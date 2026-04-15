@@ -200,6 +200,8 @@ pub struct WorkspaceManager {
 }
 
 impl WorkspaceManager {
+    const LEGACY_WORKSPACE_DIR_NAME: &'static str = ".vibe-kanban-workspaces";
+
     pub fn new(db: DBService) -> Self {
         Self { db }
     }
@@ -589,10 +591,36 @@ impl WorkspaceManager {
                 continue;
             }
 
-            let workspace_path_str = path.to_string_lossy().to_string();
-            if let Ok(false) =
-                DbWorkspace::container_ref_exists(&self.db.pool, &workspace_path_str).await
+            if path.file_name().and_then(|name| name.to_str())
+                == Some(Self::LEGACY_WORKSPACE_DIR_NAME)
             {
+                self.cleanup_orphans_in_directory(&path).await;
+                Self::remove_empty_legacy_workspace_dir(&path).await;
+                continue;
+            }
+
+            if !Self::looks_like_managed_workspace_dir(&path) {
+                debug!(
+                    "Skipping non-workspace directory during orphan cleanup: {}",
+                    path.display()
+                );
+                continue;
+            }
+
+            let workspace_path_str = path.to_string_lossy().to_string();
+            let has_tracked_workspace =
+                match DbWorkspace::container_ref_exists(&self.db.pool, &workspace_path_str).await {
+                    Ok(exists) => exists,
+                    Err(e) => {
+                        warn!(
+                            "Failed to check tracked workspace path {}: {}",
+                            workspace_path_str, e
+                        );
+                        continue;
+                    }
+                };
+
+            if !has_tracked_workspace {
                 info!("Found orphaned workspace: {}", workspace_path_str);
                 if let Err(e) = Self::cleanup_workspace_without_repos(&path).await {
                     error!(
@@ -603,6 +631,66 @@ impl WorkspaceManager {
                     info!(
                         "Successfully removed orphaned workspace: {}",
                         workspace_path_str
+                    );
+                }
+            }
+        }
+    }
+
+    fn looks_like_managed_workspace_dir(path: &Path) -> bool {
+        let Some(dir_name) = path.file_name().and_then(|name| name.to_str()) else {
+            return false;
+        };
+
+        let Some((prefix, slug)) = dir_name.split_once('-') else {
+            return false;
+        };
+
+        if prefix.len() != 4 || slug.is_empty() || !prefix.chars().all(|ch| ch.is_ascii_hexdigit())
+        {
+            return false;
+        }
+
+        if path.join(".git").is_file() {
+            return true;
+        }
+
+        let Ok(entries) = std::fs::read_dir(path) else {
+            return false;
+        };
+
+        entries.filter_map(|entry| entry.ok()).any(|entry| {
+            let repo_dir = entry.path();
+            repo_dir.is_dir() && repo_dir.join(".git").is_file()
+        })
+    }
+
+    async fn remove_empty_legacy_workspace_dir(path: &Path) {
+        let is_empty = match std::fs::read_dir(path) {
+            Ok(mut entries) => entries.next().is_none(),
+            Err(e) => {
+                debug!(
+                    "Could not inspect legacy workspace directory {}: {}",
+                    path.display(),
+                    e
+                );
+                false
+            }
+        };
+
+        if is_empty {
+            match tokio::fs::remove_dir(path).await {
+                Ok(()) => {
+                    info!(
+                        "Removed empty legacy workspace directory: {}",
+                        path.display()
+                    );
+                }
+                Err(e) => {
+                    debug!(
+                        "Could not remove legacy workspace directory {}: {}",
+                        path.display(),
+                        e
                     );
                 }
             }

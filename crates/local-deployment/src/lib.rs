@@ -48,6 +48,18 @@ pub mod container;
 mod copy;
 pub mod pty;
 
+const EVENT_HISTORY_BYTES: usize = 1 * 1024 * 1024;
+const EVENT_CHANNEL_CAPACITY: usize = 1024;
+
+fn is_local_auth_disabled() -> bool {
+    let Ok(value) = std::env::var("VK_DISABLE_AUTH") else {
+        return false;
+    };
+
+    let normalized = value.trim().to_ascii_lowercase();
+    matches!(normalized.as_str(), "1" | "true" | "yes" | "on")
+}
+
 #[derive(Clone)]
 pub struct LocalDeployment {
     config: Arc<RwLock<Config>>,
@@ -133,7 +145,10 @@ impl Deployment for LocalDeployment {
         let filesystem = FilesystemService::new();
 
         // Create shared components for EventService
-        let events_msg_store = Arc::new(MsgStore::new());
+        let events_msg_store = Arc::new(MsgStore::with_limits(
+            EVENT_HISTORY_BYTES,
+            EVENT_CHANNEL_CAPACITY,
+        ));
         let events_entry_count = Arc::new(RwLock::new(0));
 
         // Create DB with event hooks
@@ -403,6 +418,12 @@ impl LocalDeployment {
     }
 
     pub async fn get_login_status(&self) -> LoginStatus {
+        if is_local_auth_disabled() {
+            self.auth_context.clear_profile().await;
+            self.auth_context.clear_remote_auth_degraded_slug().await;
+            return LoginStatus::LoggedIn { profile: None };
+        }
+
         if self.auth_context.get_credentials().await.is_none() {
             self.auth_context.clear_profile().await;
             self.auth_context.clear_remote_auth_degraded_slug().await;

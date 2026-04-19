@@ -102,14 +102,36 @@ pub async fn link_workspace(
 }
 
 pub async fn unlink_workspace(
+    Extension(workspace): Extension<Workspace>,
     AxumPath(workspace_id): AxumPath<uuid::Uuid>,
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
+    if let Some(task_id) = workspace.task_id {
+        match Task::find_by_id(&deployment.db().pool, task_id).await? {
+            Some(task) => {
+                let project = Project::find_by_id(&deployment.db().pool, task.project_id).await?;
+                if project.remote_project_id.is_none() {
+                    Workspace::update_task_id(&deployment.db().pool, workspace.id, None).await?;
+                    return Ok(ResponseJson(ApiResponse::success(())));
+                }
+            }
+            None => {
+                tracing::warn!(
+                    workspace_id = %workspace.id,
+                    task_id = %task_id,
+                    "workspace linked task missing during unlink; clearing stale local link"
+                );
+                Workspace::update_task_id(&deployment.db().pool, workspace.id, None).await?;
+                return Ok(ResponseJson(ApiResponse::success(())));
+            }
+        }
+    }
+
     let client = deployment.remote_client()?;
 
     match client.delete_workspace(workspace_id).await {
-        Ok(()) => Ok(ResponseJson(ApiResponse::success(()))),
-        Err(RemoteClientError::Http { status: 404, .. }) => {
+        Ok(()) | Err(RemoteClientError::Http { status: 404, .. }) => {
+            Workspace::update_task_id(&deployment.db().pool, workspace.id, None).await?;
             Ok(ResponseJson(ApiResponse::success(())))
         }
         Err(e) => Err(e.into()),
@@ -124,7 +146,13 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
             load_workspace_middleware,
         ));
 
-    let delete_router = Router::new().route("/", delete(unlink_workspace));
+    let delete_router =
+        Router::new()
+            .route("/", delete(unlink_workspace))
+            .layer(from_fn_with_state(
+                deployment.clone(),
+                load_workspace_middleware,
+            ));
 
     post_router.merge(delete_router)
 }

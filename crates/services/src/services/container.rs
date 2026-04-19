@@ -57,7 +57,12 @@ use utils::{
 use uuid::Uuid;
 use worktree_manager::WorktreeError;
 
-use crate::services::{execution_process, notification::NotificationService};
+use crate::services::{
+    execution_process,
+    notification::{
+        NotificationService, WorkspaceCompletionStatus, format_workspace_completion_message,
+    },
+};
 pub type ContainerRef = String;
 
 #[derive(Debug, Error)]
@@ -247,14 +252,33 @@ pub trait ContainerService {
             .as_deref()
             .unwrap_or(&ctx.workspace.branch);
         let title = format!("Workspace Complete: {}", workspace_name);
+        let summary =
+            match CodingAgentTurn::find_latest_by_session_id(&self.db().pool, ctx.session.id).await
+            {
+                Ok(turn) => turn.and_then(|turn| turn.summary),
+                Err(error) => {
+                    tracing::warn!(
+                        "Failed to load latest coding agent turn summary for session {}: {}",
+                        ctx.session.id,
+                        error
+                    );
+                    None
+                }
+            };
         let message = match ctx.execution_process.status {
-            ExecutionProcessStatus::Completed => format!(
-                "✅ '{}' completed successfully\nBranch: {:?}\nExecutor: {:?}",
-                workspace_name, ctx.workspace.branch, ctx.session.executor
+            ExecutionProcessStatus::Completed => format_workspace_completion_message(
+                workspace_name,
+                &ctx.workspace.branch,
+                ctx.session.executor.as_deref(),
+                WorkspaceCompletionStatus::Completed,
+                summary.as_deref(),
             ),
-            ExecutionProcessStatus::Failed => format!(
-                "❌ '{}' execution failed\nBranch: {:?}\nExecutor: {:?}",
-                workspace_name, ctx.workspace.branch, ctx.session.executor
+            ExecutionProcessStatus::Failed => format_workspace_completion_message(
+                workspace_name,
+                &ctx.workspace.branch,
+                ctx.session.executor.as_deref(),
+                WorkspaceCompletionStatus::Failed,
+                summary.as_deref(),
             ),
             _ => {
                 tracing::warn!(

@@ -1,7 +1,10 @@
-use std::sync::{Arc, OnceLock};
+use std::{
+    process::Stdio,
+    sync::{Arc, OnceLock},
+};
 
 use async_trait::async_trait;
-use tokio::sync::RwLock;
+use tokio::{io::AsyncWriteExt, sync::RwLock};
 use utils::{self, command_ext::NoWindowExt};
 use uuid::Uuid;
 
@@ -17,6 +20,7 @@ pub trait PushNotifier: Send + Sync + 'static {
 /// Global push notifier set before server startup (e.g., by the Tauri app).
 /// Falls back to `DefaultPushNotifier` if not set.
 static GLOBAL_PUSH_NOTIFIER: OnceLock<Arc<dyn PushNotifier>> = OnceLock::new();
+static NTFY_CONFIG: OnceLock<Option<NtfyConfig>> = OnceLock::new();
 
 /// Register a custom push notifier globally. Must be called before the server
 /// starts (i.e., before `LocalDeployment::new()`). Typically called from the
@@ -39,6 +43,33 @@ pub struct DefaultPushNotifier;
 
 /// Cache for WSL root path from PowerShell
 static WSL_ROOT_PATH_CACHE: OnceLock<Option<String>> = OnceLock::new();
+
+#[derive(Clone, Debug)]
+struct NtfyConfig {
+    base_url: String,
+    topic: String,
+    bearer_token: Option<String>,
+    tags: Option<String>,
+    priority: Option<String>,
+    ssh_destination: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WorkspaceCompletionStatus {
+    Completed,
+    Failed,
+}
+
+const SUMMARY_METADATA_LABELS: &[&str] = &[
+    "PR",
+    "Docs",
+    "Churn",
+    "Human Needed",
+    "Commit/Push",
+    "Preview URL",
+    "Branch",
+    "Worktree",
+];
 
 #[async_trait]
 impl PushNotifier for DefaultPushNotifier {
@@ -88,6 +119,10 @@ impl NotificationService {
 
         if config.push_enabled {
             self.push_notifier.send(title, message, workspace_id).await;
+        }
+
+        if let Some(ntfy) = ntfy_config() {
+            ntfy.send(title, message).await;
         }
     }
 
@@ -149,6 +184,218 @@ impl NotificationService {
                 .spawn();
         }
     }
+}
+
+impl NtfyConfig {
+    fn from_env() -> Option<Self> {
+        let topic = std::env::var("VK_NTFY_TOPIC").ok()?.trim().to_string();
+        if topic.is_empty() {
+            return None;
+        }
+
+        let base_url = std::env::var("VK_NTFY_BASE_URL")
+            .ok()
+            .map(|value| value.trim().trim_end_matches('/').to_string())
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| "http://127.0.0.1".to_string());
+
+        let ssh_destination = std::env::var("VK_NTFY_SSH_DESTINATION")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+
+        Some(Self {
+            base_url,
+            topic,
+            bearer_token: std::env::var("VK_NTFY_BEARER_TOKEN")
+                .ok()
+                .filter(|value| !value.trim().is_empty()),
+            tags: std::env::var("VK_NTFY_TAGS")
+                .ok()
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty()),
+            priority: std::env::var("VK_NTFY_PRIORITY")
+                .ok()
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty()),
+            ssh_destination,
+        })
+    }
+
+    fn publish_url(&self) -> String {
+        format!(
+            "{}/{}",
+            self.base_url.trim_end_matches('/'),
+            self.topic.trim_start_matches('/')
+        )
+    }
+
+    async fn send(&self, title: &str, message: &str) {
+        if let Some(ssh_destination) = &self.ssh_destination {
+            self.send_via_ssh(ssh_destination, title, message).await;
+        } else {
+            self.send_direct(title, message).await;
+        }
+    }
+
+    async fn send_direct(&self, title: &str, message: &str) {
+        let client = reqwest::Client::new();
+        let mut request = client
+            .post(self.publish_url())
+            .header("Title", sanitize_header_value(title))
+            .header("Content-Type", "text/plain; charset=utf-8");
+
+        if let Some(priority) = &self.priority {
+            request = request.header("Priority", sanitize_header_value(priority));
+        }
+
+        if let Some(tags) = &self.tags {
+            request = request.header("Tags", sanitize_header_value(tags));
+        }
+
+        if let Some(token) = &self.bearer_token {
+            request = request.bearer_auth(token);
+        }
+
+        if let Err(error) = request.body(message.to_string()).send().await {
+            tracing::warn!("Failed to publish ntfy notification: {}", error);
+        }
+    }
+
+    async fn send_via_ssh(&self, ssh_destination: &str, title: &str, message: &str) {
+        let mut command = tokio::process::Command::new("ssh");
+        command
+            .arg(ssh_destination)
+            .arg("curl")
+            .arg("-fsS")
+            .arg("-X")
+            .arg("POST")
+            .arg("-H")
+            .arg(format!("Title: {}", sanitize_header_value(title)))
+            .arg("-H")
+            .arg("Content-Type: text/plain; charset=utf-8");
+
+        if let Some(priority) = &self.priority {
+            command
+                .arg("-H")
+                .arg(format!("Priority: {}", sanitize_header_value(priority)));
+        }
+
+        if let Some(tags) = &self.tags {
+            command
+                .arg("-H")
+                .arg(format!("Tags: {}", sanitize_header_value(tags)));
+        }
+
+        if let Some(token) = &self.bearer_token {
+            command.arg("-H").arg(format!(
+                "Authorization: Bearer {}",
+                sanitize_header_value(token)
+            ));
+        }
+
+        command
+            .arg("--data-binary")
+            .arg("@-")
+            .arg(self.publish_url())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped());
+
+        let mut child = match command.spawn() {
+            Ok(child) => child,
+            Err(error) => {
+                tracing::warn!("Failed to spawn SSH ntfy publisher: {}", error);
+                return;
+            }
+        };
+
+        if let Some(mut stdin) = child.stdin.take()
+            && let Err(error) = stdin.write_all(message.as_bytes()).await
+        {
+            tracing::warn!("Failed to write ntfy payload to SSH stdin: {}", error);
+            let _ = child.start_kill();
+            return;
+        }
+
+        match child.wait_with_output().await {
+            Ok(output) if output.status.success() => {}
+            Ok(output) => {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                tracing::warn!(
+                    "SSH ntfy publisher exited with status {}: {}",
+                    output.status,
+                    stderr.trim()
+                );
+            }
+            Err(error) => {
+                tracing::warn!("Failed waiting for SSH ntfy publisher: {}", error);
+            }
+        }
+    }
+}
+
+fn ntfy_config() -> Option<&'static NtfyConfig> {
+    NTFY_CONFIG.get_or_init(NtfyConfig::from_env).as_ref()
+}
+
+fn sanitize_header_value(value: &str) -> String {
+    value.replace(['\r', '\n'], " ")
+}
+
+pub fn extract_summary_metadata(summary: &str) -> Vec<(String, String)> {
+    summary
+        .lines()
+        .filter_map(|line| {
+            let (label, value) = line.split_once("::")?;
+            let label = label.trim();
+            if !SUMMARY_METADATA_LABELS.contains(&label) {
+                return None;
+            }
+
+            let value = value.trim();
+            if value.is_empty() {
+                return None;
+            }
+
+            Some((label.to_string(), value.to_string()))
+        })
+        .collect()
+}
+
+pub fn format_workspace_completion_message(
+    workspace_name: &str,
+    branch: &str,
+    executor: Option<&str>,
+    status: WorkspaceCompletionStatus,
+    summary: Option<&str>,
+) -> String {
+    let status_value = match status {
+        WorkspaceCompletionStatus::Completed => "Completed",
+        WorkspaceCompletionStatus::Failed => "Failed",
+    };
+
+    let mut lines = vec![
+        format!("Status: {status_value}"),
+        format!("Workspace: {workspace_name}"),
+        format!("Branch: {branch}"),
+    ];
+
+    if let Some(executor) = executor.filter(|value| !value.trim().is_empty()) {
+        lines.push(format!("Executor: {executor}"));
+    }
+
+    let metadata = summary.map(extract_summary_metadata).unwrap_or_default();
+    if !metadata.is_empty() {
+        lines.push(String::new());
+        lines.extend(
+            metadata
+                .into_iter()
+                .map(|(label, value)| format!("{label}:: {value}")),
+        );
+    }
+
+    lines.join("\n")
 }
 
 // --- Platform-specific push notification helpers (used by DefaultPushNotifier) ---
@@ -230,6 +477,66 @@ async fn send_windows_notification(title: &str, message: &str) {
         .arg(message)
         .no_window()
         .spawn();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        WorkspaceCompletionStatus, extract_summary_metadata, format_workspace_completion_message,
+    };
+
+    #[test]
+    fn extracts_ops_playbook_metadata_lines() {
+        let summary = r#"Validation
+Ran the relevant checks.
+
+What changed
+Added ntfy notifications.
+
+Why it matters
+Operators get completion alerts.
+
+What's next
+Set the env vars and verify a run.
+
+PR:: Not opened yet
+Docs:: Current
+Churn:: No
+Human Needed:: Yes
+Commit/Push:: Local only
+Preview URL:: Not Generated
+Branch:: vk/a80a-vk-wire-ntfy
+Worktree:: /tmp/worktree"#;
+
+        let metadata = extract_summary_metadata(summary);
+        assert_eq!(metadata.len(), 8);
+        assert_eq!(
+            metadata[0],
+            ("PR".to_string(), "Not opened yet".to_string())
+        );
+        assert_eq!(
+            metadata[7],
+            ("Worktree".to_string(), "/tmp/worktree".to_string())
+        );
+    }
+
+    #[test]
+    fn formats_workspace_completion_message_with_metadata() {
+        let message = format_workspace_completion_message(
+            "Wire Ntfy",
+            "vk/a80a-vk-wire-ntfy",
+            Some("codex"),
+            WorkspaceCompletionStatus::Completed,
+            Some(
+                "What's next\nReady for verification.\n\nPR:: Not opened yet\nBranch:: vk/a80a-vk-wire-ntfy",
+            ),
+        );
+
+        assert!(message.contains("Workspace: Wire Ntfy"));
+        assert!(message.contains("Executor: codex"));
+        assert!(message.contains("PR:: Not opened yet"));
+        assert!(message.contains("Branch:: vk/a80a-vk-wire-ntfy"));
+    }
 }
 
 /// Get WSL root path via PowerShell (cached)

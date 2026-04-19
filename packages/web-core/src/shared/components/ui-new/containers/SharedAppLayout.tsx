@@ -67,6 +67,29 @@ function getLocalProjectColor(projectId: string): string {
   return `${hash} 70% 45%`;
 }
 
+function orderLocalProjects(
+  projects: AppBarProject[],
+  localProjectOrder: string[]
+): AppBarProject[] {
+  if (localProjectOrder.length === 0) {
+    return projects;
+  }
+
+  const projectById = new Map(projects.map((project) => [project.id, project]));
+  const ordered: AppBarProject[] = [];
+
+  for (const projectId of localProjectOrder) {
+    const project = projectById.get(projectId);
+    if (!project) {
+      continue;
+    }
+    ordered.push(project);
+    projectById.delete(projectId);
+  }
+
+  return [...ordered, ...projectById.values()];
+}
+
 export function SharedAppLayout() {
   const appNavigation = useAppNavigation();
   const currentDestination = useCurrentAppDestination();
@@ -117,6 +140,10 @@ export function SharedAppLayout() {
 
   const selectedOrgId = useOrganizationStore((s) => s.selectedOrgId);
   const setSelectedOrgId = useOrganizationStore((s) => s.setSelectedOrgId);
+  const localProjectOrder = useUiPreferencesStore((s) => s.localProjectOrder);
+  const setLocalProjectOrder = useUiPreferencesStore(
+    (s) => s.setLocalProjectOrder
+  );
   const prevOrgIdRef = useRef<string | null>(null);
 
   // Auto-select first org if none selected or selection is invalid
@@ -160,12 +187,15 @@ export function SharedAppLayout() {
   );
   const localAppBarProjects = useMemo<AppBarProject[]>(
     () =>
-      localProjects.map((project) => ({
-        id: project.id,
-        name: project.name,
-        color: getLocalProjectColor(project.id),
-      })),
-    [localProjects]
+      orderLocalProjects(
+        localProjects.map((project) => ({
+          id: project.id,
+          name: project.name,
+          color: getLocalProjectColor(project.id),
+        })),
+        localProjectOrder
+      ),
+    [localProjectOrder, localProjects]
   );
   const appBarProjects = isLocalAuthBypassed
     ? localAppBarProjects
@@ -270,7 +300,7 @@ export function SharedAppLayout() {
 
   const handleProjectsDragEnd = useCallback(
     async ({ source, destination }: DropResult) => {
-      if (isLocalAuthBypassed || isSavingProjectOrder) {
+      if (isSavingProjectOrder) {
         return;
       }
       if (!destination || source.index === destination.index) {
@@ -287,6 +317,12 @@ export function SharedAppLayout() {
 
       reordered.splice(destination.index, 0, moved);
       setOrderedProjects(reordered);
+
+      if (isLocalAuthBypassed) {
+        setLocalProjectOrder(reordered.map((project) => project.id));
+        return;
+      }
+
       setIsSavingProjectOrder(true);
 
       try {
@@ -303,7 +339,13 @@ export function SharedAppLayout() {
         setIsSavingProjectOrder(false);
       }
     },
-    [isLocalAuthBypassed, isSavingProjectOrder, orderedProjects, updateManyProjects]
+    [
+      isLocalAuthBypassed,
+      isSavingProjectOrder,
+      orderedProjects,
+      setLocalProjectOrder,
+      updateManyProjects,
+    ]
   );
 
   const handleCreateProject = useCallback(async () => {

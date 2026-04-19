@@ -24,6 +24,10 @@ import {
 } from '@/shared/stores/useUiPreferencesStore';
 import type { RepoAction } from '@vibe/ui/components/RepoCard';
 
+type UiPreferencesScratchData = UiPreferencesData & {
+  local_project_order?: string[];
+};
+
 // Stable UUID for global UI preferences (not tied to a workspace/user)
 // This is a deterministic UUID v5 generated from the namespace "ui-preferences"
 // Using a fixed UUID ensures all users/sessions share the same preferences record
@@ -47,13 +51,14 @@ function storeToScratchData(state: {
   workspaceSort: WorkspaceSortState;
   selectedOrgId: string | null;
   selectedProjectId: string | null;
+  localProjectOrder: string[];
   createDraftWorkspaceByDefault: boolean;
   kanbanProjectViewSelections: Record<string, KanbanProjectViewSelection>;
   kanbanProjectViewPreferences: Record<
     string,
     Record<string, KanbanProjectViewPreferences>
   >;
-}): UiPreferencesData {
+}): UiPreferencesScratchData {
   const workspacePanelStates: { [key: string]: WorkspacePanelStateData } = {};
   for (const [key, value] of Object.entries(state.workspacePanelStates)) {
     workspacePanelStates[key] = {
@@ -83,6 +88,7 @@ function storeToScratchData(state: {
     },
     selected_org_id: state.selectedOrgId,
     selected_project_id: state.selectedProjectId,
+    local_project_order: state.localProjectOrder,
     create_draft_workspace_by_default: state.createDraftWorkspaceByDefault,
     kanban_project_view_selections: state.kanbanProjectViewSelections as Record<
       string,
@@ -96,7 +102,7 @@ function storeToScratchData(state: {
 /**
  * Converts scratch data to store state format (snake_case to camelCase)
  */
-function scratchDataToStore(data: UiPreferencesData): {
+function scratchDataToStore(data: UiPreferencesScratchData): {
   repoActions: Record<string, RepoAction>;
   expanded: Record<string, boolean>;
   contextBarPosition: ContextBarPosition;
@@ -111,6 +117,7 @@ function scratchDataToStore(data: UiPreferencesData): {
   workspaceSort: WorkspaceSortState;
   selectedOrgId: string | null;
   selectedProjectId: string | null;
+  localProjectOrder: string[];
   createDraftWorkspaceByDefault: boolean;
   kanbanProjectViewSelections: Record<string, KanbanProjectViewSelection>;
   kanbanProjectViewPreferences: Record<
@@ -168,6 +175,7 @@ function scratchDataToStore(data: UiPreferencesData): {
     },
     selectedOrgId: data.selected_org_id ?? null,
     selectedProjectId: data.selected_project_id ?? null,
+    localProjectOrder: data.local_project_order ?? [],
     createDraftWorkspaceByDefault:
       data.create_draft_workspace_by_default ??
       DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT,
@@ -209,6 +217,7 @@ export function useUiPreferencesScratch() {
     workspaceSort: state.workspaceSort,
     selectedOrgId: state.selectedOrgId,
     selectedProjectId: state.selectedProjectId,
+    localProjectOrder: state.localProjectOrder,
     createDraftWorkspaceByDefault: state.createDraftWorkspaceByDefault,
     kanbanProjectViewSelections: state.kanbanProjectViewSelections,
     kanbanProjectViewPreferences: state.kanbanProjectViewPreferences,
@@ -216,7 +225,7 @@ export function useUiPreferencesScratch() {
 
   // Extract scratch data
   const payload = scratch?.payload as ScratchPayload | undefined;
-  const scratchData: UiPreferencesData | undefined =
+  const scratchData: UiPreferencesScratchData | undefined =
     payload?.type === 'UI_PREFERENCES' ? payload.data : undefined;
 
   // Save to server function
@@ -241,6 +250,7 @@ export function useUiPreferencesScratch() {
       workspaceSort: currentState.workspaceSort,
       selectedOrgId: currentState.selectedOrgId,
       selectedProjectId: currentState.selectedProjectId,
+      localProjectOrder: currentState.localProjectOrder,
       createDraftWorkspaceByDefault: currentState.createDraftWorkspaceByDefault,
       kanbanProjectViewSelections: currentState.kanbanProjectViewSelections,
       kanbanProjectViewPreferences: currentState.kanbanProjectViewPreferences,
@@ -289,6 +299,7 @@ export function useUiPreferencesScratch() {
         workspaceSort: serverState.workspaceSort,
         selectedOrgId: serverState.selectedOrgId,
         selectedProjectId: serverState.selectedProjectId,
+        localProjectOrder: serverState.localProjectOrder,
         createDraftWorkspaceByDefault:
           serverState.createDraftWorkspaceByDefault,
         kanbanProjectViewSelections: serverState.kanbanProjectViewSelections,

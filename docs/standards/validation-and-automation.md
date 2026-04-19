@@ -52,6 +52,16 @@ Typical examples:
 
 If any expected local exercise did not happen, state that explicitly in the final summary and handoff.
 
+## Preview Validation
+
+When the operator asks for a preview:
+
+- start the relevant preview path rather than only describing how to do it
+- verify the resulting URL
+- report the working link in `Preview URL::`
+
+For this repo today, the standard remote-review preview path is the Tailscale-backed workflow documented in `docs/operations/preview-delivery.md` and `mobile-testing.md`.
+
 ## Automation Baseline
 
 This repo should keep these controls active:

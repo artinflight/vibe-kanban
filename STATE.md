@@ -14,6 +14,7 @@
 - The canonical local `staging` checkout is currently diverged from `fork/staging` and must be repaired before the branch model can be treated as healthy again.
 - The repo now has repo-specific Ops Playbook standards, adoption guidance, and a repeatable local-instance QA checklist in addition to the root continuity docs.
 - The repo now explicitly requires one final completion summary per task, current continuity-doc updates during the task, and PR creation or update when a branch is review-ready unless blocked.
+- The repo now also standardizes preview delivery: when a preview is requested, agents should use the documented Tailscale-backed flow and return a clickable working link in `Preview URL::`.
 
 ## In Progress
 
@@ -44,7 +45,9 @@
 - `docs/standards/agent-rules.md`
 - `docs/adoption/vibe-kanban-ops-adoption.md`
 - `docs/operations/local-instance-qa-checklist.md`
+- `docs/operations/preview-delivery.md`
 - `docs/self-hosting/local-backup-recovery.mdx`
+- `mobile-testing.md`
 - `scripts/vk_lean_backup.py`
 - `scripts/run_vk_lean_backup.sh`
 - `scripts/vk_restore_lean_backup.py`
@@ -60,6 +63,7 @@
 - Require local-instance validation before promoting normal task work into `staging`.
 - Preserve the existing CI and release workflows while layering Ops Playbook governance on top.
 - Treat doc upkeep and PR handling as part of task completion, not optional aftercare.
+- Treat preview delivery as part of task completion when the operator asked for a preview.
 - Treat the local DB plus GitHub state as the combined restore source, not the old cloud.
 
 ## Risks / Regression Traps

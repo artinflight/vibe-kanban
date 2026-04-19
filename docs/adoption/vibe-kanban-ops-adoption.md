@@ -12,6 +12,7 @@ This document explains how the Ops Playbook baseline is specialized for this Vib
 - branch policy and branch freshness enforcement
 - the final-message-only, one-summary-per-task completion rule
 - the expectation that canonical local `staging` and `main` stay exactly synced with their tracking branches
+- the expectation that preview requests should return a working clickable review link, not just instructions
 
 ## What Stayed Repo-Specific
 
@@ -29,7 +30,8 @@ This document explains how the Ops Playbook baseline is specialized for this Vib
 5. Treat push plus PR creation or PR update as the default branch-finish step once the branch is review-ready.
 6. Require canonical local `staging` to mirror `fork/staging` and canonical local `main` to mirror `origin/main`.
 7. Keep the existing CI and release workflows as the authoritative automation layer.
-8. Use repo-specific standards docs to explain where VK is stricter than the baseline.
+8. Standardize preview delivery around the repo's Tailscale-backed review path.
+9. Use repo-specific standards docs to explain where VK is stricter than the baseline.
 
 ## Current Adoption Status
 

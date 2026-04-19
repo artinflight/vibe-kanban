@@ -123,6 +123,7 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Before finishing any task, run `pnpm run format`.
 - Before branching new work from `staging` or describing canonical branches as healthy, run `git fetch fork origin --prune` and `pnpm run ops:branch-sync`.
 - Before using a branch in a local Vibe Kanban instance, run the narrowest relevant checks and document what was not exercised.
+- When the user asks for a preview link, spin up the relevant preview path, verify the exact URL that works over Tailscale, and include it in `Preview URL::` in the final completion message.
 - Before opening or updating a PR into `staging`, the default validation baseline is `pnpm run ops:check`, `pnpm run check`, `pnpm run lint`, and `cargo test --workspace`, plus any repo-specific generation checks affected by the change.
 - Before promoting `staging` into `main`, require a fresh `staging` branch, passing CI, and explicit human QA for meaningful user-facing changes.
 - If work touches remote deployment paths, include `pnpm run remote:generate-types:check` and `pnpm run remote:prepare-db:check`.
@@ -153,6 +154,11 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Emit this full structured summary once per user task, at the actual end of the task.
 - After that summary has been sent, do not send another full completion-summary block for follow-up actions on the same task unless the user has clearly started a new task.
 - If the user asks for a narrow follow-up inside the same task, answer that request directly and briefly instead of re-summarizing the whole task.
+- Always include `Preview URL::` and use one of:
+  - `Preview URL:: Not Generated`
+  - `Preview URL:: Updated [Open preview](https://...)`
+  - `Preview URL:: NotUpdated [Open preview](https://...)`
+- When the user asked for a preview, `Preview URL:: Not Generated` is only acceptable if you also state the concrete blocker.
 - Keep the first four sections as short complete-sentence narrative.
 - Keep metadata lines compact with `::` separators.
 - Keep intermediate progress updates brief instead of reusing the full summary block.
@@ -171,3 +177,4 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Do not edit generated shared type files manually.
 - Do not emit multiple final-summary reports for the same task.
 - Do not leave required continuity-doc or PR work undone when the branch is otherwise ready, unless you state the blocker clearly.
+- Do not satisfy a preview request with an unverified localhost URL when the operator asked for a usable review link.

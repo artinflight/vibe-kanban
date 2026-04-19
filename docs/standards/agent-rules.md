@@ -39,6 +39,7 @@ Agents must leave durable state by:
 - stating when human QA or GitHub branch-protection work is still required
 - keeping handoffs usable for a fresh cold-start agent
 - emitting one final completion summary per task instead of repeating completion reports after each follow-up step
+- including a real preview URL in `Preview URL::` when the operator asked for a preview and the preview was successfully started
 
 ## PR Execution Rules
 
@@ -48,6 +49,20 @@ Agents should:
 - push the branch and open or update the corresponding PR when the branch is review-ready unless the user says not to or a concrete blocker prevents it
 - state the exact blocker if PR work could not be completed
 - keep PR scope aligned with `STREAM.md` and the actual branch contents
+
+## Preview Delivery Rules
+
+Agents should:
+
+- treat a preview request as a request for a usable review link, not just for local process output
+- use the repo's documented preview path and verify the exact URL before reporting it
+- return the working link in `Preview URL:: Updated [Open preview](https://...)`
+- state the concrete blocker if a preview could not be produced
+
+Agents must not:
+
+- report localhost-only preview URLs when the operator asked for a remote-reviewable link
+- leave `Preview URL:: Not Generated` after a preview request without explaining why
 
 ## Concurrent Development Rules
 

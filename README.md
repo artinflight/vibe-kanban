@@ -71,6 +71,7 @@ For this fork's local-development and promotion workflow, use the repo docs alon
 - [`docs/adoption/vibe-kanban-ops-adoption.md`](docs/adoption/vibe-kanban-ops-adoption.md) for how the Ops Playbook is specialized here
 - [`docs/operations/release-safety.md`](docs/operations/release-safety.md) for the local-validation and upstream-PR gate
 - [`docs/operations/local-instance-qa-checklist.md`](docs/operations/local-instance-qa-checklist.md) for repeatable local-instance QA
+- [`docs/operations/preview-delivery.md`](docs/operations/preview-delivery.md) for the standard Tailscale preview-link workflow
 
 Normal change flow for this fork is now:
 

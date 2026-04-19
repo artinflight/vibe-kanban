@@ -148,3 +148,34 @@
   - docs and checks can expose drift quickly, but they do not by themselves reconcile a divergent canonical branch
 - Next Safest Step:
   - run the new branch-sync check, then repair canonical local `staging` before further branch-base use
+
+## 2026-04-19T01:30:00Z | vk/df84-vk-ops | standardize preview delivery
+
+- Intent: make preview handling explicit so agents spin up a real preview and return a working Tailscale-openable link in the final metadata when the operator asks for one.
+- Completed:
+  - reviewed the existing `hyroxready-app` preview rules and scripts
+  - anchored VK preview guidance to the working Tailscale + Caddy flow already documented in `mobile-testing.md`
+  - updated repo rules and standards so preview delivery is treated as part of task completion when requested
+  - added a dedicated preview-delivery operations runbook
+- Files changed:
+  - `AGENTS.md`
+  - `README.md`
+  - `STATE.md`
+  - `STREAM.md`
+  - `HANDOFF.md`
+  - `DELTA.md`
+  - `docs/standards/agent-rules.md`
+  - `docs/standards/validation-and-automation.md`
+  - `docs/adoption/vibe-kanban-ops-adoption.md`
+  - `docs/operations/preview-delivery.md`
+  - `scripts/check-ops-playbook.mjs`
+- Verified:
+  - compared preview guidance directly against `/home/mcp/code/hyroxready-app`
+  - verified that this repo's actual working remote-review path is the Tailscale-backed flow in `mobile-testing.md`
+- Not complete / known gaps:
+  - no repo-specific preview launcher script exists yet; the standard currently points at the documented manual flow
+  - `pnpm run format` may still be blocked locally by missing frontend formatting dependencies
+- Risks / Warnings:
+  - agents still need to follow the rule until preview automation is added
+- Next Safest Step:
+  - run ops-governance validation, then add a dedicated preview helper script later if preview requests stay frequent

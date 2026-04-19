@@ -18,6 +18,7 @@
 - Governance-check updates needed to enforce the new doc baseline
 - Tightening the agent behavior rules around completion summaries, continuity updates, and PR execution
 - Hardening the branch rules so canonical local `staging` cannot silently diverge from `fork/staging`
+- Standardizing preview delivery so agents return working Tailscale-openable links
 
 ## Out of Scope
 
@@ -47,7 +48,9 @@
 - `docs/adoption/*.md`
 - `docs/operations/release-safety.md`
 - `docs/operations/local-instance-qa-checklist.md`
+- `docs/operations/preview-delivery.md`
 - `docs/self-hosting/local-backup-recovery.mdx`
+- `mobile-testing.md`
 - `scripts/vk_lean_backup.py`
 - `scripts/run_vk_lean_backup.sh`
 - `scripts/vk_restore_lean_backup.py`
@@ -66,6 +69,7 @@
   - align the continuity docs with the strengthened agent-behavior rules
   - keep GitHub-side `staging` protection aligned with the documented model
   - add an explicit canonical-branch sync rule and check for local `staging` versus `fork/staging`
+  - add explicit preview-delivery rules and a runbook modeled on the working Tailscale flow
 
 ## Risks / Regression Traps
 

@@ -21,6 +21,7 @@ const requiredFiles = [
   'docs/adoption/vibe-kanban-ops-adoption.md',
   'docs/operations/release-safety.md',
   'docs/operations/local-instance-qa-checklist.md',
+  'docs/operations/preview-delivery.md',
 ];
 
 const errors = [];
@@ -64,6 +65,7 @@ if (errors.length === 0) {
     'docs/adoption/vibe-kanban-ops-adoption.md',
     'docs/operations/release-safety.md',
     'docs/operations/local-instance-qa-checklist.md',
+    'docs/operations/preview-delivery.md',
   ];
 
   for (const ref of requiredReadmeRefs) {

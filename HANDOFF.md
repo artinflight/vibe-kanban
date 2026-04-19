@@ -9,6 +9,7 @@
 - Tightened the ops-governance check so the new playbook artifacts are required.
 - Tightened the agent rules again so completion summaries happen once per task, continuity docs are updated during the task, and PR work is expected when a branch is review-ready.
 - Identified that canonical local `staging` has diverged from `fork/staging` and tightened the branch rules around exact sync.
+- Added a standard preview-delivery rule so agents should spin up a real preview and return a working Tailscale-openable link when the operator asks for one.
 
 ## What Is True Right Now
 
@@ -20,6 +21,7 @@
 - This stream's implementation branch is `vk/df84-vk-ops`.
 - The repo now documents the full fork-specific Ops Playbook model, including local-instance QA expectations before `staging`.
 - The repo also now documents that agents should not emit multiple final summaries for the same task and should treat doc updates plus PR handling as part of finishing the work.
+- The repo now also documents a standard preview-delivery path and expects `Preview URL::` to contain a real clickable link when a preview was requested.
 
 ## Known Good Backups
 
@@ -36,6 +38,7 @@
 - Start new normal VK repo work from `staging`.
 - Repair the canonical local `staging` checkout before treating the branch model as healthy again.
 - Use `docs/operations/local-instance-qa-checklist.md` before calling a branch ready for `staging`.
+- Use `docs/operations/preview-delivery.md` when the operator asks for a preview link.
 - Take the lean backup before risky schema/runtime changes if the hourly backup is not fresh enough for the task.
 - Keep the local-only behavior intact unless there is an explicit reason to reintroduce remote/cloud functionality.
 - Finish the GitHub-side setup if the remote fork still lacks a protected `staging` branch.
@@ -52,6 +55,7 @@
 - Do not put task-branch scope back into `STATE.md`.
 - Do not leave doc updates or PR work undone once the branch is otherwise review-ready unless the blocker is stated clearly.
 - Do not branch new work from a locally diverged canonical `staging` checkout.
+- Do not answer a preview request with a localhost-only URL if the operator needs a clickable remote review link.
 
 ## Verification Required Before Further Changes
 

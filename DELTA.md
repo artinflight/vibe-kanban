@@ -53,3 +53,24 @@
   - workspace linking/refresh works
 - Not complete / known gaps:
   - none blocking normal project work in the `vibe-kanban` board
+
+## 2026-04-19T00:00:00Z | vk/19e5-vk-fix-drag-and | local app bar drag-order persistence
+
+- Intent: make left-column project icon drag-and-drop stick in local-only mode instead of only animating.
+- Completed:
+  - updated the shared app layout to persist local project reorder operations instead of returning early in auth-bypassed mode
+  - added `local_project_order` to UI preferences scratch data and Zustand state
+  - restored the saved local project order when building the local app bar project list
+- Files changed:
+  - `packages/web-core/src/shared/components/ui-new/containers/SharedAppLayout.tsx`
+  - `packages/web-core/src/shared/hooks/useUiPreferencesScratch.ts`
+  - `packages/web-core/src/shared/stores/useUiPreferencesStore.ts`
+  - `crates/db/src/models/scratch.rs`
+  - `crates/server/src/routes/local_compat.rs`
+  - `crates/server/src/routes/workspaces/git.rs`
+- Verified:
+  - change committed as `b8907bba1`
+  - local-only drag handler now writes reordered project IDs into UI preferences scratch state
+- Not complete / known gaps:
+  - `pnpm run format` failed because `prettier` was unavailable in the worktree
+  - `pnpm run generate-types` was started but not confirmed complete for the scratch type change

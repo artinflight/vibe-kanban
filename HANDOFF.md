@@ -12,6 +12,7 @@
   - PR badges on issue workspace cards
 - Re-linked missing issue/workspace pairs and restored missing local PR metadata for merged workspaces.
 - Added and documented the lean backup + one-click restore flow and installed the hourly backup cron job with Desktop mirroring.
+- Fixed local-only left app bar project drag-and-drop so reordered project icons persist after drop and across reloads.
 
 ## What Is True Right Now
 
@@ -19,7 +20,7 @@
 - `/api/info` reports `shared_api_base: null`.
 - The board/issue data now lives locally in `~/.local/share/vibe-kanban/db.v2.sqlite`.
 - `staging` is the branch to use as the current repo base.
-- The repo is in a clean state after the latest local-only fix commits.
+- The repo branch `vk/19e5-vk-fix-drag-and` includes commit `b8907bba1` for local app bar project drag-order persistence.
 
 ## Known Good Backups
 
@@ -37,6 +38,7 @@
 - Take the lean backup before risky schema/runtime changes if the hourly backup is not fresh enough for the task.
 - Keep the local-only behavior intact unless there is an explicit reason to reintroduce remote/cloud functionality.
 - Prefer verifying issue/workspace/project behavior through the live local API before assuming the UI is right.
+- If touching the local app bar or project list again, preserve the `local_project_order` scratch preference path used for local-only persistence.
 
 ## What The Next Agent Must Not Do
 
@@ -64,9 +66,13 @@
   - `ART-61` merged PR `#800` restored
   - `T42` merged PR `#801` restored
 - PR badges now render on small issue cards.
+- Local app bar project reordering now persists through the UI preferences scratch store in local-only mode.
+- Validation gap:
+  - `pnpm run format` failed because `prettier` was not available in the worktree
+  - `pnpm run generate-types` was started for the scratch type change but not observed to completion during the last session
 
 ## Session Metadata
 
-- Branch: `staging`
-- Repo: `/home/mcp/_vibe_kanban_repo`
-- Focus: local-only stabilization, recoverability, and project/issue/workspace repair
+- Branch: `vk/19e5-vk-fix-drag-and`
+- Repo: `/home/mcp/code/worktrees/19e5-vk-fix-drag-and/_vibe_kanban_repo`
+- Focus: local-only left app bar drag-and-drop persistence for project icons

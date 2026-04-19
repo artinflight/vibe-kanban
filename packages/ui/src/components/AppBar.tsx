@@ -79,6 +79,7 @@ export interface AppBarProject {
   id: string;
   name: string;
   color: string;
+  hasNeedsReview?: boolean;
 }
 
 export type AppBarHostStatus = 'online' | 'offline' | 'unpaired';
@@ -106,6 +107,21 @@ function AppBarSectionLabel({ children }: { children: ReactNode }) {
     <p className="w-10 text-center text-[9px] font-medium leading-none tracking-wide text-low">
       {children}
     </p>
+  );
+}
+
+function ProjectNeedsReviewBubble() {
+  return (
+    <span
+      className="absolute -right-1 -top-1 z-10 flex h-4 min-w-4 items-center justify-center rounded-full border border-secondary bg-brand px-1"
+      aria-hidden="true"
+    >
+      <span className="flex items-center gap-px">
+        <span className="h-1 w-1 rounded-full bg-on-brand" />
+        <span className="h-1 w-1 rounded-full bg-on-brand" />
+        <span className="h-1 w-1 rounded-full bg-on-brand" />
+      </span>
+    </span>
   );
 }
 
@@ -471,29 +487,38 @@ export function AppBar({
                           style={dragProvided.draggableProps.style}
                         >
                           <Tooltip content={project.name} side="right">
-                            <button
-                              type="button"
-                              onClick={() => item.onProjectClick(project.id)}
-                              className={cn(
-                                appBarItemBaseClassName,
-                                'cursor-grab',
-                                snapshot.isDragging && 'shadow-lg',
-                                item.activeProjectId === project.id
-                                  ? ''
-                                  : 'bg-primary text-normal hover:opacity-80'
+                            <div className="relative">
+                              {project.hasNeedsReview && (
+                                <ProjectNeedsReviewBubble />
                               )}
-                              style={
-                                item.activeProjectId === project.id
-                                  ? {
-                                      color: `hsl(${project.color})`,
-                                      backgroundColor: `hsl(${project.color} / 0.2)`,
-                                    }
-                                  : undefined
-                              }
-                              aria-label={project.name}
-                            >
-                              {getProjectInitials(project.name)}
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => item.onProjectClick(project.id)}
+                                className={cn(
+                                  appBarItemBaseClassName,
+                                  'cursor-grab',
+                                  snapshot.isDragging && 'shadow-lg',
+                                  item.activeProjectId === project.id
+                                    ? ''
+                                    : 'bg-primary text-normal hover:opacity-80'
+                                )}
+                                style={
+                                  item.activeProjectId === project.id
+                                    ? {
+                                        color: `hsl(${project.color})`,
+                                        backgroundColor: `hsl(${project.color} / 0.2)`,
+                                      }
+                                    : undefined
+                                }
+                                aria-label={
+                                  project.hasNeedsReview
+                                    ? `${project.name} needs review`
+                                    : project.name
+                                }
+                              >
+                                {getProjectInitials(project.name)}
+                              </button>
+                            </div>
                           </Tooltip>
                         </div>
                       )}

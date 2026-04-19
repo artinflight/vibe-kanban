@@ -57,6 +57,8 @@ import { AppBarNotificationBellContainer } from '@/pages/workspaces/AppBarNotifi
 import { WorkspacesSidebarContainer } from '@/pages/workspaces/WorkspacesSidebarContainer';
 import { WorkspacesSidebarReopenTag } from '@vibe/ui/components/WorkspacesSidebar';
 import { useRemoteCloudHostsAppBarModel } from '@/shared/hooks/useRemoteCloudHosts';
+import { useUserContext } from '@/shared/hooks/useUserContext';
+import { useWorkspaces } from '@/shared/hooks/useWorkspaces';
 import { projectsApi } from '@/shared/lib/api';
 
 function getLocalProjectColor(projectId: string): string {
@@ -84,6 +86,8 @@ export function SharedAppLayout() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAppBarHovered, setIsAppBarHovered] = useState(false);
   const { hosts: remoteCloudHosts } = useRemoteCloudHostsAppBarModel();
+  const { workspaces: remoteWorkspaces } = useUserContext();
+  const { workspaces: activeWorkspaces } = useWorkspaces();
   const { hostId: routeHostId } = useParams({ strict: false });
   const isLocalAuthBypassed =
     loginStatus?.status === 'loggedin' && !loginStatus.profile;
@@ -167,9 +171,49 @@ export function SharedAppLayout() {
       })),
     [localProjects]
   );
-  const appBarProjects = isLocalAuthBypassed
-    ? localAppBarProjects
-    : sortedProjects;
+  const projectNeedsAttentionById = useMemo(() => {
+    const remoteProjectByLocalWorkspaceId = new Map<string, string>();
+    for (const workspace of remoteWorkspaces) {
+      if (workspace.local_workspace_id) {
+        remoteProjectByLocalWorkspaceId.set(
+          workspace.local_workspace_id,
+          workspace.project_id
+        );
+      }
+    }
+
+    const needsAttention = new Set<string>();
+    for (const workspace of activeWorkspaces) {
+      const projectId = remoteProjectByLocalWorkspaceId.get(workspace.id);
+      if (!projectId) {
+        continue;
+      }
+
+      if (
+        workspace.hasPendingApproval ||
+        (workspace.hasUnseenActivity && !workspace.isRunning)
+      ) {
+        needsAttention.add(projectId);
+      }
+    }
+
+    return needsAttention;
+  }, [activeWorkspaces, remoteWorkspaces]);
+  const appBarProjects = useMemo(
+    () =>
+      (isLocalAuthBypassed ? localAppBarProjects : sortedProjects).map(
+        (project) => ({
+          ...project,
+          hasNeedsReview: projectNeedsAttentionById.has(project.id),
+        })
+      ),
+    [
+      isLocalAuthBypassed,
+      localAppBarProjects,
+      projectNeedsAttentionById,
+      sortedProjects,
+    ]
+  );
   const isProjectsLoading = isLocalAuthBypassed
     ? isLocalProjectsLoading
     : isLoading;
@@ -550,7 +594,22 @@ export function SharedAppLayout() {
                       className="h-2.5 w-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: `hsl(${project.color})` }}
                     />
-                    <span className="truncate">{project.name}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {project.name}
+                    </span>
+                    {project.hasNeedsReview && (
+                      <span
+                        className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-brand px-1"
+                        aria-label={`${project.name} needs review`}
+                        title="Needs review"
+                      >
+                        <span className="flex items-center gap-px">
+                          <span className="h-1 w-1 rounded-full bg-on-brand" />
+                          <span className="h-1 w-1 rounded-full bg-on-brand" />
+                          <span className="h-1 w-1 rounded-full bg-on-brand" />
+                        </span>
+                      </span>
+                    )}
                   </button>
                 ))
               ) : (

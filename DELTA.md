@@ -117,3 +117,34 @@
   - agents still need to follow the rules; stronger automation may be useful later if drift continues
 - Next Safest Step:
   - run ops-governance validation and then commit the policy tightening if the user wants it recorded now
+
+## 2026-04-19T01:00:00Z | vk/df84-vk-ops | harden canonical staging sync rules
+
+- Intent: stop canonical local `staging` from silently diverging from `fork/staging` and make that sync requirement explicit in both docs and tooling.
+- Completed:
+  - verified that local `staging` is ahead 5 and behind 3 relative to `fork/staging`
+  - tightened the branch rules so canonical local `staging` must be an exact mirror of `fork/staging`
+  - added a local branch-sync check command and documented when it must be run
+  - updated continuity docs to record the currently discovered divergence as a real blocker
+- Files changed:
+  - `AGENTS.md`
+  - `STATE.md`
+  - `STREAM.md`
+  - `HANDOFF.md`
+  - `DELTA.md`
+  - `package.json`
+  - `docs/standards/operating-model.md`
+  - `docs/standards/validation-and-automation.md`
+  - `docs/adoption/vibe-kanban-ops-adoption.md`
+  - `docs/operations/release-safety.md`
+  - `scripts/check-local-branch-sync.mjs`
+- Verified:
+  - compared local `staging` against `fork/staging`
+  - confirmed the current divergence and anchored the rules to the actual `fork` remote used by this repo
+- Not complete / known gaps:
+  - the canonical local `staging` checkout is still divergent and must be repaired separately
+  - `pnpm run format` may still be blocked locally by missing frontend formatting dependencies
+- Risks / Warnings:
+  - docs and checks can expose drift quickly, but they do not by themselves reconcile a divergent canonical branch
+- Next Safest Step:
+  - run the new branch-sync check, then repair canonical local `staging` before further branch-base use

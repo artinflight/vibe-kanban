@@ -11,13 +11,16 @@
 - The imported cloud project/issue data has been brought into the local DB.
 - The `vibe-kanban` project can currently create issues and create/link workspaces successfully.
 - `staging` is the correct repo base for new VK development.
+- The canonical local `staging` checkout is currently diverged from `fork/staging` and must be repaired before the branch model can be treated as healthy again.
 - The repo now has repo-specific Ops Playbook standards, adoption guidance, and a repeatable local-instance QA checklist in addition to the root continuity docs.
 - The repo now explicitly requires one final completion summary per task, current continuity-doc updates during the task, and PR creation or update when a branch is review-ready unless blocked.
 
 ## In Progress
 
 - Normal project work can resume. No recovery-only blocker remains for issue/workspace creation in the `vibe-kanban` project.
-- The remaining activation gap is external to the repo: GitHub branch protection and the remote `staging` branch need to match the documented model.
+- The remaining activation gaps are:
+  - GitHub branch protection and the remote `staging` branch need to match the documented model
+  - the canonical local `staging` checkout must be brought back into exact sync with `fork/staging`
 
 ## Proposed / Not Adopted
 
@@ -53,6 +56,7 @@
 - Operate VK in local-only mode.
 - Use the lean backup + Desktop mirror as the standard recovery path.
 - Start new repo work from `staging`.
+- Treat canonical local `staging` as a mirror of `fork/staging`, not as a place for local-only commits.
 - Require local-instance validation before promoting normal task work into `staging`.
 - Preserve the existing CI and release workflows while layering Ops Playbook governance on top.
 - Treat doc upkeep and PR handling as part of task completion, not optional aftercare.
@@ -64,6 +68,7 @@
 - Deleting or replacing the local DB without a fresh backup will break the current restore guarantee.
 - UI changes that hide PR badges or issue/workspace links can look like data loss even when the DB is correct.
 - Treating the documented `staging` flow as fully enforced before GitHub branch protection is aligned would create a false sense of safety.
+- Branching new work from a locally diverged `staging` checkout will fork the integration history and make promotion harder to trust.
 
 ## Next Safe Steps
 
@@ -71,3 +76,4 @@
 2. Let the hourly lean backup cron keep running, or trigger a manual backup before risky work.
 3. If a future agent touches project/workspace linking, verify through the live API and the UI before merging.
 4. Align the remote fork's GitHub branch protection with the documented `staging` to `main` promotion path.
+5. Repair the canonical local `staging` checkout so it exactly matches `fork/staging`, then use `pnpm run ops:branch-sync` as the standing verification step.

@@ -14,22 +14,31 @@ This document defines the repo-specific safe path from feature work to local val
 
 ## Safe Path For Normal Changes
 
-1. Start from the latest `origin/staging`.
-2. Make one scoped change on one branch.
-3. Run the narrowest relevant validation while developing.
-4. Run the branch in the local Vibe Kanban instance and verify the intended behavior before using it as your working local build.
-5. Run the PR baseline:
+1. Fetch `fork` and `origin`, then run the canonical branch sync check.
+2. Start from the latest `fork/staging`.
+3. Make one scoped change on one branch.
+4. Run the narrowest relevant validation while developing.
+5. Run the branch in the local Vibe Kanban instance and verify the intended behavior before using it as your working local build.
+6. Run the PR baseline:
    - `pnpm run format`
+   - `pnpm run ops:branch-sync`
    - `pnpm run ops:check`
    - `pnpm run check`
    - `pnpm run lint`
    - `cargo test --workspace`
-6. If remote code changed, also run:
+7. If remote code changed, also run:
    - `pnpm run remote:generate-types:check`
    - `pnpm run remote:prepare-db:check`
-7. Rebase or merge the latest `origin/staging` before opening or updating the PR.
-8. Open a single-purpose PR into `staging`.
-9. After `staging` accumulates validated work, open a promotion PR from `staging` into `main`.
+8. Rebase or merge the latest `fork/staging` before opening or updating the PR.
+9. Open a single-purpose PR into `staging`.
+10. After `staging` accumulates validated work, open a promotion PR from `staging` into `main`.
+
+## Canonical Branch Safety
+
+- The canonical local `staging` checkout must match `fork/staging` exactly.
+- The canonical local `main` checkout must match `origin/main` exactly.
+- If either canonical branch is ahead, behind, or diverged, stop and repair it before further branch-base or promotion work.
+- Do not branch from a locally diverged `staging` checkout and assume the resulting task branch is safe.
 
 ## What Counts As Local Validation
 

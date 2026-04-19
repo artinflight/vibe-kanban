@@ -8,6 +8,7 @@
 - Updated the root continuity and identity docs to reflect the adopted model and the active task branch.
 - Tightened the ops-governance check so the new playbook artifacts are required.
 - Tightened the agent rules again so completion summaries happen once per task, continuity docs are updated during the task, and PR work is expected when a branch is review-ready.
+- Identified that canonical local `staging` has diverged from `fork/staging` and tightened the branch rules around exact sync.
 
 ## What Is True Right Now
 
@@ -15,6 +16,7 @@
 - `/api/info` reports `shared_api_base: null`.
 - The board/issue data now lives locally in `~/.local/share/vibe-kanban/db.v2.sqlite`.
 - `staging` is still the branch to use as the current repo base for new feature work.
+- The canonical local `staging` checkout is currently ahead 5 and behind 3 relative to `fork/staging`.
 - This stream's implementation branch is `vk/df84-vk-ops`.
 - The repo now documents the full fork-specific Ops Playbook model, including local-instance QA expectations before `staging`.
 - The repo also now documents that agents should not emit multiple final summaries for the same task and should treat doc updates plus PR handling as part of finishing the work.
@@ -32,11 +34,13 @@
 ## What The Next Agent Should Do
 
 - Start new normal VK repo work from `staging`.
+- Repair the canonical local `staging` checkout before treating the branch model as healthy again.
 - Use `docs/operations/local-instance-qa-checklist.md` before calling a branch ready for `staging`.
 - Take the lean backup before risky schema/runtime changes if the hourly backup is not fresh enough for the task.
 - Keep the local-only behavior intact unless there is an explicit reason to reintroduce remote/cloud functionality.
 - Finish the GitHub-side setup if the remote fork still lacks a protected `staging` branch.
 - Follow the one-summary-per-task rule even when the user asks for commit, push, or PR follow-up steps inside the same task.
+- Use `git fetch fork origin --prune` plus `pnpm run ops:branch-sync` as the standing canonical-branch health check.
 
 ## What The Next Agent Must Not Do
 
@@ -47,11 +51,14 @@
 - Do not treat the documented `staging` flow as fully enforced if GitHub branch protection has not been aligned yet.
 - Do not put task-branch scope back into `STATE.md`.
 - Do not leave doc updates or PR work undone once the branch is otherwise review-ready unless the blocker is stated clearly.
+- Do not branch new work from a locally diverged canonical `staging` checkout.
 
 ## Verification Required Before Further Changes
 
 - `curl -s http://127.0.0.1:4311/api/info` and confirm `shared_api_base` is `null`
 - `git status --short --branch`
+- `git fetch fork origin --prune`
+- `pnpm run ops:branch-sync`
 - `pnpm run ops:check`
 - Task-specific validation for any runtime or UI change
 
@@ -61,6 +68,7 @@
 - The required ops-governance check should pass once the updated files are in place.
 - No new runtime/UI behavior was changed in this session, so no fresh local app smoke test was required beyond preserving the existing local-only truth.
 - The strengthened reporting and PR-execution rules still need a fresh `pnpm run ops:check` after these latest doc edits.
+- Canonical branch sync currently fails because local `staging` is diverged from `fork/staging`.
 
 ## Session Metadata
 

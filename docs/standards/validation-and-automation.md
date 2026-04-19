@@ -26,6 +26,20 @@ If a change affects packaging or local install behavior, include the narrowest r
 - `pnpm run build:npx`
 - `pnpm run check:npx-cli`
 
+## Canonical Branch Sync Check
+
+Before branching from `staging`, after merges that should land on canonical branches, and before promotion work, run:
+
+- `git fetch fork origin --prune`
+- `pnpm run ops:branch-sync`
+
+This check should confirm:
+
+- local `staging` exactly matches `fork/staging`
+- local `main` exactly matches `origin/main`
+
+If either branch is ahead, behind, or diverged, treat that as a blocker to repair before further branch-base or promotion work.
+
 ## Local Validation Requirement
 
 Code validation alone is not enough for this repo. Before a branch is used in the local Vibe Kanban instance or proposed as ready for `staging`, exercise the changed behavior in the running app when practical.
@@ -54,6 +68,7 @@ This repo should keep these controls active:
 - `scripts/check-branch-policy.mjs` enforces allowed PR base/head combinations.
 - `scripts/check-branch-freshness.mjs` ensures the PR branch contains the latest base branch tip.
 - `scripts/check-ops-playbook.mjs` verifies the required ops docs and references exist.
+- `scripts/check-local-branch-sync.mjs` verifies that the canonical local `staging` and `main` branches match their tracking branches.
 
 ## Human Gates
 
@@ -62,6 +77,7 @@ Automation does not replace these human decisions:
 - confirming the branch was exercised safely in the local VK instance
 - deciding whether a user-facing change needs explicit manual QA before promotion to `main`
 - creating and protecting the actual remote `staging` branch on GitHub
+- repairing a locally diverged canonical `staging` or `main` checkout when the sync check fails
 
 ## Compliance Standard For This Fork
 

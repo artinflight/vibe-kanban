@@ -11,6 +11,7 @@ This document explains how the Ops Playbook baseline is specialized for this Vib
 - the `staging` to `main` promotion model
 - branch policy and branch freshness enforcement
 - the final-message-only, one-summary-per-task completion rule
+- the expectation that canonical local `staging` and `main` stay exactly synced with their tracking branches
 
 ## What Stayed Repo-Specific
 
@@ -26,8 +27,9 @@ This document explains how the Ops Playbook baseline is specialized for this Vib
 3. Require local-instance validation before a branch is considered safe for `staging`.
 4. Require agents to keep continuity docs current as part of the task, not as optional follow-up.
 5. Treat push plus PR creation or PR update as the default branch-finish step once the branch is review-ready.
-6. Keep the existing CI and release workflows as the authoritative automation layer.
-7. Use repo-specific standards docs to explain where VK is stricter than the baseline.
+6. Require canonical local `staging` to mirror `fork/staging` and canonical local `main` to mirror `origin/main`.
+7. Keep the existing CI and release workflows as the authoritative automation layer.
+8. Use repo-specific standards docs to explain where VK is stricter than the baseline.
 
 ## Current Adoption Status
 

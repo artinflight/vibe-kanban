@@ -17,6 +17,7 @@
 - Root continuity updates needed to reflect the current branch and adopted model
 - Governance-check updates needed to enforce the new doc baseline
 - Tightening the agent behavior rules around completion summaries, continuity updates, and PR execution
+- Hardening the branch rules so canonical local `staging` cannot silently diverge from `fork/staging`
 
 ## Out of Scope
 
@@ -30,6 +31,7 @@
 - The local install must keep `shared_api_base` disabled.
 - The lean backup system is the default backup path; the full-state backup is the heavy fallback.
 - The playbook adoption should specialize the baseline for VK rather than copying the standards repo verbatim.
+- The canonical local `staging` checkout should mirror `fork/staging` exactly; discovered divergence should be treated as a blocker to repair, not as a normal condition.
 
 ## Relevant Files / Modules
 
@@ -63,12 +65,14 @@
 - Pending:
   - align the continuity docs with the strengthened agent-behavior rules
   - keep GitHub-side `staging` protection aligned with the documented model
+  - add an explicit canonical-branch sync rule and check for local `staging` versus `fork/staging`
 
 ## Risks / Regression Traps
 
 - Confusing a docs-only adoption with actual enforcement if the governance check is not updated too
 - Repointing the service back to cloud/shared API config while touching ops docs
 - Leaving `STREAM.md` or `HANDOFF.md` pointing at `staging` after work now happens on task branches
+- Treating a diverged local `staging` checkout as a safe branch base
 
 ## Next Safe Steps
 

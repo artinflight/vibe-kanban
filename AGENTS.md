@@ -49,7 +49,7 @@
 5. Update repo-specific ops docs when the working model changes.
 6. Update continuity docs during the task whenever validated truth, scope, blockers, or next-safe steps materially change.
 7. Do not defer required doc updates to "later" once the relevant truth is already clear.
-6. Keep `AGENTS.md` stable; do not turn it into a session log.
+8. Keep `AGENTS.md` stable; do not turn it into a session log.
 
 ## Project Structure & Module Organization
 
@@ -67,7 +67,7 @@
 
 - Treat `main` as the protected production and upstream PR target branch.
 - Treat `staging` as the protected integration branch for normal work.
-- Start normal work from the latest `origin/staging`.
+- Start normal work from the latest `fork/staging`.
 - Use one branch per stream and one PR per concern.
 - Open normal feature, fix, docs, and chore PRs into `staging`.
 - Only open PRs into `main` from `staging`, except for explicit `hotfix/*` branches.
@@ -76,7 +76,8 @@
 - If a PR was not opened or updated, agents must say exactly why in the final completion message.
 - Do not mix unrelated cleanup, refactors, and feature work in the same branch.
 - Keep a canonical local checkout of `main` current with `origin/main`; do not leave the operator's reference checkout stale after merges.
-- Keep a canonical local checkout of `staging` current with `origin/staging` once the branch is created.
+- Keep a canonical local checkout of `staging` current with `fork/staging`; it must be an exact mirror, not a locally diverged integration branch.
+- Treat local `staging` or `main` divergence from their tracking branches as an operational blocker. Repair the canonical checkout before branching new work, promoting changes, or describing the branch model as healthy.
 - If a direct production hotfix is ever needed, branch from the latest `origin/main`, keep scope minimal, and backfill the fix to `staging` afterward.
 
 ## Documentation Roles
@@ -113,12 +114,14 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Prepare SQLx (offline): `pnpm run prepare-db`
 - Prepare SQLx (remote package, postgres): `pnpm run remote:prepare-db`
 - Local NPX build: `pnpm run build:npx` then `pnpm pack` in `npx-cli/`
+- Canonical branch sync check: `pnpm run ops:branch-sync`
 - Ops governance check: `pnpm run ops:check`
 - Format code: `pnpm run format`
 
 ## Validation Rules
 
 - Before finishing any task, run `pnpm run format`.
+- Before branching new work from `staging` or describing canonical branches as healthy, run `git fetch fork origin --prune` and `pnpm run ops:branch-sync`.
 - Before using a branch in a local Vibe Kanban instance, run the narrowest relevant checks and document what was not exercised.
 - Before opening or updating a PR into `staging`, the default validation baseline is `pnpm run ops:check`, `pnpm run check`, `pnpm run lint`, and `cargo test --workspace`, plus any repo-specific generation checks affected by the change.
 - Before promoting `staging` into `main`, require a fresh `staging` branch, passing CI, and explicit human QA for meaningful user-facing changes.

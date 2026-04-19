@@ -14,10 +14,12 @@ This document defines the branch, PR, validation, and cleanup model for this Vib
 
 ### Default rules
 
-- Start normal work from the latest `origin/staging`.
+- Start normal work from the latest `fork/staging`.
 - Use one stream per branch and one concern per PR.
 - Do not push normal task work directly to `staging` or `main`.
 - Keep a clean separation between local fork validation and upstream promotion.
+- Treat canonical local `staging` as an exact mirror of `fork/staging`, and canonical local `main` as an exact mirror of `origin/main`.
+- Do not tolerate local-only commits, behind state, or bidirectional divergence on canonical `staging` or `main`.
 
 ### Hotfix exception
 
@@ -32,13 +34,22 @@ If a direct production fix is required:
 
 The standard path for this fork is:
 
-1. Create a task branch from `origin/staging`.
-2. Implement the scoped change.
-3. Run narrow local checks while developing.
-4. Validate the branch in the local Vibe Kanban instance before treating it as safe for operator use.
-5. Open a PR into `staging`.
-6. After `staging` has passing CI and human confidence, open a promotion PR from `staging` into `main`.
-7. Propose the final upstream PR from this fork's `main` only after the fork has been validated and promoted cleanly.
+1. Fetch `fork` and `origin`, then confirm canonical branch sync.
+2. Create a task branch from `fork/staging`.
+3. Implement the scoped change.
+4. Run narrow local checks while developing.
+5. Validate the branch in the local Vibe Kanban instance before treating it as safe for operator use.
+6. Open a PR into `staging`.
+7. After `staging` has passing CI and human confidence, open a promotion PR from `staging` into `main`.
+8. Propose the final upstream PR from this fork's `main` only after the fork has been validated and promoted cleanly.
+
+## Canonical Branch Sync
+
+- The canonical local `staging` checkout must equal `fork/staging`.
+- The canonical local `main` checkout must equal `origin/main`.
+- Treat any ahead, behind, or diverged state on those canonical branches as a blocker, not as a normal condition.
+- Before branching new work, after merges, and before promotion work, fetch remotes and run the canonical branch-sync check.
+- Do not branch new work from local `staging` until that canonical checkout is back in sync.
 
 ## Local Instance Safety Rules
 

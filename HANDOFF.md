@@ -12,6 +12,8 @@
   - PR badges on issue workspace cards
 - Re-linked missing issue/workspace pairs and restored missing local PR metadata for merged workspaces.
 - Added and documented the lean backup + one-click restore flow and installed the hourly backup cron job with Desktop mirroring.
+- Wired workspace turn-completion notifications to reuse the final assistant summary metadata block.
+- Added optional ntfy mirroring for completed/failed workspace turns via `ssh homelab docker exec ntfy ...` when `VK_NTFY_TOPIC` is set.
 
 ## What Is True Right Now
 
@@ -19,7 +21,8 @@
 - `/api/info` reports `shared_api_base: null`.
 - The board/issue data now lives locally in `~/.local/share/vibe-kanban/db.v2.sqlite`.
 - `staging` is the branch to use as the current repo base.
-- The repo is in a clean state after the latest local-only fix commits.
+- Turn-completion notifications now extract `Label:: value` metadata lines from the stored coding-agent summary before notifying.
+- The ntfy bridge defaults to SSH host `homelab` and container `ntfy`; set `VK_NTFY_TOPIC` to enable it, and optionally override with `VK_NTFY_SSH_HOST` / `VK_NTFY_CONTAINER`.
 
 ## Known Good Backups
 
@@ -37,6 +40,7 @@
 - Take the lean backup before risky schema/runtime changes if the hourly backup is not fresh enough for the task.
 - Keep the local-only behavior intact unless there is an explicit reason to reintroduce remote/cloud functionality.
 - Prefer verifying issue/workspace/project behavior through the live local API before assuming the UI is right.
+- If ntfy delivery needs rollout in a live session, export `VK_NTFY_TOPIC` in the server runtime environment and run a real workspace turn to confirm the metadata payload looks right on the subscriber side.
 
 ## What The Next Agent Must Not Do
 
@@ -64,9 +68,12 @@
   - `ART-61` merged PR `#800` restored
   - `T42` merged PR `#801` restored
 - PR badges now render on small issue cards.
+- `cargo test -p services notification -- --nocapture` passed, including new metadata parsing tests.
+- `ssh homelab docker exec ntfy ntfy publish --quiet --title 'VK ntfy smoke' --message 'workspace notification smoke test' <throwaway-topic>` exited `0`.
+- `pnpm run format` did not complete because `packages/web-core` could not find `prettier` in this worktree.
 
 ## Session Metadata
 
 - Branch: `staging`
 - Repo: `/home/mcp/_vibe_kanban_repo`
-- Focus: local-only stabilization, recoverability, and project/issue/workspace repair
+- Focus: local-only stabilization, recoverability, project/issue/workspace repair, and ntfy turn-completion notifications

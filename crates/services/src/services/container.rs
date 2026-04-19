@@ -246,26 +246,42 @@ pub trait ContainerService {
             .name
             .as_deref()
             .unwrap_or(&ctx.workspace.branch);
-        let title = format!("Workspace Complete: {}", workspace_name);
-        let message = match ctx.execution_process.status {
-            ExecutionProcessStatus::Completed => format!(
-                "✅ '{}' completed successfully\nBranch: {:?}\nExecutor: {:?}",
-                workspace_name, ctx.workspace.branch, ctx.session.executor
-            ),
-            ExecutionProcessStatus::Failed => format!(
-                "❌ '{}' execution failed\nBranch: {:?}\nExecutor: {:?}",
-                workspace_name, ctx.workspace.branch, ctx.session.executor
-            ),
-            _ => {
+
+        if !matches!(
+            ctx.execution_process.status,
+            ExecutionProcessStatus::Completed | ExecutionProcessStatus::Failed
+        ) {
+            tracing::warn!(
+                "Tried to notify workspace completion for {} but process is still running!",
+                ctx.workspace.id
+            );
+            return;
+        }
+
+        let summary = match CodingAgentTurn::find_by_execution_process_id(
+            &self.db().pool,
+            ctx.execution_process.id,
+        )
+        .await
+        {
+            Ok(turn) => turn.and_then(|turn| turn.summary),
+            Err(error) => {
                 tracing::warn!(
-                    "Tried to notify workspace completion for {} but process is still running!",
-                    ctx.workspace.id
+                    execution_process_id = %ctx.execution_process.id,
+                    ?error,
+                    "failed to load coding agent turn summary for completion notification"
                 );
-                return;
+                None
             }
         };
+
         self.notification_service()
-            .notify(&title, &message, Some(ctx.workspace.id))
+            .notify_workspace_turn_completion(
+                workspace_name,
+                &ctx.execution_process.status,
+                summary.as_deref(),
+                ctx.workspace.id,
+            )
             .await;
     }
 

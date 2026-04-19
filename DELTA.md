@@ -53,3 +53,23 @@
   - workspace linking/refresh works
 - Not complete / known gaps:
   - none blocking normal project work in the `vibe-kanban` board
+
+## 2026-04-19T00:00:00Z | staging | workspace turn ntfy notifications
+
+- Intent: mirror completed VK workspace turns to the homelab `ntfy` container and include the compact `Label:: value` metadata from the final assistant summary.
+- Completed:
+  - updated workspace completion notifications to load the saved coding-agent turn summary before notifying
+  - extracted compact metadata lines from the final summary using the ops-playbook `::` contract
+  - added optional ntfy publishing via `ssh homelab docker exec ntfy ntfy publish ...`
+  - gated ntfy publishing behind `VK_NTFY_TOPIC`, with optional overrides for `VK_NTFY_SSH_HOST` and `VK_NTFY_CONTAINER`
+  - added unit coverage for metadata extraction and no-metadata fallback behavior
+- Files changed:
+  - `crates/services/src/services/container.rs`
+  - `crates/services/src/services/notification.rs`
+  - `HANDOFF.md`
+- Verified:
+  - `cargo test -p services notification -- --nocapture`
+  - `ssh homelab docker exec ntfy ntfy publish --quiet --title 'VK ntfy smoke' --message 'workspace notification smoke test' <throwaway-topic>`
+- Not complete / known gaps:
+  - full repo formatting is still blocked in this worktree because `packages/web-core` cannot find `prettier`
+  - end-to-end subscriber verification for a real completed workspace turn still requires `VK_NTFY_TOPIC` in the runtime environment

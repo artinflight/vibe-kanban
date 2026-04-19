@@ -317,12 +317,10 @@ export const Actions = {
           ? getNextWorkspaceId(ctx.activeWorkspaces, workspaceId)
           : null;
 
-        await workspacesApi.delete(workspaceId, result.deleteBranches);
-
-        // Unlink from remote issue after successful deletion
         if (result.unlinkFromIssue) {
           await workspacesApi.unlinkFromIssue(workspaceId);
         }
+        await workspacesApi.delete(workspaceId, result.deleteBranches);
         ctx.queryClient.invalidateQueries({
           queryKey: workspaceSummaryKeys.all,
         });

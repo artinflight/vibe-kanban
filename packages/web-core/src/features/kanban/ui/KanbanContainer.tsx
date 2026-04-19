@@ -473,12 +473,14 @@ function LocalProjectSettingsDialog({
 }
 
 type CollapsedKanbanColumnProps = {
+  isMobile: boolean;
   statusName: string;
   statusColor: string;
   onExpand: () => void;
 };
 
 function CollapsedKanbanColumn({
+  isMobile,
   statusName,
   statusColor,
   onExpand,
@@ -489,15 +491,32 @@ function CollapsedKanbanColumn({
     <button
       type="button"
       onClick={onExpand}
-      className="group relative flex min-h-40 flex-1 overflow-hidden bg-secondary transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-1 focus:ring-brand"
+      className={cn(
+        'group relative flex overflow-hidden bg-secondary transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-1 focus:ring-brand',
+        isMobile ? 'min-h-20 w-full' : 'min-h-40 flex-1'
+      )}
       aria-label={t('kanban.expandColumn', {
         defaultValue: 'Expand {{statusName}} column',
         statusName,
       })}
       title={statusName}
     >
-      <div className="sticky top-0 z-20 flex h-40 w-full shrink-0 items-start justify-center border-b bg-secondary/95 px-2 pt-4 backdrop-blur-sm">
-        <div className="[writing-mode:vertical-rl] flex items-center gap-2 whitespace-nowrap pt-2 text-center">
+      <div
+        className={cn(
+          'sticky top-0 z-20 flex w-full shrink-0 border-b bg-secondary/95 backdrop-blur-sm',
+          isMobile
+            ? 'h-20 items-center justify-center px-4'
+            : 'h-40 items-start justify-center px-2 pt-4'
+        )}
+      >
+        <div
+          className={cn(
+            'flex items-center gap-2 whitespace-nowrap text-center',
+            isMobile
+              ? '-rotate-90 pt-0'
+              : '[writing-mode:vertical-rl] pt-2'
+          )}
+        >
           <span className="text-sm font-medium leading-none text-normal">
             &gt;
           </span>
@@ -1482,6 +1501,7 @@ export function KanbanContainer() {
                     {isCollapsed ? (
                       <KanbanCards id={status.id} className="bg-secondary">
                         <CollapsedKanbanColumn
+                          isMobile={isMobile}
                           statusName={status.name}
                           statusColor={status.color}
                           onExpand={() => toggleCollapsedStatus(status.id)}

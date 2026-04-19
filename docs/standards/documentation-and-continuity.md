@@ -36,11 +36,13 @@ Critical repo and local-runtime context must live in the repo, not only in chat.
 
 - Holds the short next-agent pickup note.
 - Replace sections as truth changes; do not append diary-style history.
+- Update it before ending the task when the next agent would otherwise miss new blockers, boundaries, or validated state.
 
 ### `DELTA.md`
 
 - Holds the append-only checkpoint ledger.
 - Add compact entries for meaningful changes, reversals, blockers, or handoff state changes.
+- Append to it during the task once a meaningful checkpoint is real; do not leave that continuity only in the final chat message.
 
 ### `REPO_IDENTITY.md`
 
@@ -72,10 +74,25 @@ This repo uses the standardized final completion-summary format from `AGENTS.md`
 Rules:
 
 1. Use the full structure only for the final user-facing completion message of a task or turn.
-2. Keep progress updates short and lightweight.
-3. Keep `Validation`, `What changed`, `Why it matters`, and `What's next` as short narrative sections in complete sentences.
-4. Keep the metadata block compact and consistently formatted.
-5. Do not reuse the same headings in continuity docs unless they are the actual final user-facing summary.
+2. Emit that full structured summary once per task, not once per substep.
+3. If the user asks for a follow-up action like commit, push, or PR creation within the same task, answer briefly and directly unless that follow-up clearly starts a new task.
+4. Keep progress updates short and lightweight.
+5. Keep `Validation`, `What changed`, `Why it matters`, and `What's next` as short narrative sections in complete sentences.
+6. Keep the metadata block compact and consistently formatted.
+7. Do not reuse the same headings in continuity docs unless they are the actual final user-facing summary.
+
+## Required During-Task Continuity
+
+When an agent changes real repo truth, it should update the relevant continuity docs before ending the task rather than treating doc updates as optional cleanup.
+
+Minimum expectation:
+
+- update `STREAM.md` when branch scope or next-safe steps change
+- update `HANDOFF.md` when the next agent would otherwise miss important validated state or blockers
+- append `DELTA.md` for meaningful checkpoints
+- update `STATE.md` only when repo-wide truth actually changed
+
+If those updates were not made, the final completion message should explain why.
 
 ## Cold-Start Standard
 

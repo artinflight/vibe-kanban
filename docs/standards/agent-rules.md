@@ -32,12 +32,22 @@ Agents must not:
 
 ## Reporting Rules
 
-Agents should leave durable state by:
+Agents must leave durable state by:
 
 - updating continuity docs when truth changes
 - recording local validation, code validation, and remaining gaps separately
 - stating when human QA or GitHub branch-protection work is still required
 - keeping handoffs usable for a fresh cold-start agent
+- emitting one final completion summary per task instead of repeating completion reports after each follow-up step
+
+## PR Execution Rules
+
+Agents should:
+
+- treat PR work as part of finishing the branch, not as optional aftercare
+- push the branch and open or update the corresponding PR when the branch is review-ready unless the user says not to or a concrete blocker prevents it
+- state the exact blocker if PR work could not be completed
+- keep PR scope aligned with `STREAM.md` and the actual branch contents
 
 ## Concurrent Development Rules
 

@@ -89,3 +89,31 @@
   - future agents could drift again if they update root docs without keeping the standards docs in sync
 - Next Safest Step:
   - run formatting and ops-governance validation, then complete the GitHub-side branch-protection setup if needed
+
+## 2026-04-19T00:30:00Z | vk/df84-vk-ops | tighten agent completion and PR rules
+
+- Intent: stop duplicate completion-summary reporting and make continuity-doc updates plus PR handling mandatory parts of finishing a branch.
+- Completed:
+  - tightened `AGENTS.md` so the final structured summary is emitted once per task
+  - made during-task continuity updates explicit instead of optional
+  - made push plus PR open/update the default expectation once a branch is review-ready unless blocked
+  - synchronized the repo standards and adoption docs with those stronger rules
+- Files changed:
+  - `AGENTS.md`
+  - `STATE.md`
+  - `STREAM.md`
+  - `HANDOFF.md`
+  - `DELTA.md`
+  - `docs/standards/documentation-and-continuity.md`
+  - `docs/standards/agent-rules.md`
+  - `docs/standards/operating-model.md`
+  - `docs/adoption/vibe-kanban-ops-adoption.md`
+- Verified:
+  - reviewed the current repo rules directly and tightened the weak areas the operator identified
+- Not complete / known gaps:
+  - these are policy changes only; no automation yet checks for duplicate completion summaries or missing PR execution
+  - `pnpm run format` may still be blocked locally by missing frontend formatting dependencies
+- Risks / Warnings:
+  - agents still need to follow the rules; stronger automation may be useful later if drift continues
+- Next Safest Step:
+  - run ops-governance validation and then commit the policy tightening if the user wants it recorded now

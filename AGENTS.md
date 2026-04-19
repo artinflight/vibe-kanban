@@ -47,6 +47,8 @@
 3. Replace targeted sections in `HANDOFF.md`; do not stack diary entries.
 4. Append one compact `DELTA.md` entry for meaningful checkpoints.
 5. Update repo-specific ops docs when the working model changes.
+6. Update continuity docs during the task whenever validated truth, scope, blockers, or next-safe steps materially change.
+7. Do not defer required doc updates to "later" once the relevant truth is already clear.
 6. Keep `AGENTS.md` stable; do not turn it into a session log.
 
 ## Project Structure & Module Organization
@@ -70,6 +72,8 @@
 - Open normal feature, fix, docs, and chore PRs into `staging`.
 - Only open PRs into `main` from `staging`, except for explicit `hotfix/*` branches.
 - Validate a feature in this fork's local Vibe Kanban instance before promoting it to `staging`, and treat the `staging` to `main` PR as the production promotion step.
+- When a task branch is ready for review, agents should push it and open or update the corresponding PR unless the user explicitly says not to or a concrete blocker prevents it.
+- If a PR was not opened or updated, agents must say exactly why in the final completion message.
 - Do not mix unrelated cleanup, refactors, and feature work in the same branch.
 - Keep a canonical local checkout of `main` current with `origin/main`; do not leave the operator's reference checkout stale after merges.
 - Keep a canonical local checkout of `staging` current with `origin/staging` once the branch is created.
@@ -120,6 +124,7 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Before promoting `staging` into `main`, require a fresh `staging` branch, passing CI, and explicit human QA for meaningful user-facing changes.
 - If work touches remote deployment paths, include `pnpm run remote:generate-types:check` and `pnpm run remote:prepare-db:check`.
 - Do not claim completion without stating what was actually validated.
+- Do not treat doc updates, commits, pushes, or PR creation as separate "completion" events that each deserve a fresh final-summary block.
 
 ## Coding Style & Naming Conventions
 
@@ -142,6 +147,9 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
   - `Preview URL`
   - `Branch`
   - `Worktree`
+- Emit this full structured summary once per user task, at the actual end of the task.
+- After that summary has been sent, do not send another full completion-summary block for follow-up actions on the same task unless the user has clearly started a new task.
+- If the user asks for a narrow follow-up inside the same task, answer that request directly and briefly instead of re-summarizing the whole task.
 - Keep the first four sections as short complete-sentence narrative.
 - Keep metadata lines compact with `::` separators.
 - Keep intermediate progress updates brief instead of reusing the full summary block.
@@ -158,3 +166,5 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Do not release unvalidated changes into the local instance just because CI would probably pass.
 - Do not leave continuity state only in chat.
 - Do not edit generated shared type files manually.
+- Do not emit multiple final-summary reports for the same task.
+- Do not leave required continuity-doc or PR work undone when the branch is otherwise ready, unless you state the blocker clearly.

@@ -12,6 +12,7 @@
 - The `vibe-kanban` project can currently create issues and create/link workspaces successfully.
 - `staging` is the correct repo base for new VK development.
 - The repo now has repo-specific Ops Playbook standards, adoption guidance, and a repeatable local-instance QA checklist in addition to the root continuity docs.
+- The repo now explicitly requires one final completion summary per task, current continuity-doc updates during the task, and PR creation or update when a branch is review-ready unless blocked.
 
 ## In Progress
 
@@ -54,6 +55,7 @@
 - Start new repo work from `staging`.
 - Require local-instance validation before promoting normal task work into `staging`.
 - Preserve the existing CI and release workflows while layering Ops Playbook governance on top.
+- Treat doc upkeep and PR handling as part of task completion, not optional aftercare.
 - Treat the local DB plus GitHub state as the combined restore source, not the old cloud.
 
 ## Risks / Regression Traps

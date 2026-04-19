@@ -16,6 +16,7 @@
 - A repeatable local-instance QA checklist
 - Root continuity updates needed to reflect the current branch and adopted model
 - Governance-check updates needed to enforce the new doc baseline
+- Tightening the agent behavior rules around completion summaries, continuity updates, and PR execution
 
 ## Out of Scope
 
@@ -60,8 +61,7 @@
   - local workspace creation/linking works
   - existing branch policy, freshness, and ops-governance checks already exist in the repo
 - Pending:
-  - add the missing repo-specific standards/adoption docs and QA checklist
-  - align the continuity docs with the current task branch and adoption status
+  - align the continuity docs with the strengthened agent-behavior rules
   - keep GitHub-side `staging` protection aligned with the documented model
 
 ## Risks / Regression Traps

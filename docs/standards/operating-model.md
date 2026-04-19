@@ -52,6 +52,7 @@ The standard path for this fork is:
 - Keep PR scope reviewable and avoid mixing refactors with unrelated fixes.
 - State what was locally validated, what still needs human QA, and whether the branch was exercised in the local VK instance.
 - If a stream supersedes another one, say so explicitly in the PR body, `STREAM.md`, and `HANDOFF.md`.
+- Once a branch is ready for review, pushing it and opening or updating its PR is part of completing the stream unless the user explicitly defers that step or a concrete blocker exists.
 
 ## Freshness And Merge Expectations
 
@@ -79,3 +80,8 @@ Before merging to `main`, require:
 - Remove merged or abandoned worktrees after the stream is closed.
 - Do not keep editing a merged branch.
 - Close superseded PRs with a brief explanation instead of leaving stream ownership ambiguous.
+
+## Agent Completion Boundary
+
+- A task should end with one final completion summary, not a sequence of repeated summary reports after commit, push, and PR steps.
+- Follow-up execution inside the same task should be reported directly and briefly.

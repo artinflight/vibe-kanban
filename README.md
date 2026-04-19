@@ -65,7 +65,12 @@ For this fork's local-development and promotion workflow, use the repo docs alon
 - [`STREAM.md`](STREAM.md) for the active branch scope
 - [`HANDOFF.md`](HANDOFF.md) for next-agent pickup context
 - [`DELTA.md`](DELTA.md) for compact continuity history
+- [`docs/standards/operating-model.md`](docs/standards/operating-model.md) for the fork's branch and promotion model
+- [`docs/standards/validation-and-automation.md`](docs/standards/validation-and-automation.md) for required checks and automation
+- [`docs/standards/documentation-and-continuity.md`](docs/standards/documentation-and-continuity.md) for continuity doc roles
+- [`docs/adoption/vibe-kanban-ops-adoption.md`](docs/adoption/vibe-kanban-ops-adoption.md) for how the Ops Playbook is specialized here
 - [`docs/operations/release-safety.md`](docs/operations/release-safety.md) for the local-validation and upstream-PR gate
+- [`docs/operations/local-instance-qa-checklist.md`](docs/operations/local-instance-qa-checklist.md) for repeatable local-instance QA
 
 Normal change flow for this fork is now:
 
@@ -73,6 +78,8 @@ Normal change flow for this fork is now:
 2. validate locally in the Vibe Kanban instance
 3. open a PR into `staging`
 4. promote `staging` into `main`
+
+Before risky local-runtime work, take a fresh lean backup or confirm the scheduled backup is recent enough.
 
 ## Self-Hosting
 

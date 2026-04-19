@@ -21,5 +21,6 @@
 
 ## Current Adoption Notes
 
-- The repo now adopts the playbook's `staging` plus `main` model in docs and CI.
-- GitHub still needs the actual `staging` branch created and protected for the model to be fully active.
+- The repo now adopts the Ops Playbook continuity, branching, validation, and reporting model with Vibe Kanban-specific local-runtime safeguards.
+- Existing CI and release workflows remain authoritative; the playbook adds branch policy, branch freshness, continuity, and local-validation gates around them.
+- GitHub still needs the actual `staging` branch created and protected for the model to be fully active if that protection is not already in place for this fork.

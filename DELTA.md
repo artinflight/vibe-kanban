@@ -53,3 +53,39 @@
   - workspace linking/refresh works
 - Not complete / known gaps:
   - none blocking normal project work in the `vibe-kanban` board
+
+## 2026-04-19T00:00:00Z | vk/df84-vk-ops | full ops-playbook adoption for VK fork
+
+- Intent: finish adapting the Ops Playbook repo into this Vibe Kanban fork so local branch validation, continuity, and promotion rules are explicit and enforced.
+- Completed:
+  - added repo-specific standards docs for operating model, validation/automation, continuity, and agent rules
+  - added a VK-specific ops adoption doc
+  - added a repeatable local-instance QA checklist
+  - updated root continuity and identity docs to reflect the adopted model and active task branch
+  - tightened the ops-governance check to require the new playbook artifacts
+- Files changed:
+  - `AGENTS.md`
+  - `README.md`
+  - `REPO_IDENTITY.md`
+  - `STATE.md`
+  - `STREAM.md`
+  - `HANDOFF.md`
+  - `DELTA.md`
+  - `docs/standards/operating-model.md`
+  - `docs/standards/validation-and-automation.md`
+  - `docs/standards/documentation-and-continuity.md`
+  - `docs/standards/agent-rules.md`
+  - `docs/adoption/vibe-kanban-ops-adoption.md`
+  - `docs/operations/local-instance-qa-checklist.md`
+  - `scripts/check-ops-playbook.mjs`
+- Verified:
+  - compared this repo directly against `/home/mcp/code/ops-playbook`
+  - aligned the repo docs with the current task-branch reality and the fork-specific local-validation model
+- Not complete / known gaps:
+  - GitHub-side `staging` creation/protection still has to match the documented flow if not already configured
+  - no new product/runtime behavior was changed or re-smoke-tested in this doc/governance pass
+- Risks / Warnings:
+  - docs alone do not enforce remote branch protection
+  - future agents could drift again if they update root docs without keeping the standards docs in sync
+- Next Safest Step:
+  - run formatting and ops-governance validation, then complete the GitHub-side branch-protection setup if needed

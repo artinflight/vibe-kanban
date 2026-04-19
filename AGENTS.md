@@ -30,6 +30,25 @@
 4. `HANDOFF.md`
 5. `DELTA.md`
 
+## Repo-Specific Rules
+
+1. Treat this repo as the operator fork used to validate work safely before it is proposed upstream.
+2. Keep the local-only VK runtime recoverable while changing repo policy or feature code.
+3. Preserve working repo-specific release workflows; layer Ops Playbook controls on top instead of replacing proven automation.
+4. Separate repo-wide truth from branch-local intent. If a rule or status applies only to the active task branch, keep it out of `STATE.md`.
+5. When adopting or tightening ops rules, document both:
+   - what is now required for this fork
+   - what still depends on GitHub branch protection or human process outside the repo
+
+## Update Rules
+
+1. Update `STATE.md` only when repo-wide truth changes.
+2. Update `STREAM.md` when branch scope, decisions, or next steps materially change.
+3. Replace targeted sections in `HANDOFF.md`; do not stack diary entries.
+4. Append one compact `DELTA.md` entry for meaningful checkpoints.
+5. Update repo-specific ops docs when the working model changes.
+6. Keep `AGENTS.md` stable; do not turn it into a session log.
+
 ## Project Structure & Module Organization
 
 - `crates/`: Rust workspace crates — `server` (API + bins), `db` (SQLx models/migrations), `executors`, `services`, `utils`, `git` (Git operations), `api-types` (shared API types for local + remote), `review` (PR review tool), `deployment`, `local-deployment`, `remote`.
@@ -65,6 +84,10 @@
 - `STREAM.md`: current branch scope and boundaries.
 - `HANDOFF.md`: short pickup note for the next agent.
 - `DELTA.md`: append-only continuity ledger.
+- `docs/audits/vibe-kanban-ops-audit.md`: audit record of how this fork maps to the Ops Playbook.
+- `docs/standards/*.md`: repo-specific standards for branching, validation, continuity, and agent behavior.
+- `docs/adoption/*.md`: repo-specific adoption and rollout guidance for this fork.
+- `docs/operations/*.md`: operational runbooks and release/QA procedures.
 
 ## Managing Shared Types Between Rust and TypeScript
 

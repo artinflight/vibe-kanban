@@ -14,7 +14,13 @@ const requiredFiles = [
   'HANDOFF.md',
   'DELTA.md',
   'docs/audits/vibe-kanban-ops-audit.md',
+  'docs/standards/operating-model.md',
+  'docs/standards/validation-and-automation.md',
+  'docs/standards/documentation-and-continuity.md',
+  'docs/standards/agent-rules.md',
+  'docs/adoption/vibe-kanban-ops-adoption.md',
   'docs/operations/release-safety.md',
+  'docs/operations/local-instance-qa-checklist.md',
 ];
 
 const errors = [];
@@ -53,7 +59,11 @@ if (errors.length === 0) {
     'STREAM.md',
     'HANDOFF.md',
     'DELTA.md',
+    'docs/standards/operating-model.md',
+    'docs/standards/validation-and-automation.md',
+    'docs/adoption/vibe-kanban-ops-adoption.md',
     'docs/operations/release-safety.md',
+    'docs/operations/local-instance-qa-checklist.md',
   ];
 
   for (const ref of requiredReadmeRefs) {

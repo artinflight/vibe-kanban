@@ -2,24 +2,20 @@
 
 ## What Changed This Session
 
-- Recovered the local VK board state from the cloud export and imported it into the local SQLite DB.
-- Converted the live install to local-only runtime behavior by removing the active shared API base from the running service.
-- Restored local board behavior that had regressed during recovery:
-  - issue creation
-  - workspace creation/link refresh
-  - project settings menu and local column editing
-  - workspace history scroll
-  - PR badges on issue workspace cards
-- Re-linked missing issue/workspace pairs and restored missing local PR metadata for merged workspaces.
-- Added and documented the lean backup + one-click restore flow and installed the hourly backup cron job with Desktop mirroring.
+- Finished the repo-side Ops Playbook adoption for this VK fork.
+- Added repo-specific standards for operating model, validation, continuity, and agent behavior.
+- Added a VK-specific adoption doc and a repeatable local-instance QA checklist.
+- Updated the root continuity and identity docs to reflect the adopted model and the active task branch.
+- Tightened the ops-governance check so the new playbook artifacts are required.
 
 ## What Is True Right Now
 
 - The live local install is the source of truth.
 - `/api/info` reports `shared_api_base: null`.
 - The board/issue data now lives locally in `~/.local/share/vibe-kanban/db.v2.sqlite`.
-- `staging` is the branch to use as the current repo base.
-- The repo is in a clean state after the latest local-only fix commits.
+- `staging` is still the branch to use as the current repo base for new feature work.
+- This stream's implementation branch is `vk/df84-vk-ops`.
+- The repo now documents the full fork-specific Ops Playbook model, including local-instance QA expectations before `staging`.
 
 ## Known Good Backups
 
@@ -33,10 +29,11 @@
 
 ## What The Next Agent Should Do
 
-- Start new VK repo work from `staging`.
+- Start new normal VK repo work from `staging`.
+- Use `docs/operations/local-instance-qa-checklist.md` before calling a branch ready for `staging`.
 - Take the lean backup before risky schema/runtime changes if the hourly backup is not fresh enough for the task.
 - Keep the local-only behavior intact unless there is an explicit reason to reintroduce remote/cloud functionality.
-- Prefer verifying issue/workspace/project behavior through the live local API before assuming the UI is right.
+- Finish the GitHub-side setup if the remote fork still lacks a protected `staging` branch.
 
 ## What The Next Agent Must Not Do
 
@@ -44,29 +41,24 @@
 - Do not claim a DB-only copy is a full backup.
 - Do not wipe or replace the local DB without first taking a new lean restore backup.
 - Do not assume missing PR badges mean the PR is unmerged; check the local `pull_requests` rows first.
+- Do not treat the documented `staging` flow as fully enforced if GitHub branch protection has not been aligned yet.
+- Do not put task-branch scope back into `STATE.md`.
 
 ## Verification Required Before Further Changes
 
 - `curl -s http://127.0.0.1:4311/api/info` and confirm `shared_api_base` is `null`
 - `git status --short --branch`
+- `pnpm run ops:check`
 - Task-specific validation for any runtime or UI change
 
 ## Verification Status From This Session
 
-- Temporary smoke test passed against the live `vibe-kanban` project:
-  - created a temporary issue
-  - created a linked workspace against `_vibe_kanban_repo`
-  - verified the workspace appeared under the issue immediately
-  - stopped/deleted the workspace and removed the test issue cleanly
-- Hyrox issue/workspace/PR regressions were repaired locally:
-  - `ART-57` workspace re-linked
-  - `ART-60` merged PR `#799` restored
-  - `ART-61` merged PR `#800` restored
-  - `T42` merged PR `#801` restored
-- PR badges now render on small issue cards.
+- Ops docs and governance changes were reviewed locally.
+- The required ops-governance check should pass once the updated files are in place.
+- No new runtime/UI behavior was changed in this session, so no fresh local app smoke test was required beyond preserving the existing local-only truth.
 
 ## Session Metadata
 
-- Branch: `staging`
-- Repo: `/home/mcp/_vibe_kanban_repo`
-- Focus: local-only stabilization, recoverability, and project/issue/workspace repair
+- Branch: `vk/df84-vk-ops`
+- Repo: `/home/mcp/code/worktrees/df84-vk-ops/_vibe_kanban_repo`
+- Focus: finish Ops Playbook adoption for this fork without breaking local-only safety

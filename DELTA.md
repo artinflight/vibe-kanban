@@ -53,3 +53,21 @@
   - workspace linking/refresh works
 - Not complete / known gaps:
   - none blocking normal project work in the `vibe-kanban` board
+
+## 2026-04-19T00:00:00Z | vk/2d34-vk-renaming-work | issue workspace rename action
+
+- Intent: expose workspace renaming from the issue panel 3-dot menu instead of only allowing unlink/delete actions.
+- Completed:
+  - added a Rename action to `IssueWorkspaceCard`
+  - threaded rename callbacks through `IssueWorkspacesSection`
+  - wired the issue workspaces container to the existing `RenameWorkspaceDialog` and workspace update API
+- Files changed:
+  - `packages/ui/src/components/IssueWorkspaceCard.tsx`
+  - `packages/ui/src/components/IssueWorkspacesSection.tsx`
+  - `packages/web-core/src/pages/kanban/IssueWorkspacesSectionContainer.tsx`
+- Verified:
+  - code path reuses existing rename dialog + `workspacesApi.update(...)`
+  - query invalidation runs for the renamed workspace record and workspace summaries
+- Not complete / known gaps:
+  - `pnpm run format` could not finish because `prettier` is not installed in this environment
+  - `pnpm run check` could not run because `tsc` is not installed in this environment

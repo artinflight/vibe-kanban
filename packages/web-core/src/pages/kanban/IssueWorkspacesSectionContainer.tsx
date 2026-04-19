@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useParams } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { LinkIcon, PlusIcon } from '@phosphor-icons/react';
 import { useProjectContext } from '@/shared/hooks/useProjectContext';
@@ -19,9 +20,12 @@ import {
 } from '@/shared/lib/workspaceCreateState';
 import { ConfirmDialog } from '@vibe/ui/components/ConfirmDialog';
 import { DeleteWorkspaceDialog } from '@vibe/ui/components/DeleteWorkspaceDialog';
+import { RenameWorkspaceDialog } from '@vibe/ui/components/RenameWorkspaceDialog';
 import type { WorkspaceWithStats } from '@vibe/ui/components/IssueWorkspaceCard';
 import { IssueWorkspacesSection } from '@vibe/ui/components/IssueWorkspacesSection';
 import type { SectionAction } from '@vibe/ui/components/CollapsibleSectionHeader';
+import { workspaceRecordKeys } from '@/shared/hooks/useWorkspaceRecord';
+import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 
 interface IssueWorkspacesSectionContainerProps {
   issueId: string;
@@ -74,6 +78,7 @@ export function IssueWorkspacesSectionContainer({
 }: IssueWorkspacesSectionContainerProps) {
   const { t } = useTranslation('common');
   const { projectId } = useParams({ strict: false });
+  const queryClient = useQueryClient();
   const appNavigation = useAppNavigation();
   const { openWorkspaceCreateFromState } = useProjectWorkspaceCreateDraft();
   const { userId } = useAuth();
@@ -254,6 +259,26 @@ export function IssueWorkspacesSectionContainer({
     [projectId, issueId, appNavigation]
   );
 
+  const handleRenameWorkspace = useCallback(
+    async (localWorkspaceId: string, currentName: string) => {
+      await RenameWorkspaceDialog.show({
+        currentName,
+        onRename: async (newName) => {
+          await workspacesApi.update(localWorkspaceId, { name: newName });
+          await Promise.all([
+            queryClient.invalidateQueries({
+              queryKey: workspaceRecordKeys.byId(localWorkspaceId),
+            }),
+            queryClient.invalidateQueries({
+              queryKey: workspaceSummaryKeys.all,
+            }),
+          ]);
+        },
+      });
+    },
+    [queryClient]
+  );
+
   // Handle unlinking a workspace from the issue
   const handleUnlinkWorkspace = useCallback(
     async (localWorkspaceId: string) => {
@@ -357,6 +382,7 @@ export function IssueWorkspacesSectionContainer({
       actions={actions}
       onWorkspaceClick={handleWorkspaceClick}
       onCreateWorkspace={handleAddWorkspace}
+      onRenameWorkspace={handleRenameWorkspace}
       onUnlinkWorkspace={handleUnlinkWorkspace}
       onDeleteWorkspace={handleDeleteWorkspace}
       shouldAnimateCreateButton={shouldAnimateCreateButton}

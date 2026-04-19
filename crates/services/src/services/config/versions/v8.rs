@@ -25,6 +25,10 @@ fn default_relay_enabled() -> bool {
     true
 }
 
+fn default_show_left_column_links() -> bool {
+    false
+}
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize, TS, PartialEq, Eq)]
 pub enum SendMessageShortcut {
     #[default]
@@ -68,6 +72,8 @@ pub struct Config {
     pub relay_enabled: bool,
     #[serde(default)]
     pub host_nickname: Option<String>,
+    #[serde(default = "default_show_left_column_links")]
+    pub show_left_column_links: bool,
 }
 
 impl Config {
@@ -99,6 +105,7 @@ impl Config {
             send_message_shortcut: SendMessageShortcut::default(),
             relay_enabled: true,
             host_nickname: None,
+            show_left_column_links: default_show_left_column_links(),
         }
     }
 
@@ -155,6 +162,7 @@ impl Default for Config {
             send_message_shortcut: SendMessageShortcut::default(),
             relay_enabled: true,
             host_nickname: None,
+            show_left_column_links: default_show_left_column_links(),
         }
     }
 }

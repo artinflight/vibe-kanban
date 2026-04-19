@@ -76,7 +76,7 @@ export function SharedAppLayout() {
     (s) => s.isLeftSidebarVisible
   );
   const { isSignedIn } = useAuth();
-  const { appVersion, loginStatus } = useUserSystem();
+  const { appVersion, config, loginStatus } = useUserSystem();
   const updateVersion = useAppUpdateStore((s) => s.updateVersion);
   const restartForUpdate = useAppUpdateStore((s) => s.restart);
   const { data: onlineCount } = useDiscordOnlineCount();
@@ -87,6 +87,7 @@ export function SharedAppLayout() {
   const { hostId: routeHostId } = useParams({ strict: false });
   const isLocalAuthBypassed =
     loginStatus?.status === 'loggedin' && !loginStatus.profile;
+  const showLeftColumnLinks = config?.show_left_column_links ?? false;
   const navigate = useNavigate();
 
   // Register CMD+K shortcut globally for all routes under SharedAppLayout
@@ -420,6 +421,7 @@ export function SharedAppLayout() {
               onUpdateClick={restartForUpdate ?? undefined}
               githubIconPath={siGithub.path}
               discordIconPath={siDiscord.path}
+              showLeftColumnLinks={showLeftColumnLinks}
             />
             {/* Desktop content. */}
             <div className="relative min-h-0 overflow-hidden">

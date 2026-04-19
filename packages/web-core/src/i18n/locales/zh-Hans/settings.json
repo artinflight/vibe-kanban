@@ -57,6 +57,10 @@
           "label": "语言",
           "placeholder": "选择语言",
           "helper": "选择您喜欢的语言。浏览器默认将跟随您的系统语言。"
+        },
+        "leftColumnLinks": {
+          "label": "显示左侧栏链接",
+          "helper": "在左侧栏显示 remote、export、profile、GitHub 和 Discord 控件。"
         }
       },
       "taskExecution": {

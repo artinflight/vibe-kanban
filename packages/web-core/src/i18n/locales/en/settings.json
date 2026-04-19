@@ -65,6 +65,10 @@
           "label": "Language",
           "placeholder": "Select language",
           "helper": "Choose your preferred language. Browser Default follows your system language."
+        },
+        "leftColumnLinks": {
+          "label": "Show left column links",
+          "helper": "Show remote, export, profile, GitHub, and Discord controls in the left column."
         }
       },
       "taskExecution": {

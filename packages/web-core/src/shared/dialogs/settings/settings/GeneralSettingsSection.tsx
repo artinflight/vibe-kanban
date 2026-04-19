@@ -311,6 +311,18 @@ export function GeneralSettingsSection() {
             />
           </SettingsField>
         )}
+
+        <SettingsCheckbox
+          id="show-left-column-links"
+          label={t('settings.general.appearance.leftColumnLinks.label')}
+          description={t(
+            'settings.general.appearance.leftColumnLinks.helper'
+          )}
+          checked={draft?.show_left_column_links ?? false}
+          onChange={(checked) =>
+            updateDraft({ show_left_column_links: checked })
+          }
+        />
       </SettingsCard>
 
       {/* Editor */}

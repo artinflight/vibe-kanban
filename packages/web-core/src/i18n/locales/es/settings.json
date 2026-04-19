@@ -57,6 +57,10 @@
           "label": "Idioma",
           "placeholder": "Selecciona tu idioma",
           "helper": "Elige tu idioma preferido. El predeterminado del navegador sigue el idioma de tu sistema."
+        },
+        "leftColumnLinks": {
+          "label": "Mostrar enlaces de la columna izquierda",
+          "helper": "Muestra los controles de remoto, exportación, perfil, GitHub y Discord en la columna izquierda."
         }
       },
       "taskExecution": {

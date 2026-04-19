@@ -57,6 +57,10 @@
           "label": "語言",
           "placeholder": "選擇語言",
           "helper": "選擇您偏好的語言。瀏覽器預設將跟隨系統語言。"
+        },
+        "leftColumnLinks": {
+          "label": "顯示左側欄連結",
+          "helper": "在左側欄顯示 remote、export、profile、GitHub 和 Discord 控制項。"
         }
       },
       "taskExecution": {

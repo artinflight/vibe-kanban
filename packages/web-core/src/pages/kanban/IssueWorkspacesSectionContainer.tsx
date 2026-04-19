@@ -10,6 +10,7 @@ import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useProjectWorkspaceCreateDraft } from '@/shared/hooks/useProjectWorkspaceCreateDraft';
 import { workspacesApi } from '@/shared/lib/api';
+import { buildIssueWorkspaceStats } from '@/shared/lib/issueWorkspaces';
 import { getWorkspaceDefaults } from '@/shared/lib/workspaceDefaults';
 import {
   buildLinkedIssueCreateState,
@@ -25,44 +26,6 @@ import type { SectionAction } from '@vibe/ui/components/CollapsibleSectionHeader
 
 interface IssueWorkspacesSectionContainerProps {
   issueId: string;
-}
-
-type LocalWorkspaceSummary = {
-  id: string;
-  name: string;
-  isRunning?: boolean;
-  hasPendingApproval?: boolean;
-  hasRunningDevServer?: boolean;
-  hasUnseenActivity?: boolean;
-  latestProcessCompletedAt?: string | null;
-  latestProcessStatus?: string | null;
-};
-
-function resolveLocalWorkspaceId(
-  remoteWorkspace: {
-    local_workspace_id: string | null;
-    name: string | null;
-  },
-  localWorkspacesById: Map<string, LocalWorkspaceSummary>,
-  localWorkspaces: LocalWorkspaceSummary[]
-): string | null {
-  if (
-    remoteWorkspace.local_workspace_id &&
-    localWorkspacesById.has(remoteWorkspace.local_workspace_id)
-  ) {
-    return remoteWorkspace.local_workspace_id;
-  }
-
-  const normalizedName = remoteWorkspace.name?.trim().toLowerCase() ?? '';
-  if (!normalizedName) {
-    return null;
-  }
-
-  const matches = localWorkspaces.filter(
-    (workspace) => workspace.name.trim().toLowerCase() === normalizedName
-  );
-
-  return matches.length === 1 ? matches[0].id : null;
 }
 
 /**
@@ -110,50 +73,30 @@ export function IssueWorkspacesSectionContainer({
 
   // Get workspaces for the issue, with PR info
   const workspacesWithStats: WorkspaceWithStats[] = useMemo(() => {
-    const rawWorkspaces = getWorkspacesForIssue(issueId);
+    const prsByWorkspaceId = new Map<string, WorkspaceWithStats['prs']>();
 
-    return rawWorkspaces.map((workspace) => {
-      const resolvedLocalWorkspaceId = resolveLocalWorkspaceId(
-        workspace,
-        localWorkspacesById,
-        allLocalWorkspaces
-      );
-      const localWorkspace = resolvedLocalWorkspaceId
-        ? localWorkspacesById.get(resolvedLocalWorkspaceId)
-        : undefined;
+    for (const pr of pullRequests) {
+      if (!pr.workspace_id) {
+        continue;
+      }
 
-      // Find all linked PRs for this workspace
-      const linkedPrs = pullRequests
-        .filter((pr) => pr.workspace_id === workspace.id)
-        .map((pr) => ({
-          number: pr.number,
-          url: pr.url,
-          status: pr.status as 'open' | 'merged' | 'closed',
-        }));
+      const prs = prsByWorkspaceId.get(pr.workspace_id) ?? [];
+      prs.push({
+        number: pr.number,
+        url: pr.url,
+        status: pr.status as 'open' | 'merged' | 'closed',
+      });
+      prsByWorkspaceId.set(pr.workspace_id, prs);
+    }
 
-      // Get owner
-      const owner =
-        membersWithProfilesById.get(workspace.owner_user_id) ?? null;
-
-      return {
-        id: workspace.id,
-        localWorkspaceId: resolvedLocalWorkspaceId,
-        name: workspace.name,
-        archived: workspace.archived,
-        filesChanged: workspace.files_changed ?? 0,
-        linesAdded: workspace.lines_added ?? 0,
-        linesRemoved: workspace.lines_removed ?? 0,
-        prs: linkedPrs,
-        owner,
-        updatedAt: workspace.updated_at,
-        isOwnedByCurrentUser: workspace.owner_user_id === userId,
-        isRunning: localWorkspace?.isRunning,
-        hasPendingApproval: localWorkspace?.hasPendingApproval,
-        hasRunningDevServer: localWorkspace?.hasRunningDevServer,
-        hasUnseenActivity: localWorkspace?.hasUnseenActivity,
-        latestProcessCompletedAt: localWorkspace?.latestProcessCompletedAt,
-        latestProcessStatus: localWorkspace?.latestProcessStatus,
-      };
+    return buildIssueWorkspaceStats({
+      issueId,
+      remoteWorkspaces: getWorkspacesForIssue(issueId),
+      localWorkspacesById,
+      allLocalWorkspaces,
+      prsByWorkspaceId,
+      membersWithProfilesById,
+      userId,
     });
   }, [
     issueId,

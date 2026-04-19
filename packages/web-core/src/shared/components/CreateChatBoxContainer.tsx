@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState, useEffect } from 'react';
+import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
 import { useCreateMode } from '@/features/create-mode/model/useCreateMode';
@@ -63,6 +63,7 @@ export function CreateChatBoxContainer({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [hasInitializedStep, setHasInitializedStep] = useState(false);
   const [isSelectingRepos, setIsSelectingRepos] = useState(true);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     if (!hasInitialValue || hasInitializedStep) return;
@@ -223,49 +224,55 @@ export function CreateChatBoxContainer({
   // Handle submit
   const handleSubmit = useCallback(async () => {
     setHasAttemptedSubmit(true);
-    if (!canSubmit || !executorConfig) return;
+    if (!canSubmit || !executorConfig || isSubmittingRef.current) return;
 
-    const { title } = splitMessageToTitleDescription(message);
-    const data = {
-      executor_config: executorConfig,
-      name: title,
-      prompt: message,
-      repos: repos.map((r) => ({
-        repo_id: r.id,
-        target_branch: targetBranches[r.id]!,
-      })),
-      linked_issue: linkedIssue
+    isSubmittingRef.current = true;
+
+    try {
+      const { title } = splitMessageToTitleDescription(message);
+      const data = {
+        executor_config: executorConfig,
+        name: title,
+        prompt: message,
+        repos: repos.map((r) => ({
+          repo_id: r.id,
+          target_branch: targetBranches[r.id]!,
+        })),
+        linked_issue: linkedIssue
+          ? {
+              remote_project_id: linkedIssue.remoteProjectId,
+              issue_id: linkedIssue.issueId,
+            }
+          : null,
+        attachment_ids: getAttachmentIds(),
+      };
+      const linkToIssue = linkedIssue
         ? {
-            remote_project_id: linkedIssue.remoteProjectId,
-            issue_id: linkedIssue.issueId,
+            remoteProjectId: linkedIssue.remoteProjectId,
+            issueId: linkedIssue.issueId,
           }
-        : null,
-      attachment_ids: getAttachmentIds(),
-    };
-    const linkToIssue = linkedIssue
-      ? {
-          remoteProjectId: linkedIssue.remoteProjectId,
-          issueId: linkedIssue.issueId,
-        }
-      : undefined;
+        : undefined;
 
-    const result = await createWorkspace.mutateAsync({
-      data,
-      linkToIssue,
-    });
+      const result = await createWorkspace.mutateAsync({
+        data,
+        linkToIssue,
+      });
 
-    if (result.workspace) {
-      onWorkspaceCreated(result.workspace.id);
+      if (result.workspace) {
+        onWorkspaceCreated(result.workspace.id);
+      }
+
+      if (linkedIssue?.remoteProjectId) {
+        saveProjectRepoDefaults(linkedIssue.remoteProjectId, data.repos).catch(
+          (err) => console.warn('Failed to save project repo defaults:', err)
+        );
+      }
+
+      clearAttachments();
+      await clearDraft();
+    } finally {
+      isSubmittingRef.current = false;
     }
-
-    if (linkedIssue?.remoteProjectId) {
-      saveProjectRepoDefaults(linkedIssue.remoteProjectId, data.repos).catch(
-        (err) => console.warn('Failed to save project repo defaults:', err)
-      );
-    }
-
-    clearAttachments();
-    await clearDraft();
   }, [
     canSubmit,
     executorConfig,

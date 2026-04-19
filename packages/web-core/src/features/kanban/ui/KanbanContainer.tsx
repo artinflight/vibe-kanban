@@ -19,6 +19,7 @@ import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
 import { cn } from '@/shared/lib/utils';
 import { useCurrentKanbanRouteState } from '@/shared/hooks/useCurrentKanbanRouteState';
+import { buildIssueWorkspaceStats } from '@/shared/lib/issueWorkspaces';
 import {
   useUiPreferencesStore,
   resolveKanbanProjectState,
@@ -121,7 +122,6 @@ function LoadingState() {
     </div>
   );
 }
-
 
 function useDismissableLayer(
   isOpen: boolean,
@@ -297,7 +297,11 @@ function LocalProjectSettingsDialog({
     if (!key) {
       return;
     }
-    if (draftStatuses.some((status) => normalizeLocalStatusKey(status.name) === key)) {
+    if (
+      draftStatuses.some(
+        (status) => normalizeLocalStatusKey(status.name) === key
+      )
+    ) {
       setError('That column already exists.');
       return;
     }
@@ -366,10 +370,7 @@ function LocalProjectSettingsDialog({
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-[10000] bg-black/50"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 z-[10000] bg-black/50" onClick={onClose} />
       <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
         <div
           className="w-full max-w-3xl overflow-hidden rounded-sm border border-border bg-panel shadow-lg"
@@ -377,7 +378,9 @@ function LocalProjectSettingsDialog({
         >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div>
-              <h3 className="text-lg font-medium text-high">Project settings</h3>
+              <h3 className="text-lg font-medium text-high">
+                Project settings
+              </h3>
               <p className="text-sm text-low">{projectName}</p>
             </div>
             <button
@@ -391,7 +394,9 @@ function LocalProjectSettingsDialog({
           </div>
           <div className="space-y-4 px-4 py-4">
             <div className="rounded-sm border border-border bg-secondary/40 px-3 py-2 text-sm text-low">
-              Local-only boards keep their columns in local project scratch now. Add, move, and remove empty columns here. Removing a column with issues is blocked.
+              Local-only boards keep their columns in local project scratch now.
+              Add, move, and remove empty columns here. Removing a column with
+              issues is blocked.
             </div>
             <div className="flex items-center justify-between gap-4 rounded-sm border border-border bg-panel px-3 py-2">
               <div>
@@ -457,8 +462,12 @@ function LocalProjectSettingsDialog({
                           style={{ backgroundColor: `hsl(${status.color})` }}
                         />
                         <div className="min-w-0">
-                          <div className="truncate text-sm text-high">{status.name}</div>
-                          <div className="text-xs text-low">{status.count} issues</div>
+                          <div className="truncate text-sm text-high">
+                            {status.name}
+                          </div>
+                          <div className="text-xs text-low">
+                            {status.count} issues
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -483,7 +492,11 @@ function LocalProjectSettingsDialog({
                           onClick={() => removeStatus(status.id)}
                           disabled={!canRemove}
                           className="rounded-sm border border-border px-2 py-1 text-xs text-high transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
-                          title={canRemove ? 'Remove column' : 'Move issues out of this column before removing it'}
+                          title={
+                            canRemove
+                              ? 'Remove column'
+                              : 'Move issues out of this column before removing it'
+                          }
                         >
                           Remove
                         </button>
@@ -1091,38 +1104,17 @@ export function KanbanContainer() {
     const map = new Map<string, WorkspaceWithStats[]>();
 
     for (const issue of issues) {
-      const nonArchivedWorkspaces = getWorkspacesForIssue(issue.id)
-        .filter(
-          (workspace) =>
-            !workspace.archived &&
-            !!workspace.local_workspace_id &&
-            localWorkspacesById.has(workspace.local_workspace_id)
-        )
-        .map((workspace) => {
-          const localWorkspace = localWorkspacesById.get(
-            workspace.local_workspace_id!
-          );
-
-          return {
-            id: workspace.id,
-            localWorkspaceId: workspace.local_workspace_id,
-            name: workspace.name,
-            archived: workspace.archived,
-            filesChanged: workspace.files_changed ?? 0,
-            linesAdded: workspace.lines_added ?? 0,
-            linesRemoved: workspace.lines_removed ?? 0,
-            prs: prsByWorkspaceId.get(workspace.id) ?? [],
-            owner: membersWithProfilesById.get(workspace.owner_user_id) ?? null,
-            updatedAt: workspace.updated_at,
-            isOwnedByCurrentUser: workspace.owner_user_id === userId,
-            isRunning: localWorkspace?.isRunning,
-            hasPendingApproval: localWorkspace?.hasPendingApproval,
-            hasRunningDevServer: localWorkspace?.hasRunningDevServer,
-            hasUnseenActivity: localWorkspace?.hasUnseenActivity,
-            latestProcessCompletedAt: localWorkspace?.latestProcessCompletedAt,
-            latestProcessStatus: localWorkspace?.latestProcessStatus,
-          };
-        });
+      const nonArchivedWorkspaces = buildIssueWorkspaceStats({
+        issueId: issue.id,
+        remoteWorkspaces: getWorkspacesForIssue(issue.id),
+        localWorkspacesById,
+        allLocalWorkspaces: activeWorkspaces,
+        prsByWorkspaceId,
+        membersWithProfilesById,
+        userId,
+      }).filter(
+        (workspace) => !workspace.archived && !!workspace.localWorkspaceId
+      );
 
       if (nonArchivedWorkspaces.length > 0) {
         map.set(issue.id, nonArchivedWorkspaces);

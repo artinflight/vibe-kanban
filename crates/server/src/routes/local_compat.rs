@@ -127,6 +127,7 @@ struct ProjectQuery {
 
 #[derive(Debug, Deserialize)]
 struct CreateIssueRequest {
+    id: Option<Uuid>,
     project_id: Uuid,
     status_id: String,
     title: String,
@@ -1278,6 +1279,7 @@ async fn create_issue(
 
     Task::create(
         &deployment.db().pool,
+        request.id,
         request.project_id,
         request.title,
         ensure_status_metadata(request.description, &status_name),

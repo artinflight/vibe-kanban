@@ -61,12 +61,13 @@ impl Task {
 
     pub async fn create(
         pool: &SqlitePool,
+        id: Option<Uuid>,
         project_id: Uuid,
         title: String,
         description: Option<String>,
         status: TaskStatus,
     ) -> Result<Self, sqlx::Error> {
-        let id = Uuid::new_v4();
+        let id = id.unwrap_or_else(Uuid::new_v4);
         sqlx::query(
             r#"INSERT INTO tasks (id, project_id, title, description, status)
                VALUES (?, ?, ?, ?, ?)"#,
@@ -140,5 +141,56 @@ impl Task {
         )
         .fetch_optional(pool)
         .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::SqlitePool;
+    use uuid::Uuid;
+
+    use super::{Task, TaskStatus};
+
+    async fn test_pool() -> SqlitePool {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE tasks (
+                id TEXT PRIMARY KEY NOT NULL,
+                project_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL,
+                parent_workspace_id TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now', 'subsec')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now', 'subsec'))
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn create_uses_supplied_id_when_present() {
+        let pool = test_pool().await;
+        let project_id = Uuid::new_v4();
+        let issue_id = Uuid::new_v4();
+
+        let task = Task::create(
+            &pool,
+            Some(issue_id),
+            project_id,
+            "Preserve optimistic issue id".to_string(),
+            Some("description".to_string()),
+            TaskStatus::Todo,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(task.id, issue_id);
+        assert_eq!(task.project_id, project_id);
     }
 }

@@ -556,7 +556,10 @@ function CollapsedKanbanColumn({
     <button
       type="button"
       onClick={onExpand}
-      className="group relative flex min-h-40 flex-1 overflow-hidden bg-secondary transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-1 focus:ring-brand"
+      className={cn(
+        'group relative flex overflow-hidden bg-secondary transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-1 focus:ring-brand',
+        isMobile ? 'min-h-0 flex-none' : 'min-h-40 flex-1'
+      )}
       aria-label={t('kanban.expandColumn', {
         defaultValue: 'Expand {{statusName}} column ({{count}} issues)',
         statusName,
@@ -1597,11 +1600,17 @@ export function KanbanContainer() {
                   <KanbanBoard
                     key={status.id}
                     className={cn(
-                      isCollapsed && !isMobile && '!min-w-16 !max-w-16'
+                      isCollapsed &&
+                        (isMobile
+                          ? '!min-h-0'
+                          : '!min-w-16 !max-w-16')
                     )}
                   >
                     {isCollapsed ? (
-                      <KanbanCards id={status.id} className="bg-secondary">
+                      <KanbanCards
+                        id={status.id}
+                        className={cn('bg-secondary', isMobile && '!flex-none')}
+                      >
                         <CollapsedKanbanColumn
                           statusName={status.name}
                           statusColor={status.color}

@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
 const { execFileSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 const SETUP_DEV_ENVIRONMENT = path.join(
   __dirname,
   'setup-dev-environment.js'
 );
+const PORTS_FILE = path.join(__dirname, '..', '.dev-ports.json');
 
 function run(command, args) {
   return execFileSync(command, args, {
@@ -17,6 +19,26 @@ function run(command, args) {
 }
 
 function getFrontendPort() {
+  const fromEnv = process.env.FRONTEND_PORT?.trim();
+  if (fromEnv) {
+    const port = Number(fromEnv);
+    if (Number.isInteger(port) && port > 0) {
+      return port;
+    }
+  }
+
+  try {
+    if (fs.existsSync(PORTS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(PORTS_FILE, 'utf8'));
+      const port = Number(data?.frontend);
+      if (Number.isInteger(port) && port > 0) {
+        return port;
+      }
+    }
+  } catch (error) {
+    throw new Error(`Failed to read saved dev ports: ${error.message}`);
+  }
+
   const output = run(process.execPath, [SETUP_DEV_ENVIRONMENT, 'frontend']);
   const port = Number(output);
 

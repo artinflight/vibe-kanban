@@ -73,3 +73,20 @@
 - Not complete / known gaps:
   - full repo formatting is still blocked in this worktree because `packages/web-core` cannot find `prettier`
   - end-to-end subscriber verification for a real completed workspace turn still requires `VK_NTFY_TOPIC` in the runtime environment
+
+## 2026-04-24T00:00:00Z | vk/7617-vk-wire-ntfy | ntfy rollout blocked at installed binary swap
+
+- Intent: finish live rollout of the ntfy workspace-turn notification branch by wiring the topic into the local service and swapping the installed server binary.
+- Completed:
+  - confirmed the live `vibe-kanban` user service environment includes `VK_NTFY_TOPIC=vk-workspace-turns`
+  - confirmed the service launcher runs `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`
+  - confirmed that installed binary does not yet contain the ntfy notification strings from this branch
+  - completed `cargo build --release -p server` from this worktree
+- Verified:
+  - `systemctl --user show vibe-kanban.service --property=Environment,ExecStart,ActiveState,SubState --no-pager`
+  - `strings /home/mcp/.local/bin/vibe-kanban-server-cleanfix | rg "VK_NTFY_TOPIC|failed to publish workspace completion to ntfy|notify_workspace_turn_completion|Workspace::"`
+  - `cargo build --release -p server`
+- Not complete / known gaps:
+  - direct replacement of `/home/mcp/.local/bin/vibe-kanban-server-cleanfix` initially failed with `Text file busy`
+  - the interrupted follow-up stop/copy/start step means the live service is still not running the ntfy-enabled branch binary
+  - no branch PR existed yet at this checkpoint

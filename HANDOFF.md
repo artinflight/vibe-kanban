@@ -1,19 +1,13 @@
 # HANDOFF.md
 
 ## What Changed This Session
-
-- Recovered the local VK board state from the cloud export and imported it into the local SQLite DB.
-- Converted the live install to local-only runtime behavior by removing the active shared API base from the running service.
-- Restored local board behavior that had regressed during recovery:
-  - issue creation
-  - workspace creation/link refresh
-  - project settings menu and local column editing
-  - workspace history scroll
-  - PR badges on issue workspace cards
-- Re-linked missing issue/workspace pairs and restored missing local PR metadata for merged workspaces.
-- Added and documented the lean backup + one-click restore flow and installed the hourly backup cron job with Desktop mirroring.
 - Wired workspace turn-completion notifications to reuse the final assistant summary metadata block.
 - Added optional ntfy mirroring for completed/failed workspace turns via `ssh homelab docker exec ntfy ...` when `VK_NTFY_TOPIC` is set.
+- Confirmed the live `vibe-kanban` user service environment now includes `VK_NTFY_TOPIC=vk-workspace-turns`.
+- Confirmed the live systemd unit launches `/home/mcp/.local/bin/vibe-kanban-serve`, which shells into `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`.
+- Confirmed the currently installed `vibe-kanban-server-cleanfix` binary does not yet contain the ntfy strings from this branch, so live notifications are not using the new code path yet.
+- Completed a local `cargo build --release -p server` from this worktree, but the first direct binary swap attempt failed with `Text file busy` because the live service still had the installed binary open.
+- The follow-up stop/copy/start deploy step was started but interrupted before completion, so the branch code is committed but not yet landed into the installed live server binary.
 
 ## What Is True Right Now
 
@@ -23,6 +17,9 @@
 - `staging` is the branch to use as the current repo base.
 - Turn-completion notifications now extract `Label:: value` metadata lines from the stored coding-agent summary before notifying.
 - The ntfy bridge defaults to SSH host `homelab` and container `ntfy`; set `VK_NTFY_TOPIC` to enable it, and optionally override with `VK_NTFY_SSH_HOST` / `VK_NTFY_CONTAINER`.
+- The live topic currently configured for the local service is `vk-workspace-turns`.
+- The local service is still running the installed binary at `/home/mcp/.local/bin/vibe-kanban-server-cleanfix`, not a direct process from this worktree.
+- End-to-end ntfy delivery is still blocked until that installed binary is replaced with the build from this branch and the service is restarted cleanly.
 
 ## Known Good Backups
 
@@ -40,7 +37,9 @@
 - Take the lean backup before risky schema/runtime changes if the hourly backup is not fresh enough for the task.
 - Keep the local-only behavior intact unless there is an explicit reason to reintroduce remote/cloud functionality.
 - Prefer verifying issue/workspace/project behavior through the live local API before assuming the UI is right.
-- If ntfy delivery needs rollout in a live session, export `VK_NTFY_TOPIC` in the server runtime environment and run a real workspace turn to confirm the metadata payload looks right on the subscriber side.
+- To finish the ntfy rollout, stop `vibe-kanban.service`, replace `/home/mcp/.local/bin/vibe-kanban-server-cleanfix` with the fresh `target/release/server` build from this branch, and start the service again.
+- After the binary swap, run one real workspace turn and verify the subscriber receives the `vk-workspace-turns` notification with the workspace name plus compact summary metadata.
+- Open or update the branch PR if more ntfy follow-up work is resumed later.
 
 ## What The Next Agent Must Not Do
 
@@ -56,24 +55,16 @@
 - Task-specific validation for any runtime or UI change
 
 ## Verification Status From This Session
-
-- Temporary smoke test passed against the live `vibe-kanban` project:
-  - created a temporary issue
-  - created a linked workspace against `_vibe_kanban_repo`
-  - verified the workspace appeared under the issue immediately
-  - stopped/deleted the workspace and removed the test issue cleanly
-- Hyrox issue/workspace/PR regressions were repaired locally:
-  - `ART-57` workspace re-linked
-  - `ART-60` merged PR `#799` restored
-  - `ART-61` merged PR `#800` restored
-  - `T42` merged PR `#801` restored
-- PR badges now render on small issue cards.
 - `cargo test -p services notification -- --nocapture` passed, including new metadata parsing tests.
 - `ssh homelab docker exec ntfy ntfy publish --quiet --title 'VK ntfy smoke' --message 'workspace notification smoke test' <throwaway-topic>` exited `0`.
+- `systemctl --user show vibe-kanban.service --property=Environment,ExecStart,ActiveState,SubState --no-pager` confirmed `VK_NTFY_TOPIC=vk-workspace-turns` and the installed launcher path.
+- `strings /home/mcp/.local/bin/vibe-kanban-server-cleanfix | rg "VK_NTFY_TOPIC|failed to publish workspace completion to ntfy|notify_workspace_turn_completion|Workspace::"` returned no matches, confirming the live installed binary does not yet include the branch ntfy code.
+- `cargo build --release -p server` completed successfully from this worktree.
+- Direct binary replacement into `/home/mcp/.local/bin/vibe-kanban-server-cleanfix` initially failed with `Text file busy` while the service was still running.
 - `pnpm run format` did not complete because `packages/web-core` could not find `prettier` in this worktree.
 
 ## Session Metadata
 
-- Branch: `staging`
-- Repo: `/home/mcp/_vibe_kanban_repo`
-- Focus: local-only stabilization, recoverability, project/issue/workspace repair, and ntfy turn-completion notifications
+- Branch: `vk/7617-vk-wire-ntfy`
+- Repo: `/home/mcp/code/worktrees/7617-vk-wire-ntfy/_vibe_kanban_repo`
+- Focus: ntfy turn-completion notifications, live service topic wiring, and pending installed-binary rollout

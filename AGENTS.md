@@ -109,6 +109,12 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 ## Agent Summary Standard
 
 - Use this format only for the final user-facing completion message of a turn or task. Do not use it for intermediate progress updates.
+- For any user-facing preview URL in any response:
+  - generate it via the checked-in helper workflow, not from dev-server logs
+  - use `pnpm run --silent tailscale:preview:origin` as the canonical source when the branch supports the Tailscale preview workflow
+  - never present `localhost`, `127.0.0.1`, `0.0.0.0`, LAN IP addresses, or other machine-local addresses as if they were remote-accessible preview links
+  - if a remote-accessible preview has not actually been generated, say so instead of guessing
+- For any user-facing PR URL or preview URL anywhere in a response, use a clickable Markdown link. Do not emit bare URLs in prose or metadata.
 - Use this default section order:
   - `Validation`
   - `What changed`

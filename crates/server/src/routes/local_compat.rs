@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use api_types::some_if_present;
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
@@ -132,6 +133,7 @@ struct CreateIssueRequest {
     status_id: String,
     title: String,
     description: Option<String>,
+    priority: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -139,6 +141,8 @@ struct UpdateIssueRequest {
     status_id: Option<String>,
     title: Option<String>,
     description: Option<Option<String>>,
+    #[serde(default, deserialize_with = "some_if_present")]
+    priority: Option<Option<String>>,
     parent_issue_id: Option<Option<Uuid>>,
 }
 
@@ -153,6 +157,8 @@ struct BulkIssueUpdateItem {
     status_id: Option<String>,
     title: Option<String>,
     description: Option<Option<String>>,
+    #[serde(default, deserialize_with = "some_if_present")]
+    priority: Option<Option<String>>,
     parent_issue_id: Option<Option<Uuid>>,
 }
 
@@ -284,9 +290,24 @@ fn extract_status_name(description: Option<&str>, fallback: &TaskStatus) -> Stri
     task_status_name(fallback).to_string()
 }
 
-fn ensure_status_metadata(description: Option<String>, status_name: &str) -> Option<String> {
+fn normalize_priority_value(priority: Option<&str>) -> Option<&'static str> {
+    match priority?.trim().to_ascii_lowercase().as_str() {
+        "urgent" => Some("urgent"),
+        "high" => Some("high"),
+        "medium" => Some("medium"),
+        "low" => Some("low"),
+        _ => None,
+    }
+}
+
+fn ensure_issue_metadata(
+    description: Option<String>,
+    status_name: &str,
+    priority: Option<&str>,
+) -> Option<String> {
     let body = description.unwrap_or_default();
-    let mut replaced = false;
+    let mut replaced_status = false;
+    let mut replaced_priority = false;
     let mut lines = Vec::new();
 
     for line in body.lines() {
@@ -295,7 +316,16 @@ fn ensure_status_metadata(description: Option<String>, status_name: &str) -> Opt
             let prefix_len = line.len() - trimmed.len();
             let prefix = &line[..prefix_len];
             lines.push(format!("{prefix}- Original Status: {status_name}"));
-            replaced = true;
+            replaced_status = true;
+        } else if trimmed.starts_with("- Original Priority:")
+            || trimmed.starts_with("Original Priority:")
+        {
+            replaced_priority = true;
+            if let Some(priority) = priority {
+                let prefix_len = line.len() - trimmed.len();
+                let prefix = &line[..prefix_len];
+                lines.push(format!("{prefix}- Original Priority: {priority}"));
+            }
         } else {
             lines.push(line.to_string());
         }
@@ -305,19 +335,35 @@ fn ensure_status_metadata(description: Option<String>, status_name: &str) -> Opt
         "
 ",
     );
-    if !replaced {
-        if !next.trim().is_empty() {
-            next.push_str(
-                "
+    let mut metadata_lines = Vec::new();
+    if !replaced_status {
+        metadata_lines.push(format!("- Original Status: {status_name}"));
+    }
+    if let Some(priority) = priority
+        && !replaced_priority
+    {
+        metadata_lines.push(format!("- Original Priority: {priority}"));
+    }
 
+    if !metadata_lines.is_empty() {
+        if !next.trim().is_empty() {
+            if next.contains("Local metadata") {
+                next.push('\n');
+            } else {
+                next.push_str(
+                    "
+
+Local metadata
+",
+                );
+            }
+        } else {
+            next.push_str(
+                "Local metadata
 ",
             );
         }
-        next.push_str(
-            "Local metadata
-- Original Status: ",
-        );
-        next.push_str(status_name);
+        next.push_str(&metadata_lines.join("\n"));
     }
 
     let trimmed = next.trim().to_string();
@@ -1346,7 +1392,11 @@ async fn create_issue(
         &deployment.db().pool,
         request.project_id,
         request.title,
-        ensure_status_metadata(request.description, &status_name),
+        ensure_issue_metadata(
+            request.description,
+            &status_name,
+            normalize_priority_value(request.priority.as_deref()),
+        ),
         parse_task_status(&status_name),
     )
     .await?;
@@ -1389,14 +1439,20 @@ async fn update_issue(
         .unwrap_or(existing.description.clone());
     let entered_in_staging =
         !is_in_staging_status(&previous_status_name) && is_in_staging_status(&status_name);
+    let existing_priority = extract_priority(existing.description.as_deref());
+    let next_priority = match request.priority.as_ref() {
+        Some(priority) => normalize_priority_value(priority.as_deref()),
+        None => normalize_priority_value(existing_priority.as_deref()),
+    };
 
     Task::update(
         &deployment.db().pool,
         issue_id,
         request.title,
-        Some(ensure_status_metadata(
+        Some(ensure_issue_metadata(
             next_description_source,
             &status_name,
+            next_priority,
         )),
         Some(parse_task_status(&status_name)),
         request.parent_issue_id,
@@ -1446,14 +1502,20 @@ async fn bulk_update_issues(
             .unwrap_or(existing.description.clone());
         let entered_in_staging =
             !is_in_staging_status(&previous_status_name) && is_in_staging_status(&status_name);
+        let existing_priority = extract_priority(existing.description.as_deref());
+        let next_priority = match update.priority.as_ref() {
+            Some(priority) => normalize_priority_value(priority.as_deref()),
+            None => normalize_priority_value(existing_priority.as_deref()),
+        };
 
         Task::update(
             &deployment.db().pool,
             update.id,
             update.title,
-            Some(ensure_status_metadata(
+            Some(ensure_issue_metadata(
                 next_description_source,
                 &status_name,
+                next_priority,
             )),
             Some(parse_task_status(&status_name)),
             update.parent_issue_id,
@@ -1552,4 +1614,41 @@ pub fn router() -> Router<DeploymentImpl> {
             "/issues/{issue_id}",
             patch(update_issue).delete(delete_issue),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ensure_issue_metadata, extract_priority};
+
+    #[test]
+    fn ensure_issue_metadata_sets_priority() {
+        let next =
+            ensure_issue_metadata(Some("Body text".to_string()), "In progress", Some("high"));
+
+        assert_eq!(
+            next.as_deref(),
+            Some(
+                "Body text\n\nLocal metadata\n- Original Status: In progress\n- Original Priority: high"
+            )
+        );
+        assert_eq!(extract_priority(next.as_deref()), Some("high".to_string()));
+    }
+
+    #[test]
+    fn ensure_issue_metadata_clears_priority_and_keeps_status() {
+        let next = ensure_issue_metadata(
+            Some(
+                "Body text\n\nLocal metadata\n- Original Status: To do\n- Original Priority: urgent"
+                    .to_string(),
+            ),
+            "Done",
+            None,
+        );
+
+        assert_eq!(
+            next.as_deref(),
+            Some("Body text\n\nLocal metadata\n- Original Status: Done")
+        );
+        assert_eq!(extract_priority(next.as_deref()), None);
+    }
 }

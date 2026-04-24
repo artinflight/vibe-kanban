@@ -2,33 +2,28 @@
 
 ## What Changed This Session
 
-- Implemented immediate worktree-folder deletion for workspaces whose tracked PRs are merged into `staging`.
-- Implemented automatic workspace archiving and worktree cleanup when a linked local issue is moved into `In Staging`.
-- Reused the existing archive-on-merge flow instead of adding a new background job.
-- Added a safe retry after archive-script completion so archive scripts can finish before the worktree is removed.
-- Refreshed the branch-local continuity docs and `VK_WORKFLOW.md` for the new behavior.
+- Rebasing `vk/18a4-vk-issue-priorit` onto current `fork/staging` conflicted in `crates/server/src/routes/local_compat.rs` and the branch-local continuity docs.
+- Kept the local issue priority fix and merged it with newer `fork/staging` behavior that archives linked workspaces when a local issue moves into `In Staging`.
+- Refreshed the branch-local continuity docs back to this worktree instead of the unrelated branch notes that were present in the rebase base.
 
 ## What Is True Right Now
 
-- `crates/services/src/services/container.rs` now exposes a generic safe-delete helper for archived worktrees and keeps the merged-PR-to-`staging` cleanup check as a narrower wrapper.
-- `crates/services/src/services/pr_monitor.rs` calls the merged-PR helper after merge detection archives the workspace.
-- `crates/server/src/routes/workspaces/pr.rs` calls the same merged-PR helper when attaching an already-merged PR.
-- `crates/server/src/routes/local_compat.rs` now archives linked local workspaces and requests immediate worktree cleanup when an issue transitions into `In Staging`, including bulk issue updates.
-- `crates/local-deployment/src/container.rs` retries deletion after archive-script completion, which covers workspaces whose archive script delayed cleanup.
-- Pinned workspaces still keep the existing behavior and do not auto-archive on merge.
-- The branch is currently mid-rebase onto `fork/staging`, and only the continuity docs conflicted.
+- `crates/server/src/routes/local_compat.rs` now needs both behaviors preserved:
+  - local priority create/update/bulk-update support
+  - archive-on-`In Staging` behavior from current `fork/staging`
+- The branch is mid-rebase until `git rebase --continue` completes.
+- The local `staging` worktree is clean, but its branch still has unrelated divergence from `fork/staging`.
 
 ## What The Next Agent Should Do
 
-- Finish the rebase with the refreshed continuity docs.
+- Finish the rebase with `git rebase --continue`.
 - Merge the rebased branch into the local `staging` checkout.
-- Push or open/update the PR only after the merge step the user requested is complete.
+- Report the resulting local `staging` state clearly, including any pre-existing divergence from `fork/staging`.
 
 ## What The Next Agent Must Not Do
 
-- Do not remove the archive-script retry path; that would reintroduce a race where the worktree disappears mid-script.
-- Do not broaden the merged-PR cleanup path to non-`staging` PRs unless the user explicitly asks for that policy change.
-- Do not change pinned-workspace behavior without confirmation.
+- Do not drop the `In Staging` archive behavior while keeping the priority fix.
+- Do not replace this branch’s continuity notes with stale notes from another worktree.
 
 ## Verification Required Before Further Changes
 
@@ -38,12 +33,15 @@
 
 ## Verification Status From This Session
 
-- The branch rebased attempt started and only continuity-doc conflicts appeared.
-- `cargo fmt --all` had already been run before this rebase attempt.
-- Full tests were not rerun in this session.
+- Rebase started and conflicts were identified in:
+  - `crates/server/src/routes/local_compat.rs`
+  - `STREAM.md`
+  - `HANDOFF.md`
+  - `DELTA.md`
+- Conflict resolution has been applied locally, but the rebase is not complete until it is continued successfully.
 
 ## Session Metadata
 
-- Branch: `vk/7b9a-vk-worktree-clea`
-- Repo: `/home/mcp/code/worktrees/7b9a-vk-worktree-clea/_vibe_kanban_repo`
-- Focus: immediate worktree cleanup after PR merge into `staging` and on `In Staging` issue transitions
+- Branch: `vk/18a4-vk-issue-priorit`
+- Repo: `/home/mcp/code/worktrees/18a4-vk-issue-priorit/_vibe_kanban_repo`
+- Focus: land the local issue priority fix onto current `staging`

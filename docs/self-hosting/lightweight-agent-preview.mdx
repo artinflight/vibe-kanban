@@ -14,6 +14,12 @@ Kanban instance first, or set `VK_PREVIEW_BACKEND_PORT` to the backend port you
 want to reuse.
 </Note>
 
+<Note>
+Current branches allow Tailscale Serve preview hostnames directly through
+`packages/local-web/vite.config.ts`, so a lightweight preview can be published
+at a `https://...ts.net:<port>` URL without a separate backend watcher.
+</Note>
+
 ## When to use it
 
 - Use this workflow for routine UI, layout, copy, and browser smoke tests.
@@ -50,6 +56,16 @@ Stop the preview when you are done:
 ```bash
 pnpm run preview:light:stop
 ```
+
+If you want to expose that lightweight preview over Tailscale Serve, keep the
+frontend port fixed and publish the matching HTTPS port:
+
+```bash
+VK_PREVIEW_PORT=3001 pnpm run preview:light:run
+tailscale serve --bg --https=3001 http://127.0.0.1:3001
+```
+
+That route should match the exact frontend port already in use.
 
 ## Use it from the Vibe Kanban preview panel
 
@@ -118,6 +134,17 @@ Or start searching from a different range:
 ```bash
 VK_PREVIEW_PORT_START=3040 pnpm run preview:light
 ```
+</Accordion>
+
+<Accordion title="The ts.net URL points at the wrong lightweight preview">
+Make sure the published Tailscale HTTPS port matches the live frontend port.
+For example, if the preview is running on `3001`, publish `3001`:
+
+```bash
+tailscale serve --bg --https=3001 http://127.0.0.1:3001
+```
+
+Do not publish the next free port after the preview is already running.
 </Accordion>
 
 <Accordion title="The preview panel starts and immediately stops">

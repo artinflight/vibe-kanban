@@ -34,7 +34,15 @@ This workflow is for temporary development previews. It is not a production depl
 
 <Steps>
 <Step title="Compute the preview origin">
-  This repo includes a helper that uses your worktree's allocated frontend port and your current Tailscale MagicDNS hostname.
+  This repo includes a helper that uses your worktree's current frontend port
+  and your current Tailscale MagicDNS hostname.
+
+  The helper prefers, in order:
+
+  1. `FRONTEND_PORT` from the current shell
+  2. the saved `.dev-ports.json` entry for this worktree
+  3. a fresh allocation from `scripts/setup-dev-environment.js` if nothing has
+     been started yet
 
   To print the preview origin:
 
@@ -74,6 +82,12 @@ This workflow is for temporary development previews. It is not a production depl
   <Info>
   The helper publishes `https://<machine>.<tailnet>.ts.net:<frontend-port>` and forwards that HTTPS port to the same local frontend port. Because frontend ports are already unique per worktree, multiple agents can run this simultaneously without reusing the same URL.
   </Info>
+
+  <Tip>
+  Run `pnpm run tailscale:preview:start` after the dev server is already up for
+  that worktree. That ensures the helper reuses the live frontend port instead
+  of choosing a new free one.
+  </Tip>
 </Step>
 
 <Step title="Verify the preview">
@@ -113,6 +127,14 @@ Check that Tailscale Serve is forwarding to the same frontend port that the repo
 pnpm run tailscale:preview:origin
 tailscale serve status
 ```
+
+If the helper published the wrong port, stop the route and re-run it after the
+frontend is already serving:
+
+```bash
+pnpm run tailscale:preview:stop
+pnpm run tailscale:preview:start
+```
 </Accordion>
 
 <Accordion title="The UI loads but API requests fail with 403">
@@ -126,6 +148,11 @@ pnpm run dev
 ```
 
 If you are on an older branch that still hard-codes `VK_ALLOWED_ORIGINS=http://localhost:<port>` inside `pnpm run dev`, the frontend will load but API requests from the Tailscale URL will fail. In that case, update to a branch that includes this preview fix or patch `package.json` first.
+
+Current branches also rely on the local Vite server allowing `*.ts.net` hosts
+and stripping the browser `Origin` header before proxying `/api` and `/v1` to
+the local backend. If your preview URL can load static assets but backend calls
+still fail, make sure the branch includes the matching `packages/local-web/vite.config.ts` changes.
 </Accordion>
 
 <Accordion title="Two previews were overwriting each other">

@@ -24,6 +24,25 @@ pub fn codex_home() -> Option<PathBuf> {
     dirs::home_dir().map(|home| home.join(".codex"))
 }
 
+fn stable_app_server_process_cwd(current_dir: &Path) -> PathBuf {
+    stable_app_server_process_cwd_with_home(current_dir, dirs::home_dir())
+}
+
+fn stable_app_server_process_cwd_with_home(
+    current_dir: &Path,
+    home_dir: Option<PathBuf>,
+) -> PathBuf {
+    home_dir
+        .filter(|home| home.is_absolute())
+        .unwrap_or_else(|| {
+            current_dir
+                .ancestors()
+                .last()
+                .unwrap_or_else(|| Path::new("/"))
+                .to_path_buf()
+        })
+}
+
 pub(crate) fn resolve_model(model: Option<&str>) -> (Option<&str>, bool) {
     match model.and_then(|m| m.strip_suffix("-fast")) {
         Some(base) => (Some(base), true),
@@ -633,6 +652,7 @@ impl Codex {
         Fut: std::future::Future<Output = Result<(), ExecutorError>> + Send + 'static,
     {
         let (program_path, args) = command_parts.into_resolved().await?;
+        let process_cwd = stable_app_server_process_cwd(current_dir);
 
         let mut process = Command::new(program_path);
         process
@@ -640,7 +660,9 @@ impl Codex {
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
-            .current_dir(current_dir)
+            // Keep the app-server process itself on a stable cwd so it can
+            // finish cleanly even if the workspace deletes its own worktree.
+            .current_dir(&process_cwd)
             .env("NPM_CONFIG_LOGLEVEL", "error")
             .env("NODE_NO_WARNINGS", "1")
             .env("NO_COLOR", "1")
@@ -742,5 +764,29 @@ impl Codex {
             exit_signal: Some(exit_signal_rx),
             cancel: Some(cancel),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::stable_app_server_process_cwd_with_home;
+
+    #[test]
+    fn stable_app_server_process_cwd_stays_outside_worktree_when_home_exists() {
+        let current_dir = Path::new("/home/mcp/code/worktrees/demo/_vibe_kanban_repo");
+        let process_cwd =
+            stable_app_server_process_cwd_with_home(current_dir, Some("/home/mcp".into()));
+
+        assert_eq!(process_cwd, Path::new("/home/mcp"));
+    }
+
+    #[test]
+    fn stable_app_server_process_cwd_falls_back_to_root_without_home() {
+        let current_dir = Path::new("/workspace/demo");
+        let process_cwd = stable_app_server_process_cwd_with_home(current_dir, None);
+
+        assert_eq!(process_cwd, Path::new("/"));
     }
 }

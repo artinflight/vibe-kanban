@@ -78,6 +78,27 @@ export default schemas;
   };
 }
 
+function createLocalApiProxy(targetPort: string) {
+  return {
+    target: `http://localhost:${targetPort}`,
+    changeOrigin: true,
+    ws: true,
+    configure(proxy: any) {
+      proxy.on('proxyReq', (proxyReq: any) => {
+        // The Vite dev server is acting as the same-origin gateway for the
+        // browser, so do not forward the browser's original Origin header to
+        // the local backend. This keeps remote-accessible previews such as
+        // Tailscale or cloudflared from tripping backend origin validation.
+        proxyReq.removeHeader('origin');
+      });
+
+      proxy.on('proxyReqWs', (proxyReq: any) => {
+        proxyReq.removeHeader('origin');
+      });
+    },
+  };
+}
+
 export default defineConfig({
   customLogger: createFilteredLogger(),
   publicDir: path.resolve(__dirname, '../public'),
@@ -130,11 +151,7 @@ export default defineConfig({
   server: {
     port: parseInt(process.env.FRONTEND_PORT || '3000'),
     proxy: {
-      '/api': {
-        target: `http://localhost:${process.env.BACKEND_PORT || '3001'}`,
-        changeOrigin: true,
-        ws: true,
-      },
+      '/api': createLocalApiProxy(process.env.BACKEND_PORT || '3001'),
     },
     fs: {
       allow: [path.resolve(__dirname, '.'), path.resolve(__dirname, '../..')],

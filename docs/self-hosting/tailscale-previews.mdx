@@ -57,7 +57,7 @@ This workflow is for temporary development previews. It is not a production depl
   pnpm run dev
   ```
 
-  The dev script allocates the frontend, backend, and preview-proxy ports automatically.
+  The dev script allocates the frontend, backend, and preview-proxy ports automatically. It now preserves your supplied Tailscale origin and appends the local `http://localhost:<frontend-port>` origin needed for normal in-browser local development.
 
   <Tip>
   If you want repeatable ports for a longer debugging session, set `PORT` before starting the stack. The repo will use that value for the frontend and assign the backend and preview-proxy ports immediately after it.
@@ -124,6 +124,8 @@ Restart the dev stack with the full origin, including `https://`:
 eval "$(pnpm run --silent tailscale:preview:env)"
 pnpm run dev
 ```
+
+If you are on an older branch that still hard-codes `VK_ALLOWED_ORIGINS=http://localhost:<port>` inside `pnpm run dev`, the frontend will load but API requests from the Tailscale URL will fail. In that case, update to a branch that includes this preview fix or patch `package.json` first.
 </Accordion>
 
 <Accordion title="Two previews were overwriting each other">

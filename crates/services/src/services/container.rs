@@ -194,6 +194,8 @@ pub trait ContainerService {
 
     async fn kill_all_running_processes(&self) -> Result<(), ContainerError>;
 
+    async fn delete_worktree(&self, workspace: &Workspace) -> Result<(), ContainerError>;
+
     async fn delete(&self, workspace: &Workspace) -> Result<(), ContainerError>;
 
     /// A context is finalized when

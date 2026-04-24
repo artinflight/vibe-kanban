@@ -966,11 +966,14 @@ export function KanbanContainer() {
     [statuses]
   );
 
-  // Filter statuses: visible (non-hidden) for kanban, hidden for tabs
-  const visibleStatuses = useMemo(
-    () => sortedStatuses.filter((s) => !s.hidden),
-    [sortedStatuses]
-  );
+  // Fail safe if persisted project status settings hide every column.
+  // The kanban board should stay usable rather than rendering an empty state.
+  const visibleStatuses = useMemo(() => {
+    const explicitVisibleStatuses = sortedStatuses.filter((s) => !s.hidden);
+    return explicitVisibleStatuses.length > 0
+      ? explicitVisibleStatuses
+      : sortedStatuses;
+  }, [sortedStatuses]);
   const kanbanGridTemplateColumns = useMemo(
     () =>
       visibleStatuses
@@ -990,10 +993,17 @@ export function KanbanContainer() {
     return map;
   }, [visibleStatuses]);
 
-  const hiddenStatuses = useMemo(
-    () => sortedStatuses.filter((s) => s.hidden),
-    [sortedStatuses]
-  );
+  const hiddenStatuses = useMemo(() => {
+    const explicitVisibleStatusIds = new Set(
+      sortedStatuses.filter((s) => !s.hidden).map((s) => s.id)
+    );
+
+    if (explicitVisibleStatusIds.size === 0) {
+      return [];
+    }
+
+    return sortedStatuses.filter((s) => !explicitVisibleStatusIds.has(s.id));
+  }, [sortedStatuses]);
 
   const defaultCreateStatusId = useMemo(() => {
     if (kanbanViewMode === 'kanban') {

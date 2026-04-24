@@ -152,6 +152,7 @@ export default defineConfig({
     port: parseInt(process.env.FRONTEND_PORT || '3000'),
     proxy: {
       '/api': createLocalApiProxy(process.env.BACKEND_PORT || '3001'),
+      '/v1': createLocalApiProxy(process.env.BACKEND_PORT || '3001'),
     },
     fs: {
       allow: [path.resolve(__dirname, '.'), path.resolve(__dirname, '../..')],

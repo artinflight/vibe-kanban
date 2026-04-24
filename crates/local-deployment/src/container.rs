@@ -242,6 +242,7 @@ impl LocalContainerService {
 
     async fn cleanup_workspace(&self, workspace: &Workspace) {
         let Some(container_ref) = &workspace.container_ref else {
+            let _ = Workspace::mark_worktree_deleted(&self.db.pool, workspace.id).await;
             return;
         };
         let workspace_dir = PathBuf::from(container_ref);
@@ -1237,6 +1238,11 @@ impl ContainerService for LocalContainerService {
 
     async fn delete(&self, workspace: &Workspace) -> Result<(), ContainerError> {
         self.try_stop(workspace, true).await;
+        self.cleanup_workspace(workspace).await;
+        Ok(())
+    }
+
+    async fn delete_worktree(&self, workspace: &Workspace) -> Result<(), ContainerError> {
         self.cleanup_workspace(workspace).await;
         Ok(())
     }

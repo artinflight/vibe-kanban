@@ -769,6 +769,20 @@ impl LocalContainerService {
                     }
                 }
 
+                if matches!(
+                    ctx.execution_process.run_reason,
+                    ExecutionProcessRunReason::ArchiveScript
+                ) && let Err(e) = container
+                    .maybe_delete_archived_worktree_if_safe(ctx.workspace.id)
+                    .await
+                {
+                    tracing::error!(
+                        "Failed to delete archived worktree after archive script for workspace {}: {}",
+                        ctx.workspace.id,
+                        e
+                    );
+                }
+
                 // Fire analytics event when CodingAgent execution has finished
                 if config.read().await.analytics_enabled
                     && matches!(

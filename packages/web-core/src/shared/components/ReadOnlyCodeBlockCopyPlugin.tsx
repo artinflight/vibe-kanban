@@ -11,7 +11,7 @@ import {
 import { CodeBlockCopyButton } from '@/shared/components/CodeBlockCopyButton';
 
 interface MountedCodeBlock {
-  host: HTMLDivElement;
+  host: HTMLSpanElement;
   root: Root;
   text: string;
 }
@@ -104,7 +104,7 @@ export function ReadOnlyCodeBlockCopyPlugin({
           return;
         }
 
-        const host = document.createElement('div');
+        const host = document.createElement('span');
         host.className = 'absolute right-2 top-2 z-20';
 
         codeBlock.style.position = 'relative';

@@ -34,13 +34,17 @@ export function ReadOnlyCodeBlockCopyPlugin({
     const editorRoot = editor.getRootElement();
     if (!editorRoot) return;
 
+    const getCodeBlockContainer = (element: HTMLElement) =>
+      element.closest('pre') instanceof HTMLElement
+        ? (element.closest('pre') as HTMLElement)
+        : element;
+
     const removeMountedBlock = (element: HTMLElement) => {
       const mountedBlock = mountedBlocksRef.current.get(element);
       if (!mountedBlock) return;
 
       mountedBlock.root.unmount();
       mountedBlock.host.remove();
-      element.classList.remove('group');
       element.style.position = '';
       element.style.paddingTop = '';
       element.style.paddingRight = '';
@@ -65,8 +69,9 @@ export function ReadOnlyCodeBlockCopyPlugin({
         const visitNode = (node: ElementNode | RootNode = $getRoot()) => {
           for (const child of node.getChildren()) {
             if ($isCodeNode(child)) {
-              const element = editor.getElementByKey(child.getKey());
-              if (element instanceof HTMLElement) {
+              const lexicalElement = editor.getElementByKey(child.getKey());
+              if (lexicalElement instanceof HTMLElement) {
+                const element = getCodeBlockContainer(lexicalElement);
                 codeBlocks.push({
                   element,
                   text: child.getTextContent().replace(/\n$/, ''),
@@ -102,13 +107,11 @@ export function ReadOnlyCodeBlockCopyPlugin({
         }
 
         const host = document.createElement('div');
-        host.className =
-          'pointer-events-none absolute right-2 top-2 z-10 opacity-100';
+        host.className = 'absolute right-2 top-2 z-20';
 
         codeBlock.style.position = 'relative';
         codeBlock.style.paddingTop = '2.25rem';
         codeBlock.style.paddingRight = '3rem';
-        codeBlock.classList.add('group');
         codeBlock.appendChild(host);
 
         const root = createRoot(host);

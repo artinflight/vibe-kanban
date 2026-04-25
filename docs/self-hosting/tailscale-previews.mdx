@@ -14,6 +14,7 @@ Use this workflow when you want to share a branch preview for QA or review witho
 - Allows browser API requests from your Tailscale preview URL with `VK_ALLOWED_ORIGINS`
 - Uses your machine's `*.ts.net` MagicDNS hostname with a per-preview HTTPS port
 - Avoids collisions when multiple worktrees or agents publish previews from the same machine
+- Keeps local kanban fallback routes working by proxying both `/api` and `/v1`
 
 <Warning>
 This workflow is for temporary development previews. It is not a production deployment.
@@ -153,6 +154,24 @@ Current branches also rely on the local Vite server allowing `*.ts.net` hosts
 and stripping the browser `Origin` header before proxying `/api` and `/v1` to
 the local backend. If your preview URL can load static assets but backend calls
 still fail, make sure the branch includes the matching `packages/local-web/vite.config.ts` changes.
+</Accordion>
+
+<Accordion title="The preview loads, but local kanbans show empty-state or hidden-status errors">
+That usually means the frontend is serving HTML for `/v1/fallback/...` routes
+instead of proxying them to the backend.
+
+Local project kanbans depend on fallback endpoints such as:
+
+```text
+/v1/fallback/project_statuses
+/v1/fallback/issues
+```
+
+If those routes are not proxied through the local Vite server, the left nav can
+still load while the kanban body fails or shows misleading empty states.
+
+Make sure the branch's `packages/local-web/vite.config.ts` proxies both `/api`
+and `/v1` to the backend, then restart the preview.
 </Accordion>
 
 <Accordion title="Two previews were overwriting each other">

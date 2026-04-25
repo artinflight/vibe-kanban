@@ -23,8 +23,10 @@ export function CodeBlockCopyButton({
 
   const handleCopy = useCallback(async () => {
     if (!text) return;
-    await writeClipboardViaBridge(text);
-    setCopied(true);
+    const copiedToClipboard = await writeClipboardViaBridge(text);
+    if (copiedToClipboard) {
+      setCopied(true);
+    }
   }, [text]);
 
   return (

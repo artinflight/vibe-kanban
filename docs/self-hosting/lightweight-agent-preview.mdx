@@ -8,6 +8,9 @@ agent worktree. It starts only the local Vite frontend and proxies API and
 websocket traffic to an existing Vibe Kanban backend, so it avoids extra Rust
 watchers and duplicate backend processes.
 
+For local kanban boards, the preview must proxy both `/api` and `/v1` to the
+backend. The `/v1/fallback/...` routes provide local project issues and statuses.
+
 <Note>
 The default backend is `http://127.0.0.1:4311`. Start the main local Vibe
 Kanban instance first, or set `VK_PREVIEW_BACKEND_PORT` to the backend port you
@@ -145,6 +148,23 @@ tailscale serve --bg --https=3001 http://127.0.0.1:3001
 ```
 
 Do not publish the next free port after the preview is already running.
+</Accordion>
+
+<Accordion title="The preview opens, but local kanbans do not load">
+If the left nav works but the kanban body is empty or shows hidden-status
+messages only in preview, check whether the preview frontend is proxying
+`/v1/fallback/...` routes to the backend.
+
+From another machine on the tailnet, the preview URL should return JSON for:
+
+```text
+https://<machine>.<tailnet>.ts.net:<port>/v1/fallback/project_statuses?project_id=...
+https://<machine>.<tailnet>.ts.net:<port>/v1/fallback/issues?project_id=...
+```
+
+If those URLs return the Vite HTML shell instead of JSON, update the branch so
+`packages/local-web/vite.config.ts` proxies both `/api` and `/v1`, then restart
+the preview.
 </Accordion>
 
 <Accordion title="The preview panel starts and immediately stops">

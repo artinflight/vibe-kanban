@@ -182,7 +182,8 @@ function WorkspaceSelectionContent({
       const defaults = await getWorkspaceDefaults(
         workspaces,
         localWorkspaceIds,
-        projectId
+        projectId,
+        issueId
       );
 
       const createState = buildWorkspaceCreateInitialState({

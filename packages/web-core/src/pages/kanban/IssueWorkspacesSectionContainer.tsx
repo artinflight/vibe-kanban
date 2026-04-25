@@ -200,7 +200,8 @@ export function IssueWorkspacesSectionContainer({
     const defaults = await getWorkspaceDefaults(
       workspaces,
       localWorkspaceIds,
-      projectId
+      projectId,
+      issueId
     );
     const createState = buildWorkspaceCreateInitialState({
       prompt: initialPrompt,

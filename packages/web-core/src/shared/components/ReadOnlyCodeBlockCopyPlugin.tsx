@@ -30,9 +30,7 @@ export function ReadOnlyCodeBlockCopyPlugin({
 
   useEffect(() => {
     if (!enabled) return;
-
-    const editorRoot = editor.getRootElement();
-    if (!editorRoot) return;
+    let observer: MutationObserver | null = null;
 
     const getCodeBlockContainer = (element: HTMLElement) =>
       element.closest('pre') instanceof HTMLElement
@@ -135,26 +133,41 @@ export function ReadOnlyCodeBlockCopyPlugin({
       queueMicrotask(syncCodeBlocks);
     };
 
+    const attachObserver = (root: HTMLElement | null) => {
+      observer?.disconnect();
+      observer = null;
+
+      if (!root) {
+        return;
+      }
+
+      observer = new MutationObserver(syncCodeBlocks);
+      observer.observe(root, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    };
+
     const unregisterMutationListener = editor.registerMutationListener(
       CodeNode,
       queueSync,
       { skipInitialization: false }
     );
     const unregisterUpdateListener = editor.registerUpdateListener(queueSync);
-
-    const observer = new MutationObserver(syncCodeBlocks);
-    observer.observe(editorRoot, {
-      childList: true,
-      subtree: true,
-      characterData: true,
+    const unregisterRootListener = editor.registerRootListener((root) => {
+      attachObserver(root);
+      queueSync();
     });
 
+    attachObserver(editor.getRootElement());
     syncCodeBlocks();
 
     return () => {
       unregisterMutationListener();
       unregisterUpdateListener();
-      observer.disconnect();
+      unregisterRootListener();
+      observer?.disconnect();
       for (const element of Array.from(mountedBlocksRef.current.keys())) {
         removeMountedBlock(element);
       }

@@ -7,10 +7,11 @@ use axum::{
     routing::{delete, post},
 };
 use db::models::{
-    merge::MergeStatus, project::Project, pull_request::PullRequest, task::Task,
-    workspace::Workspace,
+    merge::MergeStatus, project::Project, pull_request::PullRequest, repo::Repo, task::Task,
+    workspace::Workspace, workspace_repo::WorkspaceRepo,
 };
 use deployment::Deployment;
+use git_host::{GitHostProvider, GitHostService};
 use serde::Deserialize;
 use services::services::{diff_stream, remote_client::RemoteClientError, remote_sync};
 use utils::response::ApiResponse;
@@ -22,6 +23,107 @@ use crate::{DeploymentImpl, error::ApiError, middleware::load_workspace_middlewa
 pub struct LinkWorkspaceRequest {
     pub project_id: Uuid,
     pub issue_id: Uuid,
+}
+
+async fn backfill_local_pr_rows_for_workspace(
+    deployment: &DeploymentImpl,
+    workspace: &Workspace,
+) -> Result<(), ApiError> {
+    let pool = &deployment.db().pool;
+    let workspace_repos = WorkspaceRepo::find_by_workspace_id(pool, workspace.id).await?;
+    let git = deployment.git();
+
+    for workspace_repo in workspace_repos {
+        if !PullRequest::find_by_workspace_and_repo_id(pool, workspace.id, workspace_repo.repo_id)
+            .await?
+            .is_empty()
+        {
+            continue;
+        }
+
+        let Some(repo) = Repo::find_by_id(pool, workspace_repo.repo_id).await? else {
+            continue;
+        };
+
+        let remote = match git.resolve_remote_for_branch(&repo.path, &workspace_repo.target_branch)
+        {
+            Ok(remote) => remote,
+            Err(err) => {
+                tracing::warn!(
+                    "Skipping PR backfill for workspace {} repo {}: failed to resolve remote for {}: {}",
+                    workspace.id,
+                    workspace_repo.repo_id,
+                    workspace_repo.target_branch,
+                    err
+                );
+                continue;
+            }
+        };
+
+        let git_host = match GitHostService::from_url(&remote.url) {
+            Ok(host) => host,
+            Err(err) => {
+                tracing::warn!(
+                    "Skipping PR backfill for workspace {} repo {}: failed to initialize git host for {}: {}",
+                    workspace.id,
+                    workspace_repo.repo_id,
+                    remote.url,
+                    err
+                );
+                continue;
+            }
+        };
+
+        let prs = match git_host
+            .list_prs_for_branch(&repo.path, &remote.url, &workspace.branch)
+            .await
+        {
+            Ok(prs) => prs,
+            Err(err) => {
+                tracing::warn!(
+                    "Skipping PR backfill for workspace {} repo {} branch {}: {}",
+                    workspace.id,
+                    workspace_repo.repo_id,
+                    workspace.branch,
+                    err
+                );
+                continue;
+            }
+        };
+
+        let Some(pr_info) = prs.into_iter().next() else {
+            continue;
+        };
+
+        PullRequest::create_for_workspace(
+            pool,
+            workspace.id,
+            workspace_repo.repo_id,
+            &workspace_repo.target_branch,
+            pr_info.number,
+            &pr_info.url,
+        )
+        .await?;
+
+        if !matches!(pr_info.status, MergeStatus::Open) {
+            let merged_at = if matches!(&pr_info.status, MergeStatus::Merged) {
+                pr_info.merged_at
+            } else {
+                None
+            };
+
+            PullRequest::update_status(
+                pool,
+                &pr_info.url,
+                &pr_info.status,
+                merged_at,
+                pr_info.merge_commit_sha.clone(),
+            )
+            .await?;
+        }
+    }
+
+    Ok(())
 }
 
 pub async fn link_workspace(
@@ -36,6 +138,13 @@ pub async fn link_workspace(
         if task.as_ref().map(|task| task.project_id) == Some(payload.project_id) {
             Workspace::update_task_id(&deployment.db().pool, workspace.id, Some(payload.issue_id))
                 .await?;
+            if let Err(err) = backfill_local_pr_rows_for_workspace(&deployment, &workspace).await {
+                tracing::error!(
+                    "Failed to backfill local PR rows for workspace {} after linking: {}",
+                    workspace.id,
+                    err
+                );
+            }
             return Ok(ResponseJson(ApiResponse::success(())));
         }
     }

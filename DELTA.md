@@ -99,3 +99,23 @@
 - Not complete / known gaps:
   - full test validation was not rerun after the final cleanup behavior adjustments
   - pinned workspaces still keep the existing auto-archive exception
+
+## 2026-04-24T00:00:00Z | vk/18a4-vk-issue-priorit | local issue priority fix
+
+- Intent: restore issue priority updates for local-mode VK issues.
+- Completed:
+  - traced the failure to `crates/server/src/routes/local_compat.rs`, where fallback issue reads included priority but create/update handlers ignored it
+  - added local create/update/bulk-update support for `priority`
+  - preserved the existing local metadata storage model by rewriting `Original Priority` inside the task description metadata block
+  - added unit coverage for setting and clearing priority metadata
+  - ran `cargo fmt --all`
+- Files changed:
+  - `crates/server/src/routes/local_compat.rs`
+  - `STREAM.md`
+  - `HANDOFF.md`
+- Verified:
+  - `cargo fmt --all`
+- Not complete / known gaps:
+  - `cargo test -p server local_compat` initially failed because the machine was out of disk space during dependency compilation
+  - `cargo clean` freed about `1.2 GiB`, but the narrow backend test has not yet been rerun
+  - local UI smoke testing of the priority flow is still pending

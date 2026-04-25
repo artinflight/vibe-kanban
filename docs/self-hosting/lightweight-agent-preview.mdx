@@ -42,6 +42,10 @@ pnpm run preview:light
 The command starts the frontend in the background, picks the first available
 port from `3002`, and prints the preview URL.
 
+When Tailscale is available on the host, the workflow also provisions a
+tailnet HTTPS route and prints that reachable review URL instead of a localhost
+address.
+
 Check the running preview:
 
 ```bash
@@ -101,6 +105,12 @@ Use `VK_PREVIEW_BACKEND_PORT` when the live backend is not on `4311`:
 
 ```bash
 VK_PREVIEW_BACKEND_PORT=3001 pnpm run preview:light
+```
+
+Use `VK_PREVIEW_TAILNET_PORT` when you need a stable Tailscale review URL:
+
+```bash
+VK_PREVIEW_TAILNET_PORT=18460 pnpm run preview:light
 ```
 
 ## Resource guardrails
@@ -165,6 +175,14 @@ https://<machine>.<tailnet>.ts.net:<port>/v1/fallback/issues?project_id=...
 If those URLs return the Vite HTML shell instead of JSON, update the branch so
 `packages/local-web/vite.config.ts` proxies both `/api` and `/v1`, then restart
 the preview.
+
+<Accordion title="I need a reachable review URL, not localhost">
+If Tailscale is installed and running, `preview:light` prints a tailnet HTTPS
+URL automatically. To pin it to a specific external port, set:
+
+```bash
+VK_PREVIEW_TAILNET_PORT=18460 pnpm run preview:light
+```
 </Accordion>
 
 <Accordion title="The preview panel starts and immediately stops">

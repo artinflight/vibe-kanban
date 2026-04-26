@@ -243,3 +243,35 @@
   - live `/v1/issues` smoke test preserved caller id `48344d12-121d-43cd-bb4f-5abde908d78c`; the temporary issue was deleted and the DB count returned `0`
 - Not complete / known gaps:
   - commit, push, and staging promotion are still pending
+
+## 2026-04-26T23:35:00Z | vk/ea3c-vk-auto-archive | live agent context recovery + real worktree repair
+
+- Intent: recover live agents that resumed into wrong/lost context and make the fix durable so interrupted turns are not silently dropped after restarts or failed launches.
+- Completed:
+  - inventoried recent live sessions for ORC, Modernize, T52, Staging Check, and Android Parity
+  - repaired `FR::ORC::Generative Programming` by quarantining the Quick Add / Nutrition / PR `#844` poisoned rows and restoring the Generative Programming PR `#732` context
+  - quarantined ORC rows `8a644a33-3ad8-4fb7-99f3-17ec934f9bfa`, `753aa30a-c80f-4c4d-81d1-42c6040d927c`, `e9373f3f-6a22-4803-8cfb-e996135985c9`, and `bed53320-a4fc-4ca5-ad2c-e51e29d6f105`
+  - quarantined Modernize bad resume row `c071aff7-5771-4102-8248-42fe32e094f2`, which referred to PR `#840` from the wrong checkout
+  - quarantined T52 bad post-cut `resume` row `9e0618d8-8c5c-4ddf-8b19-f31689eab3bf`
+  - preserved T52 interrupted user instruction row `aff821d6-bf1a-413e-8af1-034114d63907`
+  - verified Staging Check and Android Parity had valid latest anchors and needed no DB repair
+  - added source support to inject interrupted/killed/failed turn prompts after the latest safe resume anchor into the next direct follow-up, queued follow-up, PR-description follow-up, or review start
+  - committed and pushed `d7fd5591c fix: preserve interrupted agent context on resume`
+  - opened PR `#40`: `https://github.com/artinflight/vibe-kanban/pull/40`
+  - deployed live binary `/home/mcp/.local/bin/vibe-kanban-serve` with SHA-256 `ce0a192f4216aa184a36b495d8d3d5deb76c764927b401ad123c8d6bd12b9c04`
+  - fixed a follow-on git failure caused by earlier symlink shortcuts by converting these paths to real registered git worktrees:
+    - `/home/mcp/code/worktrees/915e-fr-modernize-des/hyroxready-app`
+    - `/home/mcp/code/worktrees/5a80-fr-orc-generativ/hyroxready-app`
+    - `/home/mcp/code/worktrees/96e5-fr-generative-pr/hyroxready-app`
+- Verified:
+  - `cargo check -p server -p local-deployment`
+  - `pnpm run format`
+  - `cargo build --release -p server`
+  - zero running coding-agent processes before service restart
+  - service active and `http://127.0.0.1:4311/api/health` returned `200`
+  - deployed binary hash matched `target/release/server`
+  - latest non-dropped anchors for recent agents each had a real rollout file under either `/home/mcp/.local/share/vibe-kanban/codex-home/sessions` or `/home/mcp/.codex/sessions`
+  - Modernize and both Generative paths are real git worktrees, not symlinks
+- Not complete / known gaps:
+  - PR `#40` still needs staging promotion
+  - no broad UI/browser agent-send regression test was run after the real-worktree repair

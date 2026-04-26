@@ -9,7 +9,7 @@
 
 ## Objective
 
-- Repair local Codex rollout continuity, execution-status streaming, and local issue/workspace linking so failed rollouts, stale "agent running" UI state, and newly created workspaces without Issues do not block normal prompt flow, then promote the fixes through the fork workflow so they survive updates/deploys.
+- Repair local Codex rollout continuity, execution-status streaming, local issue/workspace linking, and live agent context recovery so failed rollouts, stale "agent running" UI state, newly created workspaces without Issues, and agents resuming into wrong or lost context do not block normal prompt flow, then promote the fixes through the fork workflow so they survive updates/deploys.
 
 ## In Scope
 
@@ -21,6 +21,9 @@
 - Keeping local-only auth gates open when `shared_api_base` is intentionally unset
 - Preserving the local-only runtime baseline and staging merge compatibility
 - Preserving the frontend-generated local issue UUID when the local fallback issue endpoint creates a task, so workspace creation can link the new workspace back to its Issue
+- Recovering live agent sessions by quarantining known bad execution rows without deleting chat/process history
+- Injecting interrupted/killed turn prompts into the next agent prompt after the latest safe resume anchor
+- Keeping Vibe-managed repo paths as real git worktrees, not symlinks
 
 ## Out of Scope
 
@@ -28,6 +31,7 @@
 - Re-enabling shared/cloud API behavior
 - Reconstructing a zero-byte Codex rollout file that has no persisted content
 - Broad workspace lifecycle cleanup beyond what already exists on `fork/staging`
+- Replacing Vibe worktree management with symlinked canonical worktrees
 
 ## Stream-Specific Decisions
 
@@ -39,6 +43,9 @@
 - Local-only installs with no shared API base must report `LoggedIn { profile: None }` so the UI does not show remote sign-in prompts.
 - If Codex rejects a stored rollout during `thread/fork`, start a fresh thread instead of failing the user prompt; stale rollout pointers are an optimization, not a hard dependency.
 - Local fallback issue creation must honor a caller-supplied issue `id`; the workspace draft stores that id before workspace creation, so replacing it server-side creates orphaned workspaces with `task_id = null`.
+- If a service restart or failed launch interrupts a turn after the latest safe resume anchor, the next prompt must carry that interrupted prompt text explicitly.
+- `execution_processes.dropped = 1` is the preferred live quarantine mechanism for poisoned/unusable rows; do not delete process rows or coding-agent turns.
+- Vibe-managed repo paths inside `container_ref` must be actual registered git worktrees. Symlinks can make `git worktree add` fail with `already exists`.
 
 ## Relevant Files / Modules
 
@@ -53,11 +60,19 @@
 - `crates/executors/src/executors/codex/review.rs`
 - `crates/db/src/models/task.rs`
 - `crates/server/src/routes/local_compat.rs`
+- `crates/server/src/routes/sessions/mod.rs`
+- `crates/server/src/routes/sessions/review.rs`
+- `crates/server/src/routes/workspaces/pr.rs`
+- `crates/local-deployment/src/container.rs`
 - `packages/web-core/src/shared/hooks/useJsonPatchWsStream.ts`
 - `packages/web-core/src/shared/hooks/useExecutionProcesses.ts`
 - `packages/web-core/src/features/workspace-chat/model/hooks/useConversationHistory.ts`
 - `/home/mcp/.local/share/vibe-kanban/db.v2.sqlite`
 - `/home/mcp/.local/share/vibe-kanban/codex-home/sessions`
+- `/home/mcp/.codex/sessions`
+- `/home/mcp/code/worktrees/915e-fr-modernize-des/hyroxready-app`
+- `/home/mcp/code/worktrees/5a80-fr-orc-generativ/hyroxready-app`
+- `/home/mcp/code/worktrees/96e5-fr-generative-pr/hyroxready-app`
 - `/home/mcp/.config/systemd/user/vibe-kanban.service.d/fixed-ports.conf`
 - `/home/mcp/.config/systemd/user/vibe-kanban.service.d/local-auth.conf`
 
@@ -88,8 +103,16 @@
   - changed local issue creation to insert with the caller-provided UUID and return idempotently if the same issue already exists in the same project
   - rebuilt and redeployed `/home/mcp/.local/bin/vibe-kanban-serve` with SHA-256 `aa04de0df56aad09c6180200c332c5cfa56f30125e84462355cf2f8a76a2c733`
   - smoke-tested the live endpoint with temporary issue id `48344d12-121d-43cd-bb4f-5abde908d78c`; it appeared with that exact id, was deleted, and the DB count returned `0`
+- Completed in the latest session:
+  - quarantined poisoned ORC rows for Quick Add / Nutrition / PR `#844` and restored ORC to the Generative Programming PR `#732` context
+  - quarantined the Modernize bad PR `#840` resume row
+  - quarantined the useless T52 post-cut `resume` row while preserving the actual interrupted timer instruction
+  - added interrupted-context prompt recovery for direct follow-ups, queued follow-ups, PR-description follow-ups, and review starts
+  - rebuilt and redeployed `/home/mcp/.local/bin/vibe-kanban-serve` with SHA-256 `ce0a192f4216aa184a36b495d8d3d5deb76c764927b401ad123c8d6bd12b9c04`
+  - opened PR `#40`: `https://github.com/artinflight/vibe-kanban/pull/40`
+  - fixed the broken symlink repair by converting Modernize and Generative Vibe repo paths into real registered git worktrees
 - In progress:
-  - committing, pushing, and promoting the local issue id preservation hotfix into `staging`
+  - promote PR `#40` into `staging` so the interrupted-context hotfix survives normal deploys
 
 ## Risks / Regression Traps
 
@@ -101,9 +124,12 @@
 - Removing the fixed `HOST=0.0.0.0`, `BACKEND_PORT=4311`, and `PREVIEW_PROXY_PORT=4312` systemd drop-in will break `vibe.local`
 - Removing the live `VK_DISABLE_AUTH=1` drop-in should not break local UI gates after the source hardening deploy, but keeping it is still harmless defense in depth.
 - Ignoring frontend-provided issue ids in local fallback mode will orphan newly created workspaces again because the workspace create request links against the optimistic issue id.
+- Symlinking a Vibe-managed repo path will break git operations when Vibe tries to create or reset a worktree at that exact path.
+- Checking only `/home/mcp/.local/share/vibe-kanban/codex-home/sessions` can falsely report missing rollouts; newer sessions may live under `/home/mcp/.codex/sessions`.
+- Dropping T52's interrupted prompt row `aff821d6-bf1a-413e-8af1-034114d63907` would remove the exact user instruction that needs to be recovered.
 
 ## Next Safe Steps
 
-1. Commit and push the local issue id preservation hotfix.
-2. Open a new PR into `staging`.
-3. Promote the hotfix into `staging` once checks pass or after explicit human approval to bypass known failing checks.
+1. Monitor and merge PR `#40` into `staging` when acceptable.
+2. If live context breaks again, verify latest non-dropped anchors against both Codex session roots and quarantine only specific poisoned rows.
+3. If live git operations fail with `Invalid repository` or `already exists`, inspect for symlinks/stale directories before changing DB state.

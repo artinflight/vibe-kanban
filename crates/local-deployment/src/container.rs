@@ -1199,6 +1199,15 @@ impl LocalContainerService {
         // Get latest agent turn for session continuity (from coding agent turns)
         let latest_session_info =
             CodingAgentTurn::find_latest_session_info(&self.db.pool, ctx.session.id).await?;
+        let interrupted_context = CodingAgentTurn::find_interrupted_context_since_latest_success(
+            &self.db.pool,
+            ctx.session.id,
+        )
+        .await?;
+        let prompt = CodingAgentTurn::prompt_with_interrupted_context(
+            queued_data.message.clone(),
+            &interrupted_context,
+        );
 
         let repos =
             WorkspaceRepo::find_repos_for_workspace(&self.db.pool, ctx.workspace.id).await?;
@@ -1213,7 +1222,7 @@ impl LocalContainerService {
 
         let action_type = if let Some(info) = latest_session_info {
             ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
-                prompt: queued_data.message.clone(),
+                prompt: prompt.clone(),
                 session_id: info.session_id,
                 reset_to_message_id: None,
                 executor_config: queued_data.executor_config.clone(),
@@ -1221,7 +1230,7 @@ impl LocalContainerService {
             })
         } else {
             ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
-                prompt: queued_data.message.clone(),
+                prompt,
                 executor_config: queued_data.executor_config.clone(),
                 working_dir,
             })

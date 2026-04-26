@@ -69,6 +69,8 @@ pub async fn start_review(
     let agent_session_id = CodingAgentTurn::find_latest_session_info(pool, session.id)
         .await?
         .map(|info| info.session_id);
+    let interrupted_context =
+        CodingAgentTurn::find_interrupted_context_since_latest_success(pool, session.id).await?;
 
     let context: Option<Vec<ExecutorRepoReviewContext>> = if payload.use_all_workspace_commits {
         let repos =
@@ -100,6 +102,7 @@ pub async fn start_review(
     };
 
     let prompt = build_review_prompt(context.as_deref(), payload.additional_prompt.as_deref());
+    let prompt = CodingAgentTurn::prompt_with_interrupted_context(prompt, &interrupted_context);
     let resumed_session = agent_session_id.is_some();
 
     let action = ExecutorAction::new(

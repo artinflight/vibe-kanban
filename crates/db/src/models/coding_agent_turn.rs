@@ -4,6 +4,8 @@ use sqlx::{FromRow, SqlitePool};
 use ts_rs::TS;
 use uuid::Uuid;
 
+use super::execution_process::ExecutionProcessStatus;
+
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, TS)]
 pub struct CodingAgentTurn {
     pub id: Uuid,
@@ -28,6 +30,17 @@ pub struct CreateCodingAgentTurn {
 pub struct CodingAgentResumeInfo {
     pub session_id: String,
     pub message_id: Option<String>,
+}
+
+/// Prompt context from turns that happened after the latest safe resume anchor
+/// but did not produce durable resumable state.
+#[derive(Debug, FromRow)]
+pub struct CodingAgentInterruptedContext {
+    pub status: ExecutionProcessStatus,
+    pub exit_code: Option<i64>,
+    pub prompt: Option<String>,
+    pub summary: Option<String>,
+    pub created_at: DateTime<Utc>,
 }
 
 impl CodingAgentTurn {
@@ -76,6 +89,100 @@ impl CodingAgentTurn {
         )
         .fetch_optional(pool)
         .await
+    }
+
+    /// Find prompts from later turns that cannot be used as resume anchors.
+    ///
+    /// A service restart or app-server rollout failure can leave the latest user
+    /// instruction in a killed/failed turn with no final summary. The executor
+    /// cannot safely fork those sessions, but dropping their prompts makes a
+    /// later "resume" continue from stale context. These rows are injected into
+    /// the next prompt as explicit recovery context.
+    pub async fn find_interrupted_context_since_latest_success(
+        pool: &SqlitePool,
+        session_id: Uuid,
+    ) -> Result<Vec<CodingAgentInterruptedContext>, sqlx::Error> {
+        sqlx::query_as::<_, CodingAgentInterruptedContext>(
+            r#"WITH latest_success AS (
+                SELECT ep.created_at
+                FROM execution_processes ep
+                JOIN coding_agent_turns cat ON ep.id = cat.execution_process_id
+                WHERE ep.session_id = $1
+                  AND ep.run_reason = 'codingagent'
+                  AND ep.dropped = FALSE
+                  AND ep.status = 'completed'
+                  AND ep.exit_code = 0
+                  AND cat.agent_session_id IS NOT NULL
+                  AND cat.summary IS NOT NULL
+                  AND trim(cat.summary) != ''
+                ORDER BY ep.created_at DESC
+                LIMIT 1
+               )
+               SELECT
+                ep.status as status,
+                ep.exit_code,
+                cat.prompt,
+                cat.summary,
+                ep.created_at as created_at
+               FROM execution_processes ep
+               JOIN coding_agent_turns cat ON ep.id = cat.execution_process_id
+               WHERE ep.session_id = $1
+                 AND ep.run_reason = 'codingagent'
+                 AND ep.dropped = FALSE
+                 AND ((SELECT created_at FROM latest_success) IS NULL
+                      OR ep.created_at > (SELECT created_at FROM latest_success))
+                 AND (
+                    ep.status != 'completed'
+                    OR ep.exit_code IS NULL
+                    OR ep.exit_code != 0
+                    OR cat.summary IS NULL
+                    OR trim(cat.summary) = ''
+                 )
+                 AND cat.prompt IS NOT NULL
+                 AND trim(cat.prompt) != ''
+               ORDER BY ep.created_at ASC
+               LIMIT 10"#,
+        )
+        .bind(session_id)
+        .fetch_all(pool)
+        .await
+    }
+
+    pub fn prompt_with_interrupted_context(
+        prompt: String,
+        interrupted_context: &[CodingAgentInterruptedContext],
+    ) -> String {
+        if interrupted_context.is_empty() {
+            return prompt;
+        }
+
+        let mut recovered = String::from(
+            "Context recovery: one or more previous agent turns in this session were interrupted or did not produce a durable final summary. Do not assume the resumed thread contains these instructions. Treat the interrupted turn prompts below as required continuity before answering the current prompt.\n\nInterrupted turn(s), oldest to newest:\n",
+        );
+
+        for (index, context) in interrupted_context.iter().enumerate() {
+            recovered.push_str(&format!(
+                "\n{}. [{} status={:?} exit_code={}] Prompt:\n{}\n",
+                index + 1,
+                context.created_at,
+                context.status,
+                context
+                    .exit_code
+                    .map(|code| code.to_string())
+                    .unwrap_or_else(|| "none".to_string()),
+                truncate_recovery_text(context.prompt.as_deref().unwrap_or(""))
+            ));
+
+            if let Some(summary) = context.summary.as_deref().filter(|s| !s.trim().is_empty()) {
+                recovered.push_str("Partial/final text captured from that turn:\n");
+                recovered.push_str(&truncate_recovery_text(summary));
+                recovered.push('\n');
+            }
+        }
+
+        recovered.push_str("\nCurrent user prompt:\n");
+        recovered.push_str(&prompt);
+        recovered
     }
 
     /// Find coding agent turn by execution process ID
@@ -274,4 +381,16 @@ impl CodingAgentTurn {
 
         Ok(result.into_iter().collect())
     }
+}
+
+fn truncate_recovery_text(text: &str) -> String {
+    const MAX_CHARS: usize = 4_000;
+
+    let text = text.trim();
+    if text.chars().count() <= MAX_CHARS {
+        return text.to_string();
+    }
+
+    let truncated: String = text.chars().take(MAX_CHARS).collect();
+    format!("{truncated}\n[truncated]")
 }

@@ -37,6 +37,7 @@ fn generate_types_content() -> String {
         db::models::scratch::WorkspaceFilterStateData::decl(),
         db::models::scratch::WorkspaceSortStateData::decl(),
         db::models::scratch::UiPreferencesData::decl(),
+        db::models::scratch::ProjectStatusConfigData::decl(),
         db::models::scratch::ProjectRepoDefaultsData::decl(),
         db::models::scratch::ScratchPayload::decl(),
         db::models::scratch::ScratchType::decl(),
@@ -290,7 +291,7 @@ fn generate_types_content() -> String {
         serde_json::to_string(DEFAULT_COMMIT_REMINDER_PROMPT).unwrap()
     );
 
-    format!("{HEADER}\n\n{body}\n\n{constants}")
+    format!("{HEADER}\n\n{body}\n\n{constants}\n")
 }
 
 fn generate_json_schema<T: JsonSchema>() -> Result<String, serde_json::Error> {

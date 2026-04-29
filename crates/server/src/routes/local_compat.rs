@@ -1,21 +1,25 @@
 use std::collections::{HashMap, HashSet};
 
+use api_types::some_if_present;
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
     response::Json as ResponseJson,
     routing::{get, patch, post},
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use db::models::{
+    merge::MergeStatus,
     project::Project,
     pull_request::PullRequest,
     repo::Repo,
     scratch::{ProjectStatusConfigData, Scratch, ScratchPayload, ScratchType},
     task::{Task, TaskStatus},
     workspace::Workspace,
+    workspace_repo::WorkspaceRepo,
 };
 use deployment::Deployment;
+use git_host::{GitHostProvider, GitHostService, PullRequestDetail};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use services::services::container::ContainerService;
@@ -121,6 +125,12 @@ struct SyntheticWorkspacePrState {
     latest_merged_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+#[derive(Debug, Clone)]
+struct PrInferenceCandidate {
+    detail: PullRequestDetail,
+    score: usize,
+}
+
 #[derive(Debug, Deserialize)]
 struct ProjectQuery {
     project_id: Uuid,
@@ -132,6 +142,7 @@ struct CreateIssueRequest {
     status_id: String,
     title: String,
     description: Option<String>,
+    priority: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -139,6 +150,8 @@ struct UpdateIssueRequest {
     status_id: Option<String>,
     title: Option<String>,
     description: Option<Option<String>>,
+    #[serde(default, deserialize_with = "some_if_present")]
+    priority: Option<Option<String>>,
     parent_issue_id: Option<Option<Uuid>>,
 }
 
@@ -153,6 +166,8 @@ struct BulkIssueUpdateItem {
     status_id: Option<String>,
     title: Option<String>,
     description: Option<Option<String>>,
+    #[serde(default, deserialize_with = "some_if_present")]
+    priority: Option<Option<String>>,
     parent_issue_id: Option<Option<Uuid>>,
 }
 
@@ -284,9 +299,24 @@ fn extract_status_name(description: Option<&str>, fallback: &TaskStatus) -> Stri
     task_status_name(fallback).to_string()
 }
 
-fn ensure_status_metadata(description: Option<String>, status_name: &str) -> Option<String> {
+fn normalize_priority_value(priority: Option<&str>) -> Option<&'static str> {
+    match priority?.trim().to_ascii_lowercase().as_str() {
+        "urgent" => Some("urgent"),
+        "high" => Some("high"),
+        "medium" => Some("medium"),
+        "low" => Some("low"),
+        _ => None,
+    }
+}
+
+fn ensure_issue_metadata(
+    description: Option<String>,
+    status_name: &str,
+    priority: Option<&str>,
+) -> Option<String> {
     let body = description.unwrap_or_default();
-    let mut replaced = false;
+    let mut replaced_status = false;
+    let mut replaced_priority = false;
     let mut lines = Vec::new();
 
     for line in body.lines() {
@@ -295,7 +325,16 @@ fn ensure_status_metadata(description: Option<String>, status_name: &str) -> Opt
             let prefix_len = line.len() - trimmed.len();
             let prefix = &line[..prefix_len];
             lines.push(format!("{prefix}- Original Status: {status_name}"));
-            replaced = true;
+            replaced_status = true;
+        } else if trimmed.starts_with("- Original Priority:")
+            || trimmed.starts_with("Original Priority:")
+        {
+            replaced_priority = true;
+            if let Some(priority) = priority {
+                let prefix_len = line.len() - trimmed.len();
+                let prefix = &line[..prefix_len];
+                lines.push(format!("{prefix}- Original Priority: {priority}"));
+            }
         } else {
             lines.push(line.to_string());
         }
@@ -305,19 +344,35 @@ fn ensure_status_metadata(description: Option<String>, status_name: &str) -> Opt
         "
 ",
     );
-    if !replaced {
-        if !next.trim().is_empty() {
-            next.push_str(
-                "
+    let mut metadata_lines = Vec::new();
+    if !replaced_status {
+        metadata_lines.push(format!("- Original Status: {status_name}"));
+    }
+    if let Some(priority) = priority
+        && !replaced_priority
+    {
+        metadata_lines.push(format!("- Original Priority: {priority}"));
+    }
 
+    if !metadata_lines.is_empty() {
+        if !next.trim().is_empty() {
+            if next.contains("Local metadata") {
+                next.push('\n');
+            } else {
+                next.push_str(
+                    "
+
+Local metadata
+",
+                );
+            }
+        } else {
+            next.push_str(
+                "Local metadata
 ",
             );
         }
-        next.push_str(
-            "Local metadata
-- Original Status: ",
-        );
-        next.push_str(status_name);
+        next.push_str(&metadata_lines.join("\n"));
     }
 
     let trimmed = next.trim().to_string();
@@ -557,6 +612,330 @@ fn parse_pr_metadata(task: &LocalTaskRow) -> Option<CompatPullRequest> {
         created_at: task.created_at.to_rfc3339(),
         updated_at: task.updated_at.to_rfc3339(),
     })
+}
+
+fn singularize_match_token(token: &str) -> String {
+    if token.len() > 4 && token.ends_with("ies") {
+        let stem = &token[..token.len() - 3];
+        return format!("{stem}y");
+    }
+
+    if token.len() > 3 && token.ends_with('s') && !token.ends_with("ss") {
+        return token[..token.len() - 1].to_string();
+    }
+
+    token.to_string()
+}
+
+fn is_match_stop_word(token: &str) -> bool {
+    matches!(
+        token,
+        "a" | "an"
+            | "and"
+            | "app"
+            | "backport"
+            | "feature"
+            | "fix"
+            | "for"
+            | "fr"
+            | "from"
+            | "hotfix"
+            | "investigate"
+            | "issue"
+            | "let"
+            | "need"
+            | "needs"
+            | "repair"
+            | "restore"
+            | "review"
+            | "screen"
+            | "should"
+            | "staging"
+            | "that"
+            | "the"
+            | "them"
+            | "this"
+            | "today"
+            | "up"
+            | "user"
+            | "users"
+            | "via"
+            | "we"
+            | "workout"
+            | "workouts"
+    )
+}
+
+fn tokenize_pr_match_text(text: &str) -> HashSet<String> {
+    text.split(|ch: char| !ch.is_ascii_alphanumeric())
+        .filter(|token| !token.is_empty())
+        .map(|token| singularize_match_token(&token.to_ascii_lowercase()))
+        .filter(|token| token.len() >= 3)
+        .filter(|token| !is_match_stop_word(token))
+        .collect()
+}
+
+fn strip_local_metadata(description: &str) -> &str {
+    description
+        .split("\n\nLocal metadata")
+        .next()
+        .unwrap_or(description)
+        .trim()
+}
+
+fn task_match_text(task: &LocalTaskRow) -> String {
+    let title = task
+        .title
+        .split_once("::")
+        .map(|(_, rest)| rest.trim())
+        .unwrap_or(task.title.trim());
+
+    let description = task
+        .description
+        .as_deref()
+        .map(strip_local_metadata)
+        .unwrap_or_default();
+
+    if description.is_empty() {
+        title.to_string()
+    } else {
+        format!("{title}\n{description}")
+    }
+}
+
+fn candidate_pr_score(task_tokens: &HashSet<String>, pr: &PullRequestDetail) -> usize {
+    let mut pr_text = pr.title.clone();
+    if !pr.head_branch.is_empty() {
+        pr_text.push(' ');
+        pr_text.push_str(&pr.head_branch);
+    }
+
+    let pr_tokens = tokenize_pr_match_text(&pr_text);
+    let overlap = task_tokens.intersection(&pr_tokens).count();
+
+    if overlap == 0 {
+        return 0;
+    }
+
+    let unmatched_pr_tokens = pr_tokens.len().saturating_sub(overlap);
+    let mut score = overlap * 10;
+    score = score.saturating_sub(unmatched_pr_tokens * 2);
+    if pr.base_branch == "staging" {
+        score += 2;
+    }
+
+    score
+}
+
+fn infer_pr_candidates_for_task(
+    task: &LocalTaskRow,
+    target_branch: &str,
+    prs: &[PullRequestDetail],
+) -> Vec<PrInferenceCandidate> {
+    let task_tokens = tokenize_pr_match_text(&task_match_text(task));
+    if task_tokens.is_empty() {
+        return Vec::new();
+    }
+
+    let mut candidates = prs
+        .iter()
+        .filter(|pr| pr.base_branch == target_branch)
+        .filter_map(|pr| {
+            let score = candidate_pr_score(&task_tokens, pr);
+            (score >= 20).then(|| PrInferenceCandidate {
+                detail: pr.clone(),
+                score,
+            })
+        })
+        .collect::<Vec<_>>();
+
+    candidates.sort_by(|a, b| {
+        b.score
+            .cmp(&a.score)
+            .then_with(|| {
+                let a_open = matches!(a.detail.status, MergeStatus::Open);
+                let b_open = matches!(b.detail.status, MergeStatus::Open);
+                b_open.cmp(&a_open)
+            })
+            .then_with(|| b.detail.number.cmp(&a.detail.number))
+    });
+
+    let mut selected = Vec::new();
+    let mut seen_urls = HashSet::new();
+    for candidate in candidates {
+        if !seen_urls.insert(candidate.detail.url.clone()) {
+            continue;
+        }
+        selected.push(candidate);
+        if selected.len() == 2 {
+            break;
+        }
+    }
+
+    selected
+}
+
+async fn backfill_inferred_local_pr_rows(
+    deployment: &DeploymentImpl,
+    task_rows: &[LocalTaskRow],
+) -> Result<(), ApiError> {
+    if task_rows.is_empty() {
+        return Ok(());
+    }
+
+    let pool = &deployment.db().pool;
+    let git = deployment.git();
+    let project_task_ids = task_rows.iter().map(|task| task.id).collect::<HashSet<_>>();
+    let task_by_id = task_rows
+        .iter()
+        .cloned()
+        .map(|task| (task.id, task))
+        .collect::<HashMap<_, _>>();
+
+    let workspaces = Workspace::fetch_all(pool)
+        .await?
+        .into_iter()
+        .filter(|workspace| {
+            workspace
+                .task_id
+                .is_some_and(|task_id| project_task_ids.contains(&task_id))
+        })
+        .collect::<Vec<_>>();
+
+    let mut prs_by_workspace_id = HashMap::<Uuid, Vec<PullRequest>>::new();
+    for workspace in &workspaces {
+        prs_by_workspace_id.insert(
+            workspace.id,
+            PullRequest::find_by_workspace_id(pool, workspace.id).await?,
+        );
+    }
+
+    let mut recent_prs_by_remote = HashMap::<(Uuid, String), Vec<PullRequestDetail>>::new();
+
+    for workspace in workspaces {
+        let Some(task_id) = workspace.task_id else {
+            continue;
+        };
+        let Some(task) = task_by_id.get(&task_id) else {
+            continue;
+        };
+        if parse_pr_metadata(task).is_some() {
+            continue;
+        }
+
+        let workspace_repos = WorkspaceRepo::find_by_workspace_id(pool, workspace.id).await?;
+        for workspace_repo in workspace_repos {
+            let existing_prs = prs_by_workspace_id
+                .get(&workspace.id)
+                .cloned()
+                .unwrap_or_default();
+            if existing_prs
+                .iter()
+                .any(|pr| pr.repo_id == Some(workspace_repo.repo_id))
+            {
+                continue;
+            }
+
+            let Some(repo) = Repo::find_by_id(pool, workspace_repo.repo_id).await? else {
+                continue;
+            };
+
+            let remote = match git
+                .resolve_remote_for_branch(&repo.path, &workspace_repo.target_branch)
+            {
+                Ok(remote) => remote,
+                Err(err) => {
+                    tracing::warn!(
+                        "Skipping inferred PR backfill for task {} workspace {} repo {}: failed to resolve remote for {}: {}",
+                        task.id,
+                        workspace.id,
+                        workspace_repo.repo_id,
+                        workspace_repo.target_branch,
+                        err
+                    );
+                    continue;
+                }
+            };
+
+            let remote_key = (workspace_repo.repo_id, remote.url.clone());
+            let repo_recent_prs = if let Some(prs) = recent_prs_by_remote.get(&remote_key) {
+                prs.clone()
+            } else {
+                let git_host = match GitHostService::from_url(&remote.url) {
+                    Ok(host) => host,
+                    Err(err) => {
+                        tracing::warn!(
+                            "Skipping inferred PR backfill for task {} workspace {} repo {}: failed to initialize git host for {}: {}",
+                            task.id,
+                            workspace.id,
+                            workspace_repo.repo_id,
+                            remote.url,
+                            err
+                        );
+                        continue;
+                    }
+                };
+
+                let prs = match git_host.list_open_prs(&repo.path, &remote.url).await {
+                    Ok(prs) => prs,
+                    Err(err) => {
+                        tracing::warn!(
+                            "Skipping inferred PR backfill for task {} workspace {} repo {}: failed to list recent PRs: {}",
+                            task.id,
+                            workspace.id,
+                            workspace_repo.repo_id,
+                            err
+                        );
+                        continue;
+                    }
+                };
+                recent_prs_by_remote.insert(remote_key.clone(), prs.clone());
+                prs
+            };
+
+            let inferred_prs =
+                infer_pr_candidates_for_task(task, &workspace_repo.target_branch, &repo_recent_prs);
+
+            if inferred_prs.is_empty() {
+                continue;
+            }
+
+            for inferred in inferred_prs {
+                let pr = PullRequest::create_for_workspace(
+                    pool,
+                    workspace.id,
+                    workspace_repo.repo_id,
+                    &workspace_repo.target_branch,
+                    inferred.detail.number,
+                    &inferred.detail.url,
+                )
+                .await?;
+
+                if !matches!(inferred.detail.status, MergeStatus::Open) {
+                    let merged_at = if matches!(inferred.detail.status, MergeStatus::Merged) {
+                        inferred.detail.merged_at
+                    } else {
+                        None
+                    };
+                    PullRequest::update_status(
+                        pool,
+                        &inferred.detail.url,
+                        &inferred.detail.status,
+                        merged_at,
+                        inferred.detail.merge_commit_sha.clone(),
+                    )
+                    .await?;
+                }
+
+                prs_by_workspace_id
+                    .entry(workspace.id)
+                    .or_default()
+                    .push(pr);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn task_to_issue(task: LocalTaskRow, issue_number: i64, status_id: String) -> CompatIssue {
@@ -1139,6 +1518,14 @@ async fn list_fallback_pull_requests(
 ) -> Result<ResponseJson<serde_json::Value>, ApiError> {
     let task_rows = load_project_tasks(&deployment, query.project_id).await?;
     if !task_rows.is_empty() {
+        if let Err(err) = backfill_inferred_local_pr_rows(&deployment, &task_rows).await {
+            tracing::warn!(
+                "Failed to infer missing local PR rows for project {}: {}",
+                query.project_id,
+                err
+            );
+        }
+
         let task_by_workspace = Workspace::fetch_all(&deployment.db().pool)
             .await?
             .into_iter()
@@ -1234,6 +1621,14 @@ async fn list_fallback_pull_request_issues(
 ) -> Result<ResponseJson<serde_json::Value>, ApiError> {
     let task_rows = load_project_tasks(&deployment, query.project_id).await?;
     if !task_rows.is_empty() {
+        if let Err(err) = backfill_inferred_local_pr_rows(&deployment, &task_rows).await {
+            tracing::warn!(
+                "Failed to infer missing local PR links for project {}: {}",
+                query.project_id,
+                err
+            );
+        }
+
         let task_by_workspace = Workspace::fetch_all(&deployment.db().pool)
             .await?
             .into_iter()
@@ -1346,7 +1741,11 @@ async fn create_issue(
         &deployment.db().pool,
         request.project_id,
         request.title,
-        ensure_status_metadata(request.description, &status_name),
+        ensure_issue_metadata(
+            request.description,
+            &status_name,
+            normalize_priority_value(request.priority.as_deref()),
+        ),
         parse_task_status(&status_name),
     )
     .await?;
@@ -1389,14 +1788,20 @@ async fn update_issue(
         .unwrap_or(existing.description.clone());
     let entered_in_staging =
         !is_in_staging_status(&previous_status_name) && is_in_staging_status(&status_name);
+    let existing_priority = extract_priority(existing.description.as_deref());
+    let next_priority = match request.priority.as_ref() {
+        Some(priority) => normalize_priority_value(priority.as_deref()),
+        None => normalize_priority_value(existing_priority.as_deref()),
+    };
 
     Task::update(
         &deployment.db().pool,
         issue_id,
         request.title,
-        Some(ensure_status_metadata(
+        Some(ensure_issue_metadata(
             next_description_source,
             &status_name,
+            next_priority,
         )),
         Some(parse_task_status(&status_name)),
         request.parent_issue_id,
@@ -1446,14 +1851,20 @@ async fn bulk_update_issues(
             .unwrap_or(existing.description.clone());
         let entered_in_staging =
             !is_in_staging_status(&previous_status_name) && is_in_staging_status(&status_name);
+        let existing_priority = extract_priority(existing.description.as_deref());
+        let next_priority = match update.priority.as_ref() {
+            Some(priority) => normalize_priority_value(priority.as_deref()),
+            None => normalize_priority_value(existing_priority.as_deref()),
+        };
 
         Task::update(
             &deployment.db().pool,
             update.id,
             update.title,
-            Some(ensure_status_metadata(
+            Some(ensure_issue_metadata(
                 next_description_source,
                 &status_name,
+                next_priority,
             )),
             Some(parse_task_status(&status_name)),
             update.parent_issue_id,
@@ -1552,4 +1963,91 @@ pub fn router() -> Router<DeploymentImpl> {
             "/issues/{issue_id}",
             patch(update_issue).delete(delete_issue),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::Utc;
+    use db::models::merge::MergeStatus;
+    use git_host::PullRequestDetail;
+    use uuid::Uuid;
+
+    use super::{
+        LocalTaskRow, ensure_issue_metadata, extract_priority, infer_pr_candidates_for_task,
+    };
+
+    #[test]
+    fn ensure_issue_metadata_sets_priority() {
+        let next =
+            ensure_issue_metadata(Some("Body text".to_string()), "In progress", Some("high"));
+
+        assert_eq!(
+            next.as_deref(),
+            Some(
+                "Body text\n\nLocal metadata\n- Original Status: In progress\n- Original Priority: high"
+            )
+        );
+        assert_eq!(extract_priority(next.as_deref()), Some("high".to_string()));
+    }
+
+    #[test]
+    fn ensure_issue_metadata_clears_priority_and_keeps_status() {
+        let next = ensure_issue_metadata(
+            Some(
+                "Body text\n\nLocal metadata\n- Original Status: To do\n- Original Priority: urgent"
+                    .to_string(),
+            ),
+            "Done",
+            None,
+        );
+
+        assert_eq!(
+            next.as_deref(),
+            Some("Body text\n\nLocal metadata\n- Original Status: Done")
+        );
+        assert_eq!(extract_priority(next.as_deref()), None);
+    }
+
+    #[test]
+    fn infer_pr_candidates_matches_staging_sync_titles() {
+        let task = LocalTaskRow {
+            id: Uuid::new_v4(),
+            project_id: Uuid::new_v4(),
+            title: "FR::Movement Search to Include Equipment".to_string(),
+            description: Some(
+                "Users typing barbell should still find Back Squat in movement search.\n\nLocal metadata\n- Original Status: In Staging"
+                    .to_string(),
+            ),
+            status: super::TaskStatus::InReview,
+            parent_workspace_id: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        let matching = PullRequestDetail {
+            number: 803,
+            url: "https://example.com/pr/803".to_string(),
+            status: MergeStatus::Merged,
+            merged_at: None,
+            merge_commit_sha: None,
+            title: "fix(workouts): match equipment-prefixed movement search".to_string(),
+            base_branch: "staging".to_string(),
+            head_branch: "codex/movement-search-equipment".to_string(),
+        };
+        let unrelated = PullRequestDetail {
+            number: 811,
+            url: "https://example.com/pr/811".to_string(),
+            status: MergeStatus::Merged,
+            merged_at: None,
+            merge_commit_sha: None,
+            title: "fix(admin): prevent exercise library name crash".to_string(),
+            base_branch: "staging".to_string(),
+            head_branch: "codex/admin-movement-library-fix".to_string(),
+        };
+
+        let inferred = infer_pr_candidates_for_task(&task, "staging", &[unrelated, matching]);
+
+        assert_eq!(inferred.len(), 1);
+        assert_eq!(inferred[0].detail.number, 803);
+    }
 }

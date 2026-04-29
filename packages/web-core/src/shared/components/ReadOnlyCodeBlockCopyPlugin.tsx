@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { $isCodeNode, CodeNode } from '@lexical/code';
-import { createRoot, type Root } from 'react-dom/client';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   $getRoot,
@@ -10,127 +9,139 @@ import {
 } from 'lexical';
 import { CodeBlockCopyButton } from '@/shared/components/CodeBlockCopyButton';
 
-interface MountedCodeBlock {
-  host: HTMLDivElement;
-  root: Root;
+interface CodeBlockOverlay {
+  key: string;
   text: string;
+  top: number;
+  left: number;
 }
 
 interface ReadOnlyCodeBlockCopyPluginProps {
   enabled?: boolean;
 }
 
+const BUTTON_SIZE = 32;
+const BUTTON_INSET = 8;
+const RESERVED_TOP_PADDING = '2.25rem';
+const RESERVED_RIGHT_PADDING = '3rem';
+
 export function ReadOnlyCodeBlockCopyPlugin({
   enabled = true,
 }: ReadOnlyCodeBlockCopyPluginProps) {
   const [editor] = useLexicalComposerContext();
-  const mountedBlocksRef = useRef<Map<HTMLElement, MountedCodeBlock>>(
-    new Map()
-  );
+  const overlayRootRef = useRef<HTMLDivElement | null>(null);
+  const styledBlocksRef = useRef<
+    Map<
+      HTMLElement,
+      {
+        paddingTop: string;
+        paddingRight: string;
+      }
+    >
+  >(new Map());
+  const frameRef = useRef<number | null>(null);
+  const [overlays, setOverlays] = useState<CodeBlockOverlay[]>([]);
 
-  useEffect(() => {
-    if (!enabled) return;
+  const restoreCodeBlock = useCallback((element: HTMLElement) => {
+    const previous = styledBlocksRef.current.get(element);
+    if (!previous) return;
+
+    element.style.paddingTop = previous.paddingTop;
+    element.style.paddingRight = previous.paddingRight;
+    styledBlocksRef.current.delete(element);
+  }, []);
+
+  const styleCodeBlock = useCallback((element: HTMLElement) => {
+    if (!styledBlocksRef.current.has(element)) {
+      styledBlocksRef.current.set(element, {
+        paddingTop: element.style.paddingTop,
+        paddingRight: element.style.paddingRight,
+      });
+    }
+
+    element.style.paddingTop = RESERVED_TOP_PADDING;
+    element.style.paddingRight = RESERVED_RIGHT_PADDING;
+  }, []);
+
+  const syncCodeBlocks = useCallback(() => {
+    if (!enabled) {
+      setOverlays([]);
+      return;
+    }
 
     const editorRoot = editor.getRootElement();
-    if (!editorRoot) return;
+    const overlayRoot = overlayRootRef.current;
+    const positioningRoot = overlayRoot?.parentElement;
+    if (!editorRoot || !overlayRoot || !positioningRoot) return;
 
-    const removeMountedBlock = (element: HTMLElement) => {
-      const mountedBlock = mountedBlocksRef.current.get(element);
-      if (!mountedBlock) return;
+    const positioningRect = positioningRoot.getBoundingClientRect();
+    const currentElements = new Set<HTMLElement>();
+    const nextOverlays: CodeBlockOverlay[] = [];
 
-      mountedBlock.root.unmount();
-      mountedBlock.host.remove();
-      element.classList.remove('group');
-      element.style.position = '';
-      element.style.paddingTop = '';
-      element.style.paddingRight = '';
-      mountedBlocksRef.current.delete(element);
-    };
+    editor.getEditorState().read(() => {
+      const visitNode = (node: ElementNode | RootNode = $getRoot()) => {
+        for (const child of node.getChildren()) {
+          if ($isCodeNode(child)) {
+            const element = editor.getElementByKey(child.getKey());
+            const text = child.getTextContent().replace(/\n$/, '');
 
-    const cleanupRemovedBlocks = () => {
-      for (const element of Array.from(mountedBlocksRef.current.keys())) {
-        if (!element.isConnected) {
-          removeMountedBlock(element);
-        }
-      }
-    };
+            if (element instanceof HTMLElement && text.trim()) {
+              const rect = element.getBoundingClientRect();
+              currentElements.add(element);
+              styleCodeBlock(element);
 
-    const syncCodeBlocks = () => {
-      cleanupRemovedBlocks();
-
-      const currentElements = new Set<HTMLElement>();
-      const codeBlocks: Array<{ element: HTMLElement; text: string }> = [];
-
-      editor.getEditorState().read(() => {
-        const visitNode = (node: ElementNode | RootNode = $getRoot()) => {
-          for (const child of node.getChildren()) {
-            if ($isCodeNode(child)) {
-              const element = editor.getElementByKey(child.getKey());
-              if (element instanceof HTMLElement) {
-                codeBlocks.push({
-                  element,
-                  text: child.getTextContent().replace(/\n$/, ''),
-                });
-              }
-              continue;
+              nextOverlays.push({
+                key: child.getKey(),
+                text,
+                top: Math.max(0, rect.top - positioningRect.top + BUTTON_INSET),
+                left: Math.max(
+                  0,
+                  rect.right - positioningRect.left - BUTTON_SIZE - BUTTON_INSET
+                ),
+              });
             }
 
-            if ($isElementNode(child)) {
-              visitNode(child);
-            }
+            continue;
           }
-        };
 
-        visitNode();
-      });
-
-      codeBlocks.forEach(({ element: codeBlock, text: codeText }) => {
-        currentElements.add(codeBlock);
-
-        if (!codeText.trim()) {
-          removeMountedBlock(codeBlock);
-          return;
-        }
-
-        const mountedBlock = mountedBlocksRef.current.get(codeBlock);
-        if (mountedBlock) {
-          if (mountedBlock.text !== codeText) {
-            mountedBlock.text = codeText;
-            mountedBlock.root.render(<CodeBlockCopyButton text={codeText} />);
+          if ($isElementNode(child)) {
+            visitNode(child);
           }
-          return;
         }
+      };
 
-        const host = document.createElement('div');
-        host.className =
-          'pointer-events-none absolute right-2 top-2 z-10 opacity-100';
+      visitNode();
+    });
 
-        codeBlock.style.position = 'relative';
-        codeBlock.style.paddingTop = '2.25rem';
-        codeBlock.style.paddingRight = '3rem';
-        codeBlock.classList.add('group');
-        codeBlock.appendChild(host);
-
-        const root = createRoot(host);
-        root.render(<CodeBlockCopyButton text={codeText} />);
-
-        mountedBlocksRef.current.set(codeBlock, {
-          host,
-          root,
-          text: codeText,
-        });
-      });
-
-      for (const element of Array.from(mountedBlocksRef.current.keys())) {
-        if (!currentElements.has(element)) {
-          removeMountedBlock(element);
-        }
+    for (const element of Array.from(styledBlocksRef.current.keys())) {
+      if (!currentElements.has(element) || !element.isConnected) {
+        restoreCodeBlock(element);
       }
-    };
+    }
 
-    const queueSync = () => {
-      queueMicrotask(syncCodeBlocks);
-    };
+    setOverlays(nextOverlays);
+  }, [editor, enabled, restoreCodeBlock, styleCodeBlock]);
+
+  const queueSync = useCallback(() => {
+    if (frameRef.current !== null) {
+      window.cancelAnimationFrame(frameRef.current);
+    }
+    frameRef.current = window.requestAnimationFrame(() => {
+      frameRef.current = null;
+      syncCodeBlocks();
+    });
+  }, [syncCodeBlocks]);
+
+  useLayoutEffect(() => {
+    if (!enabled) {
+      setOverlays([]);
+      return;
+    }
+
+    const editorRoot = editor.getRootElement();
+    const overlayRoot = overlayRootRef.current;
+    const positioningRoot = overlayRoot?.parentElement;
+    if (!editorRoot || !overlayRoot || !positioningRoot) return;
 
     const unregisterMutationListener = editor.registerMutationListener(
       CodeNode,
@@ -146,17 +157,46 @@ export function ReadOnlyCodeBlockCopyPlugin({
       characterData: true,
     });
 
-    syncCodeBlocks();
+    const resizeObserver = new ResizeObserver(queueSync);
+    resizeObserver.observe(editorRoot);
+    resizeObserver.observe(positioningRoot);
+
+    window.addEventListener('resize', queueSync);
+    queueSync();
 
     return () => {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
       unregisterMutationListener();
       unregisterUpdateListener();
       observer.disconnect();
-      for (const element of Array.from(mountedBlocksRef.current.keys())) {
-        removeMountedBlock(element);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', queueSync);
+      for (const element of Array.from(styledBlocksRef.current.keys())) {
+        restoreCodeBlock(element);
       }
     };
-  }, [editor, enabled]);
+  }, [editor, enabled, queueSync, restoreCodeBlock]);
 
-  return null;
+  if (!enabled) return null;
+
+  return (
+    <div
+      ref={overlayRootRef}
+      className="pointer-events-none absolute inset-0 z-10"
+      aria-hidden={overlays.length === 0}
+    >
+      {overlays.map((overlay) => (
+        <div
+          key={overlay.key}
+          className="pointer-events-auto absolute"
+          style={{ top: overlay.top, left: overlay.left }}
+        >
+          <CodeBlockCopyButton text={overlay.text} />
+        </div>
+      ))}
+    </div>
+  );
 }

@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { $isCodeNode, CodeNode } from '@lexical/code';
-import { createRoot, type Root } from 'react-dom/client';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   $getRoot,
@@ -10,66 +9,75 @@ import {
 } from 'lexical';
 import { CodeBlockCopyButton } from '@/shared/components/CodeBlockCopyButton';
 
-interface MountedCodeBlock {
-  host: HTMLDivElement;
-  root: Root;
+interface CodeBlockOverlay {
+  key: string;
   text: string;
+  top: number;
+  left: number;
 }
 
 interface ReadOnlyCodeBlockCopyPluginProps {
   enabled?: boolean;
 }
 
+const BUTTON_SIZE = 32;
+const BUTTON_OFFSET = 8;
+
 export function ReadOnlyCodeBlockCopyPlugin({
   enabled = true,
 }: ReadOnlyCodeBlockCopyPluginProps) {
   const [editor] = useLexicalComposerContext();
-  const mountedBlocksRef = useRef<Map<HTMLElement, MountedCodeBlock>>(
-    new Map()
-  );
+  const [codeBlocks, setCodeBlocks] = useState<CodeBlockOverlay[]>([]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setCodeBlocks([]);
+      return;
+    }
 
-    const editorRoot = editor.getRootElement();
-    if (!editorRoot) return;
+    let observer: MutationObserver | null = null;
+    let animationFrameId: number | null = null;
 
-    const removeMountedBlock = (element: HTMLElement) => {
-      const mountedBlock = mountedBlocksRef.current.get(element);
-      if (!mountedBlock) return;
-
-      mountedBlock.root.unmount();
-      mountedBlock.host.remove();
-      element.classList.remove('group');
-      element.style.position = '';
-      element.style.paddingTop = '';
-      element.style.paddingRight = '';
-      mountedBlocksRef.current.delete(element);
-    };
-
-    const cleanupRemovedBlocks = () => {
-      for (const element of Array.from(mountedBlocksRef.current.keys())) {
-        if (!element.isConnected) {
-          removeMountedBlock(element);
-        }
-      }
+    const cancelQueuedSync = () => {
+      if (animationFrameId == null) return;
+      window.cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
     };
 
     const syncCodeBlocks = () => {
-      cleanupRemovedBlocks();
+      animationFrameId = null;
 
-      const currentElements = new Set<HTMLElement>();
-      const codeBlocks: Array<{ element: HTMLElement; text: string }> = [];
+      const editorRoot = editor.getRootElement();
+      const container = editorRoot?.closest('.wysiwyg');
+      if (
+        !(editorRoot instanceof HTMLElement) ||
+        !(container instanceof HTMLElement)
+      ) {
+        setCodeBlocks([]);
+        return;
+      }
+
+      const containerRect = container.getBoundingClientRect();
+      const nextCodeBlocks: CodeBlockOverlay[] = [];
 
       editor.getEditorState().read(() => {
         const visitNode = (node: ElementNode | RootNode = $getRoot()) => {
           for (const child of node.getChildren()) {
             if ($isCodeNode(child)) {
               const element = editor.getElementByKey(child.getKey());
-              if (element instanceof HTMLElement) {
-                codeBlocks.push({
-                  element,
-                  text: child.getTextContent().replace(/\n$/, ''),
+              const text = child.getTextContent().replace(/\n$/, '');
+
+              if (element instanceof HTMLElement && text.trim()) {
+                const rect = element.getBoundingClientRect();
+                nextCodeBlocks.push({
+                  key: child.getKey(),
+                  text,
+                  top: rect.top - containerRect.top + BUTTON_OFFSET,
+                  left:
+                    rect.right -
+                    containerRect.left -
+                    BUTTON_SIZE -
+                    BUTTON_OFFSET,
                 });
               }
               continue;
@@ -84,52 +92,27 @@ export function ReadOnlyCodeBlockCopyPlugin({
         visitNode();
       });
 
-      codeBlocks.forEach(({ element: codeBlock, text: codeText }) => {
-        currentElements.add(codeBlock);
-
-        if (!codeText.trim()) {
-          removeMountedBlock(codeBlock);
-          return;
-        }
-
-        const mountedBlock = mountedBlocksRef.current.get(codeBlock);
-        if (mountedBlock) {
-          if (mountedBlock.text !== codeText) {
-            mountedBlock.text = codeText;
-            mountedBlock.root.render(<CodeBlockCopyButton text={codeText} />);
-          }
-          return;
-        }
-
-        const host = document.createElement('div');
-        host.className =
-          'pointer-events-none absolute right-2 top-2 z-10 opacity-100';
-
-        codeBlock.style.position = 'relative';
-        codeBlock.style.paddingTop = '2.25rem';
-        codeBlock.style.paddingRight = '3rem';
-        codeBlock.classList.add('group');
-        codeBlock.appendChild(host);
-
-        const root = createRoot(host);
-        root.render(<CodeBlockCopyButton text={codeText} />);
-
-        mountedBlocksRef.current.set(codeBlock, {
-          host,
-          root,
-          text: codeText,
-        });
-      });
-
-      for (const element of Array.from(mountedBlocksRef.current.keys())) {
-        if (!currentElements.has(element)) {
-          removeMountedBlock(element);
-        }
-      }
+      setCodeBlocks(nextCodeBlocks);
     };
 
     const queueSync = () => {
-      queueMicrotask(syncCodeBlocks);
+      if (animationFrameId != null) return;
+      animationFrameId = window.requestAnimationFrame(syncCodeBlocks);
+    };
+
+    const attachObserver = (root: HTMLElement | null) => {
+      observer?.disconnect();
+      observer = null;
+
+      if (!root) return;
+
+      observer = new MutationObserver(queueSync);
+      observer.observe(root, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+      });
     };
 
     const unregisterMutationListener = editor.registerMutationListener(
@@ -138,25 +121,42 @@ export function ReadOnlyCodeBlockCopyPlugin({
       { skipInitialization: false }
     );
     const unregisterUpdateListener = editor.registerUpdateListener(queueSync);
-
-    const observer = new MutationObserver(syncCodeBlocks);
-    observer.observe(editorRoot, {
-      childList: true,
-      subtree: true,
-      characterData: true,
+    const unregisterRootListener = editor.registerRootListener((root) => {
+      attachObserver(root);
+      queueSync();
     });
 
-    syncCodeBlocks();
+    attachObserver(editor.getRootElement());
+    window.addEventListener('resize', queueSync);
+    queueSync();
 
     return () => {
+      cancelQueuedSync();
       unregisterMutationListener();
       unregisterUpdateListener();
-      observer.disconnect();
-      for (const element of Array.from(mountedBlocksRef.current.keys())) {
-        removeMountedBlock(element);
-      }
+      unregisterRootListener();
+      observer?.disconnect();
+      window.removeEventListener('resize', queueSync);
     };
   }, [editor, enabled]);
 
-  return null;
+  if (!enabled || codeBlocks.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20">
+      {codeBlocks.map((codeBlock) => (
+        <CodeBlockCopyButton
+          key={codeBlock.key}
+          text={codeBlock.text}
+          className="absolute"
+          style={{
+            top: codeBlock.top,
+            left: Math.max(BUTTON_OFFSET, codeBlock.left),
+          }}
+        />
+      ))}
+    </div>
+  );
 }

@@ -1,11 +1,13 @@
 // vite.config.ts
-import { sentryVitePlugin } from "@sentry/vite-plugin";
-import { createLogger, defineConfig, Plugin } from "vite";
-import react from "@vitejs/plugin-react";
-import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import path from "path";
-import fs from "fs";
-import pkg from "./package.json";
+import { sentryVitePlugin } from '@sentry/vite-plugin';
+import { createLogger, defineConfig, Plugin } from 'vite';
+import react from '@vitejs/plugin-react';
+import { tanstackRouter } from '@tanstack/router-plugin/vite';
+import path from 'path';
+import fs from 'fs';
+import pkg from './package.json';
+
+const backendTarget = `http://127.0.0.1:${process.env.BACKEND_PORT || '3001'}`;
 
 function createFilteredLogger() {
   const logger = createLogger();
@@ -16,14 +18,14 @@ function createFilteredLogger() {
 
   logger.error = (msg, options) => {
     const isProxyError =
-      msg.includes("ws proxy socket error") ||
-      msg.includes("ws proxy error:") ||
-      msg.includes("http proxy error:");
+      msg.includes('ws proxy socket error') ||
+      msg.includes('ws proxy error:') ||
+      msg.includes('http proxy error:');
 
     if (isProxyError) {
       const now = Date.now();
       if (now - lastRestartLog > DEBOUNCE_MS) {
-        logger.warn("Proxy connection closed, auto-reconnecting...");
+        logger.warn('Proxy connection closed, auto-reconnecting...');
         lastRestartLog = now;
       }
       return;
@@ -86,7 +88,7 @@ export default defineConfig({
   },
   plugins: [
     tanstackRouter({
-      target: "react",
+      target: 'react',
       autoCodeSplitting: false,
     }),
     react({
@@ -131,14 +133,24 @@ export default defineConfig({
     port: parseInt(process.env.FRONTEND_PORT || '3000'),
     proxy: {
       '/api': {
-        target: `http://localhost:${process.env.BACKEND_PORT || '3001'}`,
+        target: backendTarget,
         changeOrigin: true,
         ws: true,
+        configure(proxy) {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.removeHeader('origin');
+          });
+        },
       },
       '/v1': {
-        target: `http://localhost:${process.env.BACKEND_PORT || '3001'}`,
+        target: backendTarget,
         changeOrigin: true,
         ws: true,
+        configure(proxy) {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.removeHeader('origin');
+          });
+        },
       },
     },
     fs: {

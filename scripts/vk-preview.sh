@@ -371,7 +371,7 @@ start_background() {
       --working-directory="$ROOT_DIR" \
       --property=MemoryHigh=1500M \
       --property=MemoryMax=2G \
-      --setenv=PATH="/usr/bin:/bin:/home/mcp/.local/bin" \
+      --setenv=PATH="/home/mcp/.local/bin:/usr/bin:/bin" \
       --setenv=VITE_OPEN=false \
       --setenv=BROWSER=none \
       --setenv=FRONTEND_PORT="$port" \

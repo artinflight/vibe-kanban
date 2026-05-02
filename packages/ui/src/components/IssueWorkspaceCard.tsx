@@ -224,8 +224,8 @@ export function IssueWorkspaceCard({
       </div>
 
       {/* Row 2: Live status + stats (left), PR buttons (right) */}
-      <div className="flex items-center justify-between gap-half min-w-0">
-        <div className="flex items-center flex-wrap sm:flex-nowrap gap-half text-sm text-low min-w-0 flex-1 overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-half min-w-0">
+        <div className="flex items-center flex-wrap sm:flex-nowrap gap-half text-sm text-low min-w-[2rem] flex-1 overflow-hidden">
           <div className="flex items-center gap-half shrink-0">
             {hasRunningDevServer && (
               <PlayIcon
@@ -292,7 +292,7 @@ export function IssueWorkspaceCard({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-half shrink-0 flex-wrap max-w-full">
+        <div className="flex items-center justify-end gap-half flex-wrap max-w-full">
           {workspace.prs.length > 0 ? (
             workspace.prs.map((pr) => (
               <a

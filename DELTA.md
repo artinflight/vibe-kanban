@@ -1,5 +1,30 @@
 # DELTA.md
 
+## 2026-05-02T00:00:00Z | vk/739e-vk-single-line-c | inline code backtick escape fix
+
+- Intent: stop single-backtick inline code spans from trapping the cursor in code formatting.
+- Completed:
+  - changed `InlineCodeBoundaryPlugin` so closing backticks are handled in capture phase before markdown shortcuts consume them
+  - allowed empty code-formatted cursor states to leave inline code mode
+  - stripped editor-only zero-width cursor spacers during markdown import/export in `MarkdownSyncPlugin`
+  - refreshed stale branch-local `STREAM.md` and `HANDOFF.md`
+- Files changed:
+  - `packages/ui/src/components/InlineCodeBoundaryPlugin.tsx`
+  - `packages/ui/src/components/MarkdownSyncPlugin.tsx`
+  - `STREAM.md`
+  - `HANDOFF.md`
+  - `DELTA.md`
+- Verified:
+  - `pnpm i`
+  - `pnpm run format`
+  - `pnpm --filter @vibe/ui run check`
+  - `pnpm --filter @vibe/web-core run check`
+  - `pnpm --filter @vibe/ui run lint`
+  - `pnpm --filter @vibe/local-web run build`
+- Not complete / known gaps:
+  - no live deployment was performed
+  - no backend validation was run because the change is frontend-editor only
+
 ## 2026-04-18T00:00:00Z | staging | local-only recovery baseline
 
 - Intent: recover the usable VK board state, remove active cloud coupling, and make the local install restorable.

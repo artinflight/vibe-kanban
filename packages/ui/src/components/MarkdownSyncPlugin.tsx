@@ -15,6 +15,12 @@ type MarkdownSyncPluginProps = {
   transformers: Transformer[];
 };
 
+const INLINE_CODE_CURSOR_SPACER = '\u200B';
+
+function stripEditorCursorSpacers(markdown: string): string {
+  return markdown.replaceAll(INLINE_CODE_CURSOR_SPACER, '');
+}
+
 /**
  * Handles bidirectional markdown synchronization between Lexical editor and external state.
  *
@@ -44,14 +50,16 @@ export function MarkdownSyncPlugin({
 
   // Handle controlled value changes (external → editor)
   useEffect(() => {
-    if (value === lastSerializedRef.current) return;
+    const normalizedValue = stripEditorCursorSpacers(value);
+
+    if (normalizedValue === lastSerializedRef.current) return;
 
     try {
       editor.update(() => {
-        if (value.trim() === '') {
+        if (normalizedValue.trim() === '') {
           $getRoot().clear();
         } else {
-          $convertFromMarkdownString(value, transformers);
+          $convertFromMarkdownString(normalizedValue, transformers);
         }
 
         // Only position cursor at end if editor already has focus (user is actively editing)
@@ -65,7 +73,7 @@ export function MarkdownSyncPlugin({
           }
         }
       });
-      lastSerializedRef.current = value;
+      lastSerializedRef.current = normalizedValue;
     } catch (err) {
       console.error('Failed to parse markdown', err);
     }
@@ -77,8 +85,8 @@ export function MarkdownSyncPlugin({
       onEditorStateChange?.(editorState);
       if (!onChange) return;
 
-      const markdown = editorState.read(() =>
-        $convertToMarkdownString(transformers)
+      const markdown = stripEditorCursorSpacers(
+        editorState.read(() => $convertToMarkdownString(transformers))
       );
 
       if (markdown === lastSerializedRef.current) return;

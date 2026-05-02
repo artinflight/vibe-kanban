@@ -9,6 +9,8 @@ import {
   COMMAND_PRIORITY_NORMAL,
 } from 'lexical';
 
+const INLINE_CODE_CURSOR_SPACER = '\u200B';
+
 /**
  * Allows users to exit inline code formatting by pressing:
  * - Right arrow at the end of a code-formatted text node
@@ -38,26 +40,39 @@ export function InlineCodeBoundaryPlugin() {
         return false;
       }
 
+      if (!selection.hasFormat('code')) {
+        return false;
+      }
+
       const node = selection.anchor.getNode();
-      if (!$isTextNode(node) || !node.hasFormat('code')) {
-        return false;
-      }
+      if ($isTextNode(node)) {
+        if (
+          !node.hasFormat('code') ||
+          selection.anchor.offset !== node.getTextContentSize()
+        ) {
+          return false;
+        }
 
-      if (selection.anchor.offset !== node.getTextContentSize()) {
-        return false;
-      }
+        // If the next sibling is already a non-code text node, just move there
+        const next = node.getNextSibling();
+        if ($isTextNode(next) && !next.hasFormat('code')) {
+          next.select(0, 0);
+          return true;
+        }
 
-      // If the next sibling is already a non-code text node, just move there
-      const next = node.getNextSibling();
-      if ($isTextNode(next) && !next.hasFormat('code')) {
-        next.select(0, 0);
+        // Insert a zero-width space as a cursor target outside the code node
+        const spacer = $createTextNode(INLINE_CODE_CURSOR_SPACER);
+        spacer.setFormat(0);
+        node.insertAfter(spacer);
+        spacer.select(0, 0);
         return true;
       }
 
-      // Insert a zero-width space as a cursor target outside the code node
-      const spacer = $createTextNode('\u200B');
+      // Empty inline-code selections have no code-formatted text node yet.
+      // Add a plain cursor target so a closing backtick can leave code mode.
+      const spacer = $createTextNode(INLINE_CODE_CURSOR_SPACER);
       spacer.setFormat(0);
-      node.insertAfter(spacer);
+      selection.insertNodes([spacer]);
       spacer.select(0, 0);
       return true;
     }
@@ -88,11 +103,12 @@ export function InlineCodeBoundaryPlugin() {
     }
 
     // Keep the backtick escape handler attached even if Lexical swaps the
-    // contentEditable root during focus/mount transitions.
+    // contentEditable root during focus/mount transitions. Capture phase lets
+    // this run before markdown shortcuts consume the closing backtick.
     const unregisterRootListener = editor.registerRootListener(
       (rootElement, prevRootElement) => {
-        prevRootElement?.removeEventListener('keydown', handleKeyDown);
-        rootElement?.addEventListener('keydown', handleKeyDown);
+        prevRootElement?.removeEventListener('keydown', handleKeyDown, true);
+        rootElement?.addEventListener('keydown', handleKeyDown, true);
       }
     );
 

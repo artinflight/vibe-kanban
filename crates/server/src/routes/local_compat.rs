@@ -576,7 +576,7 @@ fn format_pr_status_for_metadata(pr: &PullRequest) -> &'static str {
     }
 }
 
-fn preferred_pull_request<'a>(pull_requests: &'a [PullRequest]) -> Option<&'a PullRequest> {
+fn preferred_pull_request(pull_requests: &[PullRequest]) -> Option<&PullRequest> {
     pull_requests.iter().max_by(|left, right| {
         let left_key = (
             matches!(left.pr_status, db::models::merge::MergeStatus::Merged),

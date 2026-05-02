@@ -4,6 +4,12 @@
 
 This document defines the repo-specific safe path from feature work to local validation to upstream PR promotion for this Vibe Kanban fork.
 
+<Warning>
+Workspace agents must not touch the live production Vibe Kanban service unless
+the operator explicitly approves the exact command first. See
+`docs/operations/production-protections.md`.
+</Warning>
+
 ## Branch And Promotion Model
 
 - `staging` is the integration branch for normal work.
@@ -34,20 +40,16 @@ This document defines the repo-specific safe path from feature work to local val
 
 ## Safe Path For Production Hotfixes
 
-Use this path only when you must repair the live VK service before the normal
-promotion flow can land the fix.
+Use this path only when the operator explicitly asks for production hotfix
+planning. Workspace agents still must not execute live production commands
+unless the operator explicitly approves the exact command first.
 
 1. Start from the latest `origin/main`.
 2. Create a single-purpose `hotfix/*` branch.
 3. Reproduce the production issue in a clean local or detached worktree.
 4. Run the narrowest relevant validation for the fix.
-5. Build and deploy from a clean worktree, not from a dirty canonical checkout.
-6. Verify the live service after deploy:
-   - `systemctl --user is-active vibe-kanban.service`
-   - `tr '\0' '\n' < /proc/$(systemctl --user show -p MainPID --value vibe-kanban.service)/environ | rg '^CODEX_HOME='`
-   - `curl -s http://127.0.0.1:4311/api/info`
-   - `curl -I http://127.0.0.1:4311/`
-   - current frontend asset URL returns `200`
+5. Prepare the exact production commands for human review.
+6. Run no production command until the operator approves that exact command.
 7. Merge the hotfix into `main`.
 8. Backfill the same fix into `staging` immediately and verify that branch is not left behind production.
 
@@ -56,7 +58,13 @@ promotion flow can land the fix.
 - Do not deploy directly from `staging`, a feature branch, or a rescue branch when the intent is a production hotfix.
 - Do not rebuild or restart the live service from a dirty canonical repo.
 - Do not leave a production-only fix unmerged from both `main` and `staging`.
-- Do not restart `vibe-kanban.service` while active VK agents are running unless you explicitly accept killing those runs.
+- Do not restart `vibe-kanban.service`.
+- Do not write, copy, move, chmod, replace, or delete anything under `/home/mcp/.local/bin/vibe-kanban*`.
+- Do not edit `/home/mcp/.config/systemd/user/vibe-kanban.service*`.
+- Do not use `/home/mcp/.local/share/vibe-kanban` as a test target.
+- Do not deploy debug binaries into live production paths.
+- Do not run commands that affect live VK unless the operator explicitly approves the exact command first.
+- Treat `/home/mcp/.local/bin/vibe-kanban-serve-prod` as the production service binary. Leave it alone unless the operator explicitly approves the exact command first.
 - Do not let service rewrites drop the isolated Codex home. If agent sessions start repeating or resuming confusing context after a service change, follow `docs/self-hosting/codex-home-isolation.mdx`.
 
 ## What Counts As Local Validation

@@ -3,11 +3,13 @@
 ## Current Objective
 
 - Keep the local Vibe Kanban install stable, local-only, recoverable, and usable for day-to-day project work without sidebar clutter.
+- Keep workspace agents isolated from the live production VK service unless the operator explicitly approves the exact command first.
 
 ## Confirmed Current State
 
 - Canonical VK source repo is `/home/mcp/_vibe_kanban_repo`.
 - Production is copy-deployed from a built binary, not run live from checkout.
+- Production service starts `/home/mcp/.local/bin/vibe-kanban-serve-prod`; workspace agents must leave that binary and the live service alone unless the operator explicitly approves the exact command first.
 - Live deploy details are recorded in:
   - `VK_WORKFLOW.md`
   - `LIVE_DEPLOYMENT.json`
@@ -107,6 +109,7 @@
 - Keep inactive local projects out of the primary left-column list by archiving them instead of leaving them permanently visible.
 - Keep prod VK usable for day-to-day work, but do further root-cause debugging in a separate test instance where restarts and instrumentation are safe.
 - Do not port lab findings to prod or `staging` without explicit user confirmation.
+- Workspace agents must not restart `vibe-kanban.service`, modify `/home/mcp/.local/bin/vibe-kanban*`, edit `/home/mcp/.config/systemd/user/vibe-kanban.service*`, use `/home/mcp/.local/share/vibe-kanban` as a test target, deploy debug binaries to live production paths, or run live VK commands without exact operator approval.
 
 ## Risks / Regression Traps
 

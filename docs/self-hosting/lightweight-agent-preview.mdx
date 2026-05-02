@@ -9,10 +9,16 @@ websocket traffic to an existing Vibe Kanban backend, so it avoids extra Rust
 watchers and duplicate backend processes.
 
 <Note>
-The default backend is `http://127.0.0.1:4311`. Start the main local Vibe
-Kanban instance first, or set `VK_PREVIEW_BACKEND_PORT` to the backend port you
-want to reuse.
+The default backend is `http://127.0.0.1:4311`. Workspace agents must not
+restart or modify the live backend to make preview work. Use the existing
+backend only as a read/write API target, or set `VK_PREVIEW_BACKEND_PORT` to an
+isolated backend port.
 </Note>
+
+<Warning>
+Ask the operator before starting anything that binds live ports `4311` or
+`4312`, and do not use `/home/mcp/.local/share/vibe-kanban` as a test target.
+</Warning>
 
 ## When to use it
 
@@ -82,7 +88,8 @@ stream to search a different port range:
 VK_PREVIEW_PORT_START=3040 pnpm run preview:light
 ```
 
-Use `VK_PREVIEW_BACKEND_PORT` when the live backend is not on `4311`:
+Use `VK_PREVIEW_BACKEND_PORT` when the backend you are allowed to use is not on
+`4311`:
 
 ```bash
 VK_PREVIEW_BACKEND_PORT=3001 pnpm run preview:light
@@ -103,6 +110,8 @@ VK_PREVIEW_TAILNET_PORT=18460 pnpm run preview:light
   can clean up the process.
 - Escalate to `pnpm run dev` only when the backend must rebuild or when you need
   to verify backend-specific behaviour.
+- For backend-specific behaviour, use an isolated workspace-local dev server or
+  test instance. Do not restart `vibe-kanban.service`.
 
 ## Troubleshooting
 

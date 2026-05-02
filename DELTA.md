@@ -243,3 +243,29 @@
   - live `/v1/issues` smoke test preserved caller id `48344d12-121d-43cd-bb4f-5abde908d78c`; the temporary issue was deleted and the DB count returned `0`
 - Not complete / known gaps:
   - commit, push, and staging promotion are still pending
+
+## 2026-05-02T00:00:00Z | vk/3c0b-vk-production-pr | production protection guardrails
+
+- Intent: stop workspace agents from touching the live production VK service,
+  production binary, systemd unit, live state directory, or live ports unless
+  the operator explicitly approves the exact command first.
+- Completed:
+  - added hard production-protection rules to `AGENTS.md`
+  - added `docs/operations/production-protections.md`
+  - tightened `docs/operations/release-safety.md` so hotfix planning does not
+    imply permission to run live commands
+  - updated `docs/self-hosting/lightweight-agent-preview.mdx` to prefer
+    isolated preview/dev targets and require asking before binding `4311` or
+    `4312`
+  - linked the guardrail doc from `README.md` and `docs/docs.json`
+  - extended `pnpm run ops:check` to require the guardrail language
+  - refreshed `STATE.md`, `STREAM.md`, and `HANDOFF.md` for this stream
+- Not touched:
+  - `vibe-kanban.service`
+  - `/home/mcp/.local/bin/vibe-kanban*`
+  - `/home/mcp/.config/systemd/user/vibe-kanban.service*`
+  - `/home/mcp/.local/share/vibe-kanban`
+  - ports `4311` or `4312`
+- Validation:
+  - `pnpm run format`
+  - `pnpm run ops:check`

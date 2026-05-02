@@ -66,6 +66,7 @@ For this fork's local-development and promotion workflow, use the repo docs alon
 - [`HANDOFF.md`](HANDOFF.md) for next-agent pickup context
 - [`DELTA.md`](DELTA.md) for compact continuity history
 - [`docs/operations/release-safety.md`](docs/operations/release-safety.md) for the local-validation and upstream-PR gate
+- [`docs/operations/production-protections.md`](docs/operations/production-protections.md) for live VK guardrails
 
 Normal change flow for this fork is now:
 

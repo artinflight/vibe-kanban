@@ -95,6 +95,8 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Before finishing any task, run `pnpm run format`.
 - Before using a branch in a local Vibe Kanban instance, run the narrowest relevant checks and document what was not exercised.
 - For routine UI smoke tests, prefer the lightweight preview workflow in `docs/self-hosting/lightweight-agent-preview.mdx` over starting another backend watcher; use full dev mode only when backend behaviour must be exercised.
+- Workspace agents must not test against the live production VK runtime. Use `pnpm run preview:light`, `pnpm run preview:light:run`, or an isolated workspace-local dev server.
+- If backend behaviour must be tested on ports `4311` or `4312`, ask the operator before starting anything that binds either port.
 - Before opening or updating a PR into `staging`, the default validation baseline is `pnpm run ops:check`, `pnpm run check`, `pnpm run lint`, and `cargo test --workspace`, plus any repo-specific generation checks affected by the change.
 - Before promoting `staging` into `main`, require a fresh `staging` branch, passing CI, and explicit human QA for meaningful user-facing changes.
 - If work touches remote deployment paths, include `pnpm run remote:generate-types:check` and `pnpm run remote:prepare-db:check`.
@@ -152,3 +154,10 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Do not release unvalidated changes into the local instance just because CI would probably pass.
 - Do not leave continuity state only in chat.
 - Do not edit generated shared type files manually.
+- Do not restart `vibe-kanban.service`.
+- Do not write, copy, move, chmod, replace, or delete anything under `/home/mcp/.local/bin/vibe-kanban*`.
+- Do not edit `/home/mcp/.config/systemd/user/vibe-kanban.service*`.
+- Do not use `/home/mcp/.local/share/vibe-kanban` as a test target.
+- Do not deploy debug binaries into live production paths.
+- Do not run commands that affect live VK unless the operator explicitly approves the exact command first.
+- Treat `/home/mcp/.local/bin/vibe-kanban-serve-prod` as the production service binary. Leave it alone unless the operator explicitly approves the exact command first.

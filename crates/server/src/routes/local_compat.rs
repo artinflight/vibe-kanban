@@ -252,7 +252,7 @@ fn status_color(name: &str) -> &'static str {
     }
 }
 
-fn status_sort_order(name: &str) -> i32 {
+fn status_sort_order(name: &str) -> i64 {
     match normalize_status_key(name).as_str() {
         "todo" => 0,
         "inprogress" => 1,
@@ -382,7 +382,7 @@ fn compat_statuses(
 
     for task in tasks {
         let status_name = extract_status_name(task.description.as_deref(), &task.status);
-        let next_sort_order = ordered_statuses.len() as i32;
+        let next_sort_order = ordered_statuses.len() as i64;
         push_status(
             &mut ordered_statuses,
             &mut seen_keys,

@@ -43,6 +43,30 @@ Implications:
 - merging to `staging` does not automatically deploy production
 - worktrees are not production
 
+### Refreshable Frontend Assets
+
+The server can serve frontend assets from a runtime directory instead of only
+from the embedded Rust binary when `VK_FRONTEND_DIST_DIR` is set.
+
+Recommended local production value:
+
+```bash
+VK_FRONTEND_DIST_DIR=/home/mcp/.local/share/vibe-kanban/frontend-dist/current
+```
+
+After the running service has this environment variable, UI-only changes can be
+released without restarting `vibe-kanban.service`:
+
+```bash
+bash scripts/vk-publish-frontend-dist.sh
+```
+
+That script builds `@vibe/local-web`, copies the built `dist` into a timestamped
+release directory, and atomically repoints the `current` symlink. A browser
+refresh then gets the new `index.html` and hashed assets. Backend, database,
+executor, and route changes still require the normal binary deploy and restart
+path.
+
 ## Branch Rules
 
 - `staging` is the integration base for ongoing VK work

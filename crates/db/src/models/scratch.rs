@@ -254,7 +254,6 @@ pub struct DraftIssueData {
 #[strum_discriminants(ts(use_ts_enum))]
 #[strum_discriminants(serde(rename_all = "SCREAMING_SNAKE_CASE"))]
 #[strum_discriminants(strum(serialize_all = "SCREAMING_SNAKE_CASE"))]
-#[allow(clippy::large_enum_variant)]
 pub enum ScratchPayload {
     DraftTask(String),
     DraftFollowUp(DraftFollowUpData),

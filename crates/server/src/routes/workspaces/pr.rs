@@ -146,6 +146,12 @@ async fn trigger_pr_description_follow_up(
     // Get latest agent turn if one exists (for coding agent continuity)
     let latest_session_info =
         CodingAgentTurn::find_latest_session_info(&deployment.db().pool, session.id).await?;
+    let interrupted_context = CodingAgentTurn::find_interrupted_context_since_latest_success(
+        &deployment.db().pool,
+        session.id,
+    )
+    .await?;
+    let prompt = CodingAgentTurn::prompt_with_interrupted_context(prompt, &interrupted_context);
 
     let working_dir = session
         .agent_working_dir

@@ -97,5 +97,181 @@
   - added unit coverage for the merged-to-`staging` PR detection helper
   - `cargo fmt --all` completed
 - Not complete / known gaps:
+  - PR `#6` still needs merge
+  - backup retention validation was not rerun during the sync cleanup step
   - full test validation was not rerun after the final cleanup behavior adjustments
   - pinned workspaces still keep the existing auto-archive exception
+# 2026-04-19 Workspace Polling Hotfix
+
+- A second frontend churn path was identified after the earlier kanban/sidebar fix.
+- Root cause: mounted workspace views were still polling branch status and issue-linked workspaces every 5 seconds.
+- Primary files:
+  - `packages/web-core/src/shared/hooks/useBranchStatus.ts`
+  - `packages/web-core/src/shared/hooks/useTaskWorkspaces.ts`
+- Fix:
+  - disable default 5s polling for both hooks
+  - add `staleTime`
+  - disable `refetchOnWindowFocus`
+  - disable `refetchOnMount`
+- Why this mattered:
+  - the first stress test only exercised raw HTTP endpoints and missed the browser-mounted polling path
+  - real workspace UI usage could still drive repeated `/api/workspaces/:id/git/status` and `/api/workspaces?task_id=...` calls
+  - under sustained live use, that recreated the same multi-GB server bloat / timeout pattern
+- Post-fix validation:
+  - repeated workspace-open emulation for `OpsPB::Linking in reports`, `VK:: Wire Ntfy`, and `Vk::Ops`
+  - combined polling plus summaries POST load
+  - no endpoint failures
+  - RSS stayed roughly in the `32–51 MB` range instead of climbing into GB territory
+
+## 2026-04-20T00:00:00Z | vk/ea3c-vk-auto-archive | continuity refresh for staging-equivalent worktree
+
+- Intent: resume from the real checked-out workspace state and correct stale branch-local continuity notes.
+- Completed:
+  - confirmed the checked-out branch is `vk/ea3c-vk-auto-archive`
+  - confirmed the worktree is clean and matches `staging` at `88c0ebd59`
+  - replaced stale backup-retention stream notes in `STREAM.md` and `HANDOFF.md`
+- Verified:
+  - `git status --short --branch`
+  - `git diff --stat`
+  - `git diff --name-only staging...HEAD`
+  - `git log --oneline staging..HEAD`
+  - `curl -s http://127.0.0.1:4311/api/info` confirmed `shared_api_base: null`
+- Not complete / known gaps:
+  - `pnpm run format` did not complete because `packages/web-core` could not resolve `prettier`
+
+## 2026-04-26T12:35:00Z | vk/ea3c-vk-auto-archive | Codex rollout continuity repair
+
+- Intent: stop empty or failed Codex rollout launches from poisoning follow-up turns in the local Vibe Kanban install.
+- Completed:
+  - identified `019dc72a-9fba-7961-9c36-a3f8f8a63036` as a true zero-byte rollout file
+  - confirmed `019dc9bd-ef72-76f2-b08e-4c83659f0369` was non-empty despite the late `thread not found` log
+  - changed resume lookup to only use completed exit-0 coding-agent turns with a non-empty summary
+  - backed up the live DB to `/home/mcp/backups/vk-rollout-repair-20260426T122842Z`
+  - cleared four live DB `agent_session_id` pointers whose rollout files were empty or missing
+- Verified:
+  - `cargo fmt --all`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo check -p db`
+  - post-repair live DB scan returned `bad_rollout_agent_session_rows_after 0`
+- Not complete / known gaps:
+  - the zero-byte rollout cannot be reconstructed because no persisted session content exists
+  - the upstream Codex late-finalization `thread not found` log may still appear, but it no longer points at an empty rollout anchor in the live DB
+
+## 2026-04-26T14:55:00Z | vk/ea3c-vk-auto-archive | execution status and vibe.local hotfix
+
+- Intent: stop mounted workspace pages from showing completed agents as still running until manual refresh, and restore `vibe.local` after the local deploy.
+- Completed:
+  - changed execution-process WebSocket consumers to reconnect after clean closes and reload a fresh process snapshot
+  - stopped the execution-process server stream from forwarding unrelated non-patch messages such as `finished`
+  - rebuilt `packages/local-web/dist` so the frontend fix is embedded in the local server binary
+  - rebuilt and redeployed `/home/mcp/.local/bin/vibe-kanban-serve`
+  - restored LAN proxy reachability by setting `HOST=0.0.0.0`, `BACKEND_PORT=4311`, and `PREVIEW_PROXY_PORT=4312` in the user service drop-in
+- Verified:
+  - `pnpm install`
+  - `pnpm run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo check -p services -p db`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo build --release -p server --bin server`
+  - `https://vibe.local` returned `200`
+  - execution-process WebSocket returned initial snapshot plus `Ready`
+- Not complete / known gaps:
+  - no browser-driven long-running agent test was performed; the smoke test covered the stream path and deployed service health
+
+## 2026-04-26T16:05:00Z | vk/ea3c-vk-auto-archive | local-only auth gate hotfix
+
+- Intent: stop local-only Vibe Kanban from showing a remote sign-in prompt in the left nav after service restarts or deploys.
+- Completed:
+  - traced the regression to `/api/info` returning `login_status: loggedout` while `shared_api_base` was intentionally `null`
+  - added the live user-service drop-in `/home/mcp/.config/systemd/user/vibe-kanban.service.d/local-auth.conf` with `VK_DISABLE_AUTH=1`
+  - changed local deployment login status so an install with no shared API base reports `LoggedIn { profile: None }`
+- Verified:
+  - live `/api/info` returned `login_status: loggedin` and `shared_api_base: null` after the service drop-in
+  - `https://vibe.local` returned `200` after restart
+  - `pnpm run format`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo check -p local-deployment -p server`
+  - `pnpm --filter @vibe/local-web run build`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo build --release -p server --bin server`
+  - active workspace summaries showed no `running` execution-process statuses before restart
+  - deployed binary hash matched `target/release/server`: `8d348fb20f36bb25d0dc0737aa5ae3df6e8e8c2243003bff6ffc27f2985f6525`
+  - post-restart service state was `active/running`
+  - post-restart `/api/info` returned `login_status: loggedin` and `shared_api_base: null`
+  - post-restart `https://vibe.local` returned `200`
+- Not complete / known gaps:
+  - local-auth source hardening still needs commit/push/staging promotion
+
+## 2026-04-26T17:20:00Z | vk/ea3c-vk-auto-archive | Codex unforkable rollout fallback
+
+- Intent: stop stale Codex rollout ids from blocking prompts when Codex reports that a stored thread cannot be forked.
+- Completed:
+  - investigated `019dc44c-03d6-7401-a6f5-52353f438bcf` and confirmed the rollout JSONL existed, but current Codex still rejected it as `no rollout found`
+  - backed up the live DB to `/home/mcp/backups/vk-rollout-repair-20260426T-thread019dc44c/db.v2.sqlite`
+  - cleared only the live `coding_agent_turns.agent_session_id` pointer for `019dc44c-03d6-7401-a6f5-52353f438bcf`
+  - changed Codex prompt and review launch to fall back to `thread/start` when `thread/fork` reports a missing, empty, or unloadable rollout
+  - rebuilt and deployed `/home/mcp/.local/bin/vibe-kanban-serve` with SHA-256 `4a87753855846cde85227e582c3fb0fc3fe23b297b5cd5fd74c65b802f81cc6b`
+  - restarted `vibe-kanban.service`
+- Verified:
+  - live DB query returned zero rows for `agent_session_id = 019dc44c-03d6-7401-a6f5-52353f438bcf`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo check -p executors -p server`
+  - `pnpm run format`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo build --release -p server --bin server`
+  - deployed binary hash matched `target/release/server`
+  - `systemctl --user is-active vibe-kanban.service` returned `active`
+  - post-restart `/api/info` returned `login_status: loggedin` and `shared_api_base: null`
+  - post-restart `https://vibe.local` returned `200`
+- Not complete / known gaps:
+  - commit, push, and staging promotion are still pending
+
+## 2026-04-26T22:25:00Z | vk/ea3c-vk-auto-archive | local workspace Issue-link hotfix
+
+- Intent: stop newly created local workspaces from disappearing from their Issues after the frontend creates an optimistic Issue id.
+- Completed:
+  - traced the regression to local fallback `/v1/issues` ignoring the caller-provided issue `id`
+  - confirmed workspace `915ede80-a3ba-46fc-8665-ed8b368a0bac` had `task_id = null` while matching task `b6d2320a-f63c-463f-97ec-d41f4b7f9617` existed
+  - backed up the live DB to `/home/mcp/backups/vk-issue-workspace-link-repair-20260426T2208/db.v2.sqlite`
+  - linked the orphaned `FR::Modernize Design` workspace to issue `b6d2320a-f63c-463f-97ec-d41f4b7f9617`
+  - added `Task::create_with_id` and changed local issue creation to preserve the frontend-generated UUID
+  - added same-project idempotency and different-project rejection for duplicate local issue ids
+  - rebuilt and deployed `/home/mcp/.local/bin/vibe-kanban-serve` with SHA-256 `aa04de0df56aad09c6180200c332c5cfa56f30125e84462355cf2f8a76a2c733`
+- Verified:
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo check -p db -p server`
+  - `pnpm run format`
+  - `env DATABASE_URL=sqlite:///home/mcp/.local/share/vibe-kanban/db.v2.sqlite cargo build --release -p server --bin server`
+  - deployed binary hash matched `target/release/server`
+  - `systemctl --user is-active vibe-kanban.service` returned `active`
+  - post-restart `/api/info` returned `login_status: loggedin` and `shared_api_base: null`
+  - post-restart `https://vibe.local` returned `200`
+  - live `project_workspaces` showed the repaired workspace linked to its issue
+  - live `/v1/issues` smoke test preserved caller id `48344d12-121d-43cd-bb4f-5abde908d78c`; the temporary issue was deleted and the DB count returned `0`
+- Not complete / known gaps:
+  - commit, push, and staging promotion are still pending
+
+## 2026-04-26T23:35:00Z | vk/ea3c-vk-auto-archive | live agent context recovery + real worktree repair
+
+- Intent: recover live agents that resumed into wrong/lost context and make the fix durable so interrupted turns are not silently dropped after restarts or failed launches.
+- Completed:
+  - inventoried recent live sessions for ORC, Modernize, T52, Staging Check, and Android Parity
+  - repaired `FR::ORC::Generative Programming` by quarantining the Quick Add / Nutrition / PR `#844` poisoned rows and restoring the Generative Programming PR `#732` context
+  - quarantined ORC rows `8a644a33-3ad8-4fb7-99f3-17ec934f9bfa`, `753aa30a-c80f-4c4d-81d1-42c6040d927c`, `e9373f3f-6a22-4803-8cfb-e996135985c9`, and `bed53320-a4fc-4ca5-ad2c-e51e29d6f105`
+  - quarantined Modernize bad resume row `c071aff7-5771-4102-8248-42fe32e094f2`, which referred to PR `#840` from the wrong checkout
+  - quarantined T52 bad post-cut `resume` row `9e0618d8-8c5c-4ddf-8b19-f31689eab3bf`
+  - preserved T52 interrupted user instruction row `aff821d6-bf1a-413e-8af1-034114d63907`
+  - verified Staging Check and Android Parity had valid latest anchors and needed no DB repair
+  - added source support to inject interrupted/killed/failed turn prompts after the latest safe resume anchor into the next direct follow-up, queued follow-up, PR-description follow-up, or review start
+  - committed and pushed `d7fd5591c fix: preserve interrupted agent context on resume`
+  - opened PR `#40`: `https://github.com/artinflight/vibe-kanban/pull/40`
+  - deployed live binary `/home/mcp/.local/bin/vibe-kanban-serve` with SHA-256 `ce0a192f4216aa184a36b495d8d3d5deb76c764927b401ad123c8d6bd12b9c04`
+  - fixed a follow-on git failure caused by earlier symlink shortcuts by converting these paths to real registered git worktrees:
+    - `/home/mcp/code/worktrees/915e-fr-modernize-des/hyroxready-app`
+    - `/home/mcp/code/worktrees/5a80-fr-orc-generativ/hyroxready-app`
+    - `/home/mcp/code/worktrees/96e5-fr-generative-pr/hyroxready-app`
+- Verified:
+  - `cargo check -p server -p local-deployment`
+  - `pnpm run format`
+  - `cargo build --release -p server`
+  - zero running coding-agent processes before service restart
+  - service active and `http://127.0.0.1:4311/api/health` returned `200`
+  - deployed binary hash matched `target/release/server`
+  - latest non-dropped anchors for recent agents each had a real rollout file under either `/home/mcp/.local/share/vibe-kanban/codex-home/sessions` or `/home/mcp/.codex/sessions`
+  - Modernize and both Generative paths are real git worktrees, not symlinks
+- Not complete / known gaps:
+  - PR `#40` still needs staging promotion
+  - no broad UI/browser agent-send regression test was run after the real-worktree repair

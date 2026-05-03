@@ -1,3 +1,5 @@
+#![allow(clippy::collapsible_if, clippy::question_mark, dead_code)]
+
 use std::collections::{HashMap, HashSet};
 
 use axum::{
@@ -14,8 +16,10 @@ use db::models::{
     scratch::{ProjectStatusConfigData, Scratch, ScratchPayload, ScratchType},
     task::{Task, TaskStatus},
     workspace::Workspace,
+    workspace_repo::WorkspaceRepo,
 };
 use deployment::Deployment;
+use git_host::{GitHostError, GitHostProvider, GitHostService};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use services::services::container::ContainerService;
@@ -129,6 +133,7 @@ struct ProjectQuery {
 
 #[derive(Debug, Deserialize)]
 struct CreateIssueRequest {
+    id: Option<Uuid>,
     project_id: Uuid,
     status_id: String,
     title: String,
@@ -536,10 +541,13 @@ fn parse_pr_metadata(task: &LocalTaskRow) -> Option<CompatPullRequest> {
     .to_string();
     let target_branch_name = extract_cloud_metadata_value(description, "PR base/head")
         .and_then(|value| {
-            value
-                .split("<-")
-                .next()
-                .map(|left| trim_matching_wrappers(left.trim(), '`').trim().to_string())
+            value.split("<-").next().map(|left| {
+                left.trim()
+                    .trim_matches('`')
+                    .trim_matches('"')
+                    .trim()
+                    .to_string()
+            })
         })
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| "main".to_string());
@@ -558,6 +566,95 @@ fn parse_pr_metadata(task: &LocalTaskRow) -> Option<CompatPullRequest> {
         created_at: task.created_at.to_rfc3339(),
         updated_at: task.updated_at.to_rfc3339(),
     })
+}
+
+fn format_pr_status_for_metadata(pr: &PullRequest) -> &'static str {
+    match pr.pr_status {
+        db::models::merge::MergeStatus::Merged => "MERGED",
+        db::models::merge::MergeStatus::Closed => "CLOSED",
+        _ => "OPEN",
+    }
+}
+
+fn preferred_pull_request(pull_requests: &[PullRequest]) -> Option<&PullRequest> {
+    pull_requests.iter().max_by(|left, right| {
+        let left_key = (
+            matches!(left.pr_status, db::models::merge::MergeStatus::Merged),
+            left.merged_at,
+            left.updated_at,
+            left.created_at,
+            left.pr_number,
+        );
+        let right_key = (
+            matches!(right.pr_status, db::models::merge::MergeStatus::Merged),
+            right.merged_at,
+            right.updated_at,
+            right.created_at,
+            right.pr_number,
+        );
+        left_key.cmp(&right_key)
+    })
+}
+
+fn ensure_pr_metadata(
+    description: Option<String>,
+    pr: &PullRequest,
+    head_branch: Option<&str>,
+) -> Option<String> {
+    let mut lines = Vec::<String>::new();
+    let mut replaced_pr = false;
+    let mut replaced_state = false;
+    let mut replaced_base_head = false;
+
+    let pr_line = format!("- PR: #{} {}", pr.pr_number, pr.pr_url);
+    let pr_state_line = format!("- PR state: {}", format_pr_status_for_metadata(pr));
+    let pr_base_head_line = match head_branch {
+        Some(branch) if !branch.trim().is_empty() => {
+            format!(
+                "- PR base/head: `{}` <- `{}`",
+                pr.target_branch_name, branch
+            )
+        }
+        _ => format!("- PR base/head: `{}`", pr.target_branch_name),
+    };
+
+    for line in description.clone().unwrap_or_default().lines() {
+        let trimmed = line.trim();
+        let prefix = &line[..line.len().saturating_sub(trimmed.len())];
+        if trimmed.starts_with("- PR:") || trimmed.starts_with("PR:") {
+            lines.push(format!("{prefix}{pr_line}"));
+            replaced_pr = true;
+        } else if trimmed.starts_with("- PR state:") || trimmed.starts_with("PR state:") {
+            lines.push(format!("{prefix}{pr_state_line}"));
+            replaced_state = true;
+        } else if trimmed.starts_with("- PR base/head:") || trimmed.starts_with("PR base/head:") {
+            lines.push(format!("{prefix}{pr_base_head_line}"));
+            replaced_base_head = true;
+        } else {
+            lines.push(line.to_string());
+        }
+    }
+
+    if !replaced_pr || !replaced_state || !replaced_base_head {
+        if !lines.iter().any(|line| line.trim() == "Local metadata") {
+            if !lines.is_empty() && !lines.last().is_some_and(|line| line.is_empty()) {
+                lines.push(String::new());
+            }
+            lines.push("Local metadata".to_string());
+        }
+        if !replaced_pr {
+            lines.push(pr_line);
+        }
+        if !replaced_state {
+            lines.push(pr_state_line);
+        }
+        if !replaced_base_head {
+            lines.push(pr_base_head_line);
+        }
+    }
+
+    let next = lines.join("\n").trim().to_string();
+    if next.is_empty() { None } else { Some(next) }
 }
 
 fn task_to_issue(task: LocalTaskRow, issue_number: i64, status_id: String) -> CompatIssue {
@@ -968,6 +1065,175 @@ async fn archive_linked_workspaces_for_in_staging_issue(
     Ok(())
 }
 
+async fn persist_workspace_prs_for_issue_snapshot(
+    deployment: &DeploymentImpl,
+    workspace: &Workspace,
+) -> Result<Vec<PullRequest>, ApiError> {
+    let pool = &deployment.db().pool;
+    let workspace_repos =
+        WorkspaceRepo::find_repos_with_target_branch_for_workspace(pool, workspace.id).await?;
+    let git = deployment.git();
+
+    for workspace_repo in workspace_repos {
+        let push_remote =
+            match git.resolve_remote_for_branch(&workspace_repo.repo.path, &workspace.branch) {
+                Ok(remote) => remote,
+                Err(error) => {
+                    tracing::warn!(
+                        workspace_id = %workspace.id,
+                        repo_id = %workspace_repo.repo.id,
+                        branch = %workspace.branch,
+                        ?error,
+                        "failed to resolve remote while snapshotting PR metadata"
+                    );
+                    continue;
+                }
+            };
+
+        let git_host = match GitHostService::from_url(&push_remote.url) {
+            Ok(host) => host,
+            Err(GitHostError::UnsupportedProvider) => {
+                tracing::warn!(
+                    workspace_id = %workspace.id,
+                    repo_id = %workspace_repo.repo.id,
+                    remote_url = %push_remote.url,
+                    "unsupported Git host while snapshotting PR metadata"
+                );
+                continue;
+            }
+            Err(GitHostError::CliNotInstalled { provider }) => {
+                tracing::warn!(
+                    workspace_id = %workspace.id,
+                    repo_id = %workspace_repo.repo.id,
+                    ?provider,
+                    "git host CLI not installed while snapshotting PR metadata"
+                );
+                continue;
+            }
+            Err(error) => {
+                tracing::warn!(
+                    workspace_id = %workspace.id,
+                    repo_id = %workspace_repo.repo.id,
+                    remote_url = %push_remote.url,
+                    ?error,
+                    "failed to initialize Git host while snapshotting PR metadata"
+                );
+                continue;
+            }
+        };
+
+        let prs = match git_host
+            .list_prs_for_branch(
+                &workspace_repo.repo.path,
+                &push_remote.url,
+                &workspace.branch,
+            )
+            .await
+        {
+            Ok(prs) => prs,
+            Err(GitHostError::CliNotInstalled { provider }) => {
+                tracing::warn!(
+                    workspace_id = %workspace.id,
+                    repo_id = %workspace_repo.repo.id,
+                    ?provider,
+                    "git host CLI not installed while listing branch PRs"
+                );
+                continue;
+            }
+            Err(GitHostError::AuthFailed(_)) => {
+                tracing::warn!(
+                    workspace_id = %workspace.id,
+                    repo_id = %workspace_repo.repo.id,
+                    "git auth unavailable while snapshotting PR metadata"
+                );
+                continue;
+            }
+            Err(error) => {
+                tracing::warn!(
+                    workspace_id = %workspace.id,
+                    repo_id = %workspace_repo.repo.id,
+                    branch = %workspace.branch,
+                    ?error,
+                    "failed to list branch PRs while snapshotting PR metadata"
+                );
+                continue;
+            }
+        };
+
+        for pr_info in prs {
+            PullRequest::create_for_workspace(
+                pool,
+                workspace.id,
+                workspace_repo.repo.id,
+                &workspace_repo.target_branch,
+                pr_info.number,
+                &pr_info.url,
+            )
+            .await?;
+
+            if !matches!(pr_info.status, db::models::merge::MergeStatus::Open) {
+                let merged_at = if matches!(pr_info.status, db::models::merge::MergeStatus::Merged)
+                {
+                    pr_info.merged_at
+                } else {
+                    None
+                };
+                PullRequest::update_status(
+                    pool,
+                    &pr_info.url,
+                    &pr_info.status,
+                    merged_at,
+                    pr_info.merge_commit_sha.clone(),
+                )
+                .await?;
+            }
+        }
+    }
+
+    PullRequest::find_by_workspace_id(pool, workspace.id)
+        .await
+        .map_err(ApiError::from)
+}
+
+async fn snapshot_issue_pr_metadata_before_cleanup(
+    deployment: &DeploymentImpl,
+    issue_id: Uuid,
+) -> Result<(), ApiError> {
+    let pool = &deployment.db().pool;
+    let Some(task) = Task::find_by_id(pool, issue_id).await? else {
+        return Ok(());
+    };
+
+    let workspaces = find_linked_workspaces_for_task(deployment, issue_id).await?;
+    let mut pull_requests = Vec::<PullRequest>::new();
+    let mut workspace_branch_by_id = HashMap::<Uuid, String>::new();
+
+    for workspace in workspaces {
+        workspace_branch_by_id.insert(workspace.id, workspace.branch.clone());
+        let mut linked_prs = PullRequest::find_by_workspace_id(pool, workspace.id).await?;
+        if linked_prs.is_empty() {
+            linked_prs = persist_workspace_prs_for_issue_snapshot(deployment, &workspace).await?;
+        }
+        pull_requests.extend(linked_prs);
+    }
+
+    let Some(best_pr) = preferred_pull_request(&pull_requests) else {
+        return Ok(());
+    };
+
+    let head_branch = best_pr
+        .workspace_id
+        .and_then(|workspace_id| workspace_branch_by_id.get(&workspace_id))
+        .map(String::as_str);
+    let next_description = ensure_pr_metadata(task.description.clone(), best_pr, head_branch);
+    if next_description == task.description {
+        return Ok(());
+    }
+
+    Task::update(pool, issue_id, None, Some(next_description), None, None).await?;
+    Ok(())
+}
+
 async fn list_fallback_projects(
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<serde_json::Value>, ApiError> {
@@ -1339,8 +1605,21 @@ async fn create_issue(
         Some(&TaskStatus::Todo),
     );
 
-    Task::create(
+    let id = request.id.unwrap_or_else(Uuid::new_v4);
+    if let Some(existing) = Task::find_by_id(&deployment.db().pool, id).await? {
+        if existing.project_id == request.project_id {
+            return Ok(ResponseJson(MutationTxidResponse {
+                txid: Utc::now().timestamp_millis(),
+            }));
+        }
+        return Err(ApiError::BadRequest(
+            "Issue id already exists in a different project".to_string(),
+        ));
+    }
+
+    Task::create_with_id(
         &deployment.db().pool,
+        id,
         request.project_id,
         request.title,
         ensure_status_metadata(request.description, &status_name),
@@ -1401,6 +1680,7 @@ async fn update_issue(
     .await?;
 
     if entered_in_staging {
+        snapshot_issue_pr_metadata_before_cleanup(&deployment, issue_id).await?;
         archive_linked_workspaces_for_in_staging_issue(&deployment, issue_id).await?;
     }
 
@@ -1458,6 +1738,7 @@ async fn bulk_update_issues(
         .await?;
 
         if entered_in_staging {
+            snapshot_issue_pr_metadata_before_cleanup(&deployment, update.id).await?;
             archive_linked_workspaces_for_in_staging_issue(&deployment, update.id).await?;
         }
     }
@@ -1548,4 +1829,69 @@ pub fn router() -> Router<DeploymentImpl> {
             "/issues/{issue_id}",
             patch(update_issue).delete(delete_issue),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::Utc;
+
+    use super::*;
+
+    fn sample_pull_request() -> PullRequest {
+        PullRequest {
+            id: "pr-1".to_string(),
+            workspace_id: Some(Uuid::nil()),
+            repo_id: Some(Uuid::nil()),
+            pr_url: "https://github.com/example/repo/pull/123".to_string(),
+            pr_number: 123,
+            pr_status: db::models::merge::MergeStatus::Merged,
+            target_branch_name: "staging".to_string(),
+            merged_at: Some(Utc::now()),
+            merge_commit_sha: Some("abc123".to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            synced_at: None,
+        }
+    }
+
+    #[test]
+    fn ensure_pr_metadata_appends_and_updates_lines() {
+        let pr = sample_pull_request();
+        let description = Some(
+            "Body\n\nLocal metadata\n- Original Status: In Staging\n- PR: #1 https://old.example/pr/1\n- PR state: OPEN\n- PR base/head: `main` <- `old-branch`".to_string(),
+        );
+
+        let updated = ensure_pr_metadata(description, &pr, Some("vk/test-branch"))
+            .expect("description should remain present");
+
+        assert!(updated.contains("- PR: #123 https://github.com/example/repo/pull/123"));
+        assert!(updated.contains("- PR state: MERGED"));
+        assert!(updated.contains("- PR base/head: `staging` <- `vk/test-branch`"));
+        assert_eq!(updated.matches("- PR:").count(), 1);
+    }
+
+    #[test]
+    fn parse_pr_metadata_reads_snapshot_fields() {
+        let project_id = Uuid::new_v4();
+        let issue_id = Uuid::new_v4();
+        let task = LocalTaskRow {
+            id: issue_id,
+            project_id,
+            title: "Issue".to_string(),
+            description: Some(
+                "Body\n\nLocal metadata\n- PR: #123 https://github.com/example/repo/pull/123\n- PR state: MERGED\n- PR base/head: `staging` <- `vk/test-branch`".to_string(),
+            ),
+            status: TaskStatus::InReview,
+            parent_workspace_id: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        let pr = parse_pr_metadata(&task).expect("PR metadata should parse");
+        assert_eq!(pr.number, 123);
+        assert_eq!(pr.status, "merged");
+        assert_eq!(pr.target_branch_name, "staging");
+        assert_eq!(pr.issue_id, issue_id.to_string());
+        assert_eq!(pr.project_id, project_id.to_string());
+    }
 }

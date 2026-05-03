@@ -2,71 +2,134 @@
 
 ## Stream Identifier
 
-- Branch: `vk/7b9a-vk-worktree-clea`
-- Repo: `/home/mcp/code/worktrees/7b9a-vk-worktree-clea/_vibe_kanban_repo`
+- Branch: `vk/ea3c-vk-auto-archive`
+- Repo: `/home/mcp/code/worktrees/ea3c-vk-auto-archive/_vibe_kanban_repo`
 - Base: `fork/staging`
-- Working mode: workspace lifecycle cleanup
+- Working mode: production hotfix promotion for local VK stability
 
 ## Objective
 
-- Delete workspace worktree folders as soon as a tracked PR into `staging` is merged, and archive linked workspaces plus clean up their worktrees automatically when an issue is moved into `In Staging`.
+- Repair local Codex rollout continuity, execution-status streaming, local issue/workspace linking, and live agent context recovery so failed rollouts, stale "agent running" UI state, newly created workspaces without Issues, and agents resuming into wrong or lost context do not block normal prompt flow, then promote the fixes through the fork workflow so they survive updates/deploys.
 
 ## In Scope
 
-- PR-merge monitoring paths that already archive workspaces
-- Safe immediate worktree deletion for merged-to-`staging` workspaces
-- Local issue status transitions into `In Staging`
-- Workflow documentation for the new behaviour
-- Branch-local continuity docs for this stream
+- Truthful branch-local continuity for this worktree
+- Guarding resume/fork selection against failed coding-agent turns
+- Repairing live local DB continuity pointers that reference empty or missing rollout files
+- Keeping execution-process state streams alive/reconnected so completed agents stop showing as running without a page refresh
+- Keeping `vibe.local` reachable through the LAN reverse proxy
+- Keeping local-only auth gates open when `shared_api_base` is intentionally unset
+- Preserving the local-only runtime baseline and staging merge compatibility
+- Preserving the frontend-generated local issue UUID when the local fallback issue endpoint creates a task, so workspace creation can link the new workspace back to its Issue
+- Recovering live agent sessions by quarantining known bad execution rows without deleting chat/process history
+- Injecting interrupted/killed turn prompts into the next agent prompt after the latest safe resume anchor
+- Keeping Vibe-managed repo paths as real git worktrees, not symlinks
 
 ## Out of Scope
 
-- Changing merge behavior for direct local merges
-- Altering the general archived-workspace retention policy for other cases
-- Changing pin semantics for merged workspaces
+- Reconstructing the old backup-retention branch context as if it were still checked out here
+- Re-enabling shared/cloud API behavior
+- Reconstructing a zero-byte Codex rollout file that has no persisted content
+- Broad workspace lifecycle cleanup beyond what already exists on `fork/staging`
+- Replacing Vibe worktree management with symlinked canonical worktrees
 
 ## Stream-Specific Decisions
 
-- Reuse the existing archive-on-merge flow instead of adding a separate post-merge job.
-- Only trigger immediate folder deletion for PRs merged into `staging`.
-- If an archive script is still running, defer deletion until that archive script exits.
-- Treat moving a local issue into `In Staging` as an explicit archive-and-cleanup signal for linked local workspaces.
-- Preserve the current pinned-workspace exception from auto-archiving.
+- Local runtime expectations from `STATE.md` remain in force, including `shared_api_base: null`.
+- Resume continuity should only anchor to successful coding-agent turns: completed process, exit code `0`, non-null agent session id, and non-empty final summary.
+- Empty or missing rollout files are live-state corruption, not valid resume anchors.
+- Execution-process streams are long-lived state streams; non-patch terminal messages must not make mounted workspace views keep stale running snapshots.
+- `vibe.local` requires the user service to bind `HOST=0.0.0.0` on `BACKEND_PORT=4311` for the external LAN nginx proxy.
+- Local-only installs with no shared API base must report `LoggedIn { profile: None }` so the UI does not show remote sign-in prompts.
+- If Codex rejects a stored rollout during `thread/fork`, start a fresh thread instead of failing the user prompt; stale rollout pointers are an optimization, not a hard dependency.
+- Local fallback issue creation must honor a caller-supplied issue `id`; the workspace draft stores that id before workspace creation, so replacing it server-side creates orphaned workspaces with `task_id = null`.
+- If a service restart or failed launch interrupts a turn after the latest safe resume anchor, the next prompt must carry that interrupted prompt text explicitly.
+- `execution_processes.dropped = 1` is the preferred live quarantine mechanism for poisoned/unusable rows; do not delete process rows or coding-agent turns.
+- Vibe-managed repo paths inside `container_ref` must be actual registered git worktrees. Symlinks can make `git worktree add` fail with `already exists`.
 
 ## Relevant Files / Modules
 
-- `crates/services/src/services/container.rs`
-- `crates/services/src/services/pr_monitor.rs`
-- `crates/local-deployment/src/container.rs`
-- `crates/server/src/routes/local_compat.rs`
-- `crates/server/src/routes/workspaces/pr.rs`
-- `VK_WORKFLOW.md`
+- `STREAM.md`
 - `HANDOFF.md`
 - `DELTA.md`
+- `STATE.md`
+- `crates/db/src/models/coding_agent_turn.rs`
+- `crates/services/src/services/events/streams.rs`
+- `crates/local-deployment/src/lib.rs`
+- `crates/executors/src/executors/codex.rs`
+- `crates/executors/src/executors/codex/review.rs`
+- `crates/db/src/models/task.rs`
+- `crates/server/src/routes/local_compat.rs`
+- `crates/server/src/routes/sessions/mod.rs`
+- `crates/server/src/routes/sessions/review.rs`
+- `crates/server/src/routes/workspaces/pr.rs`
+- `crates/local-deployment/src/container.rs`
+- `packages/web-core/src/shared/hooks/useJsonPatchWsStream.ts`
+- `packages/web-core/src/shared/hooks/useExecutionProcesses.ts`
+- `packages/web-core/src/features/workspace-chat/model/hooks/useConversationHistory.ts`
+- `/home/mcp/.local/share/vibe-kanban/db.v2.sqlite`
+- `/home/mcp/.local/share/vibe-kanban/codex-home/sessions`
+- `/home/mcp/.codex/sessions`
+- `/home/mcp/code/worktrees/915e-fr-modernize-des/hyroxready-app`
+- `/home/mcp/code/worktrees/5a80-fr-orc-generativ/hyroxready-app`
+- `/home/mcp/code/worktrees/96e5-fr-generative-pr/hyroxready-app`
+- `/home/mcp/.config/systemd/user/vibe-kanban.service.d/fixed-ports.conf`
+- `/home/mcp/.config/systemd/user/vibe-kanban.service.d/local-auth.conf`
 
 ## Current Status
 
-- Completed:
-  - added a shared container helper for safe immediate deletion of archived worktrees
-  - kept the merged-PR-to-`staging` cleanup path on top of that helper
-  - wired the PR monitor and attach-existing-PR route to clean up worktrees after archive-on-merge succeeds
-  - added a retry after archive-script completion so deletion waits for archive scripts to finish
-  - archived linked local workspaces and cleaned up their worktrees when a local issue transitions into `In Staging`, including bulk issue updates
-  - documented the new post-merge cleanup behaviour in `VK_WORKFLOW.md`
+- Confirmed:
+  - the reported zero-byte rollout was `019dc72a-9fba-7961-9c36-a3f8f8a63036`
+  - the reported `019dc9bd-ef72-76f2-b08e-4c83659f0369` rollout is non-empty
+  - the live DB repair cleared four invalid `agent_session_id` pointers whose rollout files were empty or missing
+  - a DB backup was saved at `/home/mcp/backups/vk-rollout-repair-20260426T122842Z`
+  - the local service is rebuilt/restarted with the rollout guard and execution-process stream hotfix
+  - `vibe.local` returns `200` through nginx after binding VK to `0.0.0.0:4311`
+- Completed locally:
+  - committed rollout continuity guard
+  - committed execution-status stream and `vibe.local` hotfix
+  - merged PR `#37` into `staging`
+  - confirmed the live left-nav sign-in regression was caused by `/api/info` returning `login_status: loggedout` for a local-only install
+  - added the live `VK_DISABLE_AUTH=1` systemd drop-in and verified `/api/info` returns `login_status: loggedin`
+  - hardened source so local-only installs with no shared API base report `LoggedIn { profile: None }`
+  - rebuilt and redeployed `/home/mcp/.local/bin/vibe-kanban-serve` with SHA-256 `8d348fb20f36bb25d0dc0737aa5ae3df6e8e8c2243003bff6ffc27f2985f6525`
+  - verified `vibe.local` still returns `200` after restart
+  - repaired live pointer `019dc44c-03d6-7401-a6f5-52353f438bcf` by backing up the DB to `/home/mcp/backups/vk-rollout-repair-20260426T-thread019dc44c/db.v2.sqlite` and clearing only that stale `agent_session_id`
+  - added a Codex executor fallback so missing, empty, or unloadable stored rollouts start a fresh thread for both normal prompts and reviews
+  - rebuilt and redeployed `/home/mcp/.local/bin/vibe-kanban-serve` with SHA-256 `4a87753855846cde85227e582c3fb0fc3fe23b297b5cd5fd74c65b802f81cc6b`
+  - verified the service is active, `/api/info` is logged in with `shared_api_base: null`, and `vibe.local` returns `200`
+  - traced new workspaces missing from Issues to the local fallback `/v1/issues` endpoint dropping the optimistic issue UUID generated by the frontend
+  - repaired workspace `915ede80-a3ba-46fc-8665-ed8b368a0bac` by linking it to task `b6d2320a-f63c-463f-97ec-d41f4b7f9617` after backing up the DB to `/home/mcp/backups/vk-issue-workspace-link-repair-20260426T2208/db.v2.sqlite`
+  - changed local issue creation to insert with the caller-provided UUID and return idempotently if the same issue already exists in the same project
+  - rebuilt and redeployed `/home/mcp/.local/bin/vibe-kanban-serve` with SHA-256 `aa04de0df56aad09c6180200c332c5cfa56f30125e84462355cf2f8a76a2c733`
+  - smoke-tested the live endpoint with temporary issue id `48344d12-121d-43cd-bb4f-5abde908d78c`; it appeared with that exact id, was deleted, and the DB count returned `0`
+- Completed in the latest session:
+  - quarantined poisoned ORC rows for Quick Add / Nutrition / PR `#844` and restored ORC to the Generative Programming PR `#732` context
+  - quarantined the Modernize bad PR `#840` resume row
+  - quarantined the useless T52 post-cut `resume` row while preserving the actual interrupted timer instruction
+  - added interrupted-context prompt recovery for direct follow-ups, queued follow-ups, PR-description follow-ups, and review starts
+  - rebuilt and redeployed `/home/mcp/.local/bin/vibe-kanban-serve` with SHA-256 `ce0a192f4216aa184a36b495d8d3d5deb76c764927b401ad123c8d6bd12b9c04`
+  - opened PR `#40`: `https://github.com/artinflight/vibe-kanban/pull/40`
+  - fixed the broken symlink repair by converting Modernize and Generative Vibe repo paths into real registered git worktrees
 - In progress:
-  - rebasing the branch onto current `fork/staging`
-- Pending:
-  - finish the rebase
-  - merge this branch into `staging`
+  - promote PR `#40` into `staging` so the interrupted-context hotfix survives normal deploys
 
 ## Risks / Regression Traps
 
-- Deleting the worktree before an archive script finishes would break archive-script execution; the retry path must remain in place.
-- The merged-PR cleanup path relies on tracked PR metadata; workspaces without tracked PR rows still fall back to the existing time-based cleanup path unless `In Staging` is used.
-- Pinned workspaces still skip archive-on-merge, so they do not use the merged-PR immediate deletion path.
+- Trusting stale continuity docs instead of the checked-out branch and code
+- Treating any non-null `agent_session_id` as resumable without checking the source process outcome
+- Treating a DB-valid `agent_session_id` as forkable after Codex has already rejected the rollout
+- Nulling all historical agent session IDs instead of only invalid live-state pointers
+- Letting execution-process WebSocket streams treat clean closes or unrelated `finished` messages as terminal state for a mounted workspace
+- Removing the fixed `HOST=0.0.0.0`, `BACKEND_PORT=4311`, and `PREVIEW_PROXY_PORT=4312` systemd drop-in will break `vibe.local`
+- Removing the live `VK_DISABLE_AUTH=1` drop-in should not break local UI gates after the source hardening deploy, but keeping it is still harmless defense in depth.
+- Ignoring frontend-provided issue ids in local fallback mode will orphan newly created workspaces again because the workspace create request links against the optimistic issue id.
+- Symlinking a Vibe-managed repo path will break git operations when Vibe tries to create or reset a worktree at that exact path.
+- Checking only `/home/mcp/.local/share/vibe-kanban/codex-home/sessions` can falsely report missing rollouts; newer sessions may live under `/home/mcp/.codex/sessions`.
+- Dropping T52's interrupted prompt row `aff821d6-bf1a-413e-8af1-034114d63907` would remove the exact user instruction that needs to be recovered.
 
 ## Next Safe Steps
 
-1. Resolve the current continuity-doc rebase conflict by keeping this branch’s stream notes.
-2. Continue the rebase onto `fork/staging`.
-3. Merge the rebased branch into the local `staging` checkout.
+1. Monitor and merge PR `#40` into `staging` when acceptable.
+2. If live context breaks again, verify latest non-dropped anchors against both Codex session roots and quarantine only specific poisoned rows.
+3. If live git operations fail with `Invalid repository` or `already exists`, inspect for symlinks/stale directories before changing DB state.

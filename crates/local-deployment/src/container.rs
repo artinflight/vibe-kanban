@@ -91,6 +91,20 @@ pub struct LocalContainerService {
     remote_client: Option<RemoteClient>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum QueuedFollowUpOutcome {
+    NoQueuedMessage,
+    Started,
+    Discarded,
+    FailedToStart,
+}
+
+impl QueuedFollowUpOutcome {
+    fn should_finalize(self) -> bool {
+        !matches!(self, Self::Started)
+    }
+}
+
 impl LocalContainerService {
     #[allow(clippy::too_many_arguments)]
     pub async fn new(
@@ -635,8 +649,26 @@ impl LocalContainerService {
                             ctx.workspace.id
                         );
 
-                        // Manually finalize task since we're bypassing normal execution flow
-                        container.finalize_task(&ctx).await;
+                        // We bypass the configured cleanup action here, so consume any queued
+                        // follow-up before finalizing the completed agent turn.
+                        let queued_follow_up_outcome =
+                            container.consume_queued_follow_up(&ctx).await;
+                        if queued_follow_up_outcome.should_finalize() {
+                            container.finalize_task(&ctx).await;
+                        }
+                        if queued_follow_up_outcome.should_finalize()
+                            && let Err(e) = CodingAgentTurn::mark_unseen_by_execution_process_id(
+                                &db.pool,
+                                ctx.execution_process.id,
+                            )
+                            .await
+                        {
+                            tracing::warn!(
+                                "Failed to mark coding agent turn unseen for execution {}: {}",
+                                ctx.execution_process.id,
+                                e
+                            );
+                        }
                         already_finalized = true;
                     }
                 }
@@ -648,59 +680,8 @@ impl LocalContainerService {
                         .ok()
                         .and_then(|action| action.next_action())
                         .is_some();
-                    let mut started_queued_follow_up = false;
-
-                    // Only execute queued messages if the execution succeeded
-                    // If it failed or was killed, just clear the queue and finalize
-                    let should_execute_queued = !matches!(
-                        ctx.execution_process.status,
-                        ExecutionProcessStatus::Failed | ExecutionProcessStatus::Killed
-                    );
-
-                    if let Some(queued_msg) =
-                        container.queued_message_service.take_queued(ctx.session.id)
-                    {
-                        if should_execute_queued {
-                            tracing::info!(
-                                "Found queued message for session {}, starting follow-up execution",
-                                ctx.session.id
-                            );
-
-                            // Delete the scratch since we're consuming the queued message
-                            if let Err(e) = Scratch::delete(
-                                &db.pool,
-                                ctx.session.id,
-                                &ScratchType::DraftFollowUp,
-                            )
-                            .await
-                            {
-                                tracing::warn!(
-                                    "Failed to delete scratch after consuming queued message: {}",
-                                    e
-                                );
-                            }
-
-                            // Execute the queued follow-up
-                            if let Err(e) = container
-                                .start_queued_follow_up(&ctx, &queued_msg.data)
-                                .await
-                            {
-                                tracing::error!("Failed to start queued follow-up: {}", e);
-                                // Fall back to finalization if follow-up fails
-                                container.finalize_task(&ctx).await;
-                            } else {
-                                started_queued_follow_up = true;
-                            }
-                        } else {
-                            // Execution failed or was killed - discard the queued message and finalize
-                            tracing::info!(
-                                "Discarding queued message for session {} due to execution status {:?}",
-                                ctx.session.id,
-                                ctx.execution_process.status
-                            );
-                            container.finalize_task(&ctx).await;
-                        }
-                    } else {
+                    let queued_follow_up_outcome = container.consume_queued_follow_up(&ctx).await;
+                    if queued_follow_up_outcome.should_finalize() {
                         container.finalize_task(&ctx).await;
                     }
 
@@ -708,7 +689,7 @@ impl LocalContainerService {
                         ctx.execution_process.run_reason,
                         ExecutionProcessRunReason::CodingAgent
                     ) && !has_chained_follow_up
-                        && !started_queued_follow_up;
+                        && !matches!(queued_follow_up_outcome, QueuedFollowUpOutcome::Started);
 
                     if should_mark_turn_unseen
                         && let Err(e) = CodingAgentTurn::mark_unseen_by_execution_process_id(
@@ -739,32 +720,15 @@ impl LocalContainerService {
                     .await
                     .unwrap_or(true);
 
-                    if !has_running_agent
-                        && let Some(queued_msg) =
-                            container.queued_message_service.take_queued(ctx.session.id)
-                    {
-                        tracing::info!(
-                            "Parallel setup script finished with queued message for session {}, starting follow-up",
-                            ctx.session.id
-                        );
-
-                        if let Err(e) =
-                            Scratch::delete(&db.pool, ctx.session.id, &ScratchType::DraftFollowUp)
-                                .await
-                        {
-                            tracing::warn!(
-                                "Failed to delete scratch after consuming queued message: {}",
-                                e
-                            );
-                        }
-
-                        if let Err(e) = container
-                            .start_queued_follow_up(&ctx, &queued_msg.data)
-                            .await
-                        {
+                    if !has_running_agent {
+                        let queued_follow_up_outcome =
+                            container.consume_queued_follow_up(&ctx).await;
+                        if matches!(
+                            queued_follow_up_outcome,
+                            QueuedFollowUpOutcome::FailedToStart
+                        ) {
                             tracing::error!(
-                                "Failed to start queued follow-up from setup script completion: {}",
-                                e
+                                "Failed to start queued follow-up from setup script completion"
                             );
                         }
                     }
@@ -1165,6 +1129,46 @@ impl LocalContainerService {
         Ok(())
     }
 
+    /// Consume a queued follow-up and start it when the completed process allows it.
+    async fn consume_queued_follow_up(&self, ctx: &ExecutionContext) -> QueuedFollowUpOutcome {
+        let Some(queued_msg) = self.queued_message_service.take_queued(ctx.session.id) else {
+            return QueuedFollowUpOutcome::NoQueuedMessage;
+        };
+
+        if matches!(
+            ctx.execution_process.status,
+            ExecutionProcessStatus::Failed | ExecutionProcessStatus::Killed
+        ) {
+            tracing::info!(
+                "Discarding queued message for session {} due to execution status {:?}",
+                ctx.session.id,
+                ctx.execution_process.status
+            );
+            return QueuedFollowUpOutcome::Discarded;
+        }
+
+        tracing::info!(
+            "Found queued message for session {}, starting follow-up execution",
+            ctx.session.id
+        );
+
+        if let Err(e) =
+            Scratch::delete(&self.db.pool, ctx.session.id, &ScratchType::DraftFollowUp).await
+        {
+            tracing::warn!(
+                "Failed to delete scratch after consuming queued message: {}",
+                e
+            );
+        }
+
+        if let Err(e) = self.start_queued_follow_up(ctx, &queued_msg.data).await {
+            tracing::error!("Failed to start queued follow-up: {}", e);
+            return QueuedFollowUpOutcome::FailedToStart;
+        }
+
+        QueuedFollowUpOutcome::Started
+    }
+
     /// Start a follow-up execution from a queued message
     async fn start_queued_follow_up(
         &self,
@@ -1199,6 +1203,15 @@ impl LocalContainerService {
         // Get latest agent turn for session continuity (from coding agent turns)
         let latest_session_info =
             CodingAgentTurn::find_latest_session_info(&self.db.pool, ctx.session.id).await?;
+        let interrupted_context = CodingAgentTurn::find_interrupted_context_since_latest_success(
+            &self.db.pool,
+            ctx.session.id,
+        )
+        .await?;
+        let prompt = CodingAgentTurn::prompt_with_interrupted_context(
+            queued_data.message.clone(),
+            &interrupted_context,
+        );
 
         let repos =
             WorkspaceRepo::find_repos_for_workspace(&self.db.pool, ctx.workspace.id).await?;
@@ -1213,7 +1226,7 @@ impl LocalContainerService {
 
         let action_type = if let Some(info) = latest_session_info {
             ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
-                prompt: queued_data.message.clone(),
+                prompt: prompt.clone(),
                 session_id: info.session_id,
                 reset_to_message_id: None,
                 executor_config: queued_data.executor_config.clone(),
@@ -1221,7 +1234,7 @@ impl LocalContainerService {
             })
         } else {
             ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
-                prompt: queued_data.message.clone(),
+                prompt,
                 executor_config: queued_data.executor_config.clone(),
                 working_dir,
             })

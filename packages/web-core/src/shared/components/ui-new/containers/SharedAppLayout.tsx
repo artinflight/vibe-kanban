@@ -754,7 +754,16 @@ export function SharedAppLayout() {
                           className="h-2.5 w-2.5 rounded-full shrink-0"
                           style={{ backgroundColor: `hsl(${project.color})` }}
                         />
-                        <span className="truncate">{project.name}</span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {project.name}
+                        </span>
+                        {project.hasNeedsReview && (
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-full border border-secondary bg-brand"
+                            aria-label={`${project.name} needs review`}
+                            title="Needs review"
+                          />
+                        )}
                       </button>
                     ))}
                   </div>

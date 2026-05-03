@@ -1535,10 +1535,31 @@ export const projectsApi = {
     const response = await makeRequest(
       `/v1/fallback/project_workspaces?project_id=${encodeURIComponent(projectId)}`
     );
-    const result = await handleApiResponse<{ workspaces: RemoteWorkspace[] }>(
-      response
-    );
-    return result.workspaces;
+
+    if (!response.ok) {
+      const result = await handleApiResponse<{ workspaces: RemoteWorkspace[] }>(
+        response
+      );
+      return result.workspaces;
+    }
+
+    const result = (await response.json()) as
+      | ApiResponse<{ workspaces: RemoteWorkspace[] }>
+      | { workspaces?: RemoteWorkspace[] };
+
+    if ('success' in result) {
+      if (!result.success) {
+        throw new ApiError(
+          result.message || 'Failed to load project workspaces',
+          response.status,
+          response
+        );
+      }
+
+      return result.data?.workspaces ?? [];
+    }
+
+    return result.workspaces ?? [];
   },
 };
 

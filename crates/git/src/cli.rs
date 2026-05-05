@@ -16,16 +16,21 @@
 //! `git` CLI, while keeping libgit2 for read‑only graph queries and credentialed
 //! network operations when useful.
 use std::{
+    env,
     ffi::{OsStr, OsString},
-    io::Write as _,
+    io::{Read, Write as _},
     path::Path,
     process::{Command, Stdio},
+    thread,
+    time::{Duration, Instant},
 };
 
 use thiserror::Error;
 use utils::{path::ALWAYS_SKIP_DIRS, shell::resolve_executable_path_blocking};
 
 use super::Commit;
+
+const DEFAULT_GIT_CLI_TIMEOUT: Duration = Duration::from_secs(120);
 
 #[derive(Debug, Error)]
 pub enum GitCliError {
@@ -711,6 +716,35 @@ impl GitCli {
 
 // Private methods
 impl GitCli {
+    fn command_timeout() -> Duration {
+        env::var("VK_GIT_CLI_TIMEOUT_SECS")
+            .ok()
+            .and_then(|value| value.parse::<u64>().ok())
+            .filter(|seconds| *seconds > 0)
+            .map(Duration::from_secs)
+            .unwrap_or(DEFAULT_GIT_CLI_TIMEOUT)
+    }
+
+    fn read_pipe<R>(mut reader: R) -> thread::JoinHandle<Result<Vec<u8>, std::io::Error>>
+    where
+        R: Read + Send + 'static,
+    {
+        thread::spawn(move || {
+            let mut output = Vec::new();
+            reader.read_to_end(&mut output)?;
+            Ok(output)
+        })
+    }
+
+    fn join_pipe(
+        handle: thread::JoinHandle<Result<Vec<u8>, std::io::Error>>,
+    ) -> Result<Vec<u8>, GitCliError> {
+        handle
+            .join()
+            .map_err(|_| GitCliError::CommandFailed("git output reader panicked".to_string()))?
+            .map_err(|e| GitCliError::CommandFailed(e.to_string()))
+    }
+
     fn classify_cli_error(&self, msg: String) -> GitCliError {
         let lower = msg.to_ascii_lowercase();
         if lower.contains("authentication failed")
@@ -801,10 +835,20 @@ impl GitCli {
         );
 
         use utils::command_ext::NoWindowExt;
+        let command_description = format!("{cmd:?}");
         let mut child = cmd
             .no_window()
             .spawn()
             .map_err(|e| GitCliError::CommandFailed(e.to_string()))?;
+
+        let stdout = child.stdout.take().ok_or_else(|| {
+            GitCliError::CommandFailed("failed to capture git stdout".to_string())
+        })?;
+        let stderr = child.stderr.take().ok_or_else(|| {
+            GitCliError::CommandFailed("failed to capture git stderr".to_string())
+        })?;
+        let stdout_handle = Self::read_pipe(stdout);
+        let stderr_handle = Self::read_pipe(stderr);
 
         let stdin_write_result = if let Some(input) = stdin
             && let Some(mut child_stdin) = child.stdin.take()
@@ -814,13 +858,34 @@ impl GitCli {
             None
         };
 
-        let out = child
-            .wait_with_output()
-            .map_err(|e| GitCliError::CommandFailed(e.to_string()))?;
+        let timeout = Self::command_timeout();
+        let started = Instant::now();
+        let status = loop {
+            if let Some(status) = child
+                .try_wait()
+                .map_err(|e| GitCliError::CommandFailed(e.to_string()))?
+            {
+                break status;
+            }
 
-        if !out.status.success() {
-            let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
-            let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if started.elapsed() >= timeout {
+                let _ = child.kill();
+                return Err(GitCliError::CommandFailed(format!(
+                    "git command timed out after {}s: {}",
+                    timeout.as_secs(),
+                    command_description
+                )));
+            }
+
+            thread::sleep(Duration::from_millis(50));
+        };
+
+        let stdout = Self::join_pipe(stdout_handle)?;
+        let stderr = Self::join_pipe(stderr_handle)?;
+
+        if !status.success() {
+            let stderr = String::from_utf8_lossy(&stderr).trim().to_string();
+            let stdout = String::from_utf8_lossy(&stdout).trim().to_string();
             let combined = match (stdout.is_empty(), stderr.is_empty()) {
                 (true, true) => "Command failed with no output".to_string(),
                 (false, false) => format!("--- stderr\n{stderr}\n--- stdout\n{stdout}"),
@@ -834,7 +899,7 @@ impl GitCli {
                 "failed to write to git stdin: {e}"
             )));
         }
-        Ok(out.stdout)
+        Ok(stdout)
     }
 
     pub fn git<I, S>(&self, repo_path: &Path, args: I) -> Result<String, GitCliError>

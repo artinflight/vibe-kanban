@@ -115,6 +115,9 @@ function useEffectiveVariant(
 /**
  * Resolves each override field independently through the fallback chain:
  * userSelections[field] → scratch[field] → lastUsed[field] → preset[field]
+ *
+ * Permission policy is intentionally excluded from last-used fallback so
+ * starting an agent in Plan Mode does not make future agents default to Plan.
  */
 function useEffectiveOverrides(
   effectiveExecutor: BaseCodingAgent | null,
@@ -147,6 +150,7 @@ function useEffectiveOverrides(
 
     for (const field of OVERRIDE_FIELDS) {
       const modelMustMatch = field === 'reasoning_id';
+      const allowLastUsedFallback = field !== 'permission_policy';
       const scratchModelMatches =
         !modelMustMatch || scratchConfig?.model_id === resolved.model_id;
       const lastUsedModelMatches =
@@ -158,7 +162,7 @@ function useEffectiveOverrides(
           : ((scratchMatches && scratchModelMatches
               ? scratchConfig?.[field]
               : undefined) ??
-            (lastUsedMatches && lastUsedModelMatches
+            (allowLastUsedFallback && lastUsedMatches && lastUsedModelMatches
               ? lastUsedConfig?.[field]
               : undefined) ??
             (variantWasUserSelected ? presetOptions?.[field] : undefined));

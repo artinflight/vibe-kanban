@@ -36,12 +36,17 @@
 - `staging` is the correct repo base for new VK development.
 - VK now uses an isolated Codex home at `/home/mcp/.local/share/vibe-kanban/codex-home`.
 - That isolation exists specifically to stop VK coding agents from sharing refresh-token rotation with tmux/interactive Codex sessions.
+- As of 2026-05-05, a recurring live VK8 stall was reproduced without active `vk-exec-*` agent units:
+  - the main `vibe-kanban.service` cgroup was above `MemoryHigh`
+  - VK-owned `git worktree add` / `git reset --hard` children were throttled under that cgroup
+  - a bad diff-stream base-commit state was repeatedly reconnecting/logging instead of staying open
 
 ## In Progress
 
 - Normal project work can resume. No recovery-only blocker remains for issue/workspace creation in the `vibe-kanban` project.
 - Branch-local work is adding local project list hygiene without reintroducing cloud/shared state.
 - The remaining unresolved stability problem is being moved toward an isolated test-instance workflow instead of continuing diagnosis directly in prod VK.
+- Hotfix branch `hotfix/recurring-vk-stall-20260505` keeps empty/failed diff streams open with `Ready` and adds a default `120s` timeout to centralized Git CLI calls. It has not been deployed to live VK8 yet.
 
 ## Proposed / Not Adopted
 

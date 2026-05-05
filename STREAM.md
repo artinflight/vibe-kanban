@@ -2,36 +2,26 @@
 
 ## Stream Identifier
 
-- Branch: `vk/ea3c-vk-auto-archive`
-- Repo: `/home/mcp/code/worktrees/ea3c-vk-auto-archive/_vibe_kanban_repo`
-- Base: `fork/staging`
-- Working mode: production hotfix promotion for local VK stability
+- Branch: `hotfix/recurring-vk-stall-20260505`
+- Repo: `/tmp/vk-hotfix-recurring-stall-20260505`
+- Base: `fork/main`
+- Working mode: production hotfix for recurring live VK stalls
 
 ## Objective
 
-- Repair local Codex rollout continuity, execution-status streaming, local issue/workspace linking, and live agent context recovery so failed rollouts, stale "agent running" UI state, newly created workspaces without Issues, and agents resuming into wrong or lost context do not block normal prompt flow, then promote the fixes through the fork workflow so they survive updates/deploys.
+- Stop the recurring live VK stall pattern where bad diff streams reconnect indefinitely and VK-owned git commands can wait forever under service cgroup memory pressure.
 
 ## In Scope
 
-- Truthful branch-local continuity for this worktree
-- Guarding resume/fork selection against failed coding-agent turns
-- Repairing live local DB continuity pointers that reference empty or missing rollout files
-- Keeping execution-process state streams alive/reconnected so completed agents stop showing as running without a page refresh
-- Keeping `vibe.local` reachable through the LAN reverse proxy
-- Keeping local-only auth gates open when `shared_api_base` is intentionally unset
-- Preserving the local-only runtime baseline and staging merge compatibility
-- Preserving the frontend-generated local issue UUID when the local fallback issue endpoint creates a task, so workspace creation can link the new workspace back to its Issue
-- Recovering live agent sessions by quarantining known bad execution rows without deleting chat/process history
-- Injecting interrupted/killed turn prompts into the next agent prompt after the latest safe resume anchor
-- Keeping Vibe-managed repo paths as real git worktrees, not symlinks
+- Keep workspace diff websockets open with `Ready` when all repo diff streams are skipped, so the frontend does not reconnect into the same failing base-commit lookup loop.
+- Add a bounded timeout to centralized Git CLI calls used by VK-owned worktree/status/diff operations.
+- Preserve live VK8 state; do not restart the service during investigation.
 
 ## Out of Scope
 
-- Reconstructing the old backup-retention branch context as if it were still checked out here
-- Re-enabling shared/cloud API behavior
-- Reconstructing a zero-byte Codex rollout file that has no persisted content
-- Broad workspace lifecycle cleanup beyond what already exists on `fork/staging`
-- Replacing Vibe worktree management with symlinked canonical worktrees
+- Restarting or redeploying VK8 without operator approval.
+- Quarantining, deleting, or force-stopping live workspaces without explicit confirmation.
+- Broad worktree-manager redesign beyond bounded Git CLI behavior.
 
 ## Stream-Specific Decisions
 
@@ -77,6 +67,19 @@
 - `/home/mcp/.config/systemd/user/vibe-kanban.service.d/local-auth.conf`
 
 ## Current Status
+
+- Confirmed on live VK8 without restart:
+  - `vibe-kanban.service` is active at PID `3441151`.
+  - The service cgroup is above `MemoryHigh=18G` at roughly `20G`.
+  - No `vk-exec-*` transient agent units are active and the DB has no running execution processes.
+  - Three VK-owned `git worktree add` processes for `hyroxready-app` are waiting on `git reset --hard --no-recurse-submodules` children throttled in `mem_cgroup_handle_over_high`.
+  - Repeated `FoxtrotLima` diff-stream logs show `failed to get base commit: no merge base found`, indicating a websocket reconnect/error loop against an invalid branch/base state.
+- Fixed in this branch:
+  - `LocalContainerService::stream_diff` now returns a `Ready` idle stream instead of closing immediately when every repo diff stream is skipped.
+  - `GitCli` now applies `VK_GIT_CLI_TIMEOUT_SECS` with a `120s` default to centralized Git CLI calls.
+- Validation so far:
+  - `cargo fmt`
+  - `cargo check -p git -p local-deployment`
 
 - Confirmed:
   - the reported zero-byte rollout was `019dc72a-9fba-7961-9c36-a3f8f8a63036`

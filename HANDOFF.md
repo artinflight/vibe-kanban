@@ -2,6 +2,24 @@
 
 ## What Changed This Session
 
+- Investigated the recurring VK8 slowdown without restarting the live service.
+- Confirmed the live service is bloated above its cgroup `MemoryHigh` and that VK-owned git worktree setup is stuck under the main `vibe-kanban.service` cgroup, not under transient agent execution units.
+- Found a concrete recurrence path: if all workspace repo diff streams fail base-commit lookup, `stream_diff` returns an empty stream, the websocket closes, and the frontend reconnects into the same failing git lookup loop.
+- Fixed that path by returning a `Ready` idle stream instead of closing when no diff streams can be started.
+- Added a hard timeout for centralized Git CLI calls (`VK_GIT_CLI_TIMEOUT_SECS`, default `120s`) so VK-owned git commands do not wait forever.
+- Did not restart VK8.
+
+## Current Hotfix Truth
+
+- Branch: `hotfix/recurring-vk-stall-20260505`
+- Worktree: `/tmp/vk-hotfix-recurring-stall-20260505`
+- Base: `fork/main`
+- Live VK8 service was not restarted.
+- Validation: `cargo fmt`; `cargo check -p git -p local-deployment`.
+- Remaining live condition: the running VK8 process still needs an approved deploy/restart before this backend fix affects production.
+
+## Previous Context
+
 - Recovered live agent resume context after several agents resumed into stale, poisoned, or wrong repository state.
 - Quarantined bad execution-process rows by setting `execution_processes.dropped = 1` instead of deleting chat/process history.
 - Restored `FR::ORC::Generative Programming` to the correct Generative Programming context and stopped it from selecting Quick Add / Nutrition / PR `#844` turns as resume anchors.

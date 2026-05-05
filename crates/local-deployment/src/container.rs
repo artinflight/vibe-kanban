@@ -36,7 +36,7 @@ use executors::{
     executors::{BaseCodingAgent, CancellationToken, ExecutorExitResult, ExecutorExitSignal},
     logs::{NormalizedEntryType, utils::patch::extract_normalized_entry_from_patch},
 };
-use futures::{FutureExt, TryStreamExt, stream::select};
+use futures::{FutureExt, StreamExt, TryStreamExt, stream::select};
 use git::GitService;
 use serde_json::json;
 use services::services::{
@@ -1691,7 +1691,9 @@ impl ContainerService for LocalContainerService {
         }
 
         if streams.is_empty() {
-            return Ok(Box::pin(futures::stream::empty()));
+            let idle_stream = futures::stream::once(async { Ok(LogMsg::Ready) })
+                .chain(futures::stream::pending());
+            return Ok(Box::pin(idle_stream));
         }
 
         // Merge all streams into one

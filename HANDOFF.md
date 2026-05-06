@@ -2,21 +2,22 @@
 
 ## What Changed This Session
 
-- Investigated the recurring VK8 slowdown without restarting the live service.
-- Confirmed the live service is bloated above its cgroup `MemoryHigh` and that VK-owned git worktree setup is stuck under the main `vibe-kanban.service` cgroup, not under transient agent execution units.
-- Found a concrete recurrence path: if all workspace repo diff streams fail base-commit lookup, `stream_diff` returns an empty stream, the websocket closes, and the frontend reconnects into the same failing git lookup loop.
-- Fixed that path by returning a `Ready` idle stream instead of closing when no diff streams can be started.
-- Added a hard timeout for centralized Git CLI calls (`VK_GIT_CLI_TIMEOUT_SECS`, default `120s`) so VK-owned git commands do not wait forever.
-- Did not restart VK8.
+- Investigated the recurring live VK wedge after memory reached roughly `19.6 GB` RSS with many dead sockets on `:4311`.
+- Found an additional retention path: execution-log websocket sends were unbounded, and normalized historical replay feeder work did not cancel when the websocket/stream was dropped.
+- Added a `5s` execution-log websocket send timeout.
+- Added cancel-on-drop for normalized log replay streams so historical raw replay feeder tasks stop when the client disconnects.
+- Took a preservation backup, force-killed only the wedged VK main PID after stop hung, installed the patched backend binary, and restarted VK.
 
 ## Current Hotfix Truth
 
-- Branch: `hotfix/recurring-vk-stall-20260505`
-- Worktree: `/tmp/vk-hotfix-recurring-stall-20260505`
+- Branch: `hotfix/bound-historical-log-replay-20260506T1715Z`
+- Worktree: `/tmp/vk-hotfix-historical-replay-20260506T1715Z`
 - Base: `fork/main`
-- Live VK8 service was not restarted.
-- Validation: `cargo fmt`; `cargo check -p git -p local-deployment`.
-- Remaining live condition: the running VK8 process still needs an approved deploy/restart before this backend fix affects production.
+- Live binary SHA-256: `832d64203bc89e44b0e5524a4986b902bdd44fd26d4d0b2cea2f679edb33eb6a`
+- Backup: `/home/mcp/backups/vk-pre-kill-preserve-agents-20260506T173550Z`
+- Validation: `cargo fmt --check --package services --package server`; `cargo check -p services -p server`; `cargo test -p services cancel_on_drop_stream_signals_replay_tasks`; live `/api/info`, `/`, and `https://vibe.local/` OK after restart.
+- Remaining condition: commit/push/PR promotion is still required so the deployed fix survives future deploys.
+- Important restart result: startup orphan cleanup marked `FR::HRV Stream`, `FR::Exploring Women's Specific Needs`, and `FR::ORC::Android Parity` failed. Their worktrees, DB rows, Codex session ids, and pre-kill snapshots were preserved, but the in-flight turns did not survive as running processes.
 
 ## Previous Context
 
@@ -32,15 +33,16 @@
 
 ## What Is True Right Now
 
-- Branch: `vk/ea3c-vk-auto-archive`
-- Worktree: `/home/mcp/code/worktrees/ea3c-vk-auto-archive/_vibe_kanban_repo`
-- PR: `https://github.com/artinflight/vibe-kanban/pull/40`
-- Latest commit: `d7fd5591c fix: preserve interrupted agent context on resume`
-- Branch is pushed to `fork/vk/ea3c-vk-auto-archive`.
+- Branch: `hotfix/bound-historical-log-replay-20260506T1715Z`
+- Worktree: `/tmp/vk-hotfix-historical-replay-20260506T1715Z`
+- PR: not opened yet for this hotfix.
+- Latest commit: pending.
+- Branch is not pushed yet.
 - Live binary: `/home/mcp/.local/bin/vibe-kanban-serve`
-- Live binary SHA-256: `ce0a192f4216aa184a36b495d8d3d5deb76c764927b401ad123c8d6bd12b9c04`
-- `vibe-kanban.service` is active and `http://127.0.0.1:4311/api/health` returns `200`.
-- There were zero running coding-agent processes at the end of the repair verification.
+- Live binary SHA-256: `832d64203bc89e44b0e5524a4986b902bdd44fd26d4d0b2cea2f679edb33eb6a`
+- `vibe-kanban.service` is active at `0.0.0.0:4311`.
+- `http://127.0.0.1:4311/api/info`, `http://127.0.0.1:4311/`, and `https://vibe.local/` return OK.
+- No `vk-exec-*` units were active immediately after restart; the three previously active rows were marked failed by VK startup cleanup.
 
 ## Agent Context Repairs
 
@@ -77,6 +79,7 @@
 
 ## Backups Created
 
+- `/home/mcp/backups/vk-pre-kill-preserve-agents-20260506T173550Z`
 - `/home/mcp/backups/vk-agent-context-repair-20260426T230936Z/db.v2.sqlite`
 - `/home/mcp/backups/vk-orc-restore-good-anchor-20260426T231708Z/db.v2.sqlite`
 - `/home/mcp/backups/vk-agent-anchor-repair-rest-20260426T232649Z/db.v2.sqlite`
@@ -84,6 +87,13 @@
 
 ## Known Good Validation
 
+- `cargo fmt --check --package services --package server`
+- `cargo check -p services -p server`
+- `cargo test -p services cancel_on_drop_stream_signals_replay_tasks`
+- `cargo build --release --bin server`
+- deployed binary hash matched `target/release/server`
+- service active after restart, `/api/info` OK, `/` OK, `https://vibe.local/` OK
+- socket check showed no `CLOSE_WAIT` pile on `:4311` immediately after restart
 - `cargo check -p server -p local-deployment`
 - `pnpm run format`
 - `cargo build --release -p server`
@@ -95,8 +105,8 @@
 
 ## What The Next Agent Should Do
 
-- Treat PR `#40` as the source promotion vehicle for this session’s hotfix.
-- Merge/promote PR `#40` to `staging` if checks are acceptable.
+- Commit/push/open PR for `hotfix/bound-historical-log-replay-20260506T1715Z`.
+- When resuming the interrupted 2026-05-06 workspaces, use the preserved workspace/session context rather than starting unrelated fresh workspaces.
 - If another agent reports lost context, first inspect that workspace session’s latest non-dropped completed anchor and verify its rollout exists under either `/home/mcp/.local/share/vibe-kanban/codex-home/sessions` or `/home/mcp/.codex/sessions`.
 - If another workspace reports `Invalid repository` or `already exists`, check whether the Vibe-managed repo path is a symlink or stale directory before touching DB context.
 
@@ -110,5 +120,5 @@
 
 ## Session Metadata
 
-- Date: 2026-04-26 UTC
-- Focus: live agent context recovery, durable interrupted-context resume hotfix, and real-worktree repair
+- Date: 2026-05-06 UTC
+- Focus: live VK execution-log replay retention hotfix and restart with preservation backup

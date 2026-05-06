@@ -32,6 +32,18 @@ use crate::{
     },
 };
 
+const EXECUTION_LOG_WS_SEND_TIMEOUT: Duration = Duration::from_secs(5);
+
+async fn send_execution_log_ws_message(
+    socket: &mut MaybeSignedWebSocket,
+    msg: Message,
+) -> anyhow::Result<()> {
+    tokio::time::timeout(EXECUTION_LOG_WS_SEND_TIMEOUT, socket.send(msg))
+        .await
+        .map_err(|_| anyhow::anyhow!("execution log websocket send timed out"))??;
+    Ok(())
+}
+
 #[derive(Debug, Deserialize)]
 struct SessionExecutionProcessQuery {
     pub session_id: Uuid,
@@ -82,9 +94,11 @@ async fn handle_raw_logs_ws(
         None => {
             // No logs available: send finished so the client gets a clean
             // close instead of retrying endlessly.
-            let _ = socket
-                .send(LogMsg::Finished.to_ws_message_unchecked())
-                .await;
+            let _ = send_execution_log_ws_message(
+                &mut socket,
+                LogMsg::Finished.to_ws_message_unchecked(),
+            )
+            .await;
             let _ = socket.close().await;
             return Ok(());
         }
@@ -114,7 +128,7 @@ async fn handle_raw_logs_ws(
             item = stream.next() => {
                 match item {
                     Some(Ok(msg)) => {
-                        if socket.send(msg).await.is_err() {
+                        if send_execution_log_ws_message(&mut socket, msg).await.is_err() {
                             break;
                         }
                     }
@@ -162,9 +176,11 @@ async fn stream_normalized_logs_ws(
             None => {
                 // No logs available: send finished and close cleanly
                 let mut socket = socket;
-                let _ = socket
-                    .send(utils::log_msg::LogMsg::Finished.to_ws_message_unchecked())
-                    .await;
+                let _ = send_execution_log_ws_message(
+                    &mut socket,
+                    utils::log_msg::LogMsg::Finished.to_ws_message_unchecked(),
+                )
+                .await;
                 let _ = socket.close().await;
             }
         }
@@ -189,8 +205,7 @@ async fn handle_normalized_logs_ws(
         }
 
         let patch = Patch(coalesce_patch_ops(std::mem::take(buffered_patch_ops)));
-        socket
-            .send(LogMsg::JsonPatch(patch).to_ws_message_unchecked())
+        send_execution_log_ws_message(socket, LogMsg::JsonPatch(patch).to_ws_message_unchecked())
             .await?;
         Ok(())
     };
@@ -220,7 +235,13 @@ async fn handle_normalized_logs_ws(
                             other => {
                                 flush_buffered_patch(&mut socket, &mut buffered_patch_ops).await?;
                                 flush_timer = None;
-                                if socket.send(other.to_ws_message_unchecked()).await.is_err() {
+                                if send_execution_log_ws_message(
+                                    &mut socket,
+                                    other.to_ws_message_unchecked(),
+                                )
+                                .await
+                                .is_err()
+                                {
                                     break;
                                 }
                             }
@@ -229,9 +250,11 @@ async fn handle_normalized_logs_ws(
                     Some(Err(e)) => {
                         let _ = flush_buffered_patch(&mut socket, &mut buffered_patch_ops).await;
                         tracing::error!("stream error: {}", e);
-                        let _ = socket
-                            .send(LogMsg::Finished.to_ws_message_unchecked())
-                            .await;
+                        let _ = send_execution_log_ws_message(
+                            &mut socket,
+                            LogMsg::Finished.to_ws_message_unchecked(),
+                        )
+                        .await;
                         break;
                     }
                     None => {

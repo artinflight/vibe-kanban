@@ -13,6 +13,13 @@
   - `LIVE_DEPLOYMENT.json`
 - VK task workspaces are under `/home/mcp/code/worktrees/...` and are not the canonical product repo.
 - Local runtime is active and serving from the rebuilt local binary.
+- Current live backend hotfix, deployed 2026-05-06:
+  - Branch/worktree: `hotfix/bound-historical-log-replay-20260506T1715Z` at `/tmp/vk-hotfix-historical-replay-20260506T1715Z`
+  - Binary SHA-256: `832d64203bc89e44b0e5524a4986b902bdd44fd26d4d0b2cea2f679edb33eb6a`
+  - Backup: `/home/mcp/backups/vk-pre-kill-preserve-agents-20260506T173550Z`
+  - Fix: dead/slow execution-log websocket sends now time out, and dropping a normalized log replay stream cancels its historical replay feeder.
+  - Verified after restart: `/api/info` OK, `/` OK, `https://vibe.local/` OK, no `CLOSE_WAIT` pile on `:4311`, service around `210 MB` shortly after boot.
+  - Important: the restart interrupted three active execution turns; VK startup orphan cleanup marked `FR::HRV Stream`, `FR::Exploring Women's Specific Needs`, and `FR::ORC::Android Parity` failed. Their VK rows, worktrees, Codex session ids, and pre-kill snapshots remain preserved.
 - `/api/info` reports `shared_api_base: null`.
 - An isolated lab instance exists at `127.0.0.1:4411` with separate state and separate `CODEX_HOME`.
 - Two frontend polling regressions that contributed to VK hangs are fixed in the current local runtime and in `staging`:
@@ -45,8 +52,8 @@
 
 - Normal project work can resume. No recovery-only blocker remains for issue/workspace creation in the `vibe-kanban` project.
 - Branch-local work is adding local project list hygiene without reintroducing cloud/shared state.
-- The remaining unresolved stability problem is being moved toward an isolated test-instance workflow instead of continuing diagnosis directly in prod VK.
-- Hotfix branch `hotfix/recurring-vk-stall-20260505` keeps empty/failed diff streams open with `Ready` and adds a default `120s` timeout to centralized Git CLI calls. It has not been deployed to live VK8 yet.
+- The current production stability hotfix is deployed but still needs commit/push/PR promotion so it survives future deploys.
+- Hotfix branch `hotfix/recurring-vk-stall-20260505` kept empty/failed diff streams open with `Ready` and added a default `120s` timeout to centralized Git CLI calls; newer production diagnosis found an additional execution-log websocket replay retention path fixed by the current hotfix.
 
 ## Proposed / Not Adopted
 
@@ -135,6 +142,7 @@
   - wait briefly for graceful cleanup
   - if still stuck, force-kill only the VK main PID and let systemd respawn it
   - do not touch tmux or unrelated Codex sessions
+- A forced VK main-PID kill can still make VK mark active execution processes orphaned/failed on the next startup. Before any restart, record active `execution_processes`, `sessions`, Codex session ids, worktree git status, and `vk-exec-*` unit metadata. After restart, expect resumption to come from the preserved workspace/session context, not from a magically recovered in-flight process.
 
 ## Next Safe Steps
 

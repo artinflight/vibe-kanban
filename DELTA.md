@@ -275,3 +275,25 @@
 - Not complete / known gaps:
   - PR `#40` still needs staging promotion
   - no broad UI/browser agent-send regression test was run after the real-worktree repair
+## 2026-05-06T18:10:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | execution-log replay retention hotfix
+
+- Intent: stop live VK from wedging when dead execution-log websocket clients retain historical normalized replay work and backend memory.
+- Completed:
+  - observed live VK at roughly `19.6 GB` RSS with many `CLOSE_WAIT` sockets on `:4311`
+  - created preservation backup `/home/mcp/backups/vk-pre-kill-preserve-agents-20260506T173550Z`
+  - added `5s` bounded sends for execution-log websocket messages
+  - added cancel-on-drop for normalized log replay streams so historical raw replay feeder work stops after client disconnect
+  - built and deployed patched backend binary to `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`
+  - restarted VK after force-killing only the wedged main PID when graceful stop hung
+- Verified:
+  - `cargo fmt --check --package services --package server`
+  - `cargo check -p services -p server`
+  - `cargo test -p services cancel_on_drop_stream_signals_replay_tasks`
+  - `cargo build --release --bin server`
+  - deployed binary SHA-256 `832d64203bc89e44b0e5524a4986b902bdd44fd26d4d0b2cea2f679edb33eb6a`
+  - post-restart `/api/info`, `/`, and `https://vibe.local/` returned OK
+  - post-restart socket check showed no `CLOSE_WAIT` pile on `:4311`
+- Not complete / known gaps:
+  - startup orphan cleanup marked active turns for `FR::HRV Stream`, `FR::Exploring Women's Specific Needs`, and `FR::ORC::Android Parity` failed
+  - their worktrees, DB rows, Codex session ids, and pre-kill snapshots remain preserved, but the in-flight processes did not survive
+  - commit/push/PR promotion still required so this deployed hotfix is durable

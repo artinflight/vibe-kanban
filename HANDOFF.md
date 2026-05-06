@@ -13,6 +13,8 @@
 - Built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-attachment-input-hotfix`.
 - Replaced the paperclip button's dropzone `open()` path with a direct native file input path for mobile browsers.
 - Built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-direct-input-hotfix`.
+- Broadened the direct native input fix to issue comments, create chat, and session chat attachment buttons so no mobile attachment surface relies on programmatic `.click()`.
+- Built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-all-attachment-inputs-hotfix`.
 - Raised attachment size limits from `20MB` to `100MB` in source. The frontend limit is live after refresh; the backend limit requires the next safe backend restart because three VK execution units were active at verification time.
 
 ## Current Hotfix Truth
@@ -52,7 +54,7 @@
 - Live binary SHA-256: `832d64203bc89e44b0e5524a4986b902bdd44fd26d4d0b2cea2f679edb33eb6a`
 - `vibe-kanban.service` is active at `0.0.0.0:4311`.
 - `http://127.0.0.1:4311/api/info`, `http://127.0.0.1:4311/`, and `https://vibe.local/` return OK.
-- Live frontend symlink now points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-direct-input-hotfix`.
+- Live frontend symlink now points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-all-attachment-inputs-hotfix`.
 - No `vk-exec-*` units were active immediately after restart; the three previously active rows were marked failed by VK startup cleanup.
 - Later attachment verification found three active `vk-exec-*` units, so the backend was not restarted for the `100MB` limit change.
 

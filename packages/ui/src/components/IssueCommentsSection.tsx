@@ -126,7 +126,6 @@ export function IssueCommentsSection({
   onPasteFiles,
   localAttachments,
   dropzoneProps,
-  onBrowseAttachment,
   isUploading,
   attachmentError,
   onDismissAttachmentError,
@@ -197,23 +196,42 @@ export function IssueCommentsSection({
             </div>
           )}
           <div className="flex items-center justify-end gap-half">
-            {onBrowseAttachment && (
+            {onPasteFiles && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={onBrowseAttachment}
+                    <label
                       title={t('kanban.attachFile')}
                       className={cn(
-                        'size-[22px] rounded-full bg-panel border border-border',
-                        'flex items-center justify-center',
-                        'text-low hover:text-normal transition-colors'
+                        'relative size-[22px] cursor-pointer overflow-hidden rounded-full bg-panel border border-border',
+                        'flex items-center justify-center text-low hover:text-normal transition-colors',
+                        isUploading && 'cursor-not-allowed opacity-50'
                       )}
                       aria-label={t('kanban.attachFile')}
+                      aria-disabled={isUploading}
                     >
                       <PaperclipIcon size={12} />
-                    </button>
+                      <input
+                        type="file"
+                        multiple
+                        disabled={isUploading}
+                        data-direct-comment-attachment-input
+                        aria-label={t('kanban.attachFile')}
+                        onClick={(event) => {
+                          event.currentTarget.value = '';
+                        }}
+                        onChange={(event) => {
+                          const files = Array.from(
+                            event.currentTarget.files ?? []
+                          );
+                          event.currentTarget.value = '';
+                          if (files.length > 0) {
+                            onPasteFiles(files);
+                          }
+                        }}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                      />
+                    </label>
                   </TooltipTrigger>
                   <TooltipContent>{t('kanban.attachFileHint')}</TooltipContent>
                 </Tooltip>

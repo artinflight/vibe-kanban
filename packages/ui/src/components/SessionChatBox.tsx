@@ -37,6 +37,7 @@ import {
   TurnNavigationPopup,
   type TurnNavigationItem,
 } from './TurnNavigationPopup';
+import { cn } from '../lib/cn';
 
 // Status enum - single source of truth for execution state
 export type ExecutionStatus =
@@ -257,7 +258,6 @@ export function SessionChatBox<TExecutor extends string = string>({
   dropzone,
 }: SessionChatBoxProps<TExecutor>) {
   const { t } = useTranslation('tasks');
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const askQuestionBannerRef = useRef<AskUserQuestionBannerHandle>(null);
 
   // Determine if in feedback mode, edit mode, or approval mode
@@ -346,10 +346,6 @@ export function SessionChatBox<TExecutor extends string = string>({
       actions.onPasteFiles(files);
     }
     e.target.value = '';
-  };
-
-  const handleAttachClick = () => {
-    fileInputRef.current?.click();
   };
 
   const {
@@ -883,20 +879,30 @@ export function SessionChatBox<TExecutor extends string = string>({
       }
       footerLeft={
         <>
-          <ToolbarIconButton
-            icon={PaperclipIcon}
+          <label
             aria-label={t('tasks:taskFormDialog.attachFile')}
+            aria-disabled={areContentInsertActionsDisabled}
             title={t('tasks:taskFormDialog.attachFile')}
-            onClick={handleAttachClick}
-            disabled={areContentInsertActionsDisabled}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFileInputChange}
-          />
+            className={cn(
+              'relative flex cursor-pointer items-center justify-center overflow-hidden text-low hover:text-normal',
+              areContentInsertActionsDisabled &&
+                'cursor-not-allowed opacity-40 hover:text-low'
+            )}
+          >
+            <PaperclipIcon className="size-icon-base" />
+            <input
+              type="file"
+              multiple
+              disabled={areContentInsertActionsDisabled}
+              data-direct-session-chat-attachment-input
+              aria-label={t('tasks:taskFormDialog.attachFile')}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+              onClick={(event) => {
+                event.currentTarget.value = '';
+              }}
+              onChange={handleFileInputChange}
+            />
+          </label>
           {onPrCommentClick && (
             <ToolbarIconButton
               icon={GithubLogoIcon}

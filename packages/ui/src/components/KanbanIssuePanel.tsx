@@ -186,7 +186,6 @@ export function KanbanIssuePanel({
   onPasteFiles,
   localAttachments,
   dropzoneProps,
-  onBrowseAttachment,
   isUploading,
   attachmentError,
   onDismissAttachmentError,
@@ -207,7 +206,6 @@ export function KanbanIssuePanel({
   const [isDescriptionEditing, setIsDescriptionEditing] =
     useState(isCreateMode);
   const descriptionContainerRef = useRef<HTMLDivElement>(null);
-  const directAttachmentInputRef = useRef<HTMLInputElement>(null);
 
   // Reset description editing state when switching between create/edit mode or when issue changes
   useEffect(() => {
@@ -220,14 +218,6 @@ export function KanbanIssuePanel({
       setIsDescriptionEditing(false);
     }
   }, [isCreateMode]);
-
-  const handleDirectAttachmentBrowse = useCallback(() => {
-    if (isSubmitting || isUploading) return;
-    const input = directAttachmentInputRef.current;
-    if (!input) return;
-    input.value = '';
-    input.click();
-  }, [isSubmitting, isUploading]);
 
   const handleDirectAttachmentChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -418,24 +408,6 @@ export function KanbanIssuePanel({
                 data-dropzone-input
               />
             )}
-            {onPasteFiles && (
-              <input
-                ref={directAttachmentInputRef}
-                type="file"
-                multiple
-                tabIndex={-1}
-                aria-hidden="true"
-                data-direct-attachment-input
-                onChange={handleDirectAttachmentChange}
-                style={{
-                  position: 'absolute',
-                  width: 1,
-                  height: 1,
-                  opacity: 0,
-                  pointerEvents: 'none',
-                }}
-              />
-            )}
             {renderDescriptionEditor({
               placeholder: isDescriptionEditing
                 ? t('kanban.issueDescriptionPlaceholder')
@@ -462,27 +434,35 @@ export function KanbanIssuePanel({
                 : undefined,
               staticToolbarActions: (
                 <>
-                  {isDescriptionEditing && onBrowseAttachment && (
+                  {isDescriptionEditing && onPasteFiles && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                            }}
-                            onClick={handleDirectAttachmentBrowse}
-                            disabled={isSubmitting || isUploading}
+                          <label
                             className={cn(
-                              'p-half rounded-sm transition-colors',
+                              'relative inline-flex cursor-pointer items-center justify-center overflow-hidden p-half rounded-sm transition-colors',
                               'text-low hover:text-normal hover:bg-panel/50',
-                              'disabled:opacity-50 disabled:cursor-not-allowed'
+                              (isSubmitting || isUploading) &&
+                                'cursor-not-allowed opacity-50'
                             )}
                             title={t('kanban.attachFile')}
                             aria-label={t('kanban.attachFile')}
+                            aria-disabled={isSubmitting || isUploading}
                           >
                             <PaperclipIcon className="size-icon-sm" />
-                          </button>
+                            <input
+                              type="file"
+                              multiple
+                              disabled={isSubmitting || isUploading}
+                              data-direct-attachment-input
+                              aria-label={t('kanban.attachFile')}
+                              onClick={(event) => {
+                                event.currentTarget.value = '';
+                              }}
+                              onChange={handleDirectAttachmentChange}
+                              className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                            />
+                          </label>
                         </TooltipTrigger>
                         <TooltipContent>
                           {t('kanban.attachFileHint')}

@@ -349,3 +349,19 @@
 - Not complete / known gaps:
   - needs operator retest on the mobile browser after a hard refresh
   - backend still needs the next safe restart before the live size limit increases from `20MB` to `100MB`
+
+## 2026-05-06T19:45:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | all mobile attachment buttons use native inputs
+
+- Intent: fix the broader mobile attachment failure across issue comments and chat boxes, not only the issue description paperclip.
+- Completed:
+  - replaced programmatic file-picker clicks in issue comments, create chat, and session chat with native overlay file inputs
+  - kept the issue description native overlay file input from the previous correction
+  - built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-all-attachment-inputs-hotfix`
+- Verified:
+  - `pnpm --filter @vibe/ui run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - `https://vibe.local/` returned `200`
+  - active frontend bundle contains markers for issue description, issue comments, create chat, and session chat direct inputs
+- Not complete / known gaps:
+  - needs operator retest on mobile after a hard refresh
+  - backend still needs the next safe restart before the live size limit increases from `20MB` to `100MB`

@@ -1,4 +1,4 @@
-import { type ReactNode, useRef } from 'react';
+import { type ReactNode } from 'react';
 import { CheckIcon, PaperclipIcon, XIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Checkbox } from './Checkbox';
@@ -6,7 +6,8 @@ import { ChatBoxBase, VisualVariant, type DropzoneProps } from './ChatBoxBase';
 import { DropdownMenuItem, DropdownMenuLabel } from './Dropdown';
 import { PrimaryButton } from './PrimaryButton';
 import type { LocalAttachmentMetadata } from './WorkspaceContext';
-import { ToolbarDropdown, ToolbarIconButton } from './Toolbar';
+import { ToolbarDropdown } from './Toolbar';
+import { cn } from '../lib/cn';
 
 export interface EditorProps {
   value: string;
@@ -114,7 +115,6 @@ export function CreateChatBox<TExecutor extends string = string>({
   linkedIssue,
 }: CreateChatBoxProps<TExecutor>) {
   const { t } = useTranslation(['common', 'tasks']);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const isDisabled = disabled || isSending;
   const canSend = editor.value.trim().length > 0 && !isDisabled;
 
@@ -122,10 +122,6 @@ export function CreateChatBox<TExecutor extends string = string>({
     if (canSend) {
       onSend();
     }
-  };
-
-  const handleAttachClick = () => {
-    fileInputRef.current?.click();
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,20 +185,31 @@ export function CreateChatBox<TExecutor extends string = string>({
       }
       footerLeft={
         <>
-          <ToolbarIconButton
-            icon={PaperclipIcon}
-            aria-label={t('tasks:taskFormDialog.attachFile')}
-            title={t('tasks:taskFormDialog.attachFile')}
-            onClick={handleAttachClick}
-            disabled={isDisabled}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFileInputChange}
-          />
+          {onPasteFiles && (
+            <label
+              aria-label={t('tasks:taskFormDialog.attachFile')}
+              aria-disabled={isDisabled}
+              title={t('tasks:taskFormDialog.attachFile')}
+              className={cn(
+                'relative flex cursor-pointer items-center justify-center overflow-hidden text-low hover:text-normal',
+                isDisabled && 'cursor-not-allowed opacity-40 hover:text-low'
+              )}
+            >
+              <PaperclipIcon className="size-icon-base" />
+              <input
+                type="file"
+                multiple
+                disabled={isDisabled}
+                data-direct-create-chat-attachment-input
+                aria-label={t('tasks:taskFormDialog.attachFile')}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                onClick={(event) => {
+                  event.currentTarget.value = '';
+                }}
+                onChange={handleFileInputChange}
+              />
+            </label>
+          )}
           <button
             type="button"
             onClick={onEditRepos}

@@ -15,6 +15,8 @@
 - Built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-direct-input-hotfix`.
 - Broadened the direct native input fix to issue comments, create chat, and session chat attachment buttons so no mobile attachment surface relies on programmatic `.click()`.
 - Built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-all-attachment-inputs-hotfix`.
+- Added visible chat attachment upload errors so paste/drop/paperclip failures no longer disappear into console-only logs.
+- Built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tchat-attachment-error-hotfix`.
 - Raised attachment size limits from `20MB` to `100MB` in source. The frontend limit is live after refresh; the backend limit requires the next safe backend restart because three VK execution units were active at verification time.
 
 ## Current Hotfix Truth
@@ -54,7 +56,11 @@
 - Live binary SHA-256: `832d64203bc89e44b0e5524a4986b902bdd44fd26d4d0b2cea2f679edb33eb6a`
 - `vibe-kanban.service` is active at `0.0.0.0:4311`.
 - `http://127.0.0.1:4311/api/info`, `http://127.0.0.1:4311/`, and `https://vibe.local/` return OK.
-- Live frontend symlink now points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-all-attachment-inputs-hotfix`.
+- Live frontend symlink now points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tchat-attachment-error-hotfix`.
+- Live attachment size findings:
+  - a small workspace chat upload through `/api/workspaces/{workspace_id}/attachments/upload?session_id=...` succeeds
+  - a `21MB` direct backend upload to `127.0.0.1:4311` still fails until the backend is restarted with the source `100MB` limit
+  - the same `21MB` upload through `https://vibe.local` fails earlier with nginx `413 Request Entity Too Large`, so the front proxy limit also needs to be raised outside VK
 - No `vk-exec-*` units were active immediately after restart; the three previously active rows were marked failed by VK startup cleanup.
 - Later attachment verification found three active `vk-exec-*` units, so the backend was not restarted for the `100MB` limit change.
 

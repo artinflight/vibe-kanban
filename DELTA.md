@@ -365,3 +365,23 @@
 - Not complete / known gaps:
   - needs operator retest on mobile after a hard refresh
   - backend still needs the next safe restart before the live size limit increases from `20MB` to `100MB`
+
+## 2026-05-06T19:53:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | chat attachment error visibility
+
+- Intent: stop chat paste/drop/paperclip upload failures from appearing as no-ops.
+- Completed:
+  - added upload error state to workspace session attachments
+  - added upload error state to create-mode attachments
+  - surfaced upload errors in the existing chat box error area
+  - built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tchat-attachment-error-hotfix`
+- Verified:
+  - `pnpm --filter @vibe/web-core run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - `https://vibe.local/` returned `200`
+  - active frontend bundle contains the new chat attachment error strings
+  - a small live workspace chat upload succeeded through the workspace attachment endpoint and was cleaned up
+  - a `21MB` direct backend upload still fails until the live backend is restarted with the source `100MB` limit
+  - a `21MB` upload through `https://vibe.local` fails earlier with nginx `413 Request Entity Too Large`
+- Not complete / known gaps:
+  - live backend restart is still required for VK's `100MB` limit to take effect
+  - front proxy/nginx body-size limit must also be raised for large uploads through `vibe.local`

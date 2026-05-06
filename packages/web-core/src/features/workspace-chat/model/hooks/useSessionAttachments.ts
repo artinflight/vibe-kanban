@@ -20,12 +20,21 @@ export function useSessionAttachments(
   const [uploadedAttachments, setUploadedAttachments] = useState<
     AttachmentResponse[]
   >([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const uploadFiles = useCallback(
     async (files: File[]) => {
-      if (!workspaceId || !sessionId) return;
+      setUploadError(null);
+
+      if (!workspaceId || !sessionId) {
+        setUploadError(
+          'Attachments can only be added after a chat session exists.'
+        );
+        return;
+      }
 
       const uploadResults: AttachmentResponse[] = [];
+      const failures: string[] = [];
 
       for (const file of files) {
         try {
@@ -37,6 +46,9 @@ export function useSessionAttachments(
           uploadResults.push(response);
         } catch (error) {
           console.error('Failed to upload attachment:', error);
+          const message =
+            error instanceof Error ? error.message : 'Unknown upload error';
+          failures.push(`${file.name}: ${message}`);
         }
       }
 
@@ -47,6 +59,10 @@ export function useSessionAttachments(
           .join('\n\n');
         onInsertMarkdown(allMarkdown);
       }
+
+      if (failures.length > 0) {
+        setUploadError(`Failed to upload ${failures.join('; ')}`);
+      }
     },
     [workspaceId, sessionId, onInsertMarkdown]
   );
@@ -55,9 +71,17 @@ export function useSessionAttachments(
     setUploadedAttachments([]);
   }, []);
 
+  const clearUploadError = useCallback(() => setUploadError(null), []);
+
   const localAttachments: LocalAttachmentMetadata[] = uploadedAttachments.map(
     toLocalAttachmentMetadata
   );
 
-  return { uploadFiles, localAttachments, clearUploadedAttachments };
+  return {
+    uploadFiles,
+    localAttachments,
+    clearUploadedAttachments,
+    uploadError,
+    clearUploadError,
+  };
 }

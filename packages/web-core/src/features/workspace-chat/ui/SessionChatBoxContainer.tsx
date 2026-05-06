@@ -440,8 +440,13 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     clearPendingComponentMarkdown,
   ]);
 
-  const { uploadFiles, localAttachments, clearUploadedAttachments } =
-    useSessionAttachments(workspaceId, sessionId, handleInsertMarkdown);
+  const {
+    uploadFiles,
+    localAttachments,
+    clearUploadedAttachments,
+    uploadError,
+    clearUploadError,
+  } = useSessionAttachments(workspaceId, sessionId, handleInsertMarkdown);
   // Unified executor + variant + model selector options resolution
   const {
     executorConfig,
@@ -595,6 +600,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         setLocalMessage(value);
       }
       if (sendError) clearError();
+      if (uploadError) clearUploadError();
     },
     [
       isQueued,
@@ -603,6 +609,8 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
       executorConfig,
       sendError,
       clearError,
+      uploadError,
+      clearUploadError,
       setLocalMessage,
     ]
   );
@@ -1063,7 +1071,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         conflictedFilesCount,
         onResolveConflicts: handleResolveConflicts,
       }}
-      error={sendError}
+      error={uploadError ?? sendError}
       agent={effectiveExecutor}
       todos={todos}
       inProgressTodo={inProgressTodo}

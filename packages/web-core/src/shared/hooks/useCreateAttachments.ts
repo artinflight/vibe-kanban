@@ -21,6 +21,7 @@ export function useCreateAttachments(
   const [attachments, setAttachments] = useState<DraftWorkspaceAttachment[]>(
     initialAttachments ?? []
   );
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const hasInitialized = useRef(false);
 
   useEffect(() => {
@@ -37,7 +38,9 @@ export function useCreateAttachments(
 
   const uploadFiles = useCallback(
     async (selectedFiles: File[]) => {
+      setUploadError(null);
       const uploadResults: DraftWorkspaceAttachment[] = [];
+      const failures: string[] = [];
 
       for (const attachment of selectedFiles) {
         try {
@@ -51,6 +54,9 @@ export function useCreateAttachments(
           });
         } catch (error) {
           console.error('Failed to upload attachment:', error);
+          const message =
+            error instanceof Error ? error.message : 'Unknown upload error';
+          failures.push(`${attachment.name}: ${message}`);
         }
       }
 
@@ -60,6 +66,10 @@ export function useCreateAttachments(
           .map(buildWorkspaceAttachmentMarkdown)
           .join('\n\n');
         onInsertMarkdown(allMarkdown);
+      }
+
+      if (failures.length > 0) {
+        setUploadError(`Failed to upload ${failures.join('; ')}`);
       }
     },
     [onInsertMarkdown]
@@ -71,6 +81,7 @@ export function useCreateAttachments(
   }, [attachments]);
 
   const clearAttachments = useCallback(() => setAttachments([]), []);
+  const clearUploadError = useCallback(() => setUploadError(null), []);
 
   const localAttachments: LocalAttachmentMetadata[] = attachments.map(
     (attachment) =>
@@ -87,5 +98,7 @@ export function useCreateAttachments(
     getAttachmentIds,
     clearAttachments,
     localAttachments,
+    uploadError,
+    clearUploadError,
   };
 }

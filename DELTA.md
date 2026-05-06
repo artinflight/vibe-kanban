@@ -332,3 +332,20 @@
   - `https://vibe.local/` returned `200`
 - Not complete / known gaps:
   - needs real mobile browser retest by the operator because the failure only reproduces through the native mobile picker event lifecycle
+
+## 2026-05-06T19:31:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | mobile direct attachment input hotfix
+
+- Intent: remove the remaining mobile/browser dependency on `react-dropzone.open()` after mobile file selection still produced no backend request.
+- Completed:
+  - added a dedicated hidden native file input for the issue paperclip action
+  - changed the paperclip button to trigger that direct input and pass selected files straight into the existing attachment upload path
+  - built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-direct-input-hotfix`
+- Verified:
+  - `pnpm --filter @vibe/ui run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - live frontend symlink points at the direct-input release
+  - `https://vibe.local/` returned `200`
+  - built frontend assets contain the `data-direct-attachment-input` marker
+- Not complete / known gaps:
+  - needs operator retest on the mobile browser after a hard refresh
+  - backend still needs the next safe restart before the live size limit increases from `20MB` to `100MB`

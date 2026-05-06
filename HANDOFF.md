@@ -11,6 +11,8 @@
 - Built and deployed a refresh-only frontend release at `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tattach-local-upload-hotfix`.
 - Fixed the mobile picker no-op by keeping the hidden dropzone file input mounted even when the native picker blurs the description editor.
 - Built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-attachment-input-hotfix`.
+- Replaced the paperclip button's dropzone `open()` path with a direct native file input path for mobile browsers.
+- Built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-direct-input-hotfix`.
 - Raised attachment size limits from `20MB` to `100MB` in source. The frontend limit is live after refresh; the backend limit requires the next safe backend restart because three VK execution units were active at verification time.
 
 ## Current Hotfix Truth
@@ -50,7 +52,7 @@
 - Live binary SHA-256: `832d64203bc89e44b0e5524a4986b902bdd44fd26d4d0b2cea2f679edb33eb6a`
 - `vibe-kanban.service` is active at `0.0.0.0:4311`.
 - `http://127.0.0.1:4311/api/info`, `http://127.0.0.1:4311/`, and `https://vibe.local/` return OK.
-- Live frontend symlink now points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-attachment-input-hotfix`.
+- Live frontend symlink now points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-direct-input-hotfix`.
 - No `vk-exec-*` units were active immediately after restart; the three previously active rows were marked failed by VK startup cleanup.
 - Later attachment verification found three active `vk-exec-*` units, so the backend was not restarted for the `100MB` limit change.
 
@@ -119,6 +121,7 @@
 
 - Commit/push/open PR for `hotfix/bound-historical-log-replay-20260506T1715Z`.
 - When no VK execution units are running, rebuild/redeploy the backend if the live install must accept files larger than `20MB`; the source limit is already `100MB`.
+- If mobile attachment selection still produces no upload request after a hard refresh, instrument the direct file-input `change` handler in the live frontend; the backend upload endpoint already succeeds from multipart smoke tests.
 - When resuming the interrupted 2026-05-06 workspaces, use the preserved workspace/session context rather than starting unrelated fresh workspaces.
 - If another agent reports lost context, first inspect that workspace session’s latest non-dropped completed anchor and verify its rollout exists under either `/home/mcp/.local/share/vibe-kanban/codex-home/sessions` or `/home/mcp/.codex/sessions`.
 - If another workspace reports `Invalid repository` or `already exists`, check whether the Vibe-managed repo path is a symlink or stale directory before touching DB context.

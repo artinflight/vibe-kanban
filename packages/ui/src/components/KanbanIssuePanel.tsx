@@ -207,6 +207,7 @@ export function KanbanIssuePanel({
   const [isDescriptionEditing, setIsDescriptionEditing] =
     useState(isCreateMode);
   const descriptionContainerRef = useRef<HTMLDivElement>(null);
+  const directAttachmentInputRef = useRef<HTMLInputElement>(null);
 
   // Reset description editing state when switching between create/edit mode or when issue changes
   useEffect(() => {
@@ -219,6 +220,25 @@ export function KanbanIssuePanel({
       setIsDescriptionEditing(false);
     }
   }, [isCreateMode]);
+
+  const handleDirectAttachmentBrowse = useCallback(() => {
+    if (isSubmitting || isUploading) return;
+    const input = directAttachmentInputRef.current;
+    if (!input) return;
+    input.value = '';
+    input.click();
+  }, [isSubmitting, isUploading]);
+
+  const handleDirectAttachmentChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.currentTarget.files ?? []);
+      event.currentTarget.value = '';
+      if (files.length > 0) {
+        onPasteFiles?.(files);
+      }
+    },
+    [onPasteFiles]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -398,6 +418,24 @@ export function KanbanIssuePanel({
                 data-dropzone-input
               />
             )}
+            {onPasteFiles && (
+              <input
+                ref={directAttachmentInputRef}
+                type="file"
+                multiple
+                tabIndex={-1}
+                aria-hidden="true"
+                data-direct-attachment-input
+                onChange={handleDirectAttachmentChange}
+                style={{
+                  position: 'absolute',
+                  width: 1,
+                  height: 1,
+                  opacity: 0,
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
             {renderDescriptionEditor({
               placeholder: isDescriptionEditing
                 ? t('kanban.issueDescriptionPlaceholder')
@@ -432,10 +470,8 @@ export function KanbanIssuePanel({
                             type="button"
                             onMouseDown={(e) => {
                               e.preventDefault();
-                              if (!isSubmitting && !isUploading) {
-                                onBrowseAttachment();
-                              }
                             }}
+                            onClick={handleDirectAttachmentBrowse}
                             disabled={isSubmitting || isUploading}
                             className={cn(
                               'p-half rounded-sm transition-colors',

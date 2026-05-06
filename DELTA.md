@@ -297,3 +297,23 @@
   - startup orphan cleanup marked active turns for `FR::HRV Stream`, `FR::Exploring Women's Specific Needs`, and `FR::ORC::Android Parity` failed
   - their worktrees, DB rows, Codex session ids, and pre-kill snapshots remain preserved, but the in-flight processes did not survive
   - commit/push/PR promotion still required so this deployed hotfix is durable
+
+## 2026-05-06T18:35:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | local attachment upload hotfix
+
+- Intent: fix local VK attachment uploads failing with `Failed to init attachment upload (405)`.
+- Completed:
+  - traced the 405 to the local-only frontend calling remote Azure `/v1/attachments/init`
+  - changed local-only attachment upload to use `/api/attachments/upload`
+  - made local `attachment://...` URLs resolve through `/api/attachments/{id}/file`
+  - raised attachment size limits from `20MB` to `100MB` in source
+  - built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tattach-local-upload-hotfix`
+  - pushed commit `f6b10cf0f fix: use local attachment uploads in local mode`
+- Verified:
+  - `pnpm --filter @vibe/web-core run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - `cargo check -p services -p server`
+  - live `/api/attachments/upload` multipart image smoke test returned success
+- Not complete / known gaps:
+  - live backend still has the old `20MB` limit until the next safe backend restart
+  - backend restart was deferred because three `vk-exec-*` units were active
+  - `cargo check --manifest-path crates/remote/Cargo.toml` was blocked by private dependency authentication

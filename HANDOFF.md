@@ -7,6 +7,9 @@
 - Added a `5s` execution-log websocket send timeout.
 - Added cancel-on-drop for normalized log replay streams so historical raw replay feeder tasks stop when the client disconnects.
 - Took a preservation backup, force-killed only the wedged VK main PID after stop hung, installed the patched backend binary, and restarted VK.
+- Fixed local-only issue/comment attachment upload routing so the frontend uses `/api/attachments/upload` instead of the remote `/v1/attachments/init` Azure flow when `shared_api_base` is empty.
+- Built and deployed a refresh-only frontend release at `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tattach-local-upload-hotfix`.
+- Raised attachment size limits from `20MB` to `100MB` in source. The frontend limit is live after refresh; the backend limit requires the next safe backend restart because three VK execution units were active at verification time.
 
 ## Current Hotfix Truth
 
@@ -16,6 +19,8 @@
 - Live binary SHA-256: `832d64203bc89e44b0e5524a4986b902bdd44fd26d4d0b2cea2f679edb33eb6a`
 - Backup: `/home/mcp/backups/vk-pre-kill-preserve-agents-20260506T173550Z`
 - Validation: `cargo fmt --check --package services --package server`; `cargo check -p services -p server`; `cargo test -p services cancel_on_drop_stream_signals_replay_tasks`; live `/api/info`, `/`, and `https://vibe.local/` OK after restart.
+- Attachment validation: `pnpm --filter @vibe/web-core run format`; `pnpm --filter @vibe/local-web run build`; `cargo check -p services -p server`; live `/api/attachments/upload` multipart smoke test returned success.
+- Remote crate validation note: `cargo check --manifest-path crates/remote/Cargo.toml` was blocked by private `vibe-kanban-private` git dependency authentication.
 - Remaining condition: commit/push/PR promotion is still required so the deployed fix survives future deploys.
 - Important restart result: startup orphan cleanup marked `FR::HRV Stream`, `FR::Exploring Women's Specific Needs`, and `FR::ORC::Android Parity` failed. Their worktrees, DB rows, Codex session ids, and pre-kill snapshots were preserved, but the in-flight turns did not survive as running processes.
 
@@ -42,7 +47,9 @@
 - Live binary SHA-256: `832d64203bc89e44b0e5524a4986b902bdd44fd26d4d0b2cea2f679edb33eb6a`
 - `vibe-kanban.service` is active at `0.0.0.0:4311`.
 - `http://127.0.0.1:4311/api/info`, `http://127.0.0.1:4311/`, and `https://vibe.local/` return OK.
+- Live frontend symlink now points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tattach-local-upload-hotfix`.
 - No `vk-exec-*` units were active immediately after restart; the three previously active rows were marked failed by VK startup cleanup.
+- Later attachment verification found three active `vk-exec-*` units, so the backend was not restarted for the `100MB` limit change.
 
 ## Agent Context Repairs
 
@@ -94,6 +101,8 @@
 - deployed binary hash matched `target/release/server`
 - service active after restart, `/api/info` OK, `/` OK, `https://vibe.local/` OK
 - socket check showed no `CLOSE_WAIT` pile on `:4311` immediately after restart
+- `pnpm --filter @vibe/local-web run build`
+- live local attachment upload endpoint returned success for a multipart image
 - `cargo check -p server -p local-deployment`
 - `pnpm run format`
 - `cargo build --release -p server`
@@ -106,6 +115,7 @@
 ## What The Next Agent Should Do
 
 - Commit/push/open PR for `hotfix/bound-historical-log-replay-20260506T1715Z`.
+- When no VK execution units are running, rebuild/redeploy the backend if the live install must accept files larger than `20MB`; the source limit is already `100MB`.
 - When resuming the interrupted 2026-05-06 workspaces, use the preserved workspace/session context rather than starting unrelated fresh workspaces.
 - If another agent reports lost context, first inspect that workspace session’s latest non-dropped completed anchor and verify its rollout exists under either `/home/mcp/.local/share/vibe-kanban/codex-home/sessions` or `/home/mcp/.codex/sessions`.
 - If another workspace reports `Invalid repository` or `already exists`, check whether the Vibe-managed repo path is a symlink or stale directory before touching DB context.

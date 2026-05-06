@@ -114,7 +114,7 @@ pub enum RouteError {
     NoThumbnail,
     #[error("access denied")]
     AccessDenied,
-    #[error("file too large (max 20MB)")]
+    #[error("file too large (max 100MB)")]
     FileTooLarge,
     #[error("upload not found or expired")]
     UploadNotFound,
@@ -147,7 +147,7 @@ impl IntoResponse for RouteError {
             RouteError::NoThumbnail => (StatusCode::NOT_FOUND, "No thumbnail available"),
             RouteError::AccessDenied => (StatusCode::FORBIDDEN, "Access denied"),
             RouteError::FileTooLarge => {
-                (StatusCode::PAYLOAD_TOO_LARGE, "File too large (max 20MB)")
+                (StatusCode::PAYLOAD_TOO_LARGE, "File too large (max 100MB)")
             }
             RouteError::UploadNotFound => (StatusCode::NOT_FOUND, "Upload not found or expired"),
             RouteError::PendingUpload(e) => {
@@ -168,7 +168,7 @@ impl IntoResponse for RouteError {
     }
 }
 
-const MAX_FILE_SIZE: i64 = 20 * 1024 * 1024;
+const MAX_FILE_SIZE: i64 = 100 * 1024 * 1024;
 
 #[instrument(name = "attachments.init_upload", skip(state, ctx, payload), fields(project_id = %payload.project_id, user_id = %ctx.user.id))]
 async fn init_upload(

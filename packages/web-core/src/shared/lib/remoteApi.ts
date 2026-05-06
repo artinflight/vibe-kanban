@@ -306,6 +306,10 @@ export async function commitIssueAttachments(
   issueId: string,
   request: CommitAttachmentsRequest
 ): Promise<CommitAttachmentsResponse> {
+  if (!getRemoteApiUrl()) {
+    return { attachments: [] };
+  }
+
   const response = await makeRequest(
     `/v1/issues/${issueId}/attachments/commit`,
     {
@@ -326,6 +330,10 @@ export async function commitCommentAttachments(
   commentId: string,
   request: CommitAttachmentsRequest
 ): Promise<CommitAttachmentsResponse> {
+  if (!getRemoteApiUrl()) {
+    return { attachments: [] };
+  }
+
   const response = await makeRequest(
     `/v1/comments/${commentId}/attachments/commit`,
     {
@@ -343,6 +351,17 @@ export async function commitCommentAttachments(
 }
 
 export async function deleteAttachment(attachmentId: string): Promise<void> {
+  if (!getRemoteApiUrl()) {
+    const response = await fetch(`/api/attachments/${attachmentId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw await parseErrorResponse(response, 'Failed to delete attachment');
+    }
+    return;
+  }
+
   const response = await makeRequest(`/v1/attachments/${attachmentId}`, {
     method: 'DELETE',
   });
@@ -355,6 +374,10 @@ export async function fetchAttachmentSasUrl(
   attachmentId: string,
   type: 'file' | 'thumbnail'
 ): Promise<string> {
+  if (!getRemoteApiUrl()) {
+    return `/api/attachments/${attachmentId}/file`;
+  }
+
   const cacheKey = `${attachmentId}:${type}`;
   const cached = sasUrlCache.get(cacheKey);
   if (cached && Date.now() < cached.expiresAt) {

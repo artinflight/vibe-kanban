@@ -392,7 +392,7 @@ export function KanbanIssuePanel({
               }
             }}
           >
-            {isDescriptionEditing && (
+            {dropzoneProps && (
               <input
                 {...(dropzoneProps?.getInputProps() as React.InputHTMLAttributes<HTMLInputElement>)}
                 data-dropzone-input

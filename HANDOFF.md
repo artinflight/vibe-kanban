@@ -9,6 +9,8 @@
 - Took a preservation backup, force-killed only the wedged VK main PID after stop hung, installed the patched backend binary, and restarted VK.
 - Fixed local-only issue/comment attachment upload routing so the frontend uses `/api/attachments/upload` instead of the remote `/v1/attachments/init` Azure flow when `shared_api_base` is empty.
 - Built and deployed a refresh-only frontend release at `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tattach-local-upload-hotfix`.
+- Fixed the mobile picker no-op by keeping the hidden dropzone file input mounted even when the native picker blurs the description editor.
+- Built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-attachment-input-hotfix`.
 - Raised attachment size limits from `20MB` to `100MB` in source. The frontend limit is live after refresh; the backend limit requires the next safe backend restart because three VK execution units were active at verification time.
 
 ## Current Hotfix Truth
@@ -20,6 +22,7 @@
 - Backup: `/home/mcp/backups/vk-pre-kill-preserve-agents-20260506T173550Z`
 - Validation: `cargo fmt --check --package services --package server`; `cargo check -p services -p server`; `cargo test -p services cancel_on_drop_stream_signals_replay_tasks`; live `/api/info`, `/`, and `https://vibe.local/` OK after restart.
 - Attachment validation: `pnpm --filter @vibe/web-core run format`; `pnpm --filter @vibe/local-web run build`; `cargo check -p services -p server`; live `/api/attachments/upload` multipart smoke test returned success.
+- Mobile attachment validation: `pnpm --filter @vibe/ui run format`; `pnpm --filter @vibe/local-web run build`; deployed frontend symlink and verified `https://vibe.local/` returns `200`.
 - Remote crate validation note: `cargo check --manifest-path crates/remote/Cargo.toml` was blocked by private `vibe-kanban-private` git dependency authentication.
 - Remaining condition: commit/push/PR promotion is still required so the deployed fix survives future deploys.
 - Important restart result: startup orphan cleanup marked `FR::HRV Stream`, `FR::Exploring Women's Specific Needs`, and `FR::ORC::Android Parity` failed. Their worktrees, DB rows, Codex session ids, and pre-kill snapshots were preserved, but the in-flight turns did not survive as running processes.
@@ -47,7 +50,7 @@
 - Live binary SHA-256: `832d64203bc89e44b0e5524a4986b902bdd44fd26d4d0b2cea2f679edb33eb6a`
 - `vibe-kanban.service` is active at `0.0.0.0:4311`.
 - `http://127.0.0.1:4311/api/info`, `http://127.0.0.1:4311/`, and `https://vibe.local/` return OK.
-- Live frontend symlink now points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tattach-local-upload-hotfix`.
+- Live frontend symlink now points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-attachment-input-hotfix`.
 - No `vk-exec-*` units were active immediately after restart; the three previously active rows were marked failed by VK startup cleanup.
 - Later attachment verification found three active `vk-exec-*` units, so the backend was not restarted for the `100MB` limit change.
 

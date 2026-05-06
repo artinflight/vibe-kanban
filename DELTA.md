@@ -317,3 +317,18 @@
   - live backend still has the old `20MB` limit until the next safe backend restart
   - backend restart was deferred because three `vk-exec-*` units were active
   - `cargo check --manifest-path crates/remote/Cargo.toml` was blocked by private dependency authentication
+
+## 2026-05-06T18:42:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | mobile attachment input hotfix
+
+- Intent: fix mobile image picker selecting a file but producing no upload, no success, and no error.
+- Completed:
+  - confirmed no matching upload request hit the backend during the failed mobile path
+  - traced likely cause to the hidden dropzone input unmounting when the native mobile picker blurred the description editor
+  - kept the hidden input mounted whenever dropzone props exist, independent of description edit focus
+  - built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-attachment-input-hotfix`
+- Verified:
+  - `pnpm --filter @vibe/ui run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - `https://vibe.local/` returned `200`
+- Not complete / known gaps:
+  - needs real mobile browser retest by the operator because the failure only reproduces through the native mobile picker event lifecycle

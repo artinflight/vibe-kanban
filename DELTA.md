@@ -20,6 +20,21 @@
 - Not complete / known gaps:
   - PR `#57` still needs CI/merge/promotion after the codeblock-copy cherry-pick
 
+## 2026-05-07T00:37:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | Android Parity scroll hotfix
+
+- Intent: fix `FR::ORC::Android Parity` where the workspace conversation could not scroll up through long history.
+- Completed:
+  - confirmed VK had four active execution units, so no restart was performed
+  - confirmed Android Parity itself had no running execution process, but had long paginated history
+  - released conversation bottom-lock immediately on upward wheel/touch input
+  - preserved the first visible row anchor when older history is prepended
+  - built and deployed frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tandroid-scroll-hotfix`
+- Verified:
+  - `pnpm --filter @vibe/web-core run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - `https://vibe.local/` returned `200`
+  - live bundle contains the scroll-hotfix marker and prior attachment/codeblock markers
+
 ## 2026-04-18T00:00:00Z | staging | local-only recovery baseline
 
 - Intent: recover the usable VK board state, remove active cloud coupling, and make the local install restorable.

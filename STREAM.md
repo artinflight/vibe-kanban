@@ -67,8 +67,12 @@
   - `vibe-kanban.service` restarted once at `2026-05-07 00:04:39 UTC`
   - `https://vibe.local/` and `/api/info` return OK
   - `21MB` upload through `https://vibe.local` succeeds and the smoke artifact was deleted
-  - frontend symlink points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tcodeblock-attachment-hotfix`
+  - frontend symlink points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tandroid-scroll-hotfix`
 - The hotfix branch now also includes the previously missing codeblock-copy reliability commit `d3fe6d53e`.
+- `FR::ORC::Android Parity` long-history scroll-up fix is frontend-only:
+  - upward wheel/touch input now releases conversation bottom-lock immediately
+  - older-history pagination preserves the first visible row anchor after prepending rows
+  - deployed without restarting VK while four other agents were running
 - Confirmed on live VK before restart:
   - `vibe-kanban.service` had reached roughly `19.6 GB` RSS with dozens of `CLOSE_WAIT` sockets on `:4311`.
   - Three execution processes were running: `FR::HRV Stream`, `FR::Exploring Women's Specific Needs`, and `FR::ORC::Android Parity`.

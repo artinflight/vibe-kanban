@@ -17,10 +17,11 @@
   - Branch/worktree: `hotfix/bound-historical-log-replay-20260506T1715Z` at `/tmp/vk-hotfix-historical-replay-20260506T1715Z`
   - Binary SHA-256: `78f37c51ea3c392985652cdb4ae513ed2b2771a9ad16fc506cc175299ee6f93f`
   - Latest backup: `/home/mcp/backups/vk-pre-pr57-deploy-20260506T234920Z`
-  - Current frontend release: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tcodeblock-attachment-hotfix`
+  - Current frontend release: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tandroid-scroll-hotfix`
   - Fix: dead/slow execution-log websocket sends now time out, and dropping a normalized log replay stream cancels its historical replay feeder.
   - Attachment limit fix is live: a `21MB` upload through `https://vibe.local` returned HTTP `200` after the 2026-05-07 restart and nginx size-limit reload.
   - Codeblock-copy reliability fix is live in the refreshable frontend release.
+  - Android Parity long-history scroll fix is live in the refreshable frontend release; no backend restart was performed.
   - Verified after restart: `/api/info` OK, `/` OK, `https://vibe.local/` OK, no `CLOSE_WAIT` pile on `:4311`, service around `210 MB` shortly after boot.
   - Important: the restart interrupted three active execution turns; VK startup orphan cleanup marked `FR::HRV Stream`, `FR::Exploring Women's Specific Needs`, and `FR::ORC::Android Parity` failed. Their VK rows, worktrees, Codex session ids, and pre-kill snapshots remain preserved.
 - `/api/info` reports `shared_api_base: null`.

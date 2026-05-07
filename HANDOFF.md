@@ -10,6 +10,8 @@
 - Verified a `21MB` attachment upload through `https://vibe.local/api/workspaces/.../attachments/upload` now succeeds with HTTP `200` and `size_bytes = 22020096`; the smoke attachment was deleted afterward.
 - Found the later codeblock-copy reliability fix was not in this hotfix branch, cherry-picked commit `d3fe6d53e` (`fix: make code block copy button reliable`), rebuilt the frontend, and deployed refreshable frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tcodeblock-attachment-hotfix`.
 - Verified the deployed frontend bundle contains the mobile direct-input markers, visible upload-error string, and codeblock overlay markers.
+- Investigated `FR::ORC::Android Parity` scroll-up failure. The workspace has no running process, but it has long history and triggers older-history pagination. The conversation list kept bottom-lock too long and prepended older history without restoring the visible row anchor.
+- Fixed upward wheel/touch handling to release bottom-lock immediately, and preserved the first visible row when older history loads. Deployed frontend-only release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tandroid-scroll-hotfix` without restarting VK.
 - Investigated the recurring live VK wedge after memory reached roughly `19.6 GB` RSS with many dead sockets on `:4311`.
 - Found an additional retention path: execution-log websocket sends were unbounded, and normalized historical replay feeder work did not cancel when the websocket/stream was dropped.
 - Added a `5s` execution-log websocket send timeout.
@@ -35,7 +37,7 @@
 - PR: `#57` (`https://github.com/artinflight/vibe-kanban/pull/57`)
 - Live binary SHA-256: `78f37c51ea3c392985652cdb4ae513ed2b2771a9ad16fc506cc175299ee6f93f`
 - Latest backup: `/home/mcp/backups/vk-pre-pr57-deploy-20260506T234920Z`
-- Current frontend release: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tcodeblock-attachment-hotfix`
+- Current frontend release: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tandroid-scroll-hotfix`
 - Validation: `cargo fmt --check --package services --package server`; `cargo check -p services -p server`; `cargo test -p services cancel_on_drop_stream_signals_replay_tasks`; live `/api/info`, `/`, and `https://vibe.local/` OK after restart.
 - Attachment validation: `pnpm --filter @vibe/web-core run format`; `pnpm --filter @vibe/local-web run build`; `cargo check -p services -p server`; live `/api/attachments/upload` multipart smoke test returned success.
 - Current deploy validation: no running `vk-exec-*` units; zero active `execution_processes`; `cargo build --release -p server`; deployed binary hash matched `target/release/server`; `https://vibe.local/api/info` OK; `https://vibe.local/` OK; `21MB` upload through `vibe.local` succeeded and was cleaned up.
@@ -138,7 +140,7 @@
 ## What The Next Agent Should Do
 
 - Monitor and merge/promote PR `#57`.
-- Keep the frontend symlink on `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tcodeblock-attachment-hotfix`; older releases are missing the final codeblock-copy reliability fix.
+- Keep the frontend symlink on `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tandroid-scroll-hotfix`; older releases are missing the Android long-history scroll fix or the final codeblock-copy reliability fix.
 - If mobile attachment selection still produces no upload request after a hard refresh, instrument the direct file-input `change` handler in the live frontend; the backend upload endpoint already succeeds from multipart smoke tests.
 - When resuming the interrupted 2026-05-06 workspaces, use the preserved workspace/session context rather than starting unrelated fresh workspaces.
 - If another agent reports lost context, first inspect that workspace session’s latest non-dropped completed anchor and verify its rollout exists under either `/home/mcp/.local/share/vibe-kanban/codex-home/sessions` or `/home/mcp/.codex/sessions`.

@@ -186,7 +186,7 @@ pub fn routes() -> Router<DeploymentImpl> {
     Router::new()
         .route(
             "/upload",
-            post(upload_file).layer(DefaultBodyLimit::max(20 * 1024 * 1024)),
+            post(upload_file).layer(DefaultBodyLimit::max(100 * 1024 * 1024)),
         )
         .route("/{id}/file", get(serve_file))
         .route("/{id}", delete(delete_file))

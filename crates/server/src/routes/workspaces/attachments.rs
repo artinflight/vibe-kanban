@@ -403,7 +403,7 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
         .route("/metadata", get(get_attachment_metadata))
         .route(
             "/upload",
-            post(upload_file).layer(DefaultBodyLimit::max(20 * 1024 * 1024)),
+            post(upload_file).layer(DefaultBodyLimit::max(100 * 1024 * 1024)),
         )
         .layer(from_fn_with_state(
             deployment.clone(),

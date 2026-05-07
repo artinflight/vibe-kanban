@@ -544,6 +544,7 @@ const WYSIWYGEditor = forwardRef<WYSIWYGEditorRef, WysiwygProps>(
                       placeholder={placeholderElement}
                       ErrorBoundary={LexicalErrorBoundary}
                     />
+                    {disabled && <ReadOnlyCodeBlockCopyPlugin />}
                   </div>
 
                   {showStaticToolbar && (
@@ -603,7 +604,6 @@ const WYSIWYGEditor = forwardRef<WYSIWYGEditorRef, WysiwygProps>(
                   )}
                   {/* Link sanitization for read-only mode */}
                   {disabled && <ReadOnlyLinkPlugin />}
-                  {disabled && <ReadOnlyCodeBlockCopyPlugin />}
                   {/* Clickable code for file paths in read-only mode */}
                   {disabled && findMatchingDiffPath && onCodeClick && (
                     <ClickableCodePlugin

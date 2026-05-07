@@ -96,12 +96,18 @@ export function CreateChatBoxContainer({
     [message, setMessage]
   );
 
-  const { uploadFiles, getAttachmentIds, clearAttachments, localAttachments } =
-    useCreateAttachments(
-      handleInsertMarkdown,
-      draftAttachments,
-      setDraftAttachments
-    );
+  const {
+    uploadFiles,
+    getAttachmentIds,
+    clearAttachments,
+    localAttachments,
+    uploadError,
+    clearUploadError,
+  } = useCreateAttachments(
+    handleInsertMarkdown,
+    draftAttachments,
+    setDraftAttachments
+  );
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -227,6 +233,7 @@ export function CreateChatBoxContainer({
 
   // Handle submit
   const handleSubmit = useCallback(async () => {
+    clearUploadError();
     setHasAttemptedSubmit(true);
     if (!canSubmit || !executorConfig) return;
 
@@ -288,11 +295,13 @@ export function CreateChatBoxContainer({
     clearDraft,
     linkedIssue,
     forcedLinkedIssue,
+    clearUploadError,
   ]);
 
   // Determine error to display
   const displayError =
-    hasAttemptedSubmit && repos.length === 0
+    uploadError ??
+    (hasAttemptedSubmit && repos.length === 0
       ? 'Add at least one repository to create a workspace'
       : hasAttemptedSubmit && !hasSelectedBranchesForAllRepos
         ? 'Select a branch for every repository before creating a workspace'
@@ -300,7 +309,7 @@ export function CreateChatBoxContainer({
           ? createWorkspace.error instanceof Error
             ? createWorkspace.error.message
             : 'Failed to create workspace'
-          : null;
+          : null);
 
   // Wait for initial value to be applied before rendering
   // This ensures the editor mounts with content ready, so autoFocus works correctly

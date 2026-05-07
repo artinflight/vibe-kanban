@@ -186,7 +186,6 @@ export function KanbanIssuePanel({
   onPasteFiles,
   localAttachments,
   dropzoneProps,
-  onBrowseAttachment,
   isUploading,
   attachmentError,
   onDismissAttachmentError,
@@ -219,6 +218,17 @@ export function KanbanIssuePanel({
       setIsDescriptionEditing(false);
     }
   }, [isCreateMode]);
+
+  const handleDirectAttachmentChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.currentTarget.files ?? []);
+      event.currentTarget.value = '';
+      if (files.length > 0) {
+        onPasteFiles?.(files);
+      }
+    },
+    [onPasteFiles]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -392,7 +402,7 @@ export function KanbanIssuePanel({
               }
             }}
           >
-            {isDescriptionEditing && (
+            {dropzoneProps && (
               <input
                 {...(dropzoneProps?.getInputProps() as React.InputHTMLAttributes<HTMLInputElement>)}
                 data-dropzone-input
@@ -424,29 +434,35 @@ export function KanbanIssuePanel({
                 : undefined,
               staticToolbarActions: (
                 <>
-                  {isDescriptionEditing && onBrowseAttachment && (
+                  {isDescriptionEditing && onPasteFiles && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              if (!isSubmitting && !isUploading) {
-                                onBrowseAttachment();
-                              }
-                            }}
-                            disabled={isSubmitting || isUploading}
+                          <label
                             className={cn(
-                              'p-half rounded-sm transition-colors',
+                              'relative inline-flex cursor-pointer items-center justify-center overflow-hidden p-half rounded-sm transition-colors',
                               'text-low hover:text-normal hover:bg-panel/50',
-                              'disabled:opacity-50 disabled:cursor-not-allowed'
+                              (isSubmitting || isUploading) &&
+                                'cursor-not-allowed opacity-50'
                             )}
                             title={t('kanban.attachFile')}
                             aria-label={t('kanban.attachFile')}
+                            aria-disabled={isSubmitting || isUploading}
                           >
                             <PaperclipIcon className="size-icon-sm" />
-                          </button>
+                            <input
+                              type="file"
+                              multiple
+                              disabled={isSubmitting || isUploading}
+                              data-direct-attachment-input
+                              aria-label={t('kanban.attachFile')}
+                              onClick={(event) => {
+                                event.currentTarget.value = '';
+                              }}
+                              onChange={handleDirectAttachmentChange}
+                              className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                            />
+                          </label>
                         </TooltipTrigger>
                         <TooltipContent>
                           {t('kanban.attachFileHint')}

@@ -7,6 +7,8 @@ import {
   useRef,
   useState,
   type MouseEvent,
+  type TouchEvent,
+  type WheelEvent,
 } from 'react';
 import { SpinnerIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
@@ -191,6 +193,7 @@ export const ConversationList = forwardRef<
   } | null>(null);
   const pendingInteractionAnchorFrameRef = useRef<number | null>(null);
   const pendingInteractionAnchorDeadlineRef = useRef(0);
+  const touchStartYRef = useRef<number | null>(null);
 
   // Use ref to access current repos without causing callback recreation
   const reposRef = useRef(repos);
@@ -551,6 +554,39 @@ export const ConversationList = forwardRef<
   });
   scrollOnEntriesChangedRef.current = scrollExecutor.onEntriesChanged;
 
+  const releaseBottomLockForUpwardScroll = useCallback(() => {
+    conversationVirtualizer.releaseBottomLock();
+  }, [conversationVirtualizer]);
+
+  const handleWheelCapture = useCallback(
+    (event: WheelEvent<HTMLDivElement>) => {
+      if (event.deltaY < 0) {
+        releaseBottomLockForUpwardScroll();
+      }
+    },
+    [releaseBottomLockForUpwardScroll]
+  );
+
+  const handleTouchStartCapture = useCallback(
+    (event: TouchEvent<HTMLDivElement>) => {
+      touchStartYRef.current = event.touches[0]?.clientY ?? null;
+    },
+    []
+  );
+
+  const handleTouchMoveCapture = useCallback(
+    (event: TouchEvent<HTMLDivElement>) => {
+      const startY = touchStartYRef.current;
+      const currentY = event.touches[0]?.clientY;
+      if (startY == null || currentY == null) return;
+
+      if (currentY > startY + 4) {
+        releaseBottomLockForUpwardScroll();
+      }
+    },
+    [releaseBottomLockForUpwardScroll]
+  );
+
   // Determine if there are entries to show placeholders
   const hasEntries = conversationRows.length > 0;
 
@@ -760,12 +796,69 @@ export const ConversationList = forwardRef<
       return;
     }
 
+    const findFirstVisibleRowAnchor = (): {
+      semanticKey: string;
+      top: number;
+    } | null => {
+      const containerTop = scrollEl.getBoundingClientRect().top;
+      const rowNodes = Array.from(
+        scrollEl.querySelectorAll<HTMLElement>('[data-semantic-key]')
+      );
+
+      for (const node of rowNodes) {
+        const rect = node.getBoundingClientRect();
+        if (rect.bottom <= containerTop + 1) continue;
+        const semanticKey = node.dataset.semanticKey;
+        if (!semanticKey) continue;
+        return { semanticKey, top: rect.top };
+      }
+
+      return null;
+    };
+
+    const restoreVisibleRowAnchor = (
+      anchor: { semanticKey: string; top: number } | null
+    ) => {
+      if (!anchor) return;
+
+      let attempts = 0;
+      const maxAttempts = 8;
+
+      const correctScroll = () => {
+        attempts++;
+        const rowNodes = Array.from(
+          scrollEl.querySelectorAll<HTMLElement>('[data-semantic-key]')
+        );
+        const targetNode = rowNodes.find(
+          (node) => node.dataset.semanticKey === anchor.semanticKey
+        );
+
+        if (targetNode) {
+          const delta = targetNode.getBoundingClientRect().top - anchor.top;
+          if (Math.abs(delta) >= 0.5) {
+            scrollEl.scrollTop += delta;
+          }
+          return;
+        }
+
+        if (attempts < maxAttempts) {
+          requestAnimationFrame(correctScroll);
+        }
+      };
+
+      requestAnimationFrame(correctScroll);
+    };
+
     const maybeLoadOlderHistory = () => {
       if (!hasMoreHistory || isLoadingHistory || loading) {
         return;
       }
       if (scrollEl.scrollTop <= 80) {
-        void loadMoreHistory();
+        conversationVirtualizer.releaseBottomLock();
+        const anchor = findFirstVisibleRowAnchor();
+        void loadMoreHistory().finally(() => {
+          restoreVisibleRowAnchor(anchor);
+        });
       }
     };
 
@@ -777,7 +870,13 @@ export const ConversationList = forwardRef<
     return () => {
       scrollEl.removeEventListener('scroll', maybeLoadOlderHistory);
     };
-  }, [hasMoreHistory, isLoadingHistory, loadMoreHistory, loading]);
+  }, [
+    conversationVirtualizer,
+    hasMoreHistory,
+    isLoadingHistory,
+    loadMoreHistory,
+    loading,
+  ]);
 
   return (
     <ApprovalFormProvider>
@@ -792,6 +891,9 @@ export const ConversationList = forwardRef<
           className="h-full overflow-y-auto scrollbar-none"
           style={{ overflowAnchor: 'none', contain: 'strict' }}
           onClickCapture={handleConversationClickCapture}
+          onTouchMoveCapture={handleTouchMoveCapture}
+          onTouchStartCapture={handleTouchStartCapture}
+          onWheelCapture={handleWheelCapture}
         >
           <div className="pt-2">
             {showSetupPlaceholder && (

@@ -1,5 +1,40 @@
 # DELTA.md
 
+## 2026-05-07T00:10:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | PR #57 deploy completion
+
+- Intent: deploy every queued VK stability, attachment, mobile attachment, upload-error, and codeblock-copy fix in one controlled release.
+- Completed:
+  - confirmed no running `vk-exec-*` units and zero active `execution_processes` rows before restart
+  - backed up live state to `/home/mcp/backups/vk-pre-pr57-deploy-20260506T234920Z`
+  - rebuilt and installed the backend to both live binary paths with SHA-256 `78f37c51ea3c392985652cdb4ae513ed2b2771a9ad16fc506cc175299ee6f93f`
+  - restarted `vibe-kanban.service` once at `2026-05-07 00:04:39 UTC`
+  - cherry-picked the missing codeblock-copy reliability fix as `d3fe6d53e`
+  - built and deployed frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tcodeblock-attachment-hotfix`
+- Verified:
+  - live `/api/info` OK through both `127.0.0.1:4311` and `https://vibe.local`
+  - `https://vibe.local/` returned `200`
+  - deployed backend binary hash matched `target/release/server`
+  - a `21MB` workspace attachment upload through `https://vibe.local` returned HTTP `200` and `size_bytes = 22020096`
+  - smoke attachment was deleted after validation
+  - frontend bundle contains the direct mobile attachment input markers, visible upload-error string, and codeblock overlay markers
+- Not complete / known gaps:
+  - PR `#57` still needs CI/merge/promotion after the codeblock-copy cherry-pick
+
+## 2026-05-07T00:37:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | Android Parity scroll hotfix
+
+- Intent: fix `FR::ORC::Android Parity` where the workspace conversation could not scroll up through long history.
+- Completed:
+  - confirmed VK had four active execution units, so no restart was performed
+  - confirmed Android Parity itself had no running execution process, but had long paginated history
+  - released conversation bottom-lock immediately on upward wheel/touch input
+  - preserved the first visible row anchor when older history is prepended
+  - built and deployed frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tandroid-scroll-hotfix`
+- Verified:
+  - `pnpm --filter @vibe/web-core run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - `https://vibe.local/` returned `200`
+  - live bundle contains the scroll-hotfix marker and prior attachment/codeblock markers
+
 ## 2026-04-18T00:00:00Z | staging | local-only recovery baseline
 
 - Intent: recover the usable VK board state, remove active cloud coupling, and make the local install restorable.
@@ -101,6 +136,7 @@
   - backup retention validation was not rerun during the sync cleanup step
   - full test validation was not rerun after the final cleanup behavior adjustments
   - pinned workspaces still keep the existing auto-archive exception
+
 # 2026-04-19 Workspace Polling Hotfix
 
 - A second frontend churn path was identified after the earlier kanban/sidebar fix.
@@ -275,3 +311,114 @@
 - Not complete / known gaps:
   - PR `#40` still needs staging promotion
   - no broad UI/browser agent-send regression test was run after the real-worktree repair
+
+## 2026-05-06T18:10:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | execution-log replay retention hotfix
+
+- Intent: stop live VK from wedging when dead execution-log websocket clients retain historical normalized replay work and backend memory.
+- Completed:
+  - observed live VK at roughly `19.6 GB` RSS with many `CLOSE_WAIT` sockets on `:4311`
+  - created preservation backup `/home/mcp/backups/vk-pre-kill-preserve-agents-20260506T173550Z`
+  - added `5s` bounded sends for execution-log websocket messages
+  - added cancel-on-drop for normalized log replay streams so historical raw replay feeder work stops after client disconnect
+  - built and deployed patched backend binary to `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`
+  - restarted VK after force-killing only the wedged main PID when graceful stop hung
+- Verified:
+  - `cargo fmt --check --package services --package server`
+  - `cargo check -p services -p server`
+  - `cargo test -p services cancel_on_drop_stream_signals_replay_tasks`
+  - `cargo build --release --bin server`
+  - deployed binary SHA-256 `832d64203bc89e44b0e5524a4986b902bdd44fd26d4d0b2cea2f679edb33eb6a`
+  - post-restart `/api/info`, `/`, and `https://vibe.local/` returned OK
+  - post-restart socket check showed no `CLOSE_WAIT` pile on `:4311`
+- Not complete / known gaps:
+  - startup orphan cleanup marked active turns for `FR::HRV Stream`, `FR::Exploring Women's Specific Needs`, and `FR::ORC::Android Parity` failed
+  - their worktrees, DB rows, Codex session ids, and pre-kill snapshots remain preserved, but the in-flight processes did not survive
+  - commit/push/PR promotion still required so this deployed hotfix is durable
+
+## 2026-05-06T18:35:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | local attachment upload hotfix
+
+- Intent: fix local VK attachment uploads failing with `Failed to init attachment upload (405)`.
+- Completed:
+  - traced the 405 to the local-only frontend calling remote Azure `/v1/attachments/init`
+  - changed local-only attachment upload to use `/api/attachments/upload`
+  - made local `attachment://...` URLs resolve through `/api/attachments/{id}/file`
+  - raised attachment size limits from `20MB` to `100MB` in source
+  - built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tattach-local-upload-hotfix`
+  - pushed commit `f6b10cf0f fix: use local attachment uploads in local mode`
+- Verified:
+  - `pnpm --filter @vibe/web-core run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - `cargo check -p services -p server`
+  - live `/api/attachments/upload` multipart image smoke test returned success
+- Not complete / known gaps:
+  - live backend still has the old `20MB` limit until the next safe backend restart
+  - backend restart was deferred because three `vk-exec-*` units were active
+  - `cargo check --manifest-path crates/remote/Cargo.toml` was blocked by private dependency authentication
+
+## 2026-05-06T18:42:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | mobile attachment input hotfix
+
+- Intent: fix mobile image picker selecting a file but producing no upload, no success, and no error.
+- Completed:
+  - confirmed no matching upload request hit the backend during the failed mobile path
+  - traced likely cause to the hidden dropzone input unmounting when the native mobile picker blurred the description editor
+  - kept the hidden input mounted whenever dropzone props exist, independent of description edit focus
+  - built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-attachment-input-hotfix`
+- Verified:
+  - `pnpm --filter @vibe/ui run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - `https://vibe.local/` returned `200`
+- Not complete / known gaps:
+  - needs real mobile browser retest by the operator because the failure only reproduces through the native mobile picker event lifecycle
+
+## 2026-05-06T19:31:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | mobile direct attachment input hotfix
+
+- Intent: remove the remaining mobile/browser dependency on `react-dropzone.open()` after mobile file selection still produced no backend request.
+- Completed:
+  - added a dedicated hidden native file input for the issue paperclip action
+  - changed the paperclip button to trigger that direct input and pass selected files straight into the existing attachment upload path
+  - built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-direct-input-hotfix`
+- Verified:
+  - `pnpm --filter @vibe/ui run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - live frontend symlink points at the direct-input release
+  - `https://vibe.local/` returned `200`
+  - built frontend assets contain the `data-direct-attachment-input` marker
+- Not complete / known gaps:
+  - needs operator retest on the mobile browser after a hard refresh
+  - backend still needs the next safe restart before the live size limit increases from `20MB` to `100MB`
+
+## 2026-05-06T19:45:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | all mobile attachment buttons use native inputs
+
+- Intent: fix the broader mobile attachment failure across issue comments and chat boxes, not only the issue description paperclip.
+- Completed:
+  - replaced programmatic file-picker clicks in issue comments, create chat, and session chat with native overlay file inputs
+  - kept the issue description native overlay file input from the previous correction
+  - built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tmobile-all-attachment-inputs-hotfix`
+- Verified:
+  - `pnpm --filter @vibe/ui run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - `https://vibe.local/` returned `200`
+  - active frontend bundle contains markers for issue description, issue comments, create chat, and session chat direct inputs
+- Not complete / known gaps:
+  - needs operator retest on mobile after a hard refresh
+  - backend still needs the next safe restart before the live size limit increases from `20MB` to `100MB`
+
+## 2026-05-06T19:53:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | chat attachment error visibility
+
+- Intent: stop chat paste/drop/paperclip upload failures from appearing as no-ops.
+- Completed:
+  - added upload error state to workspace session attachments
+  - added upload error state to create-mode attachments
+  - surfaced upload errors in the existing chat box error area
+  - built and deployed refresh-only frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506Tchat-attachment-error-hotfix`
+- Verified:
+  - `pnpm --filter @vibe/web-core run format`
+  - `pnpm --filter @vibe/local-web run build`
+  - `https://vibe.local/` returned `200`
+  - active frontend bundle contains the new chat attachment error strings
+  - a small live workspace chat upload succeeded through the workspace attachment endpoint and was cleaned up
+  - a `21MB` direct backend upload still fails until the live backend is restarted with the source `100MB` limit
+  - a `21MB` upload through `https://vibe.local` fails earlier with nginx `413 Request Entity Too Large`
+- Not complete / known gaps:
+  - live backend restart is still required for VK's `100MB` limit to take effect
+  - front proxy/nginx body-size limit must also be raised for large uploads through `vibe.local`

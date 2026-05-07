@@ -58,6 +58,17 @@
 
 ## Current Status
 
+- 2026-05-07 controlled deploy completed after confirming no live agents were running:
+  - no running `vk-exec-*` units
+  - zero active `execution_processes` rows
+  - backup saved at `/home/mcp/backups/vk-pre-pr57-deploy-20260506T234920Z`
+  - backend rebuilt with `cargo build --release -p server`
+  - live binaries installed with SHA-256 `78f37c51ea3c392985652cdb4ae513ed2b2771a9ad16fc506cc175299ee6f93f`
+  - `vibe-kanban.service` restarted once at `2026-05-07 00:04:39 UTC`
+  - `https://vibe.local/` and `/api/info` return OK
+  - `21MB` upload through `https://vibe.local` succeeds and the smoke artifact was deleted
+  - frontend symlink points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tcodeblock-attachment-hotfix`
+- The hotfix branch now also includes the previously missing codeblock-copy reliability commit `d3fe6d53e`.
 - Confirmed on live VK before restart:
   - `vibe-kanban.service` had reached roughly `19.6 GB` RSS with dozens of `CLOSE_WAIT` sockets on `:4311`.
   - Three execution processes were running: `FR::HRV Stream`, `FR::Exploring Women's Specific Needs`, and `FR::ORC::Android Parity`.
@@ -114,7 +125,7 @@
   - opened PR `#40`: `https://github.com/artinflight/vibe-kanban/pull/40`
   - fixed the broken symlink repair by converting Modernize and Generative Vibe repo paths into real registered git worktrees
 - In progress:
-  - promote PR `#40` into `staging` so the interrupted-context hotfix survives normal deploys
+  - merge/promote PR `#57` so the live hotfix survives future deploys
 
 ## Risks / Regression Traps
 
@@ -132,6 +143,6 @@
 
 ## Next Safe Steps
 
-1. Commit and push this hotfix branch, then open/promote a PR so the deployed fix is not lost.
+1. Merge/promote PR `#57` so the deployed fix is not lost.
 2. If the user resumes the interrupted workspaces, use the same workspace/session context and include the interrupted prompt text from each failed row where needed.
 3. If live memory climbs again, inspect execution-log websocket replay behavior first, then workspace summary query cost.

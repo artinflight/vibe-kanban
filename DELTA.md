@@ -1,5 +1,25 @@
 # DELTA.md
 
+## 2026-05-07T00:10:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | PR #57 deploy completion
+
+- Intent: deploy every queued VK stability, attachment, mobile attachment, upload-error, and codeblock-copy fix in one controlled release.
+- Completed:
+  - confirmed no running `vk-exec-*` units and zero active `execution_processes` rows before restart
+  - backed up live state to `/home/mcp/backups/vk-pre-pr57-deploy-20260506T234920Z`
+  - rebuilt and installed the backend to both live binary paths with SHA-256 `78f37c51ea3c392985652cdb4ae513ed2b2771a9ad16fc506cc175299ee6f93f`
+  - restarted `vibe-kanban.service` once at `2026-05-07 00:04:39 UTC`
+  - cherry-picked the missing codeblock-copy reliability fix as `d3fe6d53e`
+  - built and deployed frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260507Tcodeblock-attachment-hotfix`
+- Verified:
+  - live `/api/info` OK through both `127.0.0.1:4311` and `https://vibe.local`
+  - `https://vibe.local/` returned `200`
+  - deployed backend binary hash matched `target/release/server`
+  - a `21MB` workspace attachment upload through `https://vibe.local` returned HTTP `200` and `size_bytes = 22020096`
+  - smoke attachment was deleted after validation
+  - frontend bundle contains the direct mobile attachment input markers, visible upload-error string, and codeblock overlay markers
+- Not complete / known gaps:
+  - PR `#57` still needs CI/merge/promotion after the codeblock-copy cherry-pick
+
 ## 2026-04-18T00:00:00Z | staging | local-only recovery baseline
 
 - Intent: recover the usable VK board state, remove active cloud coupling, and make the local install restorable.
@@ -101,6 +121,7 @@
   - backup retention validation was not rerun during the sync cleanup step
   - full test validation was not rerun after the final cleanup behavior adjustments
   - pinned workspaces still keep the existing auto-archive exception
+
 # 2026-04-19 Workspace Polling Hotfix
 
 - A second frontend churn path was identified after the earlier kanban/sidebar fix.
@@ -275,6 +296,7 @@
 - Not complete / known gaps:
   - PR `#40` still needs staging promotion
   - no broad UI/browser agent-send regression test was run after the real-worktree repair
+
 ## 2026-05-06T18:10:00Z | hotfix/bound-historical-log-replay-20260506T1715Z | execution-log replay retention hotfix
 
 - Intent: stop live VK from wedging when dead execution-log websocket clients retain historical normalized replay work and backend memory.

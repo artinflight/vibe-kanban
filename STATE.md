@@ -59,6 +59,7 @@
   - `not_found` sub-agent state must remain recoverable and attention-worthy until a later running/completed/failed update or Codex state proves otherwise
   - do not treat `not_found` as terminal in DB logic or UI send-interruption guards
   - Codex `thread_spawn_edges.status = open` is not sufficient proof of currently active work when the VK parent execution is already completed; stale open edges from completed parents must not create "may still be active" warnings
+  - Codex-proven terminal child state must override stale persisted VK `subagent_jobs.status = running` rows for the same child agent ID
 - No-restart frontend repair releases were published on 2026-05-06:
   - base UI repair: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506T1531Z-no-restart-ui-fixes`
   - mobile attachment follow-up: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506T1548Z-mobile-attachment-fix`

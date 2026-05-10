@@ -11,12 +11,22 @@
 - Current live running Android Parity children are legitimate new work from the user's `2026-05-10T19:20:12Z` prompt:
   - `019e1355-ba15-7fa1-bdad-8ca4dffffe08`
   - `019e1355-baca-7042-9691-3f1348b6a596`
+- Follow-up correction: those two Android children later proved stale too after the parent execution completed at `2026-05-10T19:23:36Z`; the initial mitigation had not handled persisted VK `subagent_jobs` rows that still said `running`.
+- User also reported false active counts for `FR::ORC::Generative Programming` (`18`), `VL::Investigate repo workflow` (`7`), and `FR::Open AI API usage` (`10`).
+- Broader no-restart live mitigation:
+  - backed up Codex state to `/home/mcp/backups/codex-state-before-stale-subagent-sweep-20260510T225425Z.sqlite`
+  - closed `37` stale Codex open edges across those four workspaces
+  - backed up the VK DB to `/home/mcp/backups/vk-db-before-stale-subagent-jobs-20260510T225546Z.sqlite`
+  - marked the remaining `3` stale persisted `subagent_jobs` rows completed
+  - verified live workspace summaries now show `active_subagent_count = 0` and `unresolved_subagent_count = 0` for all four reported workspaces
 - Source repair prepared in `crates/db/src/models/subagent_job.rs`:
   - include parent `execution_processes.completed_at` when mapping VK parent threads to Codex child edges
   - treat a Codex `open` edge as completed when its VK parent execution is completed and the child was last updated within 30 seconds of parent completion, or has no child update timestamp
   - keep genuinely current child activity running when the child updated after parent completion or the parent is still running
+  - prefer Codex-proven terminal child state over stale persisted VK `running` state for the same child agent ID
 - Validation passed:
   - `cargo test -p db completed_parent_codex_open_edge_is_not_counted_as_running_when_stale`
+  - `cargo test -p db codex_completed_status_overrides_stale_persisted_running_status`
   - `cargo test -p db not_found_subagent_status_remains_recoverable`
   - `git diff --check`
 - No VK restart was performed for the live mitigation. The source repair requires the next backend deploy/restart to become permanent for future stale Codex edges.

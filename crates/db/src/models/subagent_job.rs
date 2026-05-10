@@ -449,11 +449,11 @@ fn deduplicate_jobs(jobs: Vec<SubagentJob>) -> Vec<SubagentJob> {
 
 fn status_rank(status: &SubagentJobStatus) -> u8 {
     match status {
-        SubagentJobStatus::Running => 4,
-        SubagentJobStatus::Unresolved => 3,
-        SubagentJobStatus::NotFound => 2,
-        SubagentJobStatus::Failed => 1,
-        SubagentJobStatus::Completed => 0,
+        SubagentJobStatus::Completed => 5,
+        SubagentJobStatus::Failed => 4,
+        SubagentJobStatus::Running => 3,
+        SubagentJobStatus::Unresolved => 2,
+        SubagentJobStatus::NotFound => 1,
     }
 }
 
@@ -489,6 +489,41 @@ mod tests {
             codex_edge_status("open", Some(completed_at), None),
             SubagentJobStatus::Running
         );
+    }
+
+    #[test]
+    fn codex_completed_status_overrides_stale_persisted_running_status() {
+        let session_id = Uuid::new_v4();
+        let execution_process_id = Uuid::new_v4();
+        let agent_id = "019e1355-ba15-7fa1-bdad-8ca4dffffe08";
+        let now = Utc::now();
+        let jobs = super::deduplicate_jobs(vec![
+            SubagentJob {
+                id: Uuid::new_v4(),
+                session_id,
+                execution_process_id,
+                agent_id: agent_id.to_string(),
+                nickname: None,
+                status: SubagentJobStatus::Running,
+                completed_at: None,
+                created_at: now,
+                updated_at: now,
+            },
+            SubagentJob {
+                id: Uuid::new_v4(),
+                session_id,
+                execution_process_id,
+                agent_id: agent_id.to_string(),
+                nickname: None,
+                status: SubagentJobStatus::Completed,
+                completed_at: Some(now),
+                created_at: now,
+                updated_at: now,
+            },
+        ]);
+
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0].status, SubagentJobStatus::Completed);
     }
 
     #[tokio::test]

@@ -4,16 +4,14 @@
 
 - User reported collapsed Kanban columns regressed on mobile and rendered their labels vertically instead of horizontally.
 - Root cause: `CollapsedKanbanColumn` always applied `[writing-mode:vertical-rl]`, even though mobile Kanban switches to a single-column layout where collapsed statuses should render as horizontal bars.
-- Follow-up root cause: the outer `KanbanBoard` still had its default `min-h-40`, so the mobile label was horizontal but the collapsed row kept the old tall vertical footprint.
 - Source fix:
   - `packages/web-core/src/features/kanban/ui/KanbanContainer.tsx`
   - added an `isMobile` prop to `CollapsedKanbanColumn`
   - desktop keeps the narrow vertical collapsed rail
-  - mobile now renders a compact horizontal collapsed bar with normal text flow and a `min-h-12` collapsed board footprint
-- Deployed without restarting VK by building `packages/local-web` and swapping refreshable frontend assets to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260510Tmobile-collapsed-columns-height`.
-- Updated staged restart frontend artifact `/home/mcp/.local/share/vibe-kanban/pending-releases/20260510T123551Z-rc-876eb7936/frontend-dist` with the same build so a later restart does not roll this fix back.
+  - mobile now renders a compact horizontal collapsed bar with normal text flow
+- Deployed without restarting VK by building `packages/local-web` and swapping refreshable frontend assets to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260510Tmobile-collapsed-columns`.
 - No backend restart was performed; `vibe-kanban.service` main PID remained `2063361`.
-- Validation passed: `pnpm --filter @vibe/web-core run check`, `pnpm run format`, `pnpm --filter @vibe/local-web run build`, `git diff --check`, live HTML references `/assets/index-Cjdk6Zpg.js` and `/assets/index-DO7PuNtw.css`.
+- Validation passed: `pnpm --filter @vibe/web-core run check`, `pnpm run format`, `pnpm --filter @vibe/local-web run build`, `git diff --check`, live HTML references `/assets/index-Byutb7P2.js` and `/assets/index-B2sTkbw8.css`.
 
 ## 2026-05-10 Sub-Agent Preservation Repair
 

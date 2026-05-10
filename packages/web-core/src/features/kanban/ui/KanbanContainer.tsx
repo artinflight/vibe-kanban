@@ -1628,8 +1628,7 @@ export function KanbanContainer() {
                   <KanbanBoard
                     key={status.id}
                     className={cn(
-                      isCollapsed &&
-                        (isMobile ? '!min-h-12' : '!min-w-16 !max-w-16')
+                      isCollapsed && !isMobile && '!min-w-16 !max-w-16'
                     )}
                   >
                     {isCollapsed ? (

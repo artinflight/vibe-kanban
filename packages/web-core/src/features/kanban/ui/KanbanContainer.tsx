@@ -115,6 +115,34 @@ const areKanbanFiltersEqual = (
   );
 };
 
+type WorkspaceReviewState = {
+  hasPendingApproval?: boolean | null;
+  hasUnseenActivity?: boolean | null;
+  isRunning?: boolean | null;
+  latestProcessStatus?: string | null;
+};
+
+function workspaceNeedsActionableReview(
+  workspace: WorkspaceReviewState
+): boolean {
+  if (
+    workspace.latestProcessStatus === 'failed' ||
+    workspace.latestProcessStatus === 'killed'
+  ) {
+    return false;
+  }
+
+  if (workspace.hasPendingApproval === true) {
+    return true;
+  }
+
+  return (
+    workspace.hasUnseenActivity === true &&
+    workspace.isRunning !== true &&
+    workspace.latestProcessStatus !== 'running'
+  );
+}
+
 function LoadingState() {
   const { t } = useTranslation('common');
   return (
@@ -534,9 +562,7 @@ function LocalProjectSettingsDialog({
 type CollapsedKanbanColumnProps = {
   statusName: string;
   statusColor: string;
-  issueCount: number;
-  hasNeedsAttention: boolean;
-  hasInProgress: boolean;
+  hasNeedsReview?: boolean;
   onExpand: () => void;
   isMobile: boolean;
 };
@@ -544,45 +570,37 @@ type CollapsedKanbanColumnProps = {
 function CollapsedKanbanColumn({
   statusName,
   statusColor,
-  issueCount,
-  hasNeedsAttention,
-  hasInProgress,
+  hasNeedsReview = false,
   onExpand,
   isMobile,
 }: CollapsedKanbanColumnProps) {
   const { t } = useTranslation('common');
+  const expandLabel = hasNeedsReview
+    ? t('kanban.expandColumnWithNeedsReview', {
+        defaultValue: 'Expand {{statusName}} column, needs review inside',
+        statusName,
+      })
+    : t('kanban.expandColumn', {
+        defaultValue: 'Expand {{statusName}} column',
+        statusName,
+      });
 
   return (
     <button
       type="button"
       onClick={onExpand}
-      className={cn(
-        'group relative flex overflow-hidden bg-secondary transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-1 focus:ring-brand',
-        isMobile ? 'min-h-0 flex-none' : 'min-h-40 flex-1'
-      )}
-      aria-label={t('kanban.expandColumn', {
-        defaultValue: 'Expand {{statusName}} column ({{count}} issues)',
-        statusName,
-        count: issueCount,
-      })}
-      title={`${statusName} (${issueCount})`}
+      className="group relative flex min-h-40 flex-1 overflow-hidden bg-secondary transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-1 focus:ring-brand"
+      aria-label={expandLabel}
+      title={statusName}
     >
-      <div
-        className={cn(
-          'sticky top-0 z-20 flex w-full shrink-0 border-b bg-secondary/95 px-2 backdrop-blur-sm',
-          isMobile
-            ? 'items-center justify-start py-3'
-            : 'h-40 items-start justify-center pt-4'
-        )}
-      >
-        <div
-          className={cn(
-            'flex items-center gap-2 whitespace-nowrap text-center',
-            isMobile
-              ? '[writing-mode:horizontal-tb]'
-              : '[writing-mode:vertical-rl] pt-2'
-          )}
-        >
+      {hasNeedsReview && (
+        <span
+          aria-hidden="true"
+          className="absolute right-1.5 top-1.5 z-30 h-2.5 w-2.5 rounded-full border border-secondary bg-brand shadow-sm"
+        />
+      )}
+      <div className="sticky top-0 z-20 flex h-40 w-full shrink-0 items-start justify-center border-b bg-secondary/95 px-2 pt-4 backdrop-blur-sm">
+        <div className="[writing-mode:vertical-rl] flex items-center gap-2 whitespace-nowrap pt-2 text-center">
           <span className="text-sm font-medium leading-none text-normal">
             &gt;
           </span>
@@ -1187,7 +1205,9 @@ export function KanbanContainer() {
             prs: prsByWorkspaceId.get(workspace.id) ?? [],
             owner: membersWithProfilesById.get(workspace.owner_user_id) ?? null,
             updatedAt: workspace.updated_at,
-            isOwnedByCurrentUser: workspace.owner_user_id === userId,
+            isOwnedByCurrentUser:
+              workspace.owner_user_id === userId ||
+              (workspace.owner_user_id === '' && !!localWorkspace),
             isRunning: localWorkspace?.isRunning,
             hasPendingApproval: localWorkspace?.hasPendingApproval,
             hasRunningDevServer: localWorkspace?.hasRunningDevServer,
@@ -1212,6 +1232,38 @@ export function KanbanContainer() {
     membersWithProfilesById,
     userId,
   ]);
+
+  const needsReviewByStatusId = useMemo(() => {
+    const map = new Map<string, boolean>();
+
+    for (const [statusId, issueIds] of Object.entries(items)) {
+      const statusHasNeedsReview = issueIds.some((issueId) =>
+        getWorkspacesForIssue(issueId).some((workspace) => {
+          if (
+            workspace.archived ||
+            !workspace.local_workspace_id ||
+            !localWorkspacesById.has(workspace.local_workspace_id)
+          ) {
+            return false;
+          }
+
+          const localWorkspace = localWorkspacesById.get(
+            workspace.local_workspace_id
+          );
+
+          return localWorkspace
+            ? workspaceNeedsActionableReview(localWorkspace)
+            : false;
+        })
+      );
+
+      if (statusHasNeedsReview) {
+        map.set(statusId, true);
+      }
+    }
+
+    return map;
+  }, [items, getWorkspacesForIssue, localWorkspacesById]);
 
   // Calculate sort_order based on column index and issue position
   // Formula: 1000 * [COLUMN_INDEX] + [ISSUE_INDEX] (both 1-based)
@@ -1589,18 +1641,8 @@ export function KanbanContainer() {
               {visibleStatuses.map((status) => {
                 const issueIds = items[status.id] ?? [];
                 const isCollapsed = collapsedStatusIdSet.has(status.id);
-                const columnWorkspaces = issueIds.flatMap(
-                  (issueId) => workspacesByIssueId.get(issueId) ?? []
-                );
-                const hasNeedsAttention = columnWorkspaces.some(
-                  (workspace) =>
-                    workspace.hasPendingApproval ||
-                    (!!workspace.hasUnseenActivity && !workspace.isRunning)
-                );
-                const hasInProgress = columnWorkspaces.some(
-                  (workspace) =>
-                    !!workspace.isRunning && !workspace.hasPendingApproval
-                );
+                const hasColumnNeedsReview =
+                  needsReviewByStatusId.get(status.id) === true;
 
                 return (
                   <KanbanBoard
@@ -1618,9 +1660,7 @@ export function KanbanContainer() {
                         <CollapsedKanbanColumn
                           statusName={status.name}
                           statusColor={status.color}
-                          issueCount={issueIds.length}
-                          hasNeedsAttention={hasNeedsAttention}
-                          hasInProgress={hasInProgress}
+                          hasNeedsReview={hasColumnNeedsReview}
                           onExpand={() => toggleCollapsedStatus(status.id)}
                           isMobile={isMobile}
                         />

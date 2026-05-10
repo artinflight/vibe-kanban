@@ -141,9 +141,8 @@ pub struct UiPreferencesData {
     /// Last selected project ID
     #[serde(default)]
     pub selected_project_id: Option<String>,
-    /// Preferred order for local-only project icons in the app bar
+    /// Manual order for local projects in the left app bar
     #[serde(default)]
-    #[ts(skip)]
     pub local_project_order: Vec<String>,
     /// Default setting for creating a draft workspace from new issues
     #[serde(default)]

@@ -67,34 +67,18 @@ function getLocalProjectColor(projectId: string): string {
   return `${hash} 70% 45%`;
 }
 
-function orderLocalProjects(
-  projects: AppBarProject[],
-  localProjectOrder: string[]
-): AppBarProject[] {
-  if (localProjectOrder.length === 0) {
-    return projects;
-  }
-
-  const projectById = new Map(projects.map((project) => [project.id, project]));
-  const ordered: AppBarProject[] = [];
-
-  for (const projectId of localProjectOrder) {
-    const project = projectById.get(projectId);
-    if (!project) {
-      continue;
-    }
-    ordered.push(project);
-    projectById.delete(projectId);
-  }
-
-  return [...ordered, ...projectById.values()];
-}
-
 function workspaceNeedsReview(workspace: {
   has_pending_approval?: boolean;
   has_unseen_turns?: boolean;
   latest_process_status?: string | null;
 }): boolean {
+  if (
+    workspace.latest_process_status === 'failed' ||
+    workspace.latest_process_status === 'killed'
+  ) {
+    return false;
+  }
+
   if (workspace.has_pending_approval) {
     return true;
   }
@@ -113,9 +97,7 @@ export function SharedAppLayout() {
   const isLeftSidebarVisible = useUiPreferencesStore(
     (s) => s.isLeftSidebarVisible
   );
-  const showLeftColumnLinks = useUiPreferencesStore(
-    (s) => s.showLeftColumnLinks
-  );
+  const showLeftColumnLinks = false;
   const { isSignedIn } = useAuth();
   const { workspaces: userWorkspaces } = useUserContext();
   const { appVersion, loginStatus } = useUserSystem();
@@ -131,7 +113,6 @@ export function SharedAppLayout() {
     loginStatus?.status === 'loggedin' && !loginStatus.profile;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
   // Register CMD+K shortcut globally for all routes under SharedAppLayout
   useCommandBarShortcut(() => CommandBarDialog.show());
 
@@ -203,35 +184,41 @@ export function SharedAppLayout() {
     () => sortProjectsByOrder(orgProjects),
     [orgProjects]
   );
-  const localAppBarProjects = useMemo<AppBarProject[]>(
-    () =>
-      orderLocalProjects(
-        localProjects.map((project) => ({
-          id: project.id,
-          name: project.name,
-          color: getLocalProjectColor(project.id),
-          archived: project.archived,
-        })),
-        localProjectOrder
-      ),
-    [localProjectOrder, localProjects]
-  );
+  const localProjectOrder = useUiPreferencesStore((s) => s.localProjectOrder);
+  const localAppBarProjects = useMemo<AppBarProject[]>(() => {
+    const orderIndex = new Map(
+      localProjectOrder.map((projectId, index) => [projectId, index])
+    );
 
+    return localProjects
+      .map((project) => ({
+        id: project.id,
+        name: project.name,
+        color: getLocalProjectColor(project.id),
+        archived: project.archived,
+      }))
+      .sort((a, b) => {
+        const aIndex = orderIndex.get(a.id);
+        const bIndex = orderIndex.get(b.id);
+
+        if (aIndex !== undefined && bIndex !== undefined) {
+          return aIndex - bIndex;
+        }
+        if (aIndex !== undefined) {
+          return -1;
+        }
+        if (bIndex !== undefined) {
+          return 1;
+        }
+        return 0;
+      });
+  }, [localProjectOrder, localProjects]);
   const {
     data: activeWorkspaceSummaries = [],
     isLoading: isActiveWorkspaceSummariesLoading,
   } = useQuery({
     queryKey: ['workspace-summaries', 'active'],
     queryFn: () => workspacesApi.listSummaries(false),
-    staleTime: 1000,
-    refetchInterval: 15000,
-  });
-  const {
-    data: archivedWorkspaceSummaries = [],
-    isLoading: isArchivedWorkspaceSummariesLoading,
-  } = useQuery({
-    queryKey: ['workspace-summaries', 'archived'],
-    queryFn: () => workspacesApi.listSummaries(true),
     staleTime: 1000,
     refetchInterval: 15000,
   });
@@ -244,17 +231,15 @@ export function SharedAppLayout() {
       refetchInterval: 15000,
     })),
   });
-  const needsReviewWorkspaceIds = useMemo(() => {
-    const summaries = [
-      ...activeWorkspaceSummaries,
-      ...archivedWorkspaceSummaries,
-    ];
-    return new Set(
-      summaries
-        .filter((summary) => workspaceNeedsReview(summary))
-        .map((summary) => summary.workspace_id)
-    );
-  }, [activeWorkspaceSummaries, archivedWorkspaceSummaries]);
+  const needsReviewWorkspaceIds = useMemo(
+    () =>
+      new Set(
+        activeWorkspaceSummaries
+          .filter((summary) => workspaceNeedsReview(summary))
+          .map((summary) => summary.workspace_id)
+      ),
+    [activeWorkspaceSummaries]
+  );
   const needsReviewProjectIds = useMemo(() => {
     const projectIds = new Set<string>();
 
@@ -289,32 +274,38 @@ export function SharedAppLayout() {
     needsReviewWorkspaceIds,
     userWorkspaces,
   ]);
-  const allAppBarProjects = useMemo<AppBarProject[]>(() => {
-    const projects: AppBarProject[] = isLocalAuthBypassed
-      ? localAppBarProjects
-      : sortedProjects.map((project) => ({
-          id: project.id,
-          name: project.name,
-          color: project.color,
-          archived: false,
-        }));
-
-    return projects.map((project) => ({
-      ...project,
-      hasNeedsReview: needsReviewProjectIds.has(project.id),
-    }));
-  }, [
-    isLocalAuthBypassed,
-    localAppBarProjects,
-    needsReviewProjectIds,
-    sortedProjects,
-  ]);
+  const allAppBarProjects = useMemo(
+    () =>
+      (isLocalAuthBypassed ? localAppBarProjects : sortedProjects).map(
+        (project) => ({
+          ...project,
+          hasNeedsReview: needsReviewProjectIds.has(project.id),
+        })
+      ),
+    [
+      isLocalAuthBypassed,
+      localAppBarProjects,
+      needsReviewProjectIds,
+      sortedProjects,
+    ]
+  );
   const archivedProjects = useMemo(
-    () => allAppBarProjects.filter((project) => project.archived),
+    () =>
+      allAppBarProjects.filter(
+        (project) => 'archived' in project && project.archived
+      ),
     [allAppBarProjects]
   );
+  const isProjectsLoading = isLocalAuthBypassed
+    ? isLocalProjectsLoading ||
+      isActiveWorkspaceSummariesLoading ||
+      localProjectWorkspaceQueries.some((query) => query.isLoading)
+    : isLoading || isActiveWorkspaceSummariesLoading;
   const appBarProjects = useMemo(
-    () => allAppBarProjects.filter((project) => !project.archived),
+    () =>
+      allAppBarProjects.filter(
+        (project) => !('archived' in project) || !project.archived
+      ),
     [allAppBarProjects]
   );
   const isProjectsLoading = isLocalAuthBypassed
@@ -406,6 +397,9 @@ export function SharedAppLayout() {
   const setSelectedProjectId = useUiPreferencesStore(
     (s) => s.setSelectedProjectId
   );
+  const setLocalProjectOrder = useUiPreferencesStore(
+    (s) => s.setLocalProjectOrder
+  );
   useEffect(() => {
     if (activeProjectId) {
       setSelectedProjectId(activeProjectId);
@@ -456,12 +450,16 @@ export function SharedAppLayout() {
       setIsSavingProjectOrder(true);
 
       try {
-        await updateManyProjects(
-          reordered.map((project, index) => ({
-            id: project.id,
-            changes: { sort_order: index },
-          }))
-        ).persisted;
+        if (isLocalAuthBypassed) {
+          setLocalProjectOrder(reordered.map((project) => project.id));
+        } else {
+          await updateManyProjects(
+            reordered.map((project, index) => ({
+              id: project.id,
+              changes: { sort_order: index },
+            }))
+          ).persisted;
+        }
       } catch (error) {
         console.error('Failed to reorder projects:', error);
         setOrderedProjects(previousOrder);

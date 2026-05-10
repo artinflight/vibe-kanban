@@ -55,7 +55,6 @@ export const useJsonPatchWsStream = <T extends object>(
 
   const injectInitialEntry = options?.injectInitialEntry;
   const deduplicatePatches = options?.deduplicatePatches;
-  const reconnectOnCleanClose = options?.reconnectOnCleanClose ?? false;
 
   useEffect(() => {
     if (!enabled || !endpoint) {
@@ -75,6 +74,39 @@ export const useJsonPatchWsStream = <T extends object>(
       setIsInitialized(false);
       setError(null);
       dataRef.current = undefined;
+      return;
+    }
+
+    dataRef.current = undefined;
+    setData(undefined);
+    setIsConnected(false);
+    setIsInitialized(false);
+    setError(null);
+    retryAttemptsRef.current = 0;
+    finishedRef.current = false;
+  }, [enabled, endpoint]);
+
+  function scheduleReconnect() {
+    if (retryTimerRef.current) return; // already scheduled
+    // Exponential backoff with cap: 1s, 2s, 4s, 8s (max), then stay at 8s
+    const attempt = retryAttemptsRef.current;
+    const delay = Math.min(8000, 1000 * Math.pow(2, attempt));
+    retryTimerRef.current = window.setTimeout(() => {
+      retryTimerRef.current = null;
+      setRetryNonce((n) => n + 1);
+    }, delay);
+  }
+
+  useEffect(() => {
+    if (!enabled || !endpoint) {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
       return;
     }
 

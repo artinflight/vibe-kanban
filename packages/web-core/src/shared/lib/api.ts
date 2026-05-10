@@ -103,6 +103,7 @@ import {
   ProfileResponse,
   WorkspaceSummary,
   WorkspaceSummaryResponse,
+  SubagentJob,
 } from 'shared/types';
 import type {
   Project as RemoteProject,
@@ -824,6 +825,14 @@ export const executionProcessesApi = {
       `/api/execution-processes/${processId}/repo-states`
     );
     return handleApiResponse<ExecutionProcessRepoState[]>(response);
+  },
+
+  getSubagentsForSession: async (sessionId: string): Promise<SubagentJob[]> => {
+    const params = new URLSearchParams({ session_id: sessionId });
+    const response = await makeRequest(
+      `/api/execution-processes/subagents/session?${params.toString()}`
+    );
+    return handleApiResponse<SubagentJob[]>(response);
   },
 
   stopExecutionProcess: async (processId: string): Promise<void> => {

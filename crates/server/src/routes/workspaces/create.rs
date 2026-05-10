@@ -115,25 +115,6 @@ async fn ensure_local_linked_issue_task_id(
     Ok(None)
 }
 
-fn unique_matching_task_id<'a>(
-    tasks: impl IntoIterator<Item = (Uuid, &'a str)>,
-    workspace_name: &str,
-) -> Option<Uuid> {
-    let mut matching_task_id = None;
-
-    for (task_id, title) in tasks {
-        if title.trim() != workspace_name {
-            continue;
-        }
-
-        if matching_task_id.replace(task_id).is_some() {
-            return None;
-        }
-    }
-
-    matching_task_id
-}
-
 async fn infer_local_linked_issue_task_id_from_repos(
     deployment: &DeploymentImpl,
     repos: &[WorkspaceRepoInput],
@@ -164,7 +145,7 @@ async fn infer_local_linked_issue_task_id_from_repos(
         }
     }
 
-    let mut candidate_tasks = Vec::new();
+    let mut matching_task_ids = Vec::new();
     for project_id in project_ids {
         let project = match Project::find_by_id(&deployment.db().pool, project_id).await {
             Ok(project) => project,
@@ -176,32 +157,25 @@ async fn infer_local_linked_issue_task_id_from_repos(
             continue;
         }
 
-        let tasks = Task::find_by_project(&deployment.db().pool, project_id).await?;
-        candidate_tasks.extend(tasks.into_iter().map(|task| (task.id, task.title)));
-    }
-
-    let inferred_task_id = unique_matching_task_id(
-        candidate_tasks
-            .iter()
-            .map(|(task_id, title)| (*task_id, title.as_str())),
-        workspace_name,
-    );
-
-    if inferred_task_id.is_none() {
-        let match_count = candidate_tasks
-            .iter()
-            .filter(|(_, title)| title.trim() == workspace_name)
-            .count();
-        if match_count > 1 {
-            tracing::warn!(
-                "Could not infer local issue link for workspace {:?}: {} matching tasks",
-                workspace_name,
-                match_count
-            );
+        for task in Task::find_by_project(&deployment.db().pool, project_id).await? {
+            if task.title.trim() == workspace_name && !matching_task_ids.contains(&task.id) {
+                matching_task_ids.push(task.id);
+            }
         }
     }
 
-    Ok(inferred_task_id)
+    match matching_task_ids.as_slice() {
+        [task_id] => Ok(Some(*task_id)),
+        [] => Ok(None),
+        _ => {
+            tracing::warn!(
+                "Could not infer local issue link for workspace {:?}: {} matching tasks",
+                workspace_name,
+                matching_task_ids.len()
+            );
+            Ok(None)
+        }
+    }
 }
 
 pub async fn create_workspace(

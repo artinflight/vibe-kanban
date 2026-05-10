@@ -64,6 +64,8 @@ pub struct FileService {
     max_size_bytes: u64,
 }
 
+pub const MAX_ATTACHMENT_UPLOAD_BYTES: usize = 100 * 1024 * 1024;
+
 impl FileService {
     pub fn new(pool: SqlitePool) -> Result<Self, FileError> {
         let cache_dir = utils::cache_dir().join("attachments");
@@ -73,7 +75,7 @@ impl FileService {
             cache_dir,
             legacy_cache_dir,
             pool,
-            max_size_bytes: 20 * 1024 * 1024, // 20MB default
+            max_size_bytes: MAX_ATTACHMENT_UPLOAD_BYTES as u64,
         })
     }
 

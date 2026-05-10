@@ -7,6 +7,7 @@ import {
   CircleIcon,
   GitPullRequestIcon,
   DotsThreeIcon,
+  StackIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/cn';
@@ -39,6 +40,8 @@ export interface WorkspaceSummaryProps {
   hasPendingApproval?: boolean;
   hasRunningDevServer?: boolean;
   hasUnseenActivity?: boolean;
+  activeSubagentCount?: number;
+  unresolvedSubagentCount?: number;
   latestProcessCompletedAt?: string;
   latestProcessStatus?: 'running' | 'completed' | 'failed' | 'killed';
   prStatus?: 'open' | 'merged' | 'closed' | 'unknown';
@@ -62,6 +65,8 @@ export function WorkspaceSummary({
   hasPendingApproval = false,
   hasRunningDevServer = false,
   hasUnseenActivity = false,
+  activeSubagentCount = 0,
+  unresolvedSubagentCount = 0,
   latestProcessCompletedAt,
   latestProcessStatus,
   prStatus,
@@ -75,6 +80,8 @@ export function WorkspaceSummary({
   const hasChanges = filesChanged !== undefined && filesChanged > 0;
   const isFailed =
     latestProcessStatus === 'failed' || latestProcessStatus === 'killed';
+  const subagentCount = activeSubagentCount + unresolvedSubagentCount;
+  const hasSubagentActivity = subagentCount > 0;
 
   const handleOpenCommandBar = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -150,11 +157,31 @@ export function WorkspaceSummary({
               ))}
 
             {/* Unseen activity indicator (only when not running and not failed) */}
-            {hasUnseenActivity && !isRunning && !isFailed && (
+            {hasUnseenActivity &&
+              !isRunning &&
+              !hasSubagentActivity &&
+              !isFailed && (
               <CircleIcon
                 className="size-icon-xs text-brand shrink-0"
                 weight="fill"
               />
+            )}
+
+            {/* Sub-agent activity from the Codex thread graph */}
+            {hasSubagentActivity && (
+              <span
+                className="inline-flex h-4 min-w-4 shrink-0 items-center gap-[2px] text-warning"
+                title={`${subagentCount} sub-agent${
+                  subagentCount === 1 ? '' : 's'
+                } active`}
+              >
+                <StackIcon className="size-icon-xs" weight="fill" />
+                {subagentCount > 1 && (
+                  <span className="text-[10px] leading-none tabular-nums">
+                    {subagentCount}
+                  </span>
+                )}
+              </span>
             )}
 
             {/* PR status icon */}
@@ -181,6 +208,7 @@ export function WorkspaceSummary({
 
             {/* Time elapsed OR "Draft" label (when not running) */}
             {!isRunning &&
+              !hasSubagentActivity &&
               (isDraft ? (
                 <span className="min-w-0 flex-1 truncate">
                   {t('workspaces.draft')}
@@ -194,7 +222,7 @@ export function WorkspaceSummary({
               ))}
 
             {/* Spacer when running (no elapsed time shown) */}
-            {isRunning && <span className="flex-1" />}
+            {(isRunning || hasSubagentActivity) && <span className="flex-1" />}
 
             {/* File count + lines changed on the right */}
             {hasChanges && (

@@ -1,5 +1,26 @@
 # HANDOFF.md
 
+## 2026-05-10 Android Parity Stale Sub-Agent Count Repair
+
+- User reported `FR::ORC::Android Parity` showed "42 sub-agents may still be active" after the sub-agent sidebar deployment.
+- Root cause: the Codex fallback path merged every historical `thread_spawn_edges.status = open` row for every parent `coding_agent_turns.agent_session_id` in the VK session. Android Parity has a long-lived session with many historical parent turns, so stale open Codex edges from completed parents were counted as active.
+- Live mitigation, no VK restart:
+  - backed up Codex state to `/home/mcp/backups/codex-state-before-android-subagent-stale-close-20260510T191916Z.sqlite`
+  - closed stale Android Parity Codex edges only when the parent VK execution was terminal and the child thread had not updated after parent completion, or when the child thread metadata was missing
+  - verified the live API now reports `46` completed historical sub-agents and only `2` running current sub-agents for session `a7cd1444-b385-4edd-b8ef-cc14994cd8ba`
+- Current live running Android Parity children are legitimate new work from the user's `2026-05-10T19:20:12Z` prompt:
+  - `019e1355-ba15-7fa1-bdad-8ca4dffffe08`
+  - `019e1355-baca-7042-9691-3f1348b6a596`
+- Source repair prepared in `crates/db/src/models/subagent_job.rs`:
+  - include parent `execution_processes.completed_at` when mapping VK parent threads to Codex child edges
+  - treat a Codex `open` edge as completed when its VK parent execution is completed and the child was last updated within 30 seconds of parent completion, or has no child update timestamp
+  - keep genuinely current child activity running when the child updated after parent completion or the parent is still running
+- Validation passed:
+  - `cargo test -p db completed_parent_codex_open_edge_is_not_counted_as_running_when_stale`
+  - `cargo test -p db not_found_subagent_status_remains_recoverable`
+  - `git diff --check`
+- No VK restart was performed for the live mitigation. The source repair requires the next backend deploy/restart to become permanent for future stale Codex edges.
+
 ## 2026-05-10 Mobile Collapsed Kanban Column Repair
 
 - User reported collapsed Kanban columns regressed on mobile and rendered their labels vertically instead of horizontally.

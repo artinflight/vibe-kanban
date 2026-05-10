@@ -1,5 +1,18 @@
 # HANDOFF.md
 
+## 2026-05-10 Mobile Collapsed Kanban Column Repair
+
+- User reported collapsed Kanban columns regressed on mobile and rendered their labels vertically instead of horizontally.
+- Root cause: `CollapsedKanbanColumn` always applied `[writing-mode:vertical-rl]`, even though mobile Kanban switches to a single-column layout where collapsed statuses should render as horizontal bars.
+- Source fix:
+  - `packages/web-core/src/features/kanban/ui/KanbanContainer.tsx`
+  - added an `isMobile` prop to `CollapsedKanbanColumn`
+  - desktop keeps the narrow vertical collapsed rail
+  - mobile now renders a compact horizontal collapsed bar with normal text flow
+- Deployed without restarting VK by building `packages/local-web` and swapping refreshable frontend assets to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260510Tmobile-collapsed-columns`.
+- No backend restart was performed; `vibe-kanban.service` main PID remained `2063361`.
+- Validation passed: `pnpm --filter @vibe/web-core run check`, `pnpm run format`, `pnpm --filter @vibe/local-web run build`, `git diff --check`, live HTML references `/assets/index-Byutb7P2.js` and `/assets/index-B2sTkbw8.css`.
+
 ## 2026-05-10 Sub-Agent Preservation Repair
 
 - User reported a spawned sub-agent named Halley returned an agent ID but later status checks came back `not_found`, making the work unretrievable from VK.

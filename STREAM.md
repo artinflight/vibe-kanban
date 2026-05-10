@@ -64,6 +64,7 @@
 - Prepared but not deployed:
   - sidebar sub-agent indicators now read Codex `thread_spawn_edges` through `coding_agent_turns.agent_session_id`, expose summary counts, and render a stack/count marker on workspace cards
   - stale Codex open edges from completed VK parent executions are filtered out so old Android Parity children do not show as currently active forever
+  - Codex-completed child state now overrides stale persisted VK `running` sub-agent rows during deduplication
 - Prepared but not deployed:
   - sub-agent preservation now records raw Codex `collabAgentToolCall` / `spawnAgent` completion events even when normalized `spawn_agent` entries are absent
   - `not_found` is no longer treated as terminal for sub-agent jobs; it remains recoverable and still blocks accidental follow-up prompts as unresolved work
@@ -99,6 +100,7 @@
   - do not require normalized chat tool entries as the only source of spawned child IDs
   - do not mark `not_found` as completed/final in the DB or UI interruption guard
   - do not count stale Codex `open` edges as active when the VK parent execution is already completed and the child has not updated after parent completion
+  - do not let a stale persisted VK `running` row outrank a Codex-proven completed child edge for the same agent ID
   - verify with `cargo test -p db not_found_subagent_status_remains_recoverable` and `cargo test -p services raw_codex_spawn_agent`
 
 ## Next Safe Steps

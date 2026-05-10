@@ -28,6 +28,9 @@ export interface SidebarWorkspace {
   hasPendingApproval?: boolean;
   hasRunningDevServer?: boolean;
   hasUnseenActivity?: boolean;
+  activeSubagentCount?: number;
+  unresolvedSubagentCount?: number;
+  latestSessionId?: string;
   latestProcessCompletedAt?: string;
   latestProcessStatus?: 'running' | 'completed' | 'failed' | 'killed';
   prStatus?: 'open' | 'merged' | 'closed' | 'unknown';
@@ -56,6 +59,12 @@ function toSidebarWorkspace(
   ws: WorkspaceWithStatus,
   summary?: WorkspaceSummary
 ): SidebarWorkspace {
+  const latestProcessStatus = summary?.latest_process_status ?? undefined;
+  const isRunning =
+    latestProcessStatus !== undefined
+      ? latestProcessStatus === 'running'
+      : ws.is_running;
+
   return {
     id: ws.id,
     name: ws.name ?? ws.branch, // Use name if available, fallback to branch
@@ -68,15 +77,18 @@ function toSidebarWorkspace(
     linesAdded: summary?.lines_added ?? undefined,
     linesRemoved: summary?.lines_removed ?? undefined,
     // Real data from stream
-    isRunning: ws.is_running,
+    isRunning,
     isPinned: ws.pinned,
     isArchived: ws.archived,
     // Additional data from summary
     hasPendingApproval: summary?.has_pending_approval,
     hasRunningDevServer: summary?.has_running_dev_server,
     hasUnseenActivity: summary?.has_unseen_turns,
+    activeSubagentCount: summary?.active_subagent_count ?? 0,
+    unresolvedSubagentCount: summary?.unresolved_subagent_count ?? 0,
+    latestSessionId: summary?.latest_session_id ?? undefined,
     latestProcessCompletedAt: summary?.latest_process_completed_at ?? undefined,
-    latestProcessStatus: summary?.latest_process_status ?? undefined,
+    latestProcessStatus,
     prStatus: summary?.pr_status ?? undefined,
     prNumber:
       summary?.pr_number != null ? Number(summary.pr_number) : undefined,
@@ -89,6 +101,8 @@ export const workspaceKeys = {
 };
 
 // workspaceSummaryKeys is imported from @/shared/hooks/workspaceSummaryKeys
+
+const ACTIVE_WORKSPACE_SUMMARY_REFRESH_MS = 3000;
 
 // Fetch workspace summaries from the API by archived status
 async function fetchWorkspaceSummariesByArchived(
@@ -166,10 +180,11 @@ export function useWorkspaces(): UseWorkspacesResult {
       queryKey: workspaceSummaryKeys.byArchived(false, hostId),
       queryFn: () => fetchWorkspaceSummariesByArchived(false, hostId),
       enabled: activeIsInitialized,
-      staleTime: 60000,
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
+      staleTime: 0,
+      refetchInterval: ACTIVE_WORKSPACE_SUMMARY_REFRESH_MS,
+      refetchIntervalInBackground: false,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
       placeholderData: keepPreviousData,
     });
 
@@ -181,7 +196,7 @@ export function useWorkspaces(): UseWorkspacesResult {
       enabled: archivedIsInitialized,
       staleTime: 60000,
       refetchInterval: false,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
       refetchOnMount: false,
       placeholderData: keepPreviousData,
     });

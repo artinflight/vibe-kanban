@@ -1,0 +1,95 @@
+---
+title: "Lightweight Agent Preview"
+description: "Run a fast Vibe Kanban frontend preview without starting another backend watcher"
+---
+
+Use the lightweight preview when you need to smoke-test Vibe Kanban UI changes from a workspace branch without adding heavy backend load.
+
+This workflow starts only the local web Vite server from the current worktree. It proxies `/api` and websocket traffic to the already-running local Vibe Kanban backend on `127.0.0.1:4311`.
+
+<Warning>
+Do not use `pnpm run dev` for routine UI previews in agent workspaces. It starts backend watch mode and can add expensive Rust rebuilds, file watchers, and child processes. Use the lightweight preview first.
+</Warning>
+
+## When to use it
+
+Use this workflow for:
+
+- React, CSS, layout, routing, and copy changes in `packages/local-web`, `packages/web-core`, or `packages/ui`
+- Browser smoke tests before opening or updating a PR into `staging`
+- Quick human review links from a single branch worktree
+
+Use full dev mode only when you must exercise backend behaviour, migrations, generated types, executor changes, or API route changes.
+
+## Start a preview
+
+From the worktree you want to preview, run:
+
+```bash
+pnpm run preview:light
+```
+
+The command prints a local URL such as:
+
+```text
+Preview running: http://127.0.0.1:3002/
+Backend proxy: http://127.0.0.1:4311/
+```
+
+Open that URL in a browser, or paste it into the Vibe Kanban preview URL bar.
+
+<Check>
+The preview is ready when the command prints `Preview running` and the URL loads the branch UI.
+</Check>
+
+## Stop a preview
+
+Stop the preview when the smoke test is complete:
+
+```bash
+pnpm run preview:light:stop
+```
+
+Check whether a preview is still running:
+
+```bash
+pnpm run preview:light:status
+```
+
+Tail logs if the page does not load:
+
+```bash
+pnpm run preview:light:logs
+```
+
+## Port selection
+
+By default, the helper starts at port `3002` and uses the first free port after that. Override the frontend port when you need a stable URL:
+
+```bash
+VK_PREVIEW_PORT=3012 pnpm run preview:light
+```
+
+Override the backend port only if the live local backend is intentionally running somewhere other than `4311`:
+
+```bash
+VK_PREVIEW_BACKEND_PORT=4411 pnpm run preview:light
+```
+
+## Resource guardrails
+
+- Run one lightweight preview per worktree.
+- Stop the preview when you finish testing.
+- Do not leave `pnpm run dev`, `cargo watch`, or duplicate Vite previews running in background sessions.
+- Do not use the production Vibe Kanban service itself as a scratch dev server.
+- Keep routine UI smoke tests frontend-only; move backend investigation into an isolated lab instance when restarts or instrumentation are needed.
+
+## Full dev mode fallback
+
+Use full dev mode only when the branch changes backend behaviour:
+
+```bash
+pnpm run dev:qa
+```
+
+Record why full dev mode was needed in the branch handoff or PR description.

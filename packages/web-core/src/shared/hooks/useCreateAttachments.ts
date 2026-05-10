@@ -3,6 +3,8 @@ import { attachmentsApi } from '@/shared/lib/api';
 import type { LocalAttachmentMetadata } from '@vibe/ui/components/WorkspaceContext';
 import {
   buildWorkspaceAttachmentMarkdown,
+  formatAttachmentSize,
+  MAX_ATTACHMENT_UPLOAD_BYTES,
   toLocalAttachmentMetadata,
 } from '@/shared/lib/workspaceAttachments';
 import type { DraftWorkspaceAttachment } from 'shared/types';
@@ -21,6 +23,8 @@ export function useCreateAttachments(
   const [attachments, setAttachments] = useState<DraftWorkspaceAttachment[]>(
     initialAttachments ?? []
   );
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const hasInitialized = useRef(false);
 
   useEffect(() => {
@@ -37,9 +41,25 @@ export function useCreateAttachments(
 
   const uploadFiles = useCallback(
     async (selectedFiles: File[]) => {
-      const uploadResults: DraftWorkspaceAttachment[] = [];
+      if (selectedFiles.length === 0) return;
 
+      const uploadResults: DraftWorkspaceAttachment[] = [];
+      const uploadFailures: string[] = [];
+
+      setUploadError(null);
+      setIsUploading(true);
       for (const attachment of selectedFiles) {
+        if (attachment.size > MAX_ATTACHMENT_UPLOAD_BYTES) {
+          uploadFailures.push(
+            `${attachment.name}: file is ${formatAttachmentSize(
+              attachment.size
+            )}; max upload size is ${formatAttachmentSize(
+              MAX_ATTACHMENT_UPLOAD_BYTES
+            )}`
+          );
+          continue;
+        }
+
         try {
           const response = await attachmentsApi.upload(attachment);
           uploadResults.push({
@@ -51,8 +71,12 @@ export function useCreateAttachments(
           });
         } catch (error) {
           console.error('Failed to upload attachment:', error);
+          const message =
+            error instanceof Error ? error.message : 'Unknown error';
+          uploadFailures.push(`${attachment.name}: ${message}`);
         }
       }
+      setIsUploading(false);
 
       if (uploadResults.length > 0) {
         setAttachments((prev) => [...prev, ...uploadResults]);
@@ -60,6 +84,10 @@ export function useCreateAttachments(
           .map(buildWorkspaceAttachmentMarkdown)
           .join('\n\n');
         onInsertMarkdown(allMarkdown);
+      }
+
+      if (uploadFailures.length > 0) {
+        setUploadError(`Failed to upload ${uploadFailures.join('; ')}`);
       }
     },
     [onInsertMarkdown]
@@ -70,7 +98,14 @@ export function useCreateAttachments(
     return ids.length > 0 ? ids : null;
   }, [attachments]);
 
-  const clearAttachments = useCallback(() => setAttachments([]), []);
+  const clearAttachments = useCallback(() => {
+    setAttachments([]);
+    setUploadError(null);
+  }, []);
+
+  const clearUploadError = useCallback(() => {
+    setUploadError(null);
+  }, []);
 
   const localAttachments: LocalAttachmentMetadata[] = attachments.map(
     (attachment) =>
@@ -87,5 +122,8 @@ export function useCreateAttachments(
     getAttachmentIds,
     clearAttachments,
     localAttachments,
+    uploadError,
+    clearUploadError,
+    isUploading,
   };
 }

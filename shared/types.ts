@@ -128,6 +128,10 @@ selected_org_id: string | null,
  */
 selected_project_id: string | null, 
 /**
+ * Manual order for local projects in the left app bar
+ */
+local_project_order: Array<string>,
+/**
  * Default setting for creating a draft workspace from new issues
  */
 create_draft_workspace_by_default: boolean | null, 
@@ -173,6 +177,10 @@ export enum ExecutionProcessStatus { running = "running", completed = "completed
 export type ExecutionProcessRunReason = "setupscript" | "cleanupscript" | "archivescript" | "codingagent" | "devserver";
 
 export type ExecutionProcessRepoState = { id: string, execution_process_id: string, repo_id: string, before_head_commit: string | null, after_head_commit: string | null, merge_commit: string | null, created_at: Date, updated_at: Date, };
+
+export type SubagentJob = { id: string, session_id: string, execution_process_id: string, agent_id: string, nickname: string | null, status: SubagentJobStatus, completed_at: string | null, created_at: string, updated_at: string, };
+
+export enum SubagentJobStatus { unresolved = "unresolved", running = "running", completed = "completed", not_found = "not_found", failed = "failed" }
 
 export type Merge = { "type": "direct" } & DirectMerge | { "type": "pr" } & PrMerge;
 
@@ -467,6 +475,14 @@ has_running_dev_server: boolean,
  * Does this workspace have unseen coding agent turns?
  */
 has_unseen_turns: boolean, 
+/**
+ * Number of actively running sub-agents for the latest session.
+ */
+active_subagent_count: number,
+/**
+ * Number of spawned sub-agents whose status has not been resolved yet.
+ */
+unresolved_subagent_count: number,
 /**
  * PR status for this workspace (if any PR exists)
  */

@@ -51,6 +51,36 @@ export const useJsonPatchWsStream = <T extends object>(
   const injectInitialEntry = options?.injectInitialEntry;
   const deduplicatePatches = options?.deduplicatePatches;
 
+  useEffect(() => {
+    if (!enabled || !endpoint) {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+      retryAttemptsRef.current = 0;
+      finishedRef.current = false;
+      initializedForEndpointRef.current = undefined;
+      setData(undefined);
+      setIsConnected(false);
+      setIsInitialized(false);
+      setError(null);
+      dataRef.current = undefined;
+      return;
+    }
+
+    dataRef.current = undefined;
+    setData(undefined);
+    setIsConnected(false);
+    setIsInitialized(false);
+    setError(null);
+    retryAttemptsRef.current = 0;
+    finishedRef.current = false;
+  }, [enabled, endpoint]);
+
   function scheduleReconnect() {
     if (retryTimerRef.current) return; // already scheduled
     // Exponential backoff with cap: 1s, 2s, 4s, 8s (max), then stay at 8s
@@ -64,7 +94,6 @@ export const useJsonPatchWsStream = <T extends object>(
 
   useEffect(() => {
     if (!enabled || !endpoint) {
-      // Close connection and reset state
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
@@ -73,13 +102,6 @@ export const useJsonPatchWsStream = <T extends object>(
         window.clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
       }
-      retryAttemptsRef.current = 0;
-      finishedRef.current = false;
-      setData(undefined);
-      setIsConnected(false);
-      setIsInitialized(false);
-      setError(null);
-      dataRef.current = undefined;
       return;
     }
 
@@ -222,10 +244,6 @@ export const useJsonPatchWsStream = <T extends object>(
         window.clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
       }
-      finishedRef.current = false;
-      dataRef.current = undefined;
-      setData(undefined);
-      setIsInitialized(false);
     };
   }, [
     endpoint,

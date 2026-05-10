@@ -133,6 +133,7 @@ export function IssueWorkspaceCard({
     isFailed ||
     isRunning ||
     (hasUnseenActivity && !isRunning);
+  const shouldStackPrBadges = workspace.prs.length > 2;
 
   return (
     <IssueWorkspaceCardContainer onClick={onClick} className={className}>
@@ -209,9 +210,21 @@ export function IssueWorkspaceCard({
         </div>
       </div>
 
-      {/* Row 2: Live status + stats (left), PR buttons (right) */}
-      <div className="flex items-center justify-between gap-half min-w-0">
-        <div className="flex items-center flex-wrap sm:flex-nowrap gap-half text-sm text-low min-w-0 flex-1 overflow-hidden">
+      {/* Row 2: Live status + stats, with many PRs wrapped underneath. */}
+      <div
+        className={cn(
+          'flex gap-half min-w-0',
+          shouldStackPrBadges
+            ? 'flex-col items-start'
+            : 'items-center justify-between'
+        )}
+      >
+        <div
+          className={cn(
+            'flex items-center flex-wrap sm:flex-nowrap gap-half text-sm text-low min-w-0 overflow-hidden',
+            shouldStackPrBadges ? 'w-full' : 'flex-1'
+          )}
+        >
           <div className="flex items-center gap-half shrink-0">
             {hasRunningDevServer && (
               <PlayIcon
@@ -278,7 +291,12 @@ export function IssueWorkspaceCard({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-half shrink-0 flex-wrap max-w-full">
+        <div
+          className={cn(
+            'flex items-center gap-half flex-wrap max-w-full',
+            shouldStackPrBadges ? 'justify-start' : 'justify-end shrink-0'
+          )}
+        >
           {workspace.prs.length > 0 ? (
             workspace.prs.map((pr) => (
               <a

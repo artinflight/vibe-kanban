@@ -89,6 +89,7 @@ import {
 } from '@/shared/dialogs/command-bar/selections/repoSelection';
 import { fetchAttachmentSasUrl } from '@/shared/lib/remoteApi';
 import { writeClipboardViaBridge } from '@/shared/lib/clipboard';
+import { ReadOnlyCodeBlockCopyPlugin } from '@/shared/components/ReadOnlyCodeBlockCopyPlugin';
 import type { SendMessageShortcut } from 'shared/types';
 import type { BaseCodingAgent } from 'shared/types';
 
@@ -543,6 +544,7 @@ const WYSIWYGEditor = forwardRef<WYSIWYGEditorRef, WysiwygProps>(
                       placeholder={placeholderElement}
                       ErrorBoundary={LexicalErrorBoundary}
                     />
+                    {disabled && <ReadOnlyCodeBlockCopyPlugin />}
                   </div>
 
                   {showStaticToolbar && (

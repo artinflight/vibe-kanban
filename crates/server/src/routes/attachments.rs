@@ -10,7 +10,7 @@ use chrono::{DateTime, Utc};
 use db::models::file::{File, WorkspaceAttachment};
 use deployment::Deployment;
 use serde::{Deserialize, Serialize};
-use services::services::file::FileError;
+use services::services::file::{FileError, MAX_ATTACHMENT_UPLOAD_BYTES};
 use tokio::fs::File as TokioFile;
 use tokio_util::io::ReaderStream;
 use ts_rs::TS;
@@ -186,7 +186,7 @@ pub fn routes() -> Router<DeploymentImpl> {
     Router::new()
         .route(
             "/upload",
-            post(upload_file).layer(DefaultBodyLimit::max(20 * 1024 * 1024)),
+            post(upload_file).layer(DefaultBodyLimit::max(MAX_ATTACHMENT_UPLOAD_BYTES)),
         )
         .route("/{id}/file", get(serve_file))
         .route("/{id}", delete(delete_file))

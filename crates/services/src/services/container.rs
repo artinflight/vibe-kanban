@@ -1,7 +1,9 @@
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
+    pin::Pin,
     sync::Arc,
+    task::{Context, Poll},
 };
 
 use anyhow::{Error as AnyhowError, anyhow};
@@ -48,7 +50,10 @@ use git::{GitService, GitServiceError};
 use json_patch::Patch;
 use sqlx::Error as SqlxError;
 use thiserror::Error;
-use tokio::{sync::RwLock, task::JoinHandle};
+use tokio::{
+    sync::{RwLock, oneshot},
+    task::JoinHandle,
+};
 use utils::{
     log_msg::LogMsg,
     msg_store::MsgStore,
@@ -59,6 +64,59 @@ use worktree_manager::WorktreeError;
 
 use crate::services::{execution_process, notification::NotificationService};
 pub type ContainerRef = String;
+
+const HISTORICAL_REPLAY_HISTORY_BYTES: usize = 4 * 1024 * 1024;
+const HISTORICAL_REPLAY_CHANNEL_CAPACITY: usize = 1024;
+
+struct CancelOnDropStream {
+    inner: BoxStream<'static, Result<LogMsg, std::io::Error>>,
+    cancel_tx: Option<oneshot::Sender<()>>,
+}
+
+impl CancelOnDropStream {
+    fn new(
+        inner: BoxStream<'static, Result<LogMsg, std::io::Error>>,
+        cancel_tx: oneshot::Sender<()>,
+    ) -> Self {
+        Self {
+            inner,
+            cancel_tx: Some(cancel_tx),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use futures::StreamExt;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn cancel_on_drop_stream_signals_replay_tasks() {
+        let (cancel_tx, cancel_rx) = oneshot::channel();
+        let stream = futures::stream::empty().boxed();
+
+        drop(CancelOnDropStream::new(stream, cancel_tx));
+
+        assert!(cancel_rx.await.is_ok());
+    }
+}
+
+impl futures::Stream for CancelOnDropStream {
+    type Item = Result<LogMsg, std::io::Error>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.inner.as_mut().poll_next(cx)
+    }
+}
+
+impl Drop for CancelOnDropStream {
+    fn drop(&mut self) {
+        if let Some(cancel_tx) = self.cancel_tx.take() {
+            let _ = cancel_tx.send(());
+        }
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum ContainerError {
@@ -246,26 +304,41 @@ pub trait ContainerService {
             .name
             .as_deref()
             .unwrap_or(&ctx.workspace.branch);
-        let title = format!("Workspace Complete: {}", workspace_name);
-        let message = match ctx.execution_process.status {
-            ExecutionProcessStatus::Completed => format!(
-                "✅ '{}' completed successfully\nBranch: {:?}\nExecutor: {:?}",
-                workspace_name, ctx.workspace.branch, ctx.session.executor
-            ),
-            ExecutionProcessStatus::Failed => format!(
-                "❌ '{}' execution failed\nBranch: {:?}\nExecutor: {:?}",
-                workspace_name, ctx.workspace.branch, ctx.session.executor
-            ),
-            _ => {
+        if !matches!(
+            ctx.execution_process.status,
+            ExecutionProcessStatus::Completed | ExecutionProcessStatus::Failed
+        ) {
+            tracing::warn!(
+                "Tried to notify workspace completion for {} but process is still running!",
+                ctx.workspace.id
+            );
+            return;
+        }
+
+        let summary = match CodingAgentTurn::find_by_execution_process_id(
+            &self.db().pool,
+            ctx.execution_process.id,
+        )
+        .await
+        {
+            Ok(turn) => turn.and_then(|turn| turn.summary),
+            Err(error) => {
                 tracing::warn!(
-                    "Tried to notify workspace completion for {} but process is still running!",
-                    ctx.workspace.id
+                    execution_process_id = %ctx.execution_process.id,
+                    ?error,
+                    "failed to load coding agent turn summary for completion notification"
                 );
-                return;
+                None
             }
         };
+
         self.notification_service()
-            .notify(&title, &message, Some(ctx.workspace.id))
+            .notify_workspace_turn_completion(
+                workspace_name,
+                &ctx.execution_process.status,
+                summary.as_deref(),
+                ctx.workspace.id,
+            )
             .await;
     }
 
@@ -947,11 +1020,15 @@ pub trait ContainerService {
 
         let raw_stream = execution_process::stream_raw_log_messages(&self.db().pool, *id).await?;
 
-        // Historical replays should start emitting patches immediately, even
-        // for very large finished transcripts. Feed the persisted raw log file
-        // into a temporary MsgStore incrementally so the normalizer can stream
-        // patches as it parses, instead of waiting for a full-file read.
-        let temp_store = Arc::new(MsgStore::new());
+        // Historical replays should start emitting patches immediately, but
+        // they must stay bounded. Large finished transcripts can be opened from
+        // several browser tabs, and an uncapped temporary store can retain
+        // enough replay data to wedge the local server.
+        let temp_store = Arc::new(MsgStore::with_limits(
+            HISTORICAL_REPLAY_HISTORY_BYTES,
+            HISTORICAL_REPLAY_CHANNEL_CAPACITY,
+        ));
+        let (cancel_tx, mut cancel_rx) = oneshot::channel::<()>();
 
         // Spawn normalizer on populated store and collect JoinHandles
         let handles = match executor_action.typ() {
@@ -1020,15 +1097,26 @@ pub trait ContainerService {
         tokio::spawn(async move {
             tokio::pin!(raw_stream);
 
-            while let Some(msg) = raw_stream.next().await {
-                match msg {
-                    Ok(msg @ (LogMsg::Stdout(_) | LogMsg::Stderr(_) | LogMsg::JsonPatch(_))) => {
-                        temp_store_for_feed.push(msg);
+            loop {
+                tokio::select! {
+                    _ = &mut cancel_rx => {
+                        break;
                     }
-                    Ok(LogMsg::Finished) => {}
-                    Ok(_) => {}
-                    Err(e) => {
-                        temp_store_for_feed.push(LogMsg::Stderr(format!("stream error: {e}")));
+                    msg = raw_stream.next() => {
+                        let Some(msg) = msg else {
+                            break;
+                        };
+
+                        match msg {
+                            Ok(msg @ (LogMsg::Stdout(_) | LogMsg::Stderr(_) | LogMsg::JsonPatch(_))) => {
+                                temp_store_for_feed.push(msg);
+                            }
+                            Ok(LogMsg::Finished) => {}
+                            Ok(_) => {}
+                            Err(e) => {
+                                temp_store_for_feed.push(LogMsg::Stderr(format!("stream error: {e}")));
+                            }
+                        }
                     }
                 }
             }
@@ -1036,37 +1124,37 @@ pub trait ContainerService {
             temp_store_for_feed.push_finished();
         });
 
-        Some(
-            temp_store
-                .history_plus_stream_strict()
-                .scan(HashSet::<String>::new(), move |sent_paths, msg| {
-                    let output_finished = output_finished.clone();
-                    future::ready(match msg {
-                        Ok(LogMsg::JsonPatch(patch)) => {
-                            let patch = match patch_entry_path(&patch) {
-                                Some(_) if is_add_or_replace(&patch) => {
-                                    fix_patch_ops(patch, sent_paths)
-                                }
-                                _ => patch,
-                            };
-                            Some(Some(Ok(LogMsg::JsonPatch(patch))))
-                        }
-                        Ok(LogMsg::Finished)
-                            if output_finished.load(std::sync::atomic::Ordering::SeqCst) =>
-                        {
-                            None
-                        }
-                        Ok(LogMsg::Finished) => Some(None),
-                        Ok(_) => Some(None),
-                        Err(e) => Some(Some(Err(e))),
-                    })
+        let stream = temp_store
+            .history_plus_stream_strict()
+            .scan(HashSet::<String>::new(), move |sent_paths, msg| {
+                let output_finished = output_finished.clone();
+                future::ready(match msg {
+                    Ok(LogMsg::JsonPatch(patch)) => {
+                        let patch = match patch_entry_path(&patch) {
+                            Some(_) if is_add_or_replace(&patch) => {
+                                fix_patch_ops(patch, sent_paths)
+                            }
+                            _ => patch,
+                        };
+                        Some(Some(Ok(LogMsg::JsonPatch(patch))))
+                    }
+                    Ok(LogMsg::Finished)
+                        if output_finished.load(std::sync::atomic::Ordering::SeqCst) =>
+                    {
+                        None
+                    }
+                    Ok(LogMsg::Finished) => Some(None),
+                    Ok(_) => Some(None),
+                    Err(e) => Some(Some(Err(e))),
                 })
-                .filter_map(future::ready)
-                .chain(futures::stream::once(async {
-                    Ok::<_, std::io::Error>(LogMsg::Finished)
-                }))
-                .boxed(),
-        )
+            })
+            .filter_map(future::ready)
+            .chain(futures::stream::once(async {
+                Ok::<_, std::io::Error>(LogMsg::Finished)
+            }))
+            .boxed();
+
+        Some(Box::pin(CancelOnDropStream::new(stream, cancel_tx)))
     }
 
     async fn start_workspace(

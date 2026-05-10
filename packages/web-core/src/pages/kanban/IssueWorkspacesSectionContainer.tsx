@@ -146,7 +146,9 @@ export function IssueWorkspacesSectionContainer({
         prs: linkedPrs,
         owner,
         updatedAt: workspace.updated_at,
-        isOwnedByCurrentUser: workspace.owner_user_id === userId,
+        isOwnedByCurrentUser:
+          workspace.owner_user_id === userId ||
+          (workspace.owner_user_id === '' && !!localWorkspace),
         isRunning: localWorkspace?.isRunning,
         hasPendingApproval: localWorkspace?.hasPendingApproval,
         hasRunningDevServer: localWorkspace?.hasRunningDevServer,

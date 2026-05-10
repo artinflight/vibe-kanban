@@ -202,7 +202,38 @@ impl CodingAgentTurn {
                  AND seen = 1"#,
         )
         .bind(now)
-        .bind(execution_process_id.to_string())
+        .bind(execution_process_id)
+        .execute(pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Mark a completed coding agent turn as unseen by execution process ID.
+    ///
+    /// This is used when the user viewed a workspace while the agent was still
+    /// running. The turn should become reviewable again once a final summary
+    /// exists, but only for successful completions.
+    pub async fn mark_completed_unseen_by_execution_process_id(
+        pool: &SqlitePool,
+        execution_process_id: Uuid,
+    ) -> Result<(), sqlx::Error> {
+        let now = Utc::now();
+        sqlx::query(
+            r#"UPDATE coding_agent_turns
+               SET seen = 0, updated_at = ?
+               WHERE execution_process_id = ?
+                 AND seen = 1
+                 AND EXISTS (
+                   SELECT 1
+                   FROM execution_processes ep
+                   WHERE ep.id = coding_agent_turns.execution_process_id
+                     AND ep.run_reason = 'codingagent'
+                     AND ep.status = 'completed'
+                 )"#,
+        )
+        .bind(now)
+        .bind(execution_process_id)
         .execute(pool)
         .await?;
 
@@ -251,5 +282,108 @@ impl CodingAgentTurn {
         .await?;
 
         Ok(result.into_iter().collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::{Row, sqlite::SqlitePoolOptions};
+    use uuid::Uuid;
+
+    use super::CodingAgentTurn;
+
+    #[tokio::test]
+    async fn completed_coding_agent_turns_are_marked_unseen_by_uuid_blob() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .expect("create in-memory sqlite pool");
+
+        sqlx::query(
+            r#"
+            CREATE TABLE execution_processes (
+                id BLOB PRIMARY KEY,
+                run_reason TEXT NOT NULL,
+                status TEXT NOT NULL
+            );
+
+            CREATE TABLE coding_agent_turns (
+                execution_process_id BLOB NOT NULL,
+                seen INTEGER NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .expect("create test schema");
+
+        let completed_coding_id = Uuid::new_v4();
+        let running_coding_id = Uuid::new_v4();
+        let completed_setup_id = Uuid::new_v4();
+
+        for (id, run_reason, status) in [
+            (completed_coding_id, "codingagent", "completed"),
+            (running_coding_id, "codingagent", "running"),
+            (completed_setup_id, "setupscript", "completed"),
+        ] {
+            sqlx::query(
+                r#"INSERT INTO execution_processes (id, run_reason, status)
+                   VALUES (?, ?, ?)"#,
+            )
+            .bind(id)
+            .bind(run_reason)
+            .bind(status)
+            .execute(&pool)
+            .await
+            .expect("insert execution process");
+
+            sqlx::query(
+                r#"INSERT INTO coding_agent_turns (execution_process_id, seen, updated_at)
+                   VALUES (?, 1, 'before')"#,
+            )
+            .bind(id)
+            .execute(&pool)
+            .await
+            .expect("insert coding agent turn");
+        }
+
+        CodingAgentTurn::mark_completed_unseen_by_execution_process_id(&pool, completed_coding_id)
+            .await
+            .expect("mark completed coding turn unseen");
+        CodingAgentTurn::mark_completed_unseen_by_execution_process_id(&pool, running_coding_id)
+            .await
+            .expect("ignore running coding turn");
+        CodingAgentTurn::mark_completed_unseen_by_execution_process_id(&pool, completed_setup_id)
+            .await
+            .expect("ignore completed non-coding turn");
+
+        let completed_seen = seen_for(&pool, completed_coding_id).await;
+        let running_seen = seen_for(&pool, running_coding_id).await;
+        let setup_seen = seen_for(&pool, completed_setup_id).await;
+
+        assert_eq!(completed_seen, 0);
+        assert_eq!(running_seen, 1);
+        assert_eq!(setup_seen, 1);
+
+        CodingAgentTurn::mark_unseen_by_execution_process_id(&pool, running_coding_id)
+            .await
+            .expect("mark running coding turn unseen by uuid");
+
+        assert_eq!(seen_for(&pool, running_coding_id).await, 0);
+    }
+
+    async fn seen_for(pool: &sqlx::SqlitePool, execution_process_id: Uuid) -> i64 {
+        sqlx::query(
+            r#"SELECT seen
+               FROM coding_agent_turns
+               WHERE execution_process_id = ?"#,
+        )
+        .bind(execution_process_id)
+        .fetch_one(pool)
+        .await
+        .expect("fetch seen flag")
+        .get::<i64, _>("seen")
     }
 }

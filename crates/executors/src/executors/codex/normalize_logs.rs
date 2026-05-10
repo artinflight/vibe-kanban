@@ -1336,7 +1336,11 @@ fn handle_direct_notification(
             CommandExecutionOutputDeltaNotification { item_id, delta, .. },
         ) => {
             if let Some(command_state) = state.commands.get_mut(&item_id) {
-                command_state.stdout.push_str(&delta);
+                append_truncated_tail(
+                    &mut command_state.stdout,
+                    &delta,
+                    STREAMING_COMMAND_OUTPUT_BYTES,
+                );
                 if let Some(index) = command_state.index {
                     replace_normalized_entry(msg_store, index, command_state.to_normalized_entry());
                 }
@@ -2534,8 +2538,10 @@ static SESSION_ID: LazyLock<Regex> = LazyLock::new(|| {
         .expect("valid regex")
 });
 
-const STREAMING_COMMAND_OUTPUT_BYTES: usize = 32 * 1024;
-const FINAL_COMMAND_OUTPUT_BYTES: usize = 64 * 1024;
+// Keep command-output previews small enough that replaying a completed chat does
+// not swamp the browser with repeated multi-megabyte entry replacements.
+const STREAMING_COMMAND_OUTPUT_BYTES: usize = 8 * 1024;
+const FINAL_COMMAND_OUTPUT_BYTES: usize = 16 * 1024;
 
 fn truncate_to_tail(input: &str, max_bytes: usize) -> String {
     if input.len() <= max_bytes {

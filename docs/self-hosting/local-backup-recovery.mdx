@@ -34,7 +34,7 @@ A real local backup must capture all of these at the same time:
    - `~/.config/systemd/user/vibe-kanban.service`
    - `~/.config/systemd/user/vibe-kanban.service.d/`
    - wrapper scripts such as `~/.local/bin/vibe-kanban-serve`
-   - the currently deployed binary such as `~/.local/bin/vibe-kanban-server-cleanfix`
+   - the currently deployed binary such as `~/.local/bin/vibe-kanban-serve-prod`
 3. **Source state**
    - the checked out repo
    - `git status`
@@ -79,7 +79,7 @@ This is the system currently implemented in the repo.
    - `~/.config/systemd/user/vibe-kanban.service`
    - `~/.config/systemd/user/vibe-kanban.service.d/`
    - `~/.local/bin/vibe-kanban-serve`
-   - `~/.local/bin/vibe-kanban-server-cleanfix`
+   - `~/.local/bin/vibe-kanban-serve-prod`
 3. **Exported cloud recovery data**
    - latest local cloud export zip if present
 4. **Deterministic restore metadata**
@@ -119,26 +119,31 @@ That exclusion is intentional. The purpose of the lean backup is to preserve wha
 
 Each run creates:
 
-- a timestamped directory:
+- a temporary timestamped directory while the backup is being assembled:
   - `/home/<user>/backups/vk-lean-restore-<timestamp>/`
 - a timestamped archive:
   - `/home/<user>/backups/vk-lean-restore-<timestamp>.tar.gz`
-- stable local pointers:
-  - `/home/<user>/backups/vk-lean-restore-latest`
-  - `/home/<user>/backups/vk-lean-restore-latest.tar.gz`
 
-The backup also mirrors the archive to the Desktop machine:
+The backup also mirrors the archive to the Desktop machine on the `B:` drive:
 
-- `Desktop/vk-backups/vk-lean-restore-<timestamp>.tar.gz`
-- `Desktop/vk-backups/vk-lean-restore-latest.tar.gz`
+- `B:\vk-backups\vk-lean-restore-<timestamp>.tar.gz`
+- `B:\vk-backups\vk-lean-restore-latest.tar.gz`
 
-The `latest` path is the one agents should prefer for fast restore.
+After a successful Desktop mirror, MCP removes the local full-context archive
+and extracted directory. MCP keeps only a small pointer file:
+
+- `/home/<user>/backups/vk-lean-restore-latest.desktop.json`
+
+If the Desktop mirror fails, MCP keeps the local full-context archive instead of
+deleting it.
 
 Important local-disk rule:
 
-- only the newest unpacked timestamped backup directory is kept locally
-- older local runs are kept as compressed archives only
-- this is intentional because the extracted directories are the biggest source of backup bloat
+- Desktop `B:\vk-backups` is the retention system of record for full-context
+  hourly history.
+- MCP should not accumulate full-context backup directories or archives.
+- MCP may temporarily keep a local full-context archive only when Desktop mirror
+  fails or while a backup is being assembled.
 
 ## Scheduled backups
 
@@ -179,16 +184,25 @@ Timestamped backups age out automatically using this retention ladder:
 
 This pruning runs for:
 
-- local timestamped backup archives
 - Desktop mirrored timestamped archives
 
-For local extracted directories:
+For MCP local storage:
 
-- keep only the newest timestamped extracted backup directory
-- delete older extracted directories automatically after archiving
-- rely on the retained `.tar.gz` archives for older restores
+- remove stale failed `.tmp` backup directories before starting
+- remove old local full-context archives/directories before starting
+- after a successful Desktop mirror, delete the local full-context archive and
+  extracted directory
+- keep `/home/<user>/backups/vk-lean-restore-latest.desktop.json` so restore can
+  pull the latest full-context archive back from Desktop
 
-The stable `latest` pointers are not pruned.
+Local `latest` symlinks are only expected when a Desktop mirror failed and MCP is
+temporarily preserving the local archive.
+
+## Incomplete-run handling
+
+The backup generator now stages each new run in a temporary directory first and only promotes it to `vk-lean-restore-<timestamp>` after the archive completes cleanly.
+
+That prevents failed or interrupted runs from leaving behind large partial timestamped restore directories on MCP.
 
 ## One-click backup
 
@@ -202,8 +216,10 @@ cd /home/mcp/_vibe_kanban_repo
 This will:
 
 1. create a fresh lean restore backup under `/home/<user>/backups`
-2. update the local `latest` pointers
-3. mirror the archive to the Desktop backup folder
+2. mirror the archive to `B:\vk-backups` on the Desktop host
+3. write the local Desktop pointer file
+4. delete the local full-context archive and extracted directory after the
+   Desktop copy succeeds
 
 ## One-click restore
 
@@ -214,11 +230,9 @@ cd /home/mcp/_vibe_kanban_repo
 ./scripts/run_vk_restore_latest.sh
 ```
 
-This restores from:
-
-```bash
-/home/<user>/backups/vk-lean-restore-latest.tar.gz
-```
+This restores from the local latest tar if one exists. Otherwise, it reads
+`/home/<user>/backups/vk-lean-restore-latest.desktop.json`, pulls
+`vk-lean-restore-latest.tar.gz` back from Desktop, and restores that copy.
 
 You can also restore a specific archive directly:
 
@@ -362,7 +376,7 @@ cp -a "$HOME/.config/systemd/user/vibe-kanban.service" "$root/systemd/" 2>/dev/n
 cp -a "$HOME/.config/systemd/user/vibe-kanban.service.d" "$root/systemd/" 2>/dev/null || true
 
 cp -a "$HOME/.local/bin/vibe-kanban-serve" "$root/" 2>/dev/null || true
-cp -a "$HOME/.local/bin/vibe-kanban-server-cleanfix" "$root/" 2>/dev/null || true
+cp -a "$HOME/.local/bin/vibe-kanban-serve-prod" "$root/" 2>/dev/null || true
 ```
 
 If the service points to a different binary, copy that too.
@@ -400,7 +414,7 @@ If you are intentionally using a filtered environment, record the exact launch c
 
 ```bash
 sha256sum "$HOME/.local/bin/vibe-kanban-serve" > "$root/sha256.txt" 2>/dev/null || true
-sha256sum "$HOME/.local/bin/vibe-kanban-server-cleanfix" >> "$root/sha256.txt" 2>/dev/null || true
+sha256sum "$HOME/.local/bin/vibe-kanban-serve-prod" >> "$root/sha256.txt" 2>/dev/null || true
 ```
 
 ## Backup verification checklist
@@ -449,7 +463,7 @@ cp -a "$HOME/.local/share/vibe-kanban/." "$rescue/" 2>/dev/null || true
 cp -a "$HOME/.config/systemd/user/vibe-kanban.service" "$rescue/" 2>/dev/null || true
 cp -a "$HOME/.config/systemd/user/vibe-kanban.service.d" "$rescue/" 2>/dev/null || true
 cp -a "$HOME/.local/bin/vibe-kanban-serve" "$rescue/" 2>/dev/null || true
-cp -a "$HOME/.local/bin/vibe-kanban-server-cleanfix" "$rescue/" 2>/dev/null || true
+cp -a "$HOME/.local/bin/vibe-kanban-serve-prod" "$rescue/" 2>/dev/null || true
 ```
 
 ### Step 3: Restore files from the chosen backup
@@ -461,7 +475,7 @@ cp -a "$backup/live-state/." "$HOME/.local/share/vibe-kanban/"
 cp -a "$backup/systemd/vibe-kanban.service" "$HOME/.config/systemd/user/" 2>/dev/null || true
 cp -a "$backup/systemd/vibe-kanban.service.d" "$HOME/.config/systemd/user/" 2>/dev/null || true
 cp -a "$backup/vibe-kanban-serve" "$HOME/.local/bin/" 2>/dev/null || true
-cp -a "$backup/vibe-kanban-server-cleanfix" "$HOME/.local/bin/" 2>/dev/null || true
+cp -a "$backup/vibe-kanban-serve-prod" "$HOME/.local/bin/" 2>/dev/null || true
 ```
 
 ### Step 4: Reload and restart

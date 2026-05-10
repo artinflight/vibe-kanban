@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import atexit
 import datetime
 import hashlib
 import json
@@ -15,13 +16,15 @@ DEFAULT_VK_SHARE = Path("/home/mcp/.local/share/vibe-kanban")
 DEFAULT_VK_CODEX_HOME = DEFAULT_VK_SHARE / "codex-home"
 DEFAULT_BACKUP_ROOT = Path("/home/mcp/backups")
 DEFAULT_EXPORT_ZIP = Path("/home/mcp/backups/vibe-kanban-export-2026-04-18.zip")
-DEFAULT_DESKTOP_TARGET = "desktop:Desktop/vk-backups"
+DEFAULT_DESKTOP_TARGET = "desktop:B:/vk-backups"
 BACKUP_BASENAME = "vk-lean-restore"
 LATEST_DIR_NAME = f"{BACKUP_BASENAME}-latest"
 LATEST_TAR_NAME = f"{BACKUP_BASENAME}-latest.tar.gz"
+LATEST_DESKTOP_POINTER_NAME = f"{BACKUP_BASENAME}-latest.desktop.json"
 TIMESTAMP_RE = re.compile(rf"^{BACKUP_BASENAME}-(\d{{8}}T\d{{6}}Z)(\.tar\.gz)?$")
 UTC = datetime.timezone.utc
 MIN_RECENT_SNAPSHOTS = 3
+MIN_LOCAL_FREE_KB = 40 * 1024 * 1024
 RETENTION_POLICY = {
     "hourly_for_days": 1,
     "every_6_hours_for_days": 1,
@@ -117,7 +120,12 @@ def copy_vk_codex_state(vk_share: Path, vk_codex_home: Path, dest: Path):
             rel = src.relative_to(vk_codex_home)
             dst = dest / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
+            try:
+                shutil.copy2(src, dst)
+            except FileNotFoundError:
+                # Codex session/snapshot files can disappear while agents rotate
+                # state; skip the raced file and keep the rest of the backup.
+                continue
     write_text(dest / "thread_ids.json", json.dumps(sorted(thread_ids), indent=2) + "\n")
 
 
@@ -160,9 +168,9 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def archive_dir(src_dir: Path, tar_path: Path):
+def archive_dir(src_dir: Path, tar_path: Path, arcname: str | None = None):
     with tarfile.open(tar_path, "w:gz") as tar:
-        tar.add(src_dir, arcname=src_dir.name)
+        tar.add(src_dir, arcname=arcname or src_dir.name)
 
 
 def utcnow() -> datetime.datetime:
@@ -234,26 +242,115 @@ def collect_local_backup_sets(backup_root: Path):
     return sets
 
 
+def disk_available_kb(path: Path) -> int:
+    return shutil.disk_usage(path).free // 1024
+
+
+def remove_stale_temp_backups(backup_root: Path, current_temp: Path | None = None):
+    removed = []
+    for stale_tmp in backup_root.glob(f".{BACKUP_BASENAME}-*.tmp"):
+        if current_temp is not None and stale_tmp == current_temp:
+            continue
+        if stale_tmp.is_dir():
+            shutil.rmtree(stale_tmp, ignore_errors=True)
+            removed.append(str(stale_tmp))
+    return removed
+
+
+def prune_extracted_dirs_with_archives(backup_root: Path):
+    sets = collect_local_backup_sets(backup_root)
+    removed = []
+    latest_dir = backup_root / LATEST_DIR_NAME
+    removed_dirs = set()
+
+    for _, parts in sorted(sets.items()):
+        dir_path = parts.get("dir")
+        tar_path = parts.get("tar")
+        if (
+            not dir_path
+            or not tar_path
+            or not dir_path.is_dir()
+            or dir_path.is_symlink()
+            or not tar_path.is_file()
+            or tar_path.stat().st_size == 0
+        ):
+            continue
+        shutil.rmtree(dir_path)
+        removed.append(str(dir_path))
+        removed_dirs.add(dir_path.resolve())
+
+    if latest_dir.is_symlink():
+        try:
+            latest_target = latest_dir.resolve(strict=False)
+        except OSError:
+            latest_target = None
+        if latest_target in removed_dirs or not latest_dir.exists():
+            latest_dir.unlink()
+
+    return removed
+
+
+def prune_all_local_full_backups(backup_root: Path):
+    removed = []
+    for _, parts in sorted(collect_local_backup_sets(backup_root).items()):
+        for key in ("dir", "tar"):
+            path = parts.get(key)
+            if not path or path.is_symlink() or not path.exists():
+                continue
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+            removed.append(str(path))
+
+    for pointer_name in (LATEST_DIR_NAME, LATEST_TAR_NAME):
+        pointer = backup_root / pointer_name
+        if pointer.is_symlink() or pointer.exists():
+            pointer.unlink()
+            removed.append(str(pointer))
+
+    return removed
+
+
+def prepare_local_backup_space(backup_root: Path, min_free_kb: int):
+    removed = []
+    removed.extend(remove_stale_temp_backups(backup_root))
+    _, post_retention_removed = prune_local_backups(backup_root, utcnow())
+    removed.extend(post_retention_removed)
+
+    if disk_available_kb(backup_root) < min_free_kb:
+        removed.extend(prune_extracted_dirs_with_archives(backup_root))
+
+    available = disk_available_kb(backup_root)
+    if available < min_free_kb:
+        raise RuntimeError(
+            f"not enough free space for VK lean backup after cleanup: "
+            f"{available} KB free under {backup_root}; need at least {min_free_kb} KB. "
+            f"removed: {removed}"
+        )
+    return removed
+
+
 def prune_local_backups(backup_root: Path, now: datetime.datetime):
     sets = collect_local_backup_sets(backup_root)
-    keep_archives = select_retained_timestamps(list(sets.keys()), now)
+    newest_ts = max(sets.keys()) if sets else None
     newest_ts = max(sets.keys()) if sets else None
     removed = []
     for ts, parts in sorted(sets.items()):
         dir_path = parts.get("dir")
         tar_path = parts.get("tar")
 
-        # Keep only the newest unpacked directory locally. Older runs are restored
-        # from archives, so retaining every extracted copy just burns disk.
+        # MCP should only keep the current hour locally. Desktop is the retention
+        # system of record for older timestamped archives.
         if dir_path and ts != newest_ts and dir_path.is_dir() and not dir_path.is_symlink():
             shutil.rmtree(dir_path)
             removed.append(str(dir_path))
 
-        # Retain archives by ladder policy.
-        if tar_path and ts not in keep_archives and tar_path.exists() and not tar_path.is_symlink():
+        if tar_path and ts != newest_ts and tar_path.exists() and not tar_path.is_symlink():
             tar_path.unlink()
             removed.append(str(tar_path))
-    return keep_archives, removed
+    keep_local = {newest_ts} if newest_ts else set()
+    return keep_local, removed
 
 
 def parse_desktop_target(target: str):
@@ -269,6 +366,8 @@ def windows_remote_dir(remote_dir: str) -> str:
 
 
 def windows_remote_full_dir(remote_dir: str) -> str:
+    if re.match(r"^[A-Za-z]:[\\/]", remote_dir):
+        return windows_remote_dir(remote_dir)
     remote_dir_win = windows_remote_dir(remote_dir)
     return f"%USERPROFILE%\\{remote_dir_win}"
 
@@ -326,6 +425,21 @@ def main():
     parser.add_argument("--export-zip", default=str(DEFAULT_EXPORT_ZIP))
     parser.add_argument("--desktop-target", default=DEFAULT_DESKTOP_TARGET)
     parser.add_argument("--mirror-desktop", action="store_true")
+    parser.add_argument(
+        "--local-full-retention",
+        choices=("latest", "desktop-only"),
+        default=os.environ.get("VK_LEAN_BACKUP_LOCAL_FULL_RETENTION", "desktop-only"),
+        help=(
+            "latest keeps the newest full backup on MCP; desktop-only removes "
+            "local full backups after a successful Desktop mirror."
+        ),
+    )
+    parser.add_argument(
+        "--min-local-free-kb",
+        type=int,
+        default=int(os.environ.get("VK_LEAN_BACKUP_MIN_FREE_KB", MIN_LOCAL_FREE_KB)),
+        help="Minimum free KB required after local backup cleanup before starting.",
+    )
     args = parser.parse_args()
 
     backup_root = Path(args.backup_root)
@@ -333,31 +447,50 @@ def main():
     vk_codex_home = Path(args.vk_codex_home)
     export_zip = Path(args.export_zip)
     backup_root.mkdir(parents=True, exist_ok=True)
+    preflight_removed = prepare_local_backup_space(backup_root, args.min_local_free_kb)
 
     ts = utcnow().strftime("%Y%m%dT%H%M%SZ")
     dest = backup_root / f"{BACKUP_BASENAME}-{ts}"
-    (dest / "meta").mkdir(parents=True, exist_ok=True)
-    (dest / "share-vibe-kanban").mkdir(parents=True, exist_ok=True)
-    (dest / "systemd").mkdir(parents=True, exist_ok=True)
-    (dest / "bin").mkdir(parents=True, exist_ok=True)
-    (dest / "codex-home").mkdir(parents=True, exist_ok=True)
-    (dest / "exports").mkdir(parents=True, exist_ok=True)
-    (dest / "git").mkdir(parents=True, exist_ok=True)
+    temp_dest = backup_root / f".{BACKUP_BASENAME}-{ts}.tmp"
+    tar_path = backup_root / f"{dest.name}.tar.gz"
+    local_backup_complete = False
 
-    backup_sqlite(vk_share / "db.v2.sqlite", dest / "share-vibe-kanban" / "db.v2.sqlite")
-    copy_if_exists(vk_share / "config.json", dest / "share-vibe-kanban" / "config.json")
-    copy_if_exists(vk_share / "server_ed25519_signing_key", dest / "share-vibe-kanban" / "server_ed25519_signing_key")
-    copy_if_exists(vk_share / "sessions", dest / "share-vibe-kanban" / "sessions")
+    def cleanup_incomplete_run():
+        if local_backup_complete:
+            return
+        shutil.rmtree(temp_dest, ignore_errors=True)
+        if tar_path.exists():
+            tar_path.unlink()
+        if dest.exists() and dest.is_dir() and not dest.is_symlink():
+            shutil.rmtree(dest, ignore_errors=True)
 
-    copy_vk_codex_state(vk_share, vk_codex_home, dest / "codex-home")
+    atexit.register(cleanup_incomplete_run)
 
-    copy_if_exists(Path("/home/mcp/.config/systemd/user/vibe-kanban.service"), dest / "systemd" / "vibe-kanban.service")
-    copy_if_exists(Path("/home/mcp/.config/systemd/user/vibe-kanban.service.d"), dest / "systemd" / "vibe-kanban.service.d")
+    if temp_dest.exists():
+        shutil.rmtree(temp_dest, ignore_errors=True)
+    remove_stale_temp_backups(backup_root, current_temp=temp_dest)
+    (temp_dest / "meta").mkdir(parents=True, exist_ok=True)
+    (temp_dest / "share-vibe-kanban").mkdir(parents=True, exist_ok=True)
+    (temp_dest / "systemd").mkdir(parents=True, exist_ok=True)
+    (temp_dest / "bin").mkdir(parents=True, exist_ok=True)
+    (temp_dest / "codex-home").mkdir(parents=True, exist_ok=True)
+    (temp_dest / "exports").mkdir(parents=True, exist_ok=True)
+    (temp_dest / "git").mkdir(parents=True, exist_ok=True)
+
+    backup_sqlite(vk_share / "db.v2.sqlite", temp_dest / "share-vibe-kanban" / "db.v2.sqlite")
+    copy_if_exists(vk_share / "config.json", temp_dest / "share-vibe-kanban" / "config.json")
+    copy_if_exists(vk_share / "server_ed25519_signing_key", temp_dest / "share-vibe-kanban" / "server_ed25519_signing_key")
+    copy_if_exists(vk_share / "sessions", temp_dest / "share-vibe-kanban" / "sessions")
+
+    copy_vk_codex_state(vk_share, vk_codex_home, temp_dest / "codex-home")
+
+    copy_if_exists(Path("/home/mcp/.config/systemd/user/vibe-kanban.service"), temp_dest / "systemd" / "vibe-kanban.service")
+    copy_if_exists(Path("/home/mcp/.config/systemd/user/vibe-kanban.service.d"), temp_dest / "systemd" / "vibe-kanban.service.d")
     for name in ("vibe-kanban-serve", "vibe-kanban-server-cleanfix", "vibe-kanban-server"):
-        copy_if_exists(Path("/home/mcp/.local/bin") / name, dest / "bin" / name)
+        copy_if_exists(Path("/home/mcp/.local/bin") / name, temp_dest / "bin" / name)
 
     if export_zip.exists():
-        copy_if_exists(export_zip, dest / "exports" / export_zip.name)
+        copy_if_exists(export_zip, temp_dest / "exports" / export_zip.name)
 
     conn = sqlite3.connect(str(vk_share / "db.v2.sqlite"))
     cur = conn.cursor()
@@ -372,7 +505,7 @@ def main():
     inventory.extend("|".join(map(str, row)) for row in workspaces)
     inventory.append("TASK_COUNT")
     inventory.append(str(task_count))
-    write_text(dest / "meta" / "db-inventory.txt", "\n".join(inventory) + "\n")
+    write_text(temp_dest / "meta" / "db-inventory.txt", "\n".join(inventory) + "\n")
 
     paths = set()
     for _, _, path in projects:
@@ -389,7 +522,7 @@ def main():
         if not repo_path.exists() or not git_ok(repo_path):
             continue
         slug = raw_path.strip("/").replace("/", "__")
-        meta_dir = dest / "git" / slug
+        meta_dir = temp_dest / "git" / slug
         meta_dir.mkdir(parents=True, exist_ok=True)
 
         def git_out(name, cmd):
@@ -439,50 +572,57 @@ def main():
 
         if common_dir not in common_dir_bundles:
             bundle_slug = common_dir.strip("/").replace("/", "__")
-            bundle_path = dest / "git" / f"{bundle_slug}.local-only.bundle"
+            bundle_path = temp_dest / "git" / f"{bundle_slug}.local-only.bundle"
             result = bundle_local_only(repo_path, bundle_path)
             if result.returncode != 0 or not bundle_path.exists() or bundle_path.stat().st_size == 0:
                 if bundle_path.exists():
                     bundle_path.unlink()
-                write_text(dest / "git" / f"{bundle_slug}.bundle.log", (result.stdout or "") + (result.stderr or ""))
+                write_text(temp_dest / "git" / f"{bundle_slug}.bundle.log", (result.stdout or "") + (result.stderr or ""))
                 common_dir_bundles[common_dir] = ""
             else:
-                common_dir_bundles[common_dir] = str(bundle_path.relative_to(dest))
+                common_dir_bundles[common_dir] = str(bundle_path.relative_to(temp_dest))
 
         manifest.append({
             "path": raw_path,
             "head": head,
             "branch": branch,
             "common_dir": common_dir,
-            "meta_dir": str(meta_dir.relative_to(dest)),
+            "meta_dir": str(meta_dir.relative_to(temp_dest)),
             "bundle": common_dir_bundles.get(common_dir, ""),
         })
 
-    write_text(dest / "meta" / "workspace-git-manifest.json", json.dumps(manifest, indent=2) + "\n")
-    write_text(dest / "meta" / "manifest.txt", "\n".join([
+    write_text(temp_dest / "meta" / "workspace-git-manifest.json", json.dumps(manifest, indent=2) + "\n")
+    write_text(temp_dest / "meta" / "manifest.txt", "\n".join([
         "backup_type=vk-lean-restore",
         f"created_utc={ts}",
         "description=Local VK state, isolated VK Codex continuity state, plus local-only git/workspace recovery data; excludes full repo copies and build caches assumed recoverable from GitHub",
     ]) + "\n")
 
     files = []
-    for root, _, names in os.walk(dest):
+    for root, _, names in os.walk(temp_dest):
         for name in names:
             files.append(Path(root) / name)
     files.sort()
-    with open(dest / "meta" / "SHA256SUMS", "w") as out:
+    with open(temp_dest / "meta" / "SHA256SUMS", "w") as out:
         for file_path in files:
             if file_path.name == "SHA256SUMS":
                 continue
             out.write(f"{sha256_file(file_path)}  {file_path}\n")
 
-    tar_path = backup_root / f"{dest.name}.tar.gz"
-    archive_dir(dest, tar_path)
+    archive_dir(temp_dest, tar_path, arcname=dest.name)
+    if dest.exists():
+        if dest.is_dir():
+            shutil.rmtree(dest)
+        else:
+            dest.unlink()
+    temp_dest.rename(dest)
     write_text(dest / "meta" / "archive.txt", str(tar_path) + "\n")
 
     replace_latest_pointer(backup_root / LATEST_DIR_NAME, dest)
     replace_latest_pointer(backup_root / LATEST_TAR_NAME, tar_path)
+    local_backup_complete = True
 
+    desktop_pointer = None
     if args.mirror_desktop:
         host, remote_dir = parse_desktop_target(args.desktop_target)
         if not host or not remote_dir:
@@ -495,21 +635,49 @@ def main():
         if mirror_latest.returncode != 0:
             raise RuntimeError(f"desktop latest mirror failed:\n{mirror_latest.stderr}")
         remote_keep, remote_removed = prune_remote_desktop_archives(host, remote_dir, utcnow())
+        desktop_pointer = {
+            "created_utc": ts,
+            "archive_name": tar_path.name,
+            "desktop_archive": f"{host}:{remote_dir}/{tar_path.name}",
+            "desktop_latest": f"{host}:{remote_dir}/{LATEST_TAR_NAME}",
+            "local_full_retention": args.local_full_retention,
+            "remote_kept_timestamps": sorted(remote_keep),
+            "remote_removed_archives": remote_removed,
+        }
+        write_text(
+            backup_root / LATEST_DESKTOP_POINTER_NAME,
+            json.dumps(desktop_pointer, indent=2) + "\n",
+        )
         write_text(dest / "meta" / "desktop-retention.txt", json.dumps({
             "policy": RETENTION_POLICY,
             "kept_timestamps": sorted(remote_keep),
             "removed_archives": remote_removed,
         }, indent=2) + "\n")
 
-    local_keep, local_removed = prune_local_backups(backup_root, utcnow())
-    write_text(dest / "meta" / "retention.txt", json.dumps({
-        "policy": RETENTION_POLICY,
-        "kept_timestamps": sorted(local_keep),
-        "removed_paths": local_removed,
-    }, indent=2) + "\n")
+    if args.mirror_desktop and args.local_full_retention == "desktop-only":
+        local_keep = set()
+        local_removed = prune_all_local_full_backups(backup_root)
+        if desktop_pointer is not None:
+            desktop_pointer["local_removed_paths"] = local_removed
+            write_text(
+                backup_root / LATEST_DESKTOP_POINTER_NAME,
+                json.dumps(desktop_pointer, indent=2) + "\n",
+            )
+    else:
+        local_keep, local_removed = prune_local_backups(backup_root, utcnow())
+        write_text(dest / "meta" / "retention.txt", json.dumps({
+            "policy": RETENTION_POLICY,
+            "kept_timestamps": sorted(local_keep),
+            "preflight_removed_paths": preflight_removed,
+            "removed_paths": local_removed,
+        }, indent=2) + "\n")
 
-    print(dest)
-    print(tar_path)
+    if desktop_pointer is not None and args.local_full_retention == "desktop-only":
+        print(desktop_pointer["desktop_archive"])
+        print(backup_root / LATEST_DESKTOP_POINTER_NAME)
+    else:
+        print(dest)
+        print(tar_path)
 
 
 if __name__ == "__main__":

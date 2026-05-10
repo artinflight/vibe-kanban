@@ -1,6 +1,10 @@
-use std::sync::{Arc, OnceLock};
+use std::{
+    env,
+    sync::{Arc, OnceLock},
+};
 
 use async_trait::async_trait;
+use db::models::execution_process::ExecutionProcessStatus;
 use tokio::sync::RwLock;
 use utils::{self, command_ext::NoWindowExt};
 use uuid::Uuid;
@@ -88,6 +92,34 @@ impl NotificationService {
 
         if config.push_enabled {
             self.push_notifier.send(title, message, workspace_id).await;
+        }
+    }
+
+    /// Send the standard workspace completion notification and, when configured,
+    /// mirror the final turn metadata to ntfy.
+    pub async fn notify_workspace_turn_completion(
+        &self,
+        workspace_name: &str,
+        status: &ExecutionProcessStatus,
+        summary: Option<&str>,
+        workspace_id: Uuid,
+    ) {
+        let title = workspace_completion_title(workspace_name, status);
+        let message = build_workspace_completion_message(workspace_name, status, summary);
+        let config = self.config.read().await.notifications.clone();
+
+        if config.sound_enabled {
+            Self::play_sound_notification(&config.sound_file).await;
+        }
+
+        if config.push_enabled {
+            self.push_notifier
+                .send(&title, &message, Some(workspace_id))
+                .await;
+        }
+
+        if let Some(ntfy) = TurnCompletionNtfyConfig::from_env() {
+            ntfy.publish(title, message).await;
         }
     }
 
@@ -293,5 +325,212 @@ async fn wsl_to_windows_path(wsl_path: &std::path::Path) -> Option<String> {
             path_str
         );
         None
+    }
+}
+
+#[derive(Debug, Clone)]
+struct TurnCompletionNtfyConfig {
+    base_url: String,
+    topic: String,
+    token: Option<String>,
+}
+
+impl TurnCompletionNtfyConfig {
+    fn from_env() -> Option<Self> {
+        let topic = env_var_trimmed("VK_NTFY_TOPIC")?;
+        let base_url =
+            env_var_trimmed("VK_NTFY_URL").unwrap_or_else(|| "https://ntfy.sh".to_string());
+        let token = env_var_trimmed("VK_NTFY_TOKEN");
+
+        Some(Self {
+            base_url,
+            topic,
+            token,
+        })
+    }
+
+    fn endpoint(&self) -> String {
+        format!(
+            "{}/{}",
+            self.base_url.trim_end_matches('/'),
+            self.topic.trim_start_matches('/')
+        )
+    }
+
+    async fn publish(&self, title: String, message: String) {
+        let config = self.clone();
+
+        let handle = tokio::spawn(async move {
+            let client = reqwest::Client::new();
+            let mut request = client
+                .post(config.endpoint())
+                .header("Title", title)
+                .header("Markdown", "yes")
+                .body(message);
+
+            if let Some(token) = config.token {
+                request = request.bearer_auth(token);
+            }
+
+            match request.send().await {
+                Ok(response) if response.status().is_success() => {}
+                Ok(response) => {
+                    let status = response.status();
+                    let body = response.text().await.unwrap_or_default();
+                    tracing::warn!(
+                        status = %status,
+                        body = %body,
+                        topic = %config.topic,
+                        base_url = %config.base_url,
+                        "failed to publish workspace completion to ntfy"
+                    );
+                }
+                Err(error) => {
+                    tracing::warn!(
+                        ?error,
+                        topic = %config.topic,
+                        base_url = %config.base_url,
+                        "failed to execute ntfy publish request"
+                    );
+                }
+            }
+        });
+
+        drop(handle);
+    }
+}
+
+fn env_var_trimmed(name: &str) -> Option<String> {
+    env::var(name)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+fn workspace_completion_title(workspace_name: &str, status: &ExecutionProcessStatus) -> String {
+    match status {
+        ExecutionProcessStatus::Completed => format!("Workspace Complete: {workspace_name}"),
+        ExecutionProcessStatus::Failed => format!("Workspace Failed: {workspace_name}"),
+        ExecutionProcessStatus::Killed => format!("Workspace Stopped: {workspace_name}"),
+        ExecutionProcessStatus::Running => format!("Workspace Running: {workspace_name}"),
+    }
+}
+
+fn build_workspace_completion_message(
+    workspace_name: &str,
+    status: &ExecutionProcessStatus,
+    summary: Option<&str>,
+) -> String {
+    let mut lines = vec![format!("Workspace:: {workspace_name}")];
+    let metadata_lines = summary
+        .map(extract_summary_metadata_lines)
+        .unwrap_or_default();
+
+    if metadata_lines.is_empty() {
+        lines.push(format!("Status:: {}", workspace_status_label(status)));
+    } else {
+        lines.extend(metadata_lines);
+    }
+
+    lines.join("\n")
+}
+
+fn extract_summary_metadata_lines(summary: &str) -> Vec<String> {
+    summary
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                return None;
+            }
+
+            let normalized = trimmed.strip_prefix("- ").unwrap_or(trimmed).trim();
+            let (label, value) = normalized.split_once("::")?;
+            let label = label.trim();
+            let value = value.trim();
+
+            if label.is_empty() || value.is_empty() {
+                return None;
+            }
+
+            Some(format!("{label}:: {value}"))
+        })
+        .collect()
+}
+
+fn workspace_status_label(status: &ExecutionProcessStatus) -> &'static str {
+    match status {
+        ExecutionProcessStatus::Completed => "Completed",
+        ExecutionProcessStatus::Failed => "Failed",
+        ExecutionProcessStatus::Killed => "Killed",
+        ExecutionProcessStatus::Running => "Running",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extracts_summary_metadata_lines_from_compact_block() {
+        let summary = r#"Validation
+Checks passed.
+
+What changed
+Updated the notifier.
+
+Why it matters
+Turn completion now reaches ntfy.
+
+What's next
+Branch is ready for verification.
+
+PR:: Not opened yet
+Docs:: Not Current
+Churn:: No
+Human Needed:: Yes
+Commit/Push:: Not committed and Not pushed
+Preview URL:: Not Generated
+Branch:: vk/wire-ntfy
+Worktree:: /tmp/vk"#;
+
+        assert_eq!(
+            extract_summary_metadata_lines(summary),
+            vec![
+                "PR:: Not opened yet",
+                "Docs:: Not Current",
+                "Churn:: No",
+                "Human Needed:: Yes",
+                "Commit/Push:: Not committed and Not pushed",
+                "Preview URL:: Not Generated",
+                "Branch:: vk/wire-ntfy",
+                "Worktree:: /tmp/vk",
+            ]
+        );
+    }
+
+    #[test]
+    fn workspace_completion_message_falls_back_when_summary_has_no_metadata() {
+        let message = build_workspace_completion_message(
+            "demo-workspace",
+            &ExecutionProcessStatus::Completed,
+            Some("No compact metadata here."),
+        );
+
+        assert_eq!(message, "Workspace:: demo-workspace\nStatus:: Completed");
+    }
+
+    #[test]
+    fn ntfy_endpoint_joins_base_url_and_topic() {
+        let config = TurnCompletionNtfyConfig {
+            base_url: "https://opntfy.fly.dev/".to_string(),
+            topic: "/vk-workspace-turns".to_string(),
+            token: Some("token".to_string()),
+        };
+
+        assert_eq!(
+            config.endpoint(),
+            "https://opntfy.fly.dev/vk-workspace-turns"
+        );
     }
 }

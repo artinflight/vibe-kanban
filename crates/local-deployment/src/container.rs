@@ -710,11 +710,12 @@ impl LocalContainerService {
                         && !started_queued_follow_up;
 
                     if should_mark_turn_unseen
-                        && let Err(e) = CodingAgentTurn::mark_unseen_by_execution_process_id(
-                            &db.pool,
-                            ctx.execution_process.id,
-                        )
-                        .await
+                        && let Err(e) =
+                            CodingAgentTurn::mark_completed_unseen_by_execution_process_id(
+                                &db.pool,
+                                ctx.execution_process.id,
+                            )
+                            .await
                     {
                         tracing::warn!(
                             "Failed to mark coding agent turn unseen for execution {}: {}",

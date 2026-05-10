@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Duration as ChronoDuration, TimeZone, Utc};
 use executors::executors::codex::codex_home;
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -46,6 +46,7 @@ struct SessionAgentThreadRow {
     session_id: Uuid,
     execution_process_id: Uuid,
     agent_session_id: String,
+    parent_completed_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, FromRow)]
@@ -237,7 +238,8 @@ async fn find_agent_threads_for_sessions(
         r#"SELECT
             ep.session_id,
             cat.execution_process_id,
-            cat.agent_session_id
+            cat.agent_session_id,
+            ep.completed_at AS parent_completed_at
            FROM coding_agent_turns cat
            JOIN execution_processes ep ON ep.id = cat.execution_process_id
            WHERE ep.dropped = FALSE
@@ -272,11 +274,13 @@ async fn find_codex_thread_jobs(
         None => return Ok(Vec::new()),
     };
 
-    let mut thread_context = HashMap::<String, (Uuid, Uuid)>::new();
+    let mut thread_context = HashMap::<String, (Uuid, Uuid, Option<DateTime<Utc>>)>::new();
     for row in thread_rows {
-        thread_context
-            .entry(row.agent_session_id)
-            .or_insert((row.session_id, row.execution_process_id));
+        thread_context.entry(row.agent_session_id).or_insert((
+            row.session_id,
+            row.execution_process_id,
+            row.parent_completed_at,
+        ));
     }
 
     let mut builder = QueryBuilder::<Sqlite>::new(
@@ -334,15 +338,15 @@ async fn find_codex_thread_jobs(
     Ok(rows
         .into_iter()
         .filter_map(|row| {
-            let (session_id, execution_process_id) =
+            let (session_id, execution_process_id, parent_completed_at) =
                 thread_context.get(&row.root_thread_id).copied()?;
             let created_at = ms_to_utc(row.created_at_ms).unwrap_or(now);
             let updated_at = ms_to_utc(row.updated_at_ms).unwrap_or(created_at);
-            let status = match row.edge_status.as_str() {
-                "open" => SubagentJobStatus::Running,
-                "closed" => SubagentJobStatus::Completed,
-                _ => SubagentJobStatus::Unresolved,
-            };
+            let status = codex_edge_status(
+                &row.edge_status,
+                ms_to_utc(row.updated_at_ms),
+                parent_completed_at,
+            );
             Some(SubagentJob {
                 id: Uuid::parse_str(&row.child_thread_id).unwrap_or_else(|_| Uuid::new_v4()),
                 session_id,
@@ -393,6 +397,26 @@ fn ms_to_utc(ms: Option<i64>) -> Option<DateTime<Utc>> {
     Utc.timestamp_millis_opt(ms?).single()
 }
 
+fn codex_edge_status(
+    edge_status: &str,
+    child_updated_at: Option<DateTime<Utc>>,
+    parent_completed_at: Option<DateTime<Utc>>,
+) -> SubagentJobStatus {
+    match edge_status {
+        "closed" => SubagentJobStatus::Completed,
+        "open" => {
+            if let Some(parent_completed_at) = parent_completed_at {
+                let stale_cutoff = parent_completed_at + ChronoDuration::seconds(30);
+                if child_updated_at.map_or(true, |updated_at| updated_at <= stale_cutoff) {
+                    return SubagentJobStatus::Completed;
+                }
+            }
+            SubagentJobStatus::Running
+        }
+        _ => SubagentJobStatus::Unresolved,
+    }
+}
+
 fn increment_active_count(
     counts: &mut HashMap<Uuid, SubagentJobCounts>,
     session_id: Uuid,
@@ -435,10 +459,37 @@ fn status_rank(status: &SubagentJobStatus) -> u8 {
 
 #[cfg(test)]
 mod tests {
+    use chrono::{Duration as ChronoDuration, Utc};
     use sqlx::{Row, sqlite::SqlitePoolOptions};
     use uuid::Uuid;
 
-    use super::{SubagentJob, SubagentJobStatus};
+    use super::{SubagentJob, SubagentJobStatus, codex_edge_status};
+
+    #[test]
+    fn completed_parent_codex_open_edge_is_not_counted_as_running_when_stale() {
+        let completed_at = Utc::now();
+
+        assert_eq!(
+            codex_edge_status("open", Some(completed_at), Some(completed_at)),
+            SubagentJobStatus::Completed
+        );
+        assert_eq!(
+            codex_edge_status("open", None, Some(completed_at)),
+            SubagentJobStatus::Completed
+        );
+        assert_eq!(
+            codex_edge_status(
+                "open",
+                Some(completed_at + ChronoDuration::seconds(31)),
+                Some(completed_at)
+            ),
+            SubagentJobStatus::Running
+        );
+        assert_eq!(
+            codex_edge_status("open", Some(completed_at), None),
+            SubagentJobStatus::Running
+        );
+    }
 
     #[tokio::test]
     async fn not_found_subagent_status_remains_recoverable() {

@@ -31,6 +31,7 @@ interface UseSessionQueueInteractionResult {
 }
 
 const QUEUE_STATUS_KEY = 'queue-status';
+const QUEUED_STATUS_REFRESH_MS = 3000;
 
 /**
  * Hook to manage queue interaction for session messages.
@@ -47,6 +48,11 @@ export function useSessionQueueInteraction({
       queryKey: [QUEUE_STATUS_KEY, sessionId],
       queryFn: () => queueApi.getStatus(sessionId!),
       enabled: !!sessionId,
+      refetchInterval: (query) =>
+        query.state.data?.status === 'queued'
+          ? QUEUED_STATUS_REFRESH_MS
+          : false,
+      refetchOnWindowFocus: true,
     });
 
   const isQueued = queueStatus.status === 'queued';

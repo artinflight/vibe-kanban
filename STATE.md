@@ -48,10 +48,12 @@
 - Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`.
 - 2026-05-11 regression/deployment ledger:
   - deployed without VK restart from clean frontend asset build `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`: collapsed Kanban column count badge, compact horizontal mobile collapsed columns, and queued follow-up status polling
-  - deploy only with the next approved backend restart: orphan queued-follow-up rejection, permanent stale sub-agent filtering, and `100 MB` prompt JSON body limits for workspace start/session follow-up/queued follow-up
-  - the prompt/workspace character limit is most likely the backend JSON body limit on Axum extractors, not an intentional composer textarea limit; NGINX is already configured higher, but these JSON API routes need the backend change deployed
+  - backend restart/deploy completed on 2026-05-11 after backup `/home/mcp/backups/vk-pre-restart-20260511T144352Z`
+  - deployed backend binary sha256 is `251d51ca5e831775768339c45addc6488b5298a138594accb944782db7dcc6a0`
+  - deployed backend fixes: orphan queued-follow-up rejection, permanent stale sub-agent filtering, and `100 MB` prompt JSON body limits for workspace start/session follow-up/queued follow-up
+  - the prompt/workspace character limit was the backend JSON body limit on Axum extractors, not an intentional composer textarea limit; NGINX is already configured higher, and these JSON API routes now allow `100 MB`
   - frontend asset hotfixes must be built from a clean worktree pinned to the live release boundary plus a minimal patch, never from a dirty maintenance checkout
-  - the next restart must verify the binary/source contains all queued backend fixes before service swap and must preserve the frontend `current` symlink at the clean hotfix release
+  - every restart must verify the binary/source contains all queued backend fixes before service swap and must preserve the frontend `current` symlink at the clean hotfix release
 - Needs-review completion signal invariant:
   - a coding-agent turn may be marked seen while the workspace is open/running
   - a successful `codingagent` completion must mark that turn unseen again so the workspace, issue card, Kanban column, and left-nav project marker can show needs-review
@@ -78,10 +80,11 @@
   - PR `#41` merged to `main`
   - PR `#43` backfilled to `staging`
   - while blocking execution processes appear `running`, the frontend polls process details every `3s` and reconciles terminal status without requiring a page refresh
-- The queued follow-up stale UI mitigation is partially live:
+- The queued follow-up stale UI mitigation is live:
   - while a session reports queue status `queued`, the live frontend polls queue status every `3s` and refetches on window focus
-  - backend protection against orphan queued messages is prepared in source but requires the next approved backend deploy/restart
-  - the backend guard rejects new queued follow-ups when the session has no running non-dropped `codingagent`, `setupscript`, `cleanupscript`, or `archivescript` execution to consume them
+  - backend protection rejects new queued follow-ups when the session has no running non-dropped `codingagent`, `setupscript`, `cleanupscript`, or `archivescript` execution to consume them
+  - post-restart smoke verified an orphan queued follow-up returns `409`
+  - post-restart smoke verified a `3 MB` queued prompt reaches the route and returns the expected `409`, proving the old small JSON body limit is no longer blocking that path
   - a 2026-05-11 refreshable frontend asset swap to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tqueue-status-refresh` was rolled back after production VK crashed during an event-stream storm
 - The permanent local issue-link fallback is merged in the repo:
   - main hotfix PR `#44` merged at `21815da2b9bbdd57f5711cfe9e6c481fa0aeb2ae`

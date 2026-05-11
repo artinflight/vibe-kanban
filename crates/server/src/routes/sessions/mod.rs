@@ -3,7 +3,7 @@ pub mod review;
 
 use axum::{
     Extension, Json, Router,
-    extract::{Query, State},
+    extract::{DefaultBodyLimit, Query, State},
     middleware::from_fn_with_state,
     response::Json as ResponseJson,
     routing::{get, post},
@@ -37,6 +37,8 @@ use crate::{
     DeploymentImpl, error::ApiError, middleware::load_session_middleware,
     routes::workspaces::execution::RunScriptError,
 };
+
+const PROMPT_JSON_BODY_LIMIT_BYTES: usize = 100 * 1024 * 1024;
 
 #[derive(Debug, Deserialize)]
 pub struct SessionQuery {
@@ -335,7 +337,10 @@ pub async fn run_setup_script(
 pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let session_id_router = Router::new()
         .route("/", get(get_session).put(update_session))
-        .route("/follow-up", post(follow_up))
+        .route(
+            "/follow-up",
+            post(follow_up).layer(DefaultBodyLimit::max(PROMPT_JSON_BODY_LIMIT_BYTES)),
+        )
         .route("/reset", post(reset_process))
         .route("/setup", post(run_setup_script))
         .route("/review", post(review::start_review))

@@ -1,5 +1,31 @@
 # HANDOFF.md
 
+## 2026-05-11 Regression Lockdown / Deployment Queue
+
+- Live frontend is currently `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`.
+- No-restart frontend fixes deployed from clean release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`:
+  - collapsed Kanban column count badge
+  - compact horizontal mobile collapsed Kanban columns
+  - queued follow-up status polling every `3s` while the UI still reports `queued`
+- Rollback target before this swap was `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260510T123551Z-rc-876eb7936`.
+- Backend fixes queued for the next approved VK restart:
+  - reject/cancel orphan queued follow-ups when no running queue-consumer execution exists
+  - stale sub-agent filtering so only genuinely active children count as active
+  - prompt JSON body limit raised to `100 MB` for workspace start, session follow-up, and queued follow-up routes
+- The prompt/workspace text limit appears to be the server JSON body cap, not a deliberate frontend textarea limit. NGINX already allows large bodies; these JSON routes need the backend deploy/restart before long prompts over the old Axum default limit work.
+- Regression prevention rule: do not deploy from a dirty maintenance checkout. Build frontend hotfixes from a clean worktree pinned to the current live release commit plus only the intended frontend patch, then verify the live HTML asset hash and feature behavior after the symlink swap.
+- Restart prevention rule: before the next backend restart, confirm the deployed binary/source contains every queued backend fix above, confirm the frontend `current` symlink points at the clean hotfix release, and keep the previous release path for rollback.
+
+## 2026-05-11 Collapsed Kanban Count Regression
+
+- User reported collapsed Kanban column counts disappeared after the production frontend rollback.
+- Source finding: `CollapsedKanbanColumn` rendered the status label, color dot, and needs-review marker, but no count; the visible count was not a durable part of the collapsed-column component.
+- Source fix prepared in `packages/web-core/src/features/kanban/ui/KanbanContainer.tsx`:
+  - added `issueCount` to `CollapsedKanbanColumn`
+  - passes `issueIds.length` from the status render loop
+  - renders a compact count badge for both desktop collapsed rails and mobile collapsed rows
+- Deployed without restarting VK in clean frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`.
+
 ## 2026-05-10 Android Parity Stale Sub-Agent Count Repair
 
 - User reported `FR::ORC::Android Parity` showed "42 sub-agents may still be active" after the sub-agent sidebar deployment.

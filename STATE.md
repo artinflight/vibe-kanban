@@ -45,7 +45,13 @@
 - VK now uses an isolated Codex home at `/home/mcp/.local/share/vibe-kanban/codex-home`.
 - That isolation exists specifically to stop VK coding agents from sharing refresh-token rotation with tmux/interactive Codex sessions.
 - Refreshable frontend assets are active in live production through `/home/mcp/.config/systemd/user/vibe-kanban.service.d/frontend-dist.conf`.
-- Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260506T1701Z-clean-codeblock-copy`.
+- Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`.
+- 2026-05-11 regression/deployment ledger:
+  - deployed without VK restart from clean frontend asset build `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`: collapsed Kanban column count badge, compact horizontal mobile collapsed columns, and queued follow-up status polling
+  - deploy only with the next approved backend restart: orphan queued-follow-up rejection, permanent stale sub-agent filtering, and `100 MB` prompt JSON body limits for workspace start/session follow-up/queued follow-up
+  - the prompt/workspace character limit is most likely the backend JSON body limit on Axum extractors, not an intentional composer textarea limit; NGINX is already configured higher, but these JSON API routes need the backend change deployed
+  - frontend asset hotfixes must be built from a clean worktree pinned to the live release boundary plus a minimal patch, never from a dirty maintenance checkout
+  - the next restart must verify the binary/source contains all queued backend fixes before service swap and must preserve the frontend `current` symlink at the clean hotfix release
 - Needs-review completion signal invariant:
   - a coding-agent turn may be marked seen while the workspace is open/running
   - a successful `codingagent` completion must mark that turn unseen again so the workspace, issue card, Kanban column, and left-nav project marker can show needs-review
@@ -72,6 +78,11 @@
   - PR `#41` merged to `main`
   - PR `#43` backfilled to `staging`
   - while blocking execution processes appear `running`, the frontend polls process details every `3s` and reconciles terminal status without requiring a page refresh
+- The queued follow-up stale UI mitigation is partially live:
+  - while a session reports queue status `queued`, the live frontend polls queue status every `3s` and refetches on window focus
+  - backend protection against orphan queued messages is prepared in source but requires the next approved backend deploy/restart
+  - the backend guard rejects new queued follow-ups when the session has no running non-dropped `codingagent`, `setupscript`, `cleanupscript`, or `archivescript` execution to consume them
+  - a 2026-05-11 refreshable frontend asset swap to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tqueue-status-refresh` was rolled back after production VK crashed during an event-stream storm
 - The permanent local issue-link fallback is merged in the repo:
   - main hotfix PR `#44` merged at `21815da2b9bbdd57f5711cfe9e6c481fa0aeb2ae`
   - staging backfill PR `#45` merged at `24a2dbe3ad5b7457beea772c4cbe6ea0a070944f`
@@ -222,6 +233,10 @@
   - successful agent completion must re-mark a previously seen running turn as unseen
   - frontend code must not immediately mark the current workspace seen just because a summary poll reports new unseen activity
   - regression coverage belongs in `cargo test -p db` for UUID binding and in live/API smoke checks for `/api/workspaces/summaries`
+- Do not let queued follow-up state rely only on push/update events:
+  - queue status must self-heal by polling while `queued`
+  - the backend must not accept a queued follow-up unless a real running execution exists to consume it
+  - orphan in-memory queue rows make workspaces look busy after the agent has stopped and must be canceled/rejected instead of left visible
 - Do not treat sub-agent registry misses as terminal:
   - spawned child thread IDs are durable work and may survive outside VK's in-memory registry
   - raw Codex stdout `spawnAgent` completion events and Codex `thread_spawn_edges` are recovery sources

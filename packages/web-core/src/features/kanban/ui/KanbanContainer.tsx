@@ -560,6 +560,7 @@ function LocalProjectSettingsDialog({
 type CollapsedKanbanColumnProps = {
   statusName: string;
   statusColor: string;
+  issueCount: number;
   hasNeedsReview?: boolean;
   isMobile?: boolean;
   onExpand: () => void;
@@ -568,6 +569,7 @@ type CollapsedKanbanColumnProps = {
 function CollapsedKanbanColumn({
   statusName,
   statusColor,
+  issueCount,
   hasNeedsReview = false,
   isMobile = false,
   onExpand,
@@ -582,6 +584,10 @@ function CollapsedKanbanColumn({
         defaultValue: 'Expand {{statusName}} column',
         statusName,
       });
+  const countLabel = t('kanban.columnIssueCount', {
+    count: issueCount,
+    defaultValue: '{{count}} issues',
+  });
 
   return (
     <button
@@ -610,7 +616,7 @@ function CollapsedKanbanColumn({
       >
         <div
           className={cn(
-            'flex items-center gap-2 whitespace-nowrap text-center',
+            'flex min-w-0 items-center gap-2 whitespace-nowrap text-center',
             isMobile ? 'min-w-0' : '[writing-mode:vertical-rl] pt-2'
           )}
         >
@@ -625,6 +631,17 @@ function CollapsedKanbanColumn({
             {statusName}
           </span>
         </div>
+        <span
+          className={cn(
+            'ml-auto shrink-0 rounded-sm border border-border bg-background px-1.5 py-0.5 text-xs font-medium leading-none text-low tabular-nums',
+            !isMobile &&
+              'absolute bottom-2 left-1/2 ml-0 -translate-x-1/2 px-1 py-1'
+          )}
+          aria-label={countLabel}
+          title={countLabel}
+        >
+          {issueCount}
+        </span>
       </div>
     </button>
   );
@@ -1637,6 +1654,7 @@ export function KanbanContainer() {
                         <CollapsedKanbanColumn
                           statusName={status.name}
                           statusColor={status.color}
+                          issueCount={issueIds.length}
                           hasNeedsReview={hasColumnNeedsReview}
                           isMobile={isMobile}
                           onExpand={() => toggleCollapsedStatus(status.id)}

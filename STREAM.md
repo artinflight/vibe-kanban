@@ -34,6 +34,10 @@
 - UI-only fixes can use refreshable frontend assets only after the running backend already supports the needed API behavior.
 - Frontend asset swaps must still be followed by clean branch/PR promotion; a live symlink swap is an operational hotfix, not a permanent landing path.
 - Every repaired feature needs a live verification step, not only a merge confirmation.
+- Frontend hotfixes must be built from a clean worktree pinned to the current live frontend release boundary plus only the intended patch. Dirty maintenance-checkout frontend builds are forbidden because they already caused project-list/nav regressions.
+- The current deployment queue is split:
+  - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`: collapsed Kanban count, compact mobile collapsed columns, queued-status polling
+  - restart-required backend deploy: orphan queued-message guard, stale sub-agent filtering, prompt JSON body limit raised to `100 MB`
 
 ## Relevant Files / Modules
 
@@ -71,6 +75,12 @@
   - chat-derived sub-agent activity preserves a known running/unresolved spawned child when a later `wait_agent` result reports `not_found`
 - Prepared but not deployed:
   - `mark_seen` clears the workspace-summary cache
+- Frontend deployed, backend still queued:
+  - queued follow-up status now polls every `3s` while the UI is in `queued` state and refetches on window focus; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`
+  - backend orphan-queue prevention is prepared in source: `POST /api/sessions/:id/queue` rejects queue creation unless a non-dropped running queue-consumer execution exists for that session
+  - backend orphan-queue prevention still requires the next approved backend deploy/restart
+  - prompt JSON body limits are prepared in source for workspace start, direct follow-up, and queued follow-up routes; this removes the practical long-prompt/workspace-start cap up to `100 MB` but requires backend deploy/restart
+  - 2026-05-11 refreshable frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tqueue-status-refresh` was rolled back after production VK crashed during an event-stream storm
 - Published without restart on 2026-05-06, then rolled back after regression:
   - codeblock copy overlay for read-only chat code blocks
   - local fallback workspace rename/delete action visibility when `owner_user_id = ""`
@@ -87,6 +97,7 @@
 
 - Repointing the service back to cloud/shared API config
 - Deploying or validating from dirty canonical checkout instead of a clean worktree
+- Losing queued fixes during restart; before restarting, verify the built backend contains the orphan-queue guard, stale sub-agent filter, and prompt body-limit change, and verify the frontend `current` symlink still points to the clean release with collapsed count/mobile/queue polling fixes
 - Merging stale feature branches wholesale
 - Assuming a feature is live because it exists somewhere in git history
 - Losing PR/issue display state when relying on branch/worktree presence instead of durable DB rows
@@ -102,6 +113,11 @@
   - do not count stale Codex `open` edges as active when the VK parent execution is already completed and the child has not updated after parent completion
   - do not let a stale persisted VK `running` row outrank a Codex-proven completed child edge for the same agent ID
   - verify with `cargo test -p db not_found_subagent_status_remains_recoverable` and `cargo test -p services raw_codex_spawn_agent`
+- Queued follow-up state must not regress:
+  - do not rely on a missed completion/websocket event as the only way to clear `queued`
+  - keep queue-status polling active while status is `queued`
+  - reject/cancel queue creation if there is no running queue consumer for that session
+  - verify with `cargo test -p db queue_consumer_requires_running_non_dropped_follow_up_process`
 
 ## Next Safe Steps
 
@@ -113,3 +129,4 @@
 6. Backfill broader current live `subagent_jobs` rows from Codex `thread_spawn_edges` only after confirming the desired scope; Halley alone was backfilled as a minimal no-restart mitigation.
 7. Implement PR snapshot/reconcile/backfill as a separate concern.
 8. Verify every feature against live UI/API before production promotion.
+9. Rework and redeploy the queued follow-up fix only from a clean minimal build after the event-stream crash is understood; do not reuse the 2026-05-11 dirty checkout asset swap.

@@ -1,8 +1,13 @@
 use axum::{
-    Extension, Json, Router, extract::State, middleware::from_fn_with_state,
-    response::Json as ResponseJson, routing::get,
+    Extension, Json, Router,
+    extract::{DefaultBodyLimit, State},
+    middleware::from_fn_with_state,
+    response::Json as ResponseJson,
+    routing::get,
 };
-use db::models::{scratch::DraftFollowUpData, session::Session};
+use db::models::{
+    execution_process::ExecutionProcess, scratch::DraftFollowUpData, session::Session,
+};
 use deployment::Deployment;
 use executors::profile::ExecutorConfig;
 use serde::Deserialize;
@@ -11,6 +16,8 @@ use ts_rs::TS;
 use utils::response::ApiResponse;
 
 use crate::{DeploymentImpl, error::ApiError, middleware::load_session_middleware};
+
+const PROMPT_JSON_BODY_LIMIT_BYTES: usize = 100 * 1024 * 1024;
 
 /// Request body for queueing a follow-up message
 #[derive(Debug, Deserialize, TS)]
@@ -25,6 +32,17 @@ async fn queue_message(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<QueueMessageRequest>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    if !ExecutionProcess::has_running_queue_consumer_for_session(&deployment.db().pool, session.id)
+        .await?
+    {
+        deployment
+            .queued_message_service()
+            .cancel_queued(session.id);
+        return Err(ApiError::Conflict(
+            "Cannot queue a follow-up because this session is not currently running".to_string(),
+        ));
+    }
+
     let data = DraftFollowUpData {
         message: payload.message,
         executor_config: payload.executor_config,
@@ -87,7 +105,8 @@ pub(super) fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
             "/",
             get(get_queue_status)
                 .post(queue_message)
-                .delete(cancel_queued_message),
+                .delete(cancel_queued_message)
+                .layer(DefaultBodyLimit::max(PROMPT_JSON_BODY_LIMIT_BYTES)),
         )
         .layer(from_fn_with_state(
             deployment.clone(),

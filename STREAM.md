@@ -37,7 +37,7 @@
 - Frontend hotfixes must be built from a clean worktree pinned to the current live frontend release boundary plus only the intended patch. Dirty maintenance-checkout frontend builds are forbidden because they already caused project-list/nav regressions.
 - The current deployment queue is split:
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`: collapsed Kanban count, compact mobile collapsed columns, queued-status polling
-  - restart-required backend deploy: orphan queued-message guard, stale sub-agent filtering, prompt JSON body limit raised to `100 MB`
+  - deployed backend restart on 2026-05-11: orphan queued-message guard, stale sub-agent filtering, prompt JSON body limit raised to `100 MB`
 
 ## Relevant Files / Modules
 
@@ -75,11 +75,10 @@
   - chat-derived sub-agent activity preserves a known running/unresolved spawned child when a later `wait_agent` result reports `not_found`
 - Prepared but not deployed:
   - `mark_seen` clears the workspace-summary cache
-- Frontend deployed, backend still queued:
+- Frontend and backend deployed:
   - queued follow-up status now polls every `3s` while the UI is in `queued` state and refetches on window focus; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`
-  - backend orphan-queue prevention is prepared in source: `POST /api/sessions/:id/queue` rejects queue creation unless a non-dropped running queue-consumer execution exists for that session
-  - backend orphan-queue prevention still requires the next approved backend deploy/restart
-  - prompt JSON body limits are prepared in source for workspace start, direct follow-up, and queued follow-up routes; this removes the practical long-prompt/workspace-start cap up to `100 MB` but requires backend deploy/restart
+  - backend orphan-queue prevention is live: `POST /api/sessions/:id/queue` rejects queue creation unless a non-dropped running queue-consumer execution exists for that session
+  - prompt JSON body limits are live for workspace start, direct follow-up, and queued follow-up routes; this removes the practical long-prompt/workspace-start cap up to `100 MB`
   - 2026-05-11 refreshable frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tqueue-status-refresh` was rolled back after production VK crashed during an event-stream storm
 - Published without restart on 2026-05-06, then rolled back after regression:
   - codeblock copy overlay for read-only chat code blocks

@@ -3,18 +3,27 @@
 ## 2026-05-11 Regression Lockdown / Deployment Queue
 
 - Live frontend is currently `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`.
+- Backend restart/deploy completed on 2026-05-11 after backup `/home/mcp/backups/vk-pre-restart-20260511T144352Z`.
+- Deployed binary sha256 is `251d51ca5e831775768339c45addc6488b5298a138594accb944782db7dcc6a0` for both `/home/mcp/.local/bin/vibe-kanban-serve-prod` and `/home/mcp/.local/bin/vibe-kanban-serve`.
 - No-restart frontend fixes deployed from clean release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`:
   - collapsed Kanban column count badge
   - compact horizontal mobile collapsed Kanban columns
   - queued follow-up status polling every `3s` while the UI still reports `queued`
 - Rollback target before this swap was `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260510T123551Z-rc-876eb7936`.
-- Backend fixes queued for the next approved VK restart:
+- Backend fixes deployed in the restart:
   - reject/cancel orphan queued follow-ups when no running queue-consumer execution exists
   - stale sub-agent filtering so only genuinely active children count as active
   - prompt JSON body limit raised to `100 MB` for workspace start, session follow-up, and queued follow-up routes
-- The prompt/workspace text limit appears to be the server JSON body cap, not a deliberate frontend textarea limit. NGINX already allows large bodies; these JSON routes need the backend deploy/restart before long prompts over the old Axum default limit work.
+- Post-restart verification:
+  - `GET /api/info` passed
+  - live frontend still references `/assets/index-C_nfyFbD.js` and `/assets/index-Cchj_gnC.css`
+  - project list stayed at `9` active and `8` archived projects; archived projects did not reappear in the active left nav data
+  - no running `vk-exec-*` services and `0` non-dropped running `execution_processes`
+  - orphan queued follow-up returns `409`
+  - a `3 MB` queued prompt body reaches the route and returns the expected `409`, proving the old small JSON body limit is no longer blocking that path
+- The prompt/workspace text limit was the server JSON body cap, not a deliberate frontend textarea limit. NGINX already allows large bodies; these JSON routes now allow `100 MB`.
 - Regression prevention rule: do not deploy from a dirty maintenance checkout. Build frontend hotfixes from a clean worktree pinned to the current live release commit plus only the intended frontend patch, then verify the live HTML asset hash and feature behavior after the symlink swap.
-- Restart prevention rule: before the next backend restart, confirm the deployed binary/source contains every queued backend fix above, confirm the frontend `current` symlink points at the clean hotfix release, and keep the previous release path for rollback.
+- Restart prevention rule: before any future backend restart, confirm the deployed binary/source contains every queued backend fix, confirm the frontend `current` symlink points at the intended clean release, and keep the previous release path for rollback.
 
 ## 2026-05-11 Collapsed Kanban Count Regression
 

@@ -71,6 +71,7 @@ import {
   deriveSubagentActivityFromJobs,
   useSubagentJobs,
 } from '@/shared/hooks/useSubagentJobs';
+import { useIsRealMobile } from '@/shared/hooks/useIsMobile';
 
 /** Compute execution status from boolean flags */
 function computeExecutionStatus(params: {
@@ -178,6 +179,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
   const sessionId = session?.id;
   const queryClient = useQueryClient();
   const hostId = useHostId();
+  const isRealMobile = useIsRealMobile();
 
   const handleRenameSession = useCallback(
     (targetSessionId: string, currentName: string) => {
@@ -1011,13 +1013,13 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         repoIds={repoIds}
         executor={executor}
         sessionId={sessionId}
-        autoFocus
+        autoFocus={!isRealMobile}
         onPasteFiles={onPasteFiles}
         localAttachments={localAttachments}
         sendShortcut={config?.send_message_shortcut}
       />
     ),
-    [config?.send_message_shortcut, sessionId]
+    [config?.send_message_shortcut, isRealMobile, sessionId]
   );
 
   const modelSelectorNode = effectiveExecutor ? (

@@ -22,6 +22,14 @@
   - `git diff --check`
 - Not deployed live yet. This needs a backend build/restart plus frontend asset release before `https://vibe.local` can use it.
 
+## 2026-05-11 Mobile Workspace Chat Autofocus
+
+- User reported mobile workspace open immediately raises the keyboard, making it hard to read the workspace report first.
+- Source fix prepared in `packages/web-core/src/features/workspace-chat/ui/SessionChatBoxContainer.tsx`:
+  - existing-session/new-session workspace chat still autofocuses on desktop
+  - real mobile devices now render the chat editor with `autoFocus={false}` so opening a workspace does not summon the keyboard
+- Not deployed live yet. This is frontend-only and can ship with the next clean frontend asset release.
+
 ## 2026-05-11 Regression Lockdown / Deployment Queue
 
 - Live frontend is currently `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`.

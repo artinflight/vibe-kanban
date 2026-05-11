@@ -64,12 +64,18 @@
   - the prompt/workspace character limit was the backend JSON body limit on Axum extractors, not an intentional composer textarea limit; NGINX is already configured higher, and these JSON API routes now allow `100 MB`
   - frontend asset hotfixes must be built from a clean worktree pinned to the live release boundary plus a minimal patch, never from a dirty maintenance checkout
   - every restart must verify the binary/source contains all queued backend fixes before service swap and must preserve the frontend `current` symlink at the clean hotfix release
+- Manual workspace unread source is prepared but not deployed:
+  - `PUT /api/workspaces/:id/unread` marks the latest non-dropped `codingagent` turn for that workspace unseen and invalidates workspace-summary cache
+  - frontend workspace action `Mark unread` and shortcut `W U` call that endpoint
+  - this intentionally reuses the existing needs-review marker pipeline instead of creating a separate reminder flag
+  - live use requires a backend build/restart plus frontend asset release after explicit approval
 - Needs-review completion signal invariant:
   - a coding-agent turn may be marked seen while the workspace is open/running
   - a successful `codingagent` completion must mark that turn unseen again so the workspace, issue card, Kanban column, and left-nav project marker can show needs-review
   - the DB update must bind `execution_process_id` as a `Uuid`, not as a string, because SQLite stores these IDs as UUID blobs
   - the currently mounted workspace must not auto-clear unseen state merely because `has_unseen_turns` appeared; explicit workspace selection/navigation is the clear action
   - failed/killed/interrupted terminal states must not create project-column needs-review markers
+  - manual unread must only revive the latest non-dropped coding-agent turn for the workspace; it must not mark older, dropped, setup, cleanup, archive, or unrelated workspace turns unread
 - Sub-agent preservation invariant:
   - a successful Codex `collabAgentToolCall` / `spawnAgent` event creates durable child work even if VK does not receive a normalized `spawn_agent` tool entry
   - VK must persist spawned child thread IDs from raw stdout/log events and from Codex `thread_spawn_edges`
@@ -194,8 +200,9 @@
 - `crates/db/src/lib.rs`
 - `crates/local-deployment/src/lib.rs`
 - `crates/services/src/services/pr_monitor.rs`
-- `crates/db/src/models/coding_agent_turn.rs`
-- `crates/services/src/services/events.rs`
+  - `crates/db/src/models/coding_agent_turn.rs`
+  - `crates/server/src/routes/workspaces/core.rs`
+  - `crates/services/src/services/events.rs`
 - `crates/server/src/routes/scratch.rs`
 - `docs/self-hosting/local-backup-recovery.mdx`
 - `scripts/vk_lean_backup.py`

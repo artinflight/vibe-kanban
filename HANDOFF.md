@@ -1,5 +1,27 @@
 # HANDOFF.md
 
+## 2026-05-11 Manual Workspace Unread Marker
+
+- User requested a way to mark a workspace unread after glancing at it so the needs-review marker returns as a later review reminder.
+- Source fix prepared:
+  - backend route `PUT /api/workspaces/:id/unread`
+  - DB helper marks only the latest non-dropped `codingagent` turn for that workspace `seen = 0`
+  - route invalidates the workspace-summary cache, same as `mark_seen`
+  - frontend API action `workspacesApi.markUnread`
+  - workspace command menu action `Mark unread`
+  - keyboard shortcut `W U`
+  - command-bar workspace actions now use the targeted workspace id for visibility when opened from a sidebar workspace row, instead of hiding actions based on the currently selected workspace/create-mode context
+- Regression guard:
+  - test `latest_workspace_turn_can_be_marked_unseen` verifies the helper ignores older turns, non-coding runs, dropped runs, and other workspaces.
+- Validation passed:
+  - `pnpm run format`
+  - `cargo test -p db latest_workspace_turn_can_be_marked_unseen`
+  - `cargo check -p server`
+  - `pnpm --filter @vibe/web-core run check`
+  - `pnpm --filter @vibe/local-web run check`
+  - `git diff --check`
+- Not deployed live yet. This needs a backend build/restart plus frontend asset release before `https://vibe.local` can use it.
+
 ## 2026-05-11 Regression Lockdown / Deployment Queue
 
 - Live frontend is currently `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`.

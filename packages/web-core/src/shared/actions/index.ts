@@ -395,6 +395,20 @@ export const Actions = {
     },
   },
 
+  MarkWorkspaceUnread: {
+    id: 'mark-workspace-unread',
+    label: 'Mark unread',
+    icon: EyeSlashIcon,
+    shortcut: 'W U',
+    requiresTarget: ActionTargetType.WORKSPACE,
+    isVisible: (ctx) => ctx.hasWorkspace,
+    getTooltip: () => 'Mark unread',
+    execute: async (ctx, workspaceId) => {
+      await workspacesApi.markUnread(workspaceId);
+      invalidateWorkspaceQueries(ctx.queryClient, workspaceId);
+    },
+  },
+
   SpinOffWorkspace: {
     id: 'spin-off-workspace',
     label: 'Spin off workspace',

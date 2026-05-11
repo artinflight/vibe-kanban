@@ -787,6 +787,17 @@ export const workspacesApi = {
     return handleApiResponse<void>(response);
   },
 
+  /** Mark the latest coding agent turn for a workspace as unread */
+  markUnread: async (workspaceId: string): Promise<void> => {
+    const response = await makeRequest(
+      `/api/workspaces/${workspaceId}/unread`,
+      {
+        method: 'PUT',
+      }
+    );
+    return handleApiResponse<void>(response);
+  },
+
   listSummaries: async (archived: boolean): Promise<WorkspaceSummary[]> => {
     const response = await makeRequest('/api/workspaces/summaries', {
       method: 'POST',

@@ -392,6 +392,34 @@ impl CodingAgentTurn {
         Ok(())
     }
 
+    /// Mark the latest coding agent turn for a workspace as unseen.
+    pub async fn mark_latest_unseen_by_workspace_id(
+        pool: &SqlitePool,
+        workspace_id: Uuid,
+    ) -> Result<bool, sqlx::Error> {
+        let now = Utc::now();
+        let result = sqlx::query(
+            r#"UPDATE coding_agent_turns
+               SET seen = 0, updated_at = ?
+               WHERE execution_process_id = (
+                   SELECT ep.id
+                   FROM execution_processes ep
+                   JOIN sessions s ON ep.session_id = s.id
+                   WHERE s.workspace_id = ?
+                     AND ep.run_reason = 'codingagent'
+                     AND ep.dropped = 0
+                   ORDER BY ep.created_at DESC
+                   LIMIT 1
+               )"#,
+        )
+        .bind(now)
+        .bind(workspace_id)
+        .execute(pool)
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
     /// Check if a workspace has any unseen coding agent turns
     /// Find all workspaces that have unseen coding agent turns, filtered by archived status
     pub async fn find_workspaces_with_unseen(
@@ -420,6 +448,135 @@ mod tests {
     use uuid::Uuid;
 
     use super::CodingAgentTurn;
+
+    #[tokio::test]
+    async fn latest_workspace_turn_can_be_marked_unseen() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .expect("create in-memory sqlite pool");
+
+        sqlx::query(
+            r#"
+            CREATE TABLE sessions (
+                id BLOB PRIMARY KEY,
+                workspace_id BLOB NOT NULL
+            );
+
+            CREATE TABLE execution_processes (
+                id BLOB PRIMARY KEY,
+                session_id BLOB NOT NULL,
+                run_reason TEXT NOT NULL,
+                dropped INTEGER NOT NULL,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE coding_agent_turns (
+                execution_process_id BLOB NOT NULL,
+                seen INTEGER NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .expect("create test schema");
+
+        let workspace_id = Uuid::new_v4();
+        let other_workspace_id = Uuid::new_v4();
+        let session_id = Uuid::new_v4();
+        let other_session_id = Uuid::new_v4();
+        let older_id = Uuid::new_v4();
+        let latest_id = Uuid::new_v4();
+        let setup_id = Uuid::new_v4();
+        let dropped_id = Uuid::new_v4();
+        let other_id = Uuid::new_v4();
+
+        for (id, workspace_id) in [
+            (session_id, workspace_id),
+            (other_session_id, other_workspace_id),
+        ] {
+            sqlx::query("INSERT INTO sessions (id, workspace_id) VALUES (?, ?)")
+                .bind(id)
+                .bind(workspace_id)
+                .execute(&pool)
+                .await
+                .expect("insert session");
+        }
+
+        for (id, session_id, run_reason, dropped, created_at) in [
+            (
+                older_id,
+                session_id,
+                "codingagent",
+                0,
+                "2026-05-11T00:00:00Z",
+            ),
+            (
+                latest_id,
+                session_id,
+                "codingagent",
+                0,
+                "2026-05-11T01:00:00Z",
+            ),
+            (
+                setup_id,
+                session_id,
+                "setupscript",
+                0,
+                "2026-05-11T02:00:00Z",
+            ),
+            (
+                dropped_id,
+                session_id,
+                "codingagent",
+                1,
+                "2026-05-11T03:00:00Z",
+            ),
+            (
+                other_id,
+                other_session_id,
+                "codingagent",
+                0,
+                "2026-05-11T04:00:00Z",
+            ),
+        ] {
+            sqlx::query(
+                r#"INSERT INTO execution_processes
+                   (id, session_id, run_reason, dropped, created_at)
+                   VALUES (?, ?, ?, ?, ?)"#,
+            )
+            .bind(id)
+            .bind(session_id)
+            .bind(run_reason)
+            .bind(dropped)
+            .bind(created_at)
+            .execute(&pool)
+            .await
+            .expect("insert execution process");
+
+            sqlx::query(
+                r#"INSERT INTO coding_agent_turns (execution_process_id, seen, updated_at)
+                   VALUES (?, 1, 'before')"#,
+            )
+            .bind(id)
+            .execute(&pool)
+            .await
+            .expect("insert coding agent turn");
+        }
+
+        let changed = CodingAgentTurn::mark_latest_unseen_by_workspace_id(&pool, workspace_id)
+            .await
+            .expect("mark latest workspace turn unseen");
+
+        assert!(changed);
+        assert_eq!(seen_for(&pool, older_id).await, 1);
+        assert_eq!(seen_for(&pool, latest_id).await, 0);
+        assert_eq!(seen_for(&pool, setup_id).await, 1);
+        assert_eq!(seen_for(&pool, dropped_id).await, 1);
+        assert_eq!(seen_for(&pool, other_id).await, 1);
+    }
 
     #[tokio::test]
     async fn completed_coding_agent_turns_are_marked_unseen_by_uuid_blob() {

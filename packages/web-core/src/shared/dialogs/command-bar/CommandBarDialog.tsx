@@ -80,6 +80,15 @@ function CommandBarContent({
         workspaceRecordKeys.byId(effectiveWorkspaceId)
       )
     : undefined;
+  const effectiveVisibilityContext = useMemo(
+    () => ({
+      ...visibilityContext,
+      hasWorkspace: Boolean(effectiveWorkspaceId),
+      workspaceArchived:
+        workspace?.archived ?? visibilityContext.workspaceArchived,
+    }),
+    [visibilityContext, effectiveWorkspaceId, workspace?.archived]
+  );
 
   // State machine
   const { state, currentPage, canGoBack, dispatch } = useCommandBarState(page);
@@ -96,7 +105,7 @@ function CommandBarContent({
   const resolvedPage = useResolvedPage(
     currentPage,
     state.search,
-    visibilityContext,
+    effectiveVisibilityContext,
     workspace
   );
 
@@ -180,7 +189,9 @@ function CommandBarContent({
         canGoBack={canGoBack}
         onGoBack={() => dispatch({ type: 'GO_BACK' })}
         onSelect={handleSelect}
-        getLabel={(action) => getLabel(action, workspace, visibilityContext)}
+        getLabel={(action) =>
+          getLabel(action, workspace, effectiveVisibilityContext)
+        }
         search={state.search}
         onSearchChange={(query) => dispatch({ type: 'SEARCH_CHANGE', query })}
         renderSpecialActionIcon={(iconName) =>

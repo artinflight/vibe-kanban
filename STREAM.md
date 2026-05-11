@@ -38,6 +38,7 @@
 - The current deployment queue is split:
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`: collapsed Kanban count, compact mobile collapsed columns, queued-status polling
   - deployed backend restart on 2026-05-11: orphan queued-message guard, stale sub-agent filtering, prompt JSON body limit raised to `100 MB`
+- Manual workspace unread is a backend-backed feature, not a frontend-only flag: it must set the latest coding-agent turn `seen = 0` and invalidate workspace summaries so all existing needs-review markers update consistently.
 
 ## Relevant Files / Modules
 
@@ -80,6 +81,9 @@
   - backend orphan-queue prevention is live: `POST /api/sessions/:id/queue` rejects queue creation unless a non-dropped running queue-consumer execution exists for that session
   - prompt JSON body limits are live for workspace start, direct follow-up, and queued follow-up routes; this removes the practical long-prompt/workspace-start cap up to `100 MB`
   - 2026-05-11 refreshable frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tqueue-status-refresh` was rolled back after production VK crashed during an event-stream storm
+- Prepared but not deployed:
+  - workspace action `Mark unread` calls `PUT /api/workspaces/:id/unread`, which marks the latest non-dropped `codingagent` turn unseen and invalidates the workspace-summary cache
+  - command menu entry and shortcut `W U` are wired in source
 - Published without restart on 2026-05-06, then rolled back after regression:
   - codeblock copy overlay for read-only chat code blocks
   - local fallback workspace rename/delete action visibility when `owner_user_id = ""`
@@ -129,3 +133,4 @@
 7. Implement PR snapshot/reconcile/backfill as a separate concern.
 8. Verify every feature against live UI/API before production promotion.
 9. Rework and redeploy the queued follow-up fix only from a clean minimal build after the event-stream crash is understood; do not reuse the 2026-05-11 dirty checkout asset swap.
+10. Deploy manual workspace unread with the next approved backend restart and frontend asset release, then verify that a selected workspace can be marked unread and that the workspace/project needs-review marker returns.

@@ -19,6 +19,12 @@
   - backed up the VK DB to `/home/mcp/backups/vk-db-before-stale-subagent-jobs-20260510T225546Z.sqlite`
   - marked the remaining `3` stale persisted `subagent_jobs` rows completed
   - verified live workspace summaries now show `active_subagent_count = 0` and `unresolved_subagent_count = 0` for all four reported workspaces
+- 2026-05-11 recurrence:
+  - Android Parity showed `2 possibly active` again for latest parent execution `e1cbe279-6785-4c62-ab71-234f9b9dadbc`
+  - the two children were `Meitner` (`019e1424-990e-7431-beda-31de82af1b6c`) and `Peirce` (`019e1424-9ad8-73e2-adf6-7c47e7f79618`)
+  - parent completed at `2026-05-10T23:24:06Z`; both children updated before parent completion and no Android Parity `vk-exec-*` unit was running
+  - backed up Codex state to `/home/mcp/backups/codex-state-before-android-open-edge-close-20260511T000615Z.sqlite`
+  - closed those two stale Codex open edges and verified Android Parity live summary now reports `active_subagent_count = 0` and `unresolved_subagent_count = 0`
 - Source repair prepared in `crates/db/src/models/subagent_job.rs`:
   - include parent `execution_processes.completed_at` when mapping VK parent threads to Codex child edges
   - treat a Codex `open` edge as completed when its VK parent execution is completed and the child was last updated within 30 seconds of parent completion, or has no child update timestamp

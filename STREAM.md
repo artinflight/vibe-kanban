@@ -37,6 +37,7 @@
 - Frontend hotfixes must be built from a clean worktree pinned to the current live frontend release boundary plus only the intended patch. Dirty maintenance-checkout frontend builds are forbidden because they already caused project-list/nav regressions.
 - The current deployment queue is split:
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`: collapsed Kanban count, compact mobile collapsed columns, queued-status polling
+  - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tworkspace-actions-spin-off`: command menu target-workspace visibility, spin-off workspace durable draft/error handling, mobile chat autofocus suppression
   - deployed backend restart on 2026-05-11: orphan queued-message guard, stale sub-agent filtering, prompt JSON body limit raised to `100 MB`
 - Manual workspace unread is a backend-backed feature, not a frontend-only flag: it must set the latest coding-agent turn `seen = 0` and invalidate workspace summaries so all existing needs-review markers update consistently.
 
@@ -78,12 +79,16 @@
   - `mark_seen` clears the workspace-summary cache
 - Frontend and backend deployed:
   - queued follow-up status now polls every `3s` while the UI is in `queued` state and refetches on window focus; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`
+  - command menu workspace actions evaluate against the clicked workspace target, not the currently selected route/create-mode context; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tworkspace-actions-spin-off`
+  - spin-off workspace now prepares a durable workspace-create draft for linked issue workspaces, surfaces errors, and refuses no-repo workspaces with a visible error; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tworkspace-actions-spin-off`
+  - mobile workspace chat no longer autofocuses the editor on open; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tworkspace-actions-spin-off`
   - backend orphan-queue prevention is live: `POST /api/sessions/:id/queue` rejects queue creation unless a non-dropped running queue-consumer execution exists for that session
   - prompt JSON body limits are live for workspace start, direct follow-up, and queued follow-up routes; this removes the practical long-prompt/workspace-start cap up to `100 MB`
   - 2026-05-11 refreshable frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tqueue-status-refresh` was rolled back after production VK crashed during an event-stream storm
 - Prepared but not deployed:
   - workspace action `Mark unread` calls `PUT /api/workspaces/:id/unread`, which marks the latest non-dropped `codingagent` turn unseen and invalidates the workspace-summary cache
   - command menu entry and shortcut `W U` are wired in source
+  - the 2026-05-12 frontend-only live release deliberately excluded this action until the backend route is deployed
 - Published without restart on 2026-05-06, then rolled back after regression:
   - codeblock copy overlay for read-only chat code blocks
   - local fallback workspace rename/delete action visibility when `owner_user_id = ""`

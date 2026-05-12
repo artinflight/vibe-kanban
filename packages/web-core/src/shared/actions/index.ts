@@ -73,8 +73,13 @@ import posthog from 'posthog-js';
 import { WorkspacesGuideDialog } from '@/shared/dialogs/shared/WorkspacesGuideDialog';
 import { SettingsDialog } from '@/shared/dialogs/settings/SettingsDialog';
 import { CreateWorkspaceFromPrDialog } from '@/shared/dialogs/command-bar/CreateWorkspaceFromPrDialog';
-import { buildWorkspaceCreateInitialState } from '@/shared/lib/workspaceCreateState';
+import {
+  DEFAULT_WORKSPACE_CREATE_DRAFT_ID,
+  buildWorkspaceCreateInitialState,
+  persistWorkspaceCreateDraft,
+} from '@/shared/lib/workspaceCreateState';
 import { setCreateModeSeedState } from '@/features/create-mode/model/createModeSeedStore';
+import type { CreateModeInitialState } from '@/shared/types/createMode';
 
 // Mirrored sidebar icon for right sidebar toggle
 const RightSidebarIcon: Icon = forwardRef<SVGSVGElement, IconProps>(
@@ -168,6 +173,38 @@ function navigateToCreateSubIssue(
     parentIssueId,
     assigneeIds: assigneeIds?.length ? assigneeIds : undefined,
   });
+}
+
+async function openWorkspaceCreateFromAction(
+  ctx: ActionExecutorContext,
+  initialState: CreateModeInitialState
+) {
+  const linkedIssue = initialState.linkedIssue;
+  if (linkedIssue?.remoteProjectId) {
+    const draftId = await persistWorkspaceCreateDraft(
+      initialState,
+      crypto.randomUUID(),
+      ctx.appRuntime
+    );
+    if (!draftId) {
+      throw new Error('Failed to prepare workspace draft');
+    }
+
+    ctx.appNavigation.goToProjectIssueWorkspaceCreate(
+      linkedIssue.remoteProjectId,
+      linkedIssue.issueId,
+      draftId
+    );
+    return;
+  }
+
+  setCreateModeSeedState(initialState);
+  void persistWorkspaceCreateDraft(
+    initialState,
+    DEFAULT_WORKSPACE_CREATE_DRAFT_ID,
+    ctx.appRuntime
+  );
+  ctx.appNavigation.goToWorkspacesCreate();
 }
 
 // All application actions
@@ -416,31 +453,30 @@ export const Actions = {
     requiresTarget: ActionTargetType.WORKSPACE,
     isVisible: (ctx) => ctx.hasWorkspace,
     execute: async (ctx, workspaceId) => {
-      try {
-        const [workspace, repos] = await Promise.all([
-          getWorkspace(ctx.queryClient, workspaceId),
-          workspacesApi.getRepos(workspaceId),
-        ]);
-        const linkedIssue = await resolveLinkedIssue(
-          workspaceId,
-          ctx.remoteWorkspaces
-        );
-
-        const createState = buildWorkspaceCreateInitialState({
-          prompt: null,
-          defaults: {
-            preferredRepos: repos.map((r) => ({
-              repo_id: r.id,
-              target_branch: workspace.branch,
-            })),
-          },
-          linkedIssue,
-        });
-        setCreateModeSeedState(createState);
-        ctx.appNavigation.goToWorkspacesCreate();
-      } catch {
-        ctx.appNavigation.goToWorkspacesCreate();
+      const [workspace, repos] = await Promise.all([
+        getWorkspace(ctx.queryClient, workspaceId),
+        workspacesApi.getRepos(workspaceId),
+      ]);
+      if (repos.length === 0) {
+        throw new Error('Cannot spin off a workspace with no repos configured');
       }
+
+      const linkedIssue = await resolveLinkedIssue(
+        workspaceId,
+        ctx.remoteWorkspaces
+      );
+
+      const createState = buildWorkspaceCreateInitialState({
+        prompt: null,
+        defaults: {
+          preferredRepos: repos.map((r) => ({
+            repo_id: r.id,
+            target_branch: workspace.branch,
+          })),
+        },
+        linkedIssue,
+      });
+      await openWorkspaceCreateFromAction(ctx, createState);
     },
   },
 

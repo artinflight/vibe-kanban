@@ -42,7 +42,22 @@
   - refuses to spin off a workspace with no repos configured
   - creates a durable workspace-create draft for linked project/issue workspaces and navigates to the project issue workspace-create route
   - still seeds the global workspace-create flow for unlinked workspaces
-- Not deployed live yet. The menu/spin-off pieces are frontend-only, but the current branch also contains the backend-backed manual unread action, so a live frontend-only deployment must either include a backend deploy for `/unread` or build a clean frontend patch that excludes `Mark unread`.
+- Deployed live without restarting VK in clean frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tworkspace-actions-spin-off`.
+- The live release was built from clean worktree `/tmp/vk-frontend-workspace-actions-20260512` pinned to the previous clean frontend boundary, with only:
+  - command menu target-workspace visibility fix
+  - spin-off durable draft/error-surfacing fix
+  - mobile chat autofocus suppression
+- The live frontend-only release intentionally excludes the manual unread action because the running backend still lacks `PUT /api/workspaces/:id/unread`.
+- Validation passed:
+  - `pnpm run format`
+  - `git diff --check`
+  - `pnpm --filter @vibe/web-core run check`
+  - `pnpm --filter @vibe/local-web run check`
+  - `pnpm --filter @vibe/local-web run build`
+  - live `GET /` references `/assets/index-BFwa8gDf.js`
+  - live JS/CSS assets return `200`
+  - live JS contains `spin-off-workspace` and `Cannot spin off a workspace with no repos configured`
+  - live JS does not contain `mark-workspace-unread`, `/unread`, or `Mark unread`
 
 ## 2026-05-11 Regression Lockdown / Deployment Queue
 

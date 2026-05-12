@@ -59,6 +59,27 @@
   - live JS contains `spin-off-workspace` and `Cannot spin off a workspace with no repos configured`
   - live JS does not contain `mark-workspace-unread`, `/unread`, or `Mark unread`
 
+## 2026-05-12 Issue Status Selector Repair
+
+- User reported the issue-page status control could no longer be clicked to change issue status.
+- Live browser check showed the old command-dialog status path could work, but the issue panel unnecessarily depended on global command/modal plumbing for a local property edit.
+- Source fix:
+  - `IssuePropertyRow` now renders the issue status as a native status selector when `onStatusChange` is supplied
+  - `KanbanIssuePanel` passes direct status changes through `onFormChange`
+  - `KanbanIssuePanelContainer` updates create-mode draft status directly and updates edit-mode issue `status_id` directly; the command-dialog status picker remains as a fallback path for non-direct interactions
+- Deployed live without restarting VK in clean frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tissue-status-selector`.
+- This live release also retains the earlier frontend-only workspace-action/spin-off/mobile-autofocus fixes and still excludes manual unread because the running backend lacks `PUT /api/workspaces/:id/unread`.
+- Validation passed:
+  - `pnpm run format`
+  - `pnpm --filter @vibe/ui run check`
+  - `pnpm --filter @vibe/web-core run check`
+  - `pnpm --filter @vibe/local-web run check`
+  - `git diff --check`
+  - clean release `pnpm --filter @vibe/local-web run build`
+  - live `GET /` references `/assets/index-lHRVY0wK.js` and `/assets/index-DgGNwRiN.css`
+  - live JS/CSS assets return `200`
+  - live browser test changed VL test issue `T8` from `todo` to `in_progress`, then restored it to `todo`, with both `PATCH /v1/issues/:id` requests confirmed
+
 ## 2026-05-11 Regression Lockdown / Deployment Queue
 
 - Live frontend is currently `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`.

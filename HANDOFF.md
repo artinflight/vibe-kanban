@@ -30,6 +30,20 @@
   - real mobile devices now render the chat editor with `autoFocus={false}` so opening a workspace does not summon the keyboard
 - Not deployed live yet. This is frontend-only and can ship with the next clean frontend asset release.
 
+## 2026-05-12 Workspace Actions / Spin-Off Repair
+
+- User reported `Spin off workspace` did nothing, then the workspace action menu regressed to only a small option set.
+- Menu root cause already fixed in source: `CommandBarDialog` must evaluate workspace action visibility against the clicked/sidebar target `workspaceId`, not the currently selected workspace or create-mode context.
+- Spin-off root cause found:
+  - the action swallowed all errors, so failed workspace/repo lookup or draft prep closed the menu with no visible result
+  - it only used transient create-mode seed state, which is fragile when invoked from project/issue workspace routes
+- Source fix prepared:
+  - spin-off now throws visible errors through the existing action error dialog
+  - refuses to spin off a workspace with no repos configured
+  - creates a durable workspace-create draft for linked project/issue workspaces and navigates to the project issue workspace-create route
+  - still seeds the global workspace-create flow for unlinked workspaces
+- Not deployed live yet. The menu/spin-off pieces are frontend-only, but the current branch also contains the backend-backed manual unread action, so a live frontend-only deployment must either include a backend deploy for `/unread` or build a clean frontend patch that excludes `Mark unread`.
+
 ## 2026-05-11 Regression Lockdown / Deployment Queue
 
 - Live frontend is currently `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`.

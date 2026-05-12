@@ -55,10 +55,11 @@
 - VK now uses an isolated Codex home at `/home/mcp/.local/share/vibe-kanban/codex-home`.
 - That isolation exists specifically to stop VK coding agents from sharing refresh-token rotation with tmux/interactive Codex sessions.
 - Refreshable frontend assets are active in live production through `/home/mcp/.config/systemd/user/vibe-kanban.service.d/frontend-dist.conf`.
-- Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tworkspace-actions-spin-off`.
+- Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tissue-status-selector`.
 - 2026-05-11 regression/deployment ledger:
   - deployed without VK restart from clean frontend asset build `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`: collapsed Kanban column count badge, compact horizontal mobile collapsed columns, and queued follow-up status polling
   - deployed without VK restart on 2026-05-12 from clean frontend asset build `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tworkspace-actions-spin-off`: command menu target-workspace visibility, spin-off workspace durable draft/error handling, and mobile chat autofocus suppression
+  - deployed without VK restart on 2026-05-12 from clean frontend asset build `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tissue-status-selector`: direct issue-page status selector plus the previous workspace-action/mobile fixes
   - backend restart/deploy completed on 2026-05-11 after backup `/home/mcp/backups/vk-pre-restart-20260511T144352Z`
   - deployed backend binary sha256 is `251d51ca5e831775768339c45addc6488b5298a138594accb944782db7dcc6a0`
   - deployed backend fixes: orphan queued-follow-up rejection, permanent stale sub-agent filtering, and `100 MB` prompt JSON body limits for workspace start/session follow-up/queued follow-up

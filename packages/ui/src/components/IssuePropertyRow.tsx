@@ -1,5 +1,10 @@
 import { cn } from '../lib/cn';
-import { PlusIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
+import {
+  CaretDownIcon,
+  PlusIcon,
+  UsersIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { PrimaryButton } from './PrimaryButton';
 import { IconButton } from './IconButton';
@@ -32,6 +37,7 @@ export interface IssuePropertyRowProps {
   onParentIssueClick?: () => void;
   onRemoveParentIssue?: () => void;
   onStatusClick: () => void;
+  onStatusChange?: (statusId: string) => void;
   onPriorityClick: () => void;
   onAssigneeClick: () => void;
   onAddClick?: () => void;
@@ -49,6 +55,7 @@ export function IssuePropertyRow({
   onParentIssueClick,
   onRemoveParentIssue,
   onStatusClick,
+  onStatusChange,
   onPriorityClick,
   onAssigneeClick,
   onAddClick,
@@ -59,16 +66,49 @@ export function IssuePropertyRow({
 
   return (
     <div className={cn('flex items-center gap-half flex-wrap', className)}>
-      <PrimaryButton
-        variant="tertiary"
-        onClick={onStatusClick}
-        disabled={disabled}
-      >
-        <StatusDot
-          color={statuses.find((s) => s.id === statusId)?.color ?? '0 0% 50%'}
-        />
-        {statuses.find((s) => s.id === statusId)?.name ?? 'Select status'}
-      </PrimaryButton>
+      {onStatusChange ? (
+        <label className="relative inline-flex min-h-cta items-center">
+          <StatusDot
+            color={
+              statuses.find((s) => s.id === statusId)?.color ?? '0 0% 50%'
+            }
+            className="pointer-events-none absolute left-base"
+          />
+          <select
+            value={statusId}
+            onChange={(event) => onStatusChange(event.currentTarget.value)}
+            disabled={disabled}
+            className={cn(
+              'min-h-cta appearance-none rounded-sm bg-panel py-half pl-8 pr-8 text-cta text-normal',
+              'hover:bg-secondary focus:outline-none focus:ring-1 focus:ring-brand',
+              disabled && 'cursor-not-allowed opacity-50'
+            )}
+          >
+            {statuses.map((status) => (
+              <option key={status.id} value={status.id}>
+                {status.name}
+              </option>
+            ))}
+          </select>
+          <CaretDownIcon
+            className="pointer-events-none absolute right-base size-icon-xs text-low"
+            weight="bold"
+          />
+        </label>
+      ) : (
+        <PrimaryButton
+          variant="tertiary"
+          onClick={onStatusClick}
+          disabled={disabled}
+        >
+          <StatusDot
+            color={
+              statuses.find((s) => s.id === statusId)?.color ?? '0 0% 50%'
+            }
+          />
+          {statuses.find((s) => s.id === statusId)?.name ?? 'Select status'}
+        </PrimaryButton>
+      )}
 
       <PrimaryButton
         variant="tertiary"

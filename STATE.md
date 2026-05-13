@@ -55,7 +55,8 @@
 - VK now uses an isolated Codex home at `/home/mcp/.local/share/vibe-kanban/codex-home`.
 - That isolation exists specifically to stop VK coding agents from sharing refresh-token rotation with tmux/interactive Codex sessions.
 - Refreshable frontend assets are active in live production through `/home/mcp/.config/systemd/user/vibe-kanban.service.d/frontend-dist.conf`.
-- Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tissue-status-selector`.
+- Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-rename`.
+- Live production frontend was advanced without a VK restart on 2026-05-13, adding the issue-view workspace-card Rename action while retaining the direct issue status selector release.
 - Scaleway CLI is installed at `/home/mcp/.local/bin/scw` (`2.55.0`) and initialized for project `fitRDY` (`cd72c9f8-12c2-4e5b-925d-94da82c9606d`), region `fr-par`, zone `fr-par-1`.
 - Scaleway credentials are stored in `/home/mcp/.config/scw/config.yaml`; never print or commit this file.
 - Scaleway SSH key `mcp-server-id_ed25519_mcp` (`d980864c-f353-4b3a-a4e7-ff9fc9d766be`) is registered from `/home/mcp/.ssh/id_ed25519_mcp.pub`.

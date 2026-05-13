@@ -8,7 +8,8 @@
   - `IssueWorkspacesSection` passes the rename action only for linked local workspaces owned by the current user, matching the existing open/delete ownership behavior.
   - `IssueWorkspacesSectionContainer` opens the existing `RenameWorkspaceDialog`, calls `workspacesApi.update(workspaceId, { name })`, invalidates workspace caches, and dispatches the project workspace refresh event so the issue view updates without a page reload.
   - issue workspace cards prefer the resolved local workspace name when a local workspace is linked, so local fallback project rows show the new name immediately after rename.
-- This is frontend-only and does not require a VK backend restart.
+- Deployed live without restarting VK in frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-rename`.
+- Live `GET /` references `/assets/index-D2W033ux.js`; that JS contains the rename action and cache invalidation wiring.
 
 ## 2026-05-13 Scaleway CLI / SSH Setup
 

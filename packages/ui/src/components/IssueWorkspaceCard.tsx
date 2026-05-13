@@ -6,6 +6,7 @@ import {
   LinkBreakIcon,
   PencilSimpleIcon,
   TrashIcon,
+  ArchiveIcon,
   PlayIcon,
   HandIcon,
   TriangleIcon,
@@ -50,6 +51,7 @@ export interface IssueWorkspaceCardProps {
   workspace: WorkspaceWithStats;
   onClick?: () => void;
   onRename?: () => void;
+  onArchive?: () => void;
   onUnlink?: () => void;
   onDelete?: () => void;
   showOwner?: boolean;
@@ -113,6 +115,7 @@ export function IssueWorkspaceCard({
   workspace,
   onClick,
   onRename,
+  onArchive,
   onUnlink,
   onDelete,
   showOwner = true,
@@ -169,7 +172,7 @@ export function IssueWorkspaceCard({
               className="h-5 w-5 text-[10px] border-2 border-panel"
             />
           )}
-          {(onRename || onUnlink || onDelete) && (
+          {(onRename || onArchive || onUnlink || onDelete) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -193,6 +196,21 @@ export function IssueWorkspaceCard({
                   >
                     <PencilSimpleIcon className="size-icon-xs" />
                     {t('workspaces.rename.action')}
+                  </DropdownMenuItem>
+                )}
+                {onArchive && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onArchive();
+                    }}
+                  >
+                    <ArchiveIcon className="size-icon-xs" />
+                    {workspace.archived
+                      ? t('workspaces.unarchive', {
+                          defaultValue: 'Unarchive',
+                        })
+                      : t('workspaces.archive')}
                   </DropdownMenuItem>
                 )}
                 {onUnlink && (

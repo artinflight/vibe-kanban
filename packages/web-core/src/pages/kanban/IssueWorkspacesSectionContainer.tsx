@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useParams } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { LinkIcon, PlusIcon } from '@phosphor-icons/react';
 import { useProjectContext } from '@/shared/hooks/useProjectContext';
@@ -10,6 +11,8 @@ import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useProjectWorkspaceCreateDraft } from '@/shared/hooks/useProjectWorkspaceCreateDraft';
 import { workspacesApi } from '@/shared/lib/api';
+import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
+import { dispatchWorkspaceLinkRefresh } from '@/shared/lib/workspaceLinkRefresh';
 import { getWorkspaceDefaults } from '@/shared/lib/workspaceDefaults';
 import {
   buildLinkedIssueCreateState,
@@ -19,6 +22,7 @@ import {
 } from '@/shared/lib/workspaceCreateState';
 import { ConfirmDialog } from '@vibe/ui/components/ConfirmDialog';
 import { DeleteWorkspaceDialog } from '@vibe/ui/components/DeleteWorkspaceDialog';
+import { RenameWorkspaceDialog } from '@vibe/ui/components/RenameWorkspaceDialog';
 import type { WorkspaceWithStats } from '@vibe/ui/components/IssueWorkspaceCard';
 import { IssueWorkspacesSection } from '@vibe/ui/components/IssueWorkspacesSection';
 import type { SectionAction } from '@vibe/ui/components/CollapsibleSectionHeader';
@@ -74,6 +78,7 @@ export function IssueWorkspacesSectionContainer({
 }: IssueWorkspacesSectionContainerProps) {
   const { t } = useTranslation('common');
   const { projectId } = useParams({ strict: false });
+  const queryClient = useQueryClient();
   const appNavigation = useAppNavigation();
   const { openWorkspaceCreateFromState } = useProjectWorkspaceCreateDraft();
   const { userId } = useAuth();
@@ -138,7 +143,7 @@ export function IssueWorkspacesSectionContainer({
       return {
         id: workspace.id,
         localWorkspaceId: resolvedLocalWorkspaceId,
-        name: workspace.name,
+        name: localWorkspace?.name ?? workspace.name,
         archived: workspace.archived,
         filesChanged: workspace.files_changed ?? 0,
         linesAdded: workspace.lines_added ?? 0,
@@ -256,6 +261,36 @@ export function IssueWorkspacesSectionContainer({
     [projectId, issueId, appNavigation]
   );
 
+  // Handle renaming a linked local workspace from the issue view
+  const handleRenameWorkspace = useCallback(
+    async (localWorkspaceId: string) => {
+      const localWorkspace = localWorkspacesById.get(localWorkspaceId);
+      if (!localWorkspace) {
+        await ConfirmDialog.show({
+          title: t('common:error'),
+          message: t('workspaces.notFound'),
+          confirmText: t('common:ok'),
+          showCancelButton: false,
+        });
+        return;
+      }
+
+      await RenameWorkspaceDialog.show({
+        currentName: localWorkspace.name || localWorkspace.branch,
+        onRename: async (newName) => {
+          await workspacesApi.update(localWorkspaceId, { name: newName });
+          void queryClient.invalidateQueries({ queryKey: ['workspaceRecord'] });
+          void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+          void queryClient.invalidateQueries({
+            queryKey: workspaceSummaryKeys.all,
+          });
+          dispatchWorkspaceLinkRefresh({ projectId });
+        },
+      });
+    },
+    [localWorkspacesById, projectId, queryClient, t]
+  );
+
   // Handle unlinking a workspace from the issue
   const handleUnlinkWorkspace = useCallback(
     async (localWorkspaceId: string) => {
@@ -359,6 +394,7 @@ export function IssueWorkspacesSectionContainer({
       actions={actions}
       onWorkspaceClick={handleWorkspaceClick}
       onCreateWorkspace={handleAddWorkspace}
+      onRenameWorkspace={handleRenameWorkspace}
       onUnlinkWorkspace={handleUnlinkWorkspace}
       onDeleteWorkspace={handleDeleteWorkspace}
       shouldAnimateCreateButton={shouldAnimateCreateButton}

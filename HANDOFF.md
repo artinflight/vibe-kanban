@@ -1,5 +1,34 @@
 # HANDOFF.md
 
+## 2026-05-13 Default Project Columns Repair
+
+- User reported default columns for new projects disappeared.
+- Root cause:
+  - frontend project repo-default saves could create or preserve `PROJECT_REPO_DEFAULTS` rows with `statuses: []`
+  - backend local fallback still used the old five-column template when a project had no saved status config
+  - result: new or empty-config projects could show only `To do`, `In progress`, `In review`, `Done`, and hidden `Cancelled`
+- Operator default template is now documented and guarded: `To do`, `In progress`, `On Hold`, `Long Running`, `In review`, hidden `Cancelled`, `To merge`, `In Staging`, `Hotfix Path`, `Done`.
+- Live DB repair:
+  - took backup `/home/mcp/backups/vk-pre-default-columns-fix-20260513T221338Z.sqlite`
+  - backfilled full status templates for `CodexUsage`, `Monitor local`, `LifeOS`, and `Operations`
+  - verified live `/v1/fallback/project_statuses` returns the full ten-column template for all four projects
+- Source repair:
+  - `packages/web-core/src/shared/hooks/useProjectRepoDefaults.ts` seeds/saves the full status template instead of `[]` when repo defaults are created or repaired
+  - `crates/server/src/routes/local_compat.rs` uses the same operator template for empty local status configs
+  - added local compat tests for the default status list and empty-config fallback
+- Deployed live without restarting VK in frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tdefault-project-columns`.
+- Live `GET /` references `/assets/index-DiSUCc_7.js`; backend PID stayed `913128`.
+- Backend fallback source fix is not live until the next approved backend restart, but the repaired live DB rows and frontend guard cover the reported disappearing-column path now.
+- Validation passed:
+  - `pnpm run format`
+  - `pnpm --filter @vibe/web-core run check`
+  - `pnpm --filter @vibe/local-web run check`
+  - `pnpm --filter @vibe/local-web run build`
+  - `cargo test -p server local_default_statuses`
+  - `cargo test -p server routes::local_compat::tests`
+  - `git diff --check`
+  - live asset returned `200` and contains `Long Running` / `Hotfix Path`
+
 ## 2026-05-13 Agent Chat Image Sharing
 
 - User asked whether agents can share images directly in chat.

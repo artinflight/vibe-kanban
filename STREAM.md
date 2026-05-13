@@ -43,6 +43,7 @@
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tkanban-drag-persist`: Kanban card drag status/order persistence through `ProjectContext.updateIssues`
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-archive-repo-defaults`: issue-view workspace Archive/Unarchive plus project-scoped repo default fallback
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tagent-chat-images`: inline rendering for agent/shared chat images from `.vibe-attachments/` markdown references
+  - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tdefault-project-columns`: prevents repo-default saves from erasing the operator default project columns
   - deployed backend restart on 2026-05-11: orphan queued-message guard, stale sub-agent filtering, prompt JSON body limit raised to `100 MB`
 - Manual workspace unread is a backend-backed feature, not a frontend-only flag: it must set the latest coding-agent turn `seen = 0` and invalidate workspace summaries so all existing needs-review markers update consistently.
 
@@ -92,6 +93,8 @@
   - issue-view workspace cards now expose Archive/Unarchive in the three-dot menu; project-linked workspace creation no longer uses global recent repo fallback and can infer exact project/repo matches; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-archive-repo-defaults`
   - agents can now share workspace images directly in chat by writing them under `.vibe-attachments/` and replying with markdown image syntax; read-only chat renders those images inline from `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tagent-chat-images`
   - generated workspace-level `AGENTS.md` and `CLAUDE.md` now include the image-sharing instruction in source, and 149 existing generated root config files were backfilled without restart
+  - project repo-default saves now seed/preserve the full operator status template instead of writing `statuses: []`; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tdefault-project-columns`
+  - live DB repair filled the full operator template for `CodexUsage`, `Monitor local`, `LifeOS`, and `Operations` after backup `/home/mcp/backups/vk-pre-default-columns-fix-20260513T221338Z.sqlite`
   - backend orphan-queue prevention is live: `POST /api/sessions/:id/queue` rejects queue creation unless a non-dropped running queue-consumer execution exists for that session
   - prompt JSON body limits are live for workspace start, direct follow-up, and queued follow-up routes; this removes the practical long-prompt/workspace-start cap up to `100 MB`
   - 2026-05-11 refreshable frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tqueue-status-refresh` was rolled back after production VK crashed during an event-stream storm
@@ -135,6 +138,11 @@
   - when `projectId` is present, never use a globally recent workspace repo as the default
   - use explicit project repo defaults, exact project/repo inference, or same-project recency only
   - keep `GET /api/projects/:project_id/repos` in the backend deploy queue until the next approved restart makes it live
+- Default project columns must not regress:
+  - the operator template is `To do`, `In progress`, `On Hold`, `Long Running`, `In review`, hidden `Cancelled`, `To merge`, `In Staging`, `Hotfix Path`, `Done`
+  - do not write `PROJECT_REPO_DEFAULTS.statuses: []` from repo-default save flows
+  - backend local fallback must use the same operator template for projects with no saved status config
+  - verify with `cargo test -p server routes::local_compat::tests` and a live `/v1/fallback/project_statuses` check before claiming the default-column path is safe
 - Release verification must not regress:
   - before any deploy/restart, write the feature manifest and smoke plan to `HANDOFF.md`
   - after any deploy/restart, verify active/archived project counts and order, intended left-nav actions, issue workspace menu actions, project repo defaults, needs-review markers, collapsed Kanban counts/mobile layout, Kanban drag persistence, queue reconciliation, workspace action menu completeness, issue status selector, codeblock copy, and attachment feedback

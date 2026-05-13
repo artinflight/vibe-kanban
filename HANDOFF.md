@@ -1885,3 +1885,17 @@ User QA checklist for the no-restart frontend repair:
   - proves running coding-agent and completed non-coding turns are ignored by the completed-only helper
   - proves the lower-level UUID binding helper updates a UUID-stored row
 - Added `tokio` as a `db` dev-dependency for the async DB test.
+
+2026-05-13 Kanban drag persistence hotfix:
+
+- User reported dragging an issue card to another Kanban column looked like it worked, then bounced back shortly after.
+- Live backend bulk issue updates were verified directly against VL issue `T8`: moving `todo -> in_progress` persisted, then the test issue was restored to `todo`.
+- Root cause was frontend-side: `KanbanContainer` built the bulk update payload by mutating `newItems` inside a React `setItems` updater, then called raw `bulkUpdateIssues`. If the updater side effect was not available synchronously or the Electric collection refreshed first, the move could be shown locally without a durable issue mutation and then be overwritten by the next synced snapshot.
+- Source fix:
+  - `ProjectContext` now exposes `updateIssues`
+  - Kanban drag computes `newItems` synchronously from current `items`
+  - drag persistence uses the project issue mutation collection (`updateIssues(...).persisted`) so optimistic state, fallback refresh, and bulk `/v1/issues/bulk` persistence stay aligned
+  - failed mutations restore the previous board state immediately
+- Live frontend-only deploy: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tkanban-drag-persist`, asset `/assets/index-CmLP2jfq.js`.
+- No VK restart; `vibe-kanban.service` PID stayed `913128`.
+- Validation: `pnpm --filter @vibe/web-core run check`; `pnpm --filter @vibe/local-web run check`; `pnpm run format`; `pnpm --filter @vibe/local-web run build`; `https://vibe.local/` serves `/assets/index-CmLP2jfq.js`; live JS contains the `updateIssues` drag mutation path; `/api/info` OK.

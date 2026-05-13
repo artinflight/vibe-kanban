@@ -55,8 +55,8 @@
 - VK now uses an isolated Codex home at `/home/mcp/.local/share/vibe-kanban/codex-home`.
 - That isolation exists specifically to stop VK coding agents from sharing refresh-token rotation with tmux/interactive Codex sessions.
 - Refreshable frontend assets are active in live production through `/home/mcp/.config/systemd/user/vibe-kanban.service.d/frontend-dist.conf`.
-- Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-rename`.
-- Live production frontend was advanced without a VK restart on 2026-05-13, adding the issue-view workspace-card Rename action while retaining the direct issue status selector release.
+- Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tkanban-drag-persist`.
+- Live production frontend was advanced without a VK restart on 2026-05-13, adding the Kanban drag persistence fix while retaining the issue-view workspace-card Rename action and direct issue status selector release.
 - Scaleway CLI is installed at `/home/mcp/.local/bin/scw` (`2.55.0`) and initialized for project `fitRDY` (`cd72c9f8-12c2-4e5b-925d-94da82c9606d`), region `fr-par`, zone `fr-par-1`.
 - Scaleway credentials are stored in `/home/mcp/.config/scw/config.yaml`; never print or commit this file.
 - Scaleway SSH key `mcp-server-id_ed25519_mcp` (`d980864c-f353-4b3a-a4e7-ff9fc9d766be`) is registered from `/home/mcp/.ssh/id_ed25519_mcp.pub`.
@@ -83,6 +83,11 @@
   - the currently mounted workspace must not auto-clear unseen state merely because `has_unseen_turns` appeared; explicit workspace selection/navigation is the clear action
   - failed/killed/interrupted terminal states must not create project-column needs-review markers
   - manual unread must only revive the latest non-dropped coding-agent turn for the workspace; it must not mark older, dropped, setup, cleanup, archive, or unrelated workspace turns unread
+- Kanban card drag persistence invariant:
+  - card moves must compute the next board state synchronously before `setItems`
+  - card moves must persist through `ProjectContext.updateIssues`, not a raw API call from `KanbanContainer`
+  - failed persistence must restore the previous board state instead of waiting for a later sync bounce
+  - live release for this invariant is `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tkanban-drag-persist`, asset `/assets/index-CmLP2jfq.js`
 - Sub-agent preservation invariant:
   - a successful Codex `collabAgentToolCall` / `spawnAgent` event creates durable child work even if VK does not receive a normalized `spawn_agent` tool entry
   - VK must persist spawned child thread IDs from raw stdout/log events and from Codex `thread_spawn_edges`
@@ -266,6 +271,9 @@
   - successful agent completion must re-mark a previously seen running turn as unseen
   - frontend code must not immediately mark the current workspace seen just because a summary poll reports new unseen activity
   - regression coverage belongs in `cargo test -p db` for UUID binding and in live/API smoke checks for `/api/workspaces/summaries`
+- Do not bypass the project issue mutation collection for Kanban card drags:
+  - raw `bulkUpdateIssues` calls from `KanbanContainer` can fall out of sync with the optimistic project issue collection
+  - drag updates must keep local board state, Electric/fallback refresh, and `/v1/issues/bulk` persistence on the same mutation path
 - Do not let queued follow-up state rely only on push/update events:
   - queue status must self-heal by polling while `queued`
   - the backend must not accept a queued follow-up unless a real running execution exists to consume it

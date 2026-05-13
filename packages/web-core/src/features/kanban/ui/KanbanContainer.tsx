@@ -32,10 +32,6 @@ import {
   PRIORITY_ORDER,
 } from '../model/hooks/useKanbanFilters';
 import {
-  bulkUpdateIssues,
-  type BulkUpdateIssueItem,
-} from '@/shared/lib/remoteApi';
-import {
   CaretLeftIcon,
   DotsThreeIcon,
   HandIcon,
@@ -73,7 +69,7 @@ import { IssueListView } from '@vibe/ui/components/IssueListView';
 import { CommandBarDialog } from '@/shared/dialogs/command-bar/CommandBarDialog';
 import { KanbanFiltersDialog } from '@/shared/dialogs/kanban/KanbanFiltersDialog';
 import { SearchableTagDropdownContainer } from '@/shared/components/SearchableTagDropdownContainer';
-import type { IssuePriority } from 'shared/remote-types';
+import type { IssuePriority, UpdateIssueRequest } from 'shared/remote-types';
 import { useIssueMultiSelect } from '@/shared/hooks/useIssueMultiSelect';
 import { useIssueSelectionStore } from '@/shared/stores/useIssueSelectionStore';
 import { BulkActionBarContainer } from './BulkActionBarContainer';
@@ -699,6 +695,7 @@ export function KanbanContainer() {
     getWorkspacesForIssue,
     getRelationshipsForIssue,
     issuesById,
+    updateIssues,
     insertIssueTag,
     removeIssueTag,
     insertTag,
@@ -1337,31 +1334,37 @@ export function KanbanContainer() {
       const destId = destination.droppableId;
       const isCrossColumn = sourceId !== destId;
 
-      // Update local state and capture new items for bulk update
-      let newItems: Record<string, string[]> = {};
-      setItems((prev) => {
-        const sourceItems = [...(prev[sourceId] ?? [])];
-        const [moved] = sourceItems.splice(source.index, 1);
+      const previousItems = items;
+      const sourceItems = [...(previousItems[sourceId] ?? [])];
+      const [moved] = sourceItems.splice(source.index, 1);
+      if (!moved) {
+        return;
+      }
 
-        if (!isCrossColumn) {
-          // Within-column reorder
-          sourceItems.splice(destination.index, 0, moved);
-          newItems = { ...prev, [sourceId]: sourceItems };
-        } else {
-          // Cross-column move
-          const destItems = [...(prev[destId] ?? [])];
-          destItems.splice(destination.index, 0, moved);
-          newItems = {
-            ...prev,
+      const newItems: Record<string, string[]> = isCrossColumn
+        ? {
+            ...previousItems,
             [sourceId]: sourceItems,
-            [destId]: destItems,
+            [destId]: [
+              ...(previousItems[destId] ?? []).slice(0, destination.index),
+              moved,
+              ...(previousItems[destId] ?? []).slice(destination.index),
+            ],
+          }
+        : {
+            ...previousItems,
+            [sourceId]: [
+              ...sourceItems.slice(0, destination.index),
+              moved,
+              ...sourceItems.slice(destination.index),
+            ],
           };
-        }
-        return newItems;
-      });
 
       // Build bulk updates for all issues in affected columns
-      const updates: BulkUpdateIssueItem[] = [];
+      const updates: Array<{
+        id: string;
+        changes: Partial<UpdateIssueRequest>;
+      }> = [];
 
       // Always update destination column
       const destIssueIds = newItems[destId] ?? [];
@@ -1388,20 +1391,28 @@ export function KanbanContainer() {
         });
       }
 
-      // Perform bulk update
       isSyncingRef.current = true;
-      bulkUpdateIssues(updates)
-        .catch((err) => {
-          console.error('Failed to bulk update sort order:', err);
-        })
-        .finally(() => {
-          // Delay clearing flag to let Electric sync complete
-          setTimeout(() => {
-            isSyncingRef.current = false;
-          }, 500);
-        });
+      setItems(newItems);
+
+      try {
+        updateIssues(updates)
+          .persisted.catch((err) => {
+            console.error('Failed to bulk update sort order:', err);
+            setItems(previousItems);
+          })
+          .finally(() => {
+            // Delay clearing flag to let Electric sync complete
+            setTimeout(() => {
+              isSyncingRef.current = false;
+            }, 500);
+          });
+      } catch (err) {
+        console.error('Failed to bulk update sort order:', err);
+        setItems(previousItems);
+        isSyncingRef.current = false;
+      }
     },
-    [kanbanFilters.sortField, calculateSortOrder]
+    [kanbanFilters.sortField, calculateSortOrder, items, updateIssues]
   );
 
   // Multi-select support

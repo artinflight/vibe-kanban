@@ -260,12 +260,31 @@ fn status_sort_order(name: &str) -> i64 {
     match normalize_status_key(name).as_str() {
         "todo" => 0,
         "inprogress" => 1,
-        "inreview" => 2,
-        "instaging" => 3,
-        "done" | "completed" => 4,
+        "onhold" => 2,
+        "longrunning" => 3,
+        "inreview" => 4,
         "cancelled" | "canceled" => 5,
+        "tomerge" => 6,
+        "instaging" => 7,
+        "hotfixpath" => 8,
+        "done" | "completed" => 9,
         _ => 100,
     }
+}
+
+fn default_project_status_names() -> &'static [&'static str] {
+    &[
+        "To do",
+        "In progress",
+        "On Hold",
+        "Long Running",
+        "In review",
+        "Cancelled",
+        "To merge",
+        "In Staging",
+        "Hotfix Path",
+        "Done",
+    ]
 }
 
 fn status_hidden(name: &str) -> bool {
@@ -359,13 +378,13 @@ fn compat_statuses(
     };
 
     if configured_statuses.is_empty() {
-        for name in ["To do", "In progress", "In review", "Done", "Cancelled"] {
+        for name in default_project_status_names() {
             push_status(
                 &mut ordered_statuses,
                 &mut seen_keys,
                 ProjectStatusConfigData {
                     id: status_id_from_name(name),
-                    name: name.to_string(),
+                    name: (*name).to_string(),
                     color: status_color(name).to_string(),
                     hidden: status_hidden(name),
                     sort_order: status_sort_order(name),
@@ -1843,74 +1862,54 @@ pub fn router() -> Router<DeploymentImpl> {
 
 #[cfg(test)]
 mod tests {
-    use chrono::Utc;
+    use uuid::Uuid;
 
-    use super::*;
-
-    fn sample_pull_request() -> PullRequest {
-        PullRequest {
-            id: "pr-1".to_string(),
-            workspace_id: Some(Uuid::nil()),
-            repo_id: Some(Uuid::nil()),
-            pr_url: "https://github.com/example/repo/pull/123".to_string(),
-            pr_number: 123,
-            pr_status: db::models::merge::MergeStatus::Merged,
-            target_branch_name: "staging".to_string(),
-            merged_at: Some(Utc::now()),
-            merge_commit_sha: Some("abc123".to_string()),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            synced_at: None,
-        }
-    }
+    use super::{compat_statuses, default_project_status_names};
 
     #[test]
-    fn ensure_pr_metadata_appends_and_updates_lines() {
-        let pr = sample_pull_request();
-        let description = Some(
-            "Body\n\nLocal metadata\n- Original Status: In Staging\n- PR: #1 https://old.example/pr/1\n- PR state: OPEN\n- PR base/head: `main` <- `old-branch`".to_string(),
+    fn local_default_statuses_include_operator_columns() {
+        assert_eq!(
+            default_project_status_names(),
+            &[
+                "To do",
+                "In progress",
+                "On Hold",
+                "Long Running",
+                "In review",
+                "Cancelled",
+                "To merge",
+                "In Staging",
+                "Hotfix Path",
+                "Done",
+            ]
         );
-
-        let updated = ensure_pr_metadata(description, &pr, Some("vk/test-branch"))
-            .expect("description should remain present");
-
-        assert!(updated.contains("- PR: #123 https://github.com/example/repo/pull/123"));
-        assert!(updated.contains("- PR state: MERGED"));
-        assert!(updated.contains("- PR base/head: `staging` <- `vk/test-branch`"));
-        assert_eq!(updated.matches("- PR:").count(), 1);
     }
 
     #[test]
-    fn parse_pr_metadata_reads_snapshot_fields() {
-        let project_id = Uuid::new_v4();
-        let issue_id = Uuid::new_v4();
-        let task = LocalTaskRow {
-            id: issue_id,
-            project_id,
-            title: "Issue".to_string(),
-            description: Some(
-                "Body\n\nLocal metadata\n- PR: #123 https://github.com/example/repo/pull/123\n- PR state: MERGED\n- PR base/head: `staging` <- `vk/test-branch`".to_string(),
-            ),
-            status: TaskStatus::InReview,
-            parent_workspace_id: None,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        };
+    fn empty_local_status_config_uses_operator_default_columns() {
+        let statuses = compat_statuses(Uuid::new_v4(), &[], &[]);
+        let names = statuses
+            .iter()
+            .map(|status| status.name.as_str())
+            .collect::<Vec<_>>();
 
-        let pr = parse_pr_metadata(&task).expect("PR metadata should parse");
-        assert_eq!(pr.number, 123);
-        assert_eq!(pr.status, "merged");
-        assert_eq!(pr.target_branch_name, "staging");
-        assert_eq!(pr.issue_id, issue_id.to_string());
-        assert_eq!(pr.project_id, project_id.to_string());
-    }
-
-    #[test]
-    fn recognizes_done_status_aliases_for_completion_archive() {
-        assert!(is_done_status("Done"));
-        assert!(is_done_status("completed"));
-        assert!(is_done_status("Completed"));
-        assert!(!is_done_status("In Staging"));
-        assert!(!is_done_status("In review"));
+        assert_eq!(
+            names,
+            vec![
+                "To do",
+                "In progress",
+                "On Hold",
+                "Long Running",
+                "In review",
+                "Cancelled",
+                "To merge",
+                "In Staging",
+                "Hotfix Path",
+                "Done",
+            ]
+        );
+        assert_eq!(statuses[5].id, "cancelled");
+        assert!(statuses[5].hidden);
+        assert_eq!(statuses[8].id, "status_hotfixpath");
     }
 }

@@ -139,6 +139,13 @@
   - post-restart smoke verified an orphan queued follow-up returns `409`
   - post-restart smoke verified a `3 MB` queued prompt reaches the route and returns the expected `409`, proving the old small JSON body limit is no longer blocking that path
   - a 2026-05-11 refreshable frontend asset swap to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tqueue-status-refresh` was rolled back after production VK crashed during an event-stream storm
+- Queued follow-up no-op completion invariant:
+  - if a coding-agent run makes no changes and VK skips cleanup, it must still consume and start any queued follow-up before finalizing the task
+  - normal finalization, skipped-cleanup finalization, and parallel-setup completion must all use one queued-follow-up consumption helper
+  - do not reintroduce a direct `finalize_task` call on the skipped-cleanup path before checking the queue
+  - `pnpm run ops:check` must fail if the normal, skipped-cleanup, or parallel-setup queue consumption paths disappear
+  - live source repair is prepared in `crates/local-deployment/src/container.rs` but requires the next approved backend restart to take effect
+  - queued messages are in-memory; before any restart, capture live queued statuses and preserve/replay queued prompts deliberately
 - The permanent local issue-link fallback is merged in the repo:
   - main hotfix PR `#44` merged at `21815da2b9bbdd57f5711cfe9e6c481fa0aeb2ae`
   - staging backfill PR `#45` merged at `24a2dbe3ad5b7457beea772c4cbe6ea0a070944f`

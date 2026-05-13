@@ -658,11 +658,12 @@ impl LocalContainerService {
                             container.finalize_task(&ctx).await;
                         }
                         if queued_follow_up_outcome.should_finalize()
-                            && let Err(e) = CodingAgentTurn::mark_unseen_by_execution_process_id(
-                                &db.pool,
-                                ctx.execution_process.id,
-                            )
-                            .await
+                            && let Err(e) =
+                                CodingAgentTurn::mark_completed_unseen_by_execution_process_id(
+                                    &db.pool,
+                                    ctx.execution_process.id,
+                                )
+                                .await
                         {
                             tracing::warn!(
                                 "Failed to mark coding agent turn unseen for execution {}: {}",
@@ -1163,8 +1164,7 @@ impl LocalContainerService {
             );
         }
 
-        let queued_data = queued_msg.into_follow_up_data();
-        if let Err(e) = self.start_queued_follow_up(ctx, &queued_data).await {
+        if let Err(e) = self.start_queued_follow_up(ctx, &queued_msg.data).await {
             tracing::error!("Failed to start queued follow-up: {}", e);
             return QueuedFollowUpOutcome::FailedToStart;
         }

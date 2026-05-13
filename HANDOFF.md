@@ -1,5 +1,26 @@
 # HANDOFF.md
 
+## 2026-05-13 Queue Regression Repaired In Source
+
+- User reported queued follow-ups regressed again.
+- Root cause: historical fix `f8524d79f` was present in git history but its behavior had disappeared from current `crates/local-deployment/src/container.rs`.
+- Broken path:
+  - when a coding-agent run made no changes, VK skipped the cleanup action
+  - that bypass path finalized the task immediately
+  - it did not consume an already queued follow-up first
+  - result: queued prompt could remain queued and never start
+- Source repair:
+  - restored a shared `consume_queued_follow_up` helper
+  - normal finalization, skipped-cleanup finalization, and parallel-setup completion all use the same queued-follow-up consumption path
+  - skipped-cleanup finalization now starts queued follow-up before finalizing the completed turn
+  - `scripts/check-ops-playbook.mjs` now fails `pnpm run ops:check` if the three required queue consumption paths disappear again
+- Validation passed:
+  - `pnpm run format`
+  - `pnpm run ops:check`
+  - `cargo check -p local-deployment`
+- Not deployed live yet. This is backend runtime behavior and requires a backend build/restart after explicit approval.
+- Live caution: queued follow-ups are currently in-memory. Before any restart, capture live queued messages from `/api/sessions/:id/queue` and replay or preserve them intentionally; otherwise a restart can drop queued prompts.
+
 ## 2026-05-13 Regression Prevention Gate
 
 - User asked what must change so fixed VK features stop disappearing after later work.

@@ -1,5 +1,32 @@
 # HANDOFF.md
 
+## 2026-05-13 Scaleway CLI / SSH Setup
+
+- Installed Scaleway CLI `scw` version `2.55.0` to `/home/mcp/.local/bin/scw`.
+- CLI config lives at `/home/mcp/.config/scw/config.yaml` with `0600` permissions. Do not print or commit this file; it contains the Scaleway secret key.
+- Configured default project/organization `cd72c9f8-12c2-4e5b-925d-94da82c9606d` (`fitRDY`), default region `fr-par`, and default zone `fr-par-1`.
+- Verified auth with `scw account project list`; it returned project `fitRDY`.
+- Registered existing SSH public key `/home/mcp/.ssh/id_ed25519_mcp.pub` with Scaleway IAM:
+  - key name `mcp-server-id_ed25519_mcp`
+  - key ID `d980864c-f353-4b3a-a4e7-ff9fc9d766be`
+  - project ID `cd72c9f8-12c2-4e5b-925d-94da82c9606d`
+- SSH local setup:
+  - `~/.ssh` set to `0700`
+  - `~/.ssh/id_ed25519_mcp` set to `0600`
+  - `~/.ssh/id_ed25519_mcp.pub` set to `0644`
+  - backed up SSH config to `/home/mcp/.ssh/config.bak.scaleway-20260513T112056Z`
+  - added `Include scaleway.config` to `/home/mcp/.ssh/config`
+  - generated `/home/mcp/.ssh/scaleway.config`
+- There were no Scaleway instances in the default project at setup time, so `/home/mcp/.ssh/scaleway.config` is currently empty. After creating instances, rerun:
+  - `scw instance ssh install-config zone=all`
+- Validation passed:
+  - `scw version`
+  - `scw info`
+  - `scw account project list`
+  - `scw iam ssh-key list`
+  - `scw iam ssh-key get d980864c-f353-4b3a-a4e7-ff9fc9d766be`
+  - `scw instance server list`
+
 ## 2026-05-11 Manual Workspace Unread Marker
 
 - User requested a way to mark a workspace unread after glancing at it so the needs-review marker returns as a later review reminder.

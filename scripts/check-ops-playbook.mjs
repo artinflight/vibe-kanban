@@ -32,6 +32,7 @@ const readUtf8 = (relPath) =>
 if (errors.length === 0) {
   const agents = readUtf8('AGENTS.md');
   const readme = readUtf8('README.md');
+  const localContainer = readUtf8('crates/local-deployment/src/container.rs');
 
   const requiredAgentRefs = [
     'STATE.md',
@@ -60,6 +61,24 @@ if (errors.length === 0) {
     if (!readme.includes(ref)) {
       errors.push(`README.md must reference ${ref}`);
     }
+  }
+
+  const queuedFollowUpConsumerCount = (
+    localContainer.match(/consume_queued_follow_up\(&ctx\)\.await/g) ?? []
+  ).length;
+  if (queuedFollowUpConsumerCount < 3) {
+    errors.push(
+      'container.rs must consume queued follow-ups from normal finalization, skipped-cleanup finalization, and parallel setup completion'
+    );
+  }
+
+  const skippedCleanupBlock = localContainer.match(
+    /Skipping cleanup script for workspace[\s\S]*?already_finalized = true;/
+  )?.[0];
+  if (!skippedCleanupBlock?.includes('consume_queued_follow_up(&ctx).await')) {
+    errors.push(
+      'skipped-cleanup/no-op coding-agent path must consume queued follow-up before finalizing'
+    );
   }
 }
 

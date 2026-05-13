@@ -146,6 +146,10 @@
   - do not rely on a missed completion/websocket event as the only way to clear `queued`
   - keep queue-status polling active while status is `queued`
   - reject/cancel queue creation if there is no running queue consumer for that session
+  - consume queued follow-ups before finalizing skipped-cleanup/no-op coding-agent runs
+  - keep normal finalization, skipped-cleanup finalization, and parallel-setup completion on the shared queued-follow-up helper
+  - keep the `ops:check` source guard that fails when these queue consumption paths disappear
+  - do not restart while queued messages exist unless they have been captured and can be replayed, because the queue is in-memory
   - verify with `cargo test -p db queue_consumer_requires_running_non_dropped_follow_up_process`
 
 ## Next Safe Steps

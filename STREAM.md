@@ -147,6 +147,7 @@
   - before any deploy/restart, write the feature manifest and smoke plan to `HANDOFF.md`
   - after any deploy/restart, verify active/archived project counts and order, intended left-nav actions, issue workspace menu actions, project repo defaults, needs-review markers, collapsed Kanban counts/mobile layout, Kanban drag persistence, queue reconciliation, workspace action menu completeness, issue status selector, codeblock copy, and attachment feedback
   - if any smoke item cannot be tested, record it as unverified instead of implying the deploy is safe
+  - current read-only live smoke command is `python3 scripts/vk_live_regression_smoke.py`; keep it updated when intentional project order/count changes happen
 - Sub-agent preservation must not regress:
   - do not require normalized chat tool entries as the only source of spawned child IDs
   - do not mark `not_found` as completed/final in the DB or UI interruption guard

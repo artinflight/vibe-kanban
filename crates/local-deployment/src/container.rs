@@ -67,6 +67,16 @@ use crate::{command, copy};
 const WORKSPACE_TOUCH_DEBOUNCE: Duration = Duration::from_mins(2);
 const LIVE_EXECUTION_HISTORY_BYTES: usize = 8 * 1024 * 1024;
 const LIVE_EXECUTION_CHANNEL_CAPACITY: usize = 4096;
+const WORKSPACE_AGENT_IMAGE_SHARING_INSTRUCTIONS: &str = r#"# Vibe Kanban Workspace
+
+## Sharing Images In Chat
+
+When you create an image that the user should see in chat, save the file under `.vibe-attachments/` in this workspace and reference it with normal Markdown image syntax:
+
+`![short description](.vibe-attachments/example.png)`
+
+Create `.vibe-attachments/` if needed. Use a relative `.vibe-attachments/...` path, not an absolute filesystem path.
+"#;
 
 #[derive(Clone)]
 pub struct LocalContainerService {
@@ -1076,9 +1086,9 @@ impl LocalContainerService {
         Ok(())
     }
 
-    /// Create workspace-level CLAUDE.md and AGENTS.md files that import from each repo.
-    /// Uses the @import syntax to reference each repo's config files.
-    /// Skips creating files if they already exist or if no repos have the source file.
+    /// Create workspace-level CLAUDE.md and AGENTS.md files with VK workspace instructions
+    /// and repo-local imports. Existing generated import-only files are upgraded in place;
+    /// custom files are left untouched.
     async fn create_workspace_config_files(
         workspace_dir: &Path,
         repos: &[Repo],
@@ -1088,14 +1098,6 @@ impl LocalContainerService {
         for config_file in CONFIG_FILES {
             let workspace_config_path = workspace_dir.join(config_file);
 
-            if workspace_config_path.exists() {
-                tracing::trace!(
-                    "Workspace config file {} already exists, skipping",
-                    config_file
-                );
-                continue;
-            }
-
             let mut import_lines = Vec::new();
             for repo in repos {
                 let repo_config_path = workspace_dir.join(&repo.name).join(config_file);
@@ -1104,15 +1106,53 @@ impl LocalContainerService {
                 }
             }
 
-            if import_lines.is_empty() {
-                tracing::trace!(
-                    "No repos have {}, skipping workspace config creation",
+            let content = Self::build_workspace_config_content(&import_lines);
+
+            if workspace_config_path.exists() {
+                let existing = match tokio::fs::read_to_string(&workspace_config_path).await {
+                    Ok(existing) => existing,
+                    Err(e) => {
+                        tracing::warn!(
+                            "Failed to read existing workspace config file {}: {}",
+                            config_file,
+                            e
+                        );
+                        continue;
+                    }
+                };
+
+                if existing.contains("## Sharing Images In Chat") {
+                    tracing::trace!(
+                        "Workspace config file {} already has VK instructions",
+                        config_file
+                    );
+                    continue;
+                }
+
+                if !Self::is_generated_workspace_config(&existing, config_file) {
+                    tracing::trace!(
+                        "Workspace config file {} appears custom, skipping",
+                        config_file
+                    );
+                    continue;
+                }
+
+                if let Err(e) = tokio::fs::write(&workspace_config_path, &content).await {
+                    tracing::warn!(
+                        "Failed to update workspace config file {}: {}",
+                        config_file,
+                        e
+                    );
+                    continue;
+                }
+
+                tracing::info!(
+                    "Updated generated workspace {} with VK instructions",
                     config_file
                 );
                 continue;
             }
 
-            let content = import_lines.join("\n") + "\n";
             if let Err(e) = tokio::fs::write(&workspace_config_path, &content).await {
                 tracing::warn!(
                     "Failed to create workspace config file {}: {}",
@@ -1130,6 +1170,33 @@ impl LocalContainerService {
         }
 
         Ok(())
+    }
+
+    fn build_workspace_config_content(import_lines: &[String]) -> String {
+        let mut content = WORKSPACE_AGENT_IMAGE_SHARING_INSTRUCTIONS.to_string();
+        if !import_lines.is_empty() {
+            content.push_str("\n## Repository Instructions\n\n");
+            content.push_str(&import_lines.join("\n"));
+            content.push('\n');
+        }
+        content
+    }
+
+    fn is_generated_workspace_config(content: &str, config_file: &str) -> bool {
+        let mut has_import = false;
+
+        for line in content
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+        {
+            if !line.starts_with('@') || !line.ends_with(config_file) {
+                return false;
+            }
+            has_import = true;
+        }
+
+        has_import || content.trim().is_empty()
     }
 
     /// Consume a queued follow-up and start it when the completed process allows it.
@@ -1825,5 +1892,46 @@ fn success_exit_status() -> std::process::ExitStatus {
     {
         use std::os::windows::process::ExitStatusExt;
         ExitStatusExt::from_raw(0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::LocalContainerService;
+
+    #[test]
+    fn workspace_config_content_includes_image_sharing_and_imports() {
+        let imports = vec![
+            "@repo-a/AGENTS.md".to_string(),
+            "@repo-b/AGENTS.md".to_string(),
+        ];
+
+        let content = LocalContainerService::build_workspace_config_content(&imports);
+
+        assert!(content.contains("## Sharing Images In Chat"));
+        assert!(content.contains(".vibe-attachments/example.png"));
+        assert!(content.contains("## Repository Instructions"));
+        assert!(content.contains("@repo-a/AGENTS.md"));
+        assert!(content.contains("@repo-b/AGENTS.md"));
+    }
+
+    #[test]
+    fn detects_generated_workspace_config_without_treating_custom_files_as_generated() {
+        assert!(LocalContainerService::is_generated_workspace_config(
+            "@repo-a/AGENTS.md\n@repo-b/AGENTS.md\n",
+            "AGENTS.md"
+        ));
+        assert!(LocalContainerService::is_generated_workspace_config(
+            "",
+            "AGENTS.md"
+        ));
+        assert!(!LocalContainerService::is_generated_workspace_config(
+            "# Custom instructions\n@repo-a/AGENTS.md\n",
+            "AGENTS.md"
+        ));
+        assert!(!LocalContainerService::is_generated_workspace_config(
+            "@repo-a/CLAUDE.md\n",
+            "AGENTS.md"
+        ));
     }
 }

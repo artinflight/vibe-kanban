@@ -99,6 +99,9 @@
   - editable composers should keep compact attachment-chip behavior
   - agents can share images by writing files under `.vibe-attachments/` in the workspace/session and replying with markdown such as `![caption](.vibe-attachments/example.png)`
   - image rendering must use the existing workspace attachment metadata/file routes and must not require a backend restart for frontend-only renderer changes
+  - generated workspace-level `AGENTS.md` and `CLAUDE.md` files must include the `.vibe-attachments/` image-sharing instruction so agents know the convention without user prompting
+  - existing generated root workspace config files were backfilled on 2026-05-13; custom root config files and repo-local config files were intentionally not changed
+  - the generator permanence lives in `crates/local-deployment/src/container.rs` and requires the next approved backend restart to affect future workspace creation automatically
   - live frontend release for this invariant is `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tagent-chat-images`, asset `/assets/index-D0-81B_L.js`
 - Regression prevention invariant:
   - every deploy or frontend asset swap must start with a written release manifest naming the exact source commit, build worktree, release path, frontend asset hash, backend binary hash when applicable, and every feature expected to remain present

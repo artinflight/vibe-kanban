@@ -12,6 +12,15 @@
   - create the image file inside the workspace/session under `.vibe-attachments/`
   - include normal markdown in the assistant reply, for example `![caption](.vibe-attachments/example.png)`
   - the chat renderer will display the image inline after refresh/live asset load
+- Agent instruction source:
+  - `LocalContainerService::create_workspace_config_files` now writes a small VK workspace section into generated root `AGENTS.md` and `CLAUDE.md`
+  - the section tells agents to save generated chat images under `.vibe-attachments/` and reference them with markdown image syntax
+  - existing generated import-only workspace config files are upgraded in place; custom root config files are left untouched
+  - this generator change is source-only until the next approved backend restart
+- No-restart operational backfill:
+  - updated 149 existing generated root workspace config files under `/home/mcp/code/worktrees/*/{AGENTS.md,CLAUDE.md}`
+  - skipped 9 files that were custom or unreadable
+  - repo-local `AGENTS.md`/`CLAUDE.md` files were not touched
 - Deployed live without restarting VK in frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tagent-chat-images`.
 - Live `GET /` references `/assets/index-D0-81B_L.js`; backend PID stayed `913128`.
 - Validation passed:
@@ -19,6 +28,7 @@
   - `pnpm --filter @vibe/ui run check`
   - `pnpm --filter @vibe/web-core run check`
   - `pnpm --filter @vibe/local-web run check`
+  - `cargo test -p local-deployment workspace_config`
   - `git diff --check`
   - `pnpm --filter @vibe/local-web run build`
   - live asset returned `200` and contains the inline image classes

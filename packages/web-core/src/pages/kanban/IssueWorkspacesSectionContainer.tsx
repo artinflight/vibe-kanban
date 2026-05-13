@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { LinkIcon, PlusIcon } from '@phosphor-icons/react';
 import { useProjectContext } from '@/shared/hooks/useProjectContext';
@@ -13,6 +14,8 @@ import { useProjectWorkspaceCreateDraft } from '@/shared/hooks/useProjectWorkspa
 import { workspaceRecordKeys } from '@/shared/hooks/useWorkspaceRecord';
 import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 import { workspacesApi } from '@/shared/lib/api';
+import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
+import { dispatchWorkspaceLinkRefresh } from '@/shared/lib/workspaceLinkRefresh';
 import { getWorkspaceDefaults } from '@/shared/lib/workspaceDefaults';
 import {
   buildLinkedIssueCreateState,
@@ -22,6 +25,7 @@ import {
 } from '@/shared/lib/workspaceCreateState';
 import { ConfirmDialog } from '@vibe/ui/components/ConfirmDialog';
 import { DeleteWorkspaceDialog } from '@vibe/ui/components/DeleteWorkspaceDialog';
+import { RenameWorkspaceDialog } from '@vibe/ui/components/RenameWorkspaceDialog';
 import type { WorkspaceWithStats } from '@vibe/ui/components/IssueWorkspaceCard';
 import { IssueWorkspacesSection } from '@vibe/ui/components/IssueWorkspacesSection';
 import { RenameWorkspaceDialog } from '@vibe/ui/components/RenameWorkspaceDialog';
@@ -143,7 +147,7 @@ export function IssueWorkspacesSectionContainer({
       return {
         id: workspace.id,
         localWorkspaceId: resolvedLocalWorkspaceId,
-        name: workspace.name,
+        name: localWorkspace?.name ?? workspace.name,
         archived: workspace.archived,
         filesChanged: workspace.files_changed ?? 0,
         linesAdded: workspace.lines_added ?? 0,
@@ -261,6 +265,7 @@ export function IssueWorkspacesSectionContainer({
     [projectId, issueId, appNavigation]
   );
 
+  // Handle renaming a linked local workspace from the issue view
   const handleRenameWorkspace = useCallback(
     async (localWorkspaceId: string) => {
       const localWorkspace = localWorkspacesById.get(localWorkspaceId);
@@ -278,18 +283,16 @@ export function IssueWorkspacesSectionContainer({
         currentName: localWorkspace.name || localWorkspace.branch,
         onRename: async (newName) => {
           await workspacesApi.update(localWorkspaceId, { name: newName });
-          await Promise.all([
-            queryClient.invalidateQueries({
-              queryKey: workspaceRecordKeys.byId(localWorkspaceId),
-            }),
-            queryClient.invalidateQueries({
-              queryKey: workspaceSummaryKeys.all,
-            }),
-          ]);
+          void queryClient.invalidateQueries({ queryKey: ['workspaceRecord'] });
+          void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+          void queryClient.invalidateQueries({
+            queryKey: workspaceSummaryKeys.all,
+          });
+          dispatchWorkspaceLinkRefresh({ projectId });
         },
       });
     },
-    [localWorkspacesById, queryClient, t]
+    [localWorkspacesById, projectId, queryClient, t]
   );
 
   // Handle unlinking a workspace from the issue

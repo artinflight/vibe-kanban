@@ -72,6 +72,13 @@ export function IssueWorkspacesSection({
                     ? () => onRenameWorkspace(localWorkspaceId)
                     : undefined
                 }
+                onRename={
+                  onRenameWorkspace &&
+                  localWorkspaceId &&
+                  workspace.isOwnedByCurrentUser
+                    ? () => onRenameWorkspace(localWorkspaceId)
+                    : undefined
+                }
                 onUnlink={
                   onUnlinkWorkspace && localWorkspaceId
                     ? () => onUnlinkWorkspace(localWorkspaceId)

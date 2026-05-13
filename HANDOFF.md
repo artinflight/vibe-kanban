@@ -1,5 +1,15 @@
 # HANDOFF.md
 
+## 2026-05-13 Issue View Workspace Rename
+
+- User requested a Rename option in the three-dot menu for workspaces shown inside an issue view.
+- Source fix:
+  - `IssueWorkspaceCard` now supports an `onRename` action and renders a pencil-icon `Rename` item in the existing workspace card menu.
+  - `IssueWorkspacesSection` passes the rename action only for linked local workspaces owned by the current user, matching the existing open/delete ownership behavior.
+  - `IssueWorkspacesSectionContainer` opens the existing `RenameWorkspaceDialog`, calls `workspacesApi.update(workspaceId, { name })`, invalidates workspace caches, and dispatches the project workspace refresh event so the issue view updates without a page reload.
+  - issue workspace cards prefer the resolved local workspace name when a local workspace is linked, so local fallback project rows show the new name immediately after rename.
+- This is frontend-only and does not require a VK backend restart.
+
 ## 2026-05-13 Scaleway CLI / SSH Setup
 
 - Installed Scaleway CLI `scw` version `2.55.0` to `/home/mcp/.local/bin/scw`.

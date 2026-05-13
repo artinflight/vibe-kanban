@@ -257,23 +257,29 @@ export function createImageNode(options: CreateImageNodeOptions) {
         (!isWorkspaceImage &&
           scopeLocalApiPath(metadata?.proxy_url ?? '', hostId))
     );
+    const localAttachmentUrl = localAttachment?.proxy_url
+      ? scopeLocalApiPath(localAttachment.proxy_url, hostId)
+      : null;
+    const scopedThumbnailUrl = thumbnailUrl
+      ? scopeLocalApiPath(thumbnailUrl, hostId)
+      : null;
+    const scopedFullSizeUrl = fullSizeUrl
+      ? scopeLocalApiPath(fullSizeUrl, hostId)
+      : null;
+    const scopedMetadataProxyUrl = metadata?.proxy_url
+      ? scopeLocalApiPath(metadata.proxy_url, hostId)
+      : null;
 
     const handleClick = useCallback(
       (event: React.MouseEvent) => {
         event.preventDefault();
         event.stopPropagation();
 
-        const localAttachmentUrl = localAttachment?.proxy_url
-          ? scopeLocalApiPath(localAttachment.proxy_url, hostId)
-          : null;
-
-        if (isAttachment && (localAttachmentUrl || fullSizeUrl)) {
-          const resolvedFullSizeUrl =
-            localAttachmentUrl ||
-            (fullSizeUrl ? scopeLocalApiPath(fullSizeUrl, hostId) : null);
+        if (isAttachment && (localAttachmentUrl || scopedFullSizeUrl)) {
+          const resolvedFullSizeUrl = localAttachmentUrl || scopedFullSizeUrl;
           if (!resolvedFullSizeUrl) return;
 
-          if (isImageAttachment && (localAttachmentUrl || thumbnailUrl)) {
+          if (isImageAttachment && (localAttachmentUrl || scopedThumbnailUrl)) {
             options.openImagePreview({
               imageUrl: resolvedFullSizeUrl,
               altText,
@@ -285,34 +291,30 @@ export function createImageNode(options: CreateImageNodeOptions) {
           return;
         }
 
-        if (metadata?.exists && metadata.proxy_url) {
-          const metadataProxyUrl = scopeLocalApiPath(
-            metadata.proxy_url,
-            hostId
-          );
+        if (metadata?.exists && scopedMetadataProxyUrl) {
           if (isWorkspaceImage) {
             options.openImagePreview({
-              imageUrl: metadataProxyUrl,
+              imageUrl: scopedMetadataProxyUrl,
               altText,
               fileName: metadata.file_name ?? undefined,
               format: metadata.format ?? undefined,
               sizeBytes: metadata.size_bytes,
             });
           } else {
-            window.open(metadataProxyUrl, '_blank', 'noopener,noreferrer');
+            window.open(scopedMetadataProxyUrl, '_blank', 'noopener,noreferrer');
           }
         }
       },
       [
         isAttachment,
-        localAttachment?.proxy_url,
-        fullSizeUrl,
+        localAttachmentUrl,
+        scopedFullSizeUrl,
         isImageAttachment,
-        thumbnailUrl,
+        scopedThumbnailUrl,
         metadata,
+        scopedMetadataProxyUrl,
         isWorkspaceImage,
         altText,
-        hostId,
       ]
     );
 
@@ -322,13 +324,9 @@ export function createImageNode(options: CreateImageNodeOptions) {
         event.stopPropagation();
 
         const downloadUrl =
-          (localAttachment?.proxy_url
-            ? scopeLocalApiPath(localAttachment.proxy_url, hostId)
-            : null) ??
-          (fullSizeUrl ? scopeLocalApiPath(fullSizeUrl, hostId) : null) ??
-          (!isWorkspaceImage && metadata?.proxy_url
-            ? scopeLocalApiPath(metadata.proxy_url, hostId)
-            : null);
+          localAttachmentUrl ??
+          scopedFullSizeUrl ??
+          (!isWorkspaceImage ? scopedMetadataProxyUrl : null);
         if (!downloadUrl) return;
 
         downloadBlobUrl(downloadUrl, altText || 'attachment').catch((error) => {
@@ -336,12 +334,11 @@ export function createImageNode(options: CreateImageNodeOptions) {
         });
       },
       [
-        localAttachment?.proxy_url,
-        fullSizeUrl,
+        localAttachmentUrl,
+        scopedFullSizeUrl,
         isWorkspaceImage,
-        metadata,
+        scopedMetadataProxyUrl,
         altText,
-        hostId,
       ]
     );
 
@@ -371,12 +368,54 @@ export function createImageNode(options: CreateImageNodeOptions) {
       (attachment) => attachment.path === src
     );
 
+    const inlineImageUrl = !editor.isEditable()
+      ? isAttachment && isImageAttachment
+        ? (localAttachmentUrl ?? scopedThumbnailUrl ?? scopedFullSizeUrl)
+        : isWorkspaceImage && metadata?.exists
+          ? scopedMetadataProxyUrl
+          : null
+      : null;
+    const inlineFullSizeUrl =
+      !editor.isEditable() && isAttachment && isImageAttachment
+        ? (localAttachmentUrl ?? scopedFullSizeUrl ?? scopedThumbnailUrl)
+        : inlineImageUrl;
+
+    if (inlineImageUrl) {
+      const imageName =
+        metadata?.file_name || localAttachment?.file_name || altText || src;
+
+      return (
+        <span className="group relative my-2 inline-block max-w-full align-bottom">
+          <button
+            type="button"
+            className="block max-w-full cursor-zoom-in rounded border border-border bg-muted/30 p-1 text-left transition-colors hover:border-muted-foreground"
+            onClick={handleClick}
+            onDoubleClick={onDoubleClickEdit}
+            title={imageName}
+          >
+            <img
+              src={inlineImageUrl}
+              alt={altText || imageName}
+              className="block max-h-[520px] max-w-full rounded object-contain"
+              draggable={false}
+            />
+          </button>
+          {showDownloadButton && inlineFullSizeUrl ? (
+            <button
+              onClick={handleDownload}
+              className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded bg-foreground/70 text-background opacity-0 transition-opacity hover:bg-foreground group-hover:opacity-100"
+              aria-label={t('kanban.downloadAttachment')}
+              type="button"
+            >
+              <Download className="h-4 w-4" />
+            </button>
+          ) : null}
+        </span>
+      );
+    }
+
     if (isAttachment) {
-      const previewUrl =
-        (localAttachment?.proxy_url
-          ? scopeLocalApiPath(localAttachment.proxy_url, hostId)
-          : null) ??
-        (thumbnailUrl ? scopeLocalApiPath(thumbnailUrl, hostId) : null);
+      const previewUrl = localAttachmentUrl ?? scopedThumbnailUrl;
 
       if (isImageAttachment && !localAttachment && attachmentLoading) {
         thumbnailContent = (
@@ -442,7 +481,7 @@ export function createImageNode(options: CreateImageNodeOptions) {
       } else if (metadata?.exists && metadata.proxy_url) {
         thumbnailContent = (
           <img
-            src={scopeLocalApiPath(metadata.proxy_url, hostId)}
+            src={scopedMetadataProxyUrl ?? ''}
             alt={altText}
             className="w-10 h-10 object-cover rounded flex-shrink-0"
             draggable={false}

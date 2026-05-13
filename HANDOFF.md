@@ -3,6 +3,15 @@
 ## 2026-05-13 Default Project Columns Repair
 
 - User reported default columns for new projects disappeared.
+- Release manifest:
+  - source commit: `871b910b926778d1643cd54b5c49444b90c175bc`
+  - build worktree: `/home/mcp/_vibe_kanban_repo`
+  - frontend release path: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tdefault-project-columns`
+  - frontend asset: `/assets/index-DiSUCc_7.js`
+  - frontend asset sha256: `f2c0fbc14c9610c8f39867da18dcd9bcd6791cb54e76dbca9a0912a6379721dd`
+  - backend binary sha256: `251d51ca5e831775768339c45addc6488b5298a138594accb944782db7dcc6a0`
+  - backend PID after frontend swap: `913128`
+  - expected retained features: archived-project separation/order, archived-project access, issue workspace Rename/Archive/Unarchive tokens, codeblock copy token, queued-state token, and default project column template
 - Root cause:
   - frontend project repo-default saves could create or preserve `PROJECT_REPO_DEFAULTS` rows with `statuses: []`
   - backend local fallback still used the old five-column template when a project had no saved status config
@@ -28,6 +37,21 @@
   - `cargo test -p server routes::local_compat::tests`
   - `git diff --check`
   - live asset returned `200` and contains `Long Running` / `Hotfix Path`
+  - `python3 scripts/vk_live_regression_smoke.py`
+
+## 2026-05-13 Live Regression Smoke Script
+
+- Added read-only smoke script `scripts/vk_live_regression_smoke.py`.
+- Current checks:
+  - `frontend-dist/current` points at `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tdefault-project-columns`
+  - live HTML references `/assets/index-DiSUCc_7.js`
+  - backend service has a nonzero PID
+  - live asset contains guard tokens for default columns, archived projects, Rename/Archive/Unarchive, codeblock copy, and queued state
+  - active project order is `CodexUsage | VL | Monitor local | LifeOS | Operations | programming | ops-playbook | intake-shield | foxtrot-lima | hyroxready-app`
+  - archived project order is `Monitor | OSTP | virtualCard | Champions Nutrition | caspian-ova-dashboard | vibe-kanban | vibe-kanban-orchestrator | caspian-app`
+  - `CodexUsage`, `Monitor local`, `LifeOS`, and `Operations` return the full default column template from `/v1/fallback/project_statuses`
+- Result on 2026-05-13: all checks passed.
+- Limit: this is a read-only API/static-asset smoke, not a full Playwright UI interaction test; Playwright is not installed in this checkout.
 
 ## 2026-05-13 Agent Chat Image Sharing
 

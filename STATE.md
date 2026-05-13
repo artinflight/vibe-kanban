@@ -129,6 +129,7 @@
     - workspace action menu still exposes the full expected action set, including spin-off where valid
     - direct issue status selector still changes issue status from the issue page
     - codeblock copy, paste/drag/drop attachments, and mobile attachment selection still produce visible success or error
+  - scripted read-only smoke for the current frontend hotfix boundary lives at `scripts/vk_live_regression_smoke.py`; run it after frontend swaps and before declaring the live default-column/nav/order guard safe
 - Sub-agent preservation invariant:
   - a successful Codex `collabAgentToolCall` / `spawnAgent` event creates durable child work even if VK does not receive a normalized `spawn_agent` tool entry
   - VK must persist spawned child thread IDs from raw stdout/log events and from Codex `thread_spawn_edges`

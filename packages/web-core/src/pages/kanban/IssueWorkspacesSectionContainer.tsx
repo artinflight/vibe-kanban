@@ -148,7 +148,7 @@ export function IssueWorkspacesSectionContainer({
         id: workspace.id,
         localWorkspaceId: resolvedLocalWorkspaceId,
         name: localWorkspace?.name ?? workspace.name,
-        archived: workspace.archived,
+        archived: localWorkspace?.isArchived ?? workspace.archived,
         filesChanged: workspace.files_changed ?? 0,
         linesAdded: workspace.lines_added ?? 0,
         linesRemoved: workspace.lines_removed ?? 0,
@@ -295,6 +295,33 @@ export function IssueWorkspacesSectionContainer({
     [localWorkspacesById, projectId, queryClient, t]
   );
 
+  // Handle archiving/unarchiving a linked local workspace from the issue view
+  const handleArchiveWorkspace = useCallback(
+    async (localWorkspaceId: string) => {
+      const localWorkspace = localWorkspacesById.get(localWorkspaceId);
+      if (!localWorkspace) {
+        await ConfirmDialog.show({
+          title: t('common:error'),
+          message: t('workspaces.notFound'),
+          confirmText: t('common:ok'),
+          showCancelButton: false,
+        });
+        return;
+      }
+
+      await workspacesApi.update(localWorkspaceId, {
+        archived: !localWorkspace.isArchived,
+      });
+      void queryClient.invalidateQueries({ queryKey: ['workspaceRecord'] });
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      void queryClient.invalidateQueries({
+        queryKey: workspaceSummaryKeys.all,
+      });
+      dispatchWorkspaceLinkRefresh({ projectId });
+    },
+    [localWorkspacesById, projectId, queryClient, t]
+  );
+
   // Handle unlinking a workspace from the issue
   const handleUnlinkWorkspace = useCallback(
     async (localWorkspaceId: string) => {
@@ -399,6 +426,7 @@ export function IssueWorkspacesSectionContainer({
       onWorkspaceClick={handleWorkspaceClick}
       onCreateWorkspace={handleAddWorkspace}
       onRenameWorkspace={handleRenameWorkspace}
+      onArchiveWorkspace={handleArchiveWorkspace}
       onUnlinkWorkspace={handleUnlinkWorkspace}
       onDeleteWorkspace={handleDeleteWorkspace}
       shouldAnimateCreateButton={shouldAnimateCreateButton}

@@ -10,6 +10,7 @@ use db::models::{
     project::Project,
     repo::Repo,
     scratch::{Scratch, ScratchPayload, ScratchType},
+    workspace_repo::RepoWithTargetBranch,
 };
 use deployment::Deployment;
 use serde::Deserialize;
@@ -173,6 +174,70 @@ async fn get_project(
     Ok(ResponseJson(ApiResponse::success(project)))
 }
 
+fn repo_default_target_branch(repo: &Repo) -> String {
+    repo.default_target_branch
+        .clone()
+        .unwrap_or_else(|| "main".to_string())
+}
+
+async fn list_project_repos(
+    State(deployment): State<DeploymentImpl>,
+    Path(project_id): Path<Uuid>,
+) -> Result<ResponseJson<ApiResponse<Vec<RepoWithTargetBranch>>>, ApiError> {
+    let repo_ids = if let Some(scratch) = Scratch::find_by_id(
+        &deployment.db().pool,
+        project_id,
+        &ScratchType::ProjectRepoDefaults,
+    )
+    .await?
+    {
+        match scratch.payload {
+            ScratchPayload::ProjectRepoDefaults(data) => data
+                .repos
+                .into_iter()
+                .map(|repo| (repo.repo_id, Some(repo.target_branch)))
+                .collect::<Vec<_>>(),
+            _ => Vec::new(),
+        }
+    } else {
+        let ids = sqlx::query_scalar::<_, Uuid>(
+            r#"SELECT repo_id
+               FROM project_repos
+               WHERE project_id = ?
+               ORDER BY rowid ASC"#,
+        )
+        .bind(project_id)
+        .fetch_all(&deployment.db().pool)
+        .await?;
+
+        ids.into_iter().map(|repo_id| (repo_id, None)).collect()
+    };
+
+    let ids = repo_ids
+        .iter()
+        .map(|(repo_id, _)| *repo_id)
+        .collect::<Vec<_>>();
+    let repos = Repo::find_by_ids(&deployment.db().pool, &ids).await?;
+    let target_by_repo_id = repo_ids.into_iter().collect::<HashMap<_, _>>();
+
+    let repos = repos
+        .into_iter()
+        .map(|repo| {
+            let target_branch = target_by_repo_id
+                .get(&repo.id)
+                .and_then(|target_branch| target_branch.clone())
+                .unwrap_or_else(|| repo_default_target_branch(&repo));
+
+            RepoWithTargetBranch {
+                repo,
+                target_branch,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    Ok(ResponseJson(ApiResponse::success(repos)))
+}
+
 async fn update_project(
     State(deployment): State<DeploymentImpl>,
     Path(project_id): Path<Uuid>,
@@ -200,7 +265,8 @@ async fn update_project(
 pub fn router() -> Router<DeploymentImpl> {
     let inner = Router::new()
         .route("/", get(list_projects))
-        .route("/{project_id}", get(get_project).patch(update_project));
+        .route("/{project_id}", get(get_project).patch(update_project))
+        .route("/{project_id}/repos", get(list_project_repos));
 
     Router::new().nest("/projects", inner)
 }

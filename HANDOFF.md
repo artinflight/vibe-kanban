@@ -1,5 +1,27 @@
 # HANDOFF.md
 
+## 2026-05-13 Issue Workspace Archive + Project Repo Defaults
+
+- User requested two fixes:
+  - issue-view workspace cards need an Archive/Unarchive action in the three-dot menu
+  - creating a workspace from an issue inside a project must default to that project's repo, not the globally most recent repo
+- Source fix:
+  - `IssueWorkspaceCard` now renders Archive/Unarchive beside Rename/Unlink/Delete when the card resolves to a local workspace owned by the current user.
+  - `IssueWorkspacesSectionContainer` toggles `workspacesApi.update(workspaceId, { archived })`, invalidates workspace summary/list caches, and refreshes issue workspace links.
+  - `workspaceDefaults` now tries project repo association defaults before project-local recency.
+  - `workspaceDefaults` no longer falls back to the globally most recent workspace when a `projectId` is known; that global fallback is allowed only for non-project create flows.
+  - frontend fallback can infer a repo when project name/default working dir exactly matches one repo name/display/path basename/default working dir, which covers `intake-shield` -> `intakeShield`.
+  - backend route `GET /api/projects/:project_id/repos` is implemented for permanence, using scratch repo defaults first and then `project_repos`; it requires a future approved backend restart to be live.
+- Deployed live without restarting VK in frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-archive-repo-defaults`.
+- Live `GET /` references `/assets/index-DSo-m_0N.js`; backend PID remained `913128`.
+- Validation passed:
+  - `pnpm --filter @vibe/ui run check`
+  - `pnpm --filter @vibe/web-core run check`
+  - `pnpm --filter @vibe/local-web run check`
+  - `cargo check -p server`
+  - `pnpm run format`
+  - `pnpm --filter @vibe/local-web run build`
+
 ## 2026-05-13 Issue View Workspace Rename
 
 - User requested a Rename option in the three-dot menu for workspaces shown inside an issue view.

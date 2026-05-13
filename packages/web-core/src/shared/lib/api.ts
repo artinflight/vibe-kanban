@@ -1540,6 +1540,11 @@ export const projectsApi = {
     return handleApiResponse<Project>(response);
   },
 
+  listRepos: async (projectId: string): Promise<RepoWithTargetBranch[]> => {
+    const response = await makeRequest(`/api/projects/${projectId}/repos`);
+    return handleApiResponse<RepoWithTargetBranch[]>(response);
+  },
+
   update: async (
     projectId: string,
     data: { archived: boolean }

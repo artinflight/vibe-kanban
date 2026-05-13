@@ -40,6 +40,7 @@
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tworkspace-actions-spin-off`: command menu target-workspace visibility, spin-off workspace durable draft/error handling, mobile chat autofocus suppression
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tissue-status-selector`: direct issue-page status selector plus the previous workspace-action/mobile fixes
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tkanban-drag-persist`: Kanban card drag status/order persistence through `ProjectContext.updateIssues`
+  - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-archive-repo-defaults`: issue-view workspace Archive/Unarchive plus project-scoped repo default fallback
   - deployed backend restart on 2026-05-11: orphan queued-message guard, stale sub-agent filtering, prompt JSON body limit raised to `100 MB`
 - Manual workspace unread is a backend-backed feature, not a frontend-only flag: it must set the latest coding-agent turn `seen = 0` and invalidate workspace summaries so all existing needs-review markers update consistently.
 
@@ -86,6 +87,7 @@
   - mobile workspace chat no longer autofocuses the editor on open; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tworkspace-actions-spin-off`
   - issue-page status changes now use a direct native selector and update issue `status_id` without depending on the command dialog; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tissue-status-selector`
   - Kanban card drags now compute the next board state synchronously and persist through the project issue mutation collection instead of a raw `bulkUpdateIssues` call; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tkanban-drag-persist`
+  - issue-view workspace cards now expose Archive/Unarchive in the three-dot menu; project-linked workspace creation no longer uses global recent repo fallback and can infer exact project/repo matches; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-archive-repo-defaults`
   - backend orphan-queue prevention is live: `POST /api/sessions/:id/queue` rejects queue creation unless a non-dropped running queue-consumer execution exists for that session
   - prompt JSON body limits are live for workspace start, direct follow-up, and queued follow-up routes; this removes the practical long-prompt/workspace-start cap up to `100 MB`
   - 2026-05-11 refreshable frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tqueue-status-refresh` was rolled back after production VK crashed during an event-stream storm
@@ -123,6 +125,10 @@
   - do not compute the persisted update payload through a side effect inside `setItems`
   - do not persist Kanban card drags with a raw `bulkUpdateIssues` call from `KanbanContainer`
   - use `ProjectContext.updateIssues` so optimistic state and fallback refresh stay aligned
+- Project workspace repo defaults must not regress:
+  - when `projectId` is present, never use a globally recent workspace repo as the default
+  - use explicit project repo defaults, exact project/repo inference, or same-project recency only
+  - keep `GET /api/projects/:project_id/repos` in the backend deploy queue until the next approved restart makes it live
 - Sub-agent preservation must not regress:
   - do not require normalized chat tool entries as the only source of spawned child IDs
   - do not mark `not_found` as completed/final in the DB or UI interruption guard

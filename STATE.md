@@ -56,7 +56,7 @@
 - That isolation exists specifically to stop VK coding agents from sharing refresh-token rotation with tmux/interactive Codex sessions.
 - Refreshable frontend assets are active in live production through `/home/mcp/.config/systemd/user/vibe-kanban.service.d/frontend-dist.conf`.
 - Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tkanban-drag-persist`.
-- Live production frontend was advanced without a VK restart on 2026-05-13, adding the Kanban drag persistence fix while retaining the issue-view workspace-card Rename action and direct issue status selector release.
+- Live production frontend was advanced without a VK restart on 2026-05-13, adding issue-view workspace Archive/Unarchive and project-scoped workspace repo defaulting while retaining the Kanban drag persistence fix, issue-view workspace-card Rename action, and direct issue status selector release.
 - Scaleway CLI is installed at `/home/mcp/.local/bin/scw` (`2.55.0`) and initialized for project `fitRDY` (`cd72c9f8-12c2-4e5b-925d-94da82c9606d`), region `fr-par`, zone `fr-par-1`.
 - Scaleway credentials are stored in `/home/mcp/.config/scw/config.yaml`; never print or commit this file.
 - Scaleway SSH key `mcp-server-id_ed25519_mcp` (`d980864c-f353-4b3a-a4e7-ff9fc9d766be`) is registered from `/home/mcp/.ssh/id_ed25519_mcp.pub`.
@@ -88,6 +88,12 @@
   - card moves must persist through `ProjectContext.updateIssues`, not a raw API call from `KanbanContainer`
   - failed persistence must restore the previous board state instead of waiting for a later sync bounce
   - live release for this invariant is `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tkanban-drag-persist`, asset `/assets/index-CmLP2jfq.js`
+- Project workspace repo default invariant:
+  - project-linked workspace creation must never fall back to the globally most recent workspace repo when a `projectId` is known
+  - priority is explicit project repo defaults, exact project/repo association inference, most recent workspace in the same project, then no default
+  - global recency is only valid for non-project workspace create flows
+  - backend route `GET /api/projects/:project_id/repos` is implemented in source but requires the next approved backend restart to become live
+  - live frontend release for the refreshable part is `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-archive-repo-defaults`, asset `/assets/index-DSo-m_0N.js`
 - Sub-agent preservation invariant:
   - a successful Codex `collabAgentToolCall` / `spawnAgent` event creates durable child work even if VK does not receive a normalized `spawn_agent` tool entry
   - VK must persist spawned child thread IDs from raw stdout/log events and from Codex `thread_spawn_edges`

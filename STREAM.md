@@ -35,6 +35,7 @@
 - Frontend asset swaps must still be followed by clean branch/PR promotion; a live symlink swap is an operational hotfix, not a permanent landing path.
 - Every repaired feature needs a live verification step, not only a merge confirmation.
 - Frontend hotfixes must be built from a clean worktree pinned to the current live frontend release boundary plus only the intended patch. Dirty maintenance-checkout frontend builds are forbidden because they already caused project-list/nav regressions.
+- Any deploy, restart, or frontend symlink swap must include a release manifest and a regression smoke result in `HANDOFF.md` before being called ready. If the manifest cannot prove the package contains every currently live hotfix, stop.
 - The current deployment queue is split:
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`: collapsed Kanban count, compact mobile collapsed columns, queued-status polling
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tworkspace-actions-spin-off`: command menu target-workspace visibility, spin-off workspace durable draft/error handling, mobile chat autofocus suppression
@@ -114,6 +115,8 @@
 - Losing queued fixes during restart; before restarting, verify the built backend contains the orphan-queue guard, stale sub-agent filter, and prompt body-limit change, and verify the frontend `current` symlink still points to the clean release with collapsed count/mobile/queue polling fixes
 - Merging stale feature branches wholesale
 - Assuming a feature is live because it exists somewhere in git history
+- Calling a deploy ready without a release manifest that names the exact frontend release path, asset hash, source commit, and expected feature set
+- Restarting with a backend package that embeds or points at an older frontend dist than the current live `frontend-dist/current`
 - Losing PR/issue display state when relying on branch/worktree presence instead of durable DB rows
 - Attachment cache files can be missing even when DB rows exist; restore/backfill must verify actual files, not only records.
 - Space cleanup can damage VK continuity if it prunes `codex-home`, sessions, or backups without a retention rule.
@@ -129,6 +132,10 @@
   - when `projectId` is present, never use a globally recent workspace repo as the default
   - use explicit project repo defaults, exact project/repo inference, or same-project recency only
   - keep `GET /api/projects/:project_id/repos` in the backend deploy queue until the next approved restart makes it live
+- Release verification must not regress:
+  - before any deploy/restart, write the feature manifest and smoke plan to `HANDOFF.md`
+  - after any deploy/restart, verify active/archived project counts and order, intended left-nav actions, issue workspace menu actions, project repo defaults, needs-review markers, collapsed Kanban counts/mobile layout, Kanban drag persistence, queue reconciliation, workspace action menu completeness, issue status selector, codeblock copy, and attachment feedback
+  - if any smoke item cannot be tested, record it as unverified instead of implying the deploy is safe
 - Sub-agent preservation must not regress:
   - do not require normalized chat tool entries as the only source of spawned child IDs
   - do not mark `not_found` as completed/final in the DB or UI interruption guard
@@ -153,3 +160,4 @@
 8. Verify every feature against live UI/API before production promotion.
 9. Rework and redeploy the queued follow-up fix only from a clean minimal build after the event-stream crash is understood; do not reuse the 2026-05-11 dirty checkout asset swap.
 10. Deploy manual workspace unread with the next approved backend restart and frontend asset release, then verify that a selected workspace can be marked unread and that the workspace/project needs-review marker returns.
+11. Turn the live regression smoke list into an executable script or Playwright check so repeated UI regressions are blocked before deployment instead of rediscovered by the user.

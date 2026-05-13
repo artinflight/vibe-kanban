@@ -55,7 +55,7 @@
 - VK now uses an isolated Codex home at `/home/mcp/.local/share/vibe-kanban/codex-home`.
 - That isolation exists specifically to stop VK coding agents from sharing refresh-token rotation with tmux/interactive Codex sessions.
 - Refreshable frontend assets are active in live production through `/home/mcp/.config/systemd/user/vibe-kanban.service.d/frontend-dist.conf`.
-- Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tkanban-drag-persist`.
+- Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-archive-repo-defaults`.
 - Live production frontend was advanced without a VK restart on 2026-05-13, adding issue-view workspace Archive/Unarchive and project-scoped workspace repo defaulting while retaining the Kanban drag persistence fix, issue-view workspace-card Rename action, and direct issue status selector release.
 - Scaleway CLI is installed at `/home/mcp/.local/bin/scw` (`2.55.0`) and initialized for project `fitRDY` (`cd72c9f8-12c2-4e5b-925d-94da82c9606d`), region `fr-par`, zone `fr-par-1`.
 - Scaleway credentials are stored in `/home/mcp/.config/scw/config.yaml`; never print or commit this file.
@@ -94,6 +94,25 @@
   - global recency is only valid for non-project workspace create flows
   - backend route `GET /api/projects/:project_id/repos` is implemented in source but requires the next approved backend restart to become live
   - live frontend release for the refreshable part is `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-archive-repo-defaults`, asset `/assets/index-DSo-m_0N.js`
+- Regression prevention invariant:
+  - every deploy or frontend asset swap must start with a written release manifest naming the exact source commit, build worktree, release path, frontend asset hash, backend binary hash when applicable, and every feature expected to remain present
+  - every deploy must verify the release package contains all currently live hotfixes, not only the newest change
+  - every restart package must either preserve `/home/mcp/.local/share/vibe-kanban/frontend-dist/current` or include the same-or-newer frontend dist; a backend restart must not silently roll the frontend back
+  - dirty maintenance-checkout frontend builds are forbidden; build from a clean worktree or refuse the deploy
+  - any feature that has regressed twice must get an automated test or scripted smoke check before the next related deploy
+  - before declaring a deploy ready, run the VK live regression smoke list below and record pass/fail in `HANDOFF.md`
+  - mandatory live regression smoke list:
+    - active and archived project counts/order remain stable; archived projects do not reappear in active left nav
+    - left nav still has the intended Archive access and does not restore removed Remote/Export/GitHub/Discord actions
+    - issue-view workspace menu includes Rename, Archive/Unarchive, Unlink, and Delete where appropriate
+    - creating a workspace from a project issue defaults to that project's repo and never to a globally recent repo
+    - needs-review markers appear on completed coding-agent work, clear only on intentional review, and do not count interrupted/triangle-only state
+    - collapsed Kanban columns show horizontal mobile labels and item counts
+    - Kanban card drag status/order persists after refresh
+    - queued follow-up state clears/reconciles without page refresh
+    - workspace action menu still exposes the full expected action set, including spin-off where valid
+    - direct issue status selector still changes issue status from the issue page
+    - codeblock copy, paste/drag/drop attachments, and mobile attachment selection still produce visible success or error
 - Sub-agent preservation invariant:
   - a successful Codex `collabAgentToolCall` / `spawnAgent` event creates durable child work even if VK does not receive a normalized `spawn_agent` tool entry
   - VK must persist spawned child thread IDs from raw stdout/log events and from Codex `thread_spawn_edges`

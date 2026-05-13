@@ -1,5 +1,24 @@
 # HANDOFF.md
 
+## 2026-05-13 Regression Prevention Gate
+
+- User asked what must change so fixed VK features stop disappearing after later work.
+- New rule written to `STATE.md` and `STREAM.md`: no deploy, restart, or frontend asset swap may be called ready without a release manifest and recorded regression smoke result.
+- The manifest must name the exact source commit, build worktree, release path, frontend asset hash, backend binary hash when applicable, and the full expected feature set.
+- The mandatory smoke list now includes the recurring regressions:
+  - active/archived project count and order
+  - intended left-nav actions and archive access
+  - issue-view workspace menu actions, including Rename and Archive/Unarchive
+  - project-scoped repo defaults
+  - needs-review marker behavior
+  - collapsed Kanban mobile layout and counts
+  - Kanban drag persistence
+  - queued follow-up reconciliation
+  - workspace action menu completeness and spin-off
+  - direct issue status selector
+  - codeblock copy and attachment feedback
+- Practical requirement: repeated regressions need automated coverage or a scripted smoke check before the next related deploy; documentation alone is not enough.
+
 ## 2026-05-13 Issue Workspace Archive + Project Repo Defaults
 
 - User requested two fixes:

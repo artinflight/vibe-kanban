@@ -56,6 +56,10 @@
 - That isolation exists specifically to stop VK coding agents from sharing refresh-token rotation with tmux/interactive Codex sessions.
 - Refreshable frontend assets are active in live production through `/home/mcp/.config/systemd/user/vibe-kanban.service.d/frontend-dist.conf`.
 - Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tissue-status-selector`.
+- Scaleway CLI is installed at `/home/mcp/.local/bin/scw` (`2.55.0`) and initialized for project `fitRDY` (`cd72c9f8-12c2-4e5b-925d-94da82c9606d`), region `fr-par`, zone `fr-par-1`.
+- Scaleway credentials are stored in `/home/mcp/.config/scw/config.yaml`; never print or commit this file.
+- Scaleway SSH key `mcp-server-id_ed25519_mcp` (`d980864c-f353-4b3a-a4e7-ff9fc9d766be`) is registered from `/home/mcp/.ssh/id_ed25519_mcp.pub`.
+- `/home/mcp/.ssh/config` includes `/home/mcp/.ssh/scaleway.config`; rerun `scw instance ssh install-config zone=all` after Scaleway instances are created because there were no instances at initial setup time.
 - 2026-05-11 regression/deployment ledger:
   - deployed without VK restart from clean frontend asset build `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`: collapsed Kanban column count badge, compact horizontal mobile collapsed columns, and queued follow-up status polling
   - deployed without VK restart on 2026-05-12 from clean frontend asset build `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tworkspace-actions-spin-off`: command menu target-workspace visibility, spin-off workspace durable draft/error handling, and mobile chat autofocus suppression

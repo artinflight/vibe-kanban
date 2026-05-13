@@ -1,5 +1,28 @@
 # HANDOFF.md
 
+## 2026-05-13 Agent Chat Image Sharing
+
+- User asked whether agents can share images directly in chat.
+- Source fix:
+  - read-only chat markdown now renders image references as inline images instead of compact attachment chips
+  - editable composer attachment chips keep the existing compact behavior
+  - workspace-local image paths are resolved through the existing attachment metadata/file routes, so no new backend endpoint was needed
+  - click opens the existing image preview; the inline image also keeps a download action
+- Agent workflow:
+  - create the image file inside the workspace/session under `.vibe-attachments/`
+  - include normal markdown in the assistant reply, for example `![caption](.vibe-attachments/example.png)`
+  - the chat renderer will display the image inline after refresh/live asset load
+- Deployed live without restarting VK in frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tagent-chat-images`.
+- Live `GET /` references `/assets/index-D0-81B_L.js`; backend PID stayed `913128`.
+- Validation passed:
+  - `pnpm run format`
+  - `pnpm --filter @vibe/ui run check`
+  - `pnpm --filter @vibe/web-core run check`
+  - `pnpm --filter @vibe/local-web run check`
+  - `git diff --check`
+  - `pnpm --filter @vibe/local-web run build`
+  - live asset returned `200` and contains the inline image classes
+
 ## 2026-05-13 Queue Regression Repaired In Source
 
 - User reported queued follow-ups regressed again.

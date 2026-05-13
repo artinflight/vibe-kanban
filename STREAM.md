@@ -42,6 +42,7 @@
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tissue-status-selector`: direct issue-page status selector plus the previous workspace-action/mobile fixes
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tkanban-drag-persist`: Kanban card drag status/order persistence through `ProjectContext.updateIssues`
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-archive-repo-defaults`: issue-view workspace Archive/Unarchive plus project-scoped repo default fallback
+  - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tagent-chat-images`: inline rendering for agent/shared chat images from `.vibe-attachments/` markdown references
   - deployed backend restart on 2026-05-11: orphan queued-message guard, stale sub-agent filtering, prompt JSON body limit raised to `100 MB`
 - Manual workspace unread is a backend-backed feature, not a frontend-only flag: it must set the latest coding-agent turn `seen = 0` and invalidate workspace summaries so all existing needs-review markers update consistently.
 
@@ -89,6 +90,7 @@
   - issue-page status changes now use a direct native selector and update issue `status_id` without depending on the command dialog; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tissue-status-selector`
   - Kanban card drags now compute the next board state synchronously and persist through the project issue mutation collection instead of a raw `bulkUpdateIssues` call; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tkanban-drag-persist`
   - issue-view workspace cards now expose Archive/Unarchive in the three-dot menu; project-linked workspace creation no longer uses global recent repo fallback and can infer exact project/repo matches; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-archive-repo-defaults`
+  - agents can now share workspace images directly in chat by writing them under `.vibe-attachments/` and replying with markdown image syntax; read-only chat renders those images inline from `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tagent-chat-images`
   - backend orphan-queue prevention is live: `POST /api/sessions/:id/queue` rejects queue creation unless a non-dropped running queue-consumer execution exists for that session
   - prompt JSON body limits are live for workspace start, direct follow-up, and queued follow-up routes; this removes the practical long-prompt/workspace-start cap up to `100 MB`
   - 2026-05-11 refreshable frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tqueue-status-refresh` was rolled back after production VK crashed during an event-stream storm
@@ -151,6 +153,10 @@
   - keep the `ops:check` source guard that fails when these queue consumption paths disappear
   - do not restart while queued messages exist unless they have been captured and can be replayed, because the queue is in-memory
   - verify with `cargo test -p db queue_consumer_requires_running_non_dropped_follow_up_process`
+- Agent chat image rendering must not regress:
+  - read-only chat markdown must render `.vibe-attachments/...` image references inline
+  - editable composer state must keep compact chips and not replace pending attachments with full inline images
+  - preserve the existing image preview and download behavior
 
 ## Next Safe Steps
 

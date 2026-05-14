@@ -1,5 +1,39 @@
 # HANDOFF.md
 
+## 2026-05-14 Workspace Unpin Repair
+
+- User reported pinned workspaces could not be unpinned.
+- Release manifest:
+  - source commit: `b12a238a230df1df9f4c92d15be147f650d2d93d`
+  - build worktree: `/home/mcp/_vibe_kanban_repo`
+  - frontend release path: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`
+  - frontend asset: `/assets/index-BLn8oOcK.js`
+  - frontend asset sha256: `25732813002c090ba72e414bd5e3102a48f12f09c61690f2b1a64999bec8d52b`
+  - backend binary sha256: `251d51ca5e831775768339c45addc6488b5298a138594accb944782db7dcc6a0`
+  - backend PID after frontend swap: `913128`
+  - expected retained features: archived-project separation/order, archived-project access, issue workspace Rename/Archive/Unarchive tokens, codeblock copy token, queued-state token, default project column template, and workspace pin/unpin
+- Root cause:
+  - the workspace action label and toggle path used cached `workspaceRecord` data for sidebar-targeted workspaces
+  - after pinning, that cache could still say `pinned: false`
+  - clicking `Unpin` then sent `{ pinned: true }` again, so the UI appeared to do nothing
+- Source repair:
+  - `PinWorkspace.execute` fetches fresh workspace state with `workspacesApi.get(workspaceId)` before toggling
+  - the update response is written back into the host-scoped workspace record cache
+  - workspace invalidation now targets the host-scoped record key and workspace summaries
+  - `CommandBarDialog` uses `useWorkspaceRecord` for the effective target workspace instead of cache-only `getQueryData`, so Pin/Unpin labels refresh for sidebar actions
+- Deployed live without restarting VK in frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`.
+- Live `GET /` references `/assets/index-BLn8oOcK.js`; backend PID stayed `913128`.
+- Live API validation toggled pinned state on workspace `407b575b-ec65-4b39-8a6b-23d2595c9c05` (`IS::Main`) from `true` to `false` to `true` and restored the original value.
+- Validation passed:
+  - `pnpm run format`
+  - `pnpm --filter @vibe/web-core run check`
+  - `pnpm --filter @vibe/local-web run check`
+  - `pnpm --filter @vibe/local-web run build`
+  - `python3 -m py_compile scripts/vk_live_regression_smoke.py`
+  - `git diff --check`
+  - live asset returned `200`
+  - `python3 scripts/vk_live_regression_smoke.py`
+
 ## 2026-05-13 Default Project Columns Repair
 
 - User reported default columns for new projects disappeared.
@@ -43,14 +77,14 @@
 
 - Added read-only smoke script `scripts/vk_live_regression_smoke.py`.
 - Current checks:
-  - `frontend-dist/current` points at `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tdefault-project-columns`
-  - live HTML references `/assets/index-DiSUCc_7.js`
+  - `frontend-dist/current` points at `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`
+  - live HTML references `/assets/index-BLn8oOcK.js`
   - backend service has a nonzero PID
   - live asset contains guard tokens for default columns, archived projects, Rename/Archive/Unarchive, codeblock copy, and queued state
   - active project order is `CodexUsage | VL | Monitor local | LifeOS | Operations | programming | ops-playbook | intake-shield | foxtrot-lima | hyroxready-app`
   - archived project order is `Monitor | OSTP | virtualCard | Champions Nutrition | caspian-ova-dashboard | vibe-kanban | vibe-kanban-orchestrator | caspian-app`
   - `CodexUsage`, `Monitor local`, `LifeOS`, and `Operations` return the full default column template from `/v1/fallback/project_statuses`
-- Result on 2026-05-13: all checks passed.
+- Result on 2026-05-14: all checks passed.
 - Limit: this is a read-only API/static-asset smoke, not a full Playwright UI interaction test; Playwright is not installed in this checkout.
 
 ## 2026-05-13 Agent Chat Image Sharing

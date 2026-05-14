@@ -55,8 +55,8 @@
 - VK now uses an isolated Codex home at `/home/mcp/.local/share/vibe-kanban/codex-home`.
 - That isolation exists specifically to stop VK coding agents from sharing refresh-token rotation with tmux/interactive Codex sessions.
 - Refreshable frontend assets are active in live production through `/home/mcp/.config/systemd/user/vibe-kanban.service.d/frontend-dist.conf`.
-- Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tdefault-project-columns`.
-- Live production frontend was advanced without a VK restart on 2026-05-13, preserving default project columns while retaining inline agent chat image rendering, issue-view workspace Archive/Unarchive, project-scoped workspace repo defaulting, Kanban drag persistence, issue-view workspace-card Rename, and direct issue status selector fixes.
+- Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`.
+- Live production frontend was advanced without a VK restart on 2026-05-14, repairing workspace unpin while retaining default project columns, inline agent chat image rendering, issue-view workspace Archive/Unarchive, project-scoped workspace repo defaulting, Kanban drag persistence, issue-view workspace-card Rename, and direct issue status selector fixes.
 - Scaleway CLI is installed at `/home/mcp/.local/bin/scw` (`2.55.0`) and initialized for project `fitRDY` (`cd72c9f8-12c2-4e5b-925d-94da82c9606d`), region `fr-par`, zone `fr-par-1`.
 - Scaleway credentials are stored in `/home/mcp/.config/scw/config.yaml`; never print or commit this file.
 - Scaleway SSH key `mcp-server-id_ed25519_mcp` (`d980864c-f353-4b3a-a4e7-ff9fc9d766be`) is registered from `/home/mcp/.ssh/id_ed25519_mcp.pub`.
@@ -101,6 +101,11 @@
   - existing live projects repaired on 2026-05-13: `CodexUsage`, `Monitor local`, `LifeOS`, and `Operations`
   - live frontend release for the refreshable repo-default guard is `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tdefault-project-columns`, asset `/assets/index-DiSUCc_7.js`
   - backend fallback source is fixed but requires the next approved backend restart to affect projects with no saved status config
+- Workspace pin/unpin invariant:
+  - Pin/Unpin actions must fetch fresh workspace state before toggling; cache-only state can be stale for sidebar-targeted workspaces
+  - after toggling, write the returned workspace into the host-scoped `workspaceRecord` cache and invalidate workspace summaries
+  - command-bar labels for sidebar-targeted workspaces must use a live `useWorkspaceRecord` query, not cache-only `getQueryData`
+  - live frontend release for this invariant is `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`, asset `/assets/index-BLn8oOcK.js`
 - Agent chat image invariant:
   - read-only chat markdown image references must render as inline images, not attachment chips
   - editable composers should keep compact attachment-chip behavior

@@ -136,10 +136,11 @@ async function getWorkspace(
 // Helper to invalidate workspace-related queries
 function invalidateWorkspaceQueries(
   queryClient: QueryClient,
-  workspaceId: string
+  workspaceId: string,
+  hostId: string | null = null
 ) {
   queryClient.invalidateQueries({
-    queryKey: workspaceRecordKeys.byId(workspaceId),
+    queryKey: workspaceRecordKeys.byId(workspaceId, hostId),
   });
   queryClient.invalidateQueries({ queryKey: workspaceSummaryKeys.all });
 }
@@ -280,11 +281,19 @@ export const Actions = {
     shortcut: 'W P',
     requiresTarget: ActionTargetType.WORKSPACE,
     execute: async (ctx, workspaceId) => {
-      const workspace = await getWorkspace(ctx.queryClient, workspaceId);
-      await workspacesApi.update(workspaceId, {
+      const workspace = await workspacesApi.get(workspaceId);
+      const updated = await workspacesApi.update(workspaceId, {
         pinned: !workspace.pinned,
       });
-      invalidateWorkspaceQueries(ctx.queryClient, workspaceId);
+      ctx.queryClient.setQueryData(
+        workspaceRecordKeys.byId(workspaceId, ctx.currentHostId),
+        updated
+      );
+      invalidateWorkspaceQueries(
+        ctx.queryClient,
+        workspaceId,
+        ctx.currentHostId
+      );
     },
   },
 

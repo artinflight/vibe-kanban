@@ -13,9 +13,9 @@ import urllib.request
 BASE_URL = "https://vibe.local"
 EXPECTED_RELEASE = (
     "/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/"
-    "20260513Tdefault-project-columns"
+    "20260514Tworkspace-unpin"
 )
-EXPECTED_ASSET = "/assets/index-DiSUCc_7.js"
+EXPECTED_ASSET = "/assets/index-BLn8oOcK.js"
 EXPECTED_ACTIVE = [
     "CodexUsage",
     "VL",

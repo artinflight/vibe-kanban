@@ -44,6 +44,7 @@
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tissue-workspace-archive-repo-defaults`: issue-view workspace Archive/Unarchive plus project-scoped repo default fallback
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tagent-chat-images`: inline rendering for agent/shared chat images from `.vibe-attachments/` markdown references
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tdefault-project-columns`: prevents repo-default saves from erasing the operator default project columns
+  - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`: workspace Pin/Unpin fetches fresh target state and updates the host-scoped workspace record cache before invalidating summaries
   - deployed backend restart on 2026-05-11: orphan queued-message guard, stale sub-agent filtering, prompt JSON body limit raised to `100 MB`
 - Manual workspace unread is a backend-backed feature, not a frontend-only flag: it must set the latest coding-agent turn `seen = 0` and invalidate workspace summaries so all existing needs-review markers update consistently.
 
@@ -95,6 +96,7 @@
   - generated workspace-level `AGENTS.md` and `CLAUDE.md` now include the image-sharing instruction in source, and 149 existing generated root config files were backfilled without restart
   - project repo-default saves now seed/preserve the full operator status template instead of writing `statuses: []`; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tdefault-project-columns`
   - live DB repair filled the full operator template for `CodexUsage`, `Monitor local`, `LifeOS`, and `Operations` after backup `/home/mcp/backups/vk-pre-default-columns-fix-20260513T221338Z.sqlite`
+  - workspace Pin/Unpin now fetches fresh target workspace state before toggling and refreshes the host-scoped workspace record cache; this is live in `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`
   - backend orphan-queue prevention is live: `POST /api/sessions/:id/queue` rejects queue creation unless a non-dropped running queue-consumer execution exists for that session
   - prompt JSON body limits are live for workspace start, direct follow-up, and queued follow-up routes; this removes the practical long-prompt/workspace-start cap up to `100 MB`
   - 2026-05-11 refreshable frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tqueue-status-refresh` was rolled back after production VK crashed during an event-stream storm
@@ -168,6 +170,10 @@
   - editable composer state must keep compact chips and not replace pending attachments with full inline images
   - preserve the existing image preview and download behavior
   - keep the generated workspace root `AGENTS.md`/`CLAUDE.md` instruction so agents know how to produce inline chat images
+- Workspace Pin/Unpin must not regress:
+  - do not decide the next pinned value from cache-only workspace state
+  - sidebar-targeted command labels must query the effective workspace record, not the currently selected workspace or a stale cache entry
+  - after updating pinned state, update the host-scoped workspace record cache and invalidate workspace summaries so the sidebar and command label agree
 
 ## Next Safe Steps
 

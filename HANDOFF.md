@@ -7,6 +7,10 @@
   - branch: `vk/restart-candidate-session-resume-20260519`
   - worktree: `/home/mcp/worktrees/vk-restart-candidate-session-resume-20260519`
   - base: `06a65a3ce` from `vk/land-live-fixes-20260422`, the current documented live-maintenance line
+  - source code commit built for restart: `9b1092fb63a7a1d224e0ec4258e6607c698d89ae`
+  - release binary sha256: `0670d5cfc8cc4f0331c0c1cc1f1be30aafde539e79b3c3364d481e2b20bd4e74`
+  - compact pre-restart backup: `/home/mcp/backups/vk-pre-restart-compact-20260519T173137Z`
+  - previous live binary sha256: `251d51ca5e831775768339c45addc6488b5298a138594accb944782db7dcc6a0`
 - Workflow decision:
   - a clean branch from `fork/staging` was tested but is not sufficient for a live restart because current `fork/staging` is missing later local live/prepared VK fixes recorded in this maintenance stream
   - a full cherry-pick union of `fork/staging` plus the maintenance commits was attempted in `/home/mcp/worktrees/vk-restart-candidate-union-20260519` and aborted after broad conflicts across docs, frontend, DB, API, and package files
@@ -31,15 +35,21 @@
   - `pnpm run format`
   - `pnpm run ops:check`
   - `pnpm --filter @vibe/local-web run build`
+  - `python3 -m py_compile scripts/vk_live_regression_smoke.py`
+  - `python3 scripts/vk_live_regression_smoke.py`
+  - `git diff --check`
+  - `cargo build --release --bin server`
+- Backup note:
+  - the standard lean backup was attempted twice but grew too large for MCP local headroom because it stages full VK sessions and selected Codex session files before archiving
+  - old full backup `/home/mcp/backups/vk-pre-restart-20260511T144352Z` was removed to free `21G`
+  - compact backup includes VK DB/config/signing key, systemd unit/drop-ins, live binaries, frontend current pointer, and Codex state/log SQLite metadata
+  - compact backup deliberately excludes full VK session tree and full Codex session tree; these live files are not modified by restart and remain in place
 - Before restart:
-  - run `pnpm run format`
-  - run `pnpm run ops:check`
-  - run `python3 scripts/vk_live_regression_smoke.py` against current live state
-  - build release server from this clean worktree
-  - write/update the release manifest with the final source commit and binary hash
-  - take a current VK backup
-  - check active running executions / `vk-exec-*` units and queued messages
+  - recheck active running executions / `vk-exec-*` units immediately before service restart
+  - copy `target/release/server` to both `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`
   - preserve `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`; this backend restart must not roll back the live frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`
+  - restart `vibe-kanban.service`
+  - verify `/api/info`, `/`, `https://vibe.local/`, live binary hash, frontend current pointer, and `python3 scripts/vk_live_regression_smoke.py`
 
 ## 2026-05-14 Workspace Unpin Repair
 

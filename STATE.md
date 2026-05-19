@@ -914,4 +914,7 @@ Codex follow-up state, 2026-04-20:
 - Root cause was a backend panic: `ClientRequest::ThreadResume` was added for existing-session preservation, but the Codex JSON-RPC `request_id` helper still treated that variant as unsupported.
 - Source fix is in `/home/mcp/worktrees/vk-restart-candidate-session-resume-20260519`: `crates/executors/src/executors/codex/client.rs` now includes `ClientRequest::ThreadResume { request_id, .. }` in the helper.
 - The five affected live units had zero execution logs and no `agent_session_id`; they did not receive prompts and are not recoverable agent work.
-- Validation completed before deployment prep: `cargo fmt --check`; `cargo check -p executors`.
+- Deployed from commit `da32feabf` after compact backup `/home/mcp/backups/vk-pre-thread-resume-hotfix-20260519T194311Z`.
+- Live binary sha after deploy: `84186e2cd9f3fae711f690f30a3723d97f014368a8dbd3d034d07909faa89924`; service PID `1175662`.
+- Post-restart: API/home/projects healthy, live regression smoke passed, no `vk-exec-codex-*` units remain, running execution rows are `0`, and no new request-id panic appeared in the journal.
+- Validation: `cargo fmt --check`; `cargo check -p executors`; `pnpm run format`; `cargo build --release --bin server`; `python3 scripts/vk_live_regression_smoke.py`.

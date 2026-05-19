@@ -916,4 +916,7 @@
 - Journal root cause: each start panicked at `crates/executors/src/executors/codex/client.rs:989` with `request_id called for unsupported request variant`.
 - Fix: add `ClientRequest::ThreadResume` to the Codex JSON-RPC `request_id` helper so existing-session follow-ups can actually send `thread/resume`.
 - Important operational note: the 5 affected app-server units did not receive prompts; they are stuck wrappers from the panic, not active agent work.
-- Validation so far: `cargo fmt --check`; `cargo check -p executors`.
+- Deployed after compact backup `/home/mcp/backups/vk-pre-thread-resume-hotfix-20260519T194311Z`.
+- Live binary sha is `84186e2cd9f3fae711f690f30a3723d97f014368a8dbd3d034d07909faa89924` on both `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`.
+- Post-restart service PID is `1175662`; no `vk-exec-codex-*` units remain; running execution rows are `0`.
+- Validation: `cargo fmt --check`; `cargo check -p executors`; `pnpm run format`; `cargo build --release --bin server`; `/api/info`, `https://vibe.local/`, `/api/projects`; `python3 scripts/vk_live_regression_smoke.py`; no post-restart request-id panics in journal.

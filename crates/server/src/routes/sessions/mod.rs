@@ -1,6 +1,11 @@
 pub mod queue;
 pub mod review;
 
+use std::{
+    path::{Path, PathBuf},
+    time::SystemTime,
+};
+
 use axum::{
     Extension, Json, Router,
     extract::{DefaultBodyLimit, Query, State},
@@ -21,7 +26,9 @@ use deployment::Deployment;
 use executors::{
     actions::{
         ExecutorAction, ExecutorActionType, coding_agent_follow_up::CodingAgentFollowUpRequest,
+        coding_agent_initial::CodingAgentInitialRequest,
     },
+    executors::BaseCodingAgent,
     profile::ExecutorConfig,
 };
 use serde::Deserialize;
@@ -29,6 +36,7 @@ use services::services::{
     container::ContainerService,
     events::{execution_process_patch, workspace_patch},
 };
+use sqlx::{Row, SqlitePool};
 use ts_rs::TS;
 use utils::response::ApiResponse;
 use uuid::Uuid;
@@ -39,6 +47,10 @@ use crate::{
 };
 
 const PROMPT_JSON_BODY_LIMIT_BYTES: usize = 100 * 1024 * 1024;
+const CODEX_USAGE_SAFE_STATE_RELATIVE_PATH: &str = ".vibe/current-state.md";
+const DEFAULT_CODEX_RESUME_HISTORY_LIMIT_BYTES: u64 = 8 * 1024 * 1024;
+const RECENT_STATE_TURN_LIMIT: i64 = 6;
+const STATE_FIELD_CHAR_LIMIT: usize = 4096;
 
 #[derive(Debug, Deserialize)]
 pub struct SessionQuery {
@@ -126,6 +138,299 @@ pub struct ResetProcessRequest {
     pub perform_git_reset: Option<bool>,
 }
 
+#[derive(Debug)]
+struct RecentCodingTurn {
+    created_at: String,
+    prompt: Option<String>,
+    summary: Option<String>,
+}
+
+#[derive(Debug)]
+struct CodexUsageSafeResume {
+    state_path: PathBuf,
+    previous_session_bytes: u64,
+    recent_turns: Vec<RecentCodingTurn>,
+}
+
+async fn prepare_codex_usage_safe_resume(
+    pool: &SqlitePool,
+    workspace: &Workspace,
+    session: &Session,
+    agent_session_id: &str,
+) -> Result<Option<CodexUsageSafeResume>, ApiError> {
+    if !codex_usage_safe_resume_enabled() {
+        return Ok(None);
+    }
+
+    let Some(previous_session_bytes) = find_codex_session_size(agent_session_id).await else {
+        tracing::debug!(
+            "Codex usage-safe resume skipped: could not find session JSONL for {}",
+            agent_session_id
+        );
+        return Ok(None);
+    };
+
+    let limit = codex_resume_history_limit_bytes();
+    if previous_session_bytes <= limit {
+        return Ok(None);
+    }
+
+    let workspace_root = workspace.container_ref.as_ref().ok_or_else(|| {
+        ApiError::BadRequest("Workspace container path is not available".to_string())
+    })?;
+    let state_path = PathBuf::from(workspace_root).join(CODEX_USAGE_SAFE_STATE_RELATIVE_PATH);
+    let recent_turns = load_recent_coding_turns(pool, session.id, RECENT_STATE_TURN_LIMIT).await?;
+
+    Ok(Some(CodexUsageSafeResume {
+        state_path,
+        previous_session_bytes,
+        recent_turns,
+    }))
+}
+
+async fn write_codex_usage_safe_state(
+    resume: &CodexUsageSafeResume,
+    workspace: &Workspace,
+    user_prompt: &str,
+) -> Result<(), ApiError> {
+    if let Some(parent) = resume.state_path.parent() {
+        tokio::fs::create_dir_all(parent).await.map_err(|e| {
+            ApiError::BadRequest(format!("Failed to create compact state directory: {e}"))
+        })?;
+    }
+
+    let content = build_codex_usage_safe_state(
+        workspace,
+        user_prompt,
+        resume.previous_session_bytes,
+        &resume.recent_turns,
+    );
+
+    tokio::fs::write(&resume.state_path, content)
+        .await
+        .map_err(|e| ApiError::BadRequest(format!("Failed to write compact state file: {e}")))?;
+
+    Ok(())
+}
+
+fn build_codex_usage_safe_prompt(
+    user_prompt: &str,
+    state_path: &Path,
+    previous_session_bytes: u64,
+) -> String {
+    format!(
+        r#"Vibe Kanban is starting a fresh Codex thread for this follow-up because the previous Codex thread history is too large to resume safely ({previous_session_bytes} bytes).
+
+Use the compact current-state file instead of asking for or reloading the old chat:
+{state_path}
+
+Rules for this turn:
+- Read the compact state file first, then inspect only the files needed for the user's request.
+- Do not re-read old conversation logs, large handoff ledgers, evidence folders, or screenshots unless the current request explicitly requires them.
+- Continue within this turn until the requested objective is complete or you are blocked by a concrete missing input.
+- Before ending, update the compact state file with the current status, changed files, validation, blockers, and next action.
+- Keep status reporting short and avoid duplicate summaries.
+
+User request:
+{user_prompt}"#,
+        state_path = state_path.display()
+    )
+}
+
+fn build_codex_usage_safe_state(
+    workspace: &Workspace,
+    user_prompt: &str,
+    previous_session_bytes: u64,
+    turns: &[RecentCodingTurn],
+) -> String {
+    let mut content = format!(
+        r#"# Vibe Kanban Current State
+
+Workspace: {workspace_name}
+Workspace ID: {workspace_id}
+Updated by VK: {updated_at}
+Previous Codex thread bytes: {previous_session_bytes}
+
+Purpose: compact continuity for usage-safe Codex follow-ups. Agents should resume from this file and the repository state, not from old chat history.
+
+## Current User Request
+
+{user_prompt}
+
+## Operating Rules
+
+- Prefer this file plus direct repo inspection over old chat/history replay.
+- Do not repeatedly scan evidence, screenshots, logs, or handoff files unless they are directly needed.
+- Persist in one managed objective until done or concretely blocked.
+- Before ending a long-running turn, update this file with current status, changed files, validation, blockers, and next action.
+
+## Recent Agent Turns
+"#,
+        workspace_name = workspace.name.as_deref().unwrap_or("(unnamed)"),
+        workspace_id = workspace.id,
+        updated_at = chrono::Utc::now().to_rfc3339(),
+        user_prompt = truncate_state_field(user_prompt),
+    );
+
+    if turns.is_empty() {
+        content.push_str("\nNo previous coding-agent summaries were available.\n");
+    } else {
+        for turn in turns {
+            content.push_str(&format!(
+                r#"
+### {created_at}
+
+Prompt:
+{prompt}
+
+Summary:
+{summary}
+"#,
+                created_at = turn.created_at,
+                prompt = turn
+                    .prompt
+                    .as_deref()
+                    .map(truncate_state_field)
+                    .unwrap_or_else(|| "(not recorded)".to_string()),
+                summary = turn
+                    .summary
+                    .as_deref()
+                    .map(truncate_state_field)
+                    .unwrap_or_else(|| "(not recorded)".to_string()),
+            ));
+        }
+    }
+
+    content
+}
+
+async fn load_recent_coding_turns(
+    pool: &SqlitePool,
+    session_id: Uuid,
+    limit: i64,
+) -> Result<Vec<RecentCodingTurn>, sqlx::Error> {
+    let rows = sqlx::query(
+        r#"SELECT cat.created_at, cat.prompt, cat.summary
+           FROM coding_agent_turns cat
+           JOIN execution_processes ep ON ep.id = cat.execution_process_id
+           WHERE ep.session_id = ?
+             AND ep.run_reason = 'codingagent'
+             AND ep.dropped = 0
+           ORDER BY ep.created_at DESC
+           LIMIT ?"#,
+    )
+    .bind(session_id)
+    .bind(limit)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| RecentCodingTurn {
+            created_at: row.get::<String, _>("created_at"),
+            prompt: row.get::<Option<String>, _>("prompt"),
+            summary: row.get::<Option<String>, _>("summary"),
+        })
+        .collect())
+}
+
+async fn find_codex_session_size(agent_session_id: &str) -> Option<u64> {
+    let session_id = agent_session_id.to_string();
+    tokio::task::spawn_blocking(move || {
+        let codex_home = std::env::var("CODEX_HOME")
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .map(PathBuf::from)
+            .or_else(|| {
+                std::env::var("HOME")
+                    .ok()
+                    .map(|home| PathBuf::from(home).join(".codex"))
+            })?;
+        let sessions_root = codex_home.join("sessions");
+        find_session_jsonl_size_in_root(&sessions_root, &session_id)
+    })
+    .await
+    .ok()
+    .flatten()
+}
+
+fn find_session_jsonl_size_in_root(root: &Path, agent_session_id: &str) -> Option<u64> {
+    let mut stack = vec![root.to_path_buf()];
+    let mut newest_match: Option<(SystemTime, u64)> = None;
+
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let Ok(metadata) = entry.metadata() else {
+                continue;
+            };
+            if metadata.is_dir() {
+                stack.push(path);
+                continue;
+            }
+
+            let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+            if !file_name.ends_with(".jsonl") || !file_name.contains(agent_session_id) {
+                continue;
+            }
+
+            let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+            if newest_match
+                .as_ref()
+                .map(|(existing_modified, _)| modified > *existing_modified)
+                .unwrap_or(true)
+            {
+                newest_match = Some((modified, metadata.len()));
+            }
+        }
+    }
+
+    newest_match.map(|(_, len)| len)
+}
+
+fn codex_usage_safe_resume_enabled() -> bool {
+    !env_flag_is_false("VK_CODEX_USAGE_SAFE_RESUME")
+}
+
+fn codex_resume_history_limit_bytes() -> u64 {
+    std::env::var("VK_CODEX_RESUME_HISTORY_LIMIT_BYTES")
+        .ok()
+        .and_then(|value| value.trim().parse::<u64>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(DEFAULT_CODEX_RESUME_HISTORY_LIMIT_BYTES)
+}
+
+fn env_flag_is_false(name: &str) -> bool {
+    std::env::var(name)
+        .ok()
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "0" | "false" | "no" | "off"
+            )
+        })
+        .unwrap_or(false)
+}
+
+fn truncate_state_field(value: &str) -> String {
+    let trimmed = value.trim();
+    if trimmed.chars().count() <= STATE_FIELD_CHAR_LIMIT {
+        return trimmed.to_string();
+    }
+
+    let mut truncated = trimmed
+        .chars()
+        .take(STATE_FIELD_CHAR_LIMIT)
+        .collect::<String>();
+    truncated.push_str("\n...[truncated]");
+    truncated
+}
+
 pub async fn follow_up(
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
@@ -195,13 +500,39 @@ pub async fn follow_up(
 
     let action_type = if let Some(info) = latest_session_info {
         let is_reset = payload.retry_process_id.is_some();
-        ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
-            prompt: prompt.clone(),
-            session_id: info.session_id,
-            reset_to_message_id: if is_reset { info.message_id } else { None },
-            executor_config: payload.executor_config.clone(),
-            working_dir: working_dir.clone(),
-        })
+        if !is_reset
+            && payload.executor_config.executor == BaseCodingAgent::Codex
+            && let Some(usage_safe_resume) =
+                prepare_codex_usage_safe_resume(pool, &workspace, &session, &info.session_id)
+                    .await?
+        {
+            write_codex_usage_safe_state(&usage_safe_resume, &workspace, &prompt).await?;
+            tracing::warn!(
+                session_id = %session.id,
+                workspace_id = %workspace.id,
+                agent_session_id = %info.session_id,
+                previous_session_bytes = usage_safe_resume.previous_session_bytes,
+                state_path = %usage_safe_resume.state_path.display(),
+                "Starting usage-safe fresh Codex thread instead of resuming oversized history"
+            );
+            ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
+                prompt: build_codex_usage_safe_prompt(
+                    &prompt,
+                    &usage_safe_resume.state_path,
+                    usage_safe_resume.previous_session_bytes,
+                ),
+                executor_config: payload.executor_config.clone(),
+                working_dir: working_dir.clone(),
+            })
+        } else {
+            ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+                prompt: prompt.clone(),
+                session_id: info.session_id,
+                reset_to_message_id: if is_reset { info.message_id } else { None },
+                executor_config: payload.executor_config.clone(),
+                working_dir: working_dir.clone(),
+            })
+        }
     } else {
         ExecutorActionType::CodingAgentInitialRequest(
             executors::actions::coding_agent_initial::CodingAgentInitialRequest {
@@ -355,4 +686,90 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
         .nest("/{session_id}/queue", queue::router(deployment));
 
     Router::new().nest("/sessions", sessions_router)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{fs, time::Duration};
+
+    use db::models::workspace::Workspace;
+    use tempfile::tempdir;
+    use uuid::Uuid;
+
+    use super::{
+        RecentCodingTurn, STATE_FIELD_CHAR_LIMIT, build_codex_usage_safe_prompt,
+        build_codex_usage_safe_state, find_session_jsonl_size_in_root, truncate_state_field,
+    };
+
+    #[test]
+    fn finds_newest_codex_session_jsonl_size() {
+        let dir = tempdir().expect("tempdir");
+        let day = dir.path().join("2026/05/19");
+        fs::create_dir_all(&day).expect("create sessions day");
+
+        let session_id = "019e4115-2e07-7343-884e-449117c2d718";
+        let older = day.join(format!("rollout-old-{session_id}.jsonl"));
+        let newer = day.join(format!("rollout-new-{session_id}.jsonl"));
+        fs::write(&older, "small").expect("write older");
+        std::thread::sleep(Duration::from_millis(5));
+        fs::write(&newer, "much larger").expect("write newer");
+
+        assert_eq!(
+            find_session_jsonl_size_in_root(dir.path(), session_id),
+            Some("much larger".len() as u64)
+        );
+    }
+
+    #[test]
+    fn usage_safe_prompt_points_to_compact_state_not_history() {
+        let prompt = build_codex_usage_safe_prompt(
+            "continue mobile parity",
+            std::path::Path::new("/tmp/workspace/.vibe/current-state.md"),
+            9_000_000,
+        );
+
+        assert!(prompt.contains("fresh Codex thread"));
+        assert!(prompt.contains("/tmp/workspace/.vibe/current-state.md"));
+        assert!(prompt.contains("Do not re-read old conversation logs"));
+        assert!(prompt.contains("continue mobile parity"));
+    }
+
+    #[test]
+    fn usage_safe_state_is_compact_and_includes_recent_turns() {
+        let workspace = Workspace {
+            id: Uuid::new_v4(),
+            task_id: None,
+            container_ref: Some("/tmp/workspace".to_string()),
+            branch: "vk/test".to_string(),
+            setup_completed_at: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            archived: false,
+            pinned: false,
+            name: Some("Mobile parity".to_string()),
+            worktree_deleted: false,
+        };
+        let long_summary = "x".repeat(STATE_FIELD_CHAR_LIMIT + 50);
+        let state = build_codex_usage_safe_state(
+            &workspace,
+            "next step",
+            9_000_000,
+            &[RecentCodingTurn {
+                created_at: "2026-05-19T20:00:00Z".to_string(),
+                prompt: Some("old prompt".to_string()),
+                summary: Some(long_summary),
+            }],
+        );
+
+        assert!(state.contains("Mobile parity"));
+        assert!(state.contains("next step"));
+        assert!(state.contains("old prompt"));
+        assert!(state.contains("...[truncated]"));
+        assert!(state.contains("Do not repeatedly scan evidence"));
+    }
+
+    #[test]
+    fn state_field_truncation_preserves_short_values() {
+        assert_eq!(truncate_state_field("  short value  "), "short value");
+    }
 }

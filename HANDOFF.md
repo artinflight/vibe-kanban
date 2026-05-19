@@ -58,6 +58,27 @@
   - backfill this local restart package to `staging` deliberately; do not bulk-merge the dirty maintenance checkout
   - if a future full restore-grade backup is needed, first offload or prune session data because the standard lean backup currently stages more than MCP can safely archive locally
 
+# 2026-05-19 Codex Usage-Safe Resume Guard
+
+- User reported massive real token burn during mobile parity work, not just bad reporting.
+- Root cause found in VK flow: Codex follow-ups always resumed the latest `agent_session_id` through `thread/resume`; for long sessions this lets Codex reload a huge prior thread/history before a small continue prompt.
+- Source fix prepared, not deployed:
+  - Codex follow-ups inspect the prior Codex session JSONL size under `CODEX_HOME/sessions`.
+  - If the prior thread is over `VK_CODEX_RESUME_HISTORY_LIMIT_BYTES` or the default `8 MiB`, VK writes `.vibe/current-state.md` in the workspace and starts a fresh Codex thread with a short continuity prompt instead of resuming the oversized thread.
+  - Reset/retry follow-ups still use the exact prior session/message path.
+  - Non-Codex agents and small Codex sessions keep the existing resume behavior.
+  - Generated workspace `AGENTS.md`/`CLAUDE.md` now instruct agents to keep `.vibe/current-state.md` current, avoid old chat/evidence/screenshot replay, and continue one managed objective instead of short status-only churn.
+- Runtime controls:
+  - disable with `VK_CODEX_USAGE_SAFE_RESUME=0`
+  - change threshold with `VK_CODEX_RESUME_HISTORY_LIMIT_BYTES=<bytes>`
+- Validation passed:
+  - `cargo fmt --check`
+  - `cargo test -p server routes::sessions::tests -- --nocapture`
+  - `cargo test -p local-deployment workspace_config -- --nocapture`
+  - `cargo check -p server -p local-deployment`
+  - `pnpm run format`
+- Remaining measurement gap: not live-tested against a real oversized VK workspace yet because this is backend behavior and needs an approved VK backend build/restart to take effect.
+
 ## 2026-05-14 Workspace Unpin Repair
 
 - User reported pinned workspaces could not be unpinned.

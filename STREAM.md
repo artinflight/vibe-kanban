@@ -175,6 +175,12 @@
   - editable composer state must keep compact chips and not replace pending attachments with full inline images
   - preserve the existing image preview and download behavior
   - keep the generated workspace root `AGENTS.md`/`CLAUDE.md` instruction so agents know how to produce inline chat images
+- Codex usage-safe resume must not regress:
+  - large Codex follow-ups must not blindly resume oversized prior threads when a compact `.vibe/current-state.md` handoff can carry continuity
+  - reset/retry follow-ups must keep exact prior session/message semantics
+  - non-Codex agents and small Codex sessions must keep normal resume behavior
+  - generated workspace root `AGENTS.md`/`CLAUDE.md` must keep the `.vibe/current-state.md` continuity instruction
+  - verify with `cargo test -p server routes::sessions::tests` and `cargo test -p local-deployment workspace_config`
 - Workspace Pin/Unpin must not regress:
   - do not decide the next pinned value from cache-only workspace state
   - sidebar-targeted command labels must query the effective workspace record, not the currently selected workspace or a stale cache entry
@@ -193,3 +199,4 @@
 9. Rework and redeploy the queued follow-up fix only from a clean minimal build after the event-stream crash is understood; do not reuse the 2026-05-11 dirty checkout asset swap.
 10. Deploy manual workspace unread with the next approved backend restart and frontend asset release, then verify that a selected workspace can be marked unread and that the workspace/project needs-review marker returns.
 11. Turn the live regression smoke list into an executable script or Playwright check so repeated UI regressions are blocked before deployment instead of rediscovered by the user.
+12. Deploy the Codex usage-safe resume guard with the next approved backend restart, then test an oversized existing Codex workspace follow-up and confirm the new turn starts from `.vibe/current-state.md` instead of replaying the old thread.

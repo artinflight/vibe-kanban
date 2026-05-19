@@ -920,3 +920,12 @@
 - Live binary sha is `84186e2cd9f3fae711f690f30a3723d97f014368a8dbd3d034d07909faa89924` on both `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`.
 - Post-restart service PID is `1175662`; no `vk-exec-codex-*` units remain; running execution rows are `0`.
 - Validation: `cargo fmt --check`; `cargo check -p executors`; `pnpm run format`; `cargo build --release --bin server`; `/api/info`, `https://vibe.local/`, `/api/projects`; `python3 scripts/vk_live_regression_smoke.py`; no post-restart request-id panics in journal.
+
+## 2026-05-19T21:00:00Z | vk/restart-candidate-session-resume-20260519 | Codex usage-safe resume guard prepared
+
+- User clarified the priority is actual token burn, not accounting. Investigation found VK follow-ups always resumed the latest Codex `agent_session_id`, so long mobile-parity sessions could reload huge prior thread/history for small continue prompts.
+- Prepared backend guard: Codex follow-ups over the prior session JSONL threshold (`VK_CODEX_RESUME_HISTORY_LIMIT_BYTES`, default `8 MiB`) write `.vibe/current-state.md` and start a fresh Codex thread with a compact continuity prompt instead of calling `thread/resume`.
+- Preserved normal behavior for reset/retry follow-ups, non-Codex agents, and small Codex sessions.
+- Updated generated workspace `AGENTS.md`/`CLAUDE.md` instructions so agents maintain `.vibe/current-state.md`, avoid stale evidence/screenshot/history replay, and do not end repeated status-only turns.
+- Validation passed: `cargo fmt --check`; `cargo test -p server routes::sessions::tests -- --nocapture`; `cargo test -p local-deployment workspace_config -- --nocapture`; `cargo check -p server -p local-deployment`; `pnpm run format`.
+- Not deployed live; needs approved backend build/restart and an oversized-workspace smoke to measure real prompt/context reduction.

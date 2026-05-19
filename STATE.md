@@ -44,6 +44,12 @@
 - `staging` remains the integration base for new VK development. The May 3 guardrail/check promotion and the May 5 recurring-stall hotfix have both been backfilled to `staging`.
 - VK now uses an isolated Codex home at `/home/mcp/.local/share/vibe-kanban/codex-home`.
 - That isolation exists specifically to stop VK coding agents from sharing refresh-token rotation with tmux/interactive Codex sessions.
+- Codex usage-safe resume source fix is prepared but not deployed:
+  - normal Codex follow-ups previously always used `thread/resume` with the latest `agent_session_id`, which can make a small follow-up reload a huge prior Codex thread/history
+  - when the previous Codex session JSONL exceeds `VK_CODEX_RESUME_HISTORY_LIMIT_BYTES` or the default `8 MiB`, VK now writes `.vibe/current-state.md` and starts a fresh Codex thread with a compact continuity prompt instead of resuming the oversized thread
+  - reset/retry follow-ups still resume the requested prior message, non-Codex agents are unchanged, and small Codex sessions still resume normally
+  - generated workspace `AGENTS.md`/`CLAUDE.md` files now include `.vibe/current-state.md` usage-safe continuity instructions
+  - live effect requires the next approved backend build/restart
 - Refreshable frontend assets are active in live production through `/home/mcp/.config/systemd/user/vibe-kanban.service.d/frontend-dist.conf`.
 - Live production currently serves frontend assets from `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`, pointing at release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`.
 - Live production frontend was advanced without a VK restart on 2026-05-14, repairing workspace unpin while retaining default project columns, inline agent chat image rendering, issue-view workspace Archive/Unarchive, project-scoped workspace repo defaulting, Kanban drag persistence, issue-view workspace-card Rename, and direct issue status selector fixes.

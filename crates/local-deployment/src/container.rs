@@ -76,6 +76,14 @@ When you create an image that the user should see in chat, save the file under `
 `![short description](.vibe-attachments/example.png)`
 
 Create `.vibe-attachments/` if needed. Use a relative `.vibe-attachments/...` path, not an absolute filesystem path.
+
+## Usage-Safe Continuity
+
+For long-running work, keep `.vibe/current-state.md` current. Before ending a turn, record the current status, changed files, validation, blockers, and next action there.
+
+When resuming, read `.vibe/current-state.md` first and inspect only the files needed for the current objective. Do not reload old chat logs, large handoff ledgers, evidence folders, screenshots, or attachments unless the current request explicitly requires them.
+
+Continue within one managed objective until it is complete or blocked by a concrete missing input. Avoid repeated status-only turns and duplicate summaries.
 "#;
 
 #[derive(Clone)]
@@ -1105,7 +1113,9 @@ impl LocalContainerService {
                     }
                 };
 
-                if existing.contains("## Sharing Images In Chat") {
+                if existing.contains("## Sharing Images In Chat")
+                    && existing.contains("## Usage-Safe Continuity")
+                {
                     tracing::trace!(
                         "Workspace config file {} already has VK instructions",
                         config_file
@@ -1113,7 +1123,9 @@ impl LocalContainerService {
                     continue;
                 }
 
-                if !Self::is_generated_workspace_config(&existing, config_file) {
+                if !Self::is_generated_workspace_config(&existing, config_file)
+                    && !Self::is_generated_vk_workspace_config(&existing, config_file)
+                {
                     tracing::trace!(
                         "Workspace config file {} appears custom, skipping",
                         config_file
@@ -1181,6 +1193,16 @@ impl LocalContainerService {
         }
 
         has_import || content.trim().is_empty()
+    }
+
+    fn is_generated_vk_workspace_config(content: &str, config_file: &str) -> bool {
+        content.starts_with("# Vibe Kanban Workspace")
+            && content.contains("## Sharing Images In Chat")
+            && content
+                .lines()
+                .map(str::trim)
+                .filter(|line| line.starts_with('@'))
+                .all(|line| line.ends_with(config_file))
     }
 
     /// Consume a queued follow-up and start it when the completed process allows it.
@@ -1847,6 +1869,8 @@ mod tests {
 
         assert!(content.contains("## Sharing Images In Chat"));
         assert!(content.contains(".vibe-attachments/example.png"));
+        assert!(content.contains("## Usage-Safe Continuity"));
+        assert!(content.contains(".vibe/current-state.md"));
         assert!(content.contains("## Repository Instructions"));
         assert!(content.contains("@repo-a/AGENTS.md"));
         assert!(content.contains("@repo-b/AGENTS.md"));
@@ -1868,6 +1892,21 @@ mod tests {
         ));
         assert!(!LocalContainerService::is_generated_workspace_config(
             "@repo-a/CLAUDE.md\n",
+            "AGENTS.md"
+        ));
+    }
+
+    #[test]
+    fn detects_generated_vk_workspace_config_for_instruction_upgrades() {
+        let content = "# Vibe Kanban Workspace\n\n## Sharing Images In Chat\n\nx\n\n## Repository Instructions\n\n@repo-a/AGENTS.md\n";
+        assert!(LocalContainerService::is_generated_vk_workspace_config(
+            content,
+            "AGENTS.md"
+        ));
+
+        let custom = "# Vibe Kanban Workspace\n\n## Sharing Images In Chat\n\n@repo-a/CLAUDE.md\n";
+        assert!(!LocalContainerService::is_generated_vk_workspace_config(
+            custom,
             "AGENTS.md"
         ));
     }

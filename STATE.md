@@ -907,3 +907,11 @@ Codex follow-up state, 2026-04-20:
   - `missing_in_isolated_but_found_shared = 0`
   - `missing_both = 0`
 - Do not restart VK just for this repair; no restart is needed when only copying Codex rollout files and active agents may be running.
+
+2026-05-19 Codex thread/resume request-id hotfix:
+
+- After the 2026-05-19 restart, newly started Codex follow-ups spawned `vk-exec-codex-*` units but did no work.
+- Root cause was a backend panic: `ClientRequest::ThreadResume` was added for existing-session preservation, but the Codex JSON-RPC `request_id` helper still treated that variant as unsupported.
+- Source fix is in `/home/mcp/worktrees/vk-restart-candidate-session-resume-20260519`: `crates/executors/src/executors/codex/client.rs` now includes `ClientRequest::ThreadResume { request_id, .. }` in the helper.
+- The five affected live units had zero execution logs and no `agent_session_id`; they did not receive prompts and are not recoverable agent work.
+- Validation completed before deployment prep: `cargo fmt --check`; `cargo check -p executors`.

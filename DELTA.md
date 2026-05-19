@@ -908,3 +908,12 @@
 - Included Codex existing-session `thread/resume`, branch worktree collision auto-move, the `tokio-stream/io-util` feature needed for `LinesStream` compilation, and a live smoke baseline update for current project order.
 - Explicitly excluded the proposed global Codex execution throttle/default limit of `1`.
 - Deployed after compact backup `/home/mcp/backups/vk-pre-restart-compact-20260519T173137Z`; active executions and `vk-exec-*` units were `0`; frontend symlink stayed on `20260514Tworkspace-unpin`; post-restart live regression smoke passed.
+
+## 2026-05-19T19:35:00Z | vk/restart-candidate-session-resume-20260519 | Codex thread/resume request-id hotfix
+
+- Symptom after the restart: newly started Codex agents appeared to run forever but produced no chat output.
+- Live audit found 5 `running` execution rows and 5 `vk-exec-codex-*` systemd units, but every execution had 0 log rows and no `agent_session_id`.
+- Journal root cause: each start panicked at `crates/executors/src/executors/codex/client.rs:989` with `request_id called for unsupported request variant`.
+- Fix: add `ClientRequest::ThreadResume` to the Codex JSON-RPC `request_id` helper so existing-session follow-ups can actually send `thread/resume`.
+- Important operational note: the 5 affected app-server units did not receive prompts; they are stuck wrappers from the panic, not active agent work.
+- Validation so far: `cargo fmt --check`; `cargo check -p executors`.

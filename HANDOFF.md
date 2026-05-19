@@ -2135,6 +2135,16 @@ User QA checklist for the no-restart frontend repair:
   - proves the lower-level UUID binding helper updates a UUID-stored row
 - Added `tokio` as a `db` dev-dependency for the async DB test.
 
+2026-05-19 Codex agents idle after restart:
+
+- User restarted agents after the `thread/resume` deploy and saw no output.
+- Live state showed 5 running execution rows and 5 active `vk-exec-codex-*` units, but all had 0 execution log rows and no `agent_session_id`.
+- `journalctl --user -u vibe-kanban.service` showed every start panicked at `crates/executors/src/executors/codex/client.rs:989` with `request_id called for unsupported request variant`.
+- Root cause: the new `ClientRequest::ThreadResume` variant was not included in `request_id`.
+- Fix applied in clean worktree `/home/mcp/worktrees/vk-restart-candidate-session-resume-20260519`: add `ClientRequest::ThreadResume { request_id, .. }` to the match.
+- The stuck live app-server units are not useful agent work; the VK task panicked before prompts were sent, so there are no logs or session ids to recover.
+- Validation completed so far: `cargo fmt --check`; `cargo check -p executors`.
+
 2026-05-13 Kanban drag persistence hotfix:
 
 - User reported dragging an issue card to another Kanban column looked like it worked, then bounced back shortly after.

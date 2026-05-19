@@ -977,6 +977,7 @@ fn request_id(request: &ClientRequest) -> RequestId {
         ClientRequest::Initialize { request_id, .. }
         | ClientRequest::ThreadStart { request_id, .. }
         | ClientRequest::ThreadFork { request_id, .. }
+        | ClientRequest::ThreadResume { request_id, .. }
         | ClientRequest::TurnStart { request_id, .. }
         | ClientRequest::GetAccount { request_id, .. }
         | ClientRequest::ReviewStart { request_id, .. }

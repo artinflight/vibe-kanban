@@ -18,10 +18,10 @@ use codex_app_server_protocol::{
     JSONRPCNotification, JSONRPCRequest, JSONRPCResponse, ListMcpServerStatusParams,
     ListMcpServerStatusResponse, RequestId, ReviewStartParams, ReviewStartResponse, ReviewTarget,
     ServerRequest, ThreadCompactStartParams, ThreadCompactStartResponse, ThreadForkParams,
-    ThreadForkResponse, ThreadItem, ThreadReadParams, ThreadReadResponse, ThreadStartParams,
-    ThreadStartResponse, ToolRequestUserInputAnswer, ToolRequestUserInputQuestion,
-    ToolRequestUserInputResponse, TurnCompletedNotification, TurnStartParams, TurnStartResponse,
-    TurnStatus, UserInput,
+    ThreadForkResponse, ThreadItem, ThreadReadParams, ThreadReadResponse, ThreadResumeParams,
+    ThreadResumeResponse, ThreadStartParams, ThreadStartResponse, ToolRequestUserInputAnswer,
+    ToolRequestUserInputQuestion, ToolRequestUserInputResponse, TurnCompletedNotification,
+    TurnStartParams, TurnStartResponse, TurnStatus, UserInput,
 };
 use codex_protocol::config_types::{CollaborationMode, ModeKind, Settings};
 use futures::TryFutureExt;
@@ -149,6 +149,17 @@ impl AppServerClient {
             params,
         };
         self.send_request(request, "thread/fork").await
+    }
+
+    pub async fn thread_resume(
+        &self,
+        params: ThreadResumeParams,
+    ) -> Result<ThreadResumeResponse, ExecutorError> {
+        let request = ClientRequest::ThreadResume {
+            request_id: self.next_request_id(),
+            params,
+        };
+        self.send_request(request, "thread/resume").await
     }
 
     pub async fn turn_start_with_mode(

@@ -1,5 +1,46 @@
 # HANDOFF.md
 
+## 2026-05-19 Backend Restart Candidate: Codex Session Resume + Worktree Collision
+
+- User asked to take over after a local agent made executor changes from the wrong Codex session and to get VK to a safe restart point without regressing live features.
+- Candidate branch/worktree:
+  - branch: `vk/restart-candidate-session-resume-20260519`
+  - worktree: `/home/mcp/worktrees/vk-restart-candidate-session-resume-20260519`
+  - base: `06a65a3ce` from `vk/land-live-fixes-20260422`, the current documented live-maintenance line
+- Workflow decision:
+  - a clean branch from `fork/staging` was tested but is not sufficient for a live restart because current `fork/staging` is missing later local live/prepared VK fixes recorded in this maintenance stream
+  - a full cherry-pick union of `fork/staging` plus the maintenance commits was attempted in `/home/mcp/worktrees/vk-restart-candidate-union-20260519` and aborted after broad conflicts across docs, frontend, DB, API, and package files
+  - do not hand-resolve that union under restart pressure; deploy this candidate only as a local live-maintenance restart package, then backfill intentionally to `staging` as a separate PR stream
+- Included backend fixes:
+  - Codex follow-up turns for existing VK sessions now call app-server `thread/resume` instead of `thread/fork`
+  - `/compact` and `/fast` slash-command paths also resume the current thread instead of forking it
+  - worktree recreation now detects when the requested branch is already checked out in another registered worktree and moves that existing checkout into the expected workspace path instead of failing with `already used by worktree`
+  - `crates/utils/Cargo.toml` enables `tokio-stream/io-util` because `utils::execution_logs` imports `LinesStream`; without this, `cargo test -p worktree-manager` fails before reaching the new regression test
+  - `scripts/vk_live_regression_smoke.py` updates the project-order baseline to current live state: `OSTP` is active and `Monitor local` is archived
+- Explicitly excluded:
+  - the local agent's proposed `VK_CODEX_MAX_ACTIVE_EXECUTIONS` / `VK_DISABLE_CODEX_EXECUTIONS` execution throttle
+  - any default active Codex execution limit of `1`
+  - dirty sub-agent monitor project/repo exposure changes from `/home/mcp/_vibe_kanban_repo`
+  - `.vk-preview/`
+- Validation so far:
+  - `cargo fmt --check`
+  - `cargo check -p executors`
+  - `cargo test -p worktree-manager ensure_worktree_moves_existing_checkout_for_branch`
+  - `cargo test -p worktree-manager create_worktree_when_repo_path_is_a_worktree`
+  - `rg "VK_CODEX_MAX_ACTIVE_EXECUTIONS|VK_DISABLE_CODEX_EXECUTIONS|codex_max_active_executions|active_codex_execution_count" -n crates packages scripts || true` returned no matches
+  - `pnpm run format`
+  - `pnpm run ops:check`
+  - `pnpm --filter @vibe/local-web run build`
+- Before restart:
+  - run `pnpm run format`
+  - run `pnpm run ops:check`
+  - run `python3 scripts/vk_live_regression_smoke.py` against current live state
+  - build release server from this clean worktree
+  - write/update the release manifest with the final source commit and binary hash
+  - take a current VK backup
+  - check active running executions / `vk-exec-*` units and queued messages
+  - preserve `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`; this backend restart must not roll back the live frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`
+
 ## 2026-05-14 Workspace Unpin Repair
 
 - User reported pinned workspaces could not be unpinned.

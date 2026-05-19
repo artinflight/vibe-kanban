@@ -901,3 +901,10 @@
   - broadened live log capture for namespaced `spawn_agent` / `wait_agent` tool names and singular `target`
 - Verified: `pnpm run generate-types`, `pnpm run format`, `pnpm --filter @vibe/ui run check`, `pnpm --filter @vibe/web-core run check`, `cargo check -p server`, targeted `git diff --check`.
 - Deployment: not deployed; requires approved backend restart/deploy before live `vibe.local` can show the marker.
+
+## 2026-05-19T00:00:00Z | vk/restart-candidate-session-resume-20260519 | restart candidate handoff
+
+- Built clean restart candidate from maintenance HEAD because `fork/staging` alone is missing later local live/prepared fixes and a full staging union cherry-pick produced broad conflicts.
+- Included Codex existing-session `thread/resume`, branch worktree collision auto-move, the `tokio-stream/io-util` feature needed for `LinesStream` compilation, and a live smoke baseline update for current project order.
+- Explicitly excluded the proposed global Codex execution throttle/default limit of `1`.
+- Deployment requires final release build, backup, active-agent check, frontend symlink preservation, and live regression smoke before/after restart.

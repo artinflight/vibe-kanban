@@ -19,9 +19,9 @@ EXPECTED_ASSET = "/assets/index-BLn8oOcK.js"
 EXPECTED_ACTIVE = [
     "CodexUsage",
     "VL",
-    "Monitor local",
     "LifeOS",
     "Operations",
+    "OSTP",
     "programming",
     "ops-playbook",
     "intake-shield",
@@ -30,7 +30,7 @@ EXPECTED_ACTIVE = [
 ]
 EXPECTED_ARCHIVED = [
     "Monitor",
-    "OSTP",
+    "Monitor local",
     "virtualCard",
     "Champions Nutrition",
     "caspian-ova-dashboard",

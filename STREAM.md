@@ -36,6 +36,8 @@
 - Every repaired feature needs a live verification step, not only a merge confirmation.
 - Frontend hotfixes must be built from a clean worktree pinned to the current live frontend release boundary plus only the intended patch. Dirty maintenance-checkout frontend builds are forbidden because they already caused project-list/nav regressions.
 - Any deploy, restart, or frontend symlink swap must include a release manifest and a regression smoke result in `HANDOFF.md` before being called ready. If the manifest cannot prove the package contains every currently live hotfix, stop.
+- 2026-05-19 restart candidate rule: do not deploy from `fork/staging` alone until the maintenance-stream fixes are backfilled; the safe local restart package is the clean worktree `/home/mcp/worktrees/vk-restart-candidate-session-resume-20260519` based on current maintenance HEAD plus only the documented minimal backend fixes.
+- The rejected local-agent execution throttle (`VK_CODEX_MAX_ACTIVE_EXECUTIONS` defaulting to `1`) must not be reintroduced; VK must continue to support multiple active agents.
 - The current deployment queue is split:
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260511Tclean-frontend-regression-lock`: collapsed Kanban count, compact mobile collapsed columns, queued-status polling
   - deployed no-restart asset release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260512Tworkspace-actions-spin-off`: command menu target-workspace visibility, spin-off workspace durable draft/error handling, mobile chat autofocus suppression
@@ -75,6 +77,9 @@
   - workspace rename is blocked for local fallback rows by the remote-owner gate
   - PR details/merged-state rendering lacks durable rows for some affected issues
 - Prepared but not deployed:
+  - restart candidate `vk/restart-candidate-session-resume-20260519` changes existing-session Codex follow-ups from `thread/fork` to `thread/resume`
+  - restart candidate `vk/restart-candidate-session-resume-20260519` moves an already-checked-out branch worktree into the expected workspace path instead of failing with `already used by worktree`
+  - restart candidate `vk/restart-candidate-session-resume-20260519` enables `tokio-stream/io-util` in `crates/utils` so worktree-manager tests and release builds can compile `LinesStream`
   - sidebar sub-agent indicators now read Codex `thread_spawn_edges` through `coding_agent_turns.agent_session_id`, expose summary counts, and render a stack/count marker on workspace cards
   - stale Codex open edges from completed VK parent executions are filtered out so old Android Parity children do not show as currently active forever
   - Codex-completed child state now overrides stale persisted VK `running` sub-agent rows during deduplication

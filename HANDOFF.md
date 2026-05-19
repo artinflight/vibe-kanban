@@ -44,12 +44,19 @@
   - old full backup `/home/mcp/backups/vk-pre-restart-20260511T144352Z` was removed to free `21G`
   - compact backup includes VK DB/config/signing key, systemd unit/drop-ins, live binaries, frontend current pointer, and Codex state/log SQLite metadata
   - compact backup deliberately excludes full VK session tree and full Codex session tree; these live files are not modified by restart and remain in place
-- Before restart:
-  - recheck active running executions / `vk-exec-*` units immediately before service restart
-  - copy `target/release/server` to both `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`
-  - preserve `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`; this backend restart must not roll back the live frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`
-  - restart `vibe-kanban.service`
-  - verify `/api/info`, `/`, `https://vibe.local/`, live binary hash, frontend current pointer, and `python3 scripts/vk_live_regression_smoke.py`
+- Deployed live:
+  - final pre-restart active execution rows: `0`
+  - final pre-restart running `vk-exec-*` units: `0`
+  - copied `target/release/server` to both `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`
+  - restarted `vibe-kanban.service` after user approval
+  - post-restart PID: `4129776`
+  - post-restart binary sha256: `0670d5cfc8cc4f0331c0c1cc1f1be30aafde539e79b3c3364d481e2b20bd4e74`
+  - frontend current remained `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`
+  - post-restart active execution rows: `0`
+  - post-restart checks passed: `systemctl --user status vibe-kanban.service`, `/api/info`, `https://vibe.local/`, `/api/projects`, live asset fetch, and `python3 scripts/vk_live_regression_smoke.py`
+- Follow-up required:
+  - backfill this local restart package to `staging` deliberately; do not bulk-merge the dirty maintenance checkout
+  - if a future full restore-grade backup is needed, first offload or prune session data because the standard lean backup currently stages more than MCP can safely archive locally
 
 ## 2026-05-14 Workspace Unpin Repair
 

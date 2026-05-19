@@ -907,4 +907,4 @@
 - Built clean restart candidate from maintenance HEAD because `fork/staging` alone is missing later local live/prepared fixes and a full staging union cherry-pick produced broad conflicts.
 - Included Codex existing-session `thread/resume`, branch worktree collision auto-move, the `tokio-stream/io-util` feature needed for `LinesStream` compilation, and a live smoke baseline update for current project order.
 - Explicitly excluded the proposed global Codex execution throttle/default limit of `1`.
-- Deployment requires final release build, backup, active-agent check, frontend symlink preservation, and live regression smoke before/after restart.
+- Deployed after compact backup `/home/mcp/backups/vk-pre-restart-compact-20260519T173137Z`; active executions and `vk-exec-*` units were `0`; frontend symlink stayed on `20260514Tworkspace-unpin`; post-restart live regression smoke passed.

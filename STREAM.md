@@ -199,4 +199,4 @@
 9. Rework and redeploy the queued follow-up fix only from a clean minimal build after the event-stream crash is understood; do not reuse the 2026-05-11 dirty checkout asset swap.
 10. Deploy manual workspace unread with the next approved backend restart and frontend asset release, then verify that a selected workspace can be marked unread and that the workspace/project needs-review marker returns.
 11. Turn the live regression smoke list into an executable script or Playwright check so repeated UI regressions are blocked before deployment instead of rediscovered by the user.
-12. Deploy the Codex usage-safe resume guard with the next approved backend restart, then test an oversized existing Codex workspace follow-up and confirm the new turn starts from `.vibe/current-state.md` instead of replaying the old thread.
+12. Test the live Codex usage-safe resume guard against an oversized existing Codex workspace follow-up and confirm the new turn starts from `.vibe/current-state.md` instead of replaying the old thread.

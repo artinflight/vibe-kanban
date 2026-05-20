@@ -62,7 +62,7 @@
 
 - User reported massive real token burn during mobile parity work, not just bad reporting.
 - Root cause found in VK flow: Codex follow-ups always resumed the latest `agent_session_id` through `thread/resume`; for long sessions this lets Codex reload a huge prior thread/history before a small continue prompt.
-- Source fix prepared, not deployed:
+- Source fix deployed on 2026-05-20:
   - Codex follow-ups inspect the prior Codex session JSONL size under `CODEX_HOME/sessions`.
   - If the prior thread is over `VK_CODEX_RESUME_HISTORY_LIMIT_BYTES` or the default `8 MiB`, VK writes `.vibe/current-state.md` in the workspace and starts a fresh Codex thread with a short continuity prompt instead of resuming the oversized thread.
   - Reset/retry follow-ups still use the exact prior session/message path.
@@ -77,7 +77,22 @@
   - `cargo test -p local-deployment workspace_config -- --nocapture`
   - `cargo check -p server -p local-deployment`
   - `pnpm run format`
-- Remaining measurement gap: not live-tested against a real oversized VK workspace yet because this is backend behavior and needs an approved VK backend build/restart to take effect.
+- Deployment:
+  - backup: `/home/mcp/backups/vk-pre-usage-safe-resume-restart-20260520T010220Z`
+  - source commit: `6b35eed76d0fe92a9b9386a5dd5858f8415fb423`
+  - binary sha: `7c63eb8fa7b2b46f6567ef7f8606df1d7a794bb6685d14cd7bf951c531f00e46`
+  - service PID after restart: `4182076`
+  - frontend pointer preserved: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`
+  - active executions before and after restart: `0`
+  - running `vk-exec-*` units before and after restart: `0`
+- Post-deploy validation passed:
+  - `http://127.0.0.1:4311/api/info`
+  - `http://127.0.0.1:4311/`
+  - `http://127.0.0.1:4311/api/projects`
+  - `https://vibe.local/api/info`
+  - `https://vibe.local/`
+  - `python3 scripts/vk_live_regression_smoke.py`
+- Remaining measurement gap: not yet live-tested by sending a follow-up in a real oversized VK Codex workspace and measuring the resulting model prompt/token reduction.
 
 ## 2026-05-14 Workspace Unpin Repair
 

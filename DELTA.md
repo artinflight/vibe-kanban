@@ -929,3 +929,14 @@
 - Updated generated workspace `AGENTS.md`/`CLAUDE.md` instructions so agents maintain `.vibe/current-state.md`, avoid stale evidence/screenshot/history replay, and do not end repeated status-only turns.
 - Validation passed: `cargo fmt --check`; `cargo test -p server routes::sessions::tests -- --nocapture`; `cargo test -p local-deployment workspace_config -- --nocapture`; `cargo check -p server -p local-deployment`; `pnpm run format`.
 - Not deployed live; needs approved backend build/restart and an oversized-workspace smoke to measure real prompt/context reduction.
+
+## 2026-05-20T01:08:00Z | vk/restart-candidate-session-resume-20260519 | Codex usage-safe resume guard deployed
+
+- User approved backend build/restart and emphasized not losing work.
+- Pre-restart audit found `0` active execution rows and `0` running `vk-exec-*` units.
+- Compact backup saved at `/home/mcp/backups/vk-pre-usage-safe-resume-restart-20260520T010220Z`; it includes DB backup, systemd config/drop-ins, previous binaries, frontend pointer, active execution snapshot, and running unit snapshot. VK `codex-home` and session logs were preserved in place rather than duplicated because they are large.
+- Built `cargo build --release --bin server` from source commit `6b35eed76d0fe92a9b9386a5dd5858f8415fb423`.
+- Installed binary sha `7c63eb8fa7b2b46f6567ef7f8606df1d7a794bb6685d14cd7bf951c531f00e46` to both `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`.
+- Restarted `vibe-kanban.service`; post-restart PID is `4182076`.
+- Preserved frontend pointer at `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260514Tworkspace-unpin`.
+- Post-restart validation passed for local API/root/projects, `https://vibe.local/api/info`, `https://vibe.local/`, and `python3 scripts/vk_live_regression_smoke.py`; active execution rows and running `vk-exec-*` units remained `0`.

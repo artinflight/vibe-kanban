@@ -18,12 +18,15 @@ type Props = {
   transformers: Transformer[];
 };
 
+const LINE_BREAK_PATTERN = /\r\n?|\n/;
+
 /**
  * Plugin that handles paste with markdown conversion.
  *
  * Behavior:
  * - CMD+V with HTML: Let default Lexical handling work
- * - CMD+V with plain text: Convert markdown to formatted nodes, insert at cursor
+ * - CMD+V with single-line plain text: Convert markdown to formatted nodes, insert at cursor
+ * - CMD+V with multi-line plain text: Insert raw text to preserve prompt content
  * - CMD+SHIFT+V: Insert plain text as-is (raw paste)
  */
 export function PasteMarkdownPlugin({ transformers }: Props) {
@@ -143,6 +146,14 @@ export function PasteMarkdownPlugin({ transformers }: Props) {
         editor.update(() => {
           const selection = $getSelection();
           if (!$isRangeSelection(selection)) return;
+
+          // Multi-line chat prompts must preserve every pasted line. Running
+          // them through the markdown importer can collapse/truncate content
+          // depending on the parsed block shape.
+          if (LINE_BREAK_PATTERN.test(plainText)) {
+            selection.insertRawText(plainText);
+            return;
+          }
 
           // CMD+V: Convert markdown and insert at cursor
           // Save selection before any operations that might corrupt it

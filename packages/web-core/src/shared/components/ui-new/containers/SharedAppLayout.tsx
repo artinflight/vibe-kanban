@@ -8,7 +8,7 @@ import {
   PlusIcon,
   LayoutIcon,
   KanbanIcon,
-  DownloadSimpleIcon,
+  ArchiveIcon,
 } from '@phosphor-icons/react';
 import { SyncErrorProvider } from '@/shared/providers/SyncErrorProvider';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
@@ -687,27 +687,6 @@ export function SharedAppLayout() {
             {/* Divider */}
             <div className="border-t border-border mx-4" />
 
-            {/* Export link */}
-            {isSignedIn && (
-              <div className="px-4 py-3">
-                <p className="mb-2 text-xs font-medium text-low">Export</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleExportClick();
-                    setIsDrawerOpen(false);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm text-normal hover:bg-secondary cursor-pointer"
-                >
-                  <DownloadSimpleIcon className="h-4 w-4" />
-                  Export data
-                </button>
-              </div>
-            )}
-
-            {/* Divider */}
-            {isSignedIn && <div className="border-t border-border mx-4" />}
-
             {/* Project list */}
             <div className="flex-1 overflow-y-auto p-2">
               {isSignedIn ? (
@@ -777,7 +756,21 @@ export function SharedAppLayout() {
 
             {/* Create Project button */}
             {isSignedIn && (
-              <div className="p-3 border-t border-border">
+              <div className="space-y-1 p-3 border-t border-border">
+                {archivedProjects.length > 0 && (
+                  <button
+                    type="button"
+                    data-testid="mobile-archived-projects"
+                    onClick={() => {
+                      handleOpenArchivedProjects();
+                      setIsDrawerOpen(false);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-low hover:text-normal hover:bg-secondary cursor-pointer"
+                  >
+                    <ArchiveIcon className="h-4 w-4" />
+                    Archived projects
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {

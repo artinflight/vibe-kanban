@@ -33,6 +33,9 @@ if (errors.length === 0) {
   const agents = readUtf8('AGENTS.md');
   const readme = readUtf8('README.md');
   const localContainer = readUtf8('crates/local-deployment/src/container.rs');
+  const codexExecutor = readUtf8('crates/executors/src/executors/codex.rs');
+  const workflow = readUtf8('VK_WORKFLOW.md');
+  const runbook = readUtf8('VK_AGENT_DEPLOYMENT_RUNBOOK.md');
 
   const requiredAgentRefs = [
     'STATE.md',
@@ -79,6 +82,25 @@ if (errors.length === 0) {
     errors.push(
       'skipped-cleanup/no-op coding-agent path must consume queued follow-up before finalizing'
     );
+  }
+
+  if (
+    !codexExecutor.includes('const DEFAULT_CODEX_MAX_ACTIVE_EXECUTIONS: usize = 8;')
+  ) {
+    errors.push(
+      'codex executor default max active executions must stay above one; expected DEFAULT_CODEX_MAX_ACTIVE_EXECUTIONS = 8'
+    );
+  }
+
+  for (const [name, contents] of [
+    ['VK_WORKFLOW.md', workflow],
+    ['VK_AGENT_DEPLOYMENT_RUNBOOK.md', runbook],
+  ]) {
+    if (!contents.includes('VK_CODEX_MAX_ACTIVE_EXECUTIONS=8')) {
+      errors.push(
+        `${name} must document VK_CODEX_MAX_ACTIVE_EXECUTIONS=8 as a required live runtime guardrail`
+      );
+    }
   }
 }
 

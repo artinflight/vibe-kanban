@@ -355,7 +355,7 @@ export const sessionsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    return handleApiResponse<ExecutionProcess>(response);
+    return handleApiResponse<ExecutionProcess, QueueStatus>(response);
   },
 
   startReview: async (

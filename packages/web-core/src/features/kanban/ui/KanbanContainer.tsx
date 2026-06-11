@@ -1285,12 +1285,15 @@ export function KanbanContainer() {
         return;
       }
 
-      const isManualSort = kanbanFilters.sortField === 'sort_order';
-
-      // Block within-column reordering when not in manual sort mode
-      // (cross-column moves are always allowed for status changes)
-      if (source.droppableId === destination.droppableId && !isManualSort) {
-        return;
+      const isManualSort =
+        kanbanFilters.sortField === 'sort_order' &&
+        kanbanFilters.sortDirection === 'asc';
+      if (!isManualSort) {
+        setKanbanProjectViewFilters(projectId, activeViewId, {
+          ...kanbanFilters,
+          sortField: 'sort_order',
+          sortDirection: 'asc',
+        });
       }
 
       const sourceId = source.droppableId;
@@ -1375,7 +1378,15 @@ export function KanbanContainer() {
         isSyncingRef.current = false;
       }
     },
-    [kanbanFilters.sortField, calculateSortOrder, items, updateIssues]
+    [
+      activeViewId,
+      calculateSortOrder,
+      items,
+      kanbanFilters,
+      projectId,
+      setKanbanProjectViewFilters,
+      updateIssues,
+    ]
   );
 
   // Multi-select support

@@ -13,29 +13,33 @@ import urllib.request
 BASE_URL = "https://vibe.local"
 EXPECTED_RELEASE = (
     "/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/"
-    "20260514Tworkspace-unpin"
+    "20260608Tmode-persistence"
 )
-EXPECTED_ASSET = "/assets/index-BLn8oOcK.js"
+EXPECTED_ASSET = "/assets/index-CTVtS8yb.js"
 EXPECTED_ACTIVE = [
+    "Iniandi",
     "CodexUsage",
     "VL",
-    "Monitor local",
     "LifeOS",
     "Operations",
+    "OSTP",
     "programming",
-    "ops-playbook",
     "intake-shield",
-    "foxtrot-lima",
     "hyroxready-app",
+    "VK Sub-Agent Monitor",
 ]
 EXPECTED_ARCHIVED = [
+    "PostStoryboard",
+    "mealPlan",
     "Monitor",
-    "OSTP",
+    "Monitor local",
     "virtualCard",
     "Champions Nutrition",
     "caspian-ova-dashboard",
     "vibe-kanban",
+    "ops-playbook",
     "vibe-kanban-orchestrator",
+    "foxtrot-lima",
     "caspian-app",
 ]
 EXPECTED_STATUS_NAMES = [
@@ -63,9 +67,12 @@ ASSET_TOKENS = [
     "Archived projects",
     "Archive",
     "Unarchive",
+    "mobile-archived-projects",
     "Rename",
     "Copy code",
     "queued",
+    "insertRawText",
+    "vk-executor-config-selection",
 ]
 
 

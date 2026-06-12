@@ -17,7 +17,7 @@ use db::models::{
 };
 use deployment::Deployment;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{Map, Value, json};
 use sqlx::{QueryBuilder, Sqlite};
 use utils::response::ApiResponse;
 use uuid::Uuid;
@@ -143,6 +143,7 @@ struct CreateIssueRequest {
     title: String,
     description: Option<String>,
     sort_order: Option<f64>,
+    extension_metadata: Option<Value>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -152,6 +153,7 @@ struct UpdateIssueRequest {
     description: Option<Option<String>>,
     sort_order: Option<f64>,
     parent_issue_id: Option<Option<Uuid>>,
+    extension_metadata: Option<Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -167,6 +169,7 @@ struct BulkIssueUpdateItem {
     description: Option<Option<String>>,
     sort_order: Option<f64>,
     parent_issue_id: Option<Option<Uuid>>,
+    extension_metadata: Option<Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -318,6 +321,43 @@ fn extract_local_sort_order(description: Option<&str>) -> Option<f64> {
         .filter(|value| value.is_finite())
 }
 
+fn extract_local_issue_flags(description: Option<&str>) -> Value {
+    let Some(raw_flags) = extract_cloud_metadata_value(description, "Local Issue Flags") else {
+        return Value::Null;
+    };
+
+    let mut flags = Map::new();
+    for flag in raw_flags
+        .split(',')
+        .map(|flag| flag.trim())
+        .filter(|flag| !flag.is_empty())
+    {
+        flags.insert(flag.to_string(), Value::Bool(true));
+    }
+
+    if flags.is_empty() {
+        Value::Null
+    } else {
+        json!({ "vk_flags": flags })
+    }
+}
+
+fn local_issue_flags_from_extension_metadata(extension_metadata: &Value) -> Vec<String> {
+    let Some(flags) = extension_metadata
+        .get("vk_flags")
+        .and_then(|flags| flags.as_object())
+    else {
+        return Vec::new();
+    };
+
+    let mut flag_names = flags
+        .iter()
+        .filter_map(|(name, enabled)| enabled.as_bool().unwrap_or(false).then(|| name.clone()))
+        .collect::<Vec<_>>();
+    flag_names.sort();
+    flag_names
+}
+
 fn ensure_status_metadata(description: Option<String>, status_name: &str) -> Option<String> {
     let body = description.unwrap_or_default();
     let mut replaced = false;
@@ -396,6 +436,55 @@ fn ensure_local_sort_order_metadata(
             );
         }
         next.push_str("Local metadata\n- Local Sort Order: ");
+        next.push_str(&value);
+    }
+
+    let trimmed = next.trim().to_string();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    }
+}
+
+fn ensure_local_issue_flags_metadata(
+    description: Option<String>,
+    extension_metadata: &Value,
+) -> Option<String> {
+    let body = description.unwrap_or_default();
+    let flags = local_issue_flags_from_extension_metadata(extension_metadata);
+    let value = flags.join(", ");
+    let mut replaced = false;
+    let mut lines = Vec::new();
+
+    for line in body.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("- Local Issue Flags:") || trimmed.starts_with("Local Issue Flags:")
+        {
+            replaced = true;
+            if !value.is_empty() {
+                let prefix_len = line.len() - trimmed.len();
+                let prefix = &line[..prefix_len];
+                lines.push(format!("{prefix}- Local Issue Flags: {value}"));
+            }
+        } else {
+            lines.push(line.to_string());
+        }
+    }
+
+    let mut next = lines.join(
+        "
+",
+    );
+    if !replaced && !value.is_empty() {
+        if !next.trim().is_empty() {
+            next.push_str(
+                "
+
+",
+            );
+        }
+        next.push_str("Local metadata\n- Local Issue Flags: ");
         next.push_str(&value);
     }
 
@@ -644,6 +733,7 @@ fn task_to_issue(task: LocalTaskRow, issue_number: i64, status_id: String) -> Co
     let sort_order =
         extract_local_sort_order(task.description.as_deref()).unwrap_or(issue_number as f64);
     let priority = extract_priority(task.description.as_deref());
+    let extension_metadata = extract_local_issue_flags(task.description.as_deref());
     CompatIssue {
         id: task.id.to_string(),
         project_id: task.project_id.to_string(),
@@ -659,7 +749,7 @@ fn task_to_issue(task: LocalTaskRow, issue_number: i64, status_id: String) -> Co
         sort_order,
         parent_issue_id: None,
         parent_issue_sort_order: None,
-        extension_metadata: serde_json::Value::Null,
+        extension_metadata,
         creator_user_id: None,
         created_at: task.created_at.to_rfc3339(),
         updated_at: task.updated_at.to_rfc3339(),
@@ -1468,10 +1558,13 @@ async fn create_issue(
         .filter(|value| value.is_finite())
         .unwrap_or(project_tasks.len() as f64 + 1.0);
 
-    let description = ensure_local_sort_order_metadata(
+    let mut description = ensure_local_sort_order_metadata(
         ensure_status_metadata(request.description, &status_name),
         sort_order,
     );
+    if let Some(extension_metadata) = request.extension_metadata.as_ref() {
+        description = ensure_local_issue_flags_metadata(description, extension_metadata);
+    }
 
     Task::create(
         &deployment.db().pool,
@@ -1521,6 +1614,12 @@ async fn update_issue(
     if let Some(sort_order) = request.sort_order.filter(|value| value.is_finite()) {
         next_description = ensure_local_sort_order_metadata(next_description, sort_order);
     }
+    let existing_extension_metadata = extract_local_issue_flags(existing.description.as_deref());
+    let next_extension_metadata = request
+        .extension_metadata
+        .as_ref()
+        .unwrap_or(&existing_extension_metadata);
+    next_description = ensure_local_issue_flags_metadata(next_description, next_extension_metadata);
 
     Task::update(
         &deployment.db().pool,
@@ -1574,6 +1673,14 @@ async fn bulk_update_issues(
         if let Some(sort_order) = update.sort_order.filter(|value| value.is_finite()) {
             next_description = ensure_local_sort_order_metadata(next_description, sort_order);
         }
+        let existing_extension_metadata =
+            extract_local_issue_flags(existing.description.as_deref());
+        let next_extension_metadata = update
+            .extension_metadata
+            .as_ref()
+            .unwrap_or(&existing_extension_metadata);
+        next_description =
+            ensure_local_issue_flags_metadata(next_description, next_extension_metadata);
 
         Task::update(
             &deployment.db().pool,
@@ -1680,8 +1787,9 @@ mod tests {
     use uuid::Uuid;
 
     use super::{
-        compat_statuses, default_project_status_names, ensure_local_sort_order_metadata,
-        ensure_status_metadata, extract_local_sort_order,
+        compat_statuses, default_project_status_names, ensure_local_issue_flags_metadata,
+        ensure_local_sort_order_metadata, ensure_status_metadata, extract_local_issue_flags,
+        extract_local_sort_order,
     };
 
     #[test]
@@ -1753,6 +1861,35 @@ mod tests {
                 .matches("Local Sort Order")
                 .count(),
             1
+        );
+    }
+
+    #[test]
+    fn local_issue_flags_metadata_round_trips() {
+        let description = ensure_local_issue_flags_metadata(
+            Some("body".to_string()),
+            &serde_json::json!({ "vk_flags": { "needs_review": true } }),
+        );
+
+        assert_eq!(
+            extract_local_issue_flags(description.as_deref()),
+            serde_json::json!({ "vk_flags": { "needs_review": true } })
+        );
+
+        let description = ensure_local_issue_flags_metadata(
+            description,
+            &serde_json::json!({ "vk_flags": { "needs_review": false } }),
+        );
+
+        assert_eq!(
+            extract_local_issue_flags(description.as_deref()),
+            serde_json::Value::Null
+        );
+        assert!(
+            !description
+                .as_deref()
+                .unwrap()
+                .contains("Local Issue Flags")
         );
     }
 }

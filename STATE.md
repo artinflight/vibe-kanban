@@ -6,6 +6,25 @@
 
 ## Confirmed Current State
 
+- 2026-06-12 issue needs-review flag is prepared in source but not deployed:
+  - project Kanban cards now have a compact flag control beside the priority marker
+  - the flag stores `vk_flags.needs_review` in `Issue.extension_metadata`, so it is separate from tags and can later support more issue flags
+  - local fallback task-backed issues round-trip the flag through task description metadata as `Local Issue Flags`
+  - backend build/restart is required for local fallback persistence; frontend build/release is required before the flag appears in live `vibe.local`
+- 2026-06-11 restart candidate is prepared but not restarted:
+  - clean candidate worktree is `/home/mcp/vk-restart-candidate-20260611T112143Z`, branch `deploy/restart-candidate-20260611T112143Z`, commit `2a32636534c6365452777f6d67f3b64583180160`
+  - staged restart package is `/home/mcp/vk-restart-staging-20260611T112143Z`
+  - next-restart backend binaries are installed at `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`, both sha256 `fcf8832cf5a53bf67042661bd314774cfcfeaa687e458c237aeef1648004d582`
+  - running VK process is still PID `3435842`; no service restart was performed
+  - staged frontend release is `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260611Trestart-candidate`, asset `/assets/index-Bm8ag4JP.js`, sha256 `b2a3ab5030a8a15904b2742be2ebd9252cdcdd6cfd704a198e2d18e079264715`
+  - live frontend pointer was intentionally not switched and still points at `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260608Tmode-persistence`
+  - before restart, switch the frontend pointer to the staged release, then restart `vibe-kanban.service`; do not restart if active `vk-exec-*` units or non-dropped DB running rows remain without operator approval
+- 2026-06-11 targeted restart backup is complete:
+  - stock lean backup was aborted because current live session/Codex state made it grow to roughly `40G` staged; incomplete temp data was removed
+  - successful targeted backup local tar is `/home/mcp/backups/vk-targeted-restart-restore-20260611T123534Z.tar.gz`
+  - Desktop mirror is `desktop:B:/vk-backups/vk-targeted-restart-restore-20260611T123534Z.tar.gz`
+  - sha256 is `af5f3380ae4648a19cef910985944dc2cf8d7964d81b2947a781deb16c9d195d`
+  - scope includes live DB/config/systemd/binaries/frontend, staged restart artifacts, source diff metadata, active session logs, and matching VK Codex continuity files for active thread IDs
 - 2026-06-11 Codex capacity queue fix is prepared in source but not deployed:
   - when Codex is at `VK_CODEX_MAX_ACTIVE_EXECUTIONS=8`, chat follow-up sends now queue through `QueuedMessageService::queue_for_capacity` instead of surfacing the red `Codex execution limit reached` failure
   - `ExecutionLimitReached` is a typed executor/container error so callers do not string-match `I/O error`

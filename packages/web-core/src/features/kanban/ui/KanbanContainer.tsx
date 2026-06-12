@@ -67,7 +67,11 @@ import { IssueListView } from '@vibe/ui/components/IssueListView';
 import { CommandBarDialog } from '@/shared/dialogs/command-bar/CommandBarDialog';
 import { KanbanFiltersDialog } from '@/shared/dialogs/kanban/KanbanFiltersDialog';
 import { SearchableTagDropdownContainer } from '@/shared/components/SearchableTagDropdownContainer';
-import type { IssuePriority, UpdateIssueRequest } from 'shared/remote-types';
+import type {
+  IssuePriority,
+  JsonValue,
+  UpdateIssueRequest,
+} from 'shared/remote-types';
 import { useIssueMultiSelect } from '@/shared/hooks/useIssueMultiSelect';
 import { useIssueSelectionStore } from '@/shared/stores/useIssueSelectionStore';
 import { BulkActionBarContainer } from './BulkActionBarContainer';
@@ -115,6 +119,59 @@ type WorkspaceReviewState = {
   isRunning?: boolean | null;
   latestProcessStatus?: string | null;
 };
+
+const ISSUE_FLAGS_METADATA_KEY = 'vk_flags';
+const NEEDS_REVIEW_ISSUE_FLAG = 'needs_review';
+
+function isJsonRecord(
+  value: JsonValue | undefined
+): value is Record<string, JsonValue | undefined> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function issueHasFlag(
+  extensionMetadata: JsonValue | undefined,
+  flagName: string
+): boolean {
+  if (!isJsonRecord(extensionMetadata)) {
+    return false;
+  }
+
+  const flags = extensionMetadata[ISSUE_FLAGS_METADATA_KEY];
+  return isJsonRecord(flags) && flags[flagName] === true;
+}
+
+function setIssueFlag(
+  extensionMetadata: JsonValue | undefined,
+  flagName: string,
+  enabled: boolean
+): JsonValue {
+  const nextMetadata: Record<string, JsonValue | undefined> = isJsonRecord(
+    extensionMetadata
+  )
+    ? { ...extensionMetadata }
+    : {};
+  const currentFlags = nextMetadata[ISSUE_FLAGS_METADATA_KEY];
+  const nextFlags: Record<string, JsonValue | undefined> = isJsonRecord(
+    currentFlags
+  )
+    ? { ...currentFlags }
+    : {};
+
+  if (enabled) {
+    nextFlags[flagName] = true;
+  } else {
+    delete nextFlags[flagName];
+  }
+
+  if (Object.keys(nextFlags).length > 0) {
+    nextMetadata[ISSUE_FLAGS_METADATA_KEY] = nextFlags;
+  } else {
+    delete nextMetadata[ISSUE_FLAGS_METADATA_KEY];
+  }
+
+  return nextMetadata;
+}
 
 function workspaceNeedsActionableReview(
   workspace: WorkspaceReviewState
@@ -668,6 +725,7 @@ export function KanbanContainer() {
     getWorkspacesForIssue,
     getRelationshipsForIssue,
     issuesById,
+    updateIssue,
     updateIssues,
     insertIssueTag,
     removeIssueTag,
@@ -1472,6 +1530,28 @@ export function KanbanContainer() {
     [projectId, openPrioritySelection, selectedIssueIds, isMultiSelectActive]
   );
 
+  const handleNeedsReviewFlagToggle = useCallback(
+    (issueId: string) => {
+      const issue = issueMap[issueId];
+      if (!issue) {
+        return;
+      }
+
+      const isFlagged = issueHasFlag(
+        issue.extension_metadata,
+        NEEDS_REVIEW_ISSUE_FLAG
+      );
+      updateIssue(issueId, {
+        extension_metadata: setIssueFlag(
+          issue.extension_metadata,
+          NEEDS_REVIEW_ISSUE_FLAG,
+          !isFlagged
+        ),
+      });
+    },
+    [issueMap, updateIssue]
+  );
+
   const handleCardAssigneeClick = useCallback(
     (issueId: string) => {
       const ids = isMultiSelectActive ? [...selectedIssueIds] : [issueId];
@@ -1772,6 +1852,10 @@ export function KanbanContainer() {
                                   title={issue.title}
                                   description={issue.description}
                                   priority={issue.priority}
+                                  needsReviewFlag={issueHasFlag(
+                                    issue.extension_metadata,
+                                    NEEDS_REVIEW_ISSUE_FLAG
+                                  )}
                                   tags={getTagObjectsForIssue(issue.id)}
                                   assignees={issueAssigneesMap[issue.id] ?? []}
                                   pullRequests={issueCardPullRequests}
@@ -1785,6 +1869,10 @@ export function KanbanContainer() {
                                   onPriorityClick={(e) => {
                                     e.stopPropagation();
                                     handleCardPriorityClick(issue.id);
+                                  }}
+                                  onNeedsReviewFlagToggle={(e) => {
+                                    e.stopPropagation();
+                                    handleNeedsReviewFlagToggle(issue.id);
                                   }}
                                   onAssigneeClick={(e) => {
                                     e.stopPropagation();

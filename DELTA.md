@@ -1,5 +1,21 @@
 # DELTA.md
 
+## 2026-06-11T12:45:00Z | vk/land-live-fixes-20260422 | restart candidate and targeted backup
+
+- Prepared a clean restart candidate from the current VK fix set without restarting live VK.
+- Candidate worktree: `/home/mcp/vk-restart-candidate-20260611T112143Z`; branch `deploy/restart-candidate-20260611T112143Z`; commit `2a32636534c6365452777f6d67f3b64583180160`.
+- Built backend from the candidate with `CARGO_TARGET_DIR=/home/mcp/_vibe_kanban_repo/target cargo build --release --bin server`.
+- Installed next-restart binaries to `/home/mcp/.local/bin/vibe-kanban-serve` and `/home/mcp/.local/bin/vibe-kanban-serve-prod`; sha256 `fcf8832cf5a53bf67042661bd314774cfcfeaa687e458c237aeef1648004d582`.
+- Running VK PID remained `3435842`; no restart was performed.
+- Built and staged frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260611Trestart-candidate`; asset `/assets/index-Bm8ag4JP.js`; sha256 `b2a3ab5030a8a15904b2742be2ebd9252cdcdd6cfd704a198e2d18e079264715`.
+- Did not switch live frontend pointer; it still targets `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260608Tmode-persistence`.
+- Stock lean backup was attempted but aborted after current sessions/Codex state made it grow to about `40G` staged; incomplete temp data was removed.
+- Completed targeted restart-restore backup and mirrored it to Desktop:
+  - local: `/home/mcp/backups/vk-targeted-restart-restore-20260611T123534Z.tar.gz`
+  - Desktop: `desktop:B:/vk-backups/vk-targeted-restart-restore-20260611T123534Z.tar.gz`
+  - sha256: `af5f3380ae4648a19cef910985944dc2cf8d7964d81b2947a781deb16c9d195d`
+- Cleanup touched only rebuildable caches/build outputs/temp artifacts; VK DB, live sessions, VK Codex state, registered worktrees, and completed backups were preserved.
+
 ## 2026-06-03T16:05:00Z | vk/land-live-fixes-20260422 | duplicate project cleanup
 
 - User reported duplicated projects in VK.
@@ -1052,3 +1068,12 @@
 - Changed local fallback create/update/bulk issue request structs to accept `sort_order`, store it in task description metadata as `Local Sort Order`, and read it back into fallback issue responses.
 - Verified: `pnpm --filter @vibe/web-core run check`, `cargo test -p server local_sort_order_metadata_round_trips`, and `cargo check -p server`.
 - Deployment: not deployed; backend build/restart is needed for local fallback persistence.
+
+## 2026-06-12T00:00:00Z | vk/land-live-fixes-20260422 | Issue needs-review flag prepared
+
+- Intent: let the operator quickly flag issues for review from the project Kanban card itself.
+- Changed Kanban cards to render a flag button beside the priority marker.
+- Changed `KanbanContainer` to persist the flag as `Issue.extension_metadata.vk_flags.needs_review`.
+- Changed local fallback issue handling to round-trip enabled flags through task description metadata as `Local Issue Flags`.
+- Verified: `cargo fmt`, targeted `git diff --check`, and `cargo test -p server local_issue_flags_metadata_round_trips` after a cold dependency rebuild.
+- Deployment: not deployed; live VK needs a frontend release for the button and a backend build/restart for local fallback persistence.

@@ -1,5 +1,72 @@
 # HANDOFF.md
 
+## 2026-06-12 Issue Needs-Review Flag Prepared
+
+- User asked for a quick project Kanban action to flag an issue for review, similar to the unread notification marker, with the flag sitting beside the priority marker.
+- Source change prepared, not deployed:
+  - `packages/ui/src/components/KanbanCardContent.tsx` renders a compact flag button beside the priority control.
+  - `packages/web-core/src/features/kanban/ui/KanbanContainer.tsx` toggles `vk_flags.needs_review` in `Issue.extension_metadata` through the normal `updateIssue` mutation.
+  - `crates/server/src/routes/local_compat.rs` now preserves local fallback issue flags by storing enabled flags in task description metadata as `Local Issue Flags`.
+- Intended behavior:
+  - clicking the flag on a Kanban card toggles `needs_review`
+  - active state uses a filled warning-colored flag icon
+  - the flag is not a tag and does not change issue priority
+- Validation so far:
+  - `cargo fmt`
+  - `git diff --check -- packages/ui/src/components/KanbanCardContent.tsx packages/web-core/src/features/kanban/ui/KanbanContainer.tsx crates/server/src/routes/local_compat.rs`
+  - `cargo test -p server local_issue_flags_metadata_round_trips` passed after a cold dependency rebuild; existing unrelated warnings were `db::SqlitePool`, `services::events::scratch::Scratch`, and local-compat dead code.
+- Not validated yet:
+  - frontend typecheck/build, because `node_modules` is currently absent after disk cleanup
+  - live UI behavior, because no frontend release was built/swapped and no VK restart was performed
+
+## 2026-06-11 Restart Candidate Built / Targeted Backup Complete
+
+- User asked to prepare the VK restart package and backup, then stop before the actual restart.
+- No VK restart was performed.
+- Clean restart candidate:
+  - worktree: `/home/mcp/vk-restart-candidate-20260611T112143Z`
+  - branch: `deploy/restart-candidate-20260611T112143Z`
+  - commit: `2a32636534c6365452777f6d67f3b64583180160`
+  - candidate commit contains the current prepared VK fixes from the canonical dirty checkout plus `VK_AGENT_DEPLOYMENT_RUNBOOK.md`; `.vk-preview/` was intentionally excluded.
+- Backend package:
+  - release build command: `CARGO_TARGET_DIR=/home/mcp/_vibe_kanban_repo/target cargo build --release --bin server`
+  - staged package: `/home/mcp/vk-restart-staging-20260611T112143Z`
+  - installed next-restart binaries:
+    - `/home/mcp/.local/bin/vibe-kanban-serve`
+    - `/home/mcp/.local/bin/vibe-kanban-serve-prod`
+  - installed binary sha256: `fcf8832cf5a53bf67042661bd314774cfcfeaa687e458c237aeef1648004d582`
+  - running VK process is still old PID `3435842`; it will not use the installed binary until service restart.
+  - binary marker checks found: `Codex execution limit reached`, `VK_CODEX_MAX_ACTIVE_EXECUTIONS`, `ThreadResume`, `Local Sort Order`, `wait_for_capacity`, `ntfy`, and `unread`.
+- Frontend package:
+  - build command: `pnpm --filter @vibe/local-web run build`
+  - staged release: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260611Trestart-candidate`
+  - staged asset: `/assets/index-Bm8ag4JP.js`
+  - staged asset sha256: `b2a3ab5030a8a15904b2742be2ebd9252cdcdd6cfd704a198e2d18e079264715`
+  - release manifest: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260611Trestart-candidate/RELEASE_MANIFEST.txt`
+  - live frontend pointer was not switched; it still points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260608Tmode-persistence`.
+  - staged asset marker checks found: `vk-executor-config-selection`, `mobile-archived-projects`, `insertRawText`, `queued`, `Mark unread`, `Rename`, `Archive`, and `copy`.
+- Backup:
+  - stock `scripts/vk_lean_backup.py --mirror-desktop` was attempted with a lower preflight threshold, but it ballooned to roughly `40G` staged because current live sessions/Codex state are much larger than the 2026-06-03 backup; it was stopped before filling disk and only the incomplete `.tmp` backup was removed.
+  - successful targeted restart-restore backup:
+    - local dir: `/home/mcp/backups/vk-targeted-restart-restore-20260611T123534Z`
+    - local tar: `/home/mcp/backups/vk-targeted-restart-restore-20260611T123534Z.tar.gz`
+    - Desktop tar: `desktop:B:/vk-backups/vk-targeted-restart-restore-20260611T123534Z.tar.gz`
+    - sha256: `af5f3380ae4648a19cef910985944dc2cf8d7964d81b2947a781deb16c9d195d`
+    - Desktop verification showed the archive and `.sha256` in `B:\vk-backups`.
+  - targeted backup scope: live SQLite backup, live config/signing key, systemd service/drop-ins, current live binaries, current frontend release pointer and release copy, staged frontend release, staged backend binaries, candidate/canonical source metadata and diff, active execution/session logs, and matching VK Codex continuity files for active thread IDs.
+- Cleanup performed to make space:
+  - removed rebuildable `/home/mcp/_vibe_kanban_repo/target` after staging the backend binary
+  - removed one stale worktree `node_modules` older than four days
+  - removed rebuildable Node/npm/Rust/Gradle caches and temporary Android QA/download/screenshot artifacts
+  - did not remove VK DB, VK sessions, VK Codex state, registered worktrees, or completed backup artifacts.
+- Remaining restart window steps:
+  - final readiness check during this handoff showed VK still running on PID `3435842`, `4` running `vk-exec-*` units, `4` non-dropped DB rows with `status='running'`, installed binary sha `fcf8832cf5a53bf67042661bd314774cfcfeaa687e458c237aeef1648004d582`, live frontend still on `20260608Tmode-persistence`, staged frontend ready at `20260611Trestart-candidate`, and `/home/mcp` at about `35G` free / `85%` used.
+  1. Recheck active agents: `systemctl --user list-units 'vk-exec-*' --state=running --no-legend` and DB `execution_processes where status='running' and dropped=0`.
+  2. If active agents remain, wait or ask the operator before restarting.
+  3. Switch frontend pointer: `ln -sfn /home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260611Trestart-candidate /home/mcp/.local/share/vibe-kanban/frontend-dist/current`.
+  4. Restart: `systemctl --user restart vibe-kanban.service`.
+  5. Verify `/api/info`, live frontend asset, installed binary sha, runtime env, and `python3 scripts/vk_live_regression_smoke.py`.
+
 ## 2026-06-11 Codex Capacity Queue Fix Prepared
 
 - User reported direct chat sends fail with a red error when the global Codex execution cap is full: `Codex execution limit reached: 8 active, limit 8`.

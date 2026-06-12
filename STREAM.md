@@ -65,6 +65,14 @@
 
 ## Current Status
 
+- 2026-06-11 restart package prepared, backup complete, no restart performed:
+  - clean candidate worktree `/home/mcp/vk-restart-candidate-20260611T112143Z` on local branch `deploy/restart-candidate-20260611T112143Z`, commit `2a32636534c6365452777f6d67f3b64583180160`
+  - backend binaries installed for the next restart at `/home/mcp/.local/bin/vibe-kanban-serve*`, sha256 `fcf8832cf5a53bf67042661bd314774cfcfeaa687e458c237aeef1648004d582`; running PID `3435842` has not restarted
+  - frontend release staged but not live: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260611Trestart-candidate`, asset `/assets/index-Bm8ag4JP.js`
+  - live frontend pointer still intentionally points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260608Tmode-persistence`
+  - targeted Desktop-mirrored backup complete: `desktop:B:/vk-backups/vk-targeted-restart-restore-20260611T123534Z.tar.gz`, sha256 `af5f3380ae4648a19cef910985944dc2cf8d7964d81b2947a781deb16c9d195d`
+  - stock lean backup was too large for current live sessions/Codex state and was aborted before disk fill; incomplete temp data was removed
+  - remaining restart-window work is active-agent recheck, frontend pointer switch, `systemctl --user restart vibe-kanban.service`, and post-restart smoke
 - 2026-06-11 Codex capacity queue fix prepared:
   - source now converts global Codex cap failures into capacity-waiting queued messages for chat follow-up sends
   - live deployment still requires backend build/restart; no restart was performed
@@ -208,6 +216,11 @@
   - do not compute the persisted update payload through a side effect inside `setItems`
   - do not persist Kanban card drags with a raw `bulkUpdateIssues` call from `KanbanContainer`
   - use `ProjectContext.updateIssues` so optimistic state and fallback refresh stay aligned
+- Issue review flags must not regress:
+  - keep quick manual issue review flags separate from tags and priority
+  - persist `needs_review` as `Issue.extension_metadata.vk_flags.needs_review`
+  - keep local fallback task-backed issues able to read/write the flag through `Local Issue Flags` metadata
+  - the flag control belongs beside the priority marker on project Kanban cards
 - Project workspace repo defaults must not regress:
   - when `projectId` is present, never use a globally recent workspace repo as the default
   - use explicit project repo defaults, exact project/repo inference, or same-project recency only
@@ -269,3 +282,4 @@
 9. Rework and redeploy the queued follow-up fix only from a clean minimal build after the event-stream crash is understood; do not reuse the 2026-05-11 dirty checkout asset swap.
 10. Deploy manual workspace unread with the next approved backend restart and frontend asset release, then verify that a selected workspace can be marked unread and that the workspace/project needs-review marker returns.
 11. Turn the live regression smoke list into an executable script or Playwright check so repeated UI regressions are blocked before deployment instead of rediscovered by the user.
+12. Build and deploy the issue needs-review flag after frontend dependencies are restored; include backend restart only when local fallback persistence should go live too.

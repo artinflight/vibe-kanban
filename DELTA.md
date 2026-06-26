@@ -1,5 +1,28 @@
 # DELTA.md
 
+## 2026-06-26T00:00:00Z | vk/092b-vk-dev-self-deve | VK self-development workflow hardening
+
+- Intent: make VK development from inside VK safe enough for future agents to
+  work without repeating deploy/restart/backup instructions in every prompt.
+- Completed:
+  - added the `VK Dev` self-development workflow docs
+  - added the setup guard for generated VK workspaces
+  - added a read-only live regression smoke script
+  - documented the feature-prep workflow for normal VK agents
+  - documented the lightweight/staging preview workflow
+  - documented the lean Desktop-mirrored backup workflow
+  - documented restart-ready staging so slow build/backup/validation work
+    happens before the operator-approved restart window
+- Verified:
+  - guard syntax and generated-workspace guard behavior
+  - real VK setup rerun completed successfully after replacing `rg` with `grep`
+  - `pnpm run format`
+- Not complete / known gaps:
+  - `pnpm run preview:light` still needs to be exercised from a real generated
+    VK Dev workspace
+  - no production deploy, frontend symlink swap, or service restart happened in
+    this source branch
+
 ## 2026-04-18T00:00:00Z | staging | local-only recovery baseline
 
 - Intent: recover the usable VK board state, remove active cloud coupling, and make the local install restorable.
@@ -275,3 +298,33 @@
 - Not complete / known gaps:
   - PR `#40` still needs staging promotion
   - no broad UI/browser agent-send regression test was run after the real-worktree repair
+
+## 2026-06-26T00:00:00Z | vk/092b-vk-dev-self-deve | VK self-development workflow hardening
+
+- Intent: make VK source work launched from inside VK safer by separating
+  feature work, preview, release preparation, and production deploy actions.
+- Completed:
+  - added `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
+  - added `VK_SELF_DEVELOPMENT_WORKFLOW.md`
+  - added `scripts/vk_selfdev_guard.sh`
+  - added `scripts/vk_live_regression_smoke.py`
+  - refreshed `STREAM.md`, `HANDOFF.md`, and `STATE.md` for the current branch
+  - repaired the guard after real VK setup proved `rg` was unavailable on the
+    setup-script `PATH`; guard now uses `grep`
+  - guard now backfills missing self-development/runbook docs into staging-based
+    generated workspaces
+- Verified:
+  - `bash -n scripts/vk_selfdev_guard.sh`
+  - `python3 -m py_compile scripts/vk_live_regression_smoke.py`
+  - temporary generated-workspace guard smoke with a feature branch based on
+    `staging`
+  - `pnpm run ops:check`
+  - `python3 scripts/vk_live_regression_smoke.py`
+  - `pnpm install --offline --frozen-lockfile`
+  - `pnpm run format`
+  - real VK setup rerun for workspace
+    `092bc4b8-600d-4591-ade7-df7ca49936fe` completed via process
+    `2cbe7371-3345-4660-8298-aa2fd4f2a5db` with exit code `0`
+- Not complete / known gaps:
+  - lightweight preview validation from a generated VK Dev workspace is still
+    pending

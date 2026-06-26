@@ -34,6 +34,12 @@
 - Local projects now support archive/restore behavior in the left-column project navigation.
 - Lean local backups now have tiered retention instead of unbounded growth.
 - `staging` is the correct repo base for new VK development.
+- VK self-development work should use the active `VK Dev` project, generated
+  workspaces based on `staging`, and the source-controlled workflow in
+  `VK_SELF_DEVELOPMENT_WORKFLOW.md`.
+- `VK_AGENT_DEPLOYMENT_RUNBOOK.md` is the source-controlled deploy/restart
+  checklist for VK agents. It includes feature prep, preview, lean
+  Desktop-mirrored backup, restart-ready staging, and post-restart smoke.
 - VK now uses an isolated Codex home at `/home/mcp/.local/share/vibe-kanban/codex-home`.
 - That isolation exists specifically to stop VK coding agents from sharing refresh-token rotation with tmux/interactive Codex sessions.
 - As of 2026-05-05, a recurring live VK8 stall was reproduced without active `vk-exec-*` agent units:
@@ -92,6 +98,9 @@
 - `scripts/vk_restore_lean_backup.py`
 - `scripts/run_vk_restore_latest.sh`
 - `scripts/prune_vk_backups.py`
+- `VK_WORKFLOW.md`
+- `VK_SELF_DEVELOPMENT_WORKFLOW.md`
+- `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
 - `crates/db/src/models/project.rs`
 - `crates/server/src/routes/projects.rs`
 - `packages/ui/src/components/AppBar.tsx`
@@ -105,6 +114,8 @@
 - Operate VK in local-only mode.
 - Use `/home/mcp/_vibe_kanban_repo` as the only canonical VK codebase.
 - Start external VK-fixing agents from `/home/mcp/_vibe_kanban_repo` unless the task is explicitly workspace-specific.
+- For VK work launched inside VK, use the `VK Dev` project and generated
+  workspace guard rather than old archived `vibe-kanban` workspaces.
 - Use the lean backup + Desktop mirror as the standard recovery path.
 - Apply retention to lean backups so the default recovery path stays sustainable over time.
 - Start new repo work from `staging`.
@@ -521,3 +532,21 @@ Codex follow-up state, 2026-04-20:
   - `FR::Custom Workout Log Equipment`
   - `FR::Reorder Custom Exercises`
   - `FR::Investigate Failed to Save Custom Workout`
+
+Current self-development workflow state, 2026-06-26:
+
+- The preferred active project for VK source work is `VK Dev`.
+- The old `vibe-kanban` project is archived history and should not be used as
+  the default launcher for new VK source work.
+- New normal VK development workspaces should use the canonical repo
+  `/home/mcp/_vibe_kanban_repo` and target `staging`.
+- Feature workspaces may edit source, run checks, run lightweight frontend
+  preview, update docs, and prepare PRs into `staging`.
+- Feature workspaces must not restart `vibe-kanban.service`, overwrite live
+  binaries, switch the live frontend symlink, or mutate live VK state unless the
+  task is explicitly an approved operational repair.
+- Source-controlled self-development guidance lives in:
+  - `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
+  - `VK_SELF_DEVELOPMENT_WORKFLOW.md`
+  - `scripts/vk_selfdev_guard.sh`
+  - `scripts/vk_live_regression_smoke.py`

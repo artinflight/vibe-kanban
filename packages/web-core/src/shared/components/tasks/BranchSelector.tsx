@@ -123,8 +123,9 @@ function BranchSelector({
     let filtered = branches;
 
     if (branchSearchTerm.trim()) {
-      const q = branchSearchTerm.toLowerCase();
-      filtered = filtered.filter((b) => b.name.toLowerCase().includes(q));
+      filtered = filtered.filter((b) =>
+        branchNameMatchesSearch(b.name, branchSearchTerm)
+      );
     }
     return filtered;
   }, [branches, branchSearchTerm]);
@@ -305,3 +306,27 @@ function BranchSelector({
 }
 
 export default BranchSelector;
+
+function normalizeBranchSearchText(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function branchNameMatchesSearch(branchName: string, searchTerm: string) {
+  const trimmedSearch = searchTerm.trim().toLowerCase();
+  if (!trimmedSearch) return true;
+
+  const lowerBranchName = branchName.toLowerCase();
+  if (lowerBranchName.includes(trimmedSearch)) return true;
+
+  const normalizedBranchName = normalizeBranchSearchText(branchName);
+  const normalizedQuery = normalizeBranchSearchText(trimmedSearch);
+  if (!normalizedQuery) return true;
+  if (normalizedBranchName.includes(normalizedQuery)) return true;
+
+  const queryTokens = normalizedQuery.split(' ');
+  return queryTokens.every((token) => normalizedBranchName.includes(token));
+}

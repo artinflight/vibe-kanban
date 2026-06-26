@@ -4,7 +4,7 @@ import {
   Droppable,
   type DropResult,
 } from '@hello-pangea/dnd';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   LayoutIcon,
   DownloadSimpleIcon,
@@ -14,6 +14,9 @@ import {
   KanbanIcon,
   SpinnerIcon,
   StarIcon,
+  CaretRightIcon,
+  CaretLeftIcon,
+  PencilSimpleIcon,
   type Icon,
 } from '@phosphor-icons/react';
 import { cn } from '../lib/cn';
@@ -26,6 +29,32 @@ import {
 } from './Popover';
 import { Tooltip } from './Tooltip';
 import { useTranslation } from 'react-i18next';
+import { InlineColorPicker } from './ColorPicker';
+import { Input } from './Input';
+import { Button } from './Button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './KeyboardDialog';
+
+export const PASTEL_PROJECT_COLORS = [
+  '6 78% 84%',
+  '28 92% 82%',
+  '45 95% 78%',
+  '84 64% 80%',
+  '145 55% 78%',
+  '174 58% 78%',
+  '202 82% 82%',
+  '232 72% 84%',
+  '262 70% 86%',
+  '302 62% 85%',
+  '334 78% 84%',
+  '358 74% 84%',
+] as const;
 
 function formatStarCount(count: number): string {
   if (count < 1000) return String(count);
@@ -46,6 +75,20 @@ function getProjectInitials(name: string): string {
   return trimmed.slice(0, 2).toUpperCase();
 }
 
+function getProjectAbbreviation(project: AppBarProject): string {
+  const abbreviation = project.abbreviation?.trim();
+  if (abbreviation) return abbreviation.slice(0, 3).toUpperCase();
+  return getProjectInitials(project.name);
+}
+
+function getProjectButtonStyle(project: AppBarProject, isActive: boolean) {
+  return {
+    backgroundColor: `hsl(${project.color} / ${isActive ? 1 : 0.72})`,
+    color: 'hsl(222 35% 18%)',
+    boxShadow: isActive ? `0 0 0 2px hsl(${project.color} / 0.35)` : undefined,
+  };
+}
+
 interface AppBarProps {
   projects: AppBarProject[];
   hosts?: AppBarHost[];
@@ -64,6 +107,10 @@ interface AppBarProps {
   showSocialLinks?: boolean;
   onProjectClick: (projectId: string) => void;
   onProjectsDragEnd: (result: DropResult) => void;
+  onProjectUpdate?: (
+    projectId: string,
+    updates: AppBarProjectUpdate
+  ) => Promise<void> | void;
   isSavingProjectOrder?: boolean;
   isWorkspacesActive: boolean;
   isExportActive?: boolean;
@@ -88,8 +135,15 @@ export interface AppBarProject {
   id: string;
   name: string;
   color: string;
+  abbreviation?: string;
   archived?: boolean;
   hasNeedsReview?: boolean;
+}
+
+export interface AppBarProjectUpdate {
+  name: string;
+  abbreviation: string;
+  color: string;
 }
 
 export type AppBarHostStatus = 'online' | 'offline' | 'unpaired';
@@ -166,6 +220,10 @@ type AppBarSectionItem =
       isSavingProjectOrder?: boolean;
       onProjectClick: (projectId: string) => void;
       onProjectsDragEnd: (result: DropResult) => void;
+      onProjectUpdate?: (
+        projectId: string,
+        updates: AppBarProjectUpdate
+      ) => Promise<void> | void;
       archived?: boolean;
     };
 
@@ -225,6 +283,7 @@ export function AppBar({
   showSocialLinks = true,
   onProjectClick,
   onProjectsDragEnd,
+  onProjectUpdate,
   isSavingProjectOrder,
   isWorkspacesActive,
   isExportActive = false,
@@ -245,7 +304,69 @@ export function AppBar({
   discordIconPath,
 }: AppBarProps) {
   const { t } = useTranslation('common');
+  const [isProjectFlyoutOpen, setIsProjectFlyoutOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<AppBarProject | null>(
+    null
+  );
+  const [projectDraft, setProjectDraft] = useState<AppBarProjectUpdate>({
+    name: '',
+    abbreviation: '',
+    color: PASTEL_PROJECT_COLORS[0],
+  });
+  const [projectEditError, setProjectEditError] = useState<string | null>(null);
+  const [isSavingProjectEdit, setIsSavingProjectEdit] = useState(false);
   const sections: AppBarSection[] = [];
+
+  const openProjectEditor = (project: AppBarProject) => {
+    setEditingProject(project);
+    setProjectDraft({
+      name: project.name,
+      abbreviation: getProjectAbbreviation(project),
+      color: project.color || PASTEL_PROJECT_COLORS[0],
+    });
+    setProjectEditError(null);
+  };
+
+  const closeProjectEditor = () => {
+    if (isSavingProjectEdit) return;
+    setEditingProject(null);
+    setProjectEditError(null);
+  };
+
+  const handleSaveProjectEdit = async () => {
+    if (!editingProject || !onProjectUpdate) {
+      closeProjectEditor();
+      return;
+    }
+
+    const nextName = projectDraft.name.trim();
+    const nextAbbreviation = projectDraft.abbreviation.trim().slice(0, 3);
+    if (!nextName) {
+      setProjectEditError('Project name is required.');
+      return;
+    }
+    if (!nextAbbreviation) {
+      setProjectEditError('Abbreviation is required.');
+      return;
+    }
+
+    setIsSavingProjectEdit(true);
+    setProjectEditError(null);
+    try {
+      await onProjectUpdate(editingProject.id, {
+        name: nextName,
+        abbreviation: nextAbbreviation,
+        color: projectDraft.color,
+      });
+      setEditingProject(null);
+    } catch (error) {
+      setProjectEditError(
+        error instanceof Error ? error.message : 'Failed to update project.'
+      );
+    } finally {
+      setIsSavingProjectEdit(false);
+    }
+  };
 
   if (showWorkspacesButton) {
     sections.push({
@@ -323,6 +444,7 @@ export function AppBar({
       isSavingProjectOrder,
       onProjectClick,
       onProjectsDragEnd,
+      onProjectUpdate,
     });
   }
 
@@ -520,27 +642,21 @@ export function AppBar({
                                     ? 'cursor-pointer'
                                     : 'cursor-grab',
                                   snapshot.isDragging && 'shadow-lg',
-                                  item.activeProjectId === project.id
-                                    ? ''
-                                    : item.archived
-                                      ? 'bg-primary text-low hover:bg-brand/10 hover:text-normal'
-                                      : 'bg-primary text-normal hover:opacity-80'
+                                  item.archived
+                                    ? 'opacity-70 hover:opacity-100'
+                                    : 'hover:opacity-85'
                                 )}
-                                style={
+                                style={getProjectButtonStyle(
+                                  project,
                                   item.activeProjectId === project.id
-                                    ? {
-                                        color: `hsl(${project.color})`,
-                                        backgroundColor: `hsl(${project.color} / 0.2)`,
-                                      }
-                                    : undefined
-                                }
+                                )}
                                 aria-label={
                                   project.hasNeedsReview
                                     ? `${project.name} (needs review)`
                                     : project.name
                                 }
                               >
-                                {getProjectInitials(project.name)}
+                                {getProjectAbbreviation(project)}
                               </button>
                             </div>
                           </Tooltip>
@@ -561,83 +677,283 @@ export function AppBar({
     <div
       onMouseEnter={onHoverStart}
       onMouseLeave={onHoverEnd}
-      className={cn(
-        'flex flex-col items-center h-full min-h-0 overflow-y-auto p-base gap-base',
-        'bg-secondary border-r border-border'
-      )}
+      className="relative z-30 h-full shrink-0"
     >
-      {sections.map((section) => (
-        <div key={section.key} className="flex flex-col items-center gap-1">
-          <AppBarSectionLabel>{section.label}</AppBarSectionLabel>
-          {section.items.map((item) => (
-            <div
-              key={item.key}
-              className={
-                'wrapperClassName' in item ? item.wrapperClassName : undefined
-              }
-            >
-              {renderSectionItem(item)}
-            </div>
-          ))}
-        </div>
-      ))}
+      <div
+        className={cn(
+          'flex h-full min-h-0 w-16 flex-col items-center overflow-y-auto p-base gap-base',
+          'bg-secondary border-r border-border'
+        )}
+      >
+        {sections.map((section) => (
+          <div key={section.key} className="flex flex-col items-center gap-1">
+            <AppBarSectionLabel>{section.label}</AppBarSectionLabel>
+            {section.items.map((item) => (
+              <div
+                key={item.key}
+                className={
+                  'wrapperClassName' in item ? item.wrapperClassName : undefined
+                }
+              >
+                {renderSectionItem(item)}
+              </div>
+            ))}
+          </div>
+        ))}
 
-      {/* Bottom section: Notifications + User popover + GitHub + Discord */}
-      <div className="mt-auto pt-base flex flex-col items-center gap-4">
-        {notificationBell}
-        {showProfileButton ? userPopover : null}
-        {showSocialLinks ? (
-          <>
-            <AppBarSocialLink
-              href="https://github.com/BloopAI/vibe-kanban"
-              label="Star on GitHub"
-              iconPath={githubIconPath}
-              badge={
-                starCount != null && (
-                  <>
-                    <StarIcon size={10} weight="fill" />
-                    {formatStarCount(starCount)}
-                  </>
-                )
-              }
-            />
-            <AppBarSocialLink
-              href="https://discord.gg/AC4nwVtJM3"
-              label="Join our Discord"
-              iconPath={discordIconPath}
-              badge={
-                onlineCount != null &&
-                (onlineCount > 999 ? '999+' : onlineCount)
-              }
-            />
-          </>
-        ) : null}
-        {updateVersion ? (
-          <Tooltip content={`Update to v${updateVersion}`} side="right">
+        {/* Bottom section: Notifications + User popover + GitHub + Discord */}
+        <div className="mt-auto pt-base flex flex-col items-center gap-4">
+          {notificationBell}
+          {showProfileButton ? userPopover : null}
+          {showSocialLinks ? (
+            <>
+              <AppBarSocialLink
+                href="https://github.com/BloopAI/vibe-kanban"
+                label="Star on GitHub"
+                iconPath={githubIconPath}
+                badge={
+                  starCount != null && (
+                    <>
+                      <StarIcon size={10} weight="fill" />
+                      {formatStarCount(starCount)}
+                    </>
+                  )
+                }
+              />
+              <AppBarSocialLink
+                href="https://discord.gg/AC4nwVtJM3"
+                label="Join our Discord"
+                iconPath={discordIconPath}
+                badge={
+                  onlineCount != null &&
+                  (onlineCount > 999 ? '999+' : onlineCount)
+                }
+              />
+            </>
+          ) : null}
+          {updateVersion ? (
+            <Tooltip content={`Update to v${updateVersion}`} side="right">
+              <button
+                type="button"
+                onClick={onUpdateClick}
+                className={cn(
+                  'flex items-center justify-center py-1 rounded-md w-10',
+                  'text-[9px] font-ibm-plex-mono font-medium leading-none',
+                  'bg-brand text-on-brand hover:bg-brand-hover',
+                  'transition-colors cursor-pointer'
+                )}
+              >
+                Update
+              </button>
+            </Tooltip>
+          ) : (
+            appVersion && (
+              <p
+                className="text-[9px] font-ibm-plex-mono text-low leading-none truncate max-w-10 text-center"
+                title={`v${appVersion}`}
+              >
+                v{appVersion}
+              </p>
+            )
+          )}
+        </div>
+      </div>
+
+      {projects.length > 0 && (
+        <Tooltip
+          content={
+            isProjectFlyoutOpen ? 'Hide project names' : 'Show project names'
+          }
+          side="right"
+        >
+          <button
+            type="button"
+            onClick={() => setIsProjectFlyoutOpen((open) => !open)}
+            className={cn(
+              'absolute left-full top-20 z-40 flex h-9 w-5 items-center justify-center',
+              'rounded-r-md border border-l-0 border-border bg-secondary text-low',
+              'shadow-sm transition-colors hover:text-normal'
+            )}
+            aria-label={
+              isProjectFlyoutOpen ? 'Hide project names' : 'Show project names'
+            }
+            aria-expanded={isProjectFlyoutOpen}
+          >
+            {isProjectFlyoutOpen ? (
+              <CaretLeftIcon className="h-3.5 w-3.5" weight="bold" />
+            ) : (
+              <CaretRightIcon className="h-3.5 w-3.5" weight="bold" />
+            )}
+          </button>
+        </Tooltip>
+      )}
+
+      <div
+        className={cn(
+          'absolute left-full top-0 z-30 h-full w-72 border-r border-border bg-secondary shadow-lg',
+          'transition-[opacity,transform] duration-150 ease-out',
+          isProjectFlyoutOpen
+            ? 'translate-x-0 opacity-100 pointer-events-auto'
+            : '-translate-x-2 opacity-0 pointer-events-none'
+        )}
+        aria-hidden={!isProjectFlyoutOpen}
+      >
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="flex items-center justify-between border-b border-border px-base py-base">
+            <p className="text-sm font-medium text-high">Projects</p>
             <button
               type="button"
-              onClick={onUpdateClick}
-              className={cn(
-                'flex items-center justify-center py-1 rounded-md w-10',
-                'text-[9px] font-ibm-plex-mono font-medium leading-none',
-                'bg-brand text-on-brand hover:bg-brand-hover',
-                'transition-colors cursor-pointer'
-              )}
+              onClick={() => setIsProjectFlyoutOpen(false)}
+              className="rounded-sm p-half text-low hover:bg-primary hover:text-normal"
+              aria-label="Hide project names"
             >
-              Update
+              <CaretLeftIcon className="h-4 w-4" weight="bold" />
             </button>
-          </Tooltip>
-        ) : (
-          appVersion && (
-            <p
-              className="text-[9px] font-ibm-plex-mono text-low leading-none truncate max-w-10 text-center"
-              title={`v${appVersion}`}
-            >
-              v{appVersion}
-            </p>
-          )
-        )}
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-base">
+            <div className="space-y-half">
+              {projects.map((project) => (
+                <div
+                  key={project.id}
+                  className={cn(
+                    'flex min-h-10 items-center gap-half rounded-sm px-half py-half',
+                    activeProjectId === project.id
+                      ? 'bg-primary'
+                      : 'hover:bg-primary/70'
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onProjectClick(project.id)}
+                    className="flex min-w-0 flex-1 items-center gap-half text-left"
+                  >
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold"
+                      style={getProjectButtonStyle(
+                        project,
+                        activeProjectId === project.id
+                      )}
+                    >
+                      {getProjectAbbreviation(project)}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm text-normal">
+                      {project.name}
+                    </span>
+                  </button>
+                  {project.hasNeedsReview && (
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand"
+                      title="Needs review"
+                    />
+                  )}
+                  {onProjectUpdate && !project.archived && (
+                    <button
+                      type="button"
+                      onClick={() => openProjectEditor(project)}
+                      className="shrink-0 rounded-sm p-half text-low hover:bg-secondary hover:text-normal"
+                      aria-label={`Edit ${project.name}`}
+                    >
+                      <PencilSimpleIcon className="h-4 w-4" weight="bold" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
+
+      <Dialog open={!!editingProject} onOpenChange={closeProjectEditor}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit project</DialogTitle>
+            <DialogDescription>
+              Rename the project, set its sidebar abbreviation, and choose a
+              pastel button color.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-base">
+            <div className="space-y-half">
+              <label
+                htmlFor="app-bar-project-name"
+                className="text-sm text-normal"
+              >
+                Name
+              </label>
+              <Input
+                id="app-bar-project-name"
+                value={projectDraft.name}
+                disabled={isSavingProjectEdit}
+                maxLength={100}
+                onChange={(event) =>
+                  setProjectDraft((draft) => ({
+                    ...draft,
+                    name: event.target.value,
+                  }))
+                }
+                onCommandEnter={() => void handleSaveProjectEdit()}
+              />
+            </div>
+
+            <div className="space-y-half">
+              <label
+                htmlFor="app-bar-project-abbreviation"
+                className="text-sm text-normal"
+              >
+                Abbreviation
+              </label>
+              <Input
+                id="app-bar-project-abbreviation"
+                value={projectDraft.abbreviation}
+                disabled={isSavingProjectEdit}
+                maxLength={3}
+                onChange={(event) =>
+                  setProjectDraft((draft) => ({
+                    ...draft,
+                    abbreviation: event.target.value.toUpperCase(),
+                  }))
+                }
+                onCommandEnter={() => void handleSaveProjectEdit()}
+              />
+            </div>
+
+            <div className="space-y-half">
+              <p className="text-sm text-normal">Color</p>
+              <InlineColorPicker
+                value={projectDraft.color}
+                onChange={(color) =>
+                  setProjectDraft((draft) => ({ ...draft, color }))
+                }
+                colors={PASTEL_PROJECT_COLORS}
+                disabled={isSavingProjectEdit}
+              />
+            </div>
+
+            {projectEditError && (
+              <p className="text-sm text-error">{projectEditError}</p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeProjectEditor}
+              disabled={isSavingProjectEdit}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleSaveProjectEdit()}
+              disabled={isSavingProjectEdit}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

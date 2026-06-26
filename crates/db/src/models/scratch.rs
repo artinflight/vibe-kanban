@@ -96,6 +96,15 @@ pub struct WorkspaceSortStateData {
     pub sort_order: WorkspaceSortOrderData,
 }
 
+/// Local UI customizations for project navigation.
+#[derive(Debug, Clone, Serialize, Deserialize, TS, Default)]
+pub struct ProjectCustomizationData {
+    #[serde(default)]
+    pub abbreviation: Option<String>,
+    #[serde(default)]
+    pub color: Option<String>,
+}
+
 /// Data for UI preferences scratch (global preferences stored per-user or per-device)
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct UiPreferencesData {
@@ -144,6 +153,9 @@ pub struct UiPreferencesData {
     /// Manual order for local projects in the left app bar
     #[serde(default)]
     pub local_project_order: Vec<String>,
+    /// Local project navigation display overrides keyed by project ID
+    #[serde(default)]
+    pub local_project_customizations: std::collections::HashMap<String, ProjectCustomizationData>,
     /// Default setting for creating a draft workspace from new issues
     #[serde(default)]
     pub create_draft_workspace_by_default: Option<bool>,

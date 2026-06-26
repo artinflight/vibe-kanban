@@ -122,6 +122,11 @@ export type KanbanProjectViewPreferences = {
   collapsedStatusIds: string[];
 };
 
+export type ProjectCustomization = {
+  abbreviation?: string;
+  color?: string;
+};
+
 export type ResolvedKanbanProjectState = {
   activeViewId: string;
   filters: KanbanFilterState;
@@ -358,6 +363,7 @@ type State = {
   selectedOrgId: string | null;
   selectedProjectId: string | null;
   localProjectOrder: string[];
+  localProjectCustomizations: Record<string, ProjectCustomization>;
   createDraftWorkspaceByDefault: boolean;
 
   // UI preferences actions
@@ -453,6 +459,10 @@ type State = {
   clearSelectedOrgId: () => void;
   setSelectedProjectId: (projectId: string | null) => void;
   setLocalProjectOrder: (projectIds: string[]) => void;
+  setLocalProjectCustomization: (
+    projectId: string,
+    customization: ProjectCustomization
+  ) => void;
   setCreateDraftWorkspaceByDefault: (value: boolean) => void;
 };
 
@@ -497,6 +507,7 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
   selectedOrgId: null,
   selectedProjectId: null,
   localProjectOrder: [],
+  localProjectCustomizations: {},
   createDraftWorkspaceByDefault: DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT,
 
   // UI preferences actions
@@ -890,6 +901,16 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
   clearSelectedOrgId: () => set({ selectedOrgId: null }),
   setSelectedProjectId: (projectId) => set({ selectedProjectId: projectId }),
   setLocalProjectOrder: (projectIds) => set({ localProjectOrder: projectIds }),
+  setLocalProjectCustomization: (projectId, customization) =>
+    set((state) => ({
+      localProjectCustomizations: {
+        ...state.localProjectCustomizations,
+        [projectId]: {
+          ...state.localProjectCustomizations[projectId],
+          ...customization,
+        },
+      },
+    })),
   setCreateDraftWorkspaceByDefault: (value) =>
     set({ createDraftWorkspaceByDefault: value }),
 }));

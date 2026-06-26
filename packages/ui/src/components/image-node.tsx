@@ -251,12 +251,11 @@ export function createImageNode(options: CreateImageNodeOptions) {
         isImageLikeFileName(workspaceDisplayName));
     const showDownloadButton = Boolean(
       (isAttachment &&
-        (
-          scopeLocalApiPath(localAttachment?.proxy_url ?? '', hostId) ||
+        (scopeLocalApiPath(localAttachment?.proxy_url ?? '', hostId) ||
           scopeLocalApiPath(fullSizeUrl ?? '', hostId) ||
-          scopeLocalApiPath(metadata?.proxy_url ?? '', hostId)
-        )) ||
-        (!isWorkspaceImage && scopeLocalApiPath(metadata?.proxy_url ?? '', hostId))
+          scopeLocalApiPath(metadata?.proxy_url ?? '', hostId))) ||
+        (!isWorkspaceImage &&
+          scopeLocalApiPath(metadata?.proxy_url ?? '', hostId))
     );
     const localAttachmentUrl = localAttachment?.proxy_url
       ? scopeLocalApiPath(localAttachment.proxy_url, hostId)
@@ -302,7 +301,11 @@ export function createImageNode(options: CreateImageNodeOptions) {
               sizeBytes: metadata.size_bytes,
             });
           } else {
-            window.open(scopedMetadataProxyUrl, '_blank', 'noopener,noreferrer');
+            window.open(
+              scopedMetadataProxyUrl,
+              '_blank',
+              'noopener,noreferrer'
+            );
           }
         }
       },

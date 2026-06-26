@@ -69,9 +69,7 @@ export function IssuePropertyRow({
       {onStatusChange ? (
         <label className="relative inline-flex min-h-cta items-center">
           <StatusDot
-            color={
-              statuses.find((s) => s.id === statusId)?.color ?? '0 0% 50%'
-            }
+            color={statuses.find((s) => s.id === statusId)?.color ?? '0 0% 50%'}
             className="pointer-events-none absolute left-base"
           />
           <select
@@ -102,9 +100,7 @@ export function IssuePropertyRow({
           disabled={disabled}
         >
           <StatusDot
-            color={
-              statuses.find((s) => s.id === statusId)?.color ?? '0 0% 50%'
-            }
+            color={statuses.find((s) => s.id === statusId)?.color ?? '0 0% 50%'}
           />
           {statuses.find((s) => s.id === statusId)?.name ?? 'Select status'}
         </PrimaryButton>

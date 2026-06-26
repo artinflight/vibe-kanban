@@ -70,6 +70,8 @@ export type WorkspaceFilterStateData = { project_ids: Array<string>, pr_filter: 
 
 export type WorkspaceSortStateData = { sort_by: WorkspaceSortByData, sort_order: WorkspaceSortOrderData, };
 
+export type ProjectCustomizationData = { abbreviation: string | null, color: string | null, };
+
 export type UiPreferencesData = {
 /**
  * Preferred repo actions per repo
@@ -131,6 +133,10 @@ selected_project_id: string | null,
  * Manual order for local projects in the left app bar
  */
 local_project_order: Array<string>,
+/**
+ * Local project navigation display overrides keyed by project ID
+ */
+local_project_customizations: { [key in string]?: ProjectCustomizationData },
 /**
  * Default setting for creating a draft workspace from new issues
  */
@@ -540,13 +546,14 @@ session_id: string,
  */
 data: DraftFollowUpData,
 /**
- * Ordered follow-up messages queued while the agent was running.
- */
-messages: Array<DraftFollowUpData>,
-/**
  * Timestamp when the message was queued
  */
-queued_at: string, };
+queued_at: string,
+/**
+ * True when this message is waiting for global executor capacity rather than
+ * a currently running turn in the same session to finish.
+ */
+wait_for_capacity: boolean, };
 
 export type QueueStatus = { "status": "empty" } | { "status": "queued", message: QueuedMessage, };
 

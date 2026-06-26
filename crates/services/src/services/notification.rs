@@ -1,12 +1,12 @@
 use std::{
     env,
     sync::{Arc, OnceLock},
+    time::Duration,
 };
 
 use async_trait::async_trait;
 use db::models::execution_process::ExecutionProcessStatus;
-use tokio::sync::RwLock;
-use url::Url;
+use tokio::sync::{RwLock, mpsc};
 use utils::{self, command_ext::NoWindowExt};
 use uuid::Uuid;
 
@@ -63,6 +63,7 @@ impl PushNotifier for DefaultPushNotifier {
 pub struct NotificationService {
     config: Arc<RwLock<Config>>,
     push_notifier: Arc<dyn PushNotifier>,
+    turn_completion_ntfy: Option<TurnCompletionNtfyPublisher>,
 }
 
 impl std::fmt::Debug for NotificationService {
@@ -78,6 +79,7 @@ impl NotificationService {
         Self {
             config,
             push_notifier: get_global_push_notifier(),
+            turn_completion_ntfy: TurnCompletionNtfyPublisher::from_env(),
         }
     }
 
@@ -97,16 +99,23 @@ impl NotificationService {
     }
 
     /// Send the standard workspace completion notification and, when configured,
-    /// mirror the final turn metadata to ntfy.
+    /// mirror a bounded turn-completion notice to ntfy.
     pub async fn notify_workspace_turn_completion(
         &self,
         workspace_name: &str,
         status: &ExecutionProcessStatus,
+        agent_label: Option<&str>,
         summary: Option<&str>,
         workspace_id: Uuid,
     ) {
+        let notice = TurnCompletionNotice {
+            workspace_name,
+            status,
+            agent_label,
+            summary,
+        };
         let title = workspace_completion_title(workspace_name, status);
-        let message = build_workspace_completion_message(workspace_name, status, summary);
+        let message = build_workspace_completion_message(&notice);
         let config = self.config.read().await.notifications.clone();
 
         if config.sound_enabled {
@@ -119,8 +128,8 @@ impl NotificationService {
                 .await;
         }
 
-        if let Some(ntfy) = TurnCompletionNtfyConfig::from_env() {
-            ntfy.publish(title, message).await;
+        if let Some(ntfy) = &self.turn_completion_ntfy {
+            ntfy.publish(title, message);
         }
     }
 
@@ -462,24 +471,57 @@ async fn wsl_to_windows_path(wsl_path: &std::path::Path) -> Option<String> {
     }
 }
 
+#[derive(Clone)]
+struct TurnCompletionNtfyPublisher {
+    tx: mpsc::Sender<TurnCompletionNtfyMessage>,
+}
+
+#[derive(Debug)]
+struct TurnCompletionNtfyMessage {
+    title: String,
+    body: String,
+}
+
 #[derive(Debug, Clone)]
 struct TurnCompletionNtfyConfig {
     base_url: String,
     topic: String,
     token: Option<String>,
+    queue_capacity: usize,
+    timeout: Duration,
 }
 
 impl TurnCompletionNtfyConfig {
     fn from_env() -> Option<Self> {
-        let topic = env_var_trimmed("VK_NTFY_TOPIC")?;
-        let base_url =
-            env_var_trimmed("VK_NTFY_URL").unwrap_or_else(|| "https://ntfy.sh".to_string());
-        let token = env_var_trimmed("VK_NTFY_TOKEN");
+        Self::from_env_reader(env_var_trimmed)
+    }
+
+    fn from_env_reader(mut read: impl FnMut(&str) -> Option<String>) -> Option<Self> {
+        let topic = match read("VK_TURN_COMPLETION_NTFY_TOPIC") {
+            Some(value) => value,
+            None => read("VK_NTFY_TOPIC")?,
+        };
+        let base_url = read("VK_TURN_COMPLETION_NTFY_URL")
+            .or_else(|| read("VK_NTFY_URL"))
+            .unwrap_or_else(|| "https://ntfy.sh".to_string());
+        let token = read("VK_TURN_COMPLETION_NTFY_TOKEN").or_else(|| read("VK_NTFY_TOKEN"));
+        let queue_capacity = read("VK_TURN_COMPLETION_NTFY_QUEUE")
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(64)
+            .clamp(1, 1024);
+        let timeout = Duration::from_secs(
+            read("VK_TURN_COMPLETION_NTFY_TIMEOUT_SECS")
+                .and_then(|value| value.parse::<u64>().ok())
+                .unwrap_or(4)
+                .clamp(1, 30),
+        );
 
         Some(Self {
             base_url,
             topic,
             token,
+            queue_capacity,
+            timeout,
         })
     }
 
@@ -490,47 +532,89 @@ impl TurnCompletionNtfyConfig {
             self.topic.trim_start_matches('/')
         )
     }
+}
 
-    async fn publish(&self, title: String, message: String) {
-        let config = self.clone();
-
-        let handle = tokio::spawn(async move {
-            let client = reqwest::Client::new();
-            let mut request = client
-                .post(config.endpoint())
-                .header("Title", title)
-                .header("Markdown", "yes")
-                .body(message);
-
-            if let Some(token) = config.token {
-                request = request.bearer_auth(token);
+impl TurnCompletionNtfyPublisher {
+    fn from_env() -> Option<Self> {
+        let config = TurnCompletionNtfyConfig::from_env()?;
+        let client = match reqwest::Client::builder().timeout(config.timeout).build() {
+            Ok(client) => client,
+            Err(error) => {
+                tracing::warn!(?error, "failed to initialize ntfy client");
+                return None;
             }
+        };
+        let (tx, rx) = mpsc::channel(config.queue_capacity);
 
-            match request.send().await {
-                Ok(response) if response.status().is_success() => {}
-                Ok(response) => {
-                    let status = response.status();
-                    let body = response.text().await.unwrap_or_default();
-                    tracing::warn!(
-                        status = %status,
-                        body = %body,
-                        topic = %config.topic,
-                        base_url = %config.base_url,
-                        "failed to publish workspace completion to ntfy"
-                    );
-                }
-                Err(error) => {
-                    tracing::warn!(
-                        ?error,
-                        topic = %config.topic,
-                        base_url = %config.base_url,
-                        "failed to execute ntfy publish request"
-                    );
-                }
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            handle.spawn(run_ntfy_publisher(client, config, rx));
+        } else {
+            tracing::warn!("ntfy notifications disabled because no Tokio runtime is active");
+            return None;
+        }
+
+        Some(Self { tx })
+    }
+
+    fn publish(&self, title: String, body: String) {
+        match self.tx.try_send(TurnCompletionNtfyMessage { title, body }) {
+            Ok(()) => {}
+            Err(mpsc::error::TrySendError::Full(_)) => {
+                tracing::warn!("dropping ntfy turn-completion notice because the queue is full");
             }
-        });
+            Err(mpsc::error::TrySendError::Closed(_)) => {
+                tracing::warn!("dropping ntfy turn-completion notice because the worker stopped");
+            }
+        }
+    }
+}
 
-        drop(handle);
+async fn run_ntfy_publisher(
+    client: reqwest::Client,
+    config: TurnCompletionNtfyConfig,
+    mut rx: mpsc::Receiver<TurnCompletionNtfyMessage>,
+) {
+    while let Some(message) = rx.recv().await {
+        publish_ntfy_message(&client, &config, message).await;
+    }
+}
+
+async fn publish_ntfy_message(
+    client: &reqwest::Client,
+    config: &TurnCompletionNtfyConfig,
+    message: TurnCompletionNtfyMessage,
+) {
+    let mut request = client
+        .post(config.endpoint())
+        .header("Title", message.title)
+        .header("Markdown", "yes")
+        .body(message.body);
+
+    if let Some(token) = &config.token {
+        request = request.bearer_auth(token);
+    }
+
+    match request.send().await {
+        Ok(response) if response.status().is_success() => {}
+        Ok(response) => {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            tracing::warn!(
+                status = %status,
+                body = %truncate_for_log(&body),
+                topic = %config.topic,
+                base_url = %config.base_url,
+                "failed to publish workspace completion to ntfy"
+            );
+        }
+        Err(error) => {
+            tracing::warn!(
+                ?error,
+                topic = %config.topic,
+                base_url = %config.base_url,
+                "failed to execute ntfy publish request"
+            );
+        }
     }
 }
 
@@ -543,53 +627,76 @@ fn env_var_trimmed(name: &str) -> Option<String> {
 
 fn workspace_completion_title(workspace_name: &str, status: &ExecutionProcessStatus) -> String {
     match status {
-        ExecutionProcessStatus::Completed => format!("Workspace Complete: {workspace_name}"),
-        ExecutionProcessStatus::Failed => format!("Workspace Failed: {workspace_name}"),
-        ExecutionProcessStatus::Killed => format!("Workspace Stopped: {workspace_name}"),
-        ExecutionProcessStatus::Running => format!("Workspace Running: {workspace_name}"),
+        ExecutionProcessStatus::Completed => format!("VK turn complete: {workspace_name}"),
+        ExecutionProcessStatus::Failed => format!("VK turn failed: {workspace_name}"),
+        ExecutionProcessStatus::Killed => format!("VK turn stopped: {workspace_name}"),
+        ExecutionProcessStatus::Running => format!("VK turn running: {workspace_name}"),
     }
 }
 
-fn build_workspace_completion_message(
-    workspace_name: &str,
-    status: &ExecutionProcessStatus,
-    summary: Option<&str>,
-) -> String {
-    let mut lines = vec![format!("Workspace:: {workspace_name}")];
-    let metadata_lines = summary
-        .map(extract_summary_metadata_lines)
-        .unwrap_or_default();
+struct TurnCompletionNotice<'a> {
+    workspace_name: &'a str,
+    status: &'a ExecutionProcessStatus,
+    agent_label: Option<&'a str>,
+    summary: Option<&'a str>,
+}
 
-    if metadata_lines.is_empty() {
-        lines.push(format!("Status:: {}", workspace_status_label(status)));
-    } else {
-        lines.extend(metadata_lines);
+fn build_workspace_completion_message(notice: &TurnCompletionNotice<'_>) -> String {
+    let mut lines = vec![
+        format!("Workspace:: {}", notice.workspace_name),
+        format!("Status:: {}", workspace_status_label(notice.status)),
+    ];
+
+    if let Some(agent_label) = notice.agent_label.and_then(non_empty_trimmed) {
+        lines.push(format!("Agent:: {agent_label}"));
     }
+
+    let final_statement = notice
+        .summary
+        .and_then(non_empty_trimmed)
+        .map(brief_final_statement)
+        .unwrap_or_else(|| "No final assistant statement was captured.".to_string());
+    lines.push(format!("Final:: {final_statement}"));
 
     lines.join("\n")
 }
 
-fn extract_summary_metadata_lines(summary: &str) -> Vec<String> {
-    summary
+fn brief_final_statement(summary: &str) -> String {
+    let normalized = summary
         .lines()
-        .filter_map(|line| {
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                return None;
-            }
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .take(6)
+        .collect::<Vec<_>>()
+        .join(" ");
 
-            let normalized = trimmed.strip_prefix("- ").unwrap_or(trimmed).trim();
-            let (label, value) = normalized.split_once("::")?;
-            let label = label.trim();
-            let value = value.trim();
+    truncate_chars(&normalized, 700)
+}
 
-            if label.is_empty() || value.is_empty() {
-                return None;
-            }
+fn non_empty_trimmed(value: &str) -> Option<&str> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    }
+}
 
-            Some(format!("{label}:: {value}"))
-        })
-        .collect()
+fn truncate_chars(value: &str, max_chars: usize) -> String {
+    if value.chars().count() <= max_chars {
+        return value.to_string();
+    }
+
+    let mut out = value
+        .chars()
+        .take(max_chars.saturating_sub(3))
+        .collect::<String>();
+    out.push_str("...");
+    out
+}
+
+fn truncate_for_log(value: &str) -> String {
+    truncate_chars(value, 500)
 }
 
 fn workspace_status_label(status: &ExecutionProcessStatus) -> &'static str {
@@ -606,7 +713,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn extracts_summary_metadata_lines_from_compact_block() {
+    fn workspace_completion_message_uses_brief_final_statement() {
         let summary = r#"Validation
 Checks passed.
 
@@ -628,30 +735,33 @@ Preview URL:: Not Generated
 Branch:: vk/wire-ntfy
 Worktree:: /tmp/vk"#;
 
+        let notice = TurnCompletionNotice {
+            workspace_name: "VK::Wire ntfy",
+            status: &ExecutionProcessStatus::Completed,
+            agent_label: Some("codex:gpt-5.5-high"),
+            summary: Some(summary),
+        };
+
         assert_eq!(
-            extract_summary_metadata_lines(summary),
-            vec![
-                "PR:: Not opened yet",
-                "Docs:: Not Current",
-                "Churn:: No",
-                "Human Needed:: Yes",
-                "Commit/Push:: Not committed and Not pushed",
-                "Preview URL:: Not Generated",
-                "Branch:: vk/wire-ntfy",
-                "Worktree:: /tmp/vk",
-            ]
+            build_workspace_completion_message(&notice),
+            "Workspace:: VK::Wire ntfy\nStatus:: Completed\nAgent:: codex:gpt-5.5-high\nFinal:: Validation Checks passed. What changed Updated the notifier. Why it matters Turn completion now reaches ntfy."
         );
     }
 
     #[test]
     fn workspace_completion_message_falls_back_when_summary_has_no_metadata() {
-        let message = build_workspace_completion_message(
-            "demo-workspace",
-            &ExecutionProcessStatus::Completed,
-            Some("No compact metadata here."),
-        );
+        let notice = TurnCompletionNotice {
+            workspace_name: "demo-workspace",
+            status: &ExecutionProcessStatus::Completed,
+            agent_label: None,
+            summary: None,
+        };
+        let message = build_workspace_completion_message(&notice);
 
-        assert_eq!(message, "Workspace:: demo-workspace\nStatus:: Completed");
+        assert_eq!(
+            message,
+            "Workspace:: demo-workspace\nStatus:: Completed\nFinal:: No final assistant statement was captured."
+        );
     }
 
     #[test]
@@ -660,11 +770,37 @@ Worktree:: /tmp/vk"#;
             base_url: "https://opntfy.fly.dev/".to_string(),
             topic: "/vk-workspace-turns".to_string(),
             token: Some("token".to_string()),
+            queue_capacity: 64,
+            timeout: Duration::from_secs(4),
         };
 
         assert_eq!(
             config.endpoint(),
             "https://opntfy.fly.dev/vk-workspace-turns"
         );
+    }
+
+    #[test]
+    fn turn_completion_ntfy_config_prefers_specific_env_names() {
+        let vars = [
+            ("VK_TURN_COMPLETION_NTFY_TOPIC", "vk-turns"),
+            ("VK_TURN_COMPLETION_NTFY_URL", "https://ntfy.example"),
+            ("VK_TURN_COMPLETION_NTFY_TOKEN", "secret"),
+            ("VK_TURN_COMPLETION_NTFY_QUEUE", "12"),
+            ("VK_TURN_COMPLETION_NTFY_TIMEOUT_SECS", "2"),
+            ("VK_NTFY_TOPIC", "legacy-topic"),
+            ("VK_NTFY_URL", "https://legacy.example"),
+            ("VK_NTFY_TOKEN", "legacy-secret"),
+        ];
+        let config = TurnCompletionNtfyConfig::from_env_reader(|key| {
+            vars.iter()
+                .find_map(|(name, value)| (*name == key).then(|| (*value).to_string()))
+        })
+        .expect("config");
+
+        assert_eq!(config.endpoint(), "https://ntfy.example/vk-turns");
+        assert_eq!(config.token.as_deref(), Some("secret"));
+        assert_eq!(config.queue_capacity, 12);
+        assert_eq!(config.timeout, Duration::from_secs(2));
     }
 }

@@ -323,6 +323,11 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     return isNewSessionMode ? workspaceId : sessionId;
   }, [pendingApproval?.approvalId, isNewSessionMode, workspaceId, sessionId]);
 
+  const executorConfigPersistenceKey = useMemo(
+    () => (isNewSessionMode ? workspaceId : sessionId),
+    [isNewSessionMode, sessionId, workspaceId]
+  );
+
   // Get repos for file search
   const { repos } = useWorkspaceRepo(workspaceId);
   const repoIds = repos.map((r) => r.id);
@@ -507,6 +512,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     lastUsedConfig: latestConfig,
     scratchConfig: scratchData?.executor_config ?? undefined,
     configExecutorProfile: config?.executor_profile,
+    persistenceKey: executorConfigPersistenceKey,
     onPersist: (cfg) => void saveToScratch(localMessageRef.current, cfg),
   });
 

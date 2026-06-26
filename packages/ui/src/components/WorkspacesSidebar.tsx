@@ -235,7 +235,8 @@ export function WorkspacesSidebar({
             !ws.isRunning && !hasSubagentActivity(ws) && !needsAttention(ws)
         ),
         runningWorkspaces: workspaces.filter(
-          (ws) => (ws.isRunning || hasSubagentActivity(ws)) && !needsAttention(ws)
+          (ws) =>
+            (ws.isRunning || hasSubagentActivity(ws)) && !needsAttention(ws)
         ),
       };
     }, [workspaces]);

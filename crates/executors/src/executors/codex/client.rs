@@ -18,11 +18,10 @@ use codex_app_server_protocol::{
     JSONRPCNotification, JSONRPCRequest, JSONRPCResponse, ListMcpServerStatusParams,
     ListMcpServerStatusResponse, RequestId, ReviewStartParams, ReviewStartResponse, ReviewTarget,
     ServerRequest, ThreadCompactStartParams, ThreadCompactStartResponse, ThreadForkParams,
-    ThreadForkResponse, ThreadItem, ThreadReadParams, ThreadReadResponse, ThreadStartParams,
-    ThreadStartResponse, ToolRequestUserInputAnswer, ToolRequestUserInputQuestion,
-    ToolRequestUserInputResponse, TurnCompletedNotification, TurnInterruptParams,
-    TurnInterruptResponse, TurnStartParams, TurnStartResponse, TurnStartedNotification, TurnStatus,
-    UserInput,
+    ThreadForkResponse, ThreadItem, ThreadReadParams, ThreadReadResponse, ThreadResumeParams,
+    ThreadResumeResponse, ThreadStartParams, ThreadStartResponse, ToolRequestUserInputAnswer,
+    ToolRequestUserInputQuestion, ToolRequestUserInputResponse, TurnCompletedNotification,
+    TurnStartParams, TurnStartResponse, TurnStatus, UserInput,
 };
 use codex_protocol::config_types::{CollaborationMode, ModeKind, Settings};
 use futures::TryFutureExt;
@@ -199,6 +198,17 @@ impl AppServerClient {
             params,
         };
         self.send_request(request, "thread/fork").await
+    }
+
+    pub async fn thread_resume(
+        &self,
+        params: ThreadResumeParams,
+    ) -> Result<ThreadResumeResponse, ExecutorError> {
+        let request = ClientRequest::ThreadResume {
+            request_id: self.next_request_id(),
+            params,
+        };
+        self.send_request(request, "thread/resume").await
     }
 
     pub async fn turn_start_with_mode(
@@ -1111,21 +1121,7 @@ fn answers_to_codex_format(
 }
 
 fn request_id(request: &ClientRequest) -> RequestId {
-    match request {
-        ClientRequest::Initialize { request_id, .. }
-        | ClientRequest::ThreadStart { request_id, .. }
-        | ClientRequest::ThreadFork { request_id, .. }
-        | ClientRequest::TurnStart { request_id, .. }
-        | ClientRequest::GetAccount { request_id, .. }
-        | ClientRequest::ReviewStart { request_id, .. }
-        | ClientRequest::McpServerStatusList { request_id, .. }
-        | ClientRequest::ThreadCompactStart { request_id, .. }
-        | ClientRequest::ThreadRead { request_id, .. }
-        | ClientRequest::ConfigRead { request_id, .. }
-        | ClientRequest::ConfigBatchWrite { request_id, .. }
-        | ClientRequest::GetAccountRateLimits { request_id, .. } => request_id.clone(),
-        _ => unreachable!("request_id called for unsupported request variant"),
-    }
+    request.id().clone()
 }
 
 fn should_log_notification(method: &str) -> bool {
@@ -1153,5 +1149,24 @@ impl LogWriter {
         guard.write_all(b"\n").await.map_err(ExecutorError::Io)?;
         guard.flush().await.map_err(ExecutorError::Io)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn request_id_supports_thread_resume() {
+        let expected_id = RequestId::Integer(42);
+        let request = ClientRequest::ThreadResume {
+            request_id: expected_id.clone(),
+            params: ThreadResumeParams {
+                thread_id: "thread-id".to_string(),
+                ..Default::default()
+            },
+        };
+
+        assert_eq!(expected_id, request_id(&request));
     }
 }

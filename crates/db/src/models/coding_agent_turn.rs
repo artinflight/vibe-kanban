@@ -210,6 +210,35 @@ impl CodingAgentTurn {
         .await
     }
 
+    /// Find the latest non-dropped coding agent turn for a VK session.
+    pub async fn find_latest_by_session_id(
+        pool: &SqlitePool,
+        session_id: Uuid,
+    ) -> Result<Option<Self>, sqlx::Error> {
+        sqlx::query_as::<_, CodingAgentTurn>(
+            r#"SELECT
+                cat.id,
+                cat.execution_process_id,
+                cat.agent_session_id,
+                cat.agent_message_id,
+                cat.prompt,
+                cat.summary,
+                cat.seen,
+                cat.created_at,
+                cat.updated_at
+               FROM coding_agent_turns cat
+               JOIN execution_processes ep ON ep.id = cat.execution_process_id
+               WHERE ep.session_id = ?
+                 AND ep.run_reason = 'codingagent'
+                 AND ep.dropped = FALSE
+               ORDER BY ep.created_at DESC
+               LIMIT 1"#,
+        )
+        .bind(session_id)
+        .fetch_optional(pool)
+        .await
+    }
+
     /// Create a new coding agent turn
     pub async fn create(
         pool: &SqlitePool,

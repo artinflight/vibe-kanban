@@ -6,6 +6,7 @@ import {
   type UiPreferencesData,
   type ScratchPayload,
   type WorkspacePanelStateData,
+  type ProjectCustomizationData,
   type JsonValue,
 } from 'shared/types';
 import {
@@ -23,6 +24,7 @@ import {
   type WorkspaceSortOrder,
   type KanbanProjectViewSelection,
   type KanbanProjectViewPreferences,
+  type ProjectCustomization,
 } from '@/shared/stores/useUiPreferencesStore';
 import type { RepoAction } from '@vibe/ui/components/RepoCard';
 
@@ -56,6 +58,7 @@ function storeToScratchData(state: {
   selectedOrgId: string | null;
   selectedProjectId: string | null;
   localProjectOrder: string[];
+  localProjectCustomizations: Record<string, ProjectCustomization>;
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
   savedChatMessages: SavedChatMessage[];
@@ -70,6 +73,14 @@ function storeToScratchData(state: {
     workspacePanelStates[key] = {
       right_main_panel_mode: value.rightMainPanelMode,
       is_left_main_panel_visible: value.isLeftMainPanelVisible,
+    };
+  }
+  const localProjectCustomizations: Record<string, ProjectCustomizationData> =
+    {};
+  for (const [key, value] of Object.entries(state.localProjectCustomizations)) {
+    localProjectCustomizations[key] = {
+      abbreviation: value.abbreviation ?? null,
+      color: value.color ?? null,
     };
   }
 
@@ -95,6 +106,7 @@ function storeToScratchData(state: {
     selected_org_id: state.selectedOrgId,
     selected_project_id: state.selectedProjectId,
     local_project_order: state.localProjectOrder,
+    local_project_customizations: localProjectCustomizations,
     create_draft_workspace_by_default: state.createDraftWorkspaceByDefault,
     show_left_column_links: state.showLeftColumnLinks,
     saved_chat_messages: state.savedChatMessages,
@@ -126,6 +138,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
   selectedOrgId: string | null;
   selectedProjectId: string | null;
   localProjectOrder: string[];
+  localProjectCustomizations: Record<string, ProjectCustomization>;
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
   savedChatMessages: SavedChatMessage[];
@@ -186,6 +199,8 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
     selectedOrgId: data.selected_org_id ?? null,
     selectedProjectId: data.selected_project_id ?? null,
     localProjectOrder: data.local_project_order ?? [],
+    localProjectCustomizations: (data.local_project_customizations ??
+      {}) as Record<string, ProjectCustomization>,
     createDraftWorkspaceByDefault:
       data.create_draft_workspace_by_default ??
       DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT,
@@ -246,6 +261,7 @@ export function useUiPreferencesScratch() {
     selectedOrgId: state.selectedOrgId,
     selectedProjectId: state.selectedProjectId,
     localProjectOrder: state.localProjectOrder,
+    localProjectCustomizations: state.localProjectCustomizations,
     createDraftWorkspaceByDefault: state.createDraftWorkspaceByDefault,
     showLeftColumnLinks: state.showLeftColumnLinks,
     savedChatMessages: state.savedChatMessages,
@@ -283,6 +299,7 @@ export function useUiPreferencesScratch() {
       selectedOrgId: currentState.selectedOrgId,
       selectedProjectId: currentState.selectedProjectId,
       localProjectOrder: currentState.localProjectOrder,
+      localProjectCustomizations: currentState.localProjectCustomizations,
       createDraftWorkspaceByDefault: currentState.createDraftWorkspaceByDefault,
       showLeftColumnLinks: currentState.showLeftColumnLinks,
       savedChatMessages: currentState.savedChatMessages,
@@ -341,6 +358,7 @@ export function useUiPreferencesScratch() {
         selectedOrgId: serverState.selectedOrgId,
         selectedProjectId: serverState.selectedProjectId,
         localProjectOrder: serverState.localProjectOrder,
+        localProjectCustomizations: serverState.localProjectCustomizations,
         createDraftWorkspaceByDefault:
           serverState.createDraftWorkspaceByDefault,
         showLeftColumnLinks: serverState.showLeftColumnLinks,

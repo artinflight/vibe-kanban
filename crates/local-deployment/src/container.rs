@@ -777,6 +777,8 @@ impl LocalContainerService {
                     })));
                 }
 
+                let _ = container.consume_capacity_queued_follow_up().await;
+
                 // Sync workspace to remote after CodingAgent execution
                 if matches!(
                     &ctx.execution_process.run_reason,
@@ -1231,7 +1233,10 @@ impl LocalContainerService {
             );
         }
 
-        if let Err(e) = self.start_queued_follow_up(ctx, &queued_msg.data).await {
+        if let Err(e) = self
+            .start_queued_follow_up_for_session(&ctx.workspace, &ctx.session, &queued_msg.data)
+            .await
+        {
             tracing::error!("Failed to start queued follow-up: {}", e);
             return QueuedFollowUpOutcome::FailedToStart;
         }
@@ -1239,20 +1244,114 @@ impl LocalContainerService {
         QueuedFollowUpOutcome::Started
     }
 
-    /// Start a follow-up execution from a queued message
-    async fn start_queued_follow_up(
+    /// Start the oldest message that is waiting for global executor capacity.
+    async fn consume_capacity_queued_follow_up(&self) -> QueuedFollowUpOutcome {
+        let Some(queued_msg) = self.queued_message_service.take_oldest_capacity_queued() else {
+            return QueuedFollowUpOutcome::NoQueuedMessage;
+        };
+
+        let session = match Session::find_by_id(&self.db.pool, queued_msg.session_id).await {
+            Ok(Some(session)) => session,
+            Ok(None) => {
+                tracing::warn!(
+                    "Discarding capacity-queued message for missing session {}",
+                    queued_msg.session_id
+                );
+                return QueuedFollowUpOutcome::Discarded;
+            }
+            Err(error) => {
+                tracing::warn!(
+                    session_id = %queued_msg.session_id,
+                    ?error,
+                    "Failed to load capacity-queued session; requeueing"
+                );
+                self.queued_message_service
+                    .queue_for_capacity(queued_msg.session_id, queued_msg.data);
+                return QueuedFollowUpOutcome::FailedToStart;
+            }
+        };
+
+        let workspace = match Workspace::find_by_id(&self.db.pool, session.workspace_id).await {
+            Ok(Some(workspace)) => workspace,
+            Ok(None) => {
+                tracing::warn!(
+                    "Discarding capacity-queued message for missing workspace {}",
+                    session.workspace_id
+                );
+                return QueuedFollowUpOutcome::Discarded;
+            }
+            Err(error) => {
+                tracing::warn!(
+                    session_id = %session.id,
+                    workspace_id = %session.workspace_id,
+                    ?error,
+                    "Failed to load capacity-queued workspace; requeueing"
+                );
+                self.queued_message_service
+                    .queue_for_capacity(session.id, queued_msg.data);
+                return QueuedFollowUpOutcome::FailedToStart;
+            }
+        };
+
+        if ExecutionProcess::has_running_queue_consumer_for_session(&self.db.pool, session.id)
+            .await
+            .unwrap_or(true)
+        {
+            self.queued_message_service
+                .queue_for_capacity(session.id, queued_msg.data);
+            return QueuedFollowUpOutcome::NoQueuedMessage;
+        }
+
+        if let Err(error) = Scratch::delete(
+            &self.db.pool,
+            queued_msg.session_id,
+            &ScratchType::DraftFollowUp,
+        )
+        .await
+        {
+            tracing::warn!(
+                "Failed to delete scratch after consuming capacity-queued message: {}",
+                error
+            );
+        }
+
+        match self
+            .start_queued_follow_up_for_session(&workspace, &session, &queued_msg.data)
+            .await
+        {
+            Ok(_) => QueuedFollowUpOutcome::Started,
+            Err(error) if error.is_execution_limit_reached() => {
+                self.queued_message_service
+                    .queue_for_capacity(session.id, queued_msg.data);
+                QueuedFollowUpOutcome::NoQueuedMessage
+            }
+            Err(error) => {
+                tracing::error!(
+                    session_id = %session.id,
+                    workspace_id = %workspace.id,
+                    ?error,
+                    "Failed to start capacity-queued follow-up"
+                );
+                QueuedFollowUpOutcome::FailedToStart
+            }
+        }
+    }
+
+    /// Start a follow-up execution from queued data for an arbitrary session.
+    async fn start_queued_follow_up_for_session(
         &self,
-        ctx: &ExecutionContext,
+        workspace: &Workspace,
+        session: &Session,
         queued_data: &DraftFollowUpData,
     ) -> Result<ExecutionProcess, ContainerError> {
         let executor_profile_id = queued_data.executor_config.profile_id();
 
         // Validate executor matches session if session has prior executions
         let expected_executor: Option<String> =
-            ExecutionProcess::latest_executor_profile_for_session(&self.db.pool, ctx.session.id)
+            ExecutionProcess::latest_executor_profile_for_session(&self.db.pool, session.id)
                 .await?
                 .map(|profile| profile.executor.to_string())
-                .or_else(|| ctx.session.executor.clone());
+                .or_else(|| session.executor.clone());
 
         if let Some(expected) = expected_executor {
             let actual = executor_profile_id.executor.to_string();
@@ -1261,10 +1360,10 @@ impl LocalContainerService {
             }
         }
 
-        if ctx.session.executor.is_none() {
+        if session.executor.is_none() {
             Session::update_executor(
                 &self.db.pool,
-                ctx.session.id,
+                session.id,
                 &executor_profile_id.executor.to_string(),
             )
             .await?;
@@ -1272,23 +1371,12 @@ impl LocalContainerService {
 
         // Get latest agent turn for session continuity (from coding agent turns)
         let latest_session_info =
-            CodingAgentTurn::find_latest_session_info(&self.db.pool, ctx.session.id).await?;
-        let interrupted_context = CodingAgentTurn::find_interrupted_context_since_latest_success(
-            &self.db.pool,
-            ctx.session.id,
-        )
-        .await?;
-        let prompt = CodingAgentTurn::prompt_with_interrupted_context(
-            queued_data.message.clone(),
-            &interrupted_context,
-        );
+            CodingAgentTurn::find_latest_session_info(&self.db.pool, session.id).await?;
 
-        let repos =
-            WorkspaceRepo::find_repos_for_workspace(&self.db.pool, ctx.workspace.id).await?;
+        let repos = WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id).await?;
         let cleanup_action = self.cleanup_actions_for_repos(&repos);
 
-        let working_dir = ctx
-            .session
+        let working_dir = session
             .agent_working_dir
             .as_ref()
             .filter(|dir| !dir.is_empty())
@@ -1313,8 +1401,8 @@ impl LocalContainerService {
         let action = ExecutorAction::new(action_type, cleanup_action.map(Box::new));
 
         self.start_execution(
-            &ctx.workspace,
-            &ctx.session,
+            workspace,
+            session,
             &action,
             &ExecutionProcessRunReason::CodingAgent,
         )

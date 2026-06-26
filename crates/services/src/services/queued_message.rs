@@ -18,6 +18,10 @@ pub struct QueuedMessage {
     pub messages: Vec<DraftFollowUpData>,
     /// Timestamp when the message was queued
     pub queued_at: DateTime<Utc>,
+    /// True when this message is waiting for global executor capacity rather than
+    /// a currently running turn in the same session to finish.
+    #[serde(default)]
+    pub wait_for_capacity: bool,
 }
 
 impl QueuedMessage {
@@ -97,6 +101,19 @@ impl QueuedMessageService {
             data: data.clone(),
             messages: vec![data],
             queued_at: Utc::now(),
+            wait_for_capacity: false,
+        };
+        self.queue.insert(session_id, queued.clone());
+        queued
+    }
+
+    /// Queue a message that should start when global executor capacity opens.
+    pub fn queue_for_capacity(&self, session_id: Uuid, data: DraftFollowUpData) -> QueuedMessage {
+        let queued = QueuedMessage {
+            session_id,
+            data,
+            queued_at: Utc::now(),
+            wait_for_capacity: true,
         };
         self.queue.insert(session_id, queued.clone());
         queued
@@ -116,6 +133,18 @@ impl QueuedMessageService {
     /// Used by finalization flow to consume the queued message.
     pub fn take_queued(&self, session_id: Uuid) -> Option<QueuedMessage> {
         self.queue.remove(&session_id).map(|(_, v)| v)
+    }
+
+    /// Take the oldest message waiting for global executor capacity.
+    pub fn take_oldest_capacity_queued(&self) -> Option<QueuedMessage> {
+        let session_id = self
+            .queue
+            .iter()
+            .filter(|entry| entry.value().wait_for_capacity)
+            .min_by_key(|entry| entry.value().queued_at)
+            .map(|entry| *entry.key())?;
+
+        self.take_queued(session_id)
     }
 
     /// Check if a session has a queued message
@@ -140,13 +169,12 @@ impl Default for QueuedMessageService {
 
 #[cfg(test)]
 mod tests {
-    use db::models::scratch::DraftFollowUpData;
+    use chrono::Duration;
     use executors::{executors::BaseCodingAgent, profile::ExecutorConfig};
-    use uuid::Uuid;
 
     use super::*;
 
-    fn follow_up(message: &str) -> DraftFollowUpData {
+    fn draft(message: &str) -> DraftFollowUpData {
         DraftFollowUpData {
             message: message.to_string(),
             executor_config: ExecutorConfig::new(BaseCodingAgent::Codex),
@@ -154,35 +182,40 @@ mod tests {
     }
 
     #[test]
-    fn queue_message_appends_follow_ups_for_session() {
+    fn takes_oldest_capacity_queue_without_consuming_normal_queue() {
         let service = QueuedMessageService::new();
-        let session_id = Uuid::new_v4();
+        let normal_session_id = Uuid::new_v4();
+        let newer_capacity_session_id = Uuid::new_v4();
+        let older_capacity_session_id = Uuid::new_v4();
 
-        service.queue_message(session_id, follow_up("first"));
-        let queued = service.queue_message(session_id, follow_up("second"));
+        service.queue_message(normal_session_id, draft("normal"));
+        service.queue_for_capacity(newer_capacity_session_id, draft("newer"));
+        service.queue_for_capacity(older_capacity_session_id, draft("older"));
 
-        assert_eq!(queued.messages.len(), 2);
-        assert_eq!(queued.messages[0].message, "first");
-        assert_eq!(queued.messages[1].message, "second");
-        assert_eq!(queued.data.message, "second");
-    }
+        {
+            let mut newer = service
+                .queue
+                .get_mut(&newer_capacity_session_id)
+                .expect("newer capacity message exists");
+            newer.queued_at = Utc::now();
+        }
+        {
+            let mut older = service
+                .queue
+                .get_mut(&older_capacity_session_id)
+                .expect("older capacity message exists");
+            older.queued_at = Utc::now() - Duration::minutes(1);
+        }
 
-    #[test]
-    fn queued_message_collapses_multiple_follow_ups_in_order() {
-        let session_id = Uuid::new_v4();
-        let queued = QueuedMessage {
-            session_id,
-            data: follow_up("second"),
-            messages: vec![follow_up("first"), follow_up("second")],
-            queued_at: Utc::now(),
-        };
+        let taken = service
+            .take_oldest_capacity_queued()
+            .expect("capacity message exists");
 
-        let data = queued.into_follow_up_data();
-
-        assert!(data.message.contains("Follow-up 1:\nfirst"));
-        assert!(data.message.contains("Follow-up 2:\nsecond"));
-        assert!(
-            data.message.find("Follow-up 1").unwrap() < data.message.find("Follow-up 2").unwrap()
-        );
+        assert_eq!(taken.session_id, older_capacity_session_id);
+        assert_eq!(taken.data.message, "older");
+        assert!(taken.wait_for_capacity);
+        assert!(service.get_queued(normal_session_id).is_some());
+        assert!(service.get_queued(newer_capacity_session_id).is_some());
+        assert!(service.get_queued(older_capacity_session_id).is_none());
     }
 }

@@ -1,5 +1,9 @@
 # VK_WORKFLOW.md
 
+For active agent deploy/restart work, read `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
+after this file. `VK_WORKFLOW.md` describes the stable local model; the runbook
+contains the current live checks and the operational checklist agents must use.
+
 ## Canonical Paths
 
 - Canonical Vibe Kanban source repo:
@@ -159,6 +163,7 @@ Required settings:
 - `VK_USE_SYSTEMD_RUN=1`
 - `VK_TRANSIENT_MEMORY_HIGH=1500M`
 - `VK_TRANSIENT_MEMORY_MAX=3000M`
+- `VK_CODEX_MAX_ACTIVE_EXECUTIONS=8`
 - `VK_CODEX_BASE_COMMAND=/home/mcp/.local/bin/codex`
 - `VK_ALLOWED_ORIGINS=https://vibe.local`
 

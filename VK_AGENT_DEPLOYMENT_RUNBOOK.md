@@ -2,8 +2,6 @@
 
 This file is the pickup guide for agents working on Vibe Kanban from inside
 Vibe Kanban. Follow it before editing, building, or deploying this repo.
-For the planned clean self-development project/preview model, read
-`VK_SELF_DEVELOPMENT_WORKFLOW.md` as well.
 
 ## Current Live Truth
 
@@ -61,10 +59,9 @@ the live checks above.
 4. `HANDOFF.md`
 5. `VK_WORKFLOW.md`
 6. `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
-7. `VK_SELF_DEVELOPMENT_WORKFLOW.md`
-8. Relevant crate/package `AGENTS.md`
-9. Code paths for the task
-10. `DELTA.md` only when compact history is needed
+7. Relevant crate/package `AGENTS.md`
+8. Code paths for the task
+9. `DELTA.md` only when compact history is needed
 
 ## Safe Worktree Model
 
@@ -88,156 +85,6 @@ Use this model for all VK changes:
 
 The current canonical checkout often has unrelated dirty files. Treat that as
 expected and work around it instead of reverting it.
-
-## Feature Prep Workflow
-
-Use this path for normal fixes and features.
-
-1. Create the work in the active `VK Dev` project.
-2. Confirm the workspace repo is `_vibe_kanban_repo` and the base is `staging`.
-3. Let the setup guard run. If it fails, fix the setup guard or workspace
-   configuration before editing product code.
-4. Keep the branch scoped to one concern.
-5. Update source, focused tests, and continuity docs together.
-6. Run the narrowest useful validation during development.
-7. Run `pnpm run format` before final handoff.
-8. For a feature branch, open the PR into `staging`, not `main`.
-
-Feature prep must not restart production VK, switch the live frontend symlink,
-install live binaries, or mutate live DB/project rows. Those actions belong to a
-separate release/deploy task.
-
-## Preview Workflow
-
-Use preview before promoting UI work into `staging` or before staging it for a
-live frontend swap.
-
-Frontend-only preview:
-
-```bash
-pnpm run preview:light
-pnpm run preview:light:status
-pnpm run preview:light:logs
-pnpm run preview:light:stop
-```
-
-Default behavior:
-
-- serves the local frontend from the workspace
-- proxies API calls to the existing live backend on `127.0.0.1:4311`
-- starts at preview port `3002` unless overridden
-- can expose a Tailscale HTTPS preview when Tailscale is available
-
-Useful overrides:
-
-```bash
-VK_PREVIEW_PORT=3030 pnpm run preview:light
-VK_PREVIEW_PORT_START=3040 pnpm run preview:light
-VK_PREVIEW_BACKEND_PORT=4311 pnpm run preview:light
-VK_PREVIEW_TAILNET_PORT=18460 pnpm run preview:light
-```
-
-Inside a Vibe Kanban preview panel, prefer:
-
-```bash
-pnpm run preview:light:run
-```
-
-That keeps the preview attached to the panel lifecycle.
-
-Backend/runtime preview:
-
-- do not use the live state directory
-- do not use the live Codex home
-- do not point `vibe.local` at the preview
-- use isolated lab paths such as:
-  - `VIBE_KANBAN_DATA_DIR=/home/mcp/.local/share/vibe-kanban-lab`
-  - `CODEX_HOME=/home/mcp/.local/share/vibe-kanban-lab/codex-home`
-- use ports separate from live `4311` and preview proxy `4312`
-
-If backend behavior must be exercised against real production data, stop and
-turn the task into an operator-approved release/deploy task first.
-
-## Restart-Ready Staging Workflow
-
-When a change needs a backend restart or a coordinated frontend/backend release,
-do all slow and risky work before asking for the restart window.
-
-Prepare:
-
-1. Start from a clean candidate worktree based on the intended release branch.
-2. Confirm all intended fixes are present in the candidate branch.
-3. Confirm known live fixes are not missing from the candidate branch.
-4. Run focused checks and any required broader validation.
-5. Build the release binary and frontend assets from the clean candidate.
-6. Write a deploy manifest with:
-   - branch and commit
-   - build worktree
-   - binary path and sha256
-   - frontend release path and asset names
-   - features intentionally included
-   - known fixes that must not regress
-   - validation commands and results
-7. Take an efficient restore-grade backup and mirror it to Desktop.
-8. Verify the backup archive, checksum/manifest, and latest pointer.
-9. Check active agents.
-10. Stop and report: the only remaining action should be the approved restart
-    or frontend symlink switch.
-
-At the restart window:
-
-1. Re-check active agents immediately before touching the service.
-2. If agents are active, report them and wait unless the operator explicitly
-   accepts interruption.
-3. Install the already-built binary/assets.
-4. Restart only when backend code changed.
-5. Run post-restart smoke before saying the deploy worked.
-
-This workflow exists so the operator can continue using VK while the candidate
-is built and validated, and downtime is limited to the final switch/restart.
-
-## Backup Workflow
-
-Use the lean restore backup as the default backup before risky VK operations:
-
-```bash
-./scripts/run_vk_lean_backup.sh
-```
-
-This wraps `scripts/vk_lean_backup.py --mirror-desktop`. It creates a local
-restore archive under `/home/mcp/backups`, mirrors it to
-`desktop:Desktop/vk-backups`, updates the `latest` pointers, and applies
-retention so MCP does not fill up with old extracted backups.
-
-The lean backup is the normal "safe restart" backup. It captures the local VK
-state that is not safely recoverable from GitHub, including:
-
-- `db.v2.sqlite`
-- sessions
-- isolated VK Codex home state
-- relevant systemd service config
-- deployed VK launcher/binary files
-- deterministic workspace git metadata and bundles for local-only work
-- restore metadata and checksums
-
-Before saying the backup is ready, record:
-
-- the local archive path
-- the Desktop mirror path
-- whether the `latest` pointer was updated
-- whether the backup command exited successfully
-- any restore gaps or warnings
-
-Restore references:
-
-- backup doc: `docs/self-hosting/local-backup-recovery.mdx`
-- backup script: `scripts/vk_lean_backup.py`
-- wrapper: `scripts/run_vk_lean_backup.sh`
-- restore script: `scripts/vk_restore_lean_backup.py`
-- restore latest wrapper: `scripts/run_vk_restore_latest.sh`
-
-Use a heavier manual/full backup only for schema migrations, auth migrations,
-or any operation that the lean backup doc says it cannot cover.
 
 ## Frontend-Only Deploy
 
@@ -298,12 +145,15 @@ sha256sum /home/mcp/.local/bin/vibe-kanban-serve-prod
 
 Backup before restart:
 
-```bash
-./scripts/run_vk_lean_backup.sh
-```
-
-Do not proceed until the backup is mirrored to Desktop and the backup path is
-recorded in `HANDOFF.md` or the deploy manifest.
+- At minimum, copy:
+  - `/home/mcp/.local/share/vibe-kanban/db.v2.sqlite`
+  - `/home/mcp/.config/systemd/user/vibe-kanban.service.d`
+  - `/home/mcp/.local/bin/vibe-kanban-serve`
+  - `/home/mcp/.local/bin/vibe-kanban-serve-prod`
+  - the current frontend symlink target
+- For high-risk deploys, also preserve:
+  - `/home/mcp/.local/share/vibe-kanban/sessions`
+  - `/home/mcp/.local/share/vibe-kanban/codex-home`
 
 Build and install from the clean worktree:
 

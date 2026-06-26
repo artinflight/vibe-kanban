@@ -8,7 +8,6 @@ import {
   PlusIcon,
   LayoutIcon,
   KanbanIcon,
-  DownloadSimpleIcon,
   ArchiveIcon,
 } from '@phosphor-icons/react';
 import { SyncErrorProvider } from '@/shared/providers/SyncErrorProvider';
@@ -22,6 +21,8 @@ import {
   AppBar,
   type AppBarHostStatus,
   type AppBarProject,
+  type AppBarProjectUpdate,
+  PASTEL_PROJECT_COLORS,
 } from '@vibe/ui/components/AppBar';
 import { MobileDrawer } from '@vibe/ui/components/MobileDrawer';
 import { AppBarUserPopoverContainer } from './AppBarUserPopoverContainer';
@@ -62,9 +63,9 @@ import { projectsApi, workspacesApi } from '@/shared/lib/api';
 function getLocalProjectColor(projectId: string): string {
   let hash = 0;
   for (const char of projectId) {
-    hash = (hash * 31 + char.charCodeAt(0)) % 360;
+    hash = (hash * 31 + char.charCodeAt(0)) % PASTEL_PROJECT_COLORS.length;
   }
-  return `${hash} 70% 45%`;
+  return PASTEL_PROJECT_COLORS[hash];
 }
 
 function workspaceNeedsReview(workspace: {
@@ -175,6 +176,7 @@ export function SharedAppLayout() {
   const {
     data: orgProjects = [],
     isLoading,
+    update: updateProject,
     updateMany: updateManyProjects,
   } = useShape(PROJECTS_SHAPE, projectParams, {
     enabled: !isLocalAuthBypassed && isSignedIn && !!selectedOrgId,
@@ -185,18 +187,25 @@ export function SharedAppLayout() {
     [orgProjects]
   );
   const localProjectOrder = useUiPreferencesStore((s) => s.localProjectOrder);
+  const localProjectCustomizations = useUiPreferencesStore(
+    (s) => s.localProjectCustomizations
+  );
   const localAppBarProjects = useMemo<AppBarProject[]>(() => {
     const orderIndex = new Map(
       localProjectOrder.map((projectId, index) => [projectId, index])
     );
 
     return localProjects
-      .map((project) => ({
-        id: project.id,
-        name: project.name,
-        color: getLocalProjectColor(project.id),
-        archived: project.archived,
-      }))
+      .map((project) => {
+        const customization = localProjectCustomizations[project.id];
+        return {
+          id: project.id,
+          name: project.name,
+          color: customization?.color ?? getLocalProjectColor(project.id),
+          abbreviation: customization?.abbreviation,
+          archived: project.archived,
+        };
+      })
       .sort((a, b) => {
         const aIndex = orderIndex.get(a.id);
         const bIndex = orderIndex.get(b.id);
@@ -212,7 +221,7 @@ export function SharedAppLayout() {
         }
         return 0;
       });
-  }, [localProjectOrder, localProjects]);
+  }, [localProjectCustomizations, localProjectOrder, localProjects]);
   const {
     data: activeWorkspaceSummaries = [],
     isLoading: isActiveWorkspaceSummariesLoading,
@@ -279,12 +288,15 @@ export function SharedAppLayout() {
       (isLocalAuthBypassed ? localAppBarProjects : sortedProjects).map(
         (project) => ({
           ...project,
+          abbreviation: localProjectCustomizations[project.id]?.abbreviation,
+          color: localProjectCustomizations[project.id]?.color ?? project.color,
           hasNeedsReview: needsReviewProjectIds.has(project.id),
         })
       ),
     [
       isLocalAuthBypassed,
       localAppBarProjects,
+      localProjectCustomizations,
       needsReviewProjectIds,
       sortedProjects,
     ]
@@ -400,6 +412,9 @@ export function SharedAppLayout() {
   const setLocalProjectOrder = useUiPreferencesStore(
     (s) => s.setLocalProjectOrder
   );
+  const setLocalProjectCustomization = useUiPreferencesStore(
+    (s) => s.setLocalProjectCustomization
+  );
   useEffect(() => {
     if (activeProjectId) {
       setSelectedProjectId(activeProjectId);
@@ -420,6 +435,36 @@ export function SharedAppLayout() {
       appNavigation.goToProject(projectId);
     },
     [appNavigation, setSelectedProjectId]
+  );
+
+  const handleProjectUpdate = useCallback(
+    async (projectId: string, updates: AppBarProjectUpdate) => {
+      const abbreviation = updates.abbreviation.trim().slice(0, 3);
+      const color = updates.color;
+
+      if (isLocalAuthBypassed) {
+        await projectsApi.update(projectId, { name: updates.name });
+        setLocalProjectCustomization(projectId, { abbreviation, color });
+        await queryClient.invalidateQueries({ queryKey: ['local-projects'] });
+        await queryClient.invalidateQueries({
+          queryKey: ['local-project', projectId],
+        });
+        return;
+      }
+
+      const result = updateProject(projectId, {
+        name: updates.name,
+        color,
+      });
+      await result.persisted;
+      setLocalProjectCustomization(projectId, { abbreviation, color });
+    },
+    [
+      isLocalAuthBypassed,
+      queryClient,
+      setLocalProjectCustomization,
+      updateProject,
+    ]
   );
 
   const handleProjectsDragEnd = useCallback(
@@ -594,6 +639,7 @@ export function SharedAppLayout() {
               onPairHostClick={handlePairHostClick}
               onProjectClick={handleProjectClick}
               onProjectsDragEnd={handleProjectsDragEnd}
+              onProjectUpdate={handleProjectUpdate}
               isSavingProjectOrder={isSavingProjectOrder}
               isWorkspacesActive={isWorkspacesActive}
               isExportActive={isExportActive}
@@ -706,27 +752,6 @@ export function SharedAppLayout() {
             {/* Divider */}
             <div className="border-t border-border mx-4" />
 
-            {/* Export link */}
-            {isSignedIn && (
-              <div className="px-4 py-3">
-                <p className="mb-2 text-xs font-medium text-low">Export</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleExportClick();
-                    setIsDrawerOpen(false);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm text-normal hover:bg-secondary cursor-pointer"
-                >
-                  <DownloadSimpleIcon className="h-4 w-4" />
-                  Export data
-                </button>
-              </div>
-            )}
-
-            {/* Divider */}
-            {isSignedIn && <div className="border-t border-border mx-4" />}
-
             {/* Project list */}
             <div className="flex-1 overflow-y-auto p-2">
               {isSignedIn ? (
@@ -796,33 +821,32 @@ export function SharedAppLayout() {
 
             {/* Create Project button */}
             {isSignedIn && (
-              <div className="p-3 border-t border-border">
-                <div className="space-y-2">
+              <div className="space-y-1 p-3 border-t border-border">
+                {archivedProjects.length > 0 && (
                   <button
                     type="button"
+                    data-testid="mobile-archived-projects"
                     onClick={() => {
-                      handleCreateProject();
+                      handleOpenArchivedProjects();
                       setIsDrawerOpen(false);
                     }}
                     className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-low hover:text-normal hover:bg-secondary cursor-pointer"
                   >
-                    <PlusIcon className="h-4 w-4" />
-                    Create Project
+                    <ArchiveIcon className="h-4 w-4" />
+                    Archived projects
                   </button>
-                  {isLocalAuthBypassed && archivedProjects.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsDrawerOpen(false);
-                        handleOpenArchivedProjects();
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-low hover:text-normal hover:bg-secondary cursor-pointer"
-                    >
-                      <ArchiveIcon className="h-4 w-4" />
-                      Archived Projects
-                    </button>
-                  )}
-                </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCreateProject();
+                    setIsDrawerOpen(false);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-low hover:text-normal hover:bg-secondary cursor-pointer"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  Create Project
+                </button>
               </div>
             )}
           </div>

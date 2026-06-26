@@ -355,7 +355,7 @@ export const sessionsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    return handleApiResponse<ExecutionProcess>(response);
+    return handleApiResponse<ExecutionProcess, QueueStatus>(response);
   },
 
   startReview: async (
@@ -1547,7 +1547,7 @@ export const projectsApi = {
 
   update: async (
     projectId: string,
-    data: { archived: boolean }
+    data: { archived?: boolean; name?: string }
   ): Promise<Project> => {
     const response = await makeRequest(`/api/projects/${projectId}`, {
       method: 'PATCH',

@@ -38,7 +38,7 @@ use executors::{
         coding_agent_initial::CodingAgentInitialRequest,
         script::{ScriptContext, ScriptRequest, ScriptRequestLanguage},
     },
-    executors::{ExecutorError, StandardCodingAgentExecutor},
+    executors::{BaseCodingAgent, ExecutorError, StandardCodingAgentExecutor},
     logs::{
         NormalizedEntry, NormalizedEntryError, NormalizedEntryType,
         utils::{
@@ -116,6 +116,19 @@ impl futures::Stream for CancelOnDropStream {
     }
 }
 
+fn codex_execution_limit_error_for_action(
+    executor_action: &ExecutorAction,
+) -> Option<ExecutorError> {
+    if matches!(
+        executor_action.base_executor(),
+        Some(BaseCodingAgent::Codex)
+    ) {
+        executors::executors::codex::codex_execution_limit_error()
+    } else {
+        None
+    }
+}
+
 impl Drop for CancelOnDropStream {
     fn drop(&mut self) {
         if let Some(cancel_tx) = self.cancel_tx.take() {
@@ -146,6 +159,12 @@ pub enum ContainerError {
     KillFailed(std::io::Error),
     #[error(transparent)]
     Other(#[from] AnyhowError), // Catches any unclassified errors
+}
+
+impl ContainerError {
+    pub fn is_execution_limit_reached(&self) -> bool {
+        matches!(self, Self::ExecutorError(err) if err.is_execution_limit_reached())
+    }
 }
 
 #[async_trait]
@@ -331,18 +350,32 @@ pub trait ContainerService {
             return;
         }
 
-        let summary = match CodingAgentTurn::find_by_execution_process_id(
+        let latest_summary =
+            match CodingAgentTurn::find_latest_by_session_id(&self.db().pool, ctx.session.id).await
+            {
+                Ok(turn) => turn.and_then(|turn| turn.summary),
+                Err(error) => {
+                    tracing::warn!(
+                        execution_process_id = %ctx.execution_process.id,
+                        ?error,
+                        "failed to load coding agent turn summary for completion notification"
+                    );
+                    None
+                }
+            };
+        let agent_label = match ExecutionProcess::latest_executor_profile_for_session(
             &self.db().pool,
-            ctx.execution_process.id,
+            ctx.session.id,
         )
         .await
         {
-            Ok(turn) => turn.and_then(|turn| turn.summary),
+            Ok(Some(profile_id)) => Some(profile_id.to_string()),
+            Ok(None) => None,
             Err(error) => {
                 tracing::warn!(
                     execution_process_id = %ctx.execution_process.id,
                     ?error,
-                    "failed to load coding agent turn summary for completion notification"
+                    "failed to load executor profile for completion notification"
                 );
                 None
             }
@@ -352,7 +385,8 @@ pub trait ContainerService {
             .notify_workspace_turn_completion(
                 workspace_name,
                 &ctx.execution_process.status,
-                summary.as_deref(),
+                agent_label.as_deref(),
+                latest_summary.as_deref(),
                 ctx.workspace.id,
             )
             .await;
@@ -1349,6 +1383,12 @@ pub trait ContainerService {
         executor_action: &ExecutorAction,
         run_reason: &ExecutionProcessRunReason,
     ) -> Result<ExecutionProcess, ContainerError> {
+        if matches!(run_reason, ExecutionProcessRunReason::CodingAgent)
+            && let Some(error) = codex_execution_limit_error_for_action(executor_action)
+        {
+            return Err(ContainerError::ExecutorError(error));
+        }
+
         // Create new execution process record
         // Capture current HEAD per repository as the "before" commit for this execution
         let repositories =
@@ -1439,6 +1479,24 @@ pub trait ContainerService {
                     update_error
                 );
             }
+
+            if start_error.is_execution_limit_reached() {
+                if let Err(drop_error) = ExecutionProcess::drop_at_and_after(
+                    &self.db().pool,
+                    session.id,
+                    execution_process.id,
+                )
+                .await
+                {
+                    tracing::warn!(
+                        "Failed to drop capacity-blocked execution process {}: {}",
+                        execution_process.id,
+                        drop_error
+                    );
+                }
+                return Err(start_error);
+            }
+
             // Emit stderr error message
             let log_message = LogMsg::Stderr(format!("Failed to start execution: {start_error}"));
             if let Err(e) = execution_process::append_log_message(

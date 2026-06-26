@@ -21,13 +21,23 @@ use db::models::{
 use deployment::Deployment;
 use git_host::{GitHostError, GitHostProvider, GitHostService};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use services::services::container::ContainerService;
+use serde_json::{Map, Value, json};
 use sqlx::{QueryBuilder, Sqlite};
 use utils::response::ApiResponse;
 use uuid::Uuid;
 
 use crate::{DeploymentImpl, error::ApiError};
+
+const SUB_AGENTS_REPO_NAME_HINTS: &[&str] = &[
+    "subagent",
+    "subagents",
+    "subagentsrepo",
+    "sub-agent",
+    "sub-agents",
+    "sub_agent",
+    "sub agent",
+    "vk-subagent-monitor",
+];
 
 #[derive(Debug, Serialize)]
 struct CompatProjectStatus {
@@ -53,9 +63,9 @@ struct CompatIssue {
     start_date: Option<String>,
     target_date: Option<String>,
     completed_at: Option<String>,
-    sort_order: i64,
+    sort_order: f64,
     parent_issue_id: Option<String>,
-    parent_issue_sort_order: Option<i64>,
+    parent_issue_sort_order: Option<f64>,
     extension_metadata: serde_json::Value,
     creator_user_id: Option<String>,
     created_at: String,
@@ -138,6 +148,8 @@ struct CreateIssueRequest {
     status_id: String,
     title: String,
     description: Option<String>,
+    sort_order: Option<f64>,
+    extension_metadata: Option<Value>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -145,7 +157,9 @@ struct UpdateIssueRequest {
     status_id: Option<String>,
     title: Option<String>,
     description: Option<Option<String>>,
+    sort_order: Option<f64>,
     parent_issue_id: Option<Option<Uuid>>,
+    extension_metadata: Option<Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -159,7 +173,9 @@ struct BulkIssueUpdateItem {
     status_id: Option<String>,
     title: Option<String>,
     description: Option<Option<String>>,
+    sort_order: Option<f64>,
     parent_issue_id: Option<Option<Uuid>>,
+    extension_metadata: Option<Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -313,6 +329,49 @@ fn extract_status_name(description: Option<&str>, fallback: &TaskStatus) -> Stri
     task_status_name(fallback).to_string()
 }
 
+fn extract_local_sort_order(description: Option<&str>) -> Option<f64> {
+    extract_cloud_metadata_value(description, "Local Sort Order")
+        .and_then(|value| value.parse::<f64>().ok())
+        .filter(|value| value.is_finite())
+}
+
+fn extract_local_issue_flags(description: Option<&str>) -> Value {
+    let Some(raw_flags) = extract_cloud_metadata_value(description, "Local Issue Flags") else {
+        return Value::Null;
+    };
+
+    let mut flags = Map::new();
+    for flag in raw_flags
+        .split(',')
+        .map(|flag| flag.trim())
+        .filter(|flag| !flag.is_empty())
+    {
+        flags.insert(flag.to_string(), Value::Bool(true));
+    }
+
+    if flags.is_empty() {
+        Value::Null
+    } else {
+        json!({ "vk_flags": flags })
+    }
+}
+
+fn local_issue_flags_from_extension_metadata(extension_metadata: &Value) -> Vec<String> {
+    let Some(flags) = extension_metadata
+        .get("vk_flags")
+        .and_then(|flags| flags.as_object())
+    else {
+        return Vec::new();
+    };
+
+    let mut flag_names = flags
+        .iter()
+        .filter_map(|(name, enabled)| enabled.as_bool().unwrap_or(false).then(|| name.clone()))
+        .collect::<Vec<_>>();
+    flag_names.sort();
+    flag_names
+}
+
 fn ensure_status_metadata(description: Option<String>, status_name: &str) -> Option<String> {
     let body = description.unwrap_or_default();
     let mut replaced = false;
@@ -347,6 +406,100 @@ fn ensure_status_metadata(description: Option<String>, status_name: &str) -> Opt
 - Original Status: ",
         );
         next.push_str(status_name);
+    }
+
+    let trimmed = next.trim().to_string();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    }
+}
+
+fn ensure_local_sort_order_metadata(
+    description: Option<String>,
+    sort_order: f64,
+) -> Option<String> {
+    let body = description.unwrap_or_default();
+    let mut replaced = false;
+    let mut lines = Vec::new();
+    let value = sort_order.to_string();
+
+    for line in body.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("- Local Sort Order:") || trimmed.starts_with("Local Sort Order:") {
+            let prefix_len = line.len() - trimmed.len();
+            let prefix = &line[..prefix_len];
+            lines.push(format!("{prefix}- Local Sort Order: {value}"));
+            replaced = true;
+        } else {
+            lines.push(line.to_string());
+        }
+    }
+
+    let mut next = lines.join(
+        "
+",
+    );
+    if !replaced {
+        if !next.trim().is_empty() {
+            next.push_str(
+                "
+
+",
+            );
+        }
+        next.push_str("Local metadata\n- Local Sort Order: ");
+        next.push_str(&value);
+    }
+
+    let trimmed = next.trim().to_string();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    }
+}
+
+fn ensure_local_issue_flags_metadata(
+    description: Option<String>,
+    extension_metadata: &Value,
+) -> Option<String> {
+    let body = description.unwrap_or_default();
+    let flags = local_issue_flags_from_extension_metadata(extension_metadata);
+    let value = flags.join(", ");
+    let mut replaced = false;
+    let mut lines = Vec::new();
+
+    for line in body.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("- Local Issue Flags:") || trimmed.starts_with("Local Issue Flags:")
+        {
+            replaced = true;
+            if !value.is_empty() {
+                let prefix_len = line.len() - trimmed.len();
+                let prefix = &line[..prefix_len];
+                lines.push(format!("{prefix}- Local Issue Flags: {value}"));
+            }
+        } else {
+            lines.push(line.to_string());
+        }
+    }
+
+    let mut next = lines.join(
+        "
+",
+    );
+    if !replaced && !value.is_empty() {
+        if !next.trim().is_empty() {
+            next.push_str(
+                "
+
+",
+            );
+        }
+        next.push_str("Local metadata\n- Local Issue Flags: ");
+        next.push_str(&value);
     }
 
     let trimmed = next.trim().to_string();
@@ -683,7 +836,10 @@ fn ensure_pr_metadata(
 fn task_to_issue(task: LocalTaskRow, issue_number: i64, status_id: String) -> CompatIssue {
     let (simple_id, title, parsed_issue_number) =
         extract_simple_id(&task.title, task.description.as_deref(), issue_number);
+    let sort_order =
+        extract_local_sort_order(task.description.as_deref()).unwrap_or(issue_number as f64);
     let priority = extract_priority(task.description.as_deref());
+    let extension_metadata = extract_local_issue_flags(task.description.as_deref());
     CompatIssue {
         id: task.id.to_string(),
         project_id: task.project_id.to_string(),
@@ -696,10 +852,10 @@ fn task_to_issue(task: LocalTaskRow, issue_number: i64, status_id: String) -> Co
         start_date: None,
         target_date: None,
         completed_at: None,
-        sort_order: issue_number,
+        sort_order,
         parent_issue_id: None,
         parent_issue_sort_order: None,
-        extension_metadata: serde_json::Value::Null,
+        extension_metadata,
         creator_user_id: None,
         created_at: task.created_at.to_rfc3339(),
         updated_at: task.updated_at.to_rfc3339(),
@@ -779,7 +935,7 @@ fn workspace_to_issue_with_pr_state(
         start_date: None,
         target_date: None,
         completed_at,
-        sort_order: issue_number,
+        sort_order: issue_number as f64,
         parent_issue_id: None,
         parent_issue_sort_order: None,
         extension_metadata: serde_json::Value::Null,
@@ -827,6 +983,55 @@ fn synthetic_project_from_repos(
     })
 }
 
+fn is_sub_agents_repo(repo: &Repo) -> bool {
+    let matches_hint = |value: &str| {
+        let normalized = value.trim().to_ascii_lowercase();
+        SUB_AGENTS_REPO_NAME_HINTS
+            .iter()
+            .any(|hint| normalized.contains(hint))
+    };
+
+    matches_hint(&repo.name)
+        || matches_hint(&repo.display_name)
+        || matches_hint(&repo.path.to_string_lossy())
+}
+
+fn synthetic_project_from_repo(repo: &Repo) -> SyntheticProjectContext {
+    SyntheticProjectContext {
+        project: Project {
+            id: repo.id,
+            name: repo.display_name.clone(),
+            archived: false,
+            default_agent_working_dir: repo.default_working_dir.clone(),
+            remote_project_id: None,
+            created_at: repo.created_at,
+            updated_at: repo.updated_at,
+        },
+        repo_ids: HashSet::from([repo.id]),
+    }
+}
+
+async fn list_sub_agents_project_contexts(
+    deployment: &DeploymentImpl,
+) -> Result<Vec<SyntheticProjectContext>, ApiError> {
+    let mut contexts = Repo::list_all(&deployment.db().pool)
+        .await?
+        .into_iter()
+        .filter(is_sub_agents_repo)
+        .map(|repo| synthetic_project_from_repo(&repo))
+        .collect::<Vec<_>>();
+
+    contexts.sort_by(|left, right| {
+        right
+            .project
+            .updated_at
+            .cmp(&left.project.updated_at)
+            .then_with(|| left.project.name.cmp(&right.project.name))
+    });
+
+    Ok(contexts)
+}
+
 async fn list_synthetic_project_contexts(
     deployment: &DeploymentImpl,
 ) -> Result<Vec<SyntheticProjectContext>, ApiError> {
@@ -861,6 +1066,23 @@ async fn list_synthetic_project_contexts(
             .then_with(|| left.project.name.cmp(&right.project.name))
     });
 
+    let mut sub_agents_contexts = list_sub_agents_project_contexts(deployment).await?;
+    if !sub_agents_contexts.is_empty() {
+        let existing_project_ids = contexts
+            .iter()
+            .map(|context| context.project.id)
+            .collect::<HashSet<_>>();
+        sub_agents_contexts.retain(|context| !existing_project_ids.contains(&context.project.id));
+        contexts.extend(sub_agents_contexts);
+        contexts.sort_by(|left, right| {
+            right
+                .project
+                .updated_at
+                .cmp(&left.project.updated_at)
+                .then_with(|| left.project.name.cmp(&right.project.name))
+        });
+    }
+
     Ok(contexts)
 }
 
@@ -868,6 +1090,12 @@ async fn find_exact_synthetic_project_context(
     deployment: &DeploymentImpl,
     project_id: Uuid,
 ) -> Result<Option<SyntheticProjectContext>, ApiError> {
+    if let Some(repo) = Repo::find_by_id(&deployment.db().pool, project_id).await?
+        && is_sub_agents_repo(&repo)
+    {
+        return Ok(Some(synthetic_project_from_repo(&repo)));
+    }
+
     let Some(scratch) = Scratch::find_by_id(
         &deployment.db().pool,
         project_id,
@@ -1264,6 +1492,7 @@ async fn list_fallback_projects(
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<serde_json::Value>, ApiError> {
     let mut projects = Project::find_all(&deployment.db().pool).await?;
+    let sub_agents_projects = list_sub_agents_project_contexts(&deployment).await?;
     let synthetic_contexts = list_synthetic_project_contexts(&deployment).await?;
     let synthetic_by_name = synthetic_contexts
         .iter()
@@ -1274,6 +1503,35 @@ async fn list_fallback_projects(
             )
         })
         .collect::<HashMap<_, _>>();
+    let synthetic_by_name = sub_agents_projects
+        .iter()
+        .map(|context| {
+            (
+                normalize_project_name(&context.project.name),
+                context.project.clone(),
+            )
+        })
+        .chain(synthetic_by_name)
+        .collect::<HashMap<_, _>>();
+    let mut existing_names = projects
+        .iter()
+        .map(|project| normalize_project_name(&project.name))
+        .collect::<HashSet<_>>();
+    let mut existing_ids = projects
+        .iter()
+        .map(|project| project.id)
+        .collect::<HashSet<_>>();
+
+    for context in &sub_agents_projects {
+        let name_exists = existing_names.contains(&normalize_project_name(&context.project.name));
+        let id_exists = existing_ids.contains(&context.project.id);
+
+        if !name_exists && !id_exists {
+            projects.push(context.project.clone());
+            existing_ids.insert(context.project.id);
+            existing_names.insert(normalize_project_name(&context.project.name));
+        }
+    }
 
     for project in &mut projects {
         if let Some(synthetic_project) =
@@ -1630,6 +1888,18 @@ async fn create_issue(
         &request.status_id,
         Some(&TaskStatus::Todo),
     );
+    let sort_order = request
+        .sort_order
+        .filter(|value| value.is_finite())
+        .unwrap_or(project_tasks.len() as f64 + 1.0);
+
+    let mut description = ensure_local_sort_order_metadata(
+        ensure_status_metadata(request.description, &status_name),
+        sort_order,
+    );
+    if let Some(extension_metadata) = request.extension_metadata.as_ref() {
+        description = ensure_local_issue_flags_metadata(description, extension_metadata);
+    }
 
     let id = request.id.unwrap_or_else(Uuid::new_v4);
     if let Some(existing) = Task::find_by_id(&deployment.db().pool, id).await? {
@@ -1648,7 +1918,7 @@ async fn create_issue(
         id,
         request.project_id,
         request.title,
-        ensure_status_metadata(request.description, &status_name),
+        description,
         parse_task_status(&status_name),
     )
     .await?;
@@ -1693,14 +1963,22 @@ async fn update_issue(
         !is_in_staging_status(&previous_status_name) && is_in_staging_status(&status_name);
     let entered_done = !is_done_status(&previous_status_name) && is_done_status(&status_name);
 
+    let mut next_description = ensure_status_metadata(next_description_source, &status_name);
+    if let Some(sort_order) = request.sort_order.filter(|value| value.is_finite()) {
+        next_description = ensure_local_sort_order_metadata(next_description, sort_order);
+    }
+    let existing_extension_metadata = extract_local_issue_flags(existing.description.as_deref());
+    let next_extension_metadata = request
+        .extension_metadata
+        .as_ref()
+        .unwrap_or(&existing_extension_metadata);
+    next_description = ensure_local_issue_flags_metadata(next_description, next_extension_metadata);
+
     Task::update(
         &deployment.db().pool,
         issue_id,
         request.title,
-        Some(ensure_status_metadata(
-            next_description_source,
-            &status_name,
-        )),
+        Some(next_description),
         Some(parse_task_status(&status_name)),
         request.parent_issue_id,
     )
@@ -1752,14 +2030,24 @@ async fn bulk_update_issues(
             !is_in_staging_status(&previous_status_name) && is_in_staging_status(&status_name);
         let entered_done = !is_done_status(&previous_status_name) && is_done_status(&status_name);
 
+        let mut next_description = ensure_status_metadata(next_description_source, &status_name);
+        if let Some(sort_order) = update.sort_order.filter(|value| value.is_finite()) {
+            next_description = ensure_local_sort_order_metadata(next_description, sort_order);
+        }
+        let existing_extension_metadata =
+            extract_local_issue_flags(existing.description.as_deref());
+        let next_extension_metadata = update
+            .extension_metadata
+            .as_ref()
+            .unwrap_or(&existing_extension_metadata);
+        next_description =
+            ensure_local_issue_flags_metadata(next_description, next_extension_metadata);
+
         Task::update(
             &deployment.db().pool,
             update.id,
             update.title,
-            Some(ensure_status_metadata(
-                next_description_source,
-                &status_name,
-            )),
+            Some(next_description),
             Some(parse_task_status(&status_name)),
             update.parent_issue_id,
         )
@@ -1864,7 +2152,11 @@ pub fn router() -> Router<DeploymentImpl> {
 mod tests {
     use uuid::Uuid;
 
-    use super::{compat_statuses, default_project_status_names};
+    use super::{
+        compat_statuses, default_project_status_names, ensure_local_issue_flags_metadata,
+        ensure_local_sort_order_metadata, ensure_status_metadata, extract_local_issue_flags,
+        extract_local_sort_order,
+    };
 
     #[test]
     fn local_default_statuses_include_operator_columns() {
@@ -1911,5 +2203,59 @@ mod tests {
         assert_eq!(statuses[5].id, "cancelled");
         assert!(statuses[5].hidden);
         assert_eq!(statuses[8].id, "status_hotfixpath");
+    }
+
+    #[test]
+    fn local_sort_order_metadata_round_trips() {
+        let description = ensure_status_metadata(Some("body".to_string()), "In progress");
+        let description = ensure_local_sort_order_metadata(description, 2004.0);
+
+        assert_eq!(
+            extract_local_sort_order(description.as_deref()),
+            Some(2004.0)
+        );
+
+        let description = ensure_local_sort_order_metadata(description, 1002.5);
+        assert_eq!(
+            extract_local_sort_order(description.as_deref()),
+            Some(1002.5)
+        );
+        assert_eq!(
+            description
+                .as_deref()
+                .unwrap()
+                .matches("Local Sort Order")
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn local_issue_flags_metadata_round_trips() {
+        let description = ensure_local_issue_flags_metadata(
+            Some("body".to_string()),
+            &serde_json::json!({ "vk_flags": { "needs_review": true } }),
+        );
+
+        assert_eq!(
+            extract_local_issue_flags(description.as_deref()),
+            serde_json::json!({ "vk_flags": { "needs_review": true } })
+        );
+
+        let description = ensure_local_issue_flags_metadata(
+            description,
+            &serde_json::json!({ "vk_flags": { "needs_review": false } }),
+        );
+
+        assert_eq!(
+            extract_local_issue_flags(description.as_deref()),
+            serde_json::Value::Null
+        );
+        assert!(
+            !description
+                .as_deref()
+                .unwrap()
+                .contains("Local Issue Flags")
+        );
     }
 }

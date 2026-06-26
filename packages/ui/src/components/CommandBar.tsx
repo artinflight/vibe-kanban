@@ -141,6 +141,7 @@ interface CommandBarProps<
 }
 
 const BRANCH_SEARCH_RESULT_LIMIT = 300;
+const BRANCH_SEARCH_MARKER = 'branchNameMatchesSearch';
 
 const PRIORITY_CONFIG: Record<PriorityId, { icon: Icon; colorClass: string }> =
   {
@@ -209,9 +210,7 @@ export function CommandBar<
       const matchedItems: CommandBarGroupItem<TAction, TPageId>[] = [];
 
       for (const item of group.items) {
-        const label = getItemSearchLabel(item, getLabel);
-        if (!label) continue;
-        if (!label.toLowerCase().includes(normalizedSearch)) continue;
+        if (!itemMatchesSearch(item, getLabel, normalizedSearch)) continue;
 
         if (isBranchSelectionPage && item.type === 'branch') {
           if (remainingBranchResults <= 0) {
@@ -251,7 +250,11 @@ export function CommandBar<
           onValueChange={onSearchChange}
         />
       </div>
-      <CommandList>
+      <CommandList
+        data-branch-search={
+          page.id === 'selectBranch' ? BRANCH_SEARCH_MARKER : undefined
+        }
+      >
         <CommandEmpty>{t('commandBar.noResults')}</CommandEmpty>
         {canGoBack && !search && (
           <CommandGroup>
@@ -451,4 +454,44 @@ function getItemSearchLabel<
   }
   const keywords = item.action.keywords?.join(' ') ?? '';
   return `${item.action.id} ${getLabel(item.action)} ${keywords}`.trim();
+}
+
+function itemMatchesSearch<
+  TAction extends CommandBarAction,
+  TPageId extends string,
+>(
+  item: CommandBarGroupItem<TAction, TPageId>,
+  getLabel: (action: TAction) => string,
+  normalizedSearch: string
+) {
+  if (item.type === 'branch') {
+    return branchNameMatchesSearch(item.branch.name, normalizedSearch);
+  }
+
+  const label = getItemSearchLabel(item, getLabel);
+  if (!label) return false;
+  return label.toLowerCase().includes(normalizedSearch);
+}
+
+function normalizeBranchSearchText(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function branchNameMatchesSearch(branchName: string, normalizedSearch: string) {
+  if (!normalizedSearch) return true;
+
+  const lowerBranchName = branchName.toLowerCase();
+  if (lowerBranchName.includes(normalizedSearch)) return true;
+
+  const normalizedBranchName = normalizeBranchSearchText(branchName);
+  const normalizedQuery = normalizeBranchSearchText(normalizedSearch);
+  if (!normalizedQuery) return true;
+  if (normalizedBranchName.includes(normalizedQuery)) return true;
+
+  const queryTokens = normalizedQuery.split(' ');
+  return queryTokens.every((token) => normalizedBranchName.includes(token));
 }

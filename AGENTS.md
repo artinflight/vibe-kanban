@@ -12,9 +12,10 @@
 2. `STATE.md`
 3. `STREAM.md`
 4. `HANDOFF.md`
-5. Relevant package or crate guide for the area being changed
-6. Code and validation paths for the task
-7. `DELTA.md` only for compact continuity history
+5. `VK_WORKFLOW.md` and `VK_AGENT_DEPLOYMENT_RUNBOOK.md` for Vibe Kanban repo work, deploys, restarts, frontend asset swaps, and regression prevention
+6. Relevant package or crate guide for the area being changed
+7. Code and validation paths for the task
+8. `DELTA.md` only for compact continuity history
 
 ### Crate-specific guides
 
@@ -65,6 +66,8 @@
 - `STREAM.md`: current branch scope and boundaries.
 - `HANDOFF.md`: short pickup note for the next agent.
 - `DELTA.md`: append-only continuity ledger.
+- `VK_WORKFLOW.md`: stable local runtime/deployment model.
+- `VK_AGENT_DEPLOYMENT_RUNBOOK.md`: operational checklist for agents working on or deploying VK from inside VK.
 
 ## Managing Shared Types Between Rust and TypeScript
 

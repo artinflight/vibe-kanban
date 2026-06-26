@@ -161,11 +161,11 @@ export function WorkspaceSummary({
               !isRunning &&
               !hasSubagentActivity &&
               !isFailed && (
-              <CircleIcon
-                className="size-icon-xs text-brand shrink-0"
-                weight="fill"
-              />
-            )}
+                <CircleIcon
+                  className="size-icon-xs text-brand shrink-0"
+                  weight="fill"
+                />
+              )}
 
             {/* Sub-agent activity from the Codex thread graph */}
             {hasSubagentActivity && (

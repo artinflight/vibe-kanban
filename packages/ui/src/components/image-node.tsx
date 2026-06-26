@@ -301,7 +301,11 @@ export function createImageNode(options: CreateImageNodeOptions) {
               sizeBytes: metadata.size_bytes,
             });
           } else {
-            window.open(scopedMetadataProxyUrl, '_blank', 'noopener,noreferrer');
+            window.open(
+              scopedMetadataProxyUrl,
+              '_blank',
+              'noopener,noreferrer'
+            );
           }
         }
       },

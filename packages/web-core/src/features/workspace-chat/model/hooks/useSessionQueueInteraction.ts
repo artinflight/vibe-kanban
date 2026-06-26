@@ -30,7 +30,7 @@ interface UseSessionQueueInteractionResult {
   refreshQueueStatus: () => Promise<void>;
 }
 
-const QUEUE_STATUS_KEY = 'queue-status';
+export const QUEUE_STATUS_KEY = 'queue-status';
 const QUEUED_STATUS_REFRESH_MS = 3000;
 
 /**

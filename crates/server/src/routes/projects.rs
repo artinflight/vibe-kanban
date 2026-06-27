@@ -179,7 +179,21 @@ async fn update_project(
     Json(payload): Json<UpdateProjectRequest>,
 ) -> Result<ResponseJson<ApiResponse<Project>>, ApiError> {
     let project =
-        Project::set_archived(&deployment.db().pool, project_id, payload.archived).await?;
+        match Project::set_archived(&deployment.db().pool, project_id, payload.archived).await {
+            Ok(project) => project,
+            Err(sqlx::Error::RowNotFound) => {
+                let synthetic_project = find_exact_synthetic_project(&deployment, project_id)
+                    .await?
+                    .ok_or(sqlx::Error::RowNotFound)?;
+                Project::materialize_synthetic(
+                    &deployment.db().pool,
+                    &synthetic_project,
+                    payload.archived,
+                )
+                .await?
+            }
+            Err(error) => return Err(error.into()),
+        };
     Ok(ResponseJson(ApiResponse::success(project)))
 }
 

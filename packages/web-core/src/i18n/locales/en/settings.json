@@ -221,6 +221,16 @@
           "label": "Send message with",
           "helper": "Choose the keyboard shortcut to send messages.",
           "enterLabel": "Enter (Shift+Enter for new line)"
+        },
+        "savedMessages": {
+          "label": "Saved messages",
+          "helper": "Create reusable messages that can be inserted into the chat input.",
+          "empty": "No saved messages yet.",
+          "add": "Add saved message",
+          "delete": "Delete saved message",
+          "defaultTitle": "New saved message",
+          "titlePlaceholder": "Title",
+          "contentPlaceholder": "Message {{count}}"
         }
       },
       "privacy": {

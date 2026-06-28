@@ -65,6 +65,7 @@ import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { sessionsApi } from '@/shared/lib/api';
 import { RenameSessionDialog } from '@vibe/ui/components/RenameSessionDialog';
 import type { TurnNavigationItem } from '@vibe/ui/components/TurnNavigationPopup';
+import { SavedChatMessagesPicker } from './SavedChatMessagesPicker';
 
 /** Compute execution status from boolean flags */
 function computeExecutionStatus(params: {
@@ -607,6 +608,17 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     ]
   );
 
+  const handleInsertSavedMessage = useCallback(
+    (content: string) => {
+      const currentMessage = localMessageRef.current;
+      const nextMessage = currentMessage.trim()
+        ? `${currentMessage}\n\n${content}`
+        : content;
+      handleEditorChange(nextMessage);
+    },
+    [handleEditorChange]
+  );
+
   // Handle feedback submission
   const handleSubmitFeedback = useCallback(async () => {
     if (!feedbackContext || !localMessage.trim()) return;
@@ -1052,6 +1064,12 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
       toolbarActions={{
         items: toolbarActionItems,
       }}
+      footerLeftExtra={
+        <SavedChatMessagesPicker
+          disabled={areAttachmentInputsDisabled}
+          onSelect={handleInsertSavedMessage}
+        />
+      }
       onPrCommentClick={
         actionCtx.hasOpenPR ? handleInsertPrComments : undefined
       }

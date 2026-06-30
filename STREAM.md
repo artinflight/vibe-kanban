@@ -2,26 +2,21 @@
 
 ## Stream Identifier
 
-- Branch: `vk/092b-vk-dev-self-deve`
-- Repo:
-  `/home/mcp/code/worktrees/092b-vk-dev-self-deve/_vibe_kanban_repo`
-- Base: `fork/staging` at `91e2f9d1a`
-- Working mode: VK self-development workflow hardening
+- Branch: `fix/multiline-paste-priority`
+- Repo: `/tmp/vk-paste-pr`
+- Base: `fork/staging` at `eb90083db`
+- Working mode: focused staging PR
 
 ## Objective
 
-- Make Vibe Kanban development from inside Vibe Kanban safer and less
-  ambiguous by documenting the clean feature/preview/release model, adding a
-  generated-workspace guard, and adding a read-only live smoke script for
-  deployment checks.
+- Preserve multiline chat paste in VK by making the custom paste handler handle
+  multiline plain text before Lexical's default rich paste path can consume
+  clipboards that also include HTML.
 
 ## In Scope
 
-- Root-level operational docs for VK agent deployment and self-development.
-- Required preview, backup, restart-ready staging, and post-restart verification
-  workflows for VK agents.
-- Source-controlled setup guard for generated VK development workspaces.
-- Source-controlled read-only smoke checks for live local deployment invariants.
+- `PasteMarkdownPlugin` multiline/rich clipboard behavior.
+- Read-only smoke guard for the paste source invariant.
 - Continuity notes for this branch.
 
 ## Out of Scope
@@ -30,24 +25,19 @@
 - Switching the live frontend symlink.
 - Deploying binaries or assets.
 - Mutating live DB/project records from this source task.
-- Reworking broader workspace creation, project settings UI, or lab runtime
-  implementation beyond documenting the intended boundary.
+- Reworking broader workspace creation, project settings UI, lab runtime, or
+  deployment workflows.
 
 ## Stream-Specific Decisions
 
-- The active development project is `VK Dev`; the old `vibe-kanban` project
-  remains archived history.
-- New VK development workspaces should use `/home/mcp/_vibe_kanban_repo` and
-  target `staging`.
 - Feature workspaces may prepare code, checks, preview, docs, and PRs.
 - Feature workspaces must not restart or deploy the live VK service.
-- Backend/runtime preview belongs in an isolated lab state, not live VK state.
+- This branch must merge to `staging`; the next VK release/restart package can
+  then include it through the normal VK repo project workflow.
 
 ## Relevant Files / Modules
 
-- `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
-- `VK_SELF_DEVELOPMENT_WORKFLOW.md`
-- `scripts/vk_selfdev_guard.sh`
+- `packages/ui/src/components/PasteMarkdownPlugin.tsx`
 - `scripts/vk_live_regression_smoke.py`
 - `STATE.md`
 - `STREAM.md`
@@ -56,21 +46,11 @@
 
 ## Current Status
 
-- Added the deployment runbook and self-development workflow plan as new
-  source-controlled docs.
-- Added `scripts/vk_selfdev_guard.sh`, which verifies generated VK workspaces
-  contain a real `_vibe_kanban_repo` git worktree on a branch based on
-  `staging` and appends the feature/preview/release safety boundary to
-  workspace-level `AGENTS.md` and `CLAUDE.md`.
-- Added `scripts/vk_live_regression_smoke.py`, a read-only HTTPS smoke for
-  local-only login state, project visibility, and built frontend assets.
-- Expanded `VK_AGENT_DEPLOYMENT_RUNBOOK.md` so future agents have the full
-  feature-prep, preview, lean Desktop-mirrored backup, restart-ready staging,
-  and restart verification workflow in source control.
-- Expanded `VK_SELF_DEVELOPMENT_WORKFLOW.md` so the VK Dev project model points
-  agents to those required workflows instead of relying on chat history.
-- Pinned CI `sqlx-cli` to `0.8.6` so schema checks match the repo's SQLx crate
-  version and do not float to a Rust-1.94-only CLI release.
+- `PasteMarkdownPlugin` detects multiline `text/plain` before the HTML opt-out,
+  inserts it with `selection.insertRawText`, and registers the command at
+  `COMMAND_PRIORITY_HIGH`.
+- `scripts/vk_live_regression_smoke.py` checks that the source paste handler
+  still has the multiline guard and does not use `COMMAND_PRIORITY_LOW`.
 - No live deploy, frontend symlink swap, service restart, or live DB mutation
   has been performed in this branch session.
 

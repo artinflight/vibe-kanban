@@ -6,6 +6,16 @@
 
 ## Confirmed Current State
 
+- 2026-06-30 multiline paste priority fix is prepared for staging:
+  - `packages/ui/src/components/PasteMarkdownPlugin.tsx` preserves multiline
+    `text/plain` before the `text/html` opt-out
+  - the paste command now uses `COMMAND_PRIORITY_HIGH`, so VK's multiline
+    guard runs before Lexical's default rich paste handler can consume mobile
+    or document clipboard payloads
+  - `scripts/vk_live_regression_smoke.py` now checks the source guard so future
+    release candidates cannot silently regress to low-priority paste handling
+  - no frontend asset swap, backend deploy, live DB mutation, or restart was
+    performed by this source branch
 - Canonical VK source repo is `/home/mcp/_vibe_kanban_repo`.
 - Production is copy-deployed from a built binary, not run live from checkout.
 - Live deploy details are recorded in:

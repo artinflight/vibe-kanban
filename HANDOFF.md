@@ -2,13 +2,26 @@
 
 ## Pickup Note
 
-- Branch: `vk/092b-vk-dev-self-deve`
-- Worktree:
-  `/home/mcp/code/worktrees/092b-vk-dev-self-deve/_vibe_kanban_repo`
-- Current focus: VK self-development workflow hardening.
+- Branch: `fix/multiline-paste-priority`
+- Worktree: `/tmp/vk-paste-pr`
+- Current focus: preserve multiline chat paste by running VK's paste guard
+  before Lexical's default rich paste handler.
 - Live deploy/restart status: none performed in this branch session.
 
 ## What Changed This Session
+
+- Changed `packages/ui/src/components/PasteMarkdownPlugin.tsx` so multiline
+  `text/plain` wins before the `text/html` opt-out and is inserted with
+  `selection.insertRawText(plainText)`.
+- Changed the paste command registration from `COMMAND_PRIORITY_LOW` to
+  `COMMAND_PRIORITY_HIGH` so Lexical's default rich paste handler cannot
+  consume mobile/document clipboards before VK's multiline guard runs.
+- Added a source regression check to `scripts/vk_live_regression_smoke.py` for
+  the high-priority multiline paste handler.
+- No live frontend asset swap, backend binary deploy, DB edit, or service
+  restart was performed.
+
+## Previous Staging Context
 
 - Added `VK_AGENT_DEPLOYMENT_RUNBOOK.md` as a source-controlled pickup guide for
   agents working on VK from inside VK.
@@ -55,6 +68,20 @@
 
 ## Validation So Far
 
+- `pnpm install --offline --frozen-lockfile`
+- `pnpm run format`
+- `pnpm --filter @vibe/ui run check`
+- `python3 -m py_compile scripts/vk_live_regression_smoke.py`
+- `python3 scripts/vk_live_regression_smoke.py`
+- `pnpm run ops:check`
+- `git diff --check`
+- `pnpm run check` partially passed through `local-web`, `remote-web`,
+  `web-core`, and `ui` checks, then failed during backend workspace checking
+  because the clean environment is missing system package metadata for
+  `glib-2.0.pc` required by `glib-sys`.
+
+## Prior Branch Validation
+
 - `bash -n scripts/vk_selfdev_guard.sh`
 - `python3 -m py_compile scripts/vk_live_regression_smoke.py`
 - Temporary generated-workspace guard smoke:
@@ -75,6 +102,9 @@
 
 ## Validation Gaps / Failures
 
+- Full backend workspace check was blocked by missing `glib-2.0.pc` in the clean
+  validation environment; this branch changes only frontend paste handling,
+  smoke script, and docs.
 - The real VK-created workspace setup has been exercised and repaired.
 - `pnpm run preview:light` from an actual generated VK Dev workspace
 - A real release/restart was not performed and should not be inferred from the

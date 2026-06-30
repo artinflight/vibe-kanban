@@ -1,5 +1,18 @@
 # DELTA.md
 
+## 2026-06-30T00:00:00Z | fix/multiline-paste-priority | multiline paste priority fix
+
+- Intent: make the multiline chat paste fix land through a normal PR to
+  `staging` so the next VK release/restart package includes it.
+- Finding: `staging` still had the older paste handler that returned early for
+  any `text/html` clipboard and registered at `COMMAND_PRIORITY_LOW`.
+- Changed `PasteMarkdownPlugin.tsx` so multiline `text/plain` wins before the
+  HTML opt-out, inserts via `selection.insertRawText`, and registers
+  `PASTE_COMMAND` at `COMMAND_PRIORITY_HIGH`.
+- Changed `scripts/vk_live_regression_smoke.py` to guard the source invariant.
+- Deployment: not deployed; no frontend asset swap, backend deploy, live DB
+  mutation, or restart was performed.
+
 ## 2026-06-26T00:00:00Z | vk/092b-vk-dev-self-deve | VK self-development workflow hardening
 
 - Intent: make VK development from inside VK safe enough for future agents to

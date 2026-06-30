@@ -14,11 +14,13 @@ import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 
 BASE_URL = os.environ.get("VK_SMOKE_BASE_URL", "https://vibe.local").rstrip("/")
 TIMEOUT = float(os.environ.get("VK_SMOKE_TIMEOUT", "5"))
+PASTE_PLUGIN_SOURCE = Path("packages/ui/src/components/PasteMarkdownPlugin.tsx")
 
 
 @dataclass
@@ -107,8 +109,31 @@ def check_index() -> Check:
     return ok("frontend", "index loaded and references built assets")
 
 
+def check_paste_plugin_source() -> Check:
+    if not PASTE_PLUGIN_SOURCE.exists():
+        return fail("paste source", f"{PASTE_PLUGIN_SOURCE} is missing")
+    source = PASTE_PLUGIN_SOURCE.read_text()
+    required = [
+        "COMMAND_PRIORITY_HIGH",
+        "LINE_BREAK_PATTERN.test(plainText)",
+        "selection.insertRawText(plainText)",
+        "htmlText && !shouldInsertMultilineRaw",
+    ]
+    missing = [token for token in required if token not in source]
+    if missing:
+        return fail("paste source", f"missing {', '.join(missing)}")
+    if "COMMAND_PRIORITY_LOW" in source:
+        return fail("paste source", "paste handler still uses COMMAND_PRIORITY_LOW")
+    return ok("paste source", "multiline rich paste guard runs at high priority")
+
+
 def main() -> int:
-    checks = [check_info(), check_projects(), check_index()]
+    checks = [
+        check_info(),
+        check_projects(),
+        check_index(),
+        check_paste_plugin_source(),
+    ]
     for check in checks:
         prefix = "PASS" if check.passed else "FAIL"
         print(f"{prefix} {check.name}: {check.detail}")

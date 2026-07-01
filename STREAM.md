@@ -2,66 +2,55 @@
 
 ## Stream Identifier
 
-- Branch: `vk/1bd2-vk-archive-to-sa`
+- Branch: `vk/c096-vk-agent-turn-no`
 - Repo:
-  `/home/mcp/code/worktrees/1bd2-vk-archive-to-sa/_vibe_kanban_repo`
-- Base during rebase: local `staging` at `ad768e583`, which includes
-  `fork/staging` at `89fb5724f` plus the multiline paste merge.
-- Working mode: Archive completed local kanban workspaces to save disk space.
+  `/home/mcp/code/worktrees/c096-vk-agent-turn-no/_vibe_kanban_repo`
+- Base: local `staging`
+- Working mode: VK local turn-completion notification wiring
 
 ## Objective
 
-- Reduce disk pressure from completed local kanban work by archiving linked
-  workspaces when an issue enters the `Done` status, while keeping DB/session
-  context available so a workspace can be recreated if reopened.
+- Publish an ntfy notification when a VK coding agent turn reaches a terminal
+  completed or failed state.
 
 ## In Scope
 
-- Local compatibility issue update paths.
-- Existing workspace archive/delete-worktree flow.
-- Focused regression coverage for completion-status detection.
-- Merge the rebased feature branch into local `staging`.
+- Local VK server/runtime notification code.
+- Existing ntfy env configuration already present in the live user systemd
+  drop-ins.
+- Focused Rust formatting and compile/test validation.
 
 ## Out of Scope
 
-- Deleting chat/session history from the database.
-- Compressing executor transcript JSONL files.
-- Changing remote/cloud issue archive behavior.
-- Restarting or deploying the live VK service.
+- Restarting or deploying the live `vibe-kanban.service`.
+- Changing the Fly ntfy app, topic ACLs, or credentials.
+- Frontend notification UI changes.
 
 ## Current Status
 
-- `crates/server/src/routes/local_compat.rs` now treats transitions into
-  `Done`/`completed` as completion archive triggers, matching the existing
-  `In Staging` archive behavior.
-- Linked workspaces are archived through the existing container service, PR
-  metadata is snapshotted before cleanup, and the physical worktree is deleted
-  when no non-dev process is running.
-- Existing resume context is preserved in SQLite session/process/turn rows; if
-  a user opens the workspace again, the existing `ensure_container_exists`
-  path can recreate the worktree and clear `worktree_deleted`.
-- The feature branch was rebased onto local `staging` and merged as
-  `a8aaa4afd Merge archive-to-Done workspace cleanup into staging`.
+- Found existing live drop-ins under
+  `/home/mcp/.config/systemd/user/vibe-kanban.service.d/`:
+  - `turn-completion-ntfy.conf`
+  - `ntfy-fly.conf`
+  - `ntfy-topic.conf`
+- Added env-backed ntfy publishing for coding-agent turn completion.
+- Wired the publish call to the local execution monitor immediately after a
+  coding-agent process reaches a terminal state and its summary is captured.
+- Kept existing OS/browser workspace-complete notifications unchanged.
+- Rebased this branch onto local `staging` for merge.
+- Live ntfy ACL was separately updated so `vk-workspace-turns` can be read
+  anonymously through `https://opntfy-mobile.fly.dev`; that operational change
+  is not part of this repo commit.
 
 ## Validation
 
-- `pnpm run format` reached Rust formatting, then failed because `prettier` is
-  not installed in this worktree.
-- `git diff --check` passed before the rebase.
-- `cargo test -p server local_compat::tests` did not reach test execution:
-  linking the server test binary crashed with `ld terminated with signal 7
-  [Bus error]` while the filesystem had less than 1 GiB free.
-- After the failed test attempt, `cargo clean` removed `9.0GiB` from this
-  worktree's build output and `/` recovered to about `9.3G` free.
-- After the staging merge, `pnpm run format` passed from the local `staging`
-  worktree.
-- After the staging merge, `git diff --check HEAD^..HEAD` passed.
+- `cargo fmt --all --check`
+- `cargo fmt --all --manifest-path crates/remote/Cargo.toml --check`
+- `pnpm install --offline --frozen-lockfile`
+- `cargo test -p services notification::tests`
+- `pnpm run format`
 
 ## Next Safe Steps
 
-1. Re-run `cargo test -p server local_compat::tests` after freeing more disk
-   space or building on a less constrained machine.
-2. Validate in a local VK instance by moving an issue with linked workspaces into
-   `Done` and verifying the workspace remains listed as archived while its
-   worktree is removed.
-3. Push `staging` only if the operator asks for remote publication.
+1. Merge into `staging`.
+2. Deploy/restart only through the normal VK deployment workflow.

@@ -597,6 +597,7 @@ impl LocalContainerService {
                 if let Err(e) = container.update_executor_session_summary(&exec_id).await {
                     tracing::warn!("Failed to update executor session summary: {}", e);
                 }
+                container.notify_agent_turn_completion(&ctx).await;
 
                 let success = matches!(
                     ctx.execution_process.status,

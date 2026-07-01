@@ -276,6 +276,43 @@ pub trait ContainerService {
             .await;
     }
 
+    async fn notify_agent_turn_completion(&self, ctx: &ExecutionContext) {
+        if !matches!(
+            ctx.execution_process.run_reason,
+            ExecutionProcessRunReason::CodingAgent
+        ) || matches!(ctx.execution_process.status, ExecutionProcessStatus::Killed)
+        {
+            return;
+        }
+
+        let workspace_name = ctx
+            .workspace
+            .name
+            .as_deref()
+            .unwrap_or(&ctx.workspace.branch);
+        let title = format!("Agent Turn Finished: {}", workspace_name);
+        let status = match ctx.execution_process.status {
+            ExecutionProcessStatus::Completed => "completed",
+            ExecutionProcessStatus::Failed => "failed",
+            _ => return,
+        };
+        let message = format!(
+            "Workspace: {}\nBranch: {}\nExecutor: {}\nStatus: {}\nExit code: {}",
+            workspace_name,
+            ctx.workspace.branch,
+            ctx.session.executor.as_deref().unwrap_or("unknown"),
+            status,
+            ctx.execution_process
+                .exit_code
+                .map(|code| code.to_string())
+                .unwrap_or_else(|| "none".to_string())
+        );
+
+        self.notification_service()
+            .notify_turn_completion_ntfy(&title, &message)
+            .await;
+    }
+
     /// Cleanup executions marked as running in the db, call at startup
     async fn cleanup_orphan_executions(&self) -> Result<(), ContainerError> {
         let running_processes = ExecutionProcess::find_running(&self.db().pool).await?;

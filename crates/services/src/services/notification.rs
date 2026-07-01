@@ -1,7 +1,12 @@
-use std::sync::{Arc, OnceLock};
+use std::{
+    sync::{Arc, OnceLock},
+    time::Duration,
+};
 
 use async_trait::async_trait;
+use reqwest::{StatusCode, header};
 use tokio::sync::RwLock;
+use url::Url;
 use utils::{self, command_ext::NoWindowExt};
 use uuid::Uuid;
 
@@ -91,6 +96,65 @@ impl NotificationService {
         }
     }
 
+    /// Publish coding-agent turn completion to ntfy when configured.
+    ///
+    /// Supported env vars:
+    /// - VK_TURN_COMPLETION_NTFY_URL, VK_TURN_COMPLETION_NTFY_TOPIC,
+    ///   VK_TURN_COMPLETION_NTFY_TOKEN, VK_TURN_COMPLETION_NTFY_TIMEOUT_SECS
+    /// - VK_NTFY_URL, VK_NTFY_TOPIC, VK_NTFY_TOKEN as fallbacks
+    pub async fn notify_turn_completion_ntfy(&self, title: &str, message: &str) {
+        let Some(config) = NtfyTurnCompletionConfig::from_env() else {
+            return;
+        };
+
+        let client = match reqwest::Client::builder().timeout(config.timeout).build() {
+            Ok(client) => client,
+            Err(err) => {
+                tracing::warn!("Failed to build ntfy client: {}", err);
+                return;
+            }
+        };
+
+        let mut request = client
+            .post(config.publish_url.clone())
+            .header("Title", title)
+            .header("Tags", "computer")
+            .header("Priority", "default")
+            .body(message.to_string());
+
+        if let Some(token) = config.token.as_deref() {
+            let value = format!("Bearer {token}");
+            match header::HeaderValue::from_str(&value) {
+                Ok(value) => {
+                    request = request.header(header::AUTHORIZATION, value);
+                }
+                Err(err) => {
+                    tracing::warn!("Ignoring invalid ntfy authorization header: {}", err);
+                }
+            }
+        }
+
+        match request.send().await {
+            Ok(response) if response.status().is_success() => {}
+            Ok(response) => {
+                let status = response.status();
+                tracing::warn!(
+                    "ntfy turn-completion notification failed with status {}",
+                    status
+                );
+                if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
+                    tracing::warn!("ntfy rejected the configured turn-completion credentials");
+                }
+            }
+            Err(err) => {
+                tracing::warn!(
+                    "Failed to publish ntfy turn-completion notification: {}",
+                    err
+                );
+            }
+        }
+    }
+
     /// Play a system sound notification across platforms
     async fn play_sound_notification(sound_file: &SoundFile) {
         let file_path = match sound_file.get_path().await {
@@ -149,6 +213,79 @@ impl NotificationService {
                 .spawn();
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NtfyTurnCompletionConfig {
+    publish_url: Url,
+    token: Option<String>,
+    timeout: Duration,
+}
+
+impl NtfyTurnCompletionConfig {
+    fn from_env() -> Option<Self> {
+        Self::from_lookup(|key| std::env::var(key).ok())
+    }
+
+    fn from_lookup(mut lookup: impl FnMut(&str) -> Option<String>) -> Option<Self> {
+        let url = env_first(&mut lookup, &["VK_TURN_COMPLETION_NTFY_URL", "VK_NTFY_URL"])?;
+        let topic = env_first(
+            &mut lookup,
+            &["VK_TURN_COMPLETION_NTFY_TOPIC", "VK_NTFY_TOPIC"],
+        )?;
+        let token = env_first(
+            &mut lookup,
+            &["VK_TURN_COMPLETION_NTFY_TOKEN", "VK_NTFY_TOKEN"],
+        );
+        let timeout = env_first(&mut lookup, &["VK_TURN_COMPLETION_NTFY_TIMEOUT_SECS"])
+            .and_then(|value| value.parse::<u64>().ok())
+            .filter(|seconds| *seconds > 0)
+            .map(Duration::from_secs)
+            .unwrap_or_else(|| Duration::from_secs(4));
+
+        let publish_url = build_ntfy_publish_url(&url, &topic)?;
+
+        Some(Self {
+            publish_url,
+            token,
+            timeout,
+        })
+    }
+}
+
+fn env_first(lookup: &mut impl FnMut(&str) -> Option<String>, keys: &[&str]) -> Option<String> {
+    keys.iter()
+        .filter_map(|key| lookup(key))
+        .map(|value| value.trim().to_string())
+        .find(|value| !value.is_empty())
+}
+
+fn build_ntfy_publish_url(base_url: &str, topic: &str) -> Option<Url> {
+    let mut url = match Url::parse(base_url.trim()) {
+        Ok(url) => url,
+        Err(err) => {
+            tracing::warn!("Invalid ntfy URL '{}': {}", base_url, err);
+            return None;
+        }
+    };
+
+    {
+        let mut path_segments = match url.path_segments_mut() {
+            Ok(segments) => segments,
+            Err(()) => {
+                tracing::warn!("ntfy URL cannot be used as a base URL: {}", base_url);
+                return None;
+            }
+        };
+        path_segments.pop_if_empty();
+        for segment in topic.trim_matches('/').split('/') {
+            if !segment.is_empty() {
+                path_segments.push(segment);
+            }
+        }
+    }
+
+    Some(url)
 }
 
 // --- Platform-specific push notification helpers (used by DefaultPushNotifier) ---
@@ -269,6 +406,66 @@ async fn get_wsl_root_path() -> Option<String> {
     // Cache the failure result
     let _ = WSL_ROOT_PATH_CACHE.set(None);
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::HashMap, time::Duration};
+
+    use super::{NtfyTurnCompletionConfig, build_ntfy_publish_url};
+
+    #[test]
+    fn builds_ntfy_publish_url_without_duplicate_slashes() {
+        let url = build_ntfy_publish_url("https://opntfy.fly.dev/", "/vk-workspace-turns/")
+            .expect("valid ntfy URL");
+
+        assert_eq!(url.as_str(), "https://opntfy.fly.dev/vk-workspace-turns");
+    }
+
+    #[test]
+    fn reads_turn_completion_env_before_generic_ntfy_env() {
+        let values = HashMap::from([
+            ("VK_NTFY_URL", "https://generic.example"),
+            ("VK_NTFY_TOPIC", "generic-topic"),
+            ("VK_NTFY_TOKEN", "generic-token"),
+            ("VK_TURN_COMPLETION_NTFY_URL", "https://turns.example"),
+            ("VK_TURN_COMPLETION_NTFY_TOPIC", "turn-topic"),
+            ("VK_TURN_COMPLETION_NTFY_TOKEN", "turn-token"),
+            ("VK_TURN_COMPLETION_NTFY_TIMEOUT_SECS", "7"),
+        ]);
+
+        let config = NtfyTurnCompletionConfig::from_lookup(|key| {
+            values.get(key).map(|value| value.to_string())
+        })
+        .expect("configured ntfy");
+
+        assert_eq!(
+            config.publish_url.as_str(),
+            "https://turns.example/turn-topic"
+        );
+        assert_eq!(config.token.as_deref(), Some("turn-token"));
+        assert_eq!(config.timeout, Duration::from_secs(7));
+    }
+
+    #[test]
+    fn supports_generic_ntfy_env_as_fallback() {
+        let values = HashMap::from([
+            ("VK_NTFY_URL", "https://opntfy.fly.dev"),
+            ("VK_NTFY_TOPIC", "vk-workspace-turns"),
+        ]);
+
+        let config = NtfyTurnCompletionConfig::from_lookup(|key| {
+            values.get(key).map(|value| value.to_string())
+        })
+        .expect("configured ntfy");
+
+        assert_eq!(
+            config.publish_url.as_str(),
+            "https://opntfy.fly.dev/vk-workspace-turns"
+        );
+        assert_eq!(config.token, None);
+        assert_eq!(config.timeout, Duration::from_secs(4));
+    }
 }
 
 /// Convert WSL path to Windows UNC path for PowerShell

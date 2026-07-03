@@ -8,7 +8,7 @@ PORT_FILE="$STATE_DIR/port"
 LOG_FILE="$STATE_DIR/preview.log"
 
 APP_SLUG="${PREVIEW_APP_SLUG:-vibe-kanban}"
-LOCAL_DOMAIN="${PREVIEW_LOCAL_DOMAIN:-${APP_SLUG}.local}"
+LOCAL_DOMAIN="${PREVIEW_LOCAL_DOMAIN:-vk-preview.local}"
 PORT="${PREVIEW_PORT:-3025}"
 HOST="${PREVIEW_HOST:-0.0.0.0}"
 BACKEND_PORT="${PREVIEW_BACKEND_PORT:-4311}"
@@ -79,6 +79,7 @@ start() {
       --setenv=PATH="/usr/bin:/bin:/home/mcp/.local/bin" \
       --setenv=VITE_OPEN=false \
       --setenv=BROWSER=none \
+      --setenv=__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS="$LOCAL_DOMAIN" \
       --setenv=FRONTEND_PORT="$PORT" \
       --setenv=BACKEND_PORT="$BACKEND_PORT" \
       /home/mcp/.local/bin/pnpm \
@@ -121,7 +122,7 @@ Required route owner action:
 - Add DNS for ${LOCAL_DOMAIN} -> ${DNS_OR_PROXY_IP}
 - Add homelab nginx HTTPS server_name ${LOCAL_DOMAIN}
 - Proxy ${LOCAL_DOMAIN} to http://10.0.0.129:3010
-- Add ${LOCAL_DOMAIN} -> 127.0.0.1:${PORT} to the MCP host local router
+- Confirm the MCP host local router maps ${LOCAL_DOMAIN} -> 127.0.0.1:${PORT}
 EOF
     exit 1
   fi
@@ -180,7 +181,7 @@ Environment:
   PREVIEW_PORT             Fixed frontend port. Default: 3025
   PREVIEW_HOST             Frontend bind host. Default: 0.0.0.0
   PREVIEW_BACKEND_PORT     Existing Vibe Kanban backend port. Default: 4311
-  PREVIEW_LOCAL_DOMAIN     Operator-facing .local host. Default: vibe-kanban.local
+  PREVIEW_LOCAL_DOMAIN     Operator-facing .local host. Default: vk-preview.local
   PREVIEW_DNS_OR_PROXY_IP  Private DNS/proxy IP. Default: 10.0.0.97
   PREVIEW_EXPECTED_TEXT    Content proof text. Default: Vibe Kanban
 EOF

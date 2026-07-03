@@ -13,7 +13,7 @@
 - Port: `3025`
 - Local URL: `http://127.0.0.1:3025/`
 - `.local` HTTPS URL intended for operator access:
-  `https://vibe-kanban.local/`
+  `https://vk-preview.local/`
 - Service name: `vk-preview-vibe-kanban`
 - Logs command: `journalctl --user -u vk-preview-vibe-kanban`
 - Stop command: `scripts/preview.sh stop`
@@ -23,24 +23,30 @@
   `/home/homelab1/docker/network/pihole`.
 - Access limits: SSH user `mcp@homelab` can inspect the homelab route, but
   cannot write nginx config, SSL certs, or Pi-hole config without sudo. The
-  current `https://vibe-kanban.local/` route resolves through `10.0.0.97` to
-  the homelab homepage, not this preview.
+  `https://vk-preview.local/` route currently reaches the homelab default
+  Next.js page, not this preview.
 - Validation commands and results:
-  - `scripts/preview.sh start` passed and started
-    `vk-preview-vibe-kanban`.
+  - `scripts/preview.sh start` passed and started `vk-preview-vibe-kanban`
+    with `vk-preview.local` allowed by Vite.
   - `curl --silent --fail --max-time 5 http://127.0.0.1:3025/ | rg -q
     'Vibe Kanban'` passed via `scripts/preview.sh verify`.
-  - `curl -k -I --resolve vibe-kanban.local:443:10.0.0.97
-    https://vibe-kanban.local/` returned HTTP `200`, but from the homelab
-    homepage.
-  - `curl -k --resolve vibe-kanban.local:443:10.0.0.97
-    https://vibe-kanban.local/ | rg 'Vibe Kanban'` failed, proving the
-    operator-facing route is not wired to this preview.
+  - Added MCP host local-router route
+    `vk-preview.local -> 127.0.0.1:3025` in
+    `/home/mcp/.local/share/froutreach-local/local-host-router.mjs` and
+    restarted `mealplan-host-router.service`.
+  - `curl --silent --fail --max-time 5 -H 'Host: vk-preview.local'
+    http://127.0.0.1:3010/ | rg -q 'Vibe Kanban'` passed.
+  - `curl -k -I --resolve vk-preview.local:443:10.0.0.97
+    https://vk-preview.local/` returned HTTP `200`, but from the homelab
+    default Next.js page.
+  - `curl -k --resolve vk-preview.local:443:10.0.0.97
+    https://vk-preview.local/ | rg 'Vibe Kanban'` failed, proving the
+    operator-facing HTTPS route is not wired to this preview.
 - Required route work:
-  - Add DNS/Pi-hole entry for `vibe-kanban.local -> 10.0.0.97`.
-  - Add homelab nginx HTTPS `server_name vibe-kanban.local`, certificate/key,
+  - Add DNS/Pi-hole entry for `vk-preview.local -> 10.0.0.97`.
+  - Add homelab nginx HTTPS `server_name vk-preview.local`, certificate/key,
     and proxy to `http://10.0.0.129:3010`.
-  - Add MCP local host-router route for `vibe-kanban.local` to
+  - MCP local host-router route is already added for `vk-preview.local` to
     `127.0.0.1:3025`.
 
 ## Pickup Note

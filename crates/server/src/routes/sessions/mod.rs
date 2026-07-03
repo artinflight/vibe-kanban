@@ -11,7 +11,7 @@ use axum::{
 use db::models::{
     coding_agent_turn::CodingAgentTurn,
     execution_process::{ExecutionProcess, ExecutionProcessRunReason},
-    requests::UpdateSession,
+    requests::{BranchChatWorkspaceRequest, BranchChatWorkspaceResponse, UpdateSession},
     scratch::{Scratch, ScratchType},
     session::{CreateSession, Session, SessionError},
     workspace::{Workspace, WorkspaceError},
@@ -34,8 +34,10 @@ use utils::response::ApiResponse;
 use uuid::Uuid;
 
 use crate::{
-    DeploymentImpl, error::ApiError, middleware::load_session_middleware,
-    routes::workspaces::execution::RunScriptError,
+    DeploymentImpl,
+    error::ApiError,
+    middleware::load_session_middleware,
+    routes::workspaces::{create::create_workspace_record, execution::RunScriptError},
 };
 
 #[derive(Debug, Deserialize)]
@@ -257,6 +259,173 @@ pub async fn follow_up(
     Ok(ResponseJson(ApiResponse::success(execution_process)))
 }
 
+pub async fn branch_workspace(
+    Extension(source_session): Extension<Session>,
+    State(deployment): State<DeploymentImpl>,
+    Json(payload): Json<BranchChatWorkspaceRequest>,
+) -> Result<ResponseJson<ApiResponse<BranchChatWorkspaceResponse>>, ApiError> {
+    let pool = &deployment.db().pool;
+
+    let source_workspace = Workspace::find_by_id(pool, source_session.workspace_id)
+        .await?
+        .ok_or(ApiError::Workspace(WorkspaceError::ValidationError(
+            "Workspace not found".to_string(),
+        )))?;
+
+    let prompt = payload.prompt.trim();
+    if prompt.is_empty() {
+        return Err(ApiError::BadRequest(
+            "A branch prompt is required. Provide a non-empty `prompt`.".to_string(),
+        ));
+    }
+
+    let latest_session_info =
+        CodingAgentTurn::find_latest_session_info(pool, source_session.id).await?;
+    let Some(latest_session_info) = latest_session_info else {
+        return Err(ApiError::BadRequest(
+            "This session does not have a completed agent turn to branch from yet.".to_string(),
+        ));
+    };
+
+    let expected_executor: Option<String> =
+        ExecutionProcess::latest_executor_profile_for_session(pool, source_session.id)
+            .await?
+            .map(|profile| profile.executor.to_string())
+            .or_else(|| source_session.executor.clone());
+    if let Some(expected) = expected_executor {
+        let actual = payload.executor_config.profile_id().executor.to_string();
+        if expected != actual {
+            return Err(ApiError::Session(SessionError::ExecutorMismatch {
+                expected,
+                actual,
+            }));
+        }
+    }
+
+    let source_repos =
+        WorkspaceRepo::find_repos_with_target_branch_for_workspace(pool, source_workspace.id)
+            .await?;
+    if source_repos.is_empty() {
+        return Err(ApiError::BadRequest(
+            "Source workspace has no repositories configured.".to_string(),
+        ));
+    }
+
+    let mut managed_workspace = deployment
+        .workspace_manager()
+        .load_managed_workspace(create_workspace_record(&deployment, payload.name, None).await?)
+        .await?;
+
+    if source_workspace.task_id.is_some() {
+        Workspace::update_task_id(
+            pool,
+            managed_workspace.workspace.id,
+            source_workspace.task_id,
+        )
+        .await?;
+        managed_workspace = deployment
+            .workspace_manager()
+            .load_managed_workspace(managed_workspace.workspace.clone())
+            .await?;
+    }
+
+    for repo in &source_repos {
+        let repo_input = db::models::requests::WorkspaceRepoInput {
+            repo_id: repo.repo.id,
+            target_branch: source_workspace.branch.clone(),
+        };
+        managed_workspace
+            .add_repository(&repo_input, deployment.git())
+            .await
+            .map_err(ApiError::from)?;
+    }
+
+    deployment
+        .container()
+        .ensure_container_exists(&managed_workspace.workspace)
+        .await?;
+
+    let session = Session::create(
+        pool,
+        &CreateSession {
+            executor: Some(payload.executor_config.profile_id().executor.to_string()),
+            name: source_session.name.clone(),
+        },
+        Uuid::new_v4(),
+        managed_workspace.workspace.id,
+    )
+    .await?;
+
+    let interrupted_context =
+        CodingAgentTurn::find_interrupted_context_since_latest_success(pool, source_session.id)
+            .await?;
+    let prompt =
+        CodingAgentTurn::prompt_with_interrupted_context(prompt.to_string(), &interrupted_context);
+
+    let repos =
+        WorkspaceRepo::find_repos_for_workspace(pool, managed_workspace.workspace.id).await?;
+    let cleanup_action = deployment.container().cleanup_actions_for_repos(&repos);
+    let working_dir = session
+        .agent_working_dir
+        .as_ref()
+        .filter(|dir| !dir.is_empty())
+        .cloned();
+
+    let action = ExecutorAction::new(
+        ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+            prompt,
+            session_id: latest_session_info.session_id,
+            reset_to_message_id: None,
+            executor_config: payload.executor_config.clone(),
+            working_dir,
+        }),
+        cleanup_action.map(Box::new),
+    );
+
+    let execution_process = deployment
+        .container()
+        .start_execution(
+            &managed_workspace.workspace,
+            &session,
+            &action,
+            &ExecutionProcessRunReason::CodingAgent,
+        )
+        .await?;
+
+    deployment
+        .events()
+        .msg_store()
+        .push_patch(execution_process_patch::add(&execution_process));
+    if let Some(workspace_with_status) =
+        Workspace::find_by_id_with_status(pool, managed_workspace.workspace.id).await?
+    {
+        deployment
+            .events()
+            .msg_store()
+            .push_patch(workspace_patch::replace(&workspace_with_status));
+    }
+
+    deployment
+        .track_if_analytics_allowed(
+            "workspace_branch_chat_created",
+            serde_json::json!({
+                "source_workspace_id": source_workspace.id.to_string(),
+                "source_session_id": source_session.id.to_string(),
+                "workspace_id": managed_workspace.workspace.id.to_string(),
+                "executor": &payload.executor_config.executor,
+                "variant": &payload.executor_config.variant,
+            }),
+        )
+        .await;
+
+    Ok(ResponseJson(ApiResponse::success(
+        BranchChatWorkspaceResponse {
+            workspace: managed_workspace.workspace,
+            execution_process,
+        },
+    )))
+}
+
 pub async fn reset_process(
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
@@ -339,6 +508,7 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let session_id_router = Router::new()
         .route("/", get(get_session).put(update_session))
         .route("/follow-up", post(follow_up))
+        .route("/branch-workspace", post(branch_workspace))
         .route("/reset", post(reset_process))
         .route("/setup", post(run_setup_script))
         .route("/review", post(review::start_review))

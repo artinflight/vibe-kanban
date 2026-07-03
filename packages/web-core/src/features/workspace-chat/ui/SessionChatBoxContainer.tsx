@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
 import {
   type AskUserQuestionItem,
@@ -37,11 +37,15 @@ import { ResolveConflictsDialog } from '@/shared/dialogs/tasks/ResolveConflictsD
 import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 import { buildAgentPrompt } from '@/shared/lib/promptMessage';
 import { formatDateShortWithTime } from '@/shared/lib/date';
-import { toPrettyCase } from '@/shared/lib/string';
+import {
+  splitMessageToTitleDescription,
+  toPrettyCase,
+} from '@/shared/lib/string';
 import {
   SessionChatBox,
   type ExecutionStatus,
   type SessionChatBoxEditorRenderProps,
+  type SessionToolbarActionItem,
 } from '@vibe/ui/components/SessionChatBox';
 import { ModelSelectorContainer } from '@/shared/components/ModelSelectorContainer';
 import {
@@ -65,6 +69,7 @@ import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { sessionsApi } from '@/shared/lib/api';
 import { RenameSessionDialog } from '@vibe/ui/components/RenameSessionDialog';
 import type { TurnNavigationItem } from '@vibe/ui/components/TurnNavigationPopup';
+import { GitBranchIcon } from '@phosphor-icons/react';
 
 /** Compute execution status from boolean flags */
 function computeExecutionStatus(params: {
@@ -188,6 +193,25 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     [queryClient, hostId, workspaceId]
   );
   const appNavigation = useAppNavigation();
+
+  const branchWorkspaceMutation = useMutation({
+    mutationFn: ({
+      sessionId,
+      data,
+    }: {
+      sessionId: string;
+      data: Parameters<typeof sessionsApi.branchWorkspace>[1];
+    }) => sessionsApi.branchWorkspace(sessionId, data),
+    onSuccess: async ({ workspace }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: workspaceSummaryKeys.all }),
+        queryClient.invalidateQueries({
+          queryKey: workspaceSessionKeys.byWorkspace(workspace.id, hostId),
+        }),
+      ]);
+      appNavigation.goToWorkspace(workspace.id);
+    },
+  });
 
   const { executeAction } = useActions();
   const actionCtx = useActionVisibilityContext();
@@ -585,6 +609,43 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     reviewContext,
   ]);
 
+  const handleBranchWorkspace = useCallback(async () => {
+    if (!sessionId || !executorConfig || !localMessage.trim()) return;
+
+    const { prompt } = buildAgentPrompt(localMessage, [reviewMarkdown]);
+    const { title } = splitMessageToTitleDescription(localMessage);
+
+    try {
+      await branchWorkspaceMutation.mutateAsync({
+        sessionId,
+        data: {
+          name: title,
+          prompt,
+          executor_config: executorConfig,
+        },
+      });
+    } catch {
+      return;
+    }
+
+    cancelDebouncedSave();
+    setLocalMessage('');
+    clearUploadedAttachments();
+    await clearDraft();
+    reviewContext?.clearComments();
+  }, [
+    sessionId,
+    executorConfig,
+    localMessage,
+    reviewMarkdown,
+    branchWorkspaceMutation,
+    cancelDebouncedSave,
+    setLocalMessage,
+    clearUploadedAttachments,
+    clearDraft,
+    reviewContext,
+  ]);
+
   // Editor change handler
   const handleEditorChange = useCallback(
     (value: string) => {
@@ -595,6 +656,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         setLocalMessage(value);
       }
       if (sendError) clearError();
+      if (branchWorkspaceMutation.error) branchWorkspaceMutation.reset();
     },
     [
       isQueued,
@@ -603,6 +665,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
       executorConfig,
       sendError,
       clearError,
+      branchWorkspaceMutation,
       setLocalMessage,
     ]
   );
@@ -663,6 +726,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     isStopping ||
     !!feedbackContext?.isSubmitting ||
     editRetryMutation.isPending ||
+    branchWorkspaceMutation.isPending ||
     isApproving ||
     isDenying ||
     isAnswering;
@@ -774,9 +838,9 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     [actionCtx]
   );
 
-  const toolbarActionItems = useMemo(
-    () =>
-      toolbarActionsList.flatMap((action) => {
+  const toolbarActionItems = useMemo(() => {
+    const actionItems: SessionToolbarActionItem[] = toolbarActionsList.flatMap(
+      (action) => {
         if (isSpecialIcon(action.icon)) {
           return [];
         }
@@ -793,9 +857,37 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
             onClick: () => handleToolbarAction(action),
           },
         ];
-      }),
-    [toolbarActionsList, actionCtx, handleToolbarAction]
-  );
+      }
+    );
+
+    if (!isNewSessionMode && sessionId) {
+      actionItems.push({
+        id: 'branch-workspace',
+        icon: GitBranchIcon,
+        label: 'Branch chat',
+        tooltip: localMessage.trim()
+          ? 'Start a new workspace from this chat context'
+          : 'Type a branch instruction first',
+        disabled:
+          !executorConfig ||
+          !localMessage.trim() ||
+          branchWorkspaceMutation.isPending,
+        onClick: () => void handleBranchWorkspace(),
+      });
+    }
+
+    return actionItems;
+  }, [
+    toolbarActionsList,
+    actionCtx,
+    handleToolbarAction,
+    isNewSessionMode,
+    sessionId,
+    localMessage,
+    executorConfig,
+    branchWorkspaceMutation.isPending,
+    handleBranchWorkspace,
+  ]);
 
   // Handle approve action
   const handleApprove = useCallback(async () => {
@@ -953,6 +1045,10 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
       presetOptions={presetOptions}
     />
   ) : undefined;
+  const branchWorkspaceError =
+    branchWorkspaceMutation.error instanceof Error
+      ? branchWorkspaceMutation.error.message
+      : null;
 
   // In placeholder mode, render a disabled version to maintain visual structure
   if (mode === 'placeholder') {
@@ -1063,7 +1159,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         conflictedFilesCount,
         onResolveConflicts: handleResolveConflicts,
       }}
-      error={sendError}
+      error={sendError ?? branchWorkspaceError}
       agent={effectiveExecutor}
       todos={todos}
       inProgressTodo={inProgressTodo}

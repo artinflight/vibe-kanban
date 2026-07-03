@@ -229,6 +229,10 @@ fn is_in_staging_status(value: &str) -> bool {
     normalize_status_key(value) == "instaging"
 }
 
+fn is_done_status(value: &str) -> bool {
+    matches!(normalize_status_key(value).as_str(), "done" | "completed")
+}
+
 fn status_id_from_name(name: &str) -> String {
     match normalize_status_key(name).as_str() {
         "inprogress" => "in_progress".to_string(),
@@ -1029,9 +1033,10 @@ async fn find_linked_workspaces_for_task(
     .await?)
 }
 
-async fn archive_linked_workspaces_for_in_staging_issue(
+async fn archive_linked_workspaces_for_completed_issue(
     deployment: &DeploymentImpl,
     issue_id: Uuid,
+    status_name: &str,
 ) -> Result<(), ApiError> {
     let workspaces = find_linked_workspaces_for_task(deployment, issue_id).await?;
 
@@ -1040,9 +1045,10 @@ async fn archive_linked_workspaces_for_in_staging_issue(
             && let Err(e) = deployment.container().archive_workspace(workspace.id).await
         {
             tracing::error!(
-                "Failed to archive workspace {} after moving issue {} to In Staging: {}",
+                "Failed to archive workspace {} after moving issue {} to {}: {}",
                 workspace.id,
                 issue_id,
+                status_name,
                 e
             );
             continue;
@@ -1054,9 +1060,10 @@ async fn archive_linked_workspaces_for_in_staging_issue(
             .await
         {
             tracing::error!(
-                "Failed to delete archived worktree for workspace {} after moving issue {} to In Staging: {}",
+                "Failed to delete archived worktree for workspace {} after moving issue {} to {}: {}",
                 workspace.id,
                 issue_id,
+                status_name,
                 e
             );
         }
@@ -1665,6 +1672,7 @@ async fn update_issue(
         .unwrap_or(existing.description.clone());
     let entered_in_staging =
         !is_in_staging_status(&previous_status_name) && is_in_staging_status(&status_name);
+    let entered_done = !is_done_status(&previous_status_name) && is_done_status(&status_name);
 
     Task::update(
         &deployment.db().pool,
@@ -1679,9 +1687,9 @@ async fn update_issue(
     )
     .await?;
 
-    if entered_in_staging {
+    if entered_in_staging || entered_done {
         snapshot_issue_pr_metadata_before_cleanup(&deployment, issue_id).await?;
-        archive_linked_workspaces_for_in_staging_issue(&deployment, issue_id).await?;
+        archive_linked_workspaces_for_completed_issue(&deployment, issue_id, &status_name).await?;
     }
 
     Ok(ResponseJson(MutationTxidResponse {
@@ -1723,6 +1731,7 @@ async fn bulk_update_issues(
             .unwrap_or(existing.description.clone());
         let entered_in_staging =
             !is_in_staging_status(&previous_status_name) && is_in_staging_status(&status_name);
+        let entered_done = !is_done_status(&previous_status_name) && is_done_status(&status_name);
 
         Task::update(
             &deployment.db().pool,
@@ -1737,9 +1746,10 @@ async fn bulk_update_issues(
         )
         .await?;
 
-        if entered_in_staging {
+        if entered_in_staging || entered_done {
             snapshot_issue_pr_metadata_before_cleanup(&deployment, update.id).await?;
-            archive_linked_workspaces_for_in_staging_issue(&deployment, update.id).await?;
+            archive_linked_workspaces_for_completed_issue(&deployment, update.id, &status_name)
+                .await?;
         }
     }
 
@@ -1893,5 +1903,14 @@ mod tests {
         assert_eq!(pr.target_branch_name, "staging");
         assert_eq!(pr.issue_id, issue_id.to_string());
         assert_eq!(pr.project_id, project_id.to_string());
+    }
+
+    #[test]
+    fn recognizes_done_status_aliases_for_completion_archive() {
+        assert!(is_done_status("Done"));
+        assert!(is_done_status("completed"));
+        assert!(is_done_status("Completed"));
+        assert!(!is_done_status("In Staging"));
+        assert!(!is_done_status("In review"));
     }
 }

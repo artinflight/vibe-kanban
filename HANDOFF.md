@@ -1,5 +1,48 @@
 # HANDOFF.md
 
+## Current Preview Status — 2026-07-03
+
+- Branch: `vk/a5ed-vk-saved-message`
+- Worktree:
+  `/home/mcp/code/worktrees/a5ed-vk-saved-message/_vibe_kanban_repo`
+- Preview status: local origin is running, but the operator-facing `.local`
+  HTTPS route is blocked.
+- Command used: `scripts/preview.sh start`
+- Working directory:
+  `/home/mcp/code/worktrees/a5ed-vk-saved-message/_vibe_kanban_repo`
+- Port: `3025`
+- Local URL: `http://127.0.0.1:3025/`
+- `.local` HTTPS URL intended for operator access:
+  `https://vibe-kanban.local/`
+- Service name: `vk-preview-vibe-kanban`
+- Logs command: `journalctl --user -u vk-preview-vibe-kanban`
+- Stop command: `scripts/preview.sh stop`
+- DNS/proxy route owner: homelab host `10.0.0.97`; Docker `nginx`
+  container config under
+  `/home/homelab1/docker/network/nginx/config/conf.d`; Pi-hole DNS under
+  `/home/homelab1/docker/network/pihole`.
+- Access limits: SSH user `mcp@homelab` can inspect the homelab route, but
+  cannot write nginx config, SSL certs, or Pi-hole config without sudo. The
+  current `https://vibe-kanban.local/` route resolves through `10.0.0.97` to
+  the homelab homepage, not this preview.
+- Validation commands and results:
+  - `scripts/preview.sh start` passed and started
+    `vk-preview-vibe-kanban`.
+  - `curl --silent --fail --max-time 5 http://127.0.0.1:3025/ | rg -q
+    'Vibe Kanban'` passed via `scripts/preview.sh verify`.
+  - `curl -k -I --resolve vibe-kanban.local:443:10.0.0.97
+    https://vibe-kanban.local/` returned HTTP `200`, but from the homelab
+    homepage.
+  - `curl -k --resolve vibe-kanban.local:443:10.0.0.97
+    https://vibe-kanban.local/ | rg 'Vibe Kanban'` failed, proving the
+    operator-facing route is not wired to this preview.
+- Required route work:
+  - Add DNS/Pi-hole entry for `vibe-kanban.local -> 10.0.0.97`.
+  - Add homelab nginx HTTPS `server_name vibe-kanban.local`, certificate/key,
+    and proxy to `http://10.0.0.129:3010`.
+  - Add MCP local host-router route for `vibe-kanban.local` to
+    `127.0.0.1:3025`.
+
 ## Pickup Note
 
 - Branch: `staging`

@@ -5,8 +5,8 @@
 - Branch: `vk/1bd2-vk-archive-to-sa`
 - Worktree:
   `/home/mcp/code/worktrees/1bd2-vk-archive-to-sa/_vibe_kanban_repo`
-- Current focus: archive linked local workspaces when issues enter `Done`, then
-  merge the rebased feature into local `staging`.
+- Current focus: archive linked local workspaces when issues enter `Done`; the
+  rebased feature has been merged into local `staging`.
 - Live deploy/restart status: none performed in this branch session.
 
 ## What Changed This Session
@@ -30,6 +30,8 @@
   `ensure_container_exists` flow.
 - The feature branch was rebased onto local `staging`, which is ahead of
   `fork/staging` with the multiline paste merge.
+- Local `staging` now includes merge commit
+  `a8aaa4afd Merge archive-to-Done workspace cleanup into staging`.
 - No live VK service restart, binary deploy, frontend symlink swap, or live DB
   mutation was performed.
 
@@ -42,22 +44,22 @@
   linking crashed with `ld terminated with signal 7 [Bus error]` while `/` was
   effectively full.
 - `cargo clean` removed `9.0GiB`; `/` then showed about `9.3G` free.
+- After the staging merge, `pnpm run format` passed from the local `staging`
+  worktree.
+- After the staging merge, `git diff --check HEAD^..HEAD` passed.
 
 ## Validation Gaps / Failures
 
 - Focused Rust tests still need a successful rerun after more disk is available.
-- Full `pnpm run format` still needs `prettier` installed.
 - No local VK UI/API smoke has been run for moving a linked issue into `Done`.
-- Post-rebase validation still needs to be rerun after the merge completes.
 
 ## Next Safe Steps
 
-1. Finish the rebase and merge into local `staging`.
-2. Re-run `git diff --check` and any feasible focused validation.
-3. Restore frontend dependencies or run `pnpm install` if full formatting is
-   required.
-4. Smoke the behavior in VK by moving a linked issue into `Done` and checking the
+1. Re-run `cargo test -p server local_compat::tests` after freeing enough disk
+   for server test linking.
+2. Smoke the behavior in VK by moving a linked issue into `Done` and checking the
    workspace becomes archived with `worktree_deleted = true`.
+3. Push `staging` only if the operator asks for remote publication.
 
 ## Must Not Do
 

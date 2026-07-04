@@ -40,7 +40,8 @@
 - Existing resume context is preserved in SQLite session/process/turn rows; if
   a user opens the workspace again, the existing `ensure_container_exists`
   path can recreate the worktree and clear `worktree_deleted`.
-- The feature branch is being rebased onto local `staging` before merge.
+- The feature branch was rebased onto local `staging` and merged as
+  `a8aaa4afd Merge archive-to-Done workspace cleanup into staging`.
 
 ## Validation
 
@@ -52,14 +53,15 @@
   [Bus error]` while the filesystem had less than 1 GiB free.
 - After the failed test attempt, `cargo clean` removed `9.0GiB` from this
   worktree's build output and `/` recovered to about `9.3G` free.
+- After the staging merge, `pnpm run format` passed from the local `staging`
+  worktree.
+- After the staging merge, `git diff --check HEAD^..HEAD` passed.
 
 ## Next Safe Steps
 
-1. Finish the rebase and merge into local `staging`.
-2. Re-run `git diff --check`.
-3. Install/restore frontend dev dependencies if full formatting is required.
-4. Re-run `cargo test -p server local_compat::tests` after freeing more disk
+1. Re-run `cargo test -p server local_compat::tests` after freeing more disk
    space or building on a less constrained machine.
-5. Validate in a local VK instance by moving an issue with linked workspaces into
+2. Validate in a local VK instance by moving an issue with linked workspaces into
    `Done` and verifying the workspace remains listed as archived while its
    worktree is removed.
+3. Push `staging` only if the operator asks for remote publication.

@@ -33,6 +33,13 @@
     `vk-preview.local -> 127.0.0.1:3025` in
     `/home/mcp/.local/share/froutreach-local/local-host-router.mjs` and
     restarted `mealplan-host-router.service`.
+  - Added MCP host local-router compatibility response for
+    `vk-preview.local/v1/fallback/user_workspaces`, backed by
+    `http://127.0.0.1:4311/api/workspaces`, so the preview workspace sidebar
+    receives JSON instead of the Vite HTML fallback.
+  - Updated MCP host local-router shutdown handling to force-close open
+    sockets on `SIGTERM`; this prevents router restarts from hanging on
+    active preview connections.
   - `curl --silent --fail --max-time 5 -H 'Host: vk-preview.local'
     http://127.0.0.1:3010/ | rg -q 'Vibe Kanban'` passed.
   - Added Pi-hole DNS entry `10.0.0.97 vk-preview.local` in
@@ -47,6 +54,10 @@
     https://vk-preview.local/` returned HTTP `200` from the VK preview.
   - `curl -k --resolve vk-preview.local:443:10.0.0.97
     https://vk-preview.local/ | rg 'Vibe Kanban'` passed.
+  - `curl -k https://vk-preview.local/v1/fallback/user_workspaces` returns
+    JSON with `528` workspaces.
+  - Playwright browser smoke against `https://vk-preview.local/` showed
+    populated projects and a workspace count of `50`.
   - `scripts/preview.sh verify` passed and printed
     `Preview URL: https://vk-preview.local/`.
 - Required route work:

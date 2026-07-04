@@ -1,12 +1,12 @@
 # HANDOFF.md
 
-## Current Preview Status — 2026-07-03
+## Current Preview Status — 2026-07-04
 
 - Branch: `vk/a5ed-vk-saved-message`
 - Worktree:
   `/home/mcp/code/worktrees/a5ed-vk-saved-message/_vibe_kanban_repo`
-- Preview status: local origin is running, but the operator-facing `.local`
-  HTTPS route is blocked.
+- Preview status: local origin is running and the operator-facing `.local`
+  HTTPS route is verified.
 - Command used: `scripts/preview.sh start`
 - Working directory:
   `/home/mcp/code/worktrees/a5ed-vk-saved-message/_vibe_kanban_repo`
@@ -21,10 +21,9 @@
   container config under
   `/home/homelab1/docker/network/nginx/config/conf.d`; Pi-hole DNS under
   `/home/homelab1/docker/network/pihole`.
-- Access limits: SSH user `mcp@homelab` can inspect the homelab route, but
-  cannot write nginx config, SSL certs, or Pi-hole config without sudo. The
-  `https://vk-preview.local/` route currently reaches the homelab default
-  Next.js page, not this preview.
+- Access limits: SSH user `mcp@homelab` can manage this route through Docker
+  access. The nginx vhost and Pi-hole DNS entry for `vk-preview.local` are
+  installed on homelab host `10.0.0.97`.
 - Validation commands and results:
   - `scripts/preview.sh start` passed and started `vk-preview-vibe-kanban`
     with `vk-preview.local` allowed by Vite.
@@ -36,16 +35,22 @@
     restarted `mealplan-host-router.service`.
   - `curl --silent --fail --max-time 5 -H 'Host: vk-preview.local'
     http://127.0.0.1:3010/ | rg -q 'Vibe Kanban'` passed.
+  - Added Pi-hole DNS entry `10.0.0.97 vk-preview.local` in
+    `/etc/pihole/pihole.toml` through the `pihole` container and reloaded DNS
+    with `docker exec pihole pihole reloaddns`.
+  - Added homelab nginx HTTPS vhost `vk-preview.local` through the `nginx`
+    container, generated `/etc/nginx/ssl/vk-preview.local.{crt,key}` signed by
+    `MyHomelabCA`, verified with `docker exec nginx nginx -t`, and reloaded
+    nginx with `docker exec nginx nginx -s reload`.
+  - `getent hosts vk-preview.local` returns `10.0.0.97`.
   - `curl -k -I --resolve vk-preview.local:443:10.0.0.97
-    https://vk-preview.local/` returned HTTP `200`, but from the homelab
-    default Next.js page.
+    https://vk-preview.local/` returned HTTP `200` from the VK preview.
   - `curl -k --resolve vk-preview.local:443:10.0.0.97
-    https://vk-preview.local/ | rg 'Vibe Kanban'` failed, proving the
-    operator-facing HTTPS route is not wired to this preview.
+    https://vk-preview.local/ | rg 'Vibe Kanban'` passed.
+  - `scripts/preview.sh verify` passed and printed
+    `Preview URL: https://vk-preview.local/`.
 - Required route work:
-  - Add DNS/Pi-hole entry for `vk-preview.local -> 10.0.0.97`.
-  - Add homelab nginx HTTPS `server_name vk-preview.local`, certificate/key,
-    and proxy to `http://10.0.0.129:3010`.
+  - None for the current preview route.
   - MCP local host-router route is already added for `vk-preview.local` to
     `127.0.0.1:3025`.
 

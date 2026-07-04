@@ -73,13 +73,23 @@ interface SessionProps<TExecutor extends string = string> {
   onRenameSession?: (sessionId: string, currentName: string) => void;
 }
 
+export interface SessionToolbarActionMenuItem {
+  id: string;
+  icon?: Icon;
+  label: string;
+  tooltip?: string;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
 export interface SessionToolbarActionItem {
   id: string;
   icon: Icon;
   label: string;
   tooltip?: string;
-  onClick: () => void;
+  onClick?: () => void;
   disabled?: boolean;
+  items?: SessionToolbarActionMenuItem[];
 }
 
 interface ToolbarActionsProps {
@@ -906,16 +916,37 @@ export function SessionChatBox<TExecutor extends string = string>({
               disabled={areContentInsertActionsDisabled}
             />
           )}
-          {toolbarActions?.items.map((item) => (
-            <ToolbarIconButton
-              key={item.id}
-              icon={item.icon}
-              aria-label={item.label}
-              title={item.tooltip}
-              onClick={item.onClick}
-              disabled={isDisabled || isRunning || Boolean(item.disabled)}
-            />
-          ))}
+          {toolbarActions?.items.map((item) =>
+            item.items?.length ? (
+              <ToolbarDropdown
+                key={item.id}
+                icon={item.icon}
+                label={item.label}
+                disabled={isDisabled || isRunning || Boolean(item.disabled)}
+              >
+                {item.items.map((child) => (
+                  <DropdownMenuItem
+                    key={child.id}
+                    icon={child.icon}
+                    onClick={child.onClick}
+                    disabled={Boolean(child.disabled)}
+                    title={child.tooltip}
+                  >
+                    {child.label}
+                  </DropdownMenuItem>
+                ))}
+              </ToolbarDropdown>
+            ) : (
+              <ToolbarIconButton
+                key={item.id}
+                icon={item.icon}
+                aria-label={item.label}
+                title={item.tooltip}
+                onClick={item.onClick ?? (() => {})}
+                disabled={isDisabled || isRunning || Boolean(item.disabled)}
+              />
+            )
+          )}
         </>
       }
       footerRight={renderActionButtons()}

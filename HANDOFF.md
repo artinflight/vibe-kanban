@@ -5,28 +5,32 @@
 - Branch: `vk/1ed3-vk-branch-chats`
 - Worktree:
   `/home/mcp/code/worktrees/1ed3-vk-branch-chats/_vibe_kanban_repo`
-- Current focus: branch existing workspace chats into new workspaces while
-  preserving the source agent context.
+- Current focus: branch existing workspace chats into new workspaces or
+  sub-issues while preserving the source agent context.
 - Live deploy/restart status: none performed in this branch session.
 
 ## What Changed This Session
 
 - Added `BranchChatWorkspaceRequest` and `BranchChatWorkspaceResponse`.
 - Added `POST /api/sessions/{session_id}/branch-workspace`.
-- The new route:
+- The branch workspace route:
   - loads the source session/workspace
   - requires a completed source coding-agent turn with a durable resume anchor
   - creates a new workspace
-  - preserves the source local `task_id` link when present
+  - links to an explicit current issue when provided, otherwise preserves the
+    source local `task_id` link when present
   - attaches the same repos with the source workspace branch as target branch
   - creates a new session and starts it as a `CodingAgentFollowUpRequest`
     against the source agent session id
   - emits immediate execution/workspace patches and analytics
 - Regenerated `shared/types.ts`.
 - Added `sessionsApi.branchWorkspace`.
-- Added a Branch chat toolbar icon to existing workspace chat sessions. The
-  current editor text becomes the branch instruction, then the UI navigates to
-  the new workspace.
+- Added a `Branch chat` toolbar dropdown to existing workspace chat sessions.
+  The current editor text becomes the branch instruction.
+- The dropdown can create a new workspace from the source chat context and link
+  it under the current issue when the chat is viewed inside an issue route.
+- The dropdown can also open a new sub-issue draft inside the current issue,
+  seeded from the branch instruction and review comment context.
 
 ## Validation So Far
 

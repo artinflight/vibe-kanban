@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useParams } from '@tanstack/react-router';
 import { useDropzone } from 'react-dropzone';
 import {
   type AskUserQuestionItem,
@@ -41,6 +42,7 @@ import {
   splitMessageToTitleDescription,
   toPrettyCase,
 } from '@/shared/lib/string';
+import { dispatchWorkspaceLinkRefresh } from '@/shared/lib/workspaceLinkRefresh';
 import {
   SessionChatBox,
   type ExecutionStatus,
@@ -66,7 +68,11 @@ import { useActionVisibilityContext } from '@/shared/hooks/useActionVisibilityCo
 import { PrCommentsDialog } from '@/shared/dialogs/tasks/PrCommentsDialog';
 import type { NormalizedComment } from '@vibe/ui/components/pr-comment-node';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
-import { sessionsApi } from '@/shared/lib/api';
+import {
+  buildKanbanIssueComposerKey,
+  openKanbanIssueComposer,
+} from '@/shared/stores/useKanbanIssueComposerStore';
+import { sessionsApi, workspacesApi } from '@/shared/lib/api';
 import { RenameSessionDialog } from '@vibe/ui/components/RenameSessionDialog';
 import type { TurnNavigationItem } from '@vibe/ui/components/TurnNavigationPopup';
 import { GitBranchIcon } from '@phosphor-icons/react';
@@ -177,6 +183,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
   const sessionId = session?.id;
   const queryClient = useQueryClient();
   const hostId = useHostId();
+  const { projectId, issueId } = useParams({ strict: false });
 
   const handleRenameSession = useCallback(
     (targetSessionId: string, currentName: string) => {
@@ -195,21 +202,48 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
   const appNavigation = useAppNavigation();
 
   const branchWorkspaceMutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       sessionId,
       data,
     }: {
       sessionId: string;
       data: Parameters<typeof sessionsApi.branchWorkspace>[1];
-    }) => sessionsApi.branchWorkspace(sessionId, data),
+    }) => {
+      const response = await sessionsApi.branchWorkspace(sessionId, data);
+      if (projectId && issueId && !response.workspace.task_id) {
+        await workspacesApi.linkToIssue(
+          response.workspace.id,
+          projectId,
+          issueId
+        );
+        dispatchWorkspaceLinkRefresh({ projectId });
+      }
+      return response;
+    },
     onSuccess: async ({ workspace }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: workspaceSummaryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['taskWorkspaces'] }),
+        queryClient.invalidateQueries({
+          queryKey: ['taskWorkspacesWithSessions'],
+        }),
         queryClient.invalidateQueries({
           queryKey: workspaceSessionKeys.byWorkspace(workspace.id, hostId),
         }),
       ]);
-      appNavigation.goToWorkspace(workspace.id);
+      if (projectId) {
+        dispatchWorkspaceLinkRefresh({ projectId });
+      }
+
+      if (projectId && issueId) {
+        appNavigation.goToProjectIssueWorkspace(
+          projectId,
+          issueId,
+          workspace.id
+        );
+      } else {
+        appNavigation.goToWorkspace(workspace.id);
+      }
     },
   });
 
@@ -614,6 +648,13 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
 
     const { prompt } = buildAgentPrompt(localMessage, [reviewMarkdown]);
     const { title } = splitMessageToTitleDescription(localMessage);
+    const linkedIssue =
+      projectId && issueId
+        ? {
+            remote_project_id: projectId,
+            issue_id: issueId,
+          }
+        : null;
 
     try {
       await branchWorkspaceMutation.mutateAsync({
@@ -621,6 +662,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         data: {
           name: title,
           prompt,
+          linked_issue: linkedIssue,
           executor_config: executorConfig,
         },
       });
@@ -638,7 +680,41 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     executorConfig,
     localMessage,
     reviewMarkdown,
+    projectId,
+    issueId,
     branchWorkspaceMutation,
+    cancelDebouncedSave,
+    setLocalMessage,
+    clearUploadedAttachments,
+    clearDraft,
+    reviewContext,
+  ]);
+
+  const handleBranchIssue = useCallback(async () => {
+    if (!projectId || !issueId || !localMessage.trim()) return;
+
+    const { prompt } = buildAgentPrompt(localMessage, [reviewMarkdown]);
+    const { title, description } = splitMessageToTitleDescription(localMessage);
+    openKanbanIssueComposer(buildKanbanIssueComposerKey(hostId, projectId), {
+      title,
+      description: reviewMarkdown ? prompt : description,
+      parentIssueId: issueId,
+      createDraftWorkspace: false,
+    });
+    appNavigation.goToProjectIssue(projectId, issueId);
+
+    cancelDebouncedSave();
+    setLocalMessage('');
+    clearUploadedAttachments();
+    await clearDraft();
+    reviewContext?.clearComments();
+  }, [
+    projectId,
+    issueId,
+    localMessage,
+    reviewMarkdown,
+    hostId,
+    appNavigation,
     cancelDebouncedSave,
     setLocalMessage,
     clearUploadedAttachments,
@@ -862,17 +938,35 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
 
     if (!isNewSessionMode && sessionId) {
       actionItems.push({
-        id: 'branch-workspace',
+        id: 'branch-chat',
         icon: GitBranchIcon,
         label: 'Branch chat',
         tooltip: localMessage.trim()
-          ? 'Start a new workspace from this chat context'
+          ? 'Branch this chat into an issue or workspace'
           : 'Type a branch instruction first',
-        disabled:
-          !executorConfig ||
-          !localMessage.trim() ||
-          branchWorkspaceMutation.isPending,
-        onClick: () => void handleBranchWorkspace(),
+        disabled: !localMessage.trim() || branchWorkspaceMutation.isPending,
+        items: [
+          {
+            id: 'branch-workspace',
+            label:
+              projectId && issueId ? 'New workspace in issue' : 'New workspace',
+            tooltip: executorConfig
+              ? 'Start a new workspace from this chat context'
+              : 'Choose an agent first',
+            onClick: () => void handleBranchWorkspace(),
+            disabled: !executorConfig || branchWorkspaceMutation.isPending,
+          },
+          {
+            id: 'branch-issue',
+            label: 'New issue in current issue',
+            tooltip:
+              projectId && issueId
+                ? 'Create a sub-issue from this chat context'
+                : 'Open an issue before creating a sub-issue',
+            onClick: () => void handleBranchIssue(),
+            disabled: !projectId || !issueId,
+          },
+        ],
       });
     }
 
@@ -885,8 +979,11 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     sessionId,
     localMessage,
     executorConfig,
+    projectId,
+    issueId,
     branchWorkspaceMutation.isPending,
     handleBranchWorkspace,
+    handleBranchIssue,
   ]);
 
   // Handle approve action

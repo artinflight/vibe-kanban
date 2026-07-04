@@ -48,6 +48,7 @@ pub struct CreateAndStartWorkspaceResponse {
 pub struct BranchChatWorkspaceRequest {
     pub name: Option<String>,
     pub prompt: String,
+    pub linked_issue: Option<LinkedIssueInfo>,
     pub executor_config: ExecutorConfig,
 }
 

@@ -404,7 +404,7 @@ export type CreateAndStartWorkspaceRequest = { name: string | null, repos: Array
 
 export type CreateAndStartWorkspaceResponse = { workspace: Workspace, execution_process: ExecutionProcess, };
 
-export type BranchChatWorkspaceRequest = { name: string | null, prompt: string, executor_config: ExecutorConfig, };
+export type BranchChatWorkspaceRequest = { name: string | null, prompt: string, linked_issue: LinkedIssueInfo | null, executor_config: ExecutorConfig, };
 
 export type BranchChatWorkspaceResponse = { workspace: Workspace, execution_process: ExecutionProcess, };
 

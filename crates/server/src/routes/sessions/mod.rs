@@ -313,10 +313,13 @@ pub async fn branch_workspace(
 
     let mut managed_workspace = deployment
         .workspace_manager()
-        .load_managed_workspace(create_workspace_record(&deployment, payload.name, None).await?)
+        .load_managed_workspace(
+            create_workspace_record(&deployment, payload.name, payload.linked_issue.as_ref())
+                .await?,
+        )
         .await?;
 
-    if source_workspace.task_id.is_some() {
+    if managed_workspace.workspace.task_id.is_none() && source_workspace.task_id.is_some() {
         Workspace::update_task_id(
             pool,
             managed_workspace.workspace.id,

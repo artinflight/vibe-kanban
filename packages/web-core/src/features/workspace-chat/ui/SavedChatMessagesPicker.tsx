@@ -51,7 +51,7 @@ export function SavedChatMessagesPicker({
             <DropdownMenuItem
               key={message.id}
               icon={ChatCircleTextIcon}
-              onClick={() => onSelect(message.content)}
+              onSelect={() => onSelect(message.content)}
             >
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-sm">{message.title}</span>
@@ -67,7 +67,7 @@ export function SavedChatMessagesPicker({
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem icon={GearSixIcon} onClick={handleOpenSettings}>
+        <DropdownMenuItem icon={GearSixIcon} onSelect={handleOpenSettings}>
           Manage saved messages
         </DropdownMenuItem>
       </DropdownMenuContent>

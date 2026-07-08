@@ -388,8 +388,20 @@ impl StandardCodingAgentExecutor for Codex {
                         reasoning_options: xhigh_reasoning_options.clone(),
                     },
                     ModelInfo {
+                        id: "gpt-5.4-mini".to_string(),
+                        name: "GPT-5.4 Mini".to_string(),
+                        provider_id: None,
+                        reasoning_options: xhigh_reasoning_options.clone(),
+                    },
+                    ModelInfo {
                         id: "gpt-5.4-fast".to_string(),
                         name: "GPT-5.4 Fast".to_string(),
+                        provider_id: None,
+                        reasoning_options: xhigh_reasoning_options.clone(),
+                    },
+                    ModelInfo {
+                        id: "gpt-5.3-codex-spark".to_string(),
+                        name: "GPT-5.3 Codex Spark".to_string(),
                         provider_id: None,
                         reasoning_options: xhigh_reasoning_options.clone(),
                     },

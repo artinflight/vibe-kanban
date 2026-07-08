@@ -560,3 +560,13 @@ Current self-development workflow state, 2026-06-26:
   - `VK_SELF_DEVELOPMENT_WORKFLOW.md`
   - `scripts/vk_selfdev_guard.sh`
   - `scripts/vk_live_regression_smoke.py`
+
+Current Codex model state, 2026-07-08:
+
+- Official Codex guidance recommends `gpt-5.5` for most Codex tasks.
+- The VK isolated Codex home had been pinned to `gpt-5.4` with `high` reasoning.
+- It has been updated locally to:
+  - `model = "gpt-5.5"`
+  - `model_reasoning_effort = "xhigh"`
+- The branch `vk/1b5d-vk-chat-models` adds `gpt-5.4-mini` and
+  `gpt-5.3-codex-spark` to the VK Codex model selector.

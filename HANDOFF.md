@@ -1,121 +1,43 @@
 # HANDOFF.md
 
-## Current Preview Status — 2026-07-04
-
-- Branch: `vk/a5ed-vk-saved-message`
-- Worktree:
-  `/home/mcp/code/worktrees/a5ed-vk-saved-message/_vibe_kanban_repo`
-- Preview status: local origin is running and the operator-facing `.local`
-  HTTPS route is verified.
-- Command used: `scripts/preview.sh start`
-- Working directory:
-  `/home/mcp/code/worktrees/a5ed-vk-saved-message/_vibe_kanban_repo`
-- Port: `3025`
-- Local URL: `http://127.0.0.1:3025/`
-- `.local` HTTPS URL intended for operator access:
-  `https://vk-preview.local/`
-- Service name: `vk-preview-vibe-kanban`
-- Logs command: `journalctl --user -u vk-preview-vibe-kanban`
-- Stop command: `scripts/preview.sh stop`
-- DNS/proxy route owner: homelab host `10.0.0.97`; Docker `nginx`
-  container config under
-  `/home/homelab1/docker/network/nginx/config/conf.d`; Pi-hole DNS under
-  `/home/homelab1/docker/network/pihole`.
-- Access limits: SSH user `mcp@homelab` can manage this route through Docker
-  access. The nginx vhost and Pi-hole DNS entry for `vk-preview.local` are
-  installed on homelab host `10.0.0.97`.
-- Validation commands and results:
-  - `scripts/preview.sh start` passed and started `vk-preview-vibe-kanban`
-    with `vk-preview.local` allowed by Vite.
-  - `curl --silent --fail --max-time 5 http://127.0.0.1:3025/ | rg -q
-    'Vibe Kanban'` passed via `scripts/preview.sh verify`.
-  - Added MCP host local-router route
-    `vk-preview.local -> 127.0.0.1:3025` in
-    `/home/mcp/.local/share/froutreach-local/local-host-router.mjs` and
-    restarted `mealplan-host-router.service`.
-  - Added MCP host local-router compatibility response for
-    `vk-preview.local/v1/fallback/user_workspaces`, backed by
-    `http://127.0.0.1:4311/api/workspaces`, so the preview workspace sidebar
-    receives JSON instead of the Vite HTML fallback.
-  - Updated MCP host local-router shutdown handling to force-close open
-    sockets on `SIGTERM`; this prevents router restarts from hanging on
-    active preview connections.
-  - `curl --silent --fail --max-time 5 -H 'Host: vk-preview.local'
-    http://127.0.0.1:3010/ | rg -q 'Vibe Kanban'` passed.
-  - Added Pi-hole DNS entry `10.0.0.97 vk-preview.local` in
-    `/etc/pihole/pihole.toml` through the `pihole` container and reloaded DNS
-    with `docker exec pihole pihole reloaddns`.
-  - Added homelab nginx HTTPS vhost `vk-preview.local` through the `nginx`
-    container, generated `/etc/nginx/ssl/vk-preview.local.{crt,key}` signed by
-    `MyHomelabCA`, verified with `docker exec nginx nginx -t`, and reloaded
-    nginx with `docker exec nginx nginx -s reload`.
-  - `getent hosts vk-preview.local` returns `10.0.0.97`.
-  - `curl -k -I --resolve vk-preview.local:443:10.0.0.97
-    https://vk-preview.local/` returned HTTP `200` from the VK preview.
-  - `curl -k --resolve vk-preview.local:443:10.0.0.97
-    https://vk-preview.local/ | rg 'Vibe Kanban'` passed.
-  - `curl -k https://vk-preview.local/v1/fallback/user_workspaces` returns
-    JSON with `528` workspaces.
-  - Playwright browser smoke against `https://vk-preview.local/` showed
-    populated projects and a workspace count of `50`.
-  - `scripts/preview.sh verify` passed and printed
-    `Preview URL: https://vk-preview.local/`.
-- Required route work:
-  - None for the current preview route.
-  - MCP local host-router route is already added for `vk-preview.local` to
-    `127.0.0.1:3025`.
-
 ## Pickup Note
 
-- Branch: `staging`
+- Branch: `vk/1b5d-vk-chat-models`
 - Worktree:
-  `/home/mcp/code/worktrees/a6c2-vk-multi-line-in/_vibe_kanban_repo`
-- Current focus: staging integration of completed VK feature/fix branches.
-- Live deploy/restart status: none performed from this worktree.
+  `/home/mcp/code/worktrees/1b5d-vk-chat-models/_vibe_kanban_repo`
+- Current focus: Codex model availability and default-model repair for local VK.
+- Live deploy/restart status: none performed in this branch session.
 
-## What Is True Right Now
+## What Changed This Session
 
-- Local `staging` was clean before merging `fork/staging`.
-- `fork/staging` contributed the workspace chat replay stability fix:
-  - `packages/web-core/src/shared/lib/streamJsonPatchEntries.ts`
-  - `packages/web-core/src/shared/lib/streamJsonPatchEntries.test.ts`
-- Local `staging` already contained:
-  - multiline paste preservation in workspace creation
-  - archive-to-Done linked workspace cleanup
-  - ntfy agent turn-completion notification work
-- The current operator request is to rebase and merge
-  `vk/a5ed-vk-saved-message` into `staging`.
+- Verified current Codex model guidance from official OpenAI docs.
+- Found VK's isolated Codex home was pinned to `gpt-5.4` with `high`
+  reasoning, so VK's default Codex runs were not following the current Codex
+  recommended default.
+- Updated `/home/mcp/.local/share/vibe-kanban/codex-home/config.toml` to use:
+  - `model = "gpt-5.5"`
+  - `model_reasoning_effort = "xhigh"`
+- Added the currently documented Codex choices missing from VK's Codex model
+  selector:
+  - `gpt-5.4-mini`
+  - `gpt-5.3-codex-spark`
 
-## Validation Known From Landed Streams
+## Validation
 
-- Ntfy turn-completion stream:
-  - `cargo fmt --all --check`
-  - `cargo fmt --all --manifest-path crates/remote/Cargo.toml --check`
-  - `pnpm install --offline --frozen-lockfile`
-  - `cargo test -p services notification::tests`
-  - `pnpm run format`
-- Chat replay stream:
-  - `pnpm install --offline --frozen-lockfile`
-  - `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/web-core run check`
-  - `pnpm run format`
-- Saved messages stream:
-  - `pnpm run format`
-  - `pnpm --filter @vibe/ui run format`
-  - `pnpm --filter @vibe/ui run format:check`
-  - `pnpm --filter @vibe/ui run check`
-  - `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/web-core run check`
-  - `scripts/preview.sh verify`
+- `cargo fmt --all --check`
+- `cargo test -p executors codex --lib`
+- `pnpm install --frozen-lockfile`
+- `pnpm run format`
+- `CODEX_HOME=/home/mcp/.local/share/vibe-kanban/codex-home /home/mcp/.local/bin/codex --version`
+- Confirmed the isolated Codex config begins with `gpt-5.5` / `xhigh`.
 
 ## Validation Gaps / Failures
 
-- No live production deploy or restart has been performed from this staging
-  worktree.
-- The chat replay Vitest command could not run because `vitest` is not a
-  project dependency.
+- No live VK service rebuild, restart, or UI smoke was performed.
+- Broader PR baseline checks such as `pnpm run check`, `pnpm run lint`, and
+  `cargo test --workspace` were not run.
 
 ## Next Safe Steps
 
-1. Finish the `fork/staging` merge.
-2. Rebase `vk/a5ed-vk-saved-message` onto local `staging`.
-3. Merge `vk/a5ed-vk-saved-message` into local `staging`.
-4. Run final formatting and focused checks for the staging result.
+1. Deploy/restart only through the normal VK deployment workflow if the selector
+   update should appear in the live UI.

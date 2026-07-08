@@ -2,50 +2,56 @@
 
 ## Stream Identifier
 
-- Branch: `staging`
+- Branch: `vk/1b5d-vk-chat-models`
 - Repo:
-  `/home/mcp/code/worktrees/a6c2-vk-multi-line-in/_vibe_kanban_repo`
-- Working mode: VK staging integration branch
+  `/home/mcp/code/worktrees/1b5d-vk-chat-models/_vibe_kanban_repo`
+- Base: local `staging`
+- Working mode: VK Codex model availability and default-model repair
 
 ## Objective
 
-- Keep `staging` as the integration branch for validated VK fixes before any
-  production promotion.
+- Bring VK's Codex model selector and isolated Codex default in line with the
+  current Codex model guidance.
+
+## In Scope
+
+- Local VK Codex executor model list.
+- VK isolated Codex home default model and reasoning effort.
+- Focused validation for selector/config changes.
+
+## Out of Scope
+
+- Restarting or deploying the live `vibe-kanban.service`.
+- Changing Codex account entitlements or ChatGPT plan state.
+- Reworking dynamic model discovery from Codex itself.
 
 ## Current Status
 
-- Local `staging` contains the multiline paste fix, archive-to-Done cleanup,
-  and ntfy agent turn-completion notification work.
-- `fork/staging` added the workspace chat replay stability fix from
-  `vk/a8c5-vk-something-wro`.
-- The current integration is merging `fork/staging` into local `staging` before
-  rebasing and merging `vk/a5ed-vk-saved-message`.
-- No live deploy, frontend symlink swap, service restart, or live DB mutation
-  has been performed from this staging worktree.
+- Verified current official Codex guidance:
+  - `gpt-5.5` is the recommended Codex model for most tasks.
+  - `gpt-5.4-mini` is recommended for lighter/faster coding tasks and
+    subagents.
+  - `gpt-5.3-codex-spark` is a research-preview model available to ChatGPT Pro
+    subscribers for near-instant text-only coding iteration.
+- Confirmed VK's isolated Codex config had been pinned to:
+  - `model = "gpt-5.4"`
+  - `model_reasoning_effort = "high"`
+- Updated the isolated VK Codex config to:
+  - `model = "gpt-5.5"`
+  - `model_reasoning_effort = "xhigh"`
+- Added `gpt-5.4-mini` and `gpt-5.3-codex-spark` to VK's Codex model selector.
 
 ## Validation
 
-- Prior ntfy validation included:
-  - `cargo fmt --all --check`
-  - `cargo fmt --all --manifest-path crates/remote/Cargo.toml --check`
-  - `pnpm install --offline --frozen-lockfile`
-  - `cargo test -p services notification::tests`
-  - `pnpm run format`
-- Prior chat replay validation included:
-  - `pnpm install --offline --frozen-lockfile`
-  - `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/web-core run check`
-  - `pnpm run format`
-
-## Validation Gaps / Failures
-
-- The chat replay test file was not run under Vitest because `vitest` is not
-  installed as a project dependency.
-- No live deploy or production restart has been performed for these staging
-  integrations.
+- `cargo fmt --all --check`
+- `cargo test -p executors codex --lib`
+- `pnpm install --frozen-lockfile`
+- `pnpm run format`
+- `CODEX_HOME=/home/mcp/.local/share/vibe-kanban/codex-home /home/mcp/.local/bin/codex --version`
+- Confirmed `/home/mcp/.local/share/vibe-kanban/codex-home/config.toml`
+  now starts with `gpt-5.5` / `xhigh`.
 
 ## Next Safe Steps
 
-1. Finish merging `fork/staging` into local `staging`.
-2. Rebase `vk/a5ed-vk-saved-message` onto local `staging`.
-3. Merge `vk/a5ed-vk-saved-message` into local `staging`.
-4. Run formatting and the narrow checks relevant to the final staging state.
+1. Rebuild/restart VK through the normal deployment workflow before expecting
+   the new selector entries in the UI.

@@ -24,10 +24,10 @@ let _remoteApiBase: string = BUILD_TIME_API_BASE;
 /**
  * Set the remote API base URL at runtime.
  * Called by ConfigProvider when /api/info returns a shared_api_base value.
- * No-op if base is null/undefined/empty (preserves build-time fallback).
+ * `undefined` preserves the build-time fallback; `null` clears it for local-only mode.
  */
 export function setRemoteApiBase(base: string | null | undefined) {
-  _remoteApiBase = base || BUILD_TIME_API_BASE;
+  _remoteApiBase = base === undefined ? BUILD_TIME_API_BASE : (base ?? '');
   if (_remoteApiBase) {
     syncRelayApiBaseWithRemote(_remoteApiBase);
   }
@@ -39,6 +39,10 @@ export function setRemoteApiBase(base: string | null | undefined) {
  */
 export function getRemoteApiUrl(): string {
   return _remoteApiBase;
+}
+
+export function hasRemoteApiUrl(): boolean {
+  return _remoteApiBase.trim().length > 0;
 }
 
 // Backward-compatible export — consumers should migrate to getRemoteApiUrl()
@@ -306,6 +310,10 @@ export async function commitIssueAttachments(
   issueId: string,
   request: CommitAttachmentsRequest
 ): Promise<CommitAttachmentsResponse> {
+  if (!hasRemoteApiUrl()) {
+    return { attachments: [] };
+  }
+
   const response = await makeRequest(
     `/v1/issues/${issueId}/attachments/commit`,
     {
@@ -326,6 +334,10 @@ export async function commitCommentAttachments(
   commentId: string,
   request: CommitAttachmentsRequest
 ): Promise<CommitAttachmentsResponse> {
+  if (!hasRemoteApiUrl()) {
+    return { attachments: [] };
+  }
+
   const response = await makeRequest(
     `/v1/comments/${commentId}/attachments/commit`,
     {
@@ -343,6 +355,17 @@ export async function commitCommentAttachments(
 }
 
 export async function deleteAttachment(attachmentId: string): Promise<void> {
+  if (!hasRemoteApiUrl()) {
+    const response = await fetch(`/api/attachments/${attachmentId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw await parseErrorResponse(response, 'Failed to delete attachment');
+    }
+    return;
+  }
+
   const response = await makeRequest(`/v1/attachments/${attachmentId}`, {
     method: 'DELETE',
   });
@@ -355,6 +378,10 @@ export async function fetchAttachmentSasUrl(
   attachmentId: string,
   type: 'file' | 'thumbnail'
 ): Promise<string> {
+  if (!hasRemoteApiUrl()) {
+    return `/api/attachments/${attachmentId}/file`;
+  }
+
   const cacheKey = `${attachmentId}:${type}`;
   const cached = sasUrlCache.get(cacheKey);
   if (cached && Date.now() < cached.expiresAt) {

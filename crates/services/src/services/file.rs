@@ -116,7 +116,7 @@ impl FileService {
         let clean_name = sanitize_filename(original_filename);
         let new_filename = format!("{}_{}.{}", Uuid::new_v4(), clean_name, extension);
         let cached_path = self.cache_dir.join(&new_filename);
-        fs::write(&cached_path, data)?;
+        write_file_creating_parent(&cached_path, data)?;
 
         let create_result = File::create(
             &self.pool,
@@ -312,5 +312,31 @@ fn is_duplicate_attachment_hash_error(err: &sqlx::Error) -> bool {
             .message()
             .contains("UNIQUE constraint failed: attachments.hash"),
         _ => false,
+    }
+}
+
+fn write_file_creating_parent(path: &Path, data: &[u8]) -> std::io::Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    fs::write(path, data)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::write_file_creating_parent;
+
+    #[test]
+    fn cached_file_write_recreates_missing_parent_dir() {
+        let temp_dir = tempfile::tempdir().expect("create temp dir");
+        let path = temp_dir.path().join("attachments").join("screenshot.jpg");
+
+        write_file_creating_parent(&path, b"image-bytes").expect("write cached file");
+
+        assert_eq!(
+            std::fs::read(path).expect("read cached file"),
+            b"image-bytes"
+        );
     }
 }

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LocalAttachmentMetadata } from '@vibe/ui/components/WorkspaceContext';
+import { attachmentsApi } from '@/shared/lib/api';
 import {
   computeFileHash,
   confirmAttachmentUpload,
   deleteAttachment,
+  hasRemoteApiUrl,
   initAttachmentUpload,
   uploadToAzure,
 } from '@/shared/lib/remoteApi';
@@ -92,6 +94,20 @@ function inferFormat(file: File): string {
   }
 
   return file.type.split('/')[1] ?? 'bin';
+}
+
+function toLocalAttachmentMetadata(
+  attachment: Awaited<ReturnType<typeof attachmentsApi.upload>>,
+  src: string
+): LocalAttachmentMetadata {
+  return {
+    path: src,
+    proxy_url: `/api/attachments/${attachment.id}/file`,
+    file_name: attachment.original_name,
+    size_bytes: Number(attachment.size_bytes),
+    format: attachment.mime_type?.split('/')[1] ?? 'bin',
+    mime_type: attachment.mime_type ?? 'application/octet-stream',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -229,6 +245,72 @@ export function useAzureAttachments({
         const { file, tempSrc } = pendingLocal;
 
         try {
+          if (!hasRemoteApiUrl()) {
+            setPendingAttachments((prev) =>
+              prev.map((p) =>
+                p.file === file ? { ...p, status: 'uploading', progress: 0 } : p
+              )
+            );
+            setLocalAttachments((prev) =>
+              prev.map((localFile) =>
+                localFile.path === tempSrc
+                  ? {
+                      ...localFile,
+                      pending_status: 'uploading',
+                      upload_progress: 0,
+                    }
+                  : localFile
+              )
+            );
+
+            const result = await attachmentsApi.upload(file);
+            const finalSrc = `attachment://${result.id}`;
+
+            setCompletedAttachments((prev) => [
+              ...prev,
+              {
+                id: result.id,
+                filename: result.original_name,
+                blob_id: '',
+              },
+            ]);
+            setPendingAttachments((prev) =>
+              prev.filter((p) => p.file !== file)
+            );
+            setLocalAttachments((prev) =>
+              prev.map((localFile) =>
+                localFile.path === tempSrc
+                  ? toLocalAttachmentMetadata(result, finalSrc)
+                  : localFile
+              )
+            );
+            const objectUrl = localObjectsRef.current.get(tempSrc);
+            localObjectsRef.current.delete(tempSrc);
+            if (objectUrl) {
+              URL.revokeObjectURL(objectUrl);
+            }
+
+            const replaced = onAttachmentSourceReplaceRef.current?.(
+              tempSrc,
+              finalSrc,
+              {
+                persist: pendingCountRef.current <= 1,
+              }
+            );
+            if (replaced === false) {
+              setCompletedAttachments((prev) =>
+                prev.filter((attachment) => attachment.id !== result.id)
+              );
+              setLocalAttachments((prev) =>
+                prev.filter((localFile) => localFile.path !== finalSrc)
+              );
+              deleteAttachment(result.id).catch((error) => {
+                console.error('Failed to delete abandoned attachment:', error);
+              });
+            }
+            continue;
+          }
+
           const hash = await computeFileHash(file);
 
           setPendingAttachments((prev) =>

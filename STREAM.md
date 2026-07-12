@@ -2,60 +2,69 @@
 
 ## Stream Identifier
 
-- Branch: `vk/1b5d-vk-chat-models`
+- Branch: `vk/419a-vk-allow-follow`
 - Repo:
-  `/home/mcp/code/worktrees/1b5d-vk-chat-models/_vibe_kanban_repo`
+  `/home/mcp/code/worktrees/419a-vk-allow-follow/_vibe_kanban_repo`
 - Base: local `staging`
-- Working mode: VK Codex 5.6 Sol upgrade
+- Working mode: VK queued agent follow-ups
 
 ## Objective
 
-- Update VK's Codex runtime and model selector for the GPT-5.6 Codex model
-  family, with Sol as the local default.
+- Allow users to send follow-up messages while a coding-agent turn is still
+  running, without stopping or interrupting that running process.
 
 ## In Scope
 
-- Global Codex npm package used by `/home/mcp/.local/bin/codex`.
-- Local VK Codex executor model list.
-- VK isolated Codex home default model and reasoning effort.
-- Generated shared TypeScript types and executor JSON schema.
-- Focused validation for selector/config/runtime changes.
+- Local session follow-up queue behavior.
+- Local execution monitor handoff from completed agent turn to queued follow-up.
+- Chat UI queue status for pending follow-ups.
+- Generated local shared TypeScript types.
 
 ## Out of Scope
 
-- Restarting or deploying the live `vibe-kanban.service`.
-- Changing Codex account entitlements or ChatGPT plan state.
-- Reworking dynamic model discovery from Codex itself.
+- Live `vibe-kanban.service` restart or deployment.
+- Remote/cloud queue persistence.
+- Changing executor protocols to inject into an active process mid-turn.
 
 ## Current Status
 
-- Updated global `@openai/codex` from `0.142.5` to `0.144.1`.
-- Verified current official Codex guidance:
-  - `gpt-5.6-sol` is the flagship GPT-5.6 model for complex coding and
-    research work.
-  - `gpt-5.6-terra` is the balanced everyday GPT-5.6 model.
-  - `gpt-5.6-luna` is the fast, lower-cost GPT-5.6 model.
-  - Max reasoning is documented as a higher-depth option when enabled.
-- Updated the isolated VK Codex config to:
-  - `model = "gpt-5.6-sol"`
-  - `model_reasoning_effort = "xhigh"`
-- Added `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna` to VK's Codex
-  model selector.
-- Added Codex `max` reasoning support to the VK selector/config schema.
-- Regenerated shared local TypeScript types and executor schemas.
+- Queueing a follow-up for a running session now appends to the session queue
+  instead of replacing the previous queued message.
+- When the current agent turn is ready to hand off, queued messages are collapsed
+  into one ordered follow-up prompt and started as the next coding-agent turn.
+- Existing `data` remains in the queue API response as the most recent queued
+  message for compatibility and edit restore.
+- The queue API response now also includes `messages` with all pending
+  follow-ups in order.
+- The chat UI displays a queued message count when more than one follow-up is
+  waiting.
+- The local type generator now trims line-end whitespace before writing
+  `shared/types.ts`, so generated type changes pass whitespace checks.
 
 ## Validation
 
-- `npm view @openai/codex version dist.tarball bin --json`
-- `npm install -g @openai/codex@0.144.1`
-- `CODEX_HOME=/home/mcp/.local/share/vibe-kanban/codex-home /home/mcp/.local/bin/codex --version`
-- `npm list -g @openai/codex --depth=0`
+- `pnpm install --offline --frozen-lockfile`
 - `pnpm run generate-types`
+- `pnpm run generate-types:check`
+- `cargo test -p services queued_message`
 - `pnpm run format`
-- `cargo test -p executors codex --lib`
+- `git diff --check`
+- `NODE_OPTIONS=--max-old-space-size=4096 pnpm run check`:
+  - frontend checks passed
+  - backend workspace check failed on missing system `glib-2.0` pkg-config
+    dependency before reaching changed crates
+- `cargo check -p services -p local-deployment`
+
+## Validation Gaps / Failures
+
+- Plain `pnpm run check` without `NODE_OPTIONS` failed in `local-web:check`
+  because Node hit its default heap limit.
+- Full backend workspace check failed because this environment is missing the
+  system `glib-2.0.pc` dependency required by `glib-sys`.
+- No live service restart, deploy, or browser smoke was performed.
 
 ## Next Safe Steps
 
-1. Commit the source-controlled changes.
-2. Rebuild/restart VK through the normal deployment workflow before expecting
-   the new selector entries in the live UI.
+1. Review the queued follow-up prompt wording.
+2. Run a local UI smoke after preview/dev server startup if desired.
+3. Deploy/restart only through the normal VK deployment workflow.

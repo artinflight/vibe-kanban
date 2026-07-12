@@ -478,6 +478,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     isQueued,
     queuedMessage,
     queuedConfig,
+    queuedCount,
     isQueueLoading,
     queueMessage,
     cancelQueue,
@@ -1053,6 +1054,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         onStop: stopExecution,
         onPasteFiles: uploadFiles,
       }}
+      queuedCount={queuedCount}
       session={{
         sessions,
         selectedSessionId: sessionId,

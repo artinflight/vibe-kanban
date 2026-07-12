@@ -1162,7 +1162,8 @@ impl LocalContainerService {
             );
         }
 
-        if let Err(e) = self.start_queued_follow_up(ctx, &queued_msg.data).await {
+        let queued_data = queued_msg.into_follow_up_data();
+        if let Err(e) = self.start_queued_follow_up(ctx, &queued_data).await {
             tracing::error!("Failed to start queued follow-up: {}", e);
             return QueuedFollowUpOutcome::FailedToStart;
         }

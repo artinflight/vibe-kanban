@@ -15,6 +15,8 @@ interface UseSessionQueueInteractionResult {
   queuedMessage: string | null;
   /** The executor config from the queued message, if any */
   queuedConfig: ExecutorConfig | null;
+  /** Number of queued follow-up messages */
+  queuedCount: number;
   /** Whether a queue operation is in progress */
   isQueueLoading: boolean;
   /** Queue a message for later execution */
@@ -54,6 +56,7 @@ export function useSessionQueueInteraction({
   const queuedMessage = queuedMessageData?.data.message ?? null;
   const queuedConfig: ExecutorConfig | null =
     queuedMessageData?.data.executor_config ?? null;
+  const queuedCount = queuedMessageData?.messages.length ?? 0;
 
   // Mutation for queueing a message
   const queueMutation = useMutation({
@@ -106,6 +109,7 @@ export function useSessionQueueInteraction({
     isQueued,
     queuedMessage,
     queuedConfig,
+    queuedCount,
     isQueueLoading: queueMutation.isPending || cancelMutation.isPending,
     queueMessage,
     cancelQueue,

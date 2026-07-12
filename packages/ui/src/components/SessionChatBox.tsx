@@ -194,6 +194,7 @@ interface SessionChatBoxProps<TExecutor extends string = string> {
   tokenUsageInfo?: ContextUsageInfo | null;
   supportsContextUsage?: boolean;
   dropzone?: DropzoneProps;
+  queuedCount?: number;
 }
 
 function defaultExecutorLabel(executor: string) {
@@ -257,6 +258,7 @@ export function SessionChatBox<TExecutor extends string = string>({
   tokenUsageInfo,
   supportsContextUsage,
   dropzone,
+  queuedCount = 0,
 }: SessionChatBoxProps<TExecutor>) {
   const { t } = useTranslation('tasks');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -630,7 +632,13 @@ export function SessionChatBox<TExecutor extends string = string>({
         >
           <ClockIcon className="h-4 w-4 text-low" />
           <span className="text-sm text-low">
-            {t('followUp.queuedMessage')}
+            {queuedCount > 1
+              ? t('followUp.queuedMessages', {
+                  count: queuedCount,
+                  defaultValue:
+                    '{{count}} messages queued - will execute when current run finishes',
+                })
+              : t('followUp.queuedMessage')}
           </span>
         </div>
       );

@@ -12,10 +12,52 @@ use uuid::Uuid;
 pub struct QueuedMessage {
     /// The session this message is queued for
     pub session_id: Uuid,
-    /// The follow-up data (message + variant)
+    /// The most recent follow-up data. Kept for API compatibility and edit restore.
     pub data: DraftFollowUpData,
+    /// Ordered follow-up messages queued while the agent was running.
+    pub messages: Vec<DraftFollowUpData>,
     /// Timestamp when the message was queued
     pub queued_at: DateTime<Utc>,
+}
+
+impl QueuedMessage {
+    /// Collapse queued follow-ups into one prompt for the next agent turn.
+    pub fn into_follow_up_data(self) -> DraftFollowUpData {
+        let fallback_executor_config = self.data.executor_config.clone();
+        let messages = if self.messages.is_empty() {
+            vec![self.data]
+        } else {
+            self.messages
+        };
+        let executor_config = messages
+            .last()
+            .map(|data| data.executor_config.clone())
+            .unwrap_or(fallback_executor_config);
+
+        let message = if messages.len() == 1 {
+            messages
+                .into_iter()
+                .next()
+                .map(|data| data.message)
+                .unwrap_or_default()
+        } else {
+            let mut prompt = String::from(
+                "The user sent these follow-up messages while the previous turn was still running. Address them in order.\n\n",
+            );
+            for (index, data) in messages.into_iter().enumerate() {
+                if index > 0 {
+                    prompt.push_str("\n\n");
+                }
+                prompt.push_str(&format!("Follow-up {}:\n{}", index + 1, data.message));
+            }
+            prompt
+        };
+
+        DraftFollowUpData {
+            message,
+            executor_config,
+        }
+    }
 }
 
 /// Status of the queue for a session (for frontend display)
@@ -42,11 +84,18 @@ impl QueuedMessageService {
         }
     }
 
-    /// Queue a message for a session. Replaces any existing queued message.
+    /// Queue a message for a session. Appends to any existing queued messages.
     pub fn queue_message(&self, session_id: Uuid, data: DraftFollowUpData) -> QueuedMessage {
+        if let Some(mut existing) = self.queue.get_mut(&session_id) {
+            existing.data = data.clone();
+            existing.messages.push(data);
+            return existing.clone();
+        }
+
         let queued = QueuedMessage {
             session_id,
-            data,
+            data: data.clone(),
+            messages: vec![data],
             queued_at: Utc::now(),
         };
         self.queue.insert(session_id, queued.clone());
@@ -86,5 +135,54 @@ impl QueuedMessageService {
 impl Default for QueuedMessageService {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use db::models::scratch::DraftFollowUpData;
+    use executors::{executors::BaseCodingAgent, profile::ExecutorConfig};
+    use uuid::Uuid;
+
+    use super::*;
+
+    fn follow_up(message: &str) -> DraftFollowUpData {
+        DraftFollowUpData {
+            message: message.to_string(),
+            executor_config: ExecutorConfig::new(BaseCodingAgent::Codex),
+        }
+    }
+
+    #[test]
+    fn queue_message_appends_follow_ups_for_session() {
+        let service = QueuedMessageService::new();
+        let session_id = Uuid::new_v4();
+
+        service.queue_message(session_id, follow_up("first"));
+        let queued = service.queue_message(session_id, follow_up("second"));
+
+        assert_eq!(queued.messages.len(), 2);
+        assert_eq!(queued.messages[0].message, "first");
+        assert_eq!(queued.messages[1].message, "second");
+        assert_eq!(queued.data.message, "second");
+    }
+
+    #[test]
+    fn queued_message_collapses_multiple_follow_ups_in_order() {
+        let session_id = Uuid::new_v4();
+        let queued = QueuedMessage {
+            session_id,
+            data: follow_up("second"),
+            messages: vec![follow_up("first"), follow_up("second")],
+            queued_at: Utc::now(),
+        };
+
+        let data = queued.into_follow_up_data();
+
+        assert!(data.message.contains("Follow-up 1:\nfirst"));
+        assert!(data.message.contains("Follow-up 2:\nsecond"));
+        assert!(
+            data.message.find("Follow-up 1").unwrap() < data.message.find("Follow-up 2").unwrap()
+        );
     }
 }

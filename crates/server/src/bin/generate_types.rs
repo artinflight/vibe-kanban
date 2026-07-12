@@ -291,7 +291,16 @@ fn generate_types_content() -> String {
         serde_json::to_string(DEFAULT_COMMIT_REMINDER_PROMPT).unwrap()
     );
 
-    format!("{HEADER}\n\n{body}\n\n{constants}\n")
+    trim_line_end_whitespace(&format!("{HEADER}\n\n{body}\n\n{constants}\n"))
+}
+
+fn trim_line_end_whitespace(content: &str) -> String {
+    content
+        .lines()
+        .map(str::trim_end)
+        .collect::<Vec<_>>()
+        .join("\n")
+        + "\n"
 }
 
 fn generate_json_schema<T: JsonSchema>() -> Result<String, serde_json::Error> {

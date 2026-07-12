@@ -1,5 +1,70 @@
 # HANDOFF.md
 
+## Current Preview Status — 2026-07-04
+
+- Branch: `vk/a5ed-vk-saved-message`
+- Worktree:
+  `/home/mcp/code/worktrees/a5ed-vk-saved-message/_vibe_kanban_repo`
+- Preview status: local origin is running and the operator-facing `.local`
+  HTTPS route is verified.
+- Command used: `scripts/preview.sh start`
+- Working directory:
+  `/home/mcp/code/worktrees/a5ed-vk-saved-message/_vibe_kanban_repo`
+- Port: `3025`
+- Local URL: `http://127.0.0.1:3025/`
+- `.local` HTTPS URL intended for operator access:
+  `https://vk-preview.local/`
+- Service name: `vk-preview-vibe-kanban`
+- Logs command: `journalctl --user -u vk-preview-vibe-kanban`
+- Stop command: `scripts/preview.sh stop`
+- DNS/proxy route owner: homelab host `10.0.0.97`; Docker `nginx`
+  container config under
+  `/home/homelab1/docker/network/nginx/config/conf.d`; Pi-hole DNS under
+  `/home/homelab1/docker/network/pihole`.
+- Access limits: SSH user `mcp@homelab` can manage this route through Docker
+  access. The nginx vhost and Pi-hole DNS entry for `vk-preview.local` are
+  installed on homelab host `10.0.0.97`.
+- Validation commands and results:
+  - `scripts/preview.sh start` passed and started `vk-preview-vibe-kanban`
+    with `vk-preview.local` allowed by Vite.
+  - `curl --silent --fail --max-time 5 http://127.0.0.1:3025/ | rg -q
+    'Vibe Kanban'` passed via `scripts/preview.sh verify`.
+  - Added MCP host local-router route
+    `vk-preview.local -> 127.0.0.1:3025` in
+    `/home/mcp/.local/share/froutreach-local/local-host-router.mjs` and
+    restarted `mealplan-host-router.service`.
+  - Added MCP host local-router compatibility response for
+    `vk-preview.local/v1/fallback/user_workspaces`, backed by
+    `http://127.0.0.1:4311/api/workspaces`, so the preview workspace sidebar
+    receives JSON instead of the Vite HTML fallback.
+  - Updated MCP host local-router shutdown handling to force-close open
+    sockets on `SIGTERM`; this prevents router restarts from hanging on
+    active preview connections.
+  - `curl --silent --fail --max-time 5 -H 'Host: vk-preview.local'
+    http://127.0.0.1:3010/ | rg -q 'Vibe Kanban'` passed.
+  - Added Pi-hole DNS entry `10.0.0.97 vk-preview.local` in
+    `/etc/pihole/pihole.toml` through the `pihole` container and reloaded DNS
+    with `docker exec pihole pihole reloaddns`.
+  - Added homelab nginx HTTPS vhost `vk-preview.local` through the `nginx`
+    container, generated `/etc/nginx/ssl/vk-preview.local.{crt,key}` signed by
+    `MyHomelabCA`, verified with `docker exec nginx nginx -t`, and reloaded
+    nginx with `docker exec nginx nginx -s reload`.
+  - `getent hosts vk-preview.local` returns `10.0.0.97`.
+  - `curl -k -I --resolve vk-preview.local:443:10.0.0.97
+    https://vk-preview.local/` returned HTTP `200` from the VK preview.
+  - `curl -k --resolve vk-preview.local:443:10.0.0.97
+    https://vk-preview.local/ | rg 'Vibe Kanban'` passed.
+  - `curl -k https://vk-preview.local/v1/fallback/user_workspaces` returns
+    JSON with `528` workspaces.
+  - Playwright browser smoke against `https://vk-preview.local/` showed
+    populated projects and a workspace count of `50`.
+  - `scripts/preview.sh verify` passed and printed
+    `Preview URL: https://vk-preview.local/`.
+- Required route work:
+  - None for the current preview route.
+  - MCP local host-router route is already added for `vk-preview.local` to
+    `127.0.0.1:3025`.
+
 ## Pickup Note
 
 - Branch: `staging`

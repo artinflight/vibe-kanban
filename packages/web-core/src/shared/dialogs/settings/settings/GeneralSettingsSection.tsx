@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { cloneDeep, isEqual, merge } from 'lodash';
 import {
   FolderSimpleIcon,
+  PlusIcon,
   SpeakerHighIcon,
   SpinnerIcon,
+  TrashIcon,
 } from '@phosphor-icons/react';
 import { FolderPickerDialog } from '@/shared/dialogs/shared/FolderPickerDialog';
 import {
@@ -32,6 +34,7 @@ import { useIsMobile } from '@/shared/hooks/useIsMobile';
 import {
   type MobileFontScale,
   useMobileFontScale,
+  useSavedChatMessages,
   useShowLeftColumnLinks,
 } from '@/shared/stores/useUiPreferencesStore';
 import { cn, playSound } from '@/shared/lib/utils';
@@ -63,6 +66,7 @@ export function GeneralSettingsSection() {
   const [mobileFontScale, setMobileFontScale] = useMobileFontScale();
   const [showLeftColumnLinks, setShowLeftColumnLinks] =
     useShowLeftColumnLinks();
+  const [savedChatMessages, setSavedChatMessages] = useSavedChatMessages();
   const languageOptions = getLanguageOptions(
     t('language.browserDefault', {
       ns: 'common',
@@ -80,6 +84,41 @@ export function GeneralSettingsSection() {
     null
   );
   const { setTheme } = useTheme();
+
+  const createSavedMessageId = () =>
+    globalThis.crypto?.randomUUID?.() ??
+    `saved-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  const handleAddSavedMessage = () => {
+    setSavedChatMessages([
+      ...savedChatMessages,
+      {
+        id: createSavedMessageId(),
+        title: t('settings.general.messageInput.savedMessages.defaultTitle', {
+          defaultValue: 'New saved message',
+        }),
+        content: '',
+      },
+    ]);
+  };
+
+  const handleUpdateSavedMessage = (
+    id: string,
+    field: 'title' | 'content',
+    value: string
+  ) => {
+    setSavedChatMessages(
+      savedChatMessages.map((message) =>
+        message.id === id ? { ...message, [field]: value } : message
+      )
+    );
+  };
+
+  const handleDeleteSavedMessage = (id: string) => {
+    setSavedChatMessages(
+      savedChatMessages.filter((message) => message.id !== id)
+    );
+  };
 
   // Executor options for the default coding agent dropdown
   const executorOptions = profiles
@@ -800,6 +839,80 @@ export function GeneralSettingsSection() {
               updateDraft({ send_message_shortcut: value })
             }
           />
+        </SettingsField>
+
+        <SettingsField
+          label={t('settings.general.messageInput.savedMessages.label', {
+            defaultValue: 'Saved messages',
+          })}
+          description={t('settings.general.messageInput.savedMessages.helper', {
+            defaultValue:
+              'Create reusable messages that can be inserted into the chat input.',
+          })}
+        >
+          <div className="space-y-3">
+            {savedChatMessages.length === 0 ? (
+              <div className="rounded-sm border border-dashed border-border bg-secondary px-base py-base text-sm text-low">
+                {t('settings.general.messageInput.savedMessages.empty', {
+                  defaultValue: 'No saved messages yet.',
+                })}
+              </div>
+            ) : (
+              savedChatMessages.map((message, index) => (
+                <div
+                  key={message.id}
+                  className="space-y-2 rounded-sm border border-border bg-secondary p-base"
+                >
+                  <div className="flex items-center gap-base">
+                    <SettingsInput
+                      value={message.title}
+                      onChange={(value) =>
+                        handleUpdateSavedMessage(message.id, 'title', value)
+                      }
+                      placeholder={t(
+                        'settings.general.messageInput.savedMessages.titlePlaceholder',
+                        { defaultValue: 'Title' }
+                      )}
+                    />
+                    <IconButton
+                      icon={TrashIcon}
+                      onClick={() => handleDeleteSavedMessage(message.id)}
+                      aria-label={t(
+                        'settings.general.messageInput.savedMessages.delete',
+                        { defaultValue: 'Delete saved message' }
+                      )}
+                      title={t(
+                        'settings.general.messageInput.savedMessages.delete',
+                        { defaultValue: 'Delete saved message' }
+                      )}
+                    />
+                  </div>
+                  <SettingsTextarea
+                    value={message.content}
+                    onChange={(value) =>
+                      handleUpdateSavedMessage(message.id, 'content', value)
+                    }
+                    placeholder={t(
+                      'settings.general.messageInput.savedMessages.contentPlaceholder',
+                      {
+                        count: index + 1,
+                        defaultValue: `Message ${index + 1}`,
+                      }
+                    )}
+                    rows={3}
+                  />
+                </div>
+              ))
+            )}
+            <PrimaryButton
+              variant="secondary"
+              value={t('settings.general.messageInput.savedMessages.add', {
+                defaultValue: 'Add saved message',
+              })}
+              actionIcon={PlusIcon}
+              onClick={handleAddSavedMessage}
+            />
+          </div>
         </SettingsField>
       </SettingsCard>
 

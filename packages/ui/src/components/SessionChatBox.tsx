@@ -183,6 +183,7 @@ interface SessionChatBoxProps<TExecutor extends string = string> {
   todos?: TodoProgressItem[];
   inProgressTodo?: TodoProgressItem | null;
   localAttachments?: LocalAttachmentMetadata[];
+  footerLeftExtra?: ReactNode;
   onPrCommentClick?: () => void;
   onViewCode?: () => void;
   onOpenWorkspace?: () => void;
@@ -245,6 +246,7 @@ export function SessionChatBox<TExecutor extends string = string>({
   todos,
   inProgressTodo,
   localAttachments,
+  footerLeftExtra,
   onPrCommentClick,
   onViewCode,
   onOpenWorkspace,
@@ -883,6 +885,7 @@ export function SessionChatBox<TExecutor extends string = string>({
       }
       footerLeft={
         <>
+          {footerLeftExtra}
           <ToolbarIconButton
             icon={PaperclipIcon}
             aria-label={t('tasks:taskFormDialog.attachFile')}

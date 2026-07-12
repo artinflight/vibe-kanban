@@ -14,6 +14,7 @@ import {
   DEFAULT_SHOW_LEFT_COLUMN_LINKS,
   type RightMainPanelMode,
   type ContextBarPosition,
+  type SavedChatMessage,
   type WorkspacePanelState,
   type WorkspaceFilterState,
   type WorkspaceSortState,
@@ -28,6 +29,7 @@ import type { RepoAction } from '@vibe/ui/components/RepoCard';
 type UiPreferencesScratchData = UiPreferencesData & {
   local_project_order?: string[];
   show_left_column_links?: boolean | null;
+  saved_chat_messages?: SavedChatMessage[];
 };
 
 // Stable UUID for global UI preferences (not tied to a workspace/user)
@@ -56,6 +58,7 @@ function storeToScratchData(state: {
   localProjectOrder: string[];
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
+  savedChatMessages: SavedChatMessage[];
   kanbanProjectViewSelections: Record<string, KanbanProjectViewSelection>;
   kanbanProjectViewPreferences: Record<
     string,
@@ -94,6 +97,7 @@ function storeToScratchData(state: {
     local_project_order: state.localProjectOrder,
     create_draft_workspace_by_default: state.createDraftWorkspaceByDefault,
     show_left_column_links: state.showLeftColumnLinks,
+    saved_chat_messages: state.savedChatMessages,
     kanban_project_view_selections: state.kanbanProjectViewSelections as Record<
       string,
       JsonValue
@@ -124,6 +128,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
   localProjectOrder: string[];
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
+  savedChatMessages: SavedChatMessage[];
   kanbanProjectViewSelections: Record<string, KanbanProjectViewSelection>;
   kanbanProjectViewPreferences: Record<
     string,
@@ -186,6 +191,21 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
       DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT,
     showLeftColumnLinks:
       data.show_left_column_links ?? DEFAULT_SHOW_LEFT_COLUMN_LINKS,
+    savedChatMessages: Array.isArray(data.saved_chat_messages)
+      ? data.saved_chat_messages
+          .filter(
+            (message): message is SavedChatMessage =>
+              typeof message?.id === 'string' &&
+              typeof message.title === 'string' &&
+              typeof message.content === 'string'
+          )
+          .map((message) => ({
+            id: message.id,
+            title: message.title.trim(),
+            content: message.content,
+          }))
+          .filter((message) => message.title && message.content.trim())
+      : [],
     kanbanProjectViewSelections: (data.kanban_project_view_selections ??
       {}) as Record<string, KanbanProjectViewSelection>,
     kanbanProjectViewPreferences: (data.kanban_project_view_preferences ??
@@ -228,6 +248,7 @@ export function useUiPreferencesScratch() {
     localProjectOrder: state.localProjectOrder,
     createDraftWorkspaceByDefault: state.createDraftWorkspaceByDefault,
     showLeftColumnLinks: state.showLeftColumnLinks,
+    savedChatMessages: state.savedChatMessages,
     kanbanProjectViewSelections: state.kanbanProjectViewSelections,
     kanbanProjectViewPreferences: state.kanbanProjectViewPreferences,
   }));
@@ -264,6 +285,7 @@ export function useUiPreferencesScratch() {
       localProjectOrder: currentState.localProjectOrder,
       createDraftWorkspaceByDefault: currentState.createDraftWorkspaceByDefault,
       showLeftColumnLinks: currentState.showLeftColumnLinks,
+      savedChatMessages: currentState.savedChatMessages,
       kanbanProjectViewSelections: currentState.kanbanProjectViewSelections,
       kanbanProjectViewPreferences: currentState.kanbanProjectViewPreferences,
     });
@@ -322,6 +344,7 @@ export function useUiPreferencesScratch() {
         createDraftWorkspaceByDefault:
           serverState.createDraftWorkspaceByDefault,
         showLeftColumnLinks: serverState.showLeftColumnLinks,
+        savedChatMessages: serverState.savedChatMessages,
         kanbanProjectViewSelections: serverState.kanbanProjectViewSelections,
         kanbanProjectViewPreferences: serverState.kanbanProjectViewPreferences,
       });

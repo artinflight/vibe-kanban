@@ -1334,6 +1334,35 @@ impl ContainerService for LocalContainerService {
         PathBuf::from(workspace.container_ref.clone().unwrap_or_default())
     }
 
+    async fn try_inject_follow_up(
+        &self,
+        session: &Session,
+        data: &DraftFollowUpData,
+    ) -> Result<bool, ContainerError> {
+        let processes =
+            ExecutionProcess::find_by_session_id(&self.db.pool, session.id, false).await?;
+        let Some(process) = processes.into_iter().rev().find(|process| {
+            process.status == ExecutionProcessStatus::Running
+                && process.run_reason == ExecutionProcessRunReason::CodingAgent
+        }) else {
+            return Ok(false);
+        };
+
+        let action = process.executor_action()?;
+        if action.base_executor() != Some(BaseCodingAgent::Codex)
+            || data.executor_config.executor != BaseCodingAgent::Codex
+        {
+            return Ok(false);
+        }
+
+        executors::executors::codex::client::AppServerClient::inject_follow_up_for_execution(
+            process.id,
+            data.message.clone(),
+        )
+        .await
+        .map_err(ContainerError::ExecutorError)
+    }
+
     async fn create(&self, workspace: &Workspace) -> Result<ContainerRef, ContainerError> {
         let (repositories, workspace_inputs) = self.workspace_repo_inputs(workspace.id).await?;
         let workspace_dir = Self::default_workspace_dir(workspace);
@@ -1502,6 +1531,8 @@ impl ContainerService for LocalContainerService {
 
         // Always inject workspace/session context
         env.insert("VK_WORKSPACE_ID", workspace.id.to_string());
+        env.insert("VK_SESSION_ID", execution_process.session_id.to_string());
+        env.insert("VK_EXECUTION_PROCESS_ID", execution_process.id.to_string());
         env.insert("VK_WORKSPACE_BRANCH", &workspace.branch);
 
         // Create the child and stream, add to execution tracker with timeout

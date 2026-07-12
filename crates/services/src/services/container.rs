@@ -20,6 +20,7 @@ use db::{
         merge::MergeStatus,
         pull_request::PullRequest,
         repo::Repo,
+        scratch::DraftFollowUpData,
         session::{CreateSession, Session, SessionError},
         workspace::{Workspace, WorkspaceError},
         workspace_repo::WorkspaceRepo,
@@ -102,6 +103,14 @@ pub trait ContainerService {
     async fn touch(&self, workspace: &Workspace) -> Result<(), ContainerError>;
 
     fn workspace_to_current_dir(&self, workspace: &Workspace) -> PathBuf;
+
+    async fn try_inject_follow_up(
+        &self,
+        _session: &Session,
+        _data: &DraftFollowUpData,
+    ) -> Result<bool, ContainerError> {
+        Ok(false)
+    }
 
     async fn discover_executor_options(
         &self,

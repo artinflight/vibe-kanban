@@ -101,6 +101,7 @@ use serde_json::Value;
 use strum_macros::{AsRefStr, EnumString};
 use tokio::process::Command;
 use ts_rs::TS;
+use uuid::Uuid;
 use workspace_utils::{command_ext::GroupSpawnNoWindowExt, msg_store::MsgStore};
 
 use self::{
@@ -808,6 +809,9 @@ impl Codex {
         let repo_context = env.repo_context.clone();
         let commit_reminder = env.commit_reminder;
         let commit_reminder_prompt = env.commit_reminder_prompt.clone();
+        let execution_process_id = effective_env
+            .get("VK_EXECUTION_PROCESS_ID")
+            .and_then(|value| Uuid::parse_str(value).ok());
         let cancel_for_task = cancel.clone();
 
         tokio::spawn(async move {
@@ -833,12 +837,18 @@ impl Codex {
                 cancel_for_task,
             );
             client.connect(rpc_peer);
+            if let Some(execution_process_id) = execution_process_id {
+                AppServerClient::register_active_execution(execution_process_id, &client);
+            }
 
             let result = async {
                 client.initialize().await?;
                 task(client, exit_signal_tx.clone()).await
             }
             .await;
+            if let Some(execution_process_id) = execution_process_id {
+                AppServerClient::unregister_active_execution(execution_process_id);
+            }
 
             if let Err(err) = result {
                 match &err {

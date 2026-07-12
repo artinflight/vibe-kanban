@@ -2,7 +2,7 @@ use std::{
     collections::{HashMap, VecDeque},
     io,
     sync::{
-        Arc, OnceLock,
+        Arc, Mutex as StdMutex, OnceLock, Weak,
         atomic::{AtomicBool, Ordering},
     },
 };
@@ -20,8 +20,9 @@ use codex_app_server_protocol::{
     ServerRequest, ThreadCompactStartParams, ThreadCompactStartResponse, ThreadForkParams,
     ThreadForkResponse, ThreadItem, ThreadReadParams, ThreadReadResponse, ThreadStartParams,
     ThreadStartResponse, ToolRequestUserInputAnswer, ToolRequestUserInputQuestion,
-    ToolRequestUserInputResponse, TurnCompletedNotification, TurnStartParams, TurnStartResponse,
-    TurnStatus, UserInput,
+    ToolRequestUserInputResponse, TurnCompletedNotification, TurnInterruptParams,
+    TurnInterruptResponse, TurnStartParams, TurnStartResponse, TurnStartedNotification, TurnStatus,
+    UserInput,
 };
 use codex_protocol::config_types::{CollaborationMode, ModeKind, Settings};
 use futures::TryFutureExt;
@@ -32,6 +33,7 @@ use tokio::{
     sync::Mutex,
 };
 use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
 use workspace_utils::approvals::{ApprovalStatus, QuestionStatus};
 
 use super::jsonrpc::{JsonRpcCallbacks, JsonRpcPeer};
@@ -45,11 +47,19 @@ struct PendingPlan {
     item_id: String,
 }
 
+static ACTIVE_CODEX_CLIENTS: OnceLock<StdMutex<HashMap<Uuid, Weak<AppServerClient>>>> =
+    OnceLock::new();
+
+fn active_codex_clients() -> &'static StdMutex<HashMap<Uuid, Weak<AppServerClient>>> {
+    ACTIVE_CODEX_CLIENTS.get_or_init(|| StdMutex::new(HashMap::new()))
+}
+
 pub struct AppServerClient {
     rpc: OnceLock<JsonRpcPeer>,
     log_writer: LogWriter,
     approvals: Option<Arc<dyn ExecutorApprovalService>>,
     thread_id: Mutex<Option<String>>,
+    current_turn_id: Mutex<Option<String>>,
     pending_feedback: Mutex<VecDeque<String>>,
     auto_approve: bool,
     plan_mode: bool,
@@ -83,6 +93,7 @@ impl AppServerClient {
             resolved_model: OnceLock::new(),
             pending_plan: Mutex::new(None),
             thread_id: Mutex::new(None),
+            current_turn_id: Mutex::new(None),
             pending_feedback: Mutex::new(VecDeque::new()),
             repo_context,
             commit_reminder,
@@ -94,6 +105,45 @@ impl AppServerClient {
 
     pub fn connect(&self, peer: JsonRpcPeer) {
         let _ = self.rpc.set(peer);
+    }
+
+    pub fn register_active_execution(execution_process_id: Uuid, client: &Arc<Self>) {
+        active_codex_clients()
+            .lock()
+            .expect("active Codex client registry poisoned")
+            .insert(execution_process_id, Arc::downgrade(client));
+    }
+
+    pub fn unregister_active_execution(execution_process_id: Uuid) {
+        active_codex_clients()
+            .lock()
+            .expect("active Codex client registry poisoned")
+            .remove(&execution_process_id);
+    }
+
+    pub async fn inject_follow_up_for_execution(
+        execution_process_id: Uuid,
+        message: String,
+    ) -> Result<bool, ExecutorError> {
+        let client = {
+            let mut guard = active_codex_clients()
+                .lock()
+                .expect("active Codex client registry poisoned");
+            match guard.get(&execution_process_id).and_then(Weak::upgrade) {
+                Some(client) => Some(client),
+                None => {
+                    guard.remove(&execution_process_id);
+                    None
+                }
+            }
+        };
+
+        let Some(client) = client else {
+            return Ok(false);
+        };
+
+        client.inject_follow_up(message).await?;
+        Ok(true)
     }
 
     pub fn set_resolved_model(&self, model: String) {
@@ -259,6 +309,18 @@ impl AppServerClient {
         self.send_request(request, "thread/read").await
     }
 
+    pub async fn turn_interrupt(
+        &self,
+        thread_id: String,
+        turn_id: String,
+    ) -> Result<TurnInterruptResponse, ExecutorError> {
+        let request = ClientRequest::TurnInterrupt {
+            request_id: self.next_request_id(),
+            params: TurnInterruptParams { thread_id, turn_id },
+        };
+        self.send_request(request, "turn/interrupt").await
+    }
+
     pub async fn config_batch_write(
         &self,
         edits: Vec<ConfigEdit>,
@@ -336,7 +398,8 @@ impl AppServerClient {
                 send_server_response(peer, request_id, response).await?;
                 if let Some(message) = feedback {
                     tracing::debug!("queueing file change denial feedback: {message}");
-                    self.enqueue_feedback(message).await;
+                    self.enqueue_feedback(format!("User feedback: {message}"))
+                        .await;
                 }
                 Ok(())
             }
@@ -371,7 +434,8 @@ impl AppServerClient {
                 send_server_response(peer, request_id, response).await?;
                 if let Some(message) = feedback {
                     tracing::debug!("queueing exec denial feedback: {message}");
-                    self.enqueue_feedback(message).await;
+                    self.enqueue_feedback(format!("User feedback: {message}"))
+                        .await;
                 }
                 Ok(())
             }
@@ -736,6 +800,65 @@ impl AppServerClient {
         guard.push_back(message);
     }
 
+    pub async fn inject_follow_up(&self, message: String) -> Result<(), ExecutorError> {
+        if message.trim().is_empty() {
+            return Ok(());
+        }
+
+        self.enqueue_feedback(message).await;
+
+        let thread_id = self.thread_id.lock().await.clone();
+        let turn_id = self.current_turn_id.lock().await.clone();
+        match (thread_id, turn_id) {
+            (Some(thread_id), Some(turn_id)) => {
+                tracing::debug!(
+                    thread_id = %thread_id,
+                    turn_id = %turn_id,
+                    "interrupting Codex turn to inject follow-up"
+                );
+                if let Err(err) = self.turn_interrupt(thread_id, turn_id).await {
+                    tracing::warn!("failed to interrupt Codex turn for follow-up: {err}");
+                }
+            }
+            (Some(thread_id), None) => {
+                tracing::debug!(
+                    thread_id = %thread_id,
+                    "queued Codex follow-up until the active turn is known"
+                );
+            }
+            (None, _) => {
+                tracing::debug!("queued Codex follow-up until the thread is registered");
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn has_pending_feedback(&self) -> bool {
+        !self.pending_feedback.lock().await.is_empty()
+    }
+
+    async fn interrupt_current_turn_if_pending(&self) -> Result<(), ExecutorError> {
+        if !self.has_pending_feedback().await {
+            return Ok(());
+        }
+
+        let thread_id = self.thread_id.lock().await.clone();
+        let turn_id = self.current_turn_id.lock().await.clone();
+        if let (Some(thread_id), Some(turn_id)) = (thread_id, turn_id) {
+            tracing::debug!(
+                thread_id = %thread_id,
+                turn_id = %turn_id,
+                "interrupting Codex turn for pending follow-up"
+            );
+            if let Err(err) = self.turn_interrupt(thread_id, turn_id).await {
+                tracing::warn!("failed to interrupt Codex turn for pending follow-up: {err}");
+            }
+        }
+
+        Ok(())
+    }
+
     /// Sends pending feedback messages as new turns.
     /// Returns `true` if any messages were sent.
     async fn flush_pending_feedback(&self) -> bool {
@@ -762,7 +885,7 @@ impl AppServerClient {
             if trimmed.is_empty() {
                 continue;
             }
-            self.spawn_user_message(thread_id.clone(), format!("User feedback: {trimmed}"));
+            self.spawn_user_message(thread_id.clone(), trimmed.to_string());
             sent = true;
         }
         sent
@@ -859,6 +982,17 @@ impl JsonRpcCallbacks for AppServerClient {
             self.log_writer.log_raw(raw).await?;
         }
 
+        if method == "turn/started"
+            && let Some(ref params) = notification.params
+            && let Ok(started) = serde_json::from_value::<TurnStartedNotification>(params.clone())
+        {
+            {
+                let mut guard = self.current_turn_id.lock().await;
+                guard.replace(started.turn.id.clone());
+            }
+            self.interrupt_current_turn_if_pending().await?;
+        }
+
         // Detect completed plan items in the notification stream
         if self.plan_mode
             && method == "item/completed"
@@ -876,11 +1010,26 @@ impl JsonRpcCallbacks for AppServerClient {
 
             if let Some(params) = notification.params
                 && let Ok(completed) = serde_json::from_value::<TurnCompletedNotification>(params)
-                && completed.turn.status == TurnStatus::Interrupted
             {
-                tracing::debug!("codex turn interrupted; flushing feedback queue");
-                if self.flush_pending_feedback().await {
-                    keep_alive = true;
+                {
+                    let mut guard = self.current_turn_id.lock().await;
+                    if guard.as_deref() == Some(completed.turn.id.as_str()) {
+                        guard.take();
+                    }
+                }
+
+                if completed.turn.status == TurnStatus::Interrupted {
+                    tracing::debug!("codex turn interrupted; flushing feedback queue");
+                    if self.flush_pending_feedback().await {
+                        keep_alive = true;
+                    }
+                } else if self.has_pending_feedback().await {
+                    tracing::debug!(
+                        "codex turn completed with pending follow-up; starting next turn"
+                    );
+                    if self.flush_pending_feedback().await {
+                        keep_alive = true;
+                    }
                 }
             }
 

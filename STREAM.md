@@ -6,17 +6,18 @@
 - Repo:
   `/home/mcp/code/worktrees/419a-vk-allow-follow/_vibe_kanban_repo`
 - Base: local `staging`
-- Working mode: VK queued agent follow-ups
+- Working mode: VK active Codex follow-ups
 
 ## Objective
 
-- Allow users to send follow-up messages while a coding-agent turn is still
-  running, without stopping or interrupting that running process.
+- Allow users to send follow-up messages while a Codex coding-agent turn is
+  still running by injecting them into the active Codex session at the next
+  safe opportunity.
 
 ## In Scope
 
-- Local session follow-up queue behavior.
-- Local execution monitor handoff from completed agent turn to queued follow-up.
+- Local Codex app-server follow-up injection.
+- Local session follow-up queue fallback behavior.
 - Chat UI queue status for pending follow-ups.
 - Generated local shared TypeScript types.
 
@@ -24,7 +25,7 @@
 
 - Live `vibe-kanban.service` restart or deployment.
 - Remote/cloud queue persistence.
-- Changing executor protocols to inject into an active process mid-turn.
+- Remote/cloud follow-up injection.
 
 ## Current Status
 
@@ -32,6 +33,12 @@
   instead of replacing the previous queued message.
 - When the current agent turn is ready to hand off, queued messages are collapsed
   into one ordered follow-up prompt and started as the next coding-agent turn.
+- For active Codex app-server executions, the queue endpoint now first attempts
+  to inject the follow-up into the live process. The Codex client stores pending
+  follow-ups, interrupts the active turn with `turn/interrupt`, and submits the
+  text as the next turn after `turn/completed`.
+- The post-run queue path remains as a fallback when there is no active Codex
+  client or when the active executor is not Codex.
 - Existing `data` remains in the queue API response as the most recent queued
   message for compatibility and edit restore.
 - The queue API response now also includes `messages` with all pending
@@ -54,6 +61,7 @@
   - backend workspace check failed on missing system `glib-2.0` pkg-config
     dependency before reaching changed crates
 - `cargo check -p services -p local-deployment`
+- `cargo check -p executors -p services -p local-deployment -p server`
 
 ## Validation Gaps / Failures
 
@@ -65,6 +73,5 @@
 
 ## Next Safe Steps
 
-1. Review the queued follow-up prompt wording.
-2. Run a local UI smoke after preview/dev server startup if desired.
-3. Deploy/restart only through the normal VK deployment workflow.
+1. Run a local UI smoke after preview/dev server startup if desired.
+2. Deploy/restart only through the normal VK deployment workflow.

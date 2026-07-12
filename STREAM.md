@@ -2,75 +2,63 @@
 
 ## Stream Identifier
 
-- Branch: `fix/multiline-paste-priority`
-- Repo: `/tmp/vk-paste-pr`
-- Base: `fork/staging` at `eb90083db`
-- Working mode: focused staging PR
+- Branch: `vk/a8c5-vk-something-wro`
+- Repo:
+  `/home/mcp/code/worktrees/a8c5-vk-something-wro/_vibe_kanban_repo`
+- Base: `fork/staging`
+- Working mode: VK local workspace chat stability
 
 ## Objective
 
-- Preserve multiline chat paste in VK by making the custom paste handler handle
-  multiline plain text before Lexical's default rich paste path can consume
-  clipboards that also include HTML.
+- Stop workspace chats from appearing to load older and older messages on their
+  own during live execution-log websocket reconnects.
 
 ## In Scope
 
-- `PasteMarkdownPlugin` multiline/rich clipboard behavior.
-- Read-only smoke guard for the paste source invariant.
-- Continuity notes for this branch.
+- Local frontend websocket replay behavior for chat/log JSON patch streams.
+- Focused validation for the stream replay fix.
+- Checking live service logs to identify the trigger.
 
 ## Out of Scope
 
-- Restarting `vibe-kanban.service`.
-- Switching the live frontend symlink.
-- Deploying binaries or assets.
-- Mutating live DB/project records from this source task.
-- Reworking broader workspace creation, project settings UI, lab runtime, or
-  deployment workflows.
-
-## Stream-Specific Decisions
-
-- Feature workspaces may prepare code, checks, preview, docs, and PRs.
-- Feature workspaces must not restart or deploy the live VK service.
-- This branch must merge to `staging`; the next VK release/restart package can
-  then include it through the normal VK repo project workflow.
-
-## Relevant Files / Modules
-
-- `packages/ui/src/components/PasteMarkdownPlugin.tsx`
-- `scripts/vk_live_regression_smoke.py`
-- `STATE.md`
-- `STREAM.md`
-- `HANDOFF.md`
-- `DELTA.md`
+- Restarting or deploying the live `vibe-kanban.service`.
+- Broad backend stream capacity or memory hardening.
+- Changing chat UI layout or message rendering semantics.
 
 ## Current Status
 
-- `PasteMarkdownPlugin` detects multiline `text/plain` before the HTML opt-out,
-  inserts it with `selection.insertRawText`, and registers the command at
-  `COMMAND_PRIORITY_HIGH`.
-- `scripts/vk_live_regression_smoke.py` checks that the source paste handler
-  still has the multiline guard and does not use `COMMAND_PRIORITY_LOW`.
-- No live deploy, frontend symlink swap, service restart, or live DB mutation
-  has been performed in this branch session.
+- Live logs showed repeated `MsgStore broadcast lagged` errors and
+  `execution_processes` stream closures while the service was at roughly
+  `9.1G` RSS.
+- The frontend stream helper used to reset its local snapshot before every
+  reconnect, causing replay from `/entries/0` to temporarily shrink the visible
+  transcript.
+- `streamJsonPatchEntries` now preserves the last good snapshot across
+  reconnects and only clears unapplied pending patch ops.
+- Added a regression test for reconnect replay preserving already-visible
+  newer entries.
+- Rebased the branch onto `fork/staging` before opening the PR so the PR only
+  contains this chat replay fix.
+- No live restart or deployment was performed.
 
-## Risks / Regression Traps
+## Validation
 
-- The canonical checkout `/home/mcp/_vibe_kanban_repo` may be intentionally
-  dirty; do not build or deploy from it just because it is canonical.
-- Branch names in historical handoffs can be stale; trust the checked-out branch
-  and code first.
-- A workspace name that looks like VK work is not proof that the workspace
-  contains the VK repo.
-- `VK_AGENT_DEPLOYMENT_RUNBOOK.md` contains deploy instructions, but this branch
-  does not grant permission to restart or deploy production VK.
-- The smoke script is intentionally narrow and read-only. It does not replace
-  UI/browser validation for a release candidate.
+- `pnpm install --offline --frozen-lockfile`
+- `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/web-core run check`
+- `pnpm run format`
+
+## Validation Gaps / Failures
+
+- `pnpm --filter @vibe/web-core exec vitest run src/shared/lib/streamJsonPatchEntries.test.ts`
+  could not run because `vitest` is not installed as a project dependency.
+- `pnpm --filter @vibe/web-core run check` without increased `NODE_OPTIONS`
+  hit Node heap OOM; the same check passed with `--max-old-space-size=4096`.
+- No live UI smoke was performed because this branch was not deployed into the
+  running local VK instance.
 
 ## Next Safe Steps
 
-1. Run formatting and focused script validation.
-2. Optionally run the live smoke script if `https://vibe.local` is reachable.
-3. Create or inspect a throwaway `VK Dev` workspace to verify the guard runs in
-   the generated workspace context.
-4. Open a PR into `staging` after validation.
+1. Push/open a PR into `staging`.
+2. Merge to `staging` for inclusion in the next restart candidate.
+3. Consider a separate backend hardening stream for reducing `MsgStore`
+   broadcast lag under very high output volume.

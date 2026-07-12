@@ -570,3 +570,17 @@ Current Codex model state, 2026-07-08:
   - `model_reasoning_effort = "xhigh"`
 - The branch `vk/1b5d-vk-chat-models` adds `gpt-5.4-mini` and
   `gpt-5.3-codex-spark` to the VK Codex model selector.
+
+Current Codex model state, 2026-07-12:
+
+- Official Codex guidance now lists the GPT-5.6 family:
+  - `gpt-5.6-sol` as the flagship model for complex coding and research work
+  - `gpt-5.6-terra` as the balanced everyday model
+  - `gpt-5.6-luna` as the faster, lower-cost model
+- Global `@openai/codex` backing `/home/mcp/.local/bin/codex` has been updated
+  from `0.142.5` to `0.144.1`.
+- The VK isolated Codex home has been updated locally to:
+  - `model = "gpt-5.6-sol"`
+  - `model_reasoning_effort = "xhigh"`
+- The branch `vk/1b5d-vk-chat-models` adds the GPT-5.6 family and Codex `max`
+  reasoning support to the VK Codex model selector/schema surface.

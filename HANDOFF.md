@@ -5,31 +5,37 @@
 - Branch: `vk/1b5d-vk-chat-models`
 - Worktree:
   `/home/mcp/code/worktrees/1b5d-vk-chat-models/_vibe_kanban_repo`
-- Current focus: Codex model availability and default-model repair for local VK.
+- Current focus: Codex 5.6 Sol upgrade for local VK.
 - Live deploy/restart status: none performed in this branch session.
 
 ## What Changed This Session
 
-- Verified current Codex model guidance from official OpenAI docs.
-- Found VK's isolated Codex home was pinned to `gpt-5.4` with `high`
-  reasoning, so VK's default Codex runs were not following the current Codex
-  recommended default.
+- Updated global `@openai/codex` from `0.142.5` to `0.144.1`; this is the
+  package backing `/home/mcp/.local/bin/codex`.
+- Verified official Codex model docs list:
+  - `gpt-5.6-sol`
+  - `gpt-5.6-terra`
+  - `gpt-5.6-luna`
+  - Max reasoning as a higher-depth option when enabled.
 - Updated `/home/mcp/.local/share/vibe-kanban/codex-home/config.toml` to use:
-  - `model = "gpt-5.5"`
+  - `model = "gpt-5.6-sol"`
   - `model_reasoning_effort = "xhigh"`
-- Added the currently documented Codex choices missing from VK's Codex model
-  selector:
-  - `gpt-5.4-mini`
-  - `gpt-5.3-codex-spark`
+- Added the GPT-5.6 family to VK's Codex model selector:
+  - `gpt-5.6-sol`
+  - `gpt-5.6-terra`
+  - `gpt-5.6-luna`
+- Added Codex `max` reasoning support to the source enum/schema surface.
+- Regenerated `shared/types.ts` and `shared/schemas/codex.json`.
 
 ## Validation
 
-- `cargo fmt --all --check`
-- `cargo test -p executors codex --lib`
-- `pnpm install --frozen-lockfile`
-- `pnpm run format`
+- `npm view @openai/codex version dist.tarball bin --json`
+- `npm install -g @openai/codex@0.144.1`
 - `CODEX_HOME=/home/mcp/.local/share/vibe-kanban/codex-home /home/mcp/.local/bin/codex --version`
-- Confirmed the isolated Codex config begins with `gpt-5.5` / `xhigh`.
+- `npm list -g @openai/codex --depth=0`
+- `pnpm run generate-types`
+- `pnpm run format`
+- `cargo test -p executors codex --lib`
 
 ## Validation Gaps / Failures
 
@@ -39,5 +45,6 @@
 
 ## Next Safe Steps
 
-1. Deploy/restart only through the normal VK deployment workflow if the selector
+1. Commit the source-controlled changes.
+2. Deploy/restart only through the normal VK deployment workflow if the selector
    update should appear in the live UI.

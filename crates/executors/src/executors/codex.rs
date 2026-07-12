@@ -163,6 +163,7 @@ pub enum ReasoningEffort {
     Medium,
     High,
     Xhigh,
+    Max,
 }
 
 /// Model reasoning summary style
@@ -356,12 +357,13 @@ impl StandardCodingAgentExecutor for Codex {
         _workdir: Option<&std::path::Path>,
         _repo_path: Option<&std::path::Path>,
     ) -> Result<futures::stream::BoxStream<'static, json_patch::Patch>, ExecutorError> {
-        let xhigh_reasoning_options = ReasoningOption::from_names(
+        let max_reasoning_options = ReasoningOption::from_names(
             [
                 ReasoningEffort::Low,
                 ReasoningEffort::Medium,
                 ReasoningEffort::High,
                 ReasoningEffort::Xhigh,
+                ReasoningEffort::Max,
             ]
             .map(|e| e.as_ref().to_string()),
         );
@@ -370,64 +372,82 @@ impl StandardCodingAgentExecutor for Codex {
             model_selector: ModelSelectorConfig {
                 models: vec![
                     ModelInfo {
+                        id: "gpt-5.6-sol".to_string(),
+                        name: "GPT-5.6 Sol".to_string(),
+                        provider_id: None,
+                        reasoning_options: max_reasoning_options.clone(),
+                    },
+                    ModelInfo {
+                        id: "gpt-5.6-terra".to_string(),
+                        name: "GPT-5.6 Terra".to_string(),
+                        provider_id: None,
+                        reasoning_options: max_reasoning_options.clone(),
+                    },
+                    ModelInfo {
+                        id: "gpt-5.6-luna".to_string(),
+                        name: "GPT-5.6 Luna".to_string(),
+                        provider_id: None,
+                        reasoning_options: max_reasoning_options.clone(),
+                    },
+                    ModelInfo {
                         id: "gpt-5.5".to_string(),
                         name: "GPT-5.5".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.5-fast".to_string(),
                         name: "GPT-5.5 Fast".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.4".to_string(),
                         name: "GPT-5.4".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.4-mini".to_string(),
                         name: "GPT-5.4 Mini".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.4-fast".to_string(),
                         name: "GPT-5.4 Fast".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.3-codex-spark".to_string(),
                         name: "GPT-5.3 Codex Spark".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.3-codex".to_string(),
                         name: "GPT-5.3 Codex".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.2-codex".to_string(),
                         name: "GPT-5.2 Codex".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.2".to_string(),
                         name: "GPT-5.2".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.1-codex-max".to_string(),
                         name: "GPT-5.1 Codex Max".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options,
+                        reasoning_options: max_reasoning_options,
                     },
                 ],
                 permissions: vec![

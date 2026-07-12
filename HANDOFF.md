@@ -2,48 +2,55 @@
 
 ## Pickup Note
 
-- Branch: `vk/c096-vk-agent-turn-no`
+- Branch: `staging`
 - Worktree:
-  `/home/mcp/code/worktrees/c096-vk-agent-turn-no/_vibe_kanban_repo`
-- Current focus: ntfy notifications for completed VK coding-agent turns.
-- Live deploy/restart status: none performed in this branch session.
+  `/home/mcp/code/worktrees/a6c2-vk-multi-line-in/_vibe_kanban_repo`
+- Current focus: staging integration of completed VK feature/fix branches.
+- Live deploy/restart status: none performed from this worktree.
 
-## What Changed This Session
+## What Is True Right Now
 
-- Added ntfy turn-completion publishing in
-  `crates/services/src/services/notification.rs`.
-  - Reads `VK_TURN_COMPLETION_NTFY_URL`,
-    `VK_TURN_COMPLETION_NTFY_TOPIC`,
-    `VK_TURN_COMPLETION_NTFY_TOKEN`, and
-    `VK_TURN_COMPLETION_NTFY_TIMEOUT_SECS`.
-  - Falls back to `VK_NTFY_URL`, `VK_NTFY_TOPIC`, and `VK_NTFY_TOKEN`.
-  - Publishes by HTTP POST to the configured ntfy topic.
-  - Logs failures without failing execution finalization.
-- Added focused tests for ntfy URL construction and env fallback selection.
-- Added `notify_agent_turn_completion` to the shared container service logic.
-- Called the ntfy turn notification from the local execution monitor after a
-  coding-agent execution reaches `completed` or `failed` and after summary
-  extraction.
-- Rebased this branch onto local `staging` for merge.
-- Separately granted anonymous read-only access for the live ntfy topic
-  `vk-workspace-turns`, allowing mobile subscriptions through
-  `https://opntfy-mobile.fly.dev`; anonymous publishing remains denied.
+- Local `staging` was clean before merging `fork/staging`.
+- `fork/staging` contributed the workspace chat replay stability fix:
+  - `packages/web-core/src/shared/lib/streamJsonPatchEntries.ts`
+  - `packages/web-core/src/shared/lib/streamJsonPatchEntries.test.ts`
+- Local `staging` already contained:
+  - multiline paste preservation in workspace creation
+  - archive-to-Done linked workspace cleanup
+  - ntfy agent turn-completion notification work
+- The current operator request is to rebase and merge
+  `vk/a5ed-vk-saved-message` into `staging`.
 
-## Validation
+## Validation Known From Landed Streams
 
-- `cargo fmt --all --check`
-- `cargo fmt --all --manifest-path crates/remote/Cargo.toml --check`
-- `pnpm install --offline --frozen-lockfile`
-- `cargo test -p services notification::tests`
-- `pnpm run format`
+- Ntfy turn-completion stream:
+  - `cargo fmt --all --check`
+  - `cargo fmt --all --manifest-path crates/remote/Cargo.toml --check`
+  - `pnpm install --offline --frozen-lockfile`
+  - `cargo test -p services notification::tests`
+  - `pnpm run format`
+- Chat replay stream:
+  - `pnpm install --offline --frozen-lockfile`
+  - `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/web-core run check`
+  - `pnpm run format`
+- Saved messages stream:
+  - `pnpm run format`
+  - `pnpm --filter @vibe/ui run format`
+  - `pnpm --filter @vibe/ui run format:check`
+  - `pnpm --filter @vibe/ui run check`
+  - `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/web-core run check`
+  - `scripts/preview.sh verify`
 
 ## Validation Gaps / Failures
 
-- No live service restart or live turn smoke was performed.
-- Broader PR baseline checks such as `pnpm run check`, `pnpm run lint`, and
-  `cargo test --workspace` were not run.
+- No live production deploy or restart has been performed from this staging
+  worktree.
+- The chat replay Vitest command could not run because `vitest` is not a
+  project dependency.
 
 ## Next Safe Steps
 
-1. Merge into `staging`.
-2. Deploy/restart only through the normal VK deployment workflow.
+1. Finish the `fork/staging` merge.
+2. Rebase `vk/a5ed-vk-saved-message` onto local `staging`.
+3. Merge `vk/a5ed-vk-saved-message` into local `staging`.
+4. Run final formatting and focused checks for the staging result.

@@ -77,8 +77,7 @@ export function streamJsonPatchEntries<E = unknown>(
     }
   };
 
-  const resetReplayState = () => {
-    snapshot = structuredClone(initialSnapshot);
+  const resetPendingReplay = () => {
     pendingOps = [];
     if (rafId !== null) {
       cancelAnimationFrame(rafId);
@@ -132,7 +131,7 @@ export function streamJsonPatchEntries<E = unknown>(
     retryTimer = window.setTimeout(() => {
       retryTimer = null;
       retryAttempt += 1;
-      resetReplayState();
+      resetPendingReplay();
       connect();
     }, delay);
   };

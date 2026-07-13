@@ -367,7 +367,8 @@ fn local_issue_flags_from_extension_metadata(extension_metadata: &Value) -> Vec<
 
     let mut flag_names = flags
         .iter()
-        .filter_map(|(name, enabled)| enabled.as_bool().unwrap_or(false).then(|| name.clone()))
+        .filter(|&(_name, enabled)| enabled.as_bool().unwrap_or(false))
+        .map(|(name, _enabled)| name.clone())
         .collect::<Vec<_>>();
     flag_names.sort();
     flag_names

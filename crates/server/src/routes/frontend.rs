@@ -53,7 +53,7 @@ async fn serve_file(path: &str) -> Response {
 }
 
 async fn serve_external_file(path: &str) -> Option<Response> {
-    let frontend_dir = env::var_os("VK_FRONTEND_DIST_DIR").map(PathBuf::from)?;
+    let frontend_dir = env::var_os(FRONTEND_DIST_DIR_ENV).map(PathBuf::from)?;
     let safe_path = sanitize_asset_path(path)?;
     let file_path = frontend_dir.join(&safe_path);
 

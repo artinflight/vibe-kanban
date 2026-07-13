@@ -213,6 +213,16 @@
           "label": "傳送訊息快捷鍵",
           "helper": "選擇傳送訊息的鍵盤快捷鍵。",
           "enterLabel": "Enter（Shift+Enter 換行）"
+        },
+        "savedMessages": {
+          "label": "Saved messages",
+          "helper": "Create reusable messages that can be inserted into the chat input.",
+          "empty": "No saved messages yet.",
+          "add": "Add saved message",
+          "delete": "Delete saved message",
+          "defaultTitle": "New saved message",
+          "titlePlaceholder": "Title",
+          "contentPlaceholder": "Message {{count}}"
         }
       },
       "privacy": {

@@ -185,7 +185,10 @@ pub async fn follow_up(
     let interrupted_context =
         CodingAgentTurn::find_interrupted_context_since_latest_success(pool, session.id).await?;
 
-    let prompt = payload.prompt.clone();
+    let prompt = CodingAgentTurn::prompt_with_interrupted_context(
+        payload.prompt.clone(),
+        &interrupted_context,
+    );
 
     let repos = WorkspaceRepo::find_repos_for_workspace(pool, workspace.id).await?;
     let cleanup_action = deployment.container().cleanup_actions_for_repos(&repos);

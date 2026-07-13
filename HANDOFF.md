@@ -2623,3 +2623,16 @@ User QA checklist for the no-restart frontend repair:
   - `pnpm run format`
 - `pnpm run generate-types:check` previously compiled but hung in the final linker step on this host; `pnpm run generate-types` completed and regenerated `shared/types.ts`.
 - Next step: review/push/open PR from `vk/4e18-live-backfill-to-staging` into `staging`, then run human QA on the staging preview before any `staging -> main` promotion.
+
+2026-07-13 staging PR CI repair:
+
+- PR #62 initially failed CI after the live-to-staging backfill because the recovered live commit range carried stale test helpers, clippy violations, and missing locale keys relative to current staging checks.
+- Added locale parity for saved-message and queued-follow-up strings, removed obsolete duplicate Rust test/helper code, restored the interrupted-context wrapper for normal session follow-ups, and applied clippy cleanups.
+- No deploy, restart, frontend symlink swap, or preview service mutation was performed for this promotion step.
+- Local validation before pushing the CI repair:
+  - `pnpm run format`
+  - `cargo clippy --workspace --exclude vibe-kanban-tauri --all-targets -- -D warnings`
+  - `cargo test --no-run --workspace --exclude vibe-kanban-tauri`
+  - `GITHUB_BASE_REF=staging ./scripts/check-i18n.sh`
+  - `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/web-core run check`
+  - `git diff --check`

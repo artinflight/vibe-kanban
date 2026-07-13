@@ -213,7 +213,7 @@ fn compare_projects_for_synthetic_display(left: &Project, right: &Project) -> st
 }
 
 fn sort_synthetic_projects_for_display(projects: &mut [Project]) {
-    projects.sort_by(|left, right| compare_projects_for_synthetic_display(left, right));
+    projects.sort_by(compare_projects_for_synthetic_display);
 }
 
 fn filter_synthetic_project_candidates(

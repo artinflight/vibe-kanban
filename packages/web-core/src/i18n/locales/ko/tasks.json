@@ -112,7 +112,8 @@
     "filesChanged_other": "{{count}} files changed"
   },
   "followUp": {
-    "queuedMessage": "메시지가 대기열에 추가됨 - 현재 실행이 완료되면 실행됩니다"
+    "queuedMessage": "메시지가 대기열에 추가됨 - 현재 실행이 완료되면 실행됩니다",
+    "queuedMessages": "{{count}} messages queued - will execute when current run finishes"
   },
   "git": {
     "labels": {

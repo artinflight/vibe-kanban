@@ -222,11 +222,6 @@ mod tests {
     }
 
     #[test]
-    fn codex_max_active_execution_default_is_not_single_agent() {
-        assert!(DEFAULT_CODEX_MAX_ACTIVE_EXECUTIONS > 1);
-    }
-
-    #[test]
     fn codex_auto_permission_override_exits_plan_mode() {
         let mut codex = Codex {
             append_prompt: AppendPrompt::default(),

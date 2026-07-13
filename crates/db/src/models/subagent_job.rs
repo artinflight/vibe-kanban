@@ -407,7 +407,7 @@ fn codex_edge_status(
         "open" => {
             if let Some(parent_completed_at) = parent_completed_at {
                 let stale_cutoff = parent_completed_at + ChronoDuration::seconds(30);
-                if child_updated_at.map_or(true, |updated_at| updated_at <= stale_cutoff) {
+                if child_updated_at.is_none_or(|updated_at| updated_at <= stale_cutoff) {
                     return SubagentJobStatus::Completed;
                 }
             }

@@ -107,7 +107,8 @@
     "logsCopied": "Copié !"
   },
   "followUp": {
-    "queuedMessage": "Message en file d'attente - s'exécutera lorsque l'exécution actuelle sera terminée"
+    "queuedMessage": "Message en file d'attente - s'exécutera lorsque l'exécution actuelle sera terminée",
+    "queuedMessages": "{{count}} messages queued - will execute when current run finishes"
   },
   "todoPopup": {
     "title": "Tâches",

@@ -68,9 +68,6 @@ use worktree_manager::WorktreeError;
 use crate::services::{execution_process, notification::NotificationService};
 pub type ContainerRef = String;
 const IMMEDIATE_PR_MERGE_CLEANUP_TARGET_BRANCH: &str = "staging";
-const HISTORICAL_NORMALIZED_REPLAY_HISTORY_BYTES: usize = 8 * 1024 * 1024;
-const HISTORICAL_NORMALIZED_REPLAY_CHANNEL_CAPACITY: usize = 1024;
-
 const HISTORICAL_REPLAY_HISTORY_BYTES: usize = 4 * 1024 * 1024;
 const HISTORICAL_REPLAY_CHANNEL_CAPACITY: usize = 1024;
 
@@ -88,23 +85,6 @@ impl CancelOnDropStream {
             inner,
             cancel_tx: Some(cancel_tx),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use futures::StreamExt;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn cancel_on_drop_stream_signals_replay_tasks() {
-        let (cancel_tx, cancel_rx) = oneshot::channel();
-        let stream = futures::stream::empty().boxed();
-
-        drop(CancelOnDropStream::new(stream, cancel_tx));
-
-        assert!(cancel_rx.await.is_ok());
     }
 }
 
@@ -1638,9 +1618,20 @@ fn has_merged_pr_to_target_branch(pull_requests: &[PullRequest], target_branch_n
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
+    use futures::StreamExt;
     use uuid::Uuid;
 
     use super::*;
+
+    #[tokio::test]
+    async fn cancel_on_drop_stream_signals_replay_tasks() {
+        let (cancel_tx, cancel_rx) = oneshot::channel();
+        let stream = futures::stream::empty().boxed();
+
+        drop(CancelOnDropStream::new(stream, cancel_tx));
+
+        assert!(cancel_rx.await.is_ok());
+    }
 
     fn pr(target_branch_name: &str, pr_status: MergeStatus) -> PullRequest {
         PullRequest {

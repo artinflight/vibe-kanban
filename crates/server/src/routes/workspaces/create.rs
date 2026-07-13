@@ -115,6 +115,31 @@ async fn ensure_local_linked_issue_task_id(
     Ok(None)
 }
 
+fn unique_matching_task_id<'a>(
+    tasks: impl IntoIterator<Item = (Uuid, &'a str)>,
+    workspace_name: &str,
+) -> Option<Uuid> {
+    let mut matching_task_ids = Vec::new();
+    for (task_id, title) in tasks {
+        if title.trim() == workspace_name && !matching_task_ids.contains(&task_id) {
+            matching_task_ids.push(task_id);
+        }
+    }
+
+    match matching_task_ids.as_slice() {
+        [task_id] => Some(*task_id),
+        [] => None,
+        _ => {
+            tracing::warn!(
+                "Could not infer local issue link for workspace {:?}: {} matching tasks",
+                workspace_name,
+                matching_task_ids.len()
+            );
+            None
+        }
+    }
+}
+
 async fn infer_local_linked_issue_task_id_from_repos(
     deployment: &DeploymentImpl,
     repos: &[WorkspaceRepoInput],
@@ -145,7 +170,7 @@ async fn infer_local_linked_issue_task_id_from_repos(
         }
     }
 
-    let mut matching_task_ids = Vec::new();
+    let mut matching_tasks = Vec::new();
     for project_id in project_ids {
         let project = match Project::find_by_id(&deployment.db().pool, project_id).await {
             Ok(project) => project,
@@ -158,24 +183,16 @@ async fn infer_local_linked_issue_task_id_from_repos(
         }
 
         for task in Task::find_by_project(&deployment.db().pool, project_id).await? {
-            if task.title.trim() == workspace_name && !matching_task_ids.contains(&task.id) {
-                matching_task_ids.push(task.id);
-            }
+            matching_tasks.push((task.id, task.title));
         }
     }
 
-    match matching_task_ids.as_slice() {
-        [task_id] => Ok(Some(*task_id)),
-        [] => Ok(None),
-        _ => {
-            tracing::warn!(
-                "Could not infer local issue link for workspace {:?}: {} matching tasks",
-                workspace_name,
-                matching_task_ids.len()
-            );
-            Ok(None)
-        }
-    }
+    Ok(unique_matching_task_id(
+        matching_tasks
+            .iter()
+            .map(|(task_id, title)| (*task_id, title.as_str())),
+        workspace_name,
+    ))
 }
 
 pub async fn create_workspace(

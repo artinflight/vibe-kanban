@@ -88,7 +88,8 @@ export const useJsonPatchWsStream = <T extends object>(
   }, [enabled, endpoint]);
 
   function scheduleReconnect() {
-    if (retryTimerRef.current) return;
+    if (retryTimerRef.current) return; // already scheduled
+    // Exponential backoff with cap: 1s, 2s, 4s, 8s (max), then stay at 8s
     const attempt = retryAttemptsRef.current;
     const delay = Math.min(8000, 1000 * Math.pow(2, attempt));
     retryTimerRef.current = window.setTimeout(() => {

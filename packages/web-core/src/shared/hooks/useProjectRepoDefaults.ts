@@ -13,6 +13,81 @@ export interface ProjectLocalDefaults {
   statuses: ProjectStatusConfigData[];
 }
 
+export function getDefaultProjectStatusDefaults(): ProjectStatusConfigData[] {
+  return [
+    {
+      id: 'todo',
+      name: 'To do',
+      color: '220 70% 52%',
+      hidden: false,
+      sort_order: 0,
+    },
+    {
+      id: 'in_progress',
+      name: 'In progress',
+      color: '42 90% 55%',
+      hidden: false,
+      sort_order: 1,
+    },
+    {
+      id: 'status_onhold',
+      name: 'On Hold',
+      color: '220 70% 52%',
+      hidden: false,
+      sort_order: 2,
+    },
+    {
+      id: 'status_longrunning',
+      name: 'Long Running',
+      color: '220 70% 52%',
+      hidden: false,
+      sort_order: 3,
+    },
+    {
+      id: 'in_review',
+      name: 'In review',
+      color: '280 55% 58%',
+      hidden: false,
+      sort_order: 4,
+    },
+    {
+      id: 'cancelled',
+      name: 'Cancelled',
+      color: '0 0% 55%',
+      hidden: true,
+      sort_order: 5,
+    },
+    {
+      id: 'status_tomerge',
+      name: 'To merge',
+      color: '220 70% 52%',
+      hidden: false,
+      sort_order: 6,
+    },
+    {
+      id: 'in_staging',
+      name: 'In Staging',
+      color: '196 72% 47%',
+      hidden: false,
+      sort_order: 7,
+    },
+    {
+      id: 'status_hotfixpath',
+      name: 'Hotfix Path',
+      color: '220 70% 52%',
+      hidden: false,
+      sort_order: 8,
+    },
+    {
+      id: 'done',
+      name: 'Done',
+      color: '145 55% 42%',
+      hidden: false,
+      sort_order: 9,
+    },
+  ];
+}
+
 async function getProjectLocalDefaults(
   projectId: string
 ): Promise<ProjectLocalDefaults | null> {
@@ -70,11 +145,15 @@ export async function saveProjectRepoDefaults(
 ): Promise<void> {
   const current = (await getProjectLocalDefaults(projectId)) ?? {
     repos: [],
-    statuses: [],
+    statuses: getDefaultProjectStatusDefaults(),
   };
   await saveProjectLocalDefaults(projectId, {
     ...current,
     repos,
+    statuses:
+      current.statuses.length > 0
+        ? current.statuses
+        : getDefaultProjectStatusDefaults(),
   });
 }
 

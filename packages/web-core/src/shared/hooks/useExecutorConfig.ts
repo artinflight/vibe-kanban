@@ -184,6 +184,7 @@ interface UseExecutorConfigOptions {
   lastUsedConfig: ExecutorConfig | null;
   scratchConfig?: ExecutorConfig | null;
   configExecutorProfile?: ExecutorProfileId | null;
+  persistenceKey?: string | null;
   onPersist?: (config: ExecutorConfig) => void;
 }
 
@@ -199,17 +200,67 @@ interface UseExecutorConfigResult {
   setOverrides: (partial: Partial<ExecutorConfig>) => void;
 }
 
+const STORAGE_PREFIX = 'vk-executor-config-selection';
+
+function storageKey(key: string): string {
+  return `${STORAGE_PREFIX}:${key}`;
+}
+
+function canUseStorage(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return !!window.localStorage;
+  } catch {
+    return false;
+  }
+}
+
+function readPersistedSelections(
+  key: string | null | undefined
+): Partial<ExecutorConfig> {
+  if (!key || !canUseStorage()) return {};
+  try {
+    const raw = window.localStorage.getItem(storageKey(key));
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Partial<ExecutorConfig>;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writePersistedSelections(
+  key: string | null | undefined,
+  selections: Partial<ExecutorConfig>
+): void {
+  if (!key || !canUseStorage()) return;
+  try {
+    if (Object.keys(selections).length === 0) {
+      window.localStorage.removeItem(storageKey(key));
+      return;
+    }
+    window.localStorage.setItem(storageKey(key), JSON.stringify(selections));
+  } catch {
+    // Ignore storage failures; scratch/server persistence still applies.
+  }
+}
+
 /** Unified executor + variant + model selector overrides management. */
 export function useExecutorConfig({
   profiles,
   lastUsedConfig,
   scratchConfig,
   configExecutorProfile,
+  persistenceKey,
   onPersist,
 }: UseExecutorConfigOptions): UseExecutorConfigResult {
   const [userSelections, setUserSelections] = useState<Partial<ExecutorConfig>>(
-    {}
+    () => readPersistedSelections(persistenceKey)
   );
+
+  useEffect(() => {
+    setUserSelections(readPersistedSelections(persistenceKey));
+  }, [persistenceKey]);
 
   const executor = useEffectiveExecutor(
     userSelections,
@@ -252,10 +303,12 @@ export function useExecutorConfig({
       setUserSelections((s) => {
         const { executor, variant, ...rest } = s;
         if (Object.keys(rest).length === 0) return s;
-        return { executor, variant };
+        const next = { executor, variant };
+        writePersistedSelections(persistenceKey, next);
+        return next;
       });
     }
-  }, [profileKey]);
+  }, [persistenceKey, profileKey]);
 
   const onPersistRef = useRef(onPersist);
   onPersistRef.current = onPersist;
@@ -268,13 +321,15 @@ export function useExecutorConfig({
   // Clears variant + all override fields.
   const setExecutor = useCallback(
     (exec: BaseCodingAgent) => {
-      setUserSelections({ executor: exec });
+      const next = { executor: exec };
+      setUserSelections(next);
+      writePersistedSelections(persistenceKey, next);
       // Persist with auto-resolved variant (no overrides)
       const newVariants = getVariantOptions(exec, profiles);
       const newVariant = newVariants[0] ?? null;
       persist({ executor: exec, variant: newVariant });
     },
-    [profiles, persist]
+    [persistenceKey, profiles, persist]
   );
 
   // Setting variant → keeps executor, sets variant, clears all override fields.
@@ -282,12 +337,16 @@ export function useExecutorConfig({
   // → override fields fall through to preset options for the new variant.
   const setVariant = useCallback(
     (v: string | null) => {
-      setUserSelections((prev) => ({ executor: prev.executor, variant: v }));
+      setUserSelections((prev) => {
+        const next = { executor: prev.executor, variant: v };
+        writePersistedSelections(persistenceKey, next);
+        return next;
+      });
       if (executor.effective) {
         persist({ executor: executor.effective, variant: v });
       }
     },
-    [executor.effective, persist]
+    [executor.effective, persistenceKey, persist]
   );
 
   // Model selector updates individual override fields (merge into existing).
@@ -310,10 +369,11 @@ export function useExecutorConfig({
         if (persistedConfig) {
           persist(persistedConfig);
         }
+        writePersistedSelections(persistenceKey, next);
         return next;
       });
     },
-    [executor.effective, variant.resolved, persist]
+    [executor.effective, persistenceKey, variant.resolved, persist]
   );
 
   return {

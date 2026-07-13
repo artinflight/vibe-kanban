@@ -12,9 +12,10 @@
 2. `STATE.md`
 3. `STREAM.md`
 4. `HANDOFF.md`
-5. Relevant package or crate guide for the area being changed
-6. Code and validation paths for the task
-7. `DELTA.md` only for compact continuity history
+5. `VK_WORKFLOW.md` and `VK_AGENT_DEPLOYMENT_RUNBOOK.md` for Vibe Kanban repo work, deploys, restarts, frontend asset swaps, and regression prevention
+6. Relevant package or crate guide for the area being changed
+7. Code and validation paths for the task
+8. `DELTA.md` only for compact continuity history
 
 ### Crate-specific guides
 
@@ -65,6 +66,8 @@
 - `STREAM.md`: current branch scope and boundaries.
 - `HANDOFF.md`: short pickup note for the next agent.
 - `DELTA.md`: append-only continuity ledger.
+- `VK_WORKFLOW.md`: stable local runtime/deployment model.
+- `VK_AGENT_DEPLOYMENT_RUNBOOK.md`: operational checklist for agents working on or deploying VK from inside VK.
 
 ## Managing Shared Types Between Rust and TypeScript
 
@@ -77,7 +80,7 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Install: `pnpm i`
 - Run dev (web app + backend with ports auto-assigned): `pnpm run dev`
 - Run QA dev mode: `pnpm run dev:qa`
-- Lightweight frontend preview against an existing local backend: `pnpm run preview:light`; stop with `pnpm run preview:light:stop`
+- Lightweight frontend preview against the existing live backend: `pnpm run preview:light`; stop it with `pnpm run preview:light:stop`
 - Backend (watch): `pnpm run backend:dev:watch`
 - Web app (dev): `pnpm run local-web:dev`
 - Type checks: `pnpm run check`
@@ -94,7 +97,7 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 
 - Before finishing any task, run `pnpm run format`.
 - Before using a branch in a local Vibe Kanban instance, run the narrowest relevant checks and document what was not exercised.
-- For routine UI smoke tests, prefer the lightweight preview workflow in `docs/self-hosting/lightweight-agent-preview.mdx` over starting another backend watcher; use full dev mode only when backend behaviour must be exercised.
+- For routine Vibe Kanban UI smoke tests, prefer the lightweight preview workflow in `docs/self-hosting/lightweight-agent-preview.mdx` over `pnpm run dev`; only run full backend watch mode when backend behaviour must be exercised.
 - Before opening or updating a PR into `staging`, the default validation baseline is `pnpm run ops:check`, `pnpm run check`, `pnpm run lint`, and `cargo test --workspace`, plus any repo-specific generation checks affected by the change.
 - Before promoting `staging` into `main`, require a fresh `staging` branch, passing CI, and explicit human QA for meaningful user-facing changes.
 - If work touches remote deployment paths, include `pnpm run remote:generate-types:check` and `pnpm run remote:prepare-db:check`.

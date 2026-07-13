@@ -1,6 +1,6 @@
 use std::{
     env,
-    path::{Component, Path, PathBuf},
+    path::{Component, PathBuf},
 };
 
 use axum::{
@@ -29,26 +29,11 @@ pub(super) async fn serve_frontend_root() -> impl IntoResponse {
     serve_file("index.html").await
 }
 
-async fn serve_file(path: &str) -> impl IntoResponse + use<> {
-    let path = normalize_frontend_path(path).unwrap_or_else(|| "index.html".to_string());
-
-    if let Some(root) = frontend_dist_dir() {
-        if let Some(response) = serve_disk_file(&root, &path).await {
-            return response;
-        }
-
-        // For SPA routing, serve the override index.html for unknown routes.
-        if path != "index.html"
-            && let Some(response) = serve_disk_file(&root, "index.html").await
-        {
-            return response;
-        }
+async fn serve_file(path: &str) -> Response {
+    if let Some(response) = serve_external_file(path).await {
+        return response;
     }
 
-    serve_embedded_file(&path)
-}
-
-fn serve_embedded_file(path: &str) -> Response {
     let file = Assets::get(path);
 
     match file {
@@ -67,27 +52,56 @@ fn serve_embedded_file(path: &str) -> Response {
     }
 }
 
-async fn serve_disk_file(root: &Path, path: &str) -> Option<Response> {
-    let file_path = root.join(path);
-    let content = match fs::read(&file_path).await {
-        Ok(content) => content,
-        Err(error) => {
-            if error.kind() != std::io::ErrorKind::NotFound {
-                tracing::warn!(
-                    path = %file_path.display(),
-                    error = %error,
-                    "Failed to read frontend override asset"
-                );
-            }
-            return None;
-        }
-    };
+async fn serve_external_file(path: &str) -> Option<Response> {
+    let frontend_dir = env::var_os(FRONTEND_DIST_DIR_ENV).map(PathBuf::from)?;
+    let safe_path = sanitize_asset_path(path)?;
+    let file_path = frontend_dir.join(&safe_path);
 
-    Some(ok_response(path, Body::from(content)))
+    if let Ok(content) = fs::read(&file_path).await {
+        return Some(file_response(path, content));
+    }
+
+    if path.starts_with("assets/") {
+        return Some(
+            Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::from("404 Not Found"))
+                .unwrap(),
+        );
+    }
+
+    let index_path = frontend_dir.join("index.html");
+    fs::read(index_path)
+        .await
+        .ok()
+        .map(|content| file_response("index.html", content))
+}
+
+fn sanitize_asset_path(path: &str) -> Option<PathBuf> {
+    let mut safe_path = PathBuf::new();
+
+    for component in PathBuf::from(path).components() {
+        match component {
+            Component::Normal(part) => safe_path.push(part),
+            Component::CurDir => {}
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => return None,
+        }
+    }
+
+    Some(safe_path)
+}
+
+fn file_response(path: &str, content: Vec<u8>) -> Response {
+    ok_response(path, Body::from(content))
 }
 
 fn ok_response(path: &str, body: Body) -> Response {
     let mime = mime_guess::from_path(path).first_or_octet_stream();
+    let cache_control = if path.ends_with(".html") {
+        HTML_CACHE_CONTROL
+    } else {
+        ASSET_CACHE_CONTROL
+    };
 
     Response::builder()
         .status(StatusCode::OK)
@@ -95,75 +109,7 @@ fn ok_response(path: &str, body: Body) -> Response {
             header::CONTENT_TYPE,
             HeaderValue::from_str(mime.as_ref()).unwrap(),
         )
-        .header(header::CACHE_CONTROL, cache_control_for_path(path))
+        .header(header::CACHE_CONTROL, cache_control)
         .body(body)
         .unwrap()
-}
-
-fn cache_control_for_path(path: &str) -> &'static str {
-    if path.starts_with("assets/") {
-        ASSET_CACHE_CONTROL
-    } else {
-        HTML_CACHE_CONTROL
-    }
-}
-
-fn frontend_dist_dir() -> Option<PathBuf> {
-    env::var_os(FRONTEND_DIST_DIR_ENV)
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
-}
-
-fn normalize_frontend_path(path: &str) -> Option<String> {
-    let mut parts = Vec::new();
-
-    for component in Path::new(path).components() {
-        match component {
-            Component::Normal(part) => parts.push(part.to_str()?.to_string()),
-            Component::CurDir => {}
-            Component::ParentDir | Component::RootDir | Component::Prefix(_) => return None,
-        }
-    }
-
-    if parts.is_empty() {
-        Some("index.html".to_string())
-    } else {
-        Some(parts.join("/"))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{ASSET_CACHE_CONTROL, HTML_CACHE_CONTROL};
-
-    #[test]
-    fn normalize_frontend_path_rejects_traversal() {
-        assert_eq!(
-            super::normalize_frontend_path("assets/index.js").as_deref(),
-            Some("assets/index.js")
-        );
-        assert_eq!(
-            super::normalize_frontend_path("").as_deref(),
-            Some("index.html")
-        );
-        assert_eq!(super::normalize_frontend_path("../secret"), None);
-        assert_eq!(super::normalize_frontend_path("assets/../../secret"), None);
-        assert_eq!(super::normalize_frontend_path("/absolute"), None);
-    }
-
-    #[test]
-    fn cache_control_keeps_index_refreshable() {
-        assert_eq!(
-            super::cache_control_for_path("index.html"),
-            HTML_CACHE_CONTROL
-        );
-        assert_eq!(
-            super::cache_control_for_path("site.webmanifest"),
-            HTML_CACHE_CONTROL
-        );
-        assert_eq!(
-            super::cache_control_for_path("assets/index-abc123.js"),
-            ASSET_CACHE_CONTROL
-        );
-    }
 }

@@ -32,15 +32,9 @@ import {
   PRIORITY_ORDER,
 } from '../model/hooks/useKanbanFilters';
 import {
-  bulkUpdateIssues,
-  type BulkUpdateIssueItem,
-} from '@/shared/lib/remoteApi';
-import {
   CaretLeftIcon,
   DotsThreeIcon,
-  HandIcon,
   PlusIcon,
-  SpinnerGapIcon,
   XIcon,
 } from '@phosphor-icons/react';
 import { Actions } from '@/shared/actions';
@@ -73,7 +67,11 @@ import { IssueListView } from '@vibe/ui/components/IssueListView';
 import { CommandBarDialog } from '@/shared/dialogs/command-bar/CommandBarDialog';
 import { KanbanFiltersDialog } from '@/shared/dialogs/kanban/KanbanFiltersDialog';
 import { SearchableTagDropdownContainer } from '@/shared/components/SearchableTagDropdownContainer';
-import type { IssuePriority } from 'shared/remote-types';
+import type {
+  IssuePriority,
+  JsonValue,
+  UpdateIssueRequest,
+} from 'shared/remote-types';
 import { useIssueMultiSelect } from '@/shared/hooks/useIssueMultiSelect';
 import { useIssueSelectionStore } from '@/shared/stores/useIssueSelectionStore';
 import { BulkActionBarContainer } from './BulkActionBarContainer';
@@ -114,6 +112,87 @@ const areKanbanFiltersEqual = (
     left.sortDirection === right.sortDirection
   );
 };
+
+type WorkspaceReviewState = {
+  hasPendingApproval?: boolean | null;
+  hasUnseenActivity?: boolean | null;
+  isRunning?: boolean | null;
+  latestProcessStatus?: string | null;
+};
+
+const ISSUE_FLAGS_METADATA_KEY = 'vk_flags';
+const NEEDS_REVIEW_ISSUE_FLAG = 'needs_review';
+
+function isJsonRecord(
+  value: JsonValue | undefined
+): value is Record<string, JsonValue | undefined> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function issueHasFlag(
+  extensionMetadata: JsonValue | undefined,
+  flagName: string
+): boolean {
+  if (!isJsonRecord(extensionMetadata)) {
+    return false;
+  }
+
+  const flags = extensionMetadata[ISSUE_FLAGS_METADATA_KEY];
+  return isJsonRecord(flags) && flags[flagName] === true;
+}
+
+function setIssueFlag(
+  extensionMetadata: JsonValue | undefined,
+  flagName: string,
+  enabled: boolean
+): JsonValue {
+  const nextMetadata: Record<string, JsonValue | undefined> = isJsonRecord(
+    extensionMetadata
+  )
+    ? { ...extensionMetadata }
+    : {};
+  const currentFlags = nextMetadata[ISSUE_FLAGS_METADATA_KEY];
+  const nextFlags: Record<string, JsonValue | undefined> = isJsonRecord(
+    currentFlags
+  )
+    ? { ...currentFlags }
+    : {};
+
+  if (enabled) {
+    nextFlags[flagName] = true;
+  } else {
+    delete nextFlags[flagName];
+  }
+
+  if (Object.keys(nextFlags).length > 0) {
+    nextMetadata[ISSUE_FLAGS_METADATA_KEY] = nextFlags;
+  } else {
+    delete nextMetadata[ISSUE_FLAGS_METADATA_KEY];
+  }
+
+  return nextMetadata;
+}
+
+function workspaceNeedsActionableReview(
+  workspace: WorkspaceReviewState
+): boolean {
+  if (
+    workspace.latestProcessStatus === 'failed' ||
+    workspace.latestProcessStatus === 'killed'
+  ) {
+    return false;
+  }
+
+  if (workspace.hasPendingApproval === true) {
+    return true;
+  }
+
+  return (
+    workspace.hasUnseenActivity === true &&
+    workspace.isRunning !== true &&
+    workspace.latestProcessStatus !== 'running'
+  );
+}
 
 function LoadingState() {
   const { t } = useTranslation('common');
@@ -535,8 +614,7 @@ type CollapsedKanbanColumnProps = {
   statusName: string;
   statusColor: string;
   issueCount: number;
-  hasNeedsAttention: boolean;
-  hasInProgress: boolean;
+  hasNeedsReview?: boolean;
   onExpand: () => void;
   isMobile: boolean;
 };
@@ -545,12 +623,24 @@ function CollapsedKanbanColumn({
   statusName,
   statusColor,
   issueCount,
-  hasNeedsAttention,
-  hasInProgress,
+  hasNeedsReview = false,
   onExpand,
   isMobile,
 }: CollapsedKanbanColumnProps) {
   const { t } = useTranslation('common');
+  const expandLabel = hasNeedsReview
+    ? t('kanban.expandColumnWithNeedsReview', {
+        defaultValue: 'Expand {{statusName}} column, needs review inside',
+        statusName,
+      })
+    : t('kanban.expandColumn', {
+        defaultValue: 'Expand {{statusName}} column',
+        statusName,
+      });
+  const countLabel = t('kanban.columnIssueCount', {
+    count: issueCount,
+    defaultValue: '{{count}} issues',
+  });
 
   return (
     <button
@@ -558,29 +648,29 @@ function CollapsedKanbanColumn({
       onClick={onExpand}
       className={cn(
         'group relative flex overflow-hidden bg-secondary transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-1 focus:ring-brand',
-        isMobile ? 'min-h-0 flex-none' : 'min-h-40 flex-1'
+        isMobile ? 'min-h-12 flex-none' : 'min-h-40 flex-1'
       )}
-      aria-label={t('kanban.expandColumn', {
-        defaultValue: 'Expand {{statusName}} column ({{count}} issues)',
-        statusName,
-        count: issueCount,
-      })}
-      title={`${statusName} (${issueCount})`}
+      aria-label={expandLabel}
+      title={statusName}
     >
+      {hasNeedsReview && (
+        <span
+          aria-hidden="true"
+          className="absolute right-1.5 top-1.5 z-30 h-2.5 w-2.5 rounded-full border border-secondary bg-brand shadow-sm"
+        />
+      )}
       <div
         className={cn(
-          'sticky top-0 z-20 flex w-full shrink-0 border-b bg-secondary/95 px-2 backdrop-blur-sm',
+          'sticky top-0 z-20 flex w-full shrink-0 border-b bg-secondary/95 backdrop-blur-sm',
           isMobile
-            ? 'items-center justify-start py-3'
-            : 'h-40 items-start justify-center pt-4'
+            ? 'h-12 items-center justify-start px-base'
+            : 'h-40 items-start justify-center px-2 pt-4'
         )}
       >
         <div
           className={cn(
-            'flex items-center gap-2 whitespace-nowrap text-center',
-            isMobile
-              ? '[writing-mode:horizontal-tb]'
-              : '[writing-mode:vertical-rl] pt-2'
+            'flex min-w-0 items-center gap-2 whitespace-nowrap text-center',
+            isMobile ? 'min-w-0' : '[writing-mode:vertical-rl] pt-2'
           )}
         >
           <span className="text-sm font-medium leading-none text-normal">
@@ -596,27 +686,18 @@ function CollapsedKanbanColumn({
           <span className="text-sm font-medium leading-none text-low">
             ({issueCount})
           </span>
-          {(hasNeedsAttention || hasInProgress) && (
-            <span className="flex items-center gap-1 text-low">
-              {hasNeedsAttention && (
-                <HandIcon
-                  className="size-icon-xs text-brand shrink-0"
-                  weight="fill"
-                  aria-label={t('workspaces.needsAttention')}
-                />
-              )}
-              {hasInProgress && (
-                <SpinnerGapIcon
-                  className="size-icon-xs shrink-0 animate-spin text-brand"
-                  weight="bold"
-                  aria-label={t('tasks:status.inProgress', {
-                    defaultValue: 'In Progress',
-                  })}
-                />
-              )}
-            </span>
-          )}
         </div>
+        <span
+          className={cn(
+            'ml-auto shrink-0 rounded-sm border border-border bg-background px-1.5 py-0.5 text-xs font-medium leading-none text-low tabular-nums',
+            !isMobile &&
+              'absolute bottom-2 left-1/2 ml-0 -translate-x-1/2 px-1 py-1'
+          )}
+          aria-label={countLabel}
+          title={countLabel}
+        >
+          {issueCount}
+        </span>
       </div>
     </button>
   );
@@ -647,6 +728,8 @@ export function KanbanContainer() {
     getWorkspacesForIssue,
     getRelationshipsForIssue,
     issuesById,
+    updateIssue,
+    updateIssues,
     insertIssueTag,
     removeIssueTag,
     insertTag,
@@ -1187,7 +1270,9 @@ export function KanbanContainer() {
             prs: prsByWorkspaceId.get(workspace.id) ?? [],
             owner: membersWithProfilesById.get(workspace.owner_user_id) ?? null,
             updatedAt: workspace.updated_at,
-            isOwnedByCurrentUser: workspace.owner_user_id === userId,
+            isOwnedByCurrentUser:
+              workspace.owner_user_id === userId ||
+              (workspace.owner_user_id === '' && !!localWorkspace),
             isRunning: localWorkspace?.isRunning,
             hasPendingApproval: localWorkspace?.hasPendingApproval,
             hasRunningDevServer: localWorkspace?.hasRunningDevServer,
@@ -1212,6 +1297,38 @@ export function KanbanContainer() {
     membersWithProfilesById,
     userId,
   ]);
+
+  const needsReviewByStatusId = useMemo(() => {
+    const map = new Map<string, boolean>();
+
+    for (const [statusId, issueIds] of Object.entries(items)) {
+      const statusHasNeedsReview = issueIds.some((issueId) =>
+        getWorkspacesForIssue(issueId).some((workspace) => {
+          if (
+            workspace.archived ||
+            !workspace.local_workspace_id ||
+            !localWorkspacesById.has(workspace.local_workspace_id)
+          ) {
+            return false;
+          }
+
+          const localWorkspace = localWorkspacesById.get(
+            workspace.local_workspace_id
+          );
+
+          return localWorkspace
+            ? workspaceNeedsActionableReview(localWorkspace)
+            : false;
+        })
+      );
+
+      if (statusHasNeedsReview) {
+        map.set(statusId, true);
+      }
+    }
+
+    return map;
+  }, [items, getWorkspacesForIssue, localWorkspacesById]);
 
   // Calculate sort_order based on column index and issue position
   // Formula: 1000 * [COLUMN_INDEX] + [ISSUE_INDEX] (both 1-based)
@@ -1239,43 +1356,52 @@ export function KanbanContainer() {
         return;
       }
 
-      const isManualSort = kanbanFilters.sortField === 'sort_order';
-
-      // Block within-column reordering when not in manual sort mode
-      // (cross-column moves are always allowed for status changes)
-      if (source.droppableId === destination.droppableId && !isManualSort) {
-        return;
+      const isManualSort =
+        kanbanFilters.sortField === 'sort_order' &&
+        kanbanFilters.sortDirection === 'asc';
+      if (!isManualSort) {
+        setKanbanProjectViewFilters(projectId, activeViewId, {
+          ...kanbanFilters,
+          sortField: 'sort_order',
+          sortDirection: 'asc',
+        });
       }
 
       const sourceId = source.droppableId;
       const destId = destination.droppableId;
       const isCrossColumn = sourceId !== destId;
 
-      // Update local state and capture new items for bulk update
-      let newItems: Record<string, string[]> = {};
-      setItems((prev) => {
-        const sourceItems = [...(prev[sourceId] ?? [])];
-        const [moved] = sourceItems.splice(source.index, 1);
+      const previousItems = items;
+      const sourceItems = [...(previousItems[sourceId] ?? [])];
+      const [moved] = sourceItems.splice(source.index, 1);
+      if (!moved) {
+        return;
+      }
 
-        if (!isCrossColumn) {
-          // Within-column reorder
-          sourceItems.splice(destination.index, 0, moved);
-          newItems = { ...prev, [sourceId]: sourceItems };
-        } else {
-          // Cross-column move
-          const destItems = [...(prev[destId] ?? [])];
-          destItems.splice(destination.index, 0, moved);
-          newItems = {
-            ...prev,
+      const newItems: Record<string, string[]> = isCrossColumn
+        ? {
+            ...previousItems,
             [sourceId]: sourceItems,
-            [destId]: destItems,
+            [destId]: [
+              ...(previousItems[destId] ?? []).slice(0, destination.index),
+              moved,
+              ...(previousItems[destId] ?? []).slice(destination.index),
+            ],
+          }
+        : {
+            ...previousItems,
+            [sourceId]: [
+              ...sourceItems.slice(0, destination.index),
+              moved,
+              ...sourceItems.slice(destination.index),
+            ],
           };
-        }
-        return newItems;
-      });
 
       // Build bulk updates for all issues in affected columns
-      const updates: BulkUpdateIssueItem[] = [];
+      const updates: Array<{
+        id: string;
+        changes: Partial<UpdateIssueRequest>;
+      }> = [];
 
       // Always update destination column
       const destIssueIds = newItems[destId] ?? [];
@@ -1302,20 +1428,36 @@ export function KanbanContainer() {
         });
       }
 
-      // Perform bulk update
       isSyncingRef.current = true;
-      bulkUpdateIssues(updates)
-        .catch((err) => {
-          console.error('Failed to bulk update sort order:', err);
-        })
-        .finally(() => {
-          // Delay clearing flag to let Electric sync complete
-          setTimeout(() => {
-            isSyncingRef.current = false;
-          }, 500);
-        });
+      setItems(newItems);
+
+      try {
+        updateIssues(updates)
+          .persisted.catch((err) => {
+            console.error('Failed to bulk update sort order:', err);
+            setItems(previousItems);
+          })
+          .finally(() => {
+            // Delay clearing flag to let Electric sync complete
+            setTimeout(() => {
+              isSyncingRef.current = false;
+            }, 500);
+          });
+      } catch (err) {
+        console.error('Failed to bulk update sort order:', err);
+        setItems(previousItems);
+        isSyncingRef.current = false;
+      }
     },
-    [kanbanFilters.sortField, calculateSortOrder]
+    [
+      activeViewId,
+      calculateSortOrder,
+      items,
+      kanbanFilters,
+      projectId,
+      setKanbanProjectViewFilters,
+      updateIssues,
+    ]
   );
 
   // Multi-select support
@@ -1399,6 +1541,28 @@ export function KanbanContainer() {
       openPrioritySelection(projectId, ids);
     },
     [projectId, openPrioritySelection, selectedIssueIds, isMultiSelectActive]
+  );
+
+  const handleNeedsReviewFlagToggle = useCallback(
+    (issueId: string) => {
+      const issue = issueMap[issueId];
+      if (!issue) {
+        return;
+      }
+
+      const isFlagged = issueHasFlag(
+        issue.extension_metadata,
+        NEEDS_REVIEW_ISSUE_FLAG
+      );
+      updateIssue(issueId, {
+        extension_metadata: setIssueFlag(
+          issue.extension_metadata,
+          NEEDS_REVIEW_ISSUE_FLAG,
+          !isFlagged
+        ),
+      });
+    },
+    [issueMap, updateIssue]
   );
 
   const handleCardAssigneeClick = useCallback(
@@ -1589,25 +1753,15 @@ export function KanbanContainer() {
               {visibleStatuses.map((status) => {
                 const issueIds = items[status.id] ?? [];
                 const isCollapsed = collapsedStatusIdSet.has(status.id);
-                const columnWorkspaces = issueIds.flatMap(
-                  (issueId) => workspacesByIssueId.get(issueId) ?? []
-                );
-                const hasNeedsAttention = columnWorkspaces.some(
-                  (workspace) =>
-                    workspace.hasPendingApproval ||
-                    (!!workspace.hasUnseenActivity && !workspace.isRunning)
-                );
-                const hasInProgress = columnWorkspaces.some(
-                  (workspace) =>
-                    !!workspace.isRunning && !workspace.hasPendingApproval
-                );
+                const hasColumnNeedsReview =
+                  needsReviewByStatusId.get(status.id) === true;
 
                 return (
                   <KanbanBoard
                     key={status.id}
                     className={cn(
                       isCollapsed &&
-                        (isMobile ? '!min-h-0' : '!min-w-16 !max-w-16')
+                        (isMobile ? '!min-h-12' : '!min-w-16 !max-w-16')
                     )}
                   >
                     {isCollapsed ? (
@@ -1619,10 +1773,9 @@ export function KanbanContainer() {
                           statusName={status.name}
                           statusColor={status.color}
                           issueCount={issueIds.length}
-                          hasNeedsAttention={hasNeedsAttention}
-                          hasInProgress={hasInProgress}
-                          onExpand={() => toggleCollapsedStatus(status.id)}
+                          hasNeedsReview={hasColumnNeedsReview}
                           isMobile={isMobile}
+                          onExpand={() => toggleCollapsedStatus(status.id)}
                         />
                       </KanbanCards>
                     ) : (
@@ -1702,6 +1855,10 @@ export function KanbanContainer() {
                                   title={issue.title}
                                   description={issue.description}
                                   priority={issue.priority}
+                                  needsReviewFlag={issueHasFlag(
+                                    issue.extension_metadata,
+                                    NEEDS_REVIEW_ISSUE_FLAG
+                                  )}
                                   tags={getTagObjectsForIssue(issue.id)}
                                   assignees={issueAssigneesMap[issue.id] ?? []}
                                   pullRequests={issueCardPullRequests}
@@ -1715,6 +1872,10 @@ export function KanbanContainer() {
                                   onPriorityClick={(e) => {
                                     e.stopPropagation();
                                     handleCardPriorityClick(issue.id);
+                                  }}
+                                  onNeedsReviewFlagToggle={(e) => {
+                                    e.stopPropagation();
+                                    handleNeedsReviewFlagToggle(issue.id);
                                   }}
                                   onAssigneeClick={(e) => {
                                     e.stopPropagation();

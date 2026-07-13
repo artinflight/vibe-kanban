@@ -289,6 +289,24 @@ impl ExecutionProcess {
         Ok(count > 0)
     }
 
+    pub async fn has_running_queue_consumer_for_session(
+        pool: &SqlitePool,
+        session_id: Uuid,
+    ) -> Result<bool, sqlx::Error> {
+        let count: i64 = sqlx::query_scalar(
+            r#"SELECT COUNT(*)
+               FROM execution_processes ep
+               WHERE ep.session_id = ?
+                 AND ep.status = 'running'
+                 AND ep.run_reason IN ('codingagent', 'setupscript', 'cleanupscript', 'archivescript')
+                 AND ep.dropped = FALSE"#,
+        )
+        .bind(session_id)
+        .fetch_one(pool)
+        .await?;
+        Ok(count > 0)
+    }
+
     /// Check if there are running processes (excluding dev servers) for a workspace (across all sessions)
     pub async fn has_running_non_dev_server_processes_for_workspace(
         pool: &SqlitePool,
@@ -678,5 +696,80 @@ impl ExecutionProcess {
         .await?;
 
         Ok(rows.into_iter().collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::sqlite::SqlitePoolOptions;
+    use uuid::Uuid;
+
+    use super::ExecutionProcess;
+
+    #[tokio::test]
+    async fn queue_consumer_requires_running_non_dropped_follow_up_process() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .expect("create in-memory sqlite pool");
+
+        sqlx::query(
+            r#"
+            CREATE TABLE execution_processes (
+                id BLOB PRIMARY KEY,
+                session_id BLOB NOT NULL,
+                status TEXT NOT NULL,
+                run_reason TEXT NOT NULL,
+                dropped BOOLEAN NOT NULL
+            );
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .expect("create execution_processes test table");
+
+        let session_id = Uuid::new_v4();
+
+        for (status, run_reason, dropped) in [
+            ("completed", "codingagent", false),
+            ("running", "devserver", false),
+            ("running", "codingagent", true),
+        ] {
+            sqlx::query(
+                r#"INSERT INTO execution_processes (id, session_id, status, run_reason, dropped)
+                   VALUES (?, ?, ?, ?, ?)"#,
+            )
+            .bind(Uuid::new_v4())
+            .bind(session_id)
+            .bind(status)
+            .bind(run_reason)
+            .bind(dropped)
+            .execute(&pool)
+            .await
+            .expect("insert non-consuming execution process");
+        }
+
+        assert!(
+            !ExecutionProcess::has_running_queue_consumer_for_session(&pool, session_id)
+                .await
+                .expect("check without queue consumer")
+        );
+
+        sqlx::query(
+            r#"INSERT INTO execution_processes (id, session_id, status, run_reason, dropped)
+               VALUES (?, ?, 'running', 'codingagent', FALSE)"#,
+        )
+        .bind(Uuid::new_v4())
+        .bind(session_id)
+        .execute(&pool)
+        .await
+        .expect("insert running queue consumer");
+
+        assert!(
+            ExecutionProcess::has_running_queue_consumer_for_session(&pool, session_id)
+                .await
+                .expect("check with queue consumer")
+        );
     }
 }

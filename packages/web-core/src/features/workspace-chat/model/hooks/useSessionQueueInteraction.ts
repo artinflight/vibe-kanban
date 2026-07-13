@@ -15,6 +15,8 @@ interface UseSessionQueueInteractionResult {
   queuedMessage: string | null;
   /** The executor config from the queued message, if any */
   queuedConfig: ExecutorConfig | null;
+  /** Number of queued follow-up messages */
+  queuedCount: number;
   /** Whether a queue operation is in progress */
   isQueueLoading: boolean;
   /** Queue a message for later execution */
@@ -28,7 +30,8 @@ interface UseSessionQueueInteractionResult {
   refreshQueueStatus: () => Promise<void>;
 }
 
-const QUEUE_STATUS_KEY = 'queue-status';
+export const QUEUE_STATUS_KEY = 'queue-status';
+const QUEUED_STATUS_REFRESH_MS = 3000;
 
 /**
  * Hook to manage queue interaction for session messages.
@@ -45,6 +48,11 @@ export function useSessionQueueInteraction({
       queryKey: [QUEUE_STATUS_KEY, sessionId],
       queryFn: () => queueApi.getStatus(sessionId!),
       enabled: !!sessionId,
+      refetchInterval: (query) =>
+        query.state.data?.status === 'queued'
+          ? QUEUED_STATUS_REFRESH_MS
+          : false,
+      refetchOnWindowFocus: true,
     });
 
   const isQueued = queueStatus.status === 'queued';
@@ -54,6 +62,7 @@ export function useSessionQueueInteraction({
   const queuedMessage = queuedMessageData?.data.message ?? null;
   const queuedConfig: ExecutorConfig | null =
     queuedMessageData?.data.executor_config ?? null;
+  const queuedCount = queuedMessageData?.messages.length ?? 0;
 
   // Mutation for queueing a message
   const queueMutation = useMutation({
@@ -106,6 +115,7 @@ export function useSessionQueueInteraction({
     isQueued,
     queuedMessage,
     queuedConfig,
+    queuedCount,
     isQueueLoading: queueMutation.isPending || cancelMutation.isPending,
     queueMessage,
     cancelQueue,

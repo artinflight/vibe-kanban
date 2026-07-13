@@ -73,6 +73,10 @@ pub enum ExecutorError {
     UnknownExecutorType(String),
     #[error("I/O error: {0}")]
     Io(std::io::Error),
+    #[error(
+        "Codex execution limit reached: {active} active, limit {limit}. Set VK_CODEX_MAX_ACTIVE_EXECUTIONS to override."
+    )]
+    ExecutionLimitReached { active: usize, limit: usize },
     #[error(transparent)]
     Json(#[from] serde_json::Error),
     #[error(transparent)]
@@ -89,6 +93,12 @@ pub enum ExecutorError {
     SetupHelperNotSupported,
     #[error("Auth required: {0}")]
     AuthRequired(String),
+}
+
+impl ExecutorError {
+    pub fn is_execution_limit_reached(&self) -> bool {
+        matches!(self, Self::ExecutionLimitReached { .. })
+    }
 }
 
 #[enum_dispatch]

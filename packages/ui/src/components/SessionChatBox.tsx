@@ -14,6 +14,7 @@ import {
   ArrowsOutIcon,
   GithubLogoIcon,
   PencilSimpleIcon,
+  CpuIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { ChatBoxBase, VisualVariant, type DropzoneProps } from './ChatBoxBase';
@@ -138,6 +139,21 @@ interface ReviewCommentsProps {
   onClear: () => void;
 }
 
+export interface SubagentActivityItem {
+  id: string;
+  label: string;
+  state: 'running' | 'unresolved' | 'completed' | 'not_found' | 'failed';
+}
+
+export interface SubagentActivityProps {
+  activeCount: number;
+  unresolvedCount: number;
+  completedCount: number;
+  notFoundCount: number;
+  items: SubagentActivityItem[];
+  shouldConfirmBeforeSend: boolean;
+}
+
 export interface SessionChatBoxEditorRenderProps<
   TExecutor extends string = string,
 > {
@@ -167,6 +183,7 @@ interface SessionChatBoxProps<TExecutor extends string = string> {
   approvalMode?: ApprovalModeProps;
   askQuestionMode?: AskQuestionModeProps;
   reviewComments?: ReviewCommentsProps;
+  subagentActivity?: SubagentActivityProps;
   toolbarActions?: ToolbarActionsProps;
   modelSelector?: ReactNode;
   error?: string | null;
@@ -183,6 +200,7 @@ interface SessionChatBoxProps<TExecutor extends string = string> {
   todos?: TodoProgressItem[];
   inProgressTodo?: TodoProgressItem | null;
   localAttachments?: LocalAttachmentMetadata[];
+  footerLeftExtra?: ReactNode;
   onPrCommentClick?: () => void;
   onViewCode?: () => void;
   onOpenWorkspace?: () => void;
@@ -193,6 +211,7 @@ interface SessionChatBoxProps<TExecutor extends string = string> {
   tokenUsageInfo?: ContextUsageInfo | null;
   supportsContextUsage?: boolean;
   dropzone?: DropzoneProps;
+  queuedCount?: number;
 }
 
 function defaultExecutorLabel(executor: string) {
@@ -232,6 +251,7 @@ export function SessionChatBox<TExecutor extends string = string>({
   approvalMode,
   askQuestionMode,
   reviewComments,
+  subagentActivity,
   toolbarActions,
   modelSelector,
   error,
@@ -245,6 +265,7 @@ export function SessionChatBox<TExecutor extends string = string>({
   todos,
   inProgressTodo,
   localAttachments,
+  footerLeftExtra,
   onPrCommentClick,
   onViewCode,
   onOpenWorkspace,
@@ -255,9 +276,9 @@ export function SessionChatBox<TExecutor extends string = string>({
   tokenUsageInfo,
   supportsContextUsage,
   dropzone,
+  queuedCount = 0,
 }: SessionChatBoxProps<TExecutor>) {
   const { t } = useTranslation('tasks');
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const askQuestionBannerRef = useRef<AskUserQuestionBannerHandle>(null);
 
   // Determine if in feedback mode, edit mode, or approval mode
@@ -346,10 +367,6 @@ export function SessionChatBox<TExecutor extends string = string>({
       actions.onPasteFiles(files);
     }
     e.target.value = '';
-  };
-
-  const handleAttachClick = () => {
-    fileInputRef.current?.click();
   };
 
   const {
@@ -628,7 +645,47 @@ export function SessionChatBox<TExecutor extends string = string>({
         >
           <ClockIcon className="h-4 w-4 text-low" />
           <span className="text-sm text-low">
-            {t('followUp.queuedMessage')}
+            {queuedCount > 1
+              ? t('followUp.queuedMessages', {
+                  count: queuedCount,
+                  defaultValue:
+                    '{{count}} messages queued - will execute when current run finishes',
+                })
+              : t('followUp.queuedMessage')}
+          </span>
+        </div>
+      );
+    }
+
+    if (
+      subagentActivity &&
+      (subagentActivity.activeCount > 0 || subagentActivity.unresolvedCount > 0)
+    ) {
+      const activeLabels = subagentActivity.items
+        .filter(
+          (item) => item.state === 'running' || item.state === 'unresolved'
+        )
+        .map((item) => item.label)
+        .slice(0, 3);
+      const remainingCount =
+        subagentActivity.activeCount + subagentActivity.unresolvedCount;
+
+      banners.push(
+        <div
+          key="subagents"
+          className="bg-warning/10 border-b border-warning/30 px-double py-base flex items-center gap-base"
+        >
+          <CpuIcon className="h-4 w-4 text-warning flex-shrink-0" />
+          <span className="text-sm text-normal flex-1 min-w-0">
+            <span className="font-medium">
+              {remainingCount === 1
+                ? 'Sub-agent may still be active.'
+                : `${remainingCount} sub-agents may still be active.`}
+            </span>{' '}
+            <span className="text-low">
+              {activeLabels.join(', ')}
+              {remainingCount > activeLabels.length ? '...' : ''}
+            </span>
           </span>
         </div>
       );
@@ -883,20 +940,26 @@ export function SessionChatBox<TExecutor extends string = string>({
       }
       footerLeft={
         <>
-          <ToolbarIconButton
-            icon={PaperclipIcon}
-            aria-label={t('tasks:taskFormDialog.attachFile')}
+          {footerLeftExtra}
+          <label
+            aria-disabled={areContentInsertActionsDisabled}
             title={t('tasks:taskFormDialog.attachFile')}
-            onClick={handleAttachClick}
-            disabled={areContentInsertActionsDisabled}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFileInputChange}
-          />
+            className={
+              areContentInsertActionsDisabled
+                ? 'flex items-center justify-center text-low opacity-40 cursor-not-allowed'
+                : 'flex items-center justify-center text-low hover:text-normal cursor-pointer'
+            }
+          >
+            <PaperclipIcon className="size-icon-base" />
+            <input
+              type="file"
+              multiple
+              className="sr-only"
+              disabled={areContentInsertActionsDisabled}
+              aria-label={t('tasks:taskFormDialog.attachFile')}
+              onChange={handleFileInputChange}
+            />
+          </label>
           {onPrCommentClick && (
             <ToolbarIconButton
               icon={GithubLogoIcon}

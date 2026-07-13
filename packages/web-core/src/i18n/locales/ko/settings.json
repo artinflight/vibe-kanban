@@ -213,6 +213,16 @@
           "label": "메시지 보내기 키",
           "helper": "메시지를 보내는 키보드 단축키를 선택하세요.",
           "enterLabel": "Enter (Shift+Enter로 새 줄)"
+        },
+        "savedMessages": {
+          "label": "Saved messages",
+          "helper": "Create reusable messages that can be inserted into the chat input.",
+          "empty": "No saved messages yet.",
+          "add": "Add saved message",
+          "delete": "Delete saved message",
+          "defaultTitle": "New saved message",
+          "titlePlaceholder": "Title",
+          "contentPlaceholder": "Message {{count}}"
         }
       },
       "privacy": {

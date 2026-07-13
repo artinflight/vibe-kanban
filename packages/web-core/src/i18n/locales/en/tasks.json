@@ -107,7 +107,8 @@
     "logsCopied": "Copied!"
   },
   "followUp": {
-    "queuedMessage": "Message queued - will execute when current run finishes"
+    "queuedMessage": "Message queued - will execute when current run finishes",
+    "queuedMessages": "{{count}} messages queued - will execute when current run finishes"
   },
   "todoPopup": {
     "title": "Tasks",

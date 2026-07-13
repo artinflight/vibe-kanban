@@ -67,6 +67,16 @@ use crate::{command, copy};
 const WORKSPACE_TOUCH_DEBOUNCE: Duration = Duration::from_mins(2);
 const LIVE_EXECUTION_HISTORY_BYTES: usize = 8 * 1024 * 1024;
 const LIVE_EXECUTION_CHANNEL_CAPACITY: usize = 4096;
+const WORKSPACE_AGENT_IMAGE_SHARING_INSTRUCTIONS: &str = r#"# Vibe Kanban Workspace
+
+## Sharing Images In Chat
+
+When you create an image that the user should see in chat, save the file under `.vibe-attachments/` in this workspace and reference it with normal Markdown image syntax:
+
+`![short description](.vibe-attachments/example.png)`
+
+Create `.vibe-attachments/` if needed. Use a relative `.vibe-attachments/...` path, not an absolute filesystem path.
+"#;
 
 #[derive(Clone)]
 pub struct LocalContainerService {
@@ -597,6 +607,7 @@ impl LocalContainerService {
                 if let Err(e) = container.update_executor_session_summary(&exec_id).await {
                     tracing::warn!("Failed to update executor session summary: {}", e);
                 }
+                container.notify_agent_turn_completion(&ctx).await;
 
                 let success = matches!(
                     ctx.execution_process.status,
@@ -657,11 +668,12 @@ impl LocalContainerService {
                             container.finalize_task(&ctx).await;
                         }
                         if queued_follow_up_outcome.should_finalize()
-                            && let Err(e) = CodingAgentTurn::mark_unseen_by_execution_process_id(
-                                &db.pool,
-                                ctx.execution_process.id,
-                            )
-                            .await
+                            && let Err(e) =
+                                CodingAgentTurn::mark_completed_unseen_by_execution_process_id(
+                                    &db.pool,
+                                    ctx.execution_process.id,
+                                )
+                                .await
                         {
                             tracing::warn!(
                                 "Failed to mark coding agent turn unseen for execution {}: {}",
@@ -692,11 +704,12 @@ impl LocalContainerService {
                         && !matches!(queued_follow_up_outcome, QueuedFollowUpOutcome::Started);
 
                     if should_mark_turn_unseen
-                        && let Err(e) = CodingAgentTurn::mark_unseen_by_execution_process_id(
-                            &db.pool,
-                            ctx.execution_process.id,
-                        )
-                        .await
+                        && let Err(e) =
+                            CodingAgentTurn::mark_completed_unseen_by_execution_process_id(
+                                &db.pool,
+                                ctx.execution_process.id,
+                            )
+                            .await
                     {
                         tracing::warn!(
                             "Failed to mark coding agent turn unseen for execution {}: {}",
@@ -763,6 +776,8 @@ impl LocalContainerService {
                         "exit_code": ctx.execution_process.exit_code,
                     })));
                 }
+
+                let _ = container.consume_capacity_queued_follow_up().await;
 
                 // Sync workspace to remote after CodingAgent execution
                 if matches!(
@@ -1073,9 +1088,9 @@ impl LocalContainerService {
         Ok(())
     }
 
-    /// Create workspace-level CLAUDE.md and AGENTS.md files that import from each repo.
-    /// Uses the @import syntax to reference each repo's config files.
-    /// Skips creating files if they already exist or if no repos have the source file.
+    /// Create workspace-level CLAUDE.md and AGENTS.md files with VK workspace instructions
+    /// and repo-local imports. Existing generated import-only files are upgraded in place;
+    /// custom files are left untouched.
     async fn create_workspace_config_files(
         workspace_dir: &Path,
         repos: &[Repo],
@@ -1085,14 +1100,6 @@ impl LocalContainerService {
         for config_file in CONFIG_FILES {
             let workspace_config_path = workspace_dir.join(config_file);
 
-            if workspace_config_path.exists() {
-                tracing::trace!(
-                    "Workspace config file {} already exists, skipping",
-                    config_file
-                );
-                continue;
-            }
-
             let mut import_lines = Vec::new();
             for repo in repos {
                 let repo_config_path = workspace_dir.join(&repo.name).join(config_file);
@@ -1101,15 +1108,53 @@ impl LocalContainerService {
                 }
             }
 
-            if import_lines.is_empty() {
-                tracing::trace!(
-                    "No repos have {}, skipping workspace config creation",
+            let content = Self::build_workspace_config_content(&import_lines);
+
+            if workspace_config_path.exists() {
+                let existing = match tokio::fs::read_to_string(&workspace_config_path).await {
+                    Ok(existing) => existing,
+                    Err(e) => {
+                        tracing::warn!(
+                            "Failed to read existing workspace config file {}: {}",
+                            config_file,
+                            e
+                        );
+                        continue;
+                    }
+                };
+
+                if existing.contains("## Sharing Images In Chat") {
+                    tracing::trace!(
+                        "Workspace config file {} already has VK instructions",
+                        config_file
+                    );
+                    continue;
+                }
+
+                if !Self::is_generated_workspace_config(&existing, config_file) {
+                    tracing::trace!(
+                        "Workspace config file {} appears custom, skipping",
+                        config_file
+                    );
+                    continue;
+                }
+
+                if let Err(e) = tokio::fs::write(&workspace_config_path, &content).await {
+                    tracing::warn!(
+                        "Failed to update workspace config file {}: {}",
+                        config_file,
+                        e
+                    );
+                    continue;
+                }
+
+                tracing::info!(
+                    "Updated generated workspace {} with VK instructions",
                     config_file
                 );
                 continue;
             }
 
-            let content = import_lines.join("\n") + "\n";
             if let Err(e) = tokio::fs::write(&workspace_config_path, &content).await {
                 tracing::warn!(
                     "Failed to create workspace config file {}: {}",
@@ -1127,6 +1172,33 @@ impl LocalContainerService {
         }
 
         Ok(())
+    }
+
+    fn build_workspace_config_content(import_lines: &[String]) -> String {
+        let mut content = WORKSPACE_AGENT_IMAGE_SHARING_INSTRUCTIONS.to_string();
+        if !import_lines.is_empty() {
+            content.push_str("\n## Repository Instructions\n\n");
+            content.push_str(&import_lines.join("\n"));
+            content.push('\n');
+        }
+        content
+    }
+
+    fn is_generated_workspace_config(content: &str, config_file: &str) -> bool {
+        let mut has_import = false;
+
+        for line in content
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+        {
+            if !line.starts_with('@') || !line.ends_with(config_file) {
+                return false;
+            }
+            has_import = true;
+        }
+
+        has_import || content.trim().is_empty()
     }
 
     /// Consume a queued follow-up and start it when the completed process allows it.
@@ -1161,7 +1233,11 @@ impl LocalContainerService {
             );
         }
 
-        if let Err(e) = self.start_queued_follow_up(ctx, &queued_msg.data).await {
+        let queued_data = queued_msg.into_follow_up_data();
+        if let Err(e) = self
+            .start_queued_follow_up_for_session(&ctx.workspace, &ctx.session, &queued_data)
+            .await
+        {
             tracing::error!("Failed to start queued follow-up: {}", e);
             return QueuedFollowUpOutcome::FailedToStart;
         }
@@ -1169,20 +1245,115 @@ impl LocalContainerService {
         QueuedFollowUpOutcome::Started
     }
 
-    /// Start a follow-up execution from a queued message
-    async fn start_queued_follow_up(
+    /// Start the oldest message that is waiting for global executor capacity.
+    async fn consume_capacity_queued_follow_up(&self) -> QueuedFollowUpOutcome {
+        let Some(queued_msg) = self.queued_message_service.take_oldest_capacity_queued() else {
+            return QueuedFollowUpOutcome::NoQueuedMessage;
+        };
+
+        let session = match Session::find_by_id(&self.db.pool, queued_msg.session_id).await {
+            Ok(Some(session)) => session,
+            Ok(None) => {
+                tracing::warn!(
+                    "Discarding capacity-queued message for missing session {}",
+                    queued_msg.session_id
+                );
+                return QueuedFollowUpOutcome::Discarded;
+            }
+            Err(error) => {
+                tracing::warn!(
+                    session_id = %queued_msg.session_id,
+                    ?error,
+                    "Failed to load capacity-queued session; requeueing"
+                );
+                self.queued_message_service
+                    .queue_for_capacity(queued_msg.session_id, queued_msg.data);
+                return QueuedFollowUpOutcome::FailedToStart;
+            }
+        };
+
+        let workspace = match Workspace::find_by_id(&self.db.pool, session.workspace_id).await {
+            Ok(Some(workspace)) => workspace,
+            Ok(None) => {
+                tracing::warn!(
+                    "Discarding capacity-queued message for missing workspace {}",
+                    session.workspace_id
+                );
+                return QueuedFollowUpOutcome::Discarded;
+            }
+            Err(error) => {
+                tracing::warn!(
+                    session_id = %session.id,
+                    workspace_id = %session.workspace_id,
+                    ?error,
+                    "Failed to load capacity-queued workspace; requeueing"
+                );
+                self.queued_message_service
+                    .queue_for_capacity(session.id, queued_msg.data);
+                return QueuedFollowUpOutcome::FailedToStart;
+            }
+        };
+
+        if ExecutionProcess::has_running_queue_consumer_for_session(&self.db.pool, session.id)
+            .await
+            .unwrap_or(true)
+        {
+            self.queued_message_service
+                .queue_for_capacity(session.id, queued_msg.data);
+            return QueuedFollowUpOutcome::NoQueuedMessage;
+        }
+
+        if let Err(error) = Scratch::delete(
+            &self.db.pool,
+            queued_msg.session_id,
+            &ScratchType::DraftFollowUp,
+        )
+        .await
+        {
+            tracing::warn!(
+                "Failed to delete scratch after consuming capacity-queued message: {}",
+                error
+            );
+        }
+
+        let queued_data = queued_msg.clone().into_follow_up_data();
+        match self
+            .start_queued_follow_up_for_session(&workspace, &session, &queued_data)
+            .await
+        {
+            Ok(_) => QueuedFollowUpOutcome::Started,
+            Err(error) if error.is_execution_limit_reached() => {
+                self.queued_message_service
+                    .queue_for_capacity(session.id, queued_msg.data);
+                QueuedFollowUpOutcome::NoQueuedMessage
+            }
+            Err(error) => {
+                tracing::error!(
+                    session_id = %session.id,
+                    workspace_id = %workspace.id,
+                    ?error,
+                    "Failed to start capacity-queued follow-up"
+                );
+                QueuedFollowUpOutcome::FailedToStart
+            }
+        }
+    }
+
+    /// Start a follow-up execution from queued data for an arbitrary session.
+    async fn start_queued_follow_up_for_session(
         &self,
-        ctx: &ExecutionContext,
+        workspace: &Workspace,
+        session: &Session,
         queued_data: &DraftFollowUpData,
     ) -> Result<ExecutionProcess, ContainerError> {
         let executor_profile_id = queued_data.executor_config.profile_id();
 
         // Validate executor matches session if session has prior executions
         let expected_executor: Option<String> =
-            ExecutionProcess::latest_executor_profile_for_session(&self.db.pool, ctx.session.id)
+            ExecutionProcess::latest_executor_profile_for_session(&self.db.pool, session.id)
                 .await?
                 .map(|profile| profile.executor.to_string())
-                .or_else(|| ctx.session.executor.clone());
+                .or_else(|| session.executor.clone());
 
         if let Some(expected) = expected_executor {
             let actual = executor_profile_id.executor.to_string();
@@ -1191,10 +1362,10 @@ impl LocalContainerService {
             }
         }
 
-        if ctx.session.executor.is_none() {
+        if session.executor.is_none() {
             Session::update_executor(
                 &self.db.pool,
-                ctx.session.id,
+                session.id,
                 &executor_profile_id.executor.to_string(),
             )
             .await?;
@@ -1202,23 +1373,12 @@ impl LocalContainerService {
 
         // Get latest agent turn for session continuity (from coding agent turns)
         let latest_session_info =
-            CodingAgentTurn::find_latest_session_info(&self.db.pool, ctx.session.id).await?;
-        let interrupted_context = CodingAgentTurn::find_interrupted_context_since_latest_success(
-            &self.db.pool,
-            ctx.session.id,
-        )
-        .await?;
-        let prompt = CodingAgentTurn::prompt_with_interrupted_context(
-            queued_data.message.clone(),
-            &interrupted_context,
-        );
+            CodingAgentTurn::find_latest_session_info(&self.db.pool, session.id).await?;
 
-        let repos =
-            WorkspaceRepo::find_repos_for_workspace(&self.db.pool, ctx.workspace.id).await?;
+        let repos = WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id).await?;
         let cleanup_action = self.cleanup_actions_for_repos(&repos);
 
-        let working_dir = ctx
-            .session
+        let working_dir = session
             .agent_working_dir
             .as_ref()
             .filter(|dir| !dir.is_empty())
@@ -1226,7 +1386,7 @@ impl LocalContainerService {
 
         let action_type = if let Some(info) = latest_session_info {
             ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
-                prompt: prompt.clone(),
+                prompt: queued_data.message.clone(),
                 session_id: info.session_id,
                 reset_to_message_id: None,
                 executor_config: queued_data.executor_config.clone(),
@@ -1234,7 +1394,7 @@ impl LocalContainerService {
             })
         } else {
             ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
-                prompt,
+                prompt: queued_data.message.clone(),
                 executor_config: queued_data.executor_config.clone(),
                 working_dir,
             })
@@ -1243,8 +1403,8 @@ impl LocalContainerService {
         let action = ExecutorAction::new(action_type, cleanup_action.map(Box::new));
 
         self.start_execution(
-            &ctx.workspace,
-            &ctx.session,
+            workspace,
+            session,
             &action,
             &ExecutionProcessRunReason::CodingAgent,
         )
@@ -1330,6 +1490,35 @@ impl ContainerService for LocalContainerService {
 
     fn workspace_to_current_dir(&self, workspace: &Workspace) -> PathBuf {
         PathBuf::from(workspace.container_ref.clone().unwrap_or_default())
+    }
+
+    async fn try_inject_follow_up(
+        &self,
+        session: &Session,
+        data: &DraftFollowUpData,
+    ) -> Result<bool, ContainerError> {
+        let processes =
+            ExecutionProcess::find_by_session_id(&self.db.pool, session.id, false).await?;
+        let Some(process) = processes.into_iter().rev().find(|process| {
+            process.status == ExecutionProcessStatus::Running
+                && process.run_reason == ExecutionProcessRunReason::CodingAgent
+        }) else {
+            return Ok(false);
+        };
+
+        let action = process.executor_action()?;
+        if action.base_executor() != Some(BaseCodingAgent::Codex)
+            || data.executor_config.executor != BaseCodingAgent::Codex
+        {
+            return Ok(false);
+        }
+
+        executors::executors::codex::client::AppServerClient::inject_follow_up_for_execution(
+            process.id,
+            data.message.clone(),
+        )
+        .await
+        .map_err(ContainerError::ExecutorError)
     }
 
     async fn create(&self, workspace: &Workspace) -> Result<ContainerRef, ContainerError> {
@@ -1500,6 +1689,8 @@ impl ContainerService for LocalContainerService {
 
         // Always inject workspace/session context
         env.insert("VK_WORKSPACE_ID", workspace.id.to_string());
+        env.insert("VK_SESSION_ID", execution_process.session_id.to_string());
+        env.insert("VK_EXECUTION_PROCESS_ID", execution_process.id.to_string());
         env.insert("VK_WORKSPACE_BRANCH", &workspace.branch);
 
         // Create the child and stream, add to execution tracker with timeout
@@ -1791,5 +1982,46 @@ fn success_exit_status() -> std::process::ExitStatus {
     {
         use std::os::windows::process::ExitStatusExt;
         ExitStatusExt::from_raw(0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::LocalContainerService;
+
+    #[test]
+    fn workspace_config_content_includes_image_sharing_and_imports() {
+        let imports = vec![
+            "@repo-a/AGENTS.md".to_string(),
+            "@repo-b/AGENTS.md".to_string(),
+        ];
+
+        let content = LocalContainerService::build_workspace_config_content(&imports);
+
+        assert!(content.contains("## Sharing Images In Chat"));
+        assert!(content.contains(".vibe-attachments/example.png"));
+        assert!(content.contains("## Repository Instructions"));
+        assert!(content.contains("@repo-a/AGENTS.md"));
+        assert!(content.contains("@repo-b/AGENTS.md"));
+    }
+
+    #[test]
+    fn detects_generated_workspace_config_without_treating_custom_files_as_generated() {
+        assert!(LocalContainerService::is_generated_workspace_config(
+            "@repo-a/AGENTS.md\n@repo-b/AGENTS.md\n",
+            "AGENTS.md"
+        ));
+        assert!(LocalContainerService::is_generated_workspace_config(
+            "",
+            "AGENTS.md"
+        ));
+        assert!(!LocalContainerService::is_generated_workspace_config(
+            "# Custom instructions\n@repo-a/AGENTS.md\n",
+            "AGENTS.md"
+        ));
+        assert!(!LocalContainerService::is_generated_workspace_config(
+            "@repo-a/CLAUDE.md\n",
+            "AGENTS.md"
+        ));
     }
 }

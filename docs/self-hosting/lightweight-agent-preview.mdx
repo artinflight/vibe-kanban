@@ -3,149 +3,93 @@ title: "Lightweight Agent Preview"
 description: "Run a fast Vibe Kanban frontend preview without starting another backend watcher"
 ---
 
-Use the lightweight preview when you need to smoke test frontend changes from an
-agent worktree. It starts only the local Vite frontend and proxies API and
-websocket traffic to an existing Vibe Kanban backend, so it avoids extra Rust
-watchers and duplicate backend processes.
+Use the lightweight preview when you need to smoke-test Vibe Kanban UI changes from a workspace branch without adding heavy backend load.
 
-<Note>
-The default backend is `http://127.0.0.1:4311`. Start the main local Vibe
-Kanban instance first, or set `VK_PREVIEW_BACKEND_PORT` to the backend port you
-want to reuse.
-</Note>
+This workflow starts only the local web Vite server from the current worktree. It proxies `/api` and websocket traffic to the already-running local Vibe Kanban backend on `127.0.0.1:4311`.
+
+<Warning>
+Do not use `pnpm run dev` for routine UI previews in agent workspaces. It starts backend watch mode and can add expensive Rust rebuilds, file watchers, and child processes. Use the lightweight preview first.
+</Warning>
 
 ## When to use it
 
-- Use this workflow for routine UI, layout, copy, and browser smoke tests.
-- Use full dev mode only when you changed backend behaviour, migrations,
-  executors, agent lifecycle code, or server-side APIs.
-- Run one preview per active worktree unless you have a specific reason to
-  compare multiple branches side by side.
+Use this workflow for:
 
-## Start a terminal-managed preview
+- React, CSS, layout, routing, and copy changes in `packages/local-web`, `packages/web-core`, or `packages/ui`
+- Browser smoke tests before opening or updating a PR into `staging`
+- Quick human review links from a single branch worktree
 
-From the repository root, run:
+Use full dev mode only when you must exercise backend behaviour, migrations, generated types, executor changes, or API route changes.
+
+## Start a preview
+
+From the worktree you want to preview, run:
 
 ```bash
 pnpm run preview:light
 ```
 
-The command starts the frontend in the background, picks the first available
-port from `3002`, and prints the preview URL.
+The command prints a local URL such as:
 
-When Tailscale is available on the host, the workflow also provisions a
-tailnet HTTPS route and prints that reachable review URL instead of a localhost
-address.
-
-Check the running preview:
-
-```bash
-pnpm run preview:light:status
+```text
+Preview running: http://127.0.0.1:3002/
+Backend proxy: http://127.0.0.1:4311/
 ```
 
-View recent logs:
+Open that URL in a browser, or paste it into the Vibe Kanban preview URL bar.
 
-```bash
-pnpm run preview:light:logs
-```
+<Check>
+The preview is ready when the command prints `Preview running` and the URL loads the branch UI.
+</Check>
 
-Stop the preview when you are done:
+## Stop a preview
+
+Stop the preview when the smoke test is complete:
 
 ```bash
 pnpm run preview:light:stop
 ```
 
-## Use it from the Vibe Kanban preview panel
-
-If you configure a workspace dev-server command, use the foreground variant:
+Check whether a preview is still running:
 
 ```bash
-pnpm run preview:light:run
+pnpm run preview:light:status
 ```
 
-This lets Vibe Kanban own the process, stream the Vite logs, and stop the
-server from the preview panel. Do not use the background `preview:light` command
-as the panel command, because it exits after spawning the preview.
-
-## Choose ports explicitly
-
-Use `VK_PREVIEW_PORT` when you need a stable frontend URL:
+Tail logs if the page does not load:
 
 ```bash
-VK_PREVIEW_PORT=3030 pnpm run preview:light
+pnpm run preview:light:logs
 ```
 
-Use `VK_PREVIEW_PORT_START` when several worktrees are active and you want each
-stream to search a different port range:
+## Port selection
+
+By default, the helper starts at port `3002` and uses the first free port after that. Override the frontend port when you need a stable URL:
 
 ```bash
-VK_PREVIEW_PORT_START=3040 pnpm run preview:light
+VK_PREVIEW_PORT=3012 pnpm run preview:light
 ```
 
-Use `VK_PREVIEW_BACKEND_PORT` when the live backend is not on `4311`:
+Override the backend port only if the live local backend is intentionally running somewhere other than `4311`:
 
 ```bash
-VK_PREVIEW_BACKEND_PORT=3001 pnpm run preview:light
-```
-
-Use `VK_PREVIEW_TAILNET_PORT` when you need a stable Tailscale review URL:
-
-```bash
-VK_PREVIEW_TAILNET_PORT=18460 pnpm run preview:light
+VK_PREVIEW_BACKEND_PORT=4411 pnpm run preview:light
 ```
 
 ## Resource guardrails
 
-- Reuse the existing local Vibe Kanban backend instead of starting `pnpm run dev`
-  in every worktree.
-- Stop previews when you finish a smoke test.
-- Prefer `preview:light:run` inside the Vibe Kanban preview panel so the panel
-  can clean up the process.
-- Escalate to `pnpm run dev` only when the backend must rebuild or when you need
-  to verify backend-specific behaviour.
+- Run one lightweight preview per worktree.
+- Stop the preview when you finish testing.
+- Do not leave `pnpm run dev`, `cargo watch`, or duplicate Vite previews running in background sessions.
+- Do not use the production Vibe Kanban service itself as a scratch dev server.
+- Keep routine UI smoke tests frontend-only; move backend investigation into an isolated lab instance when restarts or instrumentation are needed.
 
-## Troubleshooting
+## Full dev mode fallback
 
-<AccordionGroup>
-<Accordion title="The preview says no backend responded">
-Start the main local Vibe Kanban instance first. If it is already running on a
-different backend port, pass that port:
+Use full dev mode only when the branch changes backend behaviour:
 
 ```bash
-VK_PREVIEW_BACKEND_PORT=3001 pnpm run preview:light
-```
-</Accordion>
-
-<Accordion title="The frontend port is already in use">
-Pick a specific free frontend port:
-
-```bash
-VK_PREVIEW_PORT=3030 pnpm run preview:light
+pnpm run dev:qa
 ```
 
-Or start searching from a different range:
-
-```bash
-VK_PREVIEW_PORT_START=3040 pnpm run preview:light
-```
-</Accordion>
-
-<Accordion title="I need a reachable review URL, not localhost">
-If Tailscale is installed and running, `preview:light` prints a tailnet HTTPS
-URL automatically. To pin it to a specific external port, set:
-
-```bash
-VK_PREVIEW_TAILNET_PORT=18460 pnpm run preview:light
-```
-</Accordion>
-
-<Accordion title="The preview panel starts and immediately stops">
-Use the foreground command in the panel:
-
-```bash
-pnpm run preview:light:run
-```
-
-The background command is for terminal-managed previews only.
-</Accordion>
-</AccordionGroup>
+Record why full dev mode was needed in the branch handoff or PR description.

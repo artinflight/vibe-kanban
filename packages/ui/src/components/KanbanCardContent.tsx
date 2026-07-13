@@ -8,6 +8,7 @@ import {
   CaretRightIcon,
   CircleDashedIcon,
   DotsThreeIcon,
+  FlagIcon,
   PlusIcon,
 } from '@phosphor-icons/react';
 import { cn } from '../lib/cn';
@@ -134,8 +135,10 @@ export type KanbanCardContentProps<TTag extends KanbanTag = KanbanTag> = {
   relationships?: KanbanRelationship[];
   isSubIssue?: boolean;
   isLoading?: boolean;
+  needsReviewFlag?: boolean;
   className?: string;
   onPriorityClick?: (e: MouseEvent) => void;
+  onNeedsReviewFlagToggle?: (e: MouseEvent) => void;
   onAssigneeClick?: (e: MouseEvent) => void;
   onMoreActionsClick?: () => void;
   tagEditProps?: TagEditProps<TTag>;
@@ -153,8 +156,10 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
   relationships = [],
   isSubIssue,
   isLoading = false,
+  needsReviewFlag = false,
   className,
   onPriorityClick,
+  onNeedsReviewFlagToggle,
   onAssigneeClick,
   onMoreActionsClick,
   tagEditProps,
@@ -306,6 +311,31 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
             </button>
           ) : (
             <PriorityIcon priority={priority} />
+          )}
+          {onNeedsReviewFlagToggle && (
+            <button
+              type="button"
+              onClick={onNeedsReviewFlagToggle}
+              onMouseDown={(e) => e.stopPropagation()}
+              className={cn(
+                'rounded-sm p-half transition-colors hover:bg-secondary',
+                needsReviewFlag
+                  ? 'text-warning hover:text-warning'
+                  : 'text-low hover:text-normal'
+              )}
+              aria-pressed={needsReviewFlag}
+              aria-label={
+                needsReviewFlag ? 'Clear needs review' : 'Mark needs review'
+              }
+              title={
+                needsReviewFlag ? 'Clear needs review' : 'Mark needs review'
+              }
+            >
+              <FlagIcon
+                className="size-icon-xs"
+                weight={needsReviewFlag ? 'fill' : 'regular'}
+              />
+            </button>
           )}
         </div>
         {onAssigneeClick ? (

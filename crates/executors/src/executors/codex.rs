@@ -81,17 +81,186 @@ pub(crate) fn fork_params_from(thread_id: String, params: ThreadStartParams) -> 
     }
 }
 
+pub(crate) fn resume_params_from(
+    thread_id: String,
+    params: ThreadStartParams,
+) -> ThreadResumeParams {
+    ThreadResumeParams {
+        thread_id,
+        model: params.model,
+        model_provider: params.model_provider,
+        cwd: params.cwd,
+        approval_policy: params.approval_policy,
+        sandbox: params.sandbox,
+        config: params.config,
+        base_instructions: params.base_instructions,
+        developer_instructions: params.developer_instructions,
+        service_tier: params.service_tier,
+        ..Default::default()
+    }
+}
+
 pub(crate) fn is_unforkable_rollout_error(err: &ExecutorError) -> bool {
     let message = err.to_string();
     message.contains("no rollout found for thread id")
         || message.contains("empty session file")
-        || message.contains("failed to load rollout")
+        || message.contains("session not found")
+}
+
+fn env_flag_enabled(name: &str) -> bool {
+    std::env::var(name)
+        .ok()
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
+fn codex_execution_disabled() -> bool {
+    env_flag_enabled("VK_DISABLE_CODEX_EXECUTIONS")
+        || env_flag_enabled("VK_LAB_DISABLE_CODEX_EXECUTIONS")
+}
+
+const DEFAULT_CODEX_MAX_ACTIVE_EXECUTIONS: usize = 8;
+
+fn parse_codex_max_active_executions(value: Option<String>) -> Option<usize> {
+    value
+        .and_then(|value| value.trim().parse::<usize>().ok())
+        .filter(|value| *value > 0)
+}
+
+fn codex_max_active_executions() -> usize {
+    parse_codex_max_active_executions(std::env::var("VK_CODEX_MAX_ACTIVE_EXECUTIONS").ok())
+        .or_else(|| {
+            parse_codex_max_active_executions(
+                std::env::var("VK_LAB_CODEX_MAX_ACTIVE_EXECUTIONS").ok(),
+            )
+        })
+        .unwrap_or(DEFAULT_CODEX_MAX_ACTIVE_EXECUTIONS)
+}
+
+fn active_codex_execution_count() -> usize {
+    if systemd_run::enabled() {
+        return std::process::Command::new("systemctl")
+            .args([
+                "--user",
+                "list-units",
+                "vk-exec-codex-*.service",
+                "--state=running",
+                "--no-legend",
+                "--no-pager",
+                "--plain",
+            ])
+            .output()
+            .ok()
+            .filter(|output| output.status.success())
+            .map(|output| {
+                String::from_utf8_lossy(&output.stdout)
+                    .lines()
+                    .filter(|line| !line.trim().is_empty())
+                    .count()
+            })
+            .unwrap_or(0);
+    }
+
+    std::process::Command::new("pgrep")
+        .args(["-fc", "codex app-server"])
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .and_then(|output| {
+            String::from_utf8_lossy(&output.stdout)
+                .trim()
+                .parse::<usize>()
+                .ok()
+        })
+        .unwrap_or(0)
+}
+
+pub fn codex_execution_limit_error() -> Option<ExecutorError> {
+    let max_active = codex_max_active_executions();
+    let active = active_codex_execution_count();
+    if active >= max_active {
+        Some(ExecutorError::ExecutionLimitReached {
+            active,
+            limit: max_active,
+        })
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        executors::{BaseCodingAgent, StandardCodingAgentExecutor},
+        model_selector::PermissionPolicy,
+        profile::ExecutorConfig,
+    };
+
+    #[test]
+    fn codex_max_active_execution_parser_requires_positive_integer() {
+        assert_eq!(
+            parse_codex_max_active_executions(Some("12".into())),
+            Some(12)
+        );
+        assert_eq!(
+            parse_codex_max_active_executions(Some(" 8 ".into())),
+            Some(8)
+        );
+        assert_eq!(parse_codex_max_active_executions(Some("0".into())), None);
+        assert_eq!(parse_codex_max_active_executions(Some("-1".into())), None);
+        assert_eq!(
+            parse_codex_max_active_executions(Some("invalid".into())),
+            None
+        );
+        assert_eq!(parse_codex_max_active_executions(None), None);
+    }
+
+    #[test]
+    fn codex_auto_permission_override_exits_plan_mode() {
+        let mut codex = Codex {
+            append_prompt: AppendPrompt::default(),
+            sandbox: None,
+            ask_for_approval: Some(AskForApproval::OnRequest),
+            oss: None,
+            model: None,
+            model_reasoning_effort: None,
+            model_reasoning_summary: None,
+            model_reasoning_summary_format: None,
+            profile: None,
+            base_instructions: None,
+            include_apply_patch_tool: None,
+            model_provider: None,
+            compact_prompt: None,
+            developer_instructions: None,
+            plan: true,
+            cmd: CmdOverrides::default(),
+            approvals: None,
+        };
+
+        codex.apply_overrides(&ExecutorConfig {
+            executor: BaseCodingAgent::Codex,
+            variant: Some("PLAN".to_string()),
+            model_id: None,
+            agent_id: None,
+            reasoning_id: None,
+            permission_policy: Some(PermissionPolicy::Auto),
+        });
+
+        assert!(!codex.plan);
+        assert_eq!(codex.ask_for_approval, Some(AskForApproval::Never));
+    }
 }
 
 use async_trait::async_trait;
 use codex_app_server_protocol::{
     AskForApproval as V2AskForApproval, ReviewTarget, SandboxMode as V2SandboxMode,
-    ThreadForkParams, ThreadStartParams, UserInput,
+    ThreadForkParams, ThreadResumeParams, ThreadStartParams, UserInput,
 };
 use codex_protocol::config_types::ServiceTier;
 use derivative::Derivative;
@@ -101,6 +270,7 @@ use serde_json::Value;
 use strum_macros::{AsRefStr, EnumString};
 use tokio::process::Command;
 use ts_rs::TS;
+use uuid::Uuid;
 use workspace_utils::{command_ext::GroupSpawnNoWindowExt, msg_store::MsgStore};
 
 use self::{
@@ -163,6 +333,7 @@ pub enum ReasoningEffort {
     Medium,
     High,
     Xhigh,
+    Max,
 }
 
 /// Model reasoning summary style
@@ -356,12 +527,13 @@ impl StandardCodingAgentExecutor for Codex {
         _workdir: Option<&std::path::Path>,
         _repo_path: Option<&std::path::Path>,
     ) -> Result<futures::stream::BoxStream<'static, json_patch::Patch>, ExecutorError> {
-        let xhigh_reasoning_options = ReasoningOption::from_names(
+        let max_reasoning_options = ReasoningOption::from_names(
             [
                 ReasoningEffort::Low,
                 ReasoningEffort::Medium,
                 ReasoningEffort::High,
                 ReasoningEffort::Xhigh,
+                ReasoningEffort::Max,
             ]
             .map(|e| e.as_ref().to_string()),
         );
@@ -370,52 +542,82 @@ impl StandardCodingAgentExecutor for Codex {
             model_selector: ModelSelectorConfig {
                 models: vec![
                     ModelInfo {
+                        id: "gpt-5.6-sol".to_string(),
+                        name: "GPT-5.6 Sol".to_string(),
+                        provider_id: None,
+                        reasoning_options: max_reasoning_options.clone(),
+                    },
+                    ModelInfo {
+                        id: "gpt-5.6-terra".to_string(),
+                        name: "GPT-5.6 Terra".to_string(),
+                        provider_id: None,
+                        reasoning_options: max_reasoning_options.clone(),
+                    },
+                    ModelInfo {
+                        id: "gpt-5.6-luna".to_string(),
+                        name: "GPT-5.6 Luna".to_string(),
+                        provider_id: None,
+                        reasoning_options: max_reasoning_options.clone(),
+                    },
+                    ModelInfo {
                         id: "gpt-5.5".to_string(),
                         name: "GPT-5.5".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.5-fast".to_string(),
                         name: "GPT-5.5 Fast".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.4".to_string(),
                         name: "GPT-5.4".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
+                    },
+                    ModelInfo {
+                        id: "gpt-5.4-mini".to_string(),
+                        name: "GPT-5.4 Mini".to_string(),
+                        provider_id: None,
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.4-fast".to_string(),
                         name: "GPT-5.4 Fast".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
+                    },
+                    ModelInfo {
+                        id: "gpt-5.3-codex-spark".to_string(),
+                        name: "GPT-5.3 Codex Spark".to_string(),
+                        provider_id: None,
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.3-codex".to_string(),
                         name: "GPT-5.3 Codex".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.2-codex".to_string(),
                         name: "GPT-5.2 Codex".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.2".to_string(),
                         name: "GPT-5.2".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options.clone(),
+                        reasoning_options: max_reasoning_options.clone(),
                     },
                     ModelInfo {
                         id: "gpt-5.1-codex-max".to_string(),
                         name: "GPT-5.1 Codex Max".to_string(),
                         provider_id: None,
-                        reasoning_options: xhigh_reasoning_options,
+                        reasoning_options: max_reasoning_options,
                     },
                 ],
                 permissions: vec![
@@ -646,28 +848,10 @@ impl Codex {
             }
             Some(session_id) => {
                 let response = client
-                    .thread_fork(fork_params_from(
-                        session_id.clone(),
-                        thread_start_params.clone(),
-                    ))
-                    .await;
-
-                match response {
-                    Ok(response) => {
-                        tracing::debug!("forked thread, new thread_id={}", response.thread.id);
-                        (response.thread.id, response.model)
-                    }
-                    Err(err) if is_unforkable_rollout_error(&err) => {
-                        tracing::warn!(
-                            resume_session_id = %session_id,
-                            error = %err,
-                            "Codex resume thread is not forkable; starting a fresh thread"
-                        );
-                        let response = client.thread_start(thread_start_params).await?;
-                        (response.thread.id, response.model)
-                    }
-                    Err(err) => return Err(err),
-                }
+                    .thread_resume(resume_params_from(session_id, thread_start_params))
+                    .await?;
+                tracing::debug!("resumed thread_id={}", response.thread.id);
+                (response.thread.id, response.model)
             }
         };
 
@@ -702,6 +886,16 @@ impl Codex {
         F: FnOnce(Arc<AppServerClient>, ExitSignalSender) -> Fut + Send + 'static,
         Fut: std::future::Future<Output = Result<(), ExecutorError>> + Send + 'static,
     {
+        if codex_execution_disabled() {
+            return Err(ExecutorError::Io(std::io::Error::other(
+                "Codex executions are disabled by VK_DISABLE_CODEX_EXECUTIONS",
+            )));
+        }
+
+        if let Some(error) = codex_execution_limit_error() {
+            return Err(error);
+        }
+
         let (program_path, args) = command_parts.into_resolved().await?;
 
         let effective_env = env.clone().with_profile(&self.cmd);
@@ -776,6 +970,9 @@ impl Codex {
         let repo_context = env.repo_context.clone();
         let commit_reminder = env.commit_reminder;
         let commit_reminder_prompt = env.commit_reminder_prompt.clone();
+        let execution_process_id = effective_env
+            .get("VK_EXECUTION_PROCESS_ID")
+            .and_then(|value| Uuid::parse_str(value).ok());
         let cancel_for_task = cancel.clone();
 
         tokio::spawn(async move {
@@ -801,12 +998,18 @@ impl Codex {
                 cancel_for_task,
             );
             client.connect(rpc_peer);
+            if let Some(execution_process_id) = execution_process_id {
+                AppServerClient::register_active_execution(execution_process_id, &client);
+            }
 
             let result = async {
                 client.initialize().await?;
                 task(client, exit_signal_tx.clone()).await
             }
             .await;
+            if let Some(execution_process_id) = execution_process_id {
+                AppServerClient::unregister_active_execution(execution_process_id);
+            }
 
             if let Err(err) = result {
                 match &err {

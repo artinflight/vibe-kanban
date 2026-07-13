@@ -1,5 +1,21 @@
 # HANDOFF.md
 
+## 2026-07-13 Staging Backfill Preview Updated
+
+- Preview branch: `vk/4e18-live-backfill-to-staging`
+- Preview commit: `3bfebabe8 Backfill live VK changes into staging`
+- Draft PR: `https://github.com/artinflight/vibe-kanban/pull/62`
+- Public review URL: `https://mcp-server.tail744c4.ts.net:8443/`
+- Updated the public `8443` preview by restarting `vk-preview-originfix-vibe-kanban.service`, which serves this worktree through Vite on `127.0.0.1:3012` with the origin rewrite required for the live backend.
+- Also refreshed the helper lightweight preview on `https://mcp-server.tail744c4.ts.net:18452/` by restarting `pnpm run preview:light` on port `3002`.
+- Smoke checks:
+  - `curl -skI https://mcp-server.tail744c4.ts.net:8443/` returned `HTTP/2 200`.
+  - `curl -sk https://mcp-server.tail744c4.ts.net:8443/api/info` returned the live backend info JSON.
+  - Vite entry `/src/app/entry/App.tsx` loaded from the public preview.
+  - Public Vite source for `SharedAppLayout.tsx` contains project customization wiring for `abbreviation` and `color`.
+  - Public Vite source for `AppBar.tsx` contains project flyout/edit/custom color markers.
+- No live `vibe-kanban.service` restart or frontend symlink swap was performed.
+
 ## 2026-06-26 Multi-Line Rich Clipboard Paste Hotfix Live
 
 - User reported VK chat paste again only inserted content up to the first line.

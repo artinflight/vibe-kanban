@@ -764,7 +764,7 @@ async fn create_worktree_when_repo_path_is_a_worktree() {
 }
 
 #[tokio::test]
-async fn ensure_worktree_moves_existing_checkout_for_branch() {
+async fn ensure_worktree_rejects_unmanaged_existing_checkout_for_branch() {
     use tempfile::TempDir;
     let td = TempDir::new().unwrap();
 
@@ -792,10 +792,19 @@ async fn ensure_worktree_moves_existing_checkout_for_branch() {
         .unwrap();
     let desired_worktree_path = desired_workspace_dir.join("repo");
 
-    WorktreeManager::ensure_worktree_exists(&repo_path, "existing-branch", &desired_worktree_path)
-        .await
-        .unwrap();
+    let error = WorktreeManager::ensure_worktree_exists(
+        &repo_path,
+        "existing-branch",
+        &desired_worktree_path,
+    )
+    .await
+    .unwrap_err();
 
-    assert!(!old_worktree_path.exists());
-    assert!(desired_worktree_path.join(".git").is_file());
+    assert!(
+        error
+            .to_string()
+            .contains("Branch 'existing-branch' is already checked out at unmanaged path")
+    );
+    assert!(old_worktree_path.join(".git").is_file());
+    assert!(!desired_worktree_path.exists());
 }

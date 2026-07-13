@@ -226,7 +226,7 @@ Current implementation constraint:
 - with that setting, the candidate VK data directory should be:
   `/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban`
 
-Prepare the candidate:
+Stage 1: Pre-Spin-Up Preparation:
 
 1. Start from a clean candidate worktree based on the intended release branch.
 2. Confirm all intended fixes are present and known live fixes are not missing.
@@ -242,15 +242,26 @@ Prepare the candidate:
    - known fixes that must not regress
    - validation commands and results
 6. Take a lean restore backup and mirror it to Desktop.
-7. Seed the candidate state from the backup into the isolated candidate data
-   directory, not into `/home/mcp/.local/share/vibe-kanban`.
-8. Copy the live VK Codex home into the isolated candidate `CODEX_HOME` only
+7. Record the local archive path, Desktop mirror path, current live service
+   status, live binary hash, live frontend symlink target, `/api/info`, active
+   `vk-exec-*` units, and running execution-process count.
+8. Record rollback notes for the current `vibe.local` route, live backend
+   target, binary paths, frontend paths, and backup archive.
+9. Stop before creating or starting the candidate service, seeding candidate
+   runtime paths for active use, changing reverse-proxy routing, restarting
+   `vibe-kanban.service`, or touching `vibe.local`.
+
+Stage 2: Candidate Seed, Spin-Up, And Direct Smoke:
+
+1. Seed the candidate state from the Stage 1 backup into the isolated candidate
+   data directory, not into `/home/mcp/.local/share/vibe-kanban`.
+2. Copy the live VK Codex home into the isolated candidate `CODEX_HOME` only
    while the candidate is offline. Copy the full continuity state, not just
    `auth.json`.
-9. Start the candidate on non-live ports, for example backend `4411` and preview
+3. Start the candidate on non-live ports, for example backend `4411` and preview
    proxy `4412`.
-10. Smoke the candidate directly by port or by a temporary test-only origin.
-    Do not use `vibe.local` for this stage.
+4. Smoke the candidate directly by port or by a temporary test-only origin.
+   Do not use `vibe.local` for this stage.
 
 Candidate runtime requirements:
 
@@ -271,7 +282,7 @@ Environment=VK_TRANSIENT_MEMORY_HIGH=1500M
 Environment=VK_TRANSIENT_MEMORY_MAX=3000M
 ```
 
-Before final sync:
+Stage 3: Final Sync:
 
 1. Re-check active agents on live:
    ```bash
@@ -294,7 +305,7 @@ Before final sync:
 6. Restart the candidate on its non-live ports.
 7. Re-run direct candidate smoke.
 
-Cut over:
+Stage 4: Cutover:
 
 1. Confirm live and candidate manifests, backup paths, ports, binary hashes, and
    frontend asset paths are recorded.
@@ -313,7 +324,7 @@ Cut over:
 6. After acceptance, stop the old instance. Do not delete old state until the
    backup and rollback window are explicitly accepted.
 
-Rollback:
+Stage 5: Rollback:
 
 - flip `vibe.local` back to the previous live backend
 - stop the candidate

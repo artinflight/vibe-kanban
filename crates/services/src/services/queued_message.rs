@@ -111,7 +111,8 @@ impl QueuedMessageService {
     pub fn queue_for_capacity(&self, session_id: Uuid, data: DraftFollowUpData) -> QueuedMessage {
         let queued = QueuedMessage {
             session_id,
-            data,
+            data: data.clone(),
+            messages: vec![data],
             queued_at: Utc::now(),
             wait_for_capacity: true,
         };

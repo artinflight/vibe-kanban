@@ -34,9 +34,7 @@ import {
 import {
   CaretLeftIcon,
   DotsThreeIcon,
-  HandIcon,
   PlusIcon,
-  SpinnerGapIcon,
   XIcon,
 } from '@phosphor-icons/react';
 import { Actions } from '@/shared/actions';
@@ -617,7 +615,6 @@ type CollapsedKanbanColumnProps = {
   statusColor: string;
   issueCount: number;
   hasNeedsReview?: boolean;
-  isMobile?: boolean;
   onExpand: () => void;
   isMobile: boolean;
 };
@@ -627,7 +624,6 @@ function CollapsedKanbanColumn({
   statusColor,
   issueCount,
   hasNeedsReview = false,
-  isMobile = false,
   onExpand,
   isMobile,
 }: CollapsedKanbanColumnProps) {
@@ -690,26 +686,6 @@ function CollapsedKanbanColumn({
           <span className="text-sm font-medium leading-none text-low">
             ({issueCount})
           </span>
-          {(hasNeedsAttention || hasInProgress) && (
-            <span className="flex items-center gap-1 text-low">
-              {hasNeedsAttention && (
-                <HandIcon
-                  className="size-icon-xs text-brand shrink-0"
-                  weight="fill"
-                  aria-label={t('workspaces.needsAttention')}
-                />
-              )}
-              {hasInProgress && (
-                <SpinnerGapIcon
-                  className="size-icon-xs shrink-0 animate-spin text-brand"
-                  weight="bold"
-                  aria-label={t('tasks:status.inProgress', {
-                    defaultValue: 'In Progress',
-                  })}
-                />
-              )}
-            </span>
-          )}
         </div>
         <span
           className={cn(
@@ -1800,7 +1776,6 @@ export function KanbanContainer() {
                           hasNeedsReview={hasColumnNeedsReview}
                           isMobile={isMobile}
                           onExpand={() => toggleCollapsedStatus(status.id)}
-                          isMobile={isMobile}
                         />
                       </KanbanCards>
                     ) : (

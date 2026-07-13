@@ -19,6 +19,18 @@ pub struct CodingAgentTurn {
     pub updated_at: DateTime<Utc>,
 }
 
+fn truncate_recovery_text(text: &str) -> String {
+    const MAX_CHARS: usize = 4_000;
+
+    let text = text.trim();
+    if text.chars().count() <= MAX_CHARS {
+        return text.to_string();
+    }
+
+    let truncated: String = text.chars().take(MAX_CHARS).collect();
+    format!("{truncated}\n[truncated]")
+}
+
 #[derive(Debug, Deserialize, TS)]
 pub struct CreateCodingAgentTurn {
     pub execution_process_id: Uuid,

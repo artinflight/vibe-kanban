@@ -92,7 +92,16 @@ fn sanitize_asset_path(path: &str) -> Option<PathBuf> {
 }
 
 fn file_response(path: &str, content: Vec<u8>) -> Response {
+    ok_response(path, Body::from(content))
+}
+
+fn ok_response(path: &str, body: Body) -> Response {
     let mime = mime_guess::from_path(path).first_or_octet_stream();
+    let cache_control = if path.ends_with(".html") {
+        HTML_CACHE_CONTROL
+    } else {
+        ASSET_CACHE_CONTROL
+    };
 
     Response::builder()
         .status(StatusCode::OK)
@@ -100,6 +109,7 @@ fn file_response(path: &str, content: Vec<u8>) -> Response {
             header::CONTENT_TYPE,
             HeaderValue::from_str(mime.as_ref()).unwrap(),
         )
-        .body(Body::from(content))
+        .header(header::CACHE_CONTROL, cache_control)
+        .body(body)
         .unwrap()
 }

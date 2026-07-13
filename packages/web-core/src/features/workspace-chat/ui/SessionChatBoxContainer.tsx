@@ -66,6 +66,7 @@ import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { sessionsApi } from '@/shared/lib/api';
 import { RenameSessionDialog } from '@vibe/ui/components/RenameSessionDialog';
 import type { TurnNavigationItem } from '@vibe/ui/components/TurnNavigationPopup';
+import { SavedChatMessagesPicker } from './SavedChatMessagesPicker';
 import { deriveSubagentActivity } from '../model/subagentActivity';
 import {
   deriveSubagentActivityFromJobs,

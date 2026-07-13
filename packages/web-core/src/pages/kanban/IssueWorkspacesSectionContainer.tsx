@@ -1,7 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
-import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { LinkIcon, PlusIcon } from '@phosphor-icons/react';
 import { useProjectContext } from '@/shared/hooks/useProjectContext';
@@ -11,10 +10,8 @@ import { useUserContext } from '@/shared/hooks/useUserContext';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useProjectWorkspaceCreateDraft } from '@/shared/hooks/useProjectWorkspaceCreateDraft';
-import { workspaceRecordKeys } from '@/shared/hooks/useWorkspaceRecord';
 import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 import { workspacesApi } from '@/shared/lib/api';
-import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 import { dispatchWorkspaceLinkRefresh } from '@/shared/lib/workspaceLinkRefresh';
 import { getWorkspaceDefaults } from '@/shared/lib/workspaceDefaults';
 import {
@@ -28,7 +25,6 @@ import { DeleteWorkspaceDialog } from '@vibe/ui/components/DeleteWorkspaceDialog
 import { RenameWorkspaceDialog } from '@vibe/ui/components/RenameWorkspaceDialog';
 import type { WorkspaceWithStats } from '@vibe/ui/components/IssueWorkspaceCard';
 import { IssueWorkspacesSection } from '@vibe/ui/components/IssueWorkspacesSection';
-import { RenameWorkspaceDialog } from '@vibe/ui/components/RenameWorkspaceDialog';
 import type { SectionAction } from '@vibe/ui/components/CollapsibleSectionHeader';
 
 interface IssueWorkspacesSectionContainerProps {

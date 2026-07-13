@@ -546,6 +546,10 @@ session_id: string,
  */
 data: DraftFollowUpData,
 /**
+ * Ordered follow-up messages queued while the agent was running.
+ */
+messages: Array<DraftFollowUpData>,
+/**
  * Timestamp when the message was queued
  */
 queued_at: string,

@@ -186,7 +186,6 @@ export function SharedAppLayout() {
     () => sortProjectsByOrder(orgProjects),
     [orgProjects]
   );
-  const localProjectOrder = useUiPreferencesStore((s) => s.localProjectOrder);
   const localProjectCustomizations = useUiPreferencesStore(
     (s) => s.localProjectCustomizations
   );
@@ -320,14 +319,6 @@ export function SharedAppLayout() {
       ),
     [allAppBarProjects]
   );
-  const isProjectsLoading = isLocalAuthBypassed
-    ? isLocalProjectsLoading ||
-      isActiveWorkspaceSummariesLoading ||
-      isArchivedWorkspaceSummariesLoading ||
-      localProjectWorkspaceQueries.some((query) => query.isLoading)
-    : isLoading ||
-      isActiveWorkspaceSummariesLoading ||
-      isArchivedWorkspaceSummariesLoading;
   const [orderedProjects, setOrderedProjects] =
     useState<AppBarProject[]>(appBarProjects);
   const [isSavingProjectOrder, setIsSavingProjectOrder] = useState(false);
@@ -408,9 +399,6 @@ export function SharedAppLayout() {
   // Persist last selected project to scratch store
   const setSelectedProjectId = useUiPreferencesStore(
     (s) => s.setSelectedProjectId
-  );
-  const setLocalProjectOrder = useUiPreferencesStore(
-    (s) => s.setLocalProjectOrder
   );
   const setLocalProjectCustomization = useUiPreferencesStore(
     (s) => s.setLocalProjectCustomization

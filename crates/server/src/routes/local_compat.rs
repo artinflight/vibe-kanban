@@ -22,6 +22,7 @@ use deployment::Deployment;
 use git_host::{GitHostError, GitHostProvider, GitHostService};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
+use services::services::container::ContainerService;
 use sqlx::{QueryBuilder, Sqlite};
 use utils::response::ApiResponse;
 use uuid::Uuid;

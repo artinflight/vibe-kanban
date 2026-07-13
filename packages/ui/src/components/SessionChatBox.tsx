@@ -940,6 +940,7 @@ export function SessionChatBox<TExecutor extends string = string>({
       }
       footerLeft={
         <>
+          {footerLeftExtra}
           <label
             aria-disabled={areContentInsertActionsDisabled}
             title={t('tasks:taskFormDialog.attachFile')}

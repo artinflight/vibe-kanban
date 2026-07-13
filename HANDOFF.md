@@ -2589,3 +2589,21 @@ User QA checklist for the no-restart frontend repair:
 - Live frontend-only deploy: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260513Tkanban-drag-persist`, asset `/assets/index-CmLP2jfq.js`.
 - No VK restart; `vibe-kanban.service` PID stayed `913128`.
 - Validation: `pnpm --filter @vibe/web-core run check`; `pnpm --filter @vibe/local-web run check`; `pnpm run format`; `pnpm --filter @vibe/local-web run build`; `https://vibe.local/` serves `/assets/index-CmLP2jfq.js`; live JS contains the `updateIssues` drag mutation path; `/api/info` OK.
+
+2026-07-13 live-to-staging backfill recovery:
+
+- User found staging preview was missing live-only VK work, including colored project icons/flyout behavior and other local deploy fixes.
+- Live frontend manifest pointed at `frontend/20260626TmobileProjectEdit`, based on `deploy/restart-ready-20260626TrestartReady`, both at `11ae04d59`.
+- Created branch `vk/4e18-live-backfill-to-staging` from staging preview base `758f6b2ce`.
+- Full merge from the live deploy branch produced broad conflicts and was aborted; then the live commit range was cherry-picked onto staging instead.
+- Kept staging's newer preview script behavior during the first cherry-pick conflict and restored `preview:light:run`.
+- Resolved integration artifacts from duplicate props/imports/effects and Rust API drift after the cherry-pick sequence.
+- Validation before committing the integration repair:
+  - `git diff --check`
+  - `pnpm --filter @vibe/ui run check`
+  - `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/web-core run check`
+  - `cargo check -p executors -p services -p local-deployment -p server`
+  - `pnpm run generate-types`
+  - `pnpm run format`
+- `pnpm run generate-types:check` previously compiled but hung in the final linker step on this host; `pnpm run generate-types` completed and regenerated `shared/types.ts`.
+- Next step: review/push/open PR from `vk/4e18-live-backfill-to-staging` into `staging`, then run human QA on the staging preview before any `staging -> main` promotion.

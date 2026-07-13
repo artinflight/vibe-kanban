@@ -1233,8 +1233,9 @@ impl LocalContainerService {
             );
         }
 
+        let queued_data = queued_msg.into_follow_up_data();
         if let Err(e) = self
-            .start_queued_follow_up_for_session(&ctx.workspace, &ctx.session, &queued_msg.data)
+            .start_queued_follow_up_for_session(&ctx.workspace, &ctx.session, &queued_data)
             .await
         {
             tracing::error!("Failed to start queued follow-up: {}", e);
@@ -1315,8 +1316,9 @@ impl LocalContainerService {
             );
         }
 
+        let queued_data = queued_msg.clone().into_follow_up_data();
         match self
-            .start_queued_follow_up_for_session(&workspace, &session, &queued_msg.data)
+            .start_queued_follow_up_for_session(&workspace, &session, &queued_data)
             .await
         {
             Ok(_) => QueuedFollowUpOutcome::Started,
@@ -1384,7 +1386,7 @@ impl LocalContainerService {
 
         let action_type = if let Some(info) = latest_session_info {
             ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
-                prompt: prompt.clone(),
+                prompt: queued_data.message.clone(),
                 session_id: info.session_id,
                 reset_to_message_id: None,
                 executor_config: queued_data.executor_config.clone(),
@@ -1392,7 +1394,7 @@ impl LocalContainerService {
             })
         } else {
             ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
-                prompt,
+                prompt: queued_data.message.clone(),
                 executor_config: queued_data.executor_config.clone(),
                 working_dir,
             })

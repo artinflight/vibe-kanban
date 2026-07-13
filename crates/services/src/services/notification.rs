@@ -6,6 +6,7 @@ use std::{
 
 use async_trait::async_trait;
 use db::models::execution_process::ExecutionProcessStatus;
+use reqwest::Url;
 use tokio::sync::{RwLock, mpsc};
 use utils::{self, command_ext::NoWindowExt};
 use uuid::Uuid;
@@ -130,6 +131,12 @@ impl NotificationService {
 
         if let Some(ntfy) = &self.turn_completion_ntfy {
             ntfy.publish(title, message);
+        }
+    }
+
+    pub async fn notify_turn_completion_ntfy(&self, title: &str, message: &str) {
+        if let Some(ntfy) = &self.turn_completion_ntfy {
+            ntfy.publish(title.to_string(), message.to_string());
         }
     }
 

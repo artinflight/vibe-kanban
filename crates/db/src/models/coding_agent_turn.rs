@@ -19,6 +19,18 @@ pub struct CodingAgentTurn {
     pub updated_at: DateTime<Utc>,
 }
 
+fn truncate_recovery_text(text: &str) -> String {
+    const MAX_CHARS: usize = 4_000;
+
+    let text = text.trim();
+    if text.chars().count() <= MAX_CHARS {
+        return text.to_string();
+    }
+
+    let truncated: String = text.chars().take(MAX_CHARS).collect();
+    format!("{truncated}\n[truncated]")
+}
+
 #[derive(Debug, Deserialize, TS)]
 pub struct CreateCodingAgentTurn {
     pub execution_process_id: Uuid,
@@ -210,6 +222,35 @@ impl CodingAgentTurn {
         .await
     }
 
+    /// Find the latest non-dropped coding agent turn for a VK session.
+    pub async fn find_latest_by_session_id(
+        pool: &SqlitePool,
+        session_id: Uuid,
+    ) -> Result<Option<Self>, sqlx::Error> {
+        sqlx::query_as::<_, CodingAgentTurn>(
+            r#"SELECT
+                cat.id,
+                cat.execution_process_id,
+                cat.agent_session_id,
+                cat.agent_message_id,
+                cat.prompt,
+                cat.summary,
+                cat.seen,
+                cat.created_at,
+                cat.updated_at
+               FROM coding_agent_turns cat
+               JOIN execution_processes ep ON ep.id = cat.execution_process_id
+               WHERE ep.session_id = ?
+                 AND ep.run_reason = 'codingagent'
+                 AND ep.dropped = FALSE
+               ORDER BY ep.created_at DESC
+               LIMIT 1"#,
+        )
+        .bind(session_id)
+        .fetch_optional(pool)
+        .await
+    }
+
     /// Create a new coding agent turn
     pub async fn create(
         pool: &SqlitePool,
@@ -331,7 +372,38 @@ impl CodingAgentTurn {
                  AND seen = 1"#,
         )
         .bind(now)
-        .bind(execution_process_id.to_string())
+        .bind(execution_process_id)
+        .execute(pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Mark a completed coding agent turn as unseen by execution process ID.
+    ///
+    /// This is used when the user viewed a workspace while the agent was still
+    /// running. The turn should become reviewable again once a final summary
+    /// exists, but only for successful completions.
+    pub async fn mark_completed_unseen_by_execution_process_id(
+        pool: &SqlitePool,
+        execution_process_id: Uuid,
+    ) -> Result<(), sqlx::Error> {
+        let now = Utc::now();
+        sqlx::query(
+            r#"UPDATE coding_agent_turns
+               SET seen = 0, updated_at = ?
+               WHERE execution_process_id = ?
+                 AND seen = 1
+                 AND EXISTS (
+                   SELECT 1
+                   FROM execution_processes ep
+                   WHERE ep.id = coding_agent_turns.execution_process_id
+                     AND ep.run_reason = 'codingagent'
+                     AND ep.status = 'completed'
+                 )"#,
+        )
+        .bind(now)
+        .bind(execution_process_id)
         .execute(pool)
         .await?;
 
@@ -361,6 +433,34 @@ impl CodingAgentTurn {
         Ok(())
     }
 
+    /// Mark the latest coding agent turn for a workspace as unseen.
+    pub async fn mark_latest_unseen_by_workspace_id(
+        pool: &SqlitePool,
+        workspace_id: Uuid,
+    ) -> Result<bool, sqlx::Error> {
+        let now = Utc::now();
+        let result = sqlx::query(
+            r#"UPDATE coding_agent_turns
+               SET seen = 0, updated_at = ?
+               WHERE execution_process_id = (
+                   SELECT ep.id
+                   FROM execution_processes ep
+                   JOIN sessions s ON ep.session_id = s.id
+                   WHERE s.workspace_id = ?
+                     AND ep.run_reason = 'codingagent'
+                     AND ep.dropped = 0
+                   ORDER BY ep.created_at DESC
+                   LIMIT 1
+               )"#,
+        )
+        .bind(now)
+        .bind(workspace_id)
+        .execute(pool)
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
     /// Check if a workspace has any unseen coding agent turns
     /// Find all workspaces that have unseen coding agent turns, filtered by archived status
     pub async fn find_workspaces_with_unseen(
@@ -383,14 +483,234 @@ impl CodingAgentTurn {
     }
 }
 
-fn truncate_recovery_text(text: &str) -> String {
-    const MAX_CHARS: usize = 4_000;
+#[cfg(test)]
+mod tests {
+    use sqlx::{Row, sqlite::SqlitePoolOptions};
+    use uuid::Uuid;
 
-    let text = text.trim();
-    if text.chars().count() <= MAX_CHARS {
-        return text.to_string();
+    use super::CodingAgentTurn;
+
+    #[tokio::test]
+    async fn latest_workspace_turn_can_be_marked_unseen() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .expect("create in-memory sqlite pool");
+
+        sqlx::query(
+            r#"
+            CREATE TABLE sessions (
+                id BLOB PRIMARY KEY,
+                workspace_id BLOB NOT NULL
+            );
+
+            CREATE TABLE execution_processes (
+                id BLOB PRIMARY KEY,
+                session_id BLOB NOT NULL,
+                run_reason TEXT NOT NULL,
+                dropped INTEGER NOT NULL,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE coding_agent_turns (
+                execution_process_id BLOB NOT NULL,
+                seen INTEGER NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .expect("create test schema");
+
+        let workspace_id = Uuid::new_v4();
+        let other_workspace_id = Uuid::new_v4();
+        let session_id = Uuid::new_v4();
+        let other_session_id = Uuid::new_v4();
+        let older_id = Uuid::new_v4();
+        let latest_id = Uuid::new_v4();
+        let setup_id = Uuid::new_v4();
+        let dropped_id = Uuid::new_v4();
+        let other_id = Uuid::new_v4();
+
+        for (id, workspace_id) in [
+            (session_id, workspace_id),
+            (other_session_id, other_workspace_id),
+        ] {
+            sqlx::query("INSERT INTO sessions (id, workspace_id) VALUES (?, ?)")
+                .bind(id)
+                .bind(workspace_id)
+                .execute(&pool)
+                .await
+                .expect("insert session");
+        }
+
+        for (id, session_id, run_reason, dropped, created_at) in [
+            (
+                older_id,
+                session_id,
+                "codingagent",
+                0,
+                "2026-05-11T00:00:00Z",
+            ),
+            (
+                latest_id,
+                session_id,
+                "codingagent",
+                0,
+                "2026-05-11T01:00:00Z",
+            ),
+            (
+                setup_id,
+                session_id,
+                "setupscript",
+                0,
+                "2026-05-11T02:00:00Z",
+            ),
+            (
+                dropped_id,
+                session_id,
+                "codingagent",
+                1,
+                "2026-05-11T03:00:00Z",
+            ),
+            (
+                other_id,
+                other_session_id,
+                "codingagent",
+                0,
+                "2026-05-11T04:00:00Z",
+            ),
+        ] {
+            sqlx::query(
+                r#"INSERT INTO execution_processes
+                   (id, session_id, run_reason, dropped, created_at)
+                   VALUES (?, ?, ?, ?, ?)"#,
+            )
+            .bind(id)
+            .bind(session_id)
+            .bind(run_reason)
+            .bind(dropped)
+            .bind(created_at)
+            .execute(&pool)
+            .await
+            .expect("insert execution process");
+
+            sqlx::query(
+                r#"INSERT INTO coding_agent_turns (execution_process_id, seen, updated_at)
+                   VALUES (?, 1, 'before')"#,
+            )
+            .bind(id)
+            .execute(&pool)
+            .await
+            .expect("insert coding agent turn");
+        }
+
+        let changed = CodingAgentTurn::mark_latest_unseen_by_workspace_id(&pool, workspace_id)
+            .await
+            .expect("mark latest workspace turn unseen");
+
+        assert!(changed);
+        assert_eq!(seen_for(&pool, older_id).await, 1);
+        assert_eq!(seen_for(&pool, latest_id).await, 0);
+        assert_eq!(seen_for(&pool, setup_id).await, 1);
+        assert_eq!(seen_for(&pool, dropped_id).await, 1);
+        assert_eq!(seen_for(&pool, other_id).await, 1);
     }
 
-    let truncated: String = text.chars().take(MAX_CHARS).collect();
-    format!("{truncated}\n[truncated]")
+    #[tokio::test]
+    async fn completed_coding_agent_turns_are_marked_unseen_by_uuid_blob() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .expect("create in-memory sqlite pool");
+
+        sqlx::query(
+            r#"
+            CREATE TABLE execution_processes (
+                id BLOB PRIMARY KEY,
+                run_reason TEXT NOT NULL,
+                status TEXT NOT NULL
+            );
+
+            CREATE TABLE coding_agent_turns (
+                execution_process_id BLOB NOT NULL,
+                seen INTEGER NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .expect("create test schema");
+
+        let completed_coding_id = Uuid::new_v4();
+        let running_coding_id = Uuid::new_v4();
+        let completed_setup_id = Uuid::new_v4();
+
+        for (id, run_reason, status) in [
+            (completed_coding_id, "codingagent", "completed"),
+            (running_coding_id, "codingagent", "running"),
+            (completed_setup_id, "setupscript", "completed"),
+        ] {
+            sqlx::query(
+                r#"INSERT INTO execution_processes (id, run_reason, status)
+                   VALUES (?, ?, ?)"#,
+            )
+            .bind(id)
+            .bind(run_reason)
+            .bind(status)
+            .execute(&pool)
+            .await
+            .expect("insert execution process");
+
+            sqlx::query(
+                r#"INSERT INTO coding_agent_turns (execution_process_id, seen, updated_at)
+                   VALUES (?, 1, 'before')"#,
+            )
+            .bind(id)
+            .execute(&pool)
+            .await
+            .expect("insert coding agent turn");
+        }
+
+        CodingAgentTurn::mark_completed_unseen_by_execution_process_id(&pool, completed_coding_id)
+            .await
+            .expect("mark completed coding turn unseen");
+        CodingAgentTurn::mark_completed_unseen_by_execution_process_id(&pool, running_coding_id)
+            .await
+            .expect("ignore running coding turn");
+        CodingAgentTurn::mark_completed_unseen_by_execution_process_id(&pool, completed_setup_id)
+            .await
+            .expect("ignore completed non-coding turn");
+
+        let completed_seen = seen_for(&pool, completed_coding_id).await;
+        let running_seen = seen_for(&pool, running_coding_id).await;
+        let setup_seen = seen_for(&pool, completed_setup_id).await;
+
+        assert_eq!(completed_seen, 0);
+        assert_eq!(running_seen, 1);
+        assert_eq!(setup_seen, 1);
+
+        CodingAgentTurn::mark_unseen_by_execution_process_id(&pool, running_coding_id)
+            .await
+            .expect("mark running coding turn unseen by uuid");
+
+        assert_eq!(seen_for(&pool, running_coding_id).await, 0);
+    }
+
+    async fn seen_for(pool: &sqlx::SqlitePool, execution_process_id: Uuid) -> i64 {
+        sqlx::query(
+            r#"SELECT seen
+               FROM coding_agent_turns
+               WHERE execution_process_id = ?"#,
+        )
+        .bind(execution_process_id)
+        .fetch_one(pool)
+        .await
+        .expect("fetch seen flag")
+        .get::<i64, _>("seen")
+    }
 }

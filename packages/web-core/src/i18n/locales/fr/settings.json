@@ -213,6 +213,16 @@
           "label": "Envoyer le message avec",
           "helper": "Choisissez le raccourci clavier pour envoyer des messages.",
           "enterLabel": "Entrée (Maj+Entrée pour nouvelle ligne)"
+        },
+        "savedMessages": {
+          "label": "Saved messages",
+          "helper": "Create reusable messages that can be inserted into the chat input.",
+          "empty": "No saved messages yet.",
+          "add": "Add saved message",
+          "delete": "Delete saved message",
+          "defaultTitle": "New saved message",
+          "titlePlaceholder": "Title",
+          "contentPlaceholder": "Message {{count}}"
         }
       },
       "privacy": {

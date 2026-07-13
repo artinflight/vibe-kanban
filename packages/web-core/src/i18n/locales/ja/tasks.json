@@ -112,7 +112,8 @@
     "filesChanged_other": "{{count}} files changed"
   },
   "followUp": {
-    "queuedMessage": "メッセージがキューに追加されました - 現在の実行が完了すると実行されます"
+    "queuedMessage": "メッセージがキューに追加されました - 現在の実行が完了すると実行されます",
+    "queuedMessages": "{{count}} messages queued - will execute when current run finishes"
   },
   "git": {
     "branch": {

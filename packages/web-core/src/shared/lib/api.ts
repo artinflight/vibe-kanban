@@ -103,6 +103,7 @@ import {
   ProfileResponse,
   WorkspaceSummary,
   WorkspaceSummaryResponse,
+  SubagentJob,
 } from 'shared/types';
 import type {
   Project as RemoteProject,
@@ -354,7 +355,7 @@ export const sessionsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    return handleApiResponse<ExecutionProcess>(response);
+    return handleApiResponse<ExecutionProcess, QueueStatus>(response);
   },
 
   startReview: async (
@@ -786,6 +787,17 @@ export const workspacesApi = {
     return handleApiResponse<void>(response);
   },
 
+  /** Mark the latest coding agent turn for a workspace as unread */
+  markUnread: async (workspaceId: string): Promise<void> => {
+    const response = await makeRequest(
+      `/api/workspaces/${workspaceId}/unread`,
+      {
+        method: 'PUT',
+      }
+    );
+    return handleApiResponse<void>(response);
+  },
+
   listSummaries: async (archived: boolean): Promise<WorkspaceSummary[]> => {
     const response = await makeRequest('/api/workspaces/summaries', {
       method: 'POST',
@@ -824,6 +836,14 @@ export const executionProcessesApi = {
       `/api/execution-processes/${processId}/repo-states`
     );
     return handleApiResponse<ExecutionProcessRepoState[]>(response);
+  },
+
+  getSubagentsForSession: async (sessionId: string): Promise<SubagentJob[]> => {
+    const params = new URLSearchParams({ session_id: sessionId });
+    const response = await makeRequest(
+      `/api/execution-processes/subagents/session?${params.toString()}`
+    );
+    return handleApiResponse<SubagentJob[]>(response);
   },
 
   stopExecutionProcess: async (processId: string): Promise<void> => {
@@ -1520,9 +1540,14 @@ export const projectsApi = {
     return handleApiResponse<Project>(response);
   },
 
+  listRepos: async (projectId: string): Promise<RepoWithTargetBranch[]> => {
+    const response = await makeRequest(`/api/projects/${projectId}/repos`);
+    return handleApiResponse<RepoWithTargetBranch[]>(response);
+  },
+
   update: async (
     projectId: string,
-    data: { archived: boolean }
+    data: { archived?: boolean; name?: string }
   ): Promise<Project> => {
     const response = await makeRequest(`/api/projects/${projectId}`, {
       method: 'PATCH',

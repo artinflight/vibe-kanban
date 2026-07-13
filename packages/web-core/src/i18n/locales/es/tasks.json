@@ -112,7 +112,8 @@
     "filesChanged_other": "{{count}} files changed"
   },
   "followUp": {
-    "queuedMessage": "Mensaje en cola - se ejecutará cuando finalice la ejecución actual"
+    "queuedMessage": "Mensaje en cola - se ejecutará cuando finalice la ejecución actual",
+    "queuedMessages": "{{count}} messages queued - will execute when current run finishes"
   },
   "git": {
     "branch": {

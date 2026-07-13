@@ -1,145 +1,146 @@
 #!/usr/bin/env python3
-"""Small live smoke for the local Vibe Kanban deployment.
-
-This script is intentionally read-only. It checks invariants that have regressed
-in previous local deploys without restarting the service or mutating the DB.
-"""
+"""Read-only live smoke checks for local Vibe Kanban hotfix deploys."""
 
 from __future__ import annotations
 
 import json
-import os
 import ssl
+import subprocess
 import sys
-import urllib.error
 import urllib.request
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
 
 
-BASE_URL = os.environ.get("VK_SMOKE_BASE_URL", "https://vibe.local").rstrip("/")
-TIMEOUT = float(os.environ.get("VK_SMOKE_TIMEOUT", "5"))
-PASTE_PLUGIN_SOURCE = Path("packages/ui/src/components/PasteMarkdownPlugin.tsx")
+BASE_URL = "https://vibe.local"
+EXPECTED_RELEASE = (
+    "/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/"
+    "20260626Tmultiline-rich-paste"
+)
+EXPECTED_ASSET = "/assets/index-DXMultilinePaste.js"
+EXPECTED_ACTIVE = [
+    "matchSubs",
+    "BBinvoice",
+    "DeNest",
+    "ScrollCap",
+    "oharaFIT",
+    "outsource",
+    "Iniandi",
+    "CodexUsage",
+    "VL",
+    "LifeOS",
+    "Operations",
+    "OSTP",
+    "programming",
+    "ops-playbook",
+    "intake-shield",
+    "foxtrot-lima",
+    "caspian-app",
+    "hyroxready-app",
+    "VK Sub-Agent Monitor",
+]
+EXPECTED_ARCHIVED = [
+    "PostStoryboard",
+    "mealPlan",
+    "Monitor",
+    "Monitor local",
+    "virtualCard",
+    "Champions Nutrition",
+    "caspian-ova-dashboard",
+    "vibe-kanban",
+    "vibe-kanban-orchestrator",
+]
+EXPECTED_STATUS_NAMES = [
+    "To do",
+    "In progress",
+    "On Hold",
+    "Long Running",
+    "In review",
+    "Cancelled",
+    "To merge",
+    "In Staging",
+    "Hotfix Path",
+    "Done",
+]
+DEFAULT_COLUMN_PROJECTS = {
+    "CodexUsage": "3e9a9fda-2bd6-414f-ba93-a4a7913fede0",
+    "Monitor local": "0f7e902f-3f4f-4a7d-a72e-97e7e235e23a",
+    "LifeOS": "855db5fd-7e2f-4217-a853-21e7cc9252a4",
+    "Operations": "48c03c77-4207-48c1-86ed-686262c1116a",
+}
+ASSET_TOKENS = [
+    "status_hotfixpath",
+    "Long Running",
+    "Hotfix Path",
+    "Archived projects",
+    "Archive",
+    "Unarchive",
+    "mobile-archived-projects",
+    "Rename",
+    "Copy code",
+    "queued",
+    "insertRawText",
+    "u&&!d?!1",
+    "if(d){f.insertRawText(c);return}",
+    "vk-executor-config-selection",
+    "branchNameMatchesSearch",
+]
 
 
-@dataclass
-class Check:
-    name: str
-    passed: bool
-    detail: str
+ctx = ssl._create_unverified_context()
+failures: list[str] = []
 
 
-def request(path: str) -> tuple[int, Any, bytes]:
-    url = f"{BASE_URL}{path}"
-    request_obj = urllib.request.Request(url, headers={"Accept": "application/json"})
-    context = ssl._create_unverified_context()
-    try:
-        with urllib.request.urlopen(request_obj, timeout=TIMEOUT, context=context) as response:
-            body = response.read()
-            content_type = response.headers.get("content-type", "")
-            if "application/json" in content_type:
-                return response.status, json.loads(body.decode("utf-8")), body
-            return response.status, None, body
-    except urllib.error.HTTPError as exc:
-        body = exc.read()
-        try:
-            parsed = json.loads(body.decode("utf-8"))
-        except Exception:
-            parsed = None
-        return exc.code, parsed, body
+def check(name: str, ok: bool, detail: str = "") -> None:
+    status = "PASS" if ok else "FAIL"
+    suffix = f" :: {detail}" if detail else ""
+    print(f"{status} {name}{suffix}")
+    if not ok:
+        failures.append(f"{name}{suffix}")
 
 
-def ok(name: str, detail: str) -> Check:
-    return Check(name, True, detail)
+def get_text(path: str) -> str:
+    with urllib.request.urlopen(f"{BASE_URL}{path}", context=ctx, timeout=10) as resp:
+        return resp.read().decode("utf-8", "replace")
 
 
-def fail(name: str, detail: str) -> Check:
-    return Check(name, False, detail)
+def get_json(path: str):
+    return json.loads(get_text(path))
 
 
-def unwrap_api_data(data: Any) -> Any:
-    if isinstance(data, dict) and data.get("success") is True and "data" in data:
-        return data["data"]
-    return data
-
-
-def check_info() -> Check:
-    status, data, _ = request("/api/info")
-    data = unwrap_api_data(data)
-    if status != 200 or not isinstance(data, dict):
-        return fail("api info", f"expected JSON 200, got {status}")
-
-    shared_api_base = data.get("shared_api_base")
-    login_status = data.get("login_status")
-    if isinstance(login_status, dict):
-        login_status = login_status.get("status")
-    if shared_api_base is not None:
-        return fail("api info", f"shared_api_base is {shared_api_base!r}, expected null")
-    if login_status != "loggedin":
-        return fail("api info", f"login_status is {login_status!r}, expected loggedin")
-    return ok("api info", "local-only install is logged in with no shared API base")
-
-
-def check_projects() -> Check:
-    status, data, _ = request("/api/projects")
-    data = unwrap_api_data(data)
-    if status != 200 or not isinstance(data, list):
-        return fail("projects", f"expected JSON list 200, got {status}")
-
-    active_names = [project.get("name") for project in data if not project.get("archived")]
-    archived_names = [project.get("name") for project in data if project.get("archived")]
-    vk_dev_count = active_names.count("VK Dev")
-    if vk_dev_count != 1:
-        return fail("projects", f"active VK Dev count is {vk_dev_count}, expected 1")
-    if "vibe-kanban" in active_names:
-        return fail("projects", "archived vibe-kanban history is active again")
-    return ok(
-        "projects",
-        f"active VK Dev present once; archived projects visible in API: {len(archived_names)}",
-    )
-
-
-def check_index() -> Check:
-    status, _, body = request("/")
-    if status != 200:
-        return fail("frontend", f"expected index 200, got {status}")
-    if b"/assets/index-" not in body:
-        return fail("frontend", "index did not reference a built asset")
-    return ok("frontend", "index loaded and references built assets")
-
-
-def check_paste_plugin_source() -> Check:
-    if not PASTE_PLUGIN_SOURCE.exists():
-        return fail("paste source", f"{PASTE_PLUGIN_SOURCE} is missing")
-    source = PASTE_PLUGIN_SOURCE.read_text()
-    required = [
-        "COMMAND_PRIORITY_HIGH",
-        "LINE_BREAK_PATTERN.test(plainText)",
-        "selection.insertRawText(plainText)",
-        "htmlText && !shouldInsertMultilineRaw",
-    ]
-    missing = [token for token in required if token not in source]
-    if missing:
-        return fail("paste source", f"missing {', '.join(missing)}")
-    if "COMMAND_PRIORITY_LOW" in source:
-        return fail("paste source", "paste handler still uses COMMAND_PRIORITY_LOW")
-    return ok("paste source", "multiline rich paste guard runs at high priority")
+def command(*args: str) -> str:
+    return subprocess.check_output(args, text=True).strip()
 
 
 def main() -> int:
-    checks = [
-        check_info(),
-        check_projects(),
-        check_index(),
-        check_paste_plugin_source(),
-    ]
-    for check in checks:
-        prefix = "PASS" if check.passed else "FAIL"
-        print(f"{prefix} {check.name}: {check.detail}")
+    release = command(
+        "readlink", "-f", "/home/mcp/.local/share/vibe-kanban/frontend-dist/current"
+    )
+    check("frontend release", release == EXPECTED_RELEASE, release)
 
-    failed = [check for check in checks if not check.passed]
-    if failed:
+    pid = command("systemctl", "--user", "show", "vibe-kanban.service", "-p", "MainPID", "--value")
+    check("backend process still running", pid.isdigit() and pid != "0", f"pid={pid}")
+
+    html = get_text("/")
+    check("html references expected asset", EXPECTED_ASSET in html, EXPECTED_ASSET)
+    asset = get_text(EXPECTED_ASSET)
+    for token in ASSET_TOKENS:
+        check(f"asset contains {token}", token in asset)
+
+    projects = get_json("/api/projects")["data"]
+    active = [project["name"] for project in projects if not project["archived"]]
+    archived = [project["name"] for project in projects if project["archived"]]
+    check("active project order", active == EXPECTED_ACTIVE, " | ".join(active))
+    check("archived project order", archived == EXPECTED_ARCHIVED, " | ".join(archived))
+
+    for project_name, project_id in DEFAULT_COLUMN_PROJECTS.items():
+        data = get_json(f"/v1/fallback/project_statuses?project_id={project_id}")
+        statuses = data.get("project_statuses", data)
+        names = [status["name"] for status in statuses]
+        check(f"default columns {project_name}", names == EXPECTED_STATUS_NAMES, ", ".join(names))
+
+    if failures:
+        print("\nFailures:")
+        for failure in failures:
+            print(f"- {failure}")
         return 1
     return 0
 

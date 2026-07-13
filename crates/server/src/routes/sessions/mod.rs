@@ -3,7 +3,7 @@ pub mod review;
 
 use axum::{
     Extension, Json, Router,
-    extract::{Query, State},
+    extract::{DefaultBodyLimit, Query, State},
     middleware::from_fn_with_state,
     response::Json as ResponseJson,
     routing::{get, post},
@@ -12,7 +12,7 @@ use db::models::{
     coding_agent_turn::CodingAgentTurn,
     execution_process::{ExecutionProcess, ExecutionProcessRunReason},
     requests::UpdateSession,
-    scratch::{Scratch, ScratchType},
+    scratch::{DraftFollowUpData, Scratch, ScratchType},
     session::{CreateSession, Session, SessionError},
     workspace::{Workspace, WorkspaceError},
     workspace_repo::WorkspaceRepo,
@@ -28,6 +28,7 @@ use serde::Deserialize;
 use services::services::{
     container::ContainerService,
     events::{execution_process_patch, workspace_patch},
+    queued_message::QueueStatus,
 };
 use ts_rs::TS;
 use utils::response::ApiResponse;
@@ -37,6 +38,8 @@ use crate::{
     DeploymentImpl, error::ApiError, middleware::load_session_middleware,
     routes::workspaces::execution::RunScriptError,
 };
+
+const PROMPT_JSON_BODY_LIMIT_BYTES: usize = 100 * 1024 * 1024;
 
 #[derive(Debug, Deserialize)]
 pub struct SessionQuery {
@@ -128,7 +131,7 @@ pub async fn follow_up(
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<CreateFollowUpAttempt>,
-) -> Result<ResponseJson<ApiResponse<ExecutionProcess>>, ApiError> {
+) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
     let pool = &deployment.db().pool;
 
     // Load workspace from session
@@ -182,8 +185,10 @@ pub async fn follow_up(
     let interrupted_context =
         CodingAgentTurn::find_interrupted_context_since_latest_success(pool, session.id).await?;
 
-    let prompt =
-        CodingAgentTurn::prompt_with_interrupted_context(payload.prompt, &interrupted_context);
+    let prompt = CodingAgentTurn::prompt_with_interrupted_context(
+        payload.prompt.clone(),
+        &interrupted_context,
+    );
 
     let repos = WorkspaceRepo::find_repos_for_workspace(pool, workspace.id).await?;
     let cleanup_action = deployment.container().cleanup_actions_for_repos(&repos);
@@ -206,7 +211,7 @@ pub async fn follow_up(
     } else {
         ExecutorActionType::CodingAgentInitialRequest(
             executors::actions::coding_agent_initial::CodingAgentInitialRequest {
-                prompt,
+                prompt: prompt.clone(),
                 executor_config: payload.executor_config.clone(),
                 working_dir,
             },
@@ -215,7 +220,7 @@ pub async fn follow_up(
 
     let action = ExecutorAction::new(action_type, cleanup_action.map(Box::new));
 
-    let execution_process = deployment
+    let execution_process = match deployment
         .container()
         .start_execution(
             &workspace,
@@ -223,7 +228,34 @@ pub async fn follow_up(
             &action,
             &ExecutionProcessRunReason::CodingAgent,
         )
-        .await?;
+        .await
+    {
+        Ok(execution_process) => execution_process,
+        Err(error) if error.is_execution_limit_reached() => {
+            let queued = deployment.queued_message_service().queue_for_capacity(
+                session.id,
+                DraftFollowUpData {
+                    message: prompt,
+                    executor_config: payload.executor_config.clone(),
+                },
+            );
+
+            deployment
+                .track_if_analytics_allowed(
+                    "follow_up_queued_for_capacity",
+                    serde_json::json!({
+                        "session_id": session.id.to_string(),
+                        "workspace_id": session.workspace_id.to_string(),
+                    }),
+                )
+                .await;
+
+            return Ok(ResponseJson(ApiResponse::error_with_data(
+                QueueStatus::Queued { message: queued },
+            )));
+        }
+        Err(error) => return Err(error.into()),
+    };
 
     // Push immediate live updates for the session/workspace streams.
     // The DB hook path can lag or miss the very first process add on some
@@ -338,7 +370,10 @@ pub async fn run_setup_script(
 pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let session_id_router = Router::new()
         .route("/", get(get_session).put(update_session))
-        .route("/follow-up", post(follow_up))
+        .route(
+            "/follow-up",
+            post(follow_up).layer(DefaultBodyLimit::max(PROMPT_JSON_BODY_LIMIT_BYTES)),
+        )
         .route("/reset", post(reset_process))
         .route("/setup", post(run_setup_script))
         .route("/review", post(review::start_review))

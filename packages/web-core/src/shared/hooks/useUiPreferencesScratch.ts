@@ -6,6 +6,7 @@ import {
   type UiPreferencesData,
   type ScratchPayload,
   type WorkspacePanelStateData,
+  type ProjectCustomizationData,
   type JsonValue,
 } from 'shared/types';
 import {
@@ -14,6 +15,7 @@ import {
   DEFAULT_SHOW_LEFT_COLUMN_LINKS,
   type RightMainPanelMode,
   type ContextBarPosition,
+  type SavedChatMessage,
   type WorkspacePanelState,
   type WorkspaceFilterState,
   type WorkspaceSortState,
@@ -22,12 +24,14 @@ import {
   type WorkspaceSortOrder,
   type KanbanProjectViewSelection,
   type KanbanProjectViewPreferences,
+  type ProjectCustomization,
 } from '@/shared/stores/useUiPreferencesStore';
 import type { RepoAction } from '@vibe/ui/components/RepoCard';
 
 type UiPreferencesScratchData = UiPreferencesData & {
   local_project_order?: string[];
   show_left_column_links?: boolean | null;
+  saved_chat_messages?: SavedChatMessage[];
 };
 
 // Stable UUID for global UI preferences (not tied to a workspace/user)
@@ -54,8 +58,10 @@ function storeToScratchData(state: {
   selectedOrgId: string | null;
   selectedProjectId: string | null;
   localProjectOrder: string[];
+  localProjectCustomizations: Record<string, ProjectCustomization>;
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
+  savedChatMessages: SavedChatMessage[];
   kanbanProjectViewSelections: Record<string, KanbanProjectViewSelection>;
   kanbanProjectViewPreferences: Record<
     string,
@@ -67,6 +73,14 @@ function storeToScratchData(state: {
     workspacePanelStates[key] = {
       right_main_panel_mode: value.rightMainPanelMode,
       is_left_main_panel_visible: value.isLeftMainPanelVisible,
+    };
+  }
+  const localProjectCustomizations: Record<string, ProjectCustomizationData> =
+    {};
+  for (const [key, value] of Object.entries(state.localProjectCustomizations)) {
+    localProjectCustomizations[key] = {
+      abbreviation: value.abbreviation ?? null,
+      color: value.color ?? null,
     };
   }
 
@@ -92,8 +106,10 @@ function storeToScratchData(state: {
     selected_org_id: state.selectedOrgId,
     selected_project_id: state.selectedProjectId,
     local_project_order: state.localProjectOrder,
+    local_project_customizations: localProjectCustomizations,
     create_draft_workspace_by_default: state.createDraftWorkspaceByDefault,
     show_left_column_links: state.showLeftColumnLinks,
+    saved_chat_messages: state.savedChatMessages,
     kanban_project_view_selections: state.kanbanProjectViewSelections as Record<
       string,
       JsonValue
@@ -122,8 +138,10 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
   selectedOrgId: string | null;
   selectedProjectId: string | null;
   localProjectOrder: string[];
+  localProjectCustomizations: Record<string, ProjectCustomization>;
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
+  savedChatMessages: SavedChatMessage[];
   kanbanProjectViewSelections: Record<string, KanbanProjectViewSelection>;
   kanbanProjectViewPreferences: Record<
     string,
@@ -181,11 +199,28 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
     selectedOrgId: data.selected_org_id ?? null,
     selectedProjectId: data.selected_project_id ?? null,
     localProjectOrder: data.local_project_order ?? [],
+    localProjectCustomizations: (data.local_project_customizations ??
+      {}) as Record<string, ProjectCustomization>,
     createDraftWorkspaceByDefault:
       data.create_draft_workspace_by_default ??
       DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT,
     showLeftColumnLinks:
       data.show_left_column_links ?? DEFAULT_SHOW_LEFT_COLUMN_LINKS,
+    savedChatMessages: Array.isArray(data.saved_chat_messages)
+      ? data.saved_chat_messages
+          .filter(
+            (message): message is SavedChatMessage =>
+              typeof message?.id === 'string' &&
+              typeof message.title === 'string' &&
+              typeof message.content === 'string'
+          )
+          .map((message) => ({
+            id: message.id,
+            title: message.title.trim(),
+            content: message.content,
+          }))
+          .filter((message) => message.title && message.content.trim())
+      : [],
     kanbanProjectViewSelections: (data.kanban_project_view_selections ??
       {}) as Record<string, KanbanProjectViewSelection>,
     kanbanProjectViewPreferences: (data.kanban_project_view_preferences ??
@@ -226,8 +261,10 @@ export function useUiPreferencesScratch() {
     selectedOrgId: state.selectedOrgId,
     selectedProjectId: state.selectedProjectId,
     localProjectOrder: state.localProjectOrder,
+    localProjectCustomizations: state.localProjectCustomizations,
     createDraftWorkspaceByDefault: state.createDraftWorkspaceByDefault,
     showLeftColumnLinks: state.showLeftColumnLinks,
+    savedChatMessages: state.savedChatMessages,
     kanbanProjectViewSelections: state.kanbanProjectViewSelections,
     kanbanProjectViewPreferences: state.kanbanProjectViewPreferences,
   }));
@@ -262,8 +299,10 @@ export function useUiPreferencesScratch() {
       selectedOrgId: currentState.selectedOrgId,
       selectedProjectId: currentState.selectedProjectId,
       localProjectOrder: currentState.localProjectOrder,
+      localProjectCustomizations: currentState.localProjectCustomizations,
       createDraftWorkspaceByDefault: currentState.createDraftWorkspaceByDefault,
       showLeftColumnLinks: currentState.showLeftColumnLinks,
+      savedChatMessages: currentState.savedChatMessages,
       kanbanProjectViewSelections: currentState.kanbanProjectViewSelections,
       kanbanProjectViewPreferences: currentState.kanbanProjectViewPreferences,
     });
@@ -319,9 +358,11 @@ export function useUiPreferencesScratch() {
         selectedOrgId: serverState.selectedOrgId,
         selectedProjectId: serverState.selectedProjectId,
         localProjectOrder: serverState.localProjectOrder,
+        localProjectCustomizations: serverState.localProjectCustomizations,
         createDraftWorkspaceByDefault:
           serverState.createDraftWorkspaceByDefault,
         showLeftColumnLinks: serverState.showLeftColumnLinks,
+        savedChatMessages: serverState.savedChatMessages,
         kanbanProjectViewSelections: serverState.kanbanProjectViewSelections,
         kanbanProjectViewPreferences: serverState.kanbanProjectViewPreferences,
       });

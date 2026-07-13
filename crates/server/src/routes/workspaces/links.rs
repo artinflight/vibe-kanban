@@ -24,6 +24,30 @@ pub struct LinkWorkspaceRequest {
     pub issue_id: Uuid,
 }
 
+async fn try_link_local_workspace_issue(
+    deployment: &DeploymentImpl,
+    workspace_id: Uuid,
+    project_id: Uuid,
+    issue_id: Uuid,
+) -> Result<bool, ApiError> {
+    const MAX_ATTEMPTS: usize = 8;
+    const RETRY_DELAY_MS: u64 = 250;
+
+    for attempt in 0..MAX_ATTEMPTS {
+        let task = Task::find_by_id(&deployment.db().pool, issue_id).await?;
+        if task.as_ref().map(|task| task.project_id) == Some(project_id) {
+            Workspace::update_task_id(&deployment.db().pool, workspace_id, Some(issue_id)).await?;
+            return Ok(true);
+        }
+
+        if attempt + 1 < MAX_ATTEMPTS {
+            tokio::time::sleep(tokio::time::Duration::from_millis(RETRY_DELAY_MS)).await;
+        }
+    }
+
+    Ok(false)
+}
+
 pub async fn link_workspace(
     Extension(workspace): Extension<Workspace>,
     State(deployment): State<DeploymentImpl>,
@@ -32,12 +56,21 @@ pub async fn link_workspace(
     let project = Project::find_by_id(&deployment.db().pool, payload.project_id).await?;
 
     if project.remote_project_id.is_none() {
-        let task = Task::find_by_id(&deployment.db().pool, payload.issue_id).await?;
-        if task.as_ref().map(|task| task.project_id) == Some(payload.project_id) {
-            Workspace::update_task_id(&deployment.db().pool, workspace.id, Some(payload.issue_id))
-                .await?;
+        if try_link_local_workspace_issue(
+            &deployment,
+            workspace.id,
+            payload.project_id,
+            payload.issue_id,
+        )
+        .await?
+        {
             return Ok(ResponseJson(ApiResponse::success(())));
         }
+
+        return Err(ApiError::BadRequest(format!(
+            "Could not resolve local issue {} for workspace link",
+            payload.issue_id
+        )));
     }
 
     let client = deployment.remote_client()?;

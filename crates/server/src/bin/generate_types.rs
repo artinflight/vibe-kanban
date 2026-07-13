@@ -36,6 +36,7 @@ fn generate_types_content() -> String {
         db::models::scratch::WorkspaceSortOrderData::decl(),
         db::models::scratch::WorkspaceFilterStateData::decl(),
         db::models::scratch::WorkspaceSortStateData::decl(),
+        db::models::scratch::ProjectCustomizationData::decl(),
         db::models::scratch::UiPreferencesData::decl(),
         db::models::scratch::ProjectStatusConfigData::decl(),
         db::models::scratch::ProjectRepoDefaultsData::decl(),
@@ -51,6 +52,8 @@ fn generate_types_content() -> String {
         db::models::execution_process::ExecutionProcessStatus::decl(),
         db::models::execution_process::ExecutionProcessRunReason::decl(),
         db::models::execution_process_repo_state::ExecutionProcessRepoState::decl(),
+        db::models::subagent_job::SubagentJob::decl(),
+        db::models::subagent_job::SubagentJobStatus::decl(),
         db::models::merge::Merge::decl(),
         db::models::merge::DirectMerge::decl(),
         db::models::merge::PrMerge::decl(),
@@ -291,7 +294,15 @@ fn generate_types_content() -> String {
         serde_json::to_string(DEFAULT_COMMIT_REMINDER_PROMPT).unwrap()
     );
 
-    format!("{HEADER}\n\n{body}\n\n{constants}\n")
+    let content = format!("{HEADER}\n\n{body}\n\n{constants}");
+    format!(
+        "{}\n",
+        content
+            .lines()
+            .map(str::trim_end)
+            .collect::<Vec<_>>()
+            .join("\n")
+    )
 }
 
 fn generate_json_schema<T: JsonSchema>() -> Result<String, serde_json::Error> {

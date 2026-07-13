@@ -15,7 +15,7 @@ use mime_guess::MimeGuess;
 use serde::{Deserialize, Serialize};
 use services::services::{
     container::ContainerService,
-    file::{FileError, FileService},
+    file::{FileError, FileService, MAX_ATTACHMENT_UPLOAD_BYTES},
     remote_client::RemoteClient,
 };
 use tokio::fs::File as TokioFile;
@@ -403,7 +403,7 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
         .route("/metadata", get(get_attachment_metadata))
         .route(
             "/upload",
-            post(upload_file).layer(DefaultBodyLimit::max(20 * 1024 * 1024)),
+            post(upload_file).layer(DefaultBodyLimit::max(MAX_ATTACHMENT_UPLOAD_BYTES)),
         )
         .layer(from_fn_with_state(
             deployment.clone(),

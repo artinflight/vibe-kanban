@@ -26,6 +26,12 @@ export type MobileFontScale = 'default' | 'small' | 'smaller';
 export const DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT = false;
 export const DEFAULT_SHOW_LEFT_COLUMN_LINKS = false;
 
+export type SavedChatMessage = {
+  id: string;
+  title: string;
+  content: string;
+};
+
 const MOBILE_FONT_SCALE_KEY = 'vk-mobile-font-scale';
 
 const loadMobileFontScale = (): MobileFontScale => {
@@ -121,6 +127,11 @@ export type KanbanProjectViewPreferences = {
   showWorkspaces: boolean;
   hideBlocked: boolean;
   collapsedStatusIds: string[];
+};
+
+export type ProjectCustomization = {
+  abbreviation?: string;
+  color?: string;
 };
 
 export type ResolvedKanbanProjectState = {
@@ -359,8 +370,10 @@ type State = {
   selectedOrgId: string | null;
   selectedProjectId: string | null;
   localProjectOrder: string[];
+  localProjectCustomizations: Record<string, ProjectCustomization>;
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
+  savedChatMessages: SavedChatMessage[];
 
   // UI preferences actions
   setRepoAction: (repoId: string, action: RepoAction) => void;
@@ -455,8 +468,13 @@ type State = {
   clearSelectedOrgId: () => void;
   setSelectedProjectId: (projectId: string | null) => void;
   setLocalProjectOrder: (projectIds: string[]) => void;
+  setLocalProjectCustomization: (
+    projectId: string,
+    customization: ProjectCustomization
+  ) => void;
   setCreateDraftWorkspaceByDefault: (value: boolean) => void;
   setShowLeftColumnLinks: (value: boolean) => void;
+  setSavedChatMessages: (messages: SavedChatMessage[]) => void;
 };
 
 export const useUiPreferencesStore = create<State>()((set, get) => ({
@@ -500,8 +518,10 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
   selectedOrgId: null,
   selectedProjectId: null,
   localProjectOrder: [],
+  localProjectCustomizations: {},
   createDraftWorkspaceByDefault: DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT,
   showLeftColumnLinks: DEFAULT_SHOW_LEFT_COLUMN_LINKS,
+  savedChatMessages: [],
 
   // UI preferences actions
   setRepoAction: (repoId, action) =>
@@ -894,9 +914,26 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
   clearSelectedOrgId: () => set({ selectedOrgId: null }),
   setSelectedProjectId: (projectId) => set({ selectedProjectId: projectId }),
   setLocalProjectOrder: (projectIds) => set({ localProjectOrder: projectIds }),
+  setLocalProjectCustomization: (projectId, customization) =>
+    set((state) => ({
+      localProjectCustomizations: {
+        ...state.localProjectCustomizations,
+        [projectId]: {
+          ...state.localProjectCustomizations[projectId],
+          ...customization,
+        },
+      },
+    })),
   setCreateDraftWorkspaceByDefault: (value) =>
     set({ createDraftWorkspaceByDefault: value }),
   setShowLeftColumnLinks: (value) => set({ showLeftColumnLinks: value }),
+  setSavedChatMessages: (messages) =>
+    set({
+      savedChatMessages: messages.map((message) => ({
+        ...message,
+        title: message.title.trim(),
+      })),
+    }),
 }));
 
 // Hook for repo action preference
@@ -1006,6 +1043,12 @@ export function useShowLeftColumnLinks() {
   const value = useUiPreferencesStore((s) => s.showLeftColumnLinks);
   const set = useUiPreferencesStore((s) => s.setShowLeftColumnLinks);
   return [value, set] as const;
+}
+
+export function useSavedChatMessages() {
+  const messages = useUiPreferencesStore((s) => s.savedChatMessages);
+  const set = useUiPreferencesStore((s) => s.setSavedChatMessages);
+  return [messages, set] as const;
 }
 
 // Hook for workspace-specific panel state

@@ -96,12 +96,19 @@ export function CreateChatBoxContainer({
     [message, setMessage]
   );
 
-  const { uploadFiles, getAttachmentIds, clearAttachments, localAttachments } =
-    useCreateAttachments(
-      handleInsertMarkdown,
-      draftAttachments,
-      setDraftAttachments
-    );
+  const {
+    uploadFiles,
+    getAttachmentIds,
+    clearAttachments,
+    localAttachments,
+    uploadError,
+    clearUploadError,
+    isUploading,
+  } = useCreateAttachments(
+    handleInsertMarkdown,
+    draftAttachments,
+    setDraftAttachments
+  );
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -292,15 +299,26 @@ export function CreateChatBoxContainer({
 
   // Determine error to display
   const displayError =
-    hasAttemptedSubmit && repos.length === 0
-      ? 'Add at least one repository to create a workspace'
-      : hasAttemptedSubmit && !hasSelectedBranchesForAllRepos
-        ? 'Select a branch for every repository before creating a workspace'
-        : createWorkspace.error
-          ? createWorkspace.error instanceof Error
-            ? createWorkspace.error.message
-            : 'Failed to create workspace'
-          : null;
+    uploadError ??
+    (isUploading
+      ? 'Uploading attachment...'
+      : hasAttemptedSubmit && repos.length === 0
+        ? 'Add at least one repository to create a workspace'
+        : hasAttemptedSubmit && !hasSelectedBranchesForAllRepos
+          ? 'Select a branch for every repository before creating a workspace'
+          : createWorkspace.error
+            ? createWorkspace.error instanceof Error
+              ? createWorkspace.error.message
+              : 'Failed to create workspace'
+            : null);
+
+  const handleEditorChange = useCallback(
+    (value: string) => {
+      setMessage(value);
+      if (uploadError) clearUploadError();
+    },
+    [setMessage, uploadError, clearUploadError]
+  );
 
   // Wait for initial value to be applied before rendering
   // This ensures the editor mounts with content ready, so autoFocus works correctly
@@ -333,7 +351,7 @@ export function CreateChatBoxContainer({
                 <CreateChatBox
                   editor={{
                     value: message,
-                    onChange: setMessage,
+                    onChange: handleEditorChange,
                   }}
                   renderEditor={({
                     value,
@@ -370,7 +388,7 @@ export function CreateChatBoxContainer({
                   }
                   onSend={handleSubmit}
                   isSending={createWorkspace.isPending}
-                  disabled={!hasSelectedRepos}
+                  disabled={!hasSelectedRepos || isUploading}
                   executor={{
                     selected: effectiveExecutor,
                     options: executorOptions,

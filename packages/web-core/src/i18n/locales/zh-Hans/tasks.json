@@ -110,7 +110,8 @@
     "logsCopied": "已复制！"
   },
   "followUp": {
-    "queuedMessage": "消息已排队 - 将在当前运行完成时执行"
+    "queuedMessage": "消息已排队 - 将在当前运行完成时执行",
+    "queuedMessages": "{{count}} messages queued - will execute when current run finishes"
   },
   "todoPopup": {
     "title": "任务",

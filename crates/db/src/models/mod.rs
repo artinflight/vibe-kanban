@@ -10,6 +10,7 @@ pub mod repo;
 pub mod requests;
 pub mod scratch;
 pub mod session;
+pub mod subagent_job;
 pub mod tag;
 pub mod task;
 pub mod workspace;

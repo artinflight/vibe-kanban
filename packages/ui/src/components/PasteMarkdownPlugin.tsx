@@ -168,7 +168,12 @@ export function PasteMarkdownPlugin({ transformers }: Props) {
             const tempContainer = $createParagraphNode();
             // Note: $convertFromMarkdownString internally calls selectStart() on the container,
             // which corrupts the current selection - that's why we clone it above
-            $convertFromMarkdownString(plainText, transformers, tempContainer);
+            $convertFromMarkdownString(
+              plainText,
+              transformers,
+              tempContainer,
+              true
+            );
 
             // Restore selection that was corrupted by $convertFromMarkdownString
             $setSelection(savedSelection);

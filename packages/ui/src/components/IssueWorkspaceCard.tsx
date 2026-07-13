@@ -6,6 +6,7 @@ import {
   LinkBreakIcon,
   PencilSimpleIcon,
   TrashIcon,
+  ArchiveIcon,
   PlayIcon,
   HandIcon,
   TriangleIcon,
@@ -50,6 +51,7 @@ export interface IssueWorkspaceCardProps {
   workspace: WorkspaceWithStats;
   onClick?: () => void;
   onRename?: () => void;
+  onArchive?: () => void;
   onUnlink?: () => void;
   onDelete?: () => void;
   showOwner?: boolean;
@@ -113,6 +115,7 @@ export function IssueWorkspaceCard({
   workspace,
   onClick,
   onRename,
+  onArchive,
   onUnlink,
   onDelete,
   showOwner = true,
@@ -136,6 +139,7 @@ export function IssueWorkspaceCard({
     isFailed ||
     isRunning ||
     (hasUnseenActivity && !isRunning);
+  const shouldStackPrBadges = workspace.prs.length > 2;
 
   return (
     <IssueWorkspaceCardContainer onClick={onClick} className={className}>
@@ -168,7 +172,7 @@ export function IssueWorkspaceCard({
               className="h-5 w-5 text-[10px] border-2 border-panel"
             />
           )}
-          {(onRename || onUnlink || onDelete) && (
+          {(onRename || onArchive || onUnlink || onDelete) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -192,6 +196,21 @@ export function IssueWorkspaceCard({
                   >
                     <PencilSimpleIcon className="size-icon-xs" />
                     {t('workspaces.rename.action')}
+                  </DropdownMenuItem>
+                )}
+                {onArchive && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onArchive();
+                    }}
+                  >
+                    <ArchiveIcon className="size-icon-xs" />
+                    {workspace.archived
+                      ? t('workspaces.unarchive', {
+                          defaultValue: 'Unarchive',
+                        })
+                      : t('workspaces.archive')}
                   </DropdownMenuItem>
                 )}
                 {onUnlink && (
@@ -223,9 +242,21 @@ export function IssueWorkspaceCard({
         </div>
       </div>
 
-      {/* Row 2: Live status + stats (left), PR buttons (right) */}
-      <div className="flex items-center justify-between gap-half min-w-0">
-        <div className="flex items-center flex-wrap sm:flex-nowrap gap-half text-sm text-low min-w-0 flex-1 overflow-hidden">
+      {/* Row 2: Live status + stats, with many PRs wrapped underneath. */}
+      <div
+        className={cn(
+          'flex gap-half min-w-0',
+          shouldStackPrBadges
+            ? 'flex-col items-start'
+            : 'items-center justify-between'
+        )}
+      >
+        <div
+          className={cn(
+            'flex items-center flex-wrap sm:flex-nowrap gap-half text-sm text-low min-w-0 overflow-hidden',
+            shouldStackPrBadges ? 'w-full' : 'flex-1'
+          )}
+        >
           <div className="flex items-center gap-half shrink-0">
             {hasRunningDevServer && (
               <PlayIcon
@@ -292,7 +323,12 @@ export function IssueWorkspaceCard({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-half shrink-0 flex-wrap max-w-full">
+        <div
+          className={cn(
+            'flex items-center gap-half flex-wrap max-w-full',
+            shouldStackPrBadges ? 'justify-start' : 'justify-end shrink-0'
+          )}
+        >
           {workspace.prs.length > 0 ? (
             workspace.prs.map((pr) => (
               <a

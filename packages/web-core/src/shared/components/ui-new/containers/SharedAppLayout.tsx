@@ -8,7 +8,6 @@ import {
   PlusIcon,
   LayoutIcon,
   KanbanIcon,
-  DownloadSimpleIcon,
   ArchiveIcon,
 } from '@phosphor-icons/react';
 import { SyncErrorProvider } from '@/shared/providers/SyncErrorProvider';
@@ -22,6 +21,8 @@ import {
   AppBar,
   type AppBarHostStatus,
   type AppBarProject,
+  type AppBarProjectUpdate,
+  PASTEL_PROJECT_COLORS,
 } from '@vibe/ui/components/AppBar';
 import { MobileDrawer } from '@vibe/ui/components/MobileDrawer';
 import { AppBarUserPopoverContainer } from './AppBarUserPopoverContainer';
@@ -62,32 +63,9 @@ import { projectsApi, workspacesApi } from '@/shared/lib/api';
 function getLocalProjectColor(projectId: string): string {
   let hash = 0;
   for (const char of projectId) {
-    hash = (hash * 31 + char.charCodeAt(0)) % 360;
+    hash = (hash * 31 + char.charCodeAt(0)) % PASTEL_PROJECT_COLORS.length;
   }
-  return `${hash} 70% 45%`;
-}
-
-function orderLocalProjects(
-  projects: AppBarProject[],
-  localProjectOrder: string[]
-): AppBarProject[] {
-  if (localProjectOrder.length === 0) {
-    return projects;
-  }
-
-  const projectById = new Map(projects.map((project) => [project.id, project]));
-  const ordered: AppBarProject[] = [];
-
-  for (const projectId of localProjectOrder) {
-    const project = projectById.get(projectId);
-    if (!project) {
-      continue;
-    }
-    ordered.push(project);
-    projectById.delete(projectId);
-  }
-
-  return [...ordered, ...projectById.values()];
+  return PASTEL_PROJECT_COLORS[hash];
 }
 
 function workspaceNeedsReview(workspace: {
@@ -95,6 +73,13 @@ function workspaceNeedsReview(workspace: {
   has_unseen_turns?: boolean;
   latest_process_status?: string | null;
 }): boolean {
+  if (
+    workspace.latest_process_status === 'failed' ||
+    workspace.latest_process_status === 'killed'
+  ) {
+    return false;
+  }
+
   if (workspace.has_pending_approval) {
     return true;
   }
@@ -113,9 +98,7 @@ export function SharedAppLayout() {
   const isLeftSidebarVisible = useUiPreferencesStore(
     (s) => s.isLeftSidebarVisible
   );
-  const showLeftColumnLinks = useUiPreferencesStore(
-    (s) => s.showLeftColumnLinks
-  );
+  const showLeftColumnLinks = false;
   const { isSignedIn } = useAuth();
   const { workspaces: userWorkspaces } = useUserContext();
   const { appVersion, loginStatus } = useUserSystem();
@@ -131,7 +114,6 @@ export function SharedAppLayout() {
     loginStatus?.status === 'loggedin' && !loginStatus.profile;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
   // Register CMD+K shortcut globally for all routes under SharedAppLayout
   useCommandBarShortcut(() => CommandBarDialog.show());
 
@@ -194,6 +176,7 @@ export function SharedAppLayout() {
   const {
     data: orgProjects = [],
     isLoading,
+    update: updateProject,
     updateMany: updateManyProjects,
   } = useShape(PROJECTS_SHAPE, projectParams, {
     enabled: !isLocalAuthBypassed && isSignedIn && !!selectedOrgId,
@@ -203,35 +186,47 @@ export function SharedAppLayout() {
     () => sortProjectsByOrder(orgProjects),
     [orgProjects]
   );
-  const localAppBarProjects = useMemo<AppBarProject[]>(
-    () =>
-      orderLocalProjects(
-        localProjects.map((project) => ({
+  const localProjectCustomizations = useUiPreferencesStore(
+    (s) => s.localProjectCustomizations
+  );
+  const localAppBarProjects = useMemo<AppBarProject[]>(() => {
+    const orderIndex = new Map(
+      localProjectOrder.map((projectId, index) => [projectId, index])
+    );
+
+    return localProjects
+      .map((project) => {
+        const customization = localProjectCustomizations[project.id];
+        return {
           id: project.id,
           name: project.name,
-          color: getLocalProjectColor(project.id),
+          color: customization?.color ?? getLocalProjectColor(project.id),
+          abbreviation: customization?.abbreviation,
           archived: project.archived,
-        })),
-        localProjectOrder
-      ),
-    [localProjectOrder, localProjects]
-  );
+        };
+      })
+      .sort((a, b) => {
+        const aIndex = orderIndex.get(a.id);
+        const bIndex = orderIndex.get(b.id);
 
+        if (aIndex !== undefined && bIndex !== undefined) {
+          return aIndex - bIndex;
+        }
+        if (aIndex !== undefined) {
+          return -1;
+        }
+        if (bIndex !== undefined) {
+          return 1;
+        }
+        return 0;
+      });
+  }, [localProjectCustomizations, localProjectOrder, localProjects]);
   const {
     data: activeWorkspaceSummaries = [],
     isLoading: isActiveWorkspaceSummariesLoading,
   } = useQuery({
     queryKey: ['workspace-summaries', 'active'],
     queryFn: () => workspacesApi.listSummaries(false),
-    staleTime: 1000,
-    refetchInterval: 15000,
-  });
-  const {
-    data: archivedWorkspaceSummaries = [],
-    isLoading: isArchivedWorkspaceSummariesLoading,
-  } = useQuery({
-    queryKey: ['workspace-summaries', 'archived'],
-    queryFn: () => workspacesApi.listSummaries(true),
     staleTime: 1000,
     refetchInterval: 15000,
   });
@@ -244,17 +239,15 @@ export function SharedAppLayout() {
       refetchInterval: 15000,
     })),
   });
-  const needsReviewWorkspaceIds = useMemo(() => {
-    const summaries = [
-      ...activeWorkspaceSummaries,
-      ...archivedWorkspaceSummaries,
-    ];
-    return new Set(
-      summaries
-        .filter((summary) => workspaceNeedsReview(summary))
-        .map((summary) => summary.workspace_id)
-    );
-  }, [activeWorkspaceSummaries, archivedWorkspaceSummaries]);
+  const needsReviewWorkspaceIds = useMemo(
+    () =>
+      new Set(
+        activeWorkspaceSummaries
+          .filter((summary) => workspaceNeedsReview(summary))
+          .map((summary) => summary.workspace_id)
+      ),
+    [activeWorkspaceSummaries]
+  );
   const needsReviewProjectIds = useMemo(() => {
     const projectIds = new Set<string>();
 
@@ -289,42 +282,43 @@ export function SharedAppLayout() {
     needsReviewWorkspaceIds,
     userWorkspaces,
   ]);
-  const allAppBarProjects = useMemo<AppBarProject[]>(() => {
-    const projects: AppBarProject[] = isLocalAuthBypassed
-      ? localAppBarProjects
-      : sortedProjects.map((project) => ({
-          id: project.id,
-          name: project.name,
-          color: project.color,
-          archived: false,
-        }));
-
-    return projects.map((project) => ({
-      ...project,
-      hasNeedsReview: needsReviewProjectIds.has(project.id),
-    }));
-  }, [
-    isLocalAuthBypassed,
-    localAppBarProjects,
-    needsReviewProjectIds,
-    sortedProjects,
-  ]);
-  const archivedProjects = useMemo(
-    () => allAppBarProjects.filter((project) => project.archived),
-    [allAppBarProjects]
+  const allAppBarProjects = useMemo(
+    () =>
+      (isLocalAuthBypassed ? localAppBarProjects : sortedProjects).map(
+        (project) => ({
+          ...project,
+          abbreviation: localProjectCustomizations[project.id]?.abbreviation,
+          color: localProjectCustomizations[project.id]?.color ?? project.color,
+          hasNeedsReview: needsReviewProjectIds.has(project.id),
+        })
+      ),
+    [
+      isLocalAuthBypassed,
+      localAppBarProjects,
+      localProjectCustomizations,
+      needsReviewProjectIds,
+      sortedProjects,
+    ]
   );
-  const appBarProjects = useMemo(
-    () => allAppBarProjects.filter((project) => !project.archived),
+  const archivedProjects = useMemo(
+    () =>
+      allAppBarProjects.filter(
+        (project) => 'archived' in project && project.archived
+      ),
     [allAppBarProjects]
   );
   const isProjectsLoading = isLocalAuthBypassed
     ? isLocalProjectsLoading ||
       isActiveWorkspaceSummariesLoading ||
-      isArchivedWorkspaceSummariesLoading ||
       localProjectWorkspaceQueries.some((query) => query.isLoading)
-    : isLoading ||
-      isActiveWorkspaceSummariesLoading ||
-      isArchivedWorkspaceSummariesLoading;
+    : isLoading || isActiveWorkspaceSummariesLoading;
+  const appBarProjects = useMemo(
+    () =>
+      allAppBarProjects.filter(
+        (project) => !('archived' in project) || !project.archived
+      ),
+    [allAppBarProjects]
+  );
   const [orderedProjects, setOrderedProjects] =
     useState<AppBarProject[]>(appBarProjects);
   const [isSavingProjectOrder, setIsSavingProjectOrder] = useState(false);
@@ -406,6 +400,9 @@ export function SharedAppLayout() {
   const setSelectedProjectId = useUiPreferencesStore(
     (s) => s.setSelectedProjectId
   );
+  const setLocalProjectCustomization = useUiPreferencesStore(
+    (s) => s.setLocalProjectCustomization
+  );
   useEffect(() => {
     if (activeProjectId) {
       setSelectedProjectId(activeProjectId);
@@ -426,6 +423,36 @@ export function SharedAppLayout() {
       appNavigation.goToProject(projectId);
     },
     [appNavigation, setSelectedProjectId]
+  );
+
+  const handleProjectUpdate = useCallback(
+    async (projectId: string, updates: AppBarProjectUpdate) => {
+      const abbreviation = updates.abbreviation.trim().slice(0, 3);
+      const color = updates.color;
+
+      if (isLocalAuthBypassed) {
+        await projectsApi.update(projectId, { name: updates.name });
+        setLocalProjectCustomization(projectId, { abbreviation, color });
+        await queryClient.invalidateQueries({ queryKey: ['local-projects'] });
+        await queryClient.invalidateQueries({
+          queryKey: ['local-project', projectId],
+        });
+        return;
+      }
+
+      const result = updateProject(projectId, {
+        name: updates.name,
+        color,
+      });
+      await result.persisted;
+      setLocalProjectCustomization(projectId, { abbreviation, color });
+    },
+    [
+      isLocalAuthBypassed,
+      queryClient,
+      setLocalProjectCustomization,
+      updateProject,
+    ]
   );
 
   const handleProjectsDragEnd = useCallback(
@@ -456,12 +483,16 @@ export function SharedAppLayout() {
       setIsSavingProjectOrder(true);
 
       try {
-        await updateManyProjects(
-          reordered.map((project, index) => ({
-            id: project.id,
-            changes: { sort_order: index },
-          }))
-        ).persisted;
+        if (isLocalAuthBypassed) {
+          setLocalProjectOrder(reordered.map((project) => project.id));
+        } else {
+          await updateManyProjects(
+            reordered.map((project, index) => ({
+              id: project.id,
+              changes: { sort_order: index },
+            }))
+          ).persisted;
+        }
       } catch (error) {
         console.error('Failed to reorder projects:', error);
         setOrderedProjects(previousOrder);
@@ -596,6 +627,7 @@ export function SharedAppLayout() {
               onPairHostClick={handlePairHostClick}
               onProjectClick={handleProjectClick}
               onProjectsDragEnd={handleProjectsDragEnd}
+              onProjectUpdate={handleProjectUpdate}
               isSavingProjectOrder={isSavingProjectOrder}
               isWorkspacesActive={isWorkspacesActive}
               isExportActive={isExportActive}
@@ -708,27 +740,6 @@ export function SharedAppLayout() {
             {/* Divider */}
             <div className="border-t border-border mx-4" />
 
-            {/* Export link */}
-            {isSignedIn && (
-              <div className="px-4 py-3">
-                <p className="mb-2 text-xs font-medium text-low">Export</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleExportClick();
-                    setIsDrawerOpen(false);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm text-normal hover:bg-secondary cursor-pointer"
-                >
-                  <DownloadSimpleIcon className="h-4 w-4" />
-                  Export data
-                </button>
-              </div>
-            )}
-
-            {/* Divider */}
-            {isSignedIn && <div className="border-t border-border mx-4" />}
-
             {/* Project list */}
             <div className="flex-1 overflow-y-auto p-2">
               {isSignedIn ? (
@@ -798,33 +809,32 @@ export function SharedAppLayout() {
 
             {/* Create Project button */}
             {isSignedIn && (
-              <div className="p-3 border-t border-border">
-                <div className="space-y-2">
+              <div className="space-y-1 p-3 border-t border-border">
+                {archivedProjects.length > 0 && (
                   <button
                     type="button"
+                    data-testid="mobile-archived-projects"
                     onClick={() => {
-                      handleCreateProject();
+                      handleOpenArchivedProjects();
                       setIsDrawerOpen(false);
                     }}
                     className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-low hover:text-normal hover:bg-secondary cursor-pointer"
                   >
-                    <PlusIcon className="h-4 w-4" />
-                    Create Project
+                    <ArchiveIcon className="h-4 w-4" />
+                    Archived projects
                   </button>
-                  {isLocalAuthBypassed && archivedProjects.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsDrawerOpen(false);
-                        handleOpenArchivedProjects();
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-low hover:text-normal hover:bg-secondary cursor-pointer"
-                    >
-                      <ArchiveIcon className="h-4 w-4" />
-                      Archived Projects
-                    </button>
-                  )}
-                </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCreateProject();
+                    setIsDrawerOpen(false);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-low hover:text-normal hover:bg-secondary cursor-pointer"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  Create Project
+                </button>
               </div>
             )}
           </div>

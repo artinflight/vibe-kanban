@@ -213,6 +213,16 @@
           "label": "发送消息快捷键",
           "helper": "选择发送消息的键盘快捷键。",
           "enterLabel": "Enter（Shift+Enter 换行）"
+        },
+        "savedMessages": {
+          "label": "Saved messages",
+          "helper": "Create reusable messages that can be inserted into the chat input.",
+          "empty": "No saved messages yet.",
+          "add": "Add saved message",
+          "delete": "Delete saved message",
+          "defaultTitle": "New saved message",
+          "titlePlaceholder": "Title",
+          "contentPlaceholder": "Message {{count}}"
         }
       },
       "privacy": {

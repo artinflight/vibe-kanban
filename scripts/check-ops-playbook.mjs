@@ -32,6 +32,10 @@ const readUtf8 = (relPath) =>
 if (errors.length === 0) {
   const agents = readUtf8('AGENTS.md');
   const readme = readUtf8('README.md');
+  const localContainer = readUtf8('crates/local-deployment/src/container.rs');
+  const codexExecutor = readUtf8('crates/executors/src/executors/codex.rs');
+  const workflow = readUtf8('VK_WORKFLOW.md');
+  const runbook = readUtf8('VK_AGENT_DEPLOYMENT_RUNBOOK.md');
 
   const requiredAgentRefs = [
     'STATE.md',
@@ -59,6 +63,43 @@ if (errors.length === 0) {
   for (const ref of requiredReadmeRefs) {
     if (!readme.includes(ref)) {
       errors.push(`README.md must reference ${ref}`);
+    }
+  }
+
+  const queuedFollowUpConsumerCount = (
+    localContainer.match(/consume_queued_follow_up\(&ctx\)\.await/g) ?? []
+  ).length;
+  if (queuedFollowUpConsumerCount < 3) {
+    errors.push(
+      'container.rs must consume queued follow-ups from normal finalization, skipped-cleanup finalization, and parallel setup completion'
+    );
+  }
+
+  const skippedCleanupBlock = localContainer.match(
+    /Skipping cleanup script for workspace[\s\S]*?already_finalized = true;/
+  )?.[0];
+  if (!skippedCleanupBlock?.includes('consume_queued_follow_up(&ctx).await')) {
+    errors.push(
+      'skipped-cleanup/no-op coding-agent path must consume queued follow-up before finalizing'
+    );
+  }
+
+  if (
+    !codexExecutor.includes('const DEFAULT_CODEX_MAX_ACTIVE_EXECUTIONS: usize = 8;')
+  ) {
+    errors.push(
+      'codex executor default max active executions must stay above one; expected DEFAULT_CODEX_MAX_ACTIVE_EXECUTIONS = 8'
+    );
+  }
+
+  for (const [name, contents] of [
+    ['VK_WORKFLOW.md', workflow],
+    ['VK_AGENT_DEPLOYMENT_RUNBOOK.md', runbook],
+  ]) {
+    if (!contents.includes('VK_CODEX_MAX_ACTIVE_EXECUTIONS=8')) {
+      errors.push(
+        `${name} must document VK_CODEX_MAX_ACTIVE_EXECUTIONS=8 as a required live runtime guardrail`
+      );
     }
   }
 }

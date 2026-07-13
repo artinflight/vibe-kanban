@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { Check, Clipboard } from 'lucide-react';
 import { Button } from '@vibe/ui/components/Button';
 import { writeClipboardViaBridge } from '@/shared/lib/clipboard';
@@ -7,11 +7,13 @@ import { cn } from '@/shared/lib/utils';
 interface CodeBlockCopyButtonProps {
   text: string;
   className?: string;
+  style?: CSSProperties;
 }
 
 export function CodeBlockCopyButton({
   text,
   className,
+  style,
 }: CodeBlockCopyButtonProps) {
   const [copied, setCopied] = useState(false);
 
@@ -23,8 +25,10 @@ export function CodeBlockCopyButton({
 
   const handleCopy = useCallback(async () => {
     if (!text) return;
-    await writeClipboardViaBridge(text);
-    setCopied(true);
+    const copiedToClipboard = await writeClipboardViaBridge(text);
+    if (copiedToClipboard) {
+      setCopied(true);
+    }
   }, [text]);
 
   return (
@@ -43,6 +47,7 @@ export function CodeBlockCopyButton({
         'pointer-events-auto h-8 w-8 rounded-md border border-border/70 bg-panel/95 p-2 shadow-sm backdrop-blur-sm transition-opacity',
         className
       )}
+      style={style}
     >
       {copied ? (
         <Check className="h-4 w-4 text-success" />

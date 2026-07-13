@@ -1,4 +1,9 @@
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
+import {
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type HTMLAttributes,
+  type ReactNode,
+} from 'react';
 import {
   type Icon,
   SortAscendingIcon,
@@ -35,26 +40,25 @@ interface ToolbarIconButtonProps
   icon: Icon;
 }
 
-function ToolbarIconButton({
-  icon: IconComponent,
-  className,
-  disabled,
-  ...props
-}: ToolbarIconButtonProps) {
-  return (
-    <button
-      className={cn(
-        'flex items-center justify-center text-low hover:text-normal',
-        disabled && 'opacity-40 cursor-not-allowed hover:text-low',
-        className
-      )}
-      disabled={disabled}
-      {...props}
-    >
-      <IconComponent className="size-icon-base" />
-    </button>
-  );
-}
+const ToolbarIconButton = forwardRef<HTMLButtonElement, ToolbarIconButtonProps>(
+  ({ icon: IconComponent, className, disabled, ...props }, ref) => {
+    return (
+      <button
+        ref={ref}
+        className={cn(
+          'flex items-center justify-center text-low hover:text-normal',
+          disabled && 'opacity-40 cursor-not-allowed hover:text-low',
+          className
+        )}
+        disabled={disabled}
+        {...props}
+      >
+        <IconComponent className="size-icon-base" />
+      </button>
+    );
+  }
+);
+ToolbarIconButton.displayName = 'ToolbarIconButton';
 
 interface ToolbarDropdownProps {
   label: string;

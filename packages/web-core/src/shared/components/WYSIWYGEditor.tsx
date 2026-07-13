@@ -544,6 +544,7 @@ const WYSIWYGEditor = forwardRef<WYSIWYGEditorRef, WysiwygProps>(
                       placeholder={placeholderElement}
                       ErrorBoundary={LexicalErrorBoundary}
                     />
+                    {disabled && <ReadOnlyCodeBlockCopyPlugin />}
                   </div>
 
                   {showStaticToolbar && (

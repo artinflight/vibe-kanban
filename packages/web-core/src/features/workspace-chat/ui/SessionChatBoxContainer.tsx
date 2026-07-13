@@ -59,12 +59,20 @@ import {
 } from '@/shared/types/actions';
 import { SettingsDialog } from '@/shared/dialogs/settings/SettingsDialog';
 import { useActionVisibilityContext } from '@/shared/hooks/useActionVisibilityContext';
+import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
 import { PrCommentsDialog } from '@/shared/dialogs/tasks/PrCommentsDialog';
 import type { NormalizedComment } from '@vibe/ui/components/pr-comment-node';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { sessionsApi } from '@/shared/lib/api';
 import { RenameSessionDialog } from '@vibe/ui/components/RenameSessionDialog';
 import type { TurnNavigationItem } from '@vibe/ui/components/TurnNavigationPopup';
+import { SavedChatMessagesPicker } from './SavedChatMessagesPicker';
+import { deriveSubagentActivity } from '../model/subagentActivity';
+import {
+  deriveSubagentActivityFromJobs,
+  useSubagentJobs,
+} from '@/shared/hooks/useSubagentJobs';
+import { useIsRealMobile } from '@/shared/hooks/useIsMobile';
 
 /** Compute execution status from boolean flags */
 function computeExecutionStatus(params: {
@@ -172,6 +180,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
   const sessionId = session?.id;
   const queryClient = useQueryClient();
   const hostId = useHostId();
+  const isRealMobile = useIsRealMobile();
 
   const handleRenameSession = useCallback(
     (targetSessionId: string, currentName: string) => {
@@ -188,6 +197,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     [queryClient, hostId, workspaceId]
   );
   const appNavigation = useAppNavigation();
+  const { activeWorkspaces } = useWorkspaceContext();
 
   const { executeAction } = useActions();
   const actionCtx = useActionVisibilityContext();
@@ -210,6 +220,20 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
   // Get entries early to extract pending approval for scratch key
   const { entries } = useEntries();
   const tokenUsageInfo = useTokenUsage();
+  const logDerivedSubagentActivity = useMemo(
+    () => deriveSubagentActivity(entries),
+    [entries]
+  );
+  const { jobs: subagentJobs, isBackendAvailable: isSubagentBackendAvailable } =
+    useSubagentJobs(sessionId);
+  const backendSubagentActivity = useMemo(
+    () => deriveSubagentActivityFromJobs(subagentJobs),
+    [subagentJobs]
+  );
+  const subagentActivity =
+    isSubagentBackendAvailable && subagentJobs.length > 0
+      ? backendSubagentActivity
+      : logDerivedSubagentActivity;
 
   // Extract user messages for turn navigation
   const userMessageTurns: TurnNavigationItem[] = useMemo(() => {
@@ -271,6 +295,26 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     return null;
   }, [processes, getPendingForProcess, entries]);
 
+  const currentWorkspaceSummary = useMemo(
+    () => activeWorkspaces.find((workspace) => workspace.id === workspaceId),
+    [activeWorkspaces, workspaceId]
+  );
+
+  const isAttemptRunningReconciled = useMemo(() => {
+    if (!isAttemptRunning || !sessionId) return isAttemptRunning;
+    if (pendingApproval) return true;
+    if (currentWorkspaceSummary?.latestSessionId !== sessionId) {
+      return isAttemptRunning;
+    }
+    return currentWorkspaceSummary.latestProcessStatus === 'running';
+  }, [
+    isAttemptRunning,
+    sessionId,
+    pendingApproval,
+    currentWorkspaceSummary?.latestSessionId,
+    currentWorkspaceSummary?.latestProcessStatus,
+  ]);
+
   // Use approval_id as scratch key when pending approval exists to avoid
   // prefilling approval response with queued follow-up message
   const scratchId = useMemo(() => {
@@ -279,6 +323,11 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     }
     return isNewSessionMode ? workspaceId : sessionId;
   }, [pendingApproval?.approvalId, isNewSessionMode, workspaceId, sessionId]);
+
+  const executorConfigPersistenceKey = useMemo(
+    () => (isNewSessionMode ? workspaceId : sessionId),
+    [isNewSessionMode, sessionId, workspaceId]
+  );
 
   // Get repos for file search
   const { repos } = useWorkspaceRepo(workspaceId);
@@ -440,8 +489,14 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     clearPendingComponentMarkdown,
   ]);
 
-  const { uploadFiles, localAttachments, clearUploadedAttachments } =
-    useSessionAttachments(workspaceId, sessionId, handleInsertMarkdown);
+  const {
+    uploadFiles,
+    localAttachments,
+    clearUploadedAttachments,
+    uploadError,
+    clearUploadError,
+    isUploading,
+  } = useSessionAttachments(workspaceId, sessionId, handleInsertMarkdown);
   // Unified executor + variant + model selector options resolution
   const {
     executorConfig,
@@ -458,6 +513,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     lastUsedConfig: latestConfig,
     scratchConfig: scratchData?.executor_config ?? undefined,
     configExecutorProfile: config?.executor_profile,
+    persistenceKey: executorConfigPersistenceKey,
     onPersist: (cfg) => void saveToScratch(localMessageRef.current, cfg),
   });
 
@@ -477,6 +533,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     isQueued,
     queuedMessage,
     queuedConfig,
+    queuedCount,
     isQueueLoading,
     queueMessage,
     cancelQueue,
@@ -496,8 +553,18 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     onSelectSession,
     executorConfig,
   });
+  const displayedSendError = uploadError ?? sendError;
 
   const handleSend = useCallback(async () => {
+    if (
+      subagentActivity.shouldConfirmBeforeSend &&
+      !window.confirm(
+        'This session has sub-agents that may still be active. Sending another prompt can make the parent agent stop monitoring them. Send anyway?'
+      )
+    ) {
+      return;
+    }
+
     const { prompt, isSlashCommand } = buildAgentPrompt(localMessage, [
       reviewMarkdown,
     ]);
@@ -506,6 +573,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
 
     const success = await send(prompt);
     if (success) {
+      clearUploadError();
       cancelDebouncedSave();
       setLocalMessage('');
       clearUploadedAttachments();
@@ -530,9 +598,11 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     send,
     localMessage,
     reviewMarkdown,
+    subagentActivity.shouldConfirmBeforeSend,
     cancelDebouncedSave,
     setLocalMessage,
     clearUploadedAttachments,
+    clearUploadError,
     isNewSessionMode,
     clearDraft,
     reviewContext,
@@ -548,7 +618,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
 
     if (!workspaceId) return;
 
-    if (!isAttemptRunning) {
+    if (!isAttemptRunningReconciled) {
       refreshQueueStatus();
       return;
     }
@@ -556,7 +626,12 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     if (processes.length > prevCount) {
       refreshQueueStatus();
     }
-  }, [isAttemptRunning, workspaceId, processes.length, refreshQueueStatus]);
+  }, [
+    isAttemptRunningReconciled,
+    workspaceId,
+    processes.length,
+    refreshQueueStatus,
+  ]);
 
   // Queue message handler
   const handleQueueMessage = useCallback(async () => {
@@ -595,6 +670,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         setLocalMessage(value);
       }
       if (sendError) clearError();
+      if (uploadError) clearUploadError();
     },
     [
       isQueued,
@@ -603,8 +679,21 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
       executorConfig,
       sendError,
       clearError,
+      uploadError,
+      clearUploadError,
       setLocalMessage,
     ]
+  );
+
+  const handleInsertSavedMessage = useCallback(
+    (content: string) => {
+      const currentMessage = localMessageRef.current;
+      const nextMessage = currentMessage.trim()
+        ? `${currentMessage}\n\n${content}`
+        : content;
+      handleEditorChange(nextMessage);
+    },
+    [handleEditorChange]
   );
 
   // Handle feedback submission
@@ -665,7 +754,8 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     editRetryMutation.isPending ||
     isApproving ||
     isDenying ||
-    isAnswering;
+    isAnswering ||
+    isUploading;
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -889,7 +979,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     isQueueLoading,
     isSendingFollowUp: isSending,
     isQueued,
-    isAttemptRunning,
+    isAttemptRunning: isAttemptRunningReconciled,
   });
 
   // During loading, render with empty editor to preserve container UI
@@ -930,13 +1020,13 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         repoIds={repoIds}
         executor={executor}
         sessionId={sessionId}
-        autoFocus
+        autoFocus={!isRealMobile}
         onPasteFiles={onPasteFiles}
         localAttachments={localAttachments}
         sendShortcut={config?.send_message_shortcut}
       />
     ),
-    [config?.send_message_shortcut, sessionId]
+    [config?.send_message_shortcut, isRealMobile, sessionId]
   );
 
   const modelSelectorNode = effectiveExecutor ? (
@@ -1041,6 +1131,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         onStop: stopExecution,
         onPasteFiles: uploadFiles,
       }}
+      queuedCount={queuedCount}
       session={{
         sessions,
         selectedSessionId: sessionId,
@@ -1052,6 +1143,12 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
       toolbarActions={{
         items: toolbarActionItems,
       }}
+      footerLeftExtra={
+        <SavedChatMessagesPicker
+          disabled={areAttachmentInputsDisabled}
+          onSelect={handleInsertSavedMessage}
+        />
+      }
       onPrCommentClick={
         actionCtx.hasOpenPR ? handleInsertPrComments : undefined
       }
@@ -1063,7 +1160,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         conflictedFilesCount,
         onResolveConflicts: handleResolveConflicts,
       }}
-      error={sendError}
+      error={displayedSendError}
       agent={effectiveExecutor}
       todos={todos}
       inProgressTodo={inProgressTodo}
@@ -1127,6 +1224,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
             }
           : undefined
       }
+      subagentActivity={subagentActivity}
       localAttachments={localAttachments}
       dropzone={{ getRootProps, getInputProps, isDragActive }}
       modelSelector={modelSelectorNode}

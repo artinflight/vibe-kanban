@@ -2,6 +2,8 @@
 
 This file is the pickup guide for agents working on Vibe Kanban from inside
 Vibe Kanban. Follow it before editing, building, or deploying this repo.
+For the planned clean self-development project/preview model, read
+`VK_SELF_DEVELOPMENT_WORKFLOW.md` as well.
 
 ## Current Live Truth
 
@@ -59,9 +61,10 @@ the live checks above.
 4. `HANDOFF.md`
 5. `VK_WORKFLOW.md`
 6. `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
-7. Relevant crate/package `AGENTS.md`
-8. Code paths for the task
-9. `DELTA.md` only when compact history is needed
+7. `VK_SELF_DEVELOPMENT_WORKFLOW.md`
+8. Relevant crate/package `AGENTS.md`
+9. Code paths for the task
+10. `DELTA.md` only when compact history is needed
 
 ## Safe Worktree Model
 
@@ -85,6 +88,280 @@ Use this model for all VK changes:
 
 The current canonical checkout often has unrelated dirty files. Treat that as
 expected and work around it instead of reverting it.
+
+## Feature Prep Workflow
+
+Use this path for normal fixes and features.
+
+1. Create the work in the active `VK Dev` project.
+2. Confirm the workspace repo is `_vibe_kanban_repo` and the base is `staging`.
+3. Let the setup guard run. If it fails, fix the setup guard or workspace
+   configuration before editing product code.
+4. Keep the branch scoped to one concern.
+5. Update source, focused tests, and continuity docs together.
+6. Run the narrowest useful validation during development.
+7. Run `pnpm run format` before final handoff.
+8. For a feature branch, open the PR into `staging`, not `main`.
+
+Feature prep must not restart production VK, switch the live frontend symlink,
+install live binaries, or mutate live DB/project rows. Those actions belong to a
+separate release/deploy task.
+
+## Preview Workflow
+
+Use preview before promoting UI work into `staging` or before staging it for a
+live frontend swap.
+
+Frontend-only preview:
+
+```bash
+pnpm run preview:light
+pnpm run preview:light:status
+pnpm run preview:light:logs
+pnpm run preview:light:stop
+```
+
+Default behavior:
+
+- serves the local frontend from the workspace
+- proxies API calls to the existing live backend on `127.0.0.1:4311`
+- starts at preview port `3002` unless overridden
+- can expose a Tailscale HTTPS preview when Tailscale is available
+
+Useful overrides:
+
+```bash
+VK_PREVIEW_PORT=3030 pnpm run preview:light
+VK_PREVIEW_PORT_START=3040 pnpm run preview:light
+VK_PREVIEW_BACKEND_PORT=4311 pnpm run preview:light
+VK_PREVIEW_TAILNET_PORT=18460 pnpm run preview:light
+```
+
+Inside a Vibe Kanban preview panel, prefer:
+
+```bash
+pnpm run preview:light:run
+```
+
+That keeps the preview attached to the panel lifecycle.
+
+Backend/runtime preview:
+
+- do not use the live state directory
+- do not use the live Codex home
+- do not point `vibe.local` at the preview
+- use isolated lab paths such as:
+  - `VIBE_KANBAN_DATA_DIR=/home/mcp/.local/share/vibe-kanban-lab`
+  - `CODEX_HOME=/home/mcp/.local/share/vibe-kanban-lab/codex-home`
+- use ports separate from live `4311` and preview proxy `4312`
+
+If backend behavior must be exercised against real production data, stop and
+turn the task into an operator-approved release/deploy task first.
+
+## Restart-Ready Staging Workflow
+
+When a change needs a backend restart or a coordinated frontend/backend release,
+do all slow and risky work before asking for the restart window.
+
+Prepare:
+
+1. Start from a clean candidate worktree based on the intended release branch.
+2. Confirm all intended fixes are present in the candidate branch.
+3. Confirm known live fixes are not missing from the candidate branch.
+4. Run focused checks and any required broader validation.
+5. Build the release binary and frontend assets from the clean candidate.
+6. Write a deploy manifest with:
+   - branch and commit
+   - build worktree
+   - binary path and sha256
+   - frontend release path and asset names
+   - features intentionally included
+   - known fixes that must not regress
+   - validation commands and results
+7. Take an efficient restore-grade backup and mirror it to Desktop.
+8. Verify the backup archive, checksum/manifest, and latest pointer.
+9. Check active agents.
+10. Stop and report: the only remaining action should be the approved restart
+    or frontend symlink switch.
+
+At the restart window:
+
+1. Re-check active agents immediately before touching the service.
+2. If agents are active, report them and wait unless the operator explicitly
+   accepts interruption.
+3. Install the already-built binary/assets.
+4. Restart only when backend code changed.
+5. Run post-restart smoke before saying the deploy worked.
+
+This workflow exists so the operator can continue using VK while the candidate
+is built and validated, and downtime is limited to the final switch/restart.
+
+## Blue/Green Local Cutover Workflow
+
+Use this path when the goal is to reduce restart risk by proving a replacement
+local VK stack before `vibe.local` is moved to it.
+
+This workflow does not remove the backup requirement. It adds an isolated
+parallel instance, a final sync window, and a reversible route flip.
+
+Required invariants:
+
+- keep taking the lean restore backup and mirroring it to Desktop
+- never run two VK instances against the same live state directory
+- never share the live VK `CODEX_HOME` between active instances
+- never point `vibe.local` at the candidate until the final cutover step
+- do not start new work or coding agents on the candidate before cutover
+- treat running agents as non-migratable; wait for them to finish or get
+  explicit operator approval to interrupt them
+
+Current implementation constraint:
+
+- production data location is selected through `ProjectDirs`, which respects
+  `XDG_DATA_HOME` on Linux
+- `VIBE_KANBAN_DATA_DIR` is not currently the production data-directory
+  selector; do not rely on it for blue/green isolation unless code support has
+  been added and validated
+- use an isolated `XDG_DATA_HOME` for the candidate, such as:
+  `/home/mcp/.local/share/vibe-kanban-green-xdg`
+- with that setting, the candidate VK data directory should be:
+  `/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban`
+
+Prepare the candidate:
+
+1. Start from a clean candidate worktree based on the intended release branch.
+2. Confirm all intended fixes are present and known live fixes are not missing.
+3. Run focused checks and any required broader validation.
+4. Build the release binary and frontend assets from the clean candidate.
+5. Write a blue/green deploy manifest with:
+   - source branch and commit
+   - build worktree
+   - binary path and sha256
+   - frontend release path and asset names
+   - candidate service name, ports, `XDG_DATA_HOME`, and `CODEX_HOME`
+   - features intentionally included
+   - known fixes that must not regress
+   - validation commands and results
+6. Take a lean restore backup and mirror it to Desktop.
+7. Seed the candidate state from the backup into the isolated candidate data
+   directory, not into `/home/mcp/.local/share/vibe-kanban`.
+8. Copy the live VK Codex home into the isolated candidate `CODEX_HOME` only
+   while the candidate is offline. Copy the full continuity state, not just
+   `auth.json`.
+9. Start the candidate on non-live ports, for example backend `4411` and preview
+   proxy `4412`.
+10. Smoke the candidate directly by port or by a temporary test-only origin.
+    Do not use `vibe.local` for this stage.
+
+Candidate runtime requirements:
+
+```ini
+[Service]
+Environment=HOST=127.0.0.1
+Environment=PORT=4411
+Environment=PREVIEW_PROXY_PORT=4412
+Environment=MCP_HOST=127.0.0.1
+Environment=MCP_PORT=4411
+Environment=VK_ALLOWED_ORIGINS=https://vibe-green.local
+Environment=XDG_DATA_HOME=/home/mcp/.local/share/vibe-kanban-green-xdg
+Environment=CODEX_HOME=/home/mcp/.local/share/vibe-kanban-green-codex-home
+Environment=DISABLE_WORKTREE_CLEANUP=1
+Environment=VK_DISABLE_PR_MONITOR=1
+Environment=VK_USE_SYSTEMD_RUN=1
+Environment=VK_TRANSIENT_MEMORY_HIGH=1500M
+Environment=VK_TRANSIENT_MEMORY_MAX=3000M
+```
+
+Before final sync:
+
+1. Re-check active agents on live:
+   ```bash
+   systemctl --user list-units 'vk-exec-*' --state=running --no-legend
+   python3 - <<'PY'
+   import sqlite3
+   db='/home/mcp/.local/share/vibe-kanban/db.v2.sqlite'
+   con=sqlite3.connect(db)
+   for row in con.execute("select count(*) from execution_processes where status='running' and dropped=0"):
+       print(row[0])
+   con.close()
+   PY
+   ```
+2. If agents are active, stop and report them unless the operator explicitly
+   accepts interruption.
+3. Pause new live VK work. The final sync needs a short write-freeze window.
+4. Take one final lean restore backup and mirror it to Desktop.
+5. Stop the candidate, replace its seeded state from the final backup, and
+   refresh the candidate `CODEX_HOME` from the final backup/copy while offline.
+6. Restart the candidate on its non-live ports.
+7. Re-run direct candidate smoke.
+
+Cut over:
+
+1. Confirm live and candidate manifests, backup paths, ports, binary hashes, and
+   frontend asset paths are recorded.
+2. Confirm `curl` to the candidate `/api/info` reports the expected local-only
+   state and no unexpected shared API base.
+3. Flip only the reverse-proxy or route that serves `https://vibe.local` from
+   live `127.0.0.1:4311` to candidate `127.0.0.1:4411`.
+4. Verify:
+   ```bash
+   curl -skI https://vibe.local/
+   curl -sk https://vibe.local/api/info
+   VK_SMOKE_BASE_URL=https://vibe.local python3 scripts/vk_live_regression_smoke.py
+   ```
+5. Keep the previous live instance available but not serving `vibe.local` until
+   the operator accepts the cutover.
+6. After acceptance, stop the old instance. Do not delete old state until the
+   backup and rollback window are explicitly accepted.
+
+Rollback:
+
+- flip `vibe.local` back to the previous live backend
+- stop the candidate
+- record the rollback reason, candidate ports, backup archive, and any smoke
+  failures in the deploy manifest and `HANDOFF.md`
+
+## Backup Workflow
+
+Use the lean restore backup as the default backup before risky VK operations:
+
+```bash
+./scripts/run_vk_lean_backup.sh
+```
+
+This wraps `scripts/vk_lean_backup.py --mirror-desktop`. It creates a local
+restore archive under `/home/mcp/backups`, mirrors it to
+`desktop:Desktop/vk-backups`, updates the `latest` pointers, and applies
+retention so MCP does not fill up with old extracted backups.
+
+The lean backup is the normal "safe restart" backup. It captures the local VK
+state that is not safely recoverable from GitHub, including:
+
+- `db.v2.sqlite`
+- sessions
+- isolated VK Codex home state
+- relevant systemd service config
+- deployed VK launcher/binary files
+- deterministic workspace git metadata and bundles for local-only work
+- restore metadata and checksums
+
+Before saying the backup is ready, record:
+
+- the local archive path
+- the Desktop mirror path
+- whether the `latest` pointer was updated
+- whether the backup command exited successfully
+- any restore gaps or warnings
+
+Restore references:
+
+- backup doc: `docs/self-hosting/local-backup-recovery.mdx`
+- backup script: `scripts/vk_lean_backup.py`
+- wrapper: `scripts/run_vk_lean_backup.sh`
+- restore script: `scripts/vk_restore_lean_backup.py`
+- restore latest wrapper: `scripts/run_vk_restore_latest.sh`
+
+Use a heavier manual/full backup only for schema migrations, auth migrations,
+or any operation that the lean backup doc says it cannot cover.
 
 ## Frontend-Only Deploy
 
@@ -145,15 +422,12 @@ sha256sum /home/mcp/.local/bin/vibe-kanban-serve-prod
 
 Backup before restart:
 
-- At minimum, copy:
-  - `/home/mcp/.local/share/vibe-kanban/db.v2.sqlite`
-  - `/home/mcp/.config/systemd/user/vibe-kanban.service.d`
-  - `/home/mcp/.local/bin/vibe-kanban-serve`
-  - `/home/mcp/.local/bin/vibe-kanban-serve-prod`
-  - the current frontend symlink target
-- For high-risk deploys, also preserve:
-  - `/home/mcp/.local/share/vibe-kanban/sessions`
-  - `/home/mcp/.local/share/vibe-kanban/codex-home`
+```bash
+./scripts/run_vk_lean_backup.sh
+```
+
+Do not proceed until the backup is mirrored to Desktop and the backup path is
+recorded in `HANDOFF.md` or the deploy manifest.
 
 Build and install from the clean worktree:
 

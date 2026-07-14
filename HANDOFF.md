@@ -2636,3 +2636,18 @@ User QA checklist for the no-restart frontend repair:
   - `GITHUB_BASE_REF=staging ./scripts/check-i18n.sh`
   - `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/web-core run check`
   - `git diff --check`
+
+# 2026-07-14 Default Codex agent selection
+
+- Branch `vk/aed7-vk-default-agent` makes new Codex configurations fall back to
+  `gpt-5.6-sol` with `xhigh` (Extra High) reasoning in the web configuration
+  resolver.
+- Explicit, persisted, last-used, and preset selections retain precedence.
+- The change is frontend-only, so it can be activated through the refreshable
+  frontend asset workflow without restarting the live VK backend.
+- Validation passed: `pnpm run format`, `pnpm run ops:check`, the frontend
+  portions of `pnpm run check`, `pnpm run local-web:lint`, `pnpm run ui:lint`,
+  `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/local-web build`,
+  bundle marker checks for `gpt-5.6-sol` and `xhigh`, and lightweight preview
+  startup. The broad Rust workspace check could not run on this host because
+  the required system `glib-2.0` development package is unavailable.

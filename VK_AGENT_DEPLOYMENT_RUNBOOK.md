@@ -174,7 +174,10 @@ Prepare:
    - branch and commit
    - build worktree
    - binary path and sha256
-   - frontend release path and asset names
+   - frontend source commit, release path, asset names, and asset sha256
+   - proof that the frontend bundle was built from the same intended release
+     commit as the backend, unless an explicit mixed-version exception is
+     approved and recorded
    - features intentionally included
    - known fixes that must not regress
    - validation commands and results
@@ -213,6 +216,12 @@ Required invariants:
 - do not start new work or coding agents on the candidate before cutover
 - treat running agents as non-migratable; wait for them to finish or get
   explicit operator approval to interrupt them
+- treat the frontend bundle as part of the release, not as a reusable artifact
+  unless its source commit and required feature fingerprints are verified
+- never promote a candidate whose backend binary and frontend dist come from
+  different commits unless the operator explicitly approves the mixed-version
+  release and the manifest lists the reason, expected missing changes, and
+  rollback path
 
 Current implementation constraint:
 
@@ -236,10 +245,13 @@ Stage 1: Pre-Spin-Up Preparation:
    - source branch and commit
    - build worktree
    - binary path and sha256
-   - frontend release path and asset names
+   - frontend source commit, release path, asset names, and asset sha256
    - candidate service name, ports, `XDG_DATA_HOME`, and `CODEX_HOME`
    - features intentionally included
    - known fixes that must not regress
+   - source-map or source-hash evidence for high-risk UI features that must not
+     regress, such as code-block copy, chat image rendering, attachment flows,
+     subagent activity, workspace pin state, and repo-default behavior
    - validation commands and results
 6. Take a lean restore backup and mirror it to Desktop.
 7. Record the local archive path, Desktop mirror path, current live service
@@ -262,6 +274,13 @@ Stage 2: Candidate Seed, Spin-Up, And Direct Smoke:
    proxy `4412`.
 4. Smoke the candidate directly by port or by a temporary test-only origin.
    Do not use `vibe.local` for this stage.
+5. Verify candidate frontend provenance directly from the candidate route:
+   ```bash
+   curl -sk http://127.0.0.1:4411/ | rg -o '/assets/index-[^" ]+\.(js|css)' | sort -u
+   ```
+   The returned JS/CSS asset names must match the manifest and the frontend
+   release directory. If source maps are present, spot-check hashes or source
+   presence for must-retain UI features before proceeding.
 
 Candidate runtime requirements:
 
@@ -308,20 +327,30 @@ Stage 3: Final Sync:
 Stage 4: Cutover:
 
 1. Confirm live and candidate manifests, backup paths, ports, binary hashes, and
-   frontend asset paths are recorded.
+   frontend source commit, asset paths, and asset sha256 values are recorded.
 2. Confirm `curl` to the candidate `/api/info` reports the expected local-only
    state and no unexpected shared API base.
-3. Flip only the reverse-proxy or route that serves `https://vibe.local` from
+3. Confirm the candidate service environment points at the recorded frontend
+   dist:
+   ```bash
+   systemctl --user show vibe-kanban-green.service -p Environment --no-pager
+   ```
+   `VK_FRONTEND_DIST_DIR` must match the manifest. Do not accept a stale Stage 1
+   or preview build artifact just because the backend binary is correct.
+4. Flip only the reverse-proxy or route that serves `https://vibe.local` from
    live `127.0.0.1:4311` to candidate `127.0.0.1:4411`.
-4. Verify:
+5. Verify:
    ```bash
    curl -skI https://vibe.local/
+   curl -sk https://vibe.local/ | rg -o '/assets/index-[^" ]+\.(js|css)' | sort -u
    curl -sk https://vibe.local/api/info
    VK_SMOKE_BASE_URL=https://vibe.local python3 scripts/vk_live_regression_smoke.py
    ```
-5. Keep the previous live instance available but not serving `vibe.local` until
+   The `vibe.local` asset names must match the candidate manifest. If they do
+   not, roll the route back or fix the candidate frontend before user testing.
+6. Keep the previous live instance available but not serving `vibe.local` until
    the operator accepts the cutover.
-6. After acceptance, stop the old instance. Do not delete old state until the
+7. After acceptance, stop the old instance. Do not delete old state until the
    backup and rollback window are explicitly accepted.
 
 Stage 5: Rollback:

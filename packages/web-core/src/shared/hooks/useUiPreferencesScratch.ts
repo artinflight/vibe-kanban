@@ -283,7 +283,7 @@ export function useUiPreferencesScratch() {
     }
 
     const currentState = useUiPreferencesStore.getState();
-    const data = storeToScratchData({
+    const nextData = storeToScratchData({
       repoActions: currentState.repoActions,
       expanded: currentState.expanded,
       contextBarPosition: currentState.contextBarPosition,
@@ -306,6 +306,10 @@ export function useUiPreferencesScratch() {
       kanbanProjectViewSelections: currentState.kanbanProjectViewSelections,
       kanbanProjectViewPreferences: currentState.kanbanProjectViewPreferences,
     });
+    const data: UiPreferencesScratchData = {
+      ...(scratchData ?? {}),
+      ...nextData,
+    };
 
     const serialized = JSON.stringify(data);
     if (serialized === lastSavedPayloadRef.current) {
@@ -323,7 +327,7 @@ export function useUiPreferencesScratch() {
     } catch (e) {
       console.error('[useUiPreferencesScratch] Failed to save:', e);
     }
-  }, [updateScratch]);
+  }, [scratchData, updateScratch]);
 
   const { debounced: debouncedSave } = useDebouncedCallback(saveToServer, 500);
 

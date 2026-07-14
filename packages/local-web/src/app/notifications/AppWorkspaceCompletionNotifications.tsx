@@ -83,7 +83,7 @@ export function AppWorkspaceCompletionNotifications() {
         continue;
       }
 
-      showBrowserNotification({
+      void showBrowserNotification({
         title: notificationTitle(workspace),
         body: notificationBody(workspace),
         tag: `vk-workspace-${workspace.id}`,

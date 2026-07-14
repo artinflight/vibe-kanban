@@ -91,6 +91,12 @@ ASSET_TOKENS = [
     "Chrome notification permission still needs to be enabled",
     "Chrome notification permission is enabled",
     "Chrome notification permission is blocked",
+    "Send test notification",
+    "VK test notification",
+    "Browser notifications are working",
+    "serviceWorker",
+    "showNotification",
+    "vk-notifications-sw.js",
 ]
 
 

@@ -1671,10 +1671,11 @@ export const agentsApi = {
   },
 };
 
-// Queue API for session follow-up messages
+// Follow-up API. The server injects into active Codex sessions when possible,
+// and falls back to a queued follow-up when active injection is unavailable.
 export const queueApi = {
   /**
-   * Queue a follow-up message to be executed when current execution finishes
+   * Send a follow-up message, or queue it when current execution cannot accept it
    */
   queue: async (
     sessionId: string,

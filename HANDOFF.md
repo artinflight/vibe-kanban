@@ -1,5 +1,27 @@
 # HANDOFF.md
 
+## 2026-07-14 Local Push Notification Investigation / Source Fix Prepared
+
+- User reported that VK's built-in push notifications have never worked, making the current ntfy layer partly redundant in theory.
+- Root cause confirmed in live logs: local VK already has `notifications.push_enabled = true`, but the backend fallback notifier sends Linux desktop notifications from the MCP server process. The live service repeatedly logs `Linux notification daemon not available: org.freedesktop.DBus.Error.ServiceUnknown: The name org.freedesktop.Notifications was not provided by any .service files`, so there is no server-side notification daemon to receive them.
+- Code-level mismatch found:
+  - `crates/services/src/services/notification.rs` supports Tauri/native notifications or backend-host OS notifications, not Web Push/VAPID/browser service-worker push.
+  - `packages/local-web/src/app/notifications/showSystemNotification.ts` returned immediately outside Tauri, so Chrome-served local VK could never show browser notifications from that path.
+  - `AppSystemNotifications` is remote notification-inbox oriented and Tauri-only for system delivery, so it does not cover local workspace completion notifications in Chrome.
+- Source fix prepared, not deployed:
+  - added shared browser Notification API helpers in `packages/web-core/src/shared/lib/browserNotifications.ts`
+  - added `AppWorkspaceCompletionNotifications` in local-web to watch workspace running-to-completed/failed transitions and show Chrome/browser system notifications when the config toggle is enabled and permission is granted
+  - made non-Tauri `showSystemNotification` use the browser Notification API instead of silently returning
+  - made the Push Notifications checkbox request browser notification permission when enabled in Chrome/browser mode
+- Scope note: this is browser system notification support while VK is open in a browser tab; it is not true service-worker Web Push that wakes the browser when no VK page is open.
+- Validation:
+  - `pnpm install --offline --frozen-lockfile`
+  - `pnpm run format`
+  - `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/web-core run check`
+  - `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/local-web run check`
+  - `git diff --check`
+- No live VK restart, frontend symlink swap, or preview deployment was performed.
+
 ## 2026-07-13 Staging Backfill Preview Updated
 
 - Preview branch: `vk/4e18-live-backfill-to-staging`

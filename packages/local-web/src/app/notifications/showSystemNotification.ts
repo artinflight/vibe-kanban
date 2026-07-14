@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { showBrowserNotification } from '@/shared/lib/browserNotifications';
 import { isTauriApp } from '@/shared/lib/platform';
 
 interface NotificationPayload {
@@ -12,6 +13,11 @@ export async function showSystemNotification(
   notification: NotificationPayload
 ): Promise<void> {
   if (!isTauriApp()) {
+    showBrowserNotification({
+      title: notification.title,
+      body: notification.body,
+      tag: notification.id,
+    });
     return;
   }
 

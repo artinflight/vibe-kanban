@@ -2651,3 +2651,11 @@ User QA checklist for the no-restart frontend repair:
   bundle marker checks for `gpt-5.6-sol` and `xhigh`, and lightweight preview
   startup. The broad Rust workspace check could not run on this host because
   the required system `glib-2.0` development package is unavailable.
+- PR `#65` merged into `staging` as `108a1f377`.
+- The live Codex `DEFAULT` profile was updated through the supported
+  `/api/profiles` route to `gpt-5.6-sol` with `xhigh` reasoning. The runtime
+  cache and persisted live profile both report those values without restart.
+- Backend PID remained `1206`, and the live frontend pointer was not changed
+  from `20260714Tbrowser-notifications`.
+- Rollback backup:
+  `/home/mcp/backups/profiles-live-pre-codex-sol-xhigh-20260714.json`.

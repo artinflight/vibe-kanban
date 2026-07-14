@@ -20,7 +20,7 @@ import {
   ThemeMode,
   UiLanguage,
 } from 'shared/types';
-import { getModifierKey } from '@/shared/lib/platform';
+import { getModifierKey, isTauriApp } from '@/shared/lib/platform';
 import { getLanguageOptions } from '@/i18n/languages';
 import { toPrettyCase } from '@/shared/lib/string';
 import {
@@ -38,6 +38,10 @@ import {
   useShowLeftColumnLinks,
 } from '@/shared/stores/useUiPreferencesStore';
 import { cn, playSound } from '@/shared/lib/utils';
+import {
+  requestBrowserNotificationPermission,
+  supportsBrowserNotifications,
+} from '@/shared/lib/browserNotifications';
 import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
 import { IconButton } from '@vibe/ui/components/IconButton';
 import {
@@ -803,14 +807,22 @@ export function GeneralSettingsSection() {
           label={t('settings.general.notifications.push.label')}
           description={t('settings.general.notifications.push.helper')}
           checked={draft?.notifications.push_enabled ?? false}
-          onChange={(checked) =>
+          onChange={async (checked) => {
+            if (checked && !isTauriApp() && supportsBrowserNotifications()) {
+              const permission = await requestBrowserNotificationPermission();
+              if (permission === 'denied') {
+                setError('Browser notification permission is blocked.');
+                return;
+              }
+            }
+
             updateDraft({
               notifications: {
                 ...draft!.notifications,
                 push_enabled: checked,
               },
-            })
-          }
+            });
+          }}
         />
       </SettingsCard>
 

@@ -19,8 +19,8 @@ interface UseSessionQueueInteractionResult {
   queuedCount: number;
   /** Whether a queue operation is in progress */
   isQueueLoading: boolean;
-  /** Steer the active agent, or queue the message when active steering is unavailable */
-  queueMessage: (
+  /** Send a follow-up to the active agent, or queue it when active injection is unavailable */
+  sendFollowUp: (
     message: string,
     executorConfig: ExecutorConfig
   ) => Promise<void>;
@@ -34,7 +34,7 @@ export const QUEUE_STATUS_KEY = 'queue-status';
 const QUEUED_STATUS_REFRESH_MS = 3000;
 
 /**
- * Hook to manage follow-up queue interaction for session messages.
+ * Hook to manage follow-up interaction for session messages.
  * The server steers active Codex turns when possible and otherwise falls back
  * to a queued follow-up.
  * Uses TanStack Query for caching and mutation handling.
@@ -66,8 +66,8 @@ export function useSessionQueueInteraction({
     queuedMessageData?.data.executor_config ?? null;
   const queuedCount = queuedMessageData?.messages.length ?? 0;
 
-  // Mutation for queueing a message
-  const queueMutation = useMutation({
+  // Mutation for sending or queueing a follow-up message
+  const followUpMutation = useMutation({
     mutationFn: ({
       message,
       executorConfig,
@@ -92,15 +92,15 @@ export function useSessionQueueInteraction({
     },
   });
 
-  const queueMessage = useCallback(
+  const sendFollowUp = useCallback(
     async (message: string, executorConfig: ExecutorConfig) => {
       if (!sessionId) return;
-      await queueMutation.mutateAsync({
+      await followUpMutation.mutateAsync({
         message,
         executorConfig,
       });
     },
-    [sessionId, queueMutation]
+    [sessionId, followUpMutation]
   );
 
   const cancelQueue = useCallback(async () => {
@@ -118,8 +118,8 @@ export function useSessionQueueInteraction({
     queuedMessage,
     queuedConfig,
     queuedCount,
-    isQueueLoading: queueMutation.isPending || cancelMutation.isPending,
-    queueMessage,
+    isQueueLoading: followUpMutation.isPending || cancelMutation.isPending,
+    sendFollowUp,
     cancelQueue,
     refreshQueueStatus,
   };

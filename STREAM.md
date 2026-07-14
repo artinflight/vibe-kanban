@@ -2,15 +2,13 @@
 
 ## Stream Identifier
 
-- Branch: `vk/land-live-fixes-20260422`
-- Repo: `/home/mcp/_vibe_kanban_repo`
-- Working mode: local-only VK maintenance / live-fix audit branch
+- Branch: `vk/aed7-vk-default-agent`
+- Repo: `/home/mcp/code/worktrees/aed7-vk-default-agent/_vibe_kanban_repo`
+- Working mode: isolated feature branch
 
 ## Objective
 
-- Audit and repair new VK UI/runtime features that appeared merged or deployed but failed in live use.
-- Current focus: needs-attention sidebar marker clearing, attachment upload/paste, codeblock copy, workspace rename actions, issue PR details, and merged PR state.
-- Current documentation focus as of 2026-05-28: make VK safe for agents working from inside VK by giving them a single deployment runbook that prevents dirty-checkout builds, accidental frontend rollback, active-agent interruption, and unverified regressions.
+- Make GPT-5.6 Sol with Extra High reasoning the default Codex agent configuration.
 
 ## In Scope
 

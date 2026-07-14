@@ -1,5 +1,39 @@
 # HANDOFF.md
 
+## 2026-07-14 Browser Push Notification Frontend Release Live
+
+- User approved deploying the browser notification fix as a frontend-only change with no VK restart.
+- Source commit deployed for the frontend bundle:
+  - `1d4192e80fa694e9fab0d1a17afc28e5381d7681`
+  - branch/worktree: `vk/36b2-vk-push-notifica` at `/home/mcp/code/worktrees/36b2-vk-push-notifica/_vibe_kanban_repo`
+- Built with:
+  - `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/local-web run build`
+  - default build without `NODE_OPTIONS` hit the same Node heap ceiling seen during earlier type checks
+  - existing build warnings appeared for Sentry auth token/source-map upload, stale Browserslist, Tailwind content, dynamic imports, and chunk size; build exited successfully
+- Published release:
+  - release path: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260714Tbrowser-notifications`
+  - manifest: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260714Tbrowser-notifications/RELEASE_MANIFEST.txt`
+  - asset: `/assets/index-BgntCecr.js`
+  - asset sha256: `6a9fe0e6375f081f60bba0aaef2315261a1a1b9c3ff9215e40889cbe3c1aaa8e`
+  - index sha256: `b8b10bc942a6a61b87c5319c4a881ee68eca1574a241e0b44316872395d8b69b`
+- Production frontend pointer:
+  - `/home/mcp/.local/share/vibe-kanban/frontend-dist/current -> /home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260714Tbrowser-notifications`
+- Browser-facing `vibe.local` was routed through `vibe-kanban-green.service` on port `4511`, not production port `4311`.
+  - green service env had `VK_FRONTEND_DIST_DIR=/home/mcp/backups/vk-bluegreen-frontend-main-cef8b656-20260714T115848Z`
+  - preserved old green frontend dir as `/home/mcp/backups/vk-bluegreen-frontend-main-cef8b656-20260714T115848Z.before-browser-notifications-20260714T1407Z`
+  - replaced the original green frontend path with a symlink to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260714Tbrowser-notifications`
+  - no `vibe-kanban.service`, `vibe-kanban-green.service`, or `vibe-local-https-proxy.service` restart was performed
+- Live verification:
+  - `curl -sk https://vibe.local/` references `/assets/index-BgntCecr.js`
+  - served asset contains browser notification markers `VK turn complete`, `VK turn failed`, `Notification.permission`, `requestPermission`, and `vk-workspace-`
+  - served asset still contains existing frontend regression markers including `insertRawText`, rich paste guard, `vk-executor-config-selection`, `branchNameMatchesSearch`, `mobile-archived-projects`, `local_project_customizations`, `Archive`, `Unarchive`, `Rename`, `Copy code`, and `queued`
+  - service PIDs stayed active: production `vibe-kanban.service` PID `1206`, green `vibe-kanban-green.service` PID `1635274`, HTTPS proxy PID `1138674`
+  - `VK_SMOKE_BASE_URL=https://vibe.local python3 scripts/vk_live_regression_smoke.py` passed after updating the expected release/asset and current browser-facing green project order
+- Operator action needed:
+  - refresh Chrome at `https://vibe.local`
+  - if Chrome has not granted notification permission, toggle Settings -> General -> Push Notifications off and on once, then allow notifications for `vibe.local`
+  - notifications work while a VK tab is open; this is not service-worker Web Push for a fully closed browser
+
 ## 2026-07-14 Local Push Notification Investigation / Source Fix Prepared
 
 - User reported that VK's built-in push notifications have never worked, making the current ntfy layer partly redundant in theory.

@@ -13,32 +13,31 @@ import urllib.request
 BASE_URL = "https://vibe.local"
 EXPECTED_RELEASE = (
     "/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/"
-    "20260626Tmultiline-rich-paste"
+    "20260714Tbrowser-notifications"
 )
-EXPECTED_ASSET = "/assets/index-DXMultilinePaste.js"
+EXPECTED_ASSET = "/assets/index-BgntCecr.js"
 EXPECTED_ACTIVE = [
-    "matchSubs",
-    "BBinvoice",
-    "DeNest",
-    "ScrollCap",
+    "DeltaIndiaTango",
+    "VK Dev",
+    "CapReveal",
     "oharaFIT",
-    "outsource",
-    "Iniandi",
+    "PostStoryboard",
     "CodexUsage",
-    "VL",
+    "opNVLP",
     "LifeOS",
     "Operations",
     "OSTP",
     "programming",
     "ops-playbook",
-    "intake-shield",
     "foxtrot-lima",
-    "caspian-app",
     "hyroxready-app",
-    "VK Sub-Agent Monitor",
 ]
 EXPECTED_ARCHIVED = [
-    "PostStoryboard",
+    "BBinvoice",
+    "DeNest",
+    "ScrollCap",
+    "outsource",
+    "Iniandi",
     "mealPlan",
     "Monitor",
     "Monitor local",
@@ -47,6 +46,8 @@ EXPECTED_ARCHIVED = [
     "caspian-ova-dashboard",
     "vibe-kanban",
     "vibe-kanban-orchestrator",
+    "intake-shield",
+    "caspian-app",
 ]
 EXPECTED_STATUS_NAMES = [
     "To do",
@@ -82,6 +83,11 @@ ASSET_TOKENS = [
     "if(d){f.insertRawText(c);return}",
     "vk-executor-config-selection",
     "branchNameMatchesSearch",
+    "VK turn complete",
+    "VK turn failed",
+    "Notification.permission",
+    "requestPermission",
+    "vk-workspace-",
 ]
 
 

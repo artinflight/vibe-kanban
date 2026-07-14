@@ -138,6 +138,7 @@
       "stopping": "Stopping",
       "loading": "Loading",
       "send": "Send",
+      "sendFollowUp": "Send follow-up",
       "sending": "Sending",
       "queue": "Queue",
       "cancelQueue": "Cancel Queue",

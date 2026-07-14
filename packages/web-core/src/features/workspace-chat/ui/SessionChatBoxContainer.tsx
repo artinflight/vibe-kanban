@@ -535,7 +535,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     queuedConfig,
     queuedCount,
     isQueueLoading,
-    queueMessage,
+    sendFollowUp,
     cancelQueue,
     refreshQueueStatus,
   } = useSessionQueueInteraction({ sessionId });
@@ -633,18 +633,19 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     refreshQueueStatus,
   ]);
 
-  // Queue message handler
-  const handleQueueMessage = useCallback(async () => {
-    // Allow queueing if there's a message OR review comments, and we have a config
+  // Follow-up handler. The server injects into active Codex sessions when
+  // possible, otherwise it falls back to queueing for the next run.
+  const handleSendFollowUp = useCallback(async () => {
+    // Allow follow-up if there's a message OR review comments, and we have a config
     if ((!localMessage.trim() && !reviewMarkdown) || !executorConfig) return;
 
     const { prompt } = buildAgentPrompt(localMessage, [reviewMarkdown]);
 
     cancelDebouncedSave();
     await saveToScratch(localMessage, executorConfig);
-    await queueMessage(prompt, executorConfig);
+    await sendFollowUp(prompt, executorConfig);
 
-    // Clear local state after queueing (same as handleSend)
+    // Clear local state after sending (same as handleSend)
     setLocalMessage('');
     clearUploadedAttachments();
     reviewContext?.clearComments();
@@ -652,7 +653,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     localMessage,
     reviewMarkdown,
     executorConfig,
-    queueMessage,
+    sendFollowUp,
     cancelDebouncedSave,
     saveToScratch,
     setLocalMessage,
@@ -1071,7 +1072,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         }}
         actions={{
           onSend: () => {},
-          onQueue: () => {},
+          onSendFollowUp: () => {},
           onCancelQueue: () => {},
           onStop: () => {},
           onPasteFiles: () => {},
@@ -1126,7 +1127,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
       }}
       actions={{
         onSend: handleSend,
-        onQueue: handleQueueMessage,
+        onSendFollowUp: handleSendFollowUp,
         onCancelQueue: handleCancelQueue,
         onStop: stopExecution,
         onPasteFiles: uploadFiles,

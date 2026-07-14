@@ -6,6 +6,15 @@
 
 ## Confirmed Current State
 
+- 2026-07-14 Codex default is live without a service restart:
+  - PR `#65` merged into `staging` as `108a1f377`
+  - the live profile was updated through `PUT /api/profiles` to use
+    `gpt-5.6-sol` with `model_reasoning_effort: xhigh`
+  - both `/api/info` and `/api/profiles` report the new values
+  - backend PID remained `1206`; the live frontend pointer remained on
+    `20260714Tbrowser-notifications`
+  - rollback backup is
+    `/home/mcp/backups/profiles-live-pre-codex-sol-xhigh-20260714.json`
 - 2026-06-26 multi-line rich clipboard paste hotfix is live without backend restart:
   - live frontend pointer is `/home/mcp/.local/share/vibe-kanban/frontend-dist/current -> /home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260626Tmultiline-rich-paste`
   - live frontend asset is `/assets/index-DXMultilinePaste.js`, sha256 `bdbd9860c6a240e1256dabc8715d42ab4b96c8f1c098d6e283f3d2bdd972f268`

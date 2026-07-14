@@ -252,6 +252,8 @@ Stage 1: Pre-Spin-Up Preparation:
    - source-map or source-hash evidence for high-risk UI features that must not
      regress, such as code-block copy, chat image rendering, attachment flows,
      subagent activity, workspace pin state, and repo-default behavior
+   - UI preference inventory from live, including saved-message count and any
+     legacy/unknown UI preference keys that must be preserved
    - validation commands and results
 6. Take a lean restore backup and mirror it to Desktop.
 7. Record the local archive path, Desktop mirror path, current live service
@@ -281,6 +283,15 @@ Stage 2: Candidate Seed, Spin-Up, And Direct Smoke:
    The returned JS/CSS asset names must match the manifest and the frontend
    release directory. If source maps are present, spot-check hashes or source
    presence for must-retain UI features before proceeding.
+6. Verify candidate UI preferences against live before cutover. At minimum,
+   compare the global `UI_PREFERENCES` scratch payload for:
+   - `saved_chat_messages` presence and count
+   - `local_project_order`
+   - `local_project_customizations`
+   - `selected_project_id`
+   - any keys present in live but absent in candidate
+   Do not proceed if the candidate has fewer saved messages or has dropped
+   unknown preference keys.
 
 Candidate runtime requirements:
 
@@ -318,11 +329,17 @@ Stage 3: Final Sync:
 2. If agents are active, stop and report them unless the operator explicitly
    accepts interruption.
 3. Pause new live VK work. The final sync needs a short write-freeze window.
-4. Take one final lean restore backup and mirror it to Desktop.
-5. Stop the candidate, replace its seeded state from the final backup, and
+4. Instruct the operator to refresh or close active VK browser tabs after any
+   settings changes, then wait for the UI preferences scratch record to update.
+   Saved messages live in the global `UI_PREFERENCES` scratch payload; if the
+   browser has not flushed them to the server, a DB backup cannot preserve them.
+5. Take one final lean restore backup and mirror it to Desktop.
+6. Stop the candidate, replace its seeded state from the final backup, and
    refresh the candidate `CODEX_HOME` from the final backup/copy while offline.
-6. Restart the candidate on its non-live ports.
-7. Re-run direct candidate smoke.
+7. Restart the candidate on its non-live ports.
+8. Re-run direct candidate smoke.
+9. Re-compare live and candidate `UI_PREFERENCES` after the final sync. Saved
+   messages and unknown/legacy preference keys must match before route flip.
 
 Stage 4: Cutover:
 
@@ -337,9 +354,12 @@ Stage 4: Cutover:
    ```
    `VK_FRONTEND_DIST_DIR` must match the manifest. Do not accept a stale Stage 1
    or preview build artifact just because the backend binary is correct.
-4. Flip only the reverse-proxy or route that serves `https://vibe.local` from
+4. Confirm the final candidate `UI_PREFERENCES` inventory matches the recorded
+   live inventory, including saved-message count. If it does not, stop and
+   repair the candidate state before route flip.
+5. Flip only the reverse-proxy or route that serves `https://vibe.local` from
    live `127.0.0.1:4311` to candidate `127.0.0.1:4411`.
-5. Verify:
+6. Verify:
    ```bash
    curl -skI https://vibe.local/
    curl -sk https://vibe.local/ | rg -o '/assets/index-[^" ]+\.(js|css)' | sort -u
@@ -348,9 +368,12 @@ Stage 4: Cutover:
    ```
    The `vibe.local` asset names must match the candidate manifest. If they do
    not, roll the route back or fix the candidate frontend before user testing.
-6. Keep the previous live instance available but not serving `vibe.local` until
+7. Verify in the browser that saved messages are still present before accepting
+   the cutover. Do not treat API and asset smoke as sufficient for UI
+   preference continuity.
+8. Keep the previous live instance available but not serving `vibe.local` until
    the operator accepts the cutover.
-7. After acceptance, stop the old instance. Do not delete old state until the
+9. After acceptance, stop the old instance. Do not delete old state until the
    backup and rollback window are explicitly accepted.
 
 Stage 5: Rollback:

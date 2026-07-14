@@ -13,7 +13,7 @@ export async function showSystemNotification(
   notification: NotificationPayload
 ): Promise<void> {
   if (!isTauriApp()) {
-    showBrowserNotification({
+    await showBrowserNotification({
       title: notification.title,
       body: notification.body,
       tag: notification.id,

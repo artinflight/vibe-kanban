@@ -222,6 +222,9 @@ Required invariants:
   different commits unless the operator explicitly approves the mixed-version
   release and the manifest lists the reason, expected missing changes, and
   rollback path
+- saved messages are release-critical state. They must survive the cutover, and
+  the operator must explicitly confirm them in-browser before the old stack can
+  be stopped.
 
 Current implementation constraint:
 
@@ -293,6 +296,66 @@ Stage 2: Candidate Seed, Spin-Up, And Direct Smoke:
    Do not proceed if the candidate has fewer saved messages or has dropped
    unknown preference keys.
 
+Use this read-only helper for the comparison. Replace `GREEN_DB` if the
+candidate data directory differs:
+
+```bash
+LIVE_DB=/home/mcp/.local/share/vibe-kanban/db.v2.sqlite
+GREEN_DB=/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite
+python3 - <<'PY'
+import json
+import sqlite3
+import os
+
+UI_PREF_ID = bytes.fromhex("00000000000000000000000000000001")
+
+def load(path):
+    con = sqlite3.connect(path)
+    row = con.execute(
+        "select payload, updated_at from scratch "
+        "where scratch_type='UI_PREFERENCES' and id=?",
+        (UI_PREF_ID,),
+    ).fetchone()
+    con.close()
+    if not row:
+        raise SystemExit(f"missing UI_PREFERENCES in {path}")
+    payload = json.loads(row[0])
+    return payload.get("data", {}), row[1]
+
+live, live_updated = load(os.environ["LIVE_DB"])
+green, green_updated = load(os.environ["GREEN_DB"])
+
+for name, data, updated in (
+    ("live", live, live_updated),
+    ("green", green, green_updated),
+):
+    saved = data.get("saved_chat_messages")
+    print(
+        name,
+        "updated=", updated,
+        "saved_present=", isinstance(saved, list),
+        "saved_count=", len(saved) if isinstance(saved, list) else "n/a",
+        "keys=", len(data),
+    )
+
+missing = sorted(set(live) - set(green))
+extra = sorted(set(green) - set(live))
+print("missing_in_green=", missing)
+print("extra_in_green=", extra)
+
+live_saved = live.get("saved_chat_messages")
+green_saved = green.get("saved_chat_messages")
+live_count = len(live_saved) if isinstance(live_saved, list) else 0
+green_count = len(green_saved) if isinstance(green_saved, list) else 0
+if green_count < live_count:
+    raise SystemExit(
+        f"green saved-message count regressed: {green_count} < {live_count}"
+    )
+if missing:
+    raise SystemExit(f"green is missing UI preference keys: {missing}")
+PY
+```
+
 Candidate runtime requirements:
 
 ```ini
@@ -333,6 +396,10 @@ Stage 3: Final Sync:
    settings changes, then wait for the UI preferences scratch record to update.
    Saved messages live in the global `UI_PREFERENCES` scratch payload; if the
    browser has not flushed them to the server, a DB backup cannot preserve them.
+   If the saved-message count is `n/a` or lower than expected, stop and have the
+   operator open Settings, confirm the saved messages are visible, make a small
+   saved-message edit if needed, and wait until the DB check reports the
+   expected count.
 5. Take one final lean restore backup and mirror it to Desktop.
 6. Stop the candidate, replace its seeded state from the final backup, and
    refresh the candidate `CODEX_HOME` from the final backup/copy while offline.

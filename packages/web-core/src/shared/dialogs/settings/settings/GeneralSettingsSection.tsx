@@ -39,6 +39,7 @@ import {
 } from '@/shared/stores/useUiPreferencesStore';
 import { cn, playSound } from '@/shared/lib/utils';
 import {
+  browserNotificationPermission,
   requestBrowserNotificationPermission,
   supportsBrowserNotifications,
 } from '@/shared/lib/browserNotifications';
@@ -84,6 +85,12 @@ export function GeneralSettingsSection() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [
+    browserNotificationPermissionState,
+    setBrowserNotificationPermissionState,
+  ] = useState<NotificationPermission | null>(() =>
+    browserNotificationPermission()
+  );
   const [branchPrefixError, setBranchPrefixError] = useState<string | null>(
     null
   );
@@ -171,6 +178,19 @@ export function GeneralSettingsSection() {
       updateDraft({ workspace_dir: result });
     }
   };
+
+  const handleRequestBrowserNotifications = async () => {
+    const permission = await requestBrowserNotificationPermission();
+    setBrowserNotificationPermissionState(permission);
+
+    if (permission === 'denied') {
+      setError('Browser notification permission is blocked.');
+    }
+  };
+
+  useEffect(() => {
+    setBrowserNotificationPermissionState(browserNotificationPermission());
+  }, []);
 
   useEffect(() => {
     if (!config) return;
@@ -810,6 +830,7 @@ export function GeneralSettingsSection() {
           onChange={async (checked) => {
             if (checked && !isTauriApp() && supportsBrowserNotifications()) {
               const permission = await requestBrowserNotificationPermission();
+              setBrowserNotificationPermissionState(permission);
               if (permission === 'denied') {
                 setError('Browser notification permission is blocked.');
                 return;
@@ -824,6 +845,32 @@ export function GeneralSettingsSection() {
             });
           }}
         />
+        {!isTauriApp() &&
+          supportsBrowserNotifications() &&
+          draft?.notifications.push_enabled && (
+            <div className="flex flex-col gap-half rounded-sm border border-border/50 bg-tertiary/30 p-3 text-sm text-low">
+              {browserNotificationPermissionState === 'granted' ? (
+                <p>Chrome notification permission is enabled for this app.</p>
+              ) : browserNotificationPermissionState === 'denied' ? (
+                <p>
+                  Chrome notification permission is blocked. Allow it from the
+                  site settings for this app.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p>
+                    Chrome notification permission still needs to be enabled.
+                  </p>
+                  <PrimaryButton
+                    variant="tertiary"
+                    value="Enable browser notifications"
+                    onClick={handleRequestBrowserNotifications}
+                    className="self-start"
+                  />
+                </div>
+              )}
+            </div>
+          )}
       </SettingsCard>
 
       {/* Message Input */}

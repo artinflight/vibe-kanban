@@ -2692,3 +2692,12 @@ User QA checklist for the no-restart frontend repair:
   - `GITHUB_BASE_REF=staging ./scripts/check-i18n.sh`
   - `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/web-core run check`
   - `git diff --check`
+
+2026-07-14 VK browser notification permission follow-up:
+
+- User reopened the saved Chrome app and did not get a notification permission prompt.
+- Confirmed this was expected with the first browser-notification fix: Chrome permission was only requested when Settings -> General -> Push Notifications changed from off to on. If VK already had `push_enabled: true`, app launch did not prompt and notifications remained inactive until Chrome permission was granted.
+- Added a browser permission status panel under Push Notifications in General settings. When VK push is enabled but Chrome permission is still `default`, it shows an `Enable browser notifications` action that calls `Notification.requestPermission()` from a user click. Granted and blocked states show explicit Chrome permission status.
+- Deployed frontend-only release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260714Tnotification-permission-button`, asset `/assets/index-Cg11XCQa.js`.
+- Updated `/home/mcp/.local/share/vibe-kanban/frontend-dist/current` and the Chrome-facing green frontend symlink to the new release. No VK, green, or HTTPS proxy restart was performed.
+- Validation: `pnpm run format`; `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/web-core run check`; `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/local-web run check`; `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter @vibe/local-web run build`; `VK_SMOKE_BASE_URL=https://vibe.local python3 scripts/vk_live_regression_smoke.py`.

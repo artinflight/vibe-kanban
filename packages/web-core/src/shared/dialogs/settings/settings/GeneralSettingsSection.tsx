@@ -41,6 +41,7 @@ import { cn, playSound } from '@/shared/lib/utils';
 import {
   browserNotificationPermission,
   requestBrowserNotificationPermission,
+  showBrowserNotification,
   supportsBrowserNotifications,
 } from '@/shared/lib/browserNotifications';
 import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
@@ -186,6 +187,14 @@ export function GeneralSettingsSection() {
     if (permission === 'denied') {
       setError('Browser notification permission is blocked.');
     }
+  };
+
+  const handleSendTestBrowserNotification = () => {
+    void showBrowserNotification({
+      title: 'VK test notification',
+      body: 'Browser notifications are working for this app.',
+      tag: 'vk-test-notification',
+    });
   };
 
   useEffect(() => {
@@ -850,7 +859,15 @@ export function GeneralSettingsSection() {
           draft?.notifications.push_enabled && (
             <div className="flex flex-col gap-half rounded-sm border border-border/50 bg-tertiary/30 p-3 text-sm text-low">
               {browserNotificationPermissionState === 'granted' ? (
-                <p>Chrome notification permission is enabled for this app.</p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p>Chrome notification permission is enabled for this app.</p>
+                  <PrimaryButton
+                    variant="tertiary"
+                    value="Send test notification"
+                    onClick={handleSendTestBrowserNotification}
+                    className="self-start"
+                  />
+                </div>
               ) : browserNotificationPermissionState === 'denied' ? (
                 <p>
                   Chrome notification permission is blocked. Allow it from the

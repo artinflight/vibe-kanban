@@ -13,9 +13,9 @@ import urllib.request
 BASE_URL = "https://vibe.local"
 EXPECTED_RELEASE = (
     "/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/"
-    "20260714Tnotification-permission-button"
+    "20260714Tandroid-service-worker-notifications"
 )
-EXPECTED_ASSET = "/assets/index-Cg11XCQa.js"
+EXPECTED_ASSET = "/assets/index-D_44GjbR.js"
 EXPECTED_ACTIVE = [
     "DeltaIndiaTango",
     "VK Dev",
@@ -92,6 +92,12 @@ ASSET_TOKENS = [
     "Chrome notification permission still needs to be enabled",
     "Chrome notification permission is enabled",
     "Chrome notification permission is blocked",
+    "Send test notification",
+    "VK test notification",
+    "Browser notifications are working",
+    "serviceWorker",
+    "showNotification",
+    "vk-notifications-sw.js",
 ]
 
 

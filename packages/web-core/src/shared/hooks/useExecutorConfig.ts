@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type {
+import {
   BaseCodingAgent,
-  ExecutorConfig,
-  ExecutorProfile,
-  ExecutorProfileId,
+  type ExecutorConfig,
+  type ExecutorProfile,
+  type ExecutorProfileId,
 } from 'shared/types';
 import { getVariantOptions } from '@/shared/lib/executor';
 import { usePresetOptions } from '@/shared/hooks/usePresetOptions';
@@ -22,6 +22,20 @@ const OVERRIDE_FIELDS = [
   'reasoning_id',
   'permission_policy',
 ] as const;
+
+const DEFAULT_CODEX_OVERRIDES: Partial<ExecutorConfig> = {
+  model_id: 'gpt-5.6-sol',
+  reasoning_id: 'xhigh',
+};
+
+export function getDefaultExecutorOverride(
+  executor: BaseCodingAgent,
+  field: (typeof OVERRIDE_FIELDS)[number]
+): ExecutorConfig[(typeof OVERRIDE_FIELDS)[number]] | undefined {
+  return executor === BaseCodingAgent.CODEX
+    ? DEFAULT_CODEX_OVERRIDES[field]
+    : undefined;
+}
 
 /**
  * Resolves effective executor.
@@ -161,7 +175,8 @@ function useEffectiveOverrides(
             (lastUsedMatches && lastUsedModelMatches
               ? lastUsedConfig?.[field]
               : undefined) ??
-            (variantWasUserSelected ? presetOptions?.[field] : undefined));
+            (variantWasUserSelected ? presetOptions?.[field] : undefined) ??
+            getDefaultExecutorOverride(effectiveExecutor, field));
       if (value !== undefined) {
         (resolved as Record<string, unknown>)[field] = value;
       }

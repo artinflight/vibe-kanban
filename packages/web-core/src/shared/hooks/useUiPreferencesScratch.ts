@@ -39,6 +39,53 @@ type UiPreferencesScratchData = UiPreferencesData & {
 // Using a fixed UUID ensures all users/sessions share the same preferences record
 const UI_PREFERENCES_ID = '00000000-0000-0000-0000-000000000001';
 
+function hasSavedMessages(data: UiPreferencesScratchData | undefined) {
+  return (
+    Array.isArray(data?.saved_chat_messages) &&
+    data.saved_chat_messages.length > 0
+  );
+}
+
+function hasProjectCustomizations(data: UiPreferencesScratchData | undefined) {
+  return (
+    !!data?.local_project_customizations &&
+    Object.keys(data.local_project_customizations).length > 0
+  );
+}
+
+function preserveCriticalPreferences(
+  serverData: UiPreferencesScratchData | undefined,
+  nextData: UiPreferencesScratchData
+): UiPreferencesScratchData {
+  const data: UiPreferencesScratchData = {
+    ...(serverData ?? {}),
+    ...nextData,
+  };
+  const serverSavedMessages = serverData?.saved_chat_messages;
+  const serverProjectCustomizations = serverData?.local_project_customizations;
+
+  // UI preference saves are broad and can be triggered by unrelated layout
+  // changes. Never let a default empty client store wipe populated preference
+  // collections that came from the server.
+  if (
+    Array.isArray(serverSavedMessages) &&
+    serverSavedMessages.length > 0 &&
+    !hasSavedMessages(nextData)
+  ) {
+    data.saved_chat_messages = serverSavedMessages;
+  }
+
+  if (
+    serverProjectCustomizations &&
+    Object.keys(serverProjectCustomizations).length > 0 &&
+    !hasProjectCustomizations(nextData)
+  ) {
+    data.local_project_customizations = serverProjectCustomizations;
+  }
+
+  return data;
+}
+
 /**
  * Converts store state to scratch data format (camelCase to snake_case)
  */
@@ -219,7 +266,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
             title: message.title.trim(),
             content: message.content,
           }))
-          .filter((message) => message.title && message.content.trim())
+          .filter((message) => message.title)
       : [],
     kanbanProjectViewSelections: (data.kanban_project_view_selections ??
       {}) as Record<string, KanbanProjectViewSelection>,
@@ -306,10 +353,7 @@ export function useUiPreferencesScratch() {
       kanbanProjectViewSelections: currentState.kanbanProjectViewSelections,
       kanbanProjectViewPreferences: currentState.kanbanProjectViewPreferences,
     });
-    const data: UiPreferencesScratchData = {
-      ...(scratchData ?? {}),
-      ...nextData,
-    };
+    const data = preserveCriticalPreferences(scratchData, nextData);
 
     const serialized = JSON.stringify(data);
     if (serialized === lastSavedPayloadRef.current) {

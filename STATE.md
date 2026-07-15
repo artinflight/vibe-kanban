@@ -1049,3 +1049,10 @@ Codex follow-up state, 2026-04-20:
   - `missing_in_isolated_but_found_shared = 0`
   - `missing_both = 0`
 - Do not restart VK just for this repair; no restart is needed when only copying Codex rollout files and active agents may be running.
+
+2026-07-15 Default Codex live acceptance:
+
+- PR `#68` corrected create-mode precedence so the configured Codex profile overrides stale scratch and last-used model state for new agents; explicit current-form choices still win.
+- A frontend-only release built on the live notification source was activated at `20260715Tdefault-agent-profile-precedence`; no backend restart occurred.
+- End-to-end acceptance created a disposable agent through the live UI. The UI showed `GPT-5.6 Sol · Extra High`, and its persisted `executor_action.executor_config` contained `model_id: gpt-5.6-sol` and `reasoning_id: xhigh`.
+- The disposable validation workspace was deleted after the assertion. Green PID `3553147` and production PID `1206` remained unchanged.

@@ -6,6 +6,15 @@
 
 ## Confirmed Current State
 
+- 2026-07-15 Codex default follow-up correction is in progress:
+  - the live profile correctly reported `gpt-5.6-sol` / `xhigh`, but a newly
+    created Oharafit agent still submitted `model_id: gpt-5.5`
+  - DB execution evidence showed create-mode stale draft/last-used state
+    overrode the profile default; the prior rollout claim did not validate the
+    actual new-agent creation path
+  - the source correction makes create mode prefer profile overrides before
+    stale scratch/last-used values while preserving an explicit current-form
+    selection and leaving existing-session precedence unchanged
 - 2026-07-14 Codex default is live without a service restart:
   - PR `#65` merged into `staging` as `108a1f377`
   - the live profile was updated through `PUT /api/profiles` to use

@@ -2673,3 +2673,10 @@ User QA checklist for the no-restart frontend repair:
 - Completion requires a frontend build containing the correction and an
   end-to-end new-agent creation check that inspects the stored
   `executor_action.executor_config`; profile API values alone are insufficient.
+- Completion was confirmed on the live create path: the selector displayed
+  `GPT-5.6 Sol · Extra High`, and a disposable agent created through the UI
+  persisted `gpt-5.6-sol` / `xhigh` in `executor_action.executor_config`.
+- The live frontend release is
+  `20260715Tdefault-agent-profile-precedence`. Both backend processes retained
+  their existing PIDs; no restart was performed. The disposable workspace was
+  deleted after validation.

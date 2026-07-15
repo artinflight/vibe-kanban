@@ -144,6 +144,7 @@ export function CreateChatBoxContainer({
     lastUsedConfig: preferredExecutorConfig,
     scratchConfig,
     configExecutorProfile: config?.executor_profile,
+    preferPresetOverrides: true,
     onPersist: (cfg) => setDraftConfig(cfg),
   });
 

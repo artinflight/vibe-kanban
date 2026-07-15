@@ -2659,3 +2659,17 @@ User QA checklist for the no-restart frontend repair:
   from `20260714Tbrowser-notifications`.
 - Rollback backup:
   `/home/mcp/backups/profiles-live-pre-codex-sol-xhigh-20260714.json`.
+
+# 2026-07-15 Default Codex precedence correction
+
+- The previous live claim was false for the actual new-agent path: a newly
+  created Oharafit session submitted `gpt-5.5` despite the live profile
+  reporting `gpt-5.6-sol` / `xhigh`.
+- Root cause: create-mode scratch and preferred/last-used configuration had
+  higher precedence than profile defaults.
+- The correction makes create mode prefer profile model/reasoning overrides
+  over stale scratch/last-used values. Explicit choices made in the current
+  create form still win, and existing sessions keep their established model.
+- Completion requires a frontend build containing the correction and an
+  end-to-end new-agent creation check that inspects the stored
+  `executor_action.executor_config`; profile API values alone are insufficient.

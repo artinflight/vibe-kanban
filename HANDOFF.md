@@ -1,5 +1,17 @@
 # HANDOFF.md
 
+## 2026-08-31 Codex Resume Unknown Item Compatibility
+
+- The restart candidate includes `Handle unknown Codex thread items on resume`,
+  recovered from the `VK::Errors` In Staging workspace because that branch
+  still carried a non-equivalent executor parser fix.
+- `crates/executors/src/executors/codex/jsonrpc.rs` now sanitizes
+  `thread/resume`, `thread/fork`, and `thread/read` responses by dropping
+  unknown thread-item variants before typed deserialization.
+- This protects existing Codex threads from failing resume just because a newer
+  Codex app-server returns an item variant the current typed protocol crate
+  does not yet know.
+
 ## 2026-08-31 Older Message Reset Positioning
 
 - Branch `vk/b401-vk-reloading-old` fixes workspace-chat “Reset to this point”

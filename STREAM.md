@@ -61,6 +61,16 @@
 
 ## Current Status
 
+- 2026-08-31 Codex resume unknown-item compatibility is included in this
+  restart candidate:
+  - `VK::Errors` still had a non-equivalent branch commit that was not present
+    in `fork/staging`
+  - the candidate now drops unknown thread-item variants from Codex
+    `thread/resume`, `thread/fork`, and `thread/read` responses before typed
+    decoding
+  - this is backend/executor code and requires the coordinated backend restart
+    to become live
+
 - 2026-08-31 durable preference implementation is prepared:
   - new project-order and workspace-color tables use optimistic revisions and
     append recoverable history

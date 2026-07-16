@@ -254,11 +254,14 @@ where
     };
 
     match response {
-        Ok(PendingResponse::Result(value)) => serde_json::from_value(value).map_err(|err| {
-            ExecutorError::Io(io::Error::other(format!(
-                "failed to decode {label} response: {err}",
-            )))
-        }),
+        Ok(PendingResponse::Result(value)) => {
+            let value = sanitize_response_value(label, value);
+            serde_json::from_value(value).map_err(|err| {
+                ExecutorError::Io(io::Error::other(format!(
+                    "failed to decode {label} response: {err}",
+                )))
+            })
+        }
         Ok(PendingResponse::Error(error)) => Err(ExecutorError::Io(io::Error::other(format!(
             "{label} request failed: {}",
             error.error.message
@@ -270,6 +273,63 @@ where
             "{label} request was dropped",
         )))),
     }
+}
+
+fn sanitize_response_value(label: &str, mut value: Value) -> Value {
+    if matches!(label, "thread/resume" | "thread/fork" | "thread/read") {
+        drop_unknown_thread_items(label, &mut value);
+    }
+    value
+}
+
+fn drop_unknown_thread_items(label: &str, value: &mut Value) {
+    let Some(turns) = value
+        .get_mut("thread")
+        .and_then(|thread| thread.get_mut("turns"))
+        .and_then(Value::as_array_mut)
+    else {
+        return;
+    };
+
+    for turn in turns {
+        let Some(items) = turn.get_mut("items").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        let original_len = items.len();
+        items.retain(is_known_thread_item);
+        let dropped = original_len.saturating_sub(items.len());
+        if dropped > 0 {
+            tracing::warn!(
+                dropped,
+                "dropped unknown Codex thread item variant(s) from {label} response"
+            );
+        }
+    }
+}
+
+fn is_known_thread_item(item: &Value) -> bool {
+    let Some(item_type) = item.get("type").and_then(Value::as_str) else {
+        return true;
+    };
+
+    matches!(
+        item_type,
+        "userMessage"
+            | "agentMessage"
+            | "plan"
+            | "reasoning"
+            | "commandExecution"
+            | "fileChange"
+            | "mcpToolCall"
+            | "dynamicToolCall"
+            | "collabAgentToolCall"
+            | "webSearch"
+            | "imageView"
+            | "imageGeneration"
+            | "enteredReviewMode"
+            | "exitedReviewMode"
+            | "contextCompaction"
+    )
 }
 
 #[async_trait]
@@ -303,4 +363,56 @@ pub trait JsonRpcCallbacks: Send + Sync {
     ) -> Result<bool, ExecutorError>;
 
     async fn on_non_json(&self, _raw: &str) -> Result<(), ExecutorError>;
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::sanitize_response_value;
+
+    #[test]
+    fn thread_response_sanitizer_drops_unknown_thread_items() {
+        let value = json!({
+            "thread": {
+                "turns": [
+                    {
+                        "items": [
+                            { "type": "userMessage", "id": "known", "content": [] },
+                            { "type": "subAgentActivity", "id": "newer-protocol" },
+                            { "type": "agentMessage", "id": "also-known", "text": "done" }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        let sanitized = sanitize_response_value("thread/resume", value);
+        let items = sanitized["thread"]["turns"][0]["items"].as_array().unwrap();
+
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0]["type"], "userMessage");
+        assert_eq!(items[1]["type"], "agentMessage");
+    }
+
+    #[test]
+    fn non_thread_response_sanitizer_keeps_unknown_items() {
+        let value = json!({
+            "thread": {
+                "turns": [
+                    {
+                        "items": [
+                            { "type": "subAgentActivity", "id": "newer-protocol" }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        let sanitized = sanitize_response_value("turn/start", value);
+        let items = sanitized["thread"]["turns"][0]["items"].as_array().unwrap();
+
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0]["type"], "subAgentActivity");
+    }
 }

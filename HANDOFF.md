@@ -2673,3 +2673,15 @@ User QA checklist for the no-restart frontend repair:
 - Completion requires a frontend build containing the correction and an
   end-to-end new-agent creation check that inspects the stored
   `executor_action.executor_config`; profile API values alone are insufficient.
+
+# Current Handoff
+
+- Branch `vk/b414-vk-can-t-save-ne` fixes the local project settings modal
+  overflowing the viewport when a board has many columns.
+- The modal now has a viewport-relative maximum height, a scrollable content
+  area, and fixed header/footer regions so `Save columns` remains reachable.
+- Validation passed: `pnpm install --offline --frozen-lockfile`,
+  `pnpm run format`, `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter
+  @vibe/web-core run check`, and `git diff --check`.
+- No preview, deploy, frontend asset switch, backend restart, or live-state
+  mutation was performed.

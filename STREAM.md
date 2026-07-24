@@ -2,13 +2,14 @@
 
 ## Stream Identifier
 
-- Branch: `vk/aed7-vk-default-agent`
-- Repo: `/home/mcp/code/worktrees/aed7-vk-default-agent/_vibe_kanban_repo`
+- Branch: `vk/b414-vk-can-t-save-ne`
+- Repo: `/home/mcp/code/worktrees/b414-vk-can-t-save-ne/_vibe_kanban_repo`
 - Working mode: isolated feature branch
 
 ## Objective
 
-- Make GPT-5.6 Sol with Extra High reasoning the default Codex agent configuration.
+- Keep the local project settings modal usable when a project has enough
+  columns to exceed the viewport height.
 
 ## In Scope
 

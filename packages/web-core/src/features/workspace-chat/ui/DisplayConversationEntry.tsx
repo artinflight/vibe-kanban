@@ -495,7 +495,12 @@ function AppChatMarkdown({
         <WYSIWYGEditor
           value={content}
           disabled
-          className={className}
+          className={cn(
+            className,
+            '[&_[data-summary-metadata]]:inline [&_[data-summary-metadata]]:text-xs [&_[data-summary-metadata]]:text-low [&_[data-summary-metadata]]:mr-2',
+            "[&_[data-summary-metadata]:not([data-summary-metadata-last])]:after:content-['·'] [&_[data-summary-metadata]:not([data-summary-metadata-last])]:after:ml-2"
+          )}
+          compactSummaryMetadata
           workspaceId={workspaceId}
           sessionId={sessionId}
           findMatchingDiffPath={findMatchingDiffPath}

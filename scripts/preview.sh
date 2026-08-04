@@ -13,6 +13,7 @@ PORT="${PREVIEW_PORT:-3025}"
 HOST="${PREVIEW_HOST:-0.0.0.0}"
 BACKEND_PORT="${PREVIEW_BACKEND_PORT:-4311}"
 DNS_OR_PROXY_IP="${PREVIEW_DNS_OR_PROXY_IP:-10.0.0.97}"
+PROXY_VERIFY_HOST="${PREVIEW_PROXY_VERIFY_HOST:-homelab}"
 EXPECTED_TEXT="${PREVIEW_EXPECTED_TEXT:-Vibe Kanban}"
 UNIT_NAME="${PREVIEW_UNIT_NAME:-vk-preview-${APP_SLUG}}"
 LOCAL_URL="http://127.0.0.1:${PORT}/"
@@ -23,7 +24,7 @@ command_exists() {
 }
 
 ensure_dependencies() {
-  for cmd in pnpm curl rg systemctl systemd-run; do
+  for cmd in pnpm curl rg ssh systemctl systemd-run; do
     if ! command_exists "$cmd"; then
       echo "$cmd is required to run this preview." >&2
       exit 1
@@ -83,7 +84,7 @@ start() {
       --setenv=FRONTEND_PORT="$PORT" \
       --setenv=BACKEND_PORT="$BACKEND_PORT" \
       /home/mcp/.local/bin/pnpm \
-      --filter @vibe/local-web run dev -- \
+      --filter @vibe/local-web exec vite \
       --host "$HOST" \
       --port "$PORT" \
       --strictPort >/dev/null
@@ -106,17 +107,23 @@ verify() {
   curl --silent --fail --max-time 5 "$LOCAL_URL" | rg -q "$EXPECTED_TEXT"
 
   echo "Verifying HTTPS route: ${HTTPS_URL} via ${DNS_OR_PROXY_IP}"
-  curl -k -I --fail --max-time 5 \
-    --resolve "${LOCAL_DOMAIN}:443:${DNS_OR_PROXY_IP}" \
-    "$HTTPS_URL"
-  if ! curl -k --fail --max-time 10 \
-    --resolve "${LOCAL_DOMAIN}:443:${DNS_OR_PROXY_IP}" \
-    "$HTTPS_URL" | rg -q "$EXPECTED_TEXT"; then
+  if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "$PROXY_VERIFY_HOST" \
+    curl -k -I --fail --max-time 5 \
+      --resolve "${LOCAL_DOMAIN}:443:${DNS_OR_PROXY_IP}" \
+      "$HTTPS_URL"; then
+    echo "HTTPS route header verification failed at ${PROXY_VERIFY_HOST}." >&2
+    exit 1
+  fi
+  if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "$PROXY_VERIFY_HOST" \
+    curl -k --fail --max-time 10 \
+      --resolve "${LOCAL_DOMAIN}:443:${DNS_OR_PROXY_IP}" \
+      "$HTTPS_URL" | rg -q "$EXPECTED_TEXT"; then
     cat >&2 <<EOF
 HTTPS .local route is not serving this preview.
 Expected to find: ${EXPECTED_TEXT}
 URL checked: ${HTTPS_URL}
 Proxy IP: ${DNS_OR_PROXY_IP}
+Verification host: ${PROXY_VERIFY_HOST}
 
 Required route owner action:
 - Add DNS for ${LOCAL_DOMAIN} -> ${DNS_OR_PROXY_IP}
@@ -183,6 +190,7 @@ Environment:
   PREVIEW_BACKEND_PORT     Existing Vibe Kanban backend port. Default: 4311
   PREVIEW_LOCAL_DOMAIN     Operator-facing .local host. Default: vk-preview.local
   PREVIEW_DNS_OR_PROXY_IP  Private DNS/proxy IP. Default: 10.0.0.97
+  PREVIEW_PROXY_VERIFY_HOST SSH host at the route owner. Default: homelab
   PREVIEW_EXPECTED_TEXT    Content proof text. Default: Vibe Kanban
 EOF
     exit 2

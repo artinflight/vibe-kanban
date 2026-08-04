@@ -75,8 +75,8 @@
   - validation passed: `pnpm run format`,
     `pnpm --filter @vibe/web-core run check`, `pnpm run lint`, and
     `git diff --check`
-  - lightweight frontend preview is running at
-    `https://mcp-server.tail744c4.ts.net:18454/`; no deployment was performed
+  - operator-facing frontend preview is running and Desktop-verified at
+    `https://vk-preview.local/`; no deployment was performed
 
 - 2026-06-26 multi-line rich clipboard paste hotfix live:
   - source `PasteMarkdownPlugin.tsx` now handles multiline `text/plain` before opting out for `text/html`

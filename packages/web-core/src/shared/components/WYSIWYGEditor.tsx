@@ -65,7 +65,12 @@ import { CODE_HIGHLIGHT_CLASSES } from '@vibe/ui/lib/code-highlight-theme';
 import { LinkNode } from '@lexical/link';
 import { TableNode, TableRowNode, TableCellNode } from '@lexical/table';
 import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
-import { type EditorState, type LexicalEditor } from 'lexical';
+import {
+  $getRoot,
+  $isParagraphNode,
+  type EditorState,
+  type LexicalEditor,
+} from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useDiffPaths } from '@/shared/stores/useWorkspaceDiffStore';
 import { useSlashCommands } from '@/shared/hooks/useExecutorDiscovery';
@@ -141,6 +146,8 @@ type WysiwygProps = {
   staticToolbarActions?: ReactNode;
   /** Called when a toolbar button is clicked in preview mode to request edit */
   onRequestEdit?: () => void;
+  /** Render the standard agent-summary metadata block as compact inline text. */
+  compactSummaryMetadata?: boolean;
 };
 
 /** Ref interface for WYSIWYGEditor, exposing imperative methods */
@@ -250,6 +257,68 @@ function EditorRefPlugin({
   return null;
 }
 
+const SUMMARY_METADATA_LABELS = [
+  'PR',
+  'Docs',
+  'Churn',
+  'Human Needed',
+  'Commit/Push',
+  'Preview URL',
+  'Branch',
+  'Worktree',
+] as const;
+
+function isSummaryMetadataLine(text: string, label: string): boolean {
+  return text.trimStart().startsWith(`${label}::`);
+}
+
+function CompactSummaryMetadataPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    const updateMetadataAttributes = () => {
+      editor.getEditorState().read(() => {
+        const children = $getRoot().getChildren();
+        const metadataChildren = children.slice(
+          -SUMMARY_METADATA_LABELS.length
+        );
+        const isStandardMetadataBlock =
+          metadataChildren.length === SUMMARY_METADATA_LABELS.length &&
+          metadataChildren.every(
+            (node, index) =>
+              $isParagraphNode(node) &&
+              isSummaryMetadataLine(
+                node.getTextContent(),
+                SUMMARY_METADATA_LABELS[index]
+              )
+          );
+
+        for (const node of children) {
+          const element = editor.getElementByKey(node.getKey());
+          if (!element) continue;
+          element.removeAttribute('data-summary-metadata');
+          element.removeAttribute('data-summary-metadata-last');
+        }
+
+        if (!isStandardMetadataBlock) return;
+
+        metadataChildren.forEach((node, index) => {
+          const element = editor.getElementByKey(node.getKey());
+          element?.setAttribute('data-summary-metadata', 'true');
+          if (index === metadataChildren.length - 1) {
+            element?.setAttribute('data-summary-metadata-last', 'true');
+          }
+        });
+      });
+    };
+
+    updateMetadataAttributes();
+    return editor.registerUpdateListener(updateMetadataAttributes);
+  }, [editor]);
+
+  return null;
+}
+
 const WYSIWYGEditor = forwardRef<WYSIWYGEditorRef, WysiwygProps>(
   function WYSIWYGEditor(
     {
@@ -279,6 +348,7 @@ const WYSIWYGEditor = forwardRef<WYSIWYGEditorRef, WysiwygProps>(
       saveStatus,
       staticToolbarActions,
       onRequestEdit,
+      compactSummaryMetadata = false,
     }: WysiwygProps,
     ref: React.ForwardedRef<WYSIWYGEditorRef>
   ) {
@@ -521,6 +591,7 @@ const WYSIWYGEditor = forwardRef<WYSIWYGEditorRef, WysiwygProps>(
               <LocalAttachmentsContext.Provider value={localAttachments ?? []}>
                 <LexicalComposer initialConfig={initialConfig}>
                   <EditorRefPlugin editorRef={editorInstanceRef} />
+                  {compactSummaryMetadata && <CompactSummaryMetadataPlugin />}
                   <MarkdownSyncPlugin
                     value={value}
                     onChange={onChange}

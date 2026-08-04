@@ -1,5 +1,44 @@
 # HANDOFF.md
 
+## 2026-08-04 Compact Summary Metadata Preview
+
+- Preview status: running and verified from the Desktop/operator machine.
+- Start command: `scripts/preview.sh start`
+- Working directory:
+  `/home/mcp/code/worktrees/71d8-vk-shrink-metada/_vibe_kanban_repo`
+- Port/bind: Vite on fixed port `3025`, bound to `0.0.0.0`.
+- Local URL: `http://127.0.0.1:3025/` (origin diagnostics only).
+- Operator HTTPS URL: `https://vk-preview.local/`.
+- Service name: `vk-preview-vibe-kanban.service` (transient user systemd
+  service created by `systemd-run`).
+- DNS/proxy route owner: Pi-hole and Docker nginx on homelab `10.0.0.97`.
+  Pi-hole resolves `vk-preview.local` to the homelab proxy; nginx terminates
+  HTTPS and proxies to the MCP host at `10.0.0.129:3010`; the MCP
+  `mealplan-host-router.service` maps `vk-preview.local` to
+  `127.0.0.1:3025`.
+- Validation passed:
+  - `scripts/preview.sh verify` returned `HTTP/2 200` for the exact HTTPS URL
+    and matched `Vibe Kanban` in the page content.
+  - route-owner check used
+    `curl -k -I --resolve vk-preview.local:443:10.0.0.97 https://vk-preview.local/`.
+  - content check used
+    `curl -k --resolve vk-preview.local:443:10.0.0.97 https://vk-preview.local/ | rg 'Vibe Kanban'`.
+  - Desktop DNS resolved `vk-preview.local` to `10.0.0.97`; Desktop
+    `curl.exe -k -I https://vk-preview.local/` returned `HTTP/1.1 200 OK`, and
+    the page body contained `<title>Vibe Kanban</title>`.
+  - the HTTPS-served Vite module for `DisplayConversationEntry.tsx` contains
+    `compactSummaryMetadata: true` and the `data-summary-metadata` compact
+    styling markers, proving the preview serves this branch's requested UI.
+  - `ss -ltnp` confirmed the app listens on `0.0.0.0:3025`.
+- Logs command: `journalctl --user -u vk-preview-vibe-kanban -n 120 --no-pager`.
+- Stop command: `scripts/preview.sh stop`.
+- Access limits: private homelab/Tailscale only; the viewing device must use
+  the homelab/Pi-hole DNS route (or equivalent tailnet subnet routing). This is
+  not a public internet preview.
+- Script repair: `scripts/preview.sh` now invokes Vite without the extra CLI
+  separator so `--host 0.0.0.0` takes effect, and runs HTTPS verification from
+  the homelab route owner because MCP-to-proxy hairpin HTTPS is blocked.
+
 ## 2026-07-13 Staging Backfill Preview Updated
 
 - Preview branch: `vk/4e18-live-backfill-to-staging`

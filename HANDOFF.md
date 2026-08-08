@@ -2721,12 +2721,21 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
-- Branch `vk/b414-vk-can-t-save-ne` fixes the local project settings modal
-  overflowing the viewport when a board has many columns.
-- The modal now has a viewport-relative maximum height, a scrollable content
-  area, and fixed header/footer regions so `Save columns` remains reachable.
-- Validation passed: `pnpm install --offline --frozen-lockfile`,
-  `pnpm run format`, `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter
-  @vibe/web-core run check`, and `git diff --check`.
-- No preview, deploy, frontend asset switch, backend restart, or live-state
-  mutation was performed.
+- PR `#71` merged the compact standard-summary metadata work into `staging` as
+  `d2562a618fbb2d28f3748f4bad1ecb867b17c7e2`.
+- The final rebased frontend build passed, and the lightweight preview remains
+  available at `https://vk-preview.local/` with the operator-approved layout.
+- The live frontend was deliberately not switched. The current live release,
+  `20260715Tdefault-agent-profile-precedence`, contains
+  `/vk-notifications-sw.js`, while a clean build from merged `staging` does not.
+  Activating the staging build would regress live browser notifications.
+- Safe deployment requires backfilling the notification change from commit
+  `31321983df7a7cac75c74aaf4f0122edcdee7118` into `staging` through a separate
+  reviewed PR, rebuilding from the resulting staging commit, and running the
+  live regression smoke before an atomic frontend symlink swap.
+- No backend restart occurred and no live frontend pointer changed. The backend
+  PID observed before deployment work was `1849957`.
+- Validation completed: `pnpm run format`, `pnpm run ops:check`, frontend
+  TypeScript checks, local-web and UI lint, the production local-web build, PR
+  frontend/governance CI, and the exact HTTPS preview verification. The broad
+  local workspace check remains limited by the host's missing `glib-2.0.pc`.

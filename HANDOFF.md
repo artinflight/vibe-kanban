@@ -2726,20 +2726,18 @@ User QA checklist for the no-restart frontend repair:
 - Browser notification/service-worker preservation merged through PR `#72` at
   staging commit `4f8fa45c5480b3b018a13e4b9be5a7439a5b5eda`.
 - A production frontend release was built from a clean detached worktree at the
-  exact final staging commit and staged at
+  exact final staging commit and retained at
   `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260808Tcompact-summary-notifications`.
   Its `RELEASE_MANIFEST.txt` records assets, hashes, retained feature markers,
   and rollback details.
-- A no-restart pointer swap was attempted and immediately rolled back because
-  the running backend continued serving its cached old `index.html` and old
-  hashed asset bytes. The staged release therefore did not become live.
-- Live is safely restored to
-  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260715Tdefault-agent-profile-precedence`;
-  `/`, the existing JS/CSS, `/vk-notifications-sw.js`, and `/api/info` return
-  `200`, and `vibe-kanban.service` remains active on unchanged PID `1849957`.
-- Activation now requires explicit approval for a controlled backend restart.
-  Before restarting, recheck active agents per `VK_AGENT_DEPLOYMENT_RUNBOOK.md`;
-  then point `frontend-dist/current` to the staged release, restart once, and
-  verify the manifest asset names/hashes, service worker, `/api/info`, required
-  bundle markers, and the new backend PID. Roll back the pointer and restart if
-  any post-restart smoke fails.
+- The actual `vibe.local` route targets `vibe-kanban-green.service` on port
+  `4511`, which serves frontend files from
+  `/home/mcp/backups/vk-green-frontend-ui-pref-3fe29d6f4-20260714T162852Z`.
+  The release was deployed there by an in-place frontend-only asset refresh.
+- No backend restarted: green PID remained `3553147` and legacy PID remained
+  `1849957`. Live HTTPS serves `/assets/index-CjNnw2-P.js` and
+  `/assets/index-DnGjt7Sn.css` with the manifest hashes; compact metadata,
+  notification, multiline-paste, mode-persistence, and mobile-archive markers
+  are present; `/vk-notifications-sw.js` and `/api/info` are healthy.
+- Rollback is the complete pre-deploy frontend snapshot at
+  `/home/mcp/backups/vk-green-frontend-before-compact-summary-20260808T1250Z`.

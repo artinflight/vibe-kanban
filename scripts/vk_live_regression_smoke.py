@@ -82,6 +82,21 @@ ASSET_TOKENS = [
     "if(d){f.insertRawText(c);return}",
     "vk-executor-config-selection",
     "branchNameMatchesSearch",
+    "VK turn complete",
+    "VK turn failed",
+    "Notification.permission",
+    "requestPermission",
+    "vk-workspace-",
+    "Enable browser notifications",
+    "Chrome notification permission still needs to be enabled",
+    "Chrome notification permission is enabled",
+    "Chrome notification permission is blocked",
+    "Send test notification",
+    "VK test notification",
+    "Browser notifications are working",
+    "serviceWorker",
+    "showNotification",
+    "vk-notifications-sw.js",
 ]
 
 

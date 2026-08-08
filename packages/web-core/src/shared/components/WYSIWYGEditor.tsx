@@ -70,6 +70,7 @@ import {
   $isParagraphNode,
   type EditorState,
   type LexicalEditor,
+  type LexicalNode,
 } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useDiffPaths } from '@/shared/stores/useWorkspaceDiffStore';
@@ -267,9 +268,43 @@ const SUMMARY_METADATA_LABELS = [
   'Branch',
   'Worktree',
 ] as const;
+const SUMMARY_METADATA_LABEL_VARIANTS: readonly (readonly string[])[] = [
+  [...SUMMARY_METADATA_LABELS, 'Version'],
+  SUMMARY_METADATA_LABELS,
+];
 
 function isSummaryMetadataLine(text: string, label: string): boolean {
   return text.trimStart().startsWith(`${label}::`);
+}
+
+function findSummaryMetadataChildren(children: LexicalNode[]): LexicalNode[] {
+  for (const labels of SUMMARY_METADATA_LABEL_VARIANTS) {
+    const lastChild = children.at(-1);
+    const lastChildLines = lastChild?.getTextContent().split('\n') ?? [];
+    if (
+      $isParagraphNode(lastChild) &&
+      lastChildLines.length === labels.length &&
+      lastChildLines.every((line, index) =>
+        isSummaryMetadataLine(line, labels[index])
+      )
+    ) {
+      return [lastChild];
+    }
+
+    const candidates = children.slice(-labels.length);
+    if (
+      candidates.length === labels.length &&
+      candidates.every(
+        (node, index) =>
+          $isParagraphNode(node) &&
+          isSummaryMetadataLine(node.getTextContent(), labels[index])
+      )
+    ) {
+      return candidates;
+    }
+  }
+
+  return [];
 }
 
 function CompactSummaryMetadataPlugin() {
@@ -279,32 +314,35 @@ function CompactSummaryMetadataPlugin() {
     const updateMetadataAttributes = () => {
       editor.getEditorState().read(() => {
         const children = $getRoot().getChildren();
-        const metadataChildren = children.slice(
-          -SUMMARY_METADATA_LABELS.length
-        );
-        const isStandardMetadataBlock =
-          metadataChildren.length === SUMMARY_METADATA_LABELS.length &&
-          metadataChildren.every(
-            (node, index) =>
-              $isParagraphNode(node) &&
-              isSummaryMetadataLine(
-                node.getTextContent(),
-                SUMMARY_METADATA_LABELS[index]
-              )
-          );
+        const metadataChildren = findSummaryMetadataChildren(children);
+
+        editor
+          .getRootElement()
+          ?.querySelectorAll('[data-summary-metadata-separator]')
+          .forEach((separator) => separator.remove());
 
         for (const node of children) {
           const element = editor.getElementByKey(node.getKey());
           if (!element) continue;
           element.removeAttribute('data-summary-metadata');
           element.removeAttribute('data-summary-metadata-last');
+          element.querySelectorAll('br').forEach((lineBreak) => {
+            lineBreak.hidden = false;
+          });
         }
 
-        if (!isStandardMetadataBlock) return;
+        if (metadataChildren.length === 0) return;
 
         metadataChildren.forEach((node, index) => {
           const element = editor.getElementByKey(node.getKey());
           element?.setAttribute('data-summary-metadata', 'true');
+          element?.querySelectorAll('br').forEach((lineBreak) => {
+            const separator = document.createElement('span');
+            separator.dataset.summaryMetadataSeparator = 'true';
+            separator.textContent = ' · ';
+            lineBreak.after(separator);
+            lineBreak.hidden = true;
+          });
           if (index === metadataChildren.length - 1) {
             element?.setAttribute('data-summary-metadata-last', 'true');
           }

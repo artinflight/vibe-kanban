@@ -65,7 +65,13 @@ import { CODE_HIGHLIGHT_CLASSES } from '@vibe/ui/lib/code-highlight-theme';
 import { LinkNode } from '@lexical/link';
 import { TableNode, TableRowNode, TableCellNode } from '@lexical/table';
 import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
-import { type EditorState, type LexicalEditor } from 'lexical';
+import {
+  $getRoot,
+  $isParagraphNode,
+  type EditorState,
+  type LexicalEditor,
+  type LexicalNode,
+} from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useDiffPaths } from '@/shared/stores/useWorkspaceDiffStore';
 import { useSlashCommands } from '@/shared/hooks/useExecutorDiscovery';
@@ -141,6 +147,8 @@ type WysiwygProps = {
   staticToolbarActions?: ReactNode;
   /** Called when a toolbar button is clicked in preview mode to request edit */
   onRequestEdit?: () => void;
+  /** Render the standard agent-summary metadata block as compact inline text. */
+  compactSummaryMetadata?: boolean;
 };
 
 /** Ref interface for WYSIWYGEditor, exposing imperative methods */
@@ -250,6 +258,94 @@ function EditorRefPlugin({
   return null;
 }
 
+const SUMMARY_METADATA_LABELS = [
+  'PR',
+  'Docs',
+  'Churn',
+  'Human Needed',
+  'Commit/Push',
+  'Preview URL',
+  'Branch',
+  'Worktree',
+] as const;
+const SUMMARY_METADATA_LABEL_VARIANTS: readonly (readonly string[])[] = [
+  [...SUMMARY_METADATA_LABELS, 'Version'],
+  SUMMARY_METADATA_LABELS,
+];
+
+function isSummaryMetadataLine(text: string, label: string): boolean {
+  return text.trimStart().startsWith(`${label}::`);
+}
+
+function findSummaryMetadataChildren(children: LexicalNode[]): LexicalNode[] {
+  for (const labels of SUMMARY_METADATA_LABEL_VARIANTS) {
+    const lastChild = children.at(-1);
+    const lastChildLines = lastChild?.getTextContent().split('\n') ?? [];
+    if (
+      $isParagraphNode(lastChild) &&
+      lastChildLines.length === labels.length &&
+      lastChildLines.every((line, index) =>
+        isSummaryMetadataLine(line, labels[index])
+      )
+    ) {
+      return [lastChild];
+    }
+
+    const candidates = children.slice(-labels.length);
+    if (
+      candidates.length === labels.length &&
+      candidates.every(
+        (node, index) =>
+          $isParagraphNode(node) &&
+          isSummaryMetadataLine(node.getTextContent(), labels[index])
+      )
+    ) {
+      return candidates;
+    }
+  }
+
+  return [];
+}
+
+function CompactSummaryMetadataPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    const updateMetadataAttributes = () => {
+      editor.getEditorState().read(() => {
+        const children = $getRoot().getChildren();
+        const metadataChildren = findSummaryMetadataChildren(children);
+
+        for (const node of children) {
+          const element = editor.getElementByKey(node.getKey());
+          if (!element) continue;
+          element.removeAttribute('data-summary-metadata');
+          element.removeAttribute('data-summary-metadata-first');
+          element.removeAttribute('data-summary-metadata-last');
+        }
+
+        if (metadataChildren.length === 0) return;
+
+        metadataChildren.forEach((node, index) => {
+          const element = editor.getElementByKey(node.getKey());
+          element?.setAttribute('data-summary-metadata', 'true');
+          if (index === 0) {
+            element?.setAttribute('data-summary-metadata-first', 'true');
+          }
+          if (index === metadataChildren.length - 1) {
+            element?.setAttribute('data-summary-metadata-last', 'true');
+          }
+        });
+      });
+    };
+
+    updateMetadataAttributes();
+    return editor.registerUpdateListener(updateMetadataAttributes);
+  }, [editor]);
+
+  return null;
+}
+
 const WYSIWYGEditor = forwardRef<WYSIWYGEditorRef, WysiwygProps>(
   function WYSIWYGEditor(
     {
@@ -279,6 +375,7 @@ const WYSIWYGEditor = forwardRef<WYSIWYGEditorRef, WysiwygProps>(
       saveStatus,
       staticToolbarActions,
       onRequestEdit,
+      compactSummaryMetadata = false,
     }: WysiwygProps,
     ref: React.ForwardedRef<WYSIWYGEditorRef>
   ) {
@@ -521,6 +618,7 @@ const WYSIWYGEditor = forwardRef<WYSIWYGEditorRef, WysiwygProps>(
               <LocalAttachmentsContext.Provider value={localAttachments ?? []}>
                 <LexicalComposer initialConfig={initialConfig}>
                   <EditorRefPlugin editorRef={editorInstanceRef} />
+                  {compactSummaryMetadata && <CompactSummaryMetadataPlugin />}
                   <MarkdownSyncPlugin
                     value={value}
                     onChange={onChange}

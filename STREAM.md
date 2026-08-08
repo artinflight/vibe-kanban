@@ -2,14 +2,14 @@
 
 ## Stream Identifier
 
-- Branch: `vk/b414-vk-can-t-save-ne`
-- Repo: `/home/mcp/code/worktrees/b414-vk-can-t-save-ne/_vibe_kanban_repo`
+- Branch: `vk/71d8-vk-shrink-metada`
+- Repo: `/home/mcp/code/worktrees/71d8-vk-shrink-metada/_vibe_kanban_repo`
 - Working mode: isolated feature branch
 
 ## Objective
 
-- Keep the local project settings modal usable when a project has enough
-  columns to exceed the viewport height.
+- Render the standard agent-summary metadata as smaller inline text so final
+  reports use less vertical space.
 
 ## In Scope
 
@@ -55,6 +55,8 @@
 
 ## Relevant Files / Modules
 
+- `packages/web-core/src/shared/components/WYSIWYGEditor.tsx`
+- `packages/web-core/src/features/workspace-chat/ui/DisplayConversationEntry.tsx`
 - `packages/web-core/src/shared/providers/WorkspaceProvider.tsx`
 - `packages/web-core/src/shared/hooks/useWorkspaces.ts`
 - `crates/server/src/routes/workspaces/core.rs`
@@ -64,6 +66,21 @@
 - Issue/workspace PR display paths under `packages/web-core/src/features/kanban/` and fallback PR routes
 
 ## Current Status
+
+- 2026-08-04 compact standard-summary metadata prepared:
+  - assistant messages recognize the terminal standard summary metadata block
+    in both eight-field (`PR` through `Worktree`) and legacy nine-field
+    (`Version` appended) forms
+  - Lexical imports consecutive metadata lines into one paragraph with line
+    breaks; the renderer now detects that actual node shape
+  - recognized metadata renders below a full-width divider at the smallest
+    design-system text size, preserving one compact field per line; ordinary
+    markdown remains unchanged
+  - validation passed: `pnpm run format`,
+    `pnpm --filter @vibe/web-core run check`, `pnpm run lint`, and
+    `git diff --check`
+  - operator-facing frontend preview is running and Desktop-verified at
+    `https://vk-preview.local/`; no deployment was performed
 
 - 2026-06-26 multi-line rich clipboard paste hotfix live:
   - source `PasteMarkdownPlugin.tsx` now handles multiline `text/plain` before opting out for `text/html`

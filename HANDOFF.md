@@ -2721,12 +2721,25 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
-- Branch `vk/b414-vk-can-t-save-ne` fixes the local project settings modal
-  overflowing the viewport when a board has many columns.
-- The modal now has a viewport-relative maximum height, a scrollable content
-  area, and fixed header/footer regions so `Save columns` remains reachable.
-- Validation passed: `pnpm install --offline --frozen-lockfile`,
-  `pnpm run format`, `NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter
-  @vibe/web-core run check`, and `git diff --check`.
-- No preview, deploy, frontend asset switch, backend restart, or live-state
-  mutation was performed.
+- Compact standard-summary metadata merged through PR `#71` at staging commit
+  `d2562a618fbb2d28f3748f4bad1ecb867b17c7e2`.
+- Browser notification/service-worker preservation merged through PR `#72` at
+  staging commit `4f8fa45c5480b3b018a13e4b9be5a7439a5b5eda`.
+- A production frontend release was built from a clean detached worktree at the
+  exact final staging commit and staged at
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260808Tcompact-summary-notifications`.
+  Its `RELEASE_MANIFEST.txt` records assets, hashes, retained feature markers,
+  and rollback details.
+- A no-restart pointer swap was attempted and immediately rolled back because
+  the running backend continued serving its cached old `index.html` and old
+  hashed asset bytes. The staged release therefore did not become live.
+- Live is safely restored to
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260715Tdefault-agent-profile-precedence`;
+  `/`, the existing JS/CSS, `/vk-notifications-sw.js`, and `/api/info` return
+  `200`, and `vibe-kanban.service` remains active on unchanged PID `1849957`.
+- Activation now requires explicit approval for a controlled backend restart.
+  Before restarting, recheck active agents per `VK_AGENT_DEPLOYMENT_RUNBOOK.md`;
+  then point `frontend-dist/current` to the staged release, restart once, and
+  verify the manifest asset names/hashes, service worker, `/api/info`, required
+  bundle markers, and the new backend PID. Roll back the pointer and restart if
+  any post-restart smoke fails.

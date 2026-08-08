@@ -72,10 +72,10 @@
     in both eight-field (`PR` through `Worktree`) and legacy nine-field
     (`Version` appended) forms
   - Lexical imports consecutive metadata lines into one paragraph with line
-    breaks; the renderer now detects that actual node shape and replaces its
-    visual breaks with inline dot separators
-  - recognized metadata renders inline at the smallest design-system text size,
-    with compact dot separators; ordinary markdown remains unchanged
+    breaks; the renderer now detects that actual node shape
+  - recognized metadata renders below a full-width divider at the smallest
+    design-system text size, preserving one compact field per line; ordinary
+    markdown remains unchanged
   - validation passed: `pnpm run format`,
     `pnpm --filter @vibe/web-core run check`, `pnpm run lint`, and
     `git diff --check`

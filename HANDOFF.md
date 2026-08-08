@@ -6,9 +6,9 @@
 - Follow-up correction on 2026-08-08: the initial recognizer expected one
   Lexical paragraph per metadata line, but Lexical imports consecutive lines as
   a single paragraph containing line breaks. The renderer now recognizes that
-  actual node shape, converts the visual breaks to inline dot separators, and
-  accepts both the current eight-field block and the legacy block with trailing
-  `Version`.
+  actual node shape, preserves those compact field-per-line breaks below a
+  full-width divider, and accepts both the current eight-field block and the
+  legacy block with trailing `Version`.
 - Start command: `scripts/preview.sh start`
 - Working directory:
   `/home/mcp/code/worktrees/71d8-vk-shrink-metada/_vibe_kanban_repo`

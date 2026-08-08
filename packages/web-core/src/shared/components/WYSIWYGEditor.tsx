@@ -316,19 +316,12 @@ function CompactSummaryMetadataPlugin() {
         const children = $getRoot().getChildren();
         const metadataChildren = findSummaryMetadataChildren(children);
 
-        editor
-          .getRootElement()
-          ?.querySelectorAll('[data-summary-metadata-separator]')
-          .forEach((separator) => separator.remove());
-
         for (const node of children) {
           const element = editor.getElementByKey(node.getKey());
           if (!element) continue;
           element.removeAttribute('data-summary-metadata');
+          element.removeAttribute('data-summary-metadata-first');
           element.removeAttribute('data-summary-metadata-last');
-          element.querySelectorAll('br').forEach((lineBreak) => {
-            lineBreak.hidden = false;
-          });
         }
 
         if (metadataChildren.length === 0) return;
@@ -336,13 +329,9 @@ function CompactSummaryMetadataPlugin() {
         metadataChildren.forEach((node, index) => {
           const element = editor.getElementByKey(node.getKey());
           element?.setAttribute('data-summary-metadata', 'true');
-          element?.querySelectorAll('br').forEach((lineBreak) => {
-            const separator = document.createElement('span');
-            separator.dataset.summaryMetadataSeparator = 'true';
-            separator.textContent = ' · ';
-            lineBreak.after(separator);
-            lineBreak.hidden = true;
-          });
+          if (index === 0) {
+            element?.setAttribute('data-summary-metadata-first', 'true');
+          }
           if (index === metadataChildren.length - 1) {
             element?.setAttribute('data-summary-metadata-last', 'true');
           }

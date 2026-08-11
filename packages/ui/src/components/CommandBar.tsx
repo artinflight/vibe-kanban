@@ -11,7 +11,7 @@ import {
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
-import { useDeferredValue, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Command,
@@ -193,8 +193,7 @@ export function CommandBar<
   renderSpecialActionIcon,
 }: CommandBarProps<TAction, TPageId>) {
   const { t } = useTranslation('common');
-  const deferredSearch = useDeferredValue(search);
-  const normalizedSearch = deferredSearch.trim().toLowerCase();
+  const normalizedSearch = search.trim().toLowerCase();
   const isSearching = normalizedSearch.length > 0;
 
   const filteredGroups = useMemo(() => {

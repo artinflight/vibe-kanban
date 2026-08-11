@@ -1,5 +1,15 @@
 # HANDOFF.md
 
+## Current task
+
+- Branch: `vk/14a2-vk-branch-dropdo`
+- Objective: make issue-creation branch results filter immediately while typing.
+- Root cause: `CommandBar` filtered against `useDeferredValue(search)`, allowing large unfiltered branch lists to keep showing while the lower-priority render lagged.
+- Source change: filter against the current controlled `search` value; preserve existing branch matching and the 300-result search cap.
+- Validation passed: `pnpm run format`, `pnpm --filter @vibe/ui run check`, `pnpm --filter @vibe/ui run lint`, `NODE_OPTIONS=--max-old-space-size=2048 pnpm --filter @vibe/web-core run check`, and `git diff --check`.
+- Production frontend build transformed all modules but exhausted its 2 GB Node heap during final output generation; no build artifact is being claimed.
+- Deployment: not performed or requested.
+
 ## 2026-08-04 Compact Summary Metadata Preview
 
 - Preview status: running and verified from the Desktop/operator machine.

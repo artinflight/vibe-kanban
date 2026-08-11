@@ -2,29 +2,25 @@
 
 ## Stream Identifier
 
-- Branch: `vk/71d8-vk-shrink-metada`
-- Repo: `/home/mcp/code/worktrees/71d8-vk-shrink-metada/_vibe_kanban_repo`
-- Working mode: isolated feature branch
+- Branch: `vk/14a2-vk-branch-dropdo`
+- Repo: `/home/mcp/code/worktrees/14a2-vk-branch-dropdo/_vibe_kanban_repo`
+- Working mode: isolated fix branch
 
 ## Objective
 
-- Render the standard agent-summary metadata as smaller inline text so final
-  reports use less vertical space.
+- Make the branch dropdown used while creating an issue filter its results immediately as the user types.
 
 ## In Scope
 
-- Local-only runtime stability
-- Dysfunctional VK feature investigation
-- Focused fixes that can be promoted through `staging` and then production
-- Documentation of root cause and prevention rules
-- Space cleanup planning required before executing/deploying the repair set
+- The shared command-bar branch selection used by create mode.
+- Immediate, case-insensitive branch filtering with existing separator/token matching.
+- Focused frontend validation and continuity notes.
 
 ## Out of Scope
 
-- Reviving the old cloud-backed board model
-- Depending on `api.vibekanban.com` for local board state
-- Bulk-merging stale feature branches with unrelated changes
-- Restarting live VK without explicit user approval
+- Branch fetching or backend changes.
+- Live deployment, frontend asset swaps, or service restarts.
+- Unrelated command-bar behavior.
 
 ## Stream-Specific Decisions
 

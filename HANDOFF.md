@@ -2753,3 +2753,21 @@ User QA checklist for the no-restart frontend repair:
   verify the manifest asset names/hashes, service worker, `/api/info`, required
   bundle markers, and the new backend PID. Roll back the pointer and restart if
   any post-restart smoke fails.
+
+# 2026-08-13 Local workspace project-filter repair
+
+- Root cause: `WorkspacesSidebarContainer` populated its project filter only
+  from cloud organization projects and cloud workspace links. Local-only VK
+  sessions therefore rendered only `No project`, despite local projects and
+  linked workspaces being available through the fallback APIs.
+- Source fix: local-only sessions now reuse the cached `local-projects` query,
+  load each local project's fallback workspace links, show active projects that
+  have linked workspaces, and apply filtering with the resulting local
+  workspace-to-project map. Signed-in cloud behavior is unchanged.
+- This is a frontend-only source change. It has not been deployed, previewed,
+  committed, pushed, or opened as a PR.
+- Validation: `pnpm run format`, larger-heap
+  `pnpm --filter @vibe/web-core run check`, local-web lint, ui lint, and
+  `git diff --check` passed. The broader `pnpm run lint` was stopped while
+  compiling the unrelated Rust workspace after both frontend lint stages had
+  passed.

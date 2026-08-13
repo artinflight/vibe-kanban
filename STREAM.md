@@ -2,25 +2,24 @@
 
 ## Stream Identifier
 
-- Branch: `vk/14a2-vk-branch-dropdo`
-- Repo: `/home/mcp/code/worktrees/14a2-vk-branch-dropdo/_vibe_kanban_repo`
-- Working mode: isolated fix branch
+- Branch: `vk/4a61-vk-filter-worksp`
+- Repo: `/home/mcp/code/worktrees/4a61-vk-filter-worksp/_vibe_kanban_repo`
+- Working mode: isolated feature branch
 
 ## Objective
 
-- Make the branch dropdown used while creating an issue filter its results immediately as the user types.
+- Restore project choices and project filtering in the local-only workspace sidebar.
 
 ## In Scope
 
-- The shared command-bar branch selection used by create mode.
-- Immediate, case-insensitive branch filtering with existing separator/token matching.
+- The local-only workspace sidebar project filter and its workspace-to-project mapping.
 - Focused frontend validation and continuity notes.
 
 ## Out of Scope
 
-- Branch fetching or backend changes.
+- Backend changes.
 - Live deployment, frontend asset swaps, or service restarts.
-- Unrelated command-bar behavior.
+- Unrelated workspace sidebar behavior.
 
 ## Stream-Specific Decisions
 

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
@@ -53,6 +54,8 @@ import {
   XIcon,
 } from '@phosphor-icons/react';
 import { useRemoteCloudHostsAppBarModel } from '@/shared/hooks/useRemoteCloudHosts';
+import { useUserSystem } from '@/shared/hooks/useUserSystem';
+import { projectsApi } from '@/shared/lib/api';
 
 export type WorkspaceLayoutMode = 'flat' | 'accordion';
 
@@ -305,14 +308,33 @@ export function WorkspacesSidebarContainer({
     (s) => s.setWorkspaceSortOrder
   );
 
-  // Remote data for project filter (all orgs)
+  // Project data for the filter. Local-only sessions use the fallback project
+  // API; signed-in sessions continue to use the remote organization data.
   const { workspaces: remoteWorkspaces } = useUserContext();
+  const { loginStatus } = useUserSystem();
+  const isLocalAuthBypassed =
+    loginStatus?.status === 'loggedin' && !loginStatus.profile;
   const { data: allRemoteProjects } = useAllOrganizationProjects();
   const { data: orgsData } = useUserOrganizations();
   const organizations = useMemo(
     () => orgsData?.organizations ?? [],
     [orgsData?.organizations]
   );
+  const { data: localProjects = [] } = useQuery({
+    queryKey: ['local-projects'],
+    queryFn: () => projectsApi.list(),
+    enabled: isLocalAuthBypassed,
+    staleTime: 60_000,
+  });
+  const localProjectWorkspaceQueries = useQueries({
+    queries: localProjects.map((project) => ({
+      queryKey: ['project-workspaces', project.id],
+      queryFn: () => projectsApi.listWorkspaces(project.id),
+      enabled: isLocalAuthBypassed,
+      staleTime: 1000,
+      refetchInterval: 15_000,
+    })),
+  });
 
   // Map local workspace ID → remote project ID
   const remoteProjectByLocalId = useMemo(() => {
@@ -324,6 +346,22 @@ export function WorkspacesSidebarContainer({
     }
     return map;
   }, [remoteWorkspaces]);
+
+  const localProjectByLocalId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const query of localProjectWorkspaceQueries) {
+      for (const workspace of query.data ?? []) {
+        if (workspace.local_workspace_id) {
+          map.set(workspace.local_workspace_id, workspace.project_id);
+        }
+      }
+    }
+    return map;
+  }, [localProjectWorkspaceQueries]);
+
+  const projectByLocalId = isLocalAuthBypassed
+    ? localProjectByLocalId
+    : remoteProjectByLocalId;
 
   // Build org name lookup
   const orgNameById = useMemo(() => {
@@ -358,30 +396,48 @@ export function WorkspacesSidebarContainer({
   }, [allRemoteProjects, remoteProjectByLocalId, orgNameById]);
 
   // Build flat project options for MultiSelectDropdown
-  const projectOptions = useMemo<MultiSelectDropdownOption<string>[]>(
-    () => [
+  const projectOptions = useMemo<MultiSelectDropdownOption<string>[]>(() => {
+    const linkedLocalProjectIds = new Set(localProjectByLocalId.values());
+
+    return [
       {
         value: NO_PROJECT_ID,
         label: t('kanban.workspaceSidebar.noProject'),
       },
-      ...projectGroups.flatMap((g) =>
-        g.projects.map((p) => ({
-          value: p.id,
-          label: p.name,
-          renderOption: () => (
-            <div className="flex items-center gap-base">
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: `hsl(${p.color})` }}
-              />
-              {p.name}
-            </div>
-          ),
-        }))
-      ),
-    ],
-    [projectGroups, t]
-  );
+      ...(isLocalAuthBypassed
+        ? localProjects
+            .filter(
+              (project) =>
+                !project.archived && linkedLocalProjectIds.has(project.id)
+            )
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((project) => ({
+              value: project.id,
+              label: project.name,
+            }))
+        : projectGroups.flatMap((g) =>
+            g.projects.map((p) => ({
+              value: p.id,
+              label: p.name,
+              renderOption: () => (
+                <div className="flex items-center gap-base">
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: `hsl(${p.color})` }}
+                  />
+                  {p.name}
+                </div>
+              ),
+            }))
+          )),
+    ];
+  }, [
+    isLocalAuthBypassed,
+    localProjectByLocalId,
+    localProjects,
+    projectGroups,
+    t,
+  ]);
 
   const hasActiveFilters =
     workspaceFilters.projectIds.length > 0 ||
@@ -413,7 +469,7 @@ export function WorkspacesSidebarContainer({
         (id) => id !== NO_PROJECT_ID
       );
       result = result.filter((ws) => {
-        const projectId = remoteProjectByLocalId.get(ws.id);
+        const projectId = projectByLocalId.get(ws.id);
         if (!projectId) return includeNoProject;
         return realProjectIds.includes(projectId);
       });
@@ -436,7 +492,7 @@ export function WorkspacesSidebarContainer({
     }
 
     return result;
-  }, [activeWorkspaces, workspaceFilters, remoteProjectByLocalId, searchLower]);
+  }, [activeWorkspaces, workspaceFilters, projectByLocalId, searchLower]);
 
   const filteredArchivedWorkspaces = useMemo(() => {
     let result = archivedWorkspaces;
@@ -448,7 +504,7 @@ export function WorkspacesSidebarContainer({
         (id) => id !== NO_PROJECT_ID
       );
       result = result.filter((ws) => {
-        const projectId = remoteProjectByLocalId.get(ws.id);
+        const projectId = projectByLocalId.get(ws.id);
         if (!projectId) return includeNoProject;
         return realProjectIds.includes(projectId);
       });
@@ -469,12 +525,7 @@ export function WorkspacesSidebarContainer({
     }
 
     return result;
-  }, [
-    archivedWorkspaces,
-    workspaceFilters,
-    remoteProjectByLocalId,
-    searchLower,
-  ]);
+  }, [archivedWorkspaces, workspaceFilters, projectByLocalId, searchLower]);
 
   const sortWorkspaces = useCallback(
     (workspaces: Workspace[]) =>

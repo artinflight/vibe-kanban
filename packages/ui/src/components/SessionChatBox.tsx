@@ -543,13 +543,13 @@ export function SessionChatBox<TExecutor extends string = string>({
             <PrimaryButton
               onClick={actions.onSendFollowUp}
               disabled={!canSend}
-              value={t('conversation.actions.sendFollowUp')}
+              value={t('conversation.actions.sendCorrection')}
             />
             <PrimaryButton
               onClick={actions.onStop}
               variant="secondary"
-              value={t('conversation.actions.stop')}
-              actionIcon="spinner"
+              value={t('conversation.actions.stopAgent')}
+              actionIcon={XIcon}
             />
           </>
         );

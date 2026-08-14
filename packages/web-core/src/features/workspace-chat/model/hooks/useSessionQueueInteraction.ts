@@ -19,7 +19,7 @@ interface UseSessionQueueInteractionResult {
   queuedCount: number;
   /** Whether a queue operation is in progress */
   isQueueLoading: boolean;
-  /** Send a follow-up to the active agent, or queue it when active injection is unavailable */
+  /** Steer the active agent, or queue it when active steering is unavailable */
   sendFollowUp: (
     message: string,
     executorConfig: ExecutorConfig
@@ -35,8 +35,8 @@ const QUEUED_STATUS_REFRESH_MS = 3000;
 
 /**
  * Hook to manage follow-up interaction for session messages.
- * The server injects into active Codex sessions when possible and otherwise
- * falls back to a queued follow-up.
+ * The server steers active Codex turns when possible and otherwise falls back
+ * to a queued follow-up.
  * Uses TanStack Query for caching and mutation handling.
  */
 export function useSessionQueueInteraction({

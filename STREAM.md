@@ -2,29 +2,28 @@
 
 ## Stream Identifier
 
-- Branch: `vk/e11c-vk-fix-archiving`
-- Repo: `/home/mcp/code/worktrees/e11c-vk-fix-archiving/_vibe_kanban_repo`
+- Branch: `vk/fada-vk-turn-steer-ag`
+- Repo: `/home/mcp/code/worktrees/fada-vk-turn-steer-ag/_vibe_kanban_repo`
 - Working mode: isolated feature branch
 
 ## Objective
 
-- Make linked workspace archival reliable when local issues enter `In Staging`
-  or `Done`, including deferred cleanup after active executions finish.
+- Let users correct an active Codex agent without cancelling its turn by using
+  the app server's `turn/steer` request.
 
 ## In Scope
 
-- Terminal-status archive triggers for `In Staging` and `Done`
-- Active execution safety and completion-driven retry
-- Durable retry requests and visible cleanup failures
-- Worktree/source-history and attachment-cache safety
-- Isolated end-to-end validation and blue/green deployment
+- A working-state composer action that sends a correction to the active turn.
+- A separate action that stops the agent entirely.
+- Backend routing from the active VK execution to the matching Codex app-server
+  client, thread ID, and current turn ID.
+- Queue fallback when no steerable active Codex turn is available.
 
 ## Out of Scope
 
-- Blind deletion of non-terminal or unrelated worktrees
-- Removing attachment cache roots or unrelated uploads
-- Enabling broad age-based or orphan cleanup
-- Unrelated frontend or board changes
+- Changes to non-Codex executor behavior beyond the existing queue fallback.
+- Live deployment, frontend asset activation, or service restart.
+- Unrelated frontend, board, or executor changes.
 
 ## Stream-Specific Decisions
 

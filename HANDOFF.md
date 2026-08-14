@@ -2840,3 +2840,15 @@ User QA checklist for the no-restart frontend repair:
   the new/retained bundle markers passed. The repository smoke script itself is
   stale because it still hardcodes the 20260626 release, so equivalent
   manifest-driven live checks were run directly.
+
+# 2026-08-14 Active-Turn Steering Prepared
+
+- Branch `vk/fada-vk-turn-steer-ag` changes the active Codex correction path
+  from `turn/interrupt` plus a new turn to `turn/steer` with the current thread
+  ID and required active turn ID precondition.
+- The running composer now exposes separate `Send correction` and `Stop agent`
+  controls. Stop retains the existing execution cancellation behavior.
+- When a live Codex client or active turn ID is not available, the existing
+  queued follow-up fallback remains in effect.
+- This is a backend and frontend source change. It is not deployed and no live
+  service restart or frontend asset swap has been performed.

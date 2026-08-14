@@ -176,7 +176,7 @@ pub trait ContainerService {
 
     fn workspace_to_current_dir(&self, workspace: &Workspace) -> PathBuf;
 
-    async fn try_inject_follow_up(
+    async fn try_steer_active_turn(
         &self,
         _session: &Session,
         _data: &DraftFollowUpData,

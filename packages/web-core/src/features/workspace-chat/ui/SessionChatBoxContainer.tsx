@@ -633,8 +633,8 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     refreshQueueStatus,
   ]);
 
-  // Follow-up handler. The server injects into active Codex sessions when
-  // possible, otherwise it falls back to queueing for the next run.
+  // Correction handler. The server steers active Codex turns when possible;
+  // otherwise it falls back to queueing for the next run.
   const handleSendFollowUp = useCallback(async () => {
     // Allow follow-up if there's a message OR review comments, and we have a config
     if ((!localMessage.trim() && !reviewMarkdown) || !executorConfig) return;

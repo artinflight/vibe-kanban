@@ -2764,10 +2764,28 @@ User QA checklist for the no-restart frontend repair:
   load each local project's fallback workspace links, show active projects that
   have linked workspaces, and apply filtering with the resulting local
   workspace-to-project map. Signed-in cloud behavior is unchanged.
-- This is a frontend-only source change. It has not been deployed, previewed,
-  committed, pushed, or opened as a PR.
+- PR `#75` rebase-merged the fix into `staging` as `51f505a11`.
+- The frontend-only release is live at
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260817Tfilter-workspaces`
+  with asset `/assets/index-DhRotnm8.js`, sha256
+  `4348ec89cfe91a8ee78135fdc680b11cc78eb8ac22d7fed9274ccc9bf10a7ea1`.
+- No backend restart occurred; PID remained `1849957`. Because that process
+  canonicalized the frontend directory at startup, activation copied immutable
+  assets into its resolved `20260715Tdefault-agent-profile-precedence` directory
+  and atomically replaced `index.html`, while `frontend-dist/current` points to
+  the new release.
+- The pre-deploy live frontend was copied directly from MCP to
+  `desktop:B:/vk-backups/vk-frontend-pre-filter-workspaces-20260817T084000Z`
+  without local staging. Verification matched 766 files, 74,782,439 bytes, and
+  index sha256 `eb1645504ebc47b5cd7024fdc6389002d96ffc9aa33b6292133c8252b0bc9b6c`.
 - Validation: `pnpm run format`, larger-heap
   `pnpm --filter @vibe/web-core run check`, local-web lint, ui lint, and
   `git diff --check` passed. The broader `pnpm run lint` was stopped while
   compiling the unrelated Rust workspace after both frontend lint stages had
   passed.
+- All PR CI checks passed. The clean merged-staging production build passed,
+  HTTPS serves the manifest asset with the expected hash, `/api/info` is
+  healthy, project responses are stable, the service worker is reachable, and
+  the new/retained bundle markers passed. The repository smoke script itself is
+  stale because it still hardcodes the 20260626 release, so equivalent
+  manifest-driven live checks were run directly.

@@ -6,6 +6,16 @@
 
 ## Confirmed Current State
 
+- 2026-08-17 local workspace project filtering is live without a backend restart:
+  - PR `#75` rebase-merged into `staging` as `51f505a11`
+  - live frontend release is `20260817Tfilter-workspaces`, asset
+    `/assets/index-DhRotnm8.js`, sha256
+    `4348ec89cfe91a8ee78135fdc680b11cc78eb8ac22d7fed9274ccc9bf10a7ea1`
+  - local-only workspace filters now load active local projects and their
+    fallback workspace links instead of rendering only `No project`
+  - backend PID remained `1849957`; no service restart occurred
+  - pre-deploy frontend backup is on Desktop at
+    `desktop:B:/vk-backups/vk-frontend-pre-filter-workspaces-20260817T084000Z`
 - 2026-07-15 Codex default follow-up correction is in progress:
   - the live profile correctly reported `gpt-5.6-sol` / `xhigh`, but a newly
     created Oharafit agent still submitted `model_id: gpt-5.5`

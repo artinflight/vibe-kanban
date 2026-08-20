@@ -337,9 +337,8 @@ export function useUiPreferencesScratch() {
       return;
     }
 
-    hasInitializedRef.current = true;
-
     if (scratchData) {
+      hasInitializedRef.current = true;
       // Server has data - apply it to store
       isApplyingServerDataRef.current = true;
       lastSavedPayloadRef.current = JSON.stringify(scratchData);

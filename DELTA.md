@@ -1,5 +1,19 @@
 # DELTA.md
 
+## 2026-08-20T00:00:00Z | vk/13c6-vk-multi-line-pa | multiline paste line-ending hardening
+
+- Intent: fix the remaining multiline paste failure in VK prompt fields after
+  text already exists in the editor.
+- Finding: the previous source fix correctly handled `text/html` priority, but
+  VK's multiline detector accepted newline forms that Lexical's
+  `selection.insertRawText` did not reliably split, including lone carriage
+  returns and Unicode line separators.
+- Changed `packages/ui/src/components/PasteMarkdownPlugin.tsx` to normalize
+  pasted plain text to LF before raw insertion in browser paste, raw paste, and
+  Tauri Cmd+Shift+V fallback paths.
+- Deployment plan: land through PR to `staging`, then publish frontend assets
+  without restarting `vibe-kanban.service`.
+
 ## 2026-06-11T12:45:00Z | vk/land-live-fixes-20260422 | restart candidate and targeted backup
 
 - Prepared a clean restart candidate from the current VK fix set without restarting live VK.

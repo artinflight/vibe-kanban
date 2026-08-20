@@ -18,7 +18,11 @@ type Props = {
   transformers: Transformer[];
 };
 
-const LINE_BREAK_PATTERN = /\r\n?|\n/;
+const LINE_BREAK_PATTERN = /\r\n?|\n|\u2028|\u2029/;
+
+export function normalizePastedPlainText(text: string): string {
+  return text.replace(/\r\n?|\u2028|\u2029/g, '\n');
+}
 
 /**
  * Plugin that handles paste with markdown conversion.
@@ -93,7 +97,7 @@ export function PasteMarkdownPlugin({ transformers }: Props) {
               editor.update(() => {
                 const selection = $getSelection();
                 if (!$isRangeSelection(selection)) return;
-                selection.insertRawText(text);
+                selection.insertRawText(normalizePastedPlainText(text));
               });
             })
             .catch(() => {});
@@ -130,7 +134,7 @@ export function PasteMarkdownPlugin({ transformers }: Props) {
           editor.update(() => {
             const selection = $getSelection();
             if (!$isRangeSelection(selection)) return;
-            selection.insertRawText(plainText);
+            selection.insertRawText(normalizePastedPlainText(plainText));
           });
           shiftHeldRef.current = false;
           return true;
@@ -156,7 +160,7 @@ export function PasteMarkdownPlugin({ transformers }: Props) {
           if (!$isRangeSelection(selection)) return;
 
           if (shouldInsertMultilineRaw) {
-            selection.insertRawText(plainText);
+            selection.insertRawText(normalizePastedPlainText(plainText));
             return;
           }
 

@@ -24,10 +24,11 @@ let _remoteApiBase: string = BUILD_TIME_API_BASE;
 /**
  * Set the remote API base URL at runtime.
  * Called by ConfigProvider when /api/info returns a shared_api_base value.
- * No-op if base is null/undefined/empty (preserves build-time fallback).
+ * `null` or an empty string explicitly disables remote access for local-only
+ * sessions. `undefined` restores the build-time fallback.
  */
 export function setRemoteApiBase(base: string | null | undefined) {
-  _remoteApiBase = base || BUILD_TIME_API_BASE;
+  _remoteApiBase = base === undefined ? BUILD_TIME_API_BASE : (base ?? '');
   if (_remoteApiBase) {
     syncRelayApiBaseWithRemote(_remoteApiBase);
   }

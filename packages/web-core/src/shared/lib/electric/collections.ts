@@ -2,6 +2,7 @@ import { electricCollectionOptions } from '@tanstack/electric-db-collection';
 import { createCollection } from '@tanstack/react-db';
 
 import { getAuthRuntime } from '@/shared/lib/auth/runtime';
+import { makeLocalApiRequest } from '@/shared/lib/localApiTransport';
 import { getRemoteApiUrl, makeRequest } from '@/shared/lib/remoteApi';
 import type { MutationDefinition, ShapeDefinition } from 'shared/remote-types';
 import type { CollectionConfig, SyncError } from '@/shared/lib/electric/types';
@@ -456,7 +457,7 @@ function createFallbackSync(args: {
 
       refreshPromise = (async () => {
         try {
-          const response = await makeRequest(
+          const response = await makeLocalApiRequest(
             buildFallbackRequestPath(args.shape.fallbackUrl, args.params),
             { method: 'GET', cache: 'no-store' }
           );

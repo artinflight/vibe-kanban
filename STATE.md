@@ -6,6 +6,14 @@
 
 ## Confirmed Current State
 
+- 2026-08-26 duplicate local VK services were consolidated operationally:
+  - `vibe.local` routes through `vibe-local-https-proxy.service` to the green backend on port `4511`
+  - `vibe-kanban-green.service` is active and enabled for boot
+  - retired production `vibe-kanban.service` on port `4311` drained its final execution, then was stopped and disabled
+  - after a concurrent process re-enabled/restarted production once, it was stopped/disabled again with zero running rows and runtime-masked for the remainder of the boot
+  - stale `vibe-kanban-lab.service` on port `4411` was stopped and disabled
+  - the HTTPS proxy now wants and starts after green, with no dependency on retired production
+  - active green coding-agent executions were not interrupted
 - 2026-08-17 local workspace project filtering is live without a backend restart:
   - PR `#75` rebase-merged into `staging` as `51f505a11`
   - live frontend release is `20260817Tfilter-workspaces`, asset

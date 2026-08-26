@@ -111,6 +111,126 @@ Use this when agents appear to repeat themselves, resume the wrong context, or p
 </Step>
 </Steps>
 
+## Stale rollout path audit
+
+Run this before a backend restart and after any Codex-home migration, blue/green
+cutover, or backup restore. A thread row can point at a retired `CODEX_HOME`
+even when the current service environment is correct. If that rollout file is
+missing, resume/fork can fail with errors like:
+
+```text
+thread/resume request failed: failed to resolve rollout path ...
+thread/fork request failed: no rollout found for thread id ...
+```
+
+That is a recovery problem. Do not treat it as fixed by starting a fresh Codex
+thread unless the operator explicitly accepts losing the old thread context.
+
+<Steps>
+<Step title="Check recently active Codex threads">
+  Query the live Codex state database and verify rollout files exist:
+
+  ```bash
+  python3 - <<'PY'
+  import os
+  import sqlite3
+
+  db = '/home/mcp/.local/share/vibe-kanban/codex-home/state_5.sqlite'
+  con = sqlite3.connect(db)
+  con.row_factory = sqlite3.Row
+
+  rows = con.execute("""
+  SELECT id, rollout_path, cwd, title, datetime(updated_at, 'unixepoch') updated
+  FROM threads
+  WHERE updated_at >= strftime('%s', 'now', '-1 day')
+  ORDER BY updated_at DESC
+  """).fetchall()
+
+  missing = [row for row in rows if not os.path.exists(row['rollout_path'])]
+  print('recent_threads', len(rows))
+  print('missing_recent_rollouts', len(missing))
+  for row in missing:
+      print(dict(row))
+  PY
+  ```
+
+  <Check>
+  Do not declare resume state safe while `missing_recent_rollouts` is non-zero.
+  Restore the files from backup or report the exact unresolved thread ids.
+  </Check>
+</Step>
+
+<Step title="Check active execution rollouts">
+  For every running execution, map the VK turn to the Codex agent session id and
+  verify that thread's rollout exists:
+
+  ```bash
+  python3 - <<'PY'
+  import os
+  import sqlite3
+  import uuid
+
+  vk_db = '/home/mcp/.local/share/vibe-kanban/db.v2.sqlite'
+  codex_db = '/home/mcp/.local/share/vibe-kanban/codex-home/state_5.sqlite'
+
+  vk = sqlite3.connect(vk_db)
+  vk.row_factory = sqlite3.Row
+  codex = sqlite3.connect(codex_db)
+  codex.row_factory = sqlite3.Row
+
+  rows = vk.execute("""
+  SELECT ep.id, ep.status, ep.started_at, w.name, w.branch,
+         cat.agent_session_id
+  FROM execution_processes ep
+  JOIN sessions s ON s.id = ep.session_id
+  JOIN workspaces w ON w.id = s.workspace_id
+  LEFT JOIN coding_agent_turns cat ON cat.execution_process_id = ep.id
+  WHERE ep.status = 'running'
+  ORDER BY ep.started_at DESC
+  """).fetchall()
+
+  print('running_count', len(rows))
+  for row in rows:
+      process_id = str(uuid.UUID(bytes=row['id']))
+      agent_session_id = row['agent_session_id']
+      rollout_path = None
+      exists = None
+      if agent_session_id:
+          thread = codex.execute(
+              'SELECT rollout_path FROM threads WHERE id = ?',
+              (agent_session_id,),
+          ).fetchone()
+          if thread:
+              rollout_path = thread['rollout_path']
+              exists = os.path.exists(rollout_path)
+      print({
+          'process_id': process_id,
+          'workspace': row['name'],
+          'branch': row['branch'],
+          'agent_session_id': agent_session_id,
+          'rollout_path': rollout_path,
+          'rollout_exists': exists,
+      })
+  PY
+  ```
+</Step>
+
+<Step title="Restore missing stale rollout files">
+  If a missing path points at a retired Codex home, search same-day and older
+  Desktop session backups. Restore only the missing rollout JSONL to the exact
+  path recorded in `state_5.sqlite`; do not rewrite the database unless the
+  referenced file is unrecoverable and the operator approves a fallback.
+
+  Record:
+
+  - the missing thread id
+  - the path recorded in `state_5.sqlite`
+  - the backup archive that contained the rollout
+  - the restored file path and size
+  - the post-restore audit showing the rollout exists
+</Step>
+</Steps>
+
 ## Repair the live service
 
 Only run these commands after active VK agents finish, or after you decide it is acceptable to interrupt them.

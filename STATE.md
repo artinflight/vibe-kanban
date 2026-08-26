@@ -147,6 +147,17 @@
 - UI changes that hide archived local projects must still provide a clear restore path or they will look like missing data.
 - Replacing VK `CODEX_HOME` with a fresh directory and copying only `auth.json` will break old workspace thread fork/resume with `no rollout found for thread id ...`.
 - VK Codex isolation requires both auth and Codex session/rollout state if you want existing workspace threads to continue cleanly after the switch.
+- A same-day backup of the current live `CODEX_HOME` is not enough if
+  `state_5.sqlite` still contains thread rows pointing at a retired Codex home.
+  Before backend restarts, audit active and recently updated Codex threads for
+  missing `rollout_path` files and restore any recoverable stale paths from
+  Desktop session archives.
+- Starting a fresh Codex thread after a missing rollout error is not recovery.
+  It is a fallback with context loss and must not be described as a fix unless
+  the operator explicitly accepts that tradeoff.
+- The active-agent restart gate is mandatory: list all running executions and
+  their Codex rollout status, then get explicit acceptance for interrupting
+  those exact runs before touching the service.
 - Passing raw HTTP stress tests is not enough. The earlier false positive came from not reproducing:
   - mounted workspace UI behavior
   - repeated workspace/task polling

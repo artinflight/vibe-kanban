@@ -370,14 +370,18 @@ html {
   }
 }
 
-/* Animated border for running chat box */
-@keyframes border-flash {
-  0% {
-    background-position: 200% 0;
+/*
+ * Activity borders only animate opacity so the browser can composite them
+ * without repainting a masked gradient on every frame.
+ */
+@keyframes activity-border-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
   }
 
-  100% {
-    background-position: -200% 0;
+  50% {
+    opacity: 1;
   }
 }
 
@@ -389,24 +393,10 @@ html {
   .chat-box-running::before {
     content: '';
     @apply absolute inset-0 pointer-events-none rounded-t-md;
-    padding: 1px;
-    padding-bottom: 0;
-    background: linear-gradient(
-      45deg,
-      transparent,
-      hsl(var(--brand-secondary)),
-      transparent
-    );
-    background-size: 200% 100%;
-    animation: border-flash 2s linear infinite;
-    -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+    border: 1px solid hsl(var(--brand-secondary));
+    border-bottom: 0;
+    animation: activity-border-pulse 2s ease-in-out infinite;
+    will-change: opacity;
   }
 
   .create-issue-attention {
@@ -416,28 +406,16 @@ html {
   .create-issue-attention::before {
     content: '';
     @apply absolute inset-0 pointer-events-none rounded-sm;
-    padding: 1px;
-    background: linear-gradient(
-      120deg,
-      transparent,
-      hsl(var(--brand)),
-      transparent
-    );
-    background-size: 220% 100%;
-    animation: border-flash 1.2s linear infinite;
-    -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+    border: 1px solid hsl(var(--brand));
+    animation: activity-border-pulse 1.2s ease-in-out infinite;
+    will-change: opacity;
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .chat-box-running::before,
     .create-issue-attention::before {
       animation: none;
+      opacity: 1;
     }
   }
 }

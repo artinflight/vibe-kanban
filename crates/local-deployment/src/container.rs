@@ -1561,6 +1561,10 @@ impl ContainerService for LocalContainerService {
         .unwrap_or(true)
     }
 
+    fn status_worktree_cleanup_enabled(&self) -> bool {
+        std::env::var("DISABLE_STATUS_WORKTREE_CLEANUP").is_err()
+    }
+
     async fn store_db_stream_handle(&self, id: Uuid, handle: JoinHandle<()>) {
         self.add_db_stream_handle(id, handle).await;
     }

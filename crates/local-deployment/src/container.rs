@@ -67,6 +67,30 @@ use crate::{command, copy};
 const WORKSPACE_TOUCH_DEBOUNCE: Duration = Duration::from_mins(2);
 const LIVE_EXECUTION_HISTORY_BYTES: usize = 8 * 1024 * 1024;
 const LIVE_EXECUTION_CHANNEL_CAPACITY: usize = 4096;
+
+fn process_using_path(workspace_path: &Path, proc_root: &Path) -> Option<String> {
+    let workspace_path = workspace_path.canonicalize().ok()?;
+    let entries = std::fs::read_dir(proc_root).ok()?;
+
+    for entry in entries.filter_map(Result::ok) {
+        if !entry
+            .file_name()
+            .to_string_lossy()
+            .chars()
+            .all(|ch| ch.is_ascii_digit())
+        {
+            continue;
+        }
+        let Ok(cwd) = std::fs::read_link(entry.path().join("cwd")) else {
+            continue;
+        };
+        if cwd.starts_with(&workspace_path) {
+            return Some(entry.file_name().to_string_lossy().to_string());
+        }
+    }
+
+    None
+}
 const WORKSPACE_AGENT_IMAGE_SHARING_INSTRUCTIONS: &str = r#"# Vibe Kanban Workspace
 
 ## Sharing Images In Chat
@@ -1515,6 +1539,28 @@ impl ContainerService for LocalContainerService {
         Ok(())
     }
 
+    async fn workspace_has_external_processes(&self, workspace: &Workspace) -> bool {
+        let Some(container_ref) = workspace.container_ref.as_ref() else {
+            return false;
+        };
+        let workspace_path = PathBuf::from(container_ref);
+
+        tokio::task::spawn_blocking(move || {
+            if let Some(pid) = process_using_path(&workspace_path, Path::new("/proc")) {
+                tracing::info!(
+                    "Host process {} is using archived workspace path {}",
+                    pid,
+                    workspace_path.display()
+                );
+                true
+            } else {
+                false
+            }
+        })
+        .await
+        .unwrap_or(true)
+    }
+
     async fn store_db_stream_handle(&self, id: Uuid, handle: JoinHandle<()>) {
         self.add_db_stream_handle(id, handle).await;
     }
@@ -2024,7 +2070,7 @@ fn success_exit_status() -> std::process::ExitStatus {
 
 #[cfg(test)]
 mod tests {
-    use super::LocalContainerService;
+    use super::{LocalContainerService, process_using_path};
 
     #[test]
     fn workspace_config_content_includes_image_sharing_and_imports() {
@@ -2060,5 +2106,25 @@ mod tests {
             "@repo-a/CLAUDE.md\n",
             "AGENTS.md"
         ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn detects_process_cwd_inside_workspace_path() {
+        use std::os::unix::fs::symlink;
+
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("workspace");
+        let repo = workspace.join("repo");
+        let proc_root = temp.path().join("proc");
+        let process_dir = proc_root.join("1234");
+        std::fs::create_dir_all(&repo).unwrap();
+        std::fs::create_dir_all(&process_dir).unwrap();
+        symlink(&repo, process_dir.join("cwd")).unwrap();
+
+        assert_eq!(
+            process_using_path(&workspace, &proc_root).as_deref(),
+            Some("1234")
+        );
     }
 }

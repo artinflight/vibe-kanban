@@ -166,6 +166,10 @@ pub trait ContainerService {
 
     async fn touch(&self, workspace: &Workspace) -> Result<(), ContainerError>;
 
+    async fn workspace_has_external_processes(&self, _workspace: &Workspace) -> bool {
+        false
+    }
+
     fn workspace_to_current_dir(&self, workspace: &Workspace) -> PathBuf;
 
     async fn try_inject_follow_up(
@@ -745,6 +749,14 @@ pub trait ContainerService {
         {
             tracing::info!(
                 "Deferring archived worktree cleanup for workspace {} while a non-development execution is running",
+                workspace.id
+            );
+            return Ok(());
+        }
+
+        if self.workspace_has_external_processes(&workspace).await {
+            tracing::info!(
+                "Deferring archived worktree cleanup for workspace {} because a host process is still using its path",
                 workspace.id
             );
             return Ok(());

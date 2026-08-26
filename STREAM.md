@@ -2,29 +2,26 @@
 
 ## Stream Identifier
 
-- Branch: `vk/e11c-vk-fix-archiving`
-- Repo: `/home/mcp/code/worktrees/e11c-vk-fix-archiving/_vibe_kanban_repo`
+- Branch: `vk/d3fb-vk-2-instances`
+- Repo: `/home/mcp/code/worktrees/d3fb-vk-2-instances/_vibe_kanban_repo`
 - Working mode: isolated feature branch
 
 ## Objective
 
-- Make linked workspace archival reliable when local issues enter `In Staging`
-  or `Done`, including deferred cleanup after active executions finish.
+- Consolidate duplicate local Vibe Kanban services without interrupting active agents.
 
 ## In Scope
 
-- Terminal-status archive triggers for `In Staging` and `Done`
-- Active execution safety and completion-driven retry
-- Durable retry requests and visible cleanup failures
-- Worktree/source-history and attachment-cache safety
-- Isolated end-to-end validation and blue/green deployment
+- Identify service, port, routing, data, and execution ownership.
+- Retire unused production and lab services without interrupting active work.
+- Make green and the HTTPS proxy boot dependencies authoritative.
+- Record the verified operational state for future agents.
 
 ## Out of Scope
 
-- Blind deletion of non-terminal or unrelated worktrees
-- Removing attachment cache roots or unrelated uploads
-- Enabling broad age-based or orphan cleanup
-- Unrelated frontend or board changes
+- Restarting or stopping the active green backend.
+- Changing application source, live data, or worktrees.
+- Unrelated frontend, backend, or board changes.
 
 ## Stream-Specific Decisions
 
@@ -65,6 +62,12 @@
 
 ## Current Status
 
+- 2026-08-26 service consolidation complete:
+  - green on `4511` is the sole running VK backend and is enabled for boot
+  - production on `4311` and lab on `4411` are stopped and disabled
+  - production is runtime-masked because a concurrent process re-enabled it once after the initial shutdown
+  - `vibe.local` remains healthy and its proxy depends on green rather than production
+  - production was stopped only after its final execution reached a terminal state
 - 2026-06-26 multi-line rich clipboard paste hotfix live:
   - source `PasteMarkdownPlugin.tsx` now handles multiline `text/plain` before opting out for `text/html`
   - live frontend release is `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260626Tmultiline-rich-paste`, asset `/assets/index-DXMultilinePaste.js`

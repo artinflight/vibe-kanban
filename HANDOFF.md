@@ -2,13 +2,13 @@
 
 ## Current task
 
-- Branch: `vk/14a2-vk-branch-dropdo`
-- Objective: make issue-creation branch results filter immediately while typing.
-- Root cause: `CommandBar` filtered against `useDeferredValue(search)`, allowing large unfiltered branch lists to keep showing while the lower-priority render lagged.
-- Source change: filter against the current controlled `search` value; preserve existing branch matching and the 300-result search cap.
-- Validation passed: `pnpm run format`, `pnpm --filter @vibe/ui run check`, `pnpm --filter @vibe/ui run lint`, `NODE_OPTIONS=--max-old-space-size=2048 pnpm --filter @vibe/web-core run check`, and `git diff --check`.
-- Production frontend build transformed all modules but exhausted its 2 GB Node heap during final output generation; no build artifact is being claimed.
-- Deployment: not performed or requested.
+- Branch: `vk/d3fb-vk-2-instances`
+- Objective: consolidate duplicate local Vibe Kanban services without interrupting active agents.
+- Confirmed production `4311`, lab `4411`, and green `4511` were running while `vibe.local` already routed to green.
+- Stopped and disabled lab. Disabled production, waited for its final execution to finish, and stopped it cleanly.
+- A concurrent process recreated production's boot symlink and restarted it once; with zero production execution rows it was stopped and disabled again and runtime-masked for the rest of the boot.
+- Enabled green for boot and changed `vibe-local-https-proxy.service` to want and start after green instead of production.
+- Final operational verification found only green listening among the VK backend ports; `vibe.local` returned green's configuration and active green executions remained running.
 
 ## 2026-08-04 Compact Summary Metadata Preview
 

@@ -431,6 +431,11 @@ Do not say "backup complete" until all of these are true:
 - a file listing of the copied live-state directory exists
 - the backup location was written into the task log or handoff
 - the operator explicitly noted whether the install was cloud-coupled at backup time
+- recent Codex thread rows and active execution rows were checked for missing
+  rollout files
+- any stale rollout paths pointing outside the current live `CODEX_HOME` were
+  either captured by an additional backup or recorded as an unresolved restore
+  gap
 
 ## What does **not** count as a full backup
 
@@ -442,6 +447,9 @@ These are common failures:
 - saying "backup taken" without recording `/api/info`
 - taking a backup while `shared_api_base` is still non-null and pretending it is a full local recovery point
 - taking a backup after risky edits instead of before
+- backing up only the current `CODEX_HOME` while the live Codex state database
+  still references rollout files in an old or retired Codex home
+- treating a new Codex thread as a restore of a missing rollout-backed thread
 
 ## Restore procedure
 
@@ -523,7 +531,29 @@ Any agent working on the local VK install must follow this policy:
 2. Record whether the install is still cloud-coupled.
 3. Do not call the backup "full" unless local persistence is proven.
 4. Before schema changes, binary replacement, auth changes, or repo-link changes, take a fresh timestamped backup.
-5. After each risky change, record the exact backup path in the handoff.
+5. Before backend restarts, record the active execution inventory and whether
+   each active Codex rollout path exists.
+6. If active executions exist, stop and get explicit operator acceptance for
+   interrupting those exact runs before touching the service.
+7. After each risky change, record the exact backup path in the handoff.
+
+## Codex rollout restore guarantee
+
+The VK database and the Codex state database are not enough by themselves to
+resume old work. A Codex thread row also depends on the JSONL rollout file named
+in `state_5.sqlite`.
+
+Before a restart or restore, run the stale rollout audit in
+`docs/self-hosting/codex-home-isolation.mdx`. If it finds missing rollout files:
+
+1. Search the same-day Desktop backups first.
+2. Search older session archives if the thread predates the current live
+   `CODEX_HOME`.
+3. Restore the exact missing rollout file to the path already recorded in the
+   Codex state database.
+4. Verify the file exists and record its size.
+5. Only if the rollout is unrecoverable should an agent offer to start a fresh
+   thread, and that must be described as context loss rather than recovery.
 
 ## If the install is still cloud-coupled
 

@@ -163,6 +163,27 @@ turn the task into an operator-approved release/deploy task first.
 When a change needs a backend restart or a coordinated frontend/backend release,
 do all slow and risky work before asking for the restart window.
 
+### 2026-08-26 restart incident rules
+
+These rules were added after a restart window where the backup existed but the
+operator was not given a clear active-agent interruption gate, and a stale
+Codex rollout path was incorrectly treated as a fallback-to-new-thread problem
+instead of a restore problem.
+
+- A restart is not safe just because a backup exists.
+- A restart is not safe just because the operator says "proceed" if they also
+  asked not to lose active agent work.
+- If active agents exist, list each running execution by workspace, branch,
+  execution id, session id, agent session id, and rollout path status.
+- Ask for explicit acceptance of interruption for those exact executions before
+  touching the service.
+- Do not describe "start a new Codex thread" as fixing a missing rollout. A new
+  thread is only a fallback. First look for and restore the referenced rollout
+  file from same-day backups or older session archives.
+- When a live Codex state database contains rollout paths under a retired
+  `CODEX_HOME`, verify that those old-home paths either still exist or are
+  covered by a backup before saying resume state is protected.
+
 Prepare:
 
 1. Start from a clean candidate worktree based on the intended release branch.
@@ -183,18 +204,26 @@ Prepare:
    - validation commands and results
 7. Take an efficient restore-grade backup and mirror it to Desktop.
 8. Verify the backup archive, checksum/manifest, and latest pointer.
-9. Check active agents.
+9. Check active agents and Codex rollout availability:
+   - query the live VK database for `execution_processes.status = 'running'`
+   - join to `coding_agent_turns.agent_session_id` when present
+   - verify each active Codex thread's `rollout_path` exists
+   - query Codex threads updated today and verify their rollout files exist
+   - if any referenced rollout path is missing, restore it before restart or
+     report the exact gap as unresolved
 10. Stop and report: the only remaining action should be the approved restart
     or frontend symlink switch.
 
 At the restart window:
 
 1. Re-check active agents immediately before touching the service.
-2. If agents are active, report them and wait unless the operator explicitly
-   accepts interruption.
+2. If agents are active, report the exact inventory and wait unless the operator
+   explicitly accepts interruption for those listed runs.
 3. Install the already-built binary/assets.
 4. Restart only when backend code changed.
 5. Run post-restart smoke before saying the deploy worked.
+6. Re-run the Codex rollout availability check before saying agent resume state
+   is safe.
 
 This workflow exists so the operator can continue using VK while the candidate
 is built and validated, and downtime is limited to the final switch/restart.

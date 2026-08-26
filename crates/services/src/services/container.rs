@@ -170,6 +170,10 @@ pub trait ContainerService {
         false
     }
 
+    fn status_worktree_cleanup_enabled(&self) -> bool {
+        true
+    }
+
     fn workspace_to_current_dir(&self, workspace: &Workspace) -> PathBuf;
 
     async fn try_inject_follow_up(
@@ -734,6 +738,14 @@ pub trait ContainerService {
         &self,
         workspace_id: Uuid,
     ) -> Result<(), ContainerError> {
+        if !self.status_worktree_cleanup_enabled() {
+            tracing::info!(
+                "Status-triggered worktree cleanup is disabled for this VK instance; workspace {} remains pending",
+                workspace_id
+            );
+            return Ok(());
+        }
+
         let pool = &self.db().pool;
         let Some(workspace) = Workspace::find_by_id(pool, workspace_id).await? else {
             return Ok(());

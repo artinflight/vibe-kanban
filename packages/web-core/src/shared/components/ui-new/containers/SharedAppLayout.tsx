@@ -235,8 +235,11 @@ export function SharedAppLayout() {
       queryKey: ['project-workspaces', project.id],
       queryFn: () => projectsApi.listWorkspaces(project.id),
       enabled: isLocalAuthBypassed,
-      staleTime: 1000,
-      refetchInterval: 15000,
+      // Project/workspace links are structural. Polling every project every
+      // 15 seconds creates an expensive request and full-layout render fan-out.
+      staleTime: Infinity,
+      refetchInterval: false,
+      refetchOnWindowFocus: false,
     })),
   });
   const needsReviewWorkspaceIds = useMemo(

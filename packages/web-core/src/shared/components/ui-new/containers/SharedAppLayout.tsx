@@ -68,6 +68,26 @@ function getLocalProjectColor(projectId: string): string {
   return PASTEL_PROJECT_COLORS[hash];
 }
 
+function appBarProjectsEqual(
+  current: AppBarProject[],
+  next: AppBarProject[]
+): boolean {
+  return (
+    current.length === next.length &&
+    current.every((project, index) => {
+      const nextProject = next[index];
+      return (
+        project.id === nextProject.id &&
+        project.name === nextProject.name &&
+        project.color === nextProject.color &&
+        project.abbreviation === nextProject.abbreviation &&
+        project.archived === nextProject.archived &&
+        project.hasNeedsReview === nextProject.hasNeedsReview
+      );
+    })
+  );
+}
+
 function workspaceNeedsReview(workspace: {
   has_pending_approval?: boolean;
   has_unseen_turns?: boolean;
@@ -330,7 +350,9 @@ export function SharedAppLayout() {
     if (isSavingProjectOrder) {
       return;
     }
-    setOrderedProjects(appBarProjects);
+    setOrderedProjects((current) =>
+      appBarProjectsEqual(current, appBarProjects) ? current : appBarProjects
+    );
   }, [appBarProjects, isSavingProjectOrder]);
 
   // Navigate to the first ordered project when org changes

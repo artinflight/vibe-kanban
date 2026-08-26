@@ -2,24 +2,29 @@
 
 ## Stream Identifier
 
-- Branch: `vk/4a61-vk-filter-worksp`
-- Repo: `/home/mcp/code/worktrees/4a61-vk-filter-worksp/_vibe_kanban_repo`
+- Branch: `vk/e11c-vk-fix-archiving`
+- Repo: `/home/mcp/code/worktrees/e11c-vk-fix-archiving/_vibe_kanban_repo`
 - Working mode: isolated feature branch
 
 ## Objective
 
-- Restore project choices and project filtering in the local-only workspace sidebar.
+- Make linked workspace archival reliable when local issues enter `In Staging`
+  or `Done`, including deferred cleanup after active executions finish.
 
 ## In Scope
 
-- The local-only workspace sidebar project filter and its workspace-to-project mapping.
-- Focused frontend validation and continuity notes.
+- Terminal-status archive triggers for `In Staging` and `Done`
+- Active execution safety and completion-driven retry
+- Durable retry requests and visible cleanup failures
+- Worktree/source-history and attachment-cache safety
+- Isolated end-to-end validation and blue/green deployment
 
 ## Out of Scope
 
-- Backend changes.
-- Live deployment, frontend asset swaps, or service restarts.
-- Unrelated workspace sidebar behavior.
+- Blind deletion of non-terminal or unrelated worktrees
+- Removing attachment cache roots or unrelated uploads
+- Enabling broad age-based or orphan cleanup
+- Unrelated frontend or board changes
 
 ## Stream-Specific Decisions
 
@@ -50,8 +55,6 @@
 
 ## Relevant Files / Modules
 
-- `packages/web-core/src/shared/components/WYSIWYGEditor.tsx`
-- `packages/web-core/src/features/workspace-chat/ui/DisplayConversationEntry.tsx`
 - `packages/web-core/src/shared/providers/WorkspaceProvider.tsx`
 - `packages/web-core/src/shared/hooks/useWorkspaces.ts`
 - `crates/server/src/routes/workspaces/core.rs`
@@ -61,21 +64,6 @@
 - Issue/workspace PR display paths under `packages/web-core/src/features/kanban/` and fallback PR routes
 
 ## Current Status
-
-- 2026-08-04 compact standard-summary metadata prepared:
-  - assistant messages recognize the terminal standard summary metadata block
-    in both eight-field (`PR` through `Worktree`) and legacy nine-field
-    (`Version` appended) forms
-  - Lexical imports consecutive metadata lines into one paragraph with line
-    breaks; the renderer now detects that actual node shape
-  - recognized metadata renders below a full-width divider at the smallest
-    design-system text size, preserving one compact field per line; ordinary
-    markdown remains unchanged
-  - validation passed: `pnpm run format`,
-    `pnpm --filter @vibe/web-core run check`, `pnpm run lint`, and
-    `git diff --check`
-  - operator-facing frontend preview is running and Desktop-verified at
-    `https://vk-preview.local/`; no deployment was performed
 
 - 2026-06-26 multi-line rich clipboard paste hotfix live:
   - source `PasteMarkdownPlugin.tsx` now handles multiline `text/plain` before opting out for `text/html`

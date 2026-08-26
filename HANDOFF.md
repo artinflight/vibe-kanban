@@ -54,7 +54,58 @@
 - Script repair: `scripts/preview.sh` now invokes Vite without the extra CLI
   separator so `--host 0.0.0.0` takes effect, and runs HTTPS verification from
   the homelab route owner because MCP-to-proxy hairpin HTTPS is blocked.
+## 2026-08-26 Terminal Workspace Archive Fix Staged
 
+- Root cause: terminal-status handlers existed for both `In Staging` and `Done`,
+  but an archive skipped for a running non-development execution was not retried
+  when that execution finished. Cleanup errors were also swallowed and could
+  still mark a worktree deleted. Both deployed services used old binaries and
+  set `DISABLE_WORKTREE_CLEANUP=1`.
+- Source commits on `vk/e11c-vk-fix-archiving` add durable targeted cleanup
+  requests, retry on every non-development process completion, periodic
+  reconciliation independent of broad age cleanup, archive-script sequencing,
+  dirty-worktree and `/proc/*/cwd` process guards, and propagated cleanup
+  failures. `DISABLE_STATUS_WORKTREE_CLEANUP=1` makes a shared-storage standby
+  fully passive before reconciliation or archive scripts begin.
+- Verified release source: `e95cfdaadfb8af3f8e93243f850236195608a2d6`;
+  release binary sha256:
+  `35dca5347efbb622691afedfc517916167f9a259ed1bb035dfe9842a7e44ba9d`;
+  staged at
+  `/home/mcp/backups/vk-archive-fix-release-e95cfdaad-20260826T101700Z/server`.
+- Blue standby is running the verified binary from
+  `/home/mcp/.local/bin/vibe-kanban-serve-prod` with
+  `DISABLE_STATUS_WORKTREE_CLEANUP=1`. Its live migration has 69 pending
+  requests and no archive executions were created after the corrected startup.
+- Green's service definition now points to the verified staged release, but its
+  current process is still the 2026-07-14 binary. It was intentionally not
+  restarted because green VK executions were active, including the execution
+  performing this repair. Green remains the authoritative `vibe.local` backend;
+  restart it only after a fresh audit shows no active green execution rows or
+  `vk-exec-*` units.
+- The broad `DISABLE_WORKTREE_CLEANUP=1` setting is intentionally retained on
+  both instances. The new status-driven queue does not depend on it. Blue also
+  retains the standby-specific targeted-cleanup disable flag; green does not.
+- Isolated API end-to-end validation passed for `In Staging`, `Done`, a
+  non-terminal status, an active execution, an external process whose cwd was
+  the worktree, archive-script ordering, Git branch/history retention, and
+  attachment upload/read/delete. Attachment-cache counts, bytes, and digest
+  were unchanged. The release build, `pnpm run format`, `git diff --check`, and
+  `pnpm run ops:check` passed. Two narrow Cargo test attempts were blocked by
+  pre-existing feature/system-library build issues; a broader build was stopped
+  for disk pressure before the later clean release build succeeded.
+- Deployment churn: an intermediate blue build reached reconciliation before
+  its late standby guard and started 21 archive-script executions. All 21
+  failed, and the deletion guard prevented worktree removal. Blue was stopped,
+  the guard was moved to the start of reconciliation, and the corrected build
+  was deployed and verified with zero post-start archive executions.
+- Pre-deploy backup:
+  `/home/mcp/backups/vk-archive-fix-predeploy-20260826T093000Z.tar.gz`, mirrored
+  to `desktop:B:/vk-backups/`, sha256
+  `8041bec78af2ff8cc1f777f5584b60bad3b00895a1b791ba96f8121e8c1e9039`.
+- Remaining live acceptance: wait for a zero-agent green restart window,
+  restart `vibe-kanban-green.service`, confirm the running executable hash,
+  migration and reconciliation logs, run both terminal-status timing cases
+  against green, and repeat live attachment upload/read/delete.
 ## 2026-07-13 Staging Backfill Preview Updated
 
 - Preview branch: `vk/4e18-live-backfill-to-staging`

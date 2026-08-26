@@ -88,6 +88,52 @@ pub struct CreateWorkspace {
 }
 
 impl Workspace {
+    pub async fn request_worktree_cleanup(
+        pool: &SqlitePool,
+        workspace_id: Uuid,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "INSERT INTO workspace_cleanup_requests (workspace_id) VALUES (?) ON CONFLICT(workspace_id) DO NOTHING",
+        )
+        .bind(workspace_id)
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn clear_worktree_cleanup_request(
+        pool: &SqlitePool,
+        workspace_id: Uuid,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM workspace_cleanup_requests WHERE workspace_id = ?")
+            .bind(workspace_id)
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn has_worktree_cleanup_request(
+        pool: &SqlitePool,
+        workspace_id: Uuid,
+    ) -> Result<bool, sqlx::Error> {
+        sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM workspace_cleanup_requests WHERE workspace_id = ?)",
+        )
+        .bind(workspace_id)
+        .fetch_one(pool)
+        .await
+    }
+
+    pub async fn find_worktree_cleanup_requests(
+        pool: &SqlitePool,
+    ) -> Result<Vec<Uuid>, sqlx::Error> {
+        sqlx::query_scalar(
+            "SELECT workspace_id FROM workspace_cleanup_requests ORDER BY requested_at",
+        )
+        .fetch_all(pool)
+        .await
+    }
+
     /// Fetch all workspaces. Newest first.
     pub async fn fetch_all(pool: &SqlitePool) -> Result<Vec<Self>, WorkspaceError> {
         let workspaces = sqlx::query_as!(

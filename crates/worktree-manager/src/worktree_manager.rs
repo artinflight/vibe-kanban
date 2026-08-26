@@ -574,14 +574,22 @@ impl WorktreeManager {
 
     /// Clean up multiple worktrees
     pub async fn batch_cleanup_worktrees(data: &[WorktreeCleanup]) -> Result<(), WorktreeError> {
+        let mut first_error = None;
         for cleanup_data in data {
             tracing::debug!("Cleaning up worktree: {:?}", cleanup_data.worktree_path);
 
             if let Err(e) = Self::cleanup_worktree(cleanup_data).await {
                 tracing::error!("Failed to cleanup worktree: {}", e);
+                if first_error.is_none() {
+                    first_error = Some(e);
+                }
             }
         }
-        Ok(())
+
+        match first_error {
+            Some(error) => Err(error),
+            None => Ok(()),
+        }
     }
 
     /// Clean up a worktree path and its git metadata (non-blocking)
@@ -807,4 +815,24 @@ async fn ensure_worktree_rejects_unmanaged_existing_checkout_for_branch() {
     );
     assert!(old_worktree_path.join(".git").is_file());
     assert!(!desired_worktree_path.exists());
+}
+
+#[tokio::test]
+async fn batch_cleanup_reports_failures_instead_of_hiding_them() {
+    use tempfile::TempDir;
+
+    let td = TempDir::new().unwrap();
+    let invalid_worktree_path = td.path().join("not-a-directory");
+    tokio::fs::write(&invalid_worktree_path, b"keep me")
+        .await
+        .unwrap();
+
+    let result = WorktreeManager::batch_cleanup_worktrees(&[WorktreeCleanup::new(
+        invalid_worktree_path.clone(),
+        None,
+    )])
+    .await;
+
+    assert!(result.is_err());
+    assert!(invalid_worktree_path.exists());
 }

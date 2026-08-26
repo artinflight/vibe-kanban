@@ -1290,6 +1290,8 @@ async fn archive_linked_workspaces_for_completed_issue(
     let workspaces = find_linked_workspaces_for_task(deployment, issue_id).await?;
 
     for workspace in workspaces {
+        Workspace::request_worktree_cleanup(&deployment.db().pool, workspace.id).await?;
+
         if !workspace.archived
             && let Err(e) = deployment.container().archive_workspace(workspace.id).await
         {
@@ -1318,6 +1320,16 @@ async fn archive_linked_workspaces_for_completed_issue(
         }
     }
 
+    Ok(())
+}
+
+async fn cancel_linked_workspace_cleanup_for_non_terminal_issue(
+    deployment: &DeploymentImpl,
+    issue_id: Uuid,
+) -> Result<(), ApiError> {
+    for workspace in find_linked_workspaces_for_task(deployment, issue_id).await? {
+        Workspace::clear_worktree_cleanup_request(&deployment.db().pool, workspace.id).await?;
+    }
     Ok(())
 }
 
@@ -1989,6 +2001,8 @@ async fn update_issue(
     if entered_in_staging || entered_done {
         snapshot_issue_pr_metadata_before_cleanup(&deployment, issue_id).await?;
         archive_linked_workspaces_for_completed_issue(&deployment, issue_id, &status_name).await?;
+    } else if !is_in_staging_status(&status_name) && !is_done_status(&status_name) {
+        cancel_linked_workspace_cleanup_for_non_terminal_issue(&deployment, issue_id).await?;
     }
 
     Ok(ResponseJson(MutationTxidResponse {
@@ -2059,6 +2073,8 @@ async fn bulk_update_issues(
             snapshot_issue_pr_metadata_before_cleanup(&deployment, update.id).await?;
             archive_linked_workspaces_for_completed_issue(&deployment, update.id, &status_name)
                 .await?;
+        } else if !is_in_staging_status(&status_name) && !is_done_status(&status_name) {
+            cancel_linked_workspace_cleanup_for_non_terminal_issue(&deployment, update.id).await?;
         }
     }
 

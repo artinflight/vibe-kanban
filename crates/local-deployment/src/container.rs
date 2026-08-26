@@ -370,6 +370,11 @@ impl LocalContainerService {
     }
 
     async fn reconcile_requested_workspace_cleanups(&self) {
+        if !self.status_worktree_cleanup_enabled() {
+            tracing::info!("Status-triggered worktree cleanup is disabled for this VK instance");
+            return;
+        }
+
         let workspace_ids = match Workspace::find_worktree_cleanup_requests(&self.db.pool).await {
             Ok(workspace_ids) => workspace_ids,
             Err(error) => {

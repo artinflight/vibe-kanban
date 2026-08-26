@@ -799,6 +799,10 @@ pub trait ContainerService {
         workspace_id: Uuid,
         completed_run_reason: &ExecutionProcessRunReason,
     ) -> Result<(), ContainerError> {
+        if !self.status_worktree_cleanup_enabled() {
+            return Ok(());
+        }
+
         let pool = &self.db().pool;
         let Some(workspace) = Workspace::find_by_id(pool, workspace_id).await? else {
             return Ok(());

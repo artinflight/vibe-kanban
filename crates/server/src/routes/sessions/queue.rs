@@ -26,8 +26,8 @@ struct QueueMessageRequest {
     pub executor_config: ExecutorConfig,
 }
 
-/// Send a follow-up message to the active agent, or queue it for the next run
-/// when active injection is not available.
+/// Steer the active agent, or queue the message for the next run when steering
+/// is not available.
 async fn queue_message(
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
@@ -51,12 +51,12 @@ async fn queue_message(
 
     if deployment
         .container()
-        .try_inject_follow_up(&session, &data)
+        .try_steer_active_turn(&session, &data)
         .await?
     {
         deployment
             .track_if_analytics_allowed(
-                "follow_up_injected",
+                "active_turn_steered",
                 serde_json::json!({
                     "session_id": session.id.to_string(),
                     "workspace_id": session.workspace_id.to_string(),

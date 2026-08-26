@@ -25,6 +25,18 @@
   - the source correction makes create mode prefer profile overrides before
     stale scratch/last-used values while preserving an explicit current-form
     selection and leaving existing-session precedence unchanged
+- 2026-08-26 active-turn steering is prepared for integration into `staging`:
+  - Codex corrections use app-server `turn/steer` with the current thread ID
+    and required active turn ID, preserving the active turn instead of
+    interrupting it and starting duplicate work
+  - the working composer exposes separate `Send correction` and `Stop agent`
+    controls; stop retains full execution cancellation
+  - source validation passed for the executor/server path, targeted steer
+    request regression coverage, UI and web-core typechecks, formatting, and
+    diff checks
+  - this changes both backend and frontend; activation requires a matching
+    frontend build plus backend binary deployment and an approved VK restart
+  - no live deploy, frontend asset swap, or service restart has occurred
 - 2026-07-14 Codex default is live without a service restart:
   - PR `#65` merged into `staging` as `108a1f377`
   - the live profile was updated through `PUT /api/profiles` to use

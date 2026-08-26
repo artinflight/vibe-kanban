@@ -2852,3 +2852,6 @@ User QA checklist for the no-restart frontend repair:
   queued follow-up fallback remains in effect.
 - This is a backend and frontend source change. It is not deployed and no live
   service restart or frontend asset swap has been performed.
+- 2026-08-26 integration direction: rebase this feature onto the latest
+  `fork/staging` and land it in `staging` so the coordinated backend/frontend
+  release is included in the next approved restart package.

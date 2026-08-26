@@ -64,6 +64,14 @@
 
 ## Current Status
 
+- 2026-08-26 ready for `staging` integration:
+  - implementation is committed on `vk/fada-vk-turn-steer-ag`
+  - corrections target the active Codex turn through `turn/steer`; stopping
+    remains a separate execution-cancellation action
+  - deployment is not frontend-only: the next release must include the matching
+    frontend assets and backend binary, followed by an approved service restart
+  - no live deploy, frontend pointer change, or restart has been performed
+
 - 2026-06-26 multi-line rich clipboard paste hotfix live:
   - source `PasteMarkdownPlugin.tsx` now handles multiline `text/plain` before opting out for `text/html`
   - live frontend release is `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260626Tmultiline-rich-paste`, asset `/assets/index-DXMultilinePaste.js`

@@ -278,40 +278,42 @@ impl LocalContainerService {
         map.remove(id)
     }
 
-    async fn cleanup_workspace(&self, workspace: &Workspace) {
+    async fn cleanup_workspace(&self, workspace: &Workspace) -> Result<(), ContainerError> {
         let Some(container_ref) = &workspace.container_ref else {
-            let _ = Workspace::mark_worktree_deleted(&self.db.pool, workspace.id).await;
-            return;
+            Workspace::mark_worktree_deleted(&self.db.pool, workspace.id).await?;
+            return Ok(());
         };
         let workspace_dir = PathBuf::from(container_ref);
 
-        let repositories = WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id)
-            .await
-            .unwrap_or_default();
+        let repositories =
+            WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id).await?;
 
         if repositories.is_empty() {
             tracing::warn!(
                 "No repositories found for workspace {}, cleaning up workspace directory only",
                 workspace.id
             );
-            if workspace_dir.exists()
-                && let Err(e) = tokio::fs::remove_dir_all(&workspace_dir).await
-            {
-                tracing::warn!("Failed to remove workspace directory: {}", e);
+            if workspace_dir.exists() {
+                tokio::fs::remove_dir_all(&workspace_dir)
+                    .await
+                    .map_err(|e| {
+                        tracing::error!(
+                            "Failed to remove workspace directory {} for workspace {}: {}",
+                            workspace_dir.display(),
+                            workspace.id,
+                            e
+                        );
+                        e
+                    })?;
             }
         } else {
             WorkspaceManager::cleanup_workspace(&workspace_dir, &repositories)
                 .await
-                .unwrap_or_else(|e| {
-                    tracing::warn!(
-                        "Failed to clean up workspace for workspace {}: {}",
-                        workspace.id,
-                        e
-                    );
-                });
+                .map_err(|error| ContainerError::Other(anyhow!(error)))?;
         }
 
-        let _ = Workspace::mark_worktree_deleted(&self.db.pool, workspace.id).await;
+        Workspace::mark_worktree_deleted(&self.db.pool, workspace.id).await?;
+        Ok(())
     }
 
     async fn cleanup_expired_workspaces(&self) -> Result<(), DeploymentError> {
@@ -332,9 +334,41 @@ impl LocalContainerService {
             expired_workspaces.len()
         );
         for workspace in &expired_workspaces {
-            self.cleanup_workspace(workspace).await;
+            if let Err(error) = self.cleanup_workspace(workspace).await {
+                tracing::error!(
+                    "Failed to clean up expired workspace {}; it remains eligible for retry: {}",
+                    workspace.id,
+                    error
+                );
+            }
         }
         Ok(())
+    }
+
+    async fn reconcile_requested_workspace_cleanups(&self) {
+        let workspace_ids = match Workspace::find_worktree_cleanup_requests(&self.db.pool).await {
+            Ok(workspace_ids) => workspace_ids,
+            Err(error) => {
+                tracing::error!("Failed to list requested workspace cleanups: {}", error);
+                return;
+            }
+        };
+
+        for workspace_id in workspace_ids {
+            if let Err(error) = self
+                .retry_archived_workspace_cleanup_after_execution(
+                    workspace_id,
+                    &ExecutionProcessRunReason::CleanupScript,
+                )
+                .await
+            {
+                tracing::error!(
+                    "Failed to reconcile requested cleanup for workspace {}: {}",
+                    workspace_id,
+                    error
+                );
+            }
+        }
     }
 
     fn spawn_workspace_cleanup(&self) {
@@ -350,6 +384,7 @@ impl LocalContainerService {
             loop {
                 cleanup_interval.tick().await;
                 tracing::info!("Starting periodic workspace cleanup...");
+                container.reconcile_requested_workspace_cleanups().await;
                 container
                     .cleanup_expired_workspaces()
                     .await
@@ -747,15 +782,19 @@ impl LocalContainerService {
                     }
                 }
 
-                if matches!(
+                if !matches!(
                     ctx.execution_process.run_reason,
-                    ExecutionProcessRunReason::ArchiveScript
+                    ExecutionProcessRunReason::DevServer
                 ) && let Err(e) = container
-                    .maybe_delete_archived_worktree_if_safe(ctx.workspace.id)
+                    .retry_archived_workspace_cleanup_after_execution(
+                        ctx.workspace.id,
+                        &ctx.execution_process.run_reason,
+                    )
                     .await
                 {
                     tracing::error!(
-                        "Failed to delete archived worktree after archive script for workspace {}: {}",
+                        "Failed to resume archived workspace cleanup after {:?} execution for workspace {}: {}",
+                        ctx.execution_process.run_reason,
                         ctx.workspace.id,
                         e
                     );
@@ -1555,13 +1594,11 @@ impl ContainerService for LocalContainerService {
 
     async fn delete(&self, workspace: &Workspace) -> Result<(), ContainerError> {
         self.try_stop(workspace, true).await;
-        self.cleanup_workspace(workspace).await;
-        Ok(())
+        self.cleanup_workspace(workspace).await
     }
 
     async fn delete_worktree(&self, workspace: &Workspace) -> Result<(), ContainerError> {
-        self.cleanup_workspace(workspace).await;
-        Ok(())
+        self.cleanup_workspace(workspace).await
     }
 
     async fn ensure_container_exists(

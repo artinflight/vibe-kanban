@@ -71,6 +71,13 @@ const IMMEDIATE_PR_MERGE_CLEANUP_TARGET_BRANCH: &str = "staging";
 const HISTORICAL_REPLAY_HISTORY_BYTES: usize = 4 * 1024 * 1024;
 const HISTORICAL_REPLAY_CHANNEL_CAPACITY: usize = 1024;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ArchiveScriptStartOutcome {
+    Started,
+    NotConfigured,
+    Deferred,
+}
+
 struct CancelOnDropStream {
     inner: BoxStream<'static, Result<LogMsg, std::io::Error>>,
     cancel_tx: Option<oneshot::Sender<()>>,
@@ -618,8 +625,10 @@ pub trait ContainerService {
     }
 
     /// Attempts to run the archive script for a workspace if configured.
-    /// Silently returns Ok if no archive script is configured or if conditions aren't met.
-    async fn try_run_archive_script(&self, workspace_id: Uuid) -> Result<(), ContainerError> {
+    async fn try_run_archive_script(
+        &self,
+        workspace_id: Uuid,
+    ) -> Result<ArchiveScriptStartOutcome, ContainerError> {
         let pool = &self.db().pool;
         let workspace = Workspace::find_by_id(pool, workspace_id)
             .await?
@@ -628,14 +637,27 @@ pub trait ContainerService {
             .await
             .unwrap_or(true)
         {
-            return Ok(());
+            tracing::info!(
+                "Deferring archive script for workspace {} while a non-development execution is running",
+                workspace.id
+            );
+            return Ok(ArchiveScriptStartOutcome::Deferred);
         }
-        if self.ensure_container_exists(&workspace).await.is_err() {
-            return Ok(());
-        }
+        self.ensure_container_exists(&workspace).await.map_err(|error| {
+            tracing::error!(
+                "Could not ensure workspace {} exists before running its archive script; cleanup remains pending: {}",
+                workspace.id,
+                error
+            );
+            error
+        })?;
         let repos = WorkspaceRepo::find_repos_for_workspace(pool, workspace.id).await?;
         let Some(action) = self.archive_actions_for_repos(&repos) else {
-            return Ok(());
+            tracing::debug!(
+                "No repository archive script is configured for workspace {}",
+                workspace.id
+            );
+            return Ok(ArchiveScriptStartOutcome::NotConfigured);
         };
         let session = match Session::find_latest_by_workspace_id(pool, workspace.id).await? {
             Some(s) => s,
@@ -660,7 +682,9 @@ pub trait ContainerService {
         )
         .await?;
 
-        Ok(())
+        tracing::info!("Started archive script for workspace {}", workspace.id);
+
+        Ok(ArchiveScriptStartOutcome::Started)
     }
 
     /// Archive a workspace: set archived flag, stop running dev servers, and run archive script.
@@ -719,10 +743,99 @@ pub trait ContainerService {
             .await
             .unwrap_or(true)
         {
+            tracing::info!(
+                "Deferring archived worktree cleanup for workspace {} while a non-development execution is running",
+                workspace.id
+            );
             return Ok(());
         }
 
-        self.delete(&workspace).await
+        if !self.is_container_clean(&workspace).await? {
+            tracing::error!(
+                "Refusing to remove archived worktree for workspace {} because it contains uncommitted or untracked files; cleanup remains pending",
+                workspace.id
+            );
+            return Ok(());
+        }
+
+        self.delete(&workspace).await?;
+        Workspace::clear_worktree_cleanup_request(pool, workspace.id).await?;
+        tracing::info!(
+            "Successfully removed archived worktree for workspace {}",
+            workspace.id
+        );
+        Ok(())
+    }
+
+    /// Reconsider an archived workspace after an execution finishes. Status-triggered
+    /// archival can be deferred while an agent or script is active, so the final
+    /// relevant process must resume the archive-script-and-delete lifecycle.
+    async fn retry_archived_workspace_cleanup_after_execution(
+        &self,
+        workspace_id: Uuid,
+        completed_run_reason: &ExecutionProcessRunReason,
+    ) -> Result<(), ContainerError> {
+        let pool = &self.db().pool;
+        let Some(workspace) = Workspace::find_by_id(pool, workspace_id).await? else {
+            return Ok(());
+        };
+
+        if !Workspace::has_worktree_cleanup_request(pool, workspace.id).await? {
+            return Ok(());
+        }
+
+        if !workspace.archived || workspace.worktree_deleted {
+            return Ok(());
+        }
+
+        if ExecutionProcess::has_running_non_dev_server_processes_for_workspace(pool, workspace.id)
+            .await
+            .unwrap_or(true)
+        {
+            tracing::info!(
+                "Archived workspace {} remains active after {:?} completion; cleanup will be retried by the final execution",
+                workspace.id,
+                completed_run_reason
+            );
+            return Ok(());
+        }
+
+        let repos = WorkspaceRepo::find_repos_for_workspace(pool, workspace.id).await?;
+        if self.archive_actions_for_repos(&repos).is_some() {
+            let latest_archive = ExecutionProcess::find_latest_by_workspace_and_run_reason(
+                pool,
+                workspace.id,
+                &ExecutionProcessRunReason::ArchiveScript,
+            )
+            .await?;
+            let archive_succeeded = latest_archive.as_ref().is_some_and(|process| {
+                process.status == ExecutionProcessStatus::Completed
+                    && process.created_at >= workspace.updated_at
+            });
+
+            if !archive_succeeded {
+                if matches!(
+                    completed_run_reason,
+                    ExecutionProcessRunReason::ArchiveScript
+                ) {
+                    tracing::error!(
+                        "Archive script did not complete successfully for workspace {}; worktree cleanup remains pending for periodic retry",
+                        workspace.id
+                    );
+                    return Ok(());
+                }
+                if matches!(
+                    self.try_run_archive_script(workspace.id).await?,
+                    ArchiveScriptStartOutcome::Deferred
+                ) {
+                    return Ok(());
+                }
+                return Ok(());
+            }
+        }
+
+        self.maybe_delete_archived_worktree_if_safe(workspace.id)
+            .await
     }
 
     /// Delete the workspace worktree immediately when a merged PR into `staging`

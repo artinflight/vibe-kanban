@@ -633,9 +633,10 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     refreshQueueStatus,
   ]);
 
-  // Queue message handler
+  // Correction handler. The server steers active Codex turns when possible;
+  // otherwise it falls back to queueing for the next run.
   const handleQueueMessage = useCallback(async () => {
-    // Allow queueing if there's a message OR review comments, and we have a config
+    // Allow correction/queue if there's a message OR review comments, and we have a config
     if ((!localMessage.trim() && !reviewMarkdown) || !executorConfig) return;
 
     const { prompt } = buildAgentPrompt(localMessage, [reviewMarkdown]);

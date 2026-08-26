@@ -19,7 +19,7 @@ interface UseSessionQueueInteractionResult {
   queuedCount: number;
   /** Whether a queue operation is in progress */
   isQueueLoading: boolean;
-  /** Queue a message for later execution */
+  /** Steer the active agent, or queue the message when active steering is unavailable */
   queueMessage: (
     message: string,
     executorConfig: ExecutorConfig
@@ -34,7 +34,9 @@ export const QUEUE_STATUS_KEY = 'queue-status';
 const QUEUED_STATUS_REFRESH_MS = 3000;
 
 /**
- * Hook to manage queue interaction for session messages.
+ * Hook to manage follow-up queue interaction for session messages.
+ * The server steers active Codex turns when possible and otherwise falls back
+ * to a queued follow-up.
  * Uses TanStack Query for caching and mutation handling.
  */
 export function useSessionQueueInteraction({

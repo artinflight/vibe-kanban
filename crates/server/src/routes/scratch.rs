@@ -112,12 +112,6 @@ fn merge_ui_preferences_payload(
         data.saved_chat_messages = existing_data.saved_chat_messages.clone();
     }
 
-    if !existing_data.local_project_customizations.is_empty()
-        && data.local_project_customizations.is_empty()
-    {
-        data.local_project_customizations = existing_data.local_project_customizations.clone();
-    }
-
     UpdateScratch {
         payload: ScratchPayload::UiPreferences(data),
     }

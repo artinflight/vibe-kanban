@@ -38,6 +38,35 @@ type UiPreferencesScratchData = UiPreferencesData & {
 // This is a deterministic UUID v5 generated from the namespace "ui-preferences"
 // Using a fixed UUID ensures all users/sessions share the same preferences record
 const UI_PREFERENCES_ID = '00000000-0000-0000-0000-000000000001';
+const SAVED_CHAT_MESSAGES_FALLBACK_URL = '/vk-saved-chat-messages.json';
+
+async function loadSavedChatMessagesFallback(): Promise<SavedChatMessage[]> {
+  try {
+    const response = await fetch(SAVED_CHAT_MESSAGES_FALLBACK_URL, {
+      cache: 'no-store',
+    });
+    if (!response.ok) return [];
+
+    const messages = await response.json();
+    if (!Array.isArray(messages)) return [];
+
+    return messages
+      .filter(
+        (message): message is SavedChatMessage =>
+          typeof message?.id === 'string' &&
+          typeof message.title === 'string' &&
+          typeof message.content === 'string'
+      )
+      .map((message) => ({
+        id: message.id,
+        title: message.title.trim(),
+        content: message.content,
+      }))
+      .filter((message) => message.title && message.content.trim());
+  } catch {
+    return [];
+  }
+}
 
 /**
  * Converts store state to scratch data format (camelCase to snake_case)
@@ -339,41 +368,46 @@ export function useUiPreferencesScratch() {
 
     if (scratchData) {
       hasInitializedRef.current = true;
-      // Server has data - apply it to store
       isApplyingServerDataRef.current = true;
       lastSavedPayloadRef.current = JSON.stringify(scratchData);
-      const serverState = scratchDataToStore(scratchData);
 
-      // Merge server state into the store
-      useUiPreferencesStore.setState({
-        repoActions: serverState.repoActions,
-        expanded: serverState.expanded,
-        contextBarPosition: serverState.contextBarPosition,
-        paneSizes: serverState.paneSizes,
-        collapsedPaths: serverState.collapsedPaths,
-        fileSearchRepoId: serverState.fileSearchRepoId,
-        isLeftSidebarVisible: serverState.isLeftSidebarVisible,
-        isRightSidebarVisible: serverState.isRightSidebarVisible,
-        isTerminalVisible: serverState.isTerminalVisible,
-        workspacePanelStates: serverState.workspacePanelStates,
-        workspaceFilters: serverState.workspaceFilters,
-        workspaceSort: serverState.workspaceSort,
-        selectedOrgId: serverState.selectedOrgId,
-        selectedProjectId: serverState.selectedProjectId,
-        localProjectOrder: serverState.localProjectOrder,
-        localProjectCustomizations: serverState.localProjectCustomizations,
-        createDraftWorkspaceByDefault:
-          serverState.createDraftWorkspaceByDefault,
-        showLeftColumnLinks: serverState.showLeftColumnLinks,
-        savedChatMessages: serverState.savedChatMessages,
-        kanbanProjectViewSelections: serverState.kanbanProjectViewSelections,
-        kanbanProjectViewPreferences: serverState.kanbanProjectViewPreferences,
-      });
+      void (async () => {
+        const serverState = scratchDataToStore(scratchData);
+        const savedChatMessages =
+          serverState.savedChatMessages.length > 0
+            ? serverState.savedChatMessages
+            : await loadSavedChatMessagesFallback();
 
-      // Allow a brief delay for state to settle
-      setTimeout(() => {
-        isApplyingServerDataRef.current = false;
-      }, 100);
+        useUiPreferencesStore.setState({
+          repoActions: serverState.repoActions,
+          expanded: serverState.expanded,
+          contextBarPosition: serverState.contextBarPosition,
+          paneSizes: serverState.paneSizes,
+          collapsedPaths: serverState.collapsedPaths,
+          fileSearchRepoId: serverState.fileSearchRepoId,
+          isLeftSidebarVisible: serverState.isLeftSidebarVisible,
+          isRightSidebarVisible: serverState.isRightSidebarVisible,
+          isTerminalVisible: serverState.isTerminalVisible,
+          workspacePanelStates: serverState.workspacePanelStates,
+          workspaceFilters: serverState.workspaceFilters,
+          workspaceSort: serverState.workspaceSort,
+          selectedOrgId: serverState.selectedOrgId,
+          selectedProjectId: serverState.selectedProjectId,
+          localProjectOrder: serverState.localProjectOrder,
+          localProjectCustomizations: serverState.localProjectCustomizations,
+          createDraftWorkspaceByDefault:
+            serverState.createDraftWorkspaceByDefault,
+          showLeftColumnLinks: serverState.showLeftColumnLinks,
+          savedChatMessages,
+          kanbanProjectViewSelections: serverState.kanbanProjectViewSelections,
+          kanbanProjectViewPreferences:
+            serverState.kanbanProjectViewPreferences,
+        });
+
+        setTimeout(() => {
+          isApplyingServerDataRef.current = false;
+        }, 100);
+      })();
     }
   }, [isLoading, isConnected, scratchData]);
 

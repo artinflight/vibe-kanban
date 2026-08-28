@@ -2814,6 +2814,24 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
+- 2026-08-28 `vk/3d01-vk-hide-issue-ti` is rebased onto `fork/staging` at
+  `b73276dc4` and ready for validation/PR/deployment.
+- Scope is frontend-only: active linked workspace cards replace redundant issue
+  titles on Kanban cards while retaining title fallback for hidden/archived
+  workspaces.
+- Navigation contract: the workspace surface opens the workspace, the rest of
+  the Kanban card opens the issue flyout, and workspace cards in the flyout open
+  the workspace.
+- Deployment must target the sole live green backend on port `4511`, whose
+  current fixed frontend path is
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260826Tstaging-main-fc312a073`.
+- No backend restart is required or authorized for this frontend-only release.
+- Pre-PR validation passed: `pnpm run format`, `pnpm run ops:check`, all
+  frontend stages of `pnpm run check`, focused local-web/UI lint, and
+  `git diff --check`. The aggregate Rust check stopped on the host because
+  `glib-2.0.pc` is not installed; PR CI must supply the authoritative Rust
+  baseline even though no Rust code changed.
+
 - Compact standard-summary metadata merged through PR `#71` at staging commit
   `d2562a618fbb2d28f3748f4bad1ecb867b17c7e2`.
 - Browser notification/service-worker preservation merged through PR `#72` at

@@ -10,6 +10,38 @@
 - Enabled green for boot and changed `vibe-local-https-proxy.service` to want and start after green instead of production.
 - Final operational verification found only green listening among the VK backend ports; `vibe.local` returned green's configuration and active green executions remained running.
 
+## 2026-08-28 Restart Lessons
+
+- Branch: `vk/4e18-vk-staging-check`
+- Worktree:
+  `/home/mcp/code/worktrees/4e18-vk-staging-check/_vibe_kanban_repo`
+- Current focus: document the 2026-08 VK restart incident lessons so future
+  restart agents do not repeat the same failures.
+- Live VK truth as of this note:
+  - active service: `vibe-kanban-green.service`
+  - active ports: `4511` backend, `4512` preview proxy
+  - active DB:
+    `/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite`
+  - active Codex home: `/home/mcp/.local/share/vibe-kanban-green-codex-home`
+  - retired blue service/path: `vibe-kanban.service` / `4311` /
+    `/home/mcp/.local/share/vibe-kanban`
+- Documented hard lessons:
+  - discover live instance lineage before backing up or restarting
+  - green backups do not automatically cover retired blue `4311`
+  - verify board "In Staging" items are pushed and reachable from the candidate
+  - verify active agents and Codex rollout files before restart
+  - verify saved messages through SQLite, REST scratch, WebSocket scratch, and
+    browser UI
+  - never overwrite the active frontend release directory with an unproven
+    whole-dist build
+  - preserve and move stale worktree-path obstructions instead of deleting
+    possibly dirty work
+- Live saved-message note: the current green frontend has a live
+  `index.html` shim plus `/vk-saved-chat-messages.json` sidecar because the
+  running backend strips `saved_chat_messages` from `UI_PREFERENCES`
+  serialization. A future full frontend/backend release must include the source
+  fix before removing this hotfix.
+
 ## 2026-08-04 Compact Summary Metadata Preview
 
 - Preview status: running and verified from the Desktop/operator machine.

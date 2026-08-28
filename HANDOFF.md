@@ -2814,6 +2814,11 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
+- 2026-08-28 compact Kanban metadata follow-up prepared on top of deployed
+  workspace-first cards: tags, priority/urgency, review flag, assignee, and
+  more-actions controls now share the issue-ID row; the redundant metadata row
+  below the workspace is removed.
+
 - 2026-08-28 workspace-first Kanban cards merged and deployed:
   - PR `#83` rebase-merged into `staging` at `aa13835a9`
   - clean merged-staging frontend build is stored at

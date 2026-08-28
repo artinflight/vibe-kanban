@@ -208,10 +208,19 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
       {tagsDisplay}
     </button>
   );
+  const tagControl = tagEditProps
+    ? (tagEditProps.renderTagEditor?.({
+        allTags: tagEditProps.allTags,
+        selectedTagIds: tagEditProps.selectedTagIds,
+        onTagToggle: tagEditProps.onTagToggle,
+        onCreateTag: tagEditProps.onCreateTag,
+        trigger: tagEditorTrigger,
+      }) ?? tagEditorTrigger)
+    : tagsDisplay;
 
   return (
     <div className={cn('flex flex-col gap-half min-w-0', className)}>
-      {/* Row 1: Task ID + sub-issue indicator + loading dots + more actions */}
+      {/* Row 1: Task ID + compact issue controls */}
       <div className="flex items-center justify-between gap-half">
         <div className="flex items-center gap-half min-w-0">
           {isSubIssue && (
@@ -224,27 +233,89 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
           </span>
           {isLoading && <RunningDots />}
         </div>
-        {onMoreActionsClick && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onMoreActionsClick();
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className={cn(
-              'p-half -m-half rounded-sm text-low hover:text-normal hover:bg-secondary shrink-0',
-              isMobile
-                ? ''
-                : 'invisible opacity-0 group-hover:visible group-hover:opacity-100',
-              'transition-[opacity,color,background-color]'
-            )}
-            aria-label="More actions"
-            title="More actions"
-          >
-            <DotsThreeIcon className="size-icon-xs" weight="bold" />
-          </button>
-        )}
+        <div className="flex min-w-0 items-center justify-end gap-half">
+          {(tags.length > 0 || tagEditProps) && (
+            <div className="flex min-w-0 items-center gap-half overflow-hidden">
+              {tagControl}
+            </div>
+          )}
+          {onPriorityClick ? (
+            <button
+              type="button"
+              onClick={onPriorityClick}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="flex shrink-0 cursor-pointer items-center rounded-sm transition-colors hover:bg-secondary"
+            >
+              <PriorityIcon priority={priority} />
+              {!priority && (
+                <CircleDashedIcon
+                  className="size-icon-xs text-low"
+                  weight="bold"
+                />
+              )}
+            </button>
+          ) : (
+            <PriorityIcon priority={priority} />
+          )}
+          {onNeedsReviewFlagToggle && (
+            <button
+              type="button"
+              onClick={onNeedsReviewFlagToggle}
+              onMouseDown={(e) => e.stopPropagation()}
+              className={cn(
+                'shrink-0 rounded-sm p-half transition-colors hover:bg-secondary',
+                needsReviewFlag
+                  ? 'text-warning hover:text-warning'
+                  : 'text-low hover:text-normal'
+              )}
+              aria-pressed={needsReviewFlag}
+              aria-label={
+                needsReviewFlag ? 'Clear needs review' : 'Mark needs review'
+              }
+              title={
+                needsReviewFlag ? 'Clear needs review' : 'Mark needs review'
+              }
+            >
+              <FlagIcon
+                className="size-icon-xs"
+                weight={needsReviewFlag ? 'fill' : 'regular'}
+              />
+            </button>
+          )}
+          {onAssigneeClick ? (
+            <button
+              type="button"
+              onClick={onAssigneeClick}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="shrink-0 cursor-pointer rounded-sm transition-colors hover:bg-secondary"
+            >
+              <KanbanAssignee assignees={assignees} />
+            </button>
+          ) : (
+            <KanbanAssignee assignees={assignees} />
+          )}
+          {onMoreActionsClick && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoreActionsClick();
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className={cn(
+                'shrink-0 rounded-sm p-half -m-half text-low hover:text-normal hover:bg-secondary',
+                isMobile
+                  ? ''
+                  : 'invisible opacity-0 group-hover:visible group-hover:opacity-100',
+                'transition-[opacity,color,background-color]'
+              )}
+              aria-label="More actions"
+              title="More actions"
+            >
+              <DotsThreeIcon className="size-icon-xs" weight="bold" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Row 2: Visible workspace content, or the issue title as a fallback. */}
@@ -295,91 +366,9 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
         </p>
       )}
 
-      {/* Row 4: Priority + Assignee */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-half min-w-0">
-          {onPriorityClick ? (
-            <button
-              type="button"
-              onClick={onPriorityClick}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="flex items-center cursor-pointer hover:bg-secondary rounded-sm transition-colors"
-            >
-              <PriorityIcon priority={priority} />
-              {!priority && (
-                <CircleDashedIcon
-                  className="size-icon-xs text-low"
-                  weight="bold"
-                />
-              )}
-            </button>
-          ) : (
-            <PriorityIcon priority={priority} />
-          )}
-          {onNeedsReviewFlagToggle && (
-            <button
-              type="button"
-              onClick={onNeedsReviewFlagToggle}
-              onMouseDown={(e) => e.stopPropagation()}
-              className={cn(
-                'rounded-sm p-half transition-colors hover:bg-secondary',
-                needsReviewFlag
-                  ? 'text-warning hover:text-warning'
-                  : 'text-low hover:text-normal'
-              )}
-              aria-pressed={needsReviewFlag}
-              aria-label={
-                needsReviewFlag ? 'Clear needs review' : 'Mark needs review'
-              }
-              title={
-                needsReviewFlag ? 'Clear needs review' : 'Mark needs review'
-              }
-            >
-              <FlagIcon
-                className="size-icon-xs"
-                weight={needsReviewFlag ? 'fill' : 'regular'}
-              />
-            </button>
-          )}
-        </div>
-        {onAssigneeClick ? (
-          <button
-            type="button"
-            onClick={onAssigneeClick}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="cursor-pointer hover:bg-secondary rounded-sm transition-colors"
-          >
-            <KanbanAssignee assignees={assignees} />
-          </button>
-        ) : (
-          <KanbanAssignee assignees={assignees} />
-        )}
-      </div>
-
-      {/* Row 5: Tags, PRs, Relationships (own row to prevent overflow) */}
-      {(tags.length > 0 ||
-        tagEditProps ||
-        pullRequests.length > 0 ||
-        relationships.length > 0) && (
+      {/* Row 4: PRs and relationships */}
+      {(pullRequests.length > 0 || relationships.length > 0) && (
         <div className="flex items-center gap-half flex-wrap min-w-0">
-          {tagEditProps ? (
-            (tagEditProps.renderTagEditor?.({
-              allTags: tagEditProps.allTags,
-              selectedTagIds: tagEditProps.selectedTagIds,
-              onTagToggle: tagEditProps.onTagToggle,
-              onCreateTag: tagEditProps.onCreateTag,
-              trigger: tagEditorTrigger,
-            }) ?? tagEditorTrigger)
-          ) : (
-            <>
-              {tags.slice(0, 2).map((tag) => (
-                <KanbanBadge key={tag.id} name={tag.name} color={tag.color} />
-              ))}
-              {tags.length > 2 && (
-                <span className="text-sm text-low">+{tags.length - 2}</span>
-              )}
-            </>
-          )}
           {pullRequests.slice(0, 2).map((pr) => (
             <PrBadge
               key={pr.id}

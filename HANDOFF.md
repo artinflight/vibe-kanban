@@ -2814,6 +2814,22 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
+- 2026-08-28 workspace-first Kanban cards merged and deployed:
+  - PR `#83` rebase-merged into `staging` at `aa13835a9`
+  - clean merged-staging frontend build is stored at
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260828Tworkspace-first-cards-aa13835a9`
+  - green runtime activation copied the release into its fixed resolved frontend
+    directory and replaced `index.html` last; no backend restart occurred
+  - green remained active on unchanged PID `3112780`
+  - rollback copy is
+    `/home/mcp/backups/vk-frontend-pre-workspace-first-20260828T204900Z`
+  - release manifest records source, asset hashes, rollback, and smoke evidence
+  - local/HTTPS roots, API info, service worker, and new JS/CSS returned `200`;
+    served hashes matched the manifest; repeated project responses were stable;
+    retained live tokens and workspace-first sourcemap markers passed
+  - `scripts/vk_live_regression_smoke.py` remains stale because it hardcodes the
+    retired 20260626 release; equivalent manifest-driven checks passed
+
 - 2026-08-28 `vk/3d01-vk-hide-issue-ti` is rebased onto `fork/staging` at
   `b73276dc4` and ready for validation/PR/deployment.
 - Scope is frontend-only: active linked workspace cards replace redundant issue

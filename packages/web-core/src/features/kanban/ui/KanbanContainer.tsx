@@ -1251,9 +1251,6 @@ export function KanbanContainer() {
         .filter(
           (workspace) =>
             !workspace.archived &&
-            !prsByWorkspaceId
-              .get(workspace.id)
-              ?.some((pr) => pr.status === 'merged') &&
             !!workspace.local_workspace_id &&
             localWorkspacesById.has(workspace.local_workspace_id)
         )

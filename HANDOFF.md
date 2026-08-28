@@ -2814,6 +2814,10 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
+- 2026-08-28 responsive project-rail sizing prepared: the project section now
+  shares the remaining browser height among project buttons, keeps them square,
+  and caps each at the existing 40px size instead of overflowing the rail.
+
 - 2026-08-28 compact Kanban metadata follow-up prepared on top of deployed
   workspace-first cards: tags, priority/urgency, review flag, assignee, and
   more-actions controls now share the issue-ID row; the redundant metadata row

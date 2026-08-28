@@ -605,7 +605,7 @@ export function AppBar({
                 <div
                   ref={dropProvided.innerRef}
                   {...dropProvided.droppableProps}
-                  className="flex flex-col items-center -mb-base"
+                  className="flex h-full min-h-0 flex-col items-center gap-half"
                 >
                   {item.projects.map((project, index) => (
                     <Draggable
@@ -622,11 +622,11 @@ export function AppBar({
                           ref={dragProvided.innerRef}
                           {...dragProvided.draggableProps}
                           {...dragProvided.dragHandleProps}
-                          className="mb-base"
+                          className="flex min-h-0 max-h-10 w-10 flex-1 items-center justify-center"
                           style={dragProvided.draggableProps.style}
                         >
                           <Tooltip content={project.name} side="right">
-                            <div className="relative">
+                            <div className="relative aspect-square h-full max-h-10 max-w-10">
                               {project.hasNeedsReview && (
                                 <span
                                   className="absolute -right-1 -top-1 z-10 h-3 w-3 rounded-full border border-secondary bg-brand"
@@ -638,6 +638,7 @@ export function AppBar({
                                 onClick={() => item.onProjectClick(project.id)}
                                 className={cn(
                                   appBarItemBaseClassName,
+                                  '!h-full !w-full',
                                   item.archived
                                     ? 'cursor-pointer'
                                     : 'cursor-grab',
@@ -681,19 +682,30 @@ export function AppBar({
     >
       <div
         className={cn(
-          'flex h-full min-h-0 w-16 flex-col items-center overflow-y-auto p-base gap-base',
+          'flex h-full min-h-0 w-16 flex-col items-center overflow-hidden p-base gap-base',
           'bg-secondary border-r border-border'
         )}
       >
         {sections.map((section) => (
-          <div key={section.key} className="flex flex-col items-center gap-1">
+          <div
+            key={section.key}
+            className={cn(
+              'flex flex-col items-center gap-1',
+              section.key === 'projects'
+                ? 'min-h-0 flex-1'
+                : 'shrink-0'
+            )}
+          >
             <AppBarSectionLabel>{section.label}</AppBarSectionLabel>
             {section.items.map((item) => (
               <div
                 key={item.key}
-                className={
-                  'wrapperClassName' in item ? item.wrapperClassName : undefined
-                }
+                className={cn(
+                  item.kind === 'project-list' && 'min-h-0 flex-1',
+                  'wrapperClassName' in item
+                    ? item.wrapperClassName
+                    : undefined
+                )}
               >
                 {renderSectionItem(item)}
               </div>

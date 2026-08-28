@@ -860,7 +860,7 @@ impl Codex {
         let collaboration_mode = client.initial_collaboration_mode()?;
         client
             .turn_start_with_mode(
-                thread_id,
+                thread_id.to_string(),
                 vec![UserInput::Text {
                     text: combined_prompt,
                     text_elements: vec![],

@@ -2,13 +2,14 @@
 
 ## Stream Identifier
 
-- Branch: `vk/d3fb-vk-2-instances`
-- Repo: `/home/mcp/code/worktrees/d3fb-vk-2-instances/_vibe_kanban_repo`
+- Branch: `vk/3d01-vk-hide-issue-ti`
+- Repo: `/home/mcp/code/worktrees/3d01-vk-hide-issue-ti/_vibe_kanban_repo`
 - Working mode: isolated feature branch
 
 ## Objective
 
-- Consolidate duplicate local Vibe Kanban services without interrupting active agents.
+- Replace redundant Kanban issue titles with active linked workspace cards while
+  preserving issue-flyout and workspace navigation behavior.
 
 ## In Scope
 
@@ -61,6 +62,14 @@
 - Issue/workspace PR display paths under `packages/web-core/src/features/kanban/` and fallback PR routes
 
 ## Current Status
+
+- 2026-08-28 workspace-first Kanban cards rebased onto `fork/staging`:
+  - active linked workspaces replace issue titles and description toggles
+  - archived/hidden workspaces retain the issue-title fallback
+  - linked workspaces render even without local summary enrichment
+  - workspace-card clicks open the workspace; outer-card clicks open the issue
+    flyout; flyout workspace clicks also open the workspace
+  - frontend-only change; no backend restart is required
 
 - 2026-08-26 service consolidation complete:
   - green on `4511` is the sole running VK backend and is enabled for boot

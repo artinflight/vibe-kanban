@@ -63,6 +63,12 @@
 
 ## Current Status
 
+- 2026-08-28 compact Kanban metadata follow-up prepared:
+  - tags, priority/urgency, needs-review flag, assignee, and more-actions controls
+    share the issue-ID row
+  - the separate priority/assignee row is removed; only PR and relationship
+    badges remain below the workspace when present
+
 - 2026-08-28 workspace-first Kanban cards rebased onto `fork/staging`:
   - active linked workspaces replace issue titles and description toggles
   - archived/hidden workspaces retain the issue-title fallback

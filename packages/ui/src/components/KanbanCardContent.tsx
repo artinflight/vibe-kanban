@@ -127,6 +127,7 @@ function formatKanbanDescriptionPreview(
 export type KanbanCardContentProps<TTag extends KanbanTag = KanbanTag> = {
   displayId: string;
   title: string;
+  primaryContent?: ReactNode;
   description?: string | null;
   priority: PriorityLevel | null;
   tags: KanbanTag[];
@@ -148,6 +149,7 @@ export type KanbanCardContentProps<TTag extends KanbanTag = KanbanTag> = {
 export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
   displayId,
   title,
+  primaryContent,
   description,
   priority,
   tags,
@@ -245,40 +247,42 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
         )}
       </div>
 
-      {/* Row 2: Title + description toggle */}
-      <div className="flex items-start justify-between gap-half">
-        <span className="min-w-0 flex-1 whitespace-normal break-words text-base leading-tight text-normal">
-          {title}
-        </span>
-        {previewDescription && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsDescriptionExpanded((expanded) => !expanded);
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="mt-px shrink-0 rounded-sm p-half text-low transition-colors hover:bg-secondary hover:text-normal"
-            aria-label={t('kanban.toggleCardDescription', {
-              defaultValue: '{{action}} description',
-              action: isDescriptionExpanded ? 'Hide' : 'Show',
-            })}
-            title={t('kanban.toggleCardDescription', {
-              defaultValue: '{{action}} description',
-              action: isDescriptionExpanded ? 'Hide' : 'Show',
-            })}
-          >
-            {isDescriptionExpanded ? (
-              <CaretDownIcon className="size-icon-xs" weight="bold" />
-            ) : (
-              <CaretRightIcon className="size-icon-xs" weight="bold" />
-            )}
-          </button>
-        )}
-      </div>
+      {/* Row 2: Visible workspace content, or the issue title as a fallback. */}
+      {primaryContent ?? (
+        <div className="flex items-start justify-between gap-half">
+          <span className="min-w-0 flex-1 whitespace-normal break-words text-base leading-tight text-normal">
+            {title}
+          </span>
+          {previewDescription && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDescriptionExpanded((expanded) => !expanded);
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="mt-px shrink-0 rounded-sm p-half text-low transition-colors hover:bg-secondary hover:text-normal"
+              aria-label={t('kanban.toggleCardDescription', {
+                defaultValue: '{{action}} description',
+                action: isDescriptionExpanded ? 'Hide' : 'Show',
+              })}
+              title={t('kanban.toggleCardDescription', {
+                defaultValue: '{{action}} description',
+                action: isDescriptionExpanded ? 'Hide' : 'Show',
+              })}
+            >
+              {isDescriptionExpanded ? (
+                <CaretDownIcon className="size-icon-xs" weight="bold" />
+              ) : (
+                <CaretRightIcon className="size-icon-xs" weight="bold" />
+              )}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Row 3: Description (optional, collapsed by default) */}
-      {previewDescription && isDescriptionExpanded && (
+      {!primaryContent && previewDescription && isDescriptionExpanded && (
         <p
           className={cn(
             'text-sm text-low m-0',

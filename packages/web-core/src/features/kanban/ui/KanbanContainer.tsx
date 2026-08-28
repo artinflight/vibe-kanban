@@ -1251,6 +1251,9 @@ export function KanbanContainer() {
         .filter(
           (workspace) =>
             !workspace.archived &&
+            !prsByWorkspaceId
+              .get(workspace.id)
+              ?.some((pr) => pr.status === 'merged') &&
             !!workspace.local_workspace_id &&
             localWorkspacesById.has(workspace.local_workspace_id)
         )
@@ -1853,6 +1856,30 @@ export function KanbanContainer() {
                                 <KanbanCardContent
                                   displayId={issue.simple_id}
                                   title={issue.title}
+                                  primaryContent={
+                                    issueWorkspaces.length > 0 ? (
+                                      <div className="flex flex-col gap-half">
+                                        {issueWorkspaces.map((workspace) => (
+                                          <IssueWorkspaceCard
+                                            key={workspace.id}
+                                            workspace={workspace}
+                                            onClick={
+                                              workspace.localWorkspaceId
+                                                ? () =>
+                                                    openIssueWorkspace(
+                                                      issue.id,
+                                                      workspace.localWorkspaceId!
+                                                    )
+                                                : undefined
+                                            }
+                                            showOwner={false}
+                                            showStatusBadge={false}
+                                            showNoPrText={false}
+                                          />
+                                        ))}
+                                      </div>
+                                    ) : undefined
+                                  }
                                   description={issue.description}
                                   priority={issue.priority}
                                   needsReviewFlag={issueHasFlag(
@@ -1911,28 +1938,6 @@ export function KanbanContainer() {
                                     ),
                                   }}
                                 />
-                                {issueWorkspaces.length > 0 && (
-                                  <div className="mt-base flex flex-col gap-half">
-                                    {issueWorkspaces.map((workspace) => (
-                                      <IssueWorkspaceCard
-                                        key={workspace.id}
-                                        workspace={workspace}
-                                        onClick={
-                                          workspace.localWorkspaceId
-                                            ? () =>
-                                                openIssueWorkspace(
-                                                  issue.id,
-                                                  workspace.localWorkspaceId!
-                                                )
-                                            : undefined
-                                        }
-                                        showOwner={false}
-                                        showStatusBadge={false}
-                                        showNoPrText={false}
-                                      />
-                                    ))}
-                                  </div>
-                                )}
                               </KanbanCard>
                             );
                           })}

@@ -63,6 +63,12 @@
 
 ## Current Status
 
+- 2026-08-28 responsive project-rail sizing prepared:
+  - the project list consumes only the remaining vertical rail space
+  - project buttons shrink evenly, stay square, and cap at the existing 40px
+    square size when the project count fits
+  - the rail no longer relies on vertical scrolling to fit project buttons
+
 - 2026-08-28 compact Kanban metadata follow-up prepared:
   - tags, priority/urgency, needs-review flag, assignee, and more-actions controls
     share the issue-ID row

@@ -1256,7 +1256,7 @@ export function KanbanContainer() {
 
           return {
             id: workspace.id,
-            localWorkspaceId: localWorkspace?.id ?? null,
+            localWorkspaceId: workspace.local_workspace_id,
             name: workspace.name,
             archived: workspace.archived,
             filesChanged: workspace.files_changed ?? 0,

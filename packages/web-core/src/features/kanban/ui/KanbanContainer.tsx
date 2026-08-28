@@ -1248,20 +1248,15 @@ export function KanbanContainer() {
 
     for (const issue of issues) {
       const nonArchivedWorkspaces = getWorkspacesForIssue(issue.id)
-        .filter(
-          (workspace) =>
-            !workspace.archived &&
-            !!workspace.local_workspace_id &&
-            localWorkspacesById.has(workspace.local_workspace_id)
-        )
+        .filter((workspace) => !workspace.archived)
         .map((workspace) => {
-          const localWorkspace = localWorkspacesById.get(
-            workspace.local_workspace_id!
-          );
+          const localWorkspace = workspace.local_workspace_id
+            ? localWorkspacesById.get(workspace.local_workspace_id)
+            : undefined;
 
           return {
             id: workspace.id,
-            localWorkspaceId: workspace.local_workspace_id,
+            localWorkspaceId: localWorkspace?.id ?? null,
             name: workspace.name,
             archived: workspace.archived,
             filesChanged: workspace.files_changed ?? 0,

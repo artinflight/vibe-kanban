@@ -47,6 +47,16 @@ A real local backup must capture all of these at the same time:
 5. **Remote-coupling proof**
    - whether `/api/info` reports a non-null `shared_api_base`
    - whether the local UI is still using remote or Electric-backed issue streams
+6. **Instance-lineage proof**
+   - which service is actually active
+   - which ports are serving the UI/API
+   - which data directory belongs to each active or retired instance
+   - which Desktop archive covers each instance lineage
+7. **Live frontend identity**
+   - the active release directory or symlink target
+   - JS/CSS asset names
+   - any one-file live hotfixes or sidecar files that are not yet represented
+     in source
 
 If any of these are missing, the backup is incomplete.
 
@@ -60,6 +70,15 @@ The current recommended backup path for a local-only Vibe Kanban install is a **
 - captures the **local-only** state that GitHub does not protect
 
 This is the system currently implemented in the repo.
+
+<Warning>
+Before a restart, confirm which Vibe Kanban instance you are backing up.
+
+On the MCP host, green may be the active service while old blue `4311` state is
+retired but still recoverable from Desktop archives. A backup of green is not a
+backup of old `4311` unless the archive explicitly includes the old state
+directory too.
+</Warning>
 
 ### Scripts
 
@@ -436,6 +455,12 @@ Do not say "backup complete" until all of these are true:
 - any stale rollout paths pointing outside the current live `CODEX_HOME` were
   either captured by an additional backup or recorded as an unresolved restore
   gap
+- every active or retired VK lineage relevant to the operation is named with:
+  service name, port, DB path, frontend path, Codex home, and archive coverage
+- live-only frontend hotfixes and sidecar files are either included in the
+  archive or listed as restore gaps
+- a sample restore or dry-run import has passed when recovering data from a
+  different lineage
 
 ## What does **not** count as a full backup
 
@@ -450,12 +475,58 @@ These are common failures:
 - backing up only the current `CODEX_HOME` while the live Codex state database
   still references rollout files in an old or retired Codex home
 - treating a new Codex thread as a restore of a missing rollout-backed thread
+- backing up only green state and implying old `4311`/blue state is protected
+- copying a retired DB over current live DB instead of selectively importing
+  missing records after a dry run
+- replacing the active frontend release directory with a newly built dist and
+  losing live-only behavior such as nav styling, flyouts, or saved-message
+  shims
+- validating saved messages only by reading SQLite. The running backend can
+  drop fields from REST/WebSocket serialization even when SQLite still has the
+  data.
 
 ## Restore procedure
 
 <Warning>
 Restore into a quiescent system. Stop heavy agents and avoid changing the repo while restoring.
 </Warning>
+
+## Selective cross-lineage recovery
+
+Use this when data from a retired instance, old port, or older Desktop archive
+must be recovered into the current live instance.
+
+Do not replace the current live DB with the retired DB. The two databases may
+both contain valid but different board histories. A blind restore can erase
+newer work, archived-state decisions, saved preferences, or active project
+metadata.
+
+The safe path is:
+
+1. Take a fresh backup of the current live instance and mirror it to Desktop.
+2. Extract the retired DB into an inspection directory.
+3. Open both DBs read-only and compare by stable IDs.
+4. Classify records as:
+   - missing from live
+   - present in both and identical
+   - present in both but conflicting
+5. Import only missing records first, using a copied live DB as a dry run.
+6. Verify `pragma integrity_check` on the copied DB.
+7. Verify row counts for every imported table.
+8. Verify required sidecar files exist, such as session `processes/*.jsonl`.
+9. Apply the same import to live only after the dry run passes.
+10. Leave conflicting records untouched until the operator chooses which
+    lineage wins.
+
+For Vibe Kanban agent/session recovery, DB rows are not enough. Also recover
+the matching session directories under:
+
+```text
+sessions/<first-two-id-chars>/<session-id>/processes/*.jsonl
+```
+
+If those files are missing, the board card may reappear but transcript/resume
+history can still fail.
 
 ### Step 1: Stop the service
 
@@ -536,6 +607,10 @@ Any agent working on the local VK install must follow this policy:
 6. If active executions exist, stop and get explicit operator acceptance for
    interrupting those exact runs before touching the service.
 7. After each risky change, record the exact backup path in the handoff.
+8. After frontend deploys or hotfixes, verify the active desktop and mobile
+   origins, not just `127.0.0.1`.
+9. After preference-related changes, verify both REST and WebSocket scratch
+   paths before saying the UI state is safe.
 
 ## Codex rollout restore guarantee
 

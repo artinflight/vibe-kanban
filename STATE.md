@@ -6,6 +6,27 @@
 
 ## Confirmed Current State
 
+- 2026-08-28 restart incident lessons are documented in:
+  - `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
+  - `docs/self-hosting/local-backup-recovery.mdx`
+  - `docs/self-hosting/codex-home-isolation.mdx`
+- Current live VK instance is green, not retired blue:
+  - service: `vibe-kanban-green.service`
+  - ports: `4511` backend, `4512` preview proxy
+  - DB: `/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite`
+  - Codex home: `/home/mcp/.local/share/vibe-kanban-green-codex-home`
+- Retired blue `4311` state is not protected by a green backup unless the
+  backup explicitly includes `/home/mcp/.local/share/vibe-kanban`. Old blue
+  state may still be recoverable from Desktop archives and must be imported
+  selectively, not blindly restored over green.
+- Current green frontend is pinned to:
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260826Tstaging-main-fc312a073`
+  with assets `index-BiiblWjF.js` and `index-DnGjt7Sn.css`.
+- That frontend release has a live `index.html` saved-message shim and
+  `/vk-saved-chat-messages.json` sidecar because the running backend strips
+  `saved_chat_messages` from `UI_PREFERENCES` API/WebSocket serialization.
+  Future frontend builds must include the source fix before replacing this
+  live release.
 - 2026-08-26 duplicate local VK services were consolidated operationally:
   - `vibe.local` routes through `vibe-local-https-proxy.service` to the green backend on port `4511`
   - `vibe-kanban-green.service` is active and enabled for boot
@@ -51,6 +72,16 @@
   - source fix is in `packages/ui/src/components/PasteMarkdownPlugin.tsx` and must be included in the next proper frontend build/restart package
   - live `python3 scripts/vk_live_regression_smoke.py` passed; smoke now expects current active projects `matchSubs`, `BBinvoice`, and `DeNest` ahead of the previous project list
   - next restart/frontend package must preserve or rebuild forward from this release; do not roll `frontend-dist/current` back to older staged assets
+- 2026-06-30 multiline paste priority fix is prepared for staging:
+  - `packages/ui/src/components/PasteMarkdownPlugin.tsx` preserves multiline
+    `text/plain` before the `text/html` opt-out
+  - the paste command now uses `COMMAND_PRIORITY_HIGH`, so VK's multiline
+    guard runs before Lexical's default rich paste handler can consume mobile
+    or document clipboard payloads
+  - `scripts/vk_live_regression_smoke.py` now checks the source guard so future
+    release candidates cannot silently regress to low-priority paste handling
+  - no frontend asset swap, backend deploy, live DB mutation, or restart was
+    performed by this source branch
 - 2026-06-21 project sidebar flyout/customization is prepared in source but not deployed:
   - AppBar now has a triangle-controlled project flyout so the compact project rail can reveal full project names without widening by default
   - project buttons can use persisted per-project abbreviation and pastel color overrides
@@ -459,6 +490,26 @@
 - Do not treat route changes as the only chance to clear UI-derived state; long-lived workspace views must reconcile state changes while already mounted.
 - Do not treat attachment upload as fire-and-forget; failures must be surfaced in the composer and backend cache-file absence must not become an opaque 500.
 - Do not delete VK backups, `codex-home`, or session history merely to free space unless a current valid backup and explicit retention rule exist.
+- Before backend restarts, audit active and recently updated Codex threads for
+  missing rollout paths. Missing rollout files are data loss until restored;
+  do not treat fallback-to-new-thread behavior as a fix.
+- The active-agent restart gate is mandatory: list all running executions and
+  their Codex rollout status, then get explicit acceptance for interrupting
+  those exact runs before touching the service.
+- Board "In Staging" is not proof of deployment readiness. A future restart
+  package must compare each intended workspace branch and last summary against
+  the candidate branch, and must report `Committed / Not pushed` work as not
+  included.
+- Do not validate saved messages from SQLite alone. Verify SQLite, REST scratch,
+  WebSocket scratch, and desktop/mobile UI.
+- Do not replace the active frontend release directory with a built dist from a
+  worktree. That caused a left-nav regression during the 2026-08 restart
+  incident. Use a new release directory and pointer switch, or a backed-up
+  one-file hotfix.
+- Broken symlinks inside workspace launcher directories can block
+  `git worktree add` with `Invalid repository ... already exists`. Inspect and
+  preserve the obstruction before moving it; do not delete potentially dirty
+  worktrees.
 - Agents can get confused because VK has three different path classes:
   - canonical source repo
   - live service/runtime/state

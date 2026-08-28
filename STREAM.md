@@ -70,6 +70,8 @@
   - workspace-card clicks open the workspace; outer-card clicks open the issue
     flyout; flyout workspace clicks also open the workspace
   - frontend-only change; no backend restart is required
+  - PR `#83` rebase-merged at `aa13835a9` and the clean merged-staging frontend
+    release is live on green with unchanged backend PID `3112780`
 
 - 2026-08-26 service consolidation complete:
   - green on `4511` is the sole running VK backend and is enabled for boot

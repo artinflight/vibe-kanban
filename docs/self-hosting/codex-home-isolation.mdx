@@ -126,6 +126,20 @@ thread/fork request failed: no rollout found for thread id ...
 That is a recovery problem. Do not treat it as fixed by starting a fresh Codex
 thread unless the operator explicitly accepts losing the old thread context.
 
+<Warning>
+When there are blue/green or retired VK instances, audit every relevant Codex
+home, not just the currently active service environment.
+
+Example on the MCP host:
+
+- current green may use `/home/mcp/.local/share/vibe-kanban-green-codex-home`
+- retired blue may have used `/home/mcp/.local/share/vibe-kanban/codex-home`
+
+If `state_5.sqlite` points at a rollout in the retired home, restore that exact
+file from the matching Desktop archive. Do not rewrite the thread to a new
+rollout path or start a new thread unless the operator accepts context loss.
+</Warning>
+
 <Steps>
 <Step title="Check recently active Codex threads">
   Query the live Codex state database and verify rollout files exist:
@@ -230,6 +244,27 @@ thread unless the operator explicitly accepts losing the old thread context.
   - the post-restore audit showing the rollout exists
 </Step>
 </Steps>
+
+## Saved-message preference trap
+
+Saved messages are stored in `UI_PREFERENCES`, but the DB row is not the whole
+truth. The running backend can deserialize the JSON into a typed structure and
+serialize it back without fields that exist in SQLite. In that failure mode:
+
+- SQLite still contains `saved_chat_messages`
+- `/api/scratch/UI_PREFERENCES/...` omits `saved_chat_messages`
+- `/api/scratch/UI_PREFERENCES/.../stream/ws` omits `saved_chat_messages`
+- desktop and mobile show no saved messages
+
+For preference recovery, verify all three layers:
+
+```bash
+sqlite3 "$VK_DB" "select payload from scratch where scratch_type='UI_PREFERENCES';"
+curl -fsS "$VK_URL/api/scratch/UI_PREFERENCES/00000000-0000-0000-0000-000000000001"
+```
+
+Then verify the WebSocket initial patch or use a browser smoke. Do not claim
+saved messages are fixed from a SQLite-only check.
 
 ## Repair the live service
 

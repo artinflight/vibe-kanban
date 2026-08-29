@@ -2,6 +2,8 @@ import { useCallback, useMemo, useRef } from 'react';
 import { create } from 'zustand';
 import type { RepoAction } from '@vibe/ui/components/RepoCard';
 import type { IssuePriority } from 'shared/remote-types';
+import { useAppRuntime } from '@/shared/hooks/useAppRuntime';
+import { savedChatMessagesApi } from '@/shared/lib/api';
 
 export const RIGHT_MAIN_PANEL_MODES = {
   CHANGES: 'changes',
@@ -31,6 +33,24 @@ export type SavedChatMessage = {
   title: string;
   content: string;
 };
+
+const savedChatMessageWrites = new Map<string, Promise<void>>();
+
+function enqueueSavedChatMessageWrite(id: string, write: () => Promise<void>) {
+  const pending = savedChatMessageWrites.get(id) ?? Promise.resolve();
+  const next = pending
+    .catch(() => undefined)
+    .then(write)
+    .catch((error) => {
+      console.error('Failed to persist saved chat message:', error);
+    })
+    .finally(() => {
+      if (savedChatMessageWrites.get(id) === next) {
+        savedChatMessageWrites.delete(id);
+      }
+    });
+  savedChatMessageWrites.set(id, next);
+}
 
 const MOBILE_FONT_SCALE_KEY = 'vk-mobile-font-scale';
 
@@ -1047,7 +1067,49 @@ export function useShowLeftColumnLinks() {
 
 export function useSavedChatMessages() {
   const messages = useUiPreferencesStore((s) => s.savedChatMessages);
-  const set = useUiPreferencesStore((s) => s.setSavedChatMessages);
+  const setStore = useUiPreferencesStore((s) => s.setSavedChatMessages);
+  const runtime = useAppRuntime();
+  const set = useCallback(
+    (nextMessages: SavedChatMessage[]) => {
+      const previousMessages =
+        useUiPreferencesStore.getState().savedChatMessages;
+      setStore(nextMessages);
+
+      if (runtime !== 'local') return;
+
+      const nextById = new Map(
+        nextMessages.map((message) => [message.id, message])
+      );
+      const previousById = new Map(
+        previousMessages.map((message) => [message.id, message])
+      );
+
+      for (const previous of previousMessages) {
+        if (!nextById.has(previous.id)) {
+          enqueueSavedChatMessageWrite(previous.id, () =>
+            savedChatMessagesApi.delete(previous.id)
+          );
+        }
+      }
+
+      for (const [position, message] of nextMessages.entries()) {
+        const previous = previousById.get(message.id);
+        if (
+          message.title.trim() &&
+          message.content.trim() &&
+          (previous?.title !== message.title ||
+            previous.content !== message.content ||
+            previousMessages.findIndex((item) => item.id === message.id) !==
+              position)
+        ) {
+          enqueueSavedChatMessageWrite(message.id, async () => {
+            await savedChatMessagesApi.upsert({ ...message, position });
+          });
+        }
+      }
+    },
+    [runtime, setStore]
+  );
   return [messages, set] as const;
 }
 

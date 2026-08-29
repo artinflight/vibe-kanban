@@ -2984,3 +2984,19 @@ User QA checklist for the no-restart frontend repair:
   attachment safety, green authority, and explicit-path requirements.
 - No live restart, service edit, worktree deletion, cache clearing, attachment
   mutation, or database/session mutation was performed.
+2026-08-29 durable saved-message storage prepared, not deployed:
+
+- Root cause: local saved messages were embedded in the single global
+  `UI_PREFERENCES` scratch JSON payload, so stale/older frontend whole-payload
+  writes and typed backend serialization could erase them.
+- Added the `saved_chat_messages` SQLite table with independent rows and stable
+  ordering, plus a migration that imports valid legacy messages from the
+  existing scratch payload.
+- Added local list/upsert/delete API routes and redirected local UI hydration
+  and mutations to them. Remote-web retains its existing localStorage-backed
+  scratch behavior.
+- Local UI preference writes now omit the legacy saved-message field, removing
+  saved messages from unrelated whole-preference rewrites after migration.
+- Per-message frontend writes are serialized so a delete cannot be overtaken by
+  an earlier in-flight edit.
+- No live deploy, database mutation, frontend swap, or service restart occurred.

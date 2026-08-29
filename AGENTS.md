@@ -12,10 +12,11 @@
 2. `STATE.md`
 3. `STREAM.md`
 4. `HANDOFF.md`
-5. `VK_WORKFLOW.md` and `VK_AGENT_DEPLOYMENT_RUNBOOK.md` for Vibe Kanban repo work, deploys, restarts, frontend asset swaps, and regression prevention
-6. Relevant package or crate guide for the area being changed
-7. Code and validation paths for the task
-8. `DELTA.md` only for compact continuity history
+5. `VK_PREVIEW_GUIDE.md` for any preview request
+6. `VK_WORKFLOW.md` and `VK_AGENT_DEPLOYMENT_RUNBOOK.md` for Vibe Kanban repo work, deploys, restarts, frontend asset swaps, and regression prevention
+7. Relevant package or crate guide for the area being changed
+8. Code and validation paths for the task
+9. `DELTA.md` only for compact continuity history
 
 ### Crate-specific guides
 
@@ -80,7 +81,7 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Install: `pnpm i`
 - Run dev (web app + backend with ports auto-assigned): `pnpm run dev`
 - Run QA dev mode: `pnpm run dev:qa`
-- Lightweight frontend preview against the existing live backend: `pnpm run preview:light`; stop it with `pnpm run preview:light:stop`
+- Lightweight frontend preview against the existing live backend: read `VK_PREVIEW_GUIDE.md`, then run `pnpm run preview:light`; stop it with `pnpm run preview:light:stop`
 - Backend (watch): `pnpm run backend:dev:watch`
 - Web app (dev): `pnpm run local-web:dev`
 - Type checks: `pnpm run check`
@@ -97,7 +98,7 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 
 - Before finishing any task, run `pnpm run format`.
 - Before using a branch in a local Vibe Kanban instance, run the narrowest relevant checks and document what was not exercised.
-- For routine Vibe Kanban UI smoke tests, prefer the lightweight preview workflow in `docs/self-hosting/lightweight-agent-preview.mdx` over `pnpm run dev`; only run full backend watch mode when backend behaviour must be exercised.
+- For any preview request, follow `VK_PREVIEW_GUIDE.md`. For routine UI smoke tests, use the lightweight workflow instead of `pnpm run dev`; only use an isolated backend when backend behavior must be exercised and the operator authorizes it.
 - Before opening or updating a PR into `staging`, the default validation baseline is `pnpm run ops:check`, `pnpm run check`, `pnpm run lint`, and `cargo test --workspace`, plus any repo-specific generation checks affected by the change.
 - Before promoting `staging` into `main`, require a fresh `staging` branch, passing CI, and explicit human QA for meaningful user-facing changes.
 - If work touches remote deployment paths, include `pnpm run remote:generate-types:check` and `pnpm run remote:prepare-db:check`.

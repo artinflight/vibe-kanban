@@ -1,5 +1,18 @@
 # HANDOFF.md
 
+## 2026-08-29 Agent Preview Guide
+
+- Root entry point: `VK_PREVIEW_GUIDE.md`.
+- Agents are directed there from `AGENTS.md`, `README.md`,
+  `VK_AGENT_DEPLOYMENT_RUNBOOK.md`, and the detailed Mintlify preview page.
+- Normal UI preview means branch Vite frontend -> green backend `4511` ->
+  public Funnel `8443`; both the frontend and `/api/info` must pass before the
+  URL is shared.
+- Backend or migration changes are not demonstrated by the green-backed
+  lightweight preview until the backend is deployed. Do not create another
+  backend or database unless the operator explicitly requests isolated backend
+  testing.
+
 ## 2026-08-29 Local Kanban Tag Persistence Follow-up
 
 - Branch: `vk/3d01-vk-hide-issue-ti`

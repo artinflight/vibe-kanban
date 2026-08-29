@@ -358,6 +358,38 @@ impl LocalContainerService {
             expired_workspaces.len()
         );
         for workspace in &expired_workspaces {
+            if workspace.pinned {
+                tracing::info!(
+                    "Preserving expired workspace {} because it is pinned",
+                    workspace.id
+                );
+                continue;
+            }
+            if self.workspace_has_external_processes(workspace).await {
+                tracing::info!(
+                    "Deferring expired workspace cleanup for {} because a host process is using its path",
+                    workspace.id
+                );
+                continue;
+            }
+            match self.is_container_clean(workspace).await {
+                Ok(true) => {}
+                Ok(false) => {
+                    tracing::warn!(
+                        "Preserving expired workspace {} because it contains uncommitted or untracked files",
+                        workspace.id
+                    );
+                    continue;
+                }
+                Err(error) => {
+                    tracing::error!(
+                        "Unable to verify whether expired workspace {} is clean; preserving it: {}",
+                        workspace.id,
+                        error
+                    );
+                    continue;
+                }
+            }
             if let Err(error) = self.cleanup_workspace(workspace).await {
                 tracing::error!(
                     "Failed to clean up expired workspace {}; it remains eligible for retry: {}",

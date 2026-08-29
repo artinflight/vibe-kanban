@@ -2814,6 +2814,12 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
+- 2026-08-29 compact Kanban metadata and responsive project-rail sizing are
+  live from staging commit `46014edcf` via release
+  `20260829Tcompact-cards-project-rail-46014edcf`. Served JS hash verification
+  and `/api/info` passed; green PID remained `3112780` with no restart. Rollback
+  is `/home/mcp/backups/vk-frontend-fixed-pre-compact-rail-20260829T094000Z`.
+
 - 2026-08-29 the compact Kanban metadata row and responsive project-rail
   sizing are grouped as one frontend-only promotion into `staging`. Build and
   deploy only from the final merged commit, preserve the green saved-message

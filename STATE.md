@@ -6,6 +6,13 @@
 
 ## Confirmed Current State
 
+- 2026-08-29 compact Kanban metadata and responsive project rail are live:
+  - PR `#85` rebase-merged into `staging` as `46014edcf`
+  - frontend release: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcompact-cards-project-rail-46014edcf`
+  - live JS: `/assets/index-Cv38gUEL.js`, sha256 `3a2a1ac59a204c5923e08e48544b5f0a8180eabf3eb31db9e3084b478fcb0e67`
+  - backend PID remained `3112780`; no restart occurred
+  - rollback: `/home/mcp/backups/vk-frontend-fixed-pre-compact-rail-20260829T094000Z`
+
 - 2026-08-28 restart incident lessons are documented in:
   - `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
   - `docs/self-hosting/local-backup-recovery.mdx`

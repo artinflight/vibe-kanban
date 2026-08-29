@@ -73,6 +73,14 @@
   - Kanban headers reserve space for one truncated tag pill and a `+N` count
   - hovering the tag control exposes the complete comma-separated tag list
   - badge text truncates without hiding its color marker
+  - follow-up testing found the local compatibility API still returned empty
+    `tags` and `issue_tags` collections, so styling alone could not display tags
+  - local Kanban tags and issue/tag associations now have SQLite persistence and
+    fallback list/create/update/delete API routes
+  - local issue create/update/bulk-update now persist priority metadata instead
+    of accepting the UI mutation and immediately reloading the old value
+  - this correction requires a backend build/restart before the green-backed
+    preview can create or display persisted tags
 
 - 2026-08-29 selectable workspace branch label prepared:
   - the centered desktop navbar branch label now permits normal text selection

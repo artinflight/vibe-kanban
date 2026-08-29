@@ -27,6 +27,8 @@ import {
   type ProjectCustomization,
 } from '@/shared/stores/useUiPreferencesStore';
 import type { RepoAction } from '@vibe/ui/components/RepoCard';
+import { useAppRuntime } from '@/shared/hooks/useAppRuntime';
+import { savedChatMessagesApi } from '@/shared/lib/api';
 
 type UiPreferencesScratchData = UiPreferencesData & {
   local_project_order?: string[];
@@ -262,6 +264,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
  * Should be used once at the app root level.
  */
 export function useUiPreferencesScratch() {
+  const runtime = useAppRuntime();
   const { scratch, updateScratch, isLoading, isConnected } = useScratch(
     ScratchType.UI_PREFERENCES,
     UI_PREFERENCES_ID
@@ -339,6 +342,9 @@ export function useUiPreferencesScratch() {
       ...(scratchData ?? {}),
       ...nextData,
     };
+    if (runtime === 'local') {
+      delete data.saved_chat_messages;
+    }
 
     const serialized = JSON.stringify(data);
     if (serialized === lastSavedPayloadRef.current) {
@@ -356,7 +362,7 @@ export function useUiPreferencesScratch() {
     } catch (e) {
       console.error('[useUiPreferencesScratch] Failed to save:', e);
     }
-  }, [scratchData, updateScratch]);
+  }, [runtime, scratchData, updateScratch]);
 
   const { debounced: debouncedSave } = useDebouncedCallback(saveToServer, 500);
 
@@ -373,10 +379,21 @@ export function useUiPreferencesScratch() {
 
       void (async () => {
         const serverState = scratchDataToStore(scratchData);
-        const savedChatMessages =
+        let savedChatMessages =
           serverState.savedChatMessages.length > 0
             ? serverState.savedChatMessages
             : await loadSavedChatMessagesFallback();
+
+        if (runtime === 'local') {
+          try {
+            const durableMessages = await savedChatMessagesApi.list();
+            savedChatMessages = durableMessages.map(
+              ({ id, title, content }) => ({ id, title, content })
+            );
+          } catch (error) {
+            console.error('Failed to load saved chat messages:', error);
+          }
+        }
 
         useUiPreferencesStore.setState({
           repoActions: serverState.repoActions,
@@ -409,7 +426,7 @@ export function useUiPreferencesScratch() {
         }, 100);
       })();
     }
-  }, [isLoading, isConnected, scratchData]);
+  }, [isLoading, isConnected, runtime, scratchData]);
 
   // Subscribe to store changes and save to server
   useEffect(() => {

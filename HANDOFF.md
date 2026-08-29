@@ -2814,6 +2814,10 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
+- 2026-08-29 compact Kanban tags now reserve visible header space: one
+  truncated colored pill is shown with `+N` for additional tags, and the full
+  tag list is available as hover text.
+
 - 2026-08-29 the centered workspace branch label is selectable/copyable in the
   desktop navbar and no longer participates in the Tauri window drag region.
   The label is a branch reference, not the definitive VK workspace UUID.

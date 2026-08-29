@@ -1,5 +1,22 @@
 # HANDOFF.md
 
+## 2026-08-29 Local Kanban Tag Persistence Follow-up
+
+- Branch: `vk/3d01-vk-hide-issue-ti`
+- Worktree:
+  `/home/mcp/code/worktrees/3d01-vk-hide-issue-ti/_vibe_kanban_repo`
+- The compact tag UI was present, but the green local compatibility backend
+  returned empty `tags` and `issue_tags` collections, leaving nothing to render.
+- The branch now adds dedicated local Kanban tag tables plus fallback list and
+  mutation routes for tags and issue/tag associations.
+- The same compatibility gap affected priority: issue mutations did not accept
+  or persist the priority field. Local issue create, update, and bulk update now
+  round-trip priority metadata, including clearing a priority.
+- This is no longer frontend-only: a backend build/restart and migration are
+  required before the `4511`-backed preview can verify tag persistence.
+- Do not claim the public `8443` preview demonstrates this fix until it is
+  pointed at a backend built from the corrected source.
+
 ## Current task
 
 - Branch: `vk/d3fb-vk-2-instances`

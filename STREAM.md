@@ -63,6 +63,12 @@
 
 ## Current Status
 
+- 2026-08-29 public preview workflow repaired and documented:
+  - lightweight preview defaults to the live green backend on `4511`
+  - dynamic `184xx` Tailscale Serve URLs are explicitly labeled tailnet-only
+  - public operator review uses Funnel port `8443` and requires successful
+    frontend plus `/api/info` probes before the URL is shared
+
 - 2026-08-29 compact tag visibility follow-up prepared:
   - Kanban headers reserve space for one truncated tag pill and a `+N` count
   - hovering the tag control exposes the complete comma-separated tag list

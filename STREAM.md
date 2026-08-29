@@ -63,6 +63,17 @@
 
 ## Current Status
 
+- 2026-08-29 agent preview guide prepared:
+  - root-level `VK_PREVIEW_GUIDE.md` is the concise canonical entry point for
+    frontend-only previews against green `4511`
+  - the guide distinguishes frontend preview from backend/migration testing,
+    documents the public `8443` Funnel route, and requires frontend plus
+    `/api/info` probes before sharing
+  - timeout, wrong-database, and disappearing-value troubleshooting explicitly
+    prevents agents from starting an unnecessary second backend
+  - `AGENTS.md`, `README.md`, the deployment runbook, and the detailed
+    self-hosting page link to the guide for discovery
+
 - 2026-08-29 public preview workflow repaired and documented:
   - lightweight preview defaults to the live green backend on `4511`
   - dynamic `184xx` Tailscale Serve URLs are explicitly labeled tailnet-only

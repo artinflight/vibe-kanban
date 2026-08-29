@@ -138,6 +138,10 @@ separate release/deploy task.
 
 ## Preview Workflow
 
+Read [`VK_PREVIEW_GUIDE.md`](VK_PREVIEW_GUIDE.md) first. It is the concise,
+canonical agent procedure for choosing, starting, publishing, verifying, and
+troubleshooting a preview. The details below remain as deployment context.
+
 Use preview before promoting UI work into `staging` or before staging it for a
 live frontend swap.
 

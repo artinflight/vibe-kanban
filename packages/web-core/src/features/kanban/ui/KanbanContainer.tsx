@@ -709,6 +709,8 @@ function CollapsedKanbanColumn({
  */
 export function KanbanContainer() {
   const isMobile = useIsMobile();
+  const workspaceColors = useUiPreferencesStore((s) => s.workspaceColors);
+  const setWorkspaceColor = useUiPreferencesStore((s) => s.setWorkspaceColor);
   const { t } = useTranslation('common');
   const appNavigation = useAppNavigation();
   const routeState = useCurrentKanbanRouteState();
@@ -1855,6 +1857,15 @@ export function KanbanContainer() {
                                           <IssueWorkspaceCard
                                             key={workspace.id}
                                             workspace={workspace}
+                                            color={
+                                              workspaceColors[workspace.id]
+                                            }
+                                            onColorChange={(color) =>
+                                              setWorkspaceColor(
+                                                workspace.id,
+                                                color
+                                              )
+                                            }
                                             onClick={
                                               workspace.localWorkspaceId
                                                 ? () =>

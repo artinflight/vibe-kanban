@@ -6,6 +6,13 @@
 
 ## Confirmed Current State
 
+- 2026-08-29 colored Kanban workspaces are ready for promotion:
+  - linked workspace cards provide a three-dot pastel color picker and clear
+    action in Kanban
+  - colors persist through UI-preferences scratch and adapt their tint strength
+    for light and dark themes
+  - the change is frontend-only and does not require a green backend restart
+
 - 2026-08-29 disk-capacity policy prepared on `vk/156f-vk-disk-space-is`:
   - VK Cargo incremental compilation is disabled in repository configuration
   - green runtime rules require one dedicated shared Cargo target outside

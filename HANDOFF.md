@@ -3000,3 +3000,10 @@ User QA checklist for the no-restart frontend repair:
 - Per-message frontend writes are serialized so a delete cannot be overtaken by
   an earlier in-flight edit.
 - No live deploy, database mutation, frontend swap, or service restart occurred.
+# 2026-08-29 Colored Kanban workspaces promotion
+
+- Branch `vk/b6aa-vk-colored-works` is being promoted through a PR into
+  `staging` and then a frontend-only green release.
+- The feature adds persistent, theme-aware workspace card colors through the
+  existing UI-preferences scratch API; no backend restart is required.
+- Public preview: `https://mcp-server.tail744c4.ts.net:8443/`.

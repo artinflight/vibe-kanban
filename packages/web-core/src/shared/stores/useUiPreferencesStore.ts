@@ -391,6 +391,7 @@ type State = {
   selectedProjectId: string | null;
   localProjectOrder: string[];
   localProjectCustomizations: Record<string, ProjectCustomization>;
+  workspaceColors: Record<string, string>;
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
   savedChatMessages: SavedChatMessage[];
@@ -492,6 +493,7 @@ type State = {
     projectId: string,
     customization: ProjectCustomization
   ) => void;
+  setWorkspaceColor: (workspaceId: string, color: string | null) => void;
   setCreateDraftWorkspaceByDefault: (value: boolean) => void;
   setShowLeftColumnLinks: (value: boolean) => void;
   setSavedChatMessages: (messages: SavedChatMessage[]) => void;
@@ -539,6 +541,7 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
   selectedProjectId: null,
   localProjectOrder: [],
   localProjectCustomizations: {},
+  workspaceColors: {},
   createDraftWorkspaceByDefault: DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT,
   showLeftColumnLinks: DEFAULT_SHOW_LEFT_COLUMN_LINKS,
   savedChatMessages: [],
@@ -944,6 +947,16 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
         },
       },
     })),
+  setWorkspaceColor: (workspaceId, color) =>
+    set((state) => {
+      const workspaceColors = { ...state.workspaceColors };
+      if (color) {
+        workspaceColors[workspaceId] = color;
+      } else {
+        delete workspaceColors[workspaceId];
+      }
+      return { workspaceColors };
+    }),
   setCreateDraftWorkspaceByDefault: (value) =>
     set({ createDraftWorkspaceByDefault: value }),
   setShowLeftColumnLinks: (value) => set({ showLeftColumnLinks: value }),

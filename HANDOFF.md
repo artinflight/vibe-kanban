@@ -2814,6 +2814,10 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
+- 2026-08-29 the centered workspace branch label is selectable/copyable in the
+  desktop navbar and no longer participates in the Tauri window drag region.
+  The label is a branch reference, not the definitive VK workspace UUID.
+
 - 2026-08-29 compact Kanban metadata and responsive project-rail sizing are
   live from staging commit `46014edcf` via release
   `20260829Tcompact-cards-project-rail-46014edcf`. Served JS hash verification

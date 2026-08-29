@@ -63,6 +63,12 @@
 
 ## Current Status
 
+- 2026-08-29 selectable workspace branch label prepared:
+  - the centered desktop navbar branch label now permits normal text selection
+    and uses a text cursor instead of acting as a Tauri drag region
+  - the full branch is available as the native title when visual truncation is
+    required
+
 - 2026-08-29 compact-card and responsive-project-rail follow-up deployed:
   - PR `#85` rebase-merged into `staging` as `46014edcf`
   - release `20260829Tcompact-cards-project-rail-46014edcf` is live

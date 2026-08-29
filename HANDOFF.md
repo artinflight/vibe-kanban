@@ -2814,6 +2814,12 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
+- 2026-08-29 public branch preview is available at
+  `https://mcp-server.tail744c4.ts.net:8443/`, proxying this worktree's Vite
+  server on `127.0.0.1:3003` to green backend `4511`. Root and `/api/info`
+  returned `200`. Dynamic `184xx` Serve URLs are tailnet-only and must not be
+  presented as public operator links.
+
 - 2026-08-29 compact Kanban tags now reserve visible header space: one
   truncated colored pill is shown with `+N` for additional tags, and the full
   tag list is available as hover text.

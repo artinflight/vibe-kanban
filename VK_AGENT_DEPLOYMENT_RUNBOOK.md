@@ -488,7 +488,21 @@ Environment=VK_DISABLE_PR_MONITOR=1
 Environment=VK_USE_SYSTEMD_RUN=1
 Environment=VK_TRANSIENT_MEMORY_HIGH=1500M
 Environment=VK_TRANSIENT_MEMORY_MAX=3000M
+Environment=CARGO_TARGET_DIR=/home/mcp/.local/share/vibe-kanban-green-build/cargo-target
+Environment=CARGO_INCREMENTAL=0
 ```
+
+Create the shared Cargo target root with `mcp:mcp` ownership before starting
+green. It is reproducible build output, but it is not a generic cache: preserve
+the root and reclaim its contents only after confirming no Cargo/Rust process
+uses it. Never locate it under `/home/mcp/.cache`, a worktree, an attachment
+root, or a VK database/session tree.
+
+Keep `DISABLE_WORKTREE_CLEANUP=1` during green operation to disable the legacy
+age-only cleanup pass. Leave `DISABLE_STATUS_WORKTREE_CLEANUP` unset so
+`In Staging`, `Done`, archival, and merged-staging transitions can request the
+guarded lifecycle cleanup. The guarded path defers pinned, running,
+process-referenced, or Git-dirty worktrees rather than risking active work.
 
 Stage 3: Final Sync:
 

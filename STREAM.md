@@ -2,27 +2,29 @@
 
 ## Stream Identifier
 
-- Branch: `vk/3d01-vk-hide-issue-ti`
-- Repo: `/home/mcp/code/worktrees/3d01-vk-hide-issue-ti/_vibe_kanban_repo`
+- Branch: `vk/156f-vk-disk-space-is`
+- Repo: `/home/mcp/code/worktrees/156f-vk-disk-space-is/_vibe_kanban_repo`
 - Working mode: isolated feature branch
 
 ## Objective
 
-- Replace redundant Kanban issue titles with active linked workspace cards while
-  preserving issue-flyout and workspace navigation behavior.
+- Prevent concurrent VK development from exhausting the root filesystem while
+  preserving active work, Git state, databases, sessions, and attachments.
 
 ## In Scope
 
-- Identify service, port, routing, data, and execution ownership.
-- Retire unused production and lab services without interrupting active work.
-- Make green and the HTTPS proxy boot dependencies authoritative.
-- Record the verified operational state for future agents.
+- Deduplicate Cargo output across green-launched workspaces.
+- Disable per-worktree Cargo incremental state for this repository.
+- Make archive, In Staging, and Done transitions reclaim clean inactive
+  worktrees while retaining dirty, pinned, running, or referenced worktrees.
+- Document capacity and protected-data rules in repository governance.
 
 ## Out of Scope
 
-- Restarting or stopping the active green backend.
-- Changing application source, live data, or worktrees.
-- Unrelated frontend, backend, or board changes.
+- Restarting or stopping the active green backend without operator approval.
+- Generic cache clearing, attachment retention, database/session retention, or
+  deletion of existing worktrees outside VK's guarded lifecycle.
+- GitHub Actions or external-CI capacity management.
 
 ## Stream-Specific Decisions
 

@@ -2970,3 +2970,17 @@ User QA checklist for the no-restart frontend repair:
   the new/retained bundle markers passed. The repository smoke script itself is
   stale because it still hardcodes the 20260626 release, so equivalent
   manifest-driven live checks were run directly.
+# 2026-08-29 Disk Capacity Lifecycle Prepared
+
+- Branch `vk/156f-vk-disk-space-is` is based on current `fork/staging`.
+- Cargo incremental state is disabled for VK and the green runtime contract now
+  requires a shared target at
+  `/home/mcp/.local/share/vibe-kanban-green-build/cargo-target`.
+- Manual archive now creates the same durable guarded-cleanup request used by
+  In Staging and Done; unarchive cancels a pending request.
+- Age-based cleanup now preserves pinned, externally referenced, Git-dirty, or
+  unverifiable worktrees before any whole-worktree removal.
+- Repository rules and workspace documentation describe protected storage,
+  attachment safety, green authority, and explicit-path requirements.
+- No live restart, service edit, worktree deletion, cache clearing, attachment
+  mutation, or database/session mutation was performed.

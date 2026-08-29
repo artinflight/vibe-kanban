@@ -150,6 +150,32 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Key envs: `FRONTEND_PORT`, `BACKEND_PORT`, `HOST`, `VK_ALLOWED_ORIGINS`.
 - Dev ports and assets are managed by `scripts/setup-dev-environment.js`.
 
+## Disk Capacity Policy
+
+- Treat free root-filesystem capacity as a production dependency. Green VK must
+  use one dedicated shared Cargo target through `CARGO_TARGET_DIR`; do not put
+  it under `/home/mcp/.cache` or an attachment, database, session, backup, or
+  source/worktree root.
+- Keep Cargo incremental compilation disabled for this repository. Parallel VK
+  workspaces otherwise reproduce several GiB of incremental state each.
+- `In Staging` and `Done` archive linked workspaces and request safe worktree
+  cleanup. Pinned, running, process-referenced, or Git-dirty worktrees must be
+  preserved; a dirty completed workspace requires explicit operator review.
+- Automatic cleanup may remove a whole worktree only after VK has identified
+  the workspace from its database, confirmed it is inactive, confirmed no host
+  process uses its path, and confirmed every repository is free of uncommitted
+  and untracked files.
+- Never infer disposability from a basename such as `cache`, `target`, `build`,
+  or `node_modules`. Outside VK's verified workspace lifecycle, use a frozen,
+  reviewed allowlist of exact reproducible-output paths.
+- Never broadly or recursively clear `/home/mcp/.cache`. Preserve VK databases,
+  session stores, Codex state, attachment roots, source, Git metadata, and
+  uncommitted work. Attachment payload deletion requires a separate explicit
+  retention policy and an upload-and-retrieval smoke test.
+- Blue VK is retired and must remain stopped and disabled. Green VK is the sole
+  active instance and the only instance authorised to perform status-triggered
+  workspace cleanup.
+
 ## Forbidden Behaviors
 
 - Do not treat branch-local notes as repo-wide truth.

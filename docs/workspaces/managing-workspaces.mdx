@@ -45,8 +45,18 @@ Select **Archive** from the workspace actions, or click the **Archive** button (
 Archived workspaces can be viewed by clicking **View Archive** at the bottom of the sidebar.
 
 <Info>
-**Archiving preserves everything.** Your conversation history, sessions, notes, and worktree files all remain intact. You can unarchive at any time to continue working.
+**Archiving preserves workspace data and Git work.** Vibe Kanban keeps your
+conversation history, sessions, notes, branch, and commits. It may remove the
+worktree copy after archive scripts finish, but only when no process uses the
+workspace and the worktree has no uncommitted or untracked files. Unarchiving
+recreates a removed worktree from its branch.
 </Info>
+
+<Warning>
+If an archived worktree contains uncommitted or untracked files, Vibe Kanban
+preserves it for manual review. Commit or otherwise secure the files before you
+expect the worktree to be reclaimed.
+</Warning>
 
 ## Deleting Workspaces
 
@@ -76,7 +86,7 @@ When you delete a workspace:
 
 | Action | Worktree | Conversation | Can Restore? |
 |--------|----------|--------------|--------------|
-| **Archive** | Kept on disk | Preserved | Yes - unarchive anytime |
+| **Archive** | Removed when inactive and Git-clean | Preserved | Yes - unarchive anytime |
 | **Delete** | Removed | Deleted | No - permanent |
 
 **Use Archive when:**
@@ -130,11 +140,14 @@ Get-ChildItem "$HOME\code\worktrees" -Recurse | Measure-Object -Property Length 
 To reduce disk usage:
 
 1. **Delete completed workspaces** - Use Delete (not Archive) for tasks that are finished and merged
-2. **Review archived workspaces** - Archived workspaces still consume disk space
+2. **Review deferred archives** - Pinned, running, process-referenced, or Git-dirty workspaces remain on disk
 3. **Configure cleanup scripts** - Add cleanup scripts to remove build artifacts (like `node_modules`) when workspaces close
 
 <Tip>
-Large directories like `node_modules`, `target/`, or `build/` are copied into each worktree. Consider adding cleanup scripts to remove these when you're done with a workspace.
+Large generated directories can consume substantial space in each worktree.
+Configure an archive script only for exact paths your project has verified as
+reproducible. A directory name such as `target`, `build`, `cache`, or
+`node_modules` does not prove that its contents are disposable.
 </Tip>
 
 ## Manual Worktree Deletion

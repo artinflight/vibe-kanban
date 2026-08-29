@@ -63,6 +63,11 @@
 
 ## Current Status
 
+- 2026-08-29 compact tag visibility follow-up prepared:
+  - Kanban headers reserve space for one truncated tag pill and a `+N` count
+  - hovering the tag control exposes the complete comma-separated tag list
+  - badge text truncates without hiding its color marker
+
 - 2026-08-29 selectable workspace branch label prepared:
   - the centered desktop navbar branch label now permits normal text selection
     and uses a text cursor instead of acting as a Tauri drag region

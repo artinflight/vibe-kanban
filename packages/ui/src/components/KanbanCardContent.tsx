@@ -188,11 +188,16 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
 
   const tagsDisplay = (
     <>
-      {tags.slice(0, 2).map((tag) => (
-        <KanbanBadge key={tag.id} name={tag.name} color={tag.color} />
+      {tags.slice(0, 1).map((tag) => (
+        <KanbanBadge
+          key={tag.id}
+          name={tag.name}
+          color={tag.color}
+          className="max-w-20"
+        />
       ))}
-      {tags.length > 2 && (
-        <span className="text-sm text-low">+{tags.length - 2}</span>
+      {tags.length > 1 && (
+        <span className="shrink-0 text-sm text-low">+{tags.length - 1}</span>
       )}
       {tagEditProps && tags.length === 0 && (
         <PlusIcon className="size-icon-xs text-low" weight="bold" />
@@ -203,7 +208,8 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
     <button
       type="button"
       onClick={(e) => e.stopPropagation()}
-      className="flex items-center gap-half cursor-pointer hover:bg-secondary rounded-sm transition-colors"
+      className="flex max-w-28 shrink-0 items-center gap-half rounded-sm cursor-pointer hover:bg-secondary transition-colors"
+      title={tags.map((tag) => tag.name).join(', ') || 'Add tag'}
     >
       {tagsDisplay}
     </button>
@@ -235,7 +241,7 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
         </div>
         <div className="flex min-w-0 items-center justify-end gap-half">
           {(tags.length > 0 || tagEditProps) && (
-            <div className="flex min-w-0 items-center gap-half overflow-hidden">
+            <div className="flex shrink-0 items-center gap-half">
               {tagControl}
             </div>
           )}

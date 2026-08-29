@@ -5,6 +5,10 @@ description: "Run a fast Vibe Kanban frontend preview without starting another b
 
 Use the lightweight preview when you need to smoke-test Vibe Kanban UI changes from a workspace branch without adding heavy backend load.
 
+Agents working in this fork should begin with the root-level
+`VK_PREVIEW_GUIDE.md`. It contains the canonical decision path, public `8443`
+URL, verification gate, and troubleshooting steps.
+
 This workflow starts only the local web Vite server from the current worktree. On the current green installation, it proxies `/api` and websocket traffic to the already-running local Vibe Kanban backend on `127.0.0.1:4511`.
 
 <Warning>

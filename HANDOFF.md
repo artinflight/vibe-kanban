@@ -1,5 +1,24 @@
 # HANDOFF.md
 
+## 2026-08-29 Colored Kanban Workspaces Live
+
+- PR `#91` rebase-merged into `staging` as `4a314b61b`.
+- Linked workspace cards expose a three-dot pastel color picker with a clear
+  action; selections persist under `workspace_colors`.
+- Light and dark VK themes use separate tint strengths and theme-aware swatch
+  contrast.
+- Live immutable release:
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcolored-workspaces-4a314b61b`.
+- Live assets: `/assets/index-CbeyxDjT.js` and
+  `/assets/index-BeAK0y4J.css`; the release manifest contains their SHA-256
+  hashes and rollback target.
+- The homelab nginx `location /` upstream had regressed to backend `4511`; it
+  was backed up, restored to frontend static port `4313`, syntax-checked, and
+  reloaded. `/api/` and `/v1/` remain on green `4511`.
+- `https://vibe.local/`, both new assets, `/api/info`, and compiled feature
+  markers returned successfully after deployment.
+- Backend PID remained `3112780`; no backend restart or migration occurred.
+
 ## 2026-08-29 Agent Preview Guide
 
 - Root entry point: `VK_PREVIEW_GUIDE.md`.

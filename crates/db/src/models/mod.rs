@@ -8,6 +8,7 @@ pub mod project;
 pub mod pull_request;
 pub mod repo;
 pub mod requests;
+pub mod saved_chat_message;
 pub mod scratch;
 pub mod session;
 pub mod subagent_job;

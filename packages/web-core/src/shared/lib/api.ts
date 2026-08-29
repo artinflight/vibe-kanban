@@ -1643,6 +1643,43 @@ export const scratchApi = {
     `/api/scratch/${scratchType}/${id}/stream/ws`,
 };
 
+export type SavedChatMessageRecord = {
+  id: string;
+  title: string;
+  content: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export const savedChatMessagesApi = {
+  list: async (): Promise<SavedChatMessageRecord[]> => {
+    const response = await makeRequest('/api/saved-chat-messages');
+    return handleApiResponse<SavedChatMessageRecord[]>(response);
+  },
+
+  upsert: async (message: {
+    id: string;
+    title: string;
+    content: string;
+    position: number;
+  }): Promise<SavedChatMessageRecord> => {
+    const response = await makeRequest(
+      `/api/saved-chat-messages/${encodeURIComponent(message.id)}`,
+      { method: 'PUT', body: JSON.stringify(message) }
+    );
+    return handleApiResponse<SavedChatMessageRecord>(response);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const response = await makeRequest(
+      `/api/saved-chat-messages/${encodeURIComponent(id)}`,
+      { method: 'DELETE' }
+    );
+    return handleApiResponse<void>(response);
+  },
+};
+
 // Agents API
 export const agentsApi = {
   getDiscoveredOptionsStreamUrl: (

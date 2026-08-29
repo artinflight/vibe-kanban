@@ -6,12 +6,19 @@
 
 ## Confirmed Current State
 
-- 2026-08-29 colored Kanban workspaces are ready for promotion:
+- 2026-08-29 colored Kanban workspaces are live:
   - linked workspace cards provide a three-dot pastel color picker and clear
     action in Kanban
   - colors persist through UI-preferences scratch and adapt their tint strength
     for light and dark themes
-  - the change is frontend-only and does not require a green backend restart
+  - PR `#91` rebase-merged into `staging` as `4a314b61b`
+  - frontend release:
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcolored-workspaces-4a314b61b`
+  - live assets: `/assets/index-CbeyxDjT.js` and
+    `/assets/index-BeAK0y4J.css`
+  - the homelab nginx frontend route was restored to the dedicated static
+    service on `4313`; `/api/` and `/v1/` remain on green `4511`
+  - backend PID remained `3112780`; no backend restart or migration occurred
 
 - 2026-08-29 disk-capacity policy prepared on `vk/156f-vk-disk-space-is`:
   - VK Cargo incremental compilation is disabled in repository configuration
@@ -44,8 +51,8 @@
   state may still be recoverable from Desktop archives and must be imported
   selectively, not blindly restored over green.
 - Current green frontend is pinned to:
-  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260826Tstaging-main-fc312a073`
-  with assets `index-BiiblWjF.js` and `index-DnGjt7Sn.css`.
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcolored-workspaces-4a314b61b`
+  with assets `index-CbeyxDjT.js` and `index-BeAK0y4J.css`.
 - That frontend release has a live `index.html` saved-message shim and
   `/vk-saved-chat-messages.json` sidecar because the running backend strips
   `saved_chat_messages` from `UI_PREFERENCES` API/WebSocket serialization.

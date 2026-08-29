@@ -65,12 +65,17 @@
 
 ## Current Status
 
-- 2026-08-29 colored Kanban workspaces ready for promotion:
+- 2026-08-29 colored Kanban workspaces deployed:
   - workspace cards expose a three-dot pastel color picker and clear action
   - selections persist in UI preferences scratch under `workspace_colors`
   - light and dark themes use distinct tint strengths, with a shared inset
     color edge and theme-aware swatch contrast
-  - the feature is frontend-only; no backend restart or migration is required
+  - PR `#91` rebase-merged into `staging` as `4a314b61b`
+  - immutable frontend release is
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcolored-workspaces-4a314b61b`
+  - `vibe.local` serves the new JS/CSS through the frontend static service on
+    `4313`, while API routes remain on green `4511`
+  - backend PID remained `3112780`; no backend restart or migration occurred
   - public preview is `https://mcp-server.tail744c4.ts.net:8443/`
 
 - 2026-08-29 agent preview guide prepared:

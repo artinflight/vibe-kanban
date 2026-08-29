@@ -691,9 +691,7 @@ export function AppBar({
             key={section.key}
             className={cn(
               'flex flex-col items-center gap-1',
-              section.key === 'projects'
-                ? 'min-h-0 flex-1'
-                : 'shrink-0'
+              section.key === 'projects' ? 'min-h-0 flex-1' : 'shrink-0'
             )}
           >
             <AppBarSectionLabel>{section.label}</AppBarSectionLabel>
@@ -702,9 +700,7 @@ export function AppBar({
                 key={item.key}
                 className={cn(
                   item.kind === 'project-list' && 'min-h-0 flex-1',
-                  'wrapperClassName' in item
-                    ? item.wrapperClassName
-                    : undefined
+                  'wrapperClassName' in item ? item.wrapperClassName : undefined
                 )}
               >
                 {renderSectionItem(item)}

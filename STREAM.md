@@ -2,14 +2,14 @@
 
 ## Stream Identifier
 
-- Branch: `vk/156f-vk-disk-space-is`
-- Repo: `/home/mcp/code/worktrees/156f-vk-disk-space-is/_vibe_kanban_repo`
+- Branch: `vk/b6aa-vk-colored-works`
+- Repo: `/home/mcp/code/worktrees/b6aa-vk-colored-works/_vibe_kanban_repo`
 - Working mode: isolated feature branch
 
 ## Objective
 
-- Prevent concurrent VK development from exhausting the root filesystem while
-  preserving active work, Git state, databases, sessions, and attachments.
+- Add persistent, theme-aware color customization for workspace cards shown in
+  the Kanban view.
 
 ## In Scope
 
@@ -64,6 +64,14 @@
 - Issue/workspace PR display paths under `packages/web-core/src/features/kanban/` and fallback PR routes
 
 ## Current Status
+
+- 2026-08-29 colored Kanban workspaces ready for promotion:
+  - workspace cards expose a three-dot pastel color picker and clear action
+  - selections persist in UI preferences scratch under `workspace_colors`
+  - light and dark themes use distinct tint strengths, with a shared inset
+    color edge and theme-aware swatch contrast
+  - the feature is frontend-only; no backend restart or migration is required
+  - public preview is `https://mcp-server.tail744c4.ts.net:8443/`
 
 - 2026-08-29 agent preview guide prepared:
   - root-level `VK_PREVIEW_GUIDE.md` is the concise canonical entry point for

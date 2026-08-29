@@ -34,6 +34,7 @@ type UiPreferencesScratchData = UiPreferencesData & {
   local_project_order?: string[];
   show_left_column_links?: boolean | null;
   saved_chat_messages?: SavedChatMessage[];
+  workspace_colors?: Record<string, string>;
 };
 
 // Stable UUID for global UI preferences (not tied to a workspace/user)
@@ -90,6 +91,7 @@ function storeToScratchData(state: {
   selectedProjectId: string | null;
   localProjectOrder: string[];
   localProjectCustomizations: Record<string, ProjectCustomization>;
+  workspaceColors: Record<string, string>;
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
   savedChatMessages: SavedChatMessage[];
@@ -138,6 +140,7 @@ function storeToScratchData(state: {
     selected_project_id: state.selectedProjectId,
     local_project_order: state.localProjectOrder,
     local_project_customizations: localProjectCustomizations,
+    workspace_colors: state.workspaceColors,
     create_draft_workspace_by_default: state.createDraftWorkspaceByDefault,
     show_left_column_links: state.showLeftColumnLinks,
     saved_chat_messages: state.savedChatMessages,
@@ -170,6 +173,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
   selectedProjectId: string | null;
   localProjectOrder: string[];
   localProjectCustomizations: Record<string, ProjectCustomization>;
+  workspaceColors: Record<string, string>;
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
   savedChatMessages: SavedChatMessage[];
@@ -232,6 +236,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
     localProjectOrder: data.local_project_order ?? [],
     localProjectCustomizations: (data.local_project_customizations ??
       {}) as Record<string, ProjectCustomization>,
+    workspaceColors: data.workspace_colors ?? {},
     createDraftWorkspaceByDefault:
       data.create_draft_workspace_by_default ??
       DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT,
@@ -294,6 +299,7 @@ export function useUiPreferencesScratch() {
     selectedProjectId: state.selectedProjectId,
     localProjectOrder: state.localProjectOrder,
     localProjectCustomizations: state.localProjectCustomizations,
+    workspaceColors: state.workspaceColors,
     createDraftWorkspaceByDefault: state.createDraftWorkspaceByDefault,
     showLeftColumnLinks: state.showLeftColumnLinks,
     savedChatMessages: state.savedChatMessages,
@@ -332,6 +338,7 @@ export function useUiPreferencesScratch() {
       selectedProjectId: currentState.selectedProjectId,
       localProjectOrder: currentState.localProjectOrder,
       localProjectCustomizations: currentState.localProjectCustomizations,
+      workspaceColors: currentState.workspaceColors,
       createDraftWorkspaceByDefault: currentState.createDraftWorkspaceByDefault,
       showLeftColumnLinks: currentState.showLeftColumnLinks,
       savedChatMessages: currentState.savedChatMessages,
@@ -412,6 +419,7 @@ export function useUiPreferencesScratch() {
           selectedProjectId: serverState.selectedProjectId,
           localProjectOrder: serverState.localProjectOrder,
           localProjectCustomizations: serverState.localProjectCustomizations,
+          workspaceColors: serverState.workspaceColors,
           createDraftWorkspaceByDefault:
             serverState.createDraftWorkspaceByDefault,
           showLeftColumnLinks: serverState.showLeftColumnLinks,

@@ -11,6 +11,7 @@ import {
   HandIcon,
   TriangleIcon,
   CircleIcon,
+  PaletteIcon,
 } from '@phosphor-icons/react';
 import { UserAvatar, type UserAvatarUser } from './UserAvatar';
 import { RunningDots } from './RunningDots';
@@ -19,7 +20,25 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from './DropdownMenu';
+
+export const WORKSPACE_COLORS = [
+  '6 78% 84%',
+  '28 92% 82%',
+  '45 95% 78%',
+  '84 64% 80%',
+  '145 55% 78%',
+  '174 58% 78%',
+  '202 82% 82%',
+  '232 72% 84%',
+  '262 70% 86%',
+  '302 62% 85%',
+  '334 78% 84%',
+  '358 74% 84%',
+] as const;
 
 export interface WorkspacePr {
   number: number;
@@ -54,6 +73,8 @@ export interface IssueWorkspaceCardProps {
   onArchive?: () => void;
   onUnlink?: () => void;
   onDelete?: () => void;
+  color?: string;
+  onColorChange?: (color: string | null) => void;
   showOwner?: boolean;
   showStatusBadge?: boolean;
   showNoPrText?: boolean;
@@ -70,12 +91,14 @@ interface IssueWorkspaceCardContainerProps {
   onClick?: () => void;
   className?: string;
   children: React.ReactNode;
+  style?: React.CSSProperties;
 }
 
 function IssueWorkspaceCardContainer({
   onClick,
   className,
   children,
+  style,
 }: IssueWorkspaceCardContainerProps) {
   return (
     <div
@@ -84,6 +107,7 @@ function IssueWorkspaceCardContainer({
         onClick && 'cursor-pointer hover:bg-secondary/70',
         className
       )}
+      style={style}
       onClick={
         onClick
           ? (e) => {
@@ -118,6 +142,8 @@ export function IssueWorkspaceCard({
   onArchive,
   onUnlink,
   onDelete,
+  color,
+  onColorChange,
   showOwner = true,
   showStatusBadge = true,
   showNoPrText = true,
@@ -142,7 +168,19 @@ export function IssueWorkspaceCard({
   const shouldStackPrBadges = workspace.prs.length > 2;
 
   return (
-    <IssueWorkspaceCardContainer onClick={onClick} className={className}>
+    <IssueWorkspaceCardContainer
+      onClick={onClick}
+      className={cn(
+        color &&
+          'bg-[hsl(var(--workspace-color)/0.48)] shadow-[inset_3px_0_0_hsl(var(--workspace-color)/0.85)] dark:bg-[hsl(var(--workspace-color)/0.18)]',
+        className
+      )}
+      style={
+        color
+          ? ({ '--workspace-color': color } as React.CSSProperties)
+          : undefined
+      }
+    >
       {/* Row 1: Status badge + Name (left), Owner avatar + menu (right) */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-half min-w-0">
@@ -172,7 +210,7 @@ export function IssueWorkspaceCard({
               className="h-5 w-5 text-[10px] border-2 border-panel"
             />
           )}
-          {(onRename || onArchive || onUnlink || onDelete) && (
+          {(onColorChange || onRename || onArchive || onUnlink || onDelete) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -187,6 +225,53 @@ export function IssueWorkspaceCard({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {onColorChange && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <PaletteIcon className="size-icon-xs" />
+                      {t('workspaces.color', { defaultValue: 'Color' })}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-40 p-base">
+                      <div className="grid grid-cols-4 gap-half">
+                        {WORKSPACE_COLORS.map((workspaceColor) => (
+                          <button
+                            key={workspaceColor}
+                            type="button"
+                            aria-label={t('workspaces.setColor', {
+                              defaultValue: 'Set workspace color',
+                            })}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onColorChange(workspaceColor);
+                            }}
+                            className={cn(
+                              'size-6 rounded-full border border-black/15 hover:scale-110 transition-transform dark:border-white/20',
+                              color === workspaceColor &&
+                                'ring-2 ring-brand ring-offset-1 ring-offset-primary'
+                            )}
+                            style={{ backgroundColor: `hsl(${workspaceColor})` }}
+                          />
+                        ))}
+                      </div>
+                      {color && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onColorChange(null);
+                          }}
+                          className="mt-base w-full text-left text-sm text-low hover:text-normal"
+                        >
+                          {t('workspaces.clearColor', {
+                            defaultValue: 'Clear color',
+                          })}
+                        </button>
+                      )}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                )}
                 {onRename && (
                   <DropdownMenuItem
                     onClick={(e) => {

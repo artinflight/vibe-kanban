@@ -63,6 +63,12 @@
 
 ## Current Status
 
+- 2026-08-29 compact-card and responsive-project-rail follow-up deployed:
+  - PR `#85` rebase-merged into `staging` as `46014edcf`
+  - release `20260829Tcompact-cards-project-rail-46014edcf` is live
+  - served JS hash matched the release and `/api/info` remained healthy
+  - green backend PID stayed `3112780`; no restart occurred
+
 - 2026-08-29 compact-card and responsive-project-rail follow-up is ready for
   promotion together:
   - the branch is frontend-only and does not require a backend restart

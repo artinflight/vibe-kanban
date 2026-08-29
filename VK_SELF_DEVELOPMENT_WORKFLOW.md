@@ -108,7 +108,10 @@ Still to implement or validate:
 Frontend-only preview:
 
 - Use `pnpm run preview:light`.
-- It should proxy to the existing live backend on `127.0.0.1:4311`.
+- It should proxy to the existing green backend on `127.0.0.1:4511`.
+- Its dynamically allocated Tailscale Serve URL is tailnet-only. Use the
+  approved `8443` Funnel workflow from the deployment runbook for public
+  operator review.
 - It must not start another backend watcher.
 - Stop it with `pnpm run preview:light:stop` after review.
 - Use `pnpm run preview:light:run` inside the VK preview panel when the preview

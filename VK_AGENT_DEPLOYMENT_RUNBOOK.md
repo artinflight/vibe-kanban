@@ -153,18 +153,32 @@ pnpm run preview:light:stop
 Default behavior:
 
 - serves the local frontend from the workspace
-- proxies API calls to the existing live backend on `127.0.0.1:4311`
+- proxies API calls to the existing green backend on `127.0.0.1:4511`
 - starts at preview port `3002` unless overridden
-- can expose a Tailscale HTTPS preview when Tailscale is available
+- can expose a tailnet-only Tailscale Serve URL when Tailscale is available
+- must use the approved `8443` Tailscale Funnel route for an operator browser
+  that is not connected to the tailnet
 
 Useful overrides:
 
 ```bash
 VK_PREVIEW_PORT=3030 pnpm run preview:light
 VK_PREVIEW_PORT_START=3040 pnpm run preview:light
-VK_PREVIEW_BACKEND_PORT=4311 pnpm run preview:light
+VK_PREVIEW_BACKEND_PORT=4511 pnpm run preview:light
 VK_PREVIEW_TAILNET_PORT=18460 pnpm run preview:light
 ```
+
+Public operator review:
+
+```bash
+preview_port="$(cat .vk-preview/port)"
+tailscale funnel --bg --https 8443 "http://127.0.0.1:${preview_port}"
+curl -skfI https://mcp-server.tail744c4.ts.net:8443/
+curl -skf https://mcp-server.tail744c4.ts.net:8443/api/info
+```
+
+Never report an `184xx` Serve URL as publicly reachable. It is tailnet-only
+and commonly produces `ERR_CONNECTION_TIMED_OUT` in the operator's browser.
 
 Inside a Vibe Kanban preview panel, prefer:
 

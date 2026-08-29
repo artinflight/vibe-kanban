@@ -6,6 +6,16 @@
 
 ## Confirmed Current State
 
+- 2026-08-29 disk-capacity policy prepared on `vk/156f-vk-disk-space-is`:
+  - VK Cargo incremental compilation is disabled in repository configuration
+  - green runtime rules require one dedicated shared Cargo target outside
+    caches, worktrees, attachments, databases, and session trees
+  - manual archive now joins In Staging and Done in requesting guarded worktree
+    cleanup
+  - automatic whole-worktree cleanup preserves pinned, running,
+    process-referenced, Git-dirty, and unverifiable worktrees
+  - no live green restart or runtime environment change has been performed
+
 - 2026-08-29 compact Kanban metadata and responsive project rail are live:
   - PR `#85` rebase-merged into `staging` as `46014edcf`
   - frontend release: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcompact-cards-project-rail-46014edcf`

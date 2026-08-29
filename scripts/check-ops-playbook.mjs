@@ -101,6 +101,14 @@ if (errors.length === 0) {
         `${name} must document VK_CODEX_MAX_ACTIVE_EXECUTIONS=8 as a required live runtime guardrail`
       );
     }
+    for (const guardrail of [
+      'CARGO_TARGET_DIR=/home/mcp/.local/share/vibe-kanban-green-build/cargo-target',
+      'CARGO_INCREMENTAL=0',
+    ]) {
+      if (!contents.includes(guardrail)) {
+        errors.push(`${name} must document ${guardrail} as a required capacity guardrail`);
+      }
+    }
   }
 }
 

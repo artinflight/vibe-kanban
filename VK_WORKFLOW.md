@@ -166,6 +166,20 @@ Required settings:
 - `VK_CODEX_MAX_ACTIVE_EXECUTIONS=8`
 - `VK_CODEX_BASE_COMMAND=/home/mcp/.local/bin/codex`
 - `VK_ALLOWED_ORIGINS=https://vibe.local`
+- `CARGO_TARGET_DIR=/home/mcp/.local/share/vibe-kanban-green-build/cargo-target`
+- `CARGO_INCREMENTAL=0`
+
+The Cargo target is intentionally shared by green-launched VK workspaces. It
+deduplicates dependency output across concurrent worktrees; Cargo serialises
+conflicting writes itself. Keep the root outside `/home/mcp/.cache`, worktrees,
+and every VK data or attachment tree. Do not point blue at this root. Capacity
+reclamation for this directory must first verify that no Cargo/Rust process is
+using it and must preserve the directory root.
+
+`DISABLE_WORKTREE_CLEANUP=1` disables only age-based expiry. Do not set
+`DISABLE_STATUS_WORKTREE_CLEANUP`: green must honour cleanup requests created
+when linked issues enter `In Staging` or `Done`. VK preserves pinned, running,
+process-referenced, and Git-dirty worktrees.
 
 Run `pnpm run ops:live-runtime-guardrails` from a branch that contains the May 3 guardrail check before restart/deploy. If that script is not available on the current branch, manually verify `systemctl --user show vibe-kanban.service -p Environment` contains the settings above.
 

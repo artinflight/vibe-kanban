@@ -1,3 +1,9 @@
+[build]
+# VK workspaces are short-lived and commonly exist in parallel. Incremental
+# state is several GiB per worktree and is reproducible, so prefer predictable
+# capacity over slightly faster local rebuilds.
+incremental = false
+
 [target.x86_64-apple-darwin]
 rustflags = [
     "-C", "link-arg=-framework",

@@ -63,6 +63,13 @@
 
 ## Current Status
 
+- 2026-08-29 compact-card and responsive-project-rail follow-up is ready for
+  promotion together:
+  - the branch is frontend-only and does not require a backend restart
+  - the intended PR target is `staging`
+  - deployment must build the merged `staging` commit in a clean worktree and
+    preserve the green runtime's saved-message shim and sidecar
+
 - 2026-08-28 responsive project-rail sizing prepared:
   - the project list consumes only the remaining vertical rail space
   - project buttons shrink evenly, stay square, and cap at the existing 40px

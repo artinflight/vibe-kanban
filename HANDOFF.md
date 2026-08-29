@@ -2814,6 +2814,11 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
+- 2026-08-29 the compact Kanban metadata row and responsive project-rail
+  sizing are grouped as one frontend-only promotion into `staging`. Build and
+  deploy only from the final merged commit, preserve the green saved-message
+  shim and sidecar, and do not restart the backend.
+
 - 2026-08-28 responsive project-rail sizing prepared: the project section now
   shares the remaining browser height among project buttons, keeps them square,
   and caps each at the existing 40px size instead of overflowing the rail.

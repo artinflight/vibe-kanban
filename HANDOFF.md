@@ -1,5 +1,23 @@
 # HANDOFF.md
 
+## 2026-08-30 Light-Theme Workspace Tint Follow-up
+
+- Branch: `vk/b6aa-light-workspace-tint`.
+- Root cause: Tailwind emitted the light workspace tint before `bg-panel`, so
+  the neutral card background won the cascade. The dark-qualified rule was
+  emitted later and remained visible.
+- The light and dark tint utilities, including their hover variants, now
+  explicitly override the neutral background. The colored left edge is
+  unchanged.
+- Validation passed: repository formatting, UI TypeScript check, web-core
+  TypeScript check with a larger Node heap, local-web production build, ops
+  check, generated CSS rule inspection, and `git diff --check`.
+- Public lightweight preview:
+  `https://mcp-server.tail744c4.ts.net:8443/`; both frontend and `/api/info`
+  probes returned successfully.
+- This is frontend-only. No backend restart, migration, live asset swap, or
+  deployment has been performed for the follow-up.
+
 ## 2026-08-29 Colored Kanban Workspaces Live
 
 - PR `#91` rebase-merged into `staging` as `4a314b61b`.

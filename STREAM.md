@@ -65,6 +65,14 @@
 
 ## Current Status
 
+- 2026-08-30 light-theme tint follow-up prepared:
+  - the colored fill now wins over the card's later `bg-panel` utility in both
+    themes
+  - light cards retain the existing `0.48` tint and use `0.58` on hover; dark
+    cards retain `0.18` and use `0.24` on hover
+  - the colored inset edge remains unchanged
+  - public preview is `https://mcp-server.tail744c4.ts.net:8443/`
+
 - 2026-08-29 colored Kanban workspaces deployed:
   - workspace cards expose a three-dot pastel color picker and clear action
   - selections persist in UI preferences scratch under `workspace_colors`

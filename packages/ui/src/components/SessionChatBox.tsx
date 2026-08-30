@@ -52,7 +52,7 @@ export type ExecutionStatus =
 
 interface ActionsProps {
   onSend: () => void;
-  onSendFollowUp: () => void;
+  onQueue: () => void;
   onCancelQueue: () => void;
   onStop: () => void;
   onPasteFiles: (files: File[]) => void;
@@ -237,7 +237,7 @@ function defaultFormatSessionDate(createdAt: string | Date) {
 
 /**
  * Full-featured chat box for session mode.
- * Supports follow-ups, queue fallback, stop, attach, feedback mode, stats, and session switching.
+ * Supports queue, stop, attach, feedback mode, stats, and session switching.
  */
 export function SessionChatBox<TExecutor extends string = string>({
   status,
@@ -354,7 +354,7 @@ export function SessionChatBox<TExecutor extends string = string>({
     } else if (isInEditMode && canSend) {
       editMode?.onSubmitEdit();
     } else if (status === 'running' && canSend) {
-      actions.onSendFollowUp();
+      actions.onQueue();
     } else if (status === 'idle' && canSend) {
       actions.onSend();
     }
@@ -541,15 +541,15 @@ export function SessionChatBox<TExecutor extends string = string>({
         return (
           <>
             <PrimaryButton
-              onClick={actions.onSendFollowUp}
+              onClick={actions.onQueue}
               disabled={!canSend}
-              value={t('conversation.actions.sendFollowUp')}
+              value={t('conversation.actions.sendCorrection')}
             />
             <PrimaryButton
               onClick={actions.onStop}
               variant="secondary"
-              value={t('conversation.actions.stop')}
-              actionIcon="spinner"
+              value={t('conversation.actions.stopAgent')}
+              actionIcon={XIcon}
             />
           </>
         );

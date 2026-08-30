@@ -67,6 +67,30 @@ use crate::{command, copy};
 const WORKSPACE_TOUCH_DEBOUNCE: Duration = Duration::from_mins(2);
 const LIVE_EXECUTION_HISTORY_BYTES: usize = 8 * 1024 * 1024;
 const LIVE_EXECUTION_CHANNEL_CAPACITY: usize = 4096;
+
+fn process_using_path(workspace_path: &Path, proc_root: &Path) -> Option<String> {
+    let workspace_path = workspace_path.canonicalize().ok()?;
+    let entries = std::fs::read_dir(proc_root).ok()?;
+
+    for entry in entries.filter_map(Result::ok) {
+        if !entry
+            .file_name()
+            .to_string_lossy()
+            .chars()
+            .all(|ch| ch.is_ascii_digit())
+        {
+            continue;
+        }
+        let Ok(cwd) = std::fs::read_link(entry.path().join("cwd")) else {
+            continue;
+        };
+        if cwd.starts_with(&workspace_path) {
+            return Some(entry.file_name().to_string_lossy().to_string());
+        }
+    }
+
+    None
+}
 const WORKSPACE_AGENT_IMAGE_SHARING_INSTRUCTIONS: &str = r#"# Vibe Kanban Workspace
 
 ## Sharing Images In Chat
@@ -278,40 +302,42 @@ impl LocalContainerService {
         map.remove(id)
     }
 
-    async fn cleanup_workspace(&self, workspace: &Workspace) {
+    async fn cleanup_workspace(&self, workspace: &Workspace) -> Result<(), ContainerError> {
         let Some(container_ref) = &workspace.container_ref else {
-            let _ = Workspace::mark_worktree_deleted(&self.db.pool, workspace.id).await;
-            return;
+            Workspace::mark_worktree_deleted(&self.db.pool, workspace.id).await?;
+            return Ok(());
         };
         let workspace_dir = PathBuf::from(container_ref);
 
-        let repositories = WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id)
-            .await
-            .unwrap_or_default();
+        let repositories =
+            WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id).await?;
 
         if repositories.is_empty() {
             tracing::warn!(
                 "No repositories found for workspace {}, cleaning up workspace directory only",
                 workspace.id
             );
-            if workspace_dir.exists()
-                && let Err(e) = tokio::fs::remove_dir_all(&workspace_dir).await
-            {
-                tracing::warn!("Failed to remove workspace directory: {}", e);
+            if workspace_dir.exists() {
+                tokio::fs::remove_dir_all(&workspace_dir)
+                    .await
+                    .map_err(|e| {
+                        tracing::error!(
+                            "Failed to remove workspace directory {} for workspace {}: {}",
+                            workspace_dir.display(),
+                            workspace.id,
+                            e
+                        );
+                        e
+                    })?;
             }
         } else {
             WorkspaceManager::cleanup_workspace(&workspace_dir, &repositories)
                 .await
-                .unwrap_or_else(|e| {
-                    tracing::warn!(
-                        "Failed to clean up workspace for workspace {}: {}",
-                        workspace.id,
-                        e
-                    );
-                });
+                .map_err(|error| ContainerError::Other(anyhow!(error)))?;
         }
 
-        let _ = Workspace::mark_worktree_deleted(&self.db.pool, workspace.id).await;
+        Workspace::mark_worktree_deleted(&self.db.pool, workspace.id).await?;
+        Ok(())
     }
 
     async fn cleanup_expired_workspaces(&self) -> Result<(), DeploymentError> {
@@ -332,9 +358,78 @@ impl LocalContainerService {
             expired_workspaces.len()
         );
         for workspace in &expired_workspaces {
-            self.cleanup_workspace(workspace).await;
+            if workspace.pinned {
+                tracing::info!(
+                    "Preserving expired workspace {} because it is pinned",
+                    workspace.id
+                );
+                continue;
+            }
+            if self.workspace_has_external_processes(workspace).await {
+                tracing::info!(
+                    "Deferring expired workspace cleanup for {} because a host process is using its path",
+                    workspace.id
+                );
+                continue;
+            }
+            match self.is_container_clean(workspace).await {
+                Ok(true) => {}
+                Ok(false) => {
+                    tracing::warn!(
+                        "Preserving expired workspace {} because it contains uncommitted or untracked files",
+                        workspace.id
+                    );
+                    continue;
+                }
+                Err(error) => {
+                    tracing::error!(
+                        "Unable to verify whether expired workspace {} is clean; preserving it: {}",
+                        workspace.id,
+                        error
+                    );
+                    continue;
+                }
+            }
+            if let Err(error) = self.cleanup_workspace(workspace).await {
+                tracing::error!(
+                    "Failed to clean up expired workspace {}; it remains eligible for retry: {}",
+                    workspace.id,
+                    error
+                );
+            }
         }
         Ok(())
+    }
+
+    async fn reconcile_requested_workspace_cleanups(&self) {
+        if !self.status_worktree_cleanup_enabled() {
+            tracing::info!("Status-triggered worktree cleanup is disabled for this VK instance");
+            return;
+        }
+
+        let workspace_ids = match Workspace::find_worktree_cleanup_requests(&self.db.pool).await {
+            Ok(workspace_ids) => workspace_ids,
+            Err(error) => {
+                tracing::error!("Failed to list requested workspace cleanups: {}", error);
+                return;
+            }
+        };
+
+        for workspace_id in workspace_ids {
+            if let Err(error) = self
+                .retry_archived_workspace_cleanup_after_execution(
+                    workspace_id,
+                    &ExecutionProcessRunReason::CleanupScript,
+                )
+                .await
+            {
+                tracing::error!(
+                    "Failed to reconcile requested cleanup for workspace {}: {}",
+                    workspace_id,
+                    error
+                );
+            }
+        }
     }
 
     fn spawn_workspace_cleanup(&self) {
@@ -350,6 +445,7 @@ impl LocalContainerService {
             loop {
                 cleanup_interval.tick().await;
                 tracing::info!("Starting periodic workspace cleanup...");
+                container.reconcile_requested_workspace_cleanups().await;
                 container
                     .cleanup_expired_workspaces()
                     .await
@@ -747,15 +843,19 @@ impl LocalContainerService {
                     }
                 }
 
-                if matches!(
+                if !matches!(
                     ctx.execution_process.run_reason,
-                    ExecutionProcessRunReason::ArchiveScript
+                    ExecutionProcessRunReason::DevServer
                 ) && let Err(e) = container
-                    .maybe_delete_archived_worktree_if_safe(ctx.workspace.id)
+                    .retry_archived_workspace_cleanup_after_execution(
+                        ctx.workspace.id,
+                        &ctx.execution_process.run_reason,
+                    )
                     .await
                 {
                     tracing::error!(
-                        "Failed to delete archived worktree after archive script for workspace {}: {}",
+                        "Failed to resume archived workspace cleanup after {:?} execution for workspace {}: {}",
+                        ctx.execution_process.run_reason,
                         ctx.workspace.id,
                         e
                     );
@@ -1476,6 +1576,32 @@ impl ContainerService for LocalContainerService {
         Ok(())
     }
 
+    async fn workspace_has_external_processes(&self, workspace: &Workspace) -> bool {
+        let Some(container_ref) = workspace.container_ref.as_ref() else {
+            return false;
+        };
+        let workspace_path = PathBuf::from(container_ref);
+
+        tokio::task::spawn_blocking(move || {
+            if let Some(pid) = process_using_path(&workspace_path, Path::new("/proc")) {
+                tracing::info!(
+                    "Host process {} is using archived workspace path {}",
+                    pid,
+                    workspace_path.display()
+                );
+                true
+            } else {
+                false
+            }
+        })
+        .await
+        .unwrap_or(true)
+    }
+
+    fn status_worktree_cleanup_enabled(&self) -> bool {
+        std::env::var("DISABLE_STATUS_WORKTREE_CLEANUP").is_err()
+    }
+
     async fn store_db_stream_handle(&self, id: Uuid, handle: JoinHandle<()>) {
         self.add_db_stream_handle(id, handle).await;
     }
@@ -1492,7 +1618,7 @@ impl ContainerService for LocalContainerService {
         PathBuf::from(workspace.container_ref.clone().unwrap_or_default())
     }
 
-    async fn try_inject_follow_up(
+    async fn try_steer_active_turn(
         &self,
         session: &Session,
         data: &DraftFollowUpData,
@@ -1513,7 +1639,7 @@ impl ContainerService for LocalContainerService {
             return Ok(false);
         }
 
-        executors::executors::codex::client::AppServerClient::inject_follow_up_for_execution(
+        executors::executors::codex::client::AppServerClient::steer_execution(
             process.id,
             data.message.clone(),
         )
@@ -1555,13 +1681,11 @@ impl ContainerService for LocalContainerService {
 
     async fn delete(&self, workspace: &Workspace) -> Result<(), ContainerError> {
         self.try_stop(workspace, true).await;
-        self.cleanup_workspace(workspace).await;
-        Ok(())
+        self.cleanup_workspace(workspace).await
     }
 
     async fn delete_worktree(&self, workspace: &Workspace) -> Result<(), ContainerError> {
-        self.cleanup_workspace(workspace).await;
-        Ok(())
+        self.cleanup_workspace(workspace).await
     }
 
     async fn ensure_container_exists(
@@ -1987,7 +2111,7 @@ fn success_exit_status() -> std::process::ExitStatus {
 
 #[cfg(test)]
 mod tests {
-    use super::LocalContainerService;
+    use super::{LocalContainerService, process_using_path};
 
     #[test]
     fn workspace_config_content_includes_image_sharing_and_imports() {
@@ -2023,5 +2147,25 @@ mod tests {
             "@repo-a/CLAUDE.md\n",
             "AGENTS.md"
         ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn detects_process_cwd_inside_workspace_path() {
+        use std::os::unix::fs::symlink;
+
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("workspace");
+        let repo = workspace.join("repo");
+        let proc_root = temp.path().join("proc");
+        let process_dir = proc_root.join("1234");
+        std::fs::create_dir_all(&repo).unwrap();
+        std::fs::create_dir_all(&process_dir).unwrap();
+        symlink(&repo, process_dir.join("cwd")).unwrap();
+
+        assert_eq!(
+            process_using_path(&workspace, &proc_root).as_deref(),
+            Some("1234")
+        );
     }
 }

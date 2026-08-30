@@ -12,10 +12,11 @@
 2. `STATE.md`
 3. `STREAM.md`
 4. `HANDOFF.md`
-5. `VK_WORKFLOW.md` and `VK_AGENT_DEPLOYMENT_RUNBOOK.md` for Vibe Kanban repo work, deploys, restarts, frontend asset swaps, and regression prevention
-6. Relevant package or crate guide for the area being changed
-7. Code and validation paths for the task
-8. `DELTA.md` only for compact continuity history
+5. `VK_PREVIEW_GUIDE.md` for any preview request
+6. `VK_WORKFLOW.md` and `VK_AGENT_DEPLOYMENT_RUNBOOK.md` for Vibe Kanban repo work, deploys, restarts, frontend asset swaps, and regression prevention
+7. Relevant package or crate guide for the area being changed
+8. Code and validation paths for the task
+9. `DELTA.md` only for compact continuity history
 
 ### Crate-specific guides
 
@@ -80,7 +81,7 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Install: `pnpm i`
 - Run dev (web app + backend with ports auto-assigned): `pnpm run dev`
 - Run QA dev mode: `pnpm run dev:qa`
-- Lightweight frontend preview against the existing live backend: `pnpm run preview:light`; stop it with `pnpm run preview:light:stop`
+- Lightweight frontend preview against the existing live backend: read `VK_PREVIEW_GUIDE.md`, then run `pnpm run preview:light`; stop it with `pnpm run preview:light:stop`
 - Backend (watch): `pnpm run backend:dev:watch`
 - Web app (dev): `pnpm run local-web:dev`
 - Type checks: `pnpm run check`
@@ -97,7 +98,7 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 
 - Before finishing any task, run `pnpm run format`.
 - Before using a branch in a local Vibe Kanban instance, run the narrowest relevant checks and document what was not exercised.
-- For routine Vibe Kanban UI smoke tests, prefer the lightweight preview workflow in `docs/self-hosting/lightweight-agent-preview.mdx` over `pnpm run dev`; only run full backend watch mode when backend behaviour must be exercised.
+- For any preview request, follow `VK_PREVIEW_GUIDE.md`. For routine UI smoke tests, use the lightweight workflow instead of `pnpm run dev`; only use an isolated backend when backend behavior must be exercised and the operator authorizes it.
 - Before opening or updating a PR into `staging`, the default validation baseline is `pnpm run ops:check`, `pnpm run check`, `pnpm run lint`, and `cargo test --workspace`, plus any repo-specific generation checks affected by the change.
 - Before promoting `staging` into `main`, require a fresh `staging` branch, passing CI, and explicit human QA for meaningful user-facing changes.
 - If work touches remote deployment paths, include `pnpm run remote:generate-types:check` and `pnpm run remote:prepare-db:check`.
@@ -148,6 +149,32 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Use `.env` for local overrides; never commit secrets.
 - Key envs: `FRONTEND_PORT`, `BACKEND_PORT`, `HOST`, `VK_ALLOWED_ORIGINS`.
 - Dev ports and assets are managed by `scripts/setup-dev-environment.js`.
+
+## Disk Capacity Policy
+
+- Treat free root-filesystem capacity as a production dependency. Green VK must
+  use one dedicated shared Cargo target through `CARGO_TARGET_DIR`; do not put
+  it under `/home/mcp/.cache` or an attachment, database, session, backup, or
+  source/worktree root.
+- Keep Cargo incremental compilation disabled for this repository. Parallel VK
+  workspaces otherwise reproduce several GiB of incremental state each.
+- `In Staging` and `Done` archive linked workspaces and request safe worktree
+  cleanup. Pinned, running, process-referenced, or Git-dirty worktrees must be
+  preserved; a dirty completed workspace requires explicit operator review.
+- Automatic cleanup may remove a whole worktree only after VK has identified
+  the workspace from its database, confirmed it is inactive, confirmed no host
+  process uses its path, and confirmed every repository is free of uncommitted
+  and untracked files.
+- Never infer disposability from a basename such as `cache`, `target`, `build`,
+  or `node_modules`. Outside VK's verified workspace lifecycle, use a frozen,
+  reviewed allowlist of exact reproducible-output paths.
+- Never broadly or recursively clear `/home/mcp/.cache`. Preserve VK databases,
+  session stores, Codex state, attachment roots, source, Git metadata, and
+  uncommitted work. Attachment payload deletion requires a separate explicit
+  retention policy and an upload-and-retrieval smoke test.
+- Blue VK is retired and must remain stopped and disabled. Green VK is the sole
+  active instance and the only instance authorised to perform status-triggered
+  workspace cleanup.
 
 ## Forbidden Behaviors
 

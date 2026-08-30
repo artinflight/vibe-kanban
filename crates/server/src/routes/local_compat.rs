@@ -2,6 +2,9 @@
 
 use std::collections::{HashMap, HashSet};
 
+use api_types::{
+    CreateIssueTagRequest, CreateTagRequest, IssuePriority, UpdateTagRequest, some_if_present,
+};
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
@@ -112,6 +115,21 @@ struct CompatPullRequestIssue {
     issue_id: String,
 }
 
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+struct CompatTag {
+    id: Uuid,
+    project_id: Uuid,
+    name: String,
+    color: String,
+}
+
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+struct CompatIssueTag {
+    id: Uuid,
+    issue_id: Uuid,
+    tag_id: Uuid,
+}
+
 #[derive(Debug, Clone, sqlx::FromRow)]
 struct LocalTaskRow {
     id: Uuid,
@@ -149,6 +167,7 @@ struct CreateIssueRequest {
     status_id: String,
     title: String,
     description: Option<String>,
+    priority: Option<IssuePriority>,
     sort_order: Option<f64>,
     extension_metadata: Option<Value>,
 }
@@ -158,6 +177,8 @@ struct UpdateIssueRequest {
     status_id: Option<String>,
     title: Option<String>,
     description: Option<Option<String>>,
+    #[serde(default, deserialize_with = "some_if_present")]
+    priority: Option<Option<IssuePriority>>,
     sort_order: Option<f64>,
     parent_issue_id: Option<Option<Uuid>>,
     extension_metadata: Option<Value>,
@@ -174,6 +195,8 @@ struct BulkIssueUpdateItem {
     status_id: Option<String>,
     title: Option<String>,
     description: Option<Option<String>>,
+    #[serde(default, deserialize_with = "some_if_present")]
+    priority: Option<Option<IssuePriority>>,
     sort_order: Option<f64>,
     parent_issue_id: Option<Option<Uuid>>,
     extension_metadata: Option<Value>,
@@ -690,13 +713,63 @@ fn extract_simple_id(
 }
 
 fn extract_priority(description: Option<&str>) -> Option<String> {
-    let raw = extract_cloud_metadata_value(description, "Original Priority")?;
+    let raw = extract_cloud_metadata_value(description, "Local Priority")
+        .or_else(|| extract_cloud_metadata_value(description, "Original Priority"))?;
     match raw.to_ascii_lowercase().as_str() {
         "urgent" => Some("urgent".to_string()),
         "high" => Some("high".to_string()),
         "medium" => Some("medium".to_string()),
         "low" => Some("low".to_string()),
         _ => None,
+    }
+}
+
+fn priority_name(priority: IssuePriority) -> &'static str {
+    match priority {
+        IssuePriority::Urgent => "urgent",
+        IssuePriority::High => "high",
+        IssuePriority::Medium => "medium",
+        IssuePriority::Low => "low",
+    }
+}
+
+fn ensure_local_priority_metadata(
+    description: Option<String>,
+    priority: Option<IssuePriority>,
+) -> Option<String> {
+    let body = description.unwrap_or_default();
+    let value = priority.map(priority_name);
+    let mut replaced = false;
+    let mut lines = Vec::new();
+
+    for line in body.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("- Local Priority:") || trimmed.starts_with("Local Priority:") {
+            replaced = true;
+            if let Some(value) = value {
+                let prefix_len = line.len() - trimmed.len();
+                let prefix = &line[..prefix_len];
+                lines.push(format!("{prefix}- Local Priority: {value}"));
+            }
+        } else {
+            lines.push(line.to_string());
+        }
+    }
+
+    let mut next = lines.join("\n");
+    if !replaced && let Some(value) = value {
+        if !next.trim().is_empty() {
+            next.push_str("\n\n");
+        }
+        next.push_str("Local metadata\n- Local Priority: ");
+        next.push_str(value);
+    }
+
+    let trimmed = next.trim().to_string();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
     }
 }
 
@@ -1290,6 +1363,8 @@ async fn archive_linked_workspaces_for_completed_issue(
     let workspaces = find_linked_workspaces_for_task(deployment, issue_id).await?;
 
     for workspace in workspaces {
+        Workspace::request_worktree_cleanup(&deployment.db().pool, workspace.id).await?;
+
         if !workspace.archived
             && let Err(e) = deployment.container().archive_workspace(workspace.id).await
         {
@@ -1318,6 +1393,16 @@ async fn archive_linked_workspaces_for_completed_issue(
         }
     }
 
+    Ok(())
+}
+
+async fn cancel_linked_workspace_cleanup_for_non_terminal_issue(
+    deployment: &DeploymentImpl,
+    issue_id: Uuid,
+) -> Result<(), ApiError> {
+    for workspace in find_linked_workspaces_for_task(deployment, issue_id).await? {
+        Workspace::clear_worktree_cleanup_request(&deployment.db().pool, workspace.id).await?;
+    }
     Ok(())
 }
 
@@ -1614,6 +1699,123 @@ async fn list_fallback_empty(table: &'static str) -> ResponseJson<serde_json::Va
     ResponseJson(json!({ table: [] }))
 }
 
+async fn list_fallback_tags(
+    State(deployment): State<DeploymentImpl>,
+    Query(query): Query<ProjectQuery>,
+) -> Result<ResponseJson<serde_json::Value>, ApiError> {
+    let tags = sqlx::query_as::<_, CompatTag>(
+        "SELECT id, project_id, name, color FROM local_kanban_tags WHERE project_id = ? ORDER BY name COLLATE NOCASE",
+    )
+    .bind(query.project_id)
+    .fetch_all(&deployment.db().pool)
+    .await?;
+
+    Ok(ResponseJson(json!({ "tags": tags })))
+}
+
+async fn create_tag(
+    State(deployment): State<DeploymentImpl>,
+    Json(request): Json<CreateTagRequest>,
+) -> Result<ResponseJson<serde_json::Value>, ApiError> {
+    let tag = CompatTag {
+        id: request.id.unwrap_or_else(Uuid::new_v4),
+        project_id: request.project_id,
+        name: request.name,
+        color: request.color,
+    };
+    sqlx::query("INSERT INTO local_kanban_tags (id, project_id, name, color) VALUES (?, ?, ?, ?)")
+        .bind(tag.id)
+        .bind(tag.project_id)
+        .bind(&tag.name)
+        .bind(&tag.color)
+        .execute(&deployment.db().pool)
+        .await?;
+
+    Ok(ResponseJson(json!({ "data": tag, "txid": 0 })))
+}
+
+async fn update_tag(
+    State(deployment): State<DeploymentImpl>,
+    Path(tag_id): Path<Uuid>,
+    Json(request): Json<UpdateTagRequest>,
+) -> Result<ResponseJson<serde_json::Value>, ApiError> {
+    sqlx::query(
+        "UPDATE local_kanban_tags SET name = COALESCE(?, name), color = COALESCE(?, color), updated_at = datetime('now', 'subsec') WHERE id = ?",
+    )
+    .bind(request.name)
+    .bind(request.color)
+    .bind(tag_id)
+    .execute(&deployment.db().pool)
+    .await?;
+
+    let tag = sqlx::query_as::<_, CompatTag>(
+        "SELECT id, project_id, name, color FROM local_kanban_tags WHERE id = ?",
+    )
+    .bind(tag_id)
+    .fetch_one(&deployment.db().pool)
+    .await?;
+
+    Ok(ResponseJson(json!({ "data": tag, "txid": 0 })))
+}
+
+async fn delete_tag(
+    State(deployment): State<DeploymentImpl>,
+    Path(tag_id): Path<Uuid>,
+) -> Result<ResponseJson<serde_json::Value>, ApiError> {
+    sqlx::query("DELETE FROM local_kanban_tags WHERE id = ?")
+        .bind(tag_id)
+        .execute(&deployment.db().pool)
+        .await?;
+    Ok(ResponseJson(json!({ "txid": 0 })))
+}
+
+async fn list_fallback_issue_tags(
+    State(deployment): State<DeploymentImpl>,
+    Query(query): Query<ProjectQuery>,
+) -> Result<ResponseJson<serde_json::Value>, ApiError> {
+    let issue_tags = sqlx::query_as::<_, CompatIssueTag>(
+        r#"SELECT lit.id, lit.issue_id, lit.tag_id
+           FROM local_kanban_issue_tags lit
+           JOIN tasks task ON task.id = lit.issue_id
+           WHERE task.project_id = ?"#,
+    )
+    .bind(query.project_id)
+    .fetch_all(&deployment.db().pool)
+    .await?;
+
+    Ok(ResponseJson(json!({ "issue_tags": issue_tags })))
+}
+
+async fn create_issue_tag(
+    State(deployment): State<DeploymentImpl>,
+    Json(request): Json<CreateIssueTagRequest>,
+) -> Result<ResponseJson<serde_json::Value>, ApiError> {
+    let issue_tag = CompatIssueTag {
+        id: request.id.unwrap_or_else(Uuid::new_v4),
+        issue_id: request.issue_id,
+        tag_id: request.tag_id,
+    };
+    sqlx::query("INSERT INTO local_kanban_issue_tags (id, issue_id, tag_id) VALUES (?, ?, ?)")
+        .bind(issue_tag.id)
+        .bind(issue_tag.issue_id)
+        .bind(issue_tag.tag_id)
+        .execute(&deployment.db().pool)
+        .await?;
+
+    Ok(ResponseJson(json!({ "data": issue_tag, "txid": 0 })))
+}
+
+async fn delete_issue_tag(
+    State(deployment): State<DeploymentImpl>,
+    Path(issue_tag_id): Path<Uuid>,
+) -> Result<ResponseJson<serde_json::Value>, ApiError> {
+    sqlx::query("DELETE FROM local_kanban_issue_tags WHERE id = ?")
+        .bind(issue_tag_id)
+        .execute(&deployment.db().pool)
+        .await?;
+    Ok(ResponseJson(json!({ "txid": 0 })))
+}
+
 async fn list_fallback_project_workspaces(
     State(deployment): State<DeploymentImpl>,
     Query(query): Query<ProjectQuery>,
@@ -1899,6 +2101,7 @@ async fn create_issue(
         ensure_status_metadata(request.description, &status_name),
         sort_order,
     );
+    description = ensure_local_priority_metadata(description, request.priority);
     if let Some(extension_metadata) = request.extension_metadata.as_ref() {
         description = ensure_local_issue_flags_metadata(description, extension_metadata);
     }
@@ -1969,6 +2172,9 @@ async fn update_issue(
     if let Some(sort_order) = request.sort_order.filter(|value| value.is_finite()) {
         next_description = ensure_local_sort_order_metadata(next_description, sort_order);
     }
+    if let Some(priority) = request.priority {
+        next_description = ensure_local_priority_metadata(next_description, priority);
+    }
     let existing_extension_metadata = extract_local_issue_flags(existing.description.as_deref());
     let next_extension_metadata = request
         .extension_metadata
@@ -1989,6 +2195,8 @@ async fn update_issue(
     if entered_in_staging || entered_done {
         snapshot_issue_pr_metadata_before_cleanup(&deployment, issue_id).await?;
         archive_linked_workspaces_for_completed_issue(&deployment, issue_id, &status_name).await?;
+    } else if !is_in_staging_status(&status_name) && !is_done_status(&status_name) {
+        cancel_linked_workspace_cleanup_for_non_terminal_issue(&deployment, issue_id).await?;
     }
 
     Ok(ResponseJson(MutationTxidResponse {
@@ -2036,6 +2244,9 @@ async fn bulk_update_issues(
         if let Some(sort_order) = update.sort_order.filter(|value| value.is_finite()) {
             next_description = ensure_local_sort_order_metadata(next_description, sort_order);
         }
+        if let Some(priority) = update.priority {
+            next_description = ensure_local_priority_metadata(next_description, priority);
+        }
         let existing_extension_metadata =
             extract_local_issue_flags(existing.description.as_deref());
         let next_extension_metadata = update
@@ -2059,6 +2270,8 @@ async fn bulk_update_issues(
             snapshot_issue_pr_metadata_before_cleanup(&deployment, update.id).await?;
             archive_linked_workspaces_for_completed_issue(&deployment, update.id, &status_name)
                 .await?;
+        } else if !is_in_staging_status(&status_name) && !is_done_status(&status_name) {
+            cancel_linked_workspace_cleanup_for_non_terminal_issue(&deployment, update.id).await?;
         }
     }
 
@@ -2117,10 +2330,7 @@ pub fn router() -> Router<DeploymentImpl> {
             "/fallback/project_workspaces",
             get(list_fallback_project_workspaces),
         )
-        .route(
-            "/fallback/tags",
-            get(|| async { list_fallback_empty("tags").await }),
-        )
+        .route("/fallback/tags", get(list_fallback_tags))
         .route(
             "/fallback/issue_assignees",
             get(|| async { list_fallback_empty("issue_assignees").await }),
@@ -2129,10 +2339,7 @@ pub fn router() -> Router<DeploymentImpl> {
             "/fallback/issue_followers",
             get(|| async { list_fallback_empty("issue_followers").await }),
         )
-        .route(
-            "/fallback/issue_tags",
-            get(|| async { list_fallback_empty("issue_tags").await }),
-        )
+        .route("/fallback/issue_tags", get(list_fallback_issue_tags))
         .route(
             "/fallback/issue_relationships",
             get(|| async { list_fallback_empty("issue_relationships").await }),
@@ -2143,6 +2350,13 @@ pub fn router() -> Router<DeploymentImpl> {
         )
         .route("/fallback/pull_requests", get(list_fallback_pull_requests))
         .route("/issues", post(create_issue))
+        .route("/tags", post(create_tag))
+        .route("/tags/{tag_id}", patch(update_tag).delete(delete_tag))
+        .route("/issue_tags", post(create_issue_tag))
+        .route(
+            "/issue_tags/{issue_tag_id}",
+            axum::routing::delete(delete_issue_tag),
+        )
         .route("/issues/bulk", post(bulk_update_issues))
         .route(
             "/issues/{issue_id}",
@@ -2152,12 +2366,13 @@ pub fn router() -> Router<DeploymentImpl> {
 
 #[cfg(test)]
 mod tests {
+    use api_types::IssuePriority;
     use uuid::Uuid;
 
     use super::{
         compat_statuses, default_project_status_names, ensure_local_issue_flags_metadata,
-        ensure_local_sort_order_metadata, ensure_status_metadata, extract_local_issue_flags,
-        extract_local_sort_order,
+        ensure_local_priority_metadata, ensure_local_sort_order_metadata, ensure_status_metadata,
+        extract_local_issue_flags, extract_local_sort_order, extract_priority,
     };
 
     #[test]
@@ -2259,5 +2474,33 @@ mod tests {
                 .unwrap()
                 .contains("Local Issue Flags")
         );
+    }
+
+    #[test]
+    fn local_priority_metadata_round_trips_and_clears() {
+        let description =
+            ensure_local_priority_metadata(Some("body".to_string()), Some(IssuePriority::High));
+        assert_eq!(
+            extract_priority(description.as_deref()).as_deref(),
+            Some("high")
+        );
+
+        let description = ensure_local_priority_metadata(description, Some(IssuePriority::Low));
+        assert_eq!(
+            extract_priority(description.as_deref()).as_deref(),
+            Some("low")
+        );
+        assert_eq!(
+            description
+                .as_deref()
+                .unwrap()
+                .matches("Local Priority")
+                .count(),
+            1
+        );
+
+        let description = ensure_local_priority_metadata(description, None);
+        assert_eq!(extract_priority(description.as_deref()), None);
+        assert!(!description.as_deref().unwrap().contains("Local Priority"));
     }
 }

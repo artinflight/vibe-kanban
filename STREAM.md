@@ -2,28 +2,29 @@
 
 ## Stream Identifier
 
-- Branch: `vk/aed7-vk-default-agent`
-- Repo: `/home/mcp/code/worktrees/aed7-vk-default-agent/_vibe_kanban_repo`
+- Branch: `vk/b6aa-vk-colored-works`
+- Repo: `/home/mcp/code/worktrees/b6aa-vk-colored-works/_vibe_kanban_repo`
 - Working mode: isolated feature branch
 
 ## Objective
 
-- Make GPT-5.6 Sol with Extra High reasoning the default Codex agent configuration.
+- Add persistent, theme-aware color customization for workspace cards shown in
+  the Kanban view.
 
 ## In Scope
 
-- Local-only runtime stability
-- Dysfunctional VK feature investigation
-- Focused fixes that can be promoted through `staging` and then production
-- Documentation of root cause and prevention rules
-- Space cleanup planning required before executing/deploying the repair set
+- Deduplicate Cargo output across green-launched workspaces.
+- Disable per-worktree Cargo incremental state for this repository.
+- Make archive, In Staging, and Done transitions reclaim clean inactive
+  worktrees while retaining dirty, pinned, running, or referenced worktrees.
+- Document capacity and protected-data rules in repository governance.
 
 ## Out of Scope
 
-- Reviving the old cloud-backed board model
-- Depending on `api.vibekanban.com` for local board state
-- Bulk-merging stale feature branches with unrelated changes
-- Restarting live VK without explicit user approval
+- Restarting or stopping the active green backend without operator approval.
+- Generic cache clearing, attachment retention, database/session retention, or
+  deletion of existing worktrees outside VK's guarded lifecycle.
+- GitHub Actions or external-CI capacity management.
 
 ## Stream-Specific Decisions
 
@@ -64,6 +65,110 @@
 
 ## Current Status
 
+- 2026-08-30 light-theme tint follow-up deployed:
+  - the colored fill now wins over the card's later `bg-panel` utility in both
+    themes
+  - light cards retain the existing `0.48` tint and use `0.58` on hover; dark
+    cards retain `0.18` and use `0.24` on hover
+  - the colored inset edge remains unchanged
+  - PR `#93` rebase-merged into `staging` as `b4f57707f`
+  - immutable frontend release is
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260830Tlight-workspace-tint-b4f57707f`
+  - the recovered nine-message compatibility sidecar was retained
+    byte-for-byte and verified through `vibe.local`
+  - backend PID remained `3112780`; no backend restart occurred
+  - public preview is `https://mcp-server.tail744c4.ts.net:8443/`
+
+- 2026-08-29 colored Kanban workspaces deployed:
+  - workspace cards expose a three-dot pastel color picker and clear action
+  - selections persist in UI preferences scratch under `workspace_colors`
+  - light and dark themes use distinct tint strengths, with a shared inset
+    color edge and theme-aware swatch contrast
+  - PR `#91` rebase-merged into `staging` as `4a314b61b`
+  - immutable frontend release is
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcolored-workspaces-4a314b61b`
+  - `vibe.local` serves the new JS/CSS through the frontend static service on
+    `4313`, while API routes remain on green `4511`
+  - backend PID remained `3112780`; no backend restart or migration occurred
+  - public preview is `https://mcp-server.tail744c4.ts.net:8443/`
+
+- 2026-08-29 agent preview guide prepared:
+  - root-level `VK_PREVIEW_GUIDE.md` is the concise canonical entry point for
+    frontend-only previews against green `4511`
+  - the guide distinguishes frontend preview from backend/migration testing,
+    documents the public `8443` Funnel route, and requires frontend plus
+    `/api/info` probes before sharing
+  - timeout, wrong-database, and disappearing-value troubleshooting explicitly
+    prevents agents from starting an unnecessary second backend
+  - `AGENTS.md`, `README.md`, the deployment runbook, and the detailed
+    self-hosting page link to the guide for discovery
+
+- 2026-08-29 public preview workflow repaired and documented:
+  - lightweight preview defaults to the live green backend on `4511`
+  - dynamic `184xx` Tailscale Serve URLs are explicitly labeled tailnet-only
+  - public operator review uses Funnel port `8443` and requires successful
+    frontend plus `/api/info` probes before the URL is shared
+
+- 2026-08-29 compact tag visibility follow-up prepared:
+  - Kanban headers reserve space for one truncated tag pill and a `+N` count
+  - hovering the tag control exposes the complete comma-separated tag list
+  - badge text truncates without hiding its color marker
+  - follow-up testing found the local compatibility API still returned empty
+    `tags` and `issue_tags` collections, so styling alone could not display tags
+  - local Kanban tags and issue/tag associations now have SQLite persistence and
+    fallback list/create/update/delete API routes
+  - local issue create/update/bulk-update now persist priority metadata instead
+    of accepting the UI mutation and immediately reloading the old value
+  - this correction requires a backend build/restart before the green-backed
+    preview can create or display persisted tags
+
+- 2026-08-29 selectable workspace branch label prepared:
+  - the centered desktop navbar branch label now permits normal text selection
+    and uses a text cursor instead of acting as a Tauri drag region
+  - the full branch is available as the native title when visual truncation is
+    required
+
+- 2026-08-29 compact-card and responsive-project-rail follow-up deployed:
+  - PR `#85` rebase-merged into `staging` as `46014edcf`
+  - release `20260829Tcompact-cards-project-rail-46014edcf` is live
+  - served JS hash matched the release and `/api/info` remained healthy
+  - green backend PID stayed `3112780`; no restart occurred
+
+- 2026-08-29 compact-card and responsive-project-rail follow-up is ready for
+  promotion together:
+  - the branch is frontend-only and does not require a backend restart
+  - the intended PR target is `staging`
+  - deployment must build the merged `staging` commit in a clean worktree and
+    preserve the green runtime's saved-message shim and sidecar
+
+- 2026-08-28 responsive project-rail sizing prepared:
+  - the project list consumes only the remaining vertical rail space
+  - project buttons shrink evenly, stay square, and cap at the existing 40px
+    square size when the project count fits
+  - the rail no longer relies on vertical scrolling to fit project buttons
+
+- 2026-08-28 compact Kanban metadata follow-up prepared:
+  - tags, priority/urgency, needs-review flag, assignee, and more-actions controls
+    share the issue-ID row
+  - the separate priority/assignee row is removed; only PR and relationship
+    badges remain below the workspace when present
+
+- 2026-08-28 workspace-first Kanban cards rebased onto `fork/staging`:
+  - active linked workspaces replace issue titles and description toggles
+  - archived/hidden workspaces retain the issue-title fallback
+  - linked workspaces render even without local summary enrichment
+  - workspace-card clicks open the workspace; outer-card clicks open the issue
+    flyout; flyout workspace clicks also open the workspace
+  - frontend-only change; no backend restart is required
+  - PR `#83` rebase-merged at `aa13835a9` and the clean merged-staging frontend
+    release is live on green with unchanged backend PID `3112780`
+
+- 2026-08-26 service consolidation complete:
+  - green on `4511` is the sole running VK backend and is enabled for boot
+  - production on `4311` and lab on `4411` are stopped and disabled
+  - production is runtime-masked because a concurrent process re-enabled it once after the initial shutdown
+  - `vibe.local` remains healthy and its proxy depends on green rather than production
+  - production was stopped only after its final execution reached a terminal state
 - 2026-06-26 multi-line rich clipboard paste hotfix live:
   - source `PasteMarkdownPlugin.tsx` now handles multiline `text/plain` before opting out for `text/html`
   - live frontend release is `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260626Tmultiline-rich-paste`, asset `/assets/index-DXMultilinePaste.js`

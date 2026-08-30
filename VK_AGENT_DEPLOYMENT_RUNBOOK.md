@@ -8,21 +8,41 @@ For the planned clean self-development project/preview model, read
 ## Current Live Truth
 
 - Canonical source repo: `/home/mcp/_vibe_kanban_repo`
-- Live service: `vibe-kanban.service`
-- Live backend port: `4311`
-- Preview proxy port: `4312`
-- Live binaries:
+- Current green live service as of 2026-08-28: `vibe-kanban-green.service`
+- Retired blue service: `vibe-kanban.service`
+- Current green backend port: `4511`
+- Current green preview proxy port: `4512`
+- Retired blue backend port: `4311`
+- Retired blue preview proxy port: `4312`
+- Current green data directory:
+  - `/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban`
+- Retired blue data directory:
+  - `/home/mcp/.local/share/vibe-kanban`
+- Current green Codex home:
+  - `/home/mcp/.local/share/vibe-kanban-green-codex-home`
+- Current green binary as of 2026-08-28:
+  - `/home/mcp/backups/vk-green-rollout-resume-fix-sanitized-20260826T211600Z/server`
+- Current green frontend release as of 2026-08-28:
+  - `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260826Tstaging-main-fc312a073`
+  - live assets: `/assets/index-BiiblWjF.js`, `/assets/index-DnGjt7Sn.css`
+- The green frontend release also has a live `index.html` saved-message shim
+  and `/vk-saved-chat-messages.json` sidecar. Do not replace the whole release
+  directory with a newly built dist unless the build is proven to include all
+  live-only retained behavior.
+- Legacy blue live binaries:
   - `/home/mcp/.local/bin/vibe-kanban-serve`
   - `/home/mcp/.local/bin/vibe-kanban-serve-prod`
-- Current live binary sha256 as of 2026-06-03:
+- Retired blue binary sha256 as of 2026-06-03:
   - `722a5b0d14ca2350661cdcd0a271ac2cfea980dae4f2dcafc55b8ffe9470ed75`
-- Current live frontend pointer as of 2026-06-03:
+- Retired blue frontend pointer as of 2026-06-03:
   - `/home/mcp/.local/share/vibe-kanban/frontend-dist/current`
   - points to `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260603Tqueue-resume-max-active`
   - live asset: `/assets/index-BLreFcjw.js`
-- Current live runtime uses isolated Codex home:
+- Retired blue runtime used isolated Codex home:
   - `CODEX_HOME=/home/mcp/.local/share/vibe-kanban/codex-home`
-- Current live runtime uses refreshable frontend assets:
+- Current green runtime uses isolated Codex home:
+  - `CODEX_HOME=/home/mcp/.local/share/vibe-kanban-green-codex-home`
+- Current green runtime uses refreshable frontend assets:
   - `VK_FRONTEND_DIST_DIR=/home/mcp/.local/share/vibe-kanban/frontend-dist/current`
 - Current live runtime must allow multiple Codex agents:
   - `VK_CODEX_MAX_ACTIVE_EXECUTIONS=8`
@@ -35,11 +55,14 @@ For the planned clean self-development project/preview model, read
     names differ by punctuation or case (`foxtrot-lima` vs `FoxtrotLima`).
 
 Treat older deployment details in historical docs as history unless they match
-the live checks above.
+fresh live checks. If `systemctl`, listeners, service env, and frontend asset
+identity disagree with this section, update this section before planning a
+restart.
 
 ## Absolute Rules
 
 - Do not restart `vibe-kanban.service` without explicit operator approval.
+- Do not restart `vibe-kanban-green.service` without explicit operator approval.
 - Do not deploy from a dirty checkout.
 - Do not deploy from `/home/mcp/_vibe_kanban_repo` when it has unrelated dirty files.
 - Do not assume code is live because it is merged, committed, or present in a worktree.
@@ -52,6 +75,12 @@ the live checks above.
   - `/home/mcp/backups/...`
   unless the task explicitly asks for that operation and a retention rule is clear.
 - If active agents are running, report them and wait for approval before any restart.
+- Do not assume port `4311` is the active VK instance. Always discover live
+  service and listener state before backup, deploy, restart, or recovery.
+- Do not "fix" a live frontend regression by copying an entire newly built
+  frontend over the active release directory. Publish a new release directory
+  and atomically switch a pointer, or apply a tiny documented hotfix with a
+  one-file rollback path.
 
 ## Required Read Order
 
@@ -109,6 +138,10 @@ separate release/deploy task.
 
 ## Preview Workflow
 
+Read [`VK_PREVIEW_GUIDE.md`](VK_PREVIEW_GUIDE.md) first. It is the concise,
+canonical agent procedure for choosing, starting, publishing, verifying, and
+troubleshooting a preview. The details below remain as deployment context.
+
 Use preview before promoting UI work into `staging` or before staging it for a
 live frontend swap.
 
@@ -124,18 +157,32 @@ pnpm run preview:light:stop
 Default behavior:
 
 - serves the local frontend from the workspace
-- proxies API calls to the existing live backend on `127.0.0.1:4311`
+- proxies API calls to the existing green backend on `127.0.0.1:4511`
 - starts at preview port `3002` unless overridden
-- can expose a Tailscale HTTPS preview when Tailscale is available
+- can expose a tailnet-only Tailscale Serve URL when Tailscale is available
+- must use the approved `8443` Tailscale Funnel route for an operator browser
+  that is not connected to the tailnet
 
 Useful overrides:
 
 ```bash
 VK_PREVIEW_PORT=3030 pnpm run preview:light
 VK_PREVIEW_PORT_START=3040 pnpm run preview:light
-VK_PREVIEW_BACKEND_PORT=4311 pnpm run preview:light
+VK_PREVIEW_BACKEND_PORT=4511 pnpm run preview:light
 VK_PREVIEW_TAILNET_PORT=18460 pnpm run preview:light
 ```
+
+Public operator review:
+
+```bash
+preview_port="$(cat .vk-preview/port)"
+tailscale funnel --bg --https 8443 "http://127.0.0.1:${preview_port}"
+curl -skfI https://mcp-server.tail744c4.ts.net:8443/
+curl -skf https://mcp-server.tail744c4.ts.net:8443/api/info
+```
+
+Never report an `184xx` Serve URL as publicly reachable. It is tailnet-only
+and commonly produces `ERR_CONNECTION_TIMED_OUT` in the operator's browser.
 
 Inside a Vibe Kanban preview panel, prefer:
 
@@ -163,14 +210,66 @@ turn the task into an operator-approved release/deploy task first.
 When a change needs a backend restart or a coordinated frontend/backend release,
 do all slow and risky work before asking for the restart window.
 
+### 2026-08-26 restart incident rules
+
+These rules were added after a restart window where the backup existed but the
+operator was not given a clear active-agent interruption gate, and a stale
+Codex rollout path was incorrectly treated as a fallback-to-new-thread problem
+instead of a restore problem.
+
+- A restart is not safe just because a backup exists.
+- A restart is not safe just because the operator says "proceed" if they also
+  asked not to lose active agent work.
+- If active agents exist, list each running execution by workspace, branch,
+  execution id, session id, agent session id, and rollout path status.
+- Ask for explicit acceptance of interruption for those exact executions before
+  touching the service.
+- Do not describe "start a new Codex thread" as fixing a missing rollout. A new
+  thread is only a fallback. First look for and restore the referenced rollout
+  file from same-day backups or older session archives.
+- When a live Codex state database contains rollout paths under a retired
+  `CODEX_HOME`, verify that those old-home paths either still exist or are
+  covered by a backup before saying resume state is protected.
+- A restart/deploy check must inventory every VK instance lineage on the host:
+  green, blue, retired, lab, and any service exposed by `vibe.local`. Backups
+  must name which lineage they cover. A backup of green is not a backup of
+  retired blue `4311` state.
+- If a retired instance has a zero-byte or otherwise broken DB, search Desktop
+  archives before concluding the state is gone. Do not overwrite current green
+  with a retired DB; import missing rows selectively after a dry run.
+- A board column named "In Staging" is not proof that the work is merged into
+  the deployed candidate. Compare branches and commits. Require the last agent
+  summary to say `Committed and Pushed` or verify the commit exists in
+  `origin/staging`.
+- If any "In Staging" workspace is `Committed / Not pushed`, or its branch has
+  commits missing from `origin/staging`, stop and report it as not included in
+  the restart package.
+- UI preferences and saved-message behavior require both backend preservation
+  and frontend hydration. If the running backend serializes a typed
+  `UI_PREFERENCES` payload that omits a field, the field can exist in SQLite
+  and still be absent in API/WebSocket responses. Verify through the API,
+  scratch WebSocket, and UI before saying preferences are safe.
+- Do not use `curl` alone to validate frontend state that initializes through
+  WebSockets. Confirm the relevant route, transport path, and browser-visible
+  behavior.
+- When a live-only frontend hotfix exists, record it in the deploy manifest.
+  The next full frontend build must either include that behavior in source or
+  explicitly remove it with operator approval.
+
 Prepare:
 
 1. Start from a clean candidate worktree based on the intended release branch.
 2. Confirm all intended fixes are present in the candidate branch.
-3. Confirm known live fixes are not missing from the candidate branch.
-4. Run focused checks and any required broader validation.
-5. Build the release binary and frontend assets from the clean candidate.
-6. Write a deploy manifest with:
+3. Confirm all board "In Staging" items are actually in the candidate branch:
+   - list the workspace branch and last summary status
+   - verify branch commits are pushed
+   - verify each commit is reachable from the candidate
+   - record excluded items by name and reason
+4. Confirm known live fixes and live-only hotfixes are not missing from the
+   candidate branch.
+5. Run focused checks and any required broader validation.
+6. Build the release binary and frontend assets from the clean candidate.
+7. Write a deploy manifest with:
    - branch and commit
    - build worktree
    - binary path and sha256
@@ -179,22 +278,38 @@ Prepare:
      commit as the backend, unless an explicit mixed-version exception is
      approved and recorded
    - features intentionally included
+   - board "In Staging" items intentionally excluded
    - known fixes that must not regress
+   - live-only hotfixes that are included or intentionally retired
    - validation commands and results
-7. Take an efficient restore-grade backup and mirror it to Desktop.
-8. Verify the backup archive, checksum/manifest, and latest pointer.
-9. Check active agents.
-10. Stop and report: the only remaining action should be the approved restart
+8. Take an efficient restore-grade backup and mirror it to Desktop.
+9. Verify the backup archive, checksum/manifest, and latest pointer.
+10. Check every VK instance and state lineage:
+   - `systemctl --user list-units 'vibe-kanban*' --all`
+   - `ss -ltnp` for `4311`, `4312`, `4511`, `4512`, `80`, and `443`
+   - `systemctl --user cat` for active and retired services
+   - current DB paths and sizes for every lineage
+   - Desktop archive names that cover each lineage
+11. Check active agents and Codex rollout availability:
+   - query the live VK database for `execution_processes.status = 'running'`
+   - join to `coding_agent_turns.agent_session_id` when present
+   - verify each active Codex thread's `rollout_path` exists
+   - query Codex threads updated today and verify their rollout files exist
+   - if any referenced rollout path is missing, restore it before restart or
+     report the exact gap as unresolved
+12. Stop and report: the only remaining action should be the approved restart
     or frontend symlink switch.
 
 At the restart window:
 
 1. Re-check active agents immediately before touching the service.
-2. If agents are active, report them and wait unless the operator explicitly
-   accepts interruption.
+2. If agents are active, report the exact inventory and wait unless the operator
+   explicitly accepts interruption for those listed runs.
 3. Install the already-built binary/assets.
 4. Restart only when backend code changed.
 5. Run post-restart smoke before saying the deploy worked.
+6. Re-run the Codex rollout availability check before saying agent resume state
+   is safe.
 
 This workflow exists so the operator can continue using VK while the candidate
 is built and validated, and downtime is limited to the final switch/restart.
@@ -373,7 +488,21 @@ Environment=VK_DISABLE_PR_MONITOR=1
 Environment=VK_USE_SYSTEMD_RUN=1
 Environment=VK_TRANSIENT_MEMORY_HIGH=1500M
 Environment=VK_TRANSIENT_MEMORY_MAX=3000M
+Environment=CARGO_TARGET_DIR=/home/mcp/.local/share/vibe-kanban-green-build/cargo-target
+Environment=CARGO_INCREMENTAL=0
 ```
+
+Create the shared Cargo target root with `mcp:mcp` ownership before starting
+green. It is reproducible build output, but it is not a generic cache: preserve
+the root and reclaim its contents only after confirming no Cargo/Rust process
+uses it. Never locate it under `/home/mcp/.cache`, a worktree, an attachment
+root, or a VK database/session tree.
+
+Keep `DISABLE_WORKTREE_CLEANUP=1` during green operation to disable the legacy
+age-only cleanup pass. Leave `DISABLE_STATUS_WORKTREE_CLEANUP` unset so
+`In Staging`, `Done`, archival, and merged-staging transitions can request the
+guarded lifecycle cleanup. The guarded path defers pinned, running,
+process-referenced, or Git-dirty worktrees rather than risking active work.
 
 Stage 3: Final Sync:
 
@@ -536,18 +665,18 @@ agent runs unless they have finished. Do not proceed without operator approval.
 Preflight:
 
 ```bash
-systemctl --user show vibe-kanban.service -p MainPID -p ActiveState -p SubState
+systemctl --user show vibe-kanban-green.service -p MainPID -p ActiveState -p SubState
 systemctl --user list-units 'vk-exec-*' --state=running --no-legend
 python3 - <<'PY'
 import sqlite3
-db='/home/mcp/.local/share/vibe-kanban/db.v2.sqlite'
+db='/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite'
 con=sqlite3.connect(db)
 for row in con.execute("select count(*) from execution_processes where status='running' and dropped=0"):
     print(row[0])
 con.close()
 PY
-readlink -f /home/mcp/.local/share/vibe-kanban/frontend-dist/current
-sha256sum /home/mcp/.local/bin/vibe-kanban-serve-prod
+readlink -f /home/mcp/.local/share/vibe-kanban/frontend-dist/current 2>/dev/null || true
+sha256sum /home/mcp/backups/vk-green-rollout-resume-fix-sanitized-20260826T211600Z/server
 ```
 
 Backup before restart:
@@ -570,14 +699,14 @@ install -m 0755 target/release/server /home/mcp/.local/bin/vibe-kanban-serve-pro
 Restart only after explicit approval:
 
 ```bash
-systemctl --user restart vibe-kanban.service
+systemctl --user restart vibe-kanban-green.service
 ```
 
 Post-restart verification:
 
 ```bash
-systemctl --user show vibe-kanban.service -p MainPID -p ActiveState -p SubState
-sha256sum /home/mcp/.local/bin/vibe-kanban-serve-prod
+systemctl --user show vibe-kanban-green.service -p MainPID -p ActiveState -p SubState
+sha256sum /proc/$(systemctl --user show -p MainPID --value vibe-kanban-green.service)/exe
 readlink -f /home/mcp/.local/share/vibe-kanban/frontend-dist/current
 curl -skI https://vibe.local/
 curl -sk https://vibe.local/api/info
@@ -612,11 +741,35 @@ unverified:
 - codeblock copy works
 - paste/drag/drop/mobile attachment selection shows visible success or error
 - active sub-agent indicators show active work only, not stale historical counts
+- saved messages are visible from desktop `https://vibe.local`
+- saved messages are visible from mobile/Tailscale `https://Vibe.local`
+- `UI_PREFERENCES` scratch state preserves saved messages through both
+  `/api/scratch/...` and `/api/scratch/.../stream/ws`
+- left navigation project coloring, flyouts, archive access, and active markers
+  match the pre-deploy baseline
+- active VK instance count is understood: service names, ports, DB paths, and
+  frontend paths are recorded
 
 Record results in `HANDOFF.md` before saying the deploy is ready or complete.
 
 ## Current Regression Traps
 
+- As of 2026-08-28, green is the live service on `4511/4512`; old blue `4311`
+  can still have recoverable historical state in Desktop archives even when the
+  local blue DB is empty. Do not call a green backup a `4311` backup.
+- Whole-directory frontend swaps can erase live-only UI behavior. The
+  2026-08 restart briefly regressed left-nav coloring/flyouts by copying a
+  rebuilt dist over the active release. Use release directories and pointer
+  switches, or one-file hotfixes with backups.
+- Saved messages can be present in SQLite but missing from the UI if the
+  running backend type drops `saved_chat_messages` when serializing
+  `UI_PREFERENCES`. Verify the REST response, WebSocket initial patch, and
+  browser UI.
+- Stale worktree launcher folders can contain broken symlinks that make
+  `git worktree add` fail with `Invalid repository ... already exists`. Before
+  deleting anything, inspect whether the path is a real worktree, a normal
+  directory with work, or a broken symlink. Back up or move only the stale
+  obstruction.
 - The missing-rollout Codex resume fix has source prepared in the restart
   candidate worktree but is not live unless the binary hash changes from
   `7c63eb8fa7b2b46f6567ef7f8606df1d7a794bb6685d14cd7bf951c531f00e46`

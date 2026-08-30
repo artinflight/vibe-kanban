@@ -163,6 +163,10 @@ pub struct UiPreferencesData {
     #[serde(default)]
     #[ts(skip)]
     pub show_left_column_links: Option<bool>,
+    /// Reusable chat messages configured in local settings
+    #[serde(default)]
+    #[ts(skip)]
+    pub saved_chat_messages: Vec<serde_json::Value>,
     /// Kanban project view selections (active view per project)
     #[serde(default)]
     pub kanban_project_view_selections: std::collections::HashMap<String, serde_json::Value>,

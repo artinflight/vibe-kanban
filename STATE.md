@@ -6,6 +6,97 @@
 
 ## Confirmed Current State
 
+- 2026-08-30 light-theme workspace card tint correction is live:
+  - the neutral `bg-panel` utility was emitted after the light workspace tint
+    and overrode it, leaving only the colored inset edge visible
+  - selected workspace colors now explicitly override the neutral background
+    in light and dark themes and preserve a slightly stronger tint on hover
+  - PR `#93` rebase-merged into `staging` as `b4f57707f`
+  - live frontend release:
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260830Tlight-workspace-tint-b4f57707f`
+  - the release retains all nine saved messages in the compatibility sidecar;
+    its SHA-256 is `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - backend PID remained `3112780`; no backend restart or migration occurred
+
+- 2026-08-29 colored Kanban workspaces are live:
+  - linked workspace cards provide a three-dot pastel color picker and clear
+    action in Kanban
+  - colors persist through UI-preferences scratch and adapt their tint strength
+    for light and dark themes
+  - PR `#91` rebase-merged into `staging` as `4a314b61b`
+  - frontend release:
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcolored-workspaces-4a314b61b`
+  - live assets: `/assets/index-CbeyxDjT.js` and
+    `/assets/index-BeAK0y4J.css`
+  - the homelab nginx frontend route was restored to the dedicated static
+    service on `4313`; `/api/` and `/v1/` remain on green `4511`
+  - backend PID remained `3112780`; no backend restart or migration occurred
+
+- 2026-08-29 disk-capacity policy prepared on `vk/156f-vk-disk-space-is`:
+  - VK Cargo incremental compilation is disabled in repository configuration
+  - green runtime rules require one dedicated shared Cargo target outside
+    caches, worktrees, attachments, databases, and session trees
+  - manual archive now joins In Staging and Done in requesting guarded worktree
+    cleanup
+  - automatic whole-worktree cleanup preserves pinned, running,
+    process-referenced, Git-dirty, and unverifiable worktrees
+  - no live green restart or runtime environment change has been performed
+
+- 2026-08-29 compact Kanban metadata and responsive project rail are live:
+  - PR `#85` rebase-merged into `staging` as `46014edcf`
+  - frontend release: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcompact-cards-project-rail-46014edcf`
+  - live JS: `/assets/index-Cv38gUEL.js`, sha256 `3a2a1ac59a204c5923e08e48544b5f0a8180eabf3eb31db9e3084b478fcb0e67`
+  - backend PID remained `3112780`; no restart occurred
+  - rollback: `/home/mcp/backups/vk-frontend-fixed-pre-compact-rail-20260829T094000Z`
+
+- 2026-08-28 restart incident lessons are documented in:
+  - `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
+  - `docs/self-hosting/local-backup-recovery.mdx`
+  - `docs/self-hosting/codex-home-isolation.mdx`
+- Current live VK instance is green, not retired blue:
+  - service: `vibe-kanban-green.service`
+  - ports: `4511` backend, `4512` preview proxy
+  - DB: `/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite`
+  - Codex home: `/home/mcp/.local/share/vibe-kanban-green-codex-home`
+- Retired blue `4311` state is not protected by a green backup unless the
+  backup explicitly includes `/home/mcp/.local/share/vibe-kanban`. Old blue
+  state may still be recoverable from Desktop archives and must be imported
+  selectively, not blindly restored over green.
+- Current green frontend is pinned to:
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcolored-workspaces-4a314b61b`
+  with assets `index-CbeyxDjT.js` and `index-BeAK0y4J.css`.
+- That frontend release has a live `index.html` saved-message shim and
+  `/vk-saved-chat-messages.json` sidecar because the running backend strips
+  `saved_chat_messages` from `UI_PREFERENCES` API/WebSocket serialization.
+  Future frontend builds must include the source fix before replacing this
+  live release.
+- 2026-08-26 duplicate local VK services were consolidated operationally:
+  - `vibe.local` routes through `vibe-local-https-proxy.service` to the green backend on port `4511`
+  - `vibe-kanban-green.service` is active and enabled for boot
+  - retired production `vibe-kanban.service` on port `4311` drained its final execution, then was stopped and disabled
+  - after a concurrent process re-enabled/restarted production once, it was stopped/disabled again with zero running rows and runtime-masked for the remainder of the boot
+  - stale `vibe-kanban-lab.service` on port `4411` was stopped and disabled
+  - the HTTPS proxy now wants and starts after green, with no dependency on retired production
+  - active green coding-agent executions were not interrupted
+- 2026-08-17 local workspace project filtering is live without a backend restart:
+  - PR `#75` rebase-merged into `staging` as `51f505a11`
+  - live frontend release is `20260817Tfilter-workspaces`, asset
+    `/assets/index-DhRotnm8.js`, sha256
+    `4348ec89cfe91a8ee78135fdc680b11cc78eb8ac22d7fed9274ccc9bf10a7ea1`
+  - local-only workspace filters now load active local projects and their
+    fallback workspace links instead of rendering only `No project`
+  - backend PID remained `1849957`; no service restart occurred
+  - pre-deploy frontend backup is on Desktop at
+    `desktop:B:/vk-backups/vk-frontend-pre-filter-workspaces-20260817T084000Z`
+- 2026-07-15 Codex default follow-up correction is in progress:
+  - the live profile correctly reported `gpt-5.6-sol` / `xhigh`, but a newly
+    created Oharafit agent still submitted `model_id: gpt-5.5`
+  - DB execution evidence showed create-mode stale draft/last-used state
+    overrode the profile default; the prior rollout claim did not validate the
+    actual new-agent creation path
+  - the source correction makes create mode prefer profile overrides before
+    stale scratch/last-used values while preserving an explicit current-form
+    selection and leaving existing-session precedence unchanged
 - 2026-07-14 Codex default is live without a service restart:
   - PR `#65` merged into `staging` as `108a1f377`
   - the live profile was updated through `PUT /api/profiles` to use
@@ -24,6 +115,16 @@
   - source fix is in `packages/ui/src/components/PasteMarkdownPlugin.tsx` and must be included in the next proper frontend build/restart package
   - live `python3 scripts/vk_live_regression_smoke.py` passed; smoke now expects current active projects `matchSubs`, `BBinvoice`, and `DeNest` ahead of the previous project list
   - next restart/frontend package must preserve or rebuild forward from this release; do not roll `frontend-dist/current` back to older staged assets
+- 2026-06-30 multiline paste priority fix is prepared for staging:
+  - `packages/ui/src/components/PasteMarkdownPlugin.tsx` preserves multiline
+    `text/plain` before the `text/html` opt-out
+  - the paste command now uses `COMMAND_PRIORITY_HIGH`, so VK's multiline
+    guard runs before Lexical's default rich paste handler can consume mobile
+    or document clipboard payloads
+  - `scripts/vk_live_regression_smoke.py` now checks the source guard so future
+    release candidates cannot silently regress to low-priority paste handling
+  - no frontend asset swap, backend deploy, live DB mutation, or restart was
+    performed by this source branch
 - 2026-06-21 project sidebar flyout/customization is prepared in source but not deployed:
   - AppBar now has a triangle-controlled project flyout so the compact project rail can reveal full project names without widening by default
   - project buttons can use persisted per-project abbreviation and pastel color overrides
@@ -432,6 +533,26 @@
 - Do not treat route changes as the only chance to clear UI-derived state; long-lived workspace views must reconcile state changes while already mounted.
 - Do not treat attachment upload as fire-and-forget; failures must be surfaced in the composer and backend cache-file absence must not become an opaque 500.
 - Do not delete VK backups, `codex-home`, or session history merely to free space unless a current valid backup and explicit retention rule exist.
+- Before backend restarts, audit active and recently updated Codex threads for
+  missing rollout paths. Missing rollout files are data loss until restored;
+  do not treat fallback-to-new-thread behavior as a fix.
+- The active-agent restart gate is mandatory: list all running executions and
+  their Codex rollout status, then get explicit acceptance for interrupting
+  those exact runs before touching the service.
+- Board "In Staging" is not proof of deployment readiness. A future restart
+  package must compare each intended workspace branch and last summary against
+  the candidate branch, and must report `Committed / Not pushed` work as not
+  included.
+- Do not validate saved messages from SQLite alone. Verify SQLite, REST scratch,
+  WebSocket scratch, and desktop/mobile UI.
+- Do not replace the active frontend release directory with a built dist from a
+  worktree. That caused a left-nav regression during the 2026-08 restart
+  incident. Use a new release directory and pointer switch, or a backed-up
+  one-file hotfix.
+- Broken symlinks inside workspace launcher directories can block
+  `git worktree add` with `Invalid repository ... already exists`. Inspect and
+  preserve the obstruction before moving it; do not delete potentially dirty
+  worktrees.
 - Agents can get confused because VK has three different path classes:
   - canonical source repo
   - live service/runtime/state
@@ -459,6 +580,17 @@
   - `not_found` must stay recoverable so a later status check can restore visibility instead of permanently hiding the child work
 - Replacing VK `CODEX_HOME` with a fresh directory and copying only `auth.json` will break old workspace thread fork/resume with `no rollout found for thread id ...`.
 - VK Codex isolation requires both auth and Codex session/rollout state if you want existing workspace threads to continue cleanly after the switch.
+- A same-day backup of the current live `CODEX_HOME` is not enough if
+  `state_5.sqlite` still contains thread rows pointing at a retired Codex home.
+  Before backend restarts, audit active and recently updated Codex threads for
+  missing `rollout_path` files and restore any recoverable stale paths from
+  Desktop session archives.
+- Starting a fresh Codex thread after a missing rollout error is not recovery.
+  It is a fallback with context loss and must not be described as a fix unless
+  the operator explicitly accepts that tradeoff.
+- The active-agent restart gate is mandatory: list all running executions and
+  their Codex rollout status, then get explicit acceptance for interrupting
+  those exact runs before touching the service.
 - Passing raw HTTP stress tests is not enough. The earlier false positive came from not reproducing:
   - mounted workspace UI behavior
   - repeated workspace/task polling

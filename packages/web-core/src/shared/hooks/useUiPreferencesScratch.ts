@@ -27,17 +27,49 @@ import {
   type ProjectCustomization,
 } from '@/shared/stores/useUiPreferencesStore';
 import type { RepoAction } from '@vibe/ui/components/RepoCard';
+import { useAppRuntime } from '@/shared/hooks/useAppRuntime';
+import { savedChatMessagesApi } from '@/shared/lib/api';
 
 type UiPreferencesScratchData = UiPreferencesData & {
   local_project_order?: string[];
   show_left_column_links?: boolean | null;
   saved_chat_messages?: SavedChatMessage[];
+  workspace_colors?: Record<string, string>;
 };
 
 // Stable UUID for global UI preferences (not tied to a workspace/user)
 // This is a deterministic UUID v5 generated from the namespace "ui-preferences"
 // Using a fixed UUID ensures all users/sessions share the same preferences record
 const UI_PREFERENCES_ID = '00000000-0000-0000-0000-000000000001';
+const SAVED_CHAT_MESSAGES_FALLBACK_URL = '/vk-saved-chat-messages.json';
+
+async function loadSavedChatMessagesFallback(): Promise<SavedChatMessage[]> {
+  try {
+    const response = await fetch(SAVED_CHAT_MESSAGES_FALLBACK_URL, {
+      cache: 'no-store',
+    });
+    if (!response.ok) return [];
+
+    const messages = await response.json();
+    if (!Array.isArray(messages)) return [];
+
+    return messages
+      .filter(
+        (message): message is SavedChatMessage =>
+          typeof message?.id === 'string' &&
+          typeof message.title === 'string' &&
+          typeof message.content === 'string'
+      )
+      .map((message) => ({
+        id: message.id,
+        title: message.title.trim(),
+        content: message.content,
+      }))
+      .filter((message) => message.title && message.content.trim());
+  } catch {
+    return [];
+  }
+}
 
 /**
  * Converts store state to scratch data format (camelCase to snake_case)
@@ -59,6 +91,7 @@ function storeToScratchData(state: {
   selectedProjectId: string | null;
   localProjectOrder: string[];
   localProjectCustomizations: Record<string, ProjectCustomization>;
+  workspaceColors: Record<string, string>;
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
   savedChatMessages: SavedChatMessage[];
@@ -107,6 +140,7 @@ function storeToScratchData(state: {
     selected_project_id: state.selectedProjectId,
     local_project_order: state.localProjectOrder,
     local_project_customizations: localProjectCustomizations,
+    workspace_colors: state.workspaceColors,
     create_draft_workspace_by_default: state.createDraftWorkspaceByDefault,
     show_left_column_links: state.showLeftColumnLinks,
     saved_chat_messages: state.savedChatMessages,
@@ -139,6 +173,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
   selectedProjectId: string | null;
   localProjectOrder: string[];
   localProjectCustomizations: Record<string, ProjectCustomization>;
+  workspaceColors: Record<string, string>;
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
   savedChatMessages: SavedChatMessage[];
@@ -201,6 +236,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
     localProjectOrder: data.local_project_order ?? [],
     localProjectCustomizations: (data.local_project_customizations ??
       {}) as Record<string, ProjectCustomization>,
+    workspaceColors: data.workspace_colors ?? {},
     createDraftWorkspaceByDefault:
       data.create_draft_workspace_by_default ??
       DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT,
@@ -233,6 +269,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
  * Should be used once at the app root level.
  */
 export function useUiPreferencesScratch() {
+  const runtime = useAppRuntime();
   const { scratch, updateScratch, isLoading, isConnected } = useScratch(
     ScratchType.UI_PREFERENCES,
     UI_PREFERENCES_ID
@@ -262,6 +299,7 @@ export function useUiPreferencesScratch() {
     selectedProjectId: state.selectedProjectId,
     localProjectOrder: state.localProjectOrder,
     localProjectCustomizations: state.localProjectCustomizations,
+    workspaceColors: state.workspaceColors,
     createDraftWorkspaceByDefault: state.createDraftWorkspaceByDefault,
     showLeftColumnLinks: state.showLeftColumnLinks,
     savedChatMessages: state.savedChatMessages,
@@ -300,6 +338,7 @@ export function useUiPreferencesScratch() {
       selectedProjectId: currentState.selectedProjectId,
       localProjectOrder: currentState.localProjectOrder,
       localProjectCustomizations: currentState.localProjectCustomizations,
+      workspaceColors: currentState.workspaceColors,
       createDraftWorkspaceByDefault: currentState.createDraftWorkspaceByDefault,
       showLeftColumnLinks: currentState.showLeftColumnLinks,
       savedChatMessages: currentState.savedChatMessages,
@@ -310,6 +349,9 @@ export function useUiPreferencesScratch() {
       ...(scratchData ?? {}),
       ...nextData,
     };
+    if (runtime === 'local') {
+      delete data.saved_chat_messages;
+    }
 
     const serialized = JSON.stringify(data);
     if (serialized === lastSavedPayloadRef.current) {
@@ -327,7 +369,7 @@ export function useUiPreferencesScratch() {
     } catch (e) {
       console.error('[useUiPreferencesScratch] Failed to save:', e);
     }
-  }, [scratchData, updateScratch]);
+  }, [runtime, scratchData, updateScratch]);
 
   const { debounced: debouncedSave } = useDebouncedCallback(saveToServer, 500);
 
@@ -337,46 +379,62 @@ export function useUiPreferencesScratch() {
       return;
     }
 
-    hasInitializedRef.current = true;
-
     if (scratchData) {
-      // Server has data - apply it to store
+      hasInitializedRef.current = true;
       isApplyingServerDataRef.current = true;
       lastSavedPayloadRef.current = JSON.stringify(scratchData);
-      const serverState = scratchDataToStore(scratchData);
 
-      // Merge server state into the store
-      useUiPreferencesStore.setState({
-        repoActions: serverState.repoActions,
-        expanded: serverState.expanded,
-        contextBarPosition: serverState.contextBarPosition,
-        paneSizes: serverState.paneSizes,
-        collapsedPaths: serverState.collapsedPaths,
-        fileSearchRepoId: serverState.fileSearchRepoId,
-        isLeftSidebarVisible: serverState.isLeftSidebarVisible,
-        isRightSidebarVisible: serverState.isRightSidebarVisible,
-        isTerminalVisible: serverState.isTerminalVisible,
-        workspacePanelStates: serverState.workspacePanelStates,
-        workspaceFilters: serverState.workspaceFilters,
-        workspaceSort: serverState.workspaceSort,
-        selectedOrgId: serverState.selectedOrgId,
-        selectedProjectId: serverState.selectedProjectId,
-        localProjectOrder: serverState.localProjectOrder,
-        localProjectCustomizations: serverState.localProjectCustomizations,
-        createDraftWorkspaceByDefault:
-          serverState.createDraftWorkspaceByDefault,
-        showLeftColumnLinks: serverState.showLeftColumnLinks,
-        savedChatMessages: serverState.savedChatMessages,
-        kanbanProjectViewSelections: serverState.kanbanProjectViewSelections,
-        kanbanProjectViewPreferences: serverState.kanbanProjectViewPreferences,
-      });
+      void (async () => {
+        const serverState = scratchDataToStore(scratchData);
+        let savedChatMessages =
+          serverState.savedChatMessages.length > 0
+            ? serverState.savedChatMessages
+            : await loadSavedChatMessagesFallback();
 
-      // Allow a brief delay for state to settle
-      setTimeout(() => {
-        isApplyingServerDataRef.current = false;
-      }, 100);
+        if (runtime === 'local') {
+          try {
+            const durableMessages = await savedChatMessagesApi.list();
+            savedChatMessages = durableMessages.map(
+              ({ id, title, content }) => ({ id, title, content })
+            );
+          } catch (error) {
+            console.error('Failed to load saved chat messages:', error);
+          }
+        }
+
+        useUiPreferencesStore.setState({
+          repoActions: serverState.repoActions,
+          expanded: serverState.expanded,
+          contextBarPosition: serverState.contextBarPosition,
+          paneSizes: serverState.paneSizes,
+          collapsedPaths: serverState.collapsedPaths,
+          fileSearchRepoId: serverState.fileSearchRepoId,
+          isLeftSidebarVisible: serverState.isLeftSidebarVisible,
+          isRightSidebarVisible: serverState.isRightSidebarVisible,
+          isTerminalVisible: serverState.isTerminalVisible,
+          workspacePanelStates: serverState.workspacePanelStates,
+          workspaceFilters: serverState.workspaceFilters,
+          workspaceSort: serverState.workspaceSort,
+          selectedOrgId: serverState.selectedOrgId,
+          selectedProjectId: serverState.selectedProjectId,
+          localProjectOrder: serverState.localProjectOrder,
+          localProjectCustomizations: serverState.localProjectCustomizations,
+          workspaceColors: serverState.workspaceColors,
+          createDraftWorkspaceByDefault:
+            serverState.createDraftWorkspaceByDefault,
+          showLeftColumnLinks: serverState.showLeftColumnLinks,
+          savedChatMessages,
+          kanbanProjectViewSelections: serverState.kanbanProjectViewSelections,
+          kanbanProjectViewPreferences:
+            serverState.kanbanProjectViewPreferences,
+        });
+
+        setTimeout(() => {
+          isApplyingServerDataRef.current = false;
+        }, 100);
+      })();
     }
-  }, [isLoading, isConnected, scratchData]);
+  }, [isLoading, isConnected, runtime, scratchData]);
 
   // Subscribe to store changes and save to server
   useEffect(() => {

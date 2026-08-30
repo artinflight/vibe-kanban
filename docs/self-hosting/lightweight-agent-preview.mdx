@@ -5,7 +5,11 @@ description: "Run a fast Vibe Kanban frontend preview without starting another b
 
 Use the lightweight preview when you need to smoke-test Vibe Kanban UI changes from a workspace branch without adding heavy backend load.
 
-This workflow starts only the local web Vite server from the current worktree. It proxies `/api` and websocket traffic to the already-running local Vibe Kanban backend on `127.0.0.1:4311`.
+Agents working in this fork should begin with the root-level
+`VK_PREVIEW_GUIDE.md`. It contains the canonical decision path, public `8443`
+URL, verification gate, and troubleshooting steps.
+
+This workflow starts only the local web Vite server from the current worktree. On the current green installation, it proxies `/api` and websocket traffic to the already-running local Vibe Kanban backend on `127.0.0.1:4511`.
 
 <Warning>
 Do not use `pnpm run dev` for routine UI previews in agent workspaces. It starts backend watch mode and can add expensive Rust rebuilds, file watchers, and child processes. Use the lightweight preview first.
@@ -29,14 +33,42 @@ From the worktree you want to preview, run:
 pnpm run preview:light
 ```
 
-The command prints a local URL such as:
+The command prints a local URL and, when Tailscale is available, a tailnet-only HTTPS URL. A tailnet-only URL will time out from a browser that is not connected to the same tailnet.
 
 ```text
 Preview running: http://127.0.0.1:3002/
-Backend proxy: http://127.0.0.1:4311/
+Backend proxy: http://127.0.0.1:4511/
 ```
 
 Open that URL in a browser, or paste it into the Vibe Kanban preview URL bar.
+
+## Public browser review
+
+For an operator browser that is not connected to the tailnet, publish the
+running preview through the host's approved public Funnel port. First read the
+allocated local port, then repoint only the root route on `8443`:
+
+```bash
+preview_port="$(cat .vk-preview/port)"
+tailscale funnel --bg --https 8443 "http://127.0.0.1:${preview_port}"
+```
+
+The public review URL is:
+
+```text
+https://mcp-server.tail744c4.ts.net:8443/
+```
+
+Verify both the frontend and its green backend proxy before sharing it:
+
+```bash
+curl -skfI https://mcp-server.tail744c4.ts.net:8443/
+curl -skf https://mcp-server.tail744c4.ts.net:8443/api/info
+```
+
+Do not share the dynamically allocated `184xx` URL unless the operator has
+confirmed their browser is on the tailnet. `tailscale serve` routes are
+tailnet-only; `tailscale funnel` is the public route used for operator review.
 
 <Check>
 The preview is ready when the command prints `Preview running` and the URL loads the branch UI.
@@ -70,7 +102,7 @@ By default, the helper starts at port `3002` and uses the first free port after 
 VK_PREVIEW_PORT=3012 pnpm run preview:light
 ```
 
-Override the backend port only if the live local backend is intentionally running somewhere other than `4311`:
+Override the backend port only if the live local backend is intentionally running somewhere other than `4511`:
 
 ```bash
 VK_PREVIEW_BACKEND_PORT=4411 pnpm run preview:light

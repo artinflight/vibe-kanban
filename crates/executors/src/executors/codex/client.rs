@@ -22,7 +22,7 @@ use codex_app_server_protocol::{
     ThreadResumeResponse, ThreadStartParams, ThreadStartResponse, ToolRequestUserInputAnswer,
     ToolRequestUserInputQuestion, ToolRequestUserInputResponse, TurnCompletedNotification,
     TurnInterruptParams, TurnInterruptResponse, TurnStartParams, TurnStartResponse,
-    TurnStartedNotification, TurnStatus, UserInput,
+    TurnStartedNotification, TurnStatus, TurnSteerParams, TurnSteerResponse, UserInput,
 };
 use codex_protocol::config_types::{CollaborationMode, ModeKind, Settings};
 use futures::TryFutureExt;
@@ -121,7 +121,7 @@ impl AppServerClient {
             .remove(&execution_process_id);
     }
 
-    pub async fn inject_follow_up_for_execution(
+    pub async fn steer_execution(
         execution_process_id: Uuid,
         message: String,
     ) -> Result<bool, ExecutorError> {
@@ -142,8 +142,7 @@ impl AppServerClient {
             return Ok(false);
         };
 
-        client.inject_follow_up(message).await?;
-        Ok(true)
+        client.steer(message).await
     }
 
     pub fn set_resolved_model(&self, model: String) {
@@ -330,6 +329,23 @@ impl AppServerClient {
             params: TurnInterruptParams { thread_id, turn_id },
         };
         self.send_request(request, "turn/interrupt").await
+    }
+
+    pub async fn turn_steer(
+        &self,
+        thread_id: String,
+        turn_id: String,
+        input: Vec<UserInput>,
+    ) -> Result<TurnSteerResponse, ExecutorError> {
+        let request = ClientRequest::TurnSteer {
+            request_id: self.next_request_id(),
+            params: TurnSteerParams {
+                thread_id,
+                input,
+                expected_turn_id: turn_id,
+            },
+        };
+        self.send_request(request, "turn/steer").await
     }
 
     pub async fn config_batch_write(
@@ -811,38 +827,32 @@ impl AppServerClient {
         guard.push_back(message);
     }
 
-    pub async fn inject_follow_up(&self, message: String) -> Result<(), ExecutorError> {
-        if message.trim().is_empty() {
-            return Ok(());
+    pub async fn steer(&self, message: String) -> Result<bool, ExecutorError> {
+        let message = message.trim();
+        if message.is_empty() {
+            return Ok(false);
         }
-
-        self.enqueue_feedback(message).await;
-
         let thread_id = self.thread_id.lock().await.clone();
         let turn_id = self.current_turn_id.lock().await.clone();
-        match (thread_id, turn_id) {
-            (Some(thread_id), Some(turn_id)) => {
-                tracing::debug!(
-                    thread_id = %thread_id,
-                    turn_id = %turn_id,
-                    "interrupting Codex turn to inject follow-up"
-                );
-                if let Err(err) = self.turn_interrupt(thread_id, turn_id).await {
-                    tracing::warn!("failed to interrupt Codex turn for follow-up: {err}");
-                }
-            }
-            (Some(thread_id), None) => {
-                tracing::debug!(
-                    thread_id = %thread_id,
-                    "queued Codex follow-up until the active turn is known"
-                );
-            }
-            (None, _) => {
-                tracing::debug!("queued Codex follow-up until the thread is registered");
-            }
-        }
+        let (Some(thread_id), Some(turn_id)) = (thread_id, turn_id) else {
+            return Ok(false);
+        };
 
-        Ok(())
+        tracing::debug!(
+            thread_id = %thread_id,
+            turn_id = %turn_id,
+            "steering active Codex turn"
+        );
+        self.turn_steer(
+            thread_id,
+            turn_id,
+            vec![UserInput::Text {
+                text: message.to_string(),
+                text_elements: vec![],
+            }],
+        )
+        .await?;
+        Ok(true)
     }
 
     async fn has_pending_feedback(&self) -> bool {
@@ -1155,6 +1165,8 @@ impl LogWriter {
 
 #[cfg(test)]
 mod tests {
+    use codex_app_server_protocol::ThreadResumeParams;
+
     use super::*;
 
     #[test]
@@ -1169,5 +1181,27 @@ mod tests {
         };
 
         assert_eq!(expected_id, request_id(&request));
+    }
+
+    #[test]
+    fn turn_steer_targets_the_expected_active_turn() {
+        let expected_id = RequestId::Integer(43);
+        let request = ClientRequest::TurnSteer {
+            request_id: expected_id.clone(),
+            params: TurnSteerParams {
+                thread_id: "thread-id".to_string(),
+                expected_turn_id: "active-turn-id".to_string(),
+                input: vec![UserInput::Text {
+                    text: "Use the existing API instead.".to_string(),
+                    text_elements: vec![],
+                }],
+            },
+        };
+
+        assert_eq!(expected_id, request_id(&request));
+        let serialized = serde_json::to_value(&request).expect("serialize turn/steer request");
+        assert_eq!(serialized["method"], "turn/steer");
+        assert_eq!(serialized["params"]["threadId"], "thread-id");
+        assert_eq!(serialized["params"]["expectedTurnId"], "active-turn-id");
     }
 }

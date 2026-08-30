@@ -1,5 +1,217 @@
 # HANDOFF.md
 
+## 2026-08-30 Light-Theme Workspace Tint Follow-up
+
+- PR `#93` rebase-merged into `staging` as `b4f57707f`.
+- Root cause: Tailwind emitted the light workspace tint before `bg-panel`, so
+  the neutral card background won the cascade. The dark-qualified rule was
+  emitted later and remained visible.
+- The light and dark tint utilities, including their hover variants, now
+  explicitly override the neutral background. The colored left edge is
+  unchanged.
+- Validation passed: repository formatting, UI TypeScript check, web-core
+  TypeScript check with a larger Node heap, local-web production build, ops
+  check, generated CSS rule inspection, and `git diff --check`.
+- Live immutable frontend release:
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260830Tlight-workspace-tint-b4f57707f`.
+- Live assets: `/assets/index-CiLHcCQh.js` and
+  `/assets/index-C8AmRs-y.css`; all four light/dark normal/hover tint markers
+  were verified in the served CSS.
+- The recovered `vk-saved-chat-messages.json` sidecar was copied into the
+  release before activation and verified after activation with nine messages
+  and SHA-256
+  `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`.
+- `https://vibe.local/`, both assets, `/api/info`, and the saved-message sidecar
+  returned `200` after the frontend-static service restart.
+- Backend PID remained `3112780`; no backend restart or migration occurred.
+
+## 2026-08-29 Colored Kanban Workspaces Live
+
+- PR `#91` rebase-merged into `staging` as `4a314b61b`.
+- Linked workspace cards expose a three-dot pastel color picker with a clear
+  action; selections persist under `workspace_colors`.
+- Light and dark VK themes use separate tint strengths and theme-aware swatch
+  contrast.
+- Live immutable release:
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcolored-workspaces-4a314b61b`.
+- Live assets: `/assets/index-CbeyxDjT.js` and
+  `/assets/index-BeAK0y4J.css`; the release manifest contains their SHA-256
+  hashes and rollback target.
+- The homelab nginx `location /` upstream had regressed to backend `4511`; it
+  was backed up, restored to frontend static port `4313`, syntax-checked, and
+  reloaded. `/api/` and `/v1/` remain on green `4511`.
+- `https://vibe.local/`, both new assets, `/api/info`, and compiled feature
+  markers returned successfully after deployment.
+- Backend PID remained `3112780`; no backend restart or migration occurred.
+
+## 2026-08-29 Agent Preview Guide
+
+- Root entry point: `VK_PREVIEW_GUIDE.md`.
+- Agents are directed there from `AGENTS.md`, `README.md`,
+  `VK_AGENT_DEPLOYMENT_RUNBOOK.md`, and the detailed Mintlify preview page.
+- Normal UI preview means branch Vite frontend -> green backend `4511` ->
+  public Funnel `8443`; both the frontend and `/api/info` must pass before the
+  URL is shared.
+- Backend or migration changes are not demonstrated by the green-backed
+  lightweight preview until the backend is deployed. Do not create another
+  backend or database unless the operator explicitly requests isolated backend
+  testing.
+
+## 2026-08-29 Local Kanban Tag Persistence Follow-up
+
+- Branch: `vk/3d01-vk-hide-issue-ti`
+- Worktree:
+  `/home/mcp/code/worktrees/3d01-vk-hide-issue-ti/_vibe_kanban_repo`
+- The compact tag UI was present, but the green local compatibility backend
+  returned empty `tags` and `issue_tags` collections, leaving nothing to render.
+- The branch now adds dedicated local Kanban tag tables plus fallback list and
+  mutation routes for tags and issue/tag associations.
+- The same compatibility gap affected priority: issue mutations did not accept
+  or persist the priority field. Local issue create, update, and bulk update now
+  round-trip priority metadata, including clearing a priority.
+- This is no longer frontend-only: a backend build/restart and migration are
+  required before the `4511`-backed preview can verify tag persistence.
+- Do not claim the public `8443` preview demonstrates this fix until it is
+  pointed at a backend built from the corrected source.
+
+## Current task
+
+- Branch: `vk/d3fb-vk-2-instances`
+- Objective: consolidate duplicate local Vibe Kanban services without interrupting active agents.
+- Confirmed production `4311`, lab `4411`, and green `4511` were running while `vibe.local` already routed to green.
+- Stopped and disabled lab. Disabled production, waited for its final execution to finish, and stopped it cleanly.
+- A concurrent process recreated production's boot symlink and restarted it once; with zero production execution rows it was stopped and disabled again and runtime-masked for the rest of the boot.
+- Enabled green for boot and changed `vibe-local-https-proxy.service` to want and start after green instead of production.
+- Final operational verification found only green listening among the VK backend ports; `vibe.local` returned green's configuration and active green executions remained running.
+
+## 2026-08-28 Restart Lessons
+
+- Branch: `vk/4e18-vk-staging-check`
+- Worktree:
+  `/home/mcp/code/worktrees/4e18-vk-staging-check/_vibe_kanban_repo`
+- Current focus: document the 2026-08 VK restart incident lessons so future
+  restart agents do not repeat the same failures.
+- Live VK truth as of this note:
+  - active service: `vibe-kanban-green.service`
+  - active ports: `4511` backend, `4512` preview proxy
+  - active DB:
+    `/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite`
+  - active Codex home: `/home/mcp/.local/share/vibe-kanban-green-codex-home`
+  - retired blue service/path: `vibe-kanban.service` / `4311` /
+    `/home/mcp/.local/share/vibe-kanban`
+- Documented hard lessons:
+  - discover live instance lineage before backing up or restarting
+  - green backups do not automatically cover retired blue `4311`
+  - verify board "In Staging" items are pushed and reachable from the candidate
+  - verify active agents and Codex rollout files before restart
+  - verify saved messages through SQLite, REST scratch, WebSocket scratch, and
+    browser UI
+  - never overwrite the active frontend release directory with an unproven
+    whole-dist build
+  - preserve and move stale worktree-path obstructions instead of deleting
+    possibly dirty work
+- Live saved-message note: the current green frontend has a live
+  `index.html` shim plus `/vk-saved-chat-messages.json` sidecar because the
+  running backend strips `saved_chat_messages` from `UI_PREFERENCES`
+  serialization. A future full frontend/backend release must include the source
+  fix before removing this hotfix.
+
+## 2026-08-04 Compact Summary Metadata Preview
+
+- Preview status: running and verified from the Desktop/operator machine.
+- Follow-up correction on 2026-08-08: the initial recognizer expected one
+  Lexical paragraph per metadata line, but Lexical imports consecutive lines as
+  a single paragraph containing line breaks. The renderer now recognizes that
+  actual node shape, preserves those compact field-per-line breaks below a
+  full-width divider, and accepts both the current eight-field block and the
+  legacy block with trailing `Version`.
+- Start command: `scripts/preview.sh start`
+- Working directory:
+  `/home/mcp/code/worktrees/71d8-vk-shrink-metada/_vibe_kanban_repo`
+- Port/bind: Vite on fixed port `3025`, bound to `0.0.0.0`.
+- Local URL: `http://127.0.0.1:3025/` (origin diagnostics only).
+- Operator HTTPS URL: `https://vk-preview.local/`.
+- Service name: `vk-preview-vibe-kanban.service` (transient user systemd
+  service created by `systemd-run`).
+- DNS/proxy route owner: Pi-hole and Docker nginx on homelab `10.0.0.97`.
+  Pi-hole resolves `vk-preview.local` to the homelab proxy; nginx terminates
+  HTTPS and proxies to the MCP host at `10.0.0.129:3010`; the MCP
+  `mealplan-host-router.service` maps `vk-preview.local` to
+  `127.0.0.1:3025`.
+- Validation passed:
+  - `scripts/preview.sh verify` returned `HTTP/2 200` for the exact HTTPS URL
+    and matched `Vibe Kanban` in the page content.
+  - route-owner check used
+    `curl -k -I --resolve vk-preview.local:443:10.0.0.97 https://vk-preview.local/`.
+  - content check used
+    `curl -k --resolve vk-preview.local:443:10.0.0.97 https://vk-preview.local/ | rg 'Vibe Kanban'`.
+  - Desktop DNS resolved `vk-preview.local` to `10.0.0.97`; Desktop
+    `curl.exe -k -I https://vk-preview.local/` returned `HTTP/1.1 200 OK`, and
+    the page body contained `<title>Vibe Kanban</title>`.
+  - the HTTPS-served Vite module for `DisplayConversationEntry.tsx` contains
+    `compactSummaryMetadata: true` and the `data-summary-metadata` compact
+    styling markers, proving the preview serves this branch's requested UI.
+  - `ss -ltnp` confirmed the app listens on `0.0.0.0:3025`.
+- Logs command: `journalctl --user -u vk-preview-vibe-kanban -n 120 --no-pager`.
+- Stop command: `scripts/preview.sh stop`.
+- Access limits: private homelab/Tailscale only; the viewing device must use
+  the homelab/Pi-hole DNS route (or equivalent tailnet subnet routing). This is
+  not a public internet preview.
+- Script repair: `scripts/preview.sh` now invokes Vite without the extra CLI
+  separator so `--host 0.0.0.0` takes effect, and runs HTTPS verification from
+  the homelab route owner because MCP-to-proxy hairpin HTTPS is blocked.
+## 2026-08-26 Terminal Workspace Archive Fix Staged
+
+- Root cause: terminal-status handlers existed for both `In Staging` and `Done`,
+  but an archive skipped for a running non-development execution was not retried
+  when that execution finished. Cleanup errors were also swallowed and could
+  still mark a worktree deleted. Both deployed services used old binaries and
+  set `DISABLE_WORKTREE_CLEANUP=1`.
+- Source commits on `vk/e11c-vk-fix-archiving` add durable targeted cleanup
+  requests, retry on every non-development process completion, periodic
+  reconciliation independent of broad age cleanup, archive-script sequencing,
+  dirty-worktree and `/proc/*/cwd` process guards, and propagated cleanup
+  failures. `DISABLE_STATUS_WORKTREE_CLEANUP=1` makes a shared-storage standby
+  fully passive before reconciliation or archive scripts begin.
+- Verified release source: `e95cfdaadfb8af3f8e93243f850236195608a2d6`;
+  release binary sha256:
+  `35dca5347efbb622691afedfc517916167f9a259ed1bb035dfe9842a7e44ba9d`;
+  staged at
+  `/home/mcp/backups/vk-archive-fix-release-e95cfdaad-20260826T101700Z/server`.
+- Blue standby is running the verified binary from
+  `/home/mcp/.local/bin/vibe-kanban-serve-prod` with
+  `DISABLE_STATUS_WORKTREE_CLEANUP=1`. Its live migration has 69 pending
+  requests and no archive executions were created after the corrected startup.
+- Green's service definition now points to the verified staged release, but its
+  current process is still the 2026-07-14 binary. It was intentionally not
+  restarted because green VK executions were active, including the execution
+  performing this repair. Green remains the authoritative `vibe.local` backend;
+  restart it only after a fresh audit shows no active green execution rows or
+  `vk-exec-*` units.
+- The broad `DISABLE_WORKTREE_CLEANUP=1` setting is intentionally retained on
+  both instances. The new status-driven queue does not depend on it. Blue also
+  retains the standby-specific targeted-cleanup disable flag; green does not.
+- Isolated API end-to-end validation passed for `In Staging`, `Done`, a
+  non-terminal status, an active execution, an external process whose cwd was
+  the worktree, archive-script ordering, Git branch/history retention, and
+  attachment upload/read/delete. Attachment-cache counts, bytes, and digest
+  were unchanged. The release build, `pnpm run format`, `git diff --check`, and
+  `pnpm run ops:check` passed. Two narrow Cargo test attempts were blocked by
+  pre-existing feature/system-library build issues; a broader build was stopped
+  for disk pressure before the later clean release build succeeded.
+- Deployment churn: an intermediate blue build reached reconciliation before
+  its late standby guard and started 21 archive-script executions. All 21
+  failed, and the deletion guard prevented worktree removal. Blue was stopped,
+  the guard was moved to the start of reconciliation, and the corrected build
+  was deployed and verified with zero post-start archive executions.
+- Pre-deploy backup:
+  `/home/mcp/backups/vk-archive-fix-predeploy-20260826T093000Z.tar.gz`, mirrored
+  to `desktop:B:/vk-backups/`, sha256
+  `8041bec78af2ff8cc1f777f5584b60bad3b00895a1b791ba96f8121e8c1e9039`.
+- Remaining live acceptance: wait for a zero-agent green restart window,
+  restart `vibe-kanban-green.service`, confirm the running executable hash,
+  migration and reconciliation logs, run both terminal-status timing cases
+  against green, and repeat live attachment upload/read/delete.
 ## 2026-07-13 Staging Backfill Preview Updated
 
 - Preview branch: `vk/4e18-live-backfill-to-staging`
@@ -2659,3 +2871,183 @@ User QA checklist for the no-restart frontend repair:
   from `20260714Tbrowser-notifications`.
 - Rollback backup:
   `/home/mcp/backups/profiles-live-pre-codex-sol-xhigh-20260714.json`.
+
+# 2026-07-15 Default Codex precedence correction
+
+- The previous live claim was false for the actual new-agent path: a newly
+  created Oharafit session submitted `gpt-5.5` despite the live profile
+  reporting `gpt-5.6-sol` / `xhigh`.
+- Root cause: create-mode scratch and preferred/last-used configuration had
+  higher precedence than profile defaults.
+- The correction makes create mode prefer profile model/reasoning overrides
+  over stale scratch/last-used values. Explicit choices made in the current
+  create form still win, and existing sessions keep their established model.
+- Completion requires a frontend build containing the correction and an
+  end-to-end new-agent creation check that inspects the stored
+  `executor_action.executor_config`; profile API values alone are insufficient.
+
+# Current Handoff
+
+- 2026-08-29 public branch preview is available at
+  `https://mcp-server.tail744c4.ts.net:8443/`, proxying this worktree's Vite
+  server on `127.0.0.1:3003` to green backend `4511`. Root and `/api/info`
+  returned `200`. Dynamic `184xx` Serve URLs are tailnet-only and must not be
+  presented as public operator links.
+
+- 2026-08-29 compact Kanban tags now reserve visible header space: one
+  truncated colored pill is shown with `+N` for additional tags, and the full
+  tag list is available as hover text.
+
+- 2026-08-29 the centered workspace branch label is selectable/copyable in the
+  desktop navbar and no longer participates in the Tauri window drag region.
+  The label is a branch reference, not the definitive VK workspace UUID.
+
+- 2026-08-29 compact Kanban metadata and responsive project-rail sizing are
+  live from staging commit `46014edcf` via release
+  `20260829Tcompact-cards-project-rail-46014edcf`. Served JS hash verification
+  and `/api/info` passed; green PID remained `3112780` with no restart. Rollback
+  is `/home/mcp/backups/vk-frontend-fixed-pre-compact-rail-20260829T094000Z`.
+
+- 2026-08-29 the compact Kanban metadata row and responsive project-rail
+  sizing are grouped as one frontend-only promotion into `staging`. Build and
+  deploy only from the final merged commit, preserve the green saved-message
+  shim and sidecar, and do not restart the backend.
+
+- 2026-08-28 responsive project-rail sizing prepared: the project section now
+  shares the remaining browser height among project buttons, keeps them square,
+  and caps each at the existing 40px size instead of overflowing the rail.
+
+- 2026-08-28 compact Kanban metadata follow-up prepared on top of deployed
+  workspace-first cards: tags, priority/urgency, review flag, assignee, and
+  more-actions controls now share the issue-ID row; the redundant metadata row
+  below the workspace is removed.
+
+- 2026-08-28 workspace-first Kanban cards merged and deployed:
+  - PR `#83` rebase-merged into `staging` at `aa13835a9`
+  - clean merged-staging frontend build is stored at
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260828Tworkspace-first-cards-aa13835a9`
+  - green runtime activation copied the release into its fixed resolved frontend
+    directory and replaced `index.html` last; no backend restart occurred
+  - green remained active on unchanged PID `3112780`
+  - rollback copy is
+    `/home/mcp/backups/vk-frontend-pre-workspace-first-20260828T204900Z`
+  - release manifest records source, asset hashes, rollback, and smoke evidence
+  - local/HTTPS roots, API info, service worker, and new JS/CSS returned `200`;
+    served hashes matched the manifest; repeated project responses were stable;
+    retained live tokens and workspace-first sourcemap markers passed
+  - `scripts/vk_live_regression_smoke.py` remains stale because it hardcodes the
+    retired 20260626 release; equivalent manifest-driven checks passed
+
+- 2026-08-28 `vk/3d01-vk-hide-issue-ti` is rebased onto `fork/staging` at
+  `b73276dc4` and ready for validation/PR/deployment.
+- Scope is frontend-only: active linked workspace cards replace redundant issue
+  titles on Kanban cards while retaining title fallback for hidden/archived
+  workspaces.
+- Navigation contract: the workspace surface opens the workspace, the rest of
+  the Kanban card opens the issue flyout, and workspace cards in the flyout open
+  the workspace.
+- Deployment must target the sole live green backend on port `4511`, whose
+  current fixed frontend path is
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260826Tstaging-main-fc312a073`.
+- No backend restart is required or authorized for this frontend-only release.
+- Pre-PR validation passed: `pnpm run format`, `pnpm run ops:check`, all
+  frontend stages of `pnpm run check`, focused local-web/UI lint, and
+  `git diff --check`. The aggregate Rust check stopped on the host because
+  `glib-2.0.pc` is not installed; PR CI must supply the authoritative Rust
+  baseline even though no Rust code changed.
+
+- Compact standard-summary metadata merged through PR `#71` at staging commit
+  `d2562a618fbb2d28f3748f4bad1ecb867b17c7e2`.
+- Browser notification/service-worker preservation merged through PR `#72` at
+  staging commit `4f8fa45c5480b3b018a13e4b9be5a7439a5b5eda`.
+- A production frontend release was built from a clean detached worktree at the
+  exact final staging commit and staged at
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260808Tcompact-summary-notifications`.
+  Its `RELEASE_MANIFEST.txt` records assets, hashes, retained feature markers,
+  and rollback details.
+- A no-restart pointer swap was attempted and immediately rolled back because
+  the running backend continued serving its cached old `index.html` and old
+  hashed asset bytes. The staged release therefore did not become live.
+- Live is safely restored to
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260715Tdefault-agent-profile-precedence`;
+  `/`, the existing JS/CSS, `/vk-notifications-sw.js`, and `/api/info` return
+  `200`, and `vibe-kanban.service` remains active on unchanged PID `1849957`.
+- Activation now requires explicit approval for a controlled backend restart.
+  Before restarting, recheck active agents per `VK_AGENT_DEPLOYMENT_RUNBOOK.md`;
+  then point `frontend-dist/current` to the staged release, restart once, and
+  verify the manifest asset names/hashes, service worker, `/api/info`, required
+  bundle markers, and the new backend PID. Roll back the pointer and restart if
+  any post-restart smoke fails.
+
+# 2026-08-13 Local workspace project-filter repair
+
+- Root cause: `WorkspacesSidebarContainer` populated its project filter only
+  from cloud organization projects and cloud workspace links. Local-only VK
+  sessions therefore rendered only `No project`, despite local projects and
+  linked workspaces being available through the fallback APIs.
+- Source fix: local-only sessions now reuse the cached `local-projects` query,
+  load each local project's fallback workspace links, show active projects that
+  have linked workspaces, and apply filtering with the resulting local
+  workspace-to-project map. Signed-in cloud behavior is unchanged.
+- PR `#75` rebase-merged the fix into `staging` as `51f505a11`.
+- The frontend-only release is live at
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260817Tfilter-workspaces`
+  with asset `/assets/index-DhRotnm8.js`, sha256
+  `4348ec89cfe91a8ee78135fdc680b11cc78eb8ac22d7fed9274ccc9bf10a7ea1`.
+- No backend restart occurred; PID remained `1849957`. Because that process
+  canonicalized the frontend directory at startup, activation copied immutable
+  assets into its resolved `20260715Tdefault-agent-profile-precedence` directory
+  and atomically replaced `index.html`, while `frontend-dist/current` points to
+  the new release.
+- The pre-deploy live frontend was copied directly from MCP to
+  `desktop:B:/vk-backups/vk-frontend-pre-filter-workspaces-20260817T084000Z`
+  without local staging. Verification matched 766 files, 74,782,439 bytes, and
+  index sha256 `eb1645504ebc47b5cd7024fdc6389002d96ffc9aa33b6292133c8252b0bc9b6c`.
+- Validation: `pnpm run format`, larger-heap
+  `pnpm --filter @vibe/web-core run check`, local-web lint, ui lint, and
+  `git diff --check` passed. The broader `pnpm run lint` was stopped while
+  compiling the unrelated Rust workspace after both frontend lint stages had
+  passed.
+- All PR CI checks passed. The clean merged-staging production build passed,
+  HTTPS serves the manifest asset with the expected hash, `/api/info` is
+  healthy, project responses are stable, the service worker is reachable, and
+  the new/retained bundle markers passed. The repository smoke script itself is
+  stale because it still hardcodes the 20260626 release, so equivalent
+  manifest-driven live checks were run directly.
+# 2026-08-29 Disk Capacity Lifecycle Prepared
+
+- Branch `vk/156f-vk-disk-space-is` is based on current `fork/staging`.
+- Cargo incremental state is disabled for VK and the green runtime contract now
+  requires a shared target at
+  `/home/mcp/.local/share/vibe-kanban-green-build/cargo-target`.
+- Manual archive now creates the same durable guarded-cleanup request used by
+  In Staging and Done; unarchive cancels a pending request.
+- Age-based cleanup now preserves pinned, externally referenced, Git-dirty, or
+  unverifiable worktrees before any whole-worktree removal.
+- Repository rules and workspace documentation describe protected storage,
+  attachment safety, green authority, and explicit-path requirements.
+- No live restart, service edit, worktree deletion, cache clearing, attachment
+  mutation, or database/session mutation was performed.
+2026-08-29 durable saved-message storage prepared, not deployed:
+
+- Root cause: local saved messages were embedded in the single global
+  `UI_PREFERENCES` scratch JSON payload, so stale/older frontend whole-payload
+  writes and typed backend serialization could erase them.
+- Added the `saved_chat_messages` SQLite table with independent rows and stable
+  ordering, plus a migration that imports valid legacy messages from the
+  existing scratch payload.
+- Added local list/upsert/delete API routes and redirected local UI hydration
+  and mutations to them. Remote-web retains its existing localStorage-backed
+  scratch behavior.
+- Local UI preference writes now omit the legacy saved-message field, removing
+  saved messages from unrelated whole-preference rewrites after migration.
+- Per-message frontend writes are serialized so a delete cannot be overtaken by
+  an earlier in-flight edit.
+- No live deploy, database mutation, frontend swap, or service restart occurred.
+# 2026-08-29 Colored Kanban workspaces promotion
+
+- Branch `vk/b6aa-vk-colored-works` is being promoted through a PR into
+  `staging` and then a frontend-only green release.
+- The feature adds persistent, theme-aware workspace card colors through the
+  existing UI-preferences scratch API; no backend restart is required.
+- Public preview: `https://mcp-server.tail744c4.ts.net:8443/`.

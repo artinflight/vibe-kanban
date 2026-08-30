@@ -137,7 +137,8 @@ function useEffectiveOverrides(
   scratchConfig: ExecutorConfig | null | undefined,
   lastUsedConfig: ExecutorConfig | null,
   variantWasUserSelected: boolean,
-  presetOptions: ExecutorConfig | null | undefined
+  presetOptions: ExecutorConfig | null | undefined,
+  preferPresetOverrides: boolean
 ) {
   return useMemo((): ExecutorConfig | null => {
     if (!effectiveExecutor) return null;
@@ -169,14 +170,16 @@ function useEffectiveOverrides(
       const value =
         field in userSelections
           ? userSelections[field]
-          : ((scratchMatches && scratchModelMatches
-              ? scratchConfig?.[field]
-              : undefined) ??
-            (lastUsedMatches && lastUsedModelMatches
-              ? lastUsedConfig?.[field]
-              : undefined) ??
-            (variantWasUserSelected ? presetOptions?.[field] : undefined) ??
-            getDefaultExecutorOverride(effectiveExecutor, field));
+          : preferPresetOverrides && presetOptions?.[field] !== undefined
+            ? presetOptions[field]
+            : ((scratchMatches && scratchModelMatches
+                ? scratchConfig?.[field]
+                : undefined) ??
+              (lastUsedMatches && lastUsedModelMatches
+                ? lastUsedConfig?.[field]
+                : undefined) ??
+              (variantWasUserSelected ? presetOptions?.[field] : undefined) ??
+              getDefaultExecutorOverride(effectiveExecutor, field));
       if (value !== undefined) {
         (resolved as Record<string, unknown>)[field] = value;
       }
@@ -190,6 +193,7 @@ function useEffectiveOverrides(
     scratchConfig,
     lastUsedConfig,
     presetOptions,
+    preferPresetOverrides,
     variantWasUserSelected,
   ]);
 }
@@ -201,6 +205,7 @@ interface UseExecutorConfigOptions {
   configExecutorProfile?: ExecutorProfileId | null;
   persistenceKey?: string | null;
   onPersist?: (config: ExecutorConfig) => void;
+  preferPresetOverrides?: boolean;
 }
 
 interface UseExecutorConfigResult {
@@ -268,6 +273,7 @@ export function useExecutorConfig({
   configExecutorProfile,
   persistenceKey,
   onPersist,
+  preferPresetOverrides = false,
 }: UseExecutorConfigOptions): UseExecutorConfigResult {
   const [userSelections, setUserSelections] = useState<Partial<ExecutorConfig>>(
     () => readPersistedSelections(persistenceKey)
@@ -306,7 +312,8 @@ export function useExecutorConfig({
     scratchConfig,
     lastUsedConfig,
     variant.wasUserSelected,
-    presetOptions
+    presetOptions,
+    preferPresetOverrides
   );
 
   const profileKey = getProfileKey(executor.effective, variant.resolved);

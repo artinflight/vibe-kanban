@@ -65,12 +65,18 @@
 
 ## Current Status
 
-- 2026-08-30 light-theme tint follow-up prepared:
+- 2026-08-30 light-theme tint follow-up deployed:
   - the colored fill now wins over the card's later `bg-panel` utility in both
     themes
   - light cards retain the existing `0.48` tint and use `0.58` on hover; dark
     cards retain `0.18` and use `0.24` on hover
   - the colored inset edge remains unchanged
+  - PR `#93` rebase-merged into `staging` as `b4f57707f`
+  - immutable frontend release is
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260830Tlight-workspace-tint-b4f57707f`
+  - the recovered nine-message compatibility sidecar was retained
+    byte-for-byte and verified through `vibe.local`
+  - backend PID remained `3112780`; no backend restart occurred
   - public preview is `https://mcp-server.tail744c4.ts.net:8443/`
 
 - 2026-08-29 colored Kanban workspaces deployed:

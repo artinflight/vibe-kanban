@@ -2,7 +2,7 @@
 
 ## 2026-08-30 Light-Theme Workspace Tint Follow-up
 
-- Branch: `vk/b6aa-light-workspace-tint`.
+- PR `#93` rebase-merged into `staging` as `b4f57707f`.
 - Root cause: Tailwind emitted the light workspace tint before `bg-panel`, so
   the neutral card background won the cascade. The dark-qualified rule was
   emitted later and remained visible.
@@ -12,11 +12,18 @@
 - Validation passed: repository formatting, UI TypeScript check, web-core
   TypeScript check with a larger Node heap, local-web production build, ops
   check, generated CSS rule inspection, and `git diff --check`.
-- Public lightweight preview:
-  `https://mcp-server.tail744c4.ts.net:8443/`; both frontend and `/api/info`
-  probes returned successfully.
-- This is frontend-only. No backend restart, migration, live asset swap, or
-  deployment has been performed for the follow-up.
+- Live immutable frontend release:
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260830Tlight-workspace-tint-b4f57707f`.
+- Live assets: `/assets/index-CiLHcCQh.js` and
+  `/assets/index-C8AmRs-y.css`; all four light/dark normal/hover tint markers
+  were verified in the served CSS.
+- The recovered `vk-saved-chat-messages.json` sidecar was copied into the
+  release before activation and verified after activation with nine messages
+  and SHA-256
+  `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`.
+- `https://vibe.local/`, both assets, `/api/info`, and the saved-message sidecar
+  returned `200` after the frontend-static service restart.
+- Backend PID remained `3112780`; no backend restart or migration occurred.
 
 ## 2026-08-29 Colored Kanban Workspaces Live
 

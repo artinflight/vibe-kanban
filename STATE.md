@@ -6,13 +6,17 @@
 
 ## Confirmed Current State
 
-- 2026-08-30 light-theme workspace card tint correction is prepared:
+- 2026-08-30 light-theme workspace card tint correction is live:
   - the neutral `bg-panel` utility was emitted after the light workspace tint
     and overrode it, leaving only the colored inset edge visible
   - selected workspace colors now explicitly override the neutral background
     in light and dark themes and preserve a slightly stronger tint on hover
-  - the correction is frontend-only and is available for review at the public
-    lightweight preview before promotion or live deployment
+  - PR `#93` rebase-merged into `staging` as `b4f57707f`
+  - live frontend release:
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260830Tlight-workspace-tint-b4f57707f`
+  - the release retains all nine saved messages in the compatibility sidecar;
+    its SHA-256 is `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - backend PID remained `3112780`; no backend restart or migration occurred
 
 - 2026-08-29 colored Kanban workspaces are live:
   - linked workspace cards provide a three-dot pastel color picker and clear

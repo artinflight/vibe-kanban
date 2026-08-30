@@ -6,6 +6,14 @@
 
 ## Confirmed Current State
 
+- 2026-08-30 light-theme workspace card tint correction is prepared:
+  - the neutral `bg-panel` utility was emitted after the light workspace tint
+    and overrode it, leaving only the colored inset edge visible
+  - selected workspace colors now explicitly override the neutral background
+    in light and dark themes and preserve a slightly stronger tint on hover
+  - the correction is frontend-only and is available for review at the public
+    lightweight preview before promotion or live deployment
+
 - 2026-08-29 colored Kanban workspaces are live:
   - linked workspace cards provide a three-dot pastel color picker and clear
     action in Kanban

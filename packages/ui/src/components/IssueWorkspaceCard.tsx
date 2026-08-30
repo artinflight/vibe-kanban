@@ -172,7 +172,7 @@ export function IssueWorkspaceCard({
       onClick={onClick}
       className={cn(
         color &&
-          'bg-[hsl(var(--workspace-color)/0.48)] shadow-[inset_3px_0_0_hsl(var(--workspace-color)/0.85)] dark:bg-[hsl(var(--workspace-color)/0.18)]',
+          '!bg-[hsl(var(--workspace-color)/0.48)] hover:!bg-[hsl(var(--workspace-color)/0.58)] shadow-[inset_3px_0_0_hsl(var(--workspace-color)/0.85)] dark:!bg-[hsl(var(--workspace-color)/0.18)] dark:hover:!bg-[hsl(var(--workspace-color)/0.24)]',
         className
       )}
       style={

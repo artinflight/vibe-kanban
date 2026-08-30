@@ -32,6 +32,7 @@ interface UseAzureAttachmentsOptions {
   projectId: string;
   issueId?: string;
   commentId?: string;
+  useLocalAttachments?: boolean;
   onMarkdownInsert?: (
     markdown: string,
     options?: { persist?: boolean }
@@ -118,6 +119,7 @@ export function useAzureAttachments({
   projectId,
   issueId,
   commentId,
+  useLocalAttachments,
   onMarkdownInsert,
   onAttachmentSourceReplace,
   onAttachmentSourceRemove,
@@ -245,7 +247,10 @@ export function useAzureAttachments({
         const { file, tempSrc } = pendingLocal;
 
         try {
-          if (!hasRemoteApiUrl()) {
+          const shouldUseLocalAttachments =
+            useLocalAttachments ?? !hasRemoteApiUrl();
+
+          if (shouldUseLocalAttachments) {
             setPendingAttachments((prev) =>
               prev.map((p) =>
                 p.file === file ? { ...p, status: 'uploading', progress: 0 } : p
@@ -454,7 +459,7 @@ export function useAzureAttachments({
 
       setIsUploading(false);
     },
-    [projectId, t]
+    [projectId, t, useLocalAttachments]
   );
 
   const getAttachmentIds = useCallback(

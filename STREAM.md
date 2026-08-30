@@ -59,6 +59,15 @@
     `/api/attachments/{id}/file`.
   - remote attachment commit calls no-op locally, and abandoned local
     attachments delete through the local attachment API.
+- Follow-up fix added:
+  - `shared_api_base` is now preserved in the shared user-system context as
+    `sharedApiBase`.
+  - Kanban issue description and comment attachment uploads explicitly select
+    the local `/api/attachments/upload` path when `/api/info` reports
+    `shared_api_base: null`.
+  - This avoids Issue uploads accidentally falling through to the remote
+    `/v1/attachments/init` Azure flow, which the local compatibility router does
+    not implement for POST and therefore returns 405.
 
 ## Validation
 
@@ -70,6 +79,7 @@
 - `pnpm run local-web:legacy-path-guard`
 - `NODE_OPTIONS=--max-old-space-size=4096 pnpm run web-core:check`
 - `NODE_OPTIONS=--max-old-space-size=4096 pnpm run local-web:check`
+- `NODE_OPTIONS=--max-old-space-size=4096 pnpm run remote-web:check`
 - `cargo test -p services cached_file_write_recreates_missing_parent_dir`
 
 ## Validation Notes

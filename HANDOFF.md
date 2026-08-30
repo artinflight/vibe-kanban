@@ -39,23 +39,37 @@
   - when no remote API base is configured, uploads go directly to local
     `/api/attachments/upload`
   - temporary pending markdown is replaced with `attachment://{local_id}`
+- Follow-up 405 hardening after Issue uploads still hit
+  `/v1/attachments/init`:
+  - updated `packages/web-core/src/shared/hooks/useUserSystem.ts` and
+    `useUserSystemController.ts` to preserve `/api/info` `shared_api_base` as
+    `sharedApiBase`
+  - updated `KanbanIssuePanelContainer.tsx` and
+    `IssueCommentsSectionContainer.tsx` to pass `useLocalAttachments` when
+    `sharedApiBase === null`
+  - updated `useAzureAttachments.ts` so that explicit local signal takes
+    precedence over the mutable remote API base fallback
 
 ## Validation
 
+- `pnpm i --frozen-lockfile`
 - `cargo fmt --all --check`
 - `cargo fmt --all --manifest-path crates/remote/Cargo.toml --check`
 - `git diff --check`
-- `pnpm i --frozen-lockfile`
 - `pnpm run format`
 - `pnpm run local-web:legacy-path-guard`
 - `NODE_OPTIONS=--max-old-space-size=4096 pnpm run web-core:check`
 - `NODE_OPTIONS=--max-old-space-size=4096 pnpm run local-web:check`
+- `NODE_OPTIONS=--max-old-space-size=4096 pnpm run remote-web:check`
 
 ## Validation Gaps / Failures
 
 - `cargo test -p services cached_file_write_recreates_missing_parent_dir`
 - Parallel default-heap `web-core:check` and `local-web:check` runs OOMed at
   Node's heap limit; sequential larger-heap checks passed.
+- Initial `pnpm run format` in this follow-up failed because `prettier` was not
+  installed before `pnpm i --frozen-lockfile`; it passed after installing
+  dependencies.
 - No live service restart or deployment was performed.
 - No browser upload retry was performed from the UI after the source fix.
 

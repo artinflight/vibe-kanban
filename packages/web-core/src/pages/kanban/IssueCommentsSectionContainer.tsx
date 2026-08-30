@@ -14,6 +14,7 @@ import { useScratch } from '@/shared/hooks/useScratch';
 import { useDebouncedCallback } from '@/shared/hooks/useDebouncedCallback';
 import { useOrgContext } from '@/shared/hooks/useOrgContext';
 import { useProjectContext } from '@/shared/hooks/useProjectContext';
+import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { useCurrentUser } from '@/shared/hooks/auth/useCurrentUser';
 import { useAzureAttachments } from '@/shared/hooks/useAzureAttachments';
 import {
@@ -60,6 +61,8 @@ function IssueCommentsSectionContent() {
   const { membersWithProfilesById } = useOrgContext();
   const { projectId } = useProjectContext();
   const issueContext = useIssueContext();
+  const { sharedApiBase } = useUserSystem();
+  const useLocalAttachments = sharedApiBase === null;
   const { data: currentUser } = useCurrentUser();
   const currentUserId = currentUser?.user_id ?? '';
 
@@ -177,6 +180,7 @@ function IssueCommentsSectionContent() {
     localAttachments,
   } = useAzureAttachments({
     projectId,
+    useLocalAttachments,
     onMarkdownInsert: handleCommentMarkdownInsert,
     onAttachmentSourceReplace: handleCommentSourceReplace,
     onAttachmentSourceRemove: handleCommentSourceRemove,

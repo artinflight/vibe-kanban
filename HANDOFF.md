@@ -1,5 +1,24 @@
 # HANDOFF.md
 
+## 2026-08-31 Workspace Color Refresh Persistence Live
+
+- Root cause: the frontend sent `workspace_colors`, but the running backend's
+  typed `UI_PREFERENCES` payload omitted and discarded the field.
+- The backend contract fix is already on `staging` in `e621088ac`; it becomes
+  authoritative after the next normal backend restart.
+- PR `#97` adds a frontend compatibility fallback that mirrors colors into
+  browser storage and merges them on hydration, with backend values taking
+  precedence when available. It rebase-merged as `98eb580f3`.
+- Live immutable frontend release:
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tworkspace-color-refresh-98eb580f3`.
+- Live assets: `/assets/index-DlRW8gpD.js` and
+  `/assets/index-QO1t6__J.css`.
+- The release preserves all nine saved messages; sidecar SHA-256 is
+  `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`.
+- Backend PID remained `3112780`; no backend restart or migration occurred.
+- Rollback release is
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tleft-nav-reorder-4538b96c`.
+
 ## 2026-08-31 Left-Nav Project Reorder Follow-up
 
 - Branch commit: `4538b96c1` (`Fix left nav project reorder hitboxes`).

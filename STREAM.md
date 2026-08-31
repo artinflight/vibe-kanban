@@ -2,28 +2,25 @@
 
 ## Stream Identifier
 
-- Branch: `vk/b6aa-vk-colored-works`
-- Repo: `/home/mcp/code/worktrees/b6aa-vk-colored-works/_vibe_kanban_repo`
+- Branch: `vk/b401-vk-reloading-old`
+- Repo: `/home/mcp/code/worktrees/b401-vk-reloading-old/_vibe_kanban_repo`
 - Working mode: isolated feature branch
 
 ## Objective
 
-- Make project navigation order, workspace card colors, and saved chat messages
-  backend-authoritative, independently writable, conflict-safe, and recoverable.
+- Make “Reset to this point” on an older workspace-chat message land at the
+  selected reset boundary instead of preserving a removed viewport anchor.
 
 ## In Scope
 
-- Dedicated SQLite storage and migration from existing scratch preferences.
-- Revision-checked APIs that reject stale browser writes.
-- History records for recovery and frontend compatibility seeding.
-- Saved-message concurrency hardening and migration-chain repair.
+- Workspace-chat reset completion and scroll positioning.
+- Focused frontend validation of the reset handoff.
 
 ## Out of Scope
 
-- Restarting or deploying the active green instance; another agent owns that
-  final cutover.
-- Reconstructing the already-lost exact 17-project manual order.
-- Unrelated UI-preference or workspace-card design changes.
+- Changing backend reset semantics.
+- Restarting or deploying the active green instance.
+- Unrelated chat history, virtualizer, or preference changes.
 
 ## Stream-Specific Decisions
 

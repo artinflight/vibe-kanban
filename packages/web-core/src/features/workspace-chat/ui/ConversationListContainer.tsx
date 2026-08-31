@@ -153,7 +153,10 @@ export const ConversationList = forwardRef<
 ) {
   const { t } = useTranslation('common');
   const repos = reposProp;
-  const resetAction = useResetProcess(attempt.id, attempt.session?.id);
+  const onResetSuccessRef = useRef<(() => void) | null>(null);
+  const resetAction = useResetProcess(attempt.id, attempt.session?.id, () => {
+    onResetSuccessRef.current?.();
+  });
   const conversationScopeKey = `${attempt.id}:${sessionScopeId ?? attempt.session?.id ?? 'new'}`;
   const [filteredEntries, setFilteredEntries] = useState<DisplayEntry[]>([]);
   const [dataVersion, setDataVersion] = useState(0);
@@ -540,6 +543,21 @@ export const ConversationList = forwardRef<
     },
     [conversationVirtualizer]
   );
+
+  useEffect(() => {
+    onResetSuccessRef.current = () => {
+      // Reset removes the selected process and everything after it. Move to
+      // the new end immediately so the subsequent history update keeps
+      // following that exact reset boundary instead of preserving a
+      // now-removed anchor.
+      clearPendingInteractionAnchor();
+      scrollToBottomAndClearSpacer('auto');
+    };
+
+    return () => {
+      onResetSuccessRef.current = null;
+    };
+  }, [clearPendingInteractionAnchor, scrollToBottomAndClearSpacer]);
 
   const scrollExecutor = useScrollCommandExecutor({
     virtualizer: conversationVirtualizer.virtualizer,

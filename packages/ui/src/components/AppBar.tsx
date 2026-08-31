@@ -605,7 +605,7 @@ export function AppBar({
                 <div
                   ref={dropProvided.innerRef}
                   {...dropProvided.droppableProps}
-                  className="flex h-full min-h-0 flex-col items-center gap-half"
+                  className="flex h-full min-h-0 flex-col items-center gap-half overflow-y-auto overflow-x-hidden py-half"
                 >
                   {item.projects.map((project, index) => (
                     <Draggable
@@ -622,11 +622,11 @@ export function AppBar({
                           ref={dragProvided.innerRef}
                           {...dragProvided.draggableProps}
                           {...dragProvided.dragHandleProps}
-                          className="flex min-h-0 max-h-10 w-10 flex-1 items-center justify-center"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center"
                           style={dragProvided.draggableProps.style}
                         >
                           <Tooltip content={project.name} side="right">
-                            <div className="relative aspect-square h-full max-h-10 max-w-10">
+                            <div className="relative h-10 w-10">
                               {project.hasNeedsReview && (
                                 <span
                                   className="absolute -right-1 -top-1 z-10 h-3 w-3 rounded-full border border-secondary bg-brand"

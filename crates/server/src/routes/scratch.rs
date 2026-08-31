@@ -111,6 +111,9 @@ fn merge_ui_preferences_payload(
     if !existing_data.saved_chat_messages.is_empty() && data.saved_chat_messages.is_empty() {
         data.saved_chat_messages = existing_data.saved_chat_messages.clone();
     }
+    if existing_data.workspace_colors.is_some() && data.workspace_colors.is_none() {
+        data.workspace_colors = existing_data.workspace_colors.clone();
+    }
 
     UpdateScratch {
         payload: ScratchPayload::UiPreferences(data),

@@ -42,6 +42,38 @@ type UiPreferencesScratchData = UiPreferencesData & {
 // Using a fixed UUID ensures all users/sessions share the same preferences record
 const UI_PREFERENCES_ID = '00000000-0000-0000-0000-000000000001';
 const SAVED_CHAT_MESSAGES_FALLBACK_URL = '/vk-saved-chat-messages.json';
+const WORKSPACE_COLORS_FALLBACK_STORAGE_KEY = 'vk-workspace-colors';
+
+function loadWorkspaceColorsFallback(): Record<string, string> {
+  try {
+    const storedColors = window.localStorage.getItem(
+      WORKSPACE_COLORS_FALLBACK_STORAGE_KEY
+    );
+    if (!storedColors) return {};
+
+    const parsedColors: unknown = JSON.parse(storedColors);
+    if (!parsedColors || typeof parsedColors !== 'object') return {};
+
+    return Object.fromEntries(
+      Object.entries(parsedColors).filter(
+        (entry): entry is [string, string] => typeof entry[1] === 'string'
+      )
+    );
+  } catch {
+    return {};
+  }
+}
+
+function saveWorkspaceColorsFallback(colors: Record<string, string>): void {
+  try {
+    window.localStorage.setItem(
+      WORKSPACE_COLORS_FALLBACK_STORAGE_KEY,
+      JSON.stringify(colors)
+    );
+  } catch (error) {
+    console.error('Failed to save workspace colors locally:', error);
+  }
+}
 
 async function loadSavedChatMessagesFallback(): Promise<SavedChatMessage[]> {
   try {
@@ -386,6 +418,10 @@ export function useUiPreferencesScratch() {
 
       void (async () => {
         const serverState = scratchDataToStore(scratchData);
+        const workspaceColors = {
+          ...loadWorkspaceColorsFallback(),
+          ...serverState.workspaceColors,
+        };
         let savedChatMessages =
           serverState.savedChatMessages.length > 0
             ? serverState.savedChatMessages
@@ -419,7 +455,7 @@ export function useUiPreferencesScratch() {
           selectedProjectId: serverState.selectedProjectId,
           localProjectOrder: serverState.localProjectOrder,
           localProjectCustomizations: serverState.localProjectCustomizations,
-          workspaceColors: serverState.workspaceColors,
+          workspaceColors,
           createDraftWorkspaceByDefault:
             serverState.createDraftWorkspaceByDefault,
           showLeftColumnLinks: serverState.showLeftColumnLinks,
@@ -428,6 +464,7 @@ export function useUiPreferencesScratch() {
           kanbanProjectViewPreferences:
             serverState.kanbanProjectViewPreferences,
         });
+        saveWorkspaceColorsFallback(workspaceColors);
 
         setTimeout(() => {
           isApplyingServerDataRef.current = false;
@@ -440,6 +477,9 @@ export function useUiPreferencesScratch() {
   useEffect(() => {
     const unsubscribe = useUiPreferencesStore.subscribe(() => {
       if (!isApplyingServerDataRef.current && hasInitializedRef.current) {
+        saveWorkspaceColorsFallback(
+          useUiPreferencesStore.getState().workspaceColors
+        );
         debouncedSave();
       }
     });

@@ -5,6 +5,21 @@
 - Local `staging` was reconciled with `fork/staging`, then
   `vk/576e-vk-attachment-er` was rebased and fast-forwarded into `staging` at
   `b5222a01d`.
+- Follow-up correction: the initial frontend swap missed the retained
+  `vk-saved-chat-messages.json` sidecar. It has now been copied into the live
+  release from `20260830Tlight-workspace-tint-b4f57707f` and reverified at
+  `https://vibe.local/vk-saved-chat-messages.json` with SHA-256
+  `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`.
+- Follow-up source fix: `staging` now includes
+  `e621088ac fix ui preference workspace color persistence`, which adds
+  `workspace_colors` to the Rust/generated `UiPreferencesData` and preserves an
+  existing color map when an older client omits the field. This requires a
+  backend restart before it is live.
+- Recovery limitation: the current green DB and the pre-swap backup
+  `desktop:B:/vk-backups/vk-lean-restore-20260830T234448Z.tar.gz` both lack a
+  `workspace_colors` field in the `UI_PREFERENCES` scratch row, so the exact
+  prior color selections were not recoverable from the available green
+  snapshots.
 - Live frontend release:
   `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tissue-attachments-b5222a01d`.
 - The served bundle is `/assets/index-DSZKrAbs.js`; it contains

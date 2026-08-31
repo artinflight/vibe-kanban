@@ -67,15 +67,21 @@
 
 - 2026-08-31 issue attachment routing frontend deployed:
   - local `staging` was reconciled with `fork/staging` and advanced to
-    `b5222a01d`
+    `e621088ac`
   - issue/comment attachments in the local issue UI now route through
     `/api/attachments/upload` instead of stale issue-specific attachment paths
   - immutable frontend release is
     `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tissue-attachments-b5222a01d`
+  - the missed saved-message sidecar was restored into that release and now
+    serves nine messages from `/vk-saved-chat-messages.json` with SHA-256
+    `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
   - served JS asset is `/assets/index-DSZKrAbs.js`; live marker checks found
     `/api/attachments/upload` and did not find `attachments/issues`
   - direct invalid multipart POST to `/api/attachments/upload` returned `400`,
     not `405`
+  - source now adds `workspace_colors` to `UiPreferencesData` and preserves an
+    existing map when omitted by older clients; exact prior color choices were
+    not recoverable from current or pre-swap green DB snapshots
   - backend candidate binary was built but not installed because green
     executions were active; backend PID remained `3112780`
   - green backup completed to

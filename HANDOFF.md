@@ -1,5 +1,45 @@
 # HANDOFF.md
 
+## 2026-08-31 Issue Attachment Routing Frontend Live
+
+- Local `staging` was reconciled with `fork/staging`, then
+  `vk/576e-vk-attachment-er` was rebased and fast-forwarded into `staging` at
+  `b5222a01d`.
+- Live frontend release:
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tissue-attachments-b5222a01d`.
+- The served bundle is `/assets/index-DSZKrAbs.js`; it contains
+  `/api/attachments/upload` and no longer contains the stale
+  `attachments/issues` upload path that produced local issue attachment `405`
+  responses.
+- Direct live upload probe returned `400` for an invalid empty multipart POST,
+  confirming the live backend accepts `POST /api/attachments/upload` instead of
+  returning `405`.
+- Backend candidate built from `b5222a01d` but was not installed or restarted:
+  `target/release/server` SHA-256
+  `9b20651886503c3b69704180905b8da19ec5b36530f0d96255927f53bce029fe`.
+- Backend restart remains gated by active green executions; do not restart
+  `vibe-kanban-green.service` until a fresh active-agent audit is clear or the
+  operator explicitly accepts interruption.
+- Backup completed with green paths and desktop-only local retention:
+  `desktop:B:/vk-backups/vk-lean-restore-20260830T234448Z.tar.gz`; local
+  metadata pointer:
+  `/home/mcp/backups/vk-lean-restore-latest.desktop.json`.
+- Validation passed: `pnpm i --frozen-lockfile`,
+  `NODE_OPTIONS=--max-old-space-size=4096 pnpm run web-core:check`,
+  `NODE_OPTIONS=--max-old-space-size=4096 pnpm run local-web:check`,
+  `NODE_OPTIONS=--max-old-space-size=4096 pnpm run remote-web:check`,
+  `pnpm run local-web:legacy-path-guard`,
+  `cargo test -p services cached_file_write_recreates_missing_parent_dir`,
+  `pnpm run format` in the clean deploy worktree, `git diff --check`, live
+  `https://vibe.local/` and `/api/info` probes, live bundle marker checks, and
+  the invalid multipart POST probe.
+- A later `pnpm run format` in the local `staging` worktree failed because that
+  worktree did not have frontend dependencies installed and `prettier` was not
+  found; `git diff --check` passed after the docs update.
+- `scripts/vk_live_regression_smoke.py` is stale for this release; it still
+  expects `/assets/index-DXMultilinePaste.js` and failed with a 404 for that
+  old asset after the new frontend was activated.
+
 ## 2026-08-30 Light-Theme Workspace Tint Follow-up
 
 - PR `#93` rebase-merged into `staging` as `b4f57707f`.

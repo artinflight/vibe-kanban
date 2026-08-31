@@ -1,5 +1,25 @@
 # HANDOFF.md
 
+## 2026-08-31 Left-Nav Project Reorder Follow-up
+
+- Branch commit: `4538b96c1` (`Fix left nav project reorder hitboxes`).
+- Staging commit carrying the same patch: `20e7fc065`.
+- Root cause: the left-nav project list compressed every project button into
+  the available rail height. With many projects, the drag targets became too
+  small to reliably start or complete a reorder.
+- Fix: project icons now stay fixed at `40px` and the project list scrolls
+  vertically, giving the drag-and-drop library stable hitboxes.
+- Live immutable frontend release:
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tleft-nav-reorder-4538b96c`.
+- Live assets: `/assets/index-LxC8hBXR.js` and
+  `/assets/index-QO1t6__J.css`.
+- Release manifest and asset hashes:
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tleft-nav-reorder-4538b96c/RELEASE_MANIFEST.txt`.
+- The recovered `vk-saved-chat-messages.json` sidecar was retained
+  byte-for-byte with SHA-256
+  `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`.
+- Backend PID remained `3112780`; no backend restart or migration occurred.
+
 ## 2026-08-31 Issue Attachment Routing Frontend Live
 
 - Local `staging` was reconciled with `fork/staging`, then
@@ -51,9 +71,18 @@
 - A later `pnpm run format` in the local `staging` worktree failed because that
   worktree did not have frontend dependencies installed and `prettier` was not
   found; `git diff --check` passed after the docs update.
-- `scripts/vk_live_regression_smoke.py` is stale for this release; it still
-  expects `/assets/index-DXMultilinePaste.js` and failed with a 404 for that
-  old asset after the new frontend was activated.
+## 2026-08-31 Attachment and UI Preference Corrections
+
+- Issue attachment uploads now route local runtime uploads through
+  `/api/attachments/upload`, matching the working workspace attachment path.
+- Invalid empty `POST https://vibe.local/api/attachments/upload` returns `400`,
+  confirming the request reaches an upload handler instead of a `405`.
+- `UI_PREFERENCES` now includes and preserves `workspace_colors` in the typed
+  Rust scratch payload and generated TypeScript type, preventing future
+  backend round-trips from stripping colored workspace selections.
+- The running backend still predates the typed scratch preservation fix, so the
+  saved-message sidecar remains release-critical until the next approved
+  backend restart ships the source fix.
 
 ## 2026-08-30 Light-Theme Workspace Tint Follow-up
 

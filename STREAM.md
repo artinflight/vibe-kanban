@@ -65,6 +65,20 @@
 
 ## Current Status
 
+- 2026-08-31 left-nav project reorder frontend deployed:
+  - project icons in the left nav now remain fixed at `40px` instead of
+    shrinking to fit every project into the rail
+  - the project list scrolls vertically, giving drag-and-drop stable hitboxes
+    when many projects exist
+  - branch commit `4538b96c1`; staging commit `20e7fc065`
+  - immutable frontend release is
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tleft-nav-reorder-4538b96c`
+  - live assets are `/assets/index-LxC8hBXR.js` and
+    `/assets/index-QO1t6__J.css`
+  - `vk-saved-chat-messages.json` was retained with SHA-256
+    `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - backend PID remained `3112780`; no backend restart occurred
+
 - 2026-08-31 issue attachment routing frontend deployed:
   - local `staging` was reconciled with `fork/staging` and advanced to
     `e621088ac`

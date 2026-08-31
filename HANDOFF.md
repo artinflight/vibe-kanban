@@ -1,5 +1,18 @@
 # HANDOFF.md
 
+## 2026-08-31 Older Message Reset Positioning
+
+- Branch `vk/b401-vk-reloading-old` fixes workspace-chat “Reset to this point”
+  positioning.
+- The backend intentionally removes the selected process and all later
+  processes. The frontend previously tried to preserve a viewport anchor that
+  had just been removed, so the bulk history update could land unpredictably.
+- Reset success now clears the transient click anchor and moves to the new
+  conversation end. The following process/history update therefore stays at
+  the selected reset boundary.
+- This is frontend-only; no live deploy, asset swap, backend restart, or live
+  data mutation has been performed.
+
 ## 2026-08-31 Durable UI Preferences Prepared — Restart Agent Handoff
 
 - Project order and workspace colors now use dedicated, revision-checked SQLite

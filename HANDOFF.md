@@ -1,5 +1,19 @@
 # HANDOFF.md
 
+## 2026-08-31 Frontend Release Regression Guardrails
+
+- Added `VK_AGENT_DEPLOYMENT_RUNBOOK.md` guidance for frontend-only correction
+  releases after the attachment, workspace color, saved-message sidecar, and
+  left-nav reorder regressions.
+- Future agents must package frontend releases into a new immutable release
+  directory, copy required live sidecars before switching `current`, update
+  stale smoke-script asset expectations before interpreting failures, and
+  verify the served bundle from `https://vibe.local`.
+- Left-nav project buttons must remain fixed-size drag targets in a scrollable
+  rail; do not compress every project icon to fit the available height.
+- This is documentation-only. No deploy, restart, frontend symlink switch, or
+  live DB mutation was performed.
+
 ## 2026-08-31 Workspace Color Refresh Persistence Live
 
 - Root cause: the frontend sent `workspace_colors`, but the running backend's

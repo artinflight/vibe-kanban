@@ -719,6 +719,54 @@ Also verify the binary contains expected backend strings when applicable:
 strings /home/mcp/.local/bin/vibe-kanban-serve-prod | rg -F 'expected unique text'
 ```
 
+## Frontend Release Correction Checklist
+
+Use this checklist for frontend-only fixes and for any backend restart that
+also advances frontend assets. It exists because the 2026-08-31 attachment,
+workspace color, and left-nav reorder repairs each exposed a different release
+mistake.
+
+Before packaging:
+
+- Start from the current live frontend release and current `fork/staging`
+  state; if another agent advanced either one during the turn, re-fetch and
+  re-inventory before building.
+- Compare the candidate bundle against the current live release manifest, not
+  against a remembered asset name from chat.
+- Confirm the candidate source contains every live fix that must survive:
+  attachment upload route markers, saved-message hydration behavior,
+  `workspace_colors`, project order persistence, and current left-nav behavior.
+- If the clean staging worktree lacks dependencies and a different clean
+  worktree is used for the build, record both the build worktree commit and the
+  staging commit carrying the same patch in the release manifest.
+
+When packaging:
+
+- Create a new immutable release directory under
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/`; never overwrite
+  the current release directory.
+- Copy required live sidecars from `frontend-dist/current` into the new release
+  before switching the symlink. At minimum, preserve
+  `vk-saved-chat-messages.json` until the running backend is verified to serve
+  saved messages through typed `UI_PREFERENCES`.
+- Write `RELEASE_MANIFEST.txt` and `SHA256SUMS.txt` before activation. The
+  manifest must include rollback path, source commit, staging commit, asset
+  names, sidecar hashes, retained live-only behavior, and validation status.
+
+After activation:
+
+- Re-read `frontend-dist/current`, served `/`, served main JS/CSS, `/api/info`,
+  sidecar URL/hash, and relevant API routes from `https://vibe.local`; do not
+  assume the static server picked up the symlink.
+- Update `scripts/vk_live_regression_smoke.py` when the release name, asset
+  name, or live project baseline changes. A stale smoke script is a release
+  bug; do not treat its expected asset from an older release as truth.
+- Run the live smoke script after updating it and record the pass/fail in
+  `HANDOFF.md` and the release manifest.
+- For left-nav project work, verify fixed-size reorder hitboxes remain in the
+  served bundle. Project icons should not use flex shrink/compression to fit
+  all projects into the rail; the project list should scroll when needed.
+
 ## Mandatory Regression Smoke
 
 Every deploy, restart, or frontend symlink swap must verify or explicitly mark
@@ -747,6 +795,11 @@ unverified:
   `/api/scratch/...` and `/api/scratch/.../stream/ws`
 - left navigation project coloring, flyouts, archive access, and active markers
   match the pre-deploy baseline
+- left navigation project reorder hitboxes remain fixed-size and scrollable when
+  project count exceeds available rail height
+- live saved-message sidecar is present and hashes to the recorded baseline
+  until backend typed scratch serialization is verified to preserve saved
+  messages directly
 - active VK instance count is understood: service names, ports, DB paths, and
   frontend paths are recorded
 
@@ -761,6 +814,16 @@ Record results in `HANDOFF.md` before saying the deploy is ready or complete.
   2026-08 restart briefly regressed left-nav coloring/flyouts by copying a
   rebuilt dist over the active release. Use release directories and pointer
   switches, or one-file hotfixes with backups.
+- Copying only `dist/` output without live sidecars can silently remove saved
+  messages even when the app and `/api/info` look healthy. Treat sidecars as
+  release artifacts until the backend contract makes them unnecessary.
+- Left-nav project reorder can fail as a layout problem, not a persistence
+  problem. If project buttons are flex-compressed to fit the rail, drag targets
+  become too small to use reliably; keep the icons fixed-size and make the list
+  scroll.
+- A smoke script that still expects an old hashed asset is stale. Update the
+  script to current live truth before interpreting failures, then rerun it
+  after the symlink switch.
 - Saved messages can be present in SQLite but missing from the UI if the
   running backend type drops `saved_chat_messages` when serializing
   `UI_PREFERENCES`. Verify the REST response, WebSocket initial patch, and

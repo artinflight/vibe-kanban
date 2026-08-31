@@ -368,6 +368,9 @@
   - every deploy must verify the release package contains all currently live hotfixes, not only the newest change
   - every restart package must either preserve `/home/mcp/.local/share/vibe-kanban/frontend-dist/current` or include the same-or-newer frontend dist; a backend restart must not silently roll the frontend back
   - dirty maintenance-checkout frontend builds are forbidden; build from a clean worktree or refuse the deploy
+  - frontend-only releases must copy live sidecars such as `vk-saved-chat-messages.json` into the new immutable release directory before switching `frontend-dist/current`
+  - stale smoke-script asset names are not deploy truth; update `scripts/vk_live_regression_smoke.py` to the current release, asset names, sidecar hash, and live project baseline before interpreting post-swap smoke failures
+  - left-nav project buttons must remain fixed-size drag targets in a scrollable project list; do not compress every project icon to fit the rail height because it makes reorder unreliable with many projects
   - any feature that has regressed twice must get an automated test or scripted smoke check before the next related deploy
   - before declaring a deploy ready, run the VK live regression smoke list below and record pass/fail in `HANDOFF.md`
   - mandatory live regression smoke list:

@@ -138,6 +138,10 @@ local_project_order: Array<string>,
  */
 local_project_customizations: { [key in string]?: ProjectCustomizationData },
 /**
+ * Theme-aware Kanban workspace card colors keyed by workspace ID
+ */
+workspace_colors?: { [key in string]?: string } | null,
+/**
  * Default setting for creating a draft workspace from new issues
  */
 create_draft_workspace_by_default: boolean | null,

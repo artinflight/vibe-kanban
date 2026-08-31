@@ -34,7 +34,6 @@ type UiPreferencesScratchData = UiPreferencesData & {
   local_project_order?: string[];
   show_left_column_links?: boolean | null;
   saved_chat_messages?: SavedChatMessage[];
-  workspace_colors?: Record<string, string>;
 };
 
 // Stable UUID for global UI preferences (not tied to a workspace/user)
@@ -42,6 +41,18 @@ type UiPreferencesScratchData = UiPreferencesData & {
 // Using a fixed UUID ensures all users/sessions share the same preferences record
 const UI_PREFERENCES_ID = '00000000-0000-0000-0000-000000000001';
 const SAVED_CHAT_MESSAGES_FALLBACK_URL = '/vk-saved-chat-messages.json';
+
+function normalizeWorkspaceColors(
+  colors: UiPreferencesScratchData['workspace_colors']
+): Record<string, string> {
+  if (!colors) return {};
+
+  return Object.fromEntries(
+    Object.entries(colors).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string'
+    )
+  );
+}
 
 async function loadSavedChatMessagesFallback(): Promise<SavedChatMessage[]> {
   try {
@@ -236,7 +247,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
     localProjectOrder: data.local_project_order ?? [],
     localProjectCustomizations: (data.local_project_customizations ??
       {}) as Record<string, ProjectCustomization>,
-    workspaceColors: data.workspace_colors ?? {},
+    workspaceColors: normalizeWorkspaceColors(data.workspace_colors),
     createDraftWorkspaceByDefault:
       data.create_draft_workspace_by_default ??
       DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT,

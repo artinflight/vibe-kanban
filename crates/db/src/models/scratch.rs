@@ -156,6 +156,9 @@ pub struct UiPreferencesData {
     /// Local project navigation display overrides keyed by project ID
     #[serde(default)]
     pub local_project_customizations: std::collections::HashMap<String, ProjectCustomizationData>,
+    /// Theme-aware Kanban workspace card colors keyed by workspace ID
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_colors: Option<std::collections::HashMap<String, String>>,
     /// Default setting for creating a draft workspace from new issues
     #[serde(default)]
     pub create_draft_workspace_by_default: Option<bool>,

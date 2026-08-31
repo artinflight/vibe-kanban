@@ -65,6 +65,24 @@
 
 ## Current Status
 
+- 2026-08-31 issue attachment routing frontend deployed:
+  - local `staging` was reconciled with `fork/staging` and advanced to
+    `b5222a01d`
+  - issue/comment attachments in the local issue UI now route through
+    `/api/attachments/upload` instead of stale issue-specific attachment paths
+  - immutable frontend release is
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tissue-attachments-b5222a01d`
+  - served JS asset is `/assets/index-DSZKrAbs.js`; live marker checks found
+    `/api/attachments/upload` and did not find `attachments/issues`
+  - direct invalid multipart POST to `/api/attachments/upload` returned `400`,
+    not `405`
+  - backend candidate binary was built but not installed because green
+    executions were active; backend PID remained `3112780`
+  - green backup completed to
+    `desktop:B:/vk-backups/vk-lean-restore-20260830T234448Z.tar.gz` with local
+    desktop metadata at
+    `/home/mcp/backups/vk-lean-restore-latest.desktop.json`
+
 - 2026-08-30 light-theme tint follow-up deployed:
   - the colored fill now wins over the card's later `bg-panel` utility in both
     themes

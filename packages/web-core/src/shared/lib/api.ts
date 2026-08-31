@@ -1648,14 +1648,23 @@ export type SavedChatMessageRecord = {
   title: string;
   content: string;
   position: number;
+  revision: number;
   created_at: string;
   updated_at: string;
 };
 
+const savedChatMessageRevisions = new Map<string, number>();
+
 export const savedChatMessagesApi = {
   list: async (): Promise<SavedChatMessageRecord[]> => {
     const response = await makeRequest('/api/saved-chat-messages');
-    return handleApiResponse<SavedChatMessageRecord[]>(response);
+    const messages =
+      await handleApiResponse<SavedChatMessageRecord[]>(response);
+    savedChatMessageRevisions.clear();
+    messages.forEach((message) =>
+      savedChatMessageRevisions.set(message.id, message.revision)
+    );
+    return messages;
   },
 
   upsert: async (message: {
@@ -1666,17 +1675,83 @@ export const savedChatMessagesApi = {
   }): Promise<SavedChatMessageRecord> => {
     const response = await makeRequest(
       `/api/saved-chat-messages/${encodeURIComponent(message.id)}`,
-      { method: 'PUT', body: JSON.stringify(message) }
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...message,
+          expected_revision: savedChatMessageRevisions.get(message.id) ?? null,
+        }),
+      }
     );
-    return handleApiResponse<SavedChatMessageRecord>(response);
+    const updated = await handleApiResponse<SavedChatMessageRecord>(response);
+    savedChatMessageRevisions.set(updated.id, updated.revision);
+    return updated;
   },
 
   delete: async (id: string): Promise<void> => {
     const response = await makeRequest(
-      `/api/saved-chat-messages/${encodeURIComponent(id)}`,
+      `/api/saved-chat-messages/${encodeURIComponent(id)}?expected_revision=${encodeURIComponent(String(savedChatMessageRevisions.get(id) ?? ''))}`,
       { method: 'DELETE' }
     );
-    return handleApiResponse<void>(response);
+    await handleApiResponse<void>(response);
+    savedChatMessageRevisions.delete(id);
+  },
+};
+
+export type ProjectNavigationOrderRecord = {
+  project_ids: string[];
+  revision: number;
+  updated_at: string;
+};
+
+export type WorkspaceCardColorRecord = {
+  workspace_id: string;
+  color: string;
+  revision: number;
+  updated_at: string;
+};
+
+export type DurableUiPreferencesRecord = {
+  project_order: ProjectNavigationOrderRecord;
+  workspace_colors: Record<string, WorkspaceCardColorRecord>;
+};
+
+export const durableUiPreferencesApi = {
+  get: async (): Promise<DurableUiPreferencesRecord> => {
+    const response = await makeRequest('/api/durable-ui-preferences');
+    return handleApiResponse<DurableUiPreferencesRecord>(response);
+  },
+
+  updateProjectOrder: async (
+    projectIds: string[],
+    expectedRevision: number
+  ): Promise<ProjectNavigationOrderRecord> => {
+    const response = await makeRequest('/api/project-navigation-order', {
+      method: 'PUT',
+      body: JSON.stringify({
+        project_ids: projectIds,
+        expected_revision: expectedRevision,
+      }),
+    });
+    return handleApiResponse<ProjectNavigationOrderRecord>(response);
+  },
+
+  updateWorkspaceColor: async (
+    workspaceId: string,
+    color: string | null,
+    expectedRevision: number | null
+  ): Promise<WorkspaceCardColorRecord | null> => {
+    const response = await makeRequest(
+      `/api/workspace-card-colors/${encodeURIComponent(workspaceId)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          color,
+          expected_revision: expectedRevision,
+        }),
+      }
+    );
+    return handleApiResponse<WorkspaceCardColorRecord | null>(response);
   },
 };
 

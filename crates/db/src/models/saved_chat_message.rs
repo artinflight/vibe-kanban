@@ -9,6 +9,7 @@ pub struct SavedChatMessage {
     pub title: String,
     pub content: String,
     pub position: i64,
+    pub revision: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -19,12 +20,22 @@ pub struct UpsertSavedChatMessage {
     pub title: String,
     pub content: String,
     pub position: i64,
+    #[serde(default)]
+    pub expected_revision: Option<i64>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SavedChatMessageError {
+    #[error("Saved message revision conflict")]
+    Conflict,
+    #[error(transparent)]
+    Database(#[from] sqlx::Error),
 }
 
 impl SavedChatMessage {
     pub async fn find_all(pool: &SqlitePool) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as::<_, Self>(
-            r#"SELECT id, title, content, position, created_at, updated_at
+            r#"SELECT id, title, content, position, revision, created_at, updated_at
                FROM saved_chat_messages
                ORDER BY position ASC, created_at ASC, id ASC"#,
         )
@@ -35,31 +46,75 @@ impl SavedChatMessage {
     pub async fn upsert(
         pool: &SqlitePool,
         input: &UpsertSavedChatMessage,
-    ) -> Result<Self, sqlx::Error> {
-        sqlx::query_as::<_, Self>(
-            r#"INSERT INTO saved_chat_messages (id, title, content, position)
-               VALUES (?1, ?2, ?3, ?4)
-               ON CONFLICT(id) DO UPDATE SET
-                   title = excluded.title,
-                   content = excluded.content,
-                   position = excluded.position,
+    ) -> Result<Self, SavedChatMessageError> {
+        let result = if let Some(expected_revision) = input.expected_revision {
+            sqlx::query_as::<_, Self>(
+                r#"UPDATE saved_chat_messages SET
+                   title = ?2, content = ?3, position = ?4,
+                   revision = revision + 1,
                    updated_at = datetime('now', 'subsec')
-               RETURNING id, title, content, position, created_at, updated_at"#,
-        )
-        .bind(&input.id)
-        .bind(input.title.trim())
-        .bind(&input.content)
-        .bind(input.position)
-        .fetch_one(pool)
-        .await
+               WHERE id = ?1 AND revision = ?5
+               RETURNING id, title, content, position, revision, created_at, updated_at"#,
+            )
+            .bind(&input.id)
+            .bind(input.title.trim())
+            .bind(&input.content)
+            .bind(input.position)
+            .bind(expected_revision)
+            .fetch_optional(pool)
+            .await
+        } else {
+            sqlx::query_as::<_, Self>(
+                r#"INSERT INTO saved_chat_messages (id, title, content, position)
+               VALUES (?1, ?2, ?3, ?4)
+               RETURNING id, title, content, position, revision, created_at, updated_at"#,
+            )
+            .bind(&input.id)
+            .bind(input.title.trim())
+            .bind(&input.content)
+            .bind(input.position)
+            .fetch_optional(pool)
+            .await
+        };
+        match result {
+            Ok(Some(message)) => Ok(message),
+            Ok(None) => Err(SavedChatMessageError::Conflict),
+            Err(sqlx::Error::Database(error)) if error.is_unique_violation() => {
+                Err(SavedChatMessageError::Conflict)
+            }
+            Err(error) => Err(error.into()),
+        }
     }
 
-    pub async fn delete(pool: &SqlitePool, id: &str) -> Result<u64, sqlx::Error> {
-        Ok(sqlx::query("DELETE FROM saved_chat_messages WHERE id = ?1")
+    pub async fn delete(
+        pool: &SqlitePool,
+        id: &str,
+        expected_revision: Option<i64>,
+    ) -> Result<u64, SavedChatMessageError> {
+        let Some(expected_revision) = expected_revision else {
+            let exists = sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS(SELECT 1 FROM saved_chat_messages WHERE id = ?1)",
+            )
             .bind(id)
-            .execute(pool)
-            .await?
-            .rows_affected())
+            .fetch_one(pool)
+            .await?;
+            return if exists {
+                Err(SavedChatMessageError::Conflict)
+            } else {
+                Ok(0)
+            };
+        };
+        let deleted =
+            sqlx::query("DELETE FROM saved_chat_messages WHERE id = ?1 AND revision = ?2")
+                .bind(id)
+                .bind(expected_revision)
+                .execute(pool)
+                .await?
+                .rows_affected();
+        if deleted == 0 {
+            return Err(SavedChatMessageError::Conflict);
+        }
+        Ok(deleted)
     }
 }
 
@@ -82,6 +137,7 @@ mod tests {
                 title TEXT NOT NULL,
                 content TEXT NOT NULL,
                 position INTEGER NOT NULL DEFAULT 0,
+                revision INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL DEFAULT (datetime('now', 'subsec')),
                 updated_at TEXT NOT NULL DEFAULT (datetime('now', 'subsec'))
             )"#,
@@ -95,6 +151,7 @@ mod tests {
             title: " First ".to_string(),
             content: "one".to_string(),
             position: 0,
+            expected_revision: None,
         };
         SavedChatMessage::upsert(&pool, &first).await.unwrap();
         let second = UpsertSavedChatMessage {
@@ -102,11 +159,23 @@ mod tests {
             title: "Second".to_string(),
             content: "two".to_string(),
             position: 1,
+            expected_revision: None,
         };
         SavedChatMessage::upsert(&pool, &second).await.unwrap();
 
+        let stale = UpsertSavedChatMessage {
+            content: "stale".to_string(),
+            expected_revision: None,
+            ..first.clone()
+        };
+        assert!(matches!(
+            SavedChatMessage::upsert(&pool, &stale).await,
+            Err(SavedChatMessageError::Conflict)
+        ));
+
         let updated = UpsertSavedChatMessage {
             content: "updated".to_string(),
+            expected_revision: Some(1),
             ..first
         };
         SavedChatMessage::upsert(&pool, &updated).await.unwrap();
@@ -117,7 +186,9 @@ mod tests {
         assert_eq!(messages[0].content, "updated");
 
         assert_eq!(
-            SavedChatMessage::delete(&pool, "message-1").await.unwrap(),
+            SavedChatMessage::delete(&pool, "message-1", Some(2))
+                .await
+                .unwrap(),
             1
         );
         let messages = SavedChatMessage::find_all(&pool).await.unwrap();

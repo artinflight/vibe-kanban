@@ -6,6 +6,23 @@
 
 ## Confirmed Current State
 
+- 2026-08-31 durable local UI state is prepared for the next coordinated
+  backend/frontend deployment:
+  - project navigation order moves from shared scratch JSON into one atomic,
+    revision-checked record with append-only history
+  - workspace card colors move into independently revisioned records with
+    per-workspace history
+  - saved messages retain their dedicated table/API and now use optimistic
+    revisions plus insert/update/delete history
+  - migration `20260831000000` imports existing scratch values; the compatible
+    frontend seeds browser-only workspace colors and omits all three fields from
+    later scratch rewrites once the durable API is available
+  - the saved-message migration was renumbered to `20260829000001` to resolve
+    its pre-existing SQLx version collision with local Kanban tags
+  - a disposable copy of the live green database migrated successfully with
+    13 project-order IDs and all nine saved messages
+  - no backend restart, live frontend swap, or live database mutation occurred
+
 - 2026-08-31 saved-message compatibility hydration is live:
   - the running `0.1.42` backend does not expose the durable
     `/api/saved-chat-messages` routes; GET falls through to frontend HTML and

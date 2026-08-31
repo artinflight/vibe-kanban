@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import type { RepoAction } from '@vibe/ui/components/RepoCard';
 import type { IssuePriority } from 'shared/remote-types';
 import { useAppRuntime } from '@/shared/hooks/useAppRuntime';
-import { savedChatMessagesApi } from '@/shared/lib/api';
+import { ApiError, savedChatMessagesApi } from '@/shared/lib/api';
 
 export const RIGHT_MAIN_PANEL_MODES = {
   CHANGES: 'changes',
@@ -41,8 +41,22 @@ function enqueueSavedChatMessageWrite(id: string, write: () => Promise<void>) {
   const next = pending
     .catch(() => undefined)
     .then(write)
-    .catch((error) => {
+    .catch(async (error) => {
       console.error('Failed to persist saved chat message:', error);
+      if (error instanceof ApiError && error.statusCode === 409) {
+        try {
+          const records = await savedChatMessagesApi.list();
+          useUiPreferencesStore.setState({
+            savedChatMessages: records.map(({ id, title, content }) => ({
+              id,
+              title,
+              content,
+            })),
+          });
+        } catch (reloadError) {
+          console.error('Failed to reload saved chat messages:', reloadError);
+        }
+      }
     })
     .finally(() => {
       if (savedChatMessageWrites.get(id) === next) {

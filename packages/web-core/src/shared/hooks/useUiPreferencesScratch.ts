@@ -315,6 +315,10 @@ export function useUiPreferencesScratch() {
   const hasInitializedRef = useRef(false);
   // Track whether we're currently applying server data to prevent save loops
   const isApplyingServerDataRef = useRef(false);
+  // Older local backends do not expose the durable saved-message routes. Keep
+  // messages in scratch storage until a successful API read proves support.
+  const hasDurableSavedChatMessagesRef = useRef(false);
+  const hasHydratedSavedChatMessagesRef = useRef(false);
   const lastSavedPayloadRef = useRef<string | null>(null);
 
   // Get current store state
@@ -385,7 +389,7 @@ export function useUiPreferencesScratch() {
       ...(scratchData ?? {}),
       ...nextData,
     };
-    if (runtime === 'local') {
+    if (runtime === 'local' && hasDurableSavedChatMessagesRef.current) {
       delete data.saved_chat_messages;
     }
 
@@ -409,6 +413,40 @@ export function useUiPreferencesScratch() {
 
   const { debounced: debouncedSave } = useDebouncedCallback(saveToServer, 500);
 
+  const loadLocalSavedChatMessages = useCallback(
+    async (fallbackMessages: SavedChatMessage[]) => {
+      try {
+        const durableMessages = await savedChatMessagesApi.list();
+        hasDurableSavedChatMessagesRef.current = true;
+        return durableMessages.map(({ id, title, content }) => ({
+          id,
+          title,
+          content,
+        }));
+      } catch (error) {
+        console.error('Failed to load durable saved chat messages:', error);
+        return fallbackMessages.length > 0
+          ? fallbackMessages
+          : loadSavedChatMessagesFallback();
+      }
+    },
+    []
+  );
+
+  // Saved messages must remain available even when the UI-preferences scratch
+  // stream is missing or delayed. This also supports frontend-only deploys
+  // against an older backend by loading the immutable sidecar fallback.
+  useEffect(() => {
+    if (runtime !== 'local' || hasHydratedSavedChatMessagesRef.current) return;
+
+    hasHydratedSavedChatMessagesRef.current = true;
+    void loadLocalSavedChatMessages([]).then((savedChatMessages) => {
+      if (savedChatMessages.length > 0) {
+        useUiPreferencesStore.setState({ savedChatMessages });
+      }
+    });
+  }, [loadLocalSavedChatMessages, runtime]);
+
   // Initialize store from server data when first loaded
   useEffect(() => {
     if (hasInitializedRef.current || isLoading || !isConnected) {
@@ -426,21 +464,14 @@ export function useUiPreferencesScratch() {
           ...loadWorkspaceColorsFallback(),
           ...serverState.workspaceColors,
         };
-        let savedChatMessages =
+        const fallbackMessages =
           serverState.savedChatMessages.length > 0
             ? serverState.savedChatMessages
             : await loadSavedChatMessagesFallback();
-
-        if (runtime === 'local') {
-          try {
-            const durableMessages = await savedChatMessagesApi.list();
-            savedChatMessages = durableMessages.map(
-              ({ id, title, content }) => ({ id, title, content })
-            );
-          } catch (error) {
-            console.error('Failed to load saved chat messages:', error);
-          }
-        }
+        const savedChatMessages =
+          runtime === 'local'
+            ? await loadLocalSavedChatMessages(fallbackMessages)
+            : fallbackMessages;
 
         useUiPreferencesStore.setState({
           repoActions: serverState.repoActions,
@@ -475,7 +506,13 @@ export function useUiPreferencesScratch() {
         }, 100);
       })();
     }
-  }, [isLoading, isConnected, runtime, scratchData]);
+  }, [
+    isLoading,
+    isConnected,
+    loadLocalSavedChatMessages,
+    runtime,
+    scratchData,
+  ]);
 
   // Subscribe to store changes and save to server
   useEffect(() => {

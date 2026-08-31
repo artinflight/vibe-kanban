@@ -6,6 +6,20 @@
 
 ## Confirmed Current State
 
+- 2026-08-31 workspace colors persist across refreshes without a backend
+  restart:
+  - the running backend still strips the newly typed `workspace_colors` field
+    until its next normal restart, so the frontend mirrors selections into
+    browser storage and merges them during UI-preference hydration
+  - PR `#97` rebase-merged into `staging` as `98eb580f3`
+  - live frontend release:
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tworkspace-color-refresh-98eb580f3`
+  - live assets are `/assets/index-DlRW8gpD.js` and
+    `/assets/index-QO1t6__J.css`
+  - all nine saved messages remain in the compatibility sidecar with SHA-256
+    `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - backend PID remained `3112780`; no backend restart or migration occurred
+
 - 2026-08-30 light-theme workspace card tint correction is live:
   - the neutral `bg-panel` utility was emitted after the light workspace tint
     and overrode it, leaving only the colored inset edge visible

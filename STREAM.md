@@ -65,6 +65,18 @@
 
 ## Current Status
 
+- 2026-08-31 workspace-color refresh persistence frontend deployed:
+  - PR `#97` rebase-merged into `staging` as `98eb580f3`
+  - browser storage preserves workspace colors immediately while the running
+    backend remains on the older typed payload contract
+  - immutable frontend release is
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tworkspace-color-refresh-98eb580f3`
+  - live assets are `/assets/index-DlRW8gpD.js` and
+    `/assets/index-QO1t6__J.css`
+  - saved-message sidecar SHA-256 remains
+    `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - backend PID remained `3112780`; no backend restart occurred
+
 - 2026-08-31 left-nav project reorder frontend deployed:
   - project icons in the left nav now remain fixed at `40px` instead of
     shrinking to fit every project into the rail

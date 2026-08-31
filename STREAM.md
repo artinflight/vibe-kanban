@@ -8,23 +8,22 @@
 
 ## Objective
 
-- Add persistent, theme-aware color customization for workspace cards shown in
-  the Kanban view.
+- Make project navigation order, workspace card colors, and saved chat messages
+  backend-authoritative, independently writable, conflict-safe, and recoverable.
 
 ## In Scope
 
-- Deduplicate Cargo output across green-launched workspaces.
-- Disable per-worktree Cargo incremental state for this repository.
-- Make archive, In Staging, and Done transitions reclaim clean inactive
-  worktrees while retaining dirty, pinned, running, or referenced worktrees.
-- Document capacity and protected-data rules in repository governance.
+- Dedicated SQLite storage and migration from existing scratch preferences.
+- Revision-checked APIs that reject stale browser writes.
+- History records for recovery and frontend compatibility seeding.
+- Saved-message concurrency hardening and migration-chain repair.
 
 ## Out of Scope
 
-- Restarting or stopping the active green backend without operator approval.
-- Generic cache clearing, attachment retention, database/session retention, or
-  deletion of existing worktrees outside VK's guarded lifecycle.
-- GitHub Actions or external-CI capacity management.
+- Restarting or deploying the active green instance; another agent owns that
+  final cutover.
+- Reconstructing the already-lost exact 17-project manual order.
+- Unrelated UI-preference or workspace-card design changes.
 
 ## Stream-Specific Decisions
 
@@ -64,6 +63,16 @@
 - Issue/workspace PR display paths under `packages/web-core/src/features/kanban/` and fallback PR routes
 
 ## Current Status
+
+- 2026-08-31 durable preference implementation is prepared:
+  - new project-order and workspace-color tables use optimistic revisions and
+    append recoverable history
+  - saved-message writes/deletes reject stale revisions and record history
+  - the frontend switches away from shared scratch only after detecting the
+    new API, preserving compatibility with the currently running backend
+  - full migration chains pass on empty and copied-live databases; the live
+    copy preserved all nine saved messages
+  - no runtime restart or deployment has been performed
 
 - 2026-08-31 saved-message compatibility frontend deployed:
   - PR `#99` rebase-merged into `staging` as `a1ccb73e3`

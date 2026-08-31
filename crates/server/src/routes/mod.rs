@@ -9,6 +9,7 @@ use crate::{DeploymentImpl, middleware};
 pub mod approvals;
 pub mod config;
 pub mod containers;
+pub mod durable_ui_preferences;
 pub mod filesystem;
 // pub mod github;
 pub mod attachments;
@@ -53,6 +54,7 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(approvals::router())
         .merge(scratch::router(&deployment))
         .merge(saved_chat_messages::router())
+        .merge(durable_ui_preferences::router())
         .merge(search::router(&deployment))
         .merge(preview::api_router())
         .merge(releases::router())

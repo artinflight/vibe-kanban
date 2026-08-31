@@ -1,11 +1,14 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::Json as ResponseJson,
     routing::{get, put},
 };
-use db::models::saved_chat_message::{SavedChatMessage, UpsertSavedChatMessage};
+use db::models::saved_chat_message::{
+    SavedChatMessage, SavedChatMessageError, UpsertSavedChatMessage,
+};
 use deployment::Deployment;
+use serde::Deserialize;
 use utils::response::ApiResponse;
 
 use crate::{DeploymentImpl, error::ApiError};
@@ -33,16 +36,36 @@ async fn upsert(
             "Saved messages require an ID, title, and content".to_string(),
         ));
     }
-    let message = SavedChatMessage::upsert(&deployment.db().pool, &input).await?;
+    let message = SavedChatMessage::upsert(&deployment.db().pool, &input)
+        .await
+        .map_err(|error| match error {
+            SavedChatMessageError::Conflict => ApiError::Conflict(
+                "Saved message changed in another tab; reload before retrying".to_string(),
+            ),
+            SavedChatMessageError::Database(error) => ApiError::Database(error),
+        })?;
     Ok(ResponseJson(ApiResponse::success(message)))
 }
 
 async fn remove(
     State(deployment): State<DeploymentImpl>,
     Path(id): Path<String>,
+    Query(query): Query<DeleteSavedChatMessage>,
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
-    SavedChatMessage::delete(&deployment.db().pool, &id).await?;
+    SavedChatMessage::delete(&deployment.db().pool, &id, query.expected_revision)
+        .await
+        .map_err(|error| match error {
+            SavedChatMessageError::Conflict => ApiError::Conflict(
+                "Saved message changed in another tab; reload before retrying".to_string(),
+            ),
+            SavedChatMessageError::Database(error) => ApiError::Database(error),
+        })?;
     Ok(ResponseJson(ApiResponse::success(())))
+}
+
+#[derive(Debug, Deserialize)]
+struct DeleteSavedChatMessage {
+    expected_revision: Option<i64>,
 }
 
 pub fn router() -> Router<DeploymentImpl> {

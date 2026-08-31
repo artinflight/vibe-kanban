@@ -1,5 +1,25 @@
 # HANDOFF.md
 
+## 2026-08-31 Durable UI Preferences Prepared — Restart Agent Handoff
+
+- Project order and workspace colors now use dedicated, revision-checked SQLite
+  records with recoverable history instead of shared-scratch authority.
+- Saved messages remain in `saved_chat_messages`, now with revision conflicts
+  and automatic insert/update/delete history.
+- Migration `20260831000000_durable_ui_preferences.sql` imports current scratch
+  values. The saved-message migration is renumbered to `20260829000001` because
+  staging previously assigned `20260829000000` to both saved messages and tags.
+- A disposable live-green database copy migrated successfully: 13 order IDs and
+  nine saved messages were retained. Browser fallback colors are seeded
+  idempotently because the live scratch row contains no colors.
+- Deploy the backend and matching frontend together. The old frontend does not
+  send revision tokens; the new frontend deliberately refuses stale writes.
+- Before restart, preserve and hash the live DB, nine-message sidecar, and live
+  frontend. After restart, verify new/history tables, REST APIs, refresh
+  persistence, and a two-tab conflict test before retiring fallbacks.
+- This implementation task does not restart, switch assets, or mutate live data;
+  the operator assigned those actions to another agent.
+
 ## 2026-08-31 Saved Messages Compatibility Live
 
 - Root cause: the live `0.1.42` backend predates durable saved-message routes.

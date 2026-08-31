@@ -65,6 +65,20 @@
 
 ## Current Status
 
+- 2026-08-31 saved-message compatibility frontend deployed:
+  - PR `#99` rebase-merged into `staging` as `a1ccb73e3`
+  - older backends are treated as lacking durable saved-message support, so
+    the sidecar hydrates independently and scratch remains the write fallback
+  - immutable frontend release is
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tsaved-messages-a1ccb73e31`
+  - live assets are `/assets/index-Dw4SbUxk.js` and
+    `/assets/index-QO1t6__J.css`
+  - the sidecar still contains nine messages with SHA-256
+    `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - backend PID remained `3112780`; no backend restart occurred
+  - the live smoke script's release/asset constants are stale and must be
+    updated separately; its failure was not a live endpoint failure
+
 - 2026-08-31 workspace-color refresh persistence frontend deployed:
   - PR `#97` rebase-merged into `staging` as `98eb580f3`
   - browser storage preserves workspace colors immediately while the running

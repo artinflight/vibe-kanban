@@ -6,6 +6,22 @@
 
 ## Confirmed Current State
 
+- 2026-08-31 saved-message compatibility hydration is live:
+  - the running `0.1.42` backend does not expose the durable
+    `/api/saved-chat-messages` routes; GET falls through to frontend HTML and
+    PUT returns `405`
+  - PR `#99` rebase-merged into `staging` as `a1ccb73e3`
+  - the frontend now hydrates saved messages independently of scratch-stream
+    availability and retains scratch persistence until a successful durable
+    API read proves backend support
+  - live frontend release:
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tsaved-messages-a1ccb73e31`
+  - live assets are `/assets/index-Dw4SbUxk.js` and
+    `/assets/index-QO1t6__J.css`
+  - all nine saved messages remain in the compatibility sidecar with SHA-256
+    `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - backend PID remained `3112780`; no backend restart or migration occurred
+
 - 2026-08-31 workspace colors persist across refreshes without a backend
   restart:
   - the running backend still strips the newly typed `workspace_colors` field
@@ -77,8 +93,8 @@
   state may still be recoverable from Desktop archives and must be imported
   selectively, not blindly restored over green.
 - Current green frontend is pinned to:
-  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcolored-workspaces-4a314b61b`
-  with assets `index-CbeyxDjT.js` and `index-BeAK0y4J.css`.
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tsaved-messages-a1ccb73e31`
+  with assets `index-Dw4SbUxk.js` and `index-QO1t6__J.css`.
 - That frontend release has a live `index.html` saved-message shim and
   `/vk-saved-chat-messages.json` sidecar because the running backend strips
   `saved_chat_messages` from `UI_PREFERENCES` API/WebSocket serialization.

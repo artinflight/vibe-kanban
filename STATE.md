@@ -106,6 +106,19 @@
     `20260714Tbrowser-notifications`
   - rollback backup is
     `/home/mcp/backups/profiles-live-pre-codex-sol-xhigh-20260714.json`
+- 2026-08-31 left-nav project reorder is live without backend restart:
+  - live frontend pointer is
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/current -> /home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tleft-nav-reorder-4538b96c`
+  - live frontend asset is `/assets/index-LxC8hBXR.js`, sha256
+    `710900a655030796ac2914ecd1805b64d23b20b6429c852628772f5c0615c441`
+  - left-nav project icons remain fixed-size and the project list scrolls, so
+    drag reorder hitboxes stay usable with many projects
+  - saved-message sidecar was retained with SHA-256
+    `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - live regression smoke now expects green service
+    `vibe-kanban-green.service`, the current project order, the attachment
+    upload route, `workspace_colors`, and left-nav reorder markers
+  - backend PID remained `3112780`; no backend restart or migration occurred
 - 2026-06-26 multi-line rich clipboard paste hotfix is live without backend restart:
   - live frontend pointer is `/home/mcp/.local/share/vibe-kanban/frontend-dist/current -> /home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260626Tmultiline-rich-paste`
   - live frontend asset is `/assets/index-DXMultilinePaste.js`, sha256 `bdbd9860c6a240e1256dabc8715d42ab4b96c8f1c098d6e283f3d2bdd972f268`

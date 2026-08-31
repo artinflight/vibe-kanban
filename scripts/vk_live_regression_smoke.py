@@ -3,50 +3,67 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import ssl
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 
 
 BASE_URL = "https://vibe.local"
 EXPECTED_RELEASE = (
     "/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/"
-    "20260626Tmultiline-rich-paste"
+    "20260831Tleft-nav-reorder-4538b96c"
 )
-EXPECTED_ASSET = "/assets/index-DXMultilinePaste.js"
+EXPECTED_ASSET = "/assets/index-LxC8hBXR.js"
+EXPECTED_SAVED_MESSAGES_SHA256 = (
+    "b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d"
+)
 EXPECTED_ACTIVE = [
-    "matchSubs",
-    "BBinvoice",
-    "DeNest",
-    "ScrollCap",
+    "splitVideo",
+    "mediaManagement",
+    "CodexCommand",
+    "Telemetry",
+    "Art in Flight",
+    "beatMarkers",
+    "DeltaIndiaTango",
+    "VK Dev",
+    "CapReveal",
     "oharaFIT",
-    "outsource",
-    "Iniandi",
     "CodexUsage",
-    "VL",
     "LifeOS",
     "Operations",
     "OSTP",
     "programming",
-    "ops-playbook",
-    "intake-shield",
     "foxtrot-lima",
-    "caspian-app",
     "hyroxready-app",
-    "VK Sub-Agent Monitor",
 ]
 EXPECTED_ARCHIVED = [
+    "carFind",
+    "trendBreakdown",
+    "EyeContact",
+    "FindSpace",
+    "TrendRadar",
+    "BBinvoice",
+    "DeNest",
+    "ScrollCap",
+    "outsource",
+    "Iniandi",
     "PostStoryboard",
     "mealPlan",
+    "opNVLP",
     "Monitor",
     "Monitor local",
     "virtualCard",
     "Champions Nutrition",
     "caspian-ova-dashboard",
     "vibe-kanban",
+    "ops-playbook",
     "vibe-kanban-orchestrator",
+    "intake-shield",
+    "caspian-app",
 ]
 EXPECTED_STATUS_NAMES = [
     "To do",
@@ -79,7 +96,7 @@ ASSET_TOKENS = [
     "queued",
     "insertRawText",
     "u&&!d?!1",
-    "if(d){f.insertRawText(c);return}",
+    "if(d){f.insertRawText(TZ(c));return}",
     "vk-executor-config-selection",
     "branchNameMatchesSearch",
     "VK turn complete",
@@ -97,6 +114,11 @@ ASSET_TOKENS = [
     "serviceWorker",
     "showNotification",
     "vk-notifications-sw.js",
+    "attachments/upload",
+    "local_project_order",
+    "workspace_colors",
+    "overflow-y-auto overflow-x-hidden py-half",
+    "h-10 w-10 shrink-0",
 ]
 
 
@@ -121,6 +143,15 @@ def get_json(path: str):
     return json.loads(get_text(path))
 
 
+def post_empty(path: str) -> int:
+    request = urllib.request.Request(f"{BASE_URL}{path}", method="POST")
+    try:
+        with urllib.request.urlopen(request, context=ctx, timeout=10) as resp:
+            return resp.status
+    except urllib.error.HTTPError as error:
+        return error.code
+
+
 def command(*args: str) -> str:
     return subprocess.check_output(args, text=True).strip()
 
@@ -131,7 +162,15 @@ def main() -> int:
     )
     check("frontend release", release == EXPECTED_RELEASE, release)
 
-    pid = command("systemctl", "--user", "show", "vibe-kanban.service", "-p", "MainPID", "--value")
+    pid = command(
+        "systemctl",
+        "--user",
+        "show",
+        "vibe-kanban-green.service",
+        "-p",
+        "MainPID",
+        "--value",
+    )
     check("backend process still running", pid.isdigit() and pid != "0", f"pid={pid}")
 
     html = get_text("/")
@@ -139,6 +178,19 @@ def main() -> int:
     asset = get_text(EXPECTED_ASSET)
     for token in ASSET_TOKENS:
         check(f"asset contains {token}", token in asset)
+
+    saved_messages_sha256 = hashlib.sha256(
+        get_text("/vk-saved-chat-messages.json").encode("utf-8")
+    ).hexdigest()
+    check(
+        "saved-message sidecar",
+        saved_messages_sha256 == EXPECTED_SAVED_MESSAGES_SHA256,
+        saved_messages_sha256,
+    )
+    check(
+        "attachment upload route rejects invalid post without 405",
+        post_empty("/api/attachments/upload") == 400,
+    )
 
     projects = get_json("/api/projects")["data"]
     active = [project["name"] for project in projects if not project["archived"]]

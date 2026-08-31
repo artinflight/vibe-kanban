@@ -65,6 +65,28 @@
 
 ## Current Status
 
+- 2026-08-31 left-nav project reorder frontend deployed:
+  - project icons in the left nav now remain fixed at `40px` instead of
+    shrinking to fit every project into the rail
+  - the project list scrolls vertically, giving drag-and-drop stable hitboxes
+    when many projects exist
+  - branch commit `4538b96c1`; staging commit `20e7fc065`
+  - immutable frontend release is
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tleft-nav-reorder-4538b96c`
+  - live assets are `/assets/index-LxC8hBXR.js` and
+    `/assets/index-QO1t6__J.css`
+  - `vk-saved-chat-messages.json` was retained with SHA-256
+    `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - backend PID remained `3112780`; no backend restart occurred
+
+- 2026-08-31 attachment and UI preference corrections:
+  - local issue attachments now use the same upload route shape as workspace
+    attachments, avoiding the `/api/issues/.../attachments` `405` path
+  - typed scratch payloads now include and preserve `workspace_colors` so
+    future backend UI preference saves do not strip workspace card colors
+  - the live saved-message compatibility sidecar remains required until the
+    next approved backend restart ships the source-side preservation behavior
+
 - 2026-08-30 light-theme tint follow-up deployed:
   - the colored fill now wins over the card's later `bg-panel` utility in both
     themes

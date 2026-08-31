@@ -1,5 +1,32 @@
 # HANDOFF.md
 
+## 2026-08-31 Saved Messages Compatibility Live
+
+- Root cause: the live `0.1.42` backend predates durable saved-message routes.
+  GET `/api/saved-chat-messages` falls through to frontend HTML and PUT returns
+  `405`, while saved-message hydration was coupled to scratch initialization.
+- PR `#99` rebase-merged into `staging` as `a1ccb73e3`.
+- The frontend now hydrates saved messages independently, uses the immutable
+  sidecar when the durable API is unsupported, and keeps messages in scratch
+  storage until a successful durable API read proves support.
+- Live immutable frontend release:
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tsaved-messages-a1ccb73e31`.
+- Live assets: `/assets/index-Dw4SbUxk.js` and
+  `/assets/index-QO1t6__J.css`.
+- The release preserves all nine messages; sidecar SHA-256 is
+  `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`.
+- Backend PID remained `3112780`; no backend restart or migration occurred.
+- Validation passed: formatting, web-core TypeScript check, UI format check,
+  ops governance, frontend CI, local production build, merged-tree identity,
+  live asset/hash/sidecar/API probes, and worktree-target cleanup. Full
+  `cargo test --workspace` was attempted in the required shared target and
+  blocked by the host's missing `glib-2.0` pkg-config dependency; no Rust code
+  changed. `scripts/vk_live_regression_smoke.py` is stale at an older release
+  and asset constant, so it failed before its endpoint checks and needs a
+  separate maintenance update.
+- Rollback release is
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tworkspace-color-refresh-98eb580f3`.
+
 ## 2026-08-31 Workspace Color Refresh Persistence Live
 
 - Root cause: the frontend sent `workspace_colors`, but the running backend's

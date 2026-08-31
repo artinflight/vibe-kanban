@@ -251,7 +251,9 @@ export function IssueWorkspaceCard({
                               color === workspaceColor &&
                                 'ring-2 ring-brand ring-offset-1 ring-offset-primary'
                             )}
-                            style={{ backgroundColor: `hsl(${workspaceColor})` }}
+                            style={{
+                              backgroundColor: `hsl(${workspaceColor})`,
+                            }}
                           />
                         ))}
                       </div>

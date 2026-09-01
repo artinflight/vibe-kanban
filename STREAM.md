@@ -2,25 +2,26 @@
 
 ## Stream Identifier
 
-- Branch: `vk/b401-vk-reloading-old`
-- Repo: `/home/mcp/code/worktrees/b401-vk-reloading-old/_vibe_kanban_repo`
+- Branch: `vk/fada-vk-turn-steer-ag`
+- Repo: `/home/mcp/code/worktrees/fada-vk-turn-steer-ag/_vibe_kanban_repo`
 - Working mode: isolated feature branch
 
 ## Objective
 
-- Make “Reset to this point” on an older workspace-chat message land at the
-  selected reset boundary instead of preserving a removed viewport anchor.
+- Make working-state Codex corrections reliably reach the active turn instead
+  of silently becoming end-of-turn queued follow-ups.
 
 ## In Scope
 
-- Workspace-chat reset completion and scroll positioning.
-- Focused frontend validation of the reset handoff.
+- Active Codex client/turn readiness handling for `turn/steer`.
+- Server fallback policy and focused backend/frontend validation.
+- Continuity documentation and integration into `staging` for the next restart.
 
 ## Out of Scope
 
-- Changing backend reset semantics.
 - Restarting or deploying the active green instance.
-- Unrelated chat history, virtualizer, or preference changes.
+- Changing non-Codex queued follow-up behavior.
+- Unrelated workspace-chat or preference changes.
 
 ## Stream-Specific Decisions
 

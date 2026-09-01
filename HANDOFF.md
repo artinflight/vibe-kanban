@@ -1,5 +1,17 @@
 # HANDOFF.md
 
+## 2026-09-01 Active Codex Correction Regression
+
+- The original working-state correction path could silently queue a correction
+  when the live Codex client or active turn ID was not immediately registered.
+  The message then ran only after the current turn completed.
+- The corrected backend retries active-turn readiness for up to two seconds and
+  returns a visible conflict if steering is still unavailable. It never routes
+  a Codex correction into the normal queued-follow-up path.
+- Non-Codex follow-ups retain their existing queue fallback.
+- Deployment requires the matching backend binary and an approved restart. No
+  live deploy, frontend asset swap, restart, or data mutation was performed.
+
 ## 2026-08-31 Codex Resume Unknown Item Compatibility
 
 - The restart candidate includes `Handle unknown Codex thread items on resume`,

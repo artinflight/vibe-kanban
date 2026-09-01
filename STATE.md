@@ -6,6 +6,16 @@
 
 ## Confirmed Current State
 
+- 2026-09-01 active Codex correction regression is corrected in source:
+  - the first `turn/steer` integration silently used the normal queued-follow-up
+    path when the live client or active turn ID was not immediately available
+  - VK now waits up to two seconds for active-turn registration, then either
+    steers that turn or returns a visible retryable conflict
+  - Codex corrections cannot execute later as end-of-turn queued follow-ups;
+    non-Codex agents retain their existing queue behavior
+  - this requires a matching backend build and restart; no live deploy,
+    frontend swap, restart, or data mutation occurred
+
 - 2026-08-31 durable local UI state is prepared for the next coordinated
   backend/frontend deployment:
   - project navigation order moves from shared scratch JSON into one atomic,

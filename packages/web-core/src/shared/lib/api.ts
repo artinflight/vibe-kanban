@@ -1783,11 +1783,11 @@ export const agentsApi = {
   },
 };
 
-// Follow-up API. The server injects into active Codex sessions when possible,
-// and falls back to a queued follow-up when active injection is unavailable.
+// Follow-up API. Codex corrections must steer the active turn; other agents
+// may fall back to a queued follow-up.
 export const queueApi = {
   /**
-   * Send a follow-up message, or queue it when current execution cannot accept it
+   * Steer an active Codex turn, or queue a non-Codex follow-up
    */
   queue: async (
     sessionId: string,

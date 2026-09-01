@@ -31,6 +31,7 @@ use serde_json::{self, Value};
 use tokio::{
     io::{AsyncWrite, AsyncWriteExt, BufWriter},
     sync::Mutex,
+    time::{Duration, sleep},
 };
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -125,24 +126,35 @@ impl AppServerClient {
         execution_process_id: Uuid,
         message: String,
     ) -> Result<bool, ExecutorError> {
-        let client = {
-            let mut guard = active_codex_clients()
-                .lock()
-                .expect("active Codex client registry poisoned");
-            match guard.get(&execution_process_id).and_then(Weak::upgrade) {
-                Some(client) => Some(client),
-                None => {
-                    guard.remove(&execution_process_id);
-                    None
+        const STEER_READY_ATTEMPTS: usize = 40;
+        const STEER_READY_RETRY_DELAY: Duration = Duration::from_millis(50);
+
+        for attempt in 0..STEER_READY_ATTEMPTS {
+            let client = {
+                let mut guard = active_codex_clients()
+                    .lock()
+                    .expect("active Codex client registry poisoned");
+                match guard.get(&execution_process_id).and_then(Weak::upgrade) {
+                    Some(client) => Some(client),
+                    None => {
+                        guard.remove(&execution_process_id);
+                        None
+                    }
                 }
+            };
+
+            if let Some(client) = client
+                && client.steer(message.clone()).await?
+            {
+                return Ok(true);
             }
-        };
 
-        let Some(client) = client else {
-            return Ok(false);
-        };
+            if attempt + 1 < STEER_READY_ATTEMPTS {
+                sleep(STEER_READY_RETRY_DELAY).await;
+            }
+        }
 
-        client.steer(message).await
+        Ok(false)
     }
 
     pub fn set_resolved_model(&self, model: String) {

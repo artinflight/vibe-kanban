@@ -6,6 +6,28 @@
 
 ## Confirmed Current State
 
+- 2026-09-06 GPT-6 Astra is prepared as the Codex default in source:
+  - new Codex configurations default to `gpt-6-astra` with `xhigh` reasoning
+  - GPT-6 Astra appears first in the Codex model picker
+  - existing explicit and persisted model selections retain precedence
+  - the live green `DEFAULT` profile now uses `gpt-6-astra` with `xhigh`; both
+    `/api/info` and `/api/agents/preset-options` expose those values through
+    `https://vibe.local`, making Astra available in the existing model menu
+  - the update used the supported profile API without a service restart;
+    backend PID remained `2886161`
+  - rollback backup:
+    `/home/mcp/backups/profiles-live-pre-gpt-6-astra-20260906.json`
+  - 2026-09-07 menu cleanup is live without a backend restart:
+    - Astra displays as `GPT-6 Astra`, matching the other human-readable names
+    - Codex model choices are limited to GPT-6 Astra and GPT-5.6 Sol, Terra,
+      and Luna; all pre-5.6 choices are removed from the menu
+    - live JS is `/assets/index-DKNgBi1_.js`, SHA-256
+      `0ef9f05e161beffb7430b9306deeff18d33a0bf84435b3edaa09a20d440a350e`
+    - the existing compatibility `index.html` was preserved except for its
+      main asset reference; rollback index is
+      `/home/mcp/backups/vk-frontend-index-pre-gpt6-menu-20260907.html`
+    - backend PID remained `2886161`
+
 - 2026-09-01 active Codex correction regression is corrected in source:
   - the first `turn/steer` integration silently used the normal queued-follow-up
     path when the live client or active turn ID was not immediately available

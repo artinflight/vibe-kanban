@@ -4,6 +4,20 @@ import type {
   ReasoningOption,
 } from 'shared/types';
 
+const CURRENT_CODEX_MODEL_IDS = new Set([
+  'gpt-6-astra',
+  'gpt-5.6-sol',
+  'gpt-5.6-terra',
+  'gpt-5.6-luna',
+]);
+
+const OFFICIAL_MODEL_NAMES: Record<string, string> = {
+  'gpt-6-astra': 'GPT-6 Astra',
+  'gpt-5.6-sol': 'GPT-5.6 Sol',
+  'gpt-5.6-terra': 'GPT-5.6 Terra',
+  'gpt-5.6-luna': 'GPT-5.6 Luna',
+};
+
 function toPrettyCase(value: string): string {
   return value
     .split('_')
@@ -87,12 +101,24 @@ export function appendPresetModel(
     models: [
       {
         id: modelId,
-        name: modelId,
+        name: OFFICIAL_MODEL_NAMES[modelId.toLowerCase()] ?? modelId,
         provider_id: providerId,
         reasoning_options: [],
       },
       ...config.models,
     ],
+  };
+}
+
+export function filterCurrentCodexModels(
+  config: ModelSelectorConfig | null
+): ModelSelectorConfig | null {
+  if (!config) return null;
+  return {
+    ...config,
+    models: config.models.filter((model) =>
+      CURRENT_CODEX_MODEL_IDS.has(model.id.toLowerCase())
+    ),
   };
 }
 

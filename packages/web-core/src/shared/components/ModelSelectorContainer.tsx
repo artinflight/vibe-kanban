@@ -9,8 +9,8 @@ import {
   SlidersHorizontalIcon,
   type Icon,
 } from '@phosphor-icons/react';
-import type { BaseCodingAgent, ExecutorConfig, ModelInfo } from 'shared/types';
-import { PermissionPolicy } from 'shared/types';
+import type { ExecutorConfig, ModelInfo } from 'shared/types';
+import { BaseCodingAgent, PermissionPolicy } from 'shared/types';
 import { toPrettyCase } from '@/shared/lib/string';
 import {
   getModelKey,
@@ -26,6 +26,7 @@ import {
   escapeAttributeValue,
   parseModelId,
   appendPresetModel,
+  filterCurrentCodexModels,
   resolveDefaultModelId,
   isModelAvailable,
   resolveDefaultReasoningId,
@@ -116,7 +117,10 @@ export function ModelSelectorContainer({
     }
   }, [streamError]);
 
-  const baseConfig = streamConfig;
+  const baseConfig =
+    agent === BaseCodingAgent.CODEX
+      ? filterCurrentCodexModels(streamConfig)
+      : streamConfig;
   const config = appendPresetModel(baseConfig, presetOptions?.model_id);
 
   const availableProviderIds = useMemo(

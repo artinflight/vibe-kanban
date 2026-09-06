@@ -3075,6 +3075,19 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
+- 2026-09-06 `vk/273f-vk-update-codex` changes the source default for new
+  Codex configurations from `gpt-5.6-sol` to `gpt-6-astra`, retaining `xhigh`
+  reasoning, and adds GPT-6 Astra to the top of backend model discovery.
+- Official OpenAI documentation confirms `gpt-6-astra` and supports `xhigh`,
+  but green's installed Codex CLI `0.149.0` does not yet list Astra in
+  `codex debug models`. Do not update the live profile or deploy until the
+  green account/CLI advertises the model and a new-agent creation smoke test
+  confirms the stored executor configuration.
+- Validation passed: `pnpm run format`, `pnpm run ops:check`, larger-heap
+  `pnpm --filter @vibe/web-core run check`,
+  `cargo test -p executors codex::tests` (2 passed), and a larger-heap
+  `pnpm --filter @vibe/local-web build`.
+
 - 2026-08-29 public branch preview is available at
   `https://mcp-server.tail744c4.ts.net:8443/`, proxying this worktree's Vite
   server on `127.0.0.1:3003` to green backend `4511`. Root and `/api/info`

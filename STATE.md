@@ -6,6 +6,13 @@
 
 ## Confirmed Current State
 
+- 2026-09-06 GPT-6 Astra is prepared as the Codex default in source:
+  - new Codex configurations default to `gpt-6-astra` with `xhigh` reasoning
+  - GPT-6 Astra appears first in the Codex model picker
+  - existing explicit and persisted model selections retain precedence
+  - the installed green Codex CLI `0.149.0` does not yet advertise Astra in
+    `codex debug models`, so no live profile mutation or deploy was performed
+
 - 2026-09-01 active Codex correction regression is corrected in source:
   - the first `turn/steer` integration silently used the normal queued-follow-up
     path when the live client or active turn ID was not immediately available

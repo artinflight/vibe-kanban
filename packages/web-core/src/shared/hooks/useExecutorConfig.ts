@@ -24,7 +24,7 @@ const OVERRIDE_FIELDS = [
 ] as const;
 
 const DEFAULT_CODEX_OVERRIDES: Partial<ExecutorConfig> = {
-  model_id: 'gpt-5.6-sol',
+  model_id: 'gpt-6-astra',
   reasoning_id: 'xhigh',
 };
 

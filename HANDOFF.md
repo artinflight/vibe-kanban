@@ -3075,6 +3075,21 @@ User QA checklist for the no-restart frontend repair:
 
 # Current Handoff
 
+- 2026-09-06 `vk/273f-vk-update-codex` changes the source default for new
+  Codex configurations from `gpt-5.6-sol` to `gpt-6-astra`, retaining `xhigh`
+  reasoning, and adds GPT-6 Astra to the top of backend model discovery.
+- The live green `DEFAULT` profile was updated through `PUT /api/profiles` to
+  `gpt-6-astra` with `xhigh`. Localhost and `https://vibe.local` now return
+  those values from `/api/info` and `/api/agents/preset-options`, so the
+  existing frontend injects Astra into its model menu without a restart.
+- Green's backend PID remained `2886161`. Rollback backup is
+  `/home/mcp/backups/profiles-live-pre-gpt-6-astra-20260906.json` with SHA-256
+  `e5c503ba29a851b9610171d866f90b5d8dfc6a31a8785698a51e09c6dc133467`.
+- Validation passed: `pnpm run format`, `pnpm run ops:check`, larger-heap
+  `pnpm --filter @vibe/web-core run check`,
+  `cargo test -p executors codex::tests` (2 passed), and a larger-heap
+  `pnpm --filter @vibe/local-web build`.
+
 - 2026-08-29 public branch preview is available at
   `https://mcp-server.tail744c4.ts.net:8443/`, proxying this worktree's Vite
   server on `127.0.0.1:3003` to green backend `4511`. Root and `/api/info`

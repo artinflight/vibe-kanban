@@ -542,6 +542,12 @@ impl StandardCodingAgentExecutor for Codex {
             model_selector: ModelSelectorConfig {
                 models: vec![
                     ModelInfo {
+                        id: "gpt-6-astra".to_string(),
+                        name: "GPT-6 Astra".to_string(),
+                        provider_id: None,
+                        reasoning_options: max_reasoning_options.clone(),
+                    },
+                    ModelInfo {
                         id: "gpt-5.6-sol".to_string(),
                         name: "GPT-5.6 Sol".to_string(),
                         provider_id: None,

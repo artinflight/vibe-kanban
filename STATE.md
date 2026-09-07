@@ -6,6 +6,19 @@
 
 ## Confirmed Current State
 
+- 2026-09-07: thread recovery incident remains open. The supplied audit found
+  2,179 missing rollouts across 388 non-archived workspaces and 29 projects.
+  Restored 2,178 original files; 2,599 available original histories passed native
+  reads. Two histories still lack four later native turns (original execution
+  logs recovered separately); one killed startup lacks its original rollout.
+  No restart or new-thread fallback occurred. Saved messages remained unchanged.
+  Recovery evidence is maintained in
+  `/mnt/vk-storage/thread-recovery-20260907/README.md`. Recent/active-thread
+  checks, file existence, backup checksums, and service health are insufficient
+  to certify all histories are preserved. Do not treat earlier restart-ready
+  statements as a complete thread-preservation audit. The documented hourly
+  backup cron entry was found disabled.
+
 - 2026-08-28 restart incident lessons are documented in:
   - `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
   - `docs/self-hosting/local-backup-recovery.mdx`

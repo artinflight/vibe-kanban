@@ -192,6 +192,36 @@ turn the task into an operator-approved release/deploy task first.
 When a change needs a backend restart or a coordinated frontend/backend release,
 do all slow and risky work before asking for the restart window.
 
+### 2026-09-07 thread preservation correction
+
+A checksum-verified audit found 2,179 missing rollout files referenced by 388
+non-archived workspaces across 29 projects. Checking only running executions or
+threads updated today did not protect dormant work. Three additional files
+passed existence checks but contained malformed JSON records.
+
+- Audit every thread referenced by every non-archived workspace, including
+  workspaces in archived projects and earlier threads in each session. Record
+  any excluded archived work separately; age is not proof that data is unused.
+- Resolve every absolute rollout reference across current, retired, and shared
+  Codex homes. A backup of the selected home alone is insufficient.
+- Validate original thread identity, JSONL contents, and available history, not
+  just file existence, DB integrity, archive hashes, or service health.
+- Compare the expected thread inventory with the actual archive contents and
+  restore/read results. Missing or unreadable histories remain explicit blockers
+  to a claim that all work is preserved.
+- Do not replace missing histories with new threads. Do not overwrite current
+  state with an older whole database. Restore originals additively and preserve
+  provenance, conflicting versions, and the current state before repair.
+- Check actual backup scheduling. On September 7 the documented hourly backup
+  cron entry was disabled. Documentation of a schedule is not evidence it ran.
+
+Incident evidence: `/mnt/vk-storage/thread-recovery-20260907/README.md`.
+Recovery restored 2,178 original files and verified 2,599 native history reads.
+Two native histories still lack four later turns whose execution logs were
+recovered separately; one killed startup lacks its rollout. These exceptions
+remain open. Consult the incident report before another deploy; do not convert
+this partial recovery into a blanket preservation guarantee.
+
 ### 2026-08-26 restart incident rules
 
 These rules were added after a restart window where the backup existed but the

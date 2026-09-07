@@ -1,5 +1,37 @@
 # HANDOFF.md
 
+## 2026-09-07 Thread Recovery: Originals Restored, Exceptions Open
+
+- User supplied checksum-verified audit of 2,600 thread IDs in non-archived
+  workspaces: 2,179 missing rollout files across 388 workspaces and 29 projects.
+- Durable incident evidence and recovery tooling:
+  `/mnt/vk-storage/thread-recovery-20260907/README.md`.
+- Current green VK/Codex DBs were snapshotted with SQLite backup and passed
+  integrity checks. Original Desktop archives are retained without pruning.
+- Restored 2,178 original rollout files with exact source-byte verification.
+  All 2,599 available original histories passed native `thread/read` checks;
+  one representative original passed `thread/resume` without starting a turn.
+- Recovery is NOT fully complete: FR::Viral::Running lacks three later native
+  turns and PG::Redesign Mobile Layout lacks one. Their original execution logs,
+  prompts and matching final replies are exported in the incident directory,
+  not fabricated into native history. One killed initial attempt has only its
+  recovered startup log, with no recorded assistant output or located rollout.
+- Historical malformed records remain unchanged in 27 recovered and three
+  preexisting originals; native reads passed. Readability alone is not proof of
+  complete history. See `evidence/final-audit.json` for precise exceptions.
+- No original VK entity IDs or existing thread links were removed or changed;
+  nine saved messages are byte-for-byte unchanged in the comparison. Both live
+  databases passed integrity checks and green's PID remained unchanged.
+- No backend restart, new-thread fallback, or bulk live DB restore was done.
+- All 2,178 recovered originals and evidence are separately backed up at
+  `desktop:B:/vk-backups/vk-thread-recovery-20260907/`; local/remote archive SHA256
+  matched `3785c44870ff9f765c6001551ea9e28b67b57d930520e3bfddffd507734be316`.
+  This is a recovery bundle, not a full current application backup.
+- The documented hourly backup cron entry is disabled. The lean backup's
+  selected-home/process-log discovery does not prove coverage of every absolute
+  rollout reference in Codex state. Do not certify another restart from recent
+  or active-only checks.
+
 ## Current task
 
 - Branch: `vk/d3fb-vk-2-instances`

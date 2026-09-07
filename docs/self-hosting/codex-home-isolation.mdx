@@ -113,6 +113,14 @@ Use this when agents appear to repeat themselves, resume the wrong context, or p
 
 ## Stale rollout path audit
 
+The recent/active queries below are diagnostic samples, not a complete restart
+preservation check. The September 7 audit found 2,179 missing rollouts across
+388 non-archived workspaces despite earlier restart checks. Inventory every
+thread referenced by non-archived workspaces, including historical threads and
+workspaces in archived projects. Resolve references in retired homes too.
+Validate the original session ID and JSONL records and read the restored
+history. An existing file can still contain malformed records.
+
 Run this before a backend restart and after any Codex-home migration, blue/green
 cutover, or backup restore. A thread row can point at a retired `CODEX_HOME`
 even when the current service environment is correct. If that rollout file is

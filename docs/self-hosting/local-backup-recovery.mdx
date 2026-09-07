@@ -614,6 +614,18 @@ Any agent working on the local VK install must follow this policy:
 
 ## Codex rollout restore guarantee
 
+The September 7 incident demonstrated that archive checksums and database row
+counts do not establish complete thread coverage. The lean backup in the
+incident checkout discovers IDs from retained VK process logs and searches the
+selected Codex home; it can omit threads whose recorded rollouts live elsewhere
+or whose process logs were archived. Before trusting this backup, reconcile its
+contents against every thread referenced by non-archived workspaces and verify
+original history reads from restored files. Do not prune still-referenced
+rollouts based on age or the existence of a separately stored archive.
+
+Verify the actual backup schedule and successful results. The documented hourly
+cron entry was disabled when inspected on September 7.
+
 The VK database and the Codex state database are not enough by themselves to
 resume old work. A Codex thread row also depends on the JSONL rollout file named
 in `state_5.sqlite`.

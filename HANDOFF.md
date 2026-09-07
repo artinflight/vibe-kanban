@@ -3097,6 +3097,9 @@ User QA checklist for the no-restart frontend repair:
   `/home/mcp/backups/vk-gpt6-model-menu-20260907-MANIFEST.txt`; HTTPS root,
   served asset identity/hash, required menu markers, `/api/info`, and unchanged
   backend PID passed the live smoke check.
+- Saved recent-model metadata was pruned through the profile API so pre-5.6
+  entries cannot reappear through recency ordering. Rollback is
+  `/home/mcp/backups/profiles-live-pre-gpt56-prune-20260907.json`.
 - Validation passed: `pnpm run format`, `pnpm run ops:check`, larger-heap
   `pnpm --filter @vibe/web-core run check`,
   `cargo test -p executors codex::tests` (2 passed), and a larger-heap

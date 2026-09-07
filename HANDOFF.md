@@ -3093,6 +3093,10 @@ User QA checklist for the no-restart frontend repair:
   main JS reference changed. Rollback is
   `/home/mcp/backups/vk-frontend-index-pre-gpt6-menu-20260907.html`; green PID
   remained `2886161` and no backend restart occurred.
+- Release evidence is recorded in
+  `/home/mcp/backups/vk-gpt6-model-menu-20260907-MANIFEST.txt`; HTTPS root,
+  served asset identity/hash, required menu markers, `/api/info`, and unchanged
+  backend PID passed the live smoke check.
 - Validation passed: `pnpm run format`, `pnpm run ops:check`, larger-heap
   `pnpm --filter @vibe/web-core run check`,
   `cargo test -p executors codex::tests` (2 passed), and a larger-heap

@@ -38,3 +38,8 @@
   report CLI `0.153.4`. Its model discovery includes `gpt-6-astra`, and a real
   authenticated ephemeral Astra request returned `ASTRA_OK`, resolving the
   prior client-upgrade error for new executions without restarting VK.
+- After the live profile was overwritten back to GPT-5.6 Sol, it was restored
+  to Astra/xhigh and its recents were pruned again. The picker now always
+  injects Astra and interprets “pre-5.6” as a version floor, retaining every
+  GPT model at 5.6 or newer. The corrected live bundle is
+  `/assets/index-BjEAr7D0.js`.

@@ -36,6 +36,14 @@
     authenticated ephemeral request through the green wrapper completed with
     `ASTRA_OK`. The earlier “requires a newer version of Codex” error is
     resolved for new executions; no VK service restart was needed.
+  - 2026-09-07 the live profile was found overwritten back to GPT-5.6 Sol with
+    pre-5.6 recent models, which removed Astra from the effective picker. The
+    profile was restored to `gpt-6-astra` / `xhigh`, and the frontend now
+    injects Astra independently while filtering by a true minimum version of
+    GPT-5.6 instead of a fixed four-model allowlist. Live JS is
+    `/assets/index-BjEAr7D0.js`, SHA-256
+    `e9fffbb23f8e4f79937c0389663c9867879f2bcb0f00b33baeb0391cfaad50c2`;
+    green PID remained `2886161`.
 
 - 2026-09-01 active Codex correction regression is corrected in source:
   - the first `turn/steer` integration silently used the normal queued-follow-up

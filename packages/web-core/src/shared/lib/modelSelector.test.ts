@@ -24,13 +24,15 @@ describe('Codex model menu', () => {
     ]);
   });
 
-  it('keeps GPT-6 Astra and GPT-5.6 models only', () => {
+  it('keeps every GPT model at version 5.6 or newer', () => {
     const result = filterCurrentCodexModels(
       configWithModels([
         'gpt-6-astra',
+        'gpt-6.1-codex',
         'gpt-5.6-sol',
         'gpt-5.6-terra',
         'gpt-5.6-luna',
+        'gpt-5.7-codex',
         'gpt-5.5',
         'gpt-5.4-mini',
         'gpt-5.3-codex',
@@ -39,9 +41,11 @@ describe('Codex model menu', () => {
 
     expect(result?.models.map((model) => model.id)).toEqual([
       'gpt-6-astra',
+      'gpt-6.1-codex',
       'gpt-5.6-sol',
       'gpt-5.6-terra',
       'gpt-5.6-luna',
+      'gpt-5.7-codex',
     ]);
   });
 });

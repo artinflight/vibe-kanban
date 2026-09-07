@@ -3107,6 +3107,17 @@ User QA checklist for the no-restart frontend repair:
   client-version 400 for new executions without a VK restart. The request also
   emitted a non-blocking warning that `[features].codex_hooks` is deprecated in
   favor of `[features].hooks`; that unrelated config cleanup remains optional.
+- Later on 2026-09-07, the live profile had been overwritten back to GPT-5.6
+  Sol and its pre-5.6 recents had returned. The profile was restored to
+  `gpt-6-astra` / `xhigh`, with recents limited to Astra and GPT-5.6 Sol.
+  Source and the live frontend now inject Astra independently of profile state
+  and filter using a real GPT-5.6 minimum version rather than a fixed model
+  allowlist. Live JS is `/assets/index-BjEAr7D0.js`, SHA-256
+  `e9fffbb23f8e4f79937c0389663c9867879f2bcb0f00b33baeb0391cfaad50c2`.
+  Rollback files are
+  `/home/mcp/backups/profiles-live-before-astra-restore-20260907T1250Z.json`
+  and
+  `/home/mcp/backups/vk-frontend-index-before-astra-floor-fix-20260907T1255Z.html`.
 - Validation passed: `pnpm run format`, `pnpm run ops:check`, larger-heap
   `pnpm --filter @vibe/web-core run check`,
   `cargo test -p executors codex::tests` (2 passed), and a larger-heap

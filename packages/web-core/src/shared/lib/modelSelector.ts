@@ -4,13 +4,6 @@ import type {
   ReasoningOption,
 } from 'shared/types';
 
-const CURRENT_CODEX_MODEL_IDS = new Set([
-  'gpt-6-astra',
-  'gpt-5.6-sol',
-  'gpt-5.6-terra',
-  'gpt-5.6-luna',
-]);
-
 const OFFICIAL_MODEL_NAMES: Record<string, string> = {
   'gpt-6-astra': 'GPT-6 Astra',
   'gpt-5.6-sol': 'GPT-5.6 Sol',
@@ -116,9 +109,14 @@ export function filterCurrentCodexModels(
   if (!config) return null;
   return {
     ...config,
-    models: config.models.filter((model) =>
-      CURRENT_CODEX_MODEL_IDS.has(model.id.toLowerCase())
-    ),
+    models: config.models.filter((model) => {
+      const match = /^gpt-(\d+)(?:\.(\d+))?(?:-|$)/i.exec(model.id);
+      if (!match) return false;
+
+      const major = Number(match[1]);
+      const minor = match[2] === undefined ? 0 : Number(match[2]);
+      return major > 5 || (major === 5 && minor >= 6);
+    }),
   };
 }
 

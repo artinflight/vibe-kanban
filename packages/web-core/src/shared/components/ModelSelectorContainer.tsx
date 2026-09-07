@@ -121,7 +121,11 @@ export function ModelSelectorContainer({
     agent === BaseCodingAgent.CODEX
       ? filterCurrentCodexModels(streamConfig)
       : streamConfig;
-  const config = appendPresetModel(baseConfig, presetOptions?.model_id);
+  const configWithAstra =
+    agent === BaseCodingAgent.CODEX
+      ? appendPresetModel(baseConfig, 'gpt-6-astra')
+      : baseConfig;
+  const config = appendPresetModel(configWithAstra, presetOptions?.model_id);
 
   const availableProviderIds = useMemo(
     () => config?.providers.map((item) => item.id) ?? [],

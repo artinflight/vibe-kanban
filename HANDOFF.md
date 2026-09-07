@@ -3100,6 +3100,13 @@ User QA checklist for the no-restart frontend repair:
 - Saved recent-model metadata was pruned through the profile API so pre-5.6
   entries cannot reappear through recency ordering. Rollback is
   `/home/mcp/backups/profiles-live-pre-gpt56-prune-20260907.json`.
+- The operator upgraded Codex on 2026-09-07. The green wrapper and its
+  underlying NVM installation both report `codex-cli 0.153.4`; wrapper model
+  discovery contains `gpt-6-astra`, and an authenticated ephemeral request
+  through the wrapper returned exactly `ASTRA_OK`. This resolves the earlier
+  client-version 400 for new executions without a VK restart. The request also
+  emitted a non-blocking warning that `[features].codex_hooks` is deprecated in
+  favor of `[features].hooks`; that unrelated config cleanup remains optional.
 - Validation passed: `pnpm run format`, `pnpm run ops:check`, larger-heap
   `pnpm --filter @vibe/web-core run check`,
   `cargo test -p executors codex::tests` (2 passed), and a larger-heap

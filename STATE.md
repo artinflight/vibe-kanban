@@ -30,6 +30,12 @@
     - saved Codex recent-model metadata was also pruned to Astra and GPT-5.6;
       rollback backup is
       `/home/mcp/backups/profiles-live-pre-gpt56-prune-20260907.json`
+  - 2026-09-07 the green runtime's Codex installation was upgraded to CLI
+    `0.153.4`. Both `/home/mcp/.local/bin/codex` and its wrapped NVM binary
+    report that version, model discovery includes `gpt-6-astra`, and an
+    authenticated ephemeral request through the green wrapper completed with
+    `ASTRA_OK`. The earlier “requires a newer version of Codex” error is
+    resolved for new executions; no VK service restart was needed.
 
 - 2026-09-01 active Codex correction regression is corrected in source:
   - the first `turn/steer` integration silently used the normal queued-follow-up

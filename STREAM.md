@@ -34,3 +34,7 @@
 - The live menu now labels Astra as `GPT-6 Astra` and filters Codex choices to
   GPT-6 Astra plus GPT-5.6 Sol, Terra, and Luna. The served main bundle is
   `/assets/index-DKNgBi1_.js`; green's PID remains unchanged.
+- The green runtime wrapper and its underlying Codex installation now both
+  report CLI `0.153.4`. Its model discovery includes `gpt-6-astra`, and a real
+  authenticated ephemeral Astra request returned `ASTRA_OK`, resolving the
+  prior client-upgrade error for new executions without restarting VK.

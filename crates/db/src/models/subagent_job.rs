@@ -622,6 +622,57 @@ mod tests {
                 .await
                 .is_some()
         );
+
+        let closed_agent_id = "closed-child";
+        SubagentJob::update_status(
+            &pool,
+            session_id,
+            execution_id,
+            closed_agent_id,
+            SubagentJobStatus::Failed,
+        )
+        .await
+        .expect("record acknowledged close");
+        let closed_at = completed_at_for(&pool, execution_id, closed_agent_id).await;
+        assert!(closed_at.is_some());
+        // Delayed spawn and running events must not resurrect an explicitly
+        // closed child, even while Codex still reports its historical open edge.
+        SubagentJob::upsert_spawned(&pool, session_id, execution_id, closed_agent_id, None)
+            .await
+            .unwrap();
+        SubagentJob::update_status(
+            &pool,
+            session_id,
+            execution_id,
+            closed_agent_id,
+            SubagentJobStatus::Running,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            status_for(&pool, execution_id, closed_agent_id).await,
+            "failed"
+        );
+        assert_eq!(
+            completed_at_for(&pool, execution_id, closed_agent_id).await,
+            closed_at
+        );
+        let persisted = SubagentJob::find_by_session_id(&pool, session_id)
+            .await
+            .unwrap();
+        let mut stale_edge = persisted
+            .iter()
+            .find(|job| job.agent_id == closed_agent_id)
+            .unwrap()
+            .clone();
+        stale_edge.status = SubagentJobStatus::Running;
+        let merged = super::deduplicate_jobs([persisted, vec![stale_edge]].concat());
+        let mut counts = std::collections::HashMap::new();
+        for job in merged {
+            super::increment_active_count(&mut counts, job.session_id, &job.status);
+        }
+        assert_eq!(counts[&session_id].running, 0);
+        assert_eq!(counts[&session_id].unresolved, 0);
     }
 
     async fn status_for(pool: &sqlx::SqlitePool, execution_id: Uuid, agent_id: &str) -> String {

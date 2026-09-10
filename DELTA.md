@@ -1097,3 +1097,13 @@
 - Deployed no-restart frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260626Tmultiline-rich-paste`; live asset `/assets/index-DXMultilinePaste.js`; backend PID stayed running and no service restart was performed.
 - Verified: UI typecheck, targeted diff check, live curl marker checks, and live `python3 scripts/vk_live_regression_smoke.py`.
 - Guard: future frontend/restart packages must carry forward this source fix and not roll back below `20260626Tmultiline-rich-paste`.
+
+## 2026-09-10 — Workspace sub-agent closure
+
+- `vk/a306-vk-sub-agents` adds workspace-scoped `list_subagents` / `close_subagent`
+  MCP tools and an owning-runtime Codex archive endpoint. Parent IDs are rejected;
+  terminal tracking follows acknowledgement, and child notifications cannot end
+  the parent execution. No live deployment or data mutation occurred.
+- Validation passed: 5 executor client tests, 12 DB tests, 11 MCP tests,
+  server/MCP compilation, repository formatting, ops check, and diff check.
+- Matching backend/MCP deployment and real child/parent lifecycle QA remain.

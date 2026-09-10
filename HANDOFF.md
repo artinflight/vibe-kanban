@@ -1,5 +1,33 @@
 # HANDOFF.md
 
+## 2026-09-10 Workspace Sub-agent Closure
+
+- Branch `vk/a306-vk-sub-agents` adds `list_subagents` and `close_subagent` to
+  both VK MCP modes, with workspace context and session membership checks.
+- The backend calls `thread/archive` through the selected child's owning live
+  Codex client. It rejects parent threads and writes a terminal tracking record
+  only after the RPC succeeds. A missing runtime or timeout returns a conflict.
+- Child turn notifications cannot change or complete the workspace parent turn.
+- No live deploy, restart, database/session mutation, or frontend change occurred.
+- Activation requires the matching server and MCP binaries, then live QA of a
+  disposable child and parent completion. Read the deployment runbook first.
+- Passed `cargo test -p executors --lib executors::codex::client::tests`
+  (5 tests), `cargo test -p db -p mcp --lib` (12 DB + 11 MCP tests), and
+  `cargo check -p server -p mcp`.
+- Cargo commands used `CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target`,
+  `CARGO_INCREMENTAL=0`, and `SQLX_OFFLINE=true`.
+- Passed `pnpm run format`, `pnpm run ops:check`, and `git diff --check`.
+  Formatting initially lacked Prettier in this worktree; the successful run
+  used the canonical checkout's matching Prettier 3.6.1 via
+  `PATH=/home/mcp/_vibe_kanban_repo/packages/web-core/node_modules/.bin:$PATH`.
+- Coverage includes the owning-runtime archive RPC (mock app-server), parent
+  rejection, unavailable runtime, child/malformed notification isolation,
+  terminal tracking versus late events, and workspace-scoped MCP HTTP calls.
+- Logs: `/mnt/vk-storage/agent-checkpoints/a306-{executor-tests,db-mcp-tests,check,format}.log`.
+- Not exercised: real Codex child shutdown, live green rollout, full workspace
+  tests/lint, or frontend checks. Run the required full PR baseline and a
+  controlled local runtime smoke test before promotion into `staging`.
+
 ## 2026-09-01 Active Codex Correction Regression
 
 - The original working-state correction path could silently queue a correction

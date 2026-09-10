@@ -13,9 +13,10 @@ use axum::{
 use db::models::{
     execution_process::{ExecutionProcess, ExecutionProcessStatus},
     execution_process_repo_state::ExecutionProcessRepoState,
-    subagent_job::SubagentJob,
+    subagent_job::{SubagentJob, SubagentJobStatus},
 };
 use deployment::Deployment;
+use executors::executors::codex::client::AppServerClient;
 use futures_util::{StreamExt, TryStreamExt};
 use json_patch::{Patch, PatchOperation};
 use serde::Deserialize;
@@ -429,6 +430,65 @@ async fn list_subagent_jobs_by_session(
     Ok(ResponseJson(ApiResponse::success(jobs)))
 }
 
+async fn close_subagent(
+    State(deployment): State<DeploymentImpl>,
+    Path((session_id, agent_id)): Path<(Uuid, Uuid)>,
+) -> Result<ResponseJson<ApiResponse<serde_json::Value>>, ApiError> {
+    let pool = &deployment.db().pool;
+    let agent_id = agent_id.to_string();
+    let jobs = SubagentJob::find_by_session_id_with_codex_threads(pool, session_id).await?;
+    let job = jobs
+        .iter()
+        .find(|job| job.agent_id == agent_id)
+        .ok_or_else(|| {
+            ApiError::BadRequest("Sub-agent does not belong to this session".to_string())
+        })?;
+    // A historical or malformed spawn event must never authorize closing a
+    // workspace's parent agent, including parents in other sessions.
+    let is_parent: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM coding_agent_turns WHERE agent_session_id = ?)",
+    )
+    .bind(&agent_id)
+    .fetch_one(pool)
+    .await?;
+    if is_parent {
+        return Err(ApiError::BadRequest(
+            "Cannot close a workspace parent agent".to_string(),
+        ));
+    }
+    let closed = tokio::time::timeout(
+        Duration::from_secs(30),
+        AppServerClient::close_subagent(job.execution_process_id, agent_id.clone()),
+    )
+    .await
+    .map_err(|_| {
+        ApiError::Conflict(
+            "Sub-agent close timed out; status is uncertain. List sub-agents before retrying"
+                .to_string(),
+        )
+    })??;
+    if !closed {
+        return Err(ApiError::Conflict(
+            "The owning Codex runtime is unavailable; the sub-agent was not closed".to_string(),
+        ));
+    }
+    // Keep a terminal record so late spawn/status logs and open Codex edges do
+    // not resurrect the active indicator. Failed represents operator cancellation.
+    SubagentJob::update_status(
+        pool,
+        session_id,
+        job.execution_process_id,
+        &agent_id,
+        SubagentJobStatus::Failed,
+    )
+    .await?;
+    Ok(ResponseJson(ApiResponse::success(serde_json::json!({
+        "agent_id": agent_id,
+        "closed": true,
+        "transcript_archived": true,
+    }))))
+}
+
 pub(super) fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let workspace_id_router = Router::new()
         .route("/", get(get_execution_process_by_id))
@@ -443,6 +503,10 @@ pub(super) fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
 
     let workspaces_router = Router::new()
         .route("/subagents/session", get(list_subagent_jobs_by_session))
+        .route(
+            "/subagents/session/{session_id}/{agent_id}/close",
+            post(close_subagent),
+        )
         .route(
             "/stream/session/ws",
             get(stream_execution_processes_by_session_ws),

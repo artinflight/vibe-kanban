@@ -6,6 +6,16 @@
 
 ## Confirmed Current State
 
+- 2026-09-10 workspace sub-agent closure is prepared in source, not deployed:
+  - VK MCP exposes workspace-scoped list and close operations for tracked Codex
+    children; closing uses the owning live runtime and preserves archived history
+  - parent threads cannot be closed through the child endpoint, and child turn
+    notifications cannot finish the workspace parent's execution
+  - terminal tracking is recorded after runtime acknowledgement; unavailable
+    runtimes and timeouts do not silently clear the child as stopped
+  - activation requires matching backend/MCP binaries and coordinated live QA
+
+
 - 2026-09-01 active Codex correction regression is corrected in source:
   - the first `turn/steer` integration silently used the normal queued-follow-up
     path when the live client or active turn ID was not immediately available

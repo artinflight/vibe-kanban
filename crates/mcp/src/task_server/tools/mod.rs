@@ -45,6 +45,7 @@ mod remote_issues;
 mod remote_projects;
 mod repos;
 mod sessions;
+mod subagents;
 mod task_attempts;
 mod workspaces;
 
@@ -61,12 +62,14 @@ impl McpServer {
             + Self::issue_relationships_tools_router()
             + Self::task_attempts_tools_router()
             + Self::session_tools_router()
+            + Self::subagent_tools_router()
     }
 
     pub fn orchestrator_mode_router() -> rmcp::handler::server::tool::ToolRouter<Self> {
         let mut router = Self::context_tools_router()
             + Self::workspaces_tools_router()
-            + Self::session_tools_router();
+            + Self::session_tools_router()
+            + Self::subagent_tools_router();
         router.remove_route("list_workspaces");
         router.remove_route("delete_workspace");
         router
@@ -395,7 +398,7 @@ mod tests {
 
     static RUSTLS_PROVIDER: Once = Once::new();
 
-    fn install_rustls_provider() {
+    pub(super) fn install_rustls_provider() {
         RUSTLS_PROVIDER.call_once(|| {
             rustls::crypto::aws_lc_rs::default_provider()
                 .install_default()
@@ -415,10 +418,12 @@ mod tests {
     fn orchestrator_mode_exposes_only_scoped_workflow_tools() {
         let actual = tool_names(McpServer::orchestrator_mode_router());
         let expected = BTreeSet::from([
+            "close_subagent".to_string(),
             "create_session".to_string(),
             "get_context".to_string(),
             "get_execution".to_string(),
             "list_sessions".to_string(),
+            "list_subagents".to_string(),
             "run_session_prompt".to_string(),
             "update_session".to_string(),
             "update_workspace".to_string(),

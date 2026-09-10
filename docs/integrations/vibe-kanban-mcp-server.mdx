@@ -148,12 +148,32 @@ Supported relationship types: `blocking`, `related`, `has_duplicate`.
 | `list_sessions` | List sessions for a workspace | None | `workspace_id` | Session list |
 | `run_session_prompt` | Run a coding-agent prompt inside an existing session | `session_id`<br/>`prompt` | None | Execution details |
 | `get_execution` | Inspect execution status and final message | `execution_id` | None | Execution details |
+| `list_subagents` | Inspect sub-agents tracked for a workspace session | `session_id` | None | Agent IDs, statuses, and owning executions |
+| `close_subagent` | Request shutdown and archive a stale Codex child | `session_id`<br/>`agent_id` | None | Close and transcript archive acknowledgement |
 
 The `repositories` parameter is an array of objects with:
 - `repo_id`: The repository ID (UUID)
 - `branch`: The branch for this repository
 
 When `issue_id` is provided, the workspace is automatically linked to the remote issue. If `prompt` is omitted, the linked issue's title and description are used as the workspace prompt.
+
+### Closing stale sub-agents
+
+To release a stale sub-agent, use `list_sessions` to find your VK session ID,
+then `list_subagents` to select the exact `agent_id`. Call `close_subagent` for
+that child. Close nested children individually before their parent child.
+The workspace's main agent continues running, and the child's transcript is
+retained in the Codex archive. VK keeps a terminal tracking record so delayed
+events do not restore the active sub-agent count; an operator-closed child uses
+the existing `failed` status unless it was already completed.
+
+These tools are available in global and orchestrator MCP modes. When the MCP
+server has workspace context, you can only manage children in that workspace.
+The close action requires the owning Codex runtime to remain connected. An
+unavailable runtime or a 30-second timeout returns a conflict; a timeout does
+not prove the child stopped. Inspect the list and runtime before retrying.
+Closing an already archived child may return an error. This action does not
+delete worktrees, attachments, or conversation history.
 
 ### Supported Executors
 

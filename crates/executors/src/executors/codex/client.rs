@@ -17,12 +17,13 @@ use codex_app_server_protocol::{
     InitializeParams, InitializeResponse, ItemCompletedNotification, JSONRPCError,
     JSONRPCNotification, JSONRPCRequest, JSONRPCResponse, ListMcpServerStatusParams,
     ListMcpServerStatusResponse, RequestId, ReviewStartParams, ReviewStartResponse, ReviewTarget,
-    ServerRequest, ThreadCompactStartParams, ThreadCompactStartResponse, ThreadForkParams,
-    ThreadForkResponse, ThreadItem, ThreadReadParams, ThreadReadResponse, ThreadResumeParams,
-    ThreadResumeResponse, ThreadStartParams, ThreadStartResponse, ToolRequestUserInputAnswer,
-    ToolRequestUserInputQuestion, ToolRequestUserInputResponse, TurnCompletedNotification,
-    TurnInterruptParams, TurnInterruptResponse, TurnStartParams, TurnStartResponse,
-    TurnStartedNotification, TurnStatus, TurnSteerParams, TurnSteerResponse, UserInput,
+    ServerRequest, ThreadArchiveParams, ThreadArchiveResponse, ThreadCompactStartParams,
+    ThreadCompactStartResponse, ThreadForkParams, ThreadForkResponse, ThreadItem, ThreadReadParams,
+    ThreadReadResponse, ThreadResumeParams, ThreadResumeResponse, ThreadStartParams,
+    ThreadStartResponse, ToolRequestUserInputAnswer, ToolRequestUserInputQuestion,
+    ToolRequestUserInputResponse, TurnCompletedNotification, TurnInterruptParams,
+    TurnInterruptResponse, TurnStartParams, TurnStartResponse, TurnStartedNotification, TurnStatus,
+    TurnSteerParams, TurnSteerResponse, UserInput,
 };
 use codex_protocol::config_types::{CollaborationMode, ModeKind, Settings};
 use futures::TryFutureExt;
@@ -120,6 +121,40 @@ impl AppServerClient {
             .lock()
             .expect("active Codex client registry poisoned")
             .remove(&execution_process_id);
+    }
+
+    /// Close a verified child through its owning runtime, never a separate app-server.
+    /// The caller must verify that `agent_id` belongs to this execution's session.
+    pub async fn close_subagent(
+        execution_process_id: Uuid,
+        agent_id: String,
+    ) -> Result<bool, ExecutorError> {
+        let client = active_codex_clients()
+            .lock()
+            .expect("active Codex client registry poisoned")
+            .get(&execution_process_id)
+            .and_then(Weak::upgrade);
+        let Some(client) = client else {
+            return Ok(false);
+        };
+        let root = client.thread_id.lock().await.clone();
+        if root.is_none() || root.as_deref() == Some(agent_id.as_str()) {
+            return Err(ExecutorError::FollowUpNotSupported(
+                "Cannot close the parent thread or an unregistered session".to_string(),
+            ));
+        }
+        let request = ClientRequest::ThreadArchive {
+            request_id: client.next_request_id(),
+            params: ThreadArchiveParams {
+                thread_id: agent_id,
+            },
+        };
+        // Archiving removes the loaded child and requests Shutdown while retaining
+        // its transcript. Merely interrupting its turn leaves it in the agent tree.
+        client
+            .send_request::<ThreadArchiveResponse>(request, "thread/archive")
+            .await?;
+        Ok(true)
     }
 
     pub async fn steer_execution(
@@ -964,55 +999,30 @@ impl AppServerClient {
     }
 }
 
-#[async_trait]
-impl JsonRpcCallbacks for AppServerClient {
-    async fn on_request(
+impl AppServerClient {
+    async fn handle_notification(
         &self,
-        peer: &JsonRpcPeer,
-        raw: &str,
-        request: JSONRPCRequest,
-    ) -> Result<(), ExecutorError> {
-        self.log_writer.log_raw(raw).await?;
-        match ServerRequest::try_from(request.clone()) {
-            Ok(server_request) => self.handle_server_request(peer, server_request).await,
-            Err(err) => {
-                tracing::debug!("Unhandled server request `{}`: {err}", request.method);
-                let response = JSONRPCResponse {
-                    id: request.id,
-                    result: Value::Null,
-                };
-                peer.send(&response).await
-            }
-        }
-    }
-
-    async fn on_response(
-        &self,
-        _peer: &JsonRpcPeer,
-        raw: &str,
-        _response: &JSONRPCResponse,
-    ) -> Result<(), ExecutorError> {
-        self.log_writer.log_raw(raw).await
-    }
-
-    async fn on_error(
-        &self,
-        _peer: &JsonRpcPeer,
-        raw: &str,
-        _error: &JSONRPCError,
-    ) -> Result<(), ExecutorError> {
-        self.log_writer.log_raw(raw).await
-    }
-
-    async fn on_notification(
-        &self,
-        _peer: &JsonRpcPeer,
         raw: &str,
         notification: JSONRPCNotification,
     ) -> Result<bool, ExecutorError> {
         let method = notification.method.as_str();
         if should_log_notification(method) {
             self.log_writer.log_raw(raw).await?;
+        }
+
+        // Closing a child can emit its turn completion on this same connection.
+        // Child notifications must not replace the parent's active turn or end
+        // the workspace execution while the parent is still awaiting the tool.
+        if matches!(method, "turn/started" | "turn/completed" | "item/completed") {
+            let thread_id = notification
+                .params
+                .as_ref()
+                .and_then(|params| params.get("threadId"))
+                .and_then(Value::as_str);
+            let root = self.thread_id.lock().await;
+            if root.is_none() || root.as_deref() != thread_id {
+                return Ok(false);
+            }
         }
 
         if method == "turn/started"
@@ -1093,6 +1103,56 @@ impl JsonRpcCallbacks for AppServerClient {
         }
 
         Ok(false)
+    }
+}
+
+#[async_trait]
+impl JsonRpcCallbacks for AppServerClient {
+    async fn on_request(
+        &self,
+        peer: &JsonRpcPeer,
+        raw: &str,
+        request: JSONRPCRequest,
+    ) -> Result<(), ExecutorError> {
+        self.log_writer.log_raw(raw).await?;
+        match ServerRequest::try_from(request.clone()) {
+            Ok(server_request) => self.handle_server_request(peer, server_request).await,
+            Err(err) => {
+                tracing::debug!("Unhandled server request `{}`: {err}", request.method);
+                let response = JSONRPCResponse {
+                    id: request.id,
+                    result: Value::Null,
+                };
+                peer.send(&response).await
+            }
+        }
+    }
+
+    async fn on_response(
+        &self,
+        _peer: &JsonRpcPeer,
+        raw: &str,
+        _response: &JSONRPCResponse,
+    ) -> Result<(), ExecutorError> {
+        self.log_writer.log_raw(raw).await
+    }
+
+    async fn on_error(
+        &self,
+        _peer: &JsonRpcPeer,
+        raw: &str,
+        _error: &JSONRPCError,
+    ) -> Result<(), ExecutorError> {
+        self.log_writer.log_raw(raw).await
+    }
+
+    async fn on_notification(
+        &self,
+        _peer: &JsonRpcPeer,
+        raw: &str,
+        notification: JSONRPCNotification,
+    ) -> Result<bool, ExecutorError> {
+        self.handle_notification(raw, notification).await
     }
 
     async fn on_non_json(&self, raw: &str) -> Result<(), ExecutorError> {
@@ -1180,6 +1240,158 @@ mod tests {
     use codex_app_server_protocol::ThreadResumeParams;
 
     use super::*;
+
+    fn test_client() -> Arc<AppServerClient> {
+        AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            None,
+            true,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            CancellationToken::new(),
+        )
+    }
+
+    #[tokio::test]
+    async fn close_subagent_rejects_parent_and_unregistered_runtime() {
+        let execution = Uuid::new_v4();
+        let client = test_client();
+        AppServerClient::register_active_execution(execution, &client);
+        assert!(
+            AppServerClient::close_subagent(execution, "child".into())
+                .await
+                .is_err()
+        );
+        client.register_session("parent").await.unwrap();
+        assert!(
+            AppServerClient::close_subagent(execution, "parent".into())
+                .await
+                .is_err()
+        );
+        AppServerClient::unregister_active_execution(execution);
+        assert!(
+            !AppServerClient::close_subagent(execution, "child".into())
+                .await
+                .unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn child_turn_notifications_do_not_replace_or_complete_parent_turn() {
+        let client = test_client();
+        client.register_session("parent").await.unwrap();
+        *client.current_turn_id.lock().await = Some("parent-turn".into());
+        for method in ["turn/started", "turn/completed"] {
+            let notification = JSONRPCNotification {
+                method: method.into(),
+                params: Some(serde_json::json!({
+                    "threadId": "child",
+                    "turn": {"id": "child-turn", "items": [], "status": "interrupted", "error": null}
+                })),
+            };
+            assert!(
+                !client
+                    .handle_notification("{}", notification)
+                    .await
+                    .unwrap()
+            );
+            assert_eq!(
+                client.current_turn_id.lock().await.as_deref(),
+                Some("parent-turn")
+            );
+        }
+        assert!(
+            !client
+                .handle_notification(
+                    "{}",
+                    JSONRPCNotification {
+                        method: "turn/completed".into(),
+                        params: None,
+                    }
+                )
+                .await
+                .unwrap()
+        );
+        assert_eq!(
+            client.current_turn_id.lock().await.as_deref(),
+            Some("parent-turn")
+        );
+        let parent_completion = JSONRPCNotification {
+            method: "turn/completed".into(),
+            params: Some(serde_json::json!({
+                "threadId": "parent",
+                "turn": {"id": "parent-turn", "items": [], "status": "completed", "error": null}
+            })),
+        };
+        assert!(
+            client
+                .handle_notification("{}", parent_completion)
+                .await
+                .unwrap()
+        );
+        assert!(client.current_turn_id.lock().await.is_none());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn close_subagent_uses_owning_rpc_and_survives_child_completion() {
+        use std::process::Stdio;
+
+        use super::super::jsonrpc::ExitSignalSender;
+
+        let mut process = tokio::process::Command::new("sh")
+            .arg("-c")
+            .arg(r#"
+                IFS= read -r request
+                case "$request" in
+                  *'"method":"thread/archive"'*'"threadId":"child"'*) ;;
+                  *) exit 1 ;;
+                esac
+                printf '%s\n' '{"method":"turn/completed","params":{"threadId":"child","turn":{"id":"child-turn","items":[],"status":"interrupted","error":null}}}'
+                printf '%s\n' '{"id":1,"result":{}}'
+                # Keep the transport open until the test kills this fixture.
+                read -r unexpected
+                exit 1
+            "#)
+            .stdin(Stdio::piped()).stdout(Stdio::piped()).kill_on_drop(true)
+            .spawn().unwrap();
+        let client = test_client();
+        client.register_session("parent").await.unwrap();
+        *client.current_turn_id.lock().await = Some("parent-turn".into());
+        let (exit_tx, mut exit_rx) = tokio::sync::oneshot::channel();
+        let peer = JsonRpcPeer::spawn(
+            process.stdin.take().unwrap(),
+            process.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(exit_tx),
+            client.cancel.clone(),
+        );
+        client.connect(peer);
+        let execution = Uuid::new_v4();
+        AppServerClient::register_active_execution(execution, &client);
+        assert!(
+            tokio::time::timeout(
+                Duration::from_secs(5),
+                AppServerClient::close_subagent(execution, "child".into()),
+            )
+            .await
+            .unwrap()
+            .unwrap()
+        );
+        assert_eq!(
+            client.current_turn_id.lock().await.as_deref(),
+            Some("parent-turn")
+        );
+        assert!(matches!(
+            exit_rx.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+        AppServerClient::unregister_active_execution(execution);
+        client.cancel.cancel();
+        process.kill().await.unwrap();
+    }
 
     #[test]
     fn request_id_supports_thread_resume() {

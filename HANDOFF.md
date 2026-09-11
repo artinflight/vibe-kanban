@@ -1,5 +1,30 @@
 # HANDOFF.md
 
+## 2026-09-11 Blue Rehearsal Running, No Production Cutover
+
+- Exact current staging 9dfd19c34 built from clean detached
+  `/mnt/vk-storage/vk-blue-test-20260911/source`.
+- Isolated service `vk-blue-test-20260911.service` serves matching frontend and
+  backend on 4611, via tailnet-only https://mcp-server.tail744c4.ts.net:18463/.
+  Temporary test proxy on 3444 was stopped; production routing was not changed.
+- Disposable test state only: no live projects, thread histories or credentials
+  imported. Green remained PID 2886161 and authoritative; no production freeze,
+  snapshot, final backup or cutover occurred. Retired blue remains stopped.
+- Release build, frontend build/lint, formatting, Ops, 54 executor tests and the
+  isolated offline native-goal recovery scenario passed. Desktop/mobile Chromium
+  verified rendering, WebSocket frames and the saved test message in Settings;
+  attachment byte round-trip, served asset hashes and blue DB integrity passed.
+  Desktop reached the tailnet homepage/API. No full workspace test or real
+  authenticated agent execution is claimed.
+- Manifest, launch scripts, screenshots and detailed limits:
+  `/mnt/vk-storage/vk-blue-test-20260911/README.md`.
+- Still required: production-data restore/migration rehearsal, complete release
+  and continuity inventory, enforced writer fencing and post-write rollback
+  validation. At the agreed final window, drain/freeze writers and take a fresh
+  verified backup, then refresh blue offline. Never promote this test state or
+  an early snapshot over green's subsequent work. No production-ready claim.
+
+
 ## 2026-09-11 Next Restart Planning
 
 - Added `VK_RESTART_LESSONS_LEARNED.md`: incident lessons, isolated new-blue

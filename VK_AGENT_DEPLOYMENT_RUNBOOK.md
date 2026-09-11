@@ -581,6 +581,22 @@ Stage 5: Rollback:
 
 ## Backup Workflow
 
+Codex history preservation includes `thread_history_*.sqlite`, not only
+`state_*.sqlite` and rollout JSONL files. Copy every continuity database with
+SQLite-aware snapshots and retain the complete home. A September 11 isolated
+test omitted `thread_history_1.sqlite` and falsely returned empty recent threads;
+all 29 affected histories passed read and resume once that database was included.
+Rehearsals must reproduce the full storage contract before diagnosing data loss.
+
+For candidates containing the attachment preservation guard, set
+`DISABLE_ATTACHMENT_CLEANUP=1` during protected cutovers. Startup otherwise runs
+orphan attachment deletion, and workspace links alone do not cover every reason
+an attachment must be retained. This flag suppresses automatic startup cleanup,
+not uploads, downloads or explicitly requested deletions. Pair it with the
+worktree cleanup guards and verify attachment IDs and bytes before/after startup.
+Do not assume older binaries recognize this flag. Retention cleanup is separate
+from deployment and needs its own review.
+
 Use the lean restore backup as the default backup before risky VK operations:
 
 ```bash

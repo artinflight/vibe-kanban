@@ -15,6 +15,7 @@ const requiredFiles = [
   'DELTA.md',
   'docs/audits/vibe-kanban-ops-audit.md',
   'docs/operations/release-safety.md',
+  'docs/operations/production-protections.md',
 ];
 
 const errors = [];

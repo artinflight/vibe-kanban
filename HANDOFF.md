@@ -1,5 +1,20 @@
 # HANDOFF.md
 
+## Attachment Cleanup Cutover Guard
+
+- Branch `vk/4e18-cutover-attachment-safety`, baseline `9dfd19c34`.
+- Adds opt-in `DISABLE_ATTACHMENT_CLEANUP` around startup orphan deletion;
+  upload/download behavior and the default remain unchanged.
+- Cutover draft service sets this flag alongside worktree cleanup guards.
+- Validation passed: all 15 local-deployment library tests, targeted Clippy,
+  release build, formatting, and Ops governance. An isolated fresh production
+  copy retained all 774 attachment records and six unlinked cached files with
+  the flag; the unprotected control deleted those six. Upload/download,
+  repository/workspace/session creation, desktop/mobile saved messages and the
+  project flyout passed. Broad workspace GTK checks remain unvalidated here.
+- Integration and production activation are pending. Do not deploy the older
+  9dfd19c34 binary expecting it to honor the new flag. No live service changed.
+
 ## Staging management deployment pickup
 
 - User authorized rebasing and merging PR #103 into staging for deployment by

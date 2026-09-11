@@ -1,4 +1,5 @@
 pub mod client;
+pub mod goals;
 pub mod jsonrpc;
 pub mod normalize_logs;
 pub mod review;
@@ -629,6 +630,10 @@ impl StandardCodingAgentExecutor for Codex {
             },
             slash_commands: vec![
                 SlashCommandDescription {
+                    name: "goal".to_string(),
+                    description: Some("autonomous objective; /goal status, pause, or resume".to_string()),
+                },
+                SlashCommandDescription {
                     name: "compact".to_string(),
                     description: Some(
                         "summarize conversation to prevent hitting the context limit".to_string(),
@@ -760,7 +765,12 @@ impl Codex {
             config,
             base_instructions: self.base_instructions.clone(),
             model_provider: self.model_provider.clone(),
-            developer_instructions: self.developer_instructions.clone(),
+            developer_instructions: Some(format!(
+                "{}\n\n{}",
+                self.developer_instructions.as_deref().unwrap_or_default(),
+                goals::INSTRUCTIONS
+            )),
+            dynamic_tools: Some(vec![goals::tool_spec()]),
             service_tier,
             ..Default::default()
         }
@@ -857,6 +867,7 @@ impl Codex {
 
         client.set_resolved_model(resolved_model);
         client.register_session(&thread_id).await?;
+        client.refresh_goal().await?;
         let collaboration_mode = client.initial_collaboration_mode()?;
         client
             .turn_start_with_mode(
@@ -1004,10 +1015,13 @@ impl Codex {
 
             let result = async {
                 client.initialize().await?;
+                client.set_exit_signal(exit_signal_tx.clone());
                 task(client, exit_signal_tx.clone()).await
             }
             .await;
-            if let Some(execution_process_id) = execution_process_id {
+            if result.is_err()
+                && let Some(execution_process_id) = execution_process_id
+            {
                 AppServerClient::unregister_active_execution(execution_process_id);
             }
 

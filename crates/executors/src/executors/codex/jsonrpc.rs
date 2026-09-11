@@ -129,11 +129,12 @@ impl JsonRpcPeer {
                                             .await;
                                     }
                                     Ok(JSONRPCMessage::Request(request)) => {
-                                        if callbacks
+                                        if let Err(error) = callbacks
                                             .on_request(&reader_peer, line, request)
                                             .await
-                                            .is_err()
                                         {
+                                            tracing::error!("Codex request callback failed: {error}");
+                                            exit_tx.send_exit_signal(ExecutorExitResult::Failure).await;
                                             break;
                                         }
                                     }
@@ -145,7 +146,9 @@ impl JsonRpcPeer {
                                             // finished
                                             Ok(true) => break,
                                             Ok(false) => {}
-                                            Err(_) => {
+                                            Err(error) => {
+                                                tracing::error!("Codex notification callback failed: {error}");
+                                                exit_tx.send_exit_signal(ExecutorExitResult::Failure).await;
                                                 break;
                                             }
                                         }

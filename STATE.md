@@ -6,6 +6,13 @@
 
 ## Confirmed Current State
 
+- 2026-09-11 autonomous Codex goals are implemented and runtime-validated in the
+  continuation feature branch, not deployed to green. The native engine owns the
+  objective and scheduling; VK adds a durable checklist and bounded progress
+  guard. No per-repository configuration is required. A real seven-turn task and
+  deterministic refinement/input/tool scenarios passed. Other executor workflows
+  remain unchanged. See `VK_AUTONOMOUS_GOALS.md` and the latest handoff.
+
 - 2026-09-01 active Codex correction regression is corrected in source:
   - the first `turn/steer` integration silently used the normal queued-follow-up
     path when the live client or active turn ID was not immediately available

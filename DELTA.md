@@ -1097,3 +1097,11 @@
 - Deployed no-restart frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260626Tmultiline-rich-paste`; live asset `/assets/index-DXMultilinePaste.js`; backend PID stayed running and no service restart was performed.
 - Verified: UI typecheck, targeted diff check, live curl marker checks, and live `python3 scripts/vk_live_regression_smoke.py`.
 - Guard: future frontend/restart packages must carry forward this source fix and not roll back below `20260626Tmultiline-rich-paste`.
+
+## 2026-09-11 — Native autonomous goals
+
+- Prepared instance-wide Codex goal lifecycle support, durable requirement evidence,
+  bounded stagnation/run guards, explicit pause/resume and Stop persistence.
+- Reused native Codex scheduling instead of synthesizing continue messages.
+- Real seven-turn implementation and offline refinement/input/tool scenarios passed;
+  the green backend still needs the separate approved deployment workflow.

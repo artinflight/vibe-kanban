@@ -1858,6 +1858,19 @@ impl ContainerService for LocalContainerService {
         execution_process: &ExecutionProcess,
         status: ExecutionProcessStatus,
     ) -> Result<(), ContainerError> {
+        // Persist user Stop before killing app-server, so a later ordinary
+        // follow-up cannot silently reactivate the native goal.
+        if let Err(error) =
+            executors::executors::codex::client::AppServerClient::pause_execution_goal(
+                execution_process.id,
+            )
+            .await
+        {
+            tracing::warn!(
+                "Could not persist goal pause before stopping execution {}: {error}",
+                execution_process.id
+            );
+        }
         let child = self
             .get_child_from_store(&execution_process.id)
             .await

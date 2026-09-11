@@ -1,5 +1,11 @@
 # STREAM.md
 
+## Current Scope
+
+Branch fix/recovery-completion-boundary fixes repeated recovery injection after
+completed summaries and records the running-standby requirements. No production
+stop, cutover, database rewrite or standby-readiness claim is in this change.
+
 ## Current Maintenance Scope: September 11
 
 Branch `docs/blue-readiness-20260911` records tested handover evidence and lessons

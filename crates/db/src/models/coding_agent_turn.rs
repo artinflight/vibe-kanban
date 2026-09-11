@@ -114,6 +114,8 @@ impl CodingAgentTurn {
         pool: &SqlitePool,
         session_id: Uuid,
     ) -> Result<Vec<CodingAgentInterruptedContext>, sqlx::Error> {
+        // A durable completed reply acknowledges prior recovery context even when
+        // this turn does not emit a new native resume anchor.
         sqlx::query_as::<_, CodingAgentInterruptedContext>(
             r#"WITH latest_success AS (
                 SELECT ep.created_at
@@ -124,7 +126,6 @@ impl CodingAgentTurn {
                   AND ep.dropped = FALSE
                   AND ep.status = 'completed'
                   AND ep.exit_code = 0
-                  AND cat.agent_session_id IS NOT NULL
                   AND cat.summary IS NOT NULL
                   AND trim(cat.summary) != ''
                 ORDER BY ep.created_at DESC
@@ -489,6 +490,119 @@ mod tests {
     use uuid::Uuid;
 
     use super::CodingAgentTurn;
+
+    #[tokio::test]
+    async fn recovery_boundary_accepts_completed_summary_without_native_anchor() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::raw_sql(
+            "CREATE TABLE execution_processes (
+                id BLOB, session_id BLOB, run_reason TEXT, dropped INTEGER,
+                status TEXT, exit_code INTEGER, created_at TEXT);
+             CREATE TABLE coding_agent_turns (
+                execution_process_id BLOB, agent_session_id TEXT, prompt TEXT, summary TEXT);",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let session = Uuid::new_v4();
+        let completed = Uuid::new_v4();
+        for (id, status, exit, prompt, summary, at) in [
+            (
+                Uuid::new_v4(),
+                "killed",
+                None,
+                "old interrupted request",
+                None,
+                "2026-09-11T18:00:00Z",
+            ),
+            (
+                completed,
+                "completed",
+                Some(0),
+                "recovered request",
+                Some("Durable reply"),
+                "2026-09-11T19:00:00Z",
+            ),
+            (
+                Uuid::new_v4(),
+                "failed",
+                Some(1),
+                "new interrupted request",
+                None,
+                "2026-09-11T20:00:00Z",
+            ),
+        ] {
+            sqlx::query("INSERT INTO execution_processes VALUES (?, ?, 'codingagent', 0, ?, ?, ?)")
+                .bind(id)
+                .bind(session)
+                .bind(status)
+                .bind(exit)
+                .bind(at)
+                .execute(&pool)
+                .await
+                .unwrap();
+            sqlx::query("INSERT INTO coding_agent_turns VALUES (?, NULL, ?, ?)")
+                .bind(id)
+                .bind(prompt)
+                .bind(summary)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+        let rows = CodingAgentTurn::find_interrupted_context_since_latest_success(&pool, session)
+            .await
+            .unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].prompt.as_deref(), Some("new interrupted request"));
+
+        sqlx::query("UPDATE coding_agent_turns SET summary = ' ' WHERE execution_process_id = ?")
+            .bind(completed)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let rows = CodingAgentTurn::find_interrupted_context_since_latest_success(&pool, session)
+            .await
+            .unwrap();
+        assert_eq!(
+            rows.len(),
+            3,
+            "A blank summary must not acknowledge recovery"
+        );
+
+        sqlx::query("UPDATE coding_agent_turns SET summary = 'Durable reply' WHERE execution_process_id = ?")
+            .bind(completed).execute(&pool).await.unwrap();
+        sqlx::query("UPDATE execution_processes SET exit_code = 1 WHERE id = ?")
+            .bind(completed)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let rows = CodingAgentTurn::find_interrupted_context_since_latest_success(&pool, session)
+            .await
+            .unwrap();
+        assert_eq!(
+            rows.len(),
+            3,
+            "A nonzero exit must not acknowledge recovery"
+        );
+
+        sqlx::query("UPDATE execution_processes SET exit_code = 0, dropped = 1 WHERE id = ?")
+            .bind(completed)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let rows = CodingAgentTurn::find_interrupted_context_since_latest_success(&pool, session)
+            .await
+            .unwrap();
+        assert_eq!(
+            rows.len(),
+            2,
+            "A dropped turn must not acknowledge recovery"
+        );
+    }
 
     #[tokio::test]
     async fn latest_workspace_turn_can_be_marked_unseen() {

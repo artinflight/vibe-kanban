@@ -1,5 +1,36 @@
 # HANDOFF.md
 
+## Latest Authority: Online Preparation Only
+
+The operator approved documenting `VK_BACKEND_RESTART_PROTOCOL.md` and continuing
+preparation, NOT another production interruption. Keep Green live, test isolated
+Blue, measure the whole proposed handover and wait for explicit "cut over now".
+All earlier approvals and "Green unchanged" claims below are superseded.
+
+The first attempt aborted at a deleted-executable pathname assertion before the
+final snapshot or production Blue startup. Guarded Green returned on the same
+data (PID411861 at verification); native thread
+`01a03e74-2c1a-72f0-9e00-8e4293fe910d` resumed without replacement. The controller's
+identity check has been corrected and moved into preflight, with six unit tests
+passing, but the old attempt must not be rerun. Final snapshot and live new-feature
+acceptance remain incomplete. Preserve the historical recovery exceptions.
+
+Preparation continued without restarting Green: fresh isolated Blue runs as
+`vk-blue-warm-20260911.service` on loopback `4641/4642`, using the guarded staging
+artifact and disposable writable state. Desktop/mobile saved-message and flyout
+checks passed with ten messages and no page errors. This is not production data
+authority or an original-thread execution test. The previous controller is
+runtime-masked and remains unapproved for reuse.
+
+Component timings: four key SQLite snapshots took about 3.8 seconds total,
+their integrity checks about 1.8 seconds, and isolated Blue API startup about
+0.6 seconds. These exclude final file changes, Desktop verification, routing
+and end-to-end acceptance; they are NOT a five-second cutover certificate.
+Evidence: `/mnt/vk-storage/vk-cutover-20260911/warm-preparation-result.json` and
+`warm-staging-ui-result.json`. Measure the full replacement handover before
+requesting the operator's next cutover approval.
+
+
 ## Attachment Cleanup Cutover Guard
 
 - Branch `vk/4e18-cutover-attachment-safety`, baseline `9dfd19c34`.

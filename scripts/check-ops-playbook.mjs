@@ -12,6 +12,7 @@ const requiredFiles = [
   'STATE.md',
   'STREAM.md',
   'HANDOFF.md',
+  'VK_BACKEND_RESTART_PROTOCOL.md',
   'DELTA.md',
   'docs/audits/vibe-kanban-ops-audit.md',
   'docs/operations/release-safety.md',
@@ -36,6 +37,16 @@ if (errors.length === 0) {
   const codexExecutor = readUtf8('crates/executors/src/executors/codex.rs');
   const workflow = readUtf8('VK_WORKFLOW.md');
   const runbook = readUtf8('VK_AGENT_DEPLOYMENT_RUNBOOK.md');
+  for (const [name, contents] of [
+    ['VK_WORKFLOW.md', workflow],
+    ['VK_AGENT_DEPLOYMENT_RUNBOOK.md', runbook],
+  ]) {
+    if (!contents.includes('VK_BACKEND_RESTART_PROTOCOL.md')) {
+      errors.push(
+        `${name} must reference the established backend restart protocol`
+      );
+    }
+  }
 
   const requiredAgentRefs = [
     'STATE.md',
@@ -85,7 +96,9 @@ if (errors.length === 0) {
   }
 
   if (
-    !codexExecutor.includes('const DEFAULT_CODEX_MAX_ACTIVE_EXECUTIONS: usize = 8;')
+    !codexExecutor.includes(
+      'const DEFAULT_CODEX_MAX_ACTIVE_EXECUTIONS: usize = 8;'
+    )
   ) {
     errors.push(
       'codex executor default max active executions must stay above one; expected DEFAULT_CODEX_MAX_ACTIVE_EXECUTIONS = 8'

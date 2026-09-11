@@ -6,6 +6,14 @@
 
 ## Confirmed Current State
 
+- 2026-09-11 latest authority: `VK_BACKEND_RESTART_PROTOCOL.md` establishes
+  online preparation, isolated Blue testing, a measured interruption and fresh
+  explicit cutover approval. The attempted switch aborted before production Blue
+  or the final snapshot. Green is active on the same data with guarded rollback
+  artifact `58263e051`; staging is `c184c75e5` with PR104's attachment protection.
+  Green frontend remains the `20260831T1436Z-staging-main-84a55972d` release.
+  Historical runtime bullets below are not current deployment instructions.
+
 - 2026-09-11 planning: `VK_RESTART_LESSONS_LEARNED.md` records the incident
   analysis and proposed new-blue handover. Green remains production; retired blue
   is not the new candidate. The older workflow paths are historical. A reversible

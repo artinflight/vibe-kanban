@@ -1,6 +1,23 @@
 # Restart Lessons And Proposed Blue Cutover
 
-Date: 2026-09-11. Status: planning only, NOT restart-ready.
+Date: 2026-09-11. Status: the [backend restart protocol](VK_BACKEND_RESTART_PROTOCOL.md)
+is established; a production cutover is NOT certified ready. Historical planning
+and evidence below do not override its approval and measured-window requirements.
+
+## September 11 Attempt And Operator Correction
+
+Green was stopped during an attempted handover before a native-process identity
+assertion failed. The controller returned to protected Green on the same data;
+production Blue was not started and no final stopped-boundary snapshot was made.
+The agent failed to establish agreement on the stop-and-switch arrangement and
+failed to run that identity check before interrupting service. A Linux deleted
+executable label was not evidence that conversation files were missing.
+
+The operator's established model is now explicit: keep Green usable throughout
+preparation, test isolated Blue, finish bulk backup work and measure the complete
+handover before asking for a brief cutover window. Do not leave the operator idle
+through builds or silently turn preparation approval into an interruption.
+Keeping two writable copies is not a rollback plan; preserve all later writes.
 
 ## Decision
 

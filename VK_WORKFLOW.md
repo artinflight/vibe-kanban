@@ -1,5 +1,13 @@
 # VK_WORKFLOW.md
 
+## Established Backend Restart Protocol
+
+Follow [the backend restart protocol](VK_BACKEND_RESTART_PROTOCOL.md). Keep
+Green usable while Blue is built, isolated, tested and backed up. Rehearse and
+measure the complete interruption before offering a window, then wait for an
+explicit operator "cut over now". Preparation approval is not restart approval.
+Never promote stale rehearsal data or promise instant post-write rollback.
+
 ## September 11 Authority Correction
 
 The historical service/path examples below describe retired blue and are not

@@ -1,5 +1,12 @@
 # STREAM.md
 
+## Current Maintenance Scope: September 11
+
+Branch `vk/4e18-vk-staging-check` establishes the online-preparation restart
+protocol and continues isolated readiness work. Green must remain usable;
+production interruption or routing changes need a later explicit cutover approval.
+The old stream identifier and deployment history below are historical context.
+
 ## Stream Identifier
 
 - Branch: `vk/d3fb-vk-2-instances`

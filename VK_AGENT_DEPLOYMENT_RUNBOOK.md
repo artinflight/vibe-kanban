@@ -328,6 +328,14 @@ is built and validated, and downtime is limited to the final switch/restart.
 
 ## Blue/Green Local Cutover Workflow
 
+The established [backend restart protocol](VK_BACKEND_RESTART_PROTOCOL.md)
+governs this section and the restart-window checklist above. Green stays usable
+during builds, validation, bulk backup transfer and rehearsal. Report measured
+end-to-end interruption, not just startup time, then wait for a fresh explicit
+"cut over now". A preparation/proceed instruction is not production approval.
+If Green must stop or Blue must restart to attach current data, explain and agree
+that specific arrangement first. Do not repeat a failed handover automatically.
+
 The [September 11 lessons and cutover report](VK_RESTART_LESSONS_LEARNED.md)
 supersedes the former blue/green procedure and its hardcoded paths. Those examples
 described green as a candidate even though green is now production, and the old

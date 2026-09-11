@@ -1,5 +1,40 @@
 # HANDOFF.md
 
+## 2026-09-11 Cutover Rehearsal: Blocked, Green Unchanged
+
+- Exact staging remains `9dfd19c34`; isolated blue remains available at
+  https://mcp-server.tail744c4.ts.net:18463/ with disposable state only.
+- Consistent green/Codex SQLite copies were taken for rehearsal on the SSD,
+  not as a final backup. Isolated new-backend migration preserved entity IDs,
+  thread links and all 10 saved messages. Actual old green binary opened that
+  migrated copy and preserved an additional new-backend saved-message write.
+  This tests that rollback case, not full execution/filesystem rollback.
+- All 2,621 indexed nonarchived-workspace rollouts exist with matching IDs.
+  Native read yielded nonempty turns for 2,592; private-copy resume yielded
+  nonempty turns for another 27. Two histories still returned empty despite
+  recorded work. The known killed-startup ID lacks an index as before.
+  September 7 incomplete-tail exceptions remain. No original history was edited.
+- Attachment coverage is NOT complete: 230/774 records have hash-verified cache
+  files, 115 more have verified worktree copies, 429 remain unlocated in those
+  searched roots. Of those, 236 link to nonarchived workspaces. A representative
+  green download returned 500. This audit did not move/delete attachment files;
+  archive recovery remains open. Also classify 118 absent nonarchived workspace
+  container paths before certifying worktree preservation.
+- Audited 22 VK/VK Dev In Staging cards. Seventeen pass ancestry/patch-equivalence;
+  five need content distinctions. Production Protections document/check changes
+  are absent; PR layout uses an alternative implementation needing UI acceptance;
+  old follow-up action is superseded by steering; generated Vite cache is
+  intentionally omitted; unknown-item resume handling is included with updates.
+- Full details, IDs and reproducible evidence:
+  `/mnt/vk-storage/vk-blue-test-20260911/readiness/DECISION.md`.
+- Candidate formatting completed cleanly; Ops check passed. No full workspace
+  suite or real authenticated VK agent execution was performed this turn.
+- NOT READY: resolve file/history/release gaps, prove routing and one-writer
+  enforcement, and rehearse complete rollback. Asked operator whether a brief
+  drained green stop is acceptable at the eventual final window; no agreement
+  received yet. Green stays PID 2886161; retired blue stays stopped. No final
+  backup, production freeze, restart or route switch was performed.
+
 ## 2026-09-11 Blue Rehearsal Running, No Production Cutover
 
 - Exact current staging 9dfd19c34 built from clean detached

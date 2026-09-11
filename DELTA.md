@@ -1097,3 +1097,21 @@
 - Deployed no-restart frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260626Tmultiline-rich-paste`; live asset `/assets/index-DXMultilinePaste.js`; backend PID stayed running and no service restart was performed.
 - Verified: UI typecheck, targeted diff check, live curl marker checks, and live `python3 scripts/vk_live_regression_smoke.py`.
 - Guard: future frontend/restart packages must carry forward this source fix and not roll back below `20260626Tmultiline-rich-paste`.
+
+## 2026-09-11 — Native autonomous goals
+
+- Prepared instance-wide Codex goal lifecycle support, durable requirement evidence,
+  bounded stagnation/run guards, explicit pause/resume and Stop persistence.
+- Reused native Codex scheduling instead of synthesizing continue messages.
+- Real seven-turn implementation and offline refinement/input/tool scenarios passed;
+  the green backend still needs the separate approved deployment workflow.
+
+- Follow-up: Stop/resume native fixtures and goal-state restore validation passed.
+  Matching release artifacts are built on the task SSD; draft PR #103 targets
+  staging. No live activation occurred; release gates remain explicit.
+
+2026-09-11: Built-candidate isolated HTTP smoke passed: one VK execution, eight native goal turns, eight completed requirements, final completed status. No production deployment.
+
+2026-09-11 recovery-first clarification: six stagnant turns now initiate automatic goal-wide redirection, with persisted recovery plans and three recovery windows before failed-recovery handoff. Removed the fifty-turn stop for productive runs. The older release candidate is superseded; no deployment or restart occurred.
+
+2026-09-11: User authorized PR #103 integration into staging for the staging management agent to deploy at the next restart. Fresh fetch and rebase found the branch current with staging; recovery revision CI is green. Deployment handoff explicitly rejects the superseded binary and preserves goal backup requirements.

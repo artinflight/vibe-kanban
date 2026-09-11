@@ -1,5 +1,70 @@
 # HANDOFF.md
 
+## Staging management deployment pickup
+
+- User authorized rebasing and merging PR #103 into staging for deployment by
+  the staging management agent at the next approved restart.
+- Rebase onto fetched `fork/staging` (`8c82e47ea`) required no changes. All CI
+  checks passed for recovery revision `d912325cc`.
+- Build from current staging after merge. The old `candidate-b986fed9f` is
+  superseded: it has the rejected six-turn pause policy. Do not deploy it.
+- Preserve native `goals_*.sqlite` and `vk-goal-progress` in the pre-release
+  backup; the backup helper now includes them. Follow the normal restart runbook.
+- Activation smoke: use `/goal` from a Codex chat, confirm intermediate turns
+  continue, stalled work receives recovery instructions, and Stop still works.
+- This merge task performs no deployment, service restart, or live state change.
+
+
+## Recovery-first revision validated
+
+The user clarified that loops should trigger autonomous redirection, not an immediate pause. The six-turn pause and fifty-turn cap are superseded. Recovery now restores the full objective, ranks unresolved gaps, records a different action and expected evidence, and directs execution without a user turn. Three six-turn recovery windows precede the failed-recovery fallback; productive work has no fifty-turn cap. The prior built candidate is explicitly superseded and must be rebuilt before deployment. Validation: 54 executor tests, targeted executor Clippy, and installed-Codex scenarios for delivered-instruction recovery, exhausted recovery, and required input passed. The recovery fixture waits for the actual VK recovery directive, then closes the remaining requirements without a user resume.
+
+## 2026-09-11 Autonomous Codex Goals — Feature Prepared
+
+- Branch `vk/80a0-vk-continuation` extends the installed native Codex goal engine.
+  VK previously terminated app-server at every completed turn, before its native
+  continuation could run. Ordinary non-goal sessions and other executors remain
+  unchanged. `/goal` is exposed through existing slash-command discovery.
+- Native objective/status/accounting remain authoritative. VK adds a durable
+  requirements/evidence checklist, root-thread filtering, turn-specific context,
+  reassessment after three stagnant turns, pause after six, and a fifty-turn cap.
+  User Stop persists native pause; explicit resume retains evidence. Old threads
+  can use checkpoint footers because their dynamic tools cannot be retrofitted.
+- Validation passed: 53 executor tests; installed Codex 0.153.4 offline runtime
+  scenarios for eight-stage progress, repeated refinement, required input, and
+  dynamic checkpoint calls; targeted local-deployment compile and targeted
+  executor/local-deployment Clippy. A real GPT-6 Astra run finished seven material
+  requirements in seven autonomous work turns (378 seconds), produced 21 passing
+  Python tests, and passed independent CLI golden/error assertions. Native usage
+  accounting reported 81,194 tokens. Its isolated auth copy was removed afterward.
+- Formatting and ops governance passed. With a 6 GiB Node heap, all frontend
+  type checks passed. Full check/lint/workspace tests reach the pre-existing
+  missing GTK `glib-2.0.pc` dependency. The additional headless workspace attempt
+  was stopped during compilation; no result is claimed for it.
+- Final Stop and same-thread fresh-app-server resume scenarios passed. Resume
+  preserved checklist evidence and the refinement guard tripped again correctly.
+  The lean-backup helper now includes a consistent SQLite snapshot of native
+  goals and the VK checklist directory; restore integrity and exact goal rows
+  were verified against the completed real evaluation.
+- The built backend HTTP smoke passed in an isolated VK instance: workspace
+  creation produced one coding-agent execution spanning eight native goal turns,
+  eight completed requirements, and a final VK `completed` status.
+- Draft PR: https://github.com/artinflight/vibe-kanban/pull/103.
+- Candidate binary and matching frontend built successfully from runtime commit
+  `b986fed9f` and are staged under
+  `/mnt/vk-storage/vk-continuation/candidate-b986fed9f/`, with hashes and release
+  gates in `manifest.json`. This is a built candidate, not restart-ready: normal
+  PR/promotion review, fresh Desktop backup, final live-fix/execution inventory,
+  and explicit green restart approval remain. The operational/docs follow-up
+  does not change the compiled Rust or frontend sources.
+- Read `VK_AUTONOMOUS_GOALS.md` for commands, exact scope and tradeoffs. The feature
+  applies across all repositories for Codex; other providers are not given a
+  speculative or unbounded continuation loop.
+- No live database/config changes, backend restart or frontend swap. The running
+  green service remains on its existing binary; backend deployment is required.
+  The feature-prep boundary and explicit restart gate in the deployment runbook
+  still apply. This task has not authorized interrupting other live executions.
+
 ## 2026-09-01 Active Codex Correction Regression
 
 - The original working-state correction path could silently queue a correction

@@ -97,6 +97,7 @@ def collect_vk_thread_ids(vk_share: Path):
 
 def copy_vk_codex_state(vk_share: Path, vk_codex_home: Path, dest: Path):
     thread_ids = collect_vk_thread_ids(vk_share)
+    copy_native_goal_state(vk_codex_home, dest)
     for name in (
         "auth.json",
         "config.toml",
@@ -127,6 +128,15 @@ def copy_vk_codex_state(vk_share: Path, vk_codex_home: Path, dest: Path):
                 # state; skip the raced file and keep the rest of the backup.
                 continue
     write_text(dest / "thread_ids.json", json.dumps(sorted(thread_ids), indent=2) + "\n")
+
+
+def copy_native_goal_state(vk_codex_home: Path, dest: Path):
+    # Goals are a separate native database, not part of state_5.sqlite. Use
+    # SQLite's online backup so committed WAL state is included consistently.
+    dest.mkdir(parents=True, exist_ok=True)
+    for database in vk_codex_home.glob("goals_*.sqlite"):
+        backup_sqlite(database, dest / database.name)
+    copy_if_exists(vk_codex_home / "vk-goal-progress", dest / "vk-goal-progress")
 
 
 def git_ok(path: Path) -> bool:

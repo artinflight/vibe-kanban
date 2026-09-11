@@ -31,12 +31,16 @@ pub enum CodexSlashCommand {
     Status,
     Mcp,
     Fast { enable: Option<bool> },
+    Goal { arguments: String },
 }
 
 impl CodexSlashCommand {
     pub fn parse(prompt: &str) -> Option<Self> {
         let cmd: SlashCommandCall<'_> = parse_slash_command(prompt)?;
         match cmd.name.as_str() {
+            "goal" => Some(Self::Goal {
+                arguments: cmd.arguments.trim().to_string(),
+            }),
             "init" => Some(Self::Init),
             "compact" => Some(Self::Compact {
                 instructions: if cmd.arguments.is_empty() {
@@ -69,6 +73,10 @@ impl Codex {
     ) -> Result<SpawnedChild, ExecutorError> {
         if let Some(command) = CodexSlashCommand::parse(prompt) {
             return match command {
+                CodexSlashCommand::Goal { .. } => {
+                    self.handle_app_server_slash_command(current_dir, command, session_id, env)
+                        .await
+                }
                 CodexSlashCommand::Init => {
                     let init_target = current_dir.join(DEFAULT_PROJECT_DOC_FILENAME);
                     if init_target.exists() {
@@ -149,6 +157,7 @@ impl Codex {
         let session_id = session_id.map(|s| s.to_string());
         let (_, session_fast) = resolve_model(self.model.as_deref());
         let thread_start_params = self.build_thread_start_params(current_dir);
+        let plan_mode = self.plan;
 
         self.spawn_app_server(
             current_dir,
@@ -156,6 +165,63 @@ impl Codex {
             env,
             move |client, exit_signal_tx| async move {
                 match command {
+                    CodexSlashCommand::Goal { arguments } => {
+                        let control = matches!(arguments.as_str(), "" | "status" | "pause");
+                        if control {
+                            let Some(thread_id) = session_id else {
+                                log_event_raw(client.log_writer(), "Start autonomous work with /goal followed by the objective. Use /goal status, pause, or resume for an existing goal.".into()).await?;
+                                exit_signal_tx.send_exit_signal(ExecutorExitResult::Success).await;
+                                return Ok(());
+                            };
+                            // Read/pause do not load a thread and cannot trigger work.
+                            let method = if arguments == "pause" { "thread/goal/set" } else { "thread/goal/get" };
+                            let params = if arguments == "pause" { json!({"threadId": thread_id, "status":"paused"}) } else { json!({"threadId": thread_id}) };
+                            let goal = client.goal_request(method, params).await?;
+                            log_event_raw(client.log_writer(), super::goals::describe(&goal).await?).await?;
+                            exit_signal_tx.send_exit_signal(ExecutorExitResult::Success).await;
+                        } else {
+                            if plan_mode {
+                                return Err(ExecutorError::Io(std::io::Error::other("Switch out of Plan mode before starting or resuming a goal")));
+                            }
+                            if arguments != "resume" && arguments.chars().count() > 4000 {
+                                return Err(ExecutorError::Io(std::io::Error::other("Native goal objectives are limited to 4,000 characters. Keep the full success criteria in the conversation and provide a concise objective.")));
+                            }
+                            let (thread_id, model) = match session_id {
+                                Some(id) => {
+                                    // Do not let an old active objective launch while
+                                    // we are preparing an explicit replacement/resume.
+                                    let snapshot = client.goal_request("thread/goal/get", json!({"threadId": id})).await?;
+                                    let status = snapshot.pointer("/goal/status").and_then(serde_json::Value::as_str);
+                                    if arguments == "resume" && matches!(status, None | Some("complete")) {
+                                        return Err(ExecutorError::Io(std::io::Error::other("No unfinished goal to resume. Start a new /goal objective.")));
+                                    }
+                                    if status == Some("active") {
+                                        client.goal_request("thread/goal/set", json!({"threadId": id, "status":"paused"})).await?;
+                                    }
+                                    let response = client.thread_resume(resume_params_from(id, thread_start_params)).await?;
+                                    (response.thread.id, response.model)
+                                }
+                                None if arguments == "resume" => {
+                                    return Err(ExecutorError::Io(std::io::Error::other("No goal to resume")));
+                                }
+                                None => {
+                                    let response = client.thread_start(thread_start_params).await?;
+                                    (response.thread.id, response.model)
+                                }
+                            };
+                            client.set_resolved_model(model);
+                            client.register_session(&thread_id).await?;
+                            client.refresh_goal().await?;
+                            client.reset_goal_run().await?;
+                            let params = if arguments == "resume" {
+                                json!({"threadId": thread_id, "status":"active"})
+                            } else {
+                                json!({"threadId": thread_id, "objective": arguments, "status":"active"})
+                            };
+                            client.goal_request("thread/goal/set", params).await?;
+                            // Native goals start their own continuation; no synthetic user turn.
+                        }
+                    }
                     CodexSlashCommand::Compact { .. } => {
                         let old_thread_id = session_id.ok_or_else(|| {
                             ExecutorError::Io(std::io::Error::other("No active session to compact"))

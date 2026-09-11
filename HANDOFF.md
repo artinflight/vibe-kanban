@@ -1,5 +1,38 @@
 # HANDOFF.md
 
+## 2026-09-11 Authorized Cutover Work In Progress
+
+Operator now authorizes snapshot and cutover when ready; other VK executions
+have stopped. Live green is still unchanged. Current execution, backup/build
+progress and recovery boundaries are recorded in
+`/mnt/vk-storage/vk-cutover-20260911/PROGRESS.md`.
+
+Correction to the previous empty-history finding: the test omitted Codex's
+`thread_history_1.sqlite`. Including it made all 29 affected histories pass both
+read and private-copy resume, including iOS and Android. No original native
+history required modification. The September 7 historical gaps remain separate.
+
+A separate source branch `vk/4e18-cutover-attachment-safety` adds opt-in startup
+attachment-cleanup suppression; six live unlinked records would otherwise be
+eligible for deletion. Do not activate the older build expecting that new guard.
+PR104 merged this guard into staging at `c184c75e5`; the tested source tree is
+identical to `085d3362a`. Blue's release build and isolated retention/UI/upload
+checks passed. Guarded old-Green rollback artifact `58263e051` retained Blue's
+new test data; the original old binary must not be used for startup rollback
+because it still deletes unlinked attachments.
+
+Both preservation backup components are SHA256-verified on Desktop at
+`B:/vk-backups/vk-cutover-20260911T1854Z`; all 23 SQLite snapshots were extracted
+from the actual archive and passed integrity checks. The final stopped-boundary
+delta is still pending. An independently supervised controller is prepared at
+`/mnt/vk-storage/vk-cutover-20260911/handover.py`.
+
+After interruption, read `handover-status.json` in that directory FIRST and
+continue this original session/thread, never a replacement. Do not repeat an
+already executed cutover or restore a stale backup over newer work. The detailed
+pickup, historical recovery exceptions and remaining live checks are in
+`PROGRESS.md`. Only one final completion report is allowed after all work ends.
+
 ## 2026-09-11 Cutover Rehearsal: Blocked, Green Unchanged
 
 - Exact staging remains `9dfd19c34`; isolated blue remains available at

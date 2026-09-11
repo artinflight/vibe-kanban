@@ -69,6 +69,15 @@ fn is_pr_monitor_disabled() -> bool {
     matches!(normalized.as_str(), "1" | "true" | "yes" | "on")
 }
 
+fn attachment_cleanup_disabled(value: Option<&str>) -> bool {
+    value.is_some_and(|value| {
+        matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        )
+    })
+}
+
 #[derive(Clone)]
 pub struct LocalDeployment {
     config: Arc<RwLock<Config>>,
@@ -171,7 +180,10 @@ impl Deployment for LocalDeployment {
         };
 
         let file = FileService::new(db.clone().pool)?;
+        if attachment_cleanup_disabled(std::env::var("DISABLE_ATTACHMENT_CLEANUP").ok().as_deref())
         {
+            tracing::info!("Startup attachment cleanup disabled by DISABLE_ATTACHMENT_CLEANUP");
+        } else {
             let file_service = file.clone();
             tokio::spawn(async move {
                 tracing::info!("Starting orphaned file cleanup...");

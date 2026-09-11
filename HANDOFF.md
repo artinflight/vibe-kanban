@@ -2,6 +2,13 @@
 
 ## Latest Authority: Online Preparation Only
 
+The protocol and lessons are now shared in staging through PR105, merged at
+`3b3a65855`; canonical staging is current. Application code is unchanged from
+the tested `c184c75e5` baseline. Fresh isolated Blue is available for disposable
+testing at https://mcp-server.tail744c4.ts.net:18464/ and passed desktop/mobile
+saved-message, flyout and WebSocket checks through that address. Use Green for
+real work. The older 18463 preview is not the refreshed candidate.
+
 The operator approved documenting `VK_BACKEND_RESTART_PROTOCOL.md` and continuing
 preparation, NOT another production interruption. Keep Green live, test isolated
 Blue, measure the whole proposed handover and wait for explicit "cut over now".

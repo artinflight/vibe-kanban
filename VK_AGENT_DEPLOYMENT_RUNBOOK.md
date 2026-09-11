@@ -1,5 +1,16 @@
 # VK Agent Deployment Runbook
 
+## Current Restart Authority
+
+[VK_BACKEND_RESTART_PROTOCOL.md](VK_BACKEND_RESTART_PROTOCOL.md) is the established
+restart protocol. Preparation stays online; only an explicit final cutover
+approval permits interruption. The September 11 failed controller must not be
+reused. Green currently uses the guarded rollback artifact under
+`/mnt/vk-storage/vk-cutover-20260911/release/rollback-server` and the original data;
+its frontend is `20260831T1436Z-staging-main-84a55972d`. Production Blue is stopped.
+Verify service configuration before acting; the older dated inventory below is
+historical, not a command source for the next deployment.
+
 This file is the pickup guide for agents working on Vibe Kanban from inside
 Vibe Kanban. Follow it before editing, building, or deploying this repo.
 For the planned clean self-development project/preview model, read

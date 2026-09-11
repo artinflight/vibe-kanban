@@ -1,5 +1,22 @@
 # HANDOFF.md
 
+## Running-Green Requirement And Recovery Injection
+
+Latest operator instruction rejects stopping Green. No service stop, freeze or
+route change was performed in this preparation turn. Green remained PID2669659.
+The production Blue unit conflicts with Green and shares4511/4512; do not start
+it. Warm isolated Blue remains on4641/18464. Readiness is still false.
+
+Read-only DB inspection proves recent replies completed with exit0 and summaries
+but lacked per-turn native anchors. That made recovery injection ignore them;
+it is not proof these final replies failed to end. A narrow source fix and
+regression test are in branch fix/recovery-completion-boundary, worktree
+/mnt/vk-storage/vk-cutover-20260911/protocol-source. All13 db tests passed;
+native resume-anchor selection is unchanged. This fix is NOT deployed.
+See VK_RUNNING_STANDBY_ASSESSMENT.md there: no supported standby lifecycle exists
+in the incumbent runtime; proxy-only routing and untested process suspension
+are not lossless rollback proofs. Do not claim readiness or silently stop Green.
+
 ## Latest: V2 Returned To Green; Readiness Withdrawn
 
 Approved23:14 attempt failed before final capture/Blue activation: Green shutdown

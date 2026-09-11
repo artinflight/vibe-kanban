@@ -1,5 +1,28 @@
 # HANDOFF.md
 
+## 2026-09-11 Manual Stale Sub-agent Recovery
+
+- Operator explicitly authorised manual stale-child removal pending a backend
+  restart. Green remained active on PID `2886161`; no service restart occurred.
+- Live summaries showed stale active counts in Android Parity (54), iOS (11),
+  Goal Arbitration (5), and Body Comp Intelligence (5).
+- A read-only `thread/loaded/list` request on Android's existing app-server
+  confirmed the 54 old children were not loaded. A fresh inventory before the
+  change found three newly spawned children; all were explicitly preserved.
+- Reconciled exactly 75 whitelisted `thread_spawn_edges` from `open` to `closed`
+  using timestamp comparisons and rollout/process checks. These were already
+  stopped children, so no live child or parent process needed killing. No VK
+  `subagent_jobs` rows needed changes, and no transcript was moved or deleted.
+- API verification: iOS, Goal Arbitration, and Body Comp Intelligence now show
+  zero active/unresolved children. Android shows three active, zero unresolved;
+  its parent and all three children continue producing activity.
+- Verified all 75 edges closed and all 75 transcript paths preserved. The other
+  65 historical open edges were left alone; they were not causing active counts.
+- Audit, exact-row rollback records, and before/after API snapshots:
+  `/mnt/vk-storage/vk-subagent-recovery-20260911/`.
+- This is manual bookkeeping recovery, not deployment of commit `05ec9600d`.
+  Permanent close tools still require the matching backend/MCP rollout.
+
 ## 2026-09-10 Workspace Sub-agent Closure
 
 - Branch `vk/a306-vk-sub-agents` adds `list_subagents` and `close_subagent` to

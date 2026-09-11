@@ -26,8 +26,9 @@ those children and finish their turns.
 
 ## Boundaries and Deployment
 
-- No live services, Codex state, attachments, or worktrees are mutated by this
-  implementation task. No frontend change or database migration is required.
+- The implementation task did not mutate live state. The operator-authorised
+  manual recovery on 2026-09-11 reconciled 75 stale Codex spawn edges, as recorded
+  in `HANDOFF.md`. No frontend change or database migration is required.
 - Activation requires a matching backend and VK MCP binary. A frontend preview
   cannot exercise this feature.
 - The owning runtime must be connected; this is not an OS-process kill tool.

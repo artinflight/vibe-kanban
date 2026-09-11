@@ -1107,3 +1107,12 @@
 - Validation passed: 5 executor client tests, 12 DB tests, 11 MCP tests,
   server/MCP compilation, repository formatting, ops check, and diff check.
 - Matching backend/MCP deployment and real child/parent lifecycle QA remain.
+
+## 2026-09-11 — Manual stale child reconciliation
+
+- At the operator's request, closed 75 stale Codex spawn-edge records across
+  Android Parity (54), iOS (11), Goal Arbitration (5), and Body Comp Intelligence
+  (5). None were loaded/running; no process kill or backend restart was needed.
+- Live summaries now show zero stale children and preserve Android's three new
+  active children. All 75 transcripts remain. Exact rollback rows and API/runtime
+  evidence are in `/mnt/vk-storage/vk-subagent-recovery-20260911/`.

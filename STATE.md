@@ -6,6 +6,13 @@
 
 ## Confirmed Current State
 
+- 2026-09-11 manual sub-agent recovery cleared 75 stale open spawn edges across
+  Android Parity, iOS, Goal Arbitration, and Body Comp Intelligence. Fresh runtime
+  inventory proved these children were not loaded. Three new Android children
+  and their active parent were preserved; summaries now show only those three.
+  All transcripts remain intact and green PID `2886161` was unchanged. The
+  permanent close-tool feature remains undeployed; see `HANDOFF.md` for audit.
+
 - 2026-09-10 workspace sub-agent closure is prepared in source, not deployed:
   - VK MCP exposes workspace-scoped list and close operations for tracked Codex
     children; closing uses the owning live runtime and preserves archived history

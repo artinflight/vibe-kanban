@@ -1,5 +1,15 @@
 # STREAM.md
 
+## Current Maintenance Scope: September 11
+
+Branch `docs/online-backend-restarts` establishes the online-preparation restart
+protocol and continues isolated readiness work. Green must remain usable;
+production interruption or routing changes need a later explicit cutover approval.
+The old stream identifier and deployment history below are historical context.
+
+### Prior Integration Scope
+
+
 ## Current Stream: Attachment Preservation During Cutover
 
 - Branch: `vk/4e18-cutover-attachment-safety`, based on `fork/staging` at

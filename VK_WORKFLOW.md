@@ -1,5 +1,24 @@
 # VK_WORKFLOW.md
 
+## Established Backend Restart Protocol
+
+Follow [the backend restart protocol](VK_BACKEND_RESTART_PROTOCOL.md). Keep
+Green usable while Blue is built, isolated, tested and backed up. Rehearse and
+measure the complete interruption before offering a window, then wait for an
+explicit operator "cut over now". Preparation approval is not restart approval.
+Never promote stale rehearsal data or promise instant post-write rollback.
+
+## September 11 Authority Correction
+
+The historical service/path examples below describe retired blue and are not
+current deployment commands. Green is production. Do not start the retired
+`vibe-kanban.service`, overwrite its binary as a deployment shortcut, or seed a
+candidate into green's directories. Discover current services and routing first.
+Use [the restart lessons and proposed cutover](VK_RESTART_LESSONS_LEARNED.md)
+and the deployment runbook for the next changeover. Two generations require one
+authoritative writer and a rollback plan that preserves post-cutover writes.
+Bulk staging belongs on verified mounted `/mnt/vk-storage`; backups belong on
+Desktop `B:/vk-backups/`, not the historical system-disk paths below.
 For active agent deploy/restart work, read `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
 after this file. `VK_WORKFLOW.md` describes the stable local model; the runbook
 contains the current live checks and the operational checklist agents must use.

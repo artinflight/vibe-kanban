@@ -1111,3 +1111,5 @@
   staging. No live activation occurred; release gates remain explicit.
 
 2026-09-11: Built-candidate isolated HTTP smoke passed: one VK execution, eight native goal turns, eight completed requirements, final completed status. No production deployment.
+
+2026-09-11 recovery-first clarification: six stagnant turns now initiate automatic goal-wide redirection, with persisted recovery plans and three recovery windows before failed-recovery handoff. Removed the fifty-turn stop for productive runs. The older release candidate is superseded; no deployment or restart occurred.

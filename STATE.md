@@ -9,7 +9,9 @@
 - 2026-09-11 autonomous Codex goals are implemented and runtime-validated in the
   continuation feature branch, not deployed to green. The native engine owns the
   objective and scheduling; VK adds a durable checklist and bounded progress
-  guard. No per-repository configuration is required. A real seven-turn task and
+  guard. The recovery-first revision redirects stalled work automatically before
+  its last-resort failed-recovery handoff; productive runs have no fifty-turn cap.
+  No per-repository configuration is required. A real seven-turn task and
   deterministic refinement/input/tool scenarios passed. Other executor workflows
   remain unchanged. See `VK_AUTONOMOUS_GOALS.md` and the latest handoff.
 

@@ -7,6 +7,9 @@ use codex_app_server_protocol::DynamicToolSpec;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+const RECOVERY_WINDOW: u32 = 6;
+const MAX_RECOVERY_ROUNDS: u32 = 3;
+
 pub const TOOL: &str = "vk_goal_checkpoint";
 pub const INSTRUCTIONS: &str = include_str!("goal_instructions.md");
 
@@ -30,6 +33,8 @@ pub struct Progress {
     pub last_completed_count: usize,
     pub last_turn: Option<String>,
     pub pause_reason: Option<String>,
+    #[serde(default)]
+    pub recovery_plans: Vec<String>,
 }
 
 impl Progress {
@@ -41,6 +46,8 @@ impl Progress {
             completed: BTreeMap<String, String>,
             disposition: String,
             reason: String,
+            #[serde(default)]
+            recovery_plan: Option<String>,
         }
         let request: Checkpoint = serde_json::from_value(args).map_err(|e| e.to_string())?;
         if !matches!(request.disposition.as_str(), "continue" | "needs_input") {
@@ -80,6 +87,18 @@ impl Progress {
         {
             return Err("Completion must reference an existing requirement ID".into());
         }
+        if let Some(plan) = &request.recovery_plan {
+            if plan.trim().is_empty() || plan.len() > 4000 {
+                return Err("Recovery plan must be 1–4000 bytes".into());
+            }
+            if self.recovery_plans.contains(plan) {
+                return Err("This recovery plan was already tried. Choose a different action against an unresolved requirement".into());
+            }
+        }
+        if let Some(plan) = request.recovery_plan {
+            self.recovery_plans.push(plan);
+            self.recovery_plans.truncate(24);
+        }
         if self.requirements.is_empty() {
             self.requirements = request.requirements;
         }
@@ -92,9 +111,7 @@ impl Progress {
         }
         Ok(json!({
             "progress": self,
-            "guidance": if self.stagnant_turns >= 3 {
-                "Reassess the FULL objective. Stop revisiting completed work. Choose a different action closing a remaining requirement; request user input if none exists."
-            } else { "Close remaining requirements with evidence; stop at sufficient completion." }
+            "guidance": self.guidance()
         }))
     }
 
@@ -106,29 +123,39 @@ impl Progress {
         self.turns += 1;
         if self.completed.len() > self.last_completed_count {
             self.stagnant_turns = 0;
+            self.recovery_plans.clear();
         } else {
             self.stagnant_turns += 1;
         }
         self.last_completed_count = self.completed.len();
-        if self.pause_reason.is_none() {
-            self.pause_reason = if self.stagnant_turns >= 6 {
-                Some("Six goal turns closed no requirement. Reassess the remaining objective before resuming.".into())
-            } else if self.turns >= 50 {
-                Some(
-                    "Fifty goal turns reached the run limit. Review progress before resuming."
-                        .into(),
-                )
-            } else {
-                None
-            };
+        // Stagnation starts recovery, not a pause. Allow three full recovery
+        // windows to redirect work before concluding automatic recovery failed.
+        if self.pause_reason.is_none()
+            && self.stagnant_turns >= RECOVERY_WINDOW * (MAX_RECOVERY_ROUNDS + 1)
+        {
+            self.pause_reason = Some("Automatic recovery could not restore verified progress after three recovery windows. Explain the remaining gaps and failed approaches; user involvement is now needed to find a productive path.".into());
         }
         self.pause_reason.clone()
+    }
+
+    pub fn guidance(&self) -> String {
+        if self.stagnant_turns >= RECOVERY_WINDOW {
+            let round = (self.stagnant_turns / RECOVERY_WINDOW).min(MAX_RECOVERY_ROUNDS);
+            format!(
+                "AUTOMATIC RECOVERY {round}/{MAX_RECOVERY_ROUNDS}: Keep working. Re-read the FULL objective and current artifacts. Inventory every unresolved requirement, identify why the recent approach failed, and rank the remaining gaps by impact and dependencies. Choose an unblocked gap and a materially different concrete action. Report a recovery_plan naming the requirement ID, diagnosis, next action, and observable evidence expected; then EXECUTE it in this turn. Do not repeat earlier recovery plans or polish completed work. If the same requirement is a prerequisite, change the approach rather than abandoning it. Reassessment alone is not progress. Request user input only for a substantive blocker or when no productive action can be identified."
+            )
+        } else if self.stagnant_turns >= 3 {
+            "Reassess the FULL objective and unresolved requirements. Redirect effort to the most useful next action and execute it; do not polish completed work or stop just because reassessment was needed.".into()
+        } else {
+            "Close remaining requirements with evidence; move on from sufficiently complete work. Stop when the full objective is satisfied.".into()
+        }
     }
 
     pub fn resume(&mut self) {
         self.turns = 0;
         self.stagnant_turns = 0;
         self.pause_reason = None;
+        self.recovery_plans.clear();
         self.last_completed_count = self.completed.len();
     }
 
@@ -148,7 +175,8 @@ pub fn tool_spec() -> DynamicToolSpec {
                 "requirements": {"type":"object", "additionalProperties":{"type":"string"}},
                 "completed": {"type":"object", "additionalProperties":{"type":"string"}},
                 "disposition": {"type":"string", "enum":["continue", "needs_input"]},
-                "reason": {"type":"string"}
+                "reason": {"type":"string"},
+                "recovery_plan": {"type":"string", "description":"During recovery: unresolved requirement ID, why the previous approach failed, different next action, and expected observable evidence. Execute the action after reporting."}
             },
             "required":["requirements", "completed", "disposition", "reason"]
         }),
@@ -284,28 +312,57 @@ mod tests {
         ))
         .unwrap();
         assert!(p.finish_turn("first").is_none());
-        for n in 1..=6 {
+        for n in 1..=24 {
             p.checkpoint(report(
                 json!({}),
                 json!({"ui": format!("Polished and retested {n}")}),
             ))
             .unwrap();
-            assert_eq!(p.finish_turn(&format!("polish-{n}")).is_some(), n == 6);
+            assert_eq!(p.finish_turn(&format!("polish-{n}")).is_some(), n == 24);
         }
         assert_eq!(p.completed.len(), 1);
         assert!(!p.all_complete());
         let turns = p.turns;
-        p.finish_turn("polish-6");
+        p.finish_turn("polish-24");
         assert_eq!(p.turns, turns, "duplicate notifications must be idempotent");
     }
 
     #[test]
     fn refusal_to_checkpoint_also_stops() {
         let mut p = Progress::default();
-        for n in 0..6 {
+        for n in 0..24 {
             p.finish_turn(&n.to_string());
         }
         assert!(p.pause_reason.is_some());
+    }
+
+    #[test]
+    fn recovery_redirects_to_remaining_gap_without_a_user_turn() {
+        let mut p = Progress::default();
+        p.checkpoint(report(
+            json!({"ui":"UI parity", "api":"API parity"}),
+            json!({"ui":"Verified UI"}),
+        ))
+        .unwrap();
+        p.finish_turn("ui");
+        for n in 0..6 {
+            assert!(p.finish_turn(&format!("polish-{n}")).is_none());
+        }
+        assert!(p.guidance().contains("AUTOMATIC RECOVERY 1/3"));
+        let recovery = json!({"requirements":{},"completed":{},"disposition":"continue","reason":"","recovery_plan":"api: UI is sufficient; implement missing API contract and validate integration"});
+        p.checkpoint(recovery.clone()).unwrap();
+        assert!(p.checkpoint(recovery).is_err());
+        // Persisted recovery context survives a new executor process.
+        p = serde_json::from_str(&serde_json::to_string(&p).unwrap()).unwrap();
+        assert_eq!(p.recovery_plans.len(), 1);
+        p.checkpoint(report(
+            json!({}),
+            json!({"api":"Contract integration passed"}),
+        ))
+        .unwrap();
+        assert!(p.finish_turn("api").is_none());
+        assert_eq!(p.stagnant_turns, 0);
+        assert!(p.all_complete());
     }
 
     #[test]
@@ -327,18 +384,18 @@ mod tests {
     }
 
     #[test]
-    fn hard_limit_bounds_even_claimed_progress_and_resume_keeps_evidence() {
+    fn productive_work_does_not_pause_at_arbitrary_turn_limit() {
         let mut p = Progress::default();
         let requirements: BTreeMap<_, _> = (0..60)
             .map(|n| (n.to_string(), "Material gap".into()))
             .collect();
         p.requirements = requirements;
-        for n in 0..50 {
+        for n in 0..60 {
             p.completed.insert(n.to_string(), "evidence".into());
-            assert_eq!(p.finish_turn(&n.to_string()).is_some(), n == 49);
+            assert!(p.finish_turn(&n.to_string()).is_none());
         }
         p.resume();
-        assert_eq!(p.completed.len(), 50);
+        assert_eq!(p.completed.len(), 60);
         assert_eq!(p.turns, 0);
         assert!(p.pause_reason.is_none());
     }

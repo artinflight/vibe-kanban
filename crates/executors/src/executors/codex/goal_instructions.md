@@ -31,9 +31,20 @@ or completion evidence is invalidated, report the discrepancy; do not mark the
 goal complete. Read current artifacts before relying on historical evidence.
 
 After three turns without closing a requirement, reassess the entire objective
-and choose a materially different productive action. VK pauses after six such
-turns or fifty goal turns in one run. These are circuit breakers, not success
-criteria: never invent completion to avoid them. The checklist survives a resume.
+and redirect effort to a productive action. After six such turns, enter AUTOMATIC
+RECOVERY, without waiting for the user. Re-read the parent objective and artifacts,
+inventory and rank every remaining gap, diagnose the ineffective approach, choose
+an unblocked requirement, and report an optional recovery_plan string in the
+checkpoint: requirement ID, diagnosis, different next action, expected observable
+evidence. Execute that action in the same turn. If the current gap is a dependency,
+change the approach; do not skip necessary work. Do not repeat failed plans.
+
+Recovery gets three six-turn windows to restore verified progress. Completing a
+new requirement resets recovery. Mere reassessment, new plans or reworded evidence
+do not reset it. There is no fifty-turn stop while productive work continues.
+Only if all recovery windows fail does VK return control as failed automatic
+recovery. Never invent completion to avoid that fallback. The checklist and recent
+recovery plans survive compaction and executor restart.
 
 Use checkpoint disposition needs_input for required information, authorization,
 a meaningful user decision, discretionary refinement only, or no productive next

@@ -75,11 +75,19 @@ requirement. The native continuation prompt also repeats the objective. A stale
 steer is never queued into another turn. This helps after compaction or restart;
 the native history and current artifacts remain necessary for contextual detail.
 
-VK pauses the native goal after six turns without closing a requirement, or fifty
-goal turns in a run even if the agent keeps claiming progress. A missing checkpoint
-also consumes this allowance. A resume preserves completed work and resets only
-these run counters. Native token budgets and usage limits remain native; VK does
-not silently add a token budget. No secondary scheduling loop is involved.
+Six turns without closing a requirement starts automatic recovery, not a pause.
+VK restores the full objective, remaining checklist and recent recovery plans. The
+agent must inventory and rank remaining gaps, diagnose the ineffective approach,
+choose a different concrete action, record its expected evidence, and execute it.
+A prerequisite gap gets a new approach rather than being skipped. Recovery plans
+are persisted; repeating a plan does not count as progress.
+
+Three six-turn recovery windows allow the agent to get back on track. Newly
+verified requirements reset recovery. Only after all three windows fail (24
+consecutive turns without a new verified requirement) does VK surface failed
+automatic recovery for user involvement. There is no fifty-turn pause for a run
+that keeps making progress. Native budgets and usage limits still apply; VK does
+not add a token budget or a second scheduler.
 
 A checkpoint can request `needs_input` with a substantive reason: required input,
 authorization, a design decision, only discretionary refinement remaining, or no
@@ -100,9 +108,9 @@ instructed to finish only after both the full objective and its checklist are me
   because this installation already supports them; other adapters can be added
   when they offer equivalent lifecycle and goal-state contracts.
 - The progress circuit breaker is deliberately conservative. Deep investigation
-  can be productive without closing a requirement in six turns. Choose meaningful
-  verifiable intermediate outcomes at initial planning; a pause is a review point,
-  not a claim that the work failed or was complete.
+  can be productive without closing a requirement for many turns. Recovery is
+  the first response; failed recovery is the last-resort user handoff. Choose
+  meaningful verifiable intermediate outcomes during initial planning.
 - Evidence is agent-reported. Stable IDs and finite counters bound refinement but
   cannot prove semantic correctness or prevent all false completion claims.
 - Limits apply at turn boundaries, not within an arbitrarily long single turn.
@@ -117,7 +125,8 @@ instructed to finish only after both the full objective and its checklist are me
 
 Run all executor tests in the shared Cargo target. The state-machine suite covers
 an eight-stage objective across 24 turns, repeated polishing and evidence rewrites,
-scope shrinking, missing checkpoints, hard limits, explicit input and serialization.
+scope shrinking, missing checkpoints, automatic recovery, productive work beyond
+fifty turns, explicit input and serialization.
 
 The ignored `native_goal_runtime` integration test launches the actual installed
 Codex app-server against an offline Responses fixture. It uses no credentials or
@@ -131,7 +140,8 @@ CODEX_HOME=/mnt/vk-storage/vk-continuation/native-progress \
   cargo test -p executors --lib native_goal_runtime -- --ignored --nocapture
 ```
 
-Repeat with fresh isolated directories and `VK_GOAL_TEST_SCENARIO=loop` or
+Repeat with fresh isolated directories and `VK_GOAL_TEST_SCENARIO=recover`,
+`VK_GOAL_TEST_SCENARIO=loop` or
 `VK_GOAL_TEST_SCENARIO=needs_input`. These tests exercise native scheduling and VK
 lifecycle together. Deterministic model responses prove orchestration, not an
 unattended real model's ability to finish an arbitrary substantial software task.
@@ -177,3 +187,17 @@ creation, eight native goal turns in one VK coding-agent execution, all eight
 requirements recorded, and final VK `completed` status. The offline fixture used
 separate data, Codex home, worktrees and localhost ports; it was shut down after
 the check. Evidence is in `/mnt/vk-storage/vk-continuation/api-smoke-2/result.json`.
+
+## Recovery-first revision
+
+The original six-turn pause policy and candidate `b986fed9f` are superseded by
+automatic recovery. That older built candidate must not be deployed as the final
+implementation. The recovery scenario deliberately repeats completed work for six
+turns, then redirects to the remaining seven requirements without user input.
+
+Revision validation passed: 54 executor unit tests, targeted executor Clippy, and
+installed-Codex recovery/exhaustion/input scenarios. The recovery fixture waits
+for the actual recovery directive in the model request, then redirects and
+completes without user input. Model requests are not counted as native turns.
+The previous real-model and full-backend evaluations tested the earlier revision;
+they were not repeated for this recovery-policy change.

@@ -1,5 +1,9 @@
 # HANDOFF.md
 
+## Recovery-first revision validated
+
+The user clarified that loops should trigger autonomous redirection, not an immediate pause. The six-turn pause and fifty-turn cap are superseded. Recovery now restores the full objective, ranks unresolved gaps, records a different action and expected evidence, and directs execution without a user turn. Three six-turn recovery windows precede the failed-recovery fallback; productive work has no fifty-turn cap. The prior built candidate is explicitly superseded and must be rebuilt before deployment. Validation: 54 executor tests, targeted executor Clippy, and installed-Codex scenarios for delivered-instruction recovery, exhausted recovery, and required input passed. The recovery fixture waits for the actual VK recovery directive, then closes the remaining requirements without a user resume.
+
 ## 2026-09-11 Autonomous Codex Goals — Feature Prepared
 
 - Branch `vk/80a0-vk-continuation` extends the installed native Codex goal engine.

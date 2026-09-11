@@ -259,11 +259,11 @@ impl AppServerClient {
             let Some(client) = weak.upgrade() else { return };
             let context = {
                 let guard = client.goal.lock().await;
-                guard.as_ref().filter(|(goal, progress)| goal.status == "active" && !progress.requirements.is_empty())
+                guard.as_ref().filter(|(goal, _)| goal.status == "active")
                     .map(|(goal, progress)| (goal.thread_id.clone(), format!(
                         "VK durable goal checkpoint (supporting evidence; the full user objective and later corrections remain authoritative):\n{}\n{}",
                         serde_json::to_string(progress).unwrap_or_default(),
-                        if progress.stagnant_turns >= 3 { "Reassess all remaining requirements now. Choose a different productive action; do not polish completed work." } else { "Move toward an unresolved requirement. Verify current artifacts before trusting past evidence." }
+                        progress.guidance()
                     )))
             };
             if let Some((thread_id, text)) = context {
@@ -364,9 +364,11 @@ impl AppServerClient {
         } else if let Some(reason) = reason {
             self.pause_goal(reason, true);
         } else {
-            if progress.stagnant_turns == 3 {
-                super::slash_commands::log_event_raw(self.log_writer(),
-                    "Goal progress check: three turns closed no requirement. Reassess the full objective and choose a different productive action.".into()).await?;
+            if progress.stagnant_turns == 3
+                || (progress.stagnant_turns >= 6 && progress.stagnant_turns.is_multiple_of(6))
+            {
+                super::slash_commands::log_event_raw(self.log_writer(), progress.guidance())
+                    .await?;
             }
             // Native Codex schedules the next turn. Never send a duplicate continue.
             let weak = self.self_ref.get().expect("client self reference").clone();
@@ -1803,15 +1805,28 @@ assert p.returncode!=0 and '4' in p.stderr, (p.returncode,p.stderr)
                     String::from_utf8_lossy(&check.stderr)
                 );
             }
-            "progress" | "tool" => {
+            "progress" | "tool" | "recover" => {
                 assert_eq!(goal.status, "complete");
                 assert_eq!(progress.completed.len(), 8);
                 assert!(progress.turns >= 8);
+                if scenario == "recover" {
+                    let protocol = tokio::fs::read_to_string(
+                        std::path::Path::new(&home).join("protocol.jsonl"),
+                    )
+                    .await
+                    .unwrap();
+                    assert!(
+                        protocol.contains("AUTOMATIC RECOVERY 1/3"),
+                        "Recover only after VK actually delivered the recovery instruction"
+                    );
+                    assert!(progress.pause_reason.is_none());
+                    assert_eq!(progress.stagnant_turns, 0);
+                }
             }
             "loop" => {
                 assert_eq!(goal.status, "paused");
                 assert_eq!(progress.completed.len(), 1);
-                assert_eq!(progress.stagnant_turns, 6);
+                assert_eq!(progress.stagnant_turns, 24);
             }
             "needs_input" | "stop" => assert_eq!(goal.status, "paused"),
             _ => panic!("unknown scenario"),

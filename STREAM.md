@@ -18,7 +18,7 @@ and explicit return of control for completion or substantive user involvement.
   scheduler or automate user messages saying continue.
 - Preserve ordinary tasks and other executor behavior. Codex goal support is
   available globally through `/goal`; no repository configuration is required.
-- Add a fixed supporting checklist, evidence, reassessment and finite run limits
+- Add a fixed supporting checklist, evidence, automatic recovery and a failed-recovery fallback
   under the instance's Codex home. Native goal objective/status remain authority.
 - Root-only goal lifecycle handling, old-thread checkpoint compatibility, live
   steering registration, Stop persistence and focused/runtime regression coverage.

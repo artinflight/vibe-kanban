@@ -1,5 +1,20 @@
 # HANDOFF.md
 
+## Staging management deployment pickup
+
+- User authorized rebasing and merging PR #103 into staging for deployment by
+  the staging management agent at the next approved restart.
+- Rebase onto fetched `fork/staging` (`8c82e47ea`) required no changes. All CI
+  checks passed for recovery revision `d912325cc`.
+- Build from current staging after merge. The old `candidate-b986fed9f` is
+  superseded: it has the rejected six-turn pause policy. Do not deploy it.
+- Preserve native `goals_*.sqlite` and `vk-goal-progress` in the pre-release
+  backup; the backup helper now includes them. Follow the normal restart runbook.
+- Activation smoke: use `/goal` from a Codex chat, confirm intermediate turns
+  continue, stalled work receives recovery instructions, and Stop still works.
+- This merge task performs no deployment, service restart, or live state change.
+
+
 ## Recovery-first revision validated
 
 The user clarified that loops should trigger autonomous redirection, not an immediate pause. The six-turn pause and fifty-turn cap are superseded. Recovery now restores the full objective, ranks unresolved gaps, records a different action and expected evidence, and directs execution without a user turn. Three six-turn recovery windows precede the failed-recovery fallback; productive work has no fifty-turn cap. The prior built candidate is explicitly superseded and must be rebuilt before deployment. Validation: 54 executor tests, targeted executor Clippy, and installed-Codex scenarios for delivered-instruction recovery, exhausted recovery, and required input passed. The recovery fixture waits for the actual VK recovery directive, then closes the remaining requirements without a user resume.

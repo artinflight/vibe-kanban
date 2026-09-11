@@ -1,5 +1,29 @@
 # HANDOFF.md
 
+## Verified Readiness: September 11
+
+PR106 merged the readiness evidence and safeguards into staging at
+`fbe8bc76c`; canonical staging is current, with no application changes from
+tested `c184c75e5`. See `VK_BLUE_READINESS_20260911.md` in staging.
+Green remains live; production Blue is off. Isolated Blue on tailnet port18464
+passed original-thread private-copy resume, Turn Steer versus Stop, goals,
+desktop/mobile saved-message selection and attachment preservation.
+The complete isolated handover took35.07 seconds; same-latest-data rollback
+with conversation continuation took5.86 seconds. Allow about one minute,
+not a five-second guarantee. Fresh explicit "cut over now" is still required.
+
+Full preservation restore content, links, ownership and corrected permissions
+passed verification. Both original backup components plus the online refresh
+are Desktop verified; the final frozen delta belongs to the approved window.
+The103GB disposable restore remains pending operator cleanup approval.
+Read `/mnt/vk-storage/vk-cutover-20260911/PROGRESS.md` and final readiness receipt
+before proceeding. Historical missing tails, attachments and paths remain open.
+The OLD controller is now persistently masked with verified LoadState=masked;
+the prior runtime mask was ineffective. Never rerun it. The replacement V2 unit
+is prepared, not installed or authorized. This section supersedes older timing,
+mask and pending-rehearsal claims below. Do not push this divergent maintenance
+branch into staging; shared docs are already landed through PR106.
+
 ## Latest Authority: Online Preparation Only
 
 The protocol and lessons are now shared in staging through PR105, merged at

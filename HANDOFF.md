@@ -1,5 +1,19 @@
 # HANDOFF.md
 
+## Latest: V2 Returned To Green; Readiness Withdrawn
+
+Approved23:14 attempt failed before final capture/Blue activation: Green shutdown
+already removed the transient maintenance unit and its second stop returned5.
+Green PID2669659 is active on the same latest data; no old database restored.
+Original thread resumed, interrupted execution correctly killed. Recovery checks
+passed: ten exact saved messages, DB integrity,230 cached attachment hashes,
+3546 existing indexed rollouts, real upload/download, desktop/mobile vibe.local
+and WebSocket checks. External native clients are not paused. New Blue live
+Turn Steer/Stop/goals acceptance is incomplete. Readiness-final.json is now false.
+Do not repeat this attempt. Fix/rehearse idempotent whole-group fencing first.
+Evidence: /mnt/vk-storage/vk-cutover-20260911/handover-v2-20260911T231441Z/.
+Historical recovery exceptions remain. Earlier readiness claims below are stale.
+
 ## Verified Readiness: September 11
 
 PR106 merged the readiness evidence and safeguards into staging at

@@ -2,8 +2,8 @@
 
 ## Current Maintenance Scope: September 11
 
-Branch `docs/online-backend-restarts` establishes the online-preparation restart
-protocol and continues isolated readiness work. Green must remain usable;
+Branch `docs/blue-readiness-20260911` records tested handover evidence and lessons
+from online preparation. It contains documentation only. Green must remain usable;
 production interruption or routing changes need a later explicit cutover approval.
 The old stream identifier and deployment history below are historical context.
 

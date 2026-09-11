@@ -1,5 +1,19 @@
 # HANDOFF.md
 
+## September 11 Online Readiness Evidence
+
+Read `VK_BLUE_READINESS_20260911.md` and the final receipt under
+`/mnt/vk-storage/vk-cutover-20260911` before operating. The complete disposable
+handover passed in 35.07 seconds with same-state rollback in 5.86 seconds, including
+desktop/mobile reconnect and release-specific execution checks. Green stayed
+live; this does not authorize production cutover or certify old recovery gaps.
+The old controller is now effectively masked, not merely runtime-linked.
+Replacement controller defaults to read-only preflight and needs fresh explicit
+approval. Full archive content and corrected permissions are verified in
+`full-restore-verified.json`; retain its original mode-only comparison evidence.
+This branch changes documentation only; the application remains the tested
+`c184c75e5` tree. Historical handoffs below are not current deployment authority.
+
 ## Latest Authority: Online Preparation Only
 
 The operator approved documenting `VK_BACKEND_RESTART_PROTOCOL.md` and continuing

@@ -103,3 +103,27 @@ identity plus executable inode/device, not trust a PID or pathname alone. Test
 the actual preflight observations as well as mocked failure paths. Do not repeat
 the previous controller: prepare a new attempt only after renewed readiness and
 explicit operator approval.
+
+## Rehearsal Lessons
+
+September 11 functional and backup evidence is in
+[`VK_BLUE_READINESS_20260911.md`](VK_BLUE_READINESS_20260911.md). Keep measured
+readiness separate from authorization and from post-switch live acceptance.
+
+Verify systemd's effective `LoadState`, not just the existence of a masking
+symlink. A runtime mask can lose precedence to an installed user-unit file.
+Preserve the old unit before replacing it with an effective mask.
+
+A launcher exiting does not prove all writers exited. Verify the whole managed
+service group has released the state. Check SQLite logical generation and file
+identity rather than interpreting every WAL/SHM event as a data mutation.
+
+Test actual archive extraction, including permissions. An unprivileged tar
+restore under a restrictive umask needs explicit permission preservation; a
+successful extraction alone does not prove mode parity. Confine restoration so
+archived absolute symlinks cannot expose writable production paths.
+
+When a complete rescan or diagnostic backup is too slow for the agreed window,
+do that work online. A final-change journal must demonstrate complete coverage
+and refuse readiness after overflow or invalidated paths. Never achieve a faster
+switch by silently dropping conversation, attachment or source-state coverage.

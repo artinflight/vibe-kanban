@@ -6,11 +6,19 @@
 
 ## Confirmed Current State
 
+- 2026-09-11 online readiness: isolated old/new/old handover passed same-thread
+  continuation, steering versus Stop, native goals, saved-message/attachment
+  retention and desktop/mobile reconnect. Measured switch 35.07 seconds and
+  rollback 5.86 seconds; not a five-second guarantee. Green remains production.
+  Read `VK_BLUE_READINESS_20260911.md` for scope, backup verification, historical
+  exceptions and the separate approval/live-acceptance boundaries.
+
 - 2026-09-11 latest authority: `VK_BACKEND_RESTART_PROTOCOL.md` establishes
   online preparation, isolated Blue testing, a measured interruption and fresh
   explicit cutover approval. The attempted switch aborted before production Blue
   or the final snapshot. Green is active on the same data with guarded rollback
-  artifact `58263e051`; staging is `c184c75e5` with PR104's attachment protection.
+  artifact `58263e051`; application baseline is `c184c75e5` with PR104's attachment
+  protection, followed by documentation-only staging `3b3a65855`.
   Green frontend remains the `20260831T1436Z-staging-main-84a55972d` release.
   Historical runtime bullets below are not current deployment instructions.
 
@@ -21,7 +29,7 @@
   and compatible state recovery still require implementation and rehearsal.
 
 - 2026-09-11 autonomous Codex goals are implemented and runtime-validated in the
-  continuation feature branch, not deployed to green. The native engine owns the
+  staging application baseline, not deployed to green. The native engine owns the
   objective and scheduling; VK adds a durable checklist and bounded progress
   guard. The recovery-first revision redirects stalled work automatically before
   its last-resort failed-recovery handoff; productive runs have no fifty-turn cap.

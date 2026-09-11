@@ -1,5 +1,14 @@
 # HANDOFF.md
 
+## Current Preparation: Running Standby And Recovery Query
+
+The operator rejects stopping Green. Do not retry V2 or start the conflicting
+production Blue unit. See VK_RUNNING_STANDBY_ASSESSMENT.md for verified gaps.
+Branch fix/recovery-completion-boundary contains a narrow query fix plus a
+regression test: completed replies without a new native anchor acknowledge
+prior recovery context. Native resume-anchor selection is unchanged. This fix
+is not deployed. Green remained PID2669659; readiness remains withdrawn.
+
 **LATEST:** V2 returned to Green; readiness is withdrawn. Read the final section
 "Latest: V2 Returned To Green, Readiness Withdrawn" before the older notes below.
 

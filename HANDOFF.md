@@ -20,8 +20,24 @@
   accounting reported 81,194 tokens. Its isolated auth copy was removed afterward.
 - Formatting and ops governance passed. With a 6 GiB Node heap, all frontend
   type checks passed. Full check/lint/workspace tests reach the pre-existing
-  missing GTK `glib-2.0.pc` dependency. A headless workspace test attempt is being
-  recorded separately; do not treat the desktop baseline as green.
+  missing GTK `glib-2.0.pc` dependency. The additional headless workspace attempt
+  was stopped during compilation; no result is claimed for it.
+- Final Stop and same-thread fresh-app-server resume scenarios passed. Resume
+  preserved checklist evidence and the refinement guard tripped again correctly.
+  The lean-backup helper now includes a consistent SQLite snapshot of native
+  goals and the VK checklist directory; restore integrity and exact goal rows
+  were verified against the completed real evaluation.
+- The built backend HTTP smoke passed in an isolated VK instance: workspace
+  creation produced one coding-agent execution spanning eight native goal turns,
+  eight completed requirements, and a final VK `completed` status.
+- Draft PR: https://github.com/artinflight/vibe-kanban/pull/103.
+- Candidate binary and matching frontend built successfully from runtime commit
+  `b986fed9f` and are staged under
+  `/mnt/vk-storage/vk-continuation/candidate-b986fed9f/`, with hashes and release
+  gates in `manifest.json`. This is a built candidate, not restart-ready: normal
+  PR/promotion review, fresh Desktop backup, final live-fix/execution inventory,
+  and explicit green restart approval remain. The operational/docs follow-up
+  does not change the compiled Rust or frontend sources.
 - Read `VK_AUTONOMOUS_GOALS.md` for commands, exact scope and tradeoffs. The feature
   applies across all repositories for Codex; other providers are not given a
   speculative or unbounded continuation loop.

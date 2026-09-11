@@ -154,3 +154,26 @@ unattended real model's ability to finish an arbitrary substantial software task
   and ops governance passed. Full desktop/workspace checks require the host's
   missing GTK development package; no claim of a fully green baseline is made.
 - No live green restart or frontend publication occurred.
+
+The final Stop and fresh-app-server resume scenarios also passed. To repeat a
+resume fixture, set `VK_GOAL_TEST_RESUME_THREAD` to a paused fixture's thread ID and
+reuse its isolated CODEX_HOME. Set `VK_GOAL_TEST_SCENARIO=stop` for Stop persistence
+or `tool` for dynamic checkpoint calls.
+
+The backup helper now snapshots `goals_*.sqlite` through SQLite's online backup
+API and preserves `vk-goal-progress`. This is required in addition to native
+rollouts and the existing VK state. A restore test verified database integrity,
+exact native goal rows and checklist equality. Use the current green backup
+workflow and correct green paths when preparing an actual release.
+
+A matching frontend/release binary candidate is staged at
+`/mnt/vk-storage/vk-continuation/candidate-b986fed9f/manifest.json`. It has not been
+deployed. The runtime source commit is `b986fed9f`; the follow-up commit only adds
+backup preservation and final continuity records. Release review, a fresh Desktop
+backup, final live inventory and explicit green restart approval remain.
+
+The built backend also passed an isolated HTTP API smoke: repository/workspace
+creation, eight native goal turns in one VK coding-agent execution, all eight
+requirements recorded, and final VK `completed` status. The offline fixture used
+separate data, Codex home, worktrees and localhost ports; it was shut down after
+the check. Evidence is in `/mnt/vk-storage/vk-continuation/api-smoke-2/result.json`.

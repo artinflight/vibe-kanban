@@ -1105,3 +1105,9 @@
 - Reused native Codex scheduling instead of synthesizing continue messages.
 - Real seven-turn implementation and offline refinement/input/tool scenarios passed;
   the green backend still needs the separate approved deployment workflow.
+
+- Follow-up: Stop/resume native fixtures and goal-state restore validation passed.
+  Matching release artifacts are built on the task SSD; draft PR #103 targets
+  staging. No live activation occurred; release gates remain explicit.
+
+2026-09-11: Built-candidate isolated HTTP smoke passed: one VK execution, eight native goal turns, eight completed requirements, final completed status. No production deployment.

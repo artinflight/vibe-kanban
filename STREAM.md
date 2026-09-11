@@ -1,5 +1,18 @@
 # STREAM.md
 
+## Current Stream: Attachment Preservation During Cutover
+
+- Branch: `vk/4e18-cutover-attachment-safety`, based on `fork/staging` at
+  `9dfd19c34`.
+- Worktree: `/mnt/vk-storage/vk-blue-test-20260911/source`.
+- Scope: add opt-in `DISABLE_ATTACHMENT_CLEANUP` so restart preparation can
+  preserve attachment files and records while still allowing upload/retrieval.
+- Reason: startup unconditionally deletes records without workspace links.
+  Task-only references and unlinked uploads must not be deleted during cutover.
+- Default behavior is unchanged. Orphan classification itself is not repaired
+  by this flag. No production activation is implied by this source change.
+- Prior autonomous-goal feature notes below describe the inherited baseline.
+
 ## Stream Identifier
 
 - Branch: `vk/80a0-vk-continuation`

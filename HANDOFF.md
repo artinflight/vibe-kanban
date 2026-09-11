@@ -1,5 +1,8 @@
 # HANDOFF.md
 
+**LATEST:** V2 returned to Green; readiness is withdrawn. Read the final section
+"Latest: V2 Returned To Green, Readiness Withdrawn" before the older notes below.
+
 ## September 11 Online Readiness Evidence
 
 Read `VK_BLUE_READINESS_20260911.md` and the final receipt under
@@ -3363,3 +3366,11 @@ User QA checklist for the no-restart frontend repair:
 - The feature adds persistent, theme-aware workspace card colors through the
   existing UI-preferences scratch API; no backend restart is required.
 - Public preview: `https://mcp-server.tail744c4.ts.net:8443/`.
+# Latest: V2 Returned To Green, Readiness Withdrawn
+
+The23:14 UTC approved attempt failed when it stopped a transient execution unit
+already removed by Green shutdown. Green returned on the same data; no final
+capture or production Blue activation occurred. Recovery acceptance passed.
+Read VK_BLUE_READINESS_20260911.md's withdrawal before any further action.
+Do not repeat the attempt. Correct and rehearse the service-lifecycle defect;
+new feature live acceptance remains pending. Local readiness is now false.

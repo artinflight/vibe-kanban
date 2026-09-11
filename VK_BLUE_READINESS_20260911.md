@@ -1,5 +1,9 @@
 # September 11 Blue Readiness Evidence
 
+**READINESS WITHDRAWN:** The approved23:14 attempt returned to Green before
+snapshot/Blue activation. Read "Readiness Withdrawn After Approved Live Attempt"
+at the end of this document. All earlier readiness claims are historical.
+
 This records online preparation, not a production cutover. Green remains the
 authoritative backend on ports 4511/4512 with the guarded rollback artifact. The new
 isolated Blue test is https://mcp-server.tail744c4.ts.net:18464/ on the tailnet.
@@ -137,3 +141,28 @@ validation remains limited by the previously documented system dependency.
 Live acceptance after the separately approved switch must still verify real
 entrypoints, saved messages, original continuation, steering/Stop/goals,
 attachments, execution and logs. Process health alone is not completion.
+# Readiness Withdrawn After Approved Live Attempt
+
+At23:14 UTC the approved V2 handover returned to guarded Green on the same
+latest data. Stopping Green already removed the maintenance execution's
+transient service. The controller then treated a second stop's "unit not loaded"
+exit5 as failure. The final capture had not started; production Blue never
+started. The earlier isolated tests did not cover this actual service lifecycle.
+
+Do not reuse this attempt or claim that the deployment is ready. The local
+readiness-final.json now has ready=false. Correct and regression-test idempotent
+writer fencing, including a transient unit disappearing during parent shutdown,
+before another readiness decision. Absence alone must not replace checks that
+all relevant processes released the protected paths. Fresh approval is required.
+
+Recovery acceptance passed: Green active, both production Blue generations off,
+ten saved messages exactly unchanged, database integrity, this original native
+thread resumed,230 existing cached attachment hashes,3546 present indexed
+rollouts, real upload/download, and desktop/mobile vibe.local saved-message and
+WebSocket checks with no page errors. The interrupted execution is accurately
+marked killed. No old database was restored. New Blue Turn Steer/Stop/goals live
+acceptance remains incomplete; prior isolated evidence is not live acceptance.
+Historical recovery exceptions remain open. Evidence is in
+`/mnt/vk-storage/vk-cutover-20260911/handover-v2-20260911T231441Z/`.
+
+The preceding readiness text is historical and superseded by this withdrawal.

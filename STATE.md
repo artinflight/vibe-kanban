@@ -1,5 +1,9 @@
 # STATE.md
 
+**LATEST:** Readiness withdrawn after the23:14 V2 attempt returned to Green.
+See "September 11 V2 Recovery Supersedes Earlier Readiness" at the end of this
+file and the withdrawal in VK_BLUE_READINESS_20260911.md. Do not retry.
+
 ## Current Objective
 
 - Keep the local Vibe Kanban install stable, local-only, recoverable, and usable for day-to-day project work without sidebar clutter.
@@ -1273,3 +1277,10 @@ Codex follow-up state, 2026-04-20:
   - `missing_in_isolated_but_found_shared = 0`
   - `missing_both = 0`
 - Do not restart VK just for this repair; no restart is needed when only copying Codex rollout files and active agents may be running.
+# September 11 V2 Recovery Supersedes Earlier Readiness
+
+The approved23:14 cutover returned to guarded Green before final capture or Blue
+activation due to an already removed transient service being stopped twice.
+Green recovery checks passed on the same latest data. Readiness is withdrawn;
+see VK_BLUE_READINESS_20260911.md. No old database was restored. Historical
+recovery exceptions and new-feature live acceptance remain open.

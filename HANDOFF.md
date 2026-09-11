@@ -1,5 +1,20 @@
 # HANDOFF.md
 
+## 2026-09-11 Next Restart Planning
+
+- Added `VK_RESTART_LESSONS_LEARNED.md`: incident lessons, isolated new-blue
+  rehearsal, single-writer handover, regression evidence and rollback boundaries.
+- Corrected the runbook's obsolete blue/green examples that reused current green
+  production paths and implied rollback after new writes was just a route flip.
+- Read-only inspection found green active (PID 2886161), retired blue inactive,
+  HTTPS proxy targeting 4511 and the SSD mounted. No service, route, DB or backup
+  mutation was performed for this planning task.
+- Preparation remains open: exact release inventory, candidate isolation,
+  enforced write freeze, migration compatibility and lossless post-write rollback
+  are not yet validated. September 7 recovery exceptions remain in that report;
+  they were not re-audited today. Do not claim restart readiness.
+
+
 ## 2026-09-07 Thread Recovery: Originals Restored, Exceptions Open
 
 - User supplied checksum-verified audit of 2,600 thread IDs in non-archived

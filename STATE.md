@@ -6,6 +6,12 @@
 
 ## Confirmed Current State
 
+- 2026-09-11 planning: `VK_RESTART_LESSONS_LEARNED.md` records the incident
+  analysis and proposed new-blue handover. Green remains production; retired blue
+  is not the new candidate. The older workflow paths are historical. A reversible
+  route change is not a lossless rollback after new writes; isolation, fencing
+  and compatible state recovery still require implementation and rehearsal.
+
 - 2026-09-07: thread recovery incident remains open. The supplied audit found
   2,179 missing rollouts across 388 non-archived workspaces and 29 projects.
   Restored 2,178 original files; 2,599 available original histories passed native

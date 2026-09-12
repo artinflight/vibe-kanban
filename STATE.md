@@ -1,5 +1,14 @@
 # STATE.md
 
+**Latest September12:** New Blue4711/4712 is production; original Green
+PID2669659 remains frozen for latest-data cutback. Live original-thread continuity,
+data preservation, steer/goal/Stop, saved messages on desktop/mobile and attachment
+round-trip passed. Preexisting desktop flyout-close occlusion, historical recovery
+gaps and low SSD space remain explicit caveats. Shared report is
+`/mnt/vk-storage/worktrees/vk-reference-staging/VK_BLUE_LIVE_20260912.md`;
+PR109 merged into staging90f8ce5f5, application baseline586ac628d unchanged.
+Older deployment/readiness claims below are historical. Do not repeat handover.
+
 ## Current Objective
 
 - Keep the local Vibe Kanban install stable, local-only, recoverable, and usable for day-to-day project work without sidebar clutter.

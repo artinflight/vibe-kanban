@@ -1,5 +1,21 @@
 # HANDOFF.md
 
+## September 12: Blue Live, Acceptance Complete With Recorded Caveats
+
+Blue PID2590517 serves4711/4712; original Green PID2669659 stays frozen, not
+restarted. Both main entrypoints route Blue and serve matching frontend assets.
+Original conversation resumed on same native thread; live preservation,
+steer/native goal/separate killed Stop, upload/download and ten saved messages
+in desktop/mobile settings AND menus passed. Desktop flyout pointer-close remains
+a preexisting obstruction; keyboard works. Historical recovery gaps remain.
+
+PR109 merged shared report/lessons to staging90f8ce5f5; app remains586ac628d.
+Read /mnt/vk-storage/worktrees/vk-reference-staging/VK_BLUE_LIVE_20260912.md and
+/mnt/vk-storage/vk-cutover-20260911/PROGRESS.md. Do not repeat any controller or
+restore an old DB. Cutback must drain work, fence/stop Blue, thaw same Green and
+refresh latest settings before routing.103GB restore-test copy remains untouched
+pending cleanup permission; SSD headroom is low. This is not another restart gate.
+
 ## September 12 V3: Corrected Full Rehearsal Passed, Approved Launch Next
 
 Supersedes older pending-test notes. Full private run20260912T112557Z passes

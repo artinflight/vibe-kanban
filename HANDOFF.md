@@ -1,5 +1,17 @@
 # HANDOFF.md
 
+## September 12: Existing-Chat Model Regression Remains Open
+
+Documented two chats with prior GPT-6 requests and post-cutover GPT-5.6 requests
+in `VK_RESTART_LESSONS_LEARNED.md`. Global DEFAULT is GPT-6; native config and
+the frontend missing-override fallback are GPT-5.6. Do not claim the exact cause
+is proven or that prior selections were deleted. Investigate persisted draft
+overrides, history loading and fallback resolution before repairing anything.
+The restart protocol and deployment runbook now require per-chat boundary,
+selector and submitted-model comparisons, including latest-data cutback.
+No model settings, production data, services or application code changed for
+this documentation task. No restart or blanket model reset is authorized by it.
+
 ## September 12: Approved Restore-Test Cleanup Complete
 
 Removed only full-restore-20260911T210126Z after fresh Desktop archive hash and

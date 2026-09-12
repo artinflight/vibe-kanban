@@ -32,6 +32,40 @@ Do not run overlapping bulky verification jobs near capacity. Keep failed
 evidence; relocate scratch copies only after destination checksum verification.
 Never assume permission to delete a retained restore-test copy or user data.
 
+## Existing-Chat Model Preservation Gate
+
+The September 12 cutover checks missed existing-chat model selection. A correct
+global default, preserved history and a successful execution do not prove that
+the next turn uses the user's chosen model. This gate applies to backend
+restarts, frontend swaps and cutbacks.
+
+- Before preparation, record session IDs and effective model, reasoning effort,
+  executor and preset for existing chats, including explicit choices different
+  from the global default. Preserve saved draft/executor settings and last-used
+  execution configuration; do not overwrite drafts to collect evidence. Refresh
+  this comparison at the final boundary so work during preparation is included.
+- Rehearse existing-chat reopen, refresh and follow-up submission using isolated
+  copies of representative state. Include empty drafts, saved drafts, delayed
+  history/settings loading and a model differing from the native CLI default.
+  Check the selector AND the submitted executor configuration and native model
+  evidence, not merely the profile API or a newly created test chat.
+- At live acceptance, compare preserved per-chat settings with the boundary
+  inventory and inspect existing-chat selectors on desktop and mobile. Use
+  explicitly authorized test turns for submission checks; do not send messages
+  into user chats merely to test them. Record untested coverage as incomplete.
+- A missing choice, unexpected fallback or disagreement between display and
+  submitted model blocks readiness or successful acceptance. Do not silently
+  normalize every chat to the global default, replace a user's model choice,
+  or treat a new-chat test as existing-chat coverage. Explicit per-chat choices
+  must survive independently of default changes.
+- Test the same preservation on latest-data cutback, including choices made
+  while Blue was live. Never restore older settings or a database to recover a
+  model selection. Diagnose and repair only the affected state with evidence.
+
+These are required validation outcomes, not an implemented automated guard.
+See the September 12 model-selection incident in
+[the restart lessons](VK_RESTART_LESSONS_LEARNED.md).
+
 ## Operator Contract
 
 Green stays usable throughout preparation. Build, test, inventory, rehearse,

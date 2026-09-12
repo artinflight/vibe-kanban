@@ -1,5 +1,13 @@
 # STATE.md
 
+**September 12 model-selection correction:** Existing-chat preservation is not
+fully accepted. Two chats with prior GPT-6 request configurations submitted
+GPT-5.6 after cutover despite the live global GPT-6 default. Exact cause and
+repair remain unresolved; earlier history is still present. The restart protocol
+now requires per-chat model/draft preservation and actual submission checks.
+See `VK_RESTART_LESSONS_LEARNED.md`. Earlier acceptance claims do not cover this
+newly identified regression. Documentation changes do not repair live selection.
+
 **September12 cleanup update:** Operator-approved removal of the verified
 disposable restore-test extraction freed about101GiB; SSD now has about104GiB
 free. The low-space caveat below is resolved. Original data/worktrees and backup

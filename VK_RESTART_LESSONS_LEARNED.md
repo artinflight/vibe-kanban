@@ -4,6 +4,38 @@ Date: 2026-09-11. Status: the [backend restart protocol](VK_BACKEND_RESTART_PROT
 is established; a production cutover is NOT certified ready. Historical planning
 and evidence below do not override its approval and measured-window requirements.
 
+## September 12: Existing Chats Submitted The Wrong Model
+
+After Blue went live, the operator reported chats previously selected as GPT-6
+showing GPT-5.6. Read-only execution records confirmed:
+
+- `MM:: Live Media Operations Controller`, session
+  `c86e3837-e3f7-44bc-8df8-8604b8d220ef`: GPT-6 Astra at September 11
+  18:15 UTC; GPT-5.6 Sol at September 12 16:46 and 16:48 UTC.
+- `CP:: Improve home screen install prompts`, session
+  `efac8786-b0b3-424b-9f03-05a9af6a52e7`: GPT-6 Astra at September 11
+  14:42 UTC; GPT-5.6 Sol at September 12 16:50 UTC.
+
+These are stored execution request configurations, not just selector labels.
+Earlier GPT-6 records remain present. Blue's profile API and persisted DEFAULT
+profile selected `gpt-6-astra`; the native Codex config selected `gpt-5.6-sol`.
+Candidate source `packages/web-core/src/shared/hooks/useExecutorConfig.ts` also
+has a hardcoded `gpt-5.6-sol` fallback for missing existing-chat overrides.
+This identifies a possible failure path, not proof of the exact trigger or that
+the cutover deleted or overwrote persisted selections. Runtime model execution
+and the scope beyond these two histories require further investigation.
+
+The agent incorrectly reassured the operator after checking only the global
+default. Cutover acceptance did not verify that existing chats retained their
+model choice through the next submission. That was a validation failure.
+
+Required prevention is now the
+[existing-chat model preservation gate](VK_BACKEND_RESTART_PROTOCOL.md#existing-chat-model-preservation-gate):
+inventory choices, preserve drafts, test reopened chats and actual submissions,
+and verify latest-data cutback. Do not substitute a global default check or
+blindly change all chats. This documentation does not fix the application;
+the regression remains open until diagnosis, repair and functional validation.
+
 ## September 11 Attempt And Operator Correction
 
 Green was stopped during an attempted handover before a native-process identity

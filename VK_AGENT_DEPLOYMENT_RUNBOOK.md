@@ -5,6 +5,15 @@ Vibe Kanban. Follow it before editing, building, or deploying this repo.
 For the planned clean self-development project/preview model, read
 `VK_SELF_DEVELOPMENT_WORKFLOW.md` as well.
 
+## Required Existing-Chat Model Check
+
+Follow the [existing-chat model preservation gate](VK_BACKEND_RESTART_PROTOCOL.md#existing-chat-model-preservation-gate)
+before declaring any restart, frontend swap or cutback ready or accepted. Compare
+per-chat choices at the final boundary with the reopened selector and actual
+submitted model. A correct global default or successful new-chat test is not
+sufficient. September 12 acceptance missed this regression; the cause and repair
+remain unresolved. Preserve choices and drafts, and do not bulk-reset chats.
+
 ## Current Live Truth
 
 - Canonical source repo: `/home/mcp/_vibe_kanban_repo`

@@ -2,9 +2,9 @@
 
 ## Current Scope
 
-Branch fix/recovery-completion-boundary fixes repeated recovery injection after
-completed summaries and records the running-standby requirements. No production
-stop, cutover, database rewrite or standby-readiness claim is in this change.
+Branch docs/blue-v3-live-cutover-20260912 records the completed authorized V3
+handover, live acceptance, remaining gaps and failed-attempt lessons. This branch
+changes documentation only; runtime application baseline remains586ac628d.
 
 ## Current Maintenance Scope: September 11
 

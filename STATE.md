@@ -1,8 +1,9 @@
 # STATE.md
 
-**LATEST:** Readiness withdrawn after the23:14 V2 attempt returned to Green.
-See "September 11 V2 Recovery Supersedes Earlier Readiness" at the end of this
-file and the withdrawal in VK_BLUE_READINESS_20260911.md. Do not retry.
+**LATEST:** September12 V3 cutover is live on new Blue4711/4712; original Green
+PID2669659 is frozen for same-latest-data cutback. Read `VK_BLUE_LIVE_20260912.md`
+for actual acceptance, backups, known UI/historical gaps and recovery constraints.
+Older runtime/readiness statements below are historical, not launch instructions.
 
 ## Current Objective
 

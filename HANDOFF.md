@@ -1,5 +1,15 @@
 # HANDOFF.md
 
+## September 12: Blue Live, Original Green Paused
+
+Read VK_BLUE_LIVE_20260912.md first. New production Blue4711/4712 is active;
+original Green PID2669659 remains frozen. Original maintenance thread resumed.
+Live data preservation, steering in the same execution, native goal completion,
+separate killed Stop, saved messages, upload/download and mobile settings passed.
+Desktop flyout pointer-close remains an explicitly recorded preexisting UI gap.
+Historical recovery exceptions remain. Do not rerun a controller or restore an
+older DB; any cutback must preserve latest data and fence Blue before thawing Green.
+
 ## September 12 Paused-Green Work In Progress
 
 Operator permits freeze/thaw of the same Green process, not stop/start. Actual

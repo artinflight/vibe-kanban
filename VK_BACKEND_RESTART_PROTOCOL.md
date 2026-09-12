@@ -4,6 +4,15 @@ Established by the operator on 2026-09-11. This is the authority for future
 backend restart windows; older stop-and-switch examples are historical.
 An established protocol is not evidence that a particular candidate is ready.
 
+The [September12 live cutover record](VK_BLUE_LIVE_20260912.md) supersedes older
+runtime claims. The operator permits loaded-but-paused Green, not a silent
+stop/restart substitution. Test the actual recovery function against real private
+services, including a backup abort before Blue starts. Profiles on disk are
+overrides, not the complete profiles required by the PUT API. Expand and validate
+using incumbent semantics; avoid writing unchanged settings. Confirm the routed
+entrypoint recovers, not merely that Green has thawed. Budget simultaneous disk
+usage and verify current journal/baseline validity before fencing production.
+
 ## Operator Contract
 
 Green stays usable throughout preparation. Build, test, inventory, rehearse,

@@ -1,5 +1,31 @@
 # HANDOFF.md
 
+## September 12: Long-thread pagination source preparation
+
+Branch `vk/ab54-vk-long-threads` starts from fork staging `2df3e4333`. Completed
+turns now request their latest 40 entries through a new completed-log page API;
+upward scrolling adds 50 older entries without refetching loaded turns. The UI
+restores the visible row after prepending and offers retry/manual loading.
+Persisted-log reconstructions have a four-turn, 32 MiB serialized-payload,
+five-minute cache. Running streams keep their current replay transport.
+
+Read `VK_LONG_THREADS.md` for the contract, test commands and limits. No live
+service, production assets, routing, database or saved logs were changed.
+Validation: Rust paging/replay/cache tests pass (3); React hook/transport fixtures
+pass (8). Final whole web-core typecheck passed with a 4 GiB Node heap. Focused
+ESLint passed with only the two existing dependency warnings. `pnpm run format`,
+`pnpm run ops:check` and `git diff --check` passed. Isolated preview authorization
+has been requested and is pending; no preview backend has been started. Output is on the mounted
+SSD at `/mnt/vk-storage/vk-long-threads` and Cargo uses `/mnt/vk-storage/cargo-target`.
+
+Remaining: an authorized isolated backend/browser preview with disposable data
+must exercise the matching API, initial bottom position, upward anchoring,
+expanded groups, mobile, reconnect/Stop and real cold-load latency. The current
+lightweight preview cannot validate the new backend route. No full-workspace
+Rust/PR baseline, production build, staging PR or deployment is claimed. Cold
+server reconstruction still scans saved logs; oversized uncached turns repeat it.
+
+
 ## September 12: Blue Live, Original Green Paused
 
 Read VK_BLUE_LIVE_20260912.md first. New production Blue4711/4712 is active;

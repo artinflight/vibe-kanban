@@ -5,6 +5,13 @@ PID2669659 is frozen for same-latest-data cutback. Read `VK_BLUE_LIVE_20260912.m
 for actual acceptance, backups, known UI/historical gaps and recovery constraints.
 Older runtime/readiness statements below are historical, not launch instructions.
 
+## Source compatibility: completed conversation paging
+
+The completed-log paging frontend requires a matching backend with the
+`/api/execution-processes/{id}/log-history` route. It cannot be enabled by a
+frontend-only asset swap. See `VK_LONG_THREADS.md` for the source contract and
+validation boundaries; this note makes no deployment claim.
+
 ## Current Objective
 
 - Keep the local Vibe Kanban install stable, local-only, recoverable, and usable for day-to-day project work without sidebar clutter.

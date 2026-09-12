@@ -1115,3 +1115,12 @@
 2026-09-11 recovery-first clarification: six stagnant turns now initiate automatic goal-wide redirection, with persisted recovery plans and three recovery windows before failed-recovery handoff. Removed the fifty-turn stop for productive runs. The older release candidate is superseded; no deployment or restart occurred.
 
 2026-09-11: User authorized PR #103 integration into staging for the staging management agent to deploy at the next restart. Fresh fetch and rebase found the branch current with staging; recovery revision CI is green. Deployment handoff explicitly rejects the superseded binary and preserves goal backup requirements.
+
+
+## 2026-09-12 — Long-thread pagination prepared
+
+- `vk/ab54-vk-long-threads`: latest-40 completed log pages, 50-entry upward
+  loading, stable indices, scoped cancellation/retry and reading-position restore.
+- Bounded revision-keyed finite-replay cache; existing running streams preserved.
+- See `VK_LONG_THREADS.md` and latest handoff for tests and limitations. No live
+  runtime change; matching-backend browser validation and latency measurement remain.

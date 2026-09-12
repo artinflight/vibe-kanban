@@ -3,685 +3,350 @@ import {
   ExecutionProcessStatus,
   PatchType,
 } from 'shared/types';
-import { useExecutionProcessesContext } from '@/shared/hooks/useExecutionProcessesContext';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useExecutionProcessesContext } from '@/shared/hooks/useExecutionProcessesContext';
 import { streamJsonPatchEntries } from '@/shared/lib/streamJsonPatchEntries';
+import { makeLocalApiRequest } from '@/shared/lib/localApiTransport';
 import type {
   AddEntryType,
-  ConversationTimelineSource,
   ExecutionProcessStateStore,
-  PatchTypeWithKey,
   UseConversationHistoryParams,
 } from '@/shared/hooks/useConversationHistory/types';
-
-// Result type for the new UI's conversation history hook
-export interface UseConversationHistoryResult {
-  /** Whether the conversation only has a single coding agent turn (no follow-ups) */
-  isFirstTurn: boolean;
-  /** Whether background batches are still loading older history entries */
-  isLoadingHistory: boolean;
-  /** Whether more older history can be loaded on demand. */
-  hasMoreHistory: boolean;
-  /** Load another batch of older history entries. */
-  loadMoreHistory: () => Promise<void>;
-}
 import {
   MIN_INITIAL_ENTRIES,
   REMAINING_BATCH_SIZE,
 } from '@/shared/hooks/useConversationHistory/constants';
+import { mergeHistoryPage, type HistoryPage } from '../historyPage';
 
-function patchWithKey(
-  patch: PatchType,
-  executionProcessId: string,
-  index: number
-): PatchTypeWithKey {
+export interface UseConversationHistoryResult {
+  isFirstTurn: boolean;
+  isLoadingHistory: boolean;
+  hasMoreHistory: boolean;
+  historyError: boolean;
+  loadMoreHistory: () => Promise<void>;
+}
+
+type Scope = {
+  abort: AbortController;
+  displayed: ExecutionProcessStateStore;
+  // Absent = never fetched, number = next older cursor, null = fully fetched.
+  cursors: Map<string, number | null>;
+  streams: Map<string, { close: () => void }>;
+  statuses: Map<string, ExecutionProcessStatus>;
+  emptyEmitted: boolean;
+  initialIds: Set<string> | null;
+  initialLoaded: boolean;
+  loading: boolean;
+};
+
+function createScope(): Scope {
   return {
-    ...patch,
-    patchKey: `${executionProcessId}:${index}`,
-    executionProcessId,
+    abort: new AbortController(),
+    displayed: {},
+    cursors: new Map(),
+    streams: new Map(),
+    statuses: new Map(),
+    emptyEmitted: false,
+    initialIds: null,
+    initialLoaded: false,
+    loading: false,
   };
 }
+
+const isRunning = (process: ExecutionProcess) =>
+  process.status === ExecutionProcessStatus.running;
 
 export const useConversationHistory = ({
   onTimelineUpdated,
   scopeKey,
 }: UseConversationHistoryParams): UseConversationHistoryResult => {
   const {
-    executionProcessesVisible: executionProcessesRaw,
+    executionProcessesVisible: rawProcesses,
     isLoading,
     isConnected,
   } = useExecutionProcessesContext();
-  const executionProcesses = useRef<ExecutionProcess[]>(executionProcessesRaw);
-  const displayedExecutionProcesses = useRef<ExecutionProcessStateStore>({});
-  const loadedInitialEntries = useRef(false);
-  const emittedEmptyInitialRef = useRef(false);
-  const streamingProcessIdsRef = useRef<Set<string>>(new Set());
-  const knownProcessIdsRef = useRef<Set<string>>(new Set());
-  const onTimelineUpdatedRef = useRef<
-    UseConversationHistoryParams['onTimelineUpdated'] | null
-  >(null);
-  const previousStatusMapRef = useRef<Map<string, ExecutionProcessStatus>>(
-    new Map()
-  );
-  const [isLoadingHistoryState, setIsLoadingHistory] = useState(false);
-  const [hasMoreHistoryState, setHasMoreHistory] = useState(false);
-  const historyEntryLimitRef = useRef(MIN_INITIAL_ENTRIES);
-
-  const upsertProcessEntries = useCallback(
-    (
-      executionProcess: ExecutionProcess,
-      entries: PatchType[],
-      opts?: { ignoreShorterReplay?: boolean }
-    ) => {
-      const patchesWithKey = entries.map((entry, index) =>
-        patchWithKey(entry, executionProcess.id, index)
-      );
-
-      const existingEntries =
-        displayedExecutionProcesses.current[executionProcess.id]?.entries ?? [];
-
-      // When a running stream reconnects, the server replays from the start.
-      // Keep the already rendered transcript until replay catches back up so
-      // the chat does not jump backwards or appear to blank out mid-run.
-      if (
-        opts?.ignoreShorterReplay &&
-        patchesWithKey.length < existingEntries.length
-      ) {
-        return false;
-      }
-
-      mergeIntoDisplayed((state) => {
-        state[executionProcess.id] = {
-          executionProcess,
-          entries: patchesWithKey,
-        };
-      });
-
-      return true;
-    },
-    []
-  );
-
-  // Derive whether this is the first turn (no follow-up processes exist)
-  const isFirstTurn = useMemo(() => {
-    const codingAgentProcessCount = executionProcessesRaw.filter(
-      (ep) =>
-        ep.executor_action.typ.type === 'CodingAgentInitialRequest' ||
-        ep.executor_action.typ.type === 'CodingAgentFollowUpRequest'
-    ).length;
-    return codingAgentProcessCount <= 1;
-  }, [executionProcessesRaw]);
-
-  const mergeIntoDisplayed = (
-    mutator: (state: ExecutionProcessStateStore) => void
-  ) => {
-    const state = displayedExecutionProcesses.current;
-    mutator(state);
-  };
-
-  // The hook owns transport, loading, and reconciliation.
-  // It emits a source model that later derivation layers can transform further.
-
-  const buildTimelineSource = useCallback(
-    (
-      executionProcessState: ExecutionProcessStateStore
-    ): ConversationTimelineSource => ({
-      executionProcessState,
-      liveExecutionProcesses: executionProcesses.current,
-    }),
-    []
-  );
-
-  useEffect(() => {
-    onTimelineUpdatedRef.current = onTimelineUpdated;
-  }, [onTimelineUpdated]);
-
-  // Keep executionProcesses up to date
-  useEffect(() => {
-    executionProcesses.current = executionProcessesRaw.filter(
-      (ep) =>
-        ep.run_reason === 'setupscript' ||
-        ep.run_reason === 'cleanupscript' ||
-        ep.run_reason === 'archivescript' ||
-        ep.run_reason === 'codingagent'
-    );
-  }, [executionProcessesRaw]);
-
-  const loadEntriesForHistoricExecutionProcess = useCallback(
-    (
-      executionProcess: ExecutionProcess,
-      opts?: {
-        onEntries?: (entries: PatchType[]) => void;
-      }
-    ) => {
-      let url = '';
-      if (executionProcess.executor_action.typ.type === 'ScriptRequest') {
-        url = `/api/execution-processes/${executionProcess.id}/raw-logs/ws`;
-      } else {
-        url = `/api/execution-processes/${executionProcess.id}/normalized-logs/ws`;
-      }
-
-      return new Promise<PatchType[]>((resolve) => {
-        const controller = streamJsonPatchEntries<PatchType>(url, {
-          onEntries: (entries) => {
-            opts?.onEntries?.(entries);
-          },
-          onFinished: (allEntries) => {
-            controller.close();
-            resolve(allEntries);
-          },
-          onError: (err) => {
-            console.warn(
-              `Error loading entries for historic execution process ${executionProcess.id}`,
-              err
-            );
-          },
-        });
-      });
-    },
-    []
-  );
-
-  const flattenEntries = (
-    executionProcessState: ExecutionProcessStateStore
-  ): PatchTypeWithKey[] => {
-    return Object.values(executionProcessState)
-      .filter(
-        (p) =>
-          p.executionProcess.executor_action.typ.type ===
-            'CodingAgentFollowUpRequest' ||
-          p.executionProcess.executor_action.typ.type ===
-            'CodingAgentInitialRequest' ||
-          p.executionProcess.executor_action.typ.type === 'ReviewRequest'
-      )
-      .sort(
-        (a, b) =>
-          new Date(
-            a.executionProcess.created_at as unknown as string
-          ).getTime() -
-          new Date(b.executionProcess.created_at as unknown as string).getTime()
-      )
-      .flatMap((p) => p.entries);
-  };
-
-  const getActiveAgentProcesses = (): ExecutionProcess[] => {
-    return (
-      executionProcesses?.current.filter(
-        (p) =>
-          p.status === ExecutionProcessStatus.running &&
-          p.run_reason !== 'devserver'
-      ) ?? []
-    );
-  };
-
-  const emitEntries = useCallback(
-    (
-      executionProcessState: ExecutionProcessStateStore,
-      addEntryType: AddEntryType,
-      loading: boolean
-    ) => {
-      const timelineSource = buildTimelineSource(executionProcessState);
-      let modifiedAddEntryType = addEntryType;
-
-      const latestEntry = Object.values(executionProcessState)
+  const processes = useMemo(
+    () =>
+      rawProcesses
+        .filter((p) =>
+          [
+            'setupscript',
+            'cleanupscript',
+            'archivescript',
+            'codingagent',
+          ].includes(p.run_reason)
+        )
         .sort(
           (a, b) =>
-            new Date(
-              a.executionProcess.created_at as unknown as string
-            ).getTime() -
-            new Date(
-              b.executionProcess.created_at as unknown as string
-            ).getTime()
+            a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)
+        ),
+    [rawProcesses]
+  );
+  const processesRef = useRef(processes);
+  processesRef.current = processes;
+  const callbackRef = useRef(onTimelineUpdated);
+  callbackRef.current = onTimelineUpdated;
+  const scopeRef = useRef<Scope>(createScope());
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [hasMoreHistory, setHasMoreHistory] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
+  const [revision, setRevision] = useState(0);
+
+  const emit = useCallback(
+    (scope: Scope, type: AddEntryType, loading = false) => {
+      if (scope.abort.signal.aborted) return;
+      const latest = Object.values(scope.displayed)
+        .sort((a, b) =>
+          a.executionProcess.created_at.localeCompare(
+            b.executionProcess.created_at
+          )
         )
-        .flatMap((processState) => processState.entries)
-        .at(-1);
-
+        .at(-1)
+        ?.entries.at(-1);
       if (
-        latestEntry?.type === 'NORMALIZED_ENTRY' &&
-        latestEntry.content.entry_type.type === 'tool_use' &&
-        latestEntry.content.entry_type.tool_name === 'ExitPlanMode'
-      ) {
-        modifiedAddEntryType = 'plan';
-      }
-
-      onTimelineUpdatedRef.current?.(
-        timelineSource,
-        modifiedAddEntryType,
+        type === 'running' &&
+        latest?.type === 'NORMALIZED_ENTRY' &&
+        latest.content.entry_type.type === 'tool_use' &&
+        latest.content.entry_type.tool_name === 'ExitPlanMode'
+      )
+        type = 'plan';
+      callbackRef.current?.(
+        {
+          executionProcessState: { ...scope.displayed },
+          liveExecutionProcesses: processesRef.current,
+        },
+        type,
         loading
       );
+      setHasMoreHistory(
+        processesRef.current.some(
+          (p) =>
+            !isRunning(p) &&
+            (!scope.cursors.has(p.id) || scope.cursors.get(p.id) !== null)
+        )
+      );
     },
-    [buildTimelineSource]
+    []
   );
 
-  // This emits its own events as they are streamed
-  const loadRunningAndEmit = useCallback(
-    (executionProcess: ExecutionProcess): Promise<void> => {
-      return new Promise((resolve) => {
-        let url = '';
-        if (executionProcess.executor_action.typ.type === 'ScriptRequest') {
-          url = `/api/execution-processes/${executionProcess.id}/raw-logs/ws`;
-        } else {
-          url = `/api/execution-processes/${executionProcess.id}/normalized-logs/ws`;
+  useEffect(() => {
+    const scope = createScope();
+    scopeRef.current = scope;
+    setIsLoadingHistory(false);
+    setHistoryError(false);
+    setHasMoreHistory(false);
+    emit(scope, 'initial', true);
+    return () => {
+      scope.abort.abort();
+      for (const stream of scope.streams.values()) stream.close();
+    };
+  }, [scopeKey, emit]);
+
+  const fetchPage = useCallback(
+    async (scope: Scope, process: ExecutionProcess, limit: number) => {
+      const cursor = scope.cursors.get(process.id);
+      const query = new URLSearchParams({ limit: String(limit) });
+      if (cursor != null) query.set('before', String(cursor));
+      const response = await makeLocalApiRequest(
+        `/api/execution-processes/${process.id}/log-history?${query}`,
+        {
+          signal: scope.abort.signal,
         }
-        const controller = streamJsonPatchEntries<PatchType>(url, {
-          onEntries(entries) {
-            const updated = upsertProcessEntries(executionProcess, entries, {
-              ignoreShorterReplay: true,
-            });
-            if (updated) {
-              emitEntries(
-                displayedExecutionProcesses.current,
-                'running',
-                false
-              );
-            }
-          },
-          onFinished: () => {
-            emitEntries(displayedExecutionProcesses.current, 'running', false);
-            controller.close();
-            resolve();
-          },
-          onError: (err) => {
-            console.warn(
-              `Error streaming entries for running execution process ${executionProcess.id}`,
-              err
-            );
-          },
-        });
-      });
+      );
+      if (
+        !response.ok ||
+        !response.headers.get('content-type')?.includes('application/json')
+      ) {
+        throw new Error(`History request failed (${response.status})`);
+      }
+      const result: { success: boolean; data: HistoryPage } =
+        await response.json();
+      if (!result.success || !Array.isArray(result.data?.entries))
+        throw new Error('Invalid history page');
+      if (
+        scope.abort.signal.aborted ||
+        !processesRef.current.some((p) => p.id === process.id)
+      )
+        return 0;
+      scope.displayed[process.id] = {
+        executionProcess: process,
+        entries: mergeHistoryPage(
+          process.id,
+          scope.displayed[process.id]?.entries ?? [],
+          result.data
+        ),
+      };
+      scope.cursors.set(process.id, result.data.next_before);
+      return result.data.entries.length;
     },
-    [emitEntries, upsertProcessEntries]
+    []
   );
 
-  const loadHistoricEntries = useCallback(
-    async (
-      maxEntries?: number,
-      addEntryType: AddEntryType = 'historic'
-    ): Promise<{
-      state: ExecutionProcessStateStore;
-      truncated: boolean;
-    }> => {
-      const localDisplayedExecutionProcesses: ExecutionProcessStateStore = {};
-      let truncated = false;
-
-      if (!executionProcesses?.current) {
-        return { state: localDisplayedExecutionProcesses, truncated };
-      }
-
-      for (const executionProcess of [
-        ...executionProcesses.current,
-      ].reverse()) {
-        if (executionProcess.status === ExecutionProcessStatus.running)
-          continue;
-
-        let latestEntries: PatchTypeWithKey[] = [];
-        const entries = await loadEntriesForHistoricExecutionProcess(
-          executionProcess,
-          {
-            onEntries: (partialEntries) => {
-              latestEntries = partialEntries.map((entry, index) =>
-                patchWithKey(entry, executionProcess.id, index)
-              );
-              localDisplayedExecutionProcesses[executionProcess.id] = {
-                executionProcess,
-                entries: latestEntries,
-              };
-              mergeIntoDisplayed((state) => {
-                state[executionProcess.id] = {
-                  executionProcess,
-                  entries: latestEntries,
-                };
-              });
-              emitEntries(
-                displayedExecutionProcesses.current,
-                addEntryType,
-                true
-              );
-            },
-          }
-        );
-        const entriesWithKey =
-          latestEntries.length > 0
-            ? latestEntries
-            : entries.map((e, idx) =>
-                patchWithKey(e, executionProcess.id, idx)
-              );
-
-        localDisplayedExecutionProcesses[executionProcess.id] = {
-          executionProcess,
-          entries: entriesWithKey,
-        };
-
-        if (
-          maxEntries != null &&
-          flattenEntries(localDisplayedExecutionProcesses).length > maxEntries
-        ) {
-          truncated = true;
-          break;
+  const loadBatch = useCallback(
+    async (scope: Scope, initial: boolean) => {
+      // A ref lock also covers multiple scroll events before React has rendered.
+      if (scope.loading || scope.abort.signal.aborted) return;
+      scope.loading = true;
+      scope.initialIds ??= new Set(processesRef.current.map((p) => p.id));
+      setIsLoadingHistory(true);
+      setHistoryError(false);
+      try {
+        let remaining = initial ? MIN_INITIAL_ENTRIES : REMAINING_BATCH_SIZE;
+        for (const process of [...processesRef.current].reverse()) {
+          if (scope.abort.signal.aborted) return;
+          if (isRunning(process) || scope.cursors.get(process.id) === null)
+            continue;
+          remaining -= await fetchPage(scope, process, remaining);
+          if (remaining <= 0) break;
+        }
+        scope.initialLoaded = true;
+        emit(scope, initial ? 'initial' : 'historic');
+      } catch (error) {
+        if (!scope.abort.signal.aborted) {
+          console.warn('Unable to load conversation history', error);
+          setHistoryError(true);
+          // Keep successfully loaded pages visible and let the user retry.
+          emit(scope, initial ? 'initial' : 'historic');
+        }
+      } finally {
+        scope.loading = false;
+        if (!scope.abort.signal.aborted) {
+          setIsLoadingHistory(false);
+          setRevision((value) => value + 1);
         }
       }
-
-      return { state: localDisplayedExecutionProcesses, truncated };
     },
-    [executionProcesses]
+    [emit, fetchPage]
   );
 
-  const ensureProcessVisible = useCallback((p: ExecutionProcess) => {
-    mergeIntoDisplayed((state) => {
-      if (!state[p.id]) {
-        state[p.id] = {
-          executionProcess: {
-            id: p.id,
-            created_at: p.created_at,
-            updated_at: p.updated_at,
-            executor_action: p.executor_action,
-          },
-          entries: [],
-        };
-      }
-    });
-  }, []);
-
-  const idListKey = useMemo(
-    () => executionProcessesRaw?.map((p) => p.id).join(','),
-    [executionProcessesRaw]
-  );
-
-  const idStatusKey = useMemo(
-    () => executionProcessesRaw?.map((p) => `${p.id}:${p.status}`).join(','),
-    [executionProcessesRaw]
-  );
-
-  // Clean up entries for processes that have been removed (e.g., after reset)
   useEffect(() => {
     if (isLoading || !isConnected) return;
-    const visibleProcessIds = new Set(executionProcessesRaw.map((p) => p.id));
-    const displayedIds = Object.keys(displayedExecutionProcesses.current);
+    const scope = scopeRef.current;
+    const ids = new Set(processes.map((p) => p.id));
     let changed = false;
-
-    for (const id of displayedIds) {
-      if (!visibleProcessIds.has(id)) {
-        delete displayedExecutionProcesses.current[id];
-        changed = true;
+    for (const id of Object.keys(scope.displayed)) {
+      if (ids.has(id)) continue;
+      delete scope.displayed[id];
+      scope.cursors.delete(id);
+      scope.streams.get(id)?.close();
+      scope.streams.delete(id);
+      scope.statuses.delete(id);
+      changed = true;
+    }
+    for (const process of processes) {
+      const previousStatus = scope.statuses.get(process.id);
+      scope.statuses.set(process.id, process.status);
+      if (isRunning(process) && !scope.streams.has(process.id)) {
+        scope.displayed[process.id] ??= {
+          executionProcess: process,
+          entries: [],
+        };
+        const kind =
+          process.executor_action.typ.type === 'ScriptRequest'
+            ? 'raw'
+            : 'normalized';
+        const stream = streamJsonPatchEntries<PatchType>(
+          `/api/execution-processes/${process.id}/${kind}-logs/ws`,
+          {
+            onEntries: (entries) => {
+              if (
+                scope.abort.signal.aborted ||
+                !processesRef.current.some((p) => p.id === process.id)
+              )
+                return;
+              const existing = scope.displayed[process.id]?.entries ?? [];
+              // Do not blank an already visible live transcript during reconnect.
+              if (entries.length < existing.length) return;
+              scope.displayed[process.id] = {
+                executionProcess: process,
+                entries: entries.map((entry, index) => ({
+                  ...entry,
+                  patchKey: `${process.id}:${index}`,
+                  executionProcessId: process.id,
+                })),
+              };
+              emit(scope, 'running');
+            },
+            onFinished: () => {
+              stream.close();
+              // Leave the finished controller registered until status changes, so
+              // an unrelated render cannot open a second replay of this stream.
+              emit(scope, 'running');
+            },
+            onError: (error) =>
+              console.warn('Unable to stream conversation', error),
+          }
+        );
+        scope.streams.set(process.id, stream);
+      }
+      if (
+        !isRunning(process) &&
+        (previousStatus === ExecutionProcessStatus.running ||
+          (scope.initialIds !== null &&
+            !scope.initialIds.has(process.id) &&
+            previousStatus === undefined))
+      ) {
+        // Let the finite live stream drain; refresh the final tail as well in
+        // case the status event arrived before the last websocket patch.
+        scope.cursors.delete(process.id);
+        void fetchPage(scope, process, MIN_INITIAL_ENTRIES)
+          .then(() => {
+            if (scope.abort.signal.aborted) return;
+            emit(scope, 'running');
+          })
+          .catch((error) => {
+            if (!scope.abort.signal.aborted) {
+              console.warn('Unable to refresh completed conversation', error);
+              setHistoryError(true);
+            }
+          });
       }
     }
-
-    if (changed) {
-      emitEntries(displayedExecutionProcesses.current, 'historic', false);
-    }
-  }, [idListKey, executionProcessesRaw, emitEntries, isLoading, isConnected]);
-
-  useEffect(() => {
-    displayedExecutionProcesses.current = {};
-    loadedInitialEntries.current = false;
-    emittedEmptyInitialRef.current = false;
-    streamingProcessIdsRef.current.clear();
-    knownProcessIdsRef.current.clear();
-    previousStatusMapRef.current.clear();
-    historyEntryLimitRef.current = MIN_INITIAL_ENTRIES;
-    setHasMoreHistory(false);
-    setIsLoadingHistory(false);
-    emitEntries(displayedExecutionProcesses.current, 'initial', true);
-  }, [scopeKey, emitEntries]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (loadedInitialEntries.current) return;
-
-      if (isLoading) return;
-
-      if (executionProcesses.current.length === 0) {
-        if (emittedEmptyInitialRef.current) return;
-        emittedEmptyInitialRef.current = true;
-        emitEntries(displayedExecutionProcesses.current, 'initial', false);
+    if (changed) emit(scope, 'historic');
+    if (!scope.initialLoaded && !scope.loading && !historyError) {
+      if (processes.length === 0) {
+        if (!scope.emptyEmitted) {
+          scope.emptyEmitted = true;
+          emit(scope, 'initial');
+        }
         return;
       }
-
-      emittedEmptyInitialRef.current = false;
-
-      const { state: allInitialEntries, truncated } = await loadHistoricEntries(
-        MIN_INITIAL_ENTRIES,
-        'initial'
-      );
-      if (cancelled) return;
-      loadedInitialEntries.current = true;
-      knownProcessIdsRef.current = new Set(
-        executionProcessesRaw.map((process) => process.id)
-      );
-      historyEntryLimitRef.current = MIN_INITIAL_ENTRIES;
-      setHasMoreHistory(truncated);
-      mergeIntoDisplayed((state) => {
-        Object.assign(state, allInitialEntries);
-      });
-      emitEntries(displayedExecutionProcesses.current, 'initial', false);
-      if (!cancelled) {
-        setIsLoadingHistory(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    scopeKey,
-    idListKey,
-    isLoading,
-    loadHistoricEntries,
-    emitEntries,
-    executionProcessesRaw,
-  ]);
-
-  useEffect(() => {
-    if (!loadedInitialEntries.current || isLoading) return;
-
-    const currentProcessIds = new Set(
-      executionProcessesRaw.map((process) => process.id)
-    );
-    const newCompletedProcesses = executionProcessesRaw.filter(
-      (process) =>
-        !knownProcessIdsRef.current.has(process.id) &&
-        process.status !== ExecutionProcessStatus.running
-    );
-
-    knownProcessIdsRef.current = currentProcessIds;
-
-    if (newCompletedProcesses.length === 0) return;
-
-    let cancelled = false;
-
-    void (async () => {
-      let updated = false;
-
-      for (const process of newCompletedProcesses) {
-        let latestEntries: PatchTypeWithKey[] = [];
-        const entries = await loadEntriesForHistoricExecutionProcess(process, {
-          onEntries: (partialEntries) => {
-            latestEntries = partialEntries.map((entry, index) =>
-              patchWithKey(entry, process.id, index)
-            );
-
-            mergeIntoDisplayed((state) => {
-              state[process.id] = {
-                executionProcess: process,
-                entries: latestEntries,
-              };
-            });
-            emitEntries(displayedExecutionProcesses.current, 'historic', false);
-          },
-        });
-        if (cancelled) return;
-
-        const entriesWithKey =
-          latestEntries.length > 0
-            ? latestEntries
-            : entries.map((entry, index) =>
-                patchWithKey(entry, process.id, index)
-              );
-
-        mergeIntoDisplayed((state) => {
-          state[process.id] = {
-            executionProcess: process,
-            entries: entriesWithKey,
-          };
-        });
-        updated = true;
-      }
-
-      if (updated) {
-        emitEntries(displayedExecutionProcesses.current, 'historic', false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    executionProcessesRaw,
-    idListKey,
-    isLoading,
-    loadEntriesForHistoricExecutionProcess,
-    emitEntries,
-  ]);
-
-  useEffect(() => {
-    const activeProcesses = getActiveAgentProcesses();
-    if (activeProcesses.length === 0) return;
-
-    for (const activeProcess of activeProcesses) {
-      if (!displayedExecutionProcesses.current[activeProcess.id]) {
-        const runningOrInitial =
-          Object.keys(displayedExecutionProcesses.current).length > 1
-            ? 'running'
-            : 'initial';
-        ensureProcessVisible(activeProcess);
-        emitEntries(
-          displayedExecutionProcesses.current,
-          runningOrInitial,
-          false
-        );
-      }
-
-      if (
-        activeProcess.status === ExecutionProcessStatus.running &&
-        !streamingProcessIdsRef.current.has(activeProcess.id)
-      ) {
-        streamingProcessIdsRef.current.add(activeProcess.id);
-        loadRunningAndEmit(activeProcess).finally(() => {
-          streamingProcessIdsRef.current.delete(activeProcess.id);
-        });
-      }
+      scope.emptyEmitted = false;
+      void loadBatch(scope, true);
     }
   }, [
     scopeKey,
-    idStatusKey,
-    emitEntries,
-    ensureProcessVisible,
-    loadRunningAndEmit,
+    processes,
+    isLoading,
+    isConnected,
+    emit,
+    fetchPage,
+    loadBatch,
+    revision,
+    historyError,
   ]);
-
-  useEffect(() => {
-    if (!executionProcessesRaw) return;
-
-    const processesToReload: ExecutionProcess[] = [];
-
-    for (const process of executionProcessesRaw) {
-      const previousStatus = previousStatusMapRef.current.get(process.id);
-      const currentStatus = process.status;
-
-      if (
-        previousStatus === ExecutionProcessStatus.running &&
-        currentStatus !== ExecutionProcessStatus.running &&
-        displayedExecutionProcesses.current[process.id]
-      ) {
-        processesToReload.push(process);
-      }
-
-      previousStatusMapRef.current.set(process.id, currentStatus);
-    }
-
-    if (processesToReload.length === 0) return;
-
-    (async () => {
-      let anyUpdated = false;
-
-      for (const process of processesToReload) {
-        let latestEntries: PatchType[] = [];
-        const entries = await loadEntriesForHistoricExecutionProcess(process, {
-          onEntries: (partialEntries) => {
-            latestEntries = partialEntries;
-
-            const updated = upsertProcessEntries(process, partialEntries);
-            if (updated) {
-              emitEntries(
-                displayedExecutionProcesses.current,
-                'running',
-                false
-              );
-            }
-          },
-        });
-        const entriesToUse = latestEntries.length > 0 ? latestEntries : entries;
-
-        upsertProcessEntries(process, entriesToUse);
-        anyUpdated = true;
-      }
-
-      if (anyUpdated) {
-        emitEntries(displayedExecutionProcesses.current, 'running', false);
-      }
-    })();
-  }, [idStatusKey, executionProcessesRaw, emitEntries, upsertProcessEntries]);
-
-  // If an execution process is removed, remove it from the state
-  useEffect(() => {
-    if (!executionProcessesRaw) return;
-
-    const removedProcessIds = Object.keys(
-      displayedExecutionProcesses.current
-    ).filter((id) => !executionProcessesRaw.some((p) => p.id === id));
-
-    if (removedProcessIds.length > 0) {
-      mergeIntoDisplayed((state) => {
-        removedProcessIds.forEach((id) => {
-          delete state[id];
-        });
-      });
-    }
-  }, [scopeKey, idListKey, executionProcessesRaw]);
 
   const loadMoreHistory = useCallback(async () => {
-    if (!loadedInitialEntries.current) return;
-    if (isLoading || isLoadingHistoryState || !hasMoreHistoryState) return;
+    if (isLoading || !isConnected) return;
+    const scope = scopeRef.current;
+    await loadBatch(scope, !scope.initialLoaded);
+  }, [isLoading, isConnected, loadBatch]);
 
-    setIsLoadingHistory(true);
-    const nextLimit = historyEntryLimitRef.current + REMAINING_BATCH_SIZE;
-
-    try {
-      const { state: moreHistory, truncated } =
-        await loadHistoricEntries(nextLimit);
-      historyEntryLimitRef.current = nextLimit;
-      setHasMoreHistory(truncated);
-      mergeIntoDisplayed((state) => {
-        Object.entries(moreHistory).forEach(([processId, processState]) => {
-          state[processId] = processState;
-        });
-      });
-      emitEntries(displayedExecutionProcesses.current, 'historic', false);
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  }, [
-    emitEntries,
-    hasMoreHistoryState,
-    isLoading,
-    isLoadingHistoryState,
-    loadHistoricEntries,
-  ]);
+  const isFirstTurn = useMemo(
+    () =>
+      processes.filter(
+        (p) =>
+          p.executor_action.typ.type === 'CodingAgentInitialRequest' ||
+          p.executor_action.typ.type === 'CodingAgentFollowUpRequest'
+      ).length <= 1,
+    [processes]
+  );
 
   return {
     isFirstTurn,
-    isLoadingHistory: isLoadingHistoryState,
-    hasMoreHistory: hasMoreHistoryState,
+    isLoadingHistory,
+    hasMoreHistory,
+    historyError,
     loadMoreHistory,
   };
 };

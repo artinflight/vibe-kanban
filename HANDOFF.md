@@ -1,5 +1,15 @@
 # HANDOFF.md
 
+## September 12: Approved Restore-Test Cleanup Complete
+
+Removed only full-restore-20260911T210126Z after fresh Desktop archive hash and
+consumer/mount checks. About101GiB freed,104GiB available. No production data,
+worktrees or backup archives removed. Blue and paused Green PIDs unchanged;
+saved messages, SQLite quick check and attachment upload/retrieve passed.
+Low-space/pending-cleanup notes below are historical. Removal receipt and note
+are under /mnt/vk-storage/vk-cutover-20260911; do not reconstruct the test copy
+merely because its former directory is absent.
+
 ## September 12: Blue Live, Acceptance Complete With Recorded Caveats
 
 Blue PID2590517 serves4711/4712; original Green PID2669659 stays frozen, not

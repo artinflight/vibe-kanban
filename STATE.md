@@ -1,5 +1,11 @@
 # STATE.md
 
+**September12 cleanup update:** Operator-approved removal of the verified
+disposable restore-test extraction freed about101GiB; SSD now has about104GiB
+free. The low-space caveat below is resolved. Original data/worktrees and backup
+archives remain intact. Blue PID2590517 and paused Green PID2669659 unchanged.
+Evidence: `/mnt/vk-storage/vk-cutover-20260911/restore-test-removal.json`.
+
 **Latest September12:** New Blue4711/4712 is production; original Green
 PID2669659 remains frozen for latest-data cutback. Live original-thread continuity,
 data preservation, steer/goal/Stop, saved messages on desktop/mobile and attachment

@@ -1,5 +1,25 @@
 # HANDOFF.md
 
+## September 12: Exact Paused Candidate Validated, Cutover Approved
+
+Supersedes older readiness notes below. PR108 merged into staging586ac628d;
+tested application commit ae29fa5fd includes the completed-summary recovery
+boundary fix. Exact release/paused-server built and private full rehearsal
+20260912T010507Z passed: same Green PID freeze/thaw, latest-data cutback,
+native continuity, steer/Stop/goals, saved messages, attachments, desktop/mobile
+reload and recovery-text acknowledgement. Measured27.39s outage/5.52s cutback.
+Fourteen controller/journal/SQLite-generation tests,13 db tests, db Clippy,
+format, Ops and diff checks passed. Broad workspace validation remains unproven.
+
+Operator approves pausing Green and proceeding. Green PID2669659 is still
+running at this note; gateway4720 routes Green. Independent paused controller
+will capture current data, verify Desktop backup, freeze Green without stopping
+it, activate Blue4711 and continue THIS original thread. Read
+/mnt/vk-storage/vk-cutover-20260911/PROGRESS.md and paused-attempt.json after
+interruption; never rerun the handover. Live acceptance and final docs remain.
+Do not use old stop/start controllers or restore an old DB. Historical recovery
+exceptions remain unresolved. No final report yet for this task.
+
 ## September 12: Paused Green Approved; Gateway Routes To Unchanged Green
 
 Operator now permits Green remaining loaded but paused for same-process rollback.

@@ -1,5 +1,22 @@
 # HANDOFF.md
 
+## September 12: Paused Green Approved; Gateway Routes To Unchanged Green
+
+Operator now permits Green remaining loaded but paused for same-process rollback.
+Do not use the old stop/start controllers. Green PID2669659 remains running.
+Full private paused rehearsal004206 passed with actual standby_gateway.mjs,
+settings/profile cache refresh before cutback, native continuity/steer/Stop/goals,
+saved-message and attachment retention, desktop/mobile after reload.30.83s
+window/5.52s rollback. Six paused controller tests pass. Not production readiness.
+
+Actual gateway4720 installed/enabled and routes to Green. Homelab nginx API/v1
+and MCP HTTPS3443 now target gateway; static4313 unchanged. Only the HTTPS proxy
+was restarted, not Green. Desktop/mobile and HTTPS saved-message checks pass.
+Original configs/tools are backed up and hash verified on Desktop. Release build
+with PR108 recovery fix and exact candidate/controller acceptance remain pending.
+Read /mnt/vk-storage/vk-cutover-20260911/PROGRESS.md before any action. No new
+controller launched, no paused-ready/approval/attempt marker exists yet.
+
 ## Running-Green Requirement And Recovery Injection
 
 Latest operator instruction rejects stopping Green. No service stop, freeze or

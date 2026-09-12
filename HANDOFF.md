@@ -1,5 +1,25 @@
 # HANDOFF.md
 
+## September 12 V3: Corrected Full Rehearsal Passed, Approved Launch Next
+
+Supersedes older pending-test notes. Full private run20260912T112557Z passes
+actual controller pre-Blue abort (no settings PUT), persisted override expansion,
+same-PID Green cutback, retained Blue writes, native continuity, steer/Stop/goals,
+attachments and desktop/mobile.25.62s window/5.84s cutback.17 unit tests pass.
+Refreshed staging586ac628d still matches the immutable candidate's app code.
+Fresh online backup112321Z is Desktop verified, as are all23 archive SQLite
+payload hashes and the V3 controller/tool package. Failed scratch copies were
+relocated to Desktop with per-file checksums; verified duplicate staging copies
+retired. Production data and archives unchanged.103GB full restore copy retained.
+
+Preflight passes on unchanged Green PID2669659,10 saved messages,939 sessions,
+zero queued work and only original maintenance execution99755EC5CFC7480CA7FC43E7738A52FF.
+Old paused controller is now persistently masked. V3 requires3GiB free reserve
+and fresh approval. Operator explicitly requested repair and completion.
+After interruption read paused-v3-attempt.json and its folder/status/boundary/
+continuation files under /mnt/vk-storage/vk-cutover-20260911; never repeat a
+handover or replace this conversation. Complete live acceptance and final docs.
+
 ## September 12: Failed Paused Handover, Corrected Recovery Being Tested
 
 The01:17 attempt failed before Blue started when models_cache.json changed.

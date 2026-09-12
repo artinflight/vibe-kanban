@@ -54,6 +54,8 @@
     "subagent": {
       "defaultType": "Subagent"
     },
+    "loadEarlierMessages": "Load earlier messages",
+    "historyLoadFailed": "Could not load messages. Try again.",
     "loadingEarlierMessages": "Loading earlier messages"
   },
   "folderPicker": {

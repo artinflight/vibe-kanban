@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -173,6 +174,8 @@ export const ConversationList = forwardRef<
   const scrollOnEntriesChangedRef = useRef<
     ((addType: AddEntryType, isInitialLoad: boolean) => void) | null
   >(null);
+  const historyRequestedRef = useRef(false);
+  const historyAnchorRef = useRef<{ index: number; top: number } | null>(null);
   const pendingUpdateRef = useRef<{
     source: ConversationTimelineSource;
     addType: AddEntryType;
@@ -237,6 +240,8 @@ export const ConversationList = forwardRef<
       rafIdRef.current = null;
     }
     pendingUpdateRef.current = null;
+    historyRequestedRef.current = false;
+    historyAnchorRef.current = null;
     scriptOutputCacheRef.current.clear();
     if (planRevealSpacerRef.current) {
       planRevealSpacerRef.current.style.height = '0px';
@@ -338,6 +343,37 @@ export const ConversationList = forwardRef<
     rafIdRef.current = null;
     const pending = pendingUpdateRef.current;
     if (!pending) return;
+    pendingUpdateRef.current = null;
+
+    // Capture the reader's current position when the page arrives, rather than
+    // at request time: they may have kept scrolling while the request ran.
+    let historyAnchor: { patchKey: string; top: number } | null = null;
+    const scrollEl = tanstackScrollRef.current;
+    if (
+      historyRequestedRef.current &&
+      pending.addType === 'historic' &&
+      scrollEl
+    ) {
+      historyRequestedRef.current = false;
+      const containerTop = scrollEl.getBoundingClientRect().top;
+      for (const node of scrollEl.querySelectorAll<HTMLElement>(
+        '[data-row-index]'
+      )) {
+        if (node.getBoundingClientRect().bottom <= containerTop + 1) continue;
+        const row = prevRowsRef.current[Number(node.dataset.rowIndex)];
+        if (!row) continue;
+        const entry = row.entry;
+        const patchKey =
+          'entries' in entry
+            ? (entry.entries.at(-1)?.patchKey ?? entry.patchKey)
+            : entry.patchKey;
+        historyAnchor = {
+          patchKey,
+          top: node.getBoundingClientRect().top - containerTop,
+        };
+        break;
+      }
+    }
 
     const derivedEntries = deriveConversationEntries({
       source: pending.source,
@@ -354,6 +390,17 @@ export const ConversationList = forwardRef<
       prevEntriesRef.current,
       prevRowsRef.current
     );
+
+    if (historyAnchor) {
+      const { patchKey, top } = historyAnchor;
+      const index = derivedTimeline.rows.findIndex(
+        ({ entry }) =>
+          entry.patchKey === patchKey ||
+          ('entries' in entry &&
+            entry.entries.some((item) => item.patchKey === patchKey))
+      );
+      if (index >= 0) historyAnchorRef.current = { index, top };
+    }
 
     prevEntriesRef.current = derivedTimeline.displayEntries;
     prevRowsRef.current = derivedTimeline.rows;
@@ -374,9 +421,14 @@ export const ConversationList = forwardRef<
     addType: AddEntryType,
     newLoading: boolean
   ) => {
+    const effectiveAddType =
+      historyRequestedRef.current &&
+      pendingUpdateRef.current?.addType === 'historic'
+        ? 'historic'
+        : addType;
     pendingUpdateRef.current = {
       source,
-      addType,
+      addType: effectiveAddType,
       loading: newLoading,
       isInitialLoad: addType === 'initial',
     };
@@ -386,12 +438,17 @@ export const ConversationList = forwardRef<
     }
   };
 
-  const { isFirstTurn, isLoadingHistory, hasMoreHistory, loadMoreHistory } =
-    useConversationHistory({
-      attempt,
-      onTimelineUpdated,
-      scopeKey: conversationScopeKey,
-    });
+  const {
+    isFirstTurn,
+    isLoadingHistory,
+    hasMoreHistory,
+    historyError,
+    loadMoreHistory,
+  } = useConversationHistory({
+    attempt,
+    onTimelineUpdated,
+    scopeKey: conversationScopeKey,
+  });
 
   const prevEntriesRef = useRef<DisplayEntry[]>([]);
   const prevRowsRef = useRef<ConversationRow[]>([]);
@@ -582,6 +639,44 @@ export const ConversationList = forwardRef<
     hasEntries &&
     isFirstTurn;
 
+  const { releaseBottomLock } = conversationVirtualizer;
+  const historyScrollToIndexRef = useRef(scrollToAbsoluteIndex);
+  historyScrollToIndexRef.current = scrollToAbsoluteIndex;
+
+  useLayoutEffect(() => {
+    const anchor = historyAnchorRef.current;
+    if (!anchor) return;
+    historyAnchorRef.current = null;
+    releaseBottomLock();
+    let frame = 0;
+    let attempts = 0;
+    const correct = () => {
+      const scrollEl = tanstackScrollRef.current;
+      if (!scrollEl || attempts++ >= 6) return;
+      programmaticScrollDeadlineRef.current = performance.now() + 250;
+      const node = scrollEl.querySelector<HTMLElement>(
+        `[data-row-index="${anchor.index}"]`
+      );
+      if (!node) {
+        historyScrollToIndexRef.current(anchor.index, 'start', 'auto');
+      } else {
+        scrollEl.scrollTop +=
+          node.getBoundingClientRect().top -
+          scrollEl.getBoundingClientRect().top -
+          anchor.top;
+      }
+      frame = requestAnimationFrame(correct);
+    };
+    correct();
+    return () => cancelAnimationFrame(frame);
+  }, [dataVersion, releaseBottomLock]);
+
+  const loadOlderHistory = useCallback(async () => {
+    historyRequestedRef.current = true;
+    releaseBottomLock();
+    await loadMoreHistory();
+  }, [loadMoreHistory, releaseBottomLock]);
+
   // Expose scroll functionality via ref — delegates to TanStack Virtual
   const scrollToPreviousUserMessage = useCallback(() => {
     conversationVirtualizer.releaseBottomLock();
@@ -762,7 +857,8 @@ export const ConversationList = forwardRef<
   );
 
   const showLoader = loading && conversationRows.length === 0;
-  const showEmptyState = !loading && conversationRows.length === 0;
+  const showEmptyState =
+    !loading && !historyError && conversationRows.length === 0;
 
   const { virtualItems, totalSize, measureElement } = conversationVirtualizer;
 
@@ -778,24 +874,38 @@ export const ConversationList = forwardRef<
       return;
     }
 
+    let previousTop = scrollEl.scrollTop;
     const maybeLoadOlderHistory = () => {
-      if (!hasMoreHistory || isLoadingHistory || loading) {
+      const movedUp = scrollEl.scrollTop < previousTop;
+      previousTop = scrollEl.scrollTop;
+      if (
+        !movedUp ||
+        !hasMoreHistory ||
+        isLoadingHistory ||
+        loading ||
+        historyError
+      ) {
         return;
       }
       if (scrollEl.scrollTop <= 80) {
-        void loadMoreHistory();
+        void loadOlderHistory();
       }
     };
 
     scrollEl.addEventListener('scroll', maybeLoadOlderHistory, {
       passive: true,
     });
-    maybeLoadOlderHistory();
 
     return () => {
       scrollEl.removeEventListener('scroll', maybeLoadOlderHistory);
     };
-  }, [hasMoreHistory, isLoadingHistory, loadMoreHistory, loading]);
+  }, [
+    hasMoreHistory,
+    isLoadingHistory,
+    loadOlderHistory,
+    loading,
+    historyError,
+  ]);
 
   return (
     <ApprovalFormProvider>
@@ -821,6 +931,26 @@ export const ConversationList = forwardRef<
               </div>
             )}
           </div>
+
+          {(hasMoreHistory || historyError) &&
+            !isLoadingHistory &&
+            !loading && (
+              <div className="flex flex-col items-center gap-2 px-double py-3">
+                {historyError && (
+                  <span role="alert" className="text-sm text-error">
+                    {t('conversation.historyLoadFailed')}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  data-scroll-anchor-ignore
+                  className="text-sm text-low underline hover:text-high"
+                  onClick={() => void loadOlderHistory()}
+                >
+                  {t('conversation.loadEarlierMessages')}
+                </button>
+              </div>
+            )}
 
           {isLoadingHistory && !showLoader && (
             <div className="flex flex-col items-center gap-2 px-double py-3">

@@ -90,9 +90,15 @@ telemetry writes cannot indefinitely restart copying.
 Overlapping temporary copies exhausted the SSD during repair. Failed scratch
 copies were moved to Desktop with per-file hash verification; redundant SQLite
 staging/extraction copies were verified against retained archives before retiring.
-No production data, worktrees or backup archives were removed. The103GB full
-restore-test copy remains pending deletion permission. Future preflight checks
-must budget peak snapshot/archive/extraction usage; V3 requires3GiB free reserve.
+No production data, worktrees or backup archives were removed. After subsequent
+operator approval, only the verified disposable restore-test extraction was
+removed, freeing108358057984bytes (about101GiB) and leaving about104GiB free.
+Both required Desktop archive hashes were rechecked; no active consumers or
+nested mounts referenced the extraction. The removal receipt and adjacent
+location note preserve its audit trail. Blue and paused Green were unchanged;
+saved messages, SQLite quick check and live attachment round-trip passed afterward.
+Future preflight checks must budget peak snapshot/archive/extraction usage;
+V3 requires3GiB free reserve.
 
 Evidence: `/mnt/vk-storage/vk-cutover-20260911/PROGRESS.md`,
 `paused-v3-attempt.json`, and `paused-handover-20260912T113343Z/`.

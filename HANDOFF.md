@@ -1,5 +1,15 @@
 # HANDOFF.md
 
+## September 12 Paused-Green Work In Progress
+
+Operator permits freeze/thaw of the same Green process, not stop/start. Actual
+gateway4720 now fronts unchanged Green via vibe.local and HTTPS3443; browser and
+saved-message checks pass. Full paused private rehearsal004206 passed30.83s
+window/5.52s rollback, config/profile refresh, native continuity and features.
+Six independent controller tests pass. Release build with recovery-query fix and
+final candidate/controller acceptance still pending. No production freeze or
+Blue activation yet. See VK_RUNNING_STANDBY_ASSESSMENT.md and SSD PROGRESS.md.
+
 ## Current Preparation: Running Standby And Recovery Query
 
 The operator rejects stopping Green. Do not retry V2 or start the conflicting

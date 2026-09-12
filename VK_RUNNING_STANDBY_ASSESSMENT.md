@@ -1,5 +1,33 @@
 # Running Green Standby: Not Ready
 
+## September 12 Paused-Green Preparation
+
+The operator now explicitly permits pausing Green and resuming the same process
+for cutback. The responsive-standby question below is resolved. Production Green
+has not been paused or stopped during this preparation.
+
+Full isolated rehearsal004206 passed with a VK-only routing gate, same Green PID
+freeze/thaw, original-thread continuity both ways, Turn Steer versus Stop, goals,
+saved messages and attachments retained after Blue writes. It also changes
+configuration and executor profiles on Blue and refreshes Green's cached values
+before routing back. Browser tests explicitly reload desktop/mobile pages.
+Measured private window30.83s; rollback with continuation5.52s. These measurements
+are not a guarantee for the forthcoming production boundary.
+
+The actual `vibe.local` API route and MCP HTTPS3443 entrypoint now pass through
+gateway4720 to unchanged Green4511. Desktop/mobile saved messages and WebSockets
+passed; Green remained PID2669659. Original routing configs and gateway tools
+are verified on Desktop. No production Blue activation has occurred.
+
+The independent paused controller forbids Green stop/restart, gates requests,
+drains its own execution via the existing API, freezes Green, verifies a stable
+current backup, then starts separate-port Blue on the same data. Recovery uses
+latest config/profiles and refuses automatic rollback across new active work.
+Six controller decision tests and gateway tests pass. Release build and final
+candidate/controller acceptance remain pending; readiness remains withdrawn.
+
+Evidence and current pickup: `/mnt/vk-storage/vk-cutover-20260911/PROGRESS.md`.
+
 The operator requires Green to remain running as the fallback while Blue serves
 production. The stop/start controller does not implement that requirement and
 must not be retried. Production Green remained active during this investigation.
@@ -30,9 +58,8 @@ including configuration, queues and execution ownership. Tests must cover Blue
 writes followed by return to Green, crash recovery, existing connections and
 external native-home consumers. The same latest data remains authoritative.
 
-The remaining operator distinction is whether a loaded but paused Green is
-acceptable or Green must remain responsive. Neither alternative is certified.
-No new production interruption is authorized by this preparation task. Any
+The operator has chosen a loaded but paused Green. The earlier stop/start design
+is not approved for reuse. Any
 proposal requiring Green replacement/restart must be explicitly disclosed and
 approved, not hidden inside a claimed frontend switch.
 

@@ -1,5 +1,22 @@
 # HANDOFF.md
 
+## September 12: Failed Paused Handover, Corrected Recovery Being Tested
+
+The01:17 attempt failed before Blue started when models_cache.json changed.
+Rollback then submitted override-only profiles to a full-profile API and failed;
+Green was thawed but routing stayed in maintenance until separate recovery at
+02:28. Original Green PID2669659 and all ten saved messages are available.
+Do not claim that attempt succeeded or that the old controller is ready.
+
+Operator now explicitly requests repair and completion. Corrected controller
+expands profile overrides over exact built-in defaults and avoids writing
+unchanged settings. Tests now invoke its actual rollback function on isolated
+services, not a substitute flow. Downloaded model catalogue caches are separated
+from protected user data. A fresh online backup/journal is being prepared.
+Read /mnt/vk-storage/vk-cutover-20260911/PROGRESS.md; new attempt marker will be
+paused-v3-attempt.json. Old attempts, original conversation and historical recovery
+exceptions remain. No new production interruption has occurred in this repair.
+
 ## September 12: Exact Paused Candidate Validated, Cutover Approved
 
 Supersedes older readiness notes below. PR108 merged into staging586ac628d;

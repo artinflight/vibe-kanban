@@ -4,6 +4,34 @@ Established by the operator on 2026-09-11. This is the authority for future
 backend restart windows; older stop-and-switch examples are historical.
 An established protocol is not evidence that a particular candidate is ready.
 
+## September 12 Failure Corrections
+
+The operator permits a loaded but paused Green, retaining its original PID for
+thaw/cutback. Do not substitute a Green stop/restart. Green remains usable during
+preparation; production Blue uses separate ports and is forbidden from starting
+while Green can write. Rollback always uses latest data, never an older DB copy.
+
+Test the actual production recovery function against isolated real services and
+APIs, including backup failure BEFORE Blue starts. Mock success paths and a
+similar rehearsal implementation missed the September12 profile-format defect.
+`profiles.json` contains overrides, while the profiles PUT API requires complete
+profiles. Expand overrides using the exact incumbent defaults and runtime merge
+semantics; account for serde defaults. Do not PUT unchanged cached settings on
+an aborted switch. After Blue writes, refresh Green from latest settings before
+routing back. Verify the production entrypoint, not just the thawed process.
+
+Downloaded model catalogues and debug telemetry are not native conversations.
+Document narrow regenerable/diagnostic exclusions and retained baseline copies;
+never apply them to histories, goals, settings, execution output or worktrees.
+Refresh the journal and online baseline after a lost/moved-directory watch.
+Pin an online SQLite read snapshot where continuous writes would otherwise keep
+restarting backup. Frozen-boundary committed-generation checks still apply.
+
+Budget peak disk use for snapshots, archive, extraction and rehearsal together.
+Do not run overlapping bulky verification jobs near capacity. Keep failed
+evidence; relocate scratch copies only after destination checksum verification.
+Never assume permission to delete a retained restore-test copy or user data.
+
 ## Operator Contract
 
 Green stays usable throughout preparation. Build, test, inventory, rehearse,

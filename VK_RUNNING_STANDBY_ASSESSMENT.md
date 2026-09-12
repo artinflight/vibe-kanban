@@ -1,4 +1,9 @@
-# Running Green Standby: Not Ready
+# Paused Green Standby: Live September 12
+
+The operator-approved V3 handover is now live, with original Green frozen and
+new Blue serving current data. See `VK_BLUE_LIVE_20260912.md` for actual evidence
+and limitations. The investigation below is historical; it is not a current
+readiness block or permission to rerun earlier failed controllers.
 
 ## September 12 Paused-Green Preparation
 

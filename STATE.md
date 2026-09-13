@@ -5,6 +5,13 @@ PID2669659 is frozen for same-latest-data cutback. Read `VK_BLUE_LIVE_20260912.m
 for actual acceptance, backups, known UI/historical gaps and recovery constraints.
 Older runtime/readiness statements below are historical, not launch instructions.
 
+## September 13: Goal checkpoint frontend is live
+
+Frontend-only release `5d6ed3539` adds readable goal checkpoint cards on the live
+frontend baseline `9dfd19c34`. Served JS is `index-C4KqD6Zo.js`; backend PID2590517
+is unchanged. This rollout does not enable completed-conversation paging.
+See the latest HANDOFF.md for validation, retained release and rollback evidence.
+
 ## Goal checkpoint display contract
 
 Goal checkpoint cards are a presentation of a single assistant-message checkpoint,

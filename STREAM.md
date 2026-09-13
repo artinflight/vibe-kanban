@@ -12,6 +12,11 @@
 
 ## Status and next steps
 
-Implementation is prepared locally. See the latest HANDOFF.md entry for checks.
-Browser preview and deployment have not been performed. No services, production
-assets, routes or live data were changed. Production rollout is a separate step.
+Implementation is committed as `a6ec09b12`. Operator-authorized frontend-only
+rollout uses live-baseline backport `5d6ed3539` on
+`hotfix/goal-checkpoint-frontend`, built in
+`/mnt/vk-storage/vk-goal-checkpoint-render/deploy-source`. The full feature branch
+was not deployed because it includes newer backend-dependent conversation paging.
+Frontend pointer now selects `release-5d6ed3539` under that SSD task directory.
+Backend PID2590517 remains unchanged. See HANDOFF.md for checks and rollback.
+No PR or push has been performed.

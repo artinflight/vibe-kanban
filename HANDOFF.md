@@ -1,5 +1,46 @@
 # HANDOFF.md
 
+## September 13: Goal checkpoint frontend deployment
+
+The operator authorized frontend-only deployment. The live backend predates this
+feature branch's long-thread API, so deploy source is a narrow backport on the
+recorded live frontend baseline `9dfd19c34`, not the whole feature branch.
+Clean deployment branch `hotfix/goal-checkpoint-frontend`, commit `5d6ed3539`,
+changes only the assistant renderer, parser and two test files. Feature source
+remains `a6ec09b12` on `vk/70a7-vk-goal-based-ag`.
+
+`frontend-dist/current` now points to
+`/mnt/vk-storage/vk-goal-checkpoint-render/release-5d6ed3539`.
+Live JS is `/assets/index-C4KqD6Zo.js`, SHA256
+`4dea765b7eca7a80afdb65ecf1f5f1616be276da4535d8c17e1ffa6d787ed599`.
+CSS remains `/assets/index-QO1t6__J.css`. The prior release at
+`/mnt/vk-storage/vk-cutover-20260911/served-frontend` is retained untouched;
+its hashed assets are also retained in the new release for open tabs. A rollback
+requires only an atomic frontend symlink change to that retained release, not a
+backend restart or database restore. Backend PID2590517 and binary hash
+`d0a2ca1b0a2c59fccf103f50c96612999b9346eee6b568d7f1f021a9ed49d329`
+were preserved. No service, route, backend binary or database was replaced.
+
+Validation: production TypeScript/Vite build passed; six checkpoint tests passed;
+format passed. Desktop/mobile card tests verified expansion, keyboard activation
+and no horizontal overflow. Candidate app browser checks passed at1440/390px
+with no page errors, live WebSocket data and all12 saved-message titles visible.
+Post-switch desktop/mobile browser checks also passed (no page errors,28
+WebSocket frames per viewport and12 saved titles). HTTP asset hashes, previous
+JS availability, API health, unchanged
+40-project identity/name/archive/order baseline and12 saved messages passed.
+Deployment evidence, manifests, logs and screenshots are under
+`/mnt/vk-storage/vk-goal-checkpoint-render/`.
+
+The first build command was terminated before completion; a tracked build
+service completed successfully. Optional Sentry upload lacked a token (nonfatal).
+Browser interception required test-context local-network permission for
+WebSockets. No application security settings were changed. Broader action flows
+(drag/order mutation, upload/paste/copy, steering/Stop, review-marker clearing,
+workspace creation/menu actions) and physical mobile/Tailscale QA were not
+re-exercised. Existing flyout pointer-close caveat remains; no blanket regression
+claim. Both source commits are local; no PR or push was performed in this task.
+
 ## September 13: Goal checkpoint chat rendering
 
 Branch `vk/70a7-vk-goal-based-ag` adds a shared assistant-message checkpoint

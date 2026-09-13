@@ -138,7 +138,8 @@ pub(super) async fn get_log_history(
             match msg? {
                 LogMsg::JsonPatch(patch) => {
                     for op in patch.0 {
-                        apply_entry(&mut entries, op)?;
+                        apply_entry(&mut entries, op)
+                            .map_err(|message| ApiError::BadRequest(message.into()))?;
                     }
                 }
                 LogMsg::Stdout(content) if script => {
@@ -171,12 +172,15 @@ pub(super) async fn get_log_history(
 
 // Log entry indices are stable identities, including sparse indices after a
 // remove. Treat replace as upsert, as the existing streaming client does.
-fn apply_entry(entries: &mut BTreeMap<usize, Value>, op: PatchOperation) -> Result<(), ApiError> {
+fn apply_entry(
+    entries: &mut BTreeMap<usize, Value>,
+    op: PatchOperation,
+) -> Result<(), &'static str> {
     let index = op
         .path()
         .strip_prefix("/entries/")
         .and_then(|s| s.parse::<usize>().ok())
-        .ok_or_else(|| ApiError::BadRequest("Unsupported conversation patch path".into()))?;
+        .ok_or("Unsupported conversation patch path")?;
     match op {
         PatchOperation::Add(op) => {
             entries.insert(index, op.value);
@@ -188,9 +192,7 @@ fn apply_entry(entries: &mut BTreeMap<usize, Value>, op: PatchOperation) -> Resu
             entries.remove(&index);
         }
         _ => {
-            return Err(ApiError::BadRequest(
-                "Unsupported conversation patch operation".into(),
-            ));
+            return Err("Unsupported conversation patch operation");
         }
     }
     Ok(())

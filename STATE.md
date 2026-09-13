@@ -5,6 +5,12 @@ PID2669659 is frozen for same-latest-data cutback. Read `VK_BLUE_LIVE_20260912.m
 for actual acceptance, backups, known UI/historical gaps and recovery constraints.
 Older runtime/readiness statements below are historical, not launch instructions.
 
+## Goal checkpoint display contract
+
+Goal checkpoint cards are a presentation of a single assistant-message checkpoint,
+not cumulative goal completion. Stored protocol text remains available to the
+native goal engine; UI rendering must not change scheduling or checkpoint state.
+
 ## Source compatibility: completed conversation paging
 
 The completed-log paging frontend requires a matching backend with the

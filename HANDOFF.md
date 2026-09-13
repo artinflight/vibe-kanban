@@ -1,5 +1,26 @@
 # HANDOFF.md
 
+## September 13: Goal checkpoint chat rendering
+
+Branch `vk/70a7-vk-goal-based-ag` adds a shared assistant-message checkpoint
+card: disposition and reason are visible; requirements, checkpoint evidence
+and recovery plans expand with native details controls. Only valid standalone
+trailing protocol blocks are converted. Empty maps do not imply a completed
+goal. Code examples, malformed data and partial streams retain ordinary Markdown.
+Saved log text and backend goal behavior are unchanged; existing history uses
+the same renderer. No production services, assets, routing or data were changed.
+
+Validation passed: six Node/React server-rendering regression tests, `pnpm run
+ui:check`, `pnpm run ui:lint`, `NODE_OPTIONS=--max-old-space-size=4096 pnpm run
+web-core:check`, `pnpm run format`, `pnpm --filter @vibe/ui run format`,
+`pnpm run ops:check` and `git diff --check`. Reproduce tests with
+`VK_TEST_OUTPUT=/mnt/vk-storage/vk-goal-checkpoint-render node scripts/testing/run-goal-checkpoint-tests.mjs`.
+Logs and generated test bundles are on the mounted SSD in that directory.
+Browser/mobile smoke, production build/deploy and full backend tests were not
+performed. Next: browser review before an authorized rollout. No PR opened.
+The fork remote is named `fork`; `origin` is upstream and has no staging ref.
+Fetched `fork/staging` and confirmed this branch contains its current tip.
+
 ## September 13: Long-thread staging merge requested
 
 The operator explicitly requested a rebase merge of the committed combined

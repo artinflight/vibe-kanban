@@ -2,18 +2,16 @@
 
 ## Current Scope
 
-- Branch: `vk/ab54-vk-long-threads`, based on fork staging `2df3e4333`.
-- Objective: open completed long workspace turns at their latest messages and
-  fetch older content as the reader scrolls upward.
-- Scope: completed-log page endpoint, bounded finite-replay cache, incremental
-  frontend history loader, reading-position preservation, retry UI and tests.
-- Live streams keep their existing transport. No migrations, log deletion,
-  live deployment, service restart, routing or asset-pointer changes.
+- Branch: `vk/70a7-vk-goal-based-ag`, based on fork staging `9a2591916`.
+- Objective: render trailing goal checkpoint protocol blocks as readable chat cards.
+- Scope: shared assistant-message renderer, defensive parser and rendering tests.
+- Valid checkpoints show disposition and reason with expandable requirements,
+  verification evidence and recovery plan. Empty maps do not imply goal completion.
+- Stored messages and goal scheduling remain unchanged. Ordinary text, code
+  examples, malformed payloads and incomplete streaming blocks retain Markdown.
 
 ## Status and next steps
 
-See `VK_LONG_THREADS.md` and the latest `HANDOFF.md` entry for validation and
-limitations. Source preparation is isolated in this worktree. Browser/runtime
-validation with the matching backend remains required; the normal lightweight
-preview cannot exercise the new API. Cold reconstruction still reads the whole
-saved turn server-side. Production changes remain a separate authorized step.
+Implementation is prepared locally. See the latest HANDOFF.md entry for checks.
+Browser preview and deployment have not been performed. No services, production
+assets, routes or live data were changed. Production rollout is a separate step.

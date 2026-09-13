@@ -62,6 +62,8 @@
     "subagent": {
       "defaultType": "Subagente"
     },
+    "loadEarlierMessages": "Cargar mensajes anteriores",
+    "historyLoadFailed": "No se pudieron cargar los mensajes. Inténtalo de nuevo.",
     "loadingEarlierMessages": "Cargando mensajes anteriores"
   },
   "language": {

@@ -49,6 +49,8 @@
     "subagent": {
       "defaultType": "Sous-agent"
     },
+    "loadEarlierMessages": "Charger les messages précédents",
+    "historyLoadFailed": "Impossible de charger les messages. Réessayez.",
     "loadingEarlierMessages": "Chargement des messages pr\u00e9c\u00e9dents"
   },
   "folderPicker": {

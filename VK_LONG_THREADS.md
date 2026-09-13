@@ -1,6 +1,7 @@
 # Long workspace conversations
 
-Source branch: `vk/ab54-vk-long-threads`. This feature is not deployed.
+Source branch: `vk/ab54-vk-long-threads`. This feature is not deployed. Staging integration is tracked in
+[PR #111](https://github.com/artinflight/vibe-kanban/pull/111).
 
 Completed conversation history opens at the newest 40 log entries, including
 when a single turn contains thousands of entries. Scrolling upward near the top

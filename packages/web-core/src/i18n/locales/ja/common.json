@@ -62,6 +62,8 @@
     "subagent": {
       "defaultType": "サブエージェント"
     },
+    "loadEarlierMessages": "以前のメッセージを読み込む",
+    "historyLoadFailed": "メッセージを読み込めませんでした。もう一度お試しください。",
     "loadingEarlierMessages": "以前のメッセージを読み込み中"
   },
   "language": {

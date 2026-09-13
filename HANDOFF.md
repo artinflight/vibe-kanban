@@ -1,5 +1,19 @@
 # HANDOFF.md
 
+## September 13: Long-thread staging merge requested
+
+The operator explicitly requested a rebase merge of the committed combined
+frontend/backend implementation. PR: https://github.com/artinflight/vibe-kanban/pull/111
+into `staging`; merging is not a deployment or backend restart authorization.
+The six additional locale translations complete the history-control key set.
+Eight React regression tests passed again. Full local Rust tests and the backend
+stage of `pnpm run lint` are blocked by missing GLib desktop development files.
+The backend-only test command matching CI excludes `vibe-kanban-tauri`; its
+results and the full frontend/check baseline are recorded on the PR, alongside
+CI. Logs are `/mnt/vk-storage/vk-long-threads/merge-*.log`.
+Browser/runtime validation remains outstanding and must precede rollout. No live
+service, assets, routes or data were changed. Current merge state is on PR111.
+
 ## September 12: Long-thread pagination source preparation
 
 Branch `vk/ab54-vk-long-threads` starts from fork staging `2df3e4333`. Completed
@@ -21,8 +35,8 @@ SSD at `/mnt/vk-storage/vk-long-threads` and Cargo uses `/mnt/vk-storage/cargo-t
 Remaining: an authorized isolated backend/browser preview with disposable data
 must exercise the matching API, initial bottom position, upward anchoring,
 expanded groups, mobile, reconnect/Stop and real cold-load latency. The current
-lightweight preview cannot validate the new backend route. No full-workspace
-Rust/PR baseline, production build, staging PR or deployment is claimed. Cold
+lightweight preview cannot validate the new backend route. The full-workspace Rust attempt is blocked by missing GLib; PR111 now tracks
+merge validation. No production build or deployment is claimed. Cold
 server reconstruction still scans saved logs; oversized uncached turns repeat it.
 
 

@@ -49,6 +49,8 @@
     "subagent": {
       "defaultType": "子代理"
     },
+    "loadEarlierMessages": "加载更早的消息",
+    "historyLoadFailed": "无法加载消息，请重试。",
     "loadingEarlierMessages": "正在加载早期消息"
   },
   "folderPicker": {

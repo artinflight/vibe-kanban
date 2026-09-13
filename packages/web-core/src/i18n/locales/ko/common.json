@@ -62,6 +62,8 @@
     "subagent": {
       "defaultType": "서브에이전트"
     },
+    "loadEarlierMessages": "이전 메시지 불러오기",
+    "historyLoadFailed": "메시지를 불러오지 못했습니다. 다시 시도해 주세요.",
     "loadingEarlierMessages": "이전 메시지 불러오는 중"
   },
   "language": {

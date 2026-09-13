@@ -1124,3 +1124,12 @@
 - Bounded revision-keyed finite-replay cache; existing running streams preserved.
 - See `VK_LONG_THREADS.md` and latest handoff for tests and limitations. No live
   runtime change; matching-backend browser validation and latency measurement remain.
+
+
+## 2026-09-13 — Long-thread staging integration requested
+
+- PR111 targets staging by explicit operator request, retaining the combined
+  frontend/backend implementation; this does not authorize deployment.
+- Completed six locale translations for the history controls. React regression
+  tests passed again; full local Cargo validation hits missing GLib desktop
+  development files. PR111 records CI and remaining runtime limitations.

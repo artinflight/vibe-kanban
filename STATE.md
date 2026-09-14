@@ -1,5 +1,12 @@
 # STATE.md
 
+## Source work: unused daily capacity
+
+The isolated `feature/unused-capacity` branch adds bounded background execution
+enforcement for CodexUsage. It is not deployed or enabled. Integration and
+remaining release gates are documented in `VK_UNUSED_CAPACITY.md`. Existing
+runtime statements below are unchanged; verify actual routing before deployment.
+
 **LATEST:** September12 V3 cutover is live on new Blue4711/4712; original Green
 PID2669659 is frozen for same-latest-data cutback. Read `VK_BLUE_LIVE_20260912.md`
 for actual acceptance, backups, known UI/historical gaps and recovery constraints.

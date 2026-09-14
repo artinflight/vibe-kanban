@@ -713,7 +713,7 @@ executor_config: ExecutorConfig,
  */
 working_dir: string | null, };
 
-export type CodingAgentFollowUpRequest = { prompt: string, session_id: string, reset_to_message_id: string | null,
+export type CodingAgentFollowUpRequest = { capacity?: CapacityExecution | null, prompt: string, session_id: string, reset_to_message_id: string | null,
 /**
  * Unified executor identity + overrides
  */
@@ -723,6 +723,8 @@ executor_config: ExecutorConfig,
  * If None, uses the container_ref directory directly.
  */
 working_dir: string | null, };
+
+export type CapacityExecution = { issuer_epoch: string, id: string, allocation_id: string, expires_at_ms: bigint, stop_at_ms: bigint, lease_file: string, guard_binary: string, };
 
 export type ReviewRequest = {
 /**

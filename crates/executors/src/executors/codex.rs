@@ -910,6 +910,17 @@ impl Codex {
         let (program_path, args) = command_parts.into_resolved().await?;
 
         let effective_env = env.clone().with_profile(&self.cmd);
+        if let Some(capacity) = &effective_env.capacity {
+            if effective_env
+                .get("VK_EXECUTION_PROCESS_ID")
+                .map(String::as_str)
+                != Some(capacity.lease.execution_id.as_str())
+            {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Capacity execution identity cannot be overridden by a profile",
+                )));
+            }
+        }
         let mut transient_unit_name = None;
         let mut child = if systemd_run::enabled() {
             let mut env_vars = effective_env.vars.clone();
@@ -933,16 +944,32 @@ impl Codex {
             env_vars.insert("RUST_LOG".to_string(), "error".to_string());
             let unit_name = systemd_run::build_unit_name("codex");
             transient_unit_name = Some(unit_name.clone());
-            systemd_run::spawn_transient_unit(
-                &unit_name,
-                "VK Codex execution",
-                current_dir,
-                &program_path,
-                &args,
-                &env_vars,
-                StdinMode::Piped,
-            )?
+            if let Some(capacity) = &effective_env.capacity {
+                systemd_run::spawn_capacity_unit(
+                    &unit_name,
+                    current_dir,
+                    &program_path,
+                    &args,
+                    &env_vars,
+                    capacity,
+                )?
+            } else {
+                systemd_run::spawn_transient_unit(
+                    &unit_name,
+                    "VK Codex execution",
+                    current_dir,
+                    &program_path,
+                    &args,
+                    &env_vars,
+                    StdinMode::Piped,
+                )?
+            }
         } else {
+            if effective_env.capacity.is_some() {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Capacity execution requires systemd",
+                )));
+            }
             let mut process = Command::new(program_path);
             process
                 .kill_on_drop(true)
@@ -985,6 +1012,7 @@ impl Codex {
             .get("VK_EXECUTION_PROCESS_ID")
             .and_then(|value| Uuid::parse_str(value).ok());
         let cancel_for_task = cancel.clone();
+        let capacity_for_task = effective_env.capacity.clone();
 
         tokio::spawn(async move {
             let exit_signal_tx = ExitSignalSender::new(exit_signal_tx);
@@ -1016,6 +1044,9 @@ impl Codex {
             let result = async {
                 client.initialize().await?;
                 client.set_exit_signal(exit_signal_tx.clone());
+                if let Some(capacity) = capacity_for_task {
+                    client.watch_capacity(capacity);
+                }
                 task(client, exit_signal_tx.clone()).await
             }
             .await;

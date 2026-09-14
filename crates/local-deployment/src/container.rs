@@ -1486,6 +1486,7 @@ impl LocalContainerService {
 
         let action_type = if let Some(info) = latest_session_info {
             ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+                capacity: None,
                 prompt: queued_data.message.clone(),
                 session_id: info.session_id,
                 reset_to_message_id: None,

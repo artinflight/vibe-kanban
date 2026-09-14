@@ -859,7 +859,7 @@ mod native_acceptance {
             let mut env = ExecutionEnv::new(RepoContext::default(), false, String::new());
             env.insert("VK_EXECUTION_PROCESS_ID", execution.to_string());
             env.insert("CODEX_HOME", home.clone());
-            env.insert("VK_GOAL_TEST_SCENARIO", "capacity-expiry");
+            env.insert("VK_GOAL_TEST_SCENARIO", "capacity-containment");
             env.capacity = Some(prepared);
             let mut spawned = codex
                 .spawn_follow_up(
@@ -876,11 +876,11 @@ mod native_acceptance {
                 Some(super::super::unit_name(execution).as_str())
             );
             let stdout = spawned.child.inner().stdout.take().unwrap();
+            let protocol_path = Path::new(&home).join(format!("managed-{execution}.jsonl"));
             let drain = tokio::spawn(async move {
                 let mut stdout = stdout;
-                tokio::io::copy(&mut stdout, &mut tokio::io::sink())
-                    .await
-                    .unwrap();
+                let mut file = tokio::fs::File::create(protocol_path).await.unwrap();
+                tokio::io::copy(&mut stdout, &mut file).await.unwrap();
             });
             let result = tokio::time::timeout(
                 std::time::Duration::from_secs(7),
@@ -899,6 +899,62 @@ mod native_acceptance {
                 .unwrap()
                 .unwrap();
             assert!(wall_ms() < request.stop_at_ms);
+            let proof: serde_json::Value = serde_json::from_slice(
+                &fs::read(Path::new(&home).join("work/native-containment.json")).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(proof["workspace_write"], true);
+            assert_eq!(proof["child_started"], true);
+            assert_eq!(proof["tcp"], 1, "TCP socket creation must be denied");
+            assert_eq!(
+                proof["systemd_bus"], 1,
+                "Service-control sockets must be denied"
+            );
+            assert!(
+                proof["outside_write"].is_number(),
+                "Outside workspace must not be writable"
+            );
+            let tools: serde_json::Value = serde_json::from_slice(
+                &fs::read(Path::new(&home).join("capacity-tools.json")).unwrap(),
+            )
+            .unwrap();
+            for tool in tools.as_array().unwrap() {
+                if tool["type"] == "namespace" {
+                    assert_eq!(
+                        tool["name"], "multi_agent_v1",
+                        "No external tool namespaces"
+                    );
+                }
+                assert!(!tool["name"].as_str().unwrap_or("").starts_with("mcp_"));
+            }
+            let delegation: serde_json::Value = serde_json::from_slice(
+                &fs::read(Path::new(&home).join("capacity-delegation-reply.json")).unwrap(),
+            )
+            .unwrap();
+            let reply = delegation["input"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|item| {
+                    item["type"] == "function_call_output" && item["call_id"] == "delegation"
+                })
+                .unwrap()["output"]
+                .as_str()
+                .unwrap();
+            assert!(
+                reply == "unsupported call: spawn_agent"
+                    || reply.contains("depth")
+                    || reply.contains("limit"),
+                "Delegation must be rejected before starting a child: {reply}"
+            );
+            let heartbeat = Path::new(&home).join("work/contained-child-heartbeat");
+            let stopped = fs::read(&heartbeat).unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis(350)).await;
+            assert_eq!(
+                fs::read(&heartbeat).unwrap(),
+                stopped,
+                "Detached child must stop with the guarded service"
+            );
             if let Some(cancel) = spawned.cancel {
                 cancel.cancel();
             }

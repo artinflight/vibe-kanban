@@ -8,6 +8,7 @@ use capacity_guard::Lease;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 pub mod controller;
+pub mod policy;
 
 /// A persisted launch request is valid only in the VK process which issued it.
 /// Restart reconciliation must obtain a new grant, never replay an old action.

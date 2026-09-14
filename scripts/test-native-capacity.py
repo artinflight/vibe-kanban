@@ -48,6 +48,12 @@ for scenario in ('capacity-stop', 'capacity-expiry'):
             raise SystemExit(f'FAILED: {scenario}, resume={resume}; see {root}')
 # Exercise the real Codex executor resume path under durable managed authority.
 home = root / 'capacity-stop'
+marker = home / 'inherited-mcp-started'
+config = home / 'config.toml'
+previous_config = config.read_text() if config.exists() else ''
+assert 'mcp_servers.inherited_probe' not in previous_config
+config.write_text(previous_config + '\n[mcp_servers.inherited_probe]\ncommand="/usr/bin/python3"\nargs=' +
+                  json.dumps(['-c', f'from pathlib import Path; Path({str(marker)!r}).touch()']) + '\n')
 current = dict(env, CODEX_HOME=str(home), VK_USE_SYSTEMD_RUN='1',
                VK_CAPACITY_STATE_DIR=str(home / 'controller'), VK_CAPACITY_GUARD=str(args.guard))
 started = time.monotonic()
@@ -60,4 +66,18 @@ results.append(dict(scenario='managed-capacity-two-runs', passed=result.returnco
 (root / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
 if result.returncode:
     raise SystemExit(f'FAILED managed controller resume; see {root}')
+assert not marker.exists(), 'Inherited MCP server must never start during scheduled execution'
+results.append(dict(scenario='inherited-mcp-disabled-before-activation', passed=True))
+config.write_text(previous_config)
+current = dict(env, CODEX_HOME=str(home), VK_GOAL_TEST_SCENARIO='capacity-stop',
+               VK_GOAL_TEST_RESUME_THREAD=(home / 'capacity-thread-id').read_text())
+(home / 'capacity-request-active').unlink(missing_ok=True)
+result = subprocess.run([binary, 'native_goal_runtime', '--ignored', '--nocapture'],
+                        cwd=repo, env=current, text=True, stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT, timeout=60)
+(root / 'ordinary-after-managed.log').write_text(result.stdout)
+results.append(dict(scenario='ordinary-resume-restores-permissions', passed=result.returncode == 0))
+(root / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
+if result.returncode:
+    raise SystemExit(f'FAILED ordinary resume after managed capacity; see {root}')
 print(json.dumps(dict(artifacts=str(root), results=results), indent=2))

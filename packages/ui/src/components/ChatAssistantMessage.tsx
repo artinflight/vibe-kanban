@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { splitGoalCheckpoint } from '../lib/goalCheckpoint';
+import type { ReactNode } from "react";
+import { splitGoalCheckpoint } from "../lib/goalCheckpoint";
 
 export interface ChatAssistantMessageRenderProps {
   content: string;
@@ -31,18 +31,26 @@ export function ChatAssistantMessage({
       >
         <div className="flex flex-wrap items-center gap-base">
           <span className="font-medium text-high">Goal checkpoint</span>
-          <span className="text-low">
-            {checkpoint.disposition === 'needs_input'
-              ? 'Needs your input'
-              : 'Continuing'}
+          <span
+            className={
+              checkpoint.disposition === "complete"
+                ? "text-success"
+                : "text-low"
+            }
+          >
+            {checkpoint.disposition === "needs_input"
+              ? "Needs your input"
+              : checkpoint.disposition === "complete"
+                ? "Completed"
+                : "Continuing"}
           </span>
         </div>
         {checkpoint.reason && (
           <p className="whitespace-pre-wrap">{checkpoint.reason}</p>
         )}
         {[
-          { label: 'Requirements', entries: checkpoint.requirements },
-          { label: 'Verified this checkpoint', entries: checkpoint.completed },
+          { label: "Requirements", entries: checkpoint.requirements },
+          { label: "Verified this checkpoint", entries: checkpoint.completed },
         ].map(
           ({ label, entries }) =>
             Object.keys(entries).length > 0 && (
@@ -59,7 +67,7 @@ export function ChatAssistantMessage({
                   ))}
                 </dl>
               </details>
-            )
+            ),
         )}
         {checkpoint.recovery_plan && (
           <details>

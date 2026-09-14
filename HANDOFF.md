@@ -1,3 +1,44 @@
+## September 14 — final release acceptance
+
+The optimized VK server/guard built successfully from401f9178e. The staged
+package is `/mnt/vk-storage/codexusage-capacity/release`; source, hashes, signed
+Android0.3.0 APK, retained frontend assets and installation/recovery guidance are
+included. No production service or real goal was changed and no reset was used.
+
+Final release acceptance passed actual native crash/restart (independent stop
+620ms), stale quota (4.233s end-to-end), supervision loss/lease expiry, preserved
+same-goal/evidence resume, protected quota floor, reset-headroom stop and refusal
+to reopen yesterday's window with fresh weekly quota. Owner selection/settings,
+desktop/mobile controls, native workspace UI, saved messages and attachment bytes
+passed against the optimized binary. Expected offline relay authentication400s
+are recorded; no local feature HTTP error or browser script error occurred.
+
+An early stop attempt demonstrated the documented guard/RPC race: the process
+stopped while native status remained active. This is dormant, not authorized
+execution. The subsequent new grant reconciled and resumed that same goal; the
+final three-stop run persisted paused each time. Acceptance now checks process
+containment, resumable status/identity and same-goal resume rather than requiring
+the graceful RPC to beat the independent kill. No stop deadline was loosened.
+
+314 workspace Rust tests passed (three ignored), excluding Tauri whose GLib/GTK
+system dependency is unavailable. All65 executor tests, focused Clippy, frontend
+type checks/lint/production build,70 CU tests/real scan, and eight Android tests,
+release lint/build/signature verification passed. Physical phone/live Rainmeter
+rendering remains unverified. The final isolated backend and rehearsal units are
+stopped. No public preview was opened.
+
+Private systemd recovery rehearsal passed abort-before-activation, frozen-writer
+snapshot/activation/routed read, and returning to the same incumbent process with
+a saved message written by the candidate and preserved attachment. This uses a
+small disposable database; its subsecond timings are NOT production downtime.
+No database migration differs from the inspected incumbent baseline586ac628d.
+
+Delivery preparation still must complete the production-specific backup/delta and
+bounded handover controller if a live cutover is pursued. The package is not a
+claim that the live switch is approved or ready. Read
+the CU `docs/unused-capacity-release.md` and the VK backend restart protocol. Historical
+notes below describe earlier checkpoints and are superseded by this entry.
+
 ## Current delivery continuation
 
 Launcher/provider binding, build-cache support and native stop/resume pass 65

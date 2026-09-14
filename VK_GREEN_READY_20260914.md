@@ -1,5 +1,28 @@
 # Replacement Green From Staging
 
+## PR113 Readiness Refresh
+
+PR113 is merged into staging32676919b. The tested frontend sourcef224ec7ae has
+an identical full tree to that merge; both the pinned source and canonical
+staging checkout now point at32676919b. The only changes from503dbad74 are the
+checkpoint renderer/parser, its tests and a document. Backend inputs are unchanged;
+the previously tested server/guard binaries are reused, not rebuilt.
+
+Current frontend is index-Ca4e1mj1.js in Green and release584226ead in live Blue.
+Eight renderer tests and desktop/mobile Tailscale saved-message/WebSocket checks
+passed again after integration. Three controller tests reject changed frontend
+paths, changed frontend content and stale readiness approvals before service
+actions. The unchanged switch/recovery, thread, attachment, goal and model tests
+retain their earlier evidence; they were not all repeated for this UI-only patch.
+
+The refreshed production plan pins the current Blue frontend for rollback. The
+controller additionally requires `cutover-approval.json.readiness_sha256` to match
+the exact published readiness record. Its default preflight remains read-only.
+New archives use unique refresh timestamps, preserve prior records, and must be
+restored/hash/mode checked and Desktop-verified before ready=true is published.
+Only the latest `readiness.json` plus `release-tools-backup-receipt.json` authorize
+a claim of preparation readiness; neither authorizes actual cutover.
+
 ## Scope And Authority
 
 The operator accepted Blue as stable, authorized retiring the original frozen
@@ -10,7 +33,7 @@ Actions were invoked. An unqualified `gh pr view` defaults to the upstream repo
 on this checkout; use `--repo artinflight/vibe-kanban` for authoritative PR state.
 
 Blue remains production on4711/4712 behind gateway4720, PID2590517. Its live
-frontend remains `vk-goal-checkpoint-render/release-5d6ed3539`. Current data roots
+frontend is `vk-goal-checkpoint-render/release-584226ead`. Current data roots
 remain the existing green-named XDG directory, Codex home and attachment cache.
 Nothing in the disposable replica is an activation or restoration source.
 
@@ -22,15 +45,15 @@ Its unit is runtime-masked and boot-disabled. Original data and artifacts remain
 ## Candidate And Evidence
 
 Task root: `/mnt/vk-storage/vk-green-refresh-20260914`.
-Pinned source: `source/`, detached staging503dbad74. Canonical staging is restored
-at `/mnt/vk-storage/worktrees/vk-reference-staging`, on the same commit. Its full
-source tree equals reviewed PR head4a2f8fcf5, so checksum-verified compiled
-artifacts were reused. This is not a claim that compilation was repeated.
+Pinned source: `source/`, detached staging32676919b. Canonical staging is
+`/mnt/vk-storage/worktrees/vk-reference-staging`, on the same commit. Backend
+inputs equal reviewed PR head4a2f8fcf5; checksum-verified backend artifacts were
+reused. The completed-checkpoint frontend was rebuilt and validated separately.
 Application version remains0.1.42.
 
 - Server SHA256: `3e4e594f9f531477b3d7df3300be9de7599d1b8b7bf7ab54a41c6bdd8d114380`.
 - Capacity guard SHA256: `a66c85f10c8039906da37d3e3408f40b978690ddbc0b0c6edb028e8097a36680`.
-- Frontend entry: `index-DPTdm8R5.js`. Incumbent hashed assets remain available.
+- Frontend entry: `index-Ca4e1mj1.js`. Incumbent hashed assets remain available.
 - Test service: `vibe-kanban-green-staging-20260914.service`, loopback4911/4912.
   Private test URL: `https://mcp-server.tail744c4.ts.net:18466/` (Tailscale only).
   This endpoint remains tied to the replica, never production4511.

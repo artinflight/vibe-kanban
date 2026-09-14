@@ -1,5 +1,19 @@
 # HANDOFF.md
 
+## September14: Green Readiness Refresh After PR113
+
+PR113 merged into staging32676919b; pinned source and canonical staging updated.
+Full-tree comparison with tested frontendf224ec7ae passed; backend inputs have
+not changed from503dbad74. Eight renderer tests, fresh desktop/mobile preview
+checks and three stale-readiness/frontend rejection tests passed. Production
+Blue PID2590517 remains live on the unchanged authoritative data; no cutover.
+Production plan now binds current Blue frontend584226ead for rollback. A fresh
+approval must name the exact readiness SHA256. Read VK_GREEN_READY_20260914.md
+and the latest runtime readiness/backup receipt; only successful new packaging
+publishes ready=true. Older invalidation/pending-merge notes below are historical.
+Other agent/native work is active; drain/reconcile the fresh inventory at the
+approved window. Never replace current production data with the test replica.
+
 ## September 14: Completed Checkpoint Display Repair
 
 Live frontend now uses `/mnt/vk-storage/vk-goal-checkpoint-render/release-584226ead`.

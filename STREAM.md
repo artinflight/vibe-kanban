@@ -1,5 +1,9 @@
 # STREAM.md
 
+September14 current scope: PR113 is merged as32676919b; refresh Green readiness
+and current-frontend rollback binding without interrupting production Blue.
+The local maintenance branch records evidence; it is not an application release.
+
 ## Completed Checkpoint Hotfix: September 14
 
 Live renderer584226ead accepts completion reports without exposing raw protocol.

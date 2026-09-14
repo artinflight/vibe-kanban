@@ -6,6 +6,13 @@ An established protocol is not evidence that a particular candidate is ready.
 
 ## Generation Roles
 
+Any readiness refresh invalidates previous approval. Bind the fresh approval to
+the exact readiness SHA256 and staging commit; verify the current incumbent
+frontend path/content before entering maintenance. A frontend-only hotfix can
+change the required rollback assets without changing backend binaries. Preserve
+old receipts and publish refreshed readiness only after the new software package
+has been restored, verified and mirrored to Desktop.
+
 Color names are relative roles, not permanent ownership. As of September14,
 Blue is the accepted incumbent, original frozen Green is retired, and a fresh
 Green is prepared from staging after PR112 merged. Apply the protocol to the

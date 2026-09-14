@@ -1,5 +1,12 @@
 # STATE.md
 
+**September14 PR113 integration:** Completed-checkpoint fix merged into staging
+32676919b; canonical staging and pinned Green source updated. Blue remains live
+with frontend584226ead, unchanged PID2590517. Green frontend source equals the
+merged tree; backend inputs are unchanged. Read the refreshed runtime readiness
+and Desktop receipt before cutover. Older pending-merge/invalidation notes below
+are superseded only when new packaging publishes ready=true. No cutover occurred.
+
 **September14 frontend correction:** Completed goal checkpoints now render as
 styled cards in live release584226ead. The former parser rejected `complete`;
 the prior six tests did not cover it. Blue PID2590517 is unchanged. PR113 is the

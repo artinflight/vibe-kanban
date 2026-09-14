@@ -1,3 +1,11 @@
+## September 14 Review Correction
+
+The review requests changes. [PR112_REVIEW_FIXES.md](PR112_REVIEW_FIXES.md)
+records the model/reasoning preservation defect and missing live frontend
+hotfix, with repair acceptance criteria. Earlier acceptance and implementation
+completion statements below are historical and do not resolve these gaps.
+The current release must not be deployed unchanged.
+
 ## Completion audit — implementation and release handoff scope
 
 The authoritative goal asks for a deployable validated integration. Its fixed

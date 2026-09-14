@@ -36,6 +36,8 @@ use uuid::Uuid;
 
 use crate::{DeploymentImpl, error::ApiError};
 
+// Keep the shared HTTP error contract; this helper never constructs its large WebRTC variant.
+#[allow(clippy::result_large_err)]
 fn authorize(headers: &HeaderMap) -> Result<(), ApiError> {
     let path = std::env::var("VK_CAPACITY_TOKEN_FILE").map_err(|_| ApiError::Unauthorized)?;
     if !std::path::Path::new(&path).is_absolute() {
@@ -72,6 +74,8 @@ fn authorize(headers: &HeaderMap) -> Result<(), ApiError> {
     }
     Ok(())
 }
+// Preserve the shared conflict/I/O conversion without changing unrelated API errors.
+#[allow(clippy::result_large_err)]
 fn controller() -> Result<&'static tokio::sync::Mutex<controller::Controller>, ApiError> {
     controller::configured()?
         .ok_or_else(|| ApiError::Conflict("Unused capacity integration is not configured".into()))
@@ -104,13 +108,13 @@ async fn status(
     let running = ExecutionProcess::find_running(&deployment.db().pool).await?;
     let mut execution_states = serde_json::Map::new();
     for goal in state.goals.values() {
-        if let Some(id) = goal.grant.as_ref().and_then(|g| g.execution_id) {
-            if let Some(process) = ExecutionProcess::find_by_id(&deployment.db().pool, id).await? {
-                execution_states.insert(
-                    id.to_string(),
-                    serde_json::to_value(process.status).unwrap(),
-                );
-            }
+        if let Some(id) = goal.grant.as_ref().and_then(|g| g.execution_id)
+            && let Some(process) = ExecutionProcess::find_by_id(&deployment.db().pool, id).await?
+        {
+            execution_states.insert(
+                id.to_string(),
+                serde_json::to_value(process.status).unwrap(),
+            );
         }
     }
     Ok(Json(
@@ -264,7 +268,7 @@ async fn start(
     };
     let action = ExecutorAction::new(
         ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
-            capacity: Some(capacity),
+            capacity: Some(Box::new(capacity)),
             prompt: "/goal resume".into(),
             session_id: info.session_id,
             reset_to_message_id: None,

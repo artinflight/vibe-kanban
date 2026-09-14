@@ -1,3 +1,21 @@
+## Completion audit — implementation and release handoff scope
+
+The authoritative goal asks for a deployable validated integration. Its fixed
+`delivery` requirement explicitly permits a concrete deployment/handoff. Earlier
+continuation notes added a live production cutover as an extra completion gate;
+that was an overextension, not a user requirement. The final audit will close the
+implementation on verified source, release artifacts, acceptance and review
+checks. Production deployment is still unperformed and requires its separate
+backup/recovery preparation and explicit cutover approval. No approval is being
+requested by this handoff, and no live availability claim is made.
+
+The package and requirement-by-requirement audit are in
+`/mnt/vk-storage/codexusage-capacity/release/completion-audit.json`.
+Current final CI found one integration defect: optional capacity metadata enlarged
+the shared executor-action enum beyond the Clippy limit. Boxing that metadata
+preserves the serialized API/database representation while keeping ordinary
+execution records small. Final checks/release rebuild follow this correction.
+
 ## September 14 — final release acceptance
 
 The optimized VK server/guard built successfully from401f9178e. The staged

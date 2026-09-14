@@ -1,5 +1,12 @@
 # STATE.md
 
+**September14 live authority:** Green production PID2778969 is live/enabled on
+4511/4512 and vibe.local after the approved26second cutover. Blue PID2590517
+remains frozen/disabled as same-data fallback. Staging32676919b includes PR112
+and PR113; original-thread/model, data, saved-message, attachment and Steer/goal/
+Stop acceptance passed. See VK_GREEN_LIVE_20260914.md. Older Blue-live and
+preparation-only statements below are historical. Never restore an older DB.
+
 **September14 PR113 integration:** Completed-checkpoint fix merged into staging
 32676919b; canonical staging and pinned Green source updated. Blue remains live
 with frontend584226ead, unchanged PID2590517. Green frontend source equals the

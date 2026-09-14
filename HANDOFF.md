@@ -1,5 +1,18 @@
 # HANDOFF.md
 
+## September14: Green Is Production, Acceptance Passed
+
+Read VK_GREEN_LIVE_20260914.md before any service action. The approved switch
+completed in26seconds; Green PID2778969 is enabled/live on4511/4512 and vibe.local.
+Original Blue PID2590517 remains frozen/disabled for same-latest-data cutback.
+No database restoration or replacement maintenance thread occurred. Final backup,
+original-thread/model continuity, frozen ID/scratch preservation, saved messages
+on desktop/mobile, attachment round-trip and real Steer/goal/Stop tests passed.
+Historical recovery and existing UI exceptions remain. Replica4911 is stopped.
+Do not rerun the controller or use old preparation/readiness statements below
+as current runtime truth. Latest attempt is cutover-20260914T152557Z under the
+vk-green-refresh-20260914 SSD directory. Operator may resume normal work.
+
 ## September14: Green Readiness Refresh After PR113
 
 PR113 merged into staging32676919b; pinned source and canonical staging updated.

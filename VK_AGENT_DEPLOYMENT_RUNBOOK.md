@@ -24,6 +24,10 @@ remain unresolved. Preserve choices and drafts, and do not bulk-reset chats.
 
 ## Current Live Truth
 
+September14 post-cutover authority: Green production2778969 is live on4511/4512;
+Blue2590517 is frozen for latest-data cutback. See VK_GREEN_LIVE_20260914.md.
+The preparation inventory below predates activation and is historical.
+
 **September14 supersedes the historical inventory below.** Production is
 `vibe-kanban-paused-blue-20260912.service` on4711/4712, PID2590517, behind
 gateway4720. Original Green PID2669659 was deliberately retired without thaw;

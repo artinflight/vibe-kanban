@@ -1,5 +1,22 @@
 # HANDOFF.md
 
+## September 14: PR112 Merged, Replacement Green Validated
+
+PR112 in `artinflight/vibe-kanban` rebase-merged into staging503dbad74. Blue
+PID2590517 remains production. Original frozen Green PID2669659 was retired
+without thaw after Desktop-verified software/config preservation. Its service
+is runtime-masked and must not be revived. Replacement Green uses a contained
+replica; never copy this test state into production. Current work and evidence
+are in `VK_GREEN_READY_20260914.md` and
+`/mnt/vk-storage/vk-green-refresh-20260914/PROGRESS.md`. Final cutover needs a
+new explicit operator instruction, refreshed writer inventory and final capture.
+Do not run the September11/12 controller or restore an old database.
+Functional and same-latest-data recovery acceptance passed with the documented
+incumbent post-send warning. Test Green at the private Tailscale endpoint
+`https://mcp-server.tail744c4.ts.net:18466/`; it is copied state, not real work.
+Require `readiness.json` and the Desktop package receipt before authorizing
+activation. No cutover occurred during this preparation.
+
 ## September 14: PR112 Re-review Closes Prior Blockers
 
 Head4a2f8fcf5 addresses the scheduled model/reasoning loss and restores the live

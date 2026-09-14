@@ -1,5 +1,14 @@
 # STATE.md
 
+**September 14 authority:** Blue remains production on4711/4712, PID2590517.
+The operator accepted Blue and authorized retiring the original frozen Green;
+PID2669659 is gone without thaw, and its old unit is runtime-masked/boot-disabled.
+PR112 is merged into this fork's staging as503dbad74. Replacement Green is an
+isolated test replica, not a second production writer. Activation is still held
+for a separate cutover instruction. See `VK_GREEN_READY_20260914.md` and
+`/mnt/vk-storage/vk-green-refresh-20260914/PROGRESS.md` for current evidence.
+Older statements that original Green remains frozen are now historical.
+
 **September 12 model-selection correction:** Existing-chat preservation is not
 fully accepted. Two chats with prior GPT-6 request configurations submitted
 GPT-5.6 after cutover despite the live global GPT-6 default. Exact cause and

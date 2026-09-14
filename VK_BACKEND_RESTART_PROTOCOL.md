@@ -4,6 +4,22 @@ Established by the operator on 2026-09-11. This is the authority for future
 backend restart windows; older stop-and-switch examples are historical.
 An established protocol is not evidence that a particular candidate is ready.
 
+## Generation Roles
+
+Color names are relative roles, not permanent ownership. As of September14,
+Blue is the accepted incumbent, original frozen Green is retired, and a fresh
+Green is prepared from staging after PR112 merged. Apply the protocol to the
+verified incumbent and candidate, not to hard-coded historical unit names.
+Retiring a standby is not permission to interrupt the incumbent or activate its
+replacement. A test replica is never copied over authoritative production data.
+
+Allow accepted buffered UI-preference writes to flush after closing routed
+connections and before freezing the incumbent. Current source delays those
+writes by750ms; the prepared handover includes a1.5s drain interval and then
+verifies frozen database generations. Inventory direct callers separately.
+Use the reciprocal production start interlocks before activating a replacement;
+the historical Blue start guard knows only the retired Green service.
+
 ## September 12 Failure Corrections
 
 The operator permits a loaded but paused Green, retaining its original PID for

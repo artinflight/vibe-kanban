@@ -1,10 +1,11 @@
 # STREAM.md
 
-## Current Maintenance Scope: September 11
+## Current Maintenance Scope: September 14
 
-Branch `vk/4e18-vk-staging-check` establishes the online-preparation restart
-protocol and continues isolated readiness work. Green must remain usable;
-production interruption or routing changes need a later explicit cutover approval.
+Branch `vk/4e18-vk-staging-check` records current maintenance and readiness work.
+The operator accepted Blue, authorized retiring old paused Green and requested
+PR112 merge into staging before replacement Green preparation. Blue remains
+usable; production interruption or routing changes need later cutover approval.
 The old stream identifier and deployment history below are historical context.
 
 ## Stream Identifier

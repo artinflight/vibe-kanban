@@ -16,6 +16,16 @@ remain unresolved. Preserve choices and drafts, and do not bulk-reset chats.
 
 ## Current Live Truth
 
+**September14 supersedes the historical inventory below.** Production is
+`vibe-kanban-paused-blue-20260912.service` on4711/4712, PID2590517, behind
+gateway4720. Original Green PID2669659 was deliberately retired without thaw;
+`vibe-kanban-green.service` is masked-runtime/boot-disabled. The new staging
+Green service is isolated test state on4911/4912. Its separate prepared
+production unit is NOT activated. The authoritative data paths still contain
+`green` in their names; color is not ownership. See `VK_GREEN_READY_20260914.md`.
+
+### Historical August 28 Inventory
+
 - Canonical source repo: `/home/mcp/_vibe_kanban_repo`
 - Current green live service as of 2026-08-28: `vibe-kanban-green.service`
 - Retired blue service: `vibe-kanban.service`

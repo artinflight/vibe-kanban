@@ -2,6 +2,10 @@
 
 ## Established Backend Restart Protocol
 
+September14 role update: Blue is the incumbent and the replacement Green is the
+candidate. Original paused Green has been retired with operator authorization.
+Read `VK_GREEN_READY_20260914.md` before applying the historical color examples.
+
 Follow [the backend restart protocol](VK_BACKEND_RESTART_PROTOCOL.md). Keep
 Green usable while Blue is built, isolated, tested and backed up. Rehearse and
 measure the complete interruption before offering a window, then wait for an

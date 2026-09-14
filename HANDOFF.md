@@ -1,5 +1,26 @@
 # HANDOFF.md
 
+## September 14: Completed Checkpoint Display Repair
+
+Live frontend now uses `/mnt/vk-storage/vk-goal-checkpoint-render/release-584226ead`.
+The old parser rejected `disposition: "complete"`; this missed test case caused
+raw markup despite the prior renderer being deployed. Completed reports now use
+the same expandable card with a green Completed label. Logs and native goal
+state are not rewritten. Blue PID2590517 was not restarted. All12 saved messages,
+profiles and project responses matched before/after; desktop/mobile app and
+WebSocket checks passed. Eight renderer tests include the reported payload.
+PR113 backfills the fix into staging; merge is still pending. Green's former
+readiness record is invalidated until the frontend receipt and staging backfill
+are reconciled. Do not use the old ready=true record to authorize a cutover.
+Green preview now serves `index-Ca4e1mj1.js` from sourcef224ec7ae; desktop/mobile
+checks pass with15 copied messages (12 originals plus3 existing test messages).
+No candidate backend restart occurred. Preserve current Blue frontend584226ead
+in the next production-plan rollback binding, not the older5d6ed3539 pointer.
+Evidence: `/mnt/vk-storage/vk-goal-checkpoint-render/complete-release.json` and
+`complete-desktop-receipt.json`. Previous assets and release remain intact;
+Desktop rollback archive is in `B:/vk-backups/vk-green-refresh-20260914/`.
+
+
 ## September 14: PR112 Merged, Replacement Green Validated
 
 PR112 in `artinflight/vibe-kanban` rebase-merged into staging503dbad74. Blue

@@ -7,6 +7,14 @@ For the planned clean self-development project/preview model, read
 
 ## Required Existing-Chat Model Check
 
+For goal-checkpoint display, exercise continuing, input-needed and legacy
+completed reports, including expandable evidence at desktop/mobile sizes.
+The September14 parser accepted only the first two states, exposing completed
+reports as raw protocol despite passing six tests. Carry PR113's completion
+renderer/tests into future builds. Rendering a completion report is not proof
+that the native goal engine marked the objective complete; do not rewrite logs.
+Invalidate prior candidate readiness whenever a missing live fix is discovered.
+
 Follow the [existing-chat model preservation gate](VK_BACKEND_RESTART_PROTOCOL.md#existing-chat-model-preservation-gate)
 before declaring any restart, frontend swap or cutback ready or accepted. Compare
 per-chat choices at the final boundary with the reopened selector and actual

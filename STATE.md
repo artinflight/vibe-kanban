@@ -1,5 +1,13 @@
 # STATE.md
 
+**September14 frontend correction:** Completed goal checkpoints now render as
+styled cards in live release584226ead. The former parser rejected `complete`;
+the prior six tests did not cover it. Blue PID2590517 is unchanged. PR113 is the
+staging backfill, pending merge. The earlier Green readiness is superseded until
+this frontend repair is integrated and its updated release evidence reconciled.
+No production backend cutover or stored-message rewrite occurred.
+
+
 **September 14 authority:** Blue remains production on4711/4712, PID2590517.
 The operator accepted Blue and authorized retiring the original frozen Green;
 PID2669659 is gone without thaw, and its old unit is runtime-masked/boot-disabled.

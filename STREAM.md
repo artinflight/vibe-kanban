@@ -1,5 +1,13 @@
 # STREAM.md
 
+## Completed Checkpoint Hotfix: September 14
+
+Live renderer584226ead accepts completion reports without exposing raw protocol.
+Staging backfill is PR113 (`fix/completed-goal-checkpoint`). Maintenance notes
+here are separate from that narrowly scoped source branch. Preserve the previous
+frontend and Desktop backup; no backend restart is needed for this repair.
+
+
 ## Current Maintenance Scope: September 14
 
 Branch `vk/4e18-vk-staging-check` records current maintenance and readiness work.

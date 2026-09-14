@@ -1,3 +1,9 @@
+## September 14: VK Errors 2
+
+See [VK_ERRORS_2.md](VK_ERRORS_2.md). VK::Error workspace path is restored and
+live Git status succeeds. Media Management protocol compatibility is being
+validated on current staging. Production has not been restarted or switched.
+
 ## September 14: selected-only capacity fault isolation
 
 Current user scope is selected native VK goals on MCP only. PR112 is already

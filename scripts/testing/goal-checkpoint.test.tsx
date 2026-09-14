@@ -12,6 +12,39 @@ const checkpoint = {
 };
 const block = (value: unknown) =>
   `<vk_goal_checkpoint>${JSON.stringify(value)}</vk_goal_checkpoint>`;
+
+test("renders completion reports with completed styling and preserves evidence", () => {
+  const value = {
+    requirements: {},
+    completed: {
+      delivery:
+        "All required platform/content changes integrated via #626/#627, #628 and #629/#630. Production main c6b9bc13f990bd82fb03cc70450a5f70ee97dc34 deployed; healthy build 2026-09-14T14:08:40.205Z. Staging deploy 34853459851 succeeded; healthy build 2026-09-14T14:06:48.118Z. All 236 local tests and required CI passed. Live source receipts recognize all Sep15–19 sections; unchanged-feed check launches no duplicate job, while a read-only changed-Friday probe requires Friday/Saturday review. Main/sidecar remain identical to integrated #628, Monday hash unchanged. Native goal marked complete.",
+    },
+    disposition: "complete",
+    reason:
+      "Corrected week is live and integrated; strict novelty, video validation, published locks, paired publication, retry/cancellation and source-refresh behavior are tested and deployed.",
+  };
+  const html = render(block(value));
+  assert.match(html, /text-success/);
+  assert.match(html, />Completed</);
+  assert.match(html, /Verified this checkpoint \(1\)/);
+  assert.ok(html.includes(value.completed.delivery));
+  assert.ok(html.includes(value.reason));
+  assert.doesNotMatch(html, /vk_goal_checkpoint|Continuing|Needs your input/);
+  assert.deepEqual(splitGoalCheckpoint(block(value)).checkpoint, value);
+});
+
+test("completion remains display-only and does not hide examples or invalid fields", () => {
+  const value = { ...checkpoint, disposition: "complete" };
+  assert.match(render(`Finished.\n\n${block(value)}`), /Finished\./);
+  for (const content of [
+    `Example: ${block(value)}`,
+    `~~~json\n${block(value)}`,
+    block({ ...value, completed: { delivery: false } }),
+  ]) {
+    assert.deepEqual(splitGoalCheckpoint(content), { content });
+  }
+});
 const render = (content: string) =>
   renderToStaticMarkup(
     <ChatAssistantMessage

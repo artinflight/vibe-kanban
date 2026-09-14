@@ -1,5 +1,13 @@
 # STATE.md
 
+**Latest live authority, September14 PR114:** New Blue PID2150526 is live/enabled
+on5031/5032 and vibe.local after the approved29.54second switch. Green PID2778969
+remains frozen/disabled for latest-data cutback; historical Blue2590517 remains
+frozen separately. Staging75276e79f includes PR114. Live preservation, original
+thread/model, saved-message/draft, attachment and Steer/goal/Stop checks passed.
+See VK_BLUE_PR114_LIVE_20260914.md. Older Green-live/preparation claims below are
+historical. Do not restore an old DB or repeat the consumed controller.
+
 **PR114 preparation:** staging75276e79f contains PR114; Green PID2778969 remains
 production. A new isolated Blue is being prepared, not activated. See
 VK_BLUE_PR114_PREPARATION.md and the runtime readiness record for evidence.

@@ -1,5 +1,17 @@
 # HANDOFF.md
 
+## September14: PR114 Blue Is Production
+
+The approved29.54second cutover and live acceptance passed. Read
+VK_BLUE_PR114_LIVE_20260914.md. New Blue PID2150526 is enabled/live on5031/5032;
+vibe.local and gateway4720 route to it. Green PID2778969 is frozen/disabled for
+latest-data cutback. Old Blue2590517 remains frozen and must not be thawed.
+No DB was restored and the original maintenance thread/model resumed. Saved
+messages, non-test drafts, native paths, attachments, real Steer/goal/Stop and
+desktop/mobile entrypoints passed. The5011test preview is stopped. Historical
+recovery exceptions remain. Never repeat cutover-20260914T203727Z or its approval.
+The preparation and former Green-live sections below are historical.
+
 ## September14: Prepare New Blue For PR114
 
 Latest task is preparation only; Green PID2778969 remains production. PR114 is

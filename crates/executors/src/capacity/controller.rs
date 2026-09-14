@@ -487,6 +487,20 @@ pub async fn validate_native(lease: &Lease, snapshot: &serde_json::Value) -> io:
         .ok_or_else(|| invalid("Scheduled goal authority changed"))?;
     let native: crate::executors::codex::goals::NativeGoal =
         serde_json::from_value(snapshot["goal"].clone())?;
+    let progress: crate::executors::codex::goals::Progress = serde_json::from_slice(&fs::read(
+        crate::executors::codex::goals::progress_path(&goal.thread_id)?,
+    )?)?;
+    if progress.pause_reason.is_some()
+        || progress.all_complete()
+        || !matches!(
+            native.status.as_str(),
+            "paused" | "active" | "usage_limited"
+        )
+    {
+        return Err(invalid(
+            "Goal requires user involvement before scheduled continuation",
+        ));
+    }
     if native.thread_id != goal.thread_id
         || native.objective != goal.objective
         || native.created_at != goal.created_at
@@ -825,6 +839,23 @@ mod native_acceptance {
                 c.bind(&request, &thread, execution, wall_ms()).unwrap();
                 request.prepare(&execution.to_string()).unwrap()
             };
+            // Scheduled capacity must not override a checkpoint requesting
+            // human input or a native goal's explicit token-budget boundary.
+            let path = progress_path(&thread).unwrap();
+            let saved = fs::read(&path).unwrap();
+            let mut waiting: Progress = serde_json::from_slice(&saved).unwrap();
+            waiting.pause_reason = Some("Operator decision required".into());
+            fs::write(&path, serde_json::to_vec(&waiting).unwrap()).unwrap();
+            let mut snapshot = serde_json::json!({"goal": {
+                "threadId": thread, "objective": before.objective,
+                "createdAt": before.created_at, "status": "paused"
+            }});
+            assert!(validate_native(&prepared.lease, &snapshot).await.is_err());
+            fs::write(&path, saved).unwrap();
+            snapshot["goal"]["status"] = "budget_limited".into();
+            assert!(validate_native(&prepared.lease, &snapshot).await.is_err());
+            snapshot["goal"]["status"] = "paused".into();
+            validate_native(&prepared.lease, &snapshot).await.unwrap();
             let mut env = ExecutionEnv::new(RepoContext::default(), false, String::new());
             env.insert("VK_EXECUTION_PROCESS_ID", execution.to_string());
             env.insert("CODEX_HOME", home.clone());

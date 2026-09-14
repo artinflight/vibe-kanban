@@ -101,8 +101,20 @@ async fn status(
 ) -> Result<Json<Value>, ApiError> {
     authorize(&headers)?;
     let state = controller()?.lock().await.state.clone();
+    let running = ExecutionProcess::find_running(&deployment.db().pool).await?;
+    let mut execution_states = serde_json::Map::new();
+    for goal in state.goals.values() {
+        if let Some(id) = goal.grant.as_ref().and_then(|g| g.execution_id) {
+            if let Some(process) = ExecutionProcess::find_by_id(&deployment.db().pool, id).await? {
+                execution_states.insert(
+                    id.to_string(),
+                    serde_json::to_value(process.status).unwrap(),
+                );
+            }
+        }
+    }
     Ok(Json(
-        json!({"state":state, "foregroundActive":foreground(&deployment, &state).await?, "checkedAtMs":wall_ms()}),
+        json!({"state":state, "foregroundActive":foreground(&deployment, &state).await?, "runningExecutionIds":running.iter().map(|p|p.id).collect::<Vec<_>>(), "executionStates":execution_states, "checkedAtMs":wall_ms()}),
     ))
 }
 async fn candidate(
@@ -115,9 +127,12 @@ async fn candidate(
     let progress: Progress =
         serde_json::from_slice(&tokio::fs::read(progress_path(&info.session_id)?).await?)
             .map_err(|e| ApiError::BadRequest(e.to_string()))?;
-    if progress.objective.trim().is_empty() || progress.all_complete() {
+    if progress.objective.trim().is_empty()
+        || progress.all_complete()
+        || progress.pause_reason.is_some()
+    {
         return Err(ApiError::BadRequest(
-            "No unfinished goal with durable progress".into(),
+            "No unfinished goal available without user input".into(),
         ));
     }
     Ok(ManagedGoal {
@@ -224,6 +239,12 @@ async fn start(
         .container()
         .ensure_container_exists(&workspace)
         .await?;
+    // Creation/migration can update container_ref. Launch with the persisted
+    // workspace rather than the stale record read before preparation.
+    let workspace = Workspace::find_by_id(&deployment.db().pool, workspace.id)
+        .await?
+        .filter(|w| !w.archived)
+        .ok_or(ApiError::BadRequest("Workspace is unavailable".into()))?;
     let capacity = {
         let mut c = controller()?.lock().await;
         c.check_revision(&input.epoch, input.revision)

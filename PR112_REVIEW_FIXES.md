@@ -1,5 +1,9 @@
 # PR112 Review Findings And Repair Handoff
 
+**Repair status:** both P1 findings are addressed in application commit
+`a6106d2e0`; local repaired-binary acceptance passed. Original review findings
+below are retained as history. PR112 remains draft/unmerged and undeployed.
+
 September 14, 2026. Reviewed application head:
 `b21ef9bd5790f6a4135f80ea58dabfe49831c7ef`, against staging
 `9a2591916610870ee456b6134bf4f217831010bc`.
@@ -90,3 +94,69 @@ necessary integration. The receiving agent should choose the implementation.
 The fixing agent's handoff should identify the repaired commits, tests proving
 each outcome, exact release artifacts, remaining gaps and merge/deploy status.
 No production readiness claim is justified solely by resolving Git conflicts.
+
+## Repair implementation and validated result
+
+The scheduled route now loads the complete latest non-dropped coding-agent
+request, including explicit model/reasoning and other user overrides. Existing
+profile-only consumers retain their previous API. A server-persisted follow-up
+draft updated at or after that execution takes precedence as a complete newer
+selection; its text is neither submitted nor cleared by scheduling. Browser-only
+changes that failed to save are not observable by the scheduler. Unset fields
+continue to mean preset defaults; explicit fields survive preset changes.
+Capacity admission still applies its temporary native permission restrictions
+after normal configuration resolution. Ordinary continuation retains its normal
+request/configuration path.
+
+The live checkpoint parser and renderer were integrated from the independently
+verified current pointer `vk-goal-checkpoint-render/release-5d6ed3539` and its
+`deploy-source`. Rendering leaves stored history unchanged and preserves malformed,
+partial, fenced and ordinary messages. Old hashed assets alone are not used as
+proof of this behavior.
+
+New local regression drivers are `scripts/testing/capacity-model-review.py`,
+`capacity-checkpoint-browser.mjs`, and the imported checkpoint rendering tests.
+Artifacts and logs are under `/mnt/vk-storage/codexusage-capacity/pr112-repair`.
+The model driver accepts only the fixed disposable one-session HTTP fixture,
+uses the real installed native app-server with an offline provider, and captures
+stored execution requests, native resume parameters and actual model requests.
+No production state, live routing or real quota is part of this validation.
+
+### Repaired-code evidence
+
+- All 14 database tests passed, including complete-config preservation and
+  ignoring a newer dropped execution. Six checkpoint parser/rendering tests pass.
+- `cargo clippy -p server -p db --all-targets -- -D warnings`, `cargo check -p server`,
+  UI type-check/lint, local frontend production build (including TypeScript),
+  `pnpm run format`, and `pnpm run ops:check` passed. No Actions were invoked.
+- `capacity-model-review.py` passed four actual installed-Codex/offline-provider
+  runs: explicit GPT-6/high over a GPT-5.5/low preset; preservation after the preset
+  changed to GPT-5.6-sol/low; newer saved GPT-5.5/medium selection; and subsequent
+  ordinary continuation. Each checks the stored execution request, native resume
+  parameters, actual model-request model/reasoning, same goal/thread identity,
+  and retained progress. Scheduled network restrictions remain in place even
+  with explicit AUTO permissions; ordinary resume restores its normal sandbox.
+  Scheduled work leaves the user's unsubmitted draft intact.
+- Fresh 1360px desktop and 390px mobile loads used `index-DPTdm8R5.js`, displayed
+  structured checkpoints and ordinary surrounding text, and had no script errors.
+  Screenshots and JSON evidence are in `pr112-repair` below.
+
+### Exact repaired release and remaining boundaries
+
+`/mnt/vk-storage/codexusage-capacity/pr112-repair/manifest.json` inventories the
+new optimized server, guard, frontend files and validation evidence with SHA-256.
+The server hash is
+`3e4e594f9f531477b3d7df3300be9de7599d1b8b7bf7ab54a41c6bdd8d114380`.
+The guard is unchanged; the fresh frontend contains the live checkpoint behavior
+and retains the current live hashed assets for existing tabs. The original
+`release/manifest.json` now explicitly points to this superseding VK package.
+
+The isolated backend's teardown logged a Tokio timer shutdown panic after the
+runs. All four functional runs passed; cleanup confirmed zero running fixture
+executions, zero outstanding grants and no listener on 49173. This is recorded
+in the manifest as an unresolved teardown limitation, not certified production
+handover behavior. The full workspace/Tauri and earlier crash/reset suites were
+not rerun for this scoped repair; earlier evidence stays attributed to its old
+build. CU PR7 review and production backup/delta, measured handover/recovery and
+final cutover approval remain separate. No real quota/reset was used and no
+production service, frontend pointer, history, settings or attachment changed.

@@ -1,3 +1,18 @@
+## PR112 review repairs — September 14
+
+Both P1 findings are repaired in application commit `a6106d2e0`: scheduled resumes
+preserve complete model/reasoning choices (including newer saved chat selections),
+and the fresh frontend retains the live structured goal-checkpoint renderer.
+All14 database tests, six rendering tests, four native/offline model-selection
+runs, fresh desktop/mobile browser acceptance, focused Clippy, UI checks/lint,
+formatting and ops checks passed. Details and limits: [PR112_REVIEW_FIXES.md](PR112_REVIEW_FIXES.md).
+New candidate: `/mnt/vk-storage/codexusage-capacity/pr112-repair/manifest.json`.
+The fixture teardown emitted a Tokio shutdown panic after successful runs; zero
+executions/grants/listeners remained. Production handover is not certified.
+PR112 remains draft/unmerged and undeployed; CU PR7 and separate production
+rollout preparation/approval remain required. Older review/readiness notes below
+are historical. Do not deploy the superseded pre-repair VK package.
+
 ## September 14 Review Status
 
 PR112 requires changes before merge; its prepared release is not approved for

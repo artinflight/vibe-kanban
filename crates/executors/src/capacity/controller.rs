@@ -422,7 +422,7 @@ impl Controller {
             .goals
             .get_mut(&session)
             .ok_or_else(|| invalid("Unknown goal"))?;
-        if !goal.grant.as_ref().is_some_and(|g| g.id == id) {
+        if goal.grant.as_ref().is_none_or(|g| g.id != id) {
             return Err(invalid("Grant changed during stop reconciliation"));
         }
         goal.grant = None;

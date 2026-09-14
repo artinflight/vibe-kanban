@@ -13,6 +13,9 @@ and the latest runtime readiness/backup receipt; only successful new packaging
 publishes ready=true. Older invalidation/pending-merge notes below are historical.
 Other agent/native work is active; drain/reconcile the fresh inventory at the
 approved window. Never replace current production data with the test replica.
+Green now also retains104 assets from the latest Blue hotfix, verified through
+the replica HTTP server. Do not reuse the first refreshed archive from15:03:46;
+it predates that retention check. The latest readiness receipt names its replacement.
 
 ## September 14: Completed Checkpoint Display Repair
 

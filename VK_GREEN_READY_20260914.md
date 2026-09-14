@@ -18,6 +18,11 @@ retain their earlier evidence; they were not all repeated for this UI-only patch
 The refreshed production plan pins the current Blue frontend for rollback. The
 controller additionally requires `cutover-approval.json.readiness_sha256` to match
 the exact published readiness record. Its default preflight remains read-only.
+Green retains every asset from the current live Blue frontend, not just from the
+older candidate snapshot. An additional104 immutable files were missing after
+the hotfix; they are now copied and HTTP-verified without changing Green's entry.
+Packaging checks byte equality for all current incumbent assets. This protects
+already-open tabs that load another chunk after the forward cutover.
 New archives use unique refresh timestamps, preserve prior records, and must be
 restored/hash/mode checked and Desktop-verified before ready=true is published.
 Only the latest `readiness.json` plus `release-tools-backup-receipt.json` authorize

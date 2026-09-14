@@ -1,5 +1,22 @@
 # HANDOFF.md
 
+## September 14: Durable controller and CU bridge progress
+
+The private scheduling API and durable controller are now integrated in source:
+`crates/server/src/routes/capacity.rs` and
+`crates/executors/src/capacity/controller.rs`. Shared grants, process/revision
+fences, queued-launch revalidation, foreground preemption and deterministic-unit
+stop reconciliation are implemented. Native resume checks the selected objective
+and creation identity before activating. Seven focused authority tests passed;
+the actual managed Codex resume path passed two expiry/resume runs with retained
+objective/evidence. CU's new `src/vk-capacity.js` bridge has four passing tests.
+
+Next: implement CU scheduler and durable reconciliation/reset interlock using
+these endpoints, then owner configuration/eligibility UI and full cross-system
+acceptance. HTTP/DB integration acceptance and remote/external worker escape
+policy remain explicit gaps; do not enable the feature yet. The native goal's
+pacing requirement remains the only fully closed checklist item. No live changes.
+
 ## September 14: Unused-capacity enforcement in progress
 
 Continue `feature/unused-capacity` in `/mnt/vk-storage/codexusage-capacity/vk`;

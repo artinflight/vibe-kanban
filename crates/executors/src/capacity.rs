@@ -7,6 +7,7 @@ use std::{
 use capacity_guard::Lease;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
+pub mod controller;
 
 /// A persisted launch request is valid only in the VK process which issued it.
 /// Restart reconciliation must obtain a new grant, never replay an old action.
@@ -40,6 +41,10 @@ pub fn wall_ms() -> u64 {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis() as u64
+}
+
+pub fn unit_name(execution: uuid::Uuid) -> String {
+    format!("vk-capacity-{}.service", execution.simple())
 }
 
 impl CapacityExecution {

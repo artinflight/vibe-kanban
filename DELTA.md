@@ -1141,3 +1141,12 @@ lease/deadline enforcement and native active-turn suspension. Real user-systemd
 failure scenarios and offline native same-goal resume checks pass. Controller,
 managed restart/queue gates and CU scheduler/UI integration remain. No deployment.
 See `VK_UNUSED_CAPACITY.md`.
+
+## 2026-09-14 — Durable managed goal controller
+
+Added private bearer-authenticated scheduling endpoints, fsynced controller state,
+exclusive ownership, shared grants, restart/revision/late-renewal fencing and
+lease-creation revalidation. Ordinary entry points revoke background authority;
+managed native resume verifies objective identity. Six authority tests and actual
+managed native expiry/resume acceptance pass. CU bridge added with four tests.
+Scheduler/UI and full integrated release validation remain. No live rollout.

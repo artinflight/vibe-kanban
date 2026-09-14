@@ -67,7 +67,20 @@ impl Executable for CodingAgentFollowUpRequest {
             let execution_id = env.get("VK_EXECUTION_PROCESS_ID").ok_or_else(|| {
                 ExecutorError::Io(std::io::Error::other("Missing execution identity"))
             })?;
-            execution_env.capacity = Some(capacity.prepare(execution_id)?);
+            // Hold the controller lock through lease creation: revocation must
+            // not race a previously queued launch into creating fresh authority.
+            if let Some(controller) = crate::capacity::controller::configured()? {
+                let mut controller = controller.lock().await;
+                controller.bind(
+                    capacity,
+                    &self.session_id,
+                    uuid::Uuid::parse_str(execution_id).map_err(std::io::Error::other)?,
+                    crate::capacity::wall_ms(),
+                )?;
+                execution_env.capacity = Some(capacity.prepare(execution_id)?);
+            } else {
+                execution_env.capacity = Some(capacity.prepare(execution_id)?);
+            }
         }
         let env = &execution_env;
 

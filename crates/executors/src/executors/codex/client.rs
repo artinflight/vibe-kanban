@@ -1911,12 +1911,16 @@ mod goal_integration_tests {
         };
         let resume_thread = std::env::var("VK_GOAL_TEST_RESUME_THREAD").ok();
         let id = if let Some(id) = resume_thread.as_ref() {
-            client
+            let resumed = client
                 .thread_resume(super::super::resume_params_from(id.clone(), params))
                 .await
-                .unwrap()
-                .thread
-                .id
+                .unwrap();
+            assert_eq!(
+                serde_json::to_value(&resumed.sandbox).unwrap()["type"],
+                "dangerFullAccess",
+                "An ordinary resume must restore its requested permissions"
+            );
+            resumed.thread.id
         } else {
             client.thread_start(params).await.unwrap().thread.id
         };

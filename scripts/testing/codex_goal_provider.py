@@ -8,6 +8,7 @@ Used by the ignored native_goal_runtime integration test, never production.
 import http.server
 import json
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import sys
@@ -27,7 +28,12 @@ class Provider(http.server.BaseHTTPRequestHandler):
         global turn, recovery_stage
         request_body = self.rfile.read(int(self.headers.get('Content-Length', 0))).decode()
         turn += 1
-        if scenario.startswith('capacity') and turn >= 2:
+        if scenario.startswith('capacity') and turn == 1:
+            Path(os.environ['CODEX_HOME'], 'capacity-tools.json').write_text(
+                json.dumps(json.loads(request_body).get('tools', []), indent=2))
+        if scenario == 'capacity-containment' and turn == 3:
+            Path(os.environ['CODEX_HOME'], 'capacity-delegation-reply.json').write_text(request_body)
+        if scenario.startswith('capacity') and turn >= (3 if scenario == 'capacity-containment' else 2):
             # First deliver a durable checkpoint; then leave a native goal
             # actively awaiting a model response for 30 seconds.
             # Tests must interrupt it externally, not wait for a convenient turn.
@@ -36,7 +42,42 @@ class Provider(http.server.BaseHTTPRequestHandler):
         if scenario == 'stop':
             time.sleep(0.05)
         requirements = {str(n): f'Verify parity requirement {n}' for n in range(8)}
-        if scenario == 'tool' and turn <= 16:
+        if scenario == 'capacity-containment' and turn == 1:
+            probe = '''import json, socket, subprocess, time
+from pathlib import Path
+results = {"workspace_write": True}
+for family, target, name in [(socket.AF_INET, ("127.0.0.1", 9), "tcp"), (socket.AF_UNIX, "/run/user/1000/bus", "systemd_bus")]:
+    try:
+        s = socket.socket(family); s.settimeout(1); s.connect(target)
+        results[name] = "unexpected access"
+    except OSError as error:
+        results[name] = error.errno
+try:
+    Path.cwd().parent.joinpath("outside-work-proof").write_text("unexpected")
+    results["outside_write"] = "unexpected access"
+except OSError as error:
+    results["outside_write"] = error.errno
+heartbeat = Path("contained-child-heartbeat")
+heartbeat.unlink(missing_ok=True)
+child = "import signal,time,itertools; from pathlib import Path; signal.signal(signal.SIGTERM,signal.SIG_IGN); p=Path('contained-child-heartbeat'); [(p.write_text(str(time.time())),time.sleep(.1)) for _ in itertools.repeat(None)]"
+subprocess.Popen(["python3", "-c", child], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+for _ in range(100):
+    if heartbeat.exists(): break
+    time.sleep(.01)
+results["child_started"] = heartbeat.exists()
+Path("native-containment.json").write_text(json.dumps(results))
+print(json.dumps(results))'''
+            item = dict(type='function_call', id='containment', call_id='containment',
+                        name='exec_command', arguments=json.dumps(dict(
+                            cmd='python3 -c ' + shlex.quote(probe), login=False,
+                            yield_time_ms=1000, max_output_tokens=1000)))
+        elif scenario == 'capacity-containment' and turn == 2:
+            # Negative admission probe: depth zero must reject without starting
+            # any sub-agent. All Responses are this offline fixture.
+            item = dict(type='function_call', id='delegation', call_id='delegation',
+                        name='spawn_agent',
+                        arguments=json.dumps(dict(message='Offline denied-launch probe')))
+        elif scenario == 'tool' and turn <= 16:
             stage = (turn - 1) // 2
             if turn % 2:
                 checkpoint = dict(requirements=requirements if turn == 1 else {},
@@ -116,6 +157,11 @@ if __name__ == '__main__':
     argv = [os.environ.get('VK_GOAL_TEST_CODEX', 'codex'), 'app-server']
     for key, value in overrides.items():
         argv.extend(['-c', f'{key}={json.dumps(value)}'])
+    # Exercise the actual executor's process-level policy arguments too.
+    forwarded = sys.argv[1:]
+    if forwarded[:1] == ['app-server']:
+        forwarded = forwarded[1:]
+    argv.extend(forwarded)
     try:
         result = subprocess.run(argv, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
         sys.exit(result.returncode)

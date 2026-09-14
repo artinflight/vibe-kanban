@@ -907,10 +907,33 @@ impl Codex {
             return Err(error);
         }
 
-        let (program_path, args) = command_parts.into_resolved().await?;
+        let (program_path, mut args) = command_parts.into_resolved().await?;
+        if env.capacity.is_some() {
+            // Some native tool families are initialized at process startup,
+            // before thread config overrides. Restrict both layers.
+            for feature in crate::capacity::policy::DISABLED_FEATURES {
+                args.extend(["-c".to_string(), format!("features.{feature}=false")]);
+            }
+            args.extend([
+                "-c".into(),
+                "agents.max_depth=0".into(),
+                "-c".into(),
+                "agents.max_concurrent_threads_per_session=1".into(),
+            ]);
+        }
 
         let effective_env = env.clone().with_profile(&self.cmd);
         if let Some(capacity) = &effective_env.capacity {
+            if let Some(home) = effective_env.get("CODEX_HOME") {
+                let expected = codex_home().ok_or_else(|| {
+                    ExecutorError::Io(std::io::Error::other("Codex home is unavailable"))
+                })?;
+                if std::fs::canonicalize(home)? != std::fs::canonicalize(expected)? {
+                    return Err(ExecutorError::Io(std::io::Error::other(
+                        "Scheduled goals must use the supervised Codex account home",
+                    )));
+                }
+            }
             if effective_env
                 .get("VK_EXECUTION_PROCESS_ID")
                 .map(String::as_str)

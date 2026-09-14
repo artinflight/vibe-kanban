@@ -202,7 +202,12 @@ impl Codex {
                                     if status == Some("active") {
                                         client.goal_request("thread/goal/set", json!({"threadId": id, "status":"paused"})).await?;
                                     }
-                                    let response = client.thread_resume(resume_params_from(id, thread_start_params)).await?;
+                                    let params = resume_params_from(id, thread_start_params);
+                                    let response = if let Some(capacity) = &capacity {
+                                        crate::capacity::policy::resume(&client, params, capacity).await?
+                                    } else {
+                                        client.thread_resume(params).await?
+                                    };
                                     (response.thread.id, response.model)
                                 }
                                 None if arguments == "resume" => {

@@ -942,7 +942,13 @@ impl Codex {
             env_vars.insert("NODE_NO_WARNINGS".to_string(), "1".to_string());
             env_vars.insert("NO_COLOR".to_string(), "1".to_string());
             env_vars.insert("RUST_LOG".to_string(), "error".to_string());
-            let unit_name = systemd_run::build_unit_name("codex");
+            let unit_name = if let Some(capacity) = &effective_env.capacity {
+                crate::capacity::unit_name(
+                    Uuid::parse_str(&capacity.lease.execution_id).map_err(std::io::Error::other)?,
+                )
+            } else {
+                systemd_run::build_unit_name("codex")
+            };
             transient_unit_name = Some(unit_name.clone());
             if let Some(capacity) = &effective_env.capacity {
                 systemd_run::spawn_capacity_unit(

@@ -9,8 +9,10 @@
   suspension/resume, interactive priority, no earned resets or fresh-week spill.
 - Current implementation: expiring execution permissions, independent systemd
   deadlines, native pause/interruption and offline failure tests.
-- Remaining: authenticated controller, durable managed-goal/restart/queue gating,
-  CU scheduling and owner controls, full cross-system acceptance and delivery.
+- Controller/API and durable managed-session launch/restart gates are now in
+  source, with direct native executor acceptance. Remaining: CU scheduler and
+  owner controls, HTTP/DB and full cross-system acceptance, worker escape policy,
+  delivery.
 
 See `VK_UNUSED_CAPACITY.md` and the latest `HANDOFF.md`. This branch is not live.
 Production restart/cutover remains a separate final approval after preparation.

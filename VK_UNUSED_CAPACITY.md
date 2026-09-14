@@ -1,7 +1,7 @@
 # Unused daily capacity: enforcement work in progress
 
 CodexUsage owns the daily quota ledger. VK owns execution permission and native
-goal suspension. This branch is not deployed, and no scheduling API is enabled.
+goal suspension. This branch is not deployed. The new scheduling API is disabled unless its private controller and credential are configured.
 The CU implementation is in `/home/mcp/code/codexusage`, branch
 `feature/unused-daily-capacity`; its design and pacing checks are in
 `docs/unused-capacity.md`.
@@ -75,14 +75,50 @@ earned reset or real development agent was used by these tests.
 
 ## Remaining integration; not release ready
 
-The authenticated VK scheduling API and durable managed-goal records are still
-required. They must supply trusted metadata, serialize grant/renew/revoke,
-reject stale/expired generations, reconcile ambiguous launch/stop outcomes,
-and prevent ordinary queued/recovery paths from resuming managed background
-work without fresh permission. Actual process/cgroup termination must be observed
-before reporting stopped or issuing replacement work. An active native goal left
-on disk after hard kill must be paused before thread loading. Explicit resume
-already follows this ordering; ordinary managed-session paths need gating.
+The private VK controller and API now exist in source. The controller holds an
+exclusive filesystem lock, records eligibility/goal identity and intent before
+launch, binds the execution UUID at lease creation under the same lock, and
+persists renewal revisions before extending the permission file. Only one grant
+can be outstanding across eligible goals, so CU capacity is shared. Restart
+marks outstanding grants stopping and revokes their files before accepting work.
+Old process epochs/revisions, changed native objectives, late renewals and reused
+permissions are rejected. Pending or uncertain grants block replacement work.
+
+Background launches never use the ordinary execution queue. The common native
+execution entry point revokes background permission and records a ten-minute
+foreground hold when interactive work starts. Managed eligible sessions reject
+ordinary/queued launches; use the owner eligibility control to take a selected
+goal out of this mode before manual continuation. Other ordinary sessions retain
+their existing behavior. The API also checks running foreground executions before
+a start or renewal, including long foreground runs beyond that hold.
+
+`POST /api/capacity/stop` revokes first, invokes native pause/interruption, and
+checks the deterministic execution unit and cgroup before clearing its grant.
+An absent unit cannot allow a delayed launch because its durable grant/file has
+already been revoked. Stop uncertainty remains visible and blocks replacement.
+CU still needs to drive this reconciliation on startup and expired/completed runs.
+Seven focused authority tests passed, including revocation before launch,
+cancelled grant replay, restart/late renewal and persistence failures. The expanded
+native acceptance suite passed (four stop/expiry cases plus two managed executor
+runs) at `/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-7ilu_z49/results.json`.
+HTTP/DB integration acceptance is still required; the controller/executor path
+has been exercised directly with a real offline native goal.
+
+Configuration (not installed into a live service):
+
+- `VK_CAPACITY_STATE_DIR`: private absolute durable controller directory on SSD.
+- `VK_CAPACITY_GUARD`: absolute built guard executable.
+- `VK_CAPACITY_TOKEN_FILE`: absolute private 0600 bearer token file, at least 32
+  characters. CU reads the same secret server-side; no browser/Android exposure.
+- `VK_USE_SYSTEMD_RUN=1`: mandatory for background execution.
+
+API: authenticated GET `/api/capacity` and `/api/capacity/candidates`; POST
+`/api/capacity/eligibility`, `/start`, `/renew`, `/stop`. Mutations require the
+current controller epoch/revision. Start also specifies a new grant UUID, selected
+session UUID, allocation identity and fixed expiry/stop times. Renew specifies the
+existing grant/allocation/sequence and a later expiry within its fixed deadline.
+No endpoint redeems credits. The CU bridge in `src/vk-capacity.js` validates the
+origin, keeps credentials private and never retries ambiguous mutations.
 
 CU still needs the shared scheduler, interactive-priority preemption (including
 same-account work outside VK), adaptive shutdown reserve, reset interlock during

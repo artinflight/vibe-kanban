@@ -1769,6 +1769,15 @@ impl ContainerService for LocalContainerService {
         execution_process: &ExecutionProcess,
         executor_action: &ExecutorAction,
     ) -> Result<(), ContainerError> {
+        if executor_action.base_executor().is_some() {
+            let background = matches!(executor_action.typ(), ExecutorActionType::CodingAgentFollowUpRequest(request) if request.capacity.is_some());
+            executors::capacity::controller::before_launch(
+                execution_process.session_id,
+                background,
+            )
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
+        }
         // Get the worktree path
         let container_ref = workspace
             .container_ref

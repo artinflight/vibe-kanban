@@ -158,6 +158,7 @@ impl Codex {
         let (_, session_fast) = resolve_model(self.model.as_deref());
         let thread_start_params = self.build_thread_start_params(current_dir);
         let plan_mode = self.plan;
+        let capacity = env.capacity.clone();
 
         self.spawn_app_server(
             current_dir,
@@ -191,6 +192,9 @@ impl Codex {
                                     // Do not let an old active objective launch while
                                     // we are preparing an explicit replacement/resume.
                                     let snapshot = client.goal_request("thread/goal/get", json!({"threadId": id})).await?;
+                                    if let Some(capacity) = &capacity {
+                                        crate::capacity::controller::validate_native(&capacity.lease, &snapshot).await?;
+                                    }
                                     let status = snapshot.pointer("/goal/status").and_then(serde_json::Value::as_str);
                                     if arguments == "resume" && matches!(status, None | Some("complete")) {
                                         return Err(ExecutorError::Io(std::io::Error::other("No unfinished goal to resume. Start a new /goal objective.")));

@@ -46,4 +46,18 @@ for scenario in ('capacity-stop', 'capacity-expiry'):
         (root / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
         if result.returncode:
             raise SystemExit(f'FAILED: {scenario}, resume={resume}; see {root}')
+# Exercise the real Codex executor resume path under durable managed authority.
+home = root / 'capacity-stop'
+current = dict(env, CODEX_HOME=str(home), VK_USE_SYSTEMD_RUN='1',
+               VK_CAPACITY_STATE_DIR=str(home / 'controller'), VK_CAPACITY_GUARD=str(args.guard))
+started = time.monotonic()
+result = subprocess.run([binary, 'managed_capacity_runtime', '--ignored', '--nocapture'],
+                        cwd=repo, env=current, text=True, stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT, timeout=60)
+(root / 'managed-capacity.log').write_text(result.stdout)
+results.append(dict(scenario='managed-capacity-two-runs', passed=result.returncode == 0,
+                    elapsed_ms=round((time.monotonic() - started) * 1000)))
+(root / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
+if result.returncode:
+    raise SystemExit(f'FAILED managed controller resume; see {root}')
 print(json.dumps(dict(artifacts=str(root), results=results), indent=2))

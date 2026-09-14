@@ -390,7 +390,14 @@ impl Controller {
                 goal.reason = reason.into();
             }
         }
-        self.commit(next)?;
+        // Persistence failure must never leave in-memory renewal authority open.
+        // A restart independently invalidates old grants; existing guards also
+        // enforce the last short lease even if its revocation cannot be written.
+        if let Err(error) = self.commit(next.clone()) {
+            self.state = next;
+            let _ = self.revoke_files();
+            return Err(error);
+        }
         self.revoke_files()
     }
     fn revoke_files(&self) -> io::Result<()> {
@@ -450,15 +457,31 @@ pub fn configured() -> io::Result<Option<&'static Mutex<Controller>>> {
 }
 
 pub async fn before_launch(session: Uuid, background: bool) -> io::Result<()> {
-    let Some(controller) = configured()? else {
-        return Ok(());
+    admit_launch(configured(), session, background).await
+}
+
+async fn admit_launch(
+    controller: io::Result<Option<&Mutex<Controller>>>,
+    session: Uuid,
+    background: bool,
+) -> io::Result<()> {
+    let controller = match controller {
+        Ok(controller) => controller,
+        Err(error) if !background => {
+            tracing::warn!(%error, "Capacity controller unavailable; ordinary work remains available");
+            return Ok(());
+        }
+        Err(error) => return Err(error),
+    };
+    let Some(controller) = controller else {
+        return if background {
+            Err(invalid("No scheduled goal controller"))
+        } else {
+            Ok(())
+        };
     };
     let mut c = controller.lock().await;
     if !background {
-        c.revoke_all(
-            "Interactive work takes priority",
-            Some(wall_ms() + 10 * 60_000),
-        )?;
         if c.state
             .goals
             .get(&session)
@@ -467,6 +490,12 @@ pub async fn before_launch(session: Uuid, background: bool) -> io::Result<()> {
             return Err(invalid(
                 "Take this goal out of unused-capacity mode before manual continuation",
             ));
+        }
+        if let Err(error) = c.revoke_all(
+            "Interactive work takes priority",
+            Some(wall_ms() + 10 * 60_000),
+        ) {
+            tracing::warn!(%error, "Background authority fenced; ordinary launch continues despite capacity storage failure");
         }
     }
     Ok(())
@@ -587,6 +616,97 @@ mod tests {
             let _ = fs::remove_dir_all(&self.root);
         }
     }
+    #[tokio::test]
+    async fn optional_controller_failure_only_blocks_scheduled_launches() {
+        let session = Uuid::new_v4();
+        assert!(
+            admit_launch(Err(invalid("broken ledger")), session, false)
+                .await
+                .is_ok()
+        );
+        assert!(
+            admit_launch(Err(invalid("broken ledger")), session, true)
+                .await
+                .is_err()
+        );
+        assert!(admit_launch(Ok(None), session, false).await.is_ok());
+        assert!(admit_launch(Ok(None), session, true).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn ordinary_launch_survives_storage_failure_and_fences_only_background() {
+        let mut f = Fixture::new();
+        let request = f.issue();
+        f.launch(&request);
+        let controller = Mutex::new(f.c.take().unwrap());
+        // Force ledger replacement to fail without making the lease unreadable.
+        fs::remove_file(f.root.join("state.json")).unwrap();
+        fs::create_dir(f.root.join("state.json")).unwrap();
+        let ordinary = Uuid::new_v4();
+        assert!(
+            admit_launch(Ok(Some(&controller)), ordinary, false)
+                .await
+                .is_ok()
+        );
+        assert!(
+            admit_launch(Ok(Some(&controller)), f.session, false)
+                .await
+                .is_err()
+        );
+        let mut c = controller.lock().await;
+        assert!(!c.state.goals.contains_key(&ordinary));
+        assert!(c.state.goals[&f.session].grant.as_ref().unwrap().stopping);
+        assert!(c.state.foreground_until_ms > wall_ms());
+        assert!(
+            capacity_guard::read_lease(Path::new(&request.lease_file))
+                .unwrap()
+                .revoked
+        );
+        assert!(
+            c.renew(
+                f.session,
+                Uuid::parse_str(&request.id).unwrap(),
+                "old-week:day",
+                0,
+                31_000,
+                2000
+            )
+            .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn deselection_restores_manual_admission_without_enrolling_other_work() {
+        let mut f = Fixture::new();
+        let controller = Mutex::new(f.c.take().unwrap());
+        assert!(
+            admit_launch(Ok(Some(&controller)), f.session, false)
+                .await
+                .is_err()
+        );
+        {
+            let mut c = controller.lock().await;
+            let mut goal = c.state.goals[&f.session].clone();
+            goal.eligible = false;
+            c.enroll(goal).unwrap();
+        }
+        assert!(
+            admit_launch(Ok(Some(&controller)), f.session, false)
+                .await
+                .is_ok()
+        );
+        let ordinary = Uuid::new_v4();
+        assert!(
+            admit_launch(Ok(Some(&controller)), ordinary, false)
+                .await
+                .is_ok()
+        );
+        let c = controller.lock().await;
+        assert!(!c.state.goals[&f.session].eligible);
+        assert!(!c.state.goals.contains_key(&ordinary));
+        assert!(c.state.goals.values().all(|goal| goal.grant.is_none()));
+    }
+
     #[test]
     fn revoke_during_launch_closes_authority_before_lease_creation() {
         let mut f = Fixture::new();

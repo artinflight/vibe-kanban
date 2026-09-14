@@ -1,3 +1,20 @@
+## September 14: selected-only capacity fault isolation
+
+Current user scope is selected native VK goals on MCP only. PR112 is already
+in Green; this follow-up is based on staging 32676919b and preserves its completed
+checkpoint UI. No production restart is authorized or performed.
+
+Ordinary launch admission no longer fails when optional capacity configuration
+or persistence is unavailable. Scheduled admission still fails closed; failed
+revocation persistence fences grants in memory and attempts lease revocation.
+Restart independently invalidates prior grants. Selection gates remain explicit,
+and deselection restores manual admission. CU removes external host activity
+monitors and limits selection-change interruption to the selected target.
+
+Validation evidence: /mnt/vk-storage/codexusage-capacity/test-readiness/scope-vk-tests.log.
+Deployment/readiness remains separate; do not reuse the withdrawn activation
+package or replace the running binary in place.
+
 ## PR112 review repairs — September 14
 
 Both P1 findings are repaired in application commit `a6106d2e0`: scheduled resumes

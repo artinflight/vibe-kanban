@@ -1,5 +1,15 @@
 # HANDOFF.md
 
+## September 14: PR112 Review Requests Changes
+
+See `PR112_REVIEW.md` for review of b21ef9bd5 against staging9a2591916.
+Scheduled resume loses explicit model/reasoning overrides through profile-only
+conversion. Prepared frontend also omits live goal-checkpoint rendering5d6ed3539.
+Merge simulation and70 focused tests passed; two native tests ignored. Existing
+CI and artifact/evidence hashes verified. No merge/deploy/restart performed.
+Fix and test these gaps before release approval; current review is not cutover
+authorization. Production-specific backup and recovery preparation remain.
+
 ## September 12: Existing-Chat Model Regression Remains Open
 
 Documented two chats with prior GPT-6 requests and post-cutover GPT-5.6 requests

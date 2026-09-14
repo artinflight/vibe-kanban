@@ -17,7 +17,7 @@ use crate::{
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
 pub struct CodingAgentFollowUpRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub capacity: Option<crate::capacity::CapacityExecution>,
+    pub capacity: Option<Box<crate::capacity::CapacityExecution>>,
     pub prompt: String,
     pub session_id: String,
     #[serde(default)]

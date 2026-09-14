@@ -1,5 +1,10 @@
 # STATE.md
 
+**PR114 preparation:** staging75276e79f contains PR114; Green PID2778969 remains
+production. A new isolated Blue is being prepared, not activated. See
+VK_BLUE_PR114_PREPARATION.md and the runtime readiness record for evidence.
+The old frozen Blue is retained separately; color names do not identify paths.
+
 **September14 live authority:** Green production PID2778969 is live/enabled on
 4511/4512 and vibe.local after the approved26second cutover. Blue PID2590517
 remains frozen/disabled as same-data fallback. Staging32676919b includes PR112

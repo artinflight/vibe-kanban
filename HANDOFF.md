@@ -1,5 +1,13 @@
 # HANDOFF.md
 
+## September14: Prepare New Blue For PR114
+
+Latest task is preparation only; Green PID2778969 remains production. PR114 is
+merged into staging75276e79f. Read VK_BLUE_PR114_PREPARATION.md and the current
+readiness record under `/mnt/vk-storage/vk-blue-pr114-20260914` before acting.
+New Blue candidate is distinct from frozen old Blue PID2590517. No cutover is
+authorized by this preparation request. Do not reuse a prior approval/controller.
+
 ## September14: Green Is Production, Acceptance Passed
 
 Read VK_GREEN_LIVE_20260914.md before any service action. The approved switch

@@ -39,6 +39,55 @@ fn verify_scope(workspace: &std::path::Path, protected: &[&std::path::Path]) -> 
     Ok(())
 }
 
+// Service-level configuration only; a goal/profile cannot grant itself new paths.
+fn build_roots(value: Option<&str>, protected: &[&std::path::Path]) -> io::Result<Vec<String>> {
+    let paths: Vec<String> =
+        serde_json::from_str(value.unwrap_or("[]")).map_err(io::Error::other)?;
+    if paths.len() > 8 {
+        return Err(io::Error::other(
+            "At most eight scheduled build directories are supported",
+        ));
+    }
+    let mut roots = Vec::new();
+    for path in paths {
+        let path = std::path::Path::new(&path);
+        if !path.is_absolute() || !path.is_dir() {
+            return Err(io::Error::other(
+                "Scheduled build directories must exist and be absolute",
+            ));
+        }
+        let path = std::fs::canonicalize(path)?;
+        verify_scope(&path, protected)?;
+        for authority in protected {
+            if path.starts_with(std::fs::canonicalize(authority)?) {
+                return Err(io::Error::other(
+                    "Scheduled build directory overlaps execution authority",
+                ));
+            }
+        }
+        roots.push(path.to_string_lossy().into_owned());
+    }
+    roots.sort();
+    roots.dedup();
+    Ok(roots)
+}
+
+pub fn configured_build_roots(capacity: &PreparedCapacity) -> Result<Vec<String>, ExecutorError> {
+    let home = crate::executors::codex::codex_home()
+        .ok_or_else(|| invalid("Codex home is unavailable"))?;
+    Ok(build_roots(
+        std::env::var("VK_CAPACITY_BUILD_ROOTS").ok().as_deref(),
+        &[
+            capacity
+                .file
+                .parent()
+                .ok_or_else(|| invalid("Missing permission directory"))?,
+            &capacity.guard,
+            &home,
+        ],
+    )?)
+}
+
 pub async fn resume(
     client: &AppServerClient,
     params: ThreadResumeParams,
@@ -67,6 +116,7 @@ pub async fn resume(
         std::path::Path::new(&cwd),
         &[&capacity.file, &capacity.guard, &home],
     )?;
+    let build_roots = configured_build_roots(capacity)?;
     let resolved = client
         .goal_request("config/read", json!({"cwd":cwd,"includeLayers":false}))
         .await?;
@@ -101,10 +151,11 @@ pub async fn resume(
     config.insert("default_permissions".into(), json!(profile));
     config.insert("agents.max_depth".into(), json!(0));
     config.insert("agents.max_concurrent_threads_per_session".into(), json!(1));
-    config.insert(
-        format!("permissions.{profile}.filesystem"),
-        json!({"/":"read",":workspace_roots":{".":"write"}}),
-    );
+    let mut filesystem = json!({"/":"read",":workspace_roots":{".":"write"}});
+    for root in &build_roots {
+        filesystem[root] = json!("write");
+    }
+    config.insert(format!("permissions.{profile}.filesystem"), filesystem);
     config.insert(
         format!("permissions.{profile}.network.enabled"),
         json!(false),
@@ -127,7 +178,7 @@ pub async fn resume(
         config.insert(format!("features.{feature}"), json!(false));
     }
     let result = client.goal_request("thread/resume", wire).await?;
-    verify_permissions(&result, &profile, &cwd)?;
+    verify_permissions(&result, &profile, &cwd, &build_roots)?;
     let thread = result
         .pointer("/thread/id")
         .and_then(Value::as_str)
@@ -153,7 +204,12 @@ pub async fn resume(
         .map_err(|e| invalid(&format!("Invalid scheduled resume response: {e}")))
 }
 
-fn verify_permissions(result: &Value, profile: &str, cwd: &str) -> Result<(), ExecutorError> {
+fn verify_permissions(
+    result: &Value,
+    profile: &str,
+    cwd: &str,
+    build_roots: &[String],
+) -> Result<(), ExecutorError> {
     if result
         .pointer("/activePermissionProfile/id")
         .and_then(Value::as_str)
@@ -165,7 +221,7 @@ fn verify_permissions(result: &Value, profile: &str, cwd: &str) -> Result<(), Ex
         || result.pointer("/sandbox/networkAccess") != Some(&json!(false))
         || result.pointer("/sandbox/excludeSlashTmp") != Some(&json!(true))
         || result.pointer("/sandbox/excludeTmpdirEnvVar") != Some(&json!(true))
-        || result.pointer("/sandbox/writableRoots") != Some(&json!([]))
+        || result.pointer("/sandbox/writableRoots") != Some(&json!(build_roots))
     {
         return Err(invalid(
             "Native thread did not apply restricted scheduled permissions",
@@ -193,11 +249,35 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
+    fn build_directories_cannot_include_or_live_inside_authority() {
+        let root = std::env::temp_dir().join(format!("capacity-build-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(root.join("private/cache")).unwrap();
+        std::fs::create_dir_all(root.join("build")).unwrap();
+        for path in [
+            root.clone(),
+            root.join("private"),
+            root.join("private/cache"),
+        ] {
+            let input = serde_json::to_string(&vec![path]).unwrap();
+            assert!(build_roots(Some(&input), &[&root.join("private")]).is_err());
+        }
+        let input = serde_json::to_string(&vec![root.join("build")]).unwrap();
+        assert_eq!(
+            build_roots(Some(&input), &[&root.join("private")])
+                .unwrap()
+                .len(),
+            1
+        );
+        assert!(build_roots(Some("[\"relative\"]"), &[]).is_err());
+        assert!(build_roots(Some("{}"), &[]).is_err());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
     fn ignored_or_broadened_native_permissions_fail_admission() {
         let valid = json!({"activePermissionProfile":{"id":"capacity"},"approvalPolicy":"never",
             "cwd":"/work","runtimeWorkspaceRoots":["/work"],"sandbox":{"type":"workspaceWrite",
             "networkAccess":false,"excludeSlashTmp":true,"excludeTmpdirEnvVar":true,"writableRoots":[]}});
-        verify_permissions(&valid, "capacity", "/work").unwrap();
+        verify_permissions(&valid, "capacity", "/work", &[]).unwrap();
         for (pointer, value) in [
             ("/sandbox/networkAccess", json!(true)),
             ("/sandbox/writableRoots", json!(["/"])),
@@ -209,7 +289,7 @@ mod tests {
             let mut changed = valid.clone();
             *changed.pointer_mut(pointer).unwrap() = value;
             assert!(
-                verify_permissions(&changed, "capacity", "/work").is_err(),
+                verify_permissions(&changed, "capacity", "/work", &[]).is_err(),
                 "{pointer}"
             );
         }

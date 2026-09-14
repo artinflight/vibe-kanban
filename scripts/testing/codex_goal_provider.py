@@ -43,9 +43,22 @@ class Provider(http.server.BaseHTTPRequestHandler):
             time.sleep(0.05)
         requirements = {str(n): f'Verify parity requirement {n}' for n in range(8)}
         if scenario == 'capacity-containment' and turn == 1:
-            probe = '''import json, socket, subprocess, time
+            probe = '''import json, os, socket, subprocess, time
 from pathlib import Path
 results = {"workspace_write": True}
+build_roots = json.loads(os.environ.get("VK_CAPACITY_BUILD_ROOTS", "[]"))
+if build_roots:
+    cache = Path(build_roots[0])
+    source = Path("scheduled-build-proof.rs")
+    source.write_text('fn main() { assert_eq!(2 + 2, 4); println!("scheduled build works"); }')
+    output = cache / "scheduled-build-proof"
+    build = subprocess.run(["rustc", str(source), "-o", str(output)], capture_output=True, text=True)
+    results["build_exit"] = build.returncode
+    results["build_error"] = build.stderr[-1500:]
+    if build.returncode == 0:
+        run = subprocess.run([str(output)], capture_output=True, text=True)
+        results["built_program_exit"] = run.returncode
+        results["built_program_output"] = run.stdout.strip()
 for family, target, name in [(socket.AF_INET, ("127.0.0.1", 9), "tcp"), (socket.AF_UNIX, "/run/user/1000/bus", "systemd_bus")]:
     try:
         s = socket.socket(family); s.settimeout(1); s.connect(target)

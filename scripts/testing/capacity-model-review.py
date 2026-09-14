@@ -53,7 +53,7 @@ def boot(default):
     preset['model_reasoning_effort'] = 'low'
     profiles.write_text(json.dumps(profile))
     env = dict(os.environ, CODEX_HOME=str(home), TMPDIR=str(root/'tmp'), XDG_DATA_HOME=str(root/'release-xdg'),
-        VK_CAPACITY_STATE_DIR=str(root/'controller'), VK_CAPACITY_GUARD='/mnt/vk-storage/codexusage-capacity/release/vk-capacity-guard',
+        VK_CAPACITY_STATE_DIR=str(root/'controller'), VK_CAPACITY_GUARD=str(output/'vk-capacity-guard'),
         VK_CAPACITY_TOKEN_FILE=str(root/'token'), VK_USE_SYSTEMD_RUN='1',
         VK_CODEX_BASE_COMMAND=f'python3 {repo}/scripts/testing/codex_goal_provider.py', VK_CAPACITY_MODEL_PROVIDER='fixture',
         VK_FRONTEND_DIST_DIR=str(output/'frontend'), HOST='127.0.0.1', BACKEND_PORT='49173')
@@ -101,7 +101,8 @@ def run(expected, ordinary=False):
     requests = [json.loads(x) for x in (home/'capacity-model-requests.jsonl').read_text().splitlines()]
     assert all(x['model'] == expected['model_id'] and x['reasoning']['effort'] == expected['reasoning_id'] for x in requests), requests
     if ordinary:
-        assert not any(k.startswith('permissions.vk_capacity') for k in (resume.get('config') or {}))
+        assert 'default_permissions' not in (resume.get('config') or {})
+        assert resume['sandbox'] == 'danger-full-access', resume
         api('execution-processes/'+execution+'/stop', {})
     else:
         # Native permissions must still be restrictive despite saved full-access choice.

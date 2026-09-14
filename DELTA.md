@@ -1272,3 +1272,10 @@ with existing chunk/Tailwind warnings; Sentry authentication is absent and no
 successful Sentry upload is claimed. Final backend packaging must include this
 admission change and the completed frontend, then undergo release acceptance.
 
+## September 14 — PR112 review repair
+
+Preserved full scheduled executor choices/newer saved selection; integrated the
+live checkpoint renderer. Four native/offline cases and desktop/mobile acceptance
+pass with same goal/progress and effective model/reasoning verified. Exact
+artifacts, local checks and teardown limitation: PR112_REVIEW_FIXES.md and
+`/mnt/vk-storage/codexusage-capacity/pr112-repair/manifest.json`. No deployment.

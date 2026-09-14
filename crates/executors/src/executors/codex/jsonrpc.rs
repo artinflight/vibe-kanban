@@ -254,11 +254,14 @@ where
     };
 
     match response {
-        Ok(PendingResponse::Result(value)) => serde_json::from_value(value).map_err(|err| {
-            ExecutorError::Io(io::Error::other(format!(
-                "failed to decode {label} response: {err}",
-            )))
-        }),
+        Ok(PendingResponse::Result(mut value)) => {
+            normalize_unknown_codex_error_info(&mut value);
+            serde_json::from_value(value).map_err(|err| {
+                ExecutorError::Io(io::Error::other(format!(
+                    "failed to decode {label} response: {err}",
+                )))
+            })
+        }
         Ok(PendingResponse::Error(error)) => Err(ExecutorError::Io(io::Error::other(format!(
             "{label} request failed: {}",
             error.error.message
@@ -269,6 +272,88 @@ where
         Err(_) => Err(ExecutorError::Io(io::Error::other(format!(
             "{label} request was dropped",
         )))),
+    }
+}
+
+/// Keep responses from newer Codex app servers readable when they introduce a
+/// new unit `codexErrorInfo` variant. The pinned protocol already provides an
+/// `other` fallback, but serde's externally tagged enum cannot select it for an
+/// unknown wire value by itself.
+fn normalize_unknown_codex_error_info(value: &mut Value) {
+    const KNOWN_UNIT_VARIANTS: &[&str] = &[
+        "contextWindowExceeded",
+        "usageLimitExceeded",
+        "serverOverloaded",
+        "internalServerError",
+        "unauthorized",
+        "badRequest",
+        "threadRollbackFailed",
+        "sandboxError",
+        "other",
+    ];
+
+    match value {
+        Value::Object(object) => {
+            if let Some(Value::String(error_info)) = object.get_mut("codexErrorInfo")
+                && !KNOWN_UNIT_VARIANTS.contains(&error_info.as_str())
+            {
+                tracing::warn!(
+                    variant = %error_info,
+                    "mapping unknown Codex error category to `other`"
+                );
+                *error_info = "other".to_owned();
+            }
+
+            for child in object.values_mut() {
+                normalize_unknown_codex_error_info(child);
+            }
+        }
+        Value::Array(array) => {
+            for child in array {
+                normalize_unknown_codex_error_info(child);
+            }
+        }
+        _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::normalize_unknown_codex_error_info;
+
+    #[test]
+    fn maps_new_codex_error_info_variant_to_other() {
+        let mut response = json!({
+            "thread": {
+                "status": {
+                    "type": "systemError",
+                    "codexErrorInfo": "misalignmentPolicyViolation"
+                }
+            }
+        });
+
+        normalize_unknown_codex_error_info(&mut response);
+
+        assert_eq!(response["thread"]["status"]["codexErrorInfo"], "other");
+    }
+
+    #[test]
+    fn preserves_known_and_structured_codex_error_info_variants() {
+        let mut response = json!({
+            "known": { "codexErrorInfo": "usageLimitExceeded" },
+            "structured": {
+                "codexErrorInfo": {
+                    "httpConnectionFailed": { "httpStatusCode": 503 }
+                }
+            }
+        });
+        let expected = response.clone();
+
+        normalize_unknown_codex_error_info(&mut response);
+
+        assert_eq!(response, expected);
     }
 }
 

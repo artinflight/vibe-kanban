@@ -28,6 +28,10 @@ class Provider(http.server.BaseHTTPRequestHandler):
         global turn, recovery_stage
         request_body = self.rfile.read(int(self.headers.get('Content-Length', 0))).decode()
         turn += 1
+        if os.environ.get('VK_GOAL_TEST_CAPTURE') == '1':
+            body = json.loads(request_body)
+            with Path(os.environ['CODEX_HOME'], 'capacity-model-requests.jsonl').open('a') as log:
+                log.write(json.dumps({key: body.get(key) for key in ('model', 'reasoning')}) + '\n')
         if scenario.startswith('capacity') and turn == 1:
             Path(os.environ['CODEX_HOME'], 'capacity-tools.json').write_text(
                 json.dumps(json.loads(request_body).get('tools', []), indent=2))
@@ -176,6 +180,19 @@ if __name__ == '__main__':
         forwarded = forwarded[1:]
     argv.extend(forwarded)
     try:
+        if os.environ.get('VK_GOAL_TEST_CAPTURE') == '1':
+            child = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=sys.stdout, stderr=sys.stderr)
+            def forward():
+                for line in sys.stdin.buffer:
+                    value = json.loads(line)
+                    if value.get('method') == 'thread/resume':
+                        with Path(os.environ['CODEX_HOME'], 'capacity-resume-requests.jsonl').open('a') as log:
+                            log.write(json.dumps(value) + '\n')
+                    child.stdin.write(line)
+                    child.stdin.flush()
+                child.stdin.close()
+            threading.Thread(target=forward, daemon=True).start()
+            sys.exit(child.wait())
         result = subprocess.run(argv, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
         sys.exit(result.returncode)
     finally:

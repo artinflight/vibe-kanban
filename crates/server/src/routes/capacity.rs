@@ -8,6 +8,7 @@ use axum::{
 use db::models::{
     coding_agent_turn::CodingAgentTurn,
     execution_process::{ExecutionProcess, ExecutionProcessRunReason},
+    scratch::{Scratch, ScratchPayload, ScratchType},
     session::Session,
     workspace::Workspace,
 };
@@ -231,11 +232,28 @@ async fn start(
         .await?
         .filter(|w| !w.archived)
         .ok_or(ApiError::BadRequest("Workspace is unavailable".into()))?;
-    let profile =
-        ExecutionProcess::latest_executor_profile_for_session(&deployment.db().pool, session.id)
+    let (mut executor_config, selected_at) =
+        ExecutionProcess::latest_executor_config_for_session(&deployment.db().pool, session.id)
             .await?
-            .filter(|p| p.executor == BaseCodingAgent::Codex)
-            .ok_or(ApiError::BadRequest("Codex profile required".into()))?;
+            .ok_or(ApiError::BadRequest(
+                "Existing executor configuration required".into(),
+            ))?;
+    // A saved per-chat selection made since that execution is the user's newer
+    // intent. Keep its draft text untouched; scheduling only resumes the goal.
+    if let Some(scratch) = Scratch::find_by_id(
+        &deployment.db().pool,
+        session.id,
+        &ScratchType::DraftFollowUp,
+    )
+    .await?
+        && scratch.updated_at >= selected_at
+        && let ScratchPayload::DraftFollowUp(draft) = scratch.payload
+    {
+        executor_config = draft.executor_config;
+    }
+    if executor_config.executor != BaseCodingAgent::Codex {
+        return Err(ApiError::BadRequest("Codex configuration required".into()));
+    }
     let info = CodingAgentTurn::find_latest_session_info(&deployment.db().pool, session.id)
         .await?
         .ok_or(ApiError::BadRequest("Existing goal required".into()))?;
@@ -272,7 +290,7 @@ async fn start(
             prompt: "/goal resume".into(),
             session_id: info.session_id,
             reset_to_message_id: None,
-            executor_config: profile.into(),
+            executor_config,
             working_dir: session.agent_working_dir.clone(),
         }),
         None,

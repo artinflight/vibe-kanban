@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use chrono::{DateTime, Utc};
 use executors::{
     actions::{ExecutorAction, ExecutorActionType},
-    profile::ExecutorProfileId,
+    profile::{ExecutorConfig, ExecutorProfileId},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -577,6 +577,16 @@ impl ExecutionProcess {
         pool: &SqlitePool,
         session_id: Uuid,
     ) -> Result<Option<ExecutorProfileId>, ExecutionProcessError> {
+        Ok(Self::latest_executor_config_for_session(pool, session_id)
+            .await?
+            .map(|(config, _)| config.profile_id()))
+    }
+
+    /// Preserve the complete request configuration and its selection timestamp.
+    pub async fn latest_executor_config_for_session(
+        pool: &SqlitePool,
+        session_id: Uuid,
+    ) -> Result<Option<(ExecutorConfig, DateTime<Utc>)>, ExecutionProcessError> {
         // Find the latest CodingAgent execution process for this session
         let latest_execution_process = sqlx::query_as!(
             ExecutionProcess,
@@ -610,15 +620,18 @@ impl ExecutionProcess {
             .map_err(|e| ExecutionProcessError::ValidationError(e.to_string()))?;
 
         match &action.typ {
-            ExecutorActionType::CodingAgentInitialRequest(request) => {
-                Ok(Some(request.executor_config.profile_id()))
-            }
-            ExecutorActionType::CodingAgentFollowUpRequest(request) => {
-                Ok(Some(request.executor_config.profile_id()))
-            }
-            ExecutorActionType::ReviewRequest(request) => {
-                Ok(Some(request.executor_config.profile_id()))
-            }
+            ExecutorActionType::CodingAgentInitialRequest(request) => Ok(Some((
+                request.executor_config.clone(),
+                latest_execution_process.created_at,
+            ))),
+            ExecutorActionType::CodingAgentFollowUpRequest(request) => Ok(Some((
+                request.executor_config.clone(),
+                latest_execution_process.created_at,
+            ))),
+            ExecutorActionType::ReviewRequest(request) => Ok(Some((
+                request.executor_config.clone(),
+                latest_execution_process.created_at,
+            ))),
             _ => Err(ExecutionProcessError::ValidationError(
                 "Couldn't find profile from initial request".to_string(),
             )),
@@ -705,6 +718,66 @@ mod tests {
     use uuid::Uuid;
 
     use super::ExecutionProcess;
+
+    #[tokio::test]
+    async fn latest_config_preserves_explicit_choices_and_ignores_dropped_executions() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE TABLE execution_processes (
+            id BLOB PRIMARY KEY, session_id BLOB, run_reason TEXT, executor_action TEXT,
+            status TEXT, exit_code INTEGER, dropped BOOLEAN, started_at TEXT,
+            completed_at TEXT, created_at TEXT, updated_at TEXT)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let session = Uuid::new_v4();
+        let config = serde_json::json!({"executor":"CODEX", "variant":"DEFAULT",
+            "model_id":"gpt-6", "reasoning_id":"high"});
+        for (day, dropped, selected) in [
+            (1, false, config.clone()),
+            (
+                2,
+                true,
+                serde_json::json!({"executor":"CODEX","model_id":"gpt-5.5"}),
+            ),
+        ] {
+            let action = serde_json::json!({"typ":{"type":"CodingAgentFollowUpRequest",
+                "prompt":"/goal resume", "session_id":"same-native-thread",
+                "executor_config":selected}, "next_action":null});
+            let timestamp = format!("2026-09-{day:02}T00:00:00Z");
+            sqlx::query(
+                "INSERT INTO execution_processes VALUES (?, ?, 'codingagent', ?,
+                'killed', NULL, ?, ?, NULL, ?, ?)",
+            )
+            .bind(Uuid::new_v4())
+            .bind(session)
+            .bind(action.to_string())
+            .bind(dropped)
+            .bind(&timestamp)
+            .bind(&timestamp)
+            .bind(&timestamp)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+        let (actual, _) = ExecutionProcess::latest_executor_config_for_session(&pool, session)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(serde_json::to_value(&actual).unwrap(), config);
+        assert_eq!(
+            ExecutionProcess::latest_executor_profile_for_session(&pool, session)
+                .await
+                .unwrap()
+                .unwrap(),
+            actual.profile_id()
+        );
+    }
 
     #[tokio::test]
     async fn queue_consumer_requires_running_non_dropped_follow_up_process() {

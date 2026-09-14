@@ -1,3 +1,11 @@
+## September 14 Review Status
+
+PR112 requires changes before merge; its prepared release is not approved for
+deployment. See [PR112_REVIEW_FIXES.md](PR112_REVIEW_FIXES.md): preserve explicit
+per-chat model/reasoning on scheduled resume and retain the live goal-checkpoint
+frontend fix. Existing passing tests do not close these findings. This is a
+documentation handoff, not an application fix or production cutover approval.
+
 ## Current delivery continuation
 
 Launcher/provider binding, build-cache support and native stop/resume pass 65

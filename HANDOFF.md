@@ -1,3 +1,11 @@
+## September 14 Review: Changes Required Before Merge And Deployment
+
+Read [PR112_REVIEW_FIXES.md](PR112_REVIEW_FIXES.md) first for the repair objective,
+evidence and acceptance criteria. Scheduled resume drops explicit model/reasoning
+overrides; the prepared frontend omits the live goal-checkpoint renderer.
+These findings supersede earlier completion/readiness statements below.
+This update is documentation only: no fixes, deployment or restart occurred.
+
 ## Completion audit — implementation and release handoff scope
 
 The authoritative goal asks for a deployable validated integration. Its fixed

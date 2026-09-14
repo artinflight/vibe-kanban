@@ -1,3 +1,7 @@
+Focused Clippy for executors and capacity-guard (all targets, -D warnings) passed
+after simplifying the new controller's grant-identity predicate. No behavior
+changed. Broad workspace tests excluding the GTK-dependent Tauri app are running.
+
 ## Approved launcher/provider binding — September 14
 
 A scheduled profile cannot replace VK_CODEX_BASE_COMMAND with a different

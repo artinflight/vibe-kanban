@@ -17,6 +17,21 @@ candidate and its occupied4711/4712 ports are not reused.
 
 ## Evidence And Readiness
 
+The exact-source release build and focused tests passed:68executor tests,
+5capacity-guard tests,8renderer tests and3stale-approval/frontend tests. Two
+opt-in native fixtures and one documentation test were ignored by the unit suite;
+separate running replica acceptance exercised original-thread resume, ordinary
+launch with broken optional capacity configuration, steering, Stop and goals.
+Four existing-chat model/draft browser cases passed. All24fresh online SQLite
+payloads were restored and integrity/hash verified. Rehearsal measured24.30s
+including backup/Desktop verification, then0.12s same-PID/latest-data cutback.
+Plan roughly a minute for the live window, subject to fresh active-work and
+dirty-file inventory; these are measurements, not a guaranteed live duration.
+
+Private test URL: https://mcp-server.tail744c4.ts.net:18467/. It is a disposable
+copy with an offline provider, not a place for real work. Its one extra labeled
+rehearsal saved message is not present in production. Green remains at vibe.local.
+
 Read `readiness.json`, `desktop-ready-receipt.json`, `production-plan.json` and
 `PROGRESS.md` in the preparation directory. Readiness is not established unless
 the final record says `ready: true` and its artifact hashes still match.

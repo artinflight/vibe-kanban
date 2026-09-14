@@ -922,8 +922,14 @@ impl Codex {
             ]);
         }
 
-        let effective_env = env.clone().with_profile(&self.cmd);
-        if let Some(capacity) = &effective_env.capacity {
+        let mut effective_env = env.clone().with_profile(&self.cmd);
+        if let Some(capacity) = effective_env.capacity.clone() {
+            if let Some(root) = crate::capacity::policy::configured_build_roots(&capacity)?.first()
+            {
+                // Compilers need a writable temporary directory too. Only the
+                // scheduled process receives this override, never ordinary work.
+                effective_env.insert("TMPDIR", root.clone());
+            }
             if let Some(home) = effective_env.get("CODEX_HOME") {
                 let expected = codex_home().ok_or_else(|| {
                     ExecutorError::Io(std::io::Error::other("Codex home is unavailable"))

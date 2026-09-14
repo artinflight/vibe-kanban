@@ -860,6 +860,10 @@ mod native_acceptance {
             env.insert("VK_EXECUTION_PROCESS_ID", execution.to_string());
             env.insert("CODEX_HOME", home.clone());
             env.insert("VK_GOAL_TEST_SCENARIO", "capacity-containment");
+            env.insert(
+                "VK_CAPACITY_BUILD_ROOTS",
+                std::env::var("VK_CAPACITY_BUILD_ROOTS").unwrap(),
+            );
             env.capacity = Some(prepared);
             let mut spawned = codex
                 .spawn_follow_up(
@@ -904,6 +908,12 @@ mod native_acceptance {
             )
             .unwrap();
             assert_eq!(proof["workspace_write"], true);
+            assert_eq!(
+                proof["build_exit"], 0,
+                "Build must use its approved cache: {proof}"
+            );
+            assert_eq!(proof["built_program_exit"], 0);
+            assert_eq!(proof["built_program_output"], "scheduled build works");
             assert_eq!(proof["child_started"], true);
             assert_eq!(proof["tcp"], 1, "TCP socket creation must be denied");
             assert_eq!(

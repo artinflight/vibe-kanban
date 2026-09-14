@@ -56,6 +56,9 @@ config.write_text(previous_config + '\n[mcp_servers.inherited_probe]\ncommand="/
                   json.dumps(['-c', f'from pathlib import Path; Path({str(marker)!r}).touch()']) + '\n')
 current = dict(env, CODEX_HOME=str(home), VK_USE_SYSTEMD_RUN='1',
                VK_CAPACITY_STATE_DIR=str(home / 'controller'), VK_CAPACITY_GUARD=str(args.guard))
+build_root = root / 'build-cache'
+build_root.mkdir()
+current['VK_CAPACITY_BUILD_ROOTS'] = json.dumps([str(build_root)])
 started = time.monotonic()
 result = subprocess.run([binary, 'managed_capacity_runtime', '--ignored', '--nocapture'],
                         cwd=repo, env=current, text=True, stdout=subprocess.PIPE,

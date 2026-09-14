@@ -667,9 +667,9 @@ mod tests {
                 f.session,
                 Uuid::parse_str(&request.id).unwrap(),
                 "old-week:day",
-                1,
-                20_000,
-                1001
+                0,
+                31_000,
+                2000
             )
             .is_err()
         );

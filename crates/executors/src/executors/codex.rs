@@ -909,6 +909,10 @@ impl Codex {
 
         let (program_path, mut args) = command_parts.into_resolved().await?;
         if env.capacity.is_some() {
+            crate::capacity::policy::verify_launcher(
+                self.cmd.base_command_override.as_deref(),
+                &Self::base_command(),
+            )?;
             // Some native tool families are initialized at process startup,
             // before thread config overrides. Restrict both layers.
             for feature in crate::capacity::policy::DISABLED_FEATURES {

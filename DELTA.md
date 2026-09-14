@@ -1248,3 +1248,27 @@ The full seven-row native suite passes at
 All 64 executor unit tests passed after adding build-root admission coverage.
 Formatting and ops governance passed. The feature remains undeployed.
 
+
+## Approved launcher/provider binding — September 14
+
+A scheduled profile cannot replace VK_CODEX_BASE_COMMAND with a different
+per-goal launch command. The service administrator must use an actual local Codex
+launcher. Native resume must also report the supervised provider before activation:
+VK_CAPACITY_MODEL_PROVIDER defaults to openai. Other providers require explicit
+service configuration tied to the quota supervisor; selecting a goal alone does
+not approve them. Ordinary profile behavior is unchanged. Read-only preflight
+confirms the live DEFAULT profile matches the default launcher/provider policy.
+
+All 65 executor unit tests and the full real native suite pass, including two
+managed builds, external-access denial, independent interruption, and ordinary
+resume. Latest evidence:
+/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-imdb07uj/results.json.
+The offline fixture explicitly configures its local fixture launcher/provider.
+Frontend local/remote/web-core/UI type checks and frontend/UI lint passed. Broad
+Rust check/lint reach the existing Tauri dependency and fail because glib-2.0.pc
+is unavailable. The first optimized backend/guard build passed with an existing
+unused_mut warning in services/remote_client.rs. Frontend production build passed
+with existing chunk/Tailwind warnings; Sentry authentication is absent and no
+successful Sentry upload is claimed. Final backend packaging must include this
+admission change and the completed frontend, then undergo release acceptance.
+

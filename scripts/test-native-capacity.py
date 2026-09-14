@@ -55,7 +55,9 @@ assert 'mcp_servers.inherited_probe' not in previous_config
 config.write_text(previous_config + '\n[mcp_servers.inherited_probe]\ncommand="/usr/bin/python3"\nargs=' +
                   json.dumps(['-c', f'from pathlib import Path; Path({str(marker)!r}).touch()']) + '\n')
 current = dict(env, CODEX_HOME=str(home), VK_USE_SYSTEMD_RUN='1',
-               VK_CAPACITY_STATE_DIR=str(home / 'controller'), VK_CAPACITY_GUARD=str(args.guard))
+               VK_CAPACITY_STATE_DIR=str(home / 'controller'), VK_CAPACITY_GUARD=str(args.guard),
+               VK_CODEX_BASE_COMMAND=f'python3 {repo}/crates/executors/../../scripts/testing/codex_goal_provider.py',
+               VK_CAPACITY_MODEL_PROVIDER='fixture')
 build_root = root / 'build-cache'
 build_root.mkdir()
 current['VK_CAPACITY_BUILD_ROOTS'] = json.dumps([str(build_root)])

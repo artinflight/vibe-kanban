@@ -27,6 +27,15 @@ fn invalid(message: &str) -> ExecutorError {
     ExecutorError::Io(io::Error::other(message))
 }
 
+pub fn verify_launcher(profile: Option<&str>, approved: &str) -> Result<(), ExecutorError> {
+    if profile.is_some_and(|command| command.trim() != approved.trim()) {
+        return Err(invalid(
+            "Scheduled goals must use the service-approved local Codex launcher",
+        ));
+    }
+    Ok(())
+}
+
 fn verify_scope(workspace: &std::path::Path, protected: &[&std::path::Path]) -> io::Result<()> {
     let workspace = std::fs::canonicalize(workspace)?;
     for path in protected {
@@ -179,6 +188,8 @@ pub async fn resume(
     }
     let result = client.goal_request("thread/resume", wire).await?;
     verify_permissions(&result, &profile, &cwd, &build_roots)?;
+    let provider = std::env::var("VK_CAPACITY_MODEL_PROVIDER").unwrap_or_else(|_| "openai".into());
+    verify_provider(&result, &provider)?;
     let thread = result
         .pointer("/thread/id")
         .and_then(Value::as_str)
@@ -202,6 +213,15 @@ pub async fn resume(
     }
     serde_json::from_value(result)
         .map_err(|e| invalid(&format!("Invalid scheduled resume response: {e}")))
+}
+
+fn verify_provider(result: &Value, approved: &str) -> Result<(), ExecutorError> {
+    if approved.is_empty() || result["modelProvider"] != approved {
+        return Err(invalid(
+            "Scheduled goal uses a model provider outside the supervised allowance",
+        ));
+    }
+    Ok(())
 }
 
 fn verify_permissions(
@@ -233,6 +253,15 @@ fn verify_permissions(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn scheduled_profile_cannot_replace_the_supervised_launcher_or_provider() {
+        verify_launcher(None, "codex").unwrap();
+        verify_launcher(Some("codex"), "codex").unwrap();
+        assert!(verify_launcher(Some("ssh remote codex"), "codex").is_err());
+        verify_provider(&json!({"modelProvider":"openai"}), "openai").unwrap();
+        assert!(verify_provider(&json!({"modelProvider":"other-account"}), "openai").is_err());
+        assert!(verify_provider(&json!({}), "openai").is_err());
+    }
     #[test]
     fn writable_workspace_cannot_include_authority_even_through_symlinks() {
         let root = std::env::temp_dir().join(format!("capacity-scope-{}", uuid::Uuid::new_v4()));

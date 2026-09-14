@@ -92,6 +92,7 @@ pub struct AppServerClient {
     exit_signal: OnceLock<ExitSignalSender>,
     goal: Mutex<Option<(NativeGoal, Progress)>>,
     goal_pausing: AtomicBool,
+    capacity_stopped: AtomicBool,
     execution_id: OnceLock<Uuid>,
 }
 
@@ -106,6 +107,125 @@ impl Drop for AppServerClient {
 }
 
 impl AppServerClient {
+    /// Public control-plane pause for the owning execution, never prompt steering.
+    /// The caller must separately verify process termination; RPC success is not
+    /// evidence that model work or descendants have stopped.
+    pub async fn suspend_capacity_execution(
+        execution_id: Uuid,
+        reason: String,
+    ) -> Result<(), ExecutorError> {
+        let client = active_codex_clients()
+            .lock()
+            .expect("active client registry")
+            .get(&execution_id)
+            .and_then(Weak::upgrade)
+            .ok_or_else(|| {
+                ExecutorError::Io(io::Error::other(
+                    "No owning Codex client; reconcile execution state",
+                ))
+            })?;
+        client.suspend_capacity(reason).await;
+        Ok(())
+    }
+
+    async fn suspend_capacity(&self, reason: String) {
+        if self.capacity_stopped.swap(true, Ordering::SeqCst) {
+            return;
+        }
+        self.goal_pausing.store(true, Ordering::SeqCst);
+        let thread_id = self.thread_id.lock().await.clone();
+        if let Some(thread_id) = thread_id {
+            // Bound each call independently. The OS guard remains armed even
+            // if RPC or VK itself stalls during this graceful attempt.
+            let paused = tokio::time::timeout(
+                Duration::from_secs(1),
+                self.goal_request(
+                    "thread/goal/set",
+                    serde_json::json!({"threadId": thread_id, "status": "paused"}),
+                ),
+            )
+            .await;
+            if !matches!(paused, Ok(Ok(_))) {
+                tracing::warn!(
+                    "Capacity stop could not confirm persisted goal pause; reconcile before resuming"
+                );
+            }
+            let turn_id = self.current_turn_id.lock().await.clone();
+            if let Some(turn_id) = turn_id {
+                let _ = tokio::time::timeout(
+                    Duration::from_secs(1),
+                    self.goal_request(
+                        "turn/interrupt",
+                        serde_json::json!({"threadId": thread_id, "turnId": turn_id}),
+                    ),
+                )
+                .await;
+            }
+        }
+        let _ = super::slash_commands::log_event_raw(
+            self.log_writer(),
+            format!("Scheduled goal paused: {reason}"),
+        )
+        .await;
+        if let Some(signal) = self.exit_signal.get() {
+            signal
+                .send_exit_signal(crate::executors::ExecutorExitResult::Success)
+                .await;
+        }
+        // Intentionally remains pausing. This execution is never reactivated;
+        // later runs use a new fenced execution of the same stored goal.
+    }
+
+    pub fn watch_capacity(self: &Arc<Self>, capacity: crate::capacity::PreparedCapacity) {
+        let weak = Arc::downgrade(self);
+        tokio::spawn(async move {
+            let start = std::time::Instant::now();
+            let mut fence = match capacity_guard::Fence::new(
+                capacity.lease.clone(),
+                crate::capacity::wall_ms(),
+                0,
+            ) {
+                Ok(fence) => fence,
+                Err(reason) => {
+                    if let Some(client) = weak.upgrade() {
+                        client.suspend_capacity(reason.into()).await;
+                    }
+                    return;
+                }
+            };
+            loop {
+                sleep(Duration::from_millis(100)).await;
+                let Some(client) = weak.upgrade() else {
+                    return;
+                };
+                if client.cancel.is_cancelled() {
+                    return;
+                }
+                let now = crate::capacity::wall_ms();
+                let next = capacity_guard::read_lease(&capacity.file);
+                let reason = match next {
+                    Err(_) => Some("Permission unavailable"),
+                    Ok(next) => {
+                        match fence.observe(&next, now, start.elapsed().as_millis() as u64) {
+                            Err(reason) => Some(reason),
+                            Ok(())
+                                if next.expires_at_ms.saturating_sub(now) <= 2000
+                                    || next.stop_at_ms.saturating_sub(now) <= 2000 =>
+                            {
+                                Some("Permission or overnight deadline reached")
+                            }
+                            Ok(()) => None,
+                        }
+                    }
+                };
+                if let Some(reason) = reason {
+                    client.suspend_capacity(reason.into()).await;
+                    return;
+                }
+            }
+        });
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         log_writer: LogWriter,
@@ -137,6 +257,7 @@ impl AppServerClient {
             exit_signal: OnceLock::new(),
             goal: Mutex::new(None),
             goal_pausing: AtomicBool::new(false),
+            capacity_stopped: AtomicBool::new(false),
             execution_id: OnceLock::new(),
         });
         let _ = client.self_ref.set(Arc::downgrade(&client));
@@ -150,6 +271,14 @@ impl AppServerClient {
     /// Goal APIs postdate our pinned protocol types; keep this narrow wire adapter
     /// rather than upgrading every executor protocol as part of this feature.
     pub async fn goal_request(&self, method: &str, params: Value) -> Result<Value, ExecutorError> {
+        if method == "thread/goal/set"
+            && params["status"] == "active"
+            && self.capacity_stopped.load(Ordering::SeqCst)
+        {
+            return Err(ExecutorError::Io(io::Error::other(
+                "Scheduled execution has stopped",
+            )));
+        }
         let id = self.next_request_id();
         let request = serde_json::json!({"id": id, "method": method, "params": params});
         tokio::time::timeout(
@@ -340,7 +469,8 @@ impl AppServerClient {
     }
 
     async fn goal_turn_completed(&self, turn_id: &str) -> Result<bool, ExecutorError> {
-        if self.goal_pausing.load(Ordering::SeqCst) {
+        if self.goal_pausing.load(Ordering::SeqCst) || self.capacity_stopped.load(Ordering::SeqCst)
+        {
             return Ok(true);
         }
         let mut guard = self.goal.lock().await;
@@ -515,6 +645,11 @@ impl AppServerClient {
         input: Vec<UserInput>,
         collaboration_mode: Option<CollaborationMode>,
     ) -> Result<TurnStartResponse, ExecutorError> {
+        if self.capacity_stopped.load(Ordering::SeqCst) {
+            return Err(ExecutorError::Io(io::Error::other(
+                "Scheduled execution has stopped",
+            )));
+        }
         let request = ClientRequest::TurnStart {
             request_id: self.next_request_id(),
             params: TurnStartParams {
@@ -1685,13 +1820,58 @@ mod goal_integration_tests {
             ));
             command
         };
-        let mut child = command
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::null())
-            .kill_on_drop(true)
-            .spawn()
-            .unwrap();
+        use workspace_utils::command_ext::GroupSpawnNoWindowExt;
+        let guarded = std::env::var("VK_GOAL_TEST_GUARD").ok().map(|guard| {
+            assert_eq!(scenario, "capacity-expiry");
+            let now = crate::capacity::wall_ms();
+            crate::capacity::CapacityExecution {
+                issuer_epoch: crate::capacity::issuer_epoch().into(),
+                id: Uuid::new_v4().to_string(),
+                allocation_id: "old-week:day".into(),
+                expires_at_ms: now + 6000,
+                stop_at_ms: now + 8000,
+                lease_file: std::path::Path::new(&home)
+                    .join(format!("{}.json", Uuid::new_v4()))
+                    .to_string_lossy()
+                    .into_owned(),
+                guard_binary: guard,
+            }
+            .prepare(&Uuid::new_v4().to_string())
+            .unwrap()
+        });
+        let mut child = if let Some(capacity) = &guarded {
+            let env = [
+                "PATH",
+                "HOME",
+                "CODEX_HOME",
+                "VK_GOAL_TEST_SCENARIO",
+                "VK_GOAL_TEST_CODEX",
+            ]
+            .into_iter()
+            .filter_map(|key| std::env::var(key).ok().map(|value| (key.to_owned(), value)))
+            .collect();
+            crate::systemd_run::spawn_capacity_unit(
+                &crate::systemd_run::build_unit_name("capacity-native-test"),
+                &work,
+                std::path::Path::new("/usr/bin/python3"),
+                &[concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../../scripts/testing/codex_goal_provider.py"
+                )
+                .into()],
+                &env,
+                capacity,
+            )
+            .unwrap()
+        } else {
+            command
+                .stdin(std::process::Stdio::piped())
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .kill_on_drop(true)
+                .group_spawn_no_window()
+                .unwrap()
+        };
         let (tx, mut rx) = tokio::sync::oneshot::channel();
         let signal = ExitSignalSender::new(tx);
         let cancel = CancellationToken::new();
@@ -1711,8 +1891,8 @@ mod goal_integration_tests {
         );
         client.set_exit_signal(signal.clone());
         let peer = JsonRpcPeer::spawn(
-            child.stdin.take().unwrap(),
-            child.stdout.take().unwrap(),
+            child.inner().stdin.take().unwrap(),
+            child.inner().stdout.take().unwrap(),
             client.clone(),
             signal,
             cancel.clone(),
@@ -1757,6 +1937,76 @@ mod goal_integration_tests {
             .goal_request("thread/goal/set", params)
             .await
             .unwrap();
+        if scenario.starts_with("capacity") {
+            let marker = std::path::Path::new(&home).join("capacity-request-active");
+            for _ in 0..500 {
+                if marker.exists() && client.current_turn_id.lock().await.is_some() {
+                    break;
+                }
+                sleep(Duration::from_millis(10)).await;
+            }
+            assert!(
+                marker.exists(),
+                "Exercise a model request that is still active"
+            );
+            assert!(client.current_turn_id.lock().await.is_some());
+            let execution_id = Uuid::new_v4();
+            AppServerClient::register_active_execution(execution_id, &client);
+            let snapshot = client
+                .goal_request("thread/goal/get", serde_json::json!({"threadId": id}))
+                .await
+                .unwrap();
+            let baseline = std::path::Path::new(&home).join("capacity-goal-before.json");
+            if resume_thread.is_some() {
+                let before: Value =
+                    serde_json::from_slice(&std::fs::read(&baseline).unwrap()).unwrap();
+                for key in ["threadId", "objective", "createdAt"] {
+                    assert_eq!(
+                        snapshot["goal"][key], before["goal"][key],
+                        "Resume preserves {key}"
+                    );
+                }
+            } else {
+                std::fs::write(&baseline, serde_json::to_vec(&snapshot).unwrap()).unwrap();
+            }
+            std::fs::write(std::path::Path::new(&home).join("capacity-thread-id"), &id).unwrap();
+            if scenario == "capacity-stop" {
+                let before = std::time::Instant::now();
+                AppServerClient::suspend_capacity_execution(
+                    execution_id,
+                    "Test overnight stop".into(),
+                )
+                .await
+                .unwrap();
+                assert!(
+                    before.elapsed() < Duration::from_secs(3),
+                    "Do not wait for 30-second model response"
+                );
+            } else if let Some(capacity) = &guarded {
+                client.watch_capacity(capacity.clone());
+            } else {
+                use std::os::unix::fs::PermissionsExt;
+                let now = crate::capacity::wall_ms();
+                let file = std::path::Path::new(&home).join("capacity-permission.json");
+                let lease = capacity_guard::Lease {
+                    version: 1,
+                    id: Uuid::new_v4().to_string(),
+                    allocation_id: "old-week:day".into(),
+                    execution_id: execution_id.to_string(),
+                    expires_at_ms: now + 6000,
+                    stop_at_ms: now + 8000,
+                    sequence: 0,
+                    revoked: false,
+                };
+                std::fs::write(&file, serde_json::to_vec(&lease).unwrap()).unwrap();
+                std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o600)).unwrap();
+                client.watch_capacity(crate::capacity::PreparedCapacity {
+                    file,
+                    guard: std::path::PathBuf::new(),
+                    lease,
+                });
+            }
+        }
         if scenario == "stop" {
             let execution_id = Uuid::new_v4();
             AppServerClient::register_active_execution(execution_id, &client);
@@ -1828,13 +2078,41 @@ assert p.returncode!=0 and '4' in p.stderr, (p.returncode,p.stderr)
                 assert_eq!(progress.completed.len(), 1);
                 assert_eq!(progress.stagnant_turns, 24);
             }
-            "needs_input" | "stop" => assert_eq!(goal.status, "paused"),
+            "needs_input" | "stop" | "capacity-stop" | "capacity-expiry" => {
+                assert_eq!(goal.status, "paused")
+            }
             _ => panic!("unknown scenario"),
         }
         let restored = goals::load(goal).await.unwrap();
         assert_eq!(restored.completed, progress.completed);
+        if scenario.starts_with("capacity") {
+            assert!(
+                !restored.completed.is_empty(),
+                "A scheduled pause must preserve actual completed checkpoint evidence"
+            );
+            assert!(
+                client
+                    .goal_request(
+                        "thread/goal/set",
+                        serde_json::json!({"threadId": id, "status":"active"})
+                    )
+                    .await
+                    .is_err(),
+                "Stopped execution must not reactivate even if ordinary goal-pause bookkeeping is reset"
+            );
+        }
         drop(guard);
         cancel.cancel();
+        if let Some(capacity) = guarded {
+            tokio::time::timeout(Duration::from_secs(10), child.wait())
+                .await
+                .unwrap()
+                .unwrap();
+            assert!(
+                crate::capacity::wall_ms() < capacity.lease.stop_at_ms,
+                "Guarded native work must exit before the hard deadline"
+            );
+        }
         child.kill().await.ok();
     }
 }

@@ -8,6 +8,7 @@ Used by the ignored native_goal_runtime integration test, never production.
 import http.server
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 import threading
@@ -26,6 +27,12 @@ class Provider(http.server.BaseHTTPRequestHandler):
         global turn, recovery_stage
         request_body = self.rfile.read(int(self.headers.get('Content-Length', 0))).decode()
         turn += 1
+        if scenario.startswith('capacity') and turn >= 2:
+            # First deliver a durable checkpoint; then leave a native goal
+            # actively awaiting a model response for 30 seconds.
+            # Tests must interrupt it externally, not wait for a convenient turn.
+            Path(os.environ['CODEX_HOME'], 'capacity-request-active').write_text(str(turn))
+            time.sleep(30)
         if scenario == 'stop':
             time.sleep(0.05)
         requirements = {str(n): f'Verify parity requirement {n}' for n in range(8)}

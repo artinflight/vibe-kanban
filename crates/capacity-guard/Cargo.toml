@@ -1,0 +1,13 @@
+[package]
+name = "capacity-guard"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+libc = "0.2"
+
+[[bin]]
+name = "vk-capacity-guard"
+path = "src/main.rs"

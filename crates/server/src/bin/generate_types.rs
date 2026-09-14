@@ -234,6 +234,7 @@ fn generate_types_content() -> String {
         executors::executors::AppendPrompt::decl(),
         executors::actions::coding_agent_initial::CodingAgentInitialRequest::decl(),
         executors::actions::coding_agent_follow_up::CodingAgentFollowUpRequest::decl(),
+        executors::capacity::CapacityExecution::decl(),
         executors::actions::review::ReviewRequest::decl(),
         executors::actions::review::RepoReviewContext::decl(),
         executors::logs::CommandExitStatus::decl(),

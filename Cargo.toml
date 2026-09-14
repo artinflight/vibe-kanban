@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/capacity-guard",
     "crates/api-types",
     "crates/relay-client",
     "crates/server",

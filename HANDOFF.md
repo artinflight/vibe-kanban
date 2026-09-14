@@ -1,5 +1,21 @@
 # HANDOFF.md
 
+## September 14: Unused-capacity enforcement in progress
+
+Continue `feature/unused-capacity` in `/mnt/vk-storage/codexusage-capacity/vk`;
+CU pacing is in `/home/mcp/code/codexusage`. Read `VK_UNUSED_CAPACITY.md` for
+implemented controls, concrete failure evidence and remaining integration.
+No live services or agents were touched. The native goal remains incomplete.
+Next implementation is the authenticated durable VK capacity controller and
+managed-session startup/queue reconciliation, followed by CU scheduler/controls.
+Guard/core tests and native interruption tests pass. The actual guarded native
+initial/resumed expiry path also passed, with persisted goal progress retained
+and process exit before the hard deadline. All 55 executor unit tests pass.
+Generated types, formatting and `pnpm run ops:check` passed. The reproducible
+native runner passed all four initial/resumed stop/guarded-expiry cases; results:
+`/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-jdnps8ur/results.json`.
+Full workspace/frontend release checks remain for delivery.
+
 ## September 13: Long-thread staging merge requested
 
 The operator explicitly requested a rebase merge of the committed combined

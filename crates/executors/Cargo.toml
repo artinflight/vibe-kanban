@@ -4,6 +4,7 @@ version = "0.1.42"
 edition = "2024"
 
 [dependencies]
+capacity-guard = { path = "../capacity-guard" }
 workspace_utils = { path = "../utils", package = "utils" }
 git = { path = "../git" }
 tokio = { workspace = true }

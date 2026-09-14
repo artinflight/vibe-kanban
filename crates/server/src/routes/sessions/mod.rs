@@ -202,6 +202,7 @@ pub async fn follow_up(
     let action_type = if let Some(info) = latest_session_info {
         let is_reset = payload.retry_process_id.is_some();
         ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+            capacity: None,
             prompt: prompt.clone(),
             session_id: info.session_id,
             reset_to_message_id: if is_reset { info.message_id } else { None },

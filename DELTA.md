@@ -1133,3 +1133,11 @@
 - Completed six locale translations for the history controls. React regression
   tests passed again; full local Cargo validation hits missing GLib desktop
   development files. PR111 records CI and remaining runtime limitations.
+
+## 2026-09-14 — Unused capacity execution fences
+
+Isolated branch `feature/unused-capacity` adds the capacity-guard crate, systemd
+lease/deadline enforcement and native active-turn suspension. Real user-systemd
+failure scenarios and offline native same-goal resume checks pass. Controller,
+managed restart/queue gates and CU scheduler/UI integration remain. No deployment.
+See `VK_UNUSED_CAPACITY.md`.

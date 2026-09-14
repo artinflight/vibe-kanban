@@ -1,3 +1,9 @@
+## Current delivery continuation
+
+Launcher/provider binding, build-cache support and native stop/resume pass 65
+executor tests plus real acceptance. See VK_UNUSED_CAPACITY.md for exact evidence.
+Release packaging/rehearsal remain open; no production cutover has occurred.
+
 ## Scheduled build directories — September 14
 
 `VK_CAPACITY_BUILD_ROOTS` is an optional JSON array of at most eight existing

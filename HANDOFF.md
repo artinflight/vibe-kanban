@@ -1,5 +1,15 @@
 # HANDOFF.md
 
+## September 14: PR112 Re-review Closes Prior Blockers
+
+Head4a2f8fcf5 addresses the scheduled model/reasoning loss and restores the live
+checkpoint renderer. See `PR112_REVIEW.md` for evidence and remaining limits.
+Recommend staging merge; PR remains draft and production deployment is not
+approved.14 DB and six renderer tests independently passed, as did format/Ops,
+diff and merge simulation;1200 manifest hashes matched. The isolated shutdown
+panic still needs diagnosis or bounded recovery evidence before deployment.
+No merge, push, restart or production change was made by this re-review.
+
 ## September 14: PR112 Review Requests Changes
 
 See `PR112_REVIEW.md` for review of b21ef9bd5 against staging9a2591916.

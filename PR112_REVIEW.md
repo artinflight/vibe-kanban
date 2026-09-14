@@ -1,5 +1,38 @@
 # PR112 Merge And Deployment Review
 
+## September 14 Re-review: Prior Blockers Closed, Deployment Still Pending
+
+Re-reviewed head `4a2f8fcf5bb41c7df2bcfcf640715e7d0ff0b567` (application fix
+`a6106d2e0`). No remaining merge blocker found in the repair diff. Recommend
+merging into staging after taking the PR out of draft; this is not production
+deployment approval. The findings below describe the superseded reviewed head.
+
+The scheduled route now preserves the complete last non-dropped executor
+configuration and honors a newer server-saved draft selection without submitting
+or clearing its text. Capacity restrictions still apply separately. The two
+checkpoint-renderer files exactly match the live hotfix source5d6ed3539.
+
+Independent revalidation: all14 DB tests and six checkpoint tests passed;
+formatting, Ops, PR whitespace check and fresh staging merge simulation passed.
+All1200 files listed across the repaired manifest's artifact, frontend and
+evidence sections matched their hashes. Reviewed four native/offline-provider
+execution records including actual model requests, preset changes, newer saved
+selection and ordinary continuation, plus desktop/mobile browser evidence.
+Those native/browser scenarios were not independently rerun. Full workspace,
+Tauri and crash/reset suites were not rerun on this head. The current head has
+no hosted checks; previous green CI belongs to b21ef9bd5. No Actions invoked.
+
+The repaired test backend log contains a Tokio timer shutdown panic. Its cause
+and production impact remain unproven; do not claim clean shutdown or safe
+production handover from successful feature tests. Diagnose or bound this issue
+and validate actual shutdown/recovery before deployment. CU PR7 remains a
+separate review/dependency, and production backup/delta, measured handover and
+explicit final approval remain required. No merge, push, restart or deployment
+was performed in this re-review. Repaired package:
+`/mnt/vk-storage/codexusage-capacity/pr112-repair/manifest.json`.
+
+## Original Review (Superseded)
+
 Reviewed September 14, 2026. PR: https://github.com/artinflight/vibe-kanban/pull/112
 Head: `b21ef9bd5790f6a4135f80ea58dabfe49831c7ef`.
 Staging: `9a2591916610870ee456b6134bf4f217831010bc`.

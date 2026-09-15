@@ -2,12 +2,12 @@
 
 ## Established Backend Restart Protocol
 
-September14 role update: Blue is the incumbent and the replacement Green is the
-candidate. Original paused Green has been retired with operator authorization.
-Read `VK_GREEN_READY_20260914.md` before applying the historical color examples.
+September15 role update: Blue2150526 is incumbent; new Green5091 is the candidate.
+Old Green2778969 and historical Blue2590517 remain frozen. Read
+`VK_GREEN_READY_20260915.md` before applying historical color examples.
 
 Follow [the backend restart protocol](VK_BACKEND_RESTART_PROTOCOL.md). Keep
-Green usable while Blue is built, isolated, tested and backed up. Rehearse and
+the incumbent usable while its replacement is built, isolated, tested and backed up. Rehearse and
 measure the complete interruption before offering a window, then wait for an
 explicit operator "cut over now". Preparation approval is not restart approval.
 Never promote stale rehearsal data or promise instant post-write rollback.

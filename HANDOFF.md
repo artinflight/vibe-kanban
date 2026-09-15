@@ -1,5 +1,18 @@
 # HANDOFF.md
 
+## September 15: New Green Preparation
+
+Read `VK_GREEN_READY_20260915.md` and
+`/mnt/vk-storage/vk-green-refresh-20260915/readiness.json` before service actions.
+Blue2150526 stays live; Green candidate5091 is not started. Test replica5071 is
+not production data. Staging2fd585ac3 includes PR115/PR116. New companion CU
+configuration is installed, but its current PID3155695 has not restarted.
+Fresh approval must bind readiness and authorize the CU restart as well as
+pausing Blue. Refresh online changes, capture the final frozen delta and use
+the latest shared data. Never reuse an old approval or copy the replica back.
+Old Green2778969 and historical Blue2590517 stay frozen. Runtime evidence and
+Desktop receipts, not this note alone, determine readiness.
+
 ## September14: PR114 Blue Is Production
 
 The approved29.54second cutover and live acceptance passed. Read

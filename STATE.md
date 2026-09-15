@@ -1,5 +1,13 @@
 # STATE.md
 
+**September 15 preparation authority:** Blue PID2150526 remains production on
+5031/5032. New Green is prepared from staging2fd585ac3 (PR115/PR116), with an
+isolated preview on5071 and a next-start production unit on5091/5092. No cutover
+is authorized by this preparation task. Read `VK_GREEN_READY_20260915.md` and
+the runtime readiness record; readiness requires verified Desktop packaging.
+Capacity configuration is installed for next start, not live-accepted. CU
+PID3155695 has not restarted. Older readiness and role statements are historical.
+
 **Latest live authority, September14 PR114:** New Blue PID2150526 is live/enabled
 on5031/5032 and vibe.local after the approved29.54second switch. Green PID2778969
 remains frozen/disabled for latest-data cutback; historical Blue2590517 remains

@@ -6,6 +6,29 @@ An established protocol is not evidence that a particular candidate is ready.
 
 ## Generation Roles
 
+September15 role authority is `VK_GREEN_READY_20260915.md`: Blue2150526 is live,
+new Green5091 is only prepared. Older dated examples below are historical.
+
+### Required Capacity Integration
+
+Use the candidate staging source's `scripts/vk-capacity-deployment.py` and
+`scripts/deployment/mcp-capacity.json` for every MCP deployment. Package both
+server and release-matched guard. Render and inspect candidate/CodexUsage
+drop-ins, preserve previous settings, install without starting services and
+require read-only `check` success before readiness. Include configuration and
+tool hashes in the approved recovery package. Never rotate the private token.
+
+The CU companion may need a restart to load its stable gateway/database
+settings. Inventory CU-owned native processes separately from preserved external
+processes, and include that restart in the approved window. Rehearse companion
+stop/start and backup-abort recovery with private units, never production CU.
+After routing, require `live-check` to verify running settings, connection and
+reconciliation; do not equate installed configuration with live readiness.
+Preserve enabled/disabled state and selected goals without enrolling or enabling
+anything. Include CU persistent data in backup/journal coverage and quiesce its
+writes before the final capture. An old incumbent without loaded capacity
+configuration can restore ordinary operation, not prove the new integration.
+
 Any readiness refresh invalidates previous approval. Bind the fresh approval to
 the exact readiness SHA256 and staging commit; verify the current incumbent
 frontend path/content before entering maintenance. A frontend-only hotfix can

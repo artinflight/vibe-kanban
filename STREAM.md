@@ -1,8 +1,10 @@
 # STREAM.md
 
-Current completion: approved September14 Green cutover and live acceptance.
-VK_GREEN_LIVE_20260914.md records final state. Keep Blue frozen for cutback;
-normal operation now uses Green. No further handover is pending in this stream.
+Current scope: September15 staging2fd585ac3 replacement Green preparation.
+Blue2150526 remains production; no new handover is authorized. Read
+VK_GREEN_READY_20260915.md and the verified runtime readiness package. This
+maintenance branch records evidence, not the candidate application source.
+Earlier completion and role statements below are historical.
 
 September14 current scope: PR113 is merged as32676919b; refresh Green readiness
 and current-frontend rollback binding without interrupting production Blue.

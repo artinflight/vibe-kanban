@@ -24,9 +24,15 @@ remain unresolved. Preserve choices and drafts, and do not bulk-reset chats.
 
 ## Current Live Truth
 
-September14 post-cutover authority: Green production2778969 is live on4511/4512;
-Blue2590517 is frozen for latest-data cutback. See VK_GREEN_LIVE_20260914.md.
-The preparation inventory below predates activation and is historical.
+September15 authority: Blue2150526 is live on5031/5032. New Green5091 is prepared,
+not activated. Old Green2778969 and historical Blue2590517 are frozen. Read
+VK_GREEN_READY_20260915.md. The inventories below are historical.
+
+Every candidate now includes the versioned capacity deployment profile and
+release-matched guard from staging PR116. Render/install/check next-start
+configuration, account for the CU companion restart, and require the separate
+post-cutover live-check. Configuration success is not live activation. Preserve
+automation settings and goal selections; do not enable scheduling to pass tests.
 
 **September14 supersedes the historical inventory below.** Production is
 `vibe-kanban-paused-blue-20260912.service` on4711/4712, PID2590517, behind

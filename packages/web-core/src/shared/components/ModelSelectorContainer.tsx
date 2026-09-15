@@ -31,6 +31,7 @@ import {
   resolveDefaultReasoningId,
 } from '@/shared/lib/modelSelector';
 import { profilesApi } from '@/shared/lib/api';
+import { normalizeCodexModelSelector } from '@/shared/lib/codexModelSelector';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { getResolvedTheme, useTheme } from '@/shared/hooks/useTheme';
 import { useModelSelectorConfig } from '@/shared/hooks/useExecutorDiscovery';
@@ -117,7 +118,10 @@ export function ModelSelectorContainer({
   }, [streamError]);
 
   const baseConfig = streamConfig;
-  const config = appendPresetModel(baseConfig, presetOptions?.model_id);
+  const config = normalizeCodexModelSelector(
+    agent,
+    appendPresetModel(baseConfig, presetOptions?.model_id)
+  );
 
   const availableProviderIds = useMemo(
     () => config?.providers.map((item) => item.id) ?? [],

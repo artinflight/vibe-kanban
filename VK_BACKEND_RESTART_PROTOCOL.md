@@ -6,8 +6,8 @@ An established protocol is not evidence that a particular candidate is ready.
 
 ## Generation Roles
 
-September15 role authority is `VK_GREEN_READY_20260915.md`: Blue2150526 is live,
-new Green5091 is only prepared. Older dated examples below are historical.
+September15 role authority is `VK_GREEN_LIVE_20260915.md`: Green1674994 is live,
+Blue2150526 is frozen for latest-data cutback. Older dated examples are historical.
 
 ### Required Capacity Integration
 

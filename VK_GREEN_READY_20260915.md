@@ -1,5 +1,8 @@
 # September 15 Green Preparation
 
+Historical readiness record: the separately approved cutover is now complete.
+Read `VK_GREEN_LIVE_20260915.md`; do not reuse the approval or repeat handover.
+
 Preparation only. Blue remains usable; no cutover is authorized yet. Final
 readiness is the verified `readiness.json` and Desktop receipt under
 `/mnt/vk-storage/vk-green-refresh-20260915`, not this document alone.

@@ -1,5 +1,14 @@
 # STATE.md
 
+**September15 live authority:** Green1674994 is enabled/live on5091/5092;
+gateway4720 and vibe.local route Green after the approved28.11second handover.
+Blue2150526 remains frozen/disabled for latest-data cutback. CU1674995 restarted
+and its capacity connection is reconciled, with automation still off. Staging
+2fd585ac3 (PR115/PR116) is deployed. Preservation, original thread/model, saved
+messages/drafts, attachment, Steer/Stop/goals and desktop/mobile checks passed.
+Read `VK_GREEN_LIVE_20260915.md`. Earlier preparation/Blue-live entries below
+are historical; never repeat the consumed controller or restore an older DB.
+
 **September 15 preparation authority:** Blue PID2150526 remains production on
 5031/5032. New Green is prepared from staging2fd585ac3 (PR115/PR116), with an
 isolated preview on5071 and a next-start production unit on5091/5092. No cutover

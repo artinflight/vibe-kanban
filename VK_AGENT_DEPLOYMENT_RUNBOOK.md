@@ -24,9 +24,10 @@ remain unresolved. Preserve choices and drafts, and do not bulk-reset chats.
 
 ## Current Live Truth
 
-September15 authority: Blue2150526 is live on5031/5032. New Green5091 is prepared,
-not activated. Old Green2778969 and historical Blue2590517 are frozen. Read
-VK_GREEN_READY_20260915.md. The inventories below are historical.
+September15 authority: Green1674994 is live on5091/5092. Blue2150526 is frozen
+for latest-data cutback; old Green2778969 and historical Blue2590517 remain
+frozen separately. CU1674995 is connected/reconciled with automation off. Read
+VK_GREEN_LIVE_20260915.md. The inventories below are historical.
 
 Every candidate now includes the versioned capacity deployment profile and
 release-matched guard from staging PR116. Render/install/check next-start

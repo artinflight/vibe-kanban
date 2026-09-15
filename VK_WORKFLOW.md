@@ -2,9 +2,9 @@
 
 ## Established Backend Restart Protocol
 
-September15 role update: Blue2150526 is incumbent; new Green5091 is the candidate.
-Old Green2778969 and historical Blue2590517 remain frozen. Read
-`VK_GREEN_READY_20260915.md` before applying historical color examples.
+September15 role update: Green1674994 is live; Blue2150526 is the paused fallback.
+Old Green2778969 and historical Blue2590517 remain frozen separately. Read
+`VK_GREEN_LIVE_20260915.md` before applying historical color examples.
 
 Follow [the backend restart protocol](VK_BACKEND_RESTART_PROTOCOL.md). Keep
 the incumbent usable while its replacement is built, isolated, tested and backed up. Rehearse and

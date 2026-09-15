@@ -1,5 +1,17 @@
 # HANDOFF.md
 
+## September 15: Green Is Live
+
+Read `VK_GREEN_LIVE_20260915.md`. Approved handover completed in28.11seconds;
+Green1674994 is enabled/live5091/5092, Blue2150526 frozen/disabled. CU1674995
+is connected/reconciled with automation off. Original maintenance thread/model
+and current data are preserved; all live acceptance checks passed. The5071
+replica and18468 preview route are stopped. Historical recovery exceptions remain.
+Never repeat cutover-20260915T083542Z or reuse its approval. Use latest data for
+any cutback; old Green2778969 and historical Blue2590517 remain frozen separately.
+The preparation notes below are historical; final Desktop evidence receipt is
+`/mnt/vk-storage/vk-green-refresh-20260915/live-acceptance-desktop-receipt.json`.
+
 ## September 15: New Green Preparation
 
 Read `VK_GREEN_READY_20260915.md` and

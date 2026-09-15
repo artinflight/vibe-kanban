@@ -1290,3 +1290,20 @@ same-thread resume pass. Candidate binary and isolated handover/recovery are
 prepared on SSD; production is still the incumbent 5031 backend. See VK_ERRORS_2.md.
 
 - 2026-09-15: Version capacity deployment settings and candidate-bound installation/verification in VK; preserve separate Errors 2 stream and production runtime.
+
+## 2026-09-15 | vk/d498-vk-chat-orchestr | conversational orchestration design
+
+- Inspected local/cloud entity relationships, direct session chat, steering and
+  in-memory queue, safe resume, raw JSONL/history, summaries, shell remounts,
+  request/approval boundaries and native goals/capacity.
+- Created VK_CHAT_ARCHITECTURE.md, VK_CHAT_CONTRACTS.md, VK_CHAT_VOICE.md,
+  VK_CHAT_IMPLEMENTATION.md and VK_CHAT_HANDOFF.md; updated branch continuity.
+- Checked primary Retell and ElevenLabs documentation for browser voice,
+  custom-model transcript protocol, signatures, selectable voices and costs.
+- Design proposes VK-owned persistent conversations, scoped memory and durable
+  shared delivery, direct-session bypass and replaceable voice adapters.
+- Ops Playbook, relative document links and diff whitespace checks passed.
+  Repository formatting completed Rust then failed on missing Prettier; no source
+  changes. No application tests, feature implementation, provider setup, runtime
+  change, deployment, commit or push. Later implementation is authorised by the
+  user's future handoff instruction, with no inherited architecture-task boundary.

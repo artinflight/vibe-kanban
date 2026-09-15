@@ -1,11 +1,7 @@
-# VK:: Errors 2
+# Capacity deployment package
 
-Repair the Media Management Orchestration resume failure and VK::Error follow-up
-failure reported September 14. Base: current fork/staging `75276e79f`.
-
-See [VK_ERRORS_2.md](VK_ERRORS_2.md) for reproduction, live workspace recovery,
-protocol compatibility changes, validation and deployment boundaries.
-
-Preserve both original conversations and their histories. Do not move this
-active worktree for a build. Use the mounted SSD shared Cargo target. The old
-capacity implementation notes belong to their original stream, not this repair.
+Put the post-PR114 configuration repair in VK staging, so deployment from this
+repository carries it into any nominated backend service. Scope is the versioned
+MCP profile, rendering/install/check tooling, tests and deployment instructions.
+No Rust/executor changes, production restart or edits to VK::Errors 2.
+See [VK_CAPACITY_DEPLOYMENT.md](VK_CAPACITY_DEPLOYMENT.md).

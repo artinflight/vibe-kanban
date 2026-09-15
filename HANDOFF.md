@@ -1,3 +1,12 @@
+## September 15: capacity deployment configuration in VK staging
+
+The post-PR114 missing-configuration fix is now versioned in VK: see
+[VK_CAPACITY_DEPLOYMENT.md](VK_CAPACITY_DEPLOYMENT.md). The deployment tool binds
+both VK/CU settings to the actual candidate service and release guard; missing
+configuration fails readiness. Eleven Python regressions and the current host
+read-only configuration check pass. No runtime configuration or production
+process was changed by this patch. VK::Errors 2 remains a separate stream.
+
 ## September 14: VK Errors 2
 
 See [VK_ERRORS_2.md](VK_ERRORS_2.md). VK::Error workspace path is restored and

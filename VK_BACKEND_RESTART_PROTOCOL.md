@@ -1,5 +1,15 @@
 # Backend Restart Protocol
 
+## Required MCP capacity deployment configuration
+
+Follow [VK_CAPACITY_DEPLOYMENT.md](VK_CAPACITY_DEPLOYMENT.md) for every candidate.
+Package the release-matched guard, render/install the versioned service settings,
+and pass the read-only configuration check before claiming readiness. After the
+authorized start, pass `live-check` against the nominated service and executable.
+The PR114 code merge did not install these settings; copying a server binary or
+creating another service without them repeats the deployment omission. Preserve
+the active restart agent’s ownership; this check does not authorize interruption.
+
 Established by the operator on 2026-09-11. This is the authority for future
 backend restart windows; older stop-and-switch examples are historical.
 An established protocol is not evidence that a particular candidate is ready.

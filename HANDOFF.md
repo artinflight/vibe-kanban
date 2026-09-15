@@ -1,8 +1,11 @@
 ## September 14: VK Errors 2
 
 See [VK_ERRORS_2.md](VK_ERRORS_2.md). VK::Error workspace path is restored and
-live Git status succeeds. Media Management protocol compatibility is being
-validated on current staging. Production has not been restarted or switched.
+live follow-up preflight passes without launching a turn. Media Management
+compatibility passes the captured 154-turn decode and repaired-binary offline
+HTTP resume. 323 server tests pass. PR115 targets staging; the binary and isolated
+handover/recovery evidence are ready. Full backup timing and cutover approval
+remain separate. Production has not been restarted or switched.
 
 ## September 14: selected-only capacity fault isolation
 

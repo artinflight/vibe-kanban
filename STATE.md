@@ -1,3 +1,18 @@
+## September 14 late runtime check and chat recovery
+
+Observed production routing points to port 5031 and
+`vibe-kanban-blue-pr114-production-20260914.service` PID 2150526, source 75276e79f.
+The retained Green 4511 and historical Blue 4711 processes are frozen standbys;
+do not treat their listening sockets as healthy active backends or restart them.
+
+VK::Error's relocated clean worktree is restored to its expected managed path;
+the live follow-up handler now passes workspace validation. The original branch,
+commit and conversation are preserved. PR #115 repairs newer Codex error-category
+compatibility; its built candidate passes the captured 154-turn decode and offline
+HTTP same-thread resume. It is not deployed. See [VK_ERRORS_2.md](VK_ERRORS_2.md)
+for evidence and remaining cutover boundaries. Older runtime statements below
+are historical unless corroborated by current service/routing checks.
+
 ## PR112 review repairs — September 14
 
 Both P1 findings are repaired in application commit `a6106d2e0`: scheduled resumes
@@ -132,7 +147,7 @@ enforcement for CodexUsage. It is not deployed or enabled. Integration and
 remaining release gates are documented in `VK_UNUSED_CAPACITY.md`. Existing
 runtime statements below are unchanged; verify actual routing before deployment.
 
-**LATEST:** September12 V3 cutover is live on new Blue4711/4712; original Green
+**LATEST:** September12 V3 cutover is live on new Blue 4711/4712; original Green
 PID2669659 is frozen for same-latest-data cutback. Read `VK_BLUE_LIVE_20260912.md`
 for actual acceptance, backups, known UI/historical gaps and recovery constraints.
 Older runtime/readiness statements below are historical, not launch instructions.

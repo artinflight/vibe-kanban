@@ -58,3 +58,62 @@ against the repaired deployed backend.
 
 Evidence and private capture: `/mnt/vk-storage/vk-errors-2/evidence/`.
 Build output uses `/mnt/vk-storage/cargo-target` with incremental compilation off.
+
+## Validation results
+
+- Live VK::Error Git status passes at its restored original path. A deliberately
+  mismatched-executor follow-up reaches the expected HTTP 409 check after
+  workspace validation, with execution count unchanged at nine; no prompt was
+  launched. This replaces the previous workspace HTTP 500 failure.
+- All 73 executor unit tests pass; the captured-response integration also passes
+  and retains the original thread ID and all 154 turns. Unknown error rendering
+  is covered; the historical failed status and safety message are retained.
+- Server workspace tests: 323 passed, four ignored, excluding Tauri. The complete
+  workspace command and full lint cannot run here because GLib is missing.
+  Focused executor Clippy passes. Frontend lint and all four frontend type checks
+  pass; type checks require `NODE_OPTIONS=--max-old-space-size=4096` on this host.
+  The initial default-heap check failed before that successful rerun.
+- Formatting, ops governance and diff whitespace checks pass.
+- Optimized server build succeeds. Candidate:
+  `/mnt/vk-storage/vk-errors-2/release/server`; the existing external frontend is
+  retained. This binary must not be used without `VK_FRONTEND_DIST_DIR` because
+  the backend-only build has the standard dummy embedded frontend.
+- Actual old-binary HTTP reproduction: an initial fixture turn completes and
+  its next follow-up fails with the reported unknown-category decoding error.
+  On the repaired binary, two follow-ups to that same fixture session complete,
+  retaining its native thread identity. The fixture uses an offline app-server
+  protocol peer, not a live model request or the original user's agent.
+- The handover rehearsal uses a private copy of the 922-workspace live database
+  plus that fixture. Injected backup failure restores the incumbent's original
+  PID and route. Successful switch takes 5.20 seconds (4.86 capture/fencing,
+  0.34 activation); recovery takes 0.09 seconds and preserves the incumbent PID.
+  Those timings include the replica VK database, not all native-home databases;
+  a full native-history backup measurement is recorded separately before proposing
+  a production window. Both isolated rehearsal services are stopped afterward.
+- An online backup delta is Desktop B: SHA256 verified. This is preparation;
+  latest state must still be captured under the approved final writer fence.
+
+PR: https://github.com/artinflight/vibe-kanban/pull/115 (targets staging).
+The source/build commit is `fc784f7a2`; deployment preparation is under
+`/mnt/vk-storage/vk-errors-2`. No production switch is authorized or performed.
+
+## Build resource lesson
+
+Running the release build and broad tests inside the native agent's 1.5 GiB
+memory-high cgroup caused heavy swap/reclaim. Their verified process groups were
+moved into the dedicated transient `vk-errors-2-build.scope`, bounded at 12 GiB
+memory-high / 16 GiB maximum. Future heavy validation should start in its own
+bounded build service rather than inherit the agent's memory pressure. Production
+and other agent memory limits were not changed.
+
+The full online delta capture, including native-home SQLite snapshots and Desktop
+hash verification, measured 25.35 seconds in a bounded backup service after
+removing compiler memory pressure. Plan a roughly 30–45 second production window,
+with a strict capture timeout and recovery on abort; this is an estimate, not a
+five-second production guarantee. The latest backup manifest records its full
+prior-backup dependency chain. Four additional shared-history Codex processes
+(OharaFit/CodexUsage app servers and two tmux-owned connections) must be briefly
+paused by exact PID/start/inode identity only under the final approval. Private
+process pause/resume and wrong-identity rejection were rehearsed successfully.
+Other live VK turns must finish before cutover. The controller refuses to bypass
+that condition and preserves all retained standby processes.

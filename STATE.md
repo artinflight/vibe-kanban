@@ -1,3 +1,13 @@
+## September 15: automatic agent switching architecture documented
+
+Source inspection confirms VK already has full ExecutorConfig model overrides,
+executor-bound sessions and Codex-thread-local native goal checkpoints. The
+existing CU capacity bridge governs selected Codex background goals; it is not a
+general routing API. [VK_AGENT_AUTOSWITCH.md](VK_AGENT_AUTOSWITCH.md) records the
+proposed extension and the separate CU responsibility for usage/allocation.
+This is design documentation only; automatic agent switching is not implemented
+or deployed. Branch scope and development pickup remain in STREAM.md/HANDOFF.md.
+
 ## September 15: capacity deployment configuration in VK staging
 
 The post-PR114 missing-configuration fix is now versioned in VK: see

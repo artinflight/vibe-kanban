@@ -1290,3 +1290,12 @@ same-thread resume pass. Candidate binary and isolated handover/recovery are
 prepared on SSD; production is still the incumbent 5031 backend. See VK_ERRORS_2.md.
 
 - 2026-09-15: Version capacity deployment settings and candidate-bound installation/verification in VK; preserve separate Errors 2 stream and production runtime.
+
+## 2026-09-15 — Agent/model autoswitch design
+
+Completed the docs-only architecture pass in VK_AGENT_AUTOSWITCH.md after inspecting
+VK and the separate dirty CodexUsage working tree read-only. Decisions: reuse full
+ExecutorConfig; CU owns quota/targets/margins; VK uses reset-aware pool selection,
+manual precedence, coherent boundaries and linked-session handoffs. Native goal
+transfer requires explicit ownership/checkpoint support. Next session begins
+development; docs-only was temporary. No implementation or runtime mutation.

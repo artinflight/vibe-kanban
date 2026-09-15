@@ -1,5 +1,13 @@
 # STATE.md
 
+**September15 model-selector correction:** live frontend f175c1b5b restores
+GPT-6 reasoning controls and hides advertised GPT models below5.6, without
+restarting Green1674994 or rewriting chat choices. Desktop/mobile dropdown and
+model-list checks passed. PR117 is pending staging integration; do not release
+staging without this fix. Evidence: `/mnt/vk-storage/vk-model-selector-20260915`.
+The earlier accepted-model checks proved retained Xhigh, not dropdown choices;
+that acceptance gap is now explicit in the restart protocol.
+
 **September15 live authority:** Green1674994 is enabled/live on5091/5092;
 gateway4720 and vibe.local route Green after the approved28.11second handover.
 Blue2150526 remains frozen/disabled for latest-data cutback. CU1674995 restarted

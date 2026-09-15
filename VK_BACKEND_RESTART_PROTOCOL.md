@@ -80,6 +80,15 @@ Never assume permission to delete a retained restore-test copy or user data.
 
 ## Existing-Chat Model Preservation Gate
 
+September15 added a second model-selection regression: a correct GPT-6/Xhigh
+label and a successful submission masked the absent reasoning dropdown and old
+catalog entries. On MCP, open the actual Codex model menu at desktop/mobile
+sizes and verify GPT versions below5.6 are hidden and GPT-6 has the supported
+Low/Medium/High/Xhigh/Max menu choices. Do not merely check the selected label.
+Do not offer native-only efforts the deployed VK enum cannot accept. Carry
+PR117 into the candidate and the retained cutback frontend; preserving the old
+frontend verbatim can reintroduce a known UI regression. Do not reset chats.
+
 The September 12 cutover checks missed existing-chat model selection. A correct
 global default, preserved history and a successful execution do not prove that
 the next turn uses the user's chosen model. This gate applies to backend

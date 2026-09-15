@@ -1,5 +1,18 @@
 # HANDOFF.md
 
+## September 15: Live Model Selector Hotfix
+
+Frontend f175c1b5b is published from
+`/mnt/vk-storage/vk-model-selector-20260915/release`; Green1674994 was not
+restarted. Live desktop/mobile checks show GPT5.6 variants plus GPT-6 and
+Low/Medium/High/Xhigh/Max for GPT-6. Saved messages/profiles are unchanged.
+PR117 targets staging and must merge before another staging deployment:
+https://github.com/artinflight/vibe-kanban/pull/117 . Source branch is
+fix/codex-model-selector-regression, worktree under that SSD task's `source`.
+The current paused-Blue standby record now retains this frontend for cutback;
+its original record and the frontend/source recovery package are on Desktop.
+Do not reconstruct a rollback using stale frontend paths from older notes.
+
 ## September 15: Green Is Live
 
 Read `VK_GREEN_LIVE_20260915.md`. Approved handover completed in28.11seconds;

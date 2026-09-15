@@ -7,6 +7,12 @@ For the planned clean self-development project/preview model, read
 
 ## Required Existing-Chat Model Check
 
+Include the model catalog and reasoning dropdown, not only selected labels and
+submitted defaults. PR117 fixes the September15 missing GPT-6 capabilities and
+obsolete Codex choices. It must be integrated before the next staging release.
+The live frontend and paused-Blue cutback frontend now carry f175c1b5b. See the
+expanded model gate in `VK_BACKEND_RESTART_PROTOCOL.md`.
+
 For goal-checkpoint display, exercise continuing, input-needed and legacy
 completed reports, including expandable evidence at desktop/mobile sizes.
 The September14 parser accepted only the first two states, exposing completed

@@ -1,3 +1,23 @@
+## September 15: Chat orchestration design and implementation handoff
+
+The design is in [VK_CHAT_ARCHITECTURE.md](VK_CHAT_ARCHITECTURE.md),
+[contracts](VK_CHAT_CONTRACTS.md), [voice](VK_CHAT_VOICE.md) and
+[implementation sequence](VK_CHAT_IMPLEMENTATION.md). Baseline source:
+`2fd585ac30bfa75975f6319585e4a66bb684fdcf`.
+
+The architecture task created documents, with no feature or runtime changes.
+Development starts on the user's later [implementation instruction](VK_CHAT_HANDOFF.md).
+The design extends existing direct sessions and execution controls, adds independent
+conversation/memory storage and durable delivery, and keeps voice behind an adapter.
+Provider credentials/retention and an auditioned Irish voice are live-integration
+decisions; they do not block starting the text foundation.
+
+Validation: Ops Playbook and all relative design-document link targets passed;
+`git diff --check` passed. `pnpm run format` completed Rust formatting, then
+stopped because `prettier` is not installed in this worktree. No source files
+changed. Application tests, live model/provider calls and runtime validation
+were not performed. No commit, push or PR was created for this task.
+
 ## September 15: capacity deployment configuration in VK staging
 
 The post-PR114 missing-configuration fix is now versioned in VK: see

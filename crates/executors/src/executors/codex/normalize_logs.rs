@@ -1559,7 +1559,7 @@ pub fn normalize_logs(
                 continue;
             }
 
-            if let Ok(server_notification) = serde_json::from_str::<ServerNotification>(&line) {
+            if let Ok(server_notification) = super::jsonrpc::parse_server_notification(&line) {
                 if handle_direct_notification(
                     server_notification,
                     &mut state,
@@ -2450,7 +2450,8 @@ fn handle_jsonrpc_response(
     entry_index: &EntryIndexProvider,
     model_params: &mut ModelParamsState,
 ) {
-    if let Ok(resp) = serde_json::from_value::<ThreadStartResponse>(response.result.clone()) {
+    let result = super::jsonrpc::sanitize_response_value("thread/read", response.result);
+    if let Ok(resp) = serde_json::from_value::<ThreadStartResponse>(result.clone()) {
         msg_store.push_session_id(resp.thread.id);
         handle_model_params(
             Some(resp.model),
@@ -2462,7 +2463,7 @@ fn handle_jsonrpc_response(
         return;
     }
 
-    if let Ok(resp) = serde_json::from_value::<ThreadForkResponse>(response.result.clone()) {
+    if let Ok(resp) = serde_json::from_value::<ThreadForkResponse>(result) {
         msg_store.push_session_id(resp.thread.id);
         handle_model_params(
             Some(resp.model),
@@ -2784,6 +2785,19 @@ mod tests {
         }
 
         latest_normalized_entries(&msg_store)
+    }
+
+    #[tokio::test]
+    async fn unknown_error_notification_is_visible_to_user() {
+        let entries = normalize_lines(&[json!({"method":"error", "params": {
+            "threadId":"thread", "turnId":"turn", "willRetry":false,
+            "error":{"message":"Request blocked by safety systems", "codexErrorInfo":"misalignmentPolicyViolation"}
+        }}).to_string()]).await;
+        assert!(entries.iter().any(|entry| matches!(
+            entry.entry_type,
+            NormalizedEntryType::ErrorMessage { .. }
+        ) && entry.content
+            == "Error: Request blocked by safety systems"));
     }
 
     async fn normalize_stdout_stderr(

@@ -17,7 +17,8 @@ use std::{
 
 use async_trait::async_trait;
 use codex_app_server_protocol::{
-    JSONRPCError, JSONRPCMessage, JSONRPCNotification, JSONRPCRequest, JSONRPCResponse, RequestId,
+    CodexErrorInfo, JSONRPCError, JSONRPCMessage, JSONRPCNotification, JSONRPCRequest,
+    JSONRPCResponse, RequestId, ServerNotification,
 };
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
@@ -278,11 +279,56 @@ where
     }
 }
 
-fn sanitize_response_value(label: &str, mut value: Value) -> Value {
+pub(super) fn sanitize_response_value(label: &str, mut value: Value) -> Value {
     if matches!(label, "thread/resume" | "thread/fork" | "thread/read") {
         drop_unknown_thread_items(label, &mut value);
     }
+    if matches!(
+        label,
+        "thread/resume" | "thread/fork" | "thread/read" | "thread/rollback"
+    ) && let Some(turns) = value
+        .pointer_mut("/thread/turns")
+        .and_then(Value::as_array_mut)
+    {
+        for turn in turns {
+            normalize_turn_error(turn.get_mut("error"));
+        }
+    }
+    if matches!(label, "turn/start" | "turn/steer") {
+        normalize_turn_error(value.pointer_mut("/turn/error"));
+    }
     value
+}
+
+/// Accept new error categories without discarding the error message or failed
+/// turn status. Only touch protocol error fields, never arbitrary tool output.
+fn normalize_turn_error(error: Option<&mut Value>) {
+    let Some(info) = error.and_then(|error| error.get_mut("codexErrorInfo")) else {
+        return;
+    };
+    if info.is_null() {
+        return;
+    }
+    if let Err(error) = serde_json::from_value::<CodexErrorInfo>(info.clone())
+        && error.to_string().starts_with("unknown variant `")
+    {
+        tracing::warn!("mapping an unknown Codex error category to other");
+        *info = Value::String("other".to_owned());
+    }
+}
+
+pub(super) fn parse_server_notification(
+    line: &str,
+) -> Result<ServerNotification, serde_json::Error> {
+    let mut value: Value = serde_json::from_str(line)?;
+    match value.get("method").and_then(Value::as_str) {
+        Some("error") => normalize_turn_error(value.pointer_mut("/params/error")),
+        Some("turn/started" | "turn/completed") => {
+            normalize_turn_error(value.pointer_mut("/params/turn/error"));
+        }
+        _ => {}
+    }
+    serde_json::from_value(value)
 }
 
 fn drop_unknown_thread_items(label: &str, value: &mut Value) {
@@ -373,6 +419,119 @@ mod tests {
     use serde_json::json;
 
     use super::sanitize_response_value;
+
+    fn new_error_response() -> serde_json::Value {
+        serde_json::from_str(include_str!("fixtures/new-error-resume.json")).unwrap()
+    }
+
+    #[tokio::test]
+    async fn resume_decodes_new_error_category_and_preserves_failed_turn() {
+        use codex_app_server_protocol::{CodexErrorInfo, ThreadResumeResponse, TurnStatus};
+        let value = new_error_response();
+        assert!(serde_json::from_value::<ThreadResumeResponse>(value.clone()).is_err());
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        tx.send(super::PendingResponse::Result(value)).unwrap();
+        let response: ThreadResumeResponse = super::await_response(
+            rx,
+            "thread/resume",
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+        let turn = &response.thread.turns[0];
+        assert_eq!(turn.status, TurnStatus::Failed);
+        let error = turn.error.as_ref().unwrap();
+        assert_eq!(error.codex_error_info, Some(CodexErrorInfo::Other));
+        assert!(error.message.contains("blocked by our safety systems"));
+    }
+
+    #[test]
+    fn thread_error_compatibility_covers_read_fork_rollback_and_structured_categories() {
+        for method in [
+            "thread/resume",
+            "thread/read",
+            "thread/fork",
+            "thread/rollback",
+        ] {
+            let mut value = new_error_response();
+            value["thread"]["turns"][0]["error"]["codexErrorInfo"] =
+                json!({"futureCategory": {"detail": "new"}});
+            let sanitized = sanitize_response_value(method, value);
+            assert_eq!(
+                sanitized["thread"]["turns"][0]["error"]["codexErrorInfo"],
+                "other"
+            );
+        }
+    }
+
+    #[test]
+    fn error_notification_preserves_message_retry_and_identity() {
+        use codex_app_server_protocol::{CodexErrorInfo, ServerNotification};
+        let value = json!({"method":"error", "params": {
+            "threadId":"thread-fixture", "turnId":"failed-turn", "willRetry":false,
+            "error":new_error_response()["thread"]["turns"][0]["error"]
+        }});
+        let ServerNotification::Error(notification) =
+            super::parse_server_notification(&value.to_string()).unwrap()
+        else {
+            panic!("expected error");
+        };
+        assert!(!notification.will_retry);
+        assert_eq!(notification.thread_id, "thread-fixture");
+        assert_eq!(
+            notification.error.codex_error_info,
+            Some(CodexErrorInfo::Other)
+        );
+        assert!(
+            notification
+                .error
+                .message
+                .contains("blocked by our safety systems")
+        );
+    }
+
+    #[test]
+    fn compatibility_preserves_known_errors_malformed_data_and_tool_payloads() {
+        for category in [
+            json!("usageLimitExceeded"),
+            json!({"httpConnectionFailed":{"httpStatusCode":503}}),
+            json!({"httpConnectionFailed":{"httpStatusCode":"invalid"}}),
+            json!(null),
+            json!(42),
+        ] {
+            let mut value = new_error_response();
+            value["thread"]["turns"][0]["error"]["codexErrorInfo"] = category;
+            assert_eq!(
+                sanitize_response_value("thread/resume", value.clone()),
+                value
+            );
+        }
+        let mut value = new_error_response();
+        value["thread"]["turns"][0]["items"] = json!([{
+            "type":"mcpToolCall", "result":{"codexErrorInfo":"user-owned-value"}
+        }]);
+        let sanitized = sanitize_response_value("thread/resume", value);
+        assert_eq!(
+            sanitized["thread"]["turns"][0]["items"][0]["result"]["codexErrorInfo"],
+            "user-owned-value"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires a private captured thread/resume response"]
+    fn captured_resume_response_decodes_without_losing_turns() {
+        use codex_app_server_protocol::ThreadResumeResponse;
+        let path = std::env::var("VK_TEST_RESUME_RESPONSE").expect("fixture path");
+        let value: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        let count = value["thread"]["turns"].as_array().unwrap().len();
+        let id = value["thread"]["id"].as_str().unwrap().to_owned();
+        let response: ThreadResumeResponse =
+            serde_json::from_value(sanitize_response_value("thread/resume", value)).unwrap();
+        assert_eq!(response.thread.id, id);
+        assert_eq!(response.thread.turns.len(), count);
+        assert!(response.thread.turns.iter().any(|t| t.error.is_some()));
+    }
 
     #[test]
     fn thread_response_sanitizer_drops_unknown_thread_items() {

@@ -1279,3 +1279,12 @@ live checkpoint renderer. Four native/offline cases and desktop/mobile acceptanc
 pass with same goal/progress and effective model/reasoning verified. Exact
 artifacts, local checks and teardown limitation: PR112_REVIEW_FIXES.md and
 `/mnt/vk-storage/codexusage-capacity/pr112-repair/manifest.json`. No deployment.
+
+## 2026-09-14 — VK Errors 2
+
+Restored VK::Error's clean relocated worktree with a compatibility symlink;
+verified live follow-up preflight clears the workspace gate without starting an
+execution. PR #115 adds scoped Codex error-category compatibility, preserving real
+error text/status. Captured154-turn decode, 323 server tests and offline HTTP
+same-thread resume pass. Candidate binary and isolated handover/recovery are
+prepared on SSD; production is still the incumbent 5031 backend. See VK_ERRORS_2.md.

@@ -1,7 +1,6 @@
-# Capacity deployment package
+# Codex Model Selector Regression
 
-Put the post-PR114 configuration repair in VK staging, so deployment from this
-repository carries it into any nominated backend service. Scope is the versioned
-MCP profile, rendering/install/check tooling, tests and deployment instructions.
-No Rust/executor changes, production restart or edits to VK::Errors 2.
-See [VK_CAPACITY_DEPLOYMENT.md](VK_CAPACITY_DEPLOYMENT.md).
+Restore GPT-6 reasoning choices and hide GPT versions below5.6 in the Codex
+selector. Based on staging2fd585ac3, this frontend-only compatibility correction
+does not rewrite existing chat selections, drafts, defaults or native settings.
+No backend restart. See `VK_MODEL_SELECTOR_FIX.md` for evidence and deployment.

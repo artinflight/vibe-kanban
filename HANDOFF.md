@@ -1,3 +1,13 @@
+## September 15: model selector regression
+
+The deployed backend's static catalog omitted GPT-6 and retained old GPT models.
+Preset insertion gave GPT-6 no reasoning options; preserving an Xhigh selection
+did not prove its dropdown worked. The Codex-only frontend compatibility helper
+adds GPT-6 Astra with Low/Medium/High/Xhigh/Max and filters versions below5.6.
+Native catalog and VK's accepted enum confirm these five levels. Ultra is not
+offered because the running backend cannot deserialize it. Other executors and
+existing persisted choices remain untouched. See `VK_MODEL_SELECTOR_FIX.md`.
+
 ## September 15: capacity deployment configuration in VK staging
 
 The post-PR114 missing-configuration fix is now versioned in VK: see

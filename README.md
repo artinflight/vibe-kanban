@@ -65,6 +65,7 @@ For this fork's local-development and promotion workflow, use the repo docs alon
 - [`STREAM.md`](STREAM.md) for the active branch scope
 - [`HANDOFF.md`](HANDOFF.md) for next-agent pickup context
 - [`DELTA.md`](DELTA.md) for compact continuity history
+- [`VK_AGENT_AUTOSWITCH.md`](VK_AGENT_AUTOSWITCH.md) for the automatic agent/model switching design and future implementation handoff
 - [`VK_PREVIEW_GUIDE.md`](VK_PREVIEW_GUIDE.md) for the agent-safe branch preview workflow and public review URL
 - [`docs/operations/release-safety.md`](docs/operations/release-safety.md) for the local-validation and upstream-PR gate
 - [`docs/operations/production-protections.md`](docs/operations/production-protections.md) for live-instance and data-preservation boundaries

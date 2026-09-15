@@ -1,3 +1,31 @@
+## September 15: VK::Agent Autoswitch — future implementation handoff
+
+Read [VK_AGENT_AUTOSWITCH.md](VK_AGENT_AUTOSWITCH.md), the completed design contract.
+**The next session should begin development. The docs-only restriction belonged
+only to this design pass.** Reuse ExecutorConfig; CU owns all quota/allocation
+accounting. VK chooses among configured agent/model entries, keeps coherent work
+sticky and transfers ownership only after a durable safe handoff.
+
+Inspected VK HEAD 2fd585ac3 and CodexUsage HEAD 400fa63 on its dirty
+fix/adaptive-daily-target working tree. CU was read-only; hashes and specific source
+paths are recorded in the design. Factory telemetry and exact requested model /
+router access remain activation dependencies. Native goals require a thin portable
+checkpoint/ownership adapter; token budgets cannot silently reset across providers.
+No product preference blocks starting implementation.
+
+Start with CU's versioned routing snapshot and VK config/selector tests, then
+settings, linked-session transfer and native/non-native continuation acceptance.
+Complete all stages before claiming full auto-switching support. No production
+code, tests, schemas, runtime, preview or deployment changed in this pass.
+Validation: pnpm run ops:check and git diff --check passed; all 20 local design
+links resolve. Prettier checks pass for the new design and STREAM.md. Required
+pnpm run format passed in a disposable tracked-source copy on mounted SSD using
+the existing Prettier installation (no dependency install); log:
+/mnt/vk-storage/vk-agent-autoswitch-format-9remi34a/format.log.
+This isolation kept the production-source worktree untouched. Final scope audit
+contains only six Markdown files. No application tests, UI preview, real provider
+execution, quota integration or deployment validation was run for this docs pass.
+
 ## September 15: capacity deployment configuration in VK staging
 
 The post-PR114 missing-configuration fix is now versioned in VK: see

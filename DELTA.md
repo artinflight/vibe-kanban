@@ -1288,3 +1288,5 @@ execution. PR #115 adds scoped Codex error-category compatibility, preserving re
 error text/status. Captured154-turn decode, 323 server tests and offline HTTP
 same-thread resume pass. Candidate binary and isolated handover/recovery are
 prepared on SSD; production is still the incumbent 5031 backend. See VK_ERRORS_2.md.
+
+- 2026-09-15: Version capacity deployment settings and candidate-bound installation/verification in VK; preserve separate Errors 2 stream and production runtime.

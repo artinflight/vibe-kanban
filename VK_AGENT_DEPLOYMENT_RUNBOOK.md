@@ -1,5 +1,15 @@
 # VK Agent Deployment Runbook
 
+## Required MCP capacity deployment configuration
+
+Follow [VK_CAPACITY_DEPLOYMENT.md](VK_CAPACITY_DEPLOYMENT.md) for every candidate.
+Package the release-matched guard, render/install the versioned service settings,
+and pass the read-only configuration check before claiming readiness. After the
+authorized start, pass `live-check` against the nominated service and executable.
+The PR114 code merge did not install these settings; copying a server binary or
+creating another service without them repeats the deployment omission. Preserve
+the active restart agent’s ownership; this check does not authorize interruption.
+
 ## Current Restart Authority
 
 [VK_BACKEND_RESTART_PROTOCOL.md](VK_BACKEND_RESTART_PROTOCOL.md) is the established

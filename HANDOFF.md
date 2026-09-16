@@ -1,3 +1,34 @@
+## September 16 — VK::AS::Integration Phase
+
+Read [VK_AGENT_AUTOSWITCH_INTEGRATION.md](VK_AGENT_AUTOSWITCH_INTEGRATION.md) and
+[VK_AGENT_AUTOSWITCH.md](VK_AGENT_AUTOSWITCH.md). They reconcile VK design
+`29f99ad75` with CU working-tree `docs/agent-autoswitch.md` and
+`docs/allocation-contract-v1.md` at `/home/mcp/code/codexusage` on
+`docs/agent-autoswitch-integration`. Both repositories use the exact shared
+`cu.allocation.v1` draft revision-2 block; promote the paired docs together.
+CU's unrelated dirty source/tests remain untouched and are not part of this pass.
+
+Build next: CU normalized pools/binding identity, ranking, atomic multi-permit
+journal and lifecycle/renewal routes; VK participant settings/mapping, client,
+parallel admission/launch reconciliation, independent expiry enforcement and safe
+finite-turn handoffs. Shared fixtures then isolated CU/VK concurrency, failure,
+restart, deadline, identity and manual/overnight regression checks are specified.
+No active native goal transfer or multi-pool charging is needed for initial delivery.
+
+No known design mismatch remains. Activation still needs Factory live-source/access
+and identity evidence, credible consumption/lag/tail bounds, per-executor stop/guard
+proof and shared overnight accounting. Unverified combinations remain unavailable.
+No implementation, test addition, schema/migration, runtime change, /goal, commit,
+push or PR action occurred.
+
+Validation: `pnpm run format` passed using the existing SSD-hosted Prettier on PATH;
+`pnpm run ops:check` passed. The shared contract blocks are byte-identical (SHA-256
+`e69ac9dc5b7cd2001de5a00919a3c8c16521489c5208c8b5d5018cbc2afec693`);
+29 local document links resolve; document whitespace, Git diff checks and the
+Markdown-only VK change-scope check passed. Formatting log:
+`/mnt/vk-storage/vk-as-integration-20260916/format.log`. No application/provider
+or live integration tests were run because this is docs-only.
+
 ## September 15: capacity deployment configuration in VK staging
 
 The post-PR114 missing-configuration fix is now versioned in VK: see

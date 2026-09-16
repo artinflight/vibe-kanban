@@ -1,3 +1,15 @@
+## September 16: autoswitch integration design (not implemented)
+
+The VK/CU boundary and `cu.allocation.v1` draft revision 2 are documented in
+[VK_AGENT_AUTOSWITCH_INTEGRATION.md](VK_AGENT_AUTOSWITCH_INTEGRATION.md), beside
+[the autoswitch design](VK_AGENT_AUTOSWITCH.md). CU's producer contract mirrors
+that shared block. CU owns quota ranking/reservations/settlement; VK owns execution
+configuration mapping, parallel launch/runtime supervision and safe finite-turn
+handoff. Native goal transfer is later scope; no one-job-per-provider gate applies.
+Provider telemetry/bounds, executor expiry enforcement and overnight co-accounting
+are explicit activation gates. This is documentation, not deployed capability;
+no runtime or production state was changed.
+
 ## September 15: capacity deployment configuration in VK staging
 
 The post-PR114 missing-configuration fix is now versioned in VK: see

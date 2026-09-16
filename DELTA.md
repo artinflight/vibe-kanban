@@ -1290,3 +1290,8 @@ same-thread resume pass. Candidate binary and isolated handover/recovery are
 prepared on SSD; production is still the incumbent 5031 backend. See VK_ERRORS_2.md.
 
 - 2026-09-15: Version capacity deployment settings and candidate-bound installation/verification in VK; preserve separate Errors 2 stream and production runtime.
+
+- 2026-09-16: Reconcile VK autoswitch and CU multi-provider allocation in docs only;
+  canonical VK integration and mirrored CU contract use cu.allocation.v1 draft 2.
+  Keep pool/config identity separate, CU-owned atomic concurrent admission, bounded
+  runtime authority and finite handoff; document activation gates and later goals.

@@ -1,30 +1,34 @@
-## September 15: VK::Agent Autoswitch — future implementation handoff
+## September 16: autoswitch review revision — initial implementation handoff
 
-Read [VK_AGENT_AUTOSWITCH.md](VK_AGENT_AUTOSWITCH.md), the completed design contract.
-**The next session should begin development. The docs-only restriction belonged
-only to this design pass.** Reuse ExecutorConfig; CU owns all quota/allocation
-accounting. VK chooses among configured agent/model entries, keeps coherent work
-sticky and transfers ownership only after a durable safe handoff.
+Read [VK_AGENT_AUTOSWITCH.md](VK_AGENT_AUTOSWITCH.md). This revision supersedes the
+September 15 autoswitch handoff and the original PR/download snapshot. Preserve
+parallel jobs, including shared-pool jobs; briefly coordinate admission decisions.
+CU owns preference/admission and all quota math. VK filters local eligibility,
+maps the result to ExecutorConfig and handles safe finite-turn continuation.
+Droid `auto` is settled and may share the Factory subscription pool with Opus.
 
-Inspected VK HEAD 2fd585ac3 and CodexUsage HEAD 400fa63 on its dirty
-fix/adaptive-daily-target working tree. CU was read-only; hashes and specific source
-paths are recorded in the design. Factory telemetry and exact requested model /
-router access remain activation dependencies. Native goals require a thin portable
-checkpoint/ownership adapter; token budgets cannot silently reset across providers.
-No product preference blocks starting implementation.
+**Next session: begin initial development. Docs-only belongs only to this pass.**
+Agree section 13 with the separate CU design: contract/version and bindings,
+recommendation/admission atomicity, concurrent launches/idempotency/reconciliation,
+freshness and current-work safety/outage semantics. The separate provider-neutral
+CU design was not found in the locally available docs; no agreement is assumed.
+Develop contract fixtures, settings, selection and parallel admission, then safe
+finite-turn linked-session handoff. Existing state should suffice wherever possible.
 
-Start with CU's versioned routing snapshot and VK config/selector tests, then
-settings, linked-session transfer and native/non-native continuation acceptance.
-Complete all stages before claiming full auto-switching support. No production
-code, tests, schemas, runtime, preview or deployment changed in this pass.
-Validation: pnpm run ops:check and git diff --check passed; all 20 local design
-links resolve. Prettier checks pass for the new design and STREAM.md. Required
-pnpm run format passed in a disposable tracked-source copy on mounted SSD using
-the existing Prettier installation (no dependency install); log:
-/mnt/vk-storage/vk-agent-autoswitch-format-9remi34a/format.log.
-This isolation kept the production-source worktree untouched. Final scope audit
-contains only six Markdown files. No application tests, UI preview, real provider
-execution, quota integration or deployment validation was run for this docs pass.
+Active cross-engine goal transfer is later work with separate acceptance, not a
+prerequisite to basic autoswitching. Preserve native ownership or pause an active
+goal in the initial release. No portable goal store/new continuation loop is required.
+Factory telemetry/account access and other explicit model access remain provider
+activation checks. No user product preference is needed now.
+
+Validation: pnpm run ops:check, git diff --check, Prettier checks and all 20
+local design links passed; obsolete score/serialization requirements were checked
+for removal. Required pnpm run format passed in the existing disposable SSD source
+copy, with log /mnt/vk-storage/vk-agent-autoswitch-format-9remi34a/revision-format.log.
+Five Markdown files changed; no application tests or live validation were run.
+This pass changes documentation only. No production code, tests, schema, migration, UI, runtime change or /goal.
+The existing PR #119 and downloadable ZIP contain the September 15 committed
+snapshot until separately updated; this revision is currently local documentation.
 
 ## September 15: capacity deployment configuration in VK staging
 

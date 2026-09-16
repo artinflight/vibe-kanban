@@ -1,6 +1,6 @@
 # Automatic agent switching
 
-Status: implementation-ready design, 2026-09-15. Nothing in this document is
+Status: revised VK design, 2026-09-16; shared CU contract alignment pending. Nothing in this document is
 implemented by this pass. The next session should begin development; the
 **docs-only restriction applies only to this design pass**.
 
@@ -13,10 +13,15 @@ of the same agent. Auto assigns coherent work among that list using CodexUsage
 configuration suitable; VK does not infer model intelligence from names or prices.
 
 - CU owns usage, account/pool identity, limits, reset calendars, allocation targets,
-  future reserves, safety margins and any measured burn-rate calculation.
+  future reserves, safety margins, pacing/reset urgency, allocation preferences
+  and any quota-balancing switch thresholds.
 - VK owns eligibility for this work, configuration selection, execution, continuity
   and explanations. It does not scan provider logs, estimate tokens, convert tokens
   into quota, or maintain a second allocation ledger.
+- Parallel jobs remain supported even when they share a subscription quota pool.
+  Coordinate admission decisions briefly; do not lock a pool for a job lifetime.
+- Initial delivery covers new work and safe finite-turn continuation. Active
+  autonomous-goal transfer across engines is a separate advanced capability.
 - Select at a new assignment and reconsider at a safe continuation boundary. Prefer
   the incumbent through coherent work. Quota exhaustion is a failure to avoid,
   rather than the normal switching trigger.
@@ -50,9 +55,9 @@ claim or runtime change follows from this design.
 | Native goals                               | [Codex client](crates/executors/src/executors/codex/client.rs) lets the native engine schedule turns. [goals.rs](crates/executors/src/executors/codex/goals.rs) persists supporting checklist/evidence/recovery counters under Codex home, keyed by thread. No provider-neutral goal ownership or atomic transfer exists.                                     |
 | Existing CU bridge                         | [capacity routes](crates/server/src/routes/capacity.rs), [capacity controller](crates/executors/src/capacity/controller.rs), guard and [unused-capacity notes](VK_UNUSED_CAPACITY.md) implement selected native Codex goal grants, expiry and stop/resume. They are not a generic agent allocator.                                                            |
 
-CU inspected read-only at `/home/mcp/code/codexusage`, branch
+Historical inspection on 2026-09-15: CU was inspected read-only at `/home/mcp/code/codexusage`, branch
 `fix/adaptive-daily-target`, HEAD `400fa63f029adf64ebeb610ddc195cf15309dbdd`.
-Its working tree is dirty; the following existing working files include untracked
+At that inspection its working tree was dirty; the following existing working files include untracked
 implementation and must not be assumed present in that commit or a release.
 Do not overwrite or absorb that work without reconciling its owner's branch.
 
@@ -115,141 +120,132 @@ current authorization. The same PermissionPolicy enum does not prove equivalent
 sandbox enforcement across executors. Unsupported equivalence blocks that transfer;
 never broaden access to make a cheaper or better-funded configuration eligible.
 
-## 4. CU ↔ VK contract (new, required implementation)
+## 4. Shared CU ↔ VK contract
 
-Add a versioned **read-only routing snapshot** endpoint to CU, proposed
-`GET /api/routing/v1/snapshot`. Keep `/api/capacity` compatible. CU produces the
-same underlying allocation facts for its dashboard, background scheduler and this
-API, with an explicit `interactive_routing` policy view. Overnight eligibility is
-not foreground eligibility. Existing background grants retain all their controls.
+Consume a small, versioned provider-neutral recommendation/admission contract from
+CodexUsage. The separate CU design owns its wire format and allocation policy.
+The former VK-specific raw-quota snapshot, pacing fractions and score formulas
+are withdrawn. VK must not reach into CU's ledger, scan CU files, or require its
+internal allocation representation to match this document.
 
-Use server-to-server HTTP. Configure the CU origin and a read-only credential file
-in the VK service, separately from CU→VK launch credentials. Restrict origin to an
-administrator-configured loopback/private HTTPS service; validate redirects, use
-request timeouts, response-size bounds and no browser-supplied URL. Add read-token
-verification to CU for this endpoint; its existing public display routes are not
-that authentication mechanism. No launch, reset or allocation-edit authority is
-needed. Settings exposes connection health, not the token or arbitrary endpoints.
+The following are **semantic requirements for integration agreement**, not an
+already agreed endpoint or schema. Exact field names and transport are pending.
 
-Contract fields, all named here as a proposed wire contract:
+| Information                                                        | VK needs it for                                                                                                                                              |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Contract version, decision identity/revision and validity          | Reject unsupported/stale decisions and bind admission to the decision used.                                                                                  |
+| Candidate identity and opaque account/pool binding                 | Map complete configured ExecutorConfig entries to their actual quota exposure, including multiple entries sharing one pool.                                  |
+| Eligibility and admit-new result with reason                       | Intersect CU budget eligibility with VK's local capability/authorization checks. CU combines all applicable quota constraints.                               |
+| Current preference/recommendation among submitted eligible choices | Choose a concrete configuration without reproducing budget pressure, target comparisons or reset urgency. CU may recommend the incumbent at a safe boundary. |
+| Current-work safety disposition, where supported                   | Distinguish “finish current work but admit no more” from “pause/stop”; do not infer this from a raw percentage or new-admission denial.                      |
+| Retry/refresh information and relevant reset/safety explanation    | Explain waiting and schedule reevaluation. Reset information is display/retry context, never a VK quota-refill calculation.                                  |
+| Concurrent-admission decision identity and lifecycle semantics     | Ensure simultaneous decisions see already accepted launches, and reconcile success, failure or an uncertain spawn without duplicate admissions.              |
 
-| Level           | Required information                                                                                                                                                                                                                                                                                               |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Snapshot        | `schema_version: 1`, unique `snapshot_id`, `generated_at`, `valid_until`, `policy_revision`; UTC timestamps; no-store. Freshness is per observation, not just HTTP response age.                                                                                                                                   |
-| Binding         | `binding_id`, opaque `account_id`, `account_revision`, supported config descriptor/model mapping, `pool_ids` (all applicable constraints), status/reason.                                                                                                                                                          |
-| Pool            | `pool_id`, `cycle_id`, `observed_at`, `valid_until`, `resets_at` when applicable, native `unit`, limit/used/remaining, CU target and protected reserve, safety margin, `routable_remaining`, `admit_new`, `continue_current`, `retry_at`, status/reason. Unknown numeric values are null, never zero or unlimited. |
-| Pacing per pool | `behind_target_fraction` and `remaining_target_fraction` in [0,1], plus `target_ends_at`. CU normalizes against that pool's target, accounting for reserves, resets and all applicable allocation policy. Zero/unconfigured targets are unavailable, not divisors.                                                 |
+VK supplies its locally eligible candidate IDs/bindings, a request idempotency key,
+new-work versus safe-boundary context, and incumbent identity when present. It
+reports accepted launch/start/failure facts needed by the agreed admission
+protocol. These are execution facts, not estimated consumption. CU chooses how to
+account for in-flight demand, outside-client usage, reserves and reset periods.
+Do not require raw token counts, dollar budgets, normalized fractions, numeric
+ranking scores or VK-managed quota reservations in this interface.
 
-For each pool CU chooses the current allocation horizon and exports its end as
-`target_ends_at` (no later than that allowance's reset/expiry). With target amount
-`T > 0`, actual consumption `C` and target consumption by now `P` in that same
-horizon, `behind_target_fraction = clamp((P - C) / T, 0, 1)` and
-`remaining_target_fraction = clamp(min(routable_remaining, max(T - C, 0)) / T, 0, 1)`.
-CU defines `P` from its existing pacing policy and preserves its authoritative
-opening/future floor; VK does not reconstruct `T`, `P` or `C`. Multiple windows
-must each have their own horizon. Missing authoritative pacing cannot be replaced
-by the dashboard's token projection. CU must expose a denied/unknown pool until
-it can calculate a valid view from its ledger.
+A recommendation for one query is not automatically reusable admission for any
+number of simultaneous launches. CU/integration must define whether selection
+and admission are atomic or require a short-lived confirmation. A read-only ranked
+list alone does not solve concurrent admission. This is an explicit mismatch with
+the original VK snapshot proposal; do not compensate with VK quota math or a
+one-running-job-per-pool rule. See section 13 for the agreement checklist.
 
-`routable_remaining` is available **after** reserve and safety deductions. CU must
-not subtract headroom twice, distribute a second daily allowance at each query, or
-reuse a historical cycle after a reset. All required pools must permit admission.
-CU explicitly distinguishes a provider-confirmed absent limit from an unreadable
-limit. An account with only a reported weekly window need not invent a short one.
-An unmetered provider can participate only through an explicit authoritative CU
-budget/policy binding; an unknown limit is not unmetered.
+Use server-to-server access with administrator-configured origin/credentials and
+bounded requests; never a browser-selected URL. Keep credentials and raw provider
+responses out of the UI. Recommendation reads need no reset or allocation-edit
+permission. If admission acknowledgement is stateful, agree its narrow permission
+separately; do not assume a read-only token can perform it or reuse existing
+CU→VK scheduled-goal launch authority. Preserve current public display routes and
+background grant semantics. Settings shows connection health and CU's explanation.
 
-CU computes safety margin from existing observed quota movement and monitoring/
-stop latency where available, with a conservative provider-specific floor when
-history is insufficient. This remains CU work. Its current Codex background
-headroom formula and short-window protection are reusable inputs, not constants
-to scatter in VK. New provider limits/units/calendars belong to CU adapters.
+Use the contract's validity/refresh rules. Unknown versions, expired responses,
+invalid candidate bindings or uncertain decisions block new automatic admissions;
+manual mode retains existing behavior. Do not predict replenishment at reset or
+turn stale information into permission. CU unavailability is not inherently a
+revocation of a running job: follow the last accepted decision's explicit running
+safety semantics. If the shared contract cannot express those semantics, flag that
+gap before enabling monitored stop behavior rather than inventing a lease in VK.
 
-VK fetches at decision time and refreshes every 15 seconds while auto work
-is active (earlier if CU expiry requires), coalescing concurrent requests. A decision accepts observations no older
-than the smaller of CU's expiry and 60 seconds; CU may require a stricter deadline.
-Use a 2-second request timeout. Expired snapshots, future-dated observations beyond
-5 seconds clock tolerance, invalid ranges, unknown versions, missing pool mappings
-or a changed account/cycle require fresh validation. Never predict a quota refill
-at the wall-clock reset time; wait for CU's new cycle observation.
+## 5. Configuration selection and parallel admission
 
-This read-only view does not reserve tokens and cannot guarantee no quota failure
-from external clients. CU must include their observed usage in its existing source.
-Do not claim instant visibility or add a VK usage estimator to fill that gap.
+VK's selection is a mapping and runtime decision, not an allocation calculation:
 
-## 5. Selection policy
+1. Apply the master toggle, manual pin and enabled participant list. Filter local
+   availability, validated model/account binding, authorization/tools and support
+   for this boundary. Submit only eligible choices to CU.
+2. At a new assignment ask CU which eligible choice to prefer and admit. At a
+   safe continuation boundary include the incumbent. Follow CU's admitted
+   recommendation; do not rerank by remaining quota, reset time or a local score.
+3. When CU declares alternatives equivalent, prefer the compatible incumbent,
+   then saved participant order. Multiple models sharing quota remain distinct
+   choices but create no extra allocation weight. CU must know their shared binding.
+4. Keep coherent work with its owner between safe boundaries. Reconsider a
+   voluntary switch at a completed finite turn/material unit; fluctuating
+   recommendations do not interrupt tools or split that unit. Quota-driven
+   hysteresis/thresholds belong to CU. An explicit CU stop or provider failure
+   invokes the safe stop path rather than waiting for a nicer boundary.
+5. Revalidate the chosen config and decision immediately before spawn, persist
+   the decision/launch identity, and launch. If it became locally unavailable,
+   ask CU again with the remaining eligible set. Do not select a previously denied
+   fallback just because it is next in the settings list. No admitted choice means
+   a capacity wait with CU's reason/retry guidance.
 
-Selection is a deterministic function of the work, configured participants, fresh
-CU snapshot, current assignment and actual VK running/admitting executions.
-
-1. Apply master switch, explicit manual pin, participant enablement and task scope.
-   Filter config availability, model/account validation, authorization/tool needs,
-   continuation support and all CU pool admission conditions.
-2. Group equivalent quota exposure by sorted pool IDs. Adding three models on one
-   account does not create three allocations or three tickets in a lottery.
-3. For each applicable pool CU supplies fractions `d = behind_target_fraction` and
-   `r = remaining_target_fraction`. VK computes urgency
-   `u = min(1, r / max(hours_until_target_ends_at, 1))`, and pool score `d + u`.
-   The configuration score is the **minimum** score over its required pools;
-   the tightest applicable pool controls. CU calculates the fractions; VK only
-   ranks them. Compare these dimensionless values, never raw tokens or dollars.
-4. For new work choose the highest score. Equal scores choose the less recently
-   assigned quota group, then participant order. Entries sharing the same pools
-   choose the incumbent if compatible, else participant order. Round only for UI;
-   use full precision for selection and a fixed tie tolerance of 1e-6.
-5. Keep an eligible incumbent until a coherent boundary. At that boundary a
-   voluntary switch requires another candidate's score to exceed it by at least
-   0.05 and at least one newly completed material checkpoint since the last
-   voluntary switch. A finite user turn is a coherent boundary for ordinary work.
-   Required evacuation for quota/availability ignores this score threshold.
-6. Revalidate under admission locks immediately before spawn, persist the decision,
-   then launch. If no candidate survives, persist a capacity wait with reason and
-   retry time. Never silently use the manual default or change the user's budget.
-
-The constants above are initial policy defaults with deterministic tests, not
-claims of optimal workload forecasting. No historical task-duration estimator is
-required. CU can evolve allocation targets without VK learning provider formulas.
-
-Illustrative inputs (CU fractions, not measured account data):
-
-| Candidate/pool               | Behind target d | Remaining target r | Hours left | Score |
-| ---------------------------- | --------------: | -----------------: | ---------: | ----: |
-| A, resetting soon            |            0.10 |               0.20 |          2 |  0.20 |
-| B, later reset               |            0.10 |               0.60 |        120 | 0.105 |
-| C, farther behind its target |            0.40 |               0.50 |         24 | 0.421 |
-
-A wins over B when both are similarly paced; C wins new work because it is much
-further behind. If A also requires a short-window pool with score 0.02, its score
-is 0.02; if that pool denies admission A is excluded. If the incumbent B is still
-inside a coherent unit, it finishes that unit while safe. The policy spends
-available capacity without promising to exhaust every pool before reset.
+Examples are behavioral, with no VK allocation formula: CU may prefer a pool near
+reset, another pool behind its target, or the incumbent. VK honors that preference
+when the candidate is locally eligible and the boundary is safe. If CU changes its
+allocation strategy, VK does not need a new budget formula.
 
 ### Concurrent work
 
-For the first release allow one automatic execution/admission per shared CU pool
-on a VK host. This is a routing concurrency rule, not a consumption reservation.
-Different independent pools can run concurrently. Acquire pool locks in stable
-order and a workspace ownership lock; recheck active manual and scheduled work
-sharing the binding. Auto waits while those occupy the pool. Manual work keeps
-its existing precedence and admission behavior. After a run ends require a CU
-observation newer than its end before admitting another auto run on that pool.
+Preserve multiple agents/jobs running at once, including jobs sharing a CU pool.
+Only the short **selection/admission transaction** is coordinated. Reuse existing
+VK execution limits and repository/session concurrency rules; auto introduces no
+single-runner quota-pool semaphore and no workspace-wide lock for unrelated jobs.
 
-Persist the assignment and reconcile running process identities after a VK restart;
-an empty in-memory lock map is not proof of availability. CU stale readings or
-uncertain process state keep automatic admission closed. Multi-host reservations
-and higher concurrency per pool are later extensions of CU's allocation authority,
-not prerequisites for this local-host feature. Existing manual parallelism and
-outside clients mean safety margins still matter.
+For simultaneous launches A and B against a shared pool, CU's agreed admission
+protocol must make A's accepted admission visible when deciding B. CU can admit
+both, prefer a different pool for B, or defer B according to allocation policy.
+If both are admitted they run concurrently. Neither waits for the other to finish
+or for a post-completion usage observation merely because its pool is shared.
+The next admission can proceed as soon as the preceding decision is acknowledged
+or reconciled, without waiting for that execution's lifetime.
+
+A short host-side gate may order admission calls where the shared protocol needs
+it. Release it after the decision transaction; it is not held across tool work,
+execution completion, or a long provider spawn. Represent an uncertain launch by
+its durable idempotent admission/launch record and reconcile that record with CU.
+CU owns any pending-demand accounting or expiry. VK must not estimate per-job
+cost, debit a local budget, or infer that a crashed client restored capacity.
+The integration agreement must cover when an acknowledgement is accepted and
+when a failed/unstarted admission can be released safely.
+
+Existing manual/scheduled executions sharing a pool do not automatically exclude
+auto work. Supply execution facts if required by the CU contract and honor its
+admission result. Preserve existing foreground preemption rules where applicable;
+do not extend those into new pool-wide serialization. Only conflicting owners of
+the **same continuation being transferred** must be mutually excluded. Independent
+tasks and existing supported parallel work remain independent.
+
+After restart reconcile pending launch identities before retrying them. Healthy
+parallel jobs keep their existing ownership. CU's shared decision must account for
+concurrent clients to the scope it promises; a VK process-local mutex is not a
+multi-host quota guarantee. No new distributed VK scheduler is required.
 
 ## 6. Boundaries and handoff
 
 | Situation                           | Required behavior                                                                                                                                                                                                                                                 |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | New task/execution                  | Resolve auto once before session creation; carry the full selected config into the action and show the decision. Setup/cleanup scripts themselves are not agent candidates.                                                                                       |
-| Ordinary follow-up                  | Keep the incumbent while eligible; reconsider when the previous finite turn is fully settled. Explicit selection pins it. Switching must not create unsolicited continuation turns.                                                                               |
-| Multi-turn autonomous work          | Prefer one configuration through a material work unit. A completed turn/checkpoint is necessary but pending tools/approvals/processes can make it unsafe to transfer.                                                                                             |
-| Long-running native goal            | Native turn completion is inside a still-running execution. Request and acknowledge native pause before transfer; a log event alone cannot fence the next native turn. See goal ownership below.                                                                  |
-| Allocation approaching margin       | CU denies new admission first. While `continue_current` is true allow current work to reach the next boundary; then switch/wait. If CU denies continuation, request graceful pause/stop immediately.                                                              |
+| Ordinary follow-up                  | Prefer coherent ownership; consult CU with the incumbent when the previous finite turn is fully settled. Explicit selection pins it. Switching must not create unsolicited continuation turns.                                                                    |
+| Multi-turn autonomous work          | Initial delivery switches only when existing task state and a settled finite turn are sufficient. Engine-owned objective/progress reconstruction is advanced scope; otherwise keep the owner or pause.                                                            |
+| Long-running native goal            | Initial delivery retains the engine owner or pauses it. Advanced transfer needs acknowledged native pause and progress continuity; a turn-completed log event is not a transferable boundary.                                                                     |
+| Allocation approaching margin       | Use CU’s explicit new-work and current-work dispositions. A new-admission denial alone does not order a running job to stop; an explicit stop invokes graceful pause/stop. VK computes no quota threshold.                                                        |
 | Sudden limit/unavailability         | Stop/reconcile the old executor and descendants; capture actual partial state. A launch known to have failed before starting work can be retried on a different eligible configuration without a work handoff. Unknown launch outcomes cannot be treated as such. |
 | User stop, input or approval needed | Suspend auto continuation. Switching cannot bypass a user pause, pending approval, plan review, unmet information request or budget exhaustion.                                                                                                                   |
 
@@ -271,9 +267,12 @@ last quota call solely to obtain a polished handoff.
 
 ### Durable handoff content
 
-Store a small versioned handoff in VK's database, attached to source execution and
-successor session. Assemble facts from existing task/prompt/turn/repo/goal state;
-use the outgoing agent's checkpoint summary for rationale. No extra summarizer
+Use existing repository/task state, persisted prompts, summaries and validation
+records first. If those suffice, pass references plus the next action; do not create
+a duplicate objective/checklist store. Persist only missing handoff context and
+source/successor links with existing execution records. The following is a content
+checklist, not a requirement to duplicate every fact into a new database entity.
+Use the outgoing agent's summary for rationale. No extra summarizer
 model, peer-agent debate, or full transcript conversion is needed.
 
 - Full authorized objective, acceptance criteria and latest user corrections;
@@ -312,7 +311,8 @@ not resume its stale transcript as if intervening work never happened.
 
 Persist phases `running → draining → ready → starting → running`, or `waiting`,
 `needs_input`, `stopped`, `complete`. A monotonic assignment generation and
-compare-and-swap updates ensure only one owner advances work. Persist source,
+compare-and-swap updates ensure only one owner advances that continuation.
+This fence does not exclude unrelated parallel jobs or other users of its pool. Persist source,
 destination, handoff revision and launch idempotency key before spawn; reconcile
 an ambiguous spawn with its execution record/process identity before any retry.
 Crash recovery may rebuild a handoff but never replay a completed launch. Old
@@ -320,50 +320,50 @@ sessions remain readable; sends to a superseded owner return the current owner
 link. Transfer queued user messages once in sequence, keeping attachment access
 and explicit model selections; new user input invalidates an unlaunched handoff.
 
-## 7. Long-running goals: necessary extension, not hidden existing support
+## 7. Staged capability: basic routing first, goal transfer later
 
-Current checklist persistence is thread-local and native Codex owns scheduling.
-An ordinary linked chat cannot magically inherit a native goal or token budget.
-Implement a thin **portable continuation record** for auto-enabled autonomous work
-in VK's existing execution/DB layer. It contains stable objective ID/revision,
-current owning session/execution, status/pause reason, immutable requirements,
-completed evidence, recovery counters, constraints, handoff revision and budget
-references. Extract/reuse the present `Progress` validation and checkpoint grammar;
-there must be one authoritative checklist for this objective, not copied lists
-that drift. Native-only manual goals keep their current behavior.
+### Initial implementation — independently useful and releasable
 
-For a native-backed owner the native engine continues to schedule turns; VK never
-starts a second continuation loop. Import its existing objective and progress only
-at a confirmed paused boundary, preserving completed evidence and stagnation/
-recovery state. Adapters publish updates into the portable record and check its
-ownership generation before continuing. On transfer pause/fence the old native
-goal, save its final state, then activate the successor. Never mark an old goal
-complete to release ownership; it remains paused with a successor reference.
+Deliver CU-informed selection for new tasks/executions and safe finite-turn
+continuations where existing repository/task state plus a small handoff is enough.
+Support different engines at these boundaries without assuming their native
+session formats are interchangeable. Reuse existing authorized follow-up behavior;
+add no goal creation, new autonomous scheduler or universal checkpoint engine.
 
-For an executor without native goals, use the existing execution-finalization/
-follow-up machinery to start **one finite turn at a time**, and only for explicitly
-authorized autonomous work. Its checkpoint is accepted through the existing
-message marker grammar (or dynamic tool when supported), bound to the active root
-execution/generation. Reuse full-objective completion checks, needs-input handling
-and recovery limits. Ignore descendant or superseded-owner checkpoints. A missing
-or invalid checkpoint pauses instead of sending unbounded “continue” prompts.
-This small continuation adapter is necessary for cross-agent goals; no second
-multi-agent coordinator, planner or quota engine is proposed.
+An active native goal remains with its owning engine. Its internal turn-completed
+event does not make it an ordinary completed execution. If it cannot safely
+continue, pause/wait or use existing same-engine recovery; show “Cross-engine goal
+transfer not supported yet”. Do not reconstruct the goal in another engine as an
+initial-release fallback. Independent new jobs still benefit from CU balancing
+while that goal is pinned or paused. An ordinary task can change agents at a
+settled boundary without needing a portable goal framework.
 
-Adapters must demonstrate quiesce, resume/start, checkpoint delivery, permissions
-and status semantics before being eligible for autonomous transfers. Ordinary
-new-task routing can support an executor before that adapter is ready, but the
-full feature must not claim cross-agent goal completion based only on new tasks.
+Initial acceptance does not require active cross-engine goal transfer. Describe
+that limitation explicitly in settings/status and release notes; it is an advanced
+capability, not a blocker for shipping basic parallel autoswitching.
 
-Native token budgets are model/provider-specific. Preserve native usage and limits
-on same-native resumes. A goal with an explicit native token budget cannot transfer
-to another provider unless the original budget semantics can be enforced there.
-Default to paused/ineligible destination with “Budget cannot transfer”; never reset
-the budget or convert it using invented token exchange rates. The user may revise
-that goal to a portable constraint (for example a CU allocation budget or deadline),
-which is a real authorization change. No budget change is required for ordinary
-unbudgeted goals. Elapsed deadlines and explicit iteration limits remain cumulative
-across sessions; switching never resets recovery or progress counters.
+### Advanced capability — separate implementation and acceptance
+
+The inspected Codex checklist is thread-local and its native engine owns scheduling.
+A later goal-transfer implementation must preserve the authorized objective,
+corrections, completed evidence, remaining work, pauses, budgets and recovery state;
+acknowledge/fence the old engine before starting another; and maintain one owner
+for that objective. Never mark the old goal complete merely to transfer ownership.
+
+Prefer existing native goal/task/checkpoint state and references. Add only missing
+transfer metadata after proving what the destination needs; a new portable goal
+store or a non-native continuation loop is not prescribed by this basic design.
+No agent-to-agent debate, replanning layer or additional quota engine is needed.
+Existing sound architecture remains authoritative unless new evidence warrants a
+change. The main risk is lost context/intent, not code-format incompatibility.
+
+Before enabling advanced transfer, prove native pause/next-turn race handling,
+objective/evidence continuity, single ownership, and preservation of needs-input,
+user-stop, permission and recovery constraints. Native token budgets must not reset
+or be converted through invented exchange rates. If their semantics cannot be
+preserved, that destination is ineligible unless the user explicitly revises the
+budget. These requirements apply to advanced transfer and do not gate initial
+new-task or ordinary safe-boundary switching.
 
 ### Interaction with unused-capacity scheduling
 
@@ -373,7 +373,8 @@ arbitrary foreground execution. The initial implementation keeps a scheduled run
 on its authorized configuration; it can stop/wait under the existing controller.
 It must never transfer that grant or evade its local-only permissions. Ordinary
 auto work follows existing foreground preemption and requires old grant revocation
-and confirmed stop before reusing a workspace/pool. Extending background routing
+and confirmed stop when preempting that scheduled execution or taking over its
+continuation. Sharing a quota pool alone is not a reason to serialize jobs. Extending background routing
 requires an explicit later CU grant/adapter capability; do not silently broaden
 this already deployed subsystem.
 
@@ -387,9 +388,9 @@ Add one section below the existing agent profile editor:
   an available CU account binding. Show exact effective model and permission mode.
   Model choices come from the executor; budget choices come from CU.
 - Rows show enabled state, label, agent + model + variant/reasoning, account/pool
-  labels, safe capacity, allocation pacing, next reset, current eligibility reason,
+  labels, CU recommendation/admission status, any CU-supplied reset/safety context,
   and remove action. Shared-pool rows say “Shares allocation with …”.
-- Link to CU for allocation editing. VK displays targets/reserves; it does not
+- Link to CU for allocation editing. VK displays CU-supplied explanations; it does not
   offer a second budget slider. Do not expose provider reset-credit controls here.
 - Allow saving incomplete/disabled entries with a visible issue. Enabling requires
   at least one valid participant; one works but shows “No alternative configured”.
@@ -406,7 +407,8 @@ pins active auto work to its last configuration and removes future automatic
 switching; it does not resume paused work or silently choose a different default.
 
 Show “Auto · Agent / Model” and a short reason, then an activity entry for every
-switch with previous/next config, allocation reason and handoff link. On a
+switch with previous/next config, CU reason and continuity links. Show advanced
+goal-transfer limitations without disabling basic auto routing. On a
 cross-session switch follow the current owner in the workspace chat and retain
 source-history links. Surface waiting vs draining vs recovery vs input required.
 Provide Retry, Choose manually and Pause actions. Retry refetches/revalidates; it
@@ -424,25 +426,27 @@ Future implementation changes, not changes authorized in this design pass:
    task/session state and scratch round-tripping, defaulting missing fields to
    manual. Keep complete concrete ExecutorConfig in execution actions for replay
    and audit. A request cannot claim an unresolved Auto executor enum variant.
-3. Add durable assignment/continuation and handoff records with DB migrations:
-   objective/assignment UUID, generation, workspace/current session/process,
-   routing mode, participant/config revision, phase, pause reason, source/successor
-   IDs, launch key, checkpoint/handoff payloads and timestamps. Unique active
-   ownership per auto-managed workspace; revision checks reject concurrent edits.
-   Finite work can use the assignment record without a goal/checklist payload.
-4. Record a small decision payload with the action: policy/snapshot/cycle IDs,
-   chosen participant/resolved config, pool IDs, scores and reason codes. Keep
-   only the relevant decision facts, not an accumulating copy of quota history.
-   Capacity cache is disposable; ownership, messages and handoffs are durable.
+3. Extend existing session/execution persistence with routing intent, selected
+   participant/config revision, CU decision/admission identity, launch key and
+   source/successor linkage. Store only missing handoff context and a transfer
+   generation/state sufficient to prevent duplicate continuation owners. No
+   workspace-wide unique auto owner or new portable goal/checklist table is required
+   for the initial implementation. Use migrations only where existing records
+   cannot represent these facts; those are future development changes.
+4. Record CU contract version, decision identity, selected config, opaque pool
+   bindings and reason with the action. No VK scores or copy of quota history.
+   Cached recommendations are disposable; launch/transfer identities and pending
+   messages are durable. Advanced objective transfer metadata is separate scope.
 5. Put one selector/admission service alongside existing services. Call it from
-   new-work resolution, direct/queued follow-up resolution, and autonomous boundary
-   callbacks. Final `start_execution` admission verifies the already-resolved
+   new-work resolution and eligible direct/queued finite follow-up resolution.
+   Engine-owned autonomous goal callbacks remain unchanged in initial delivery. Final `start_execution` admission verifies the already-resolved
    assignment under locks; it must not secretly change a session's executor.
    Update MCP entry points to carry intent; do not route subagents, reviews or
    setup/cleanup actions implicitly. Explicit specialized work must pass capability
    checks before it can opt in.
 6. Add narrowly scoped executor adapter methods/capability data for resolved model
-   and account context, quiesce/continuation and error classification. Use existing
+   and account context, safe finite-turn continuation and error classification.
+   Advanced native goal transfer adapters are not an initial prerequisite. Use existing
    CodingAgent dispatch; no separate provider registry in each UI/selector path.
    CU billing providers need not equal VK executor types.
 
@@ -454,17 +458,17 @@ persist secrets inside a resolved profile audit payload.
 
 ## 10. Failures and recovery defaults
 
-| Failure                                                          | Default                                                                                                                                                                           |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CU unavailable/stale/invalid                                     | No new auto work. Ask current owner to reach a safe boundary; expired continuation authority triggers stop. Manual mode remains available with existing behavior.                 |
-| One provider auth/model unavailable                              | Exclude only that binding/config; explain setup issue. Another eligible config may receive work after safety checks.                                                              |
-| Confirmed hard account/pool limit                                | Block every configuration sharing the affected pool until fresh CU recovery/cycle evidence. A different model on that pool is not a fallback.                                     |
-| Transient provider fault                                         | Try at most one alternate config per failed assignment boundary, then pause. Cool down affected binding for 60 seconds (or longer provider Retry-After); revalidate before reuse. |
-| Generic runtime/test failure                                     | Do not assume quota failure or rotate models. Keep task evidence and existing error handling; automatic retries could repeat bad code or side effects.                            |
-| Ambiguous network/spawn failure                                  | Reconcile execution and external effects before choosing again. Idempotency key prevents duplicate work.                                                                          |
-| All allocations protected/exhausted                              | Durable capacity wait; retry on CU update, no faster than 15 seconds, or at supplied retry time. No busy loop, reset-credit redemption or paid spillover.                         |
-| Missing handoff / dirty state changed / native pause unconfirmed | Rebuild from durable evidence if possible; otherwise needs-input. Do not fabricate validation or assume a dead process.                                                           |
-| User input/approval/manual pin/goal budget pause                 | User state wins over capacity recovery and auto retry.                                                                                                                            |
+| Failure                                                          | Default                                                                                                                                                                                                       |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CU unavailable/stale/invalid                                     | No new auto admissions. Existing runs follow the agreed current-work safety/expiry semantics; missing recommendations alone do not create a VK lease or revoke all jobs. Manual mode keeps existing behavior. |
+| One provider auth/model unavailable                              | Exclude only that binding/config; explain setup issue. Another eligible config may receive work after safety checks.                                                                                          |
+| Confirmed hard account/pool limit                                | Block every configuration sharing the affected pool until fresh CU recovery/cycle evidence. A different model on that pool is not a fallback.                                                                 |
+| Transient provider fault                                         | Try at most one alternate config per failed assignment boundary, then pause. Cool down affected binding for 60 seconds (or longer provider Retry-After); revalidate before reuse.                             |
+| Generic runtime/test failure                                     | Do not assume quota failure or rotate models. Keep task evidence and existing error handling; automatic retries could repeat bad code or side effects.                                                        |
+| Ambiguous network/spawn failure                                  | Reconcile execution and external effects before choosing again. Idempotency key prevents duplicate work.                                                                                                      |
+| All allocations protected/exhausted                              | Durable capacity wait; retry using CU refresh/retry guidance with bounded transport backoff. No busy loop, reset-credit redemption or paid spillover.                                                         |
+| Missing handoff / dirty state changed / native pause unconfirmed | Rebuild from durable evidence if possible; otherwise needs-input. Do not fabricate validation or assume a dead process.                                                                                       |
+| User input/approval/manual pin/goal budget pause                 | User state wins over capacity recovery and auto retry.                                                                                                                                                        |
 
 Distinguish operational capacity waiting from a substantive needs-input pause so a
 fresh observation can resume only the former. After restart, reconcile all pending
@@ -473,89 +477,104 @@ when needed to prevent a restart from replaying a provider-failure loop.
 
 ## 11. Factory and requested model examples
 
-VK's current [Droid executor](crates/executors/src/executors/droid.rs) passes a
-string model through `--model` and uses `--session-id` for follow-up. Its discovered
-model list is hardcoded and includes Opus 4.6; it does **not** include Opus 5 or a
-Factory router entry. `--auto low/medium/high` controls permissions, not model
-routing. Omitting `--model` selects a provider default; it does not establish Auto.
+Per the review correction, **Factory's router model ID is `auto`**. Represent
+Droid + `auto` and Droid + explicit Claude Opus as separate ExecutorConfig entries.
+For the router use `executor: DROID`, `model_id: "auto"`; use the verified explicit
+Opus model ID for the other entry. They may map to the **same Factory subscription
+quota pool**. An execution configuration is not a quota pool, and adding the
+router entry does not add a subscription or independent capacity.
 
-Factory's official [router documentation](https://docs.factory.ai/model-independence/factory-router)
-confirms a selectable Factory Router, also called Auto Model in some surfaces.
-Its [CLI reference](https://docs.factory.ai/droid-cli/cli-reference) distinguishes
-model choice, autonomy and session continuation. Both were inspected 2026-09-15.
-The inspected pages do not establish the exact router CLI model ID for this host;
-`droid` was not found on this shell's PATH. No live Factory login or quota call was
-made. Verify the supported CLI's actual ID and account access before enabling it.
+The inspected [Droid executor](crates/executors/src/executors/droid.rs) passes the
+model string through `--model` and uses `--session-id` for follow-up. Its September
+15 discovered list lacked the router entry; expose/validate `auto` through that
+existing adapter during development. `--model auto` selects Factory routing;
+`--auto low/medium/high` controls permissions. Do not conflate either with VK's
+master autoswitch toggle or assume omitting the model selects the router.
 
-Represent Droid + explicit Opus and Droid + Factory Router as separate entries once
-verified. Both may share Factory quota; CU maps that accurately. Internal router
-choices stay Factory's responsibility. VK applies no preferred-router heuristic.
-User examples “GPT-6 Astra” and “Claude Opus 5” express desired configurations, not
-verified IDs or availability in this checkout. Resolve exact supported IDs through
-executor discovery during implementation; do not replace the requested models
-silently or bake example names into allocation code.
+Internal routing stays Factory's responsibility. CU evaluates the actual Factory
+quota binding; VK neither recommends the router unconditionally nor counts its
+possible underlying models as independent pools. Router-ID discovery is no longer
+an unresolved design question. Installed CLI/account compatibility and telemetry
+remain implementation acceptance checks. The exact requested Astra/Opus model IDs
+and account access still need normal executor validation; never silently substitute
+another model or bake their names into allocation policy.
 
 ## 12. Implementation sequence and acceptance
 
-The next session starts development from this design, reconciling current staging
-and CU's in-progress source first. Use separate scoped VK/CU changes where needed.
-No further general design round is needed.
+The next development session begins implementation of the initial capability.
+Reconcile current staging and agree the small shared CU contract with the separate
+CU design; do not re-open resolved product decisions or wait for goal portability.
 
-1. CU contract and adapters: expose authoritative Codex interactive allocation
-   view, add generic binding/pool normalization and test fixtures; implement and
-   verify Factory quota collection/allocation before enabling Factory entries.
-2. VK config, selector and new-work admission: full ExecutorConfig round-trip,
-   shared-pool gates, deterministic policy, manual default compatibility and
-   Settings → Agents controls. Keep auto disabled until end-to-end validation.
-3. Boundary transfer: assignment/handoff persistence, linked sessions, queue
-   ownership, same-executor model resume checks, stop/restart/idempotency behavior.
-4. Autonomous support: portable checkpoint adapter and fenced native ownership
-   transfer; demonstrate an unbudgeted multi-turn objective continuing across two
-   actual supported agents with no lost requirements or duplicate native loop.
-5. Integrate and validate locally, then normal staging PR/release preparation.
-   Deployment/restart requires the existing separate runbook procedure. A partial
-   new-task milestone is not evidence that long-goal switching is complete.
+1. Agree versioned candidate/binding, recommendation, admission, freshness and
+   concurrent-launch semantics with CU. Build VK-side contract fixtures against
+   that agreement, not CU internal ledgers or locally invented quota formulas.
+2. Implement config/settings, complete ExecutorConfig round-tripping, manual
+   precedence and CU-backed new-work selection. Include Droid `auto` distinctly.
+3. Add safe finite-turn continuation, minimal missing handoff context, linked
+   sessions, queue ownership and launch reconciliation using existing execution
+   machinery. Preserve parallelism within shared pools.
+4. Validate and release this **initial capability independently**, with active
+   cross-engine goal transfer explicitly unsupported. Enabling a provider requires
+   a trustworthy CU binding and actual model/account compatibility for that provider.
+5. Later, implement advanced active-goal transfer with its own acceptance gates
+   from section 7. It is not part of initial feature readiness.
 
-Required tests and observable acceptance:
+| Area                      | Initial acceptance evidence                                                                                                                                                                                                                                           |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared contract           | Version/expiry rejection; eligible subset and incumbent sent; CU recommendation honored; all-denied wait; unknown binding rejected; current-work safety semantics; no VK budget formulas or raw-ledger dependency.                                                    |
+| Parallel admission        | Two accepted jobs on one shared pool overlap in execution; racing requests use agreed admission/revision semantics; another admission need not wait for completion or a post-completion observation; failed/ambiguous starts and restart do not duplicate admissions. |
+| CU recommendation mapping | Fixtures in which CU prefers a near-reset pool, another underused pool or the incumbent select that configuration. CU owns the numerical policy tests; VK checks the result without recomputing it.                                                                   |
+| Config/UI                 | Off migration; add/remove/re-enable; multiple models per agent; explicit Opus and `auto` can share a pool; manual override; stale profile/settings invalidation; refresh persistence; mobile/keyboard support and visible goal-transfer limitation.                   |
+| Launch/continuity         | Complete model/reasoning survives initial/direct/queued finite resumes; legacy requests stay manual; task corrections, architecture decisions, dirty files, all repos and attachments survive safe linked-session handoff; queued messages delivered once.            |
+| Safety/faults             | Provider failure, uncertain external effects, detached writers, pending approvals, user stop and storage/transport failures cannot trigger unsafe transfer. An untransferable active goal stays with its engine or pauses while independent jobs continue.            |
+| Existing behavior         | Current manual parallelism, native scheduling and background-grant restrictions remain intact; no extra autonomous loop, workspace-wide auto exclusion or pool-lifetime lock.                                                                                         |
 
-| Area               | Evidence required                                                                                                                                                                                                                                                       |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CU contract        | Shared accounts/models, all required windows, absent vs unknown, target/floor integrity, stale/advisory bootstrap, DST, reset/replenishment, policy/account changes, authentication and no reset mutations. Current background scheduler tests must still pass.         |
-| Policy             | Fixtures above; near-reset preference; behind-target balancing; bottleneck pool; reserves respected; identical-pool entries add no weight; incumbent threshold/progress stickiness; deterministic ties; zero/all unavailable; large clock jump and invalid numbers.     |
-| Config/UI          | Off migration, add/remove/re-enable, two models on one executor, profile change invalidation, router vs permission Auto, manual override, stale setting revision, refresh persistence, error reasons and mobile/keyboard operation.                                     |
-| Launch/concurrency | Simultaneous requests cannot claim same workspace/pool; actual resolved model/reasoning survives initial/direct/queued resumes and restart. Legacy requests remain manual. Failure before/after spawn cannot duplicate execution.                                       |
-| Handoff            | Same dirty worktree/HEAD preserved; all repos and attachments reachable; partial edits and latest user correction retained; old session readable; queued messages exactly once; successor uses current architecture and validation evidence. No reset or forced commit. |
-| Goals              | Material checkpoint transferred; native next-turn race fenced; old owner cannot resume/write; finite non-native continuation reuses recovery counters; needs-input, stop and budget pauses survive switch/restart; no goal created by the master toggle.                |
-| Faults             | Provider loss mid-tool, detached writer, hard shared quota, CU outage mid-turn, stop timeout, database failure at each phase, unknown external side effect, stale quota after reset. Demonstrate stop/wait instead of optimistic transfer.                              |
-| Existing capacity  | Selected scheduled goals retain grants, native model/reasoning and permission restrictions; automatic foreground routing cannot broaden/replay a scheduled grant.                                                                                                       |
+Advanced acceptance separately proves acknowledged native quiescence, objective/
+progress/budget preservation, owner fencing and restart recovery across supported
+engines. Do not present initial tests as evidence of that later capability.
 
-Run focused Rust/UI/Node contract tests during development, regenerate Rust-derived
-shared types and SQLx metadata when affected, then the repo's staging PR baseline:
+During development run focused Rust/UI and shared-contract checks, regenerate
+Rust-derived types/SQLx metadata when affected, then the repo's staging baseline:
 `pnpm run format`, `pnpm run ops:check`, `pnpm run check`, `pnpm run lint`,
-`cargo test --workspace`, plus affected generation checks and CU's documented tests.
-Use isolated backend fixtures for process/goal transfers and the documented light
-preview for routine UI checks. Live acceptance needs confirmed model/account access;
-mock success alone cannot prove native stop, Factory routing or quota safety.
+`cargo test --workspace`, plus affected generation checks. CU allocation/collector
+validation belongs to its design and repository. Use isolated backend fixtures for
+execution transfers and the documented light preview for ordinary UI checks.
+Deployment follows the existing separate runbook, not this design pass.
 
-## 13. Actual dependencies and unresolved evidence
+## 13. Shared-contract alignment and genuine remaining issues
 
-Product decisions above are resolved; no user preference is needed to start coding.
-These are concrete activation gates, not reasons to postpone implementation:
+A search of the available CU checkout's docs and CONTINUITY.md on 2026-09-16 did
+not locate the separate provider-neutral design. Therefore this document does
+**not** claim the two designs already agree. Section 4 captures VK's needs for the
+integration pass; the old raw snapshot/score API is superseded.
 
-- CU lacks the proposed generic routing snapshot and Factory collector in inspected
-  source. Integrate its dirty/untracked allocation work through the appropriate
-  branch. Verify an authoritative Factory usage/limit/reset source and account/pool
-  mapping; if unavailable, show Factory as unsupported for auto rather than infer
-  quota from model tokens. Operator credentials/access may be needed at that gate.
-- The host's supported Droid CLI/router ID and the requested model IDs/access must
-  be verified. The generic selector and Codex path can be developed using fixtures
-  while that evidence is gathered; unverified entries cannot be activated.
-- Cross-agent native goals require the continuation/ownership extension and real
-  quiescence tests. Native-token-budgeted goals need an explicit user budget revision
-  if their semantics cannot transfer. That decision is per goal, not a new global
-  budget policy and not a blocker for unbudgeted goal development.
+The CU/integration design must resolve these bounded questions before enabling
+automatic admission against the real service:
 
-This design pass ends with documentation. Future handoff: **begin implementation**,
-starting with the CU snapshot contract and VK configuration/selection tests, then
-complete safe transfer and goal integration. Do not carry the temporary docs-only
-boundary into that explicitly authorized development session.
+- **Contract/version and binding:** agree request/response names, candidate-to-pool
+  mapping, supported-version behavior and incumbent/boundary context. CU must
+  distinguish distinct execution entries from shared subscription capacity.
+- **Recommendation versus admission:** establish whether one operation both
+  recommends and admits or a confirmation is needed. Define concurrent request
+  ordering, idempotent retry, in-flight launch acknowledgements, expiry and
+  ambiguous-start reconciliation. A stale read-only ranking is insufficient;
+  execution-lifetime pool serialization is expressly not a fallback.
+- **Freshness and active-work safety:** define validity/refresh/retry semantics and
+  whether CU can distinguish deny-new, continue-current and stop-current. Agree
+  outage/expiry behavior explicitly; VK must not invent a quota threshold or
+  reinterpret missing advisory data as universal stop authority.
+- **Transport/access and coverage:** agree narrow permissions if admission is
+  stateful and the scope of concurrent clients CU accounts for. CU determines
+  authoritative provider telemetry and any treatment of pending/external usage.
+  No VK cost estimator or duplicate allocation ledger fills a missing capability.
+
+Factory authoritative telemetry/account access and requested model availability
+are provider activation dependencies. `auto` is the settled Factory router ID.
+There is no additional product preference required from the user now. Advanced
+cross-engine goal state/budget transfer remains later work, not an initial gate.
+
+Future implementation handoff: **begin initial development** with agreed CU
+contract fixtures, configuration/selection and parallel admission, then safe
+finite-turn handoffs. Track contract mismatches explicitly with the CU design.
+The docs-only restriction ends with this revision pass; it is not a permanent
+constraint. No implementation or runtime change is made in this pass.

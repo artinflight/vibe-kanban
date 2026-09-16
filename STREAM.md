@@ -1,17 +1,19 @@
-# VK::Agent Autoswitch — design complete
+# VK::Agent Autoswitch — review revisions complete
 
-This branch contains a docs-only design pass for automatic agent/model switching.
-The implementation contract is [VK_AGENT_AUTOSWITCH.md](VK_AGENT_AUTOSWITCH.md).
-Reuse ExecutorConfig and existing execution/continuity paths; CodexUsage remains
-the sole usage/allocation authority. The design covers shared pools, reset-aware
-pacing, manual precedence, linked-session handoffs and native goal ownership.
+This docs-only revision preserves the existing product design and applies the
+September 16 review in [VK_AGENT_AUTOSWITCH.md](VK_AGENT_AUTOSWITCH.md).
 
-No production code, tests, schemas, migrations, runtime configuration or UI were
-changed. No deploy, preview, commit or push was performed by this pass.
+- Multiple jobs may run concurrently on one quota pool; coordinate only admission.
+- CU owns quota reasoning, preferences and admission; VK maps eligible configs.
+- Initial delivery includes new work and safe finite-turn continuation. Active
+  cross-engine goal transfer is separately releasable advanced work.
+- Droid model `auto` is explicit and can share Factory quota with explicit Opus.
 
-Next session: begin development from latest staging and reconcile CodexUsage's
-in-progress working tree. Implement the CU routing snapshot, VK selector/settings,
-then safe session and goal transfer. The docs-only restriction ends with this
-pass; it is not a permanent project constraint. Factory telemetry/model access and
-native quiescence are activation gates documented in the design, not reasons to
-restart general design. Validation results are in HANDOFF.md.
+The shared CU contract is not yet jointly agreed. Section 13 lists version/binding,
+concurrent-admission and active-work safety semantics for the integration pass.
+No VK-specific score, raw quota schema or lifetime pool lock may fill that gap.
+
+Next session should begin initial development with contract fixtures, settings,
+selection/admission and safe handoffs. The docs-only boundary belongs only to this
+pass. No code, tests, schemas, migrations, UI or runtime behavior changed; no goal
+was created. Validation and exact pickup status are in HANDOFF.md.

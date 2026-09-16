@@ -1,12 +1,15 @@
-## September 15: automatic agent switching architecture documented
+## September 16: autoswitch design review corrections
 
-Source inspection confirms VK already has full ExecutorConfig model overrides,
-executor-bound sessions and Codex-thread-local native goal checkpoints. The
-existing CU capacity bridge governs selected Codex background goals; it is not a
-general routing API. [VK_AGENT_AUTOSWITCH.md](VK_AGENT_AUTOSWITCH.md) records the
-proposed extension and the separate CU responsibility for usage/allocation.
-This is design documentation only; automatic agent switching is not implemented
-or deployed. Branch scope and development pickup remain in STREAM.md/HANDOFF.md.
+[VK_AGENT_AUTOSWITCH.md](VK_AGENT_AUTOSWITCH.md) now preserves shared-pool parallel
+execution and assigns quota preference/admission reasoning entirely to CodexUsage.
+VK consumes a versioned shared contract; its integration semantics remain to be
+agreed with the separate CU design. Basic new-work/safe-turn autoswitching is an
+independent release; active cross-engine goal transfer is advanced scope. Factory
+router model ID is `auto`, a distinct execution choice that may share Opus quota.
+
+This supersedes the September 15 design's local scoring, execution-lifetime pool
+serialization and combined goal-transfer release gate. The feature remains design
+only, unimplemented and undeployed. Branch scope/pickup are in STREAM.md/HANDOFF.md.
 
 ## September 15: capacity deployment configuration in VK staging
 

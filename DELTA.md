@@ -1299,3 +1299,14 @@ ExecutorConfig; CU owns quota/targets/margins; VK uses reset-aware pool selectio
 manual precedence, coherent boundaries and linked-session handoffs. Native goal
 transfer requires explicit ownership/checkpoint support. Next session begins
 development; docs-only was temporary. No implementation or runtime mutation.
+
+## 2026-09-16 — Autoswitch review corrections
+
+Revised VK_AGENT_AUTOSWITCH.md without implementation: preserve shared-pool parallel
+execution, move all allocation preference/threshold math to CU, replace raw snapshot
+requirements with a small versioned shared-contract expectation, and separate basic
+safe-boundary routing from advanced active-goal transfer. Factory model `auto` is
+settled and can share explicit Opus quota. Section 13 lists integration agreement
+gaps instead of VK workarounds. Next session begins initial development; docs-only
+is temporary. Earlier scoring/lifetime-pool-lock/combined-release decisions are
+superseded. PR/download revision remains the September 15 snapshot.

@@ -5,6 +5,7 @@ import { useConversationVirtualizer } from "../../packages/web-core/src/features
 import { useResumeConversationAtBottom } from "../../packages/web-core/src/features/workspace-chat/model/useResumeConversationAtBottom";
 
 function Harness() {
+  const contentContainerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(4000);
   const { scrollToBottom } = useConversationVirtualizer({
@@ -12,6 +13,7 @@ function Harness() {
     contentVersion: height,
     totalRowCount: 1,
     scrollContainerRef,
+    contentContainerRef,
   });
   const [scope, setScope] = useState("first");
   useResumeConversationAtBottom(scope, () => scrollToBottom("auto"));
@@ -27,7 +29,9 @@ function Harness() {
         id="chat"
         style={{ height: 400, overflow: "auto" }}
       >
-        <div style={{ height }}>Conversation</div>
+        <div ref={contentContainerRef} style={{ height }}>
+          Conversation
+        </div>
       </div>
     </>
   );

@@ -1,3 +1,18 @@
+## September 20: frontend deployment preparation
+
+User authorized frontend-only deployment. The live frontend is based on
+`f175c1b5b`, which includes model-selector changes absent from this branch.
+Candidate source at `/mnt/vk-storage/vk-chat-scroll-20260920/source` preserves
+that baseline and adds only the chat-scroll fix. Live browser testing reproduced
+mid-chat positions on desktop/mobile. The first production-build test exposed
+delayed tail resizing, now addressed with a content ResizeObserver and upward
+scroll detection. Eight isolated Chromium regressions pass. Deployment browser
+acceptance and publication are pending; no backend restart is planned.
+
+Rollback frontend archive is verified on Desktop at
+`B:/vk-backups/vk-chat-scroll-20260920/frontend-recovery.tar.zst`.
+Deployment evidence and receipts are under `/mnt/vk-storage/vk-chat-scroll-20260920`.
+
 ## September 20: VK::Chat Scroll Position
 
 Prepared shared frontend fix on `vk/f531-vk-chat-scroll-p`. Chats resume at the

@@ -46,6 +46,11 @@ try {
   await page.getByText("Grow", { exact: true }).click();
   await bottom();
   console.log("PASS: remain at bottom as initial content grows");
+  await page.locator("#chat > div").evaluate((el) => {
+    el.style.height = "5500px";
+  });
+  await bottom();
+  console.log("PASS: follow delayed tail resizing without a timeline update");
   await page.locator("#chat").hover();
   await page.mouse.wheel(0, -1600);
   await page.waitForFunction(

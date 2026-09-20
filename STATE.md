@@ -1,3 +1,10 @@
+## September 20: chat-scroll frontend live
+
+User-authorized frontend-only publication is complete. Live frontend source
+`3da008db2` retains the prior model-selector fix and adds chat-bottom resume with
+late layout following. Backend unchanged (PID 1674994). Exact validation and
+rollback: [VK_CHAT_SCROLL_DEPLOYMENT.md](VK_CHAT_SCROLL_DEPLOYMENT.md).
+
 ## September 20: chat resume behavior
 
 Chat scroll work is tracked in STREAM.md/HANDOFF.md on the feature branch.

@@ -1,3 +1,8 @@
+## September 20: chat resume behavior
+
+Chat scroll work is tracked in STREAM.md/HANDOFF.md on the feature branch.
+It changes only the shared frontend; production deployment state is unchanged.
+
 ## September 15: capacity deployment configuration in VK staging
 
 The post-PR114 missing-configuration fix is now versioned in VK: see

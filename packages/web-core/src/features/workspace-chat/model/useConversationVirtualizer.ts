@@ -156,7 +156,8 @@ export function useConversationVirtualizer({
   onAtBottomChange,
   shouldSuppressSizeAdjustment,
 }: ConversationVirtualizerOptions): ConversationVirtualizerResult {
-  const bottomLockedRef = useRef(false);
+  // Start pinned while history and virtual row measurements settle.
+  const bottomLockedRef = useRef(true);
   const smoothScrollDeadlineRef = useRef(0);
 
   const isBottomScrollCorrectionActive = useCallback(
@@ -341,6 +342,7 @@ export function useConversationVirtualizer({
         smoothScrollDeadlineRef.current = performance.now() + 500;
         el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
       } else {
+        smoothScrollDeadlineRef.current = 0;
         el.scrollTop = el.scrollHeight - el.clientHeight;
       }
     },

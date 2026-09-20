@@ -19,6 +19,7 @@ import {
 import { deriveConversationEntries } from '../model/deriveConversationEntries';
 import { deriveConversationTimeline } from '../model/deriveConversationTimeline';
 import { useConversationVirtualizer } from '../model/useConversationVirtualizer';
+import { useResumeConversationAtBottom } from '../model/useResumeConversationAtBottom';
 import { useScrollCommandExecutor } from '../model/useScrollCommandExecutor';
 
 import DisplayConversationEntry from './DisplayConversationEntry';
@@ -430,7 +431,11 @@ export const ConversationList = forwardRef<
       source,
       addType: effectiveAddType,
       loading: newLoading,
-      isInitialLoad: addType === 'initial',
+      // Keep the initial-bottom request when history/stream updates are
+      // coalesced into the same animation frame.
+      isInitialLoad:
+        addType === 'initial' ||
+        pendingUpdateRef.current?.isInitialLoad === true,
     };
 
     if (rafIdRef.current === null) {
@@ -615,6 +620,12 @@ export const ConversationList = forwardRef<
       onResetSuccessRef.current = null;
     };
   }, [clearPendingInteractionAnchor, scrollToBottomAndClearSpacer]);
+
+  useResumeConversationAtBottom(conversationScopeKey, () => {
+    clearPendingInteractionAnchor();
+    historyAnchorRef.current = null;
+    scrollToBottomAndClearSpacer('auto');
+  });
 
   const scrollExecutor = useScrollCommandExecutor({
     virtualizer: conversationVirtualizer.virtualizer,

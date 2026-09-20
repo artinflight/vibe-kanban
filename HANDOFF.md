@@ -1,3 +1,14 @@
+## September 20: chat-scroll frontend deployed
+
+Frontend-only deployment completed with user authorization. See
+[VK_CHAT_SCROLL_DEPLOYMENT.md](VK_CHAT_SCROLL_DEPLOYMENT.md) for source provenance,
+validation, limitations and rollback. Live release is
+`/mnt/vk-storage/vk-chat-scroll-20260920/release`, source `3da008db2` (live model
+selector baseline plus this stream's fixes). Desktop/mobile browser checks show
+zero distance from bottom on open/reload/visible-tab return. Existing model menus
+pass; API project ordering, saved messages and profiles are unchanged. Backend
+PID remains 1674994; no restart. Earlier preparation notes below are historical.
+
 ## September 20: frontend deployment preparation
 
 User authorized frontend-only deployment. The live frontend is based on

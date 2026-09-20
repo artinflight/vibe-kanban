@@ -1,3 +1,27 @@
+## September 20: VK::Chat Scroll Position
+
+Prepared shared frontend fix on `vk/f531-vk-chat-scroll-p`. Chats resume at the
+bottom on mount/scope switch, visible-tab return, and browser pageshow. Initial
+load intent survives rAF coalescing; instant jumps clear smooth-scroll deadlines.
+Manual upward scrolling still releases bottom following.
+
+`pnpm run format`, `pnpm run local-web:lint`, and `pnpm run ops:check`
+passed. `NODE_OPTIONS=--max-old-space-size=8192 pnpm run web-core:check`
+passed after the default Node heap ran out of memory. Focused shared-file ESLint using the local-web config has zero errors but
+fails `--max-warnings 0` on four pre-existing hook dependency warnings (two in
+useConversationVirtualizer and two in ConversationListContainer).
+
+Seven Chromium hook-harness checks passed (initial load, content growth, manual
+reading, instant resume, scope switch, visible-tab return, restored page).
+Run with `VK_TEST_OUTPUT=/mnt/vk-storage/chat-scroll-tests`,
+`PLAYWRIGHT_MODULE=/mnt/vk-storage/codexusage-capacity/format/node_modules/playwright-core/index.mjs`,
+and `CHROMIUM_PATH=/opt/playwright-browsers/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell`
+using `node scripts/testing/run-chat-scroll-browser.mjs`.
+Visibility/pageshow events are simulated. Full live conversation navigation,
+physical mobile resume, and backend tests were not exercised. Production has not
+been changed; browser QA against the intended runtime is still needed before
+promotion/deployment. Changes are committed locally; no push or PR opened.
+
 ## September 15: capacity deployment configuration in VK staging
 
 The post-PR114 missing-configuration fix is now versioned in VK: see

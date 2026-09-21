@@ -25,8 +25,16 @@ run, browser smoke, full workspace suite or live instance validation is claimed.
 If the native engine has already ended the turn, steering can be rejected;
 VK reports the actual missing evidence instead of reopening the goal. Final
 checkpoint ordering is reconciled before the turn-completion status is emitted.
-Changes are prepared for the user-requested local commit. No production
-deployment, service restart, PR or push performed.
+Rebased onto staging `0df82745f` and pushed for
+[PR #123](https://github.com/artinflight/vibe-kanban/pull/123), targeting staging.
+Fresh validation: all 78 executor tests pass (three native/environment fixtures
+ignored), strict executor Clippy passes, and all 11 metadata tests pass.
+Formatting, ops governance, frontend lint and local-web type checking pass.
+Full workspace tests and aggregate lint stop at this host's missing Tauri
+`gobject-2.0` development library; CI supplies the non-Tauri workspace checks.
+Logs: `/mnt/vk-storage/vk-weird-message-tests/pr-*.log`.
+PR status and final merge commit are recorded in GitHub. No production
+deployment or service restart has occurred.
 Deployment requires a validated backend candidate and the established explicit
 cutover approval; this branch has not been exercised in the live VK instance.
 

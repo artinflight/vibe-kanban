@@ -12,5 +12,6 @@ Final checkpoints remain accepted after the native completion notification.
 A rejected/late steer falls back to an honest unverified status. Checklist
 verification is supporting evidence, not an independent audit of the objective.
 
-Backend and shared frontend changes are local, not deployed. See HANDOFF.md
-for validation and deployment boundaries.
+Backend and shared frontend changes are pushed for
+[PR #123](https://github.com/artinflight/vibe-kanban/pull/123) into staging.
+They are not deployed. See HANDOFF.md for validation and deployment boundaries.

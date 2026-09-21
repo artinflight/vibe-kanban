@@ -1,5 +1,14 @@
 # HANDOFF.md
 
+## September 21: Rehearsal Cleanup Complete
+
+Read VK_REHEARSAL_RETIREMENT_20260921.md. The authorized cleanup removed
+31.06GiB of copied databases/archives from22 old rehearsals after full archives
+were verified on Desktop.5.9GiB of local evidence/source/attachments remain.
+SSD reports75GiB free, including concurrent disk work. Green1674994 and frozen
+Blue2150526 are unchanged; live attachment round-trip passes. Restart readiness
+is still false until remaining integration/build/rehearsal gates are satisfied.
+
 ## September 21: Restart Preparation Blocked, Green Unchanged
 
 Read VK_RESTART_PREPARATION_20260921.md. Staging fa7523c17 contains PR122

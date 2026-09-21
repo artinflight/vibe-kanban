@@ -3,6 +3,12 @@
 Status: NOT READY. Preparation is authorized; production cutover is not.
 No services, routing, production data or frontend pointers were changed.
 
+Storage update: authorized rehearsal retirement completed later September21;
+see VK_REHEARSAL_RETIREMENT_20260921.md. SSD now reports75GiB free. The original
+4.3GiB observation below is historical; recalculate peak candidate requirements
+against current capacity before starting preparation. Other readiness gates
+remain open. Cleanup is not restart approval.
+
 ## Verified Release Scope
 
 Fetched fork/staging is fa7523c17ce0339cf4848a507b2b1273eb43db16.

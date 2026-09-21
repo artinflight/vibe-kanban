@@ -1,5 +1,17 @@
 # HANDOFF.md
 
+## September 21: Restart Preparation Blocked, Green Unchanged
+
+Read VK_RESTART_PREPARATION_20260921.md. Staging fa7523c17 contains PR122
+(plus PR121) and PR123, the two new agent streams. Green1674994 remains live;
+Blue2150526 remains frozen. Preparation only is authorized, not cutover.
+PR117 is still open and must be integrated to retain the live model dropdown.
+Its merge conflicts are confined to HANDOFF.md and STREAM.md. SSD free space
+is only4.3GiB; no bulky candidate copy/build or new backup was started.
+The current live frontend is the September20 chat-scroll release, not the
+September15 path below. CU companion staging also needs inclusion/verification.
+No readiness claim, production change or fresh cutover approval exists.
+
 ## September 15: Live Model Selector Hotfix
 
 Frontend f175c1b5b is published from

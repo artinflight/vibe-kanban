@@ -159,6 +159,35 @@ impl Progress {
         self.last_completed_count = self.completed.len();
     }
 
+    /// A status describes recorded evidence, never an independent audit of the work.
+    pub fn completion_metadata(&self) -> String {
+        if self.all_complete() {
+            return "Completion:: Verified against the goal checklist".into();
+        }
+        if self.requirements.is_empty() {
+            return "Completion:: Unverified — no goal checklist was recorded".into();
+        }
+        let missing = self
+            .requirements
+            .iter()
+            .filter(|(id, _)| !self.completed.contains_key(*id))
+            .map(|(id, requirement)| format!("{id}: {requirement}"))
+            .collect::<Vec<_>>()
+            .join("; ");
+        format!(
+            "Completion:: Unverified — missing evidence for {}",
+            missing.split_whitespace().collect::<Vec<_>>().join(" ")
+        )
+    }
+
+    pub fn reconciliation_prompt(&self) -> String {
+        format!(
+            "VK completion reconciliation, within this turn only. The native goal was marked complete before all checklist evidence was recorded. Read current artifacts against the FULL objective and later user corrections. Record only supported evidence using vk_goal_checkpoint (or its root-message fallback). Do not invent evidence, change the objective, reopen the goal, or start another turn. If work is unfinished, name the concrete gaps and next action. Ask the user only for an actual decision or blocker. In the final summary metadata, put Completion:: immediately after Human Needed::; use Verified only when the full objective and every requirement are supported, otherwise Unverified with the specific gaps. Human Needed:: Yes only for a decision or blocker.\nObjective: {}\nCheckpoint: {}",
+            self.objective,
+            serde_json::to_string(self).unwrap_or_default()
+        )
+    }
+
     pub fn all_complete(&self) -> bool {
         !self.requirements.is_empty() && self.requirements.len() == self.completed.len()
     }
@@ -167,7 +196,7 @@ impl Progress {
 pub fn tool_spec() -> DynamicToolSpec {
     DynamicToolSpec {
         name: TOOL.into(),
-        description: "Read or update the durable VK checklist for an active native goal. Use empty maps to read. Define requirements once, then report completed IDs with validation evidence. needs_input pauses autonomy. Does not create or complete goals.".into(),
+        description: "Read or update the durable VK checklist for an active native goal, or reconcile evidence after completion in the current turn. Use empty maps to read. Define requirements once, then report completed IDs with validation evidence. needs_input pauses autonomy. Does not create or complete goals.".into(),
         defer_loading: false,
         input_schema: json!({
             "type": "object", "additionalProperties": false,
@@ -275,6 +304,32 @@ mod tests {
 
     fn report(requirements: Value, completed: Value) -> Value {
         json!({"requirements": requirements, "completed": completed, "disposition":"continue", "reason":""})
+    }
+
+    #[test]
+    fn completion_reports_missing_evidence_without_claiming_unfinished_work() {
+        let mut progress = Progress::default();
+        assert_eq!(
+            progress.completion_metadata(),
+            "Completion:: Unverified — no goal checklist was recorded"
+        );
+        progress
+            .checkpoint(report(
+                json!({"api":"API integration", "ui":"UI validation"}),
+                json!({"api":"Contract passed"}),
+            ))
+            .unwrap();
+        assert_eq!(
+            progress.completion_metadata(),
+            "Completion:: Unverified — missing evidence for ui: UI validation"
+        );
+        progress
+            .checkpoint(report(json!({}), json!({"ui":"Browser acceptance passed"})))
+            .unwrap();
+        assert_eq!(
+            progress.completion_metadata(),
+            "Completion:: Verified against the goal checklist"
+        );
     }
 
     #[test]

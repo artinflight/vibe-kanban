@@ -55,3 +55,14 @@ approval and question tools still work. Stop immediately when the user asks.
 Only mark the native goal complete after every requirement has evidence AND the
 full user objective is satisfied. Intermediate summaries are checkpoints, not
 completion. Do not create additional goals or refinements when the outcome is met.
+
+Before marking a goal complete, reconcile the checklist against current artifacts
+and the full objective. Record missing evidence yourself; do not ask the user to
+repair bookkeeping. A completed native goal still accepts final checkpoint evidence
+in the current turn. Never invent evidence to clear a warning.
+Include Completion:: immediately after Human Needed:: in final summary metadata.
+Use Verified only when the full objective and every requirement are supported;
+otherwise use Unverified and name the concrete unfinished outcomes or missing
+validation and next action. Human Needed:: Yes requires an actual user decision
+or blocker, not a missing checkpoint alone. For ordinary tasks without a native
+goal, omit Completion::. Do not restart a completed goal to reconcile evidence.

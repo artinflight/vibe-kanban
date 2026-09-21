@@ -92,6 +92,7 @@ pub struct AppServerClient {
     exit_signal: OnceLock<ExitSignalSender>,
     goal: Mutex<Option<(NativeGoal, Progress)>>,
     goal_pausing: AtomicBool,
+    completion_reconciliation_sent: AtomicBool,
     capacity_stopped: AtomicBool,
     execution_id: OnceLock<Uuid>,
 }
@@ -257,6 +258,7 @@ impl AppServerClient {
             exit_signal: OnceLock::new(),
             goal: Mutex::new(None),
             goal_pausing: AtomicBool::new(false),
+            completion_reconciliation_sent: AtomicBool::new(false),
             capacity_stopped: AtomicBool::new(false),
             execution_id: OnceLock::new(),
         });
@@ -339,10 +341,63 @@ impl AppServerClient {
             *old = goal;
             goals::save(&old.thread_id, progress).await?;
         } else {
+            self.completion_reconciliation_sent
+                .store(false, Ordering::SeqCst);
             let progress = goals::load(&goal).await?;
             *guard = Some((goal, progress));
         }
         Ok(())
+    }
+
+    // Steering stays in the current turn: no new goal, budget, or continuation loop.
+    // Never await an RPC response in the notification reader itself.
+    async fn reconcile_goal_completion(&self) {
+        if self.goal_pausing.load(Ordering::SeqCst)
+            || self.capacity_stopped.load(Ordering::SeqCst)
+            || self.cancel.is_cancelled()
+        {
+            return;
+        }
+        let Some(turn_id) = self.current_turn_id.lock().await.clone() else {
+            return;
+        };
+        let guard = self.goal.lock().await;
+        let Some((goal, progress)) = guard.as_ref() else {
+            return;
+        };
+        if goal.status != "complete"
+            || progress.all_complete()
+            || self
+                .completion_reconciliation_sent
+                .swap(true, Ordering::SeqCst)
+        {
+            return;
+        }
+        let thread_id = goal.thread_id.clone();
+        let prompt = progress.reconciliation_prompt();
+        let weak = self.self_ref.get().expect("client self reference").clone();
+        tokio::spawn(async move {
+            let Some(client) = weak.upgrade() else { return };
+            if client.goal_pausing.load(Ordering::SeqCst)
+                || client.capacity_stopped.load(Ordering::SeqCst)
+                || client.cancel.is_cancelled()
+            {
+                return;
+            }
+            if let Err(err) = client
+                .turn_steer(
+                    thread_id,
+                    turn_id,
+                    vec![UserInput::Text {
+                        text: prompt,
+                        text_elements: vec![],
+                    }],
+                )
+                .await
+            {
+                tracing::debug!("Completion reconciliation steer was not accepted: {err}");
+            }
+        });
     }
 
     pub async fn reset_goal_run(&self) -> Result<(), ExecutorError> {
@@ -478,9 +533,16 @@ impl AppServerClient {
             return Ok(false);
         };
         if goal.status != "active" {
-            if goal.status == "complete" && !progress.all_complete() {
-                super::slash_commands::log_event_raw(self.log_writer(),
-                    "Codex reported completion, but the VK checklist is incomplete. Completion needs review against the full objective.".into()).await?;
+            if goal.status == "complete" {
+                self.log_writer
+                    .log_raw(
+                        &serde_json::json!({
+                            "method": "vk/goal/completion",
+                            "params": {"metadata": progress.completion_metadata()}
+                        })
+                        .to_string(),
+                    )
+                    .await?;
             }
             return Ok(false);
         }
@@ -954,17 +1016,18 @@ impl AppServerClient {
                     }
                     let mut guard = self.goal.lock().await;
                     let result = match guard.as_mut() {
-                        Some((goal, progress)) if goal.status == "active" => {
+                        Some((goal, progress)) if matches!(goal.status.as_str(), "active" | "complete") => {
                             let result = progress.checkpoint(params.arguments);
                             if result.is_ok() {
                                 goals::save(&goal.thread_id, progress).await?;
-                                if let Some(reason) = progress.pause_reason.clone() {
+                                if goal.status == "active"
+                                    && let Some(reason) = progress.pause_reason.clone() {
                                     self.pause_goal(reason, false);
                                 }
                             }
                             result
                         }
-                        _ => Err("No active native goal. Do not create a goal without user authorization.".into()),
+                        _ => Err("No active or completed native goal to checkpoint. Do not create a goal without user authorization.".into()),
                     };
                     let success = result.is_ok();
                     let text = match result {
@@ -1492,6 +1555,7 @@ impl JsonRpcCallbacks for AppServerClient {
         {
             self.accept_goal(params.get("goal").cloned().unwrap_or(Value::Null))
                 .await?;
+            self.reconcile_goal_completion().await;
         }
         if method == "thread/goal/cleared"
             && let Some(params) = notification.params.as_ref()
@@ -1514,17 +1578,23 @@ impl JsonRpcCallbacks for AppServerClient {
         {
             let mut guard = self.goal.lock().await;
             if let Some((goal, progress)) = guard.as_mut()
-                && goal.status == "active"
+                && matches!(goal.status.as_str(), "active" | "complete")
             {
                 match progress.checkpoint(args) {
                     Ok(_) => {
                         goals::save(&goal.thread_id, progress).await?;
-                        if let Some(reason) = progress.pause_reason.clone() {
+                        if goal.status == "active"
+                            && let Some(reason) = progress.pause_reason.clone()
+                        {
                             self.pause_goal(reason, false);
                         }
                     }
                     Err(error) => {
-                        self.pause_goal(format!("Invalid goal checkpoint: {error}"), false);
+                        if goal.status == "active" {
+                            self.pause_goal(format!("Invalid goal checkpoint: {error}"), false);
+                        } else {
+                            tracing::warn!("Invalid completion checkpoint: {error}");
+                        }
                     }
                 }
             }
@@ -1754,6 +1824,126 @@ mod goal_integration_tests {
     use tokio::process::Command;
 
     use super::*;
+
+    #[tokio::test]
+    async fn completion_reconciliation_steers_once_without_starting_a_turn() {
+        use std::process::Stdio;
+
+        use tokio::io::{AsyncBufReadExt, BufReader};
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        *client.thread_id.lock().await = Some("root".into());
+        *client.current_turn_id.lock().await = Some("finishing".into());
+        *client.goal.lock().await = Some((
+            NativeGoal {
+                thread_id: "root".into(),
+                objective: "Deliver feature".into(),
+                status: "complete".into(),
+                created_at: 1,
+            },
+            Progress::default(),
+        ));
+        // A stopped execution must not send any request (no peer attached yet).
+        client.capacity_stopped.store(true, Ordering::SeqCst);
+        client.reconcile_goal_completion().await;
+        assert!(!client.completion_reconciliation_sent.load(Ordering::SeqCst));
+        client.capacity_stopped.store(false, Ordering::SeqCst);
+        let mut child = Command::new("python3")
+            .args([
+                "-u",
+                "-c",
+                r#"
+import json, sys
+for line in sys.stdin:
+    request = json.loads(line)
+    print(line.strip(), file=sys.stderr, flush=True)
+    print(json.dumps({"id": request["id"], "result": {"turnId": "finishing"}}), flush=True)
+"#,
+            ])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let mut requests = BufReader::new(child.stderr.take().unwrap()).lines();
+        let (exit_tx, _exit_rx) = tokio::sync::oneshot::channel();
+        let peer = JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(exit_tx),
+            cancel.clone(),
+        );
+        assert!(client.rpc.set(peer).is_ok());
+        client.reconcile_goal_completion().await;
+        client.reconcile_goal_completion().await;
+        let raw = tokio::time::timeout(Duration::from_secs(5), requests.next_line())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        let request: Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(request["method"], "turn/steer");
+        assert_eq!(request["params"]["threadId"], "root");
+        assert_eq!(request["params"]["expectedTurnId"], "finishing");
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), requests.next_line())
+                .await
+                .is_err()
+        );
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn incomplete_completion_is_metadata_and_does_not_continue_the_goal() {
+        use tokio::io::AsyncReadExt;
+        let (writer, mut reader) = tokio::io::duplex(8192);
+        let client = AppServerClient::new(
+            LogWriter::new(writer),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            CancellationToken::new(),
+        );
+        let mut progress = Progress::default();
+        progress
+            .requirements
+            .insert("delivery".into(), "Verify deployment".into());
+        *client.goal.lock().await = Some((
+            NativeGoal {
+                thread_id: "root".into(),
+                objective: "Deliver feature".into(),
+                status: "complete".into(),
+                created_at: 1,
+            },
+            progress,
+        ));
+        assert!(!client.goal_turn_completed("finished").await.unwrap());
+        let mut buffer = [0; 8192];
+        let count = reader.read(&mut buffer).await.unwrap();
+        let logged = String::from_utf8_lossy(&buffer[..count]);
+        assert!(logged.contains("Completion:: Unverified"));
+        assert!(logged.contains("delivery: Verify deployment"));
+        assert!(!logged.contains("Codex reported completion"));
+        // Stop and capacity guards take precedence even over completion handling.
+        client.capacity_stopped.store(true, Ordering::SeqCst);
+        assert!(client.goal_turn_completed("stopped").await.unwrap());
+    }
 
     #[tokio::test]
     async fn ordinary_turns_remain_finite_and_descendant_goals_are_ignored() {

@@ -1,3 +1,22 @@
+## September 21: overnight start failure fix
+
+The selected goal failed at 02:22 UTC because capacity native validation expected
+`usage_limited`, while goal/get returned `usageLimited`. No pause request existed
+and the checklist was unfinished. Corrected the wire spelling and added a
+regression covering the actual payload, genuine input/completion blockers, token
+budget limits and unknown states. The ignored native containment fixture now
+uses real wire spellings too.
+
+Validation: `CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target
+TMPDIR=/mnt/vk-storage/cargo-target/tmp cargo test -p executors --lib` passed:
+74 passed, 0 failed, 3 ignored. The new exact-payload regression passed separately.
+Ignored tests require explicitly configured native/containment fixtures and were
+not rerun; no live selected-goal execution was attempted. Rustfmt and diff checks
+passed. Logs: /mnt/vk-storage/cu-pace-ui/vk-status-tests.log and
+vk-executor-regression.log. Production has NOT been
+restarted or patched; deploy staging through the normal operator-owned backend
+rollout. No UI asset changes, goal selection changes or live goal resumes.
+
 ## September 20: chat-scroll frontend deployed
 
 Frontend-only deployment completed with user authorization. See

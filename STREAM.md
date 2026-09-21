@@ -1,22 +1,17 @@
-# VK::Chat Scroll Position
+# Scheduled goal resume status correction
 
-Scope: shared frontend conversation scrolling. Reopening/switching chats and
-returning from a hidden browser tab or restored page resume at the bottom.
-Preserve initial-bottom intent across coalesced history updates, start bottom
-following during initial layout, and clear stale smooth-scroll deadlines on an
-instant jump. Manual scrolling up remains supported while reading.
+Scope: fix the September 21 overnight rejection of an unfinished native goal
+whose app-server status is `usageLimited`. VK previously compared against the
+SQLite spelling `usage_limited` and reported a false need for user involvement.
 
-Validation: eight Chromium hook-harness scenarios pass via
-`scripts/testing/run-chat-scroll-browser.mjs`. The harness exercises real DOM
-scrolling and shared hooks; visibility/pageshow events are simulated. Full live
-chat navigation and mobile app switching have not been exercised. See HANDOFF.md
-for commands and remaining review. Frontend-only deployment is authorized and in preparation; see HANDOFF.md.
-The layout observer also handles delayed unvirtualized tail resizing.
+Use the captured goal/get wire response in a regression test. Keep actual
+checkpoint input requests, completed work, token-budget limits, blocked states,
+identity checks and execution leases enforced. Distinguish rejection reasons.
+No manual-takeover redesign, production goal mutation or VK restart in this stream.
 
-## Deployment
+Target: artinflight/vibe-kanban staging. Deployment requires an operator-managed
+backend build/restart; this source fix does not update the running binary.
 
-Frontend-only deployment completed with user authorization. Live release source
-`3da008db2` combines current live `f175c1b5b` with this stream's application changes.
-Production desktop/mobile browser acceptance passes. Backend was not restarted.
-See [VK_CHAT_SCROLL_DEPLOYMENT.md](VK_CHAT_SCROLL_DEPLOYMENT.md) for evidence and
-untested paths. Earlier preparation status above is superseded.
+Validation complete: 74 executor tests passed, three environment-dependent native
+fixtures ignored. Captured usageLimited wire regression passed. Backend rollout
+and a bounded live scheduled run remain unperformed.

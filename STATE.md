@@ -1468,3 +1468,15 @@ The capacity executor must accept the wire spelling. Genuine checkpoint input
 requests, completed checklists, `budgetLimited`, `blocked` and unknown statuses
 remain rejected with distinct reasons. Keep quota authorization and independent
 execution deadlines unchanged. Regression uses the captured response shape.
+
+
+## Capacity workflow invariants — September 21
+
+Selected idle goals allow ordinary continuation. Manual messages to a managed
+active goal revoke permission and verify its execution unit has exited before
+opening a normal continuation; selection stays saved. Admission precedes executor
+slot acquisition, including the active-turn queue route. Native slash commands
+must reach the executor parser unchanged even after interrupted turns. Candidate
+and pre-grant checks agree with native goal state/identity; SQLite snake_case is
+explicitly translated to app-server camelCase. See CAPACITY_WORKFLOW_AUDIT.md
+for final-source native/systemd/CU acceptance and the operator-owned deployment.

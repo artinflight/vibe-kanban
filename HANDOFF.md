@@ -1,5 +1,20 @@
 # HANDOFF.md
 
+## September 21: New Blue Preparation
+
+Read VK_BLUE_READY_20260921.md and the runtime readiness record under
+/mnt/vk-storage/vk-blue-refresh-20260921. Exact staging df49b0207 is built and
+isolated functional/model/recovery checks pass. Green1674994 remains live;
+new production Blue5121 is inactive. Next-start candidate/interlock/CU settings
+are installed without restarting production. CU's live corrections are retained.
+Fresh Desktop backup and restored SQLite payloads pass; software-package receipt
+and ready=true remain mandatory before offering the switch. Preparation is not
+cutover approval. Refresh live changes and require fresh approval before pausing
+Green. Historical frozen generations and recovery exceptions remain untouched.
+The initial model-label test mismatch was diagnosed and the recovery rehearsal
+rerun successfully; do not repeat failed production handovers from older notes.
+
+
 ## September 21: PR117 Reconciled And Merged
 
 PR117 merged as df49b020706e831ae203d05b1b89723dc2321cc8. Canonical staging

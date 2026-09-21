@@ -1,5 +1,14 @@
 # STATE.md
 
+**September21 Blue preparation:** exact staging df49b0207 is built; isolated
+thread/Steer/Stop/goal/attachment, model/draft and latest-data cutback checks pass.
+Green1674994 remains live with the September20 frontend. New Blue5121 is
+inactive; candidate/CU next-start configuration is installed, not activated.
+Read VK_BLUE_READY_20260921.md and its Desktop-verified runtime readiness before
+any service action. Fresh explicit cutover approval is still required. Older
+preparation blockers below are historical; missing-history exceptions remain.
+
+
 **September21 PR117 integration:** the live model-selector fix is now merged
 into staging as df49b0207; canonical staging is current. Reconciliation preserved
 new goal/capacity/completion and chat-scroll work. Combined frontend build,

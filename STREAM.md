@@ -1,5 +1,12 @@
 # STREAM.md
 
+September21 scope: prepare new Blue from exact staging df49b0207 while Green
+remains live; preserve CU local corrections and current frontend rollback.
+No production cutover is authorized. Read VK_BLUE_READY_20260921.md and the
+runtime readiness/backup receipts. This branch records maintenance evidence,
+not the application release source.
+
+
 Current completion: September15 staging2fd585ac3 Green cutover and live acceptance.
 Green1674994 is production; Blue2150526 is paused for latest-data cutback. Read
 VK_GREEN_LIVE_20260915.md and the final Desktop evidence receipt. This

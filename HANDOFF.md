@@ -1,3 +1,10 @@
+## September 21: consolidated capacity repair — validated
+
+This supersedes deploying PR121 alone. The native-status correction is already
+in staging; the full isolated scheduled/manual handoff now passes, including the additional
+recovery-wrapper fix for native /goal commands. Production VK has not been restarted.
+See CAPACITY_WORKFLOW_AUDIT.md for scope, evidence and deployment boundaries.
+
 ## September 21: overnight start failure fix
 
 The selected goal failed at 02:22 UTC because capacity native validation expected

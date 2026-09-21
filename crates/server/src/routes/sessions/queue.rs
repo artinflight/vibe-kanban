@@ -32,6 +32,42 @@ async fn queue_message(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<QueueMessageRequest>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    let scheduled = if let Ok(Some(controller)) = executors::capacity::controller::configured() {
+        controller
+            .lock()
+            .await
+            .state
+            .goals
+            .get(&session.id)
+            .is_some_and(|g| g.grant.is_some())
+    } else {
+        false
+    };
+    if scheduled {
+        // The active-turn send UI uses this route. A manual message must take
+        // over from scheduled work, rather than steer inside its restricted lease.
+        let response = super::follow_up(
+            Extension(session),
+            State(deployment),
+            Json(super::CreateFollowUpAttempt {
+                prompt: payload.message,
+                executor_config: payload.executor_config,
+                retry_process_id: None,
+                force_when_dirty: None,
+                perform_git_reset: None,
+            }),
+        )
+        .await?
+        .0;
+        return if response.is_success() {
+            Ok(ResponseJson(ApiResponse::success(QueueStatus::Empty)))
+        } else {
+            let queued = response.into_error_data().ok_or_else(|| {
+                ApiError::Conflict("Manual takeover could not be started or queued".into())
+            })?;
+            Ok(ResponseJson(ApiResponse::success(queued)))
+        };
+    }
     if !ExecutionProcess::has_running_queue_consumer_for_session(&deployment.db().pool, session.id)
         .await?
     {

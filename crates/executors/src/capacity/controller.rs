@@ -482,23 +482,116 @@ async fn admit_launch(
     };
     let mut c = controller.lock().await;
     if !background {
-        if c.state
-            .goals
-            .get(&session)
-            .is_some_and(|g| g.eligible || g.grant.is_some())
-        {
-            return Err(invalid(
-                "Take this goal out of unused-capacity mode before manual continuation",
-            ));
-        }
+        let owned = c.state.goals.get(&session).and_then(|g| g.grant.clone());
         if let Err(error) = c.revoke_all(
             "Interactive work takes priority",
             Some(wall_ms() + 10 * 60_000),
         ) {
             tracing::warn!(%error, "Background authority fenced; ordinary launch continues despite capacity storage failure");
         }
+        // Idle selection is not an execution lock. For an active selected goal,
+        // revoke first and confirm containment exit before allowing a second
+        // app-server to touch the same native thread. Keep the selection saved.
+        drop(c);
+        if let Some(grant) = owned {
+            if let Some(execution) = grant.execution_id {
+                let _ = tokio::time::timeout(
+                    std::time::Duration::from_secs(3),
+                    crate::executors::codex::client::AppServerClient::suspend_capacity_execution(
+                        execution,
+                        "Manual work takes priority".into(),
+                    ),
+                )
+                .await;
+                if !stop_execution_unit(execution).await? {
+                    return Err(invalid(
+                        "Background work is still stopping; retry your message shortly",
+                    ));
+                }
+            }
+            let mut c = controller.lock().await;
+            if c.state
+                .goals
+                .get(&session)
+                .and_then(|g| g.grant.as_ref())
+                .is_some_and(|g| g.id == grant.id)
+            {
+                c.stopped(session, grant.id, "Paused for manual work".into())?;
+            }
+        }
     }
     Ok(())
+}
+
+pub async fn stop_execution_unit(execution: Uuid) -> io::Result<bool> {
+    let unit = crate::capacity::unit_name(execution);
+    let _ = tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        tokio::process::Command::new("systemctl")
+            .args(["--user", "stop", &unit])
+            .kill_on_drop(true)
+            .output(),
+    )
+    .await;
+    let output = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        tokio::process::Command::new("systemctl")
+            .args([
+                "--user",
+                "show",
+                &unit,
+                "--property=LoadState",
+                "--property=ActiveState",
+                "--property=ControlGroup",
+            ])
+            .kill_on_drop(true)
+            .output(),
+    )
+    .await
+    .map_err(|_| invalid("Cannot verify execution shutdown"))??;
+    let text = String::from_utf8_lossy(&output.stdout);
+    let values: std::collections::HashMap<_, _> =
+        text.lines().filter_map(|l| l.split_once('=')).collect();
+    if values.get("LoadState") == Some(&"not-found") {
+        return Ok(true);
+    }
+    if !matches!(values.get("ActiveState"), Some(&"inactive" | &"failed")) {
+        return Ok(false);
+    }
+    let Some(group) = values.get("ControlGroup") else {
+        return Ok(false);
+    };
+    if group.is_empty() {
+        return Ok(true);
+    }
+    if !group.starts_with('/') || group.contains("..") {
+        return Ok(false);
+    }
+    match tokio::fs::read_to_string(format!("/sys/fs/cgroup{group}/cgroup.events")).await {
+        Ok(events) => Ok(events.lines().any(|l| l == "populated 0")),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(true),
+        Err(e) => Err(e),
+    }
+}
+
+pub async fn record_launch_failure(execution: Uuid, reason: &str) {
+    if let Ok(Some(controller)) = configured() {
+        let mut c = controller.lock().await;
+        let mut next = c.state.clone();
+        if let Some(goal) = next.goals.values_mut().find(|g| {
+            g.grant
+                .as_ref()
+                .is_some_and(|grant| grant.execution_id == Some(execution))
+        }) {
+            goal.reason = format!(
+                "Could not start: {}",
+                reason.chars().take(500).collect::<String>()
+            );
+            if let Err(error) = c.commit(next) {
+                tracing::warn!(%error, "Could not persist scheduled launch failure");
+            }
+        }
+    }
 }
 
 pub async fn validate_native(lease: &Lease, snapshot: &serde_json::Value) -> io::Result<()> {
@@ -533,7 +626,7 @@ pub async fn validate_native(lease: &Lease, snapshot: &serde_json::Value) -> io:
 }
 
 // Goal status is the app-server wire value, not the SQLite storage spelling.
-fn validate_native_readiness(
+pub fn validate_native_readiness(
     native: &crate::executors::codex::goals::NativeGoal,
     progress: &crate::executors::codex::goals::Progress,
 ) -> io::Result<()> {
@@ -745,20 +838,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn deselection_restores_manual_admission_without_enrolling_other_work() {
+    async fn selected_idle_goal_allows_manual_work_without_losing_selection() {
         let mut f = Fixture::new();
         let controller = Mutex::new(f.c.take().unwrap());
         assert!(
             admit_launch(Ok(Some(&controller)), f.session, false)
                 .await
-                .is_err()
+                .is_ok()
         );
-        {
-            let mut c = controller.lock().await;
-            let mut goal = c.state.goals[&f.session].clone();
-            goal.eligible = false;
-            c.enroll(goal).unwrap();
-        }
+        assert!(controller.lock().await.state.goals[&f.session].eligible);
         assert!(
             admit_launch(Ok(Some(&controller)), f.session, false)
                 .await
@@ -771,7 +859,7 @@ mod tests {
                 .is_ok()
         );
         let c = controller.lock().await;
-        assert!(!c.state.goals[&f.session].eligible);
+        assert!(c.state.goals[&f.session].eligible);
         assert!(!c.state.goals.contains_key(&ordinary));
         assert!(c.state.goals.values().all(|goal| goal.grant.is_none()));
     }

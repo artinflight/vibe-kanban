@@ -1,17 +1,15 @@
-# Scheduled goal resume status correction
+# Consolidated overnight capacity workflow repair
 
-Scope: fix the September 21 overnight rejection of an unfinished native goal
-whose app-server status is `usageLimited`. VK previously compared against the
-SQLite spelling `usage_limited` and reported a false need for user involvement.
+User request: fix all identified workflow failures and validate the integrated
+backend before another production restart. Production restart is not authorised
+for this stream. Target fork staging; do not collide with other active agents.
 
-Use the captured goal/get wire response in a regression test. Keep actual
-checkpoint input requests, completed work, token-budget limits, blocked states,
-identity checks and execution leases enforced. Distinguish rejection reasons.
-No manual-takeover redesign, production goal mutation or VK restart in this stream.
+Scope: native-goal readiness and identity validation before permission; same-goal
+manual takeover preserving selection; foreground admission before executor slot
+allocation; active-turn send route takeover; durable launch-failure reasons.
+PR121 wire-status fix is included in the base. CU companion branch provides
+persistent activity history and specific unavailable-goal reasons.
 
-Target: artinflight/vibe-kanban staging. Deployment requires an operator-managed
-backend build/restart; this source fix does not update the running binary.
-
-Validation complete: 74 executor tests passed, three environment-dependent native
-fixtures ignored. Captured usageLimited wire regression passed. Backend rollout
-and a bounded live scheduled run remain unperformed.
+Validation uses an existing one-session, credential-free isolated HTTP fixture,
+installed native Codex with local deterministic provider, real systemd guards,
+and the CU scheduler with synthetic quota. See CAPACITY_WORKFLOW_AUDIT.md.

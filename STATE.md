@@ -1460,3 +1460,11 @@ activation due to an already removed transient service being stopped twice.
 Green recovery checks passed on the same latest data. Readiness is withdrawn;
 see VK_BLUE_READINESS_20260911.md. No old database was restored. Historical
 recovery exceptions and new-feature live acceptance remain open.
+
+## September 21: scheduled resume wire-status correction
+
+The installed app-server returns `usageLimited`; SQLite stores `usage_limited`.
+The capacity executor must accept the wire spelling. Genuine checkpoint input
+requests, completed checklists, `budgetLimited`, `blocked` and unknown statuses
+remain rejected with distinct reasons. Keep quota authorization and independent
+execution deadlines unchanged. Regression uses the captured response shape.

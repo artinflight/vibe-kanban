@@ -519,17 +519,7 @@ pub async fn validate_native(lease: &Lease, snapshot: &serde_json::Value) -> io:
     let progress: crate::executors::codex::goals::Progress = serde_json::from_slice(&fs::read(
         crate::executors::codex::goals::progress_path(&goal.thread_id)?,
     )?)?;
-    if progress.pause_reason.is_some()
-        || progress.all_complete()
-        || !matches!(
-            native.status.as_str(),
-            "paused" | "active" | "usage_limited"
-        )
-    {
-        return Err(invalid(
-            "Goal requires user involvement before scheduled continuation",
-        ));
-    }
+    validate_native_readiness(&native, &progress)?;
     if native.thread_id != goal.thread_id
         || native.objective != goal.objective
         || native.created_at != goal.created_at
@@ -542,9 +532,88 @@ pub async fn validate_native(lease: &Lease, snapshot: &serde_json::Value) -> io:
     Ok(())
 }
 
+// Goal status is the app-server wire value, not the SQLite storage spelling.
+fn validate_native_readiness(
+    native: &crate::executors::codex::goals::NativeGoal,
+    progress: &crate::executors::codex::goals::Progress,
+) -> io::Result<()> {
+    if let Some(reason) = &progress.pause_reason {
+        return Err(invalid(&format!(
+            "Goal is waiting for your input: {reason}"
+        )));
+    }
+    if progress.all_complete() {
+        return Err(invalid(
+            "Goal checklist is complete; no scheduled work remains",
+        ));
+    }
+    match native.status.as_str() {
+        "paused" | "active" | "usageLimited" => Ok(()),
+        "budgetLimited" => Err(invalid(
+            "Goal has reached its token budget; scheduled work cannot raise it",
+        )),
+        "blocked" => Err(invalid(
+            "Goal is blocked; resolve it before scheduled continuation",
+        )),
+        "complete" => Err(invalid("Goal is complete; no scheduled work remains")),
+        status => Err(invalid(&format!(
+            "Unsupported native goal status: {status}"
+        ))),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn native_usage_limited_wire_response_can_resume_but_user_and_budget_stops_cannot() {
+        use crate::executors::codex::goals::{NativeGoal, Progress};
+        // Shape and casing captured from the installed app-server's goal/get
+        // response for the goal rejected on September 21.
+        let mut native: NativeGoal = serde_json::from_value(serde_json::json!({
+            "threadId": "01a0801c-5784-7560-8919-3783ef7ccc7c",
+            "objective": "Finish existing development goal", "status": "usageLimited",
+            "tokenBudget": null, "tokensUsed": 32377768, "timeUsedSeconds": 44554,
+            "createdAt": 1789223198, "updatedAt": 1789327215
+        }))
+        .unwrap();
+        let mut progress = Progress::default();
+        progress
+            .requirements
+            .insert("work".into(), "Finish remaining work".into());
+        validate_native_readiness(&native, &progress).unwrap();
+        progress.pause_reason = Some("Choose required behavior".into());
+        assert!(
+            validate_native_readiness(&native, &progress)
+                .unwrap_err()
+                .to_string()
+                .contains("Choose required behavior")
+        );
+        progress.pause_reason = None;
+        progress
+            .completed
+            .insert("work".into(), "Verified complete".into());
+        assert!(validate_native_readiness(&native, &progress).is_err());
+        progress.completed.clear();
+        for status in [
+            "budgetLimited",
+            "blocked",
+            "complete",
+            "usage_limited",
+            "unknown",
+        ] {
+            native.status = status.into();
+            assert!(
+                validate_native_readiness(&native, &progress).is_err(),
+                "{status}"
+            );
+        }
+        for status in ["paused", "active"] {
+            native.status = status.into();
+            validate_native_readiness(&native, &progress).unwrap();
+        }
+    }
+
     struct Fixture {
         root: PathBuf,
         guard: PathBuf,
@@ -972,9 +1041,9 @@ mod native_acceptance {
             }});
             assert!(validate_native(&prepared.lease, &snapshot).await.is_err());
             fs::write(&path, saved).unwrap();
-            snapshot["goal"]["status"] = "budget_limited".into();
+            snapshot["goal"]["status"] = "budgetLimited".into();
             assert!(validate_native(&prepared.lease, &snapshot).await.is_err());
-            snapshot["goal"]["status"] = "paused".into();
+            snapshot["goal"]["status"] = "usageLimited".into();
             validate_native(&prepared.lease, &snapshot).await.unwrap();
             let mut env = ExecutionEnv::new(RepoContext::default(), false, String::new());
             env.insert("VK_EXECUTION_PROCESS_ID", execution.to_string());

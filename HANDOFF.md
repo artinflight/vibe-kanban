@@ -1,3 +1,43 @@
+# September 21: VK::Weird Message
+
+Prepared on `vk/7649-vk-weird-message`. Goal completion now requests a single
+same-turn evidence reconciliation, accepts final checkpoints after native
+completion, and records `Completion::` metadata. The log normalizer inserts or
+replaces that field after `Human Needed::` in the latest standard report of the
+same turn. Without a report it emits compact metadata. No continuation loop,
+goal reopening, or automatic evidence fabrication. Goal instructions require
+specific gaps/next actions and reserve Human Needed for real decisions/blockers.
+
+Shared frontend recognizes new and legacy summary metadata, including optional
+Version. Backend normalization and RPC tests cover report merging, missing
+evidence, bounded steering, capacity stop and ordinary-session behavior.
+Validation: `pnpm run format`, `pnpm run ops:check`,
+`NODE_OPTIONS=--max-old-space-size=8192 pnpm run web-core:check`, and focused
+ESLint for WYSIWYGEditor/summaryMetadata pass. Eleven real Lexical metadata
+matching tests pass for legacy/new/versioned reports, separate paragraphs and
+single paragraphs, standalone status and ordinary prose. Run with
+`VK_TEST_OUTPUT=/mnt/vk-storage/vk-weird-message-tests node scripts/testing/run-summary-metadata-tests.mjs`.
+Codex executor regressions pass: 29 passed, two intentionally ignored. Run with
+`CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target CARGO_INCREMENTAL=0 cargo test -p executors codex --lib --offline`.
+Logs are on the mounted SSD under `/mnt/vk-storage/vk-weird-message-tests`.
+The native model-runtime and private capture tests remain ignored; no real model
+run, browser smoke, full workspace suite or live instance validation is claimed.
+If the native engine has already ended the turn, steering can be rejected;
+VK reports the actual missing evidence instead of reopening the goal. Final
+checkpoint ordering is reconciled before the turn-completion status is emitted.
+Rebased onto staging `0df82745f` and pushed for
+[PR #123](https://github.com/artinflight/vibe-kanban/pull/123), targeting staging.
+Fresh validation: all 78 executor tests pass (three native/environment fixtures
+ignored), strict executor Clippy passes, and all 11 metadata tests pass.
+Formatting, ops governance, frontend lint and local-web type checking pass.
+Full workspace tests and aggregate lint stop at this host's missing Tauri
+`gobject-2.0` development library; CI supplies the non-Tauri workspace checks.
+Logs: `/mnt/vk-storage/vk-weird-message-tests/pr-*.log`.
+PR status and final merge commit are recorded in GitHub. No production
+deployment or service restart has occurred.
+Deployment requires a validated backend candidate and the established explicit
+cutover approval; this branch has not been exercised in the live VK instance.
+
 ## September 21: consolidated capacity repair — validated
 
 This supersedes deploying PR121 alone. The native-status correction is already

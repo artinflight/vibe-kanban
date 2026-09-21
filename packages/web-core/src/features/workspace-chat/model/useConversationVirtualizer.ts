@@ -70,6 +70,9 @@ export interface ConversationVirtualizerOptions {
    */
   onAtBottomChange?: (atBottom: boolean) => void;
 
+  /** Wraps all rows, including the dynamically sized unvirtualized tail. */
+  contentContainerRef?: RefObject<HTMLDivElement | null>;
+
   shouldSuppressSizeAdjustment?: () => boolean;
 }
 
@@ -154,9 +157,11 @@ export function useConversationVirtualizer({
   totalRowCount,
   scrollContainerRef,
   onAtBottomChange,
+  contentContainerRef,
   shouldSuppressSizeAdjustment,
 }: ConversationVirtualizerOptions): ConversationVirtualizerResult {
-  const bottomLockedRef = useRef(false);
+  // Start pinned while history and virtual row measurements settle.
+  const bottomLockedRef = useRef(true);
   const smoothScrollDeadlineRef = useRef(0);
 
   const isBottomScrollCorrectionActive = useCallback(
@@ -267,7 +272,10 @@ export function useConversationVirtualizer({
     const el = scrollContainerRef.current;
     if (!el) return;
 
+    let previousScrollTop = el.scrollTop;
     const handleScroll = () => {
+      const movedUp = el.scrollTop < previousScrollTop;
+      previousScrollTop = el.scrollTop;
       const nearBottom = isNearBottom(
         el.scrollTop,
         el.clientHeight,
@@ -279,6 +287,7 @@ export function useConversationVirtualizer({
       // interaction anchor corrections.
       if (
         bottomLockedRef.current &&
+        movedUp &&
         !nearBottom &&
         performance.now() > smoothScrollDeadlineRef.current &&
         !shouldSuppressSizeAdjustment?.()
@@ -326,6 +335,23 @@ export function useConversationVirtualizer({
     scrollContainerRef,
   ]);
 
+  // Tail rows (images, markdown and tool output) can resize without a React
+  // timeline update. Follow their actual height, not just the virtual spacer.
+  useLayoutEffect(() => {
+    const el = scrollContainerRef.current;
+    const content = contentContainerRef?.current;
+    if (!el || !content) return;
+    const observer = new ResizeObserver(() => {
+      if (!bottomLockedRef.current) return;
+      if (performance.now() < smoothScrollDeadlineRef.current) return;
+      el.scrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+      syncIsAtBottom();
+    });
+    observer.observe(content);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [contentContainerRef, scrollContainerRef, syncIsAtBottom]);
+
   // -------------------------------------------------------------------------
   // Imperative helpers
   // -------------------------------------------------------------------------
@@ -341,6 +367,7 @@ export function useConversationVirtualizer({
         smoothScrollDeadlineRef.current = performance.now() + 500;
         el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
       } else {
+        smoothScrollDeadlineRef.current = 0;
         el.scrollTop = el.scrollHeight - el.clientHeight;
       }
     },

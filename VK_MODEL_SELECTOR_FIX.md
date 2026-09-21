@@ -1,5 +1,24 @@
 # Codex Model Selector Regression
 
+## September 21 Integration Repair
+
+PR117 had never landed in staging, although the September20 live frontend
+included its September15 fix. Staging had advanced through PR121/122/123.
+Only HANDOFF.md and STREAM.md conflicted; reconciliation preserves both stream
+histories. Model-selector and chat-scroll source match live source3da008db2;
+the latest goal/capacity/completion changes remain intact from staging fa7523c17.
+
+Fresh combined-source validation passes:3 model tests,11 metadata tests, all
+frontend typechecks, frontend and targeted selector lint, production build,
+formatting, ops governance and PR diff checks. Desktop1440/mobile390 actual
+model/reasoning menus pass without page errors. Full aggregate checks/lint and
+Rust workspace tests remain blocked by missing host GTK development libraries.
+Evidence: /mnt/vk-storage/vk-pr117-reconciliation-20260921. Preview stopped;
+no production pointer change or backend restart. This is staging integration,
+not approval of a complete deployment candidate or final cutover.
+
+## Original Regression
+
 The September15 acceptance verified retained model selections and actual GPT-6
 submissions, but missed catalog contents and available reasoning controls. The
 running backend still advertises GPT5.1-5.6 and omits GPT-6. The preset fallback

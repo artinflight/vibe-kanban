@@ -1,3 +1,20 @@
+## September 21: PR117 staging reconciliation
+
+PR117's model selector correction is reconciled with staging fa7523c17.
+Only continuity documents conflicted; retain the September21 goal/capacity and
+September20 scroll changes below. Production already carries the model fix via
+the September20 frontend release. This integration does not restart production.
+
+Fresh validation: model tests3/3, summary metadata11/11, all frontend typechecks,
+frontend lint, focused model-selector ESLint, production frontend build,
+formatting and ops checks pass. Desktop1440/mobile390 browser checks open the
+actual GPT-6 menu and verify Low/Medium/High/Xhigh/Max and no pre-5.6 choices.
+No page errors. The temporary preview is stopped. Aggregate check/lint and
+workspace tests stop at missing host GTK libraries (glib/gobject/gio); they are
+not claimed as passing. Evidence: /mnt/vk-storage/vk-pr117-reconciliation-20260921.
+The initial preview probe raced startup; retry after HTTP200 passed both widths.
+No backend changes relative to staging and no production publication occurred.
+
 ## September 15: model selector regression
 
 The deployed backend's static catalog omitted GPT-6 and retained old GPT models.
@@ -7,6 +24,122 @@ adds GPT-6 Astra with Low/Medium/High/Xhigh/Max and filters versions below5.6.
 Native catalog and VK's accepted enum confirm these five levels. Ultra is not
 offered because the running backend cannot deserialize it. Other executors and
 existing persisted choices remain untouched. See `VK_MODEL_SELECTOR_FIX.md`.
+
+# September 21: VK::Weird Message
+
+Prepared on `vk/7649-vk-weird-message`. Goal completion now requests a single
+same-turn evidence reconciliation, accepts final checkpoints after native
+completion, and records `Completion::` metadata. The log normalizer inserts or
+replaces that field after `Human Needed::` in the latest standard report of the
+same turn. Without a report it emits compact metadata. No continuation loop,
+goal reopening, or automatic evidence fabrication. Goal instructions require
+specific gaps/next actions and reserve Human Needed for real decisions/blockers.
+
+Shared frontend recognizes new and legacy summary metadata, including optional
+Version. Backend normalization and RPC tests cover report merging, missing
+evidence, bounded steering, capacity stop and ordinary-session behavior.
+Validation: `pnpm run format`, `pnpm run ops:check`,
+`NODE_OPTIONS=--max-old-space-size=8192 pnpm run web-core:check`, and focused
+ESLint for WYSIWYGEditor/summaryMetadata pass. Eleven real Lexical metadata
+matching tests pass for legacy/new/versioned reports, separate paragraphs and
+single paragraphs, standalone status and ordinary prose. Run with
+`VK_TEST_OUTPUT=/mnt/vk-storage/vk-weird-message-tests node scripts/testing/run-summary-metadata-tests.mjs`.
+Codex executor regressions pass: 29 passed, two intentionally ignored. Run with
+`CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target CARGO_INCREMENTAL=0 cargo test -p executors codex --lib --offline`.
+Logs are on the mounted SSD under `/mnt/vk-storage/vk-weird-message-tests`.
+The native model-runtime and private capture tests remain ignored; no real model
+run, browser smoke, full workspace suite or live instance validation is claimed.
+If the native engine has already ended the turn, steering can be rejected;
+VK reports the actual missing evidence instead of reopening the goal. Final
+checkpoint ordering is reconciled before the turn-completion status is emitted.
+Rebased onto staging `0df82745f` and pushed for
+[PR #123](https://github.com/artinflight/vibe-kanban/pull/123), targeting staging.
+Fresh validation: all 78 executor tests pass (three native/environment fixtures
+ignored), strict executor Clippy passes, and all 11 metadata tests pass.
+Formatting, ops governance, frontend lint and local-web type checking pass.
+Full workspace tests and aggregate lint stop at this host's missing Tauri
+`gobject-2.0` development library; CI supplies the non-Tauri workspace checks.
+Logs: `/mnt/vk-storage/vk-weird-message-tests/pr-*.log`.
+PR status and final merge commit are recorded in GitHub. No production
+deployment or service restart has occurred.
+Deployment requires a validated backend candidate and the established explicit
+cutover approval; this branch has not been exercised in the live VK instance.
+
+## September 21: consolidated capacity repair — validated
+
+This supersedes deploying PR121 alone. The native-status correction is already
+in staging; the full isolated scheduled/manual handoff now passes, including the additional
+recovery-wrapper fix for native /goal commands. Production VK has not been restarted.
+See CAPACITY_WORKFLOW_AUDIT.md for scope, evidence and deployment boundaries.
+
+## September 21: overnight start failure fix
+
+The selected goal failed at 02:22 UTC because capacity native validation expected
+`usage_limited`, while goal/get returned `usageLimited`. No pause request existed
+and the checklist was unfinished. Corrected the wire spelling and added a
+regression covering the actual payload, genuine input/completion blockers, token
+budget limits and unknown states. The ignored native containment fixture now
+uses real wire spellings too.
+
+Validation: `CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target
+TMPDIR=/mnt/vk-storage/cargo-target/tmp cargo test -p executors --lib` passed:
+74 passed, 0 failed, 3 ignored. The new exact-payload regression passed separately.
+Ignored tests require explicitly configured native/containment fixtures and were
+not rerun; no live selected-goal execution was attempted. Rustfmt and diff checks
+passed. Logs: /mnt/vk-storage/cu-pace-ui/vk-status-tests.log and
+vk-executor-regression.log. Production has NOT been
+restarted or patched; deploy staging through the normal operator-owned backend
+rollout. No UI asset changes, goal selection changes or live goal resumes.
+
+## September 20: chat-scroll frontend deployed
+
+Frontend-only deployment completed with user authorization. See
+[VK_CHAT_SCROLL_DEPLOYMENT.md](VK_CHAT_SCROLL_DEPLOYMENT.md) for source provenance,
+validation, limitations and rollback. Live release is
+`/mnt/vk-storage/vk-chat-scroll-20260920/release`, source `3da008db2` (live model
+selector baseline plus this stream's fixes). Desktop/mobile browser checks show
+zero distance from bottom on open/reload/visible-tab return. Existing model menus
+pass; API project ordering, saved messages and profiles are unchanged. Backend
+PID remains 1674994; no restart. Earlier preparation notes below are historical.
+
+## September 20: frontend deployment preparation
+
+User authorized frontend-only deployment. The live frontend is based on
+`f175c1b5b`, which includes model-selector changes absent from this branch.
+Candidate source at `/mnt/vk-storage/vk-chat-scroll-20260920/source` preserves
+that baseline and adds only the chat-scroll fix. Live browser testing reproduced
+mid-chat positions on desktop/mobile. The first production-build test exposed
+delayed tail resizing, now addressed with a content ResizeObserver and upward
+scroll detection. Eight isolated Chromium regressions pass. Deployment browser
+acceptance and publication are pending; no backend restart is planned.
+
+Rollback frontend archive is verified on Desktop at
+`B:/vk-backups/vk-chat-scroll-20260920/frontend-recovery.tar.zst`.
+Deployment evidence and receipts are under `/mnt/vk-storage/vk-chat-scroll-20260920`.
+
+## September 20: VK::Chat Scroll Position
+
+Prepared shared frontend fix on `vk/f531-vk-chat-scroll-p`. Chats resume at the
+bottom on mount/scope switch, visible-tab return, and browser pageshow. Initial
+load intent survives rAF coalescing; instant jumps clear smooth-scroll deadlines.
+Manual upward scrolling still releases bottom following.
+
+`pnpm run format`, `pnpm run local-web:lint`, and `pnpm run ops:check`
+passed. `NODE_OPTIONS=--max-old-space-size=8192 pnpm run web-core:check`
+passed after the default Node heap ran out of memory. Focused shared-file ESLint using the local-web config has zero errors but
+fails `--max-warnings 0` on four pre-existing hook dependency warnings (two in
+useConversationVirtualizer and two in ConversationListContainer).
+
+Seven Chromium hook-harness checks passed (initial load, content growth, manual
+reading, instant resume, scope switch, visible-tab return, restored page).
+Run with `VK_TEST_OUTPUT=/mnt/vk-storage/chat-scroll-tests`,
+`PLAYWRIGHT_MODULE=/mnt/vk-storage/codexusage-capacity/format/node_modules/playwright-core/index.mjs`,
+and `CHROMIUM_PATH=/opt/playwright-browsers/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell`
+using `node scripts/testing/run-chat-scroll-browser.mjs`.
+Visibility/pageshow events are simulated. Full live conversation navigation,
+physical mobile resume, and backend tests were not exercised. Production has not
+been changed; browser QA against the intended runtime is still needed before
+promotion/deployment. Changes are committed locally; no push or PR opened.
 
 ## September 15: capacity deployment configuration in VK staging
 

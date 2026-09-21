@@ -1080,6 +1080,7 @@ impl Codex {
                 AppServerClient::register_active_execution(execution_process_id, &client);
             }
 
+            let scheduled = capacity_for_task.is_some();
             let result = async {
                 client.initialize().await?;
                 client.set_exit_signal(exit_signal_tx.clone());
@@ -1096,6 +1097,10 @@ impl Codex {
             }
 
             if let Err(err) = result {
+                if scheduled && let Some(execution) = execution_process_id {
+                    crate::capacity::controller::record_launch_failure(execution, &err.to_string())
+                        .await;
+                }
                 match &err {
                     ExecutorError::Io(io_err)
                         if io_err.kind() == std::io::ErrorKind::BrokenPipe =>

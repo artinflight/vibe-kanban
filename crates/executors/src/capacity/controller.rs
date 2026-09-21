@@ -482,23 +482,116 @@ async fn admit_launch(
     };
     let mut c = controller.lock().await;
     if !background {
-        if c.state
-            .goals
-            .get(&session)
-            .is_some_and(|g| g.eligible || g.grant.is_some())
-        {
-            return Err(invalid(
-                "Take this goal out of unused-capacity mode before manual continuation",
-            ));
-        }
+        let owned = c.state.goals.get(&session).and_then(|g| g.grant.clone());
         if let Err(error) = c.revoke_all(
             "Interactive work takes priority",
             Some(wall_ms() + 10 * 60_000),
         ) {
             tracing::warn!(%error, "Background authority fenced; ordinary launch continues despite capacity storage failure");
         }
+        // Idle selection is not an execution lock. For an active selected goal,
+        // revoke first and confirm containment exit before allowing a second
+        // app-server to touch the same native thread. Keep the selection saved.
+        drop(c);
+        if let Some(grant) = owned {
+            if let Some(execution) = grant.execution_id {
+                let _ = tokio::time::timeout(
+                    std::time::Duration::from_secs(3),
+                    crate::executors::codex::client::AppServerClient::suspend_capacity_execution(
+                        execution,
+                        "Manual work takes priority".into(),
+                    ),
+                )
+                .await;
+                if !stop_execution_unit(execution).await? {
+                    return Err(invalid(
+                        "Background work is still stopping; retry your message shortly",
+                    ));
+                }
+            }
+            let mut c = controller.lock().await;
+            if c.state
+                .goals
+                .get(&session)
+                .and_then(|g| g.grant.as_ref())
+                .is_some_and(|g| g.id == grant.id)
+            {
+                c.stopped(session, grant.id, "Paused for manual work".into())?;
+            }
+        }
     }
     Ok(())
+}
+
+pub async fn stop_execution_unit(execution: Uuid) -> io::Result<bool> {
+    let unit = crate::capacity::unit_name(execution);
+    let _ = tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        tokio::process::Command::new("systemctl")
+            .args(["--user", "stop", &unit])
+            .kill_on_drop(true)
+            .output(),
+    )
+    .await;
+    let output = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        tokio::process::Command::new("systemctl")
+            .args([
+                "--user",
+                "show",
+                &unit,
+                "--property=LoadState",
+                "--property=ActiveState",
+                "--property=ControlGroup",
+            ])
+            .kill_on_drop(true)
+            .output(),
+    )
+    .await
+    .map_err(|_| invalid("Cannot verify execution shutdown"))??;
+    let text = String::from_utf8_lossy(&output.stdout);
+    let values: std::collections::HashMap<_, _> =
+        text.lines().filter_map(|l| l.split_once('=')).collect();
+    if values.get("LoadState") == Some(&"not-found") {
+        return Ok(true);
+    }
+    if !matches!(values.get("ActiveState"), Some(&"inactive" | &"failed")) {
+        return Ok(false);
+    }
+    let Some(group) = values.get("ControlGroup") else {
+        return Ok(false);
+    };
+    if group.is_empty() {
+        return Ok(true);
+    }
+    if !group.starts_with('/') || group.contains("..") {
+        return Ok(false);
+    }
+    match tokio::fs::read_to_string(format!("/sys/fs/cgroup{group}/cgroup.events")).await {
+        Ok(events) => Ok(events.lines().any(|l| l == "populated 0")),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(true),
+        Err(e) => Err(e),
+    }
+}
+
+pub async fn record_launch_failure(execution: Uuid, reason: &str) {
+    if let Ok(Some(controller)) = configured() {
+        let mut c = controller.lock().await;
+        let mut next = c.state.clone();
+        if let Some(goal) = next.goals.values_mut().find(|g| {
+            g.grant
+                .as_ref()
+                .is_some_and(|grant| grant.execution_id == Some(execution))
+        }) {
+            goal.reason = format!(
+                "Could not start: {}",
+                reason.chars().take(500).collect::<String>()
+            );
+            if let Err(error) = c.commit(next) {
+                tracing::warn!(%error, "Could not persist scheduled launch failure");
+            }
+        }
+    }
 }
 
 pub async fn validate_native(lease: &Lease, snapshot: &serde_json::Value) -> io::Result<()> {
@@ -519,17 +612,7 @@ pub async fn validate_native(lease: &Lease, snapshot: &serde_json::Value) -> io:
     let progress: crate::executors::codex::goals::Progress = serde_json::from_slice(&fs::read(
         crate::executors::codex::goals::progress_path(&goal.thread_id)?,
     )?)?;
-    if progress.pause_reason.is_some()
-        || progress.all_complete()
-        || !matches!(
-            native.status.as_str(),
-            "paused" | "active" | "usage_limited"
-        )
-    {
-        return Err(invalid(
-            "Goal requires user involvement before scheduled continuation",
-        ));
-    }
+    validate_native_readiness(&native, &progress)?;
     if native.thread_id != goal.thread_id
         || native.objective != goal.objective
         || native.created_at != goal.created_at
@@ -542,9 +625,88 @@ pub async fn validate_native(lease: &Lease, snapshot: &serde_json::Value) -> io:
     Ok(())
 }
 
+// Goal status is the app-server wire value, not the SQLite storage spelling.
+pub fn validate_native_readiness(
+    native: &crate::executors::codex::goals::NativeGoal,
+    progress: &crate::executors::codex::goals::Progress,
+) -> io::Result<()> {
+    if let Some(reason) = &progress.pause_reason {
+        return Err(invalid(&format!(
+            "Goal is waiting for your input: {reason}"
+        )));
+    }
+    if progress.all_complete() {
+        return Err(invalid(
+            "Goal checklist is complete; no scheduled work remains",
+        ));
+    }
+    match native.status.as_str() {
+        "paused" | "active" | "usageLimited" => Ok(()),
+        "budgetLimited" => Err(invalid(
+            "Goal has reached its token budget; scheduled work cannot raise it",
+        )),
+        "blocked" => Err(invalid(
+            "Goal is blocked; resolve it before scheduled continuation",
+        )),
+        "complete" => Err(invalid("Goal is complete; no scheduled work remains")),
+        status => Err(invalid(&format!(
+            "Unsupported native goal status: {status}"
+        ))),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn native_usage_limited_wire_response_can_resume_but_user_and_budget_stops_cannot() {
+        use crate::executors::codex::goals::{NativeGoal, Progress};
+        // Shape and casing captured from the installed app-server's goal/get
+        // response for the goal rejected on September 21.
+        let mut native: NativeGoal = serde_json::from_value(serde_json::json!({
+            "threadId": "01a0801c-5784-7560-8919-3783ef7ccc7c",
+            "objective": "Finish existing development goal", "status": "usageLimited",
+            "tokenBudget": null, "tokensUsed": 32377768, "timeUsedSeconds": 44554,
+            "createdAt": 1789223198, "updatedAt": 1789327215
+        }))
+        .unwrap();
+        let mut progress = Progress::default();
+        progress
+            .requirements
+            .insert("work".into(), "Finish remaining work".into());
+        validate_native_readiness(&native, &progress).unwrap();
+        progress.pause_reason = Some("Choose required behavior".into());
+        assert!(
+            validate_native_readiness(&native, &progress)
+                .unwrap_err()
+                .to_string()
+                .contains("Choose required behavior")
+        );
+        progress.pause_reason = None;
+        progress
+            .completed
+            .insert("work".into(), "Verified complete".into());
+        assert!(validate_native_readiness(&native, &progress).is_err());
+        progress.completed.clear();
+        for status in [
+            "budgetLimited",
+            "blocked",
+            "complete",
+            "usage_limited",
+            "unknown",
+        ] {
+            native.status = status.into();
+            assert!(
+                validate_native_readiness(&native, &progress).is_err(),
+                "{status}"
+            );
+        }
+        for status in ["paused", "active"] {
+            native.status = status.into();
+            validate_native_readiness(&native, &progress).unwrap();
+        }
+    }
+
     struct Fixture {
         root: PathBuf,
         guard: PathBuf,
@@ -676,20 +838,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn deselection_restores_manual_admission_without_enrolling_other_work() {
+    async fn selected_idle_goal_allows_manual_work_without_losing_selection() {
         let mut f = Fixture::new();
         let controller = Mutex::new(f.c.take().unwrap());
         assert!(
             admit_launch(Ok(Some(&controller)), f.session, false)
                 .await
-                .is_err()
+                .is_ok()
         );
-        {
-            let mut c = controller.lock().await;
-            let mut goal = c.state.goals[&f.session].clone();
-            goal.eligible = false;
-            c.enroll(goal).unwrap();
-        }
+        assert!(controller.lock().await.state.goals[&f.session].eligible);
         assert!(
             admit_launch(Ok(Some(&controller)), f.session, false)
                 .await
@@ -702,7 +859,7 @@ mod tests {
                 .is_ok()
         );
         let c = controller.lock().await;
-        assert!(!c.state.goals[&f.session].eligible);
+        assert!(c.state.goals[&f.session].eligible);
         assert!(!c.state.goals.contains_key(&ordinary));
         assert!(c.state.goals.values().all(|goal| goal.grant.is_none()));
     }
@@ -972,9 +1129,9 @@ mod native_acceptance {
             }});
             assert!(validate_native(&prepared.lease, &snapshot).await.is_err());
             fs::write(&path, saved).unwrap();
-            snapshot["goal"]["status"] = "budget_limited".into();
+            snapshot["goal"]["status"] = "budgetLimited".into();
             assert!(validate_native(&prepared.lease, &snapshot).await.is_err());
-            snapshot["goal"]["status"] = "paused".into();
+            snapshot["goal"]["status"] = "usageLimited".into();
             validate_native(&prepared.lease, &snapshot).await.unwrap();
             let mut env = ExecutionEnv::new(RepoContext::default(), false, String::new());
             env.insert("VK_EXECUTION_PROCESS_ID", execution.to_string());

@@ -25,7 +25,7 @@ use executors::{
         BaseCodingAgent,
         codex::{
             client::AppServerClient,
-            goals::{Progress, progress_path},
+            goals::{NativeGoal, Progress, progress_path},
         },
     },
 };
@@ -33,6 +33,10 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use services::services::container::ContainerService;
 use sha2::{Digest, Sha256};
+use sqlx::{
+    Connection, Row,
+    sqlite::{SqliteConnectOptions, SqliteConnection},
+};
 use uuid::Uuid;
 
 use crate::{DeploymentImpl, error::ApiError};
@@ -140,6 +144,41 @@ async fn candidate(
             "No unfinished goal available without user input".into(),
         ));
     }
+    // Read-only discovery must agree with the native resume gate. The progress
+    // sidecar alone can outlive a replaced/completed/budget-limited native goal.
+    let home = executors::executors::codex::codex_home()
+        .ok_or_else(|| ApiError::BadRequest("Codex home unavailable".into()))?;
+    let mut native_db = SqliteConnection::connect_with(
+        &SqliteConnectOptions::new()
+            .filename(home.join("goals_1.sqlite"))
+            .read_only(true)
+            .create_if_missing(false),
+    )
+    .await?;
+    let row =
+        sqlx::query("SELECT objective,status,created_at_ms FROM thread_goals WHERE thread_id=?")
+            .bind(&info.session_id)
+            .fetch_optional(&mut native_db)
+            .await?
+            .ok_or_else(|| ApiError::BadRequest("Native goal no longer exists".into()))?;
+    let stored_status: String = row.try_get("status")?;
+    let native = NativeGoal {
+        thread_id: info.session_id.clone(),
+        objective: row.try_get("objective")?,
+        created_at: row.try_get::<i64, _>("created_at_ms")? / 1000,
+        // SQLite stores snake_case; app-server uses camelCase on the wire.
+        status: match stored_status.as_str() {
+            "usage_limited" => "usageLimited".into(),
+            "budget_limited" => "budgetLimited".into(),
+            _ => stored_status,
+        },
+    };
+    if native.objective != progress.objective || native.created_at != progress.created_at {
+        return Err(ApiError::BadRequest(
+            "Goal changed; refresh its progress before selecting it".into(),
+        ));
+    }
+    controller::validate_native_readiness(&native, &progress).map_err(conflict)?;
     Ok(ManagedGoal {
         session_id: session.id,
         thread_id: info.session_id,
@@ -257,6 +296,7 @@ async fn start(
     let info = CodingAgentTurn::find_latest_session_info(&deployment.db().pool, session.id)
         .await?
         .ok_or(ApiError::BadRequest("Existing goal required".into()))?;
+    let ready = candidate(&deployment, &session).await?;
     deployment
         .container()
         .ensure_container_exists(&workspace)
@@ -271,6 +311,19 @@ async fn start(
         let mut c = controller()?.lock().await;
         c.check_revision(&input.epoch, input.revision)
             .map_err(conflict)?;
+        let selected = c
+            .state
+            .goals
+            .get(&session.id)
+            .ok_or_else(|| ApiError::BadRequest("Select this goal first".into()))?;
+        if selected.thread_id != ready.thread_id
+            || selected.objective != ready.objective
+            || selected.created_at != ready.created_at
+        {
+            return Err(ApiError::BadRequest(
+                "Selected goal changed; select its new objective explicitly".into(),
+            ));
+        }
         if foreground(&deployment, &c.state).await? {
             return Err(ApiError::Conflict("Interactive work takes priority".into()));
         }
@@ -384,7 +437,7 @@ async fn stop(
         if let Some(execution) = grant.execution_id {
             let _ =
                 AppServerClient::suspend_capacity_execution(execution, input.reason.clone()).await;
-            if !stop_unit(execution).await? {
+            if !controller::stop_execution_unit(execution).await? {
                 continue;
             }
         }
@@ -395,56 +448,6 @@ async fn stop(
             .map_err(conflict)?;
     }
     Ok(Json(json!({"state":controller()?.lock().await.state})))
-}
-async fn stop_unit(execution: Uuid) -> Result<bool, ApiError> {
-    let unit = executors::capacity::unit_name(execution);
-    let _ = tokio::time::timeout(
-        std::time::Duration::from_secs(3),
-        tokio::process::Command::new("systemctl")
-            .args(["--user", "stop", &unit])
-            .kill_on_drop(true)
-            .output(),
-    )
-    .await;
-    let output = tokio::time::timeout(
-        std::time::Duration::from_secs(2),
-        tokio::process::Command::new("systemctl")
-            .args([
-                "--user",
-                "show",
-                &unit,
-                "--property=LoadState",
-                "--property=ActiveState",
-                "--property=ControlGroup",
-            ])
-            .kill_on_drop(true)
-            .output(),
-    )
-    .await
-    .map_err(|_| ApiError::Conflict("Cannot verify execution shutdown".into()))??;
-    let text = String::from_utf8_lossy(&output.stdout);
-    let values: std::collections::HashMap<_, _> =
-        text.lines().filter_map(|l| l.split_once('=')).collect();
-    if values.get("LoadState") == Some(&"not-found") {
-        return Ok(true);
-    }
-    if !matches!(values.get("ActiveState"), Some(&"inactive" | &"failed")) {
-        return Ok(false);
-    }
-    let Some(group) = values.get("ControlGroup") else {
-        return Ok(false);
-    };
-    if group.is_empty() {
-        return Ok(true);
-    }
-    if !group.starts_with('/') || group.contains("..") {
-        return Ok(false);
-    }
-    match tokio::fs::read_to_string(format!("/sys/fs/cgroup{group}/cgroup.events")).await {
-        Ok(events) => Ok(events.lines().any(|l| l == "populated 0")),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(true),
-        Err(e) => Err(e.into()),
-    }
 }
 pub fn router() -> Router<DeploymentImpl> {
     Router::new()

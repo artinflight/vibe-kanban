@@ -1,3 +1,15 @@
+## September 20: chat-scroll frontend live
+
+User-authorized frontend-only publication is complete. Live frontend source
+`3da008db2` retains the prior model-selector fix and adds chat-bottom resume with
+late layout following. Backend unchanged (PID 1674994). Exact validation and
+rollback: [VK_CHAT_SCROLL_DEPLOYMENT.md](VK_CHAT_SCROLL_DEPLOYMENT.md).
+
+## September 20: chat resume behavior
+
+Chat scroll work is tracked in STREAM.md/HANDOFF.md on the feature branch.
+It changes only the shared frontend; production deployment state is unchanged.
+
 ## September 15: capacity deployment configuration in VK staging
 
 The post-PR114 missing-configuration fix is now versioned in VK: see
@@ -1448,3 +1460,23 @@ activation due to an already removed transient service being stopped twice.
 Green recovery checks passed on the same latest data. Readiness is withdrawn;
 see VK_BLUE_READINESS_20260911.md. No old database was restored. Historical
 recovery exceptions and new-feature live acceptance remain open.
+
+## September 21: scheduled resume wire-status correction
+
+The installed app-server returns `usageLimited`; SQLite stores `usage_limited`.
+The capacity executor must accept the wire spelling. Genuine checkpoint input
+requests, completed checklists, `budgetLimited`, `blocked` and unknown statuses
+remain rejected with distinct reasons. Keep quota authorization and independent
+execution deadlines unchanged. Regression uses the captured response shape.
+
+
+## Capacity workflow invariants — September 21
+
+Selected idle goals allow ordinary continuation. Manual messages to a managed
+active goal revoke permission and verify its execution unit has exited before
+opening a normal continuation; selection stays saved. Admission precedes executor
+slot acquisition, including the active-turn queue route. Native slash commands
+must reach the executor parser unchanged even after interrupted turns. Candidate
+and pre-grant checks agree with native goal state/identity; SQLite snake_case is
+explicitly translated to app-server camelCase. See CAPACITY_WORKFLOW_AUDIT.md
+for final-source native/systemd/CU acceptance and the operator-owned deployment.

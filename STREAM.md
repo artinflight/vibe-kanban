@@ -1,15 +1,16 @@
-# Consolidated overnight capacity workflow repair
+# VK::Weird Message
 
-User request: fix all identified workflow failures and validate the integrated
-backend before another production restart. Production restart is not authorised
-for this stream. Target fork staging; do not collide with other active agents.
+Scope: reconcile native goal completion evidence within the current turn and
+report completion status in the standard summary metadata. Replace the generic
+checklist warning with `Completion::` after `Human Needed::`, naming missing
+evidence when unverified. VK normalizes its status into the existing report;
+a response without a standard report receives a compact metadata line.
 
-Scope: native-goal readiness and identity validation before permission; same-goal
-manual takeover preserving selection; foreground admission before executor slot
-allocation; active-turn send route takeover; durable launch-failure reasons.
-PR121 wire-status fix is included in the base. CU companion branch provides
-persistent activity history and specific unavailable-goal reasons.
+The reconciliation request is a single turn/steer pinned to the current root
+turn. It never starts another turn, reopens the goal or changes its budget.
+Final checkpoints remain accepted after the native completion notification.
+A rejected/late steer falls back to an honest unverified status. Checklist
+verification is supporting evidence, not an independent audit of the objective.
 
-Validation uses an existing one-session, credential-free isolated HTTP fixture,
-installed native Codex with local deterministic provider, real systemd guards,
-and the CU scheduler with synthetic quota. See CAPACITY_WORKFLOW_AUDIT.md.
+Backend and shared frontend changes are local, not deployed. See HANDOFF.md
+for validation and deployment boundaries.

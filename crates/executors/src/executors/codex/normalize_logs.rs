@@ -372,6 +372,7 @@ impl ToNormalizedEntry for PatchEntry {
 struct LogState {
     entry_index: EntryIndexProvider,
     assistant: Option<StreamingText>,
+    completion_report: Option<(usize, NormalizedEntry)>,
     thinking: Option<StreamingText>,
     commands: HashMap<String, CommandState>,
     mcp_tools: HashMap<String, McpToolState>,
@@ -400,6 +401,7 @@ impl LogState {
         Self {
             entry_index,
             assistant: None,
+            completion_report: None,
             thinking: None,
             commands: HashMap::new(),
             mcp_tools: HashMap::new(),
@@ -478,7 +480,57 @@ impl LogState {
     }
 
     fn assistant_message(&mut self, content: String) -> (NormalizedEntry, usize, bool) {
-        self.streaming_text_set(content, StreamingTextKind::Assistant)
+        let result = self.streaming_text_set(content, StreamingTextKind::Assistant);
+        // Keep the latest finished assistant message only. Never attach a status
+        // to an older report if this turn's final response uses another format.
+        if result
+            .0
+            .content
+            .trim_start()
+            .starts_with("<vk_goal_checkpoint>")
+            && super::goals::checkpoint_from_message(&result.0.content).is_some()
+        {
+            return result;
+        }
+        self.completion_report = if result
+            .0
+            .content
+            .lines()
+            .any(|line| line.starts_with("Human Needed::"))
+            && result
+                .0
+                .content
+                .lines()
+                .any(|line| line.starts_with("Worktree::"))
+        {
+            Some((result.1, result.0.clone()))
+        } else {
+            None
+        };
+        result
+    }
+
+    fn completion_metadata(&mut self, metadata: String) -> (NormalizedEntry, usize, bool) {
+        if let Some((index, mut entry)) = self.completion_report.take() {
+            let mut lines = Vec::new();
+            for line in entry.content.lines() {
+                if line.starts_with("Completion::") {
+                    continue;
+                }
+                lines.push(line.to_string());
+                if line.starts_with("Human Needed::") {
+                    lines.push(metadata.clone());
+                }
+            }
+            entry.content = lines.join("\n");
+            self.completion_report = Some((index, entry.clone()));
+            (entry, index, false)
+        } else {
+            self.assistant = None;
+            let result = self.assistant_message(metadata);
+            self.assistant = None;
+            result
+        }
     }
 
     fn thinking(&mut self, content: String) -> (NormalizedEntry, usize, bool) {
@@ -1347,12 +1399,15 @@ fn handle_direct_notification(
             }
             true
         }
+        ServerNotification::TurnStarted(..) => {
+            state.completion_report = None;
+            true
+        }
         ServerNotification::FileChangeOutputDelta(FileChangeOutputDeltaNotification { .. })
         | ServerNotification::McpToolCallProgress(McpToolCallProgressNotification { .. })
         | ServerNotification::ReasoningTextDelta(..)
         | ServerNotification::ThreadStatusChanged(..)
-        | ServerNotification::TurnCompleted(..)
-        | ServerNotification::TurnStarted(..) => true,
+        | ServerNotification::TurnCompleted(..) => true,
         ServerNotification::ItemStarted(notification) => {
             handle_direct_item_started(notification, state, msg_store, entry_index, worktree_path);
             true
@@ -1590,6 +1645,19 @@ pub fn normalize_logs(
                 Ok(value) => value,
                 Err(_) => continue,
             };
+
+            if notification.method == "vk/goal/completion" {
+                if let Some(metadata) = notification
+                    .params
+                    .as_ref()
+                    .and_then(|params| params.get("metadata"))
+                    .and_then(serde_json::Value::as_str)
+                {
+                    let (entry, index, is_new) = state.completion_metadata(metadata.into());
+                    upsert_normalized_entry(&msg_store, index, entry, is_new);
+                }
+                continue;
+            }
 
             if !notification.method.starts_with("codex/event") {
                 continue;
@@ -2390,11 +2458,12 @@ pub fn normalize_logs(
                         }
                     }
                 }
+                EventMsg::TurnStarted(..) | EventMsg::UserMessage(..) => {
+                    state.completion_report = None;
+                }
                 EventMsg::AgentReasoningRawContent(..)
                 | EventMsg::AgentReasoningRawContentDelta(..)
                 | EventMsg::ThreadRolledBack(..)
-                | EventMsg::TurnStarted(..)
-                | EventMsg::UserMessage(..)
                 | EventMsg::TurnDiff(..)
                 | EventMsg::GetHistoryEntryResponse(..)
                 | EventMsg::McpListToolsResponse(..)
@@ -3007,6 +3076,40 @@ mod tests {
             }
             other => panic!("unexpected dynamic tool entry: {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn completion_metadata_updates_summary_instead_of_adding_a_warning() {
+        let summary = "Validation:: Tests passed.\n\nPR:: Not opened yet\nDocs:: Current\nChurn:: No\nHuman Needed:: No\nCompletion:: Verified\nCommit/Push:: Not committed; not pushed\nPreview URL:: Not Generated\nBranch:: test\nWorktree:: /workspace";
+        let message = |text: &str| {
+            json!({
+                "method":"codex/event/agent_message",
+                "params":{"msg":{"type":"agent_message", "message":text}}
+            })
+            .to_string()
+        };
+        let metadata = "Completion:: Unverified — missing evidence for delivery: Verify deployment";
+        let status =
+            json!({"method":"vk/goal/completion", "params":{"metadata":metadata}}).to_string();
+        let entries = normalize_lines(&[message(summary), status.clone()]).await;
+        assert_eq!(entries.len(), 1);
+        assert!(
+            entries[0]
+                .content
+                .contains(&format!("Human Needed:: No\n{metadata}\nCommit/Push::"))
+        );
+        assert!(!entries[0].content.contains("Completion:: Verified"));
+        let checkpoint = "<vk_goal_checkpoint>{\"requirements\":{},\"completed\":{},\"disposition\":\"continue\",\"reason\":\"\"}</vk_goal_checkpoint>";
+        let entries =
+            normalize_lines(&[message(summary), message(checkpoint), status.clone()]).await;
+        assert_eq!(entries.len(), 2);
+        assert!(entries[0].content.contains(metadata));
+        assert_eq!(entries[1].content, checkpoint);
+        // Without a standard summary, preserve the response and show compact metadata.
+        let entries = normalize_lines(&[message("Work is finished."), status]).await;
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].content, "Work is finished.");
+        assert_eq!(entries[1].content, metadata);
     }
 
     #[tokio::test]

@@ -1,4 +1,10 @@
-# VK::Weird Message
+# Codex Model Selector Regression
+
+Restore GPT-6 reasoning choices and hide GPT versions below5.6 in the Codex
+selector. Updated onto staging fa7523c17, this frontend-only compatibility correction
+does not rewrite existing chat selections, drafts, defaults or native settings.
+No backend restart. See `VK_MODEL_SELECTOR_FIX.md` for evidence and deployment.
+## Integrated Staging Context: VK::Weird Message
 
 Scope: reconcile native goal completion evidence within the current turn and
 report completion status in the standard summary metadata. Replace the generic

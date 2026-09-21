@@ -1,3 +1,30 @@
+## September 21: PR117 staging reconciliation
+
+PR117's model selector correction is reconciled with staging fa7523c17.
+Only continuity documents conflicted; retain the September21 goal/capacity and
+September20 scroll changes below. Production already carries the model fix via
+the September20 frontend release. This integration does not restart production.
+
+Fresh validation: model tests3/3, summary metadata11/11, all frontend typechecks,
+frontend lint, focused model-selector ESLint, production frontend build,
+formatting and ops checks pass. Desktop1440/mobile390 browser checks open the
+actual GPT-6 menu and verify Low/Medium/High/Xhigh/Max and no pre-5.6 choices.
+No page errors. The temporary preview is stopped. Aggregate check/lint and
+workspace tests stop at missing host GTK libraries (glib/gobject/gio); they are
+not claimed as passing. Evidence: /mnt/vk-storage/vk-pr117-reconciliation-20260921.
+The initial preview probe raced startup; retry after HTTP200 passed both widths.
+No backend changes relative to staging and no production publication occurred.
+
+## September 15: model selector regression
+
+The deployed backend's static catalog omitted GPT-6 and retained old GPT models.
+Preset insertion gave GPT-6 no reasoning options; preserving an Xhigh selection
+did not prove its dropdown worked. The Codex-only frontend compatibility helper
+adds GPT-6 Astra with Low/Medium/High/Xhigh/Max and filters versions below5.6.
+Native catalog and VK's accepted enum confirm these five levels. Ultra is not
+offered because the running backend cannot deserialize it. Other executors and
+existing persisted choices remain untouched. See `VK_MODEL_SELECTOR_FIX.md`.
+
 # September 21: VK::Weird Message
 
 Prepared on `vk/7649-vk-weird-message`. Goal completion now requests a single

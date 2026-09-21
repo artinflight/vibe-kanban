@@ -1,5 +1,14 @@
 # STATE.md
 
+**September21 PR117 integration:** the live model-selector fix is now merged
+into staging as df49b0207; canonical staging is current. Reconciliation preserved
+new goal/capacity/completion and chat-scroll work. Combined frontend build,
+typechecks, targeted tests/lint and actual desktop/mobile model menus pass.
+Host GTK dependencies still block full aggregate Rust checks/tests. Green's
+running backend and current frontend are unchanged. Full replacement readiness
+and explicit cutover approval remain separate; no production switch occurred.
+Evidence: /mnt/vk-storage/vk-pr117-reconciliation-20260921.
+
 **September15 model-selector correction:** live frontend f175c1b5b restores
 GPT-6 reasoning controls and hides advertised GPT models below5.6, without
 restarting Green1674994 or rewriting chat choices. Desktop/mobile dropdown and

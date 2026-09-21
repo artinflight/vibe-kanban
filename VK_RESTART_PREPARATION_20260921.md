@@ -3,6 +3,15 @@
 Status: NOT READY. Preparation is authorized; production cutover is not.
 No services, routing, production data or frontend pointers were changed.
 
+Integration update: PR117 merged September21 as df49b0207. Its application
+tree matches validated candidate61b111b4c; canonical staging is current.
+The model-fix omission and continuity conflicts below are resolved. Fresh
+frontend build, typechecks/lint,3 model tests,11 summary tests and actual
+desktop/mobile menus pass. Full aggregate Rust checks/tests are blocked by
+missing GTK development libraries. Candidate backend packaging, CU scope,
+backup/rehearsal and final approval remain outstanding. Use the new staging
+head for further preparation, not the superseded fa7523c17 baseline.
+
 Storage update: authorized rehearsal retirement completed later September21;
 see VK_REHEARSAL_RETIREMENT_20260921.md. SSD now reports75GiB free. The original
 4.3GiB observation below is historical; recalculate peak candidate requirements

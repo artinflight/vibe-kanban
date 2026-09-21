@@ -1,5 +1,20 @@
 # HANDOFF.md
 
+## September 21: PR117 Reconciled And Merged
+
+PR117 merged as df49b020706e831ae203d05b1b89723dc2321cc8. Canonical staging
+is fast-forwarded. Only continuity documents conflicted; the live model fix
+and chat-scroll source remain intact alongside PR121/122/123. Reconciled source
+61b111b4c passed3 model tests,11 summary tests, frontend typechecks/lint, focused
+selector lint, production build and desktop/mobile actual dropdown checks.
+Aggregate Rust checks/tests remain blocked by missing host GTK libraries.
+Evidence: /mnt/vk-storage/vk-pr117-reconciliation-20260921. Preview stopped.
+Green1674994 stays live, Blue2150526 frozen. No production deployment or cutover.
+Remaining full Blue preparation/backup/rehearsal gates still apply; PR117 is
+no longer a source-integration blocker. Use current staging df49b0207, not the
+older preparation baseline. PR branch fix/codex-model-selector-regression is
+committed/pushed; application tree of the merge matches the tested candidate.
+
 ## September 21: Rehearsal Cleanup Complete
 
 Read VK_REHEARSAL_RETIREMENT_20260921.md. The authorized cleanup removed

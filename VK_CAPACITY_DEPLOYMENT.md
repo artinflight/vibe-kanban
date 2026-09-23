@@ -87,7 +87,9 @@ Success is momentary availability, not authorization to stop a service or proof
 of complete readiness. Keep other writers fenced between this barrier and the
 candidate's actual lock acquisition; still require post-start live-check.
 
-The legacy incumbent has no lock-release/state-reload API. A same-PID paused
+Compatible builds now implement [explicit ownership handover](VK_CAPACITY_OWNERSHIP.md).
+Use the capability probe and release/acquire sequence for those builds. The
+already-running legacy incumbent still has no lock-release/state-reload API. A same-PID paused
 fallback is therefore incompatible with another process owning the same root.
 Do not evade it with a new lock inode, a separate stale controller copy, or by
 disabling capacity. Stopping the incumbent requires explicit operator agreement

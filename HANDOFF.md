@@ -1,3 +1,29 @@
+## September23: Ownership Handover Implemented, Not Deployed
+
+The operator chose explicit ownership handover and then prohibited final cutover
+without fresh permission because VK is in use. Production must remain unchanged.
+See VK_CAPACITY_OWNERSHIP.md. Authenticated release/acquire endpoints transfer
+the existing lock only after executions and grants drain, fence released owners,
+and reload latest controller state on same-process return. Standby startup is
+opt-in. No database migration or frontend change is included.
+
+Validation: server check/build and targeted server/executor Clippy pass;
+81 executor tests pass (3 ignored), 5 capacity-guard tests and 21 Python tests
+pass. Formatting, ops:check and diff checks pass. Real HTTP acceptance at
+/mnt/vk-storage/vk-ownership-handover-20260923/api-20260923T165556Z passes
+same-PID pause/switch/return, latest saved-message and scheduling preservation,
+backup-abort recovery, drained-candidate exit recovery, authorization, stale
+receipts, active-execution rejection and competing ownership. Private test
+services are stopped. Earlier fixture failures (binary-copy race and debug
+database path mismatch) were corrected before this successful run.
+
+Not exercised: full workspace/Tauri/frontend suites, production CU lifecycle,
+release packaging or live production handover. Current Green lacks these new
+endpoints and needs a separately approved initial upgrade. No production
+cutover is ready or authorized by these isolated results. No old data restored.
+Source is on fix/capacity-cutover-lock, not pushed or merged to staging.
+The earlier restart-based policy below is historical, not the chosen protocol.
+
 ## September23: Capacity Lock Readiness Fix
 
 Read VK_CAPACITY_DEPLOYMENT.md#capacity-ownership-before-cutover. The new

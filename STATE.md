@@ -1,3 +1,14 @@
+## September23: Ownership Handover Source Ready For Review
+
+Branch fix/capacity-cutover-lock implements explicit authenticated capacity
+release/acquire and inert standby startup. Real copied-data HTTP acceptance
+verified same-PID return with latest data and failure recovery; details and
+limitations are in HANDOFF.md and VK_CAPACITY_OWNERSHIP.md. This is branch-local
+implementation evidence, not a staging or production deployment claim.
+Production Green is unchanged. Current Green lacks the endpoints, so adoption
+requires a separately approved initial upgrade and production preparation.
+The operator is working in VK and forbids final cutover without fresh permission.
+
 ## September23: Cutover Ownership Barrier
 
 Branch fix/capacity-cutover-lock adds a read-only existing-inode capacity lock

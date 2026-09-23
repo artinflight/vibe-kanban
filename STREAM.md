@@ -1,5 +1,11 @@
 # Capacity Cutover Lock
 
+Current scope: implement authenticated ownership release/acquire with fresh
+state reload and paused same-PID fallback for compatible backends. Production
+cutover is explicitly withheld by the operator, who is using VK. Do not stop,
+pause, restart or reroute production. See VK_CAPACITY_OWNERSHIP.md. The running
+legacy backend requires a separate one-time upgrade before using this protocol.
+
 Fix read-only readiness to detect a capacity owner that survives process pause.
 Branch fix/capacity-cutover-lock adds the existing-inode lock barrier and real
 kernel-lock tests; it does not change production services or silently replace

@@ -53,7 +53,7 @@ pub struct State {
 pub struct Controller {
     root: PathBuf,
     guard: PathBuf,
-    _lock: fs::File,
+    ownership: Option<fs::File>,
     pub state: State,
 }
 fn invalid(message: &str) -> io::Error {
@@ -81,7 +81,70 @@ fn save(path: &Path, value: &impl Serialize) -> io::Result<()> {
     result
 }
 impl Controller {
+    pub fn standby(root: PathBuf, guard: PathBuf) -> io::Result<Self> {
+        if !root.is_absolute() || !guard.is_absolute() || !guard.is_file() {
+            return Err(invalid(
+                "Absolute controller directory and existing guard required",
+            ));
+        }
+        Ok(Self {
+            root,
+            guard,
+            ownership: None,
+            state: State {
+                version: 1,
+                epoch: String::new(),
+                revision: 0,
+                foreground_until_ms: 0,
+                goals: BTreeMap::new(),
+                issued_ids: BTreeSet::new(),
+            },
+        })
+    }
+    pub fn is_owner(&self) -> bool {
+        self.ownership.is_some()
+    }
+    pub fn ensure_owner(&self) -> io::Result<()> {
+        if !self.is_owner() {
+            return Err(invalid(
+                "Capacity ownership released; explicit acquisition required",
+            ));
+        }
+        Ok(())
+    }
+    pub fn release(&mut self, epoch: &str, revision: u64) -> io::Result<State> {
+        self.check_revision(epoch, revision)?;
+        if self.state.goals.values().any(|goal| goal.grant.is_some()) {
+            return Err(invalid(
+                "Drain and reconcile all capacity grants before release",
+            ));
+        }
+        // Dropping our descriptor releases the same inode, never a replacement lock.
+        self.ownership.take();
+        Ok(self.state.clone())
+    }
+    pub fn acquire(&mut self, epoch: &str, revision: u64) -> io::Result<()> {
+        if self.is_owner() {
+            return Err(invalid("Already owns capacity controller"));
+        }
+        let next = Self::open_checked(
+            self.root.clone(),
+            self.guard.clone(),
+            Uuid::new_v4().to_string(),
+            Some((epoch, revision)),
+        )?;
+        *self = next;
+        Ok(())
+    }
     pub fn open(root: PathBuf, guard: PathBuf, epoch: String) -> io::Result<Self> {
+        Self::open_checked(root, guard, epoch, None)
+    }
+    fn open_checked(
+        root: PathBuf,
+        guard: PathBuf,
+        epoch: String,
+        expected: Option<(&str, u64)>,
+    ) -> io::Result<Self> {
         if !root.is_absolute() || !guard.is_absolute() || !guard.is_file() {
             return Err(invalid(
                 "Absolute capacity state directory and existing guard required",
@@ -123,6 +186,16 @@ impl Controller {
         if state.version != 1 || state.goals.len() > 100 {
             return Err(invalid("Unsupported capacity state"));
         }
+        if let Some((expected_epoch, revision)) = expected {
+            if state.epoch != expected_epoch || state.revision != revision {
+                return Err(invalid(
+                    "Stale ownership handover; read the current owner's release receipt",
+                ));
+            }
+            if state.goals.values().any(|goal| goal.grant.is_some()) {
+                return Err(invalid("Cannot acquire ownership with unreconciled grants"));
+            }
+        }
         for (id, goal) in &mut state.goals {
             if *id != goal.session_id {
                 return Err(invalid("Invalid managed session identity"));
@@ -137,7 +210,7 @@ impl Controller {
         let mut this = Self {
             root,
             guard,
-            _lock: lock,
+            ownership: Some(lock),
             state,
         };
         this.commit(this.state.clone())?;
@@ -145,6 +218,7 @@ impl Controller {
         Ok(this)
     }
     fn commit(&mut self, mut next: State) -> io::Result<()> {
+        self.ensure_owner()?;
         next.revision = self
             .state
             .revision
@@ -155,6 +229,7 @@ impl Controller {
         Ok(())
     }
     pub fn check_revision(&self, epoch: &str, revision: u64) -> io::Result<()> {
+        self.ensure_owner()?;
         if epoch != self.state.epoch || revision != self.state.revision {
             return Err(invalid(
                 "Stale capacity controller state; read and reconcile again",
@@ -254,7 +329,9 @@ impl Controller {
         goal.reason = "Starting scheduled goal".into();
         self.commit(next)?;
         Ok(CapacityExecution {
-            issuer_epoch: self.state.epoch.clone(),
+            // Process identity protects persisted actions; controller epochs
+            // separately rotate each time this process reacquires ownership.
+            issuer_epoch: issuer_epoch().into(),
             id: id.to_string(),
             allocation_id: allocation,
             expires_at_ms: expires,
@@ -286,7 +363,7 @@ impl Controller {
             || grant.stopping
             || grant.execution_id.is_some()
             || grant.epoch != self.state.epoch
-            || request.issuer_epoch != self.state.epoch
+            || request.issuer_epoch != issuer_epoch()
             || grant.expires_at_ms <= now
             || self.state.foreground_until_ms > now
             || grant.allocation_id != request.allocation_id
@@ -380,6 +457,7 @@ impl Controller {
         save(&file, &lease)
     }
     pub fn revoke_all(&mut self, reason: &str, foreground_until: Option<u64>) -> io::Result<()> {
+        self.ensure_owner()?;
         let mut next = self.state.clone();
         if let Some(until) = foreground_until {
             next.foreground_until_ms = next.foreground_until_ms.max(until);
@@ -401,6 +479,7 @@ impl Controller {
         self.revoke_files()
     }
     fn revoke_files(&self) -> io::Result<()> {
+        self.ensure_owner()?;
         for goal in self.state.goals.values() {
             if let Some(grant) = &goal.grant
                 && grant.stopping
@@ -446,7 +525,14 @@ pub fn configured() -> io::Result<Option<&'static Mutex<Controller>>> {
         };
         let guard = std::env::var("VK_CAPACITY_GUARD")
             .map_err(|_| "VK_CAPACITY_GUARD is required".to_string())?;
-        Controller::open(root.into(), guard.into(), issuer_epoch().into())
+        let controller = match std::env::var("VK_CAPACITY_START_PAUSED").as_deref() {
+            Ok("1") => Controller::standby(root.into(), guard.into()),
+            Ok("0") | Err(std::env::VarError::NotPresent) => {
+                Controller::open(root.into(), guard.into(), issuer_epoch().into())
+            }
+            _ => return Err("VK_CAPACITY_START_PAUSED must be 0 or 1".into()),
+        };
+        controller
             .map(|c| Some(Mutex::new(c)))
             .map_err(|e| e.to_string())
     });
@@ -481,6 +567,7 @@ async fn admit_launch(
         };
     };
     let mut c = controller.lock().await;
+    c.ensure_owner()?;
     if !background {
         let owned = c.state.goals.get(&session).and_then(|g| g.grant.clone());
         if let Err(error) = c.revoke_all(
@@ -597,6 +684,7 @@ pub async fn record_launch_failure(execution: Uuid, reason: &str) {
 pub async fn validate_native(lease: &Lease, snapshot: &serde_json::Value) -> io::Result<()> {
     let controller = configured()?.ok_or_else(|| invalid("No scheduled goal controller"))?;
     let c = controller.lock().await;
+    c.ensure_owner()?;
     let goal = c
         .state
         .goals
@@ -771,6 +859,80 @@ mod tests {
             save(Path::new(&request.lease_file), &lease).unwrap();
             lease
         }
+    }
+
+    #[test]
+    fn ownership_handover_reloads_latest_state_on_return() {
+        let mut f = Fixture::new();
+        let a = f.c.as_mut().unwrap();
+        let mut b = Controller::standby(f.root.clone(), f.guard.clone()).unwrap();
+        let epoch = a.state.epoch.clone();
+        let revision = a.state.revision;
+        assert!(b.acquire(&epoch, revision).is_err());
+        let released = a.release(&epoch, revision).unwrap();
+        assert!(!a.is_owner());
+        assert!(a.revoke_all("stale writer", None).is_err());
+        assert!(a.check_revision(&epoch, revision).is_err());
+        b.acquire(&released.epoch, released.revision).unwrap();
+        assert_ne!(b.state.epoch, epoch);
+        let mut goal = b.state.goals[&f.session].clone();
+        goal.eligible = false;
+        b.enroll(goal).unwrap();
+        let used = Uuid::new_v4();
+        let mut next = b.state.clone();
+        next.issued_ids.insert(used);
+        next.foreground_until_ms += 1000;
+        b.commit(next).unwrap();
+        let back = b.release(&b.state.epoch.clone(), b.state.revision).unwrap();
+        let disk = fs::read(f.root.join("state.json")).unwrap();
+        assert!(a.acquire(&epoch, revision).is_err());
+        assert_eq!(fs::read(f.root.join("state.json")).unwrap(), disk);
+        assert!(!a.is_owner());
+        a.acquire(&back.epoch, back.revision).unwrap();
+        assert!(!a.state.goals[&f.session].eligible);
+        assert!(a.state.issued_ids.contains(&used));
+        assert_eq!(a.state.foreground_until_ms, back.foreground_until_ms);
+        assert_ne!(a.state.epoch, back.epoch);
+        assert!(b.acquire(&back.epoch, back.revision).is_err());
+        let mut goal = a.state.goals[&f.session].clone();
+        goal.eligible = true;
+        a.enroll(goal).unwrap();
+        let request = a
+            .issue(
+                f.session,
+                Uuid::new_v4(),
+                "new-allocation".into(),
+                30_000,
+                90_000,
+                2000,
+            )
+            .unwrap();
+        assert_eq!(request.issuer_epoch, issuer_epoch());
+        a.bind(&request, "native-thread", Uuid::new_v4(), 2000)
+            .unwrap();
+    }
+
+    #[test]
+    fn ownership_release_rejects_unreconciled_grants_and_stale_receipts() {
+        let mut f = Fixture::new();
+        f.issue();
+        let c = f.c.as_mut().unwrap();
+        assert!(c.release(&c.state.epoch.clone(), c.state.revision).is_err());
+        assert!(c.is_owner());
+        assert!(c.release("wrong", c.state.revision).is_err());
+        assert!(Controller::open(f.root.clone(), f.guard.clone(), "other".into()).is_err());
+    }
+
+    #[tokio::test]
+    async fn released_owner_cannot_admit_foreground_or_background_work() {
+        let mut f = Fixture::new();
+        let mut c = f.c.take().unwrap();
+        c.release(&c.state.epoch.clone(), c.state.revision).unwrap();
+        let before = fs::read(f.root.join("state.json")).unwrap();
+        let c = Mutex::new(c);
+        assert!(admit_launch(Ok(Some(&c)), f.session, false).await.is_err());
+        assert!(admit_launch(Ok(Some(&c)), f.session, true).await.is_err());
+        assert_eq!(fs::read(f.root.join("state.json")).unwrap(), before);
     }
     impl Drop for Fixture {
         fn drop(&mut self) {
@@ -990,7 +1152,7 @@ mod tests {
                 10_000,
             )
             .unwrap();
-        assert_eq!(next.issuer_epoch, "new-epoch");
+        assert_eq!(next.issuer_epoch, issuer_epoch());
         assert_eq!(
             c.state.goals[&f.session].objective,
             "Preserve full development objective"

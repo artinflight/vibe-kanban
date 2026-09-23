@@ -1,5 +1,14 @@
 # STATE.md
 
+**September23 live ownership-capable Blue:** staging1b31e1874/PR124 is deployed
+on Blue764264, ports5121/5122, with CU764269 connected and reconciled. The
+28.53second cutover used final Desktop-verified latest data. Legacy Green is
+stopped/disabled with old software retained for latest-data restart recovery;
+it is not a paused same-PID standby. Live workflow/preservation tests passed.
+Two reconnection subscriber-overflow errors remain a documented logging
+follow-up; old missing-history/attachment exceptions are unchanged. Read
+VK_OWNERSHIP_CUTOVER_20260923.md. Earlier Green-live/readiness notes are history.
+
 **September23 ownership transition preparation:** PR124 is merged to staging
 1b31e1874. The operator authorized full deployment after the preparation hold.
 Green remains live until the new attempt proves otherwise. This legacy-to-new

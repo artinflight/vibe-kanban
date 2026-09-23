@@ -6,6 +6,14 @@ An established protocol is not evidence that a particular candidate is ready.
 
 ## Generation Roles
 
+September23 current authority: ownership-capable Blue764264 is live on5121/5122.
+Legacy Green is stopped/disabled, not frozen, with original release retained for
+latest-data restart recovery. Read VK_OWNERSHIP_CUTOVER_20260923.md. The initial
+legacy transition was separately authorized because that binary could not
+release its lifetime lock. For subsequent ownership-capable builds use the
+staging VK_CAPACITY_OWNERSHIP.md protocol; do not blindly reuse either consumed
+September23 attempt or infer permission for a later cutover.
+
 September15 role authority is `VK_GREEN_LIVE_20260915.md`: Green1674994 is live,
 Blue2150526 is frozen for latest-data cutback. Older dated examples are historical.
 

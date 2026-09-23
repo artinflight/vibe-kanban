@@ -1,5 +1,24 @@
 # HANDOFF.md
 
+## September23: Ownership-Capable Blue Live
+
+The separately authorized cutover-20260923T185406Z completed in28.53seconds.
+Blue764264 is enabled/live on5121/5122 and vibe.local; CU764269 is connected
+and reconciled. Legacy Green is stopped/disabled, with original software kept
+for restart on latest data, not same-PID thaw. Never restore an old database.
+PR124/staging1b31e1874 is deployed, application-equivalent build f9dac41e4.
+Read VK_OWNERSHIP_CUTOVER_20260923.md and the consumed attempt status. Do not
+repeat the handover. Original maintenance thread/model resumed successfully.
+
+Live preservation,12 saved messages, navigation/color relations,5979 native
+index paths, attachment round-trip, actual steering/goals/Stop, desktop/mobile
+local+tailnet saved messages/model menus and CU checks passed. Historical
+missing-history/attachment exceptions remain. Two MsgStore subscriber overflow
+errors at18:54:41 need logging follow-up: source matches previous Green, no
+recurrence in subsequent checks, but no claim of complete subscriber delivery.
+All pre-cutover protected data checks passed. Final evidence is archived to
+Desktop; see the runtime ownership-live-evidence-receipt.json after packaging.
+
 ## September23: Full Ownership-Capable Cutover Authorized
 
 The operator has now authorized the complete cutover while away, superseding

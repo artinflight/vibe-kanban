@@ -1,5 +1,16 @@
 # HANDOFF.md
 
+## September23: Full Ownership-Capable Cutover Authorized
+
+The operator has now authorized the complete cutover while away, superseding
+the hold below. Read VK_OWNERSHIP_CUTOVER_20260923.md and runtime PROGRESS.md.
+PR124 is merged to staging1b31e1874. The current legacy Green needs a one-time
+stop/restart transition because it cannot release its lifetime lock. Preserve
+its old software for restart against latest data; do not claim same-PID fallback
+for this initial adoption. New release packaging, fresh backup and rehearsals
+are in progress; no production change is claimed by this note. Inspect the new
+attempt status before acting; never repeat the consumed earlier attempt.
+
 ## September23: Ownership Handover Tested; No Cutover Permission
 
 The operator chose ownership handover instead of the historical restart-based

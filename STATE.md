@@ -1,5 +1,12 @@
 # STATE.md
 
+**September23 ownership transition preparation:** PR124 is merged to staging
+1b31e1874. The operator authorized full deployment after the preparation hold.
+Green remains live until the new attempt proves otherwise. This legacy-to-new
+transition requires stopping Green and retaining its software for latest-data
+restart recovery; the legacy process cannot release ownership while paused.
+Read VK_OWNERSHIP_CUTOVER_20260923.md. Do not reuse the consumed attempt below.
+
 **September23 failed Blue activation:** Green1674994 is again live/running on
 5091/5092 and vibe.local with the September20 frontend; candidate Blue5121 is
 stopped. Green was paused, never replaced, and no older database was restored.

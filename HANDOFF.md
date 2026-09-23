@@ -1,5 +1,21 @@
 # HANDOFF.md
 
+## September23: Lock Fix Tested, Policy Decision Pending
+
+User requested fixing the handover. Source branch fix/capacity-cutover-lock at
+/mnt/vk-storage/worktrees/vk-capacity-cutover-lock adds the read-only lock-check
+barrier and five real-kernel tests; existing eleven deployment tests also pass.
+Source commit32029e3ec is local, not pushed or merged into staging.
+Copied-data rehearsal under /mnt/vk-storage/vk-capacity-handoff-fix-20260923
+reproduces the paused-owner failure and verifies stop/restart switch, backup
+failure recovery, broken candidate capacity recovery, and preservation of the
+latest saved message, setting, goal eligibility and issued grant IDs on return.
+This changes fallback from same-PID thaw to starting old software on latest data.
+The operator has been asked to approve that change; no answer received yet.
+Green1674994 remains running, Blue stopped; production has not changed this turn.
+Do not execute the old consumed handover. Fresh production controller packaging,
+CU lifecycle checks, backup and explicit stop/restart agreement remain required.
+
 ## September23: Returned To Green, Do Not Retry
 
 The authorized cutover failed capacity reconciliation. Green1674994 retained

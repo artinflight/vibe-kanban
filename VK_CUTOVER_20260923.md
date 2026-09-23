@@ -66,6 +66,26 @@ rollback-execution records. The original pre-switch readiness remains archived.
 
 ## Preparation Context
 
+### Subsequent Fix Preparation
+
+The user's "Fix it" request produced a read-only lock barrier on branch
+fix/capacity-cutover-lock (mounted SSD worktree of that name). Five real-lock
+tests and eleven deployment tests pass. The real production read-only probe
+correctly rejects Green's held lock before any interruption.
+The isolated alternative under /mnt/vk-storage/vk-capacity-handoff-fix-20260923
+uses actual old/new server binaries sharing one controller root. It reproduces
+the failed paused-owner switch, then passes stop/restart handoff, backup failure,
+unhealthy capacity API recovery, and latest-data return including changed goal
+eligibility and used grant history. Final private switch took7.45seconds and
+return0.47seconds; these are not production downtime estimates or promises.
+
+No production processes or settings changed during that fix work. The operator
+has been asked whether stopping Green with restart-based fallback is acceptable;
+same-PID paused fallback remains unsupported. Do not infer permission or retry
+the consumed attempt. Refresh full production packaging, companion validation
+and backups after the policy decision. A tested isolated mechanism is not yet
+a ready, authorized production cutover.
+
 The operator authorized the full refresh and cutover while away. The following
 records preparation, not a successful switch.
 

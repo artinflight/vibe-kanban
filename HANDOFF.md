@@ -1,5 +1,24 @@
 # HANDOFF.md
 
+## September23: Ownership Handover Tested; No Cutover Permission
+
+The operator chose ownership handover instead of the historical restart-based
+alternative below. Implementation is on fix/capacity-cutover-lock under
+/mnt/vk-storage/worktrees/vk-capacity-cutover-lock, not pushed or merged.
+See its VK_CAPACITY_OWNERSHIP.md for release/acquire, standby and recovery.
+81 executor tests pass (3 ignored), 5 guard tests and 21 Python tests pass;
+server build/check, targeted Clippy, format and ops checks pass. Real HTTP tests
+at /mnt/vk-storage/vk-ownership-handover-20260923/api-20260923T165556Z
+verify same-PID return, latest saved messages/controller choices, backup-abort
+and drained-candidate exit recovery, auth and stale/competing-owner rejection.
+The isolated test services are stopped; production remains unchanged.
+Current Green does not have the new endpoints. A separately approved initial
+upgrade, release packaging and real CU lifecycle validation remain necessary.
+The operator is using VK again: do not pause, stop, restart or reroute production
+and do not perform final cutover without fresh permission. Do not reuse consumed
+handover controllers or restore old databases. Historical recovery exceptions
+remain unchanged. These results do not certify production cutover readiness.
+
 ## September23: Lock Fix Tested, Policy Decision Pending
 
 User requested fixing the handover. Source branch fix/capacity-cutover-lock at

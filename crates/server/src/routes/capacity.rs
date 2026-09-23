@@ -109,7 +109,11 @@ async fn status(
     headers: HeaderMap,
 ) -> Result<Json<Value>, ApiError> {
     authorize(&headers)?;
-    let state = controller()?.lock().await.state.clone();
+    let state = {
+        let c = controller()?.lock().await;
+        c.ensure_owner().map_err(conflict)?;
+        c.state.clone()
+    };
     let running = ExecutionProcess::find_running(&deployment.db().pool).await?;
     let mut execution_states = serde_json::Map::new();
     for goal in state.goals.values() {
@@ -457,5 +461,64 @@ pub fn router() -> Router<DeploymentImpl> {
         .route("/capacity/start", post(start))
         .route("/capacity/renew", post(renew))
         .route("/capacity/stop", post(stop))
+        .route("/capacity/ownership", get(ownership))
+        .route("/capacity/ownership/release", post(release_ownership))
+        .route("/capacity/ownership/acquire", post(acquire_ownership))
         .layer(DefaultBodyLimit::max(16_384))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Ownership {
+    epoch: String,
+    revision: u64,
+}
+
+async fn ownership(headers: HeaderMap) -> Result<Json<Value>, ApiError> {
+    authorize(&headers)?;
+    let c = controller()?.lock().await;
+    Ok(Json(json!({"protocolVersion":1,"owned":c.is_owner(),
+        "state":if c.is_owner() { Some(&c.state) } else { None }})))
+}
+
+async fn release_ownership(
+    State(deployment): State<DeploymentImpl>,
+    headers: HeaderMap,
+    Json(input): Json<Ownership>,
+) -> Result<Json<Value>, ApiError> {
+    authorize(&headers)?;
+    let mut c = controller()?.lock().await;
+    if !ExecutionProcess::find_running(&deployment.db().pool)
+        .await?
+        .is_empty()
+    {
+        return Err(ApiError::Conflict(
+            "Drain executions before releasing capacity ownership".into(),
+        ));
+    }
+    let state = c.release(&input.epoch, input.revision).map_err(conflict)?;
+    Ok(Json(
+        json!({"protocolVersion":1,"owned":false,"state":state}),
+    ))
+}
+
+async fn acquire_ownership(
+    State(deployment): State<DeploymentImpl>,
+    headers: HeaderMap,
+    Json(input): Json<Ownership>,
+) -> Result<Json<Value>, ApiError> {
+    authorize(&headers)?;
+    let mut c = controller()?.lock().await;
+    if !ExecutionProcess::find_running(&deployment.db().pool)
+        .await?
+        .is_empty()
+    {
+        return Err(ApiError::Conflict(
+            "Drain executions before acquiring capacity ownership".into(),
+        ));
+    }
+    c.acquire(&input.epoch, input.revision).map_err(conflict)?;
+    Ok(Json(
+        json!({"protocolVersion":1,"owned":true,"state":c.state}),
+    ))
 }

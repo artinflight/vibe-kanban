@@ -5,8 +5,10 @@ render: prepare a candidate's two drop-ins without changing services.
 install: atomically install both drop-ins and daemon-reload, never restart.
 check: verify effective next-start settings for the nominated candidate.
 live-check: additionally verify process environments, routed backend and CU.
+lock-check: configuration check plus actual controller lock availability.
 """
 import argparse
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -185,7 +187,7 @@ def install(profile, unit, server, planned, root):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('action', choices=['render', 'install', 'check', 'live-check'])
+    p.add_argument('action', choices=['render', 'install', 'check', 'live-check', 'lock-check'])
     p.add_argument('--profile', type=Path, default=PROFILE)
     p.add_argument('--unit', required=True)
     p.add_argument('--server', required=True, type=Path)
@@ -207,6 +209,11 @@ def main():
         if args.action == 'install':
             install(profile, args.unit, args.server, planned, Path.home() / '.config/systemd/user')
         check(profile, args.unit, args.server, planned, args.action == 'live-check')
+        if args.action == 'lock-check':
+            spec = importlib.util.spec_from_file_location('capacity_lock', Path(__file__).with_name('vk-capacity-lock.py'))
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            module.check_available(profile['stateDir'])
     print(json.dumps({'passed': True, 'action': args.action, 'unit': args.unit,
                       'server': str(args.server), 'liveVerified': args.action == 'live-check',
                       'servicesRestarted': False, 'goalsEnabled': False}))

@@ -1,4 +1,18 @@
-# Codex Model Selector Regression
+# Capacity Cutover Lock
+
+Current scope: implement authenticated ownership release/acquire with fresh
+state reload and paused same-PID fallback for compatible backends. Production
+cutover is explicitly withheld by the operator, who is using VK. Do not stop,
+pause, restart or reroute production. See VK_CAPACITY_OWNERSHIP.md. The running
+legacy backend requires a separate one-time upgrade before using this protocol.
+
+Fix read-only readiness to detect a capacity owner that survives process pause.
+Branch fix/capacity-cutover-lock adds the existing-inode lock barrier and real
+kernel-lock tests; it does not change production services or silently replace
+the operator's same-PID standby requirement. Restart-based recovery is separately
+rehearsed with copied data and requires explicit approval before production.
+
+## Integrated Codex Model Selector Regression
 
 Restore GPT-6 reasoning choices and hide GPT versions below5.6 in the Codex
 selector. Updated onto staging fa7523c17, this frontend-only compatibility correction

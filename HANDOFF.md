@@ -1,5 +1,16 @@
 # HANDOFF.md
 
+## September23: Full Cutover Authorized
+
+Read VK_CUTOVER_20260923.md and runtime PROGRESS.md under
+/mnt/vk-storage/vk-blue-refresh-20260921. VK staging is unchanged df49b0207;
+CU is refreshed separately to5fa797d plus preserved live manual-reset fixes.
+All131 combined CU tests pass. New journal/baseline replace the invalid old
+watch epoch. Before or after interruption, inspect cutover-attempt.json and
+its status; never repeat the handover. Green stays loaded for same-latest-data
+cutback. Complete live acceptance and report exactly once at the end.
+
+
 ## September 21: New Blue Preparation
 
 Read VK_BLUE_READY_20260921.md and the runtime readiness record under

@@ -1,3 +1,22 @@
+## September23: Capacity Lock Readiness Fix
+
+Read VK_CAPACITY_DEPLOYMENT.md#capacity-ownership-before-cutover. The new
+lock-check action fails while an incumbent holds controller.lock, including
+when paused. Five real-kernel lock tests and eleven deployment tests pass.
+Production Green1674994 remains untouched; Blue is stopped after the earlier
+failed cutover. A stop/restart policy is being rehearsed separately in
+/mnt/vk-storage/vk-capacity-handoff-fix-20260923 using copied data, actual binaries
+and one shared capacity root. The final rehearsal passes backup-abort recovery,
+unhealthy candidate capacity API recovery, and latest application/controller
+state preservation on successful switch and cutback. The intermediate fixture
+assertion expected409/500 but its deliberately missing token correctly produced
+401; accepting that injected unhealthy response then verified recovery.
+Formatting, ops:check and diff checks pass. No application code was changed;
+full frontend/Rust suites were not rerun for this Python-only barrier.
+This is not permission to stop Green or retry the consumed production attempt.
+No stale database or capacity state is restored. Full production packaging and
+real CU lifecycle acceptance are still required before activation.
+
 ## September 21: PR117 staging reconciliation
 
 PR117's model selector correction is reconciled with staging fa7523c17.

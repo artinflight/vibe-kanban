@@ -66,7 +66,53 @@ scheduling. Preserve the user's existing selections and disabled/enabled state.
 Only explicitly selected goals are subject to background scheduling; ordinary
 unselected goals keep their existing behavior.
 
-## Scope and verification
+## Capacity Ownership Before Cutover
+
+Configuration checks alone do not prove that the new backend can acquire the
+capacity controller. September23 production exposed a lifetime file lock held
+by the paused incumbent. Freezing it does not close the file or release the lock.
+Separate-root rehearsals and API health checks missed this failure.
+
+Use the read-only ownership barrier before starting the candidate:
+
+```bash
+python3 scripts/vk-capacity-deployment.py lock-check \
+  --unit CANDIDATE.service --server /mnt/vk-storage/RELEASE/server
+```
+
+It checks configuration, then attempts a nonblocking lock on the existing
+controller.lock inode. It never creates, truncates, replaces, or removes that
+file. Missing files, symlinks, inode replacement, and held locks fail closed.
+Success is momentary availability, not authorization to stop a service or proof
+of complete readiness. Keep other writers fenced between this barrier and the
+candidate's actual lock acquisition; still require post-start live-check.
+
+The legacy incumbent has no lock-release/state-reload API. A same-PID paused
+fallback is therefore incompatible with another process owning the same root.
+Do not evade it with a new lock inode, a separate stale controller copy, or by
+disabling capacity. Stopping the incumbent requires explicit operator agreement
+to restart-based fallback instead of the promised pause/thaw behavior.
+
+With that separately approved policy, the controller can stop the companion and
+drained incumbent, verify the shared lock is released, capture the final state,
+and start the candidate. On failure it stops the candidate and starts the old
+software against the same latest database and controller files. Do not restore
+old state. A fresh process reloads goals, selections and used grant IDs instead
+of retaining a stale in-memory copy. Preserve enabled settings and selections;
+do not start new goals or spend reset credits to make readiness pass.
+
+Rehearse the real old/new binaries sharing one private controller root. Force
+the old process to acquire the lock before freezing it, reproduce the conflict,
+then verify backup failure, a broken candidate capacity API, and successful
+cutover/cutback after writes to application and capacity state. Recovery must
+not depend on the failed candidate API responding. This tests a different policy,
+not a repair to same-PID fallback.
+
+`python3 scripts/test-capacity-lock.py` exercises real kernel locks and a paused
+disposable owner, plus missing/symlink/non-file rejection. All test payloads use
+the mounted SSD. No production services are stopped by these tools or tests.
+
+## Configuration Verification
 
 `python3 scripts/test-capacity-deployment.py` checks new service/release names,
 configuration quoting, missing settings, wrong guards/origins/dependencies,

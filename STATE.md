@@ -1,3 +1,13 @@
+## September23: Cutover Ownership Barrier
+
+Branch fix/capacity-cutover-lock adds a read-only existing-inode capacity lock
+check with real kernel-lock regression tests. Pausing a lock owner is now
+explicitly rejected by the barrier. Configuration checks alone are not readiness.
+The production read-only probe fails as expected while Green1674994 runs; no
+production settings or process changed. A restart-based alternative passed a
+real-binary, shared-root copied-data rehearsal, but requires a changed operator
+approval and refreshed full package before production. See VK_CAPACITY_DEPLOYMENT.md.
+
 ## September 20: chat-scroll frontend live
 
 User-authorized frontend-only publication is complete. Live frontend source

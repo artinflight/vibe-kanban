@@ -1,5 +1,15 @@
 # STATE.md
 
+**September23 failed Blue activation:** Green1674994 is again live/running on
+5091/5092 and vibe.local with the September20 frontend; candidate Blue5121 is
+stopped. Green was paused, never replaced, and no older database was restored.
+Blue could not acquire Green's lifetime capacity-controller lock while Green
+was frozen. Readiness is invalidated; the consumed handover must not be repeated.
+CodexUsage now runs the separate cu-20260923 combined package and reconciles
+with Green, with capacity scheduling on and reset automation off. See
+VK_CUTOVER_20260923.md for rollback acceptance and the next blocking requirement.
+Earlier candidate-ready statements are historical, not current authorization.
+
 **September21 Blue preparation:** exact staging df49b0207 is built; isolated
 thread/Steer/Stop/goal/attachment, model/draft and latest-data cutback checks pass.
 Green1674994 remains live with the September20 frontend. New Blue5121 is

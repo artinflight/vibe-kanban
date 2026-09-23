@@ -1,5 +1,16 @@
 # HANDOFF.md
 
+## September23: Returned To Green, Do Not Retry
+
+The authorized cutover failed capacity reconciliation. Green1674994 retained
+controller.lock while frozen, so Blue's capacity endpoints returned500.
+Green is live again on the same latest data; Blue is stopped. CU's refreshed
+package is running and connected. Read VK_CUTOVER_20260923.md and runtime
+cutover-20260923T154246Z/status.json plus rollback acceptance evidence.
+Readiness is false. Do not repeat the consumed controller, unlink the lock,
+stop Green to bypass it, or restore old data. A capacity-aware ownership transfer
+and same-latest-state cutback rehearsal are needed before another approval.
+
 ## September23: Full Cutover Authorized
 
 Read VK_CUTOVER_20260923.md and runtime PROGRESS.md under

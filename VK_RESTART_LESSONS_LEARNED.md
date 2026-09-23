@@ -4,6 +4,22 @@ Date: 2026-09-11. Status: the [backend restart protocol](VK_BACKEND_RESTART_PROT
 is established; a production cutover is NOT certified ready. Historical planning
 and evidence below do not override its approval and measured-window requirements.
 
+## September23: Pausing Retained A Capacity Lock
+
+The candidate passed isolated functional checks and a switch/recovery rehearsal,
+but the rehearsal did not establish handoff of an already-owned capacity root.
+During production activation, paused Green1674994 retained an exclusive flock
+on `/mnt/vk-storage/codexusage-capacity/runtime/controller/controller.lock`.
+Blue returned500 from capacity endpoints with a lock acquisition error; CU
+could not reconcile. The controller stopped Blue and thawed the same Green PID,
+without restoring a database. This was a readiness/rehearsal coverage failure,
+not a reason to bypass the live acceptance gate.
+
+Before another switch, prove capacity ownership transfer and latest-state
+cutback with a real lock-holding incumbent. Readiness has been invalidated.
+Do not unlink the lock, force concurrent owners, or terminate Green as a shortcut.
+Evidence and preservation checks: `VK_CUTOVER_20260923.md`.
+
 ## September 12: Existing Chats Submitted The Wrong Model
 
 After Blue went live, the operator reported chats previously selected as GPT-6

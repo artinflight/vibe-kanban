@@ -11,6 +11,19 @@ Blue2150526 is frozen for latest-data cutback. Older dated examples are historic
 
 ### Required Capacity Integration
 
+September23 production demonstrated that pausing an incumbent retains its
+lifetime exclusive capacity-controller file lock. A candidate sharing that
+controller root cannot open it, even though API health and SQLite checks pass.
+Inspect actual incumbent lock ownership before declaring readiness. Rehearse
+with a capacity-enabled incumbent holding the real type of controller lock;
+a private companion process and separate controller roots do not prove transfer.
+The handover must transfer capacity ownership while preserving goals, grants,
+running/paused child state, and latest-data cutback to the retained incumbent.
+Do not unlink or replace the locked inode to manufacture success, start two
+owners, stop the incumbent contrary to the paused-standby requirement, or skip
+live reconciliation. If no tested ownership transfer exists, remain not ready.
+The consumed September23 attempt is not permission to try again.
+
 Use the candidate staging source's `scripts/vk-capacity-deployment.py` and
 `scripts/deployment/mcp-capacity.json` for every MCP deployment. Package both
 server and release-matched guard. Render and inspect candidate/CodexUsage

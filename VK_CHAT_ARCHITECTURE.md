@@ -11,10 +11,13 @@ follow the repository's `VK_*.md` architecture/runbook convention.
 
 ## Product and experience
 
-VK gains one enduring assistant conversation above projects and a direct
-conversation with the selected agent inside each workspace. Both accept text and
-voice, persist in VK, and remain readable across devices connected to the same
-VK authority. The supervisor is an application capability, with no artificial
+VK gains one enduring supervisor conversation above projects. Existing workspace/
+session chat remains the raw direct coding-agent interface, with its current
+detailed responses, completion reports, validation, controls, history and behaviour.
+Both interfaces accept voice and text, but each retains its own existing or new
+history owner: existing session history for workspace chat, new persistent history
+for the supervisor. Both remain readable through the same VK authority. The
+supervisor is an application capability, with no artificial
 project, repository, worktree, or coding-agent session.
 
 Put a Chat entry in the application rail. On desktop it opens a resizable global
@@ -25,13 +28,14 @@ state. Closing a panel while voice remains active leaves a conspicuous mic/stop
 control. Browser reload may end audio but must not end the conversation.
 
 The global composer says “Supervisor”; the workspace composer names its selected
-session. Switching sessions explicitly changes the direct target. Workspace chat
-retains its existing transcript and advanced controls. Add voice and a readable
-presentation of results there; the user's input goes directly to that session,
-without a supervisor routing/model round trip. A lightweight presentation model
-may translate the agent's output for speech; it has no dispatch tools.
+session. Switching sessions explicitly changes the direct target. Add workspace
+voice as transcription into the existing session message path. The coding-agent
+response remains unchanged in existing session history. Optional spoken playback
+uses that response without a second reasoning or summarisation model. Voice
+transport metadata is separate from the agent conversation. Workspace text and
+voice do not invoke supervisor routing, memory or presentation services.
 
-A normal reply explains the material outcome, failure, decision or question in
+A normal supervisor reply explains the material outcome, failure, decision or question in
 natural language. Length follows the situation. Routine successful validation,
 commit metadata and tool chatter stay in expandable evidence. An activity chip
 such as “Sent to Android · onboarding” exposes exact recipients, transmitted
@@ -66,8 +70,8 @@ not old continuity claims about live service ports.
 | Sending | [sessions/mod.rs](crates/server/src/routes/sessions/mod.rs) `follow_up`; [queue.rs](crates/server/src/routes/sessions/queue.rs) | **Small extension**: extract shared dispatch service and add durable receipts/idempotency |
 | Running delivery | [container.rs](crates/local-deployment/src/container.rs) `try_steer_active_turn`, `consume_queued_follow_up`; [queued_message.rs](crates/services/src/services/queued_message.rs) | **Small extension with reliability risk**: persist queue and receipt state; keep existing capability decisions |
 | Raw history | [execution_process.rs](crates/services/src/services/execution_process.rs), [execution_logs.rs](crates/utils/src/execution_logs.rs), [log_history.rs](crates/server/src/routes/execution_processes/log_history.rs) | **Reuse** JSONL logs and finite normalised-history pages; add stable evidence references |
-| Direct frontend | [SessionChatBoxContainer.tsx](packages/web-core/src/features/workspace-chat/ui/SessionChatBoxContainer.tsx), [useSessionSend.ts](packages/web-core/src/features/workspace-chat/model/hooks/useSessionSend.ts), [useSessionQueueInteraction.ts](packages/web-core/src/features/workspace-chat/model/hooks/useSessionQueueInteraction.ts), [useConversationHistory.ts](packages/web-core/src/features/workspace-chat/model/hooks/useConversationHistory.ts) | **Small extension**: shared transport, transcript identity and voice controls; retain editor/attachments/retry behaviours |
-| Summary evidence | [workspace_summary.rs](crates/server/src/routes/workspaces/workspace_summary.rs), `CodingAgentTurn.summary`, [DisplayConversationEntry.tsx](packages/web-core/src/features/workspace-chat/ui/DisplayConversationEntry.tsx) | **Reuse** status and raw report, **new** semantic translation; existing summary is not a conversational synopsis |
+| Direct frontend | [SessionChatBoxContainer.tsx](packages/web-core/src/features/workspace-chat/ui/SessionChatBoxContainer.tsx), [useSessionSend.ts](packages/web-core/src/features/workspace-chat/model/hooks/useSessionSend.ts), [useSessionQueueInteraction.ts](packages/web-core/src/features/workspace-chat/model/hooks/useSessionQueueInteraction.ts), [useConversationHistory.ts](packages/web-core/src/features/workspace-chat/model/hooks/useConversationHistory.ts) | **Small extension**: voice input through existing session messaging and optional raw-response playback; preserve text UI, history, editor, attachments and retry behaviours |
+| Summary evidence | [workspace_summary.rs](crates/server/src/routes/workspaces/workspace_summary.rs), `CodingAgentTurn.summary`, [DisplayConversationEntry.tsx](packages/web-core/src/features/workspace-chat/ui/DisplayConversationEntry.tsx) | **Reuse** status and raw report, **new** supervisor-only semantic translation; existing summary is not a conversational synopsis |
 | Shell | [SharedAppLayout.tsx](packages/web-core/src/shared/components/ui-new/containers/SharedAppLayout.tsx), [_app.tsx](packages/local-web/src/routes/_app.tsx), [App.tsx](packages/local-web/src/app/entry/App.tsx) | **Small extension**: rail/panel and provider above route/host remounts |
 | Local persistence | [db/lib.rs](crates/db/src/lib.rs), [migrations](crates/db/migrations), [saved_chat_message.rs](crates/db/src/models/saved_chat_message.rs), [scratch.rs](crates/db/src/models/scratch.rs) | **Reuse** SQLx/SQLite; **new** conversation/memory tables. Saved messages are reusable composer snippets, scratch is draft/UI state, neither is conversation storage |
 | Events | [events.rs](crates/services/src/services/events.rs), [events route](crates/server/src/routes/events.rs), [execution routes](crates/server/src/routes/execution_processes.rs) | **Reuse** event plumbing: SSE `/api/events`, JSON-patch WebSocket execution/log streams. **Small extension**: committed conversation sequence/replay |
@@ -104,17 +108,22 @@ and distinguish local task IDs, remote issue IDs and synthetic IDs.
 ## System boundaries and ownership
 
 ```text
-Global panel ──┐                         ┌── bounded context/read tools
-              ├── VK Conversation API ─┼── supervisor model ── action proposal
-Direct chat ──┘          │              └── direct target ──────┐
-                        │                                     v
-Browser audio <-> Voice adapter                       policy + dispatcher
-                        │                                     │
-                        v                                     v
-             SQLite conversation/events              existing sessions/container
-             memory/actions/evidence                 steering/queue/follow-up
-                        ^                                     │
-                        └──── result ingestion <── turns/logs/events
+Global text/voice -> Supervisor Conversation API -> supervisor model + policy
+                              |                              |
+                              v                              v
+                    supervisor history/memory       shared agent dispatch
+                              ^                              ^
+                              |                              |
+                    evidence/summary ingestion      existing session message path
+                              ^                              ^
+                              |                              |
+                    existing agent turns/logs       workspace text / voice transcript
+                              |
+                              v
+                    existing raw workspace chat
+                    optional raw-response speech playback
+
+Voice transport adapters are shared; supervisor and workspace bindings are distinct.
 ```
 
 VK owns identity, history, memory, routing candidates, permissions, action
@@ -150,11 +159,11 @@ lifecycle, session/executor identity, latest relevant activity and source revisi
 Use indexed name/alias lookup and filtered SQL first; semantic search is an
 optional later improvement, not a mandatory vector database.
 
-For each turn:
+For each supervisor turn (direct workspace interaction bypasses this resolver):
 
 1. Load conversation focus, explicit references and authorised recent entities.
 2. Narrow by project/repository names, issue/workspace title, branch, activity and
-   session. Current page is a hint in global mode, a pinned target in direct mode.
+   session. The current page is a hint for the supervisor, not an implicit target.
 3. Give the model a bounded candidate set with differentiating names and dates.
    Active work ranks ahead of archived work unless the user asks historically.
 4. Resolve one target or an intentional set. “The two parity agents” is a set;
@@ -185,9 +194,11 @@ conflict. Ask owners for a decision when required; no automatic merges.
 
 [Contracts](VK_CHAT_CONTRACTS.md) specifies the persistence model. One default
 global conversation per principal/authority retains topic segments and searchable
-history. Direct conversations are one per VK session; a workspace entry resolves
-the selected session rather than flattening independent agents into one history.
-A direct result can be referenced in global history without duplicating dispatch.
+history. Workspace chat keeps its existing session history and rendering; no new
+direct-conversation entity, projected replacement history or parallel chat is added.
+The supervisor references workspace results as evidence without replacing those
+results or duplicating dispatch. The history, memory and translation design below
+belongs solely to the supervisor.
 
 Keep four distinct things:
 
@@ -198,7 +209,10 @@ Keep four distinct things:
 
 Memory scopes are principal-global, project, repository, workspace, conversation
 and session, represented by typed scope references rather than six new stores.
-Scope is mandatory. Prefer the smallest applicable scope: “web is authoritative
+Scope is mandatory. These scopes govern what the supervisor remembers about work;
+they do not inject supervisor memory into direct session chat. Ordinary workspace
+messages neither create nor retrieve supervisor memories. Prefer the smallest
+applicable scope: “web is authoritative
 for fitRDY onboarding” is a project relationship, not a rule for every Android repo.
 A repository convention crossing projects must be explicitly repository-scoped.
 A memory involving two entities is retrievable only when access permits both.
@@ -222,7 +236,8 @@ prevent automatic re-extraction from a forgotten source.
 
 ### Conversational translation
 
-On result ingestion, read the complete final report and relevant failure/status
+Inside the supervisor only, on result ingestion, read the complete final report
+and relevant failure/status
 signals. If needed inspect logs/diffs, with finite pages and bounded hierarchical
 summarisation for large reports; record any coverage gap. Identify what addresses
 the user's intent and what needs attention. Suppress routine passing validation by
@@ -239,6 +254,10 @@ its reasoning. Record source selection and summarisation version in activity, no
 private model chain-of-thought. Missing/deleted evidence is reported as unavailable.
 
 ## Actions, autonomy and permission
+
+This policy governs supervisor actions; ordinary workspace text/voice keeps the
+existing session permissions, approvals and controls without a supervisor policy
+round trip. Shared delivery primitives preserve those existing semantics.
 
 Reads normally run immediately within access scope. Explicit ordinary messages
 and questions to an unambiguous session need no extra confirmation, including a
@@ -293,7 +312,7 @@ for one operator's cross-device conversation.
 | New conversation tables in existing SQLite | Global history cannot satisfy a workspace session's foreign keys; avoids fake workspaces and whole-scratch overwrites |
 | Durable shared queue/dispatch extension | Changes a sensitive execution boundary but avoids two competing queue consumers and false delivery promises |
 | New thin supervisor model adapter | Avoids coding-runtime authority and launch latency; requires separate model credentials/budget |
-| Direct session bypass plus optional output presentation | Retains direct agent semantics without speaking raw test logs; presentation model cannot issue actions |
+| Existing direct session interface plus voice transport | Preserves raw text/output/history; optional speech reads the existing response with no second reasoning model or supervisor memory |
 | Append-only events with queryable rows | Reliable replay without a new message broker or replatforming all VK state into event sourcing |
 | Scoped relational memory first | Easier provenance/deletion/isolation; semantic search can be added after measuring retrieval misses |
 | Retell custom-model integration | More integration responsibility than a managed vendor agent; keeps VK's conversation and action logic shared with text |

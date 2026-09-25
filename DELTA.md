@@ -1307,3 +1307,13 @@ prepared on SSD; production is still the incumbent 5031 backend. See VK_ERRORS_2
   changes. No application tests, feature implementation, provider setup, runtime
   change, deployment, commit or push. Later implementation is authorised by the
   user's future handoff instruction, with no inherited architecture-task boundary.
+
+## 2026-09-25 | vk/d498-vk-chat-orchestr | supervisor/workspace boundary correction
+
+- Revised all five VK_CHAT documents: product ownership/diagram, supervisor-only
+  schema/APIs/memory, direct voice binding/playback, milestones/acceptance/rollout
+  and future implementation prompt.
+- Removed proposed direct-conversation history and presentation model. Existing
+  workspace/session text remains raw and unchanged; voice uses its existing path.
+- Kept shared low-level delivery and voice transport; no feature implementation,
+  provider configuration or runtime changes.

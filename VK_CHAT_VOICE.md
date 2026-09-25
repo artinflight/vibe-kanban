@@ -7,16 +7,19 @@ capability claims below are documentation evidence, not a tested integration.
 ## Boundary
 
 Use a narrow voice-session adapter, not a universal telephony framework. The
-shared conversation service consumes user utterances and produces assistant text;
-it has no Retell call IDs, SDK objects, voice-agent prompts or provider tool state.
+supervisor conversation service consumes utterances and produces conversational
+responses. Workspace voice instead sends transcribed input through the existing
+agent/session message path and leaves its raw response/history unchanged. Neither
+path needs Retell call IDs, SDK objects or provider tool state in its chat model.
 The adapter owns those details. Browser media can flow directly to the voice
 provider; canonical text and action records still flow through VK.
 
 Proposed backend `VoiceProvider` operations:
 
 - `capabilities()` and `list_voices()` return catalogue metadata and previews.
-- `create_session(conversation_binding, voice, retention_policy)` returns provider
-  identity plus expiring browser connection material.
+- `create_session(binding, voice, retention_policy)` returns provider
+  identity plus expiring browser connection material. The binding is either a
+  supervisor conversation or an existing workspace/session, never both.
 - `ingest_provider_event()` verifies and normalises incoming transcript, lifecycle,
   response-request and interruption events.
 - `send_response(response_generation, text_chunk, complete)` streams VK-produced
@@ -32,6 +35,12 @@ features degrade visibly, not through pretend successful operations.
 Normalised inputs include `session.connected`, `utterance.partial`,
 `utterance.boundary`, `utterance.revised`, `response.requested`,
 `speech.interrupted`, `playback.observed`, `session.ended` and `session.error`.
+Direct mode requires no second reasoning/summarisation agent. Optional TTS reads
+the existing coding-agent response (or a user-selected passage) without semantic
+rewriting. Mechanical speech formatting may omit markup syntax, but preserves
+content and never alters the stored response. Playback controls and transport
+metadata stay outside the normal workspace transcript.
+
 Every input is correlated to VK voice-session ID/generation and provider event or
 segment identity. Speech recognition (STT) and synthesis (TTS) are provider
 responsibilities, while VK commits text, resolves targets and applies policy.
@@ -63,30 +72,39 @@ own shared text/voice state and action handling, which justifies this custom pat
 
 Do not build two independently reasoning assistants, one in Retell prompts and
 one in VK. Retell's response engine forwards to the same VK coordinator used by
-text. In direct mode it forwards to the pinned session dispatcher and presentation
-service, not global entity resolution. No provider-side tools can mutate VK.
+supervisor text. In direct mode the adapter uses the existing pinned session's
+message path and optionally streams its raw response to TTS. It does not invoke
+the supervisor model, summarisation, memory or entity resolution. A custom-model
+protocol endpoint here is an adapter, not an additional model. No provider-side
+tools can mutate VK.
 
 ## End-to-end flow
 
 ```text
-User presses microphone in global or selected-session conversation
-  -> VK authenticates, binds conversation/target, commits voice session
+User presses microphone in supervisor or existing workspace/session chat
+  -> VK authenticates, binds supervisor conversation OR session, commits voice metadata
   -> Retell adapter creates browser call; VK stores provider correlation
   -> browser joins media with expiring material; microphone indicator stays visible
   -> Retell custom-model socket sends transcript snapshots
-  -> adapter reconciles segments; VK commits a stable user utterance
-  -> global coordinator OR direct dispatcher accepts the message
-  -> durable action receipts and resulting assistant text enter shared history
-  -> adapter speaks the text; playback/interruption updates annotate that message
-  -> desktop later reads the same history and continues with typed messages
+  -> adapter reconciles segments and accepts stable input once
+  -> supervisor: its coordinator/history -> conversational response -> speech
+  -> workspace: existing session message path -> raw agent response/history
+       -> optional raw-response TTS, with separate playback metadata
+  -> desktop later reads the appropriate unchanged history owner and types there
 ```
 
-Return a short conversational acknowledgement after durable acceptance if agent
+In the supervisor, return a short conversational acknowledgement after durable
+acceptance if agent
 work will take time. It may say the agent has been asked, never that the requested
 change succeeded. Do not keep a model request open waiting minutes for coding
 completion. Result ingestion later creates a linked answer; during an active call,
 queue it for a natural speech boundary. Outside a call it remains readable and may
 use the existing notification integration with user preference controls.
+
+For workspace voice, show delivery through existing session controls. Any spoken
+transport acknowledgement is deterministic and separate from agent history. The
+agent response remains the normal detailed workspace response; there is no
+conversation-result ingestion or summary step in that path.
 
 ## Transcript and interruption semantics
 
@@ -97,39 +115,52 @@ otherwise. Repeated identical words are not a safe deduplication key. Keep provi
 snapshot revisions bounded; never append the entire snapshot as another message.
 
 A response request proposes a turn boundary. Commit the unconsumed user segment
-as one message only once; silence reminders and repeated requests with the same
+once into the supervisor conversation or existing session message path; silence
+reminders and repeated requests with the same
 input create no new dispatch. Persist `(voice_session, segment, accepted_revision)`
 correlation before actions. Material corrections arriving before dispatch replace
-an uncommitted proposal; after dispatch they become a visible linked correction
-and require deliberate corrective action. Do not edit the text that originally
+uncommitted input; after dispatch they require deliberate corrective input via
+the same interface. Supervisor corrections link to their original message; direct
+corrections use existing session messaging and keep revision metadata in voice
+storage. Do not edit the text that originally
 authorised an action out of the audit record.
 
 For initial action-bearing voice turns use a short configurable endpointing
 stability window (start at 500 ms and measure), cancel if speech resumes, and ask
-when target names or consequential instructions remain unclear. Transcript
-certainty alone never grants permission. Destructive or broad operations use the
-same scoped confirmation flow as text; a spoken “yes” binds to the current
+when supervisor targets or consequential instructions remain unclear. In direct
+mode the selected session is fixed; unclear transcription stays a draft for user
+correction, without a reasoning agent. Transcript certainty alone never grants
+permission. Supervisor destructive/broad operations use its text confirmation
+flow; workspace voice retains existing session permissions and approval
+controls; a spoken “yes” binds to the current
 unexpired confirmation, not an old conversation topic.
 
-Persist canonical assistant text independently of observed speech. Store planned
+In supervisor mode, persist canonical assistant text independently of observed
+speech. Store planned
 text, delivered transcript/offset where supported, and `spoken`, `partial`,
 `not_spoken` or `unknown` delivery. Default history shows the response with an
 interruption marker and expandable “what was spoken”; do not duplicate it as a
 second assistant answer. Do not claim word-perfect playback where the provider
 only supplies inferred transcript. An interrupted confirmation question must not
 be assumed heard. A barge-in fences response generation and unsent proposals;
-it cannot undo instructions already delivered to an agent.
+it cannot undo instructions already delivered to an agent. In direct mode, retain
+only transport revisions and playback references separately; do not annotate or
+replace normal workspace response history. Barge-in stops direct audio playback,
+not the coding-agent execution. New speech follows existing session send semantics.
 
-The same user may type during a call. Typed messages join the same sequence; audio
-output uses the current conversation generation. Topic changes update focus for
-future messages and do not retarget in-flight agent work.
+The same user may type during a call. Supervisor text joins its conversation
+sequence and topic focus. Workspace text and transcribed input both use existing
+session ordering; no supervisor sequence or topic resolution applies. Changing a
+workspace voice target requires an explicit session binding change, never inference
+from the spoken topic. In-flight agent work keeps its original target.
 
 ## Reconnect and device behaviour
 
 Maintain separate state machines for VK conversation transport and audio transport.
-Either can disconnect without deleting history. Resume VK events from durable
-sequence; resume media only if supported and safe. Otherwise end/reconcile the old
-call and create a new `voice_sessions` segment attached to the existing conversation.
+Either can disconnect without deleting history. Resume supervisor events from its
+durable sequence; workspace chat uses its existing history/reconnect path. Resume
+media only if supported and safe. Otherwise end/reconcile the old call and create
+a new `voice_sessions` segment with the same supervisor or existing-session binding.
 A new call does not replay previously accepted utterances or already spoken output.
 
 Reconnect snapshots may contain the whole call; segment identity and consumed
@@ -139,7 +170,8 @@ restart marks in-flight generations interrupted, scans actions and reconciles
 calls. If transcript finality cannot be established, offer the recovered text as
 an unsent draft instead of acting on it.
 
-Allow one microphone owner per conversation with explicit device takeover. End
+Allow one microphone owner per supervisor conversation or existing session
+binding with explicit device takeover. End
 and release tracks on user stop, logout or permission revocation. For mobile,
 validate HTTPS, browser permission, Bluetooth/headset routing, echo cancellation,
 network transitions and screen-lock/background suspension. Do not promise continuous
@@ -165,8 +197,10 @@ Audition natural conversational Irish voices on the actual low-latency synthesis
 path, using VK project names, short acknowledgements, long explanations and
 interruption recovery. The operator chooses the voice; do not substitute a
 caricature or an Irish-language model for Irish-accent English. Confirm rights and
-availability for the chosen voice. Start with per-user default plus per-conversation
-override. Apply a change on the next media segment unless live switching is
+availability for the chosen voice. Start with per-user default plus
+per-supervisor-conversation or voice-session
+override. These are voice settings, not supervisor memory applied to workspace
+chat. Apply a change on the next media segment unless live switching is
 verified. If unavailable, offer another voice and keep text usable; never silently
 switch accent. No voice cloning is needed.
 
@@ -221,7 +255,7 @@ segment. No migration of conversation, memory, actions or execution ownership.
 Do not implement speculative adapters now; define the contract and a fake adapter.
 
 Budget recurring cost as voice minutes × transport/STT/TTS rate, plus supervisor
-and presentation input/output tokens, summary refreshes, storage/backup, ingress
+input/output tokens, summary refreshes, storage/backup, ingress
 hosting/egress and optional concurrency/add-ons. Coding-agent turns triggered by
 questions retain their own costs. Custom-model billing must avoid counting both
 a managed vendor model and VK's model for the same response.
@@ -235,5 +269,7 @@ commitment. [Retell pricing](https://www.retellai.com/pricing).
 Track per-call actuals and monthly estimates, set configurable spend alerts and
 hard call-duration/concurrency limits, and terminate abandoned calls after a
 configurable idle grace period. Low-cost deterministic acknowledgements and cached
-source-grounded summaries reduce repeated model calls. Do not buy a vector store,
+source-grounded supervisor summaries reduce repeated model calls. Direct workspace
+voice incurs STT/TTS/transport and normal coding-agent costs, with no second
+reasoning or summarisation model. Do not buy a vector store,
 telephone number or additional orchestration service for the initial release.

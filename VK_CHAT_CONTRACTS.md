@@ -8,26 +8,33 @@ Names establish the implementation contract; generate public types from Rust.
 
 Use the existing local SQLx database and migration machinery. UUID primary keys,
 UTC timestamps, foreign keys and bounded JSON payloads follow existing VK patterns.
-Create tables additively; do not rewrite execution logs or legacy chat history.
+Create tables additively; do not rewrite execution logs or existing session history.
+The `conversation_*` tables and `conversations` serve the global supervisor only.
+Workspace text chat continues using existing session APIs, history and rendering.
+Shared delivery and voice metadata below do not create a second workspace chat.
 
 | Table | Essential columns and constraints |
 | --- | --- |
-| `conversations` | `id`, `authority_id`, `principal_id`, `kind` (global/direct), nullable `workspace_id`, `session_id`, `next_seq`, `revision`, `created_at`, `archived_at`. Unique default global per authority/principal; unique direct per authority/principal/session. Check global has no workspace/session; direct has both and session belongs to workspace |
+| `conversations` | `id`, `authority_id`, `principal_id`, `next_seq`, `revision`, `created_at`, `archived_at`. Unique default global per authority/principal; no direct-conversation rows or workspace/session ownership |
 | `conversation_messages` | `id`, `conversation_id`, `created_seq`, `role`, `origin` (typed/voice/agent/derived/system), `body`, `revision`, `status`, nullable `reply_to_id`, `source_ref_id`, `voice_session_id`, `client_message_id`, `created_at`. Unique `(conversation_id, client_message_id)` when provided |
 | `conversation_events` | `(conversation_id, seq)` primary key, `event_id` unique, `type`, `schema_version`, `entity_id`, `entity_revision`, `payload`, `occurred_at`. Durable user-visible changes and action transitions; transient token/ASR deltas are not durable events |
 | `conversation_runs` | `id`, `conversation_id`, `input_message_id`, `input_revision`, `status`, `generation`, `lease_owner`, `lease_until`, `context_manifest`, `model_config`, `usage`, `error`. One active leased generation per conversation; status covers pending/running/completed/interrupted/failed |
-| `conversation_actions` | `id`, `run_id` nullable for direct sends, `conversation_id`, `origin_message_id`, `intent_kind`, `payload`, `payload_digest`, `state`, `route_evidence`, `authorisation_source`, `created_at`. Immutable authorised payload; corrections create new actions |
-| `agent_deliveries` | `id`, `action_id`, fully qualified target, `executor_config`, `target_revision`, `message`, `state`, `attempt_count`, `not_before`, `lease_generation`, nullable `execution_process_id`, `provider_receipt`, `error`. Unique `(action_id, target_session_key)`; shared session queue consumes these rows |
+| `conversation_actions` | `id`, `run_id` nullable for explicitly authorised supervisor actions outside a model run, `conversation_id`, `origin_message_id`, `intent_kind`, `payload`, `payload_digest`, `state`, `route_evidence`, `authorisation_source`, `created_at`. Immutable authorised payload; corrections create new actions |
+| `agent_deliveries` | `id`, nullable supervisor `action_id`, `source_kind` (supervisor/session/voice), `source_id`, `idempotency_key`, fully qualified target, `executor_config`, `target_revision`, `message`, `state`, `attempt_count`, `not_before`, `lease_generation`, nullable `execution_process_id`, `provider_receipt`, `error`. Unique `(source_kind, source_id, idempotency_key, target_session_key)`; shared session queue consumes these rows without requiring a supervisor action for direct sends |
 | `conversation_confirmations` | `id`, `action_id`, `principal_id`, `payload_digest`, `target_revision`, `expires_at`, `state`, `answered_message_id`. Durable, one-use, compare-and-swap acceptance |
 | `conversation_evidence` | `id`, typed source key (authority/session/process/turn/log entry or repo state), `source_revision`, `content_hash`, `availability`, `captured_at`, optional retained raw report. Unique source/revision; stable references, no arbitrary filesystem paths from callers |
 | `conversation_message_evidence` | `(message_id, evidence_id)`, optional excerpt locator, `relationship` (summarised/quoted/supporting). Supports many reports per answer |
 | `conversation_memory` | `id`, `principal_id`, scope kind/key, `claim_key`, `body`, `entity_refs`, `state` (proposed/active/superseded/retracted), `revision`, `supersedes_id`, `source_message_id`, `author_kind`, `confidence`, `valid_from`, `valid_until`. Partial uniqueness for one active revision per principal/scope/claim key |
 | `conversation_context` | `conversation_id`, `revision`, `focus`, `topic_segment`, `summary`, `covered_through_seq`, `source_versions`, `invalidated_at`. Derived and rebuildable; never used as sole evidence |
 | `conversation_read_cursors` | `(principal_id, conversation_id)`, `last_read_seq`, `last_reviewed_sources`, `updated_at`. Monotonic explicit acknowledgement; separate from existing `CodingAgentTurn.seen` |
-| `voice_sessions` | `id`, `conversation_id`, `provider`, `provider_call_id`, `voice_key`, `generation`, `state`, `transcript_cursor`, `started_at`, `ended_at`, `usage`, `retention_config`. Unique provider/call ID; never stores browser access token |
-| `voice_utterances` | `id`, `voice_session_id`, `provider_segment_key`, `revision`, `speaker`, `text`, `status`, audio offsets, nullable `message_id`, `response_generation`, `delivery_state`. Unique segment key/revision; explicit link to canonical text |
+| `voice_sessions` | `id`, `authority_id`, `principal_id`, `binding_kind` (supervisor/session), nullable `conversation_id`, nullable `session_id`, `provider`, `provider_call_id`, `voice_key`, `generation`, `state`, `transcript_cursor`, `started_at`, `ended_at`, `usage`, `retention_config`. Exactly one binding: supervisor conversation or existing session. Unique provider/call ID; never stores browser access token |
+| `voice_utterances` | `id`, `voice_session_id`, `provider_segment_key`, `revision`, `speaker`, `text`, `status`, audio offsets, nullable supervisor `message_id`, nullable `delivery_id` and existing agent response reference, `response_generation`, `delivery_state`. Unique segment key/revision; transport correlation only, not a parallel session history |
 
-A direct conversation wraps one session rather than one execution. Existing
+Workspace voice binds directly to the selected existing session. Finalised input
+is delivered once through the session message path; its response remains in
+existing agent history. Voice revisions/playback metadata live in voice tables,
+not supervisor messages or an alternate workspace transcript. Supervisor memory
+scopes never cause direct chat to read or write that memory. Existing
 multi-user deployments must not treat the local operator principal as a cloud
 user. Initially provision one stable installation operator ID under the existing
 trusted boundary; authenticated relay principals need an explicit ownership map.
@@ -50,7 +57,7 @@ history. History deletion and source artefact deletion are separate operations.
 
 ## Transaction and event contract
 
-A durable mutation increments conversation sequence, updates its query row and
+A durable supervisor mutation increments conversation sequence, updates its query row and
 inserts its event in the same database transaction. Increment `next_seq` under the
 write transaction, not from wall-clock time or a frontend counter. Emit notifications
 only after commit. SQLite hooks/MsgStore can wake subscribers but are not a durable
@@ -78,6 +85,12 @@ generation and stable entity ID. They can be lost; final durable events replace
 them. On reconnect fetch the snapshot and resume after its sequence. Never infer
 that the user saw/spoke/heard a message simply because the server emitted it.
 
+Workspace chat continues using existing execution/log streams. Workspace voice
+status/caption events are scoped to `voice_session_id` and its generation; recovery
+loads that transport state and existing session history, not supervisor replay.
+Shared delivery updates feed existing session status paths; only supervisor-origin
+deliveries also generate supervisor conversation activity events.
+
 ## Proposed HTTP surface
 
 Mount local routes under the existing `/api` request boundary. Use existing
@@ -87,11 +100,11 @@ fully qualified. No browser-to-model credentials or arbitrary tool execution API
 
 | Route | Behaviour |
 | --- | --- |
-| `POST /conversations/resolve` | Resolve/create the principal's global conversation or an explicitly selected direct session; idempotent by unique keys |
+| `POST /conversations/resolve` | Resolve/create the principal's global supervisor conversation; idempotent by unique keys |
 | `GET /conversations` | Principal-owned history list; cursor pagination and text search |
 | `GET /conversations/{id}` | Snapshot with last sequence, active run/action summaries and capability flags |
 | `GET /conversations/{id}/messages?before_seq=&limit=` | Older messages and evidence/activity links; default 50, cap 200 |
-| `POST /conversations/{id}/messages` | `{client_message_id, body, origin, reply_to_id?, expected_focus_revision?, target?}`; 202 only after message plus pending run/direct action commit; returns stable IDs/sequence |
+| `POST /conversations/{id}/messages` | `{client_message_id, body, origin, reply_to_id?, expected_focus_revision?, target?}`; 202 only after message plus pending supervisor run/action commit; returns stable IDs/sequence |
 | `POST /conversations/{id}/messages/{mid}/corrections` | Creates a linked correction, preserving original authorisation evidence; never silently edits dispatched instructions |
 | `GET /conversations/{id}/events/ws?after_seq=` | Replay/live contract above, using existing signed WebSocket mechanisms where applicable |
 | `POST /conversation-runs/{id}/cancel` | Fences model generation; cancels only undispatched proposals, returns any already delivered actions |
@@ -103,10 +116,13 @@ fully qualified. No browser-to-model credentials or arbitrary tool execution API
 | `PATCH/DELETE /conversation-memories/{id}` | Revision-checked supersession/retraction, scope validation and cache invalidation |
 | `POST /conversations/{id}/read` | Acknowledge displayed sequence and actually reviewed source coverage |
 | `GET /voice/capabilities` and `GET /voice/voices` | Provider availability and selectable voice previews, no credentials |
-| `POST /conversations/{id}/voice-sessions` | Bind call to conversation, selected direct session if applicable, and voice preference; short-lived browser connection material |
-| `POST /voice-sessions/{id}/resume` and `/end` | Reconcile/reconnect or start a new media segment on the same conversation; idempotent end |
+| `POST /conversations/{id}/voice-sessions` | Bind call to supervisor conversation and voice preference; short-lived browser connection material |
+| `POST /sessions/{id}/voice-sessions` | Bind voice to an existing authorised session; transcripts use existing follow-up/steering/queue semantics, with no supervisor run or conversation row |
+| `GET /voice-sessions/{id}` and `/events/ws` | Authorised transport snapshot/events for either binding; caption revisions and playback metadata only |
+| `POST /voice-sessions/{id}/resume` and `/end` | Reconcile/reconnect or start a new media segment on the same supervisor conversation or existing agent session binding; idempotent end |
 
-Initial limits: 64 KiB text per conversational message (attachments by existing
+Initial supervisor limits (existing workspace text limits remain unchanged):
+64 KiB text per conversational message (attachments by existing
 reference), 20 routing candidates per page, default maximum 5 inferred recipients
 before scope review, and one active model run per conversation. Explicit larger
 sets are supported through reviewed target manifests. These are configurable
@@ -124,10 +140,12 @@ SQL, shell commands, filesystem paths or provider callbacks.
 
 ## Dispatch and reconciliation
 
-Refactor existing session follow-up/queue handlers and their frontend callers onto
-one dispatch service. Keep their public compatibility during migration. Replace
+Extract reusable dispatch primitives from existing session follow-up/queue handlers.
+Keep ordinary workspace callers on their existing APIs with the same behaviour;
+no supervisor/model/memory dependency is introduced. Replace
 the authoritative `DashMap` queue with persisted `agent_deliveries` (optionally an
-in-memory cache), including legacy callers by giving them source/action IDs. Do
+in-memory cache), including existing callers through delivery source IDs, without
+creating supervisor conversation/action rows for workspace messages. Do
 not copy messages into both an independent supervisor queue and the old consumer.
 
 Message acceptance is not execution success. Per-recipient states:
@@ -167,7 +185,8 @@ state, native-goal pause, permissions and active process under the guard. A proc
 finishing between resolution and dispatch causes a re-read; it does not change the
 target session. A renamed/archived/deleted target may require re-resolution.
 Queue cancel and consumer claim must be one atomic state transition. Preserve
-message ordering by committed sequence; keep individual provenance when legacy
+existing session admission order across sources; supervisor sequence orders its
+own inputs only. Keep individual provenance when existing
 behaviour combines several messages into one follow-up prompt.
 
 Create an execution correlation (delivery ID to process ID) in the same transaction
@@ -186,25 +205,28 @@ Use the same rule for provider call creation timeouts: reconcile, then retry.
 
 A durable result-ingestion scan uses coding-turn ID plus source revision/hash as
 its key. Live events give low latency; restart scan repairs missed finalisations.
-Initial direct history is a lazy projection of existing turns/logs with stable
-source keys. New direct sends and their projected agent echoes share those keys
-so the transcript does not double-render. Keep original input separate from any
-expanded executor prompt. Native retry/reset makes an old process `dropped`;
+Supervisor ingestion references existing turns/logs by stable evidence keys; it
+does not project a new direct history. Existing workspace rendering and prompt
+history stay unchanged. Voice transport correlates accepted segments with existing
+delivery/response IDs so retries cannot insert duplicate agent messages. Native
+retry/reset makes an old process `dropped`;
 record that supersession in evidence and exclude it from current-state summaries,
 while retaining historical action records. Existing process normalisation and
 attachment handling remain the raw view.
 
 ## Concurrency and failure semantics
 
-- Text and finalised speech enter one sequence. Two clients may append concurrently;
+- Supervisor text and finalised speech enter one supervisor sequence. Two
+  clients may append concurrently;
   unique client IDs deduplicate retries. A reused ID with changed content is 409.
 - Conversation model work uses one renewable lease/generation. A new utterance can
   interrupt generation; ignore late model tool proposals from the fenced generation.
   Already accepted actions remain visible and independently reconciled.
 - Direct and global sends to the same agent use the same admission/queue boundary.
-  Opposing instructions are not merged by a summary. Show their order and ask for
-  clarification when the new intent is ambiguous.
-- One active microphone owner per conversation. A second device requests takeover;
+  Opposing instructions are not merged by a summary. The supervisor can clarify
+  its own ambiguous intent; direct sends retain existing session behaviour.
+- One active microphone owner per supervisor conversation or existing session
+  binding. A second device requests takeover;
   the old generation is fenced before new media starts. Typed messages remain usable.
 - Model failure leaves committed input and delivery records intact; retry a run
   with its existing action IDs. A new model response cannot duplicate those effects.
@@ -215,6 +237,10 @@ attachment handling remain the raw view.
 - Approval expiry or lost native approval waiter is reported; re-fetch the agent's
   current request. Persistent orchestration confirmation does not resurrect an
   expired executor approval.
+
+Direct text/voice never creates a conversation model run. A supervisor model outage
+or missing model credential cannot block ordinary workspace interaction. Cancelling
+workspace speech playback only stops audio; it does not cancel the coding-agent run.
 
 ## Observability, privacy and retention
 
@@ -246,4 +272,5 @@ Local origin checks are CSRF protection, not user authentication: current middle
 allows requests without Origin and bypasses signature verification for non-relay
 requests. Preserve trusted local access; never expose new chat/tools routes publicly
 on the assumption that CORS authenticates them. Voice ingress is separately
-restricted as described in [voice security](VK_CHAT_VOICE.md#security-and-third-party-processing).
+restricted as described in [voice
+security](VK_CHAT_VOICE.md#security-and-third-party-processing).

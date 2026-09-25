@@ -1,3 +1,13 @@
+## September 25: clarified supervisor/workspace boundary
+
+All five VK_CHAT design documents now reserve new conversation history, memory,
+routing and conversational summaries for the global supervisor. Existing workspace
+text chat retains raw coding-agent output, validation, controls and history.
+Workspace voice transcribes into the existing session message path; optional
+playback uses the raw response without another reasoning model. Voice metadata
+stays separate. Shared delivery/voice primitives remain reusable. No implementation
+or runtime changes were made for this focused revision.
+
 ## September 15: Chat orchestration design and implementation handoff
 
 The design is in [VK_CHAT_ARCHITECTURE.md](VK_CHAT_ARCHITECTURE.md),

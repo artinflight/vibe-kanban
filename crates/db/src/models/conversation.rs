@@ -42,6 +42,12 @@ pub enum ConversationError {
     InvalidBody,
     #[error("Run lease is expired, cancelled or superseded")]
     StaleLease,
+    #[error("Record changed; reload before applying this change")]
+    RevisionConflict,
+    #[error("Invalid supervisor record or scope")]
+    InvalidRecord,
+    #[error("Resolve active or uncertain deliveries before deleting supervisor history")]
+    ActiveDeliveries,
     #[error(transparent)]
     Database(#[from] sqlx::Error),
 }
@@ -509,3 +515,5 @@ async fn emit(
 
 #[cfg(test)]
 mod tests;
+
+pub mod records;

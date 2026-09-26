@@ -15,6 +15,7 @@ use db::models::conversation::{
     AcceptConversationMessage, Conversation, ConversationError, ConversationInputOrigin,
     ConversationMessage, ConversationScope, ConversationStore,
 };
+use futures_util::SinkExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sqlx::SqlitePool;
@@ -101,6 +102,9 @@ impl From<ConversationError> for ChatApiError {
             ConversationError::StaleLease => {
                 Self(StatusCode::CONFLICT, "Response was cancelled or superseded")
             }
+            ConversationError::RevisionConflict => Self(StatusCode::CONFLICT, "Record changed; reload before updating"),
+            ConversationError::InvalidRecord => Self(StatusCode::BAD_REQUEST, "Invalid supervisor record or scope"),
+            ConversationError::ActiveDeliveries => Self(StatusCode::CONFLICT, "Resolve active or uncertain deliveries before deleting history"),
             ConversationError::InvalidBody => Self(
                 StatusCode::BAD_REQUEST,
                 "Message must contain text and be at most 64 KiB",

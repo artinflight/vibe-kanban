@@ -9,6 +9,7 @@ executors = { path = "../executors" }
 thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = "0.10"
 anyhow = { workspace = true }
 tracing = { workspace = true }
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "sqlite", "sqlite-preupdate-hook", "chrono", "uuid"] }

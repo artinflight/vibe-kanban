@@ -11,6 +11,14 @@ follow the repository's `VK_*.md` architecture/runbook convention.
 
 ## Product and experience
 
+Mobile voice is Android-first: a lightweight native Kotlin client connects to the
+same VK backend. Register its internet voice session as an Android Telecom call
+so the car MMI recognises an ongoing call and exposes supported call controls.
+Screen-off operation and actual car acceptance are requirements, not optional
+future extensions. No telephone number or cellular call is needed. Desktop web
+remains the primary text/history interface; browser voice is a secondary surface.
+See [native call design](VK_CHAT_VOICE.md#android-client-and-native-call-integration).
+
 VK gains one enduring supervisor conversation above projects. Existing workspace/
 session chat remains the raw direct coding-agent interface, with its current
 detailed responses, completion reports, validation, controls, history and behaviour.
@@ -42,6 +50,25 @@ such as “Sent to Android · onboarding” exposes exact recipients, transmitte
 instruction, delivery status and linked result. A summary is visibly a summary;
 “Original” opens the untouched report. These are affordances, not mandatory
 sections in every response.
+
+### Spoken conversation quality
+
+Supervisor speech must be natural, plain English intended to be heard. Do not
+read Markdown lists, numbered steps, routine test counts, identifiers, file paths,
+code, JSON or other machine-formatted strings aloud. Explain the meaning and
+material outcome in conversational sentences. A necessary quantity can be spoken
+naturally when it answers the question; incidental technical numbers belong in
+visual evidence. Technical drill-down opens the exact source on screen and gives
+a plain-English spoken explanation. Asking to show code does not authorise reading
+it aloud. This is a voice-output requirement, not a rigid response template.
+
+Test the proposed supervisor speech as text early, before connecting TTS or
+building the calling UI. Use realistic raw agent reports and follow-up questions
+to judge what the user would actually hear. Passing schema/keyword checks alone
+cannot establish naturalness. See the [speech evaluation gate](VK_CHAT_IMPLEMENTATION.md#early-spoken-text-evaluation-gate).
+Existing workspace output stays raw. Optional direct playback uses prose passages
+from that output, with explicit selection/skip controls for technical blocks and
+no extra reasoning model; it does not inherit supervisor summarisation or memory.
 
 Examples and acceptance intent:
 
@@ -79,6 +106,7 @@ not old continuity claims about live service ports.
 | Cloud | [remote guide](crates/remote/AGENTS.md), [shapes.rs](crates/remote/src/shapes.rs), [remote auth](crates/remote/src/auth) | **Reuse when remote support is enabled**: Postgres, membership checks, Electric read sync and REST mutations; no new cloud conversation replica initially |
 | Permissions | [routes/mod.rs](crates/server/src/routes/mod.rs), [origin.rs](crates/server/src/middleware/origin.rs), [relay_request_signature.rs](crates/server/src/middleware/relay_request_signature.rs), [approvals.rs](crates/services/src/services/approvals.rs) | **Reuse** request and executor approval boundaries; **new** durable orchestration confirmation grants |
 | Autonomous/child agents | [Codex client](crates/executors/src/executors/codex/client.rs), [goals.rs](crates/executors/src/executors/codex/goals.rs), [capacity.rs](crates/server/src/routes/capacity.rs), [subagent_job.rs](crates/db/src/models/subagent_job.rs) | **Reuse** native goals/checkpoints, capacity admission, root/child relationships; no second goal continuation loop |
+| Native Android voice client | No client for this feature in the inspected baseline | **New subsystem**: thin Kotlin application, Telecom lifecycle and provider media adapter; reuse backend APIs/history, not a second supervisor |
 | Supervisor, memory, voice | No first-class equivalent in the inspected paths | **New subsystems** inside existing backend/frontend packages, not new independently deployed services by default |
 
 ### Entity relationships that routing must respect
@@ -123,7 +151,9 @@ Global text/voice -> Supervisor Conversation API -> supervisor model + policy
                     existing raw workspace chat
                     optional raw-response speech playback
 
-Voice transport adapters are shared; supervisor and workspace bindings are distinct.
+Android Telecom call -> native media adapter -> shared VK voice-session API
+Desktop browser voice -> browser media adapter -> same voice-session API
+Voice transport contracts are shared; supervisor and workspace bindings are distinct.
 ```
 
 VK owns identity, history, memory, routing candidates, permissions, action
@@ -305,6 +335,13 @@ never create separate global histories simply because navigation changes host.
 Cloud-wide multi-user aggregation is a genuine later scope decision, not required
 for one operator's cross-device conversation.
 
+The Android client uses the same authority, conversation/session IDs and replay
+contracts. It owns local call controls and media lifecycle, not canonical history,
+memory or model execution. Use the protected phone-to-VK access path and keep
+provider secrets on the server. A native client does not turn Origin checks into
+authentication. Initial UI is supervisor call, explicit workspace/session picker,
+live captions and call controls; full coding-agent controls remain in VK web.
+
 ## Tradeoffs and decisions
 
 | Choice | Reason / consequence |
@@ -315,12 +352,15 @@ for one operator's cross-device conversation.
 | Existing direct session interface plus voice transport | Preserves raw text/output/history; optional speech reads the existing response with no second reasoning model or supervisor memory |
 | Append-only events with queryable rows | Reliable replay without a new message broker or replatforming all VK state into event sourcing |
 | Scoped relational memory first | Easier provenance/deletion/isolation; semantic search can be added after measuring retrieval misses |
-| Retell custom-model integration | More integration responsibility than a managed vendor agent; keeps VK's conversation and action logic shared with text |
+| Android-first voice with Core-Telecom | Supports platform call lifecycle and car controls; adds APK delivery and real device/car QA. A WebView or media-only session does not satisfy the requirement |
+| Retell custom-model integration, conditional on native transport proof | Keeps VK logic shared with text; browser support alone does not establish Android compatibility. Preserve the provider boundary if another adapter is needed |
 | Preserve canonical text separately from speech delivery | Honest interruption history; neither generated text nor provider playback alone is the entire conversation |
 
 Real operator decisions are the funded supervisor model account, voice account and
 acceptable external processing/retention, and the auditioned Irish voice. Recommend
 one local authority, no raw audio retention, user-requested summaries plus relevant
 instruction-result updates, and no unsolicited spoken announcements outside an
-active voice conversation. Optional cloud-wide sharing, telephone access and
-background mobile calling can be chosen later without blocking the core design.
+active voice conversation. Android background calling and car MMI integration are
+in scope. Phone/Android version and car/MMI connection details are needed for
+physical acceptance. Optional cloud-wide sharing and telephone access remain later
+choices; neither is needed for a native internet call.

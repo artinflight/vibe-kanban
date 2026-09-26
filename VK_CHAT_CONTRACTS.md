@@ -27,7 +27,7 @@ Shared delivery and voice metadata below do not create a second workspace chat.
 | `conversation_memory` | `id`, `principal_id`, scope kind/key, `claim_key`, `body`, `entity_refs`, `state` (proposed/active/superseded/retracted), `revision`, `supersedes_id`, `source_message_id`, `author_kind`, `confidence`, `valid_from`, `valid_until`. Partial uniqueness for one active revision per principal/scope/claim key |
 | `conversation_context` | `conversation_id`, `revision`, `focus`, `topic_segment`, `summary`, `covered_through_seq`, `source_versions`, `invalidated_at`. Derived and rebuildable; never used as sole evidence |
 | `conversation_read_cursors` | `(principal_id, conversation_id)`, `last_read_seq`, `last_reviewed_sources`, `updated_at`. Monotonic explicit acknowledgement; separate from existing `CodingAgentTurn.seen` |
-| `voice_sessions` | `id`, `authority_id`, `principal_id`, `binding_kind` (supervisor/session), nullable `conversation_id`, nullable `session_id`, `provider`, `provider_call_id`, `voice_key`, `generation`, `state`, `transcript_cursor`, `started_at`, `ended_at`, `usage`, `retention_config`. Exactly one binding: supervisor conversation or existing session. Unique provider/call ID; never stores browser access token |
+| `voice_sessions` | `id`, `authority_id`, `principal_id`, `binding_kind` (supervisor/session), nullable `conversation_id`, nullable `session_id`, `provider`, `provider_call_id`, `voice_key`, `generation`, `state`, `transcript_cursor`, `started_at`, `ended_at`, `usage`, `retention_config`, `client_platform` (android/web), `client_instance_id`, `lease_expires_at`. Exactly one binding: supervisor conversation or existing session. Unique provider/call ID; never stores client access tokens |
 | `voice_utterances` | `id`, `voice_session_id`, `provider_segment_key`, `revision`, `speaker`, `text`, `status`, audio offsets, nullable supervisor `message_id`, nullable `delivery_id` and existing agent response reference, `response_generation`, `delivery_state`. Unique segment key/revision; transport correlation only, not a parallel session history |
 
 Workspace voice binds directly to the selected existing session. Finalised input
@@ -96,7 +96,7 @@ deliveries also generate supervisor conversation activity events.
 Mount local routes under the existing `/api` request boundary. Use existing
 `ApiResponse<T>` conventions and generated Rust/TypeScript DTOs. IDs in URLs are
 local to the selected authoritative backend; external references in payloads are
-fully qualified. No browser-to-model credentials or arbitrary tool execution API.
+fully qualified. No client-to-model credentials or arbitrary tool execution API.
 
 | Route | Behaviour |
 | --- | --- |
@@ -115,11 +115,37 @@ fully qualified. No browser-to-model credentials or arbitrary tool execution API
 | `GET/POST /conversation-memories` | Scoped list/search or explicit addition |
 | `PATCH/DELETE /conversation-memories/{id}` | Revision-checked supersession/retraction, scope validation and cache invalidation |
 | `POST /conversations/{id}/read` | Acknowledge displayed sequence and actually reviewed source coverage |
-| `GET /voice/capabilities` and `GET /voice/voices` | Provider availability and selectable voice previews, no credentials |
-| `POST /conversations/{id}/voice-sessions` | Bind call to supervisor conversation and voice preference; short-lived browser connection material |
+| `GET /voice/capabilities` and `GET /voice/voices` | Provider availability per client platform, native transport support and selectable voice previews, no credentials |
+| `POST /conversations/{id}/voice-sessions` | Bind call to supervisor conversation and voice preference; short-lived platform-tagged client connection material |
 | `POST /sessions/{id}/voice-sessions` | Bind voice to an existing authorised session; transcripts use existing follow-up/steering/queue semantics, with no supervisor run or conversation row |
 | `GET /voice-sessions/{id}` and `/events/ws` | Authorised transport snapshot/events for either binding; caption revisions and playback metadata only |
+| `POST /voice-sessions/{id}/heartbeat` | Renew bounded media ownership lease for authenticated client/generation; expired or fenced ownership cannot revive a call |
 | `POST /voice-sessions/{id}/resume` and `/end` | Reconcile/reconnect or start a new media segment on the same supervisor conversation or existing agent session binding; idempotent end |
+
+### Android call contract
+
+The native client uses the same voice endpoints and history owners. Creation
+includes `client_platform`, `client_instance_id` and a stable idempotency key;
+unsupported platform/provider combinations fail before creating a billable call.
+Connection material stays ephemeral in client memory. Retrying creation returns
+the same binding or an explicit uncertain-creation state, not a second call.
+
+Android owns its local Telecom handle and controls, mapped to VK voice-session
+ID/generation; handles and endpoint observations are transport metadata, never
+conversation messages or model tools. Voice snapshots expose connection state,
+owner generation and disconnect reason. Platform call state, provider media state
+and agent execution state remain distinct. Ending/hanging up is terminal for that
+media generation, including across racing resume/heartbeat requests. A stopped
+client cannot renew its lease; expiry reconciles/ends the provider session without
+cancelling accepted agent work. Set a bounded lease (initial 60 seconds, heartbeats
+every 15 seconds; measure on device), with a shorter local reconnect grace.
+Device takeover fences the old generation and closes its native/media call.
+
+Mute, audio routing and supported hold controls execute locally through Telecom
+and its media adapter without a model round trip. Do not publish every endpoint
+change into supervisor history. Existing authorization applies to the Android
+client too; absence of a browser Origin header is not authentication. See
+[native call integration](VK_CHAT_VOICE.md#android-client-and-native-call-integration).
 
 Initial supervisor limits (existing workspace text limits remain unchanged):
 64 KiB text per conversational message (attachments by existing
@@ -241,6 +267,18 @@ attachment handling remain the raw view.
 Direct text/voice never creates a conversation model run. A supervisor model outage
 or missing model credential cannot block ordinary workspace interaction. Cancelling
 workspace speech playback only stops audio; it does not cancel the coding-agent run.
+
+## Spoken output contract
+
+Supervisor response output identifies canonical message text, optional linked
+speech-ready text, and visual evidence references separately. Speech text is
+plain-English prose validated before TTS, not a serialised UI Markdown payload.
+Store the planned speech reference/version and observed playback metadata in the
+existing voice correlation model. A separate speech variant is produced by the
+same supervisor run and cannot add actions or replace the canonical evidence.
+Direct session playback references original response ranges plus skipped-range
+metadata; it never writes a sanitised replacement agent message. See
+[speech content policy](VK_CHAT_VOICE.md#speech-content-natural-plain-english).
 
 ## Observability, privacy and retention
 

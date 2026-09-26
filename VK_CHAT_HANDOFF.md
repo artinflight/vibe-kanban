@@ -22,6 +22,19 @@ Copy the following prompt to start development:
 > no parallel direct conversation or supervisor memory applied to workspace chat.
 > Reuse low-level dispatch and voice transport where sensible; supervisor behaviour
 > belongs only to the global supervisor.
+> Build the lightweight native Android voice client first for mobile use, sharing
+> VK backend history and voice contracts. Integrate Android Core-Telecom so the car
+> MMI recognises a call and exposes supported call controls; include screen-off
+> calling, car audio/hang-up and incoming-call handling in real phone/car acceptance.
+> Prove native provider transport/Telecom compatibility early; Retell is conditional
+> on that proof. A WebView or media-only session is insufficient. Desktop web keeps
+> text/history; browser voice is secondary. No telephone number is required.
+> Make supervisor speech natural plain English: no spoken lists, routine test-count
+> recitals, code or opaque technical strings. Keep technical evidence available
+> visually. Build the early spoken-text evaluation corpus and review real-model
+> text outputs before voice integration, as specified in the implementation plan.
+> Preserve raw workspace responses; optional direct playback filters/selects prose
+> without a summarising agent.
 > Update the design when implementation decisions materially change it. Use fixtures
 > while provider credentials are unavailable and identify the precise live-integration
 > gates. Follow VK's validation, storage, preview and deployment rules. If I explicitly

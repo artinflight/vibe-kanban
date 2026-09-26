@@ -3,6 +3,8 @@
 Companion to [architecture](VK_CHAT_ARCHITECTURE.md) and
 [contracts](VK_CHAT_CONTRACTS.md). Provider documentation checked 2026-09-15;
 capability claims below are documentation evidence, not a tested integration.
+Android call integration references checked 2026-09-26. Android-first mobile voice
+and car MMI call controls supersede the earlier foreground-browser mobile scope.
 
 ## Boundary
 
@@ -11,14 +13,14 @@ supervisor conversation service consumes utterances and produces conversational
 responses. Workspace voice instead sends transcribed input through the existing
 agent/session message path and leaves its raw response/history unchanged. Neither
 path needs Retell call IDs, SDK objects or provider tool state in its chat model.
-The adapter owns those details. Browser media can flow directly to the voice
+The adapter owns those details. Native Android or browser media can flow directly to the voice
 provider; canonical text and action records still flow through VK.
 
 Proposed backend `VoiceProvider` operations:
 
 - `capabilities()` and `list_voices()` return catalogue metadata and previews.
 - `create_session(binding, voice, retention_policy)` returns provider
-  identity plus expiring browser connection material. The binding is either a
+  identity plus expiring client connection material for an explicitly supported platform. The binding is either a
   supervisor conversation or an existing workspace/session, never both.
 - `ingest_provider_event()` verifies and normalises incoming transcript, lifecycle,
   response-request and interruption events.
@@ -26,7 +28,7 @@ Proposed backend `VoiceProvider` operations:
   speech content; `cancel_response()` stops obsolete output when supported.
 - `reconcile_session()` and `end_session()` recover status or end media.
 
-Proposed frontend `VoiceClient` owns connect, mute, end, device selection and
+Proposed client `VoiceClient` owns connect, mute, end, device selection and
 connection status. Provider-specific connection data is an opaque tagged payload
 consumed only by its adapter. Capability flags describe transcript revisions,
 playback acknowledgements, interruption, voice switching and reconnect. Unsupported
@@ -37,15 +39,81 @@ Normalised inputs include `session.connected`, `utterance.partial`,
 `speech.interrupted`, `playback.observed`, `session.ended` and `session.error`.
 Direct mode requires no second reasoning/summarisation agent. Optional TTS reads
 the existing coding-agent response (or a user-selected passage) without semantic
-rewriting. Mechanical speech formatting may omit markup syntax, but preserves
-content and never alters the stored response. Playback controls and transport
+rewriting. Mechanical speech formatting and prose selection preserve the meaning of played
+passages, mark skipped technical content and never alter the stored response. Playback controls and transport
 metadata stay outside the normal workspace transcript.
 
 Every input is correlated to VK voice-session ID/generation and provider event or
 segment identity. Speech recognition (STT) and synthesis (TTS) are provider
 responsibilities, while VK commits text, resolves targets and applies policy.
 
+## Android client and native call integration
+
+Build a thin native Kotlin Android app, with supervisor calling as the default and
+an explicit workspace/session selector for direct voice. VK remains the source of
+truth for all conversations and actions. Native captions are views of those same
+records; the app does not introduce another assistant, memory store or workspace
+conversation. Desktop web retains text/history and later browser voice reuses the
+same backend contract. A WebView shell alone is insufficient.
+
+The product requirement is a real platform-integrated VoIP call: the user's car MMI
+must show the ongoing call and offer its supported call controls, like the
+experience the user reports with ChatGPT voice. That comparison is a UX target,
+not evidence about ChatGPT internals or a requirement to copy them. Bluetooth
+call audio alone is insufficient without call state/control integration.
+
+Use Jetpack Core-Telecom as the recommended Android integration. Register the app
+and add an audio call through `CallsManager`, with `MANAGE_OWN_CALLS` and microphone
+permissions. Handle platform lifecycle callbacks, post the required foreground
+notification and let Telecom own endpoint routing. Keep the media SDK from fighting
+Telecom for audio routes. These are documented platform capabilities; the chosen
+SDK must demonstrate compatibility. [Core-Telecom guide](https://developer.android.com/develop/connectivity/telecom/voip-app/telecom).
+
+Telecom supports self-managed calls, Bluetooth head units and automotive call
+experiences. Prefer this integration without becoming the default dialler. A
+separate Android Auto app, SIM call, Twilio number or phone dial-out is not required
+by this design. Validate Bluetooth hands-free and Android Auto separately where
+the operator uses them; they are different connection paths. Exact controls and
+labels depend on the phone and MMI. [ConnectionService reference](https://developer.android.com/reference/android/telecom/ConnectionService).
+
+Start calls from an explicit visible user action, then maintain the supported
+foreground call lifecycle while the screen locks or the app backgrounds. Declare
+the service types/permissions required by the selected Android/Telecom versions;
+do not assume background microphone startup is allowed. On permission revocation
+or platform termination, close media and reconcile backend state.
+[Android microphone restrictions](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start).
+
+### Native call lifecycle and acceptance
+
+- Use a stable local call handle mapped to the VK binding and current media
+  generation. Platform active/disconnected state follows actual media readiness.
+- Car/headset hang-up stops capture and playback immediately, releases the platform
+  call and idempotently ends the VK/provider voice session. It does not stop an
+  already-running coding task or erase its history. Offline end is reconciled; a
+  bounded server lease/idle timeout prevents an orphan billable call.
+- Reflect mute and endpoint changes in both UI and media. Support hold/inactive
+  transitions only when media can actually suspend; do not advertise unsupported
+  capabilities. Telecom arbitration for another call must suspend/end VK audio
+  appropriately, with no microphone leakage into the competing call.
+- Network recovery never resends accepted instructions. Retain the platform call
+  only during a bounded recoverable media interruption; otherwise disconnect and
+  offer explicit resume. A late reconnect must not resurrect a call after hang-up.
+- Test on the operator's phone and car: MMI shows a call, car microphone/speakers
+  work, MMI/steering-wheel hang-up ends it, supported mute controls agree, locked
+  screen sustains conversation, an incoming cellular call is handled, and network
+  loss/recovery leaves no duplicate instruction or ghost call. Record phone/OS,
+  MMI model/software and Bluetooth versus Android Auto mode. Emulator or handset
+  speaker success alone cannot close car acceptance.
+
 ## Why Retell custom-model mode
+
+Retell remains the initial provider candidate, conditional on a supported native
+Android media path that works with Telecom. No native Retell SDK compatibility has
+been established by this design. The early spike must prove server-authorised
+joining, audio routing, lifecycle control and custom-model transcript delivery on
+Android; browser SDK documentation is insufficient. If that gate fails, record the
+blocker and choose a supported provider adapter without changing VK conversation
+ownership or settling for a WebView workaround.
 
 Retell documents browser calls without a phone number, live transcript support
 and browser microphone/playback requirements. Its current web guide uses
@@ -81,11 +149,13 @@ tools can mutate VK.
 ## End-to-end flow
 
 ```text
-User presses microphone in supervisor or existing workspace/session chat
+User starts Android supervisor/direct call (or later browser microphone)
   -> VK authenticates, binds supervisor conversation OR session, commits voice metadata
-  -> Retell adapter creates browser call; VK stores provider correlation
-  -> browser joins media with expiring material; microphone indicator stays visible
-  -> Retell custom-model socket sends transcript snapshots
+  -> provider adapter creates authorised media session; VK stores correlation
+  -> Android registers Telecom call and joins supported native media transport
+       (browser surface uses its browser adapter)
+  -> call/microphone controls stay available through the platform notification/MMI
+  -> provider adapter (Retell custom-model socket when selected) sends transcripts
   -> adapter reconciles segments and accepts stable input once
   -> supervisor: its coordinator/history -> conversational response -> speech
   -> workspace: existing session message path -> raw agent response/history
@@ -105,6 +175,41 @@ For workspace voice, show delivery through existing session controls. Any spoken
 transport acknowledgement is deterministic and separate from agent history. The
 agent response remains the normal detailed workspace response; there is no
 conversation-result ingestion or summary step in that path.
+
+## Speech content: natural plain English
+
+The global supervisor produces speech-ready plain-English prose. Its normal
+spoken channel never recites bullet/numbered lists, test-count inventories, commit
+hashes, paths, code blocks, JSON, URLs or opaque IDs. It explains what happened,
+what matters and what needs the user, with length appropriate to the question.
+Meaningful numbers (for example a requested duration) remain possible in ordinary
+sentences; this is not a ban on conveying quantities. Exact technical material is
+available visually through raw-evidence links, accompanied by a conversational
+explanation. Do not turn a request to show source into code dictation.
+
+Prefer one speech-ready supervisor answer reused for text and speech, with
+technical evidence rendered separately as attachments/activity. When an answer
+needs a separate speech variant, generate it within the existing supervisor run,
+link it to the canonical message and retain the planned/spoken distinction. Never
+invent a second voice reasoning agent. Prompt for the listener's understanding
+and desired outcome; enforce output structure in code. If structured/code output
+leaks into speech, hold it from TTS and use a bounded same-run correction or a
+short deterministic explanation that details are available on screen. A regex
+cannot assess meaning or replace semantic evaluation.
+
+Direct workspace voice still stores the unmodified coding-agent response. Its
+optional playback defaults to prose-only passages; deterministically skip code,
+tables, enumerations and opaque technical tokens with a visible skipped-content
+indicator. Preserve the exact original and provide selection/stop controls. This
+is a playback filter, not a paraphrase or supervisor round trip. If the available
+output is entirely technical or cannot safely be filtered, keep it on screen and
+use a short transport notice rather than reciting it or silently changing meaning.
+Do not claim prose from a coding agent has been conversationally rewritten.
+
+Exercise these rules using text fixtures before live voice setup. The same approved
+text samples then become TTS audition and car-audio acceptance inputs. Natural
+speech must still disclose material failures and uncertainty; brevity must not
+hide them. The implementation plan defines the early acceptance gate.
 
 ## Transcript and interruption semantics
 
@@ -171,14 +276,13 @@ calls. If transcript finality cannot be established, offer the recovered text as
 an unsent draft instead of acting on it.
 
 Allow one microphone owner per supervisor conversation or existing session
-binding with explicit device takeover. End
-and release tracks on user stop, logout or permission revocation. For mobile,
-validate HTTPS, browser permission, Bluetooth/headset routing, echo cancellation,
-network transitions and screen-lock/background suspension. Do not promise continuous
-background/locked-screen calling from browser capability evidence. Foreground
-mobile voice plus graceful resume is the initial requirement; native background
-calling is a separate platform decision. Tauri microphone permissions require
-platform-specific acceptance as well.
+binding with explicit device takeover. Fence and disconnect the previous native
+call as well as its provider media before activating another microphone owner.
+End and release capture on user stop, logout or permission revocation. Android
+screen-off calling and car controls follow the acceptance gate above. Browser
+voice remains a secondary surface: validate HTTPS, microphone permission and
+foreground/reload recovery without promising browser background calling. Tauri
+microphone permissions require platform-specific acceptance as well.
 
 ## Selectable Irish voice
 
@@ -207,7 +311,12 @@ switch accent. No voice cloning is needed.
 ## Security and third-party processing
 
 Keep secret API keys server-side. Allowlisted voice/model settings, quotas and
-short-lived call credentials prevent arbitrary browser-created billable sessions.
+short-lived call credentials prevent arbitrary client-created billable sessions.
+Use authenticated/protected VK access from Android (including the existing tailnet
+path where configured), with revocable app credentials protected by Android
+Keystore when credentials are needed. Do not embed provider keys in the APK.
+Use a generic call label such as “VK Supervisor” by default so car/lock-screen
+displays do not expose project names; show a direct target in the app.
 An opaque call ID is correlation, not authentication. Provider callbacks cannot
 supply their own conversation or workspace binding.
 
@@ -248,6 +357,8 @@ clear request, especially when audio may be overheard.
 
 A replacement adapter must pass the transcript/deduplication, interruption,
 reconnect, capability-auth and mixed-input conformance suite before activation.
+A mobile replacement must also pass native Telecom/media and real car acceptance;
+a browser-only replacement cannot claim equivalent Android support.
 Changing Retell to Vapi, ElevenLabs realtime or a direct audio stack affects voice
 transport/configuration only. Keep old provider bindings for history, map the
 user's preferred voice to a newly auditioned equivalent, and start a new media
@@ -256,7 +367,9 @@ Do not implement speculative adapters now; define the contract and a fake adapte
 
 Budget recurring cost as voice minutes × transport/STT/TTS rate, plus supervisor
 input/output tokens, summary refreshes, storage/backup, ingress
-hosting/egress and optional concurrency/add-ons. Coding-agent turns triggered by
+hosting/egress and optional concurrency/add-ons. Native VoIP does not add PSTN
+minutes; APK signing/distribution, Android compatibility and device/car regression
+work are additional maintenance costs. Coding-agent turns triggered by
 questions retain their own costs. Custom-model billing must avoid counting both
 a managed vendor model and VK's model for the same response.
 

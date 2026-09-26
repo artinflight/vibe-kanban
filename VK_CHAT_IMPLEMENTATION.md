@@ -18,9 +18,40 @@ hidden “supervisor project”.
 
 Run a bounded voice API/SDK contract spike early, alongside that foundation when
 credentials are available. It must settle server-created call joining, authenticated
-custom-model ingress and transcript identity before committing to voice production
+custom-model ingress, transcript identity and native Android media/Telecom
+compatibility before committing to voice production
 code. The text foundation can proceed without a funded provider. Each milestone
 below has a demonstrable outcome; it is not a separate architecture exercise.
+
+## Early spoken-text evaluation gate
+
+Create a small representative evaluation corpus alongside the foundation, before
+voice UI/provider work. Run the first real-model text-only evaluation as soon as
+the supervisor model adapter is available in milestone 3; milestone 4 must pass
+it before live voice acceptance. This needs model credentials, not voice accounts
+or an Android build. Fixtures can establish the harness while credentials are absent.
+
+Include verbose successful completion reports, failed validation, a blocked agent,
+an architecture explanation, two-agent coordination, raw-evidence requests,
+“What tests?”, “What files?”, “Show the code”, long identifiers and malicious
+instructions embedded in reports. Include speech interruptions and topic changes.
+Save source inputs, expected material facts, actual proposed spoken text, model/
+prompt version and review outcome; retain no sensitive production data in fixtures.
+
+Assess aloud-friendly natural English, accurate meaning, relevant failure and
+uncertainty disclosure, and appropriate brevity. Fail unsolicited lists/numbered
+steps, routine count recitals, code/JSON, hashes/paths/URLs and other opaque strings
+in the spoken payload. Check necessary quantities are expressed naturally rather
+than deleting useful facts. Verify exact technical evidence remains accessible
+on screen. Deterministic structure checks catch obvious leaks; human review of
+representative outputs judges naturalness and groundedness. Do not grade exact
+sentences or substitute a fixed response template. Repeat after material prompt/
+model changes and carry the accepted corpus into actual TTS/car testing.
+
+For direct workspace mode, test unchanged raw stored output and zero supervisor
+model calls separately. Optional prose-only playback must skip technical blocks
+with an indicator, never paraphrase, and fall back to visual output where filtering
+would distort meaning. This gate preserves the direct/supervisor boundary.
 
 ## Milestones
 
@@ -58,6 +89,9 @@ message (the present consumer discards these queues).
 **Early voice spike output:** pinned SDK/API compatibility evidence and authenticated
 call binding test, or a precise provider blocker; no invented SDK methods. This
 is a development acceptance gate for the later adapter, not a dependency of text.
+Include a minimal real-device Telecom/provider call, screen lock, car audio and MMI
+hang-up. Record unsupported SDK/transport combinations rather than assuming a
+browser SDK can be embedded. Car hardware availability gates car proof only.
 
 ### 2. First-class supervisor text UI and workspace evidence access
 
@@ -133,9 +167,12 @@ source evidence; missing rationale causes a question to the agent; “since I la
 checked” uses acknowledged source coverage; unread completion is not falsely
 classified as a pending user decision.
 
-### 5. Provider-neutral browser voice
+### 5. Android-first native calls and shared voice transport
 
-**Establishes:** fake and Retell adapters, global/direct mic controls, selectable
+**Establishes:** a thin native Kotlin Android client with Core-Telecom call
+lifecycle, foreground notification, car MMI controls and screen-off operation;
+fake and validated provider adapters (Retell first candidate), global/direct call
+controls, selectable
 voice with previews, transcript reconciliation, mixed input, interruption and
 reconnect on the same supervisor conversation or existing session binding.
 Supervisor voice uses its coordinator; workspace voice transcribes into existing
@@ -150,9 +187,14 @@ and test fixtures before external setup. Deployment follows the normal VK runboo
 
 **Likely areas:** new conversation `voice` service/adapters, narrow provider ingress
 routes, server configuration, frontend `features/conversation/voice`, provider SDK
-package/lockfile, settings and microphone UI. Keep vendor imports within adapters.
+package/lockfile, settings and microphone UI. New proposed `apps/android/` Kotlin/
+Gradle module owns Telecom/media lifecycle, native UI, secure connection setup and
+APK signing/distribution configuration. Reconcile any existing Android module
+before creating one. Keep vendor imports within platform adapters and share
+wire contracts with the backend; a native client does not reuse React components.
 
-**Works when:** start a browser call without a telephone, see live captions, send
+**Works when:** start a native Android internet call without a telephone number,
+see live captions, send
 an instruction, end audio, then read/continue by text on another device; repeat in
 a direct workspace through existing session messaging, with unchanged raw output
 and history. Assert zero supervisor model/memory calls and no duplicate direct
@@ -160,7 +202,12 @@ conversation rows. Optional playback preserves response content. Transcript snap
 response retries, reminders, webhook duplication, mid-sentence revisions and
 barge-in never duplicate actions. Disconnection is recoverable and unknown
 playback remains labelled. Operator accepts a convincing Irish-accent voice using
-the actual realtime path. A fake replacement provider passes the same conversation
+the actual realtime path. Real phone/car acceptance must prove call recognition,
+car mic/speakers, MMI/steering-wheel hang-up, supported mute, screen lock, incoming
+cellular call arbitration and network recovery without ghost calls or duplicate
+actions. Test both supervisor and direct session bindings. Browser voice can
+follow using the same backend; it does not gate Android acceptance. A fake
+replacement provider passes the same conversation
 conformance tests without changing stored messages/memory/actions.
 
 ### 6. Recovery, privacy and controlled rollout
@@ -181,7 +228,7 @@ SQLite migration/offline query metadata and backup manifests.
 capacity/approval regressions; backup/restore preserves conversation and raw evidence;
 voice failure leaves text usable; kill switches stop new model/voice actions without
 losing accepted messages or stranding queued work. Record measured latency/cost and
-remaining browser limitations. Promotion follows staging checks and explicit human
+remaining device/car and secondary browser limitations. Promotion follows staging checks and explicit human
 QA; production interruption follows the existing restart protocol.
 
 ## Acceptance matrix and testing strategy
@@ -196,9 +243,11 @@ QA; production interruption follows the existing restart protocol.
 | Workspace boundary | Existing detailed/raw responses, validation, completion reports, controls and history unchanged; no supervisor memory/model calls for direct text/voice; transport metadata separate; direct chat works when supervisor is disabled |
 | Raw evidence | Long/paged reports; command failure buried in logs; dropped retry; source unavailable; historical vs current diff; incomplete log persistence while process completes |
 | Voice adapter | Full snapshot repeats; partial corrections; same words twice; silence reminders; interrupted/unspoken response; reconnect/new call; mismatched call identity; duplicate/out-of-order webhooks; forged/expired ingress |
+| Android call integration | Real Telecom/provider media, foreground notification, permission revocation, screen lock, endpoint/mute changes, hang-up/resume race, process death, lease expiry, incoming cellular call and signed APK install/update |
+| Car MMI | Operator phone/car pairing: recognised call, hands-free two-way audio, MMI/steering-wheel end, supported controls, no ghost call; record Bluetooth/Android Auto modes separately |
 | UI/accessibility | Desktop and narrow mobile; keyboard/panel focus; screen-reader captions; long history; navigation/host remount; microphone refusal; logout; offline draft; two-device mic takeover |
 | Native goals | Interactive sessions and goal sessions; needs-input/budget/capacity pause; no inferred activation; existing stop/resume/checkpoint behaviour retained |
-| Operator acceptance | All product examples, Irish voice audition, real phone/browser network transitions and documented background limitations, natural summaries with successful evidence drill-down |
+| Operator acceptance | All product examples, Irish voice audition, real Android/car network transitions and screen-off calling; secondary browser limitations documented, natural summaries with successful evidence drill-down |
 | Operational | Backups/restores, mounted bulk storage, retention/export/deletion propagation, provider outage/rate limits, spend limits, event backlog recovery and no unauthorised local API exposure |
 
 Test important policy/integration behaviour in Rust and UI transport/rendering in
@@ -228,7 +277,8 @@ preview guide for UI smoke tests; never validate mutations against production da
    with a source watermark and bounded batches. No direct-history migration,
    replacement or duplicate conversation is introduced.
 4. Enable the global supervisor for reads, then agent messaging, supervisor
-   summarisation/memory and finally voice. Existing workspace text stays as it is;
+   summarisation/memory and finally Android voice with native call integration;
+   browser voice follows as a secondary client. Existing workspace text stays as it is;
    workspace voice adds transcription to its existing message path. Supervisor
    action policy and existing session controls retain their respective
    boundaries. Distinguish frontend visibility, model invocation and dispatch
@@ -241,7 +291,11 @@ preview guide for UI smoke tests; never validate mutations against production da
    pending deliveries; an older in-memory consumer cannot recover them. Prefer a
    forward fix; preserve DB/logs and post-release writes under the restart protocol.
 6. Human QA precedes staging-to-main production promotion. Document actual provider
-   versions, accepted voice and retention configuration when integrated. Rehearse
+   versions, accepted voice and retention configuration when integrated. Deliver a
+   signed Android APK through the protected operator distribution path, with
+   version/minimum-OS notes, protected signing key and upgrade/rollback instructions;
+   app rollback must remain compatible with server contracts. Record physical
+   phone/car results before labelling mobile calling ready. Rehearse
    coordinated backend/UI deployment and restore before requesting cutover.
 
 ## Operator decisions and defaults
@@ -249,10 +303,11 @@ preview guide for UI smoke tests; never validate mutations against production da
 | Decision | Recommendation | Needed by |
 | --- | --- | --- |
 | Supervisor model account/model and budget | One configurable streaming/tool-capable hosted model, separate from coding executors; fixtures until credentials exist | Live milestone 3 acceptance |
-| Retell account, ingress hosting and external data processing | Server-created browser calls; narrowly authenticated ingress; no raw audio retention and minimal vendor storage, verified in account | External voice spike / milestone 5 |
+| Retell account, ingress hosting and external data processing | Server-authorised native-compatible media; narrowly authenticated ingress; no raw audio retention and minimal vendor storage, verified in account | External voice spike / milestone 5 |
 | Irish voice | Audition natural Irish English voices, then select; retain supervisor-conversation or voice-session override | Milestone 5 human acceptance |
 | Notification policy | Relevant result updates in history; no unsolicited speech outside an active call | Default can ship; user may change |
-| Multi-user cloud-wide ownership and background native calling | Keep future extensions explicit; initial one trusted authority with foreground cross-device access | Only if that broader scope is requested |
+| Phone/Android and car MMI model/software, Bluetooth versus Android Auto | Native call controls and background operation are settled requirements; record hardware details and test on the actual setup | Early native spike / milestone 5 physical acceptance |
+| Multi-user cloud-wide ownership | Future extension; initial one trusted authority with cross-device access | Only if that broader scope is requested |
 
 No decision is required to begin the core text implementation. Provider choices
 are real live-integration gates, not reasons to repeat architectural investigation.

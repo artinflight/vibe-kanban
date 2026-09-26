@@ -11,6 +11,21 @@ fn generate_types_content() -> String {
 // If you are an AI, and you absolutely have to edit this file, please confirm with the user first.";
 
     let decls: Vec<String> = vec![
+        db::models::conversation::Conversation::decl(),
+        db::models::conversation::ConversationInputOrigin::decl(),
+        db::models::conversation::AcceptConversationMessage::decl(),
+        db::models::conversation::ConversationMessage::decl(),
+        db::models::conversation::records::MemoryScope::decl(),
+        db::models::conversation::records::EvidenceSource::decl(),
+        db::models::conversation::records::ConversationAction::decl(),
+        db::models::conversation::records::ConversationEvidence::decl(),
+        db::models::conversation::records::ConversationMemory::decl(),
+        server::routes::conversations::SupervisorCapabilities::decl(),
+        server::routes::conversations::SupervisorSnapshot::decl(),
+        server::routes::conversations::SupervisorMessageReceipt::decl(),
+        server::routes::conversations::SupervisorEvent::decl(),
+        server::routes::conversations::DeleteSupervisorHistory::decl(),
+        server::routes::conversations::ForgetSupervisorMemory::decl(),
         db::models::repo::Repo::decl(),
         db::models::project::Project::decl(),
         db::models::repo::UpdateRepo::decl(),

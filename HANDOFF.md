@@ -1,3 +1,61 @@
+## September 26: durable delivery, supervisor records and API continuation
+
+Current implementation extends the foundation below. See
+`crates/db/src/models/conversation/records.rs` and migrations `20260926000001`
+through `20260926000003`: durable agent delivery, installation identity and
+supervisor action/evidence/memory records. `crates/server/src/routes/conversations.rs`
+adds opt-in local-operator history/replay, records, export/deletion and forgetting.
+`VK_SUPERVISOR_ENABLED=1` enables reads; production sends deliberately report model
+unavailable until the configured worker exists. Relay clients remain denied until
+principal ownership mapping; capabilities do not imply authentication. All responses
+are no-store. Original workspace chat keeps its existing raw history and controls.
+
+Memory supersession uses exact revision comparison; inferred claims remain proposed,
+linked scopes must all be present for retrieval, and forgetting redacts memory events,
+invalidates context and fences active model generations. Full history deletion
+removes supervisor content and retains sequence tombstones. It rejects active or
+uncertain delivery outcomes and never deletes raw workspace evidence at its source.
+Evidence retention preserves original bytes and rejects changed same-revision input.
+Action proposals are immutable/idempotent and require a live originating run.
+Authorisation/confirmation and actual supervisor dispatch remain future integration.
+
+Session queue callers now await a SQL-backed queue. Queue batch admission inserts
+process correlation atomically before spawn. Periodic recovery (after startup orphan
+cleanup) skips active finalisers, retains uncertainty after admission and retries only
+unadmitted claims. Capacity-denial reset and newer queued corrections are one
+transaction. No runtime/model process has been started to test these changes.
+Pending dispatch acceptance includes direct-admission races, steering receipts,
+crash boundaries against a real executor and goal/approval integration.
+
+UI investigation: `packages/local-web/src/app/entry/App.tsx` is above the
+`AppRouteProviders key={hostId}` remount in routes/_app.tsx. Keep supervisor state
+there; use explicit local authority in localApiTransport rather than implicit
+current-host routing. SharedAppLayout/AppBar support a small dedicated launcher
+slot; a context consumer can stay absent in remote-web until ownership is mapped.
+The existing Radix Dialog primitives provide focus/escape behavior. No UI code
+was added in this slice; preserve raw workspace rendering and use generated DTOs.
+
+Validation so far: all 31 database tests pass (`vk-chat-record-tests.log`), including
+nine records tests and the eight original conversation tests. All five API tests pass, including authenticated-scope rejection, export,
+revision-checked deletion/forgetting and no-store headers. Shared TypeScript types
+were regenerated through the Rust generator, and `cargo check -p server --offline`
+passes. All seven refreshed durable-queue tests pass, including atomic capacity-denial
+reconciliation that preserves newer messages. Logs live under `/mnt/vk-storage/capacity-build-tmp/`.
+Use `CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target CARGO_INCREMENTAL=0 SQLX_OFFLINE=true`
+with offline Cargo. No live DB/runtime/provider changes or implementation push.
+An offline frontend dependency install succeeded from a copied local pnpm store
+on the mounted SSD; full `pnpm run format` now passes. The copy is at
+`/mnt/vk-storage/capacity-build-tmp/vk-chat-pnpm-store` (source store unchanged).
+The early speech corpus/checker in `scripts/chat/` has twelve synthetic source
+cases and five passing harness tests. It has no real-model acceptance result.
+Funded API provider selection was asked asynchronously; unrelated work can continue.
+
+Scheduled goal pauses have automatically committed earlier slices; inspect Git for
+current commit boundaries. The persistence requirement now has matching storage/API evidence. The full
+goal remains active, with model/UI/voice/Android
+and integration acceptance still outstanding. Continue those milestones once the
+current API/generation checks pass rather than repeatedly polishing storage.
+
 ## September 26: implementation authorised; supervisor storage foundation
 
 The user activated the full native goal “get this built.” Implementation is now
@@ -5,7 +63,7 @@ in scope; the earlier documentation-only boundary has expired. The approved
 Android/car MMI, plain-English speech and raw-workspace boundaries remain binding.
 The fixed native checklist covers persistence, dispatch, UI, routing/policy,
 memory/summaries, speech evaluation, voice, Android and integration/release.
-No full requirement is complete yet; this is the first milestone-1 slice.
+Historical foundation checkpoint below; the newer entry above records subsequent progress.
 
 Implemented `crates/db/migrations/20260926000000_supervisor_conversation_foundation.sql`,
 `crates/db/src/models/conversation.rs` and its test module. These provide scoped

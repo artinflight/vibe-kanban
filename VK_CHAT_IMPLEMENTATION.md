@@ -6,12 +6,16 @@ Implementation entry instruction: [handoff prompt](VK_CHAT_HANDOFF.md).
 
 ## Implementation progress — 2026-09-26
 
-Milestone 1 has begun in source. The additive migration
-`20260926000000_supervisor_conversation_foundation.sql` and
-`crates/db/src/models/conversation.rs` implement supervisor-only message/run/event
-transactions, scoped reads, retry idempotency, paging and worker lease fencing.
-Existing raw workspace history is preserved. This is an internal storage slice;
-API/UI/model/dispatch integration and the remaining design are not yet delivered.
+Milestone 1 now includes supervisor history/run/event storage; immutable action
+proposals; exact retained evidence and message links; scoped/versioned memory;
+export/deletion; and stable local operator identity. The opt-in conversation API
+provides history/replay and record access, with production send acceptance disabled
+until model-worker integration. Existing raw workspace history is preserved.
+
+The existing session queue has moved to durable delivery rows with transactional
+process correlation and recovery. Supervisor action authorisation/dispatch,
+real execution-boundary acceptance, global UI, configured model and later
+milestones remain open. This is source implementation, not a deployed feature.
 See STREAM.md and HANDOFF.md for current validation and next work.
 
 ## Recommended first slice
@@ -35,8 +39,10 @@ below has a demonstrable outcome; it is not a separate architecture exercise.
 
 ## Early spoken-text evaluation gate
 
-Create a small representative evaluation corpus alongside the foundation, before
-voice UI/provider work. Run the first real-model text-only evaluation as soon as
+The initial synthetic corpus and structural checker are in
+[`scripts/chat/`](scripts/chat/README.md). Five harness tests pass; actual model
+output generation and semantic review remain required. Run this alongside the
+foundation, before voice UI/provider work. Run the first real-model text-only evaluation as soon as
 the supervisor model adapter is available in milestone 3; milestone 4 must pass
 it before live voice acceptance. This needs model credentials, not voice accounts
 or an Android build. Fixtures can establish the harness while credentials are absent.

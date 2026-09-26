@@ -230,3 +230,122 @@ async fn reject_foreign_conversation_invalid_cursor_and_unbound_voice_input() {
         StatusCode::BAD_REQUEST
     );
 }
+
+#[tokio::test]
+async fn export_delete_and_forget_require_owner_and_current_revision() {
+    use db::models::conversation::records::{MemoryChange, MemoryScope};
+    let (pool, router) = fixture(true).await;
+    let scope = ConversationScope::local_operator(&pool).await.unwrap();
+    let store = ConversationStore::new(pool, scope);
+    let id = store.resolve().await.unwrap().id;
+    let accepted = store
+        .accept(
+            id,
+            &AcceptConversationMessage {
+                client_message_id: Uuid::new_v4(),
+                body: "Keep it brief".into(),
+                origin: ConversationInputOrigin::Typed,
+                reply_to_id: None,
+            },
+        )
+        .await
+        .unwrap();
+    let memory = store
+        .put_memory(
+            id,
+            &MemoryChange {
+                scope: MemoryScope::Global,
+                claim_key: "style".into(),
+                body: "Concise updates".into(),
+                entity_refs: vec![],
+                source_message_id: accepted.message.id,
+                replaces: None,
+                explicit: true,
+                valid_until: None,
+            },
+        )
+        .await
+        .unwrap();
+    let (_, listed) = call(
+        &router,
+        "GET",
+        &format!("/conversations/{id}/memories"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(listed["data"].as_array().unwrap().len(), 1);
+    let path = format!("/conversations/{id}/memories/{}", memory.id);
+    assert_eq!(
+        call(&router, "DELETE", &path, json!({"expected_revision":99}))
+            .await
+            .0,
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        call(
+            &router,
+            "DELETE",
+            &path,
+            json!({"expected_revision":memory.revision})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let (_, export) = call(
+        &router,
+        "GET",
+        &format!("/conversations/{id}/export"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(export["data"]["memories"][0]["body"], "");
+    let path = format!("/conversations/{id}/history");
+    assert_eq!(
+        call(&router, "DELETE", &path, json!({"expected_revision":1}))
+            .await
+            .0,
+        StatusCode::CONFLICT
+    );
+    let revision = export["data"]["conversation"]["revision"].as_i64().unwrap();
+    assert_eq!(
+        call(
+            &router,
+            "DELETE",
+            &path,
+            json!({"expected_revision":revision})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let (_, messages) = call(
+        &router,
+        "GET",
+        &format!("/conversations/{id}/messages"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(messages["data"], json!([]));
+    assert_eq!(
+        call(
+            &router,
+            "GET",
+            &format!("/conversations/{}/export", Uuid::new_v4()),
+            json!({})
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+    let response = router
+        .oneshot(
+            Request::builder()
+                .uri(format!("/conversations/{id}/export"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.headers()["cache-control"], "no-store");
+}

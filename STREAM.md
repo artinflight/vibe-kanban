@@ -13,28 +13,34 @@ baseline `2fd585ac30bfa75975f6319585e4a66bb684fdcf`. Work follows
 
 ## Current implementation
 
-Milestone 1 started. Added SQLite supervisor conversation/message/event/run
-storage and a scoped Rust repository with transactional input acceptance,
-idempotent retry, paginated history, durable replay, serial worker leases,
-renewal, cancellation and fenced completion. No workspace/session rows are copied
-or rewritten. APIs, execution dispatch, UI and model workers are not wired yet.
+Milestone 1 now has supervisor-only SQLite conversation/message/event/run storage,
+action proposals, retained source evidence and scoped/versioned memory. Atomic
+acceptance, replay, leases, fenced completion, export and revision-checked deletion
+preserve existing raw workspace reports. A stable local installation principal
+owns these records; relay requests are denied until explicit ownership mapping.
+The opt-in API exposes history/replay, records, export/deletion and memory forgetting.
+Production message acceptance stays disabled until a real model worker is connected.
 
-Eight new conversation tests cover real additive migration, populated legacy
-history preservation, concurrent acceptance, paging, rollback on injected failure,
-restart and lease cancellation/expiry. The existing database suite also passes.
-Exact final validation is recorded in HANDOFF.md. Full requirement completion is
-not claimed: action/evidence/memory storage, delivery and remaining milestones
-are still outstanding.
+The ordinary session queue now uses durable `agent_deliveries`, preserving existing
+prompt projection and Codex steering behavior. Batch claims correlate process
+creation in one transaction; recovery retries only unadmitted work, retains uncertain
+outcomes, and reconciles capacity denial without losing newer messages. Actual
+supervisor action dispatch/confirmations and executor integration acceptance remain.
+
+Database validation now includes 31 passing tests covering additive legacy-history
+migration, concurrent writers, restart/replay, evidence retention, scoped retrieval,
+forgetting, deletion and rollback. API/delivery check status and commands are in
+HANDOFF.md. No UI, configured supervisor model, provider or Android client is delivered.
 
 ## Next implementation
 
-Continue milestone 1: shared durable delivery and result correlation, installation
-scope/auth mapping and API/replay integration. Add action/evidence storage and
-reconciliation without changing existing Codex steering or raw workspace chat.
-Prepare the early spoken-text corpus before connecting a real supervisor model.
+Finish current API/type generation checks, then move to the global UI and the
+configured supervisor worker/context/policy. Complete shared dispatch integration
+and its real execution-boundary acceptance alongside that work. Prepare the early
+spoken-text corpus before live voice integration. Do not rework the tested storage
+foundation without a concrete integration failure or missing acceptance outcome.
 Android Telecom/car MMI, natural English speech, raw direct workspace chat and
-provider-neutral voice remain requirements. The native goal's fixed checklist
-covers the complete implementation; it is not limited to this first slice.
+provider-neutral voice remain requirements of the full native goal.
 
 ## Validation environment
 
@@ -42,5 +48,6 @@ Scheduled execution has restricted network and no provider calls. Rust dependenc
 are available offline. Use `CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target`,
 `CARGO_INCREMENTAL=0`, `SQLX_OFFLINE=true`; TMPDIR points to the mounted SSD's
 `/mnt/vk-storage/capacity-build-tmp`. `pnpm run format` completes Rust formatting
-but frontend formatting is blocked by missing `prettier`. No live DB, service,
+and frontend formatting now passes after an offline dependency install using an
+SSD copy of the cached pnpm store. No live DB, service,
 provider account or deployment was changed.

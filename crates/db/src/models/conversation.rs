@@ -59,7 +59,9 @@ pub struct Conversation {
     pub id: Uuid,
     pub authority_id: Uuid,
     pub principal_id: Uuid,
+    #[ts(type = "number")]
     pub next_seq: i64,
+    #[ts(type = "number")]
     pub revision: i64,
     pub created_at: DateTime<Utc>,
     pub archived_at: Option<DateTime<Utc>>,
@@ -85,10 +87,12 @@ pub struct AcceptConversationMessage {
 pub struct ConversationMessage {
     pub id: Uuid,
     pub conversation_id: Uuid,
+    #[ts(type = "number")]
     pub created_seq: i64,
     pub role: String,
     pub origin: String,
     pub body: String,
+    #[ts(type = "number")]
     pub revision: i64,
     pub status: String,
     pub reply_to_id: Option<Uuid>,
@@ -101,9 +105,12 @@ pub struct ConversationRun {
     pub id: Uuid,
     pub conversation_id: Uuid,
     pub input_message_id: Uuid,
+    #[ts(type = "number")]
     pub input_revision: i64,
+    #[ts(type = "number")]
     pub accepted_seq: i64,
     pub status: String,
+    #[ts(type = "number")]
     pub generation: i64,
     pub lease_owner: Option<Uuid>,
     pub lease_until: Option<i64>,
@@ -118,13 +125,16 @@ pub struct ConversationRun {
 #[derive(Debug, Clone, Serialize, Deserialize, TS, FromRow)]
 pub struct ConversationEvent {
     pub conversation_id: Uuid,
+    #[ts(type = "number")]
     pub seq: i64,
     pub event_id: Uuid,
     #[serde(rename = "type")]
     #[sqlx(rename = "type")]
     pub event_type: String,
+    #[ts(type = "number")]
     pub schema_version: i64,
     pub entity_id: Uuid,
+    #[ts(type = "number")]
     pub revision: i64,
     // JSON storage is decoded by the API projection, not embedded as a JSON string on the wire.
     pub payload: String,
@@ -496,7 +506,16 @@ async fn emit(
     .bind(conversation_id)
     .fetch_one(&mut *conn)
     .await?;
-    let payload = serde_json::to_string(payload).map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
+    let mut payload =
+        serde_json::to_value(payload).map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
+    // Replay never needs worker leases or context/model manifests. Keeping only
+    // status prevents obsolete context surviving in historical run events.
+    if event_type == "run.status" {
+        payload = serde_json::json!({"id":payload["id"], "input_message_id":payload["input_message_id"],
+            "status":payload["status"], "generation":payload["generation"],
+            "output_message_id":payload["output_message_id"], "error":payload["error"]});
+    }
+    let payload = serde_json::to_string(&payload).map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
     sqlx::query(
         "INSERT INTO conversation_events \
          (conversation_id, seq, event_id, type, entity_id, revision, payload) VALUES (?, ?, ?, ?, ?, ?, ?)",

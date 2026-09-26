@@ -1346,3 +1346,21 @@ Final focused eight-test run adds competing-worker concurrency. Ops and diff
 checks pass; full formatter remains blocked by missing prettier after Rust passes.
 No APIs, agent delivery, models, voice or Android are integrated yet; full goal
 remains active. See HANDOFF.md for paths, evidence and next milestone-1 work.
+
+## 2026-09-26 — supervisor records, API and durable session queue
+
+Added the SQL-backed session delivery queue, atomic process correlation and recovery;
+stable installation identity; scoped supervisor HTTP/replay APIs; immutable action
+proposals, exact evidence retention/links, scoped versioned memory, forgetting,
+export and revision-checked deletion. Raw workspace reports remain separate.
+Forgetting scrubs obsolete memory events and fences active model responses.
+All 31 database and five API tests pass. Generated types and server check pass;
+refreshed queue tests are recorded in the latest HANDOFF. Offline frontend install
+from an SSD copy of the cached pnpm store unblocked full formatting.
+
+Added twelve early speech-evaluation source cases and a structural checker with
+five passing harness tests. Actual model outputs and human semantic review remain
+unverified. Persistence is now evidenced on the native checklist; the full goal
+stays active. No production deployment, live model/provider calls, implementation
+push or Android/car acceptance occurred. Global UI/model/dispatch integration is
+next; see HANDOFF and STREAM for the current continuation.

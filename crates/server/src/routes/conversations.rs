@@ -14,6 +14,7 @@ use axum::{
 use db::models::conversation::{
     AcceptConversationMessage, Conversation, ConversationError, ConversationInputOrigin,
     ConversationMessage, ConversationScope, ConversationStore,
+    records::{ConversationAction, ConversationEvidence, ConversationExport, ConversationMemory},
 };
 use futures_util::SinkExt;
 use serde::{Deserialize, Serialize};
@@ -44,6 +45,7 @@ pub struct SupervisorCapabilities {
 #[derive(Debug, Serialize, TS)]
 pub struct SupervisorSnapshot {
     pub conversation: Conversation,
+    #[ts(type = "number")]
     pub last_seq: i64,
     pub capabilities: SupervisorCapabilities,
 }
@@ -57,12 +59,15 @@ pub struct SupervisorMessageReceipt {
 #[derive(Debug, Serialize, TS)]
 pub struct SupervisorEvent {
     pub conversation_id: Uuid,
+    #[ts(type = "number")]
     pub seq: i64,
     pub event_id: Uuid,
     #[serde(rename = "type")]
     pub event_type: String,
+    #[ts(type = "number")]
     pub schema_version: i64,
     pub entity_id: Uuid,
+    #[ts(type = "number")]
     pub revision: i64,
     pub occurred_at: chrono::DateTime<chrono::Utc>,
     #[ts(type = "unknown")]
@@ -102,9 +107,18 @@ impl From<ConversationError> for ChatApiError {
             ConversationError::StaleLease => {
                 Self(StatusCode::CONFLICT, "Response was cancelled or superseded")
             }
-            ConversationError::RevisionConflict => Self(StatusCode::CONFLICT, "Record changed; reload before updating"),
-            ConversationError::InvalidRecord => Self(StatusCode::BAD_REQUEST, "Invalid supervisor record or scope"),
-            ConversationError::ActiveDeliveries => Self(StatusCode::CONFLICT, "Resolve active or uncertain deliveries before deleting history"),
+            ConversationError::RevisionConflict => Self(
+                StatusCode::CONFLICT,
+                "Record changed; reload before updating",
+            ),
+            ConversationError::InvalidRecord => Self(
+                StatusCode::BAD_REQUEST,
+                "Invalid supervisor record or scope",
+            ),
+            ConversationError::ActiveDeliveries => Self(
+                StatusCode::CONFLICT,
+                "Resolve active or uncertain deliveries before deleting history",
+            ),
             ConversationError::InvalidBody => Self(
                 StatusCode::BAD_REQUEST,
                 "Message must contain text and be at most 64 KiB",
@@ -195,6 +209,104 @@ async fn messages(
         .messages(id, query.before_seq, query.limit.unwrap_or(50))
         .await?;
     Ok(Json(ApiResponse::success(messages)))
+}
+
+async fn export(
+    State(state): State<ConversationApiState>,
+    Path(id): Path<Uuid>,
+    relay: Relay,
+) -> Result<Json<ApiResponse<ConversationExport>>, ChatApiError> {
+    Ok(Json(ApiResponse::success(
+        state.store(relay).await?.export(id).await?,
+    )))
+}
+
+#[derive(Debug, Deserialize, TS)]
+pub struct DeleteSupervisorHistory {
+    #[ts(type = "number")]
+    pub expected_revision: i64,
+}
+
+/// Clears supervisor history, memories and retained evidence together. Original
+/// session logs are separate records and never included in this deletion.
+async fn delete_history(
+    State(state): State<ConversationApiState>,
+    Path(id): Path<Uuid>,
+    relay: Relay,
+    Json(input): Json<DeleteSupervisorHistory>,
+) -> Result<Json<ApiResponse<SupervisorSnapshot>>, ChatApiError> {
+    let conversation = state
+        .store(relay)
+        .await?
+        .delete_content(id, input.expected_revision)
+        .await?;
+    Ok(Json(ApiResponse::success(SupervisorSnapshot {
+        last_seq: conversation.next_seq - 1,
+        conversation,
+        capabilities: state.capabilities(),
+    })))
+}
+
+async fn actions(
+    State(state): State<ConversationApiState>,
+    Path(id): Path<Uuid>,
+    relay: Relay,
+) -> Result<Json<ApiResponse<Vec<ConversationAction>>>, ChatApiError> {
+    Ok(Json(ApiResponse::success(
+        state.store(relay).await?.actions(id).await?,
+    )))
+}
+
+async fn evidence(
+    State(state): State<ConversationApiState>,
+    Path((id, evidence_id)): Path<(Uuid, Uuid)>,
+    relay: Relay,
+) -> Result<Json<ApiResponse<ConversationEvidence>>, ChatApiError> {
+    Ok(Json(ApiResponse::success(
+        state.store(relay).await?.evidence(id, evidence_id).await?,
+    )))
+}
+
+async fn memories(
+    State(state): State<ConversationApiState>,
+    Path(id): Path<Uuid>,
+    relay: Relay,
+) -> Result<Json<ApiResponse<Vec<ConversationMemory>>>, ChatApiError> {
+    Ok(Json(ApiResponse::success(
+        state.store(relay).await?.list_memories(id).await?,
+    )))
+}
+
+#[derive(Debug, Deserialize, TS)]
+pub struct ForgetSupervisorMemory {
+    #[ts(type = "number")]
+    pub expected_revision: i64,
+}
+
+async fn forget_memory(
+    State(state): State<ConversationApiState>,
+    Path((id, memory_id)): Path<(Uuid, Uuid)>,
+    relay: Relay,
+    Json(input): Json<ForgetSupervisorMemory>,
+) -> Result<Json<ApiResponse<()>>, ChatApiError> {
+    state
+        .store(relay)
+        .await?
+        .forget_memory(id, memory_id, input.expected_revision)
+        .await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+async fn private_response(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
+    let mut response = next.run(request).await;
+    response.headers_mut().insert(
+        axum::http::header::CACHE_CONTROL,
+        axum::http::HeaderValue::from_static("no-store"),
+    );
+    response
 }
 
 async fn accept(
@@ -322,8 +434,21 @@ fn api_router<S: Clone + Send + Sync + 'static>(state: ConversationApiState) -> 
         .route("/conversations/resolve", post(resolve))
         .route("/conversations/{id}", get(snapshot))
         .route("/conversations/{id}/messages", get(messages).post(accept))
+        .route("/conversations/{id}/export", get(export))
+        .route(
+            "/conversations/{id}/history",
+            axum::routing::delete(delete_history),
+        )
+        .route("/conversations/{id}/actions", get(actions))
+        .route("/conversations/{id}/evidence/{evidence_id}", get(evidence))
+        .route("/conversations/{id}/memories", get(memories))
+        .route(
+            "/conversations/{id}/memories/{memory_id}",
+            axum::routing::delete(forget_memory),
+        )
         .route("/conversations/{id}/events", get(events))
         .route("/conversations/{id}/events/ws", get(events_ws))
+        .layer(axum::middleware::from_fn(private_response))
         .with_state(state)
 }
 

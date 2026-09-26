@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use db::{
     DBService,
     models::{
+        agent_delivery::{AgentDelivery, DeliveryClaim},
         coding_agent_turn::{CodingAgentTurn, CreateCodingAgentTurn},
         execution_process::{
             CreateExecutionProcess, ExecutionContext, ExecutionProcess, ExecutionProcessError,
@@ -422,6 +423,12 @@ pub trait ContainerService {
         self.notification_service()
             .notify_turn_completion_ntfy(&title, &message)
             .await;
+    }
+
+    /// Repair durable receipts and resume safely unadmitted queue work. Called
+    /// after orphan-process reconciliation and periodically during operation.
+    async fn reconcile_queued_deliveries(&self) -> Result<(), ContainerError> {
+        Ok(())
     }
 
     /// Cleanup executions marked as running in the db, call at startup
@@ -1504,6 +1511,18 @@ pub trait ContainerService {
         executor_action: &ExecutorAction,
         run_reason: &ExecutionProcessRunReason,
     ) -> Result<ExecutionProcess, ContainerError> {
+        self.start_execution_with_delivery(workspace, session, executor_action, run_reason, None)
+            .await
+    }
+
+    async fn start_execution_with_delivery(
+        &self,
+        workspace: &Workspace,
+        session: &Session,
+        executor_action: &ExecutorAction,
+        run_reason: &ExecutionProcessRunReason,
+        delivery: Option<&DeliveryClaim>,
+    ) -> Result<ExecutionProcess, ContainerError> {
         if matches!(run_reason, ExecutionProcessRunReason::CodingAgent)
             && let Some(error) = codex_execution_limit_error_for_action(executor_action)
         {
@@ -1543,13 +1562,24 @@ pub trait ContainerService {
             run_reason: run_reason.clone(),
         };
 
-        let execution_process = ExecutionProcess::create(
-            &self.db().pool,
-            &create_execution_process,
-            Uuid::new_v4(),
-            &repo_states,
-        )
-        .await?;
+        let execution_process = if let Some(claim) = delivery {
+            AgentDelivery::admit(
+                &self.db().pool,
+                claim,
+                &create_execution_process,
+                Uuid::new_v4(),
+                &repo_states,
+            )
+            .await?
+        } else {
+            ExecutionProcess::create(
+                &self.db().pool,
+                &create_execution_process,
+                Uuid::new_v4(),
+                &repo_states,
+            )
+            .await?
+        };
         if *run_reason != ExecutionProcessRunReason::ArchiveScript {
             Workspace::set_archived(&self.db().pool, workspace.id, false).await?;
         }
@@ -1602,6 +1632,9 @@ pub trait ContainerService {
             }
 
             if start_error.is_execution_limit_reached() {
+                if delivery.is_some() {
+                    AgentDelivery::capacity_denied(&self.db().pool, execution_process.id).await?;
+                }
                 if let Err(drop_error) = ExecutionProcess::drop_at_and_after(
                     &self.db().pool,
                     session.id,

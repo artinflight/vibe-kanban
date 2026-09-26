@@ -4,6 +4,16 @@ Design source: [architecture](VK_CHAT_ARCHITECTURE.md),
 [contracts](VK_CHAT_CONTRACTS.md), [voice](VK_CHAT_VOICE.md).
 Implementation entry instruction: [handoff prompt](VK_CHAT_HANDOFF.md).
 
+## Implementation progress — 2026-09-26
+
+Milestone 1 has begun in source. The additive migration
+`20260926000000_supervisor_conversation_foundation.sql` and
+`crates/db/src/models/conversation.rs` implement supervisor-only message/run/event
+transactions, scoped reads, retry idempotency, paging and worker lease fencing.
+Existing raw workspace history is preserved. This is an internal storage slice;
+API/UI/model/dispatch integration and the remaining design are not yet delivered.
+See STREAM.md and HANDOFF.md for current validation and next work.
+
 ## Recommended first slice
 
 Start with durable supervisor text acceptance and delivery to an existing agent

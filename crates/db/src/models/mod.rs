@@ -1,4 +1,6 @@
+pub mod agent_delivery;
 pub mod coding_agent_turn;
+pub mod conversation;
 pub mod durable_ui_preferences;
 pub mod execution_process;
 pub mod execution_process_logs;

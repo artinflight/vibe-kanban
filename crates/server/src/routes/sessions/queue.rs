@@ -37,7 +37,8 @@ async fn queue_message(
     {
         deployment
             .queued_message_service()
-            .cancel_queued(session.id);
+            .cancel_queued(session.id)
+            .await?;
         return Err(ApiError::Conflict(
             "Cannot queue a follow-up because this session is not currently running".to_string(),
         ));
@@ -77,7 +78,8 @@ async fn queue_message(
 
     let queued = deployment
         .queued_message_service()
-        .queue_message(session.id, data);
+        .queue_message(session.id, data)
+        .await?;
 
     deployment
         .track_if_analytics_allowed(
@@ -105,7 +107,8 @@ async fn cancel_queued_message(
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
     deployment
         .queued_message_service()
-        .cancel_queued(session.id);
+        .cancel_queued(session.id)
+        .await?;
 
     deployment
         .track_if_analytics_allowed(
@@ -125,7 +128,10 @@ async fn get_queue_status(
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
-    let status = deployment.queued_message_service().get_status(session.id);
+    let status = deployment
+        .queued_message_service()
+        .get_status(session.id)
+        .await?;
 
     Ok(ResponseJson(ApiResponse::success(status)))
 }

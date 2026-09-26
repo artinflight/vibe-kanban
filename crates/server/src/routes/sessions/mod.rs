@@ -233,13 +233,16 @@ pub async fn follow_up(
     {
         Ok(execution_process) => execution_process,
         Err(error) if error.is_execution_limit_reached() => {
-            let queued = deployment.queued_message_service().queue_for_capacity(
-                session.id,
-                DraftFollowUpData {
-                    message: prompt,
-                    executor_config: payload.executor_config.clone(),
-                },
-            );
+            let queued = deployment
+                .queued_message_service()
+                .queue_for_capacity(
+                    session.id,
+                    DraftFollowUpData {
+                        message: payload.prompt.clone(),
+                        executor_config: payload.executor_config.clone(),
+                    },
+                )
+                .await?;
 
             deployment
                 .track_if_analytics_allowed(

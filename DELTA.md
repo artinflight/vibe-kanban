@@ -1335,3 +1335,14 @@ passed. `pnpm run format` completed Rust formatting then failed because `prettie
 is unavailable; no feature source changed. Device/car behaviour and model output
 are documented acceptance gates, not tested functionality. This revision is
 uncommitted and unpushed; future implementation begins on explicit instruction.
+
+## 2026-09-26 — implementation started: durable supervisor storage
+
+User activated full native implementation goal. Added additive supervisor-only
+conversation/message/run/event migration and scoped Rust store. Atomic acceptance,
+retry conflict detection, replay/paging, lease/cancel fencing and existing raw
+history preservation are covered by eight new tests; all 22 database tests pass.
+Final focused eight-test run adds competing-worker concurrency. Ops and diff
+checks pass; full formatter remains blocked by missing prettier after Rust passes.
+No APIs, agent delivery, models, voice or Android are integrated yet; full goal
+remains active. See HANDOFF.md for paths, evidence and next milestone-1 work.

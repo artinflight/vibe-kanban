@@ -161,6 +161,24 @@ async fn main() -> Result<(), VibeKanbanError> {
     let proxy_router: Router = routes::preview::subdomain_router(deployment.clone())
         .layer(ValidateRequestHeaderLayer::custom(validate_origin));
 
+    // Durable queue recovery runs only after startup orphan reconciliation. A
+    // database claim arbitrates this scan against the ordinary completion path.
+    let delivery_deployment = deployment.clone();
+    let delivery_shutdown = shutdown_token.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
+        loop {
+            tokio::select! {
+                _ = delivery_shutdown.cancelled() => break,
+                _ = interval.tick() => {
+                    if let Err(error) = delivery_deployment.container().reconcile_queued_deliveries().await {
+                        tracing::warn!(?error, "Durable agent delivery reconciliation failed");
+                    }
+                }
+            }
+        }
+    });
+
     let main_shutdown = shutdown_token.clone();
     let proxy_shutdown = shutdown_token.clone();
 

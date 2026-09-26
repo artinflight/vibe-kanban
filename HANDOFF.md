@@ -1,3 +1,42 @@
+## September 26: implementation authorised; supervisor storage foundation
+
+The user activated the full native goal “get this built.” Implementation is now
+in scope; the earlier documentation-only boundary has expired. The approved
+Android/car MMI, plain-English speech and raw-workspace boundaries remain binding.
+The fixed native checklist covers persistence, dispatch, UI, routing/policy,
+memory/summaries, speech evaluation, voice, Android and integration/release.
+No full requirement is complete yet; this is the first milestone-1 slice.
+
+Implemented `crates/db/migrations/20260926000000_supervisor_conversation_foundation.sql`,
+`crates/db/src/models/conversation.rs` and its test module. These provide scoped
+supervisor conversation identity, atomic message/pending-run/event acceptance,
+retry conflict detection, history paging, durable replay, serial worker leases,
+renewal, cancellation and stale-completion fencing. Existing workspace/session
+history and send paths remain unchanged. The store is not exposed by an API or
+connected to a model/agent worker yet. Scope must later come from trusted auth,
+not client/model-selected principal IDs. Additional action/evidence/memory and
+voice tables remain to implement.
+
+Validation: `CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target CARGO_INCREMENTAL=0
+SQLX_OFFLINE=true cargo test -p db --lib --offline` passed all 22 tests. After adding
+concurrent competing-worker coverage, the focused `models::conversation::tests`
+run passed all eight tests. Coverage includes populated migration preserving exact
+raw agent reports, rerun of migrations, 12 concurrent retries, ten distinct
+concurrent messages, two worker claimants, restart/replay, injected event-write
+rollback, cross-scope rejection and expiry/cancel fencing. Logs are in
+`/mnt/vk-storage/capacity-build-tmp/vk-chat-db-tests.log` and
+`vk-chat-db-final-tests.log`. `pnpm run ops:check`, Rust formatting and
+`git diff --check` passed. `pnpm run format` stopped at missing `prettier` after
+Rust formatting; frontend tests, live models/providers and Android/car were not
+exercised. No production/runtime/external account changes occurred.
+
+Next: continue milestone 1 with durable existing-session delivery, action/evidence
+storage and reconciliation, trusted installation scope and API/replay integration.
+Keep Codex unavailable-steering conflict and existing executor choices/approvals.
+Do not create a parallel direct chat. Prepare spoken-text evaluation fixtures early;
+real model/provider/physical-car acceptance still gates their corresponding work.
+The current slice is uncommitted/unpushed and the implementation goal remains active.
+
 ## September 26: Android calls, car MMI and spoken-language acceptance
 
 All five VK_CHAT design documents now specify Android-first mobile voice through

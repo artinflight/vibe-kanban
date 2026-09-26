@@ -201,9 +201,16 @@ impl AgentDelivery {
     /// Only the pre-launch capacity denial permits a correlated attempt to queue
     /// again. Arbitrary failed/unknown starts are never automatically retried.
     pub async fn capacity_denied(pool: &SqlitePool, process_id: Uuid) -> Result<(), sqlx::Error> {
+        let mut tx = pool.begin().await?;
+        sqlx::query("UPDATE execution_processes SET status = 'failed', dropped = 1, completed_at = datetime('now','subsec') WHERE id = ? AND status = 'running'")
+            .bind(process_id).execute(&mut *tx).await?;
         sqlx::query("UPDATE agent_deliveries SET state = 'waiting_capacity', wait_for_capacity = 1, execution_process_id = NULL, claim_id = NULL, lease_until = NULL, error = NULL, updated_at = datetime('now','subsec') WHERE execution_process_id = ? AND state = 'started'")
-            .bind(process_id).execute(pool).await?;
-        Ok(())
+            .bind(process_id).execute(&mut *tx).await?;
+        // Corrections accepted while admission was in flight should wait with
+        // the original message, not be discarded as replies to a failed turn.
+        sqlx::query("UPDATE agent_deliveries SET state = 'waiting_capacity', wait_for_capacity = 1 WHERE predecessor_process_id = ? AND state = 'queued'")
+            .bind(process_id).execute(&mut *tx).await?;
+        tx.commit().await
     }
 
     pub async fn reconcile(pool: &SqlitePool) -> Result<(), sqlx::Error> {

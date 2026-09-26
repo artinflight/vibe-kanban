@@ -1615,6 +1615,13 @@ pub trait ContainerService {
             .start_execution_inner(workspace, &execution_process, executor_action)
             .await
         {
+            if delivery.is_some() && start_error.is_execution_limit_reached() {
+                // Classify a known pre-launch capacity denial atomically with
+                // process completion. The recovery scan must never see an
+                // ordinary failed delivery in between these writes.
+                AgentDelivery::capacity_denied(&self.db().pool, execution_process.id).await?;
+                return Err(start_error);
+            }
             // Mark process as failed
             if let Err(update_error) = ExecutionProcess::update_completion(
                 &self.db().pool,
@@ -1632,9 +1639,6 @@ pub trait ContainerService {
             }
 
             if start_error.is_execution_limit_reached() {
-                if delivery.is_some() {
-                    AgentDelivery::capacity_denied(&self.db().pool, execution_process.id).await?;
-                }
                 if let Err(drop_error) = ExecutionProcess::drop_at_and_after(
                     &self.db().pool,
                     session.id,

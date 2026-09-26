@@ -14,7 +14,10 @@ use axum::{
 use db::models::conversation::{
     AcceptConversationMessage, Conversation, ConversationError, ConversationInputOrigin,
     ConversationMessage, ConversationScope, ConversationStore,
-    records::{ConversationAction, ConversationEvidence, ConversationExport, ConversationMemory},
+    records::{
+        ConversationAction, ConversationEvidence, ConversationExport, ConversationMemory,
+        MessageEvidenceRef,
+    },
 };
 use futures_util::SinkExt;
 use serde::{Deserialize, Serialize};
@@ -267,6 +270,20 @@ async fn evidence(
     )))
 }
 
+async fn message_evidence(
+    State(state): State<ConversationApiState>,
+    Path((id, message_id)): Path<(Uuid, Uuid)>,
+    relay: Relay,
+) -> Result<Json<ApiResponse<Vec<MessageEvidenceRef>>>, ChatApiError> {
+    Ok(Json(ApiResponse::success(
+        state
+            .store(relay)
+            .await?
+            .message_evidence(id, message_id)
+            .await?,
+    )))
+}
+
 async fn memories(
     State(state): State<ConversationApiState>,
     Path(id): Path<Uuid>,
@@ -434,6 +451,10 @@ fn api_router<S: Clone + Send + Sync + 'static>(state: ConversationApiState) -> 
         .route("/conversations/resolve", post(resolve))
         .route("/conversations/{id}", get(snapshot))
         .route("/conversations/{id}/messages", get(messages).post(accept))
+        .route(
+            "/conversations/{id}/messages/{message_id}/evidence",
+            get(message_evidence),
+        )
         .route("/conversations/{id}/export", get(export))
         .route(
             "/conversations/{id}/history",

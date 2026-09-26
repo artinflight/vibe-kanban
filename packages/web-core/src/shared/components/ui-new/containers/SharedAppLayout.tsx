@@ -16,6 +16,7 @@ import { useUiPreferencesStore } from '@/shared/stores/useUiPreferencesStore';
 import { cn } from '@/shared/lib/utils';
 import { isTauriMac } from '@/shared/lib/platform';
 
+import { SupervisorLauncher } from './SupervisorLauncher';
 import { NavbarContainer } from './NavbarContainer';
 import {
   AppBar,
@@ -637,6 +638,7 @@ export function SharedAppLayout() {
               onSignIn={handleSignIn}
               onHoverStart={() => setIsAppBarHovered(true)}
               onHoverEnd={() => setIsAppBarHovered(false)}
+              supervisorLauncher={<SupervisorLauncher />}
               notificationBell={
                 isSignedIn ? <AppBarNotificationBellContainer /> : undefined
               }

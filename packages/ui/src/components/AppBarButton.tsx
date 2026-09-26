@@ -7,6 +7,8 @@ interface AppBarButtonProps {
   icon?: Icon;
   label: string;
   isActive?: boolean;
+  expanded?: boolean;
+  controls?: string;
   onClick?: () => void;
   className?: string;
   children?: React.ReactNode;
@@ -16,6 +18,8 @@ export function AppBarButton({
   icon: IconComponent,
   label,
   isActive = false,
+  expanded,
+  controls,
   onClick,
   className,
   children,
@@ -34,6 +38,9 @@ export function AppBarButton({
         className
       )}
       aria-label={label}
+      aria-expanded={expanded}
+      aria-controls={controls}
+      aria-haspopup={controls ? "dialog" : undefined}
     >
       {IconComponent && (
         <IconComponent className="size-icon-base" weight="bold" />

@@ -349,3 +349,69 @@ async fn export_delete_and_forget_require_owner_and_current_revision() {
         .unwrap();
     assert_eq!(response.headers()["cache-control"], "no-store");
 }
+
+#[tokio::test]
+async fn message_sources_drill_down_to_exact_owned_evidence() {
+    use db::models::conversation::records::EvidenceSource;
+    let (pool, router) = fixture(true).await;
+    let scope = ConversationScope::local_operator(&pool).await.unwrap();
+    let store = ConversationStore::new(pool.clone(), scope);
+    let id = store.resolve().await.unwrap().id;
+    let repo = Uuid::new_v4();
+    sqlx::query("INSERT INTO repos (id,path,name,display_name) VALUES (?, '/fixture/repo', 'repo', 'Repository')").bind(repo).execute(&pool).await.unwrap();
+    let input = AcceptConversationMessage {
+        client_message_id: Uuid::new_v4(),
+        body: "What changed?".into(),
+        origin: ConversationInputOrigin::Typed,
+        reply_to_id: None,
+    };
+    let accepted = store.accept(id, &input).await.unwrap();
+    let raw = "Validation:: 42 tests passed\n```rust\nfn untouched() {}\n```";
+    let source = store
+        .retain_evidence(
+            id,
+            &EvidenceSource::Repository { repo_id: repo },
+            "revision-1",
+            raw,
+        )
+        .await
+        .unwrap();
+    store
+        .link_evidence(id, accepted.message.id, source.id, "supporting")
+        .await
+        .unwrap();
+    let (status, references) = call(
+        &router,
+        "GET",
+        &format!(
+            "/conversations/{id}/messages/{}/evidence",
+            accepted.message.id
+        ),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(references["data"][0]["evidence_id"], source.id.to_string());
+    assert!(references["data"][0].get("raw_report").is_none());
+    let (status, report) = call(
+        &router,
+        "GET",
+        &format!("/conversations/{id}/evidence/{}", source.id),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(report["data"]["raw_report"], raw);
+    let foreign = Uuid::new_v4();
+    assert_eq!(
+        call(
+            &router,
+            "GET",
+            &format!("/conversations/{foreign}/evidence/{}", source.id),
+            json!({})
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+}

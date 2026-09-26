@@ -10,6 +10,7 @@ import { useTauriNotificationNavigation } from '@web/app/hooks/useTauriNotificat
 import { useTauriUpdateReady } from '@web/app/hooks/useTauriUpdateReady';
 import { AppSystemNotifications } from '@web/app/notifications/AppSystemNotifications';
 import { AppWorkspaceCompletionNotifications } from '@web/app/notifications/AppWorkspaceCompletionNotifications';
+import { SupervisorProvider } from '@/features/conversation/SupervisorProvider';
 import { router } from '@web/app/router';
 
 function TauriListeners() {
@@ -36,7 +37,9 @@ function App() {
                   'projects',
                 ]}
               >
-                <RouterProvider router={router} />
+                <SupervisorProvider>
+                  <RouterProvider router={router} />
+                </SupervisorProvider>
               </HotkeysProvider>
             </ClickedElementsProvider>
           </LocalAuthProvider>

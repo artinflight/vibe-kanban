@@ -123,6 +123,15 @@ pub struct MessageEvidence {
     pub relationship: String,
 }
 
+#[derive(Debug, Serialize, TS, FromRow)]
+pub struct MessageEvidenceRef {
+    pub evidence_id: Uuid,
+    pub relationship: String,
+    #[ts(type = "EvidenceSource")]
+    pub source: Json<EvidenceSource>,
+    pub availability: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct ConversationExport {
     pub schema_version: u32,
@@ -139,6 +148,19 @@ pub struct ConversationExport {
 }
 
 impl ConversationStore {
+    pub async fn message_evidence(
+        &self,
+        id: Uuid,
+        message_id: Uuid,
+    ) -> Result<Vec<MessageEvidenceRef>> {
+        self.get(id).await?;
+        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM conversation_messages WHERE conversation_id = ? AND id = ?)").bind(id).bind(message_id).fetch_one(&self.pool).await?;
+        if !exists {
+            return Err(ConversationError::NotFound);
+        }
+        Ok(sqlx::query_as("SELECT l.evidence_id, l.relationship, e.source, e.availability FROM conversation_message_evidence l JOIN conversation_evidence e ON e.id = l.evidence_id AND e.conversation_id = l.conversation_id WHERE l.conversation_id = ? AND l.message_id = ? ORDER BY e.captured_at, e.id").bind(id).bind(message_id).fetch_all(&self.pool).await?)
+    }
+
     pub async fn list_memories(&self, id: Uuid) -> Result<Vec<ConversationMemory>> {
         self.get(id).await?;
         Ok(sqlx::query_as("SELECT * FROM conversation_memory WHERE conversation_id = ? AND state IN ('active','proposed') ORDER BY created_at DESC LIMIT 200").bind(id).fetch_all(&self.pool).await?)

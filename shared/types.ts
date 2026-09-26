@@ -22,6 +22,8 @@ export type ConversationEvidence = { id: string, conversation_id: string, source
 
 export type ConversationMemory = { id: string, conversation_id: string, scope_kind: string, scope_id: string, claim_key: string, body: string, entity_refs: MemoryScope[], state: string, revision: number, supersedes_id: string | null, source_message_id: string, author_kind: string, valid_until: string | null, created_at: string, };
 
+export type MessageEvidenceRef = { evidence_id: string, relationship: string, source: EvidenceSource, availability: string, };
+
 export type SupervisorCapabilities = { enabled: boolean, accepting_messages: boolean, agent_actions: boolean, voice: boolean, authority: string, };
 
 export type SupervisorSnapshot = { conversation: Conversation, last_seq: number, capabilities: SupervisorCapabilities, };

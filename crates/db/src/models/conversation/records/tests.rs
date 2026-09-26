@@ -224,6 +224,14 @@ async fn retains_exact_report_and_rejects_changed_revision_or_foreign_links() {
         .await
         .unwrap();
     assert_eq!(store.export(id).await.unwrap().message_evidence.len(), 1);
+    let linked = store.message_evidence(id, message).await.unwrap();
+    assert_eq!(linked.len(), 1);
+    assert_eq!(linked[0].evidence_id, evidence.id);
+    assert_eq!(linked[0].source.0, source);
+    assert!(matches!(
+        store.message_evidence(id, Uuid::new_v4()).await,
+        Err(ConversationError::NotFound)
+    ));
     let other = ConversationStore::new(
         pool.clone(),
         ConversationScope {
@@ -234,6 +242,10 @@ async fn retains_exact_report_and_rejects_changed_revision_or_foreign_links() {
     let other_id = other.resolve().await.unwrap().id;
     assert!(matches!(
         other.evidence(id, evidence.id).await,
+        Err(ConversationError::NotFound)
+    ));
+    assert!(matches!(
+        other.message_evidence(id, message).await,
         Err(ConversationError::NotFound)
     ));
     assert!(matches!(

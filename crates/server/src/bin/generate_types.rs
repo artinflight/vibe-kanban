@@ -20,6 +20,7 @@ fn generate_types_content() -> String {
         db::models::conversation::records::ConversationAction::decl(),
         db::models::conversation::records::ConversationEvidence::decl(),
         db::models::conversation::records::ConversationMemory::decl(),
+        db::models::conversation::records::MessageEvidenceRef::decl(),
         server::routes::conversations::SupervisorCapabilities::decl(),
         server::routes::conversations::SupervisorSnapshot::decl(),
         server::routes::conversations::SupervisorMessageReceipt::decl(),

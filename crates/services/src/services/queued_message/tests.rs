@@ -347,14 +347,17 @@ async fn capacity_denial_retains_identity_and_cannot_overwrite_new_message() {
         .queue_message(session, draft("new correction"))
         .await
         .unwrap();
-    sqlx::query("UPDATE execution_processes SET status = 'failed', dropped = 1 WHERE id = ?")
-        .bind(process.id)
-        .execute(&pool)
-        .await
-        .unwrap();
     AgentDelivery::capacity_denied(&pool, process.id)
         .await
         .unwrap();
+    AgentDelivery::reconcile(&pool).await.unwrap();
+    let status: (String, bool) =
+        sqlx::query_as("SELECT status, dropped FROM execution_processes WHERE id = ?")
+            .bind(process.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(status, ("failed".into(), true));
     service
         .queue_with_key(session, draft("original"), false, key)
         .await

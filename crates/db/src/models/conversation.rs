@@ -16,6 +16,20 @@ pub struct ConversationScope {
     pub principal_id: Uuid,
 }
 
+impl ConversationScope {
+    /// Only for requests already admitted under VK's trusted local boundary.
+    /// Signed relay requests require an explicit principal mapping instead.
+    pub async fn local_operator(pool: &SqlitePool) -> std::result::Result<Self, sqlx::Error> {
+        let (authority_id, principal_id) = sqlx::query_as::<_, (Uuid, Uuid)>(
+            "SELECT authority_id, principal_id FROM supervisor_installation_identity WHERE singleton = 1",
+        ).fetch_one(pool).await?;
+        Ok(Self {
+            authority_id,
+            principal_id,
+        })
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum ConversationError {
     #[error("Conversation or message not found in this scope")]

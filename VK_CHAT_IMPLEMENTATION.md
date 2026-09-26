@@ -9,23 +9,39 @@ Implementation entry instruction: [handoff prompt](VK_CHAT_HANDOFF.md).
 Milestone 1 now includes supervisor history/run/event storage; immutable action
 proposals; exact retained evidence and message links; scoped/versioned memory;
 export/deletion; and stable local operator identity. The opt-in conversation API
-provides history/replay and record access, with production send acceptance disabled
-until model-worker integration. Existing raw workspace history is preserved.
+provides history/replay and record access. Send acceptance follows the configured
+worker's actual readiness; missing credentials leave history available. Existing
+raw workspace history is preserved. No live configuration has been changed.
 
 The existing session queue has moved to durable delivery rows with transactional
 process correlation and recovery. Direct session steering now persists exact-process
 attempts/acknowledgements with an eight-test crash/idempotency suite. Uncertain
-steering never falls back to queued replay. Supervisor action authorisation/dispatch,
-real execution-boundary acceptance, configured model and later milestones remain
-open. The initial global UI implements persistent local-authority history/replay,
-activity/evidence drill-down and data controls. Six API tests, five reducer tests,
+steering never falls back to queued replay. Exact-payload confirmation storage and
+atomic supervisor-to-delivery admission now have twelve database tests. Direct and
+queued process creation share atomic process/repository/raw-prompt persistence and
+post-commit workspace events. The service dispatcher now consumes authorised actions
+through that same ledger and steering transport. Queued supervisor instructions keep
+their exact configuration and are revalidated at consumption; native-goal/approval/
+capacity gates run before delivery. The configured Codex executor reads goal state
+before resuming an inactive thread. Existing recovery reconciles action outcomes.
+The configured supervisor worker now integrates typed proposal/status tools, a
+separate tool-free semantic assessment, and the existing dispatcher. Confirmation
+API/global UI bind exact payloads and preserve receipts across retries. Outcome
+evidence ingestion, real execution-boundary acceptance, live model evaluation and
+later milestones remain open. The initial global UI implements persistent local-authority history/replay,
+activity/evidence drill-down and data controls. Seven API tests, seven reducer tests,
 typechecks and focused lint pass. Browser acceptance is blocked by the scheduled
 sandbox Chromium launch restriction; live model and multi-client integration remain. This is source implementation, not a deployed feature.
 A leased supervisor worker and bounded local read tools now run against a
 provider-neutral model interface with deterministic integration tests. Final
 answers and evidence links persist atomically; cancellation, timeout and model
-failures stop work without automatic retries. Hosted adapter/startup integration,
-complete project/attention retrieval and action policy remain open. See STREAM.md
+failures stop work without automatic retries. The OpenAI Responses adapter/startup
+consumer is now implemented, with explicit supervisor-only configuration and
+transient provider continuation state. API receipt retries survive worker loss;
+bounded status pages and UI show failed/interrupted replies after reload. Complete
+project/attention retrieval, outcome ingestion, model settings and actual provider/
+speech evaluation remain open. Policy integration has deterministic coverage;
+actual policy judgments still require funded-model evaluation. See STREAM.md
 and HANDOFF.md for current validation and next work.
 
 ## Recommended first slice

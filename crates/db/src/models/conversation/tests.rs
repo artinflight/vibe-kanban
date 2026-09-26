@@ -10,13 +10,8 @@ async fn database() -> SqlitePool {
         .connect("sqlite::memory:")
         .await
         .unwrap();
-    // Exercise the actual additive migration, not a test-only replica.
-    sqlx::raw_sql(include_str!(
-        "../../../migrations/20260926000000_supervisor_conversation_foundation.sql"
-    ))
-    .execute(&pool)
-    .await
-    .unwrap();
+    // Exercise current storage with the real full migration chain.
+    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
     pool
 }
 

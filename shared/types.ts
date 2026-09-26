@@ -18,6 +18,16 @@ export type EvidenceSource = { "kind": "agent_report", session_id: string, proce
 
 export type ConversationAction = { id: string, conversation_id: string, request_id: string, run_id: string | null, origin_message_id: string, intent_kind: string, payload: unknown, payload_digest: string, route_evidence: unknown, authorisation_source: string | null, state: string, revision: number, created_at: string, };
 
+export type ActionConfirmation = { id: string, conversation_id: string, action_id: string, principal_id: string, payload_digest: string, action_revision: number, expires_at: number, state: string, answered_message_id: string | null, created_at: string, };
+
+export type MessageTarget = { workspace_id: string, session_id: string, workspace_name: string, session_name: string | null, branch: string, executor_config: ExecutorConfig, version: string, };
+
+export type AgentMessage = { message: string, targets: Array<MessageTarget>, };
+
+export type SupervisorActionDetail = { action: ConversationAction, message: AgentMessage | null, blocked: string | null, deliveries: unknown[], };
+
+export type AnswerSupervisorConfirmation = { payload_digest: string, action_revision: number, accept: boolean, };
+
 export type ConversationEvidence = { id: string, conversation_id: string, source: EvidenceSource, source_revision: string, content_hash: string, availability: string, raw_report: string | null, captured_at: string, };
 
 export type ConversationMemory = { id: string, conversation_id: string, scope_kind: string, scope_id: string, claim_key: string, body: string, entity_refs: MemoryScope[], state: string, revision: number, supersedes_id: string | null, source_message_id: string, author_kind: string, valid_until: string | null, created_at: string, };
@@ -29,6 +39,8 @@ export type SupervisorCapabilities = { enabled: boolean, accepting_messages: boo
 export type SupervisorSnapshot = { conversation: Conversation, last_seq: number, capabilities: SupervisorCapabilities, };
 
 export type SupervisorMessageReceipt = { message: ConversationMessage, run_id: string, };
+
+export type SupervisorRunStatus = { id: string, input_message_id: string, status: string, error: string | null, generation: number, };
 
 export type SupervisorEvent = { conversation_id: string, seq: number, event_id: string, type: string, schema_version: number, entity_id: string, revision: number, occurred_at: string, payload: unknown, };
 

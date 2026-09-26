@@ -7,6 +7,169 @@ use tower::ServiceExt;
 
 use super::*;
 
+struct ApiWorkerModel(std::sync::atomic::AtomicUsize);
+#[async_trait::async_trait]
+impl services::services::conversation::model::ConversationModel for ApiWorkerModel {
+    fn identity(&self) -> services::services::conversation::model::ModelIdentity {
+        services::services::conversation::model::ModelIdentity {
+            provider: "fixture".into(),
+            model: "api-worker".into(),
+        }
+    }
+    async fn next(
+        &self,
+        _request: &services::services::conversation::model::ModelRequest,
+    ) -> Result<
+        services::services::conversation::model::ModelResponse,
+        services::services::conversation::model::ModelError,
+    > {
+        use services::services::conversation::model::*;
+        self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        Ok(ModelResponse {
+            step: ModelStep::Reply {
+                text: "I can help you check the workspaces.".into(),
+                evidence_ids: vec![],
+            },
+            usage: ModelUsage::default(),
+            continuation: ModelContinuation::default(),
+        })
+    }
+}
+
+#[tokio::test]
+async fn actual_consumer_answers_api_messages_and_receipt_retries_survive_shutdown() {
+    use std::{
+        sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        },
+        time::Duration,
+    };
+
+    use tokio_util::sync::CancellationToken;
+    let (pool, _) = fixture(false).await;
+    let stop = CancellationToken::new();
+    let model = Arc::new(ApiWorkerModel(AtomicUsize::new(0)));
+    let runtime = SupervisorRuntime::start(pool.clone(), model.clone(), stop.clone())
+        .await
+        .unwrap();
+    let router: Router = api_router(ConversationApiState {
+        pool: pool.clone(),
+        enabled: true,
+        readiness: SupervisorReadiness::Worker(runtime),
+    });
+    let (_, resolved) = call(&router, "POST", "/conversations/resolve", json!({})).await;
+    assert_eq!(resolved["data"]["capabilities"]["accepting_messages"], true);
+    assert_eq!(resolved["data"]["capabilities"]["agent_actions"], false);
+    let id = resolved["data"]["conversation"]["id"].as_str().unwrap();
+    let path = format!("/conversations/{id}/messages");
+    let input = json!({"client_message_id":Uuid::new_v4(),"body":"Hello","origin":"typed"});
+    let (status, receipt) = call(&router, "POST", &path, input.clone()).await;
+    assert_eq!(status, StatusCode::ACCEPTED);
+    let history = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            let (_, history) = call(&router, "GET", &path, json!({})).await;
+            if history["data"].as_array().unwrap().len() == 2 {
+                break history;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert!(
+        history["data"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|m| m["body"] == "I can help you check the workspaces.")
+    );
+    let (_, events) = call(
+        &router,
+        "GET",
+        &format!("/conversations/{id}/events?after_seq=0"),
+        json!({}),
+    )
+    .await;
+    assert!(
+        events["data"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["type"] == "run.status" && e["payload"]["status"] == "completed")
+    );
+    stop.cancel();
+    let (_, snapshot) = call(&router, "POST", "/conversations/resolve", json!({})).await;
+    assert_eq!(
+        snapshot["data"]["capabilities"]["accepting_messages"],
+        false
+    );
+    let (status, replayed) = call(&router, "POST", &path, input.clone()).await;
+    assert_eq!(status, StatusCode::ACCEPTED);
+    assert_eq!(receipt["data"], replayed["data"]);
+    let mut changed = input;
+    changed["body"] = json!("changed instruction");
+    assert_eq!(
+        call(&router, "POST", &path, changed.clone()).await.0,
+        StatusCode::CONFLICT
+    );
+    changed["client_message_id"] = json!(Uuid::new_v4());
+    assert_eq!(
+        call(&router, "POST", &path, changed).await.0,
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    assert_eq!(model.0.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM conversation_runs")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        1
+    );
+    assert_eq!(call(&router, "GET", &path, json!({})).await.1, history);
+    let (_, runs) = call(
+        &router,
+        "GET",
+        &format!("/conversations/{id}/runs"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(runs["data"][0]["status"], "completed");
+    assert_eq!(
+        runs["data"][0]["input_message_id"],
+        receipt["data"]["message"]["id"]
+    );
+    for private in [
+        "lease_owner",
+        "lease_until",
+        "context_manifest",
+        "model_config",
+        "usage",
+    ] {
+        assert!(runs["data"][0].get(private).is_none());
+    }
+    let before = receipt["data"]["message"]["created_seq"].as_i64().unwrap();
+    let (_, earlier) = call(
+        &router,
+        "GET",
+        &format!("/conversations/{id}/runs?before_seq={before}"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(earlier["data"], json!([]));
+    assert_eq!(
+        call(
+            &router,
+            "GET",
+            &format!("/conversations/{}/runs", Uuid::new_v4()),
+            json!({})
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+}
+
 async fn fixture(accepting_messages: bool) -> (SqlitePool, Router) {
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
@@ -17,7 +180,7 @@ async fn fixture(accepting_messages: bool) -> (SqlitePool, Router) {
     let router = api_router(ConversationApiState {
         pool: pool.clone(),
         enabled: true,
-        accepting_messages,
+        readiness: SupervisorReadiness::Fixture(accepting_messages),
     });
     (pool, router)
 }
@@ -84,7 +247,7 @@ async fn api_accepts_once_and_replays_committed_records_across_clients() {
     let fresh_client: Router = api_router(ConversationApiState {
         pool,
         enabled: true,
-        accepting_messages: true,
+        readiness: SupervisorReadiness::Fixture(true),
     });
     let (_, same) = call(&fresh_client, "POST", "/conversations/resolve", json!({})).await;
     assert_eq!(same["data"]["conversation"]["id"], id);
@@ -160,7 +323,7 @@ async fn disabled_or_relay_request_cannot_resolve_local_operator_history() {
     let disabled: Router = api_router(ConversationApiState {
         pool: pool.clone(),
         enabled: false,
-        accepting_messages: false,
+        readiness: SupervisorReadiness::Fixture(false),
     });
     assert_eq!(
         call(&disabled, "POST", "/conversations/resolve", json!({}))
@@ -415,3 +578,5 @@ async fn message_sources_drill_down_to_exact_owned_evidence() {
         StatusCode::NOT_FOUND
     );
 }
+
+mod actions;

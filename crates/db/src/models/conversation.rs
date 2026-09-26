@@ -38,6 +38,8 @@ pub enum ConversationError {
     IdempotencyConflict,
     #[error("Conversation is archived")]
     Archived,
+    #[error("Supervisor worker is unavailable")]
+    WorkerUnavailable,
     #[error("Input must contain text and be at most 64 KiB")]
     InvalidBody,
     #[error("Run lease is expired, cancelled or superseded")]
@@ -212,6 +214,16 @@ impl ConversationStore {
         id: Uuid,
         input: &AcceptConversationMessage,
     ) -> Result<AcceptedConversationMessage> {
+        self.accept_if_available(id, input, true).await
+    }
+
+    /// Readiness gates new work, not recovery of an already accepted receipt.
+    pub async fn accept_if_available(
+        &self,
+        id: Uuid,
+        input: &AcceptConversationMessage,
+        available: bool,
+    ) -> Result<AcceptedConversationMessage> {
         validate_body(&input.body)?;
         let mut tx = self.pool.begin().await?;
         let conversation = self.lock(&mut tx, id).await?;
@@ -242,7 +254,10 @@ impl ConversationStore {
             tx.commit().await?;
             return Ok(AcceptedConversationMessage { message, run });
         }
-        actions::invalidate_pending(&mut tx,id).await?;
+        if !available {
+            return Err(ConversationError::WorkerUnavailable);
+        }
+        actions::invalidate_pending(&mut tx, id).await?;
         if conversation.archived_at.is_some() {
             return Err(ConversationError::Archived);
         }
@@ -346,6 +361,7 @@ impl ConversationStore {
         for run in expired {
             emit(&mut tx, id, "run.status", run.id, run.generation + 1, &run).await?;
         }
+        actions::invalidate_pending(&mut tx, id).await?;
         if conversation.archived_at.is_some() {
             tx.commit().await?;
             return Ok(None);
@@ -503,7 +519,7 @@ impl ConversationStore {
             .await?
             .ok_or(ConversationError::NotFound)?
         };
-        actions::invalidate_pending(&mut tx,id).await?;
+        actions::invalidate_pending(&mut tx, id).await?;
         tx.commit().await?;
         Ok(run)
     }
@@ -560,6 +576,6 @@ async fn emit(
 #[cfg(test)]
 mod tests;
 
-pub mod records;
 pub mod actions;
+pub mod records;
 mod worker;

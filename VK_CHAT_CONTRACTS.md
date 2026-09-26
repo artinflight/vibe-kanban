@@ -21,7 +21,7 @@ Shared delivery and voice metadata below do not create a second workspace chat.
 | `conversation_runs` | `id`, `conversation_id`, `input_message_id`, `input_revision`, `status`, `generation`, `lease_owner`, `lease_until`, `context_manifest`, `model_config`, `usage`, `error`. One active leased generation per conversation; status covers pending/running/completed/interrupted/failed |
 | `conversation_actions` | `id`, `run_id` nullable for explicitly authorised supervisor actions outside a model run, `conversation_id`, `origin_message_id`, `intent_kind`, `payload`, `payload_digest`, `state`, `route_evidence`, `authorisation_source`, `created_at`. Immutable authorised payload; corrections create new actions |
 | `agent_deliveries` | `id`, nullable supervisor `action_id`, `source_kind` (supervisor/session/voice), `source_id`, `idempotency_key`, fully qualified target, `executor_config`, `target_revision`, `message`, `state`, `attempt_count`, `not_before`, `lease_generation`, nullable `execution_process_id`, `delivery_mode` (queue/steer), `steering_acknowledged_at`, `provider_receipt`, `error`. Unique `(source_kind, source_id, idempotency_key, target_session_key)`; shared session queue consumes these rows without requiring a supervisor action for direct sends |
-| `conversation_confirmations` | `id`, `action_id`, `principal_id`, `payload_digest`, `target_revision`, `expires_at`, `state`, `answered_message_id`. Durable, one-use, compare-and-swap acceptance |
+| `conversation_confirmations` | `id`, `action_id`, `principal_id`, `payload_digest`, `action_revision`, `expires_at`, `state`, `answered_message_id`. Target revisions live in the immutable action payload; durable, one-use, compare-and-swap acceptance |
 | `conversation_evidence` | `id`, typed source key (authority/session/process/turn/log entry or repo state), `source_revision`, `content_hash`, `availability`, `captured_at`, optional retained raw report. Unique source/revision; stable references, no arbitrary filesystem paths from callers |
 | `conversation_message_evidence` | `(message_id, evidence_id)`, optional excerpt locator, `relationship` (summarised/quoted/supporting). Supports many reports per answer |
 | `conversation_memory` | `id`, `principal_id`, scope kind/key, `claim_key`, `body`, `entity_refs`, `state` (proposed/active/superseded/retracted), `revision`, `supersedes_id`, `source_message_id`, `author_kind`, `confidence`, `valid_from`, `valid_until`. Partial uniqueness for one active revision per principal/scope/claim key |
@@ -104,13 +104,15 @@ fully qualified. No client-to-model credentials or arbitrary tool execution API.
 | `GET /conversations` | Principal-owned history list; cursor pagination and text search |
 | `GET /conversations/{id}` | Snapshot with last sequence, active run/action summaries and capability flags |
 | `GET /conversations/{id}/messages?before_seq=&limit=` | Older messages and evidence/activity links; default 50, cap 200 |
+| `GET /conversations/{id}/runs?before_seq=&limit=` | Implemented scoped reply-status projection, ordered by input sequence; default 50, cap 200; omits leases, context manifests and model configuration |
 | `POST /conversations/{id}/messages` | `{client_message_id, body, origin, reply_to_id?, expected_focus_revision?, target?}`; 202 only after message plus pending supervisor run/action commit; returns stable IDs/sequence |
 | `POST /conversations/{id}/messages/{mid}/corrections` | Creates a linked correction, preserving original authorisation evidence; never silently edits dispatched instructions |
 | `GET /conversations/{id}/events/ws?after_seq=` | Replay/live contract above, using existing signed WebSocket mechanisms where applicable |
 | `POST /conversation-runs/{id}/cancel` | Fences model generation; cancels only undispatched proposals, returns any already delivered actions |
 | `GET /conversation-actions/{id}` | Exact payload/targets/receipts and evidence visible to its principal |
 | `POST /conversation-actions/{id}/cancel` | Cancels pending deliveries via compare-and-swap; cannot unsend a successful steering message |
-| `POST /conversation-confirmations/{id}/answer` | Decision with expected digest/revision; changed/expired grant returns conflict |
+| `GET /conversations/{id}/confirmations` and `POST /conversations/{id}/confirmations/{confirmation_id}` | Read owned grants and submit an explicit decision with expected digest/revision; changed/expired grant returns conflict |
+| `GET /conversations/{id}/actions/{action_id}` | Frozen instruction/recipients, safe delivery receipts and the latest dispatch block; no internal claim/lease fields |
 | `GET /conversation-evidence/{id}` | Raw report or authorised paged artefact lookup; unavailable source is explicit |
 | `GET/POST /conversation-memories` | Scoped list/search or explicit addition |
 | `PATCH/DELETE /conversation-memories/{id}` | Revision-checked supersession/retraction, scope validation and cache invalidation |
@@ -121,6 +123,76 @@ fully qualified. No client-to-model credentials or arbitrary tool execution API.
 | `GET /voice-sessions/{id}` and `/events/ws` | Authorised transport snapshot/events for either binding; caption revisions and playback metadata only |
 | `POST /voice-sessions/{id}/heartbeat` | Renew bounded media ownership lease for authenticated client/generation; expired or fenced ownership cannot revive a call |
 | `POST /voice-sessions/{id}/resume` and `/end` | Reconcile/reconnect or start a new media segment on the same supervisor conversation or existing agent session binding; idempotent end |
+
+### Configured supervisor worker — implemented boundary
+
+`services/conversation/openai.rs` implements the existing `ConversationModel`
+interface; `runtime.rs` owns its lifecycle inside `LocalDeployment`. Workspace
+messages do not call either module. The first adapter uses OpenAI Responses with
+six typed read tools and a structured final `{text, evidence_ids}` response. A
+configured local deployment also supplies the action service/transport: this adds
+`propose_agent_message` and `read_action`, and advertises `agent_actions` while the
+consumer is ready. Read-only test/alternate deployments can omit the action service.
+Memory mutation, native-goal controls and executor approvals remain unavailable
+as model tools. Workspace messages retain their separate raw path.
+
+Configuration is explicit and supervisor-specific:
+
+| Setting | Meaning |
+| --- | --- |
+| `VK_SUPERVISOR_ENABLED=1` | Enable supervisor history and attempt to start its consumer |
+| `VK_SUPERVISOR_MODEL_PROVIDER=openai` | Select the implemented hosted adapter |
+| `VK_SUPERVISOR_MODEL` | Required API model identifier; choose a model supporting Responses, function calling and structured output; no paid model default |
+| `VK_SUPERVISOR_API_KEY_FILE` | Required absolute regular file readable by the service; on Unix no group/other permissions; final-path symlinks rejected; maximum 4 KiB |
+| `VK_SUPERVISOR_MAX_OUTPUT_TOKENS` | Optional per-request output ceiling, 256–8192, default 4096; this includes the provider's output accounting, not a sentence-length target |
+
+Missing/invalid configuration leaves history readable and rejects new input.
+Never borrow a coding executor's login or infer a funded provider from its model
+selection. Configuration changes require the normal authorised service restart;
+source implementation does not activate these settings or contact a provider.
+
+The worker scans pending rows at startup, wakes after committed input and polls
+for missed notifications every half second. SQLite leases arbitrate multiple
+consumers. Readiness checks actual task/shutdown state. A rejected credential or
+persistence failure stops acceptance; already pending work remains durable for
+operator repair. Failed/interrupted turns are not automatically rerun. Normal
+shutdown drops in-flight HTTP work and records failure; abrupt termination leaves
+lease recovery to record interruption. An accepted-message retry returns the same
+receipt even while the worker is unavailable; a new identity receives 503 and a
+changed payload under an existing identity receives 409.
+
+Requests use a fixed TLS endpoint, no redirects, no ambient proxy or automatic
+HTTP retries, a ten-second connect timeout and sixty-second request timeout.
+The existing worker bounds a turn to twelve model steps and two minutes. Input
+and response bodies cap at 768 KiB and 1 MiB; retrieved tool data caps at 192 KiB
+per turn, with a separate 256 KiB cap on temporary provider continuation items.
+Each new instruction proposal may add one tool-free policy request within that
+same time budget; exact duplicates in a turn reuse their assessment/action. Budget
+for these requests as part of supervisor model cost. Token usage from decoded
+responses and safe inference settings are recorded
+against the run. Cancelled requests or invalid/lost responses can still incur
+provider charges without known usage; reconcile those with provider accounting.
+Provider error bodies, credentials and full requests do not enter logs/events.
+
+VK reconstructs bounded history from SQLite. Requests set `store:false` and
+`background:false`, without provider conversation IDs or `previous_response_id`.
+Native function outputs are returned by call ID; reasoning items and incidental
+assistant commentary are replayed only within that turn. They are neither visible
+chat replies nor persistent/exported context. Only the final validated structured
+reply and verified evidence links enter supervisor history. These wire choices
+follow [function calling](https://developers.openai.com/api/docs/guides/function-calling)
+and [stateless Responses guidance](https://developers.openai.com/api/docs/guides/migrate-to-responses)
+(checked 2026-09-26).
+
+`store:false` is not a promise of zero third-party retention. Declare the model
+egress (selected history, scoped preferences and retrieved reports) in the settings
+work; provider abuse-monitoring and caching rules still apply. Account-specific
+retention and regional requirements must be checked before live use against the
+[provider data controls](https://developers.openai.com/api/docs/guides/your-data).
+Adapter replacement preserves VK storage, lifecycle, typed tools, safe errors and
+evidence contracts; only transient provider items and HTTP serialization change.
+Deterministic adapter/consumer tests do not certify live model behavior or speech
+quality. The real-model corpus and funded provider configuration remain gates.
 
 ### Android call contract
 
@@ -173,6 +245,95 @@ the authoritative `DashMap` queue with persisted `agent_deliveries` (optionally 
 in-memory cache), including existing callers through delivery source IDs, without
 creating supervisor conversation/action rows for workspace messages. Do
 not copy messages into both an independent supervisor queue and the old consumer.
+
+Implemented action storage (`conversation/actions.rs`, migration
+`20260926000005`) freezes message text, selected sessions, workspace identity,
+repository relationships and full executor configuration. A trusted semantic
+assessment of the current user request determines whether the message is
+requested and consequential. This assessment is not an HTTP/tool argument supplied
+by the proposing agent or an instruction taken from workspace reports. The
+semantic assessment is now a distinct tool-free request to the configured model.
+VK supplies the current user request, earlier user turns for explicit references,
+selected entity-search/workspace-state results, and the frozen proposal. Raw agent
+reports and durable preferences do not enter this assessment; names and routing
+results remain data rather than policy instructions. The proposal tool accepts only
+message text and session IDs, never its own approval/risk fields. Structured policy
+output distinguishes ordinary, consequential, unclear and unsupported-control
+requests, with an authorization judgment and retained explanation. Invalid/refused/
+unavailable assessment cannot authorize delivery. Prompt version `supervisor-v2`,
+assessment version `supervisor-message-assessment-v1` and known combined usage are
+recorded. Real-model semantic/security evaluation remains a release gate.
+
+The service dispatcher enforces runtime goal/approval gates before admission
+and again before executing an owned steering attempt. Exact repeated proposals in
+one user turn share an identity derived from the run, message and sorted recipients,
+even if the model changes function-call IDs. An unfinished policy decision after a
+stale-target failure is not presented as a human confirmation. Worker lease checks
+fence cancelled assessment before dispatch.
+
+Storage approves ordinary explicit messages without an additional question.
+Consequential/unclear requests and inferred sets over five recipients receive a
+principal-bound five-minute confirmation containing the exact payload digest and
+action revision. Unsupported dedicated controls and unrequested instructions are
+rejected, not converted into confirmable messages. Acceptance revalidates the
+canonical targets, as does transfer into `agent_deliveries`; changing a model
+configuration while retaining an old version string cannot pass validation.
+Cancelled/failed/expired originating runs invalidate undispatched proposals.
+Expiry also fences a previously accepted grant until delivery admission. Admission
+commits all recipient rows together; a retry returns existing receipts and never
+another permission to perform a steering RPC. Export/deletion include grants.
+
+Direct and queued process creation now share transactional admission. The process,
+repository snapshots and original coding prompt commit together before spawn.
+Competing coding launches in one workspace cannot both observe it as idle. Direct
+parallel setup and dev-server behavior is preserved; queued work requires the
+workspace to finish its non-dev processes. A queued admission that loses to direct
+work releases its claim without losing the message. The container explicitly
+publishes the committed process/workspace state because SQLite hooks may fire
+before another connection can read the new rows.
+
+`conversation/dispatch.rs` connects approved action records to the shared queue
+and exact-process steering primitive. It does not grant authorization or enable
+model action tools. Preflight checks all recipients before transfer; later runtime
+changes can reject individual recipients, preserving partial outcomes. Known
+steering rejection is terminal; RPC/receipt uncertainty never falls back to queue.
+Repeated action dispatch returns existing receipts, including after runtime changes.
+The existing queue recovery scan reconciles action states and durable events when
+receipt aggregates change; no additional scheduler or delivery loop is introduced.
+
+Supervisor queue rows form isolated batches. Ordinary direct rows still collapse
+into their existing ordered raw prompt, but cannot override an adjacent approved
+supervisor message/configuration. Target identity, branch, repository relationships,
+full executor selection and action authorization are checked before preparation,
+inside atomic process admission, and immediately before external delivery. An
+expired/cancelled or changed target cannot acquire a new execution through an old
+proposal. This is snapshot checking, not a distributed transaction with an executor.
+A transport attempt remains uncertain if VK loses its acknowledgement.
+
+`dispatch_gate.rs` checks pending executor approvals across the workspace, capacity
+ownership and workspace/session lifecycle. Active Codex sessions are read through
+their exact owning app-server. For inactive sessions, the existing configured Codex
+executor performs native `thread/goal/get` before `thread/resume`; no independent
+probe process or progress-file guess is used. A null or complete native goal permits
+ordinary follow-up. A paused, unknown, malformed or unreadable native state rejects
+it; an active goal also respects its matching VK progress pause reason. Missing goal
+API support therefore blocks supervisor follow-up with a recoverable diagnostic,
+while existing direct workspace behavior is unchanged. No goal is created, reset
+or resumed by these checks. Dedicated slash controls cannot be sent through this
+message channel. Typed server-owned delivery provenance is separate from profile
+and child environment overrides.
+
+The global panel now presents consequential/unclear instructions for review with
+exact text, workspace/session labels, links, expiry, and send/decline controls.
+Confirmation and action events refresh the panel across clients. Acceptance binds
+owner, digest and revision before dispatch; an interrupted acceptance can be retried
+using the same grant. Stored delivery receipts remain readable after worker loss;
+new acceptance waits for a ready action service. Known preflight blocks are durable
+`action.blocked` events and appear in action details; uncertain RPCs retain their
+receipts and are never blindly resent. Outcome report ingestion, real-model policy
+review and real executor/capacity/approval acceptance remain release gates.
+Deterministic protocol fixtures do not certify a live native session or remove
+provider/device release gates.
 
 Message acceptance is not execution success. Per-recipient states:
 

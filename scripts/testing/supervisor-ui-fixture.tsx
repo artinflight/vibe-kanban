@@ -39,7 +39,7 @@ setLocalApiTransport({
       return success({message,run_id:'run'});
     }
     if (url.pathname.endsWith('/messages')) return success(messages.filter((row) => row.created_seq < Number(url.searchParams.get('before_seq') ?? Infinity)).slice(-50));
-    if (url.pathname.endsWith('/actions') || url.pathname.endsWith('/memories')) return success([]);
+    if (url.pathname.endsWith('/actions') || url.pathname.endsWith('/memories') || url.pathname.endsWith('/runs') || url.pathname.endsWith('/confirmations')) return success([]);
     if (url.pathname.endsWith('/messages/opening/evidence')) return success([{evidence_id:'source',relationship:'summarised',source:{kind:'agent_report',session_id:'agent-session',process_id:'process'},availability:'retained'}]);
     if (url.pathname.endsWith('/evidence/source')) return success({id:'source',conversation_id:'conversation',source:{kind:'agent_report',session_id:'agent-session',process_id:'process'},source_revision:'final',content_hash:'fixture',availability:'retained',raw_report:raw,captured_at:'2026-09-26T00:00:00Z'});
     if (url.pathname.endsWith('/history') && init?.method === 'DELETE') { messages=[]; event('history.cleared',{}); return success(snapshot()); }

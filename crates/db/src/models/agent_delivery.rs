@@ -7,7 +7,7 @@ use sqlx::{FromRow, SqlitePool};
 use uuid::Uuid;
 
 use super::{
-    execution_process::{CreateExecutionProcess, ExecutionProcess},
+    execution_process::{CreateExecutionProcess, ExecutionProcess, ExecutionProcessError},
     execution_process_repo_state::CreateExecutionProcessRepoState,
     scratch::DraftFollowUpData,
 };
@@ -126,9 +126,21 @@ impl AgentDelivery {
             tx.commit().await?;
             return Ok(None);
         }
+        let first: Option<(Uuid,String)> = sqlx::query_as("SELECT id,source_kind FROM agent_deliveries WHERE session_id=? AND state IN ('queued','waiting_capacity') ORDER BY position LIMIT 1")
+            .bind(session_id).fetch_optional(&mut *tx).await?;
+        let Some((first_id, first_kind)) = first else {
+            tx.commit().await?;
+            return Ok(None);
+        };
+        // Keep the legacy direct-message batch, stopping at a supervisor row.
+        // Its approved prompt/configuration must never inherit a later sender's
+        // settings or become part of that sender's collapsed prompt.
+        let supervisor_id = (first_kind == "supervisor").then_some(first_id);
+        let boundary:Option<i64>=sqlx::query_scalar("SELECT min(position) FROM agent_deliveries WHERE session_id=? AND source_kind='supervisor' AND state IN ('queued','waiting_capacity')")
+            .bind(session_id).fetch_one(&mut *tx).await?;
         let claim_id = Uuid::new_v4();
-        let mut deliveries = sqlx::query_as::<_, Self>("UPDATE agent_deliveries SET state = 'dispatching', claim_id = ?, lease_until = unixepoch() + 300, attempt_count = attempt_count + 1, updated_at = datetime('now','subsec') WHERE session_id = ? AND state IN ('queued','waiting_capacity') RETURNING *")
-            .bind(claim_id).bind(session_id).fetch_all(&mut *tx).await?;
+        let mut deliveries = sqlx::query_as::<_, Self>("UPDATE agent_deliveries SET state = 'dispatching', claim_id = ?, lease_until = unixepoch() + 300, attempt_count = attempt_count + 1, updated_at = datetime('now','subsec') WHERE session_id = ? AND state IN ('queued','waiting_capacity') AND ((? IS NOT NULL AND id=?) OR (? IS NULL AND (? IS NULL OR position<?))) RETURNING *")
+            .bind(claim_id).bind(session_id).bind(supervisor_id).bind(supervisor_id).bind(supervisor_id).bind(boundary).bind(boundary).fetch_all(&mut *tx).await?;
         deliveries.sort_by_key(|d| d.position);
         tx.commit().await?;
         Ok((!deliveries.is_empty()).then_some(DeliveryClaim {
@@ -173,33 +185,36 @@ impl AgentDelivery {
         data: &CreateExecutionProcess,
         process_id: Uuid,
         repo_states: &[CreateExecutionProcessRepoState],
-    ) -> Result<ExecutionProcess, sqlx::Error> {
+    ) -> Result<ExecutionProcess, ExecutionProcessError> {
         if data.session_id != claim.session_id {
-            return Err(sqlx::Error::RowNotFound);
+            return Err(sqlx::Error::RowNotFound.into());
         }
         let mut tx = pool.begin().await?;
-        let count = sqlx::query("UPDATE agent_deliveries SET state = 'started', execution_process_id = ?, lease_until = NULL, updated_at = datetime('now','subsec') WHERE claim_id = ? AND session_id = ? AND state = 'dispatching' AND lease_until > unixepoch() AND execution_process_id IS NULL")
-            .bind(process_id).bind(claim.id).bind(claim.session_id).execute(&mut *tx).await?.rows_affected();
-        if count == 0 || count as usize != claim.deliveries.len() {
-            return Err(sqlx::Error::RowNotFound);
+        let deliveries:Vec<Self> = sqlx::query_as("UPDATE agent_deliveries SET state = 'started', execution_process_id = ?, lease_until = NULL, updated_at = datetime('now','subsec') WHERE claim_id = ? AND session_id = ? AND state = 'dispatching' AND lease_until > unixepoch() AND execution_process_id IS NULL RETURNING *")
+            .bind(process_id).bind(claim.id).bind(claim.session_id).fetch_all(&mut *tx).await?;
+        if deliveries.is_empty()
+            || deliveries.len() != claim.deliveries.len()
+            || deliveries
+                .iter()
+                .any(|d| !claim.deliveries.iter().any(|expected| expected.id == d.id))
+        {
+            return Err(sqlx::Error::RowNotFound.into());
         }
-        let valid: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM sessions s JOIN workspaces w ON w.id = s.workspace_id WHERE s.id = ? AND w.archived = 0 AND w.worktree_deleted = 0 AND NOT EXISTS(SELECT 1 FROM execution_processes p WHERE p.session_id IN (SELECT id FROM sessions WHERE workspace_id = w.id) AND p.status = 'running' AND p.run_reason != 'devserver' AND p.dropped = 0))")
-            .bind(data.session_id).fetch_one(&mut *tx).await?;
-        if !valid {
-            return Err(sqlx::Error::Protocol(
-                "Queued target changed or is already running".into(),
-            ));
+        for delivery in &deliveries {
+            supervisor::validate(&mut tx, delivery).await?;
+            if delivery.source_kind == "supervisor" {
+                if deliveries.len() != 1
+                    || supervisor::executor_config(&data.executor_action)
+                        != Some(&delivery.data.executor_config)
+                {
+                    return Err(ExecutionProcessError::DeliveryRejected);
+                }
+            }
         }
-        sqlx::query("INSERT INTO execution_processes (id, session_id, run_reason, executor_action, status) VALUES (?, ?, ?, ?, 'running')")
-            .bind(process_id).bind(data.session_id).bind(&data.run_reason).bind(sqlx::types::Json(&data.executor_action)).execute(&mut *tx).await?;
-        for entry in repo_states {
-            sqlx::query("INSERT INTO execution_process_repo_states (id, execution_process_id, repo_id, before_head_commit, after_head_commit, merge_commit) VALUES (?, ?, ?, ?, ?, ?)")
-                .bind(Uuid::new_v4()).bind(process_id).bind(entry.repo_id).bind(&entry.before_head_commit).bind(&entry.after_head_commit).bind(&entry.merge_commit).execute(&mut *tx).await?;
-        }
+        let process =
+            ExecutionProcess::insert_admitted(&mut tx, data, process_id, repo_states, true).await?;
         tx.commit().await?;
-        ExecutionProcess::find_by_id(pool, process_id)
-            .await?
-            .ok_or(sqlx::Error::RowNotFound)
+        Ok(process)
     }
 
     /// Only the pre-launch capacity denial permits a correlated attempt to queue
@@ -244,3 +259,4 @@ impl AgentDelivery {
 }
 
 pub mod steering;
+mod supervisor;

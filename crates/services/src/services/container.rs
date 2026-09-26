@@ -12,7 +12,7 @@ use db::{
     DBService,
     models::{
         agent_delivery::{AgentDelivery, DeliveryClaim},
-        coding_agent_turn::{CodingAgentTurn, CreateCodingAgentTurn},
+        coding_agent_turn::CodingAgentTurn,
         execution_process::{
             CreateExecutionProcess, ExecutionContext, ExecutionProcess, ExecutionProcessError,
             ExecutionProcessRunReason, ExecutionProcessStatus,
@@ -166,6 +166,10 @@ pub trait ContainerService {
     fn notification_service(&self) -> &NotificationService;
 
     async fn touch(&self, workspace: &Workspace) -> Result<(), ContainerError>;
+
+    /// Transactions can commit after SQLite hooks ran. Publish only committed
+    /// process/turn state, before spawning, for both direct and queued launches.
+    async fn publish_execution_admitted(&self, process: &ExecutionProcess);
 
     async fn workspace_has_external_processes(&self, _workspace: &Workspace) -> bool {
         false
@@ -1591,36 +1595,7 @@ pub trait ContainerService {
             )
             .await?
         };
-        if *run_reason != ExecutionProcessRunReason::ArchiveScript {
-            Workspace::set_archived(&self.db().pool, workspace.id, false).await?;
-        }
-
-        if let Some(prompt) = match executor_action.typ() {
-            ExecutorActionType::CodingAgentInitialRequest(coding_agent_request) => {
-                Some(coding_agent_request.prompt.clone())
-            }
-            ExecutorActionType::CodingAgentFollowUpRequest(follow_up_request) => {
-                Some(follow_up_request.prompt.clone())
-            }
-            ExecutorActionType::ReviewRequest(review_request) => {
-                Some(review_request.prompt.clone())
-            }
-            ExecutorActionType::ScriptRequest(_) => None,
-        } {
-            let create_coding_agent_turn = CreateCodingAgentTurn {
-                execution_process_id: execution_process.id,
-                prompt: Some(prompt),
-            };
-
-            let coding_agent_turn_id = Uuid::new_v4();
-
-            CodingAgentTurn::create(
-                &self.db().pool,
-                &create_coding_agent_turn,
-                coding_agent_turn_id,
-            )
-            .await?;
-        }
+        self.publish_execution_admitted(&execution_process).await;
 
         if let Err(start_error) = self
             .start_execution_inner(workspace, &execution_process, executor_action)

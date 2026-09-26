@@ -19,6 +19,7 @@ use services::services::{
     auth::AuthContext,
     config::{Config, ConfigError},
     container::{ContainerError, ContainerService},
+    conversation::runtime::SupervisorRuntime,
     events::{EventError, EventService},
     file::{FileError, FileService},
     file_search::FileSearchCache,
@@ -105,6 +106,8 @@ pub trait Deployment: Clone + Send + Sync + 'static {
     fn approvals(&self) -> &Approvals;
 
     fn queued_message_service(&self) -> &QueuedMessageService;
+
+    fn supervisor(&self) -> &SupervisorRuntime;
 
     fn auth_context(&self) -> &AuthContext;
 

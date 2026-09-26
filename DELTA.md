@@ -1469,3 +1469,136 @@ conversation API tests and two session queue regression tests pass after migrati
 governance and diff whitespace checks pass. No real executor/model/provider call
 or deployment was performed. Supervisor action authorisation/receipt linkage,
 admission-race repair and executor acceptance remain the next dispatch work.
+
+## 2026-09-26 | Exact action confirmations and transactional process admission
+
+Migration `20260926000005_supervisor_action_confirmations.sql` and
+`db::models::conversation::actions` now persist exact-message policy decisions,
+principal-bound five-minute confirmation grants, target/configuration snapshots,
+all-recipient delivery admission and aggregate recipient outcomes. Ordinary
+explicit messages need no extra confirmation; consequential/unclear instructions
+and broad inferred sets require review. Unauthorized instructions and dedicated
+native-goal/tool-approval controls are rejected by the storage policy. The semantic
+assessment is a trusted service input, not yet supplied by a real model. Do not
+expose assessment fields as client/model tool arguments.
+
+Targets are re-read canonically before approval, confirmation and transfer to the
+ledger; copying an old version while changing a model or workspace fails. A
+completed supervisor explanation can leave a pending confirmation, but failed,
+cancelled or expired runs fence undispatched actions. Confirmations bind digest,
+revision, owner and expiry; replays cannot broaden payloads or emit duplicate
+requests. Export/deletion include grants. Only the first admission returns owned
+steering attempts; replay returns existing receipts without another RPC attempt.
+
+Direct and queued process creation now share `ExecutionProcess::insert_admitted`.
+Process, repository snapshots, raw coding prompt and unarchive transition commit
+in one transaction before spawning. Writer locking prevents duplicate coding
+launches across sessions in a workspace. Direct parallel setup/dev-server behavior
+and explicit unarchive are preserved; sequential setup reserves its next coding
+turn. Queued work remains stricter about finishing all non-dev processes. A losing
+queued admission releases its claim without losing the message. The container
+publishes process/workspace patches after commit for both paths. Raw workspace
+rendering, history and response content have no supervisor dependency.
+
+Current validation: all **48 DB and 37 service tests pass** in
+`/mnt/vk-storage/capacity-build-tmp/vk-chat-action-admission-regression.log`.
+This includes twelve new confirmation/action tests and five file-backed admission
+tests using multiple SQLite connections, real migrations, injected repository/
+prompt write failures, rollback, replay and unchanged raw reports. The initial
+full run exposed incomplete old test fixtures (foundation-only schema and missing
+repository display name); fixtures now use the current migration chain and valid
+repository rows. The populated legacy-history migration test remains in the suite.
+Server queue/API integration validation is pending in this pickup note until its
+terminal result is appended below. Full formatting and ops governance pass.
+
+**Next implementation:** connect the service-owned semantic assessment, confirmation
+API/UI and delivery execution using the existing exact-process steering primitive.
+Add runtime native-goal pause/activation and executor-approval checks before
+admission and delivery; revalidate queued supervisor targets/configuration again
+at consumption. Current transfer checks do not cover changes while waiting in a
+queue. Complete result ingestion/action reconciliation and actual executor
+acceptance. Keep production send readiness false and worker tools read-only until
+these capabilities are wired. Hosted model adapter/startup, scoped memory use and
+attention projection, real-model speech evaluation, voice/provider, native Android
+and device/car acceptance remain open. No deployment/provider/runtime changes or
+live model/executor calls were made.
+
+Action/admission server validation completed: six conversation API tests and both
+queue-route regressions pass. Server and local-deployment compile with the shared
+transactional admission and post-commit publication. This does not certify a live
+WebSocket/executor or configured model/provider flow.
+
+SQLx preparation completed with the full migration chain. Only the obsolete
+standalone execution-process insert query metadata was removed; the temporary
+preparation database was cleaned by the repository script.
+
+Final validation for this slice: 48 DB + 37 service + six conversation API + two
+queue-route tests pass (93 total). Full formatting, ops governance, SQLx generation
+and `prepare-db:check`, and `git diff --check` pass. The temporary preparation DB
+was removed. Feature source remains undeployed; full supervisor/model/voice/Android
+acceptance and release requirements are still open.
+
+
+## 2026-09-26 — configured supervisor worker and reply-status integration
+
+Added a supervisor-only OpenAI Responses adapter and deployment-owned startup/
+shutdown consumer. Explicit model/provider/private-key-file settings gate new
+messages; missing configuration leaves history available. The adapter uses the
+existing typed read tools and verified evidence contract, bounds requests/tool
+context/continuations, classifies safe errors and keeps vendor continuation items
+out of persisted history/logs/exports. Incidental provider commentary is transient;
+only terminal structured replies are published. No executor credentials, hidden
+coding workspace or provider-owned conversation are used.
+
+Added durable-consumer startup/restart/shutdown and rejected-credential behavior.
+Already accepted message receipts remain recoverable after readiness becomes false;
+new messages fail without inserting work and changed identities remain conflict.
+The global UI now shows durable reply status alongside the input, handles monotonic
+status replay, refreshes capabilities and supports pending receipt retries while
+new work is unavailable. Run status uses a scoped, bounded API and generated types;
+leases/internal context stay private. Workspace raw chat remains unchanged.
+
+Validation: 48 DB + 46 services + seven conversation API + two queue-route tests
+pass (103 Rust tests). Nine new service tests cover native wire parsing/replay,
+credential handling and actual database-backed consumer lifecycle; API acceptance
+through the real consumer and status paging/projection are exercised. Seven UI
+state tests, web-core/local-web typechecks, focused production-file lint, generated
+contracts, full formatting, ops governance and diff whitespace checks pass. The
+initial lint command incorrectly included the Node test file under the app-only
+TS config; the production-file command passes and the separate Node suite passes.
+Logs use `/mnt/vk-storage/capacity-build-tmp/vk-chat-model-*.log`.
+
+Configured model behavior remains deterministic-test evidence, not live-provider
+or speech acceptance. Next is semantic/action policy, confirmations and actual
+supervisor dispatch with goal/approval/configuration revalidation. Complete context,
+memory/attention, funded model evaluation, voice/native compatibility, signed
+Android/device/car and release/restore outcomes remain. No live runtime/provider
+configuration, external model/executor call or deployment occurred.
+
+Final generated-type verification passed: `pnpm run generate-types:check` reports
+`shared/types.ts` current; generated schemas match. No checks remain running for
+this slice.
+
+
+## 2026-09-26 — supervisor delivery execution and native-goal checks
+
+- Added the service-owned approved-action dispatcher using existing queue and
+  exact-process steering. Admission ownership prevents repeated RPCs; rejection,
+  uncertainty and partial outcomes retain separate receipts.
+- Isolated supervisor batches from raw direct queue collapsing; revalidate target,
+  executor selection and authorisation at consumption/admission/delivery. Normalize
+  the existing legacy executor identity instead of treating its fill as rerouting.
+- Added runtime approval/capacity/lifecycle checks and native Codex goal inspection
+  before supervisor thread resume. No progress-file guess, second control process,
+  supervisor slash command, or change to ordinary direct chat is required.
+- Reuse the existing queue recovery scan to emit changed aggregate action states.
+  Semantic model tools, confirmation interfaces and outcome evidence ingestion
+  remain next; action capability is not enabled. Current validation is in HANDOFF.md.
+- No deployment, provider setup, live model/executor call or phone/car test.
+
+- Validation: 53 DB + 58 service + three scripted Codex protocol + seven
+  conversation API + two direct queue-route tests pass (123 total); formatting,
+  ops governance and diff whitespace checks pass. Terminal logs:
+  `/mnt/vk-storage/capacity-build-tmp/vk-chat-dispatch-{regression,api-tests,queue-api-tests,format,ops}.log`
+  and `vk-chat-goal-gate-tests.log`. Full workspace/PR baseline and live
+  executor/model/browser/device acceptance remain unverified.

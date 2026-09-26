@@ -12,12 +12,15 @@ import type {
   SupervisorEvent,
   SupervisorSnapshot,
   ConversationMessage,
+  SupervisorRunStatus,
 } from 'shared/types';
 import { ApiError } from '@/shared/lib/api';
+import { createMessageId } from '@/shared/lib/createMessageId';
 import { SupervisorContext } from '@/shared/hooks/useSupervisor';
 import { supervisorApi } from './api';
 import {
   applySupervisorEvent,
+  mergeRuns,
   type SupervisorHistory,
 } from './supervisor-state';
 import { SupervisorPanel } from './SupervisorPanel';
@@ -25,17 +28,19 @@ import { SupervisorPanel } from './SupervisorPanel';
 // Mount above the host-keyed route providers: workspace navigation cannot
 // replace the supervisor owner, draft, pending retry or connection.
 export function SupervisorProvider({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
   const { data: capabilities } = useQuery({
     queryKey: ['supervisor', 'local', 'capabilities'],
     queryFn: supervisorApi.capabilities,
     staleTime: 30_000,
     retry: false,
+    refetchInterval: open ? 10_000 : false,
   });
-  const [open, setOpen] = useState(false);
   const [snapshot, setSnapshot] = useState<SupervisorSnapshot | null>(null);
   const [history, setHistory] = useState<SupervisorHistory | null>(null);
   const current = useRef<SupervisorHistory | null>(null);
   const [page, setPage] = useState<ConversationMessage[] | null>(null);
+  const [pageRuns, setPageRuns] = useState<SupervisorRunStatus[]>([]);
   const [hasEarlier, setHasEarlier] = useState(true);
   const [loading, setLoading] = useState(false);
   const [connected, setConnected] = useState(false);
@@ -74,7 +79,10 @@ export function SupervisorProvider({ children }: { children: ReactNode }) {
       setError(null);
       try {
         const next = await supervisorApi.resolve();
-        const messages = await supervisorApi.messages(next.conversation.id);
+        const [messages, runs] = await Promise.all([
+          supervisorApi.messages(next.conversation.id),
+          supervisorApi.runs(next.conversation.id),
+        ]);
         if (disposed) return;
         const old = current.current;
         if (
@@ -89,6 +97,7 @@ export function SupervisorProvider({ children }: { children: ReactNode }) {
         dataEpoch.current += 1;
         setSnapshot(next);
         setPage(null);
+        setPageRuns([]);
         setHasEarlier(messages.length === 50);
         publish({
           conversationId: next.conversation.id,
@@ -96,6 +105,7 @@ export function SupervisorProvider({ children }: { children: ReactNode }) {
           principalId: next.conversation.principal_id,
           cursor: next.last_seq,
           messages,
+          runs,
         });
         setRevision((value) => value + 1);
         void connect();
@@ -155,17 +165,28 @@ export function SupervisorProvider({ children }: { children: ReactNode }) {
               event as SupervisorEvent
             );
             publish({ ...after, messages: after.messages.slice(-200) });
+            if (event.type === 'run.status') {
+              const run = (event as SupervisorEvent)
+                .payload as SupervisorRunStatus;
+              setPageRuns((before) =>
+                before.some((item) => item.id === run.id)
+                  ? mergeRuns(before, [run])
+                  : before
+              );
+            }
             if (after.messages.length > 200) setHasEarlier(true);
             if (event.type === 'history.cleared') {
               dataEpoch.current += 1;
               setPage(null);
+              setPageRuns([]);
               setPending(null);
               setHasEarlier(false);
             }
             if (
               event.type === 'memory.changed' ||
               event.type === 'memory.forgotten' ||
-              event.type === 'action.status' ||
+              event.type.startsWith('action.') ||
+              event.type.startsWith('confirmation.') ||
               event.type === 'evidence.linked' ||
               event.type === 'history.cleared'
             )
@@ -208,10 +229,15 @@ export function SupervisorProvider({ children }: { children: ReactNode }) {
   }, [open, capabilities?.enabled, publish, reload]);
 
   const send = useCallback(async () => {
-    if (!snapshot?.capabilities.accepting_messages || sendInFlight.current)
+    if (
+      !snapshot ||
+      (!pending &&
+        !(capabilities ?? snapshot.capabilities).accepting_messages) ||
+      sendInFlight.current
+    )
       return;
     const input: AcceptConversationMessage = pending ?? {
-      client_message_id: crypto.randomUUID(),
+      client_message_id: createMessageId(),
       body: draft,
       origin: 'typed',
       reply_to_id: null,
@@ -234,7 +260,7 @@ export function SupervisorProvider({ children }: { children: ReactNode }) {
       sendInFlight.current = false;
       setSending(false);
     }
-  }, [snapshot, pending, draft]);
+  }, [snapshot, capabilities, pending, draft]);
 
   const earlier = useCallback(async () => {
     if (!snapshot || loading) return;
@@ -247,8 +273,12 @@ export function SupervisorProvider({ children }: { children: ReactNode }) {
         snapshot.conversation.id,
         oldest
       );
+      const runs = await supervisorApi.runs(snapshot.conversation.id, oldest);
       if (epoch !== dataEpoch.current) return;
-      if (messages.length) setPage(messages);
+      if (messages.length) {
+        setPage(messages);
+        setPageRuns(runs);
+      }
       setHasEarlier(messages.length === 50);
     } catch (failure) {
       setError(String(failure));
@@ -291,8 +321,18 @@ export function SupervisorProvider({ children }: { children: ReactNode }) {
           target?.focus();
         }}
         onClose={() => setOpen(false)}
-        snapshot={snapshot}
+        snapshot={
+          snapshot && {
+            ...snapshot,
+            capabilities: capabilities ?? snapshot.capabilities,
+          }
+        }
         messages={page ?? history?.messages ?? []}
+        runs={
+          page
+            ? mergeRuns(pageRuns, history?.runs ?? [])
+            : (history?.runs ?? [])
+        }
         loading={loading}
         connected={connected}
         error={error}

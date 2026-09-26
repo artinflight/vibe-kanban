@@ -57,7 +57,10 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(approvals::router())
         .merge(scratch::router(&deployment))
         .merge(saved_chat_messages::router())
-        .merge(conversations::router(deployment.db().pool.clone()))
+        .merge(conversations::router(
+            deployment.db().pool.clone(),
+            deployment.supervisor().clone(),
+        ))
         .merge(durable_ui_preferences::router())
         .merge(search::router(&deployment))
         .merge(preview::api_router())

@@ -13,17 +13,18 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use super::{
-    execution_process_repo_state::{CreateExecutionProcessRepoState, ExecutionProcessRepoState},
-    repo::Repo,
-    session::Session,
-    workspace::Workspace,
-    workspace_repo::WorkspaceRepo,
+    execution_process_repo_state::CreateExecutionProcessRepoState, repo::Repo, session::Session,
+    workspace::Workspace, workspace_repo::WorkspaceRepo,
 };
 
 #[derive(Debug, Error)]
 pub enum ExecutionProcessError {
     #[error(transparent)]
     Database(#[from] sqlx::Error),
+    #[error("Workspace is already running an incompatible process")]
+    AdmissionConflict,
+    #[error("Supervisor delivery no longer matches its approved target or executor settings")]
+    DeliveryRejected,
     #[error("Execution process not found")]
     ExecutionProcessNotFound,
     #[error("Failed to create execution process: {0}")]
@@ -391,46 +392,19 @@ impl ExecutionProcess {
         .await
     }
 
-    /// Create a new execution process
-    ///
-    /// Note: We intentionally avoid using a transaction here. SQLite update
-    /// hooks fire during transactions (before commit), and the hook spawns an
-    /// async task that queries `find_by_rowid` on a different connection.
-    /// If we used a transaction, that query would not see the uncommitted row,
-    /// causing the WebSocket event to be lost.
+    /// Admit the process, repository state and original coding prompt together.
+    /// The container publishes the committed admission explicitly; SQLite hooks
+    /// alone cannot reliably observe uncommitted inserts on another connection.
     pub async fn create(
         pool: &SqlitePool,
         data: &CreateExecutionProcess,
         process_id: Uuid,
         repo_states: &[CreateExecutionProcessRepoState],
-    ) -> Result<Self, sqlx::Error> {
-        let now = Utc::now();
-        let executor_action_json = sqlx::types::Json(&data.executor_action);
-
-        sqlx::query!(
-            r#"INSERT INTO execution_processes (
-                    id, session_id, run_reason, executor_action,
-                    status, exit_code, started_at, completed_at, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
-            process_id,
-            data.session_id,
-            data.run_reason,
-            executor_action_json,
-            ExecutionProcessStatus::Running,
-            None::<i64>,
-            now,
-            None::<DateTime<Utc>>,
-            now,
-            now
-        )
-        .execute(pool)
-        .await?;
-
-        ExecutionProcessRepoState::create_many(pool, process_id, repo_states).await?;
-
-        Self::find_by_id(pool, process_id)
-            .await?
-            .ok_or(sqlx::Error::RowNotFound)
+    ) -> Result<Self, ExecutionProcessError> {
+        let mut tx = pool.begin().await?;
+        let process = Self::insert_admitted(&mut tx, data, process_id, repo_states, false).await?;
+        tx.commit().await?;
+        Ok(process)
     }
 
     pub async fn was_stopped(pool: &SqlitePool, id: Uuid) -> bool {
@@ -846,3 +820,5 @@ mod tests {
         );
     }
 }
+
+mod admission;

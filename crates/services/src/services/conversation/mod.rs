@@ -11,8 +11,13 @@ use sqlx::SqlitePool;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
+pub mod action_service;
 pub mod context;
+pub mod dispatch;
+pub mod dispatch_gate;
 pub mod model;
+pub mod openai;
+pub mod runtime;
 
 use context::LocalContext;
 use model::{
@@ -48,6 +53,7 @@ pub struct SupervisorWorker {
     worker_id: Uuid,
     heartbeat: Duration,
     deadline: Duration,
+    actions: Option<Arc<action_service::SupervisorActions>>,
 }
 
 impl SupervisorWorker {
@@ -61,7 +67,13 @@ impl SupervisorWorker {
             worker_id: Uuid::new_v4(),
             heartbeat: Duration::from_secs(15),
             deadline: Duration::from_secs(120),
+            actions: None,
         })
+    }
+
+    pub fn with_actions(mut self, actions: Arc<action_service::SupervisorActions>) -> Self {
+        self.actions = Some(actions);
+        self
     }
 
     /// Called by deployment-owned scheduling. Only durable pending runs can be
@@ -136,8 +148,13 @@ impl SupervisorWorker {
             return Err(WorkError::Safe("model_configuration_invalid"));
         }
         let mut request = ModelRequest {
-            instructions: INSTRUCTIONS,
+            instructions: if self.actions.is_some() {
+                model::ACTION_INSTRUCTIONS
+            } else {
+                INSTRUCTIONS
+            },
             prompt_version: PROMPT_VERSION,
+            agent_actions: self.actions.is_some(),
             input: store.run_input(run).await?,
             history: store.run_history(run).await?,
             preferences: store
@@ -153,16 +170,19 @@ impl SupervisorWorker {
             "history":request.history.iter().map(|m|json!({"id":m.id,"revision":m.revision})).collect::<Vec<_>>(),
             "memories":request.preferences.iter().map(|m|json!({"id":m.id,"revision":m.revision})).collect::<Vec<_>>(),
             "tools":[]});
-        let model = json!({"identity":identity,"prompt_version":PROMPT_VERSION});
+        let model = json!({"identity":identity,"prompt_version":PROMPT_VERSION,"options":self.model.options(),"agent_actions":self.actions.is_some()});
         let mut usage = ModelUsage::default();
         let mut call_ids = HashSet::new();
         let mut evidence_seen = HashSet::new();
         let mut tool_bytes = 0;
+        let mut continuation_bytes = 0;
         persist(store, run, &manifest, &model, &usage).await?;
         for _ in 0..MAX_STEPS {
             store.renew(run).await?;
             let response = self.model.next(&request).await.map_err(|error| {
                 WorkError::Safe(match error {
+                    model::ModelError::Authentication => "model_authentication_failed",
+                    model::ModelError::Refused => "model_refused",
                     model::ModelError::Unavailable => "model_unavailable",
                     model::ModelError::RateLimited => "model_rate_limited",
                     model::ModelError::InvalidResponse => "model_invalid_response",
@@ -177,6 +197,13 @@ impl SupervisorWorker {
                 .checked_add(response.usage.output_tokens)
                 .ok_or(WorkError::Safe("model_invalid_usage"))?;
             persist(store, run, &manifest, &model, &usage).await?;
+            continuation_bytes += response
+                .continuation
+                .bytes()
+                .map_err(|_| WorkError::Safe("model_invalid_response"))?;
+            if continuation_bytes > 256 * 1024 {
+                return Err(WorkError::Safe("context_budget_exceeded"));
+            }
             match response.step {
                 ModelStep::Reply { text, evidence_ids } => {
                     if text.trim().is_empty()
@@ -198,12 +225,52 @@ impl SupervisorWorker {
                     {
                         return Err(WorkError::Safe("model_invalid_tool_call"));
                     }
-                    let result = match self.context.execute(run, &call.tool).await {
+                    let executed = match &call.tool {
+                        model::SupervisorTool::ProposeAgentMessage { message, sessions } => {
+                            if let Some(actions) = &self.actions {
+                                match actions
+                                    .propose(run, &request, self.model.as_ref(), message, sessions)
+                                    .await
+                                {
+                                    Ok((result, policy_usage)) => {
+                                        usage.input_tokens = usage
+                                            .input_tokens
+                                            .checked_add(policy_usage.input_tokens)
+                                            .ok_or(WorkError::Safe("model_invalid_usage"))?;
+                                        usage.output_tokens = usage
+                                            .output_tokens
+                                            .checked_add(policy_usage.output_tokens)
+                                            .ok_or(WorkError::Safe("model_invalid_usage"))?;
+                                        Ok(result)
+                                    }
+                                    Err(action_service::ActionError::Store(error)) => Err(error),
+                                    Err(action_service::ActionError::Model(error)) => {
+                                        return Err(WorkError::Safe(model_failure(error)));
+                                    }
+                                }
+                            } else {
+                                Ok(json!({"error":"agent_actions_unavailable"}))
+                            }
+                        }
+                        model::SupervisorTool::ReadAction { action_id } => {
+                            if let Some(actions) = &self.actions {
+                                actions.status(run.conversation_id, *action_id).await
+                            } else {
+                                Ok(json!({"error":"agent_actions_unavailable"}))
+                            }
+                        }
+                        _ => self.context.execute(run, &call.tool).await,
+                    };
+                    let result = match executed {
                         Ok(result) => result,
                         Err(ConversationError::NotFound) => json!({"error":"source_unavailable"}),
                         Err(ConversationError::InvalidRecord) => {
                             json!({"error":"invalid_tool_arguments"})
                         }
+                        Err(
+                            ConversationError::RevisionConflict
+                            | ConversationError::IdempotencyConflict,
+                        ) => json!({"error":"action_changed_reconfirm_intent"}),
                         Err(error) => return Err(error.into()),
                     };
                     let encoded = serde_json::to_vec(&result)
@@ -224,7 +291,11 @@ impl SupervisorWorker {
                         "source_revision":result["data"]["source_revision"],
                         "memories":result["data"]["memories"].as_array().map(|memories|memories.iter().map(|m|json!({"id":m["id"],"revision":m["revision"]})).collect::<Vec<_>>())}));
                     persist(store, run, &manifest, &model, &usage).await?;
-                    request.exchanges.push(ToolExchange { call, result });
+                    request.exchanges.push(ToolExchange {
+                        call,
+                        result,
+                        continuation: response.continuation,
+                    });
                 }
             }
         }
@@ -246,3 +317,13 @@ async fn persist(
 
 #[cfg(test)]
 mod tests;
+
+fn model_failure(error: model::ModelError) -> &'static str {
+    match error {
+        model::ModelError::Authentication => "model_authentication_failed",
+        model::ModelError::Refused => "model_refused",
+        model::ModelError::Unavailable => "model_unavailable",
+        model::ModelError::RateLimited => "model_rate_limited",
+        model::ModelError::InvalidResponse => "model_invalid_response",
+    }
+}

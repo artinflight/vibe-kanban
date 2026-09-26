@@ -1,5 +1,8 @@
 import type {
   AcceptConversationMessage,
+  ActionConfirmation,
+  AnswerSupervisorConfirmation,
+  SupervisorActionDetail,
   ConversationAction,
   ConversationEvidence,
   ConversationMemory,
@@ -7,6 +10,7 @@ import type {
   MessageEvidenceRef,
   SupervisorCapabilities,
   SupervisorMessageReceipt,
+  SupervisorRunStatus,
   SupervisorSnapshot,
 } from 'shared/types';
 import { handleApiResponse } from '@/shared/lib/api';
@@ -42,7 +46,25 @@ export const supervisorApi = {
     ),
   send: (id: string, input: AcceptConversationMessage) =>
     request<SupervisorMessageReceipt>(`/${id}/messages`, 'POST', input),
+  runs: (id: string, before?: number) =>
+    request<SupervisorRunStatus[]>(
+      `/${id}/runs?limit=200${before === undefined ? '' : `&before_seq=${before}`}`
+    ),
   actions: (id: string) => request<ConversationAction[]>(`/${id}/actions`),
+  action: (id: string, action: string) =>
+    request<SupervisorActionDetail>(`/${id}/actions/${action}`),
+  confirmations: (id: string) =>
+    request<ActionConfirmation[]>(`/${id}/confirmations`),
+  confirm: (
+    id: string,
+    confirmation: string,
+    answer: AnswerSupervisorConfirmation
+  ) =>
+    request<SupervisorActionDetail>(
+      `/${id}/confirmations/${confirmation}`,
+      'POST',
+      answer
+    ),
   memories: (id: string) => request<ConversationMemory[]>(`/${id}/memories`),
   references: (id: string, message: string) =>
     request<MessageEvidenceRef[]>(`/${id}/messages/${message}/evidence`),

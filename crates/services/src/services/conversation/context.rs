@@ -10,7 +10,7 @@ use sha2::{Digest, Sha256};
 use sqlx::{FromRow, SqlitePool};
 use uuid::Uuid;
 
-use super::model::ReadTool;
+use super::model::SupervisorTool;
 
 type Result<T> = std::result::Result<T, ConversationError>;
 const PAGE: i64 = 20;
@@ -81,26 +81,29 @@ impl LocalContext {
         })
     }
 
-    pub async fn execute(&self, run: &ConversationRun, tool: &ReadTool) -> Result<Value> {
+    pub async fn execute(&self, run: &ConversationRun, tool: &SupervisorTool) -> Result<Value> {
         // Recheck scope and cancellation before each read or retained-evidence write.
         self.store.renew(run).await?;
         let data = match tool {
-            ReadTool::FindContext {
+            SupervisorTool::ProposeAgentMessage { .. } | SupervisorTool::ReadAction { .. } => {
+                return Err(ConversationError::InvalidRecord);
+            }
+            SupervisorTool::FindContext {
                 query,
                 include_archived,
                 offset,
             } => self.find(query, *include_archived, *offset).await?,
-            ReadTool::ReadWorkspaceState {
+            SupervisorTool::ReadWorkspaceState {
                 workspace_id,
                 offset,
             } => self.workspace(*workspace_id, *offset).await?,
-            ReadTool::ReadAgentHistory { session_id, offset } => {
+            SupervisorTool::ReadAgentHistory { session_id, offset } => {
                 self.history(*session_id, *offset).await?
             }
-            ReadTool::ReadAgentReport { process_id, offset } => {
+            SupervisorTool::ReadAgentReport { process_id, offset } => {
                 self.report(run, *process_id, *offset).await?
             }
-            ReadTool::ReadEvidence {
+            SupervisorTool::ReadEvidence {
                 evidence_id,
                 offset,
             } => {
@@ -113,7 +116,7 @@ impl LocalContext {
                     None => json!({"evidence_id":evidence.id,"availability":"unavailable"}),
                 }
             }
-            ReadTool::SearchMemory { workspace_id } => {
+            SupervisorTool::SearchMemory { workspace_id } => {
                 let mut scopes = vec![MemoryScope::Conversation(run.conversation_id)];
                 if let Some(id) = workspace_id {
                     let row = self.candidate(*id).await?;

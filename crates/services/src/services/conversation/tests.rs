@@ -83,6 +83,7 @@ fn identity() -> ModelIdentity {
 }
 fn reply(text: &str) -> ModelResponse {
     ModelResponse {
+        continuation: ModelContinuation::default(),
         step: ModelStep::Reply {
             text: text.into(),
             evidence_ids: vec![],
@@ -108,20 +109,20 @@ impl ConversationModel for ReadModel {
     async fn next(&self, request: &ModelRequest) -> Result<ModelResponse, ModelError> {
         self.requests.lock().unwrap().push(request.clone());
         let tool = match request.exchanges.len() {
-            0 => ReadTool::FindContext {
+            0 => SupervisorTool::FindContext {
                 query: "Android".into(),
                 include_archived: false,
                 offset: 0,
             },
-            1 => ReadTool::ReadWorkspaceState {
+            1 => SupervisorTool::ReadWorkspaceState {
                 workspace_id: self.workspace,
                 offset: 0,
             },
-            2 => ReadTool::ReadAgentHistory {
+            2 => SupervisorTool::ReadAgentHistory {
                 session_id: self.session,
                 offset: 0,
             },
-            3 => ReadTool::ReadAgentReport {
+            3 => SupervisorTool::ReadAgentReport {
                 process_id: self.process,
                 offset: 0,
             },
@@ -133,6 +134,7 @@ impl ConversationModel for ReadModel {
                 )
                 .unwrap();
                 return Ok(ModelResponse {
+                    continuation: ModelContinuation::default(),
                     step: ModelStep::Reply {
                         text: "The Android agent brought onboarding into line with web.".into(),
                         evidence_ids: vec![evidence_id],
@@ -145,6 +147,7 @@ impl ConversationModel for ReadModel {
             }
         };
         Ok(ModelResponse {
+            continuation: ModelContinuation::default(),
             step: ModelStep::Tool {
                 call: ToolCall {
                     id: format!("call_{}", request.exchanges.len()),
@@ -358,6 +361,7 @@ async fn model_failures_invalid_citations_and_tool_loops_are_terminal_without_au
         (Err(ModelError::InvalidResponse), "model_invalid_response"),
         (
             Ok(ModelResponse {
+                continuation: ModelContinuation::default(),
                 step: ModelStep::Reply {
                     text: "I found it.".into(),
                     evidence_ids: vec![Uuid::new_v4()],
@@ -368,10 +372,11 @@ async fn model_failures_invalid_citations_and_tool_loops_are_terminal_without_au
         ),
         (
             Ok(ModelResponse {
+                continuation: ModelContinuation::default(),
                 step: ModelStep::Tool {
                     call: ToolCall {
                         id: "same_call".into(),
-                        tool: ReadTool::FindContext {
+                        tool: SupervisorTool::FindContext {
                             query: "".into(),
                             include_archived: false,
                             offset: 0,
@@ -547,7 +552,7 @@ async fn context_is_bounded_handles_ambiguity_archive_and_literal_search_and_ref
             .context
             .execute(
                 &run,
-                &ReadTool::FindContext {
+                &SupervisorTool::FindContext {
                     query: "Android".into(),
                     include_archived: archived,
                     offset: 0,
@@ -561,7 +566,7 @@ async fn context_is_bounded_handles_ambiguity_archive_and_literal_search_and_ref
             .context
             .execute(
                 &run,
-                &ReadTool::FindContext {
+                &SupervisorTool::FindContext {
                     query: "Android".into(),
                     include_archived: archived,
                     offset: 20,
@@ -575,7 +580,7 @@ async fn context_is_bounded_handles_ambiguity_archive_and_literal_search_and_ref
         .context
         .execute(
             &run,
-            &ReadTool::FindContext {
+            &SupervisorTool::FindContext {
                 query: "%".into(),
                 include_archived: true,
                 offset: 0,
@@ -584,7 +589,7 @@ async fn context_is_bounded_handles_ambiguity_archive_and_literal_search_and_ref
         .await
         .unwrap();
     assert!(wildcard["data"]["items"].as_array().unwrap().is_empty());
-    let tool = ReadTool::ReadWorkspaceState {
+    let tool = SupervisorTool::ReadWorkspaceState {
         workspace_id: f.workspace,
         offset: 0,
     };
@@ -617,7 +622,7 @@ async fn exact_unicode_evidence_paging_and_atomic_reply_links_survive_failure() 
         .context
         .execute(
             &run,
-            &ReadTool::ReadAgentReport {
+            &SupervisorTool::ReadAgentReport {
                 process_id: f.process,
                 offset: 0,
             },
@@ -643,7 +648,7 @@ async fn exact_unicode_evidence_paging_and_atomic_reply_links_survive_failure() 
             .context
             .execute(
                 &run,
-                &ReadTool::ReadEvidence {
+                &SupervisorTool::ReadEvidence {
                     evidence_id: eid,
                     offset: offset as u32,
                 },
@@ -735,7 +740,7 @@ async fn foreign_scope_and_fenced_runs_cannot_retain_sources_or_change_run_metad
         f.context
             .execute(
                 &run,
-                &ReadTool::FindContext {
+                &SupervisorTool::FindContext {
                     query: "".into(),
                     include_archived: false,
                     offset: 0
@@ -796,7 +801,7 @@ async fn retrieval_does_not_mix_workspace_preferences_and_forgetting_fences_mode
         .context
         .execute(
             &run,
-            &ReadTool::SearchMemory {
+            &SupervisorTool::SearchMemory {
                 workspace_id: Some(f.workspace),
             },
         )
@@ -821,10 +826,12 @@ async fn retrieval_does_not_mix_workspace_preferences_and_forgetting_fences_mode
 #[test]
 fn model_contract_rejects_arbitrary_actions_and_undeclared_arguments() {
     assert!(
-        serde_json::from_value::<ReadTool>(
+        serde_json::from_value::<SupervisorTool>(
             json!({"name":"shell","arguments":{"command":"rm -rf x"}})
         )
         .is_err()
     );
-    assert!(serde_json::from_value::<ReadTool>(json!({"name":"find_context","arguments":{"query":"x","include_archived":false,"offset":0,"principal_id":"forged"}})).is_err());
+    assert!(serde_json::from_value::<SupervisorTool>(json!({"name":"find_context","arguments":{"query":"x","include_archived":false,"offset":0,"principal_id":"forged"}})).is_err());
 }
+
+mod actions;

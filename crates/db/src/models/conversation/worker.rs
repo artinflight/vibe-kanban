@@ -5,6 +5,19 @@ use serde_json::Value;
 use super::*;
 
 impl ConversationStore {
+    /// Bounded status pages use the input sequence, matching message history.
+    pub async fn runs(
+        &self,
+        id: Uuid,
+        before_seq: Option<i64>,
+        limit: u32,
+    ) -> Result<Vec<ConversationRun>> {
+        self.get(id).await?;
+        Ok(sqlx::query_as("SELECT * FROM conversation_runs WHERE conversation_id = ? AND (? IS NULL OR accepted_seq < ?) ORDER BY accepted_seq DESC LIMIT ?")
+            .bind(id).bind(before_seq).bind(before_seq).bind(limit.clamp(1,200))
+            .fetch_all(&self.pool).await?)
+    }
+
     pub async fn run(&self, id: Uuid, run_id: Uuid) -> Result<ConversationRun> {
         self.get(id).await?;
         sqlx::query_as("SELECT * FROM conversation_runs WHERE conversation_id = ? AND id = ?")
@@ -103,7 +116,7 @@ impl ConversationStore {
             &failed,
         )
         .await?;
-        super::actions::invalidate_pending(&mut tx,run.conversation_id).await?;
+        super::actions::invalidate_pending(&mut tx, run.conversation_id).await?;
         tx.commit().await?;
         Ok(())
     }

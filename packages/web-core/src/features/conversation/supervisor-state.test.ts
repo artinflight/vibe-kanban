@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { applySupervisorEvent, mergeMessages } from './supervisor-state.ts';
+import {
+  applySupervisorEvent,
+  mergeMessages,
+  mergeRuns,
+} from './supervisor-state.ts';
 import type { SupervisorHistory } from './supervisor-state.ts';
 import type {
   ConversationMessage,
@@ -30,6 +34,7 @@ const history = (): SupervisorHistory => ({
   principalId: 'owner',
   cursor: 2,
   messages: [message('first', 1)],
+  runs: [],
 });
 const event = (seq: number, type = 'message.final'): SupervisorEvent => ({
   conversation_id: 'conversation',
@@ -82,4 +87,61 @@ test('unrendered activity still advances the durable cursor', () => {
   assert.equal(next.messages, before.messages);
   assert.equal(next.cursor, 3);
   assert.equal(next.messages.length, 1);
+});
+
+test('failed replies survive replay and late status pages cannot restore running state', () => {
+  const run = {
+    id: 'run',
+    input_message_id: 'first',
+    status: 'failed',
+    generation: 2,
+    error: 'model_authentication_failed',
+  };
+  const updated = applySupervisorEvent(history(), {
+    ...event(3, 'run.status'),
+    payload: run,
+  });
+  assert.deepEqual(updated.runs, [run]);
+  assert.equal(
+    mergeRuns(updated.runs, [
+      { ...run, status: 'running', generation: 1, error: null },
+    ])[0].status,
+    'failed'
+  );
+  assert.deepEqual(
+    applySupervisorEvent(updated, event(4, 'history.cleared')).runs,
+    []
+  );
+});
+
+test('run status is validated and retained only for the displayed history window', () => {
+  assert.throws(
+    () =>
+      applySupervisorEvent(history(), {
+        ...event(3, 'run.status'),
+        payload: { status: 'failed' },
+      }),
+    /Invalid reply status/
+  );
+  const run = {
+    id: 'run',
+    input_message_id: 'first',
+    status: 'pending',
+    generation: 0,
+    error: null,
+  };
+  const updated = applySupervisorEvent(history(), {
+    ...event(3, 'run.status'),
+    payload: run,
+  });
+  const later = {
+    ...updated,
+    messages: Array.from({ length: 200 }, (_, i) =>
+      message(`later-${i}`, i + 4)
+    ),
+  };
+  assert.equal(
+    applySupervisorEvent(later, event(4, 'action.status')).runs.length,
+    0
+  );
 });

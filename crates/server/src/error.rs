@@ -370,6 +370,12 @@ impl IntoResponse for ApiError {
             ApiError::ExecutionProcess(ExecutionProcessError::ExecutionProcessNotFound) => {
                 ErrorInfo::not_found("ExecutionProcessError", "Execution process not found.")
             }
+            ApiError::ExecutionProcess(ExecutionProcessError::AdmissionConflict) => {
+                ErrorInfo::conflict(
+                    "ExecutionAdmissionConflict",
+                    "This workspace is already running work. Send a message to its active session or wait for it to finish.",
+                )
+            }
             ApiError::ExecutionProcess(_) => ErrorInfo::internal("ExecutionProcessError"),
 
             ApiError::GitService(GitServiceError::MergeConflicts { message, .. }) => {

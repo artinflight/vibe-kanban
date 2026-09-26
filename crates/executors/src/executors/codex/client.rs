@@ -68,6 +68,13 @@ struct GoalTurn {
 static ACTIVE_CODEX_CLIENTS: OnceLock<StdMutex<HashMap<Uuid, Weak<AppServerClient>>>> =
     OnceLock::new();
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GoalMessageAdmission {
+    Allowed,
+    Paused,
+    Unavailable,
+}
+
 fn active_codex_clients() -> &'static StdMutex<HashMap<Uuid, Weak<AppServerClient>>> {
     ACTIVE_CODEX_CLIENTS.get_or_init(|| StdMutex::new(HashMap::new()))
 }
@@ -380,6 +387,61 @@ impl AppServerClient {
             }
         }
         Ok(())
+    }
+
+    /// Read-only projection for an active owning execution. A missing owner is
+    /// unknown, never permission to queue a replacement turn.
+    pub async fn execution_goal_admission(
+        execution_process_id: Uuid,
+    ) -> Result<GoalMessageAdmission, ExecutorError> {
+        let client = active_codex_clients()
+            .lock()
+            .expect("active client registry")
+            .get(&execution_process_id)
+            .and_then(Weak::upgrade);
+        let Some(client) = client else {
+            return Ok(GoalMessageAdmission::Unavailable);
+        };
+        let Some(thread) = client.thread_id.lock().await.clone() else {
+            return Ok(GoalMessageAdmission::Unavailable);
+        };
+        client.supervisor_goal_admission(&thread).await
+    }
+
+    /// Does not register/load/resume the thread or change native goal status.
+    /// Query failure (including an unsupported API) is not proof of no goal.
+    pub async fn supervisor_goal_admission(
+        &self,
+        thread: &str,
+    ) -> Result<GoalMessageAdmission, ExecutorError> {
+        let value = self
+            .goal_request("thread/goal/get", serde_json::json!({"threadId": thread}))
+            .await?;
+        match value.get("goal") {
+            Some(Value::Null) => Ok(GoalMessageAdmission::Allowed),
+            Some(value) => {
+                let goal: NativeGoal = serde_json::from_value(value.clone()).map_err(|_| {
+                    ExecutorError::Io(io::Error::other("native_goal_state_unavailable"))
+                })?;
+                if goal.thread_id != thread {
+                    return Ok(GoalMessageAdmission::Unavailable);
+                }
+                match goal.status.as_str() {
+                    "paused" => Ok(GoalMessageAdmission::Paused),
+                    "complete" => Ok(GoalMessageAdmission::Allowed),
+                    "active" => {
+                        let progress = goals::load(&goal).await?;
+                        Ok(if progress.pause_reason.is_some() {
+                            GoalMessageAdmission::Paused
+                        } else {
+                            GoalMessageAdmission::Allowed
+                        })
+                    }
+                    _ => Ok(GoalMessageAdmission::Unavailable),
+                }
+            }
+            None => Ok(GoalMessageAdmission::Unavailable),
+        }
     }
 
     fn supply_goal_context(&self, turn_id: String) {

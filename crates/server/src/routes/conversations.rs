@@ -13,7 +13,8 @@ use axum::{
 };
 use db::models::conversation::{
     AcceptConversationMessage, Conversation, ConversationError, ConversationInputOrigin,
-    ConversationMessage, ConversationScope, ConversationStore,
+    ConversationMessage, ConversationRun, ConversationScope, ConversationStore,
+    actions::{ActionConfirmation, AgentMessage},
     records::{
         ConversationAction, ConversationEvidence, ConversationExport, ConversationMemory,
         MessageEvidenceRef,
@@ -22,6 +23,7 @@ use db::models::conversation::{
 use futures_util::SinkExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use services::services::conversation::runtime::SupervisorRuntime;
 use sqlx::SqlitePool;
 use ts_rs::TS;
 use utils::response::ApiResponse;
@@ -33,7 +35,40 @@ use crate::{DeploymentImpl, middleware::RelayRequestSignatureContext};
 struct ConversationApiState {
     pool: SqlitePool,
     enabled: bool,
-    accepting_messages: bool,
+    readiness: SupervisorReadiness,
+}
+
+#[derive(Clone)]
+enum SupervisorReadiness {
+    Worker(SupervisorRuntime),
+    #[cfg(test)]
+    Fixture(bool),
+}
+impl SupervisorReadiness {
+    fn accepting(&self) -> bool {
+        match self {
+            Self::Worker(runtime) => runtime.accepting_messages(),
+            #[cfg(test)]
+            Self::Fixture(value) => *value,
+        }
+    }
+    fn actions(
+        &self,
+    ) -> Option<&std::sync::Arc<services::services::conversation::action_service::SupervisorActions>>
+    {
+        match self {
+            Self::Worker(runtime) => runtime.actions(),
+            #[cfg(test)]
+            Self::Fixture(_) => None,
+        }
+    }
+    fn wake(&self) {
+        match self {
+            Self::Worker(runtime) => runtime.wake(),
+            #[cfg(test)]
+            Self::Fixture(_) => {}
+        }
+    }
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -57,6 +92,27 @@ pub struct SupervisorSnapshot {
 pub struct SupervisorMessageReceipt {
     pub message: ConversationMessage,
     pub run_id: Uuid,
+}
+
+#[derive(Debug, Serialize, TS)]
+pub struct SupervisorRunStatus {
+    pub id: Uuid,
+    pub input_message_id: Uuid,
+    pub status: String,
+    pub error: Option<String>,
+    #[ts(type = "number")]
+    pub generation: i64,
+}
+impl From<ConversationRun> for SupervisorRunStatus {
+    fn from(run: ConversationRun) -> Self {
+        Self {
+            id: run.id,
+            input_message_id: run.input_message_id,
+            status: run.status,
+            error: run.error,
+            generation: run.generation,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -107,6 +163,10 @@ impl From<ConversationError> for ChatApiError {
                 "Message ID already has different content",
             ),
             ConversationError::Archived => Self(StatusCode::CONFLICT, "Conversation is archived"),
+            ConversationError::WorkerUnavailable => Self(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Supervisor worker is unavailable; saved history remains available",
+            ),
             ConversationError::StaleLease => {
                 Self(StatusCode::CONFLICT, "Response was cancelled or superseded")
             }
@@ -144,8 +204,8 @@ impl ConversationApiState {
     fn capabilities(&self) -> SupervisorCapabilities {
         SupervisorCapabilities {
             enabled: self.enabled,
-            accepting_messages: self.enabled && self.accepting_messages,
-            agent_actions: false,
+            accepting_messages: self.enabled && self.readiness.accepting(),
+            agent_actions: self.enabled && self.readiness.actions().is_some(),
             voice: false,
             authority: "local_operator".into(),
         }
@@ -214,6 +274,118 @@ async fn messages(
     Ok(Json(ApiResponse::success(messages)))
 }
 
+#[derive(Debug, Serialize, TS)]
+pub struct SupervisorActionDetail {
+    pub action: ConversationAction,
+    pub message: Option<AgentMessage>,
+    pub blocked: Option<String>,
+    #[ts(type = "unknown[]")]
+    pub deliveries: Vec<Value>,
+}
+#[derive(Debug, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct AnswerSupervisorConfirmation {
+    pub payload_digest: String,
+    #[ts(type = "number")]
+    pub action_revision: i64,
+    pub accept: bool,
+}
+async fn confirmations(
+    State(state): State<ConversationApiState>,
+    Path(id): Path<Uuid>,
+    relay: Relay,
+) -> Result<Json<ApiResponse<Vec<ActionConfirmation>>>, ChatApiError> {
+    Ok(Json(ApiResponse::success(
+        state.store(relay).await?.confirmations(id).await?,
+    )))
+}
+async fn action_detail(
+    State(state): State<ConversationApiState>,
+    Path((id, action_id)): Path<(Uuid, Uuid)>,
+    relay: Relay,
+) -> Result<Json<ApiResponse<SupervisorActionDetail>>, ChatApiError> {
+    let store = state.store(relay).await?;
+    Ok(Json(ApiResponse::success(
+        detail(&store, id, action_id).await?,
+    )))
+}
+async fn detail(
+    store: &ConversationStore,
+    id: Uuid,
+    action_id: Uuid,
+) -> Result<SupervisorActionDetail, ConversationError> {
+    let action = store.reconcile_action(id, action_id).await?;
+    let message = if action.intent_kind == "agent_message" {
+        serde_json::from_value(action.payload.0.clone()).ok()
+    } else {
+        None
+    };
+    let deliveries = store
+        .action_deliveries(id, action_id)
+        .await?
+        .iter()
+        .map(services::services::conversation::action_service::delivery_receipt)
+        .collect();
+    let blocked = store.dispatch_block(id, action_id).await?;
+    Ok(SupervisorActionDetail {
+        action,
+        message,
+        deliveries,
+        blocked,
+    })
+}
+async fn answer_confirmation(
+    State(state): State<ConversationApiState>,
+    Path((id, confirmation)): Path<(Uuid, Uuid)>,
+    relay: Relay,
+    Json(answer): Json<AnswerSupervisorConfirmation>,
+) -> Result<Json<ApiResponse<SupervisorActionDetail>>, ChatApiError> {
+    let store = state.store(relay).await?;
+    if answer.accept && state.readiness.actions().is_none() {
+        let previous = store.confirmation(id, confirmation).await?;
+        if previous.payload_digest != answer.payload_digest
+            || previous.action_revision != answer.action_revision
+        {
+            return Err(ConversationError::RevisionConflict.into());
+        }
+        if previous.state == "accepted" {
+            let detail = detail(&store, id, previous.action_id).await?;
+            if !detail.deliveries.is_empty() || detail.action.state != "approved" {
+                return Ok(Json(ApiResponse::success(detail)));
+            }
+        }
+        return Err(ChatApiError(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Supervisor actions are unavailable; confirmation has not been accepted",
+        ));
+    }
+    let action = store
+        .answer_confirmation(
+            id,
+            confirmation,
+            &answer.payload_digest,
+            answer.action_revision,
+            answer.accept,
+        )
+        .await?;
+    if answer.accept {
+        // Acceptance and dispatch have separate durable receipts. Retrying this
+        // exact answer after disconnect resumes admission or returns its receipt.
+        state
+            .readiness
+            .actions()
+            .ok_or(ChatApiError(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Supervisor actions stopped; retry this confirmation",
+            ))?
+            .dispatch(id, action.id)
+            .await?;
+    }
+    Ok(Json(ApiResponse::success(
+        detail(&store, id, action.id).await?,
+    )))
+}
+
 async fn export(
     State(state): State<ConversationApiState>,
     Path(id): Path<Uuid>,
@@ -221,6 +393,22 @@ async fn export(
 ) -> Result<Json<ApiResponse<ConversationExport>>, ChatApiError> {
     Ok(Json(ApiResponse::success(
         state.store(relay).await?.export(id).await?,
+    )))
+}
+
+async fn runs(
+    State(state): State<ConversationApiState>,
+    Path(id): Path<Uuid>,
+    relay: Relay,
+    Query(query): Query<HistoryQuery>,
+) -> Result<Json<ApiResponse<Vec<SupervisorRunStatus>>>, ChatApiError> {
+    let runs = state
+        .store(relay)
+        .await?
+        .runs(id, query.before_seq, query.limit.unwrap_or(50))
+        .await?;
+    Ok(Json(ApiResponse::success(
+        runs.into_iter().map(Into::into).collect(),
     )))
 }
 
@@ -333,12 +521,6 @@ async fn accept(
     Json(input): Json<AcceptConversationMessage>,
 ) -> Result<(StatusCode, Json<ApiResponse<SupervisorMessageReceipt>>), ChatApiError> {
     let store = state.store(relay).await?;
-    if !state.accepting_messages {
-        return Err(ChatApiError(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Supervisor model is not configured; saved history remains available",
-        ));
-    }
     // Voice input must arrive through the authenticated voice adapter and its
     // segment idempotency contract, not by self-labelling an arbitrary request.
     if input.origin != ConversationInputOrigin::Typed {
@@ -347,7 +529,10 @@ async fn accept(
             "Voice transcripts require a bound voice session",
         ));
     }
-    let accepted = store.accept(id, &input).await?;
+    let accepted = store
+        .accept_if_available(id, &input, state.readiness.accepting())
+        .await?;
+    state.readiness.wake();
     Ok((
         StatusCode::ACCEPTED,
         Json(ApiResponse::success(SupervisorMessageReceipt {
@@ -451,6 +636,7 @@ fn api_router<S: Clone + Send + Sync + 'static>(state: ConversationApiState) -> 
         .route("/conversations/resolve", post(resolve))
         .route("/conversations/{id}", get(snapshot))
         .route("/conversations/{id}/messages", get(messages).post(accept))
+        .route("/conversations/{id}/runs", get(runs))
         .route(
             "/conversations/{id}/messages/{message_id}/evidence",
             get(message_evidence),
@@ -461,6 +647,15 @@ fn api_router<S: Clone + Send + Sync + 'static>(state: ConversationApiState) -> 
             axum::routing::delete(delete_history),
         )
         .route("/conversations/{id}/actions", get(actions))
+        .route(
+            "/conversations/{id}/actions/{action_id}",
+            get(action_detail),
+        )
+        .route("/conversations/{id}/confirmations", get(confirmations))
+        .route(
+            "/conversations/{id}/confirmations/{confirmation_id}",
+            post(answer_confirmation),
+        )
         .route("/conversations/{id}/evidence/{evidence_id}", get(evidence))
         .route("/conversations/{id}/memories", get(memories))
         .route(
@@ -473,13 +668,11 @@ fn api_router<S: Clone + Send + Sync + 'static>(state: ConversationApiState) -> 
         .with_state(state)
 }
 
-pub fn router(pool: SqlitePool) -> Router<DeploymentImpl> {
+pub fn router(pool: SqlitePool, runtime: SupervisorRuntime) -> Router<DeploymentImpl> {
     api_router(ConversationApiState {
         pool,
-        enabled: std::env::var("VK_SUPERVISOR_ENABLED").is_ok_and(|value| value == "1"),
-        // Set from the configured model worker when it is integrated. Never
-        // acknowledge user requests into a queue that has no response consumer.
-        accepting_messages: false,
+        enabled: runtime.enabled(),
+        readiness: SupervisorReadiness::Worker(runtime),
     })
 }
 

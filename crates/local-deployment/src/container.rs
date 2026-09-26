@@ -45,6 +45,7 @@ use services::services::{
     approvals::{Approvals, executor_approvals::ExecutorApprovalBridge},
     config::{Config, DEFAULT_COMMIT_REMINDER_PROMPT},
     container::{ContainerError, ContainerRef, ContainerService},
+    conversation::dispatch_gate::DispatchGate,
     diff_stream::{self, DiffStreamHandle},
     events::{execution_process_patch, workspace_patch},
     file::FileService,
@@ -1356,10 +1357,7 @@ impl LocalContainerService {
     async fn consume_delivery_batch(&self, batch: ClaimedQueuedMessage) -> QueuedFollowUpOutcome {
         let result = self.start_delivery_batch(&batch).await;
         match result {
-            Ok(Some(process)) => {
-                // Event hooks run before a transaction commits: publish admission
-                // explicitly after commit so raw workspace streams see the process.
-                self.db_event_for_delivery(&process).await;
+            Ok(Some(_process)) => {
                 if let Err(error) = Scratch::delete(
                     &self.db.pool,
                     batch.claim.session_id,
@@ -1373,15 +1371,32 @@ impl LocalContainerService {
             }
             Ok(None) => QueuedFollowUpOutcome::NoQueuedMessage,
             Err(error) => {
-                let result = if error.is_execution_limit_reached() {
-                    AgentDelivery::release(&self.db.pool, &batch.claim, true).await
-                } else {
-                    AgentDelivery::fail_claim(
+                let result = if matches!(
+                    error,
+                    ContainerError::ExecutionProcess(
+                        db::models::execution_process::ExecutionProcessError::AdmissionConflict
+                    )
+                ) {
+                    AgentDelivery::release(
                         &self.db.pool,
                         &batch.claim,
-                        "queued_admission_failed",
+                        batch.message.wait_for_capacity,
                     )
                     .await
+                } else if error.is_execution_limit_reached() {
+                    AgentDelivery::release(&self.db.pool, &batch.claim, true).await
+                } else {
+                    let reason = if matches!(
+                        error,
+                        ContainerError::ExecutionProcess(
+                            db::models::execution_process::ExecutionProcessError::DeliveryRejected
+                        )
+                    ) {
+                        "supervisor_target_changed"
+                    } else {
+                        "queued_admission_failed"
+                    };
+                    AgentDelivery::fail_claim(&self.db.pool, &batch.claim, reason).await
                 };
                 if let Err(persist_error) = result {
                     tracing::error!(?persist_error, "Failed to persist queue outcome");
@@ -1392,7 +1407,7 @@ impl LocalContainerService {
         }
     }
 
-    async fn db_event_for_delivery(&self, process: &ExecutionProcess) {
+    async fn publish_process_admission(&self, process: &ExecutionProcess) {
         self.event_store
             .push_patch(execution_process_patch::add(process));
         match Session::find_by_id(&self.db.pool, process.session_id).await {
@@ -1404,7 +1419,9 @@ impl LocalContainerService {
                         .push_patch(workspace_patch::replace(&workspace));
                 }
             }
-            Err(error) => tracing::warn!(?error, "Could not refresh queued workspace status"),
+            Err(error) => {
+                tracing::warn!(?error, "Could not refresh workspace status after admission")
+            }
             Ok(None) => {}
         }
     }
@@ -1413,6 +1430,14 @@ impl LocalContainerService {
         &self,
         batch: &ClaimedQueuedMessage,
     ) -> Result<Option<ExecutionProcess>, ContainerError> {
+        AgentDelivery::validate_supervisor_claim(&self.db.pool, &batch.claim).await?;
+        let gate = DispatchGate::local(self.db.pool.clone(), self.approvals.clone());
+        for delivery in &batch.claim.deliveries {
+            if let Err(block) = gate.delivery(delivery).await {
+                AgentDelivery::fail_claim(&self.db.pool, &batch.claim, &block.to_string()).await?;
+                return Ok(None);
+            }
+        }
         let session = Session::find_by_id(&self.db.pool, batch.claim.session_id)
             .await?
             .ok_or_else(|| ContainerError::Other(anyhow!("Queued session no longer exists")))?;
@@ -1547,8 +1572,17 @@ fn failure_exit_status() -> std::process::ExitStatus {
 
 #[async_trait]
 impl ContainerService for LocalContainerService {
+    async fn publish_execution_admitted(&self, process: &ExecutionProcess) {
+        self.publish_process_admission(process).await;
+    }
     async fn reconcile_queued_deliveries(&self) -> Result<(), ContainerError> {
         AgentDelivery::reconcile(&self.db.pool).await?;
+        let scope =
+            db::models::conversation::ConversationScope::local_operator(&self.db.pool).await?;
+        db::models::conversation::ConversationStore::new(self.db.pool.clone(), scope)
+            .reconcile_delivery_actions()
+            .await
+            .map_err(|error| ContainerError::Other(anyhow!(error)))?;
         let monitor_ids: Vec<_> = self
             .exit_monitor_handles
             .read()
@@ -1909,6 +1943,19 @@ impl ContainerService for LocalContainerService {
         env.insert("VK_SESSION_ID", execution_process.session_id.to_string());
         env.insert("VK_EXECUTION_PROCESS_ID", execution_process.id.to_string());
         env.insert("VK_WORKSPACE_BRANCH", &workspace.branch);
+
+        // Recover trusted provenance from the durable ledger, never prompt text
+        // or profile environment. Recheck mutable gates immediately before spawn.
+        let supervisor_deliveries =
+            AgentDelivery::supervisor_for_process(&self.db.pool, execution_process.id).await?;
+        let gate = DispatchGate::local(self.db.pool.clone(), self.approvals.clone());
+        for delivery in &supervisor_deliveries {
+            AgentDelivery::validate_supervisor_delivery(&self.db.pool, delivery).await?;
+            gate.delivery(delivery)
+                .await
+                .map_err(|error| ContainerError::Other(anyhow!(error)))?;
+        }
+        env.supervisor_message = !supervisor_deliveries.is_empty();
 
         // Create the child and stream, add to execution tracker with timeout
         let mut spawned = tokio::time::timeout(

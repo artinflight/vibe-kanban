@@ -72,6 +72,11 @@ impl Codex {
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
         if let Some(command) = CodexSlashCommand::parse(prompt) {
+            if env.supervisor_message {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "supervisor_message_cannot_invoke_session_controls",
+                )));
+            }
             return match command {
                 CodexSlashCommand::Goal { .. } => {
                     self.handle_app_server_slash_command(current_dir, command, session_id, env)

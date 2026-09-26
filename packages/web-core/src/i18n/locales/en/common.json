@@ -607,13 +607,46 @@
     "history": "Supervisor conversation",
     "you": "You",
     "newReply": "The supervisor has replied.",
-    "modelUnavailable": "The supervisor model is not configured. Your saved conversation is available.",
+    "modelUnavailable": "The supervisor is unavailable for new messages. Your saved conversation is available.",
+    "replyState": {
+      "pending": "Waiting for a reply.",
+      "running": "The supervisor is working on a reply.",
+      "failed": "The supervisor could not finish this reply. Your message is saved.",
+      "interrupted": "This reply was interrupted. Your message is saved; it was not automatically retried.",
+      "cancelled": "This reply was cancelled.",
+      "model_authentication_failed": "The model credential was rejected. The operator needs to check the supervisor configuration.",
+      "model_rate_limited": "The model is busy. Your message is saved; you can ask again later.",
+      "model_refused": "The model declined to answer this message.",
+      "model_timeout": "The reply took too long and was stopped. Your message is saved.",
+      "worker_shutdown": "The service stopped while preparing this reply. Your message is saved."
+    },
     "reload": "Reload conversation",
     "message": "Message the supervisor",
     "placeholder": "Talk to the supervisor…",
     "editNew": "Edit as a new message",
     "sending": "Sending…",
     "retry": "Retry the same message",
-    "send": "Send"
+    "send": "Send",
+    "confirmation": {
+      "title": "Review this instruction",
+      "recipients": "Send to",
+      "send": "Send instruction",
+      "retry": "Retry approved instruction",
+      "reject": "Decline",
+      "expired": "This confirmation has expired. Ask the supervisor to prepare it again.",
+      "unavailable": "Sending is unavailable. You can still decline this instruction.",
+      "invalid": "This instruction changed. Ask the supervisor to prepare it again.",
+      "sent": "Your decision is saved. Delivery status is available in activity.",
+      "blocked": "The instruction has not been sent. Resolve the workspace restriction before retrying.",
+      "block": {
+        "pending_executor_approval": "The agent is waiting for an approval in its workspace.",
+        "native_goal_managed_by_capacity": "This agent’s goal is managed by the capacity scheduler.",
+        "native_goal_paused": "The agent’s goal is paused. Use its workspace controls to manage the goal.",
+        "native_goal_state_unavailable": "VK could not verify the agent’s goal state.",
+        "target_unavailable": "The selected workspace or agent is no longer available.",
+        "runtime_state_unavailable": "VK could not verify the agent’s current state.",
+        "supervisor_message_cannot_invoke_session_controls": "Use the workspace controls for this operation."
+      }
+    }
   }
 }

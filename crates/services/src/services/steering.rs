@@ -51,6 +51,25 @@ where
         SteeringAdmission::Replay(receipt) => return outcome(&receipt),
         SteeringAdmission::Attempt(receipt) => receipt,
     };
+    send_attempt(pool, attempt, send).await
+}
+
+/// Consume the one owned attempt returned by atomic delivery admission. Never
+/// reconstruct an attempt from a replayed receipt; receipt recovery is read-only.
+pub(crate) async fn send_attempt<F, Fut, E>(
+    pool: &SqlitePool,
+    attempt: AgentDelivery,
+    send: F,
+) -> Result<SteeringOutcome, SteeringError>
+where
+    F: FnOnce(Uuid) -> Fut,
+    Fut: Future<Output = Result<bool, E>>,
+{
+    let current: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_deliveries WHERE id=? AND claim_id=? AND state='dispatching' AND delivery_mode='steer' AND steering_acknowledged_at IS NULL AND lease_until>unixepoch())")
+        .bind(attempt.id).bind(attempt.claim_id).fetch_one(pool).await?;
+    if !current {
+        return Err(SteeringError::Uncertain);
+    }
     let process_id = attempt
         .execution_process_id
         .ok_or(SteeringError::Uncertain)?;

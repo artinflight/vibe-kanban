@@ -13,8 +13,10 @@ import type {
   ConversationMessage,
   MessageEvidenceRef,
   SupervisorSnapshot,
+  SupervisorRunStatus,
 } from 'shared/types';
 import { supervisorApi } from './api';
+import { SupervisorConfirmations } from './SupervisorConfirmations';
 
 const buttonClass =
   'rounded border border-border px-base py-half text-normal hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50';
@@ -25,6 +27,7 @@ interface Props {
   onRestoreFocus: () => void;
   snapshot: SupervisorSnapshot | null;
   messages: ConversationMessage[];
+  runs: SupervisorRunStatus[];
   loading: boolean;
   connected: boolean;
   error: string | null;
@@ -40,6 +43,36 @@ interface Props {
   onLatest: () => void;
   activityRevision: number;
   onReload: () => void;
+}
+
+function ReplyStatus({ run }: { run: SupervisorRunStatus | undefined }) {
+  const { t } = useTranslation('common');
+  if (!run || run.status === 'completed') return null;
+  const status = [
+    'pending',
+    'running',
+    'failed',
+    'interrupted',
+    'cancelled',
+  ].includes(run.status)
+    ? run.status
+    : 'failed';
+  const reason =
+    status === 'failed' &&
+    [
+      'model_authentication_failed',
+      'model_rate_limited',
+      'model_refused',
+      'model_timeout',
+      'worker_shutdown',
+    ].includes(run.error ?? '')
+      ? run.error
+      : status;
+  return (
+    <p role="status" className="mt-half text-low">
+      {t(`supervisor.replyState.${reason}`)}
+    </p>
+  );
 }
 
 function SourceDetails({
@@ -372,6 +405,14 @@ export function SupervisorPanel(props: Props) {
           {!props.loading && props.messages.length === 0 && (
             <p className="text-low">{t('supervisor.empty')}</p>
           )}
+          {props.snapshot && !props.viewingEarlier && (
+            <SupervisorConfirmations
+              key={props.snapshot.conversation.id}
+              id={props.snapshot.conversation.id}
+              revision={props.activityRevision}
+              available={props.snapshot.capabilities.agent_actions}
+            />
+          )}
           <ol className="space-y-double" aria-label={t('supervisor.history')}>
             {props.messages.map((message) => (
               <li
@@ -390,6 +431,13 @@ export function SupervisorPanel(props: Props) {
                 <p className="whitespace-pre-wrap break-words text-normal">
                   {message.body}
                 </p>
+                {message.role === 'user' && (
+                  <ReplyStatus
+                    run={props.runs.find(
+                      (run) => run.input_message_id === message.id
+                    )}
+                  />
+                )}
                 {message.role === 'assistant' && props.snapshot && (
                   <SourceDetails
                     conversationId={props.snapshot.conversation.id}
@@ -454,7 +502,12 @@ export function SupervisorPanel(props: Props) {
             <button
               type="submit"
               className={buttonClass}
-              disabled={!ready || props.sending || !props.draft.trim()}
+              disabled={
+                (!ready && !props.retrying) ||
+                !props.snapshot ||
+                props.sending ||
+                !props.draft.trim()
+              }
             >
               {props.sending
                 ? t('supervisor.sending')

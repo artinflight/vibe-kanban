@@ -396,7 +396,21 @@ impl ConversationStore {
         leased: &ConversationRun,
         body: &str,
     ) -> Result<ConversationMessage> {
+        self.complete_with_evidence(leased, body, &[]).await
+    }
+
+    /// Final text and its evidence links appear atomically, so a crash cannot
+    /// publish an apparently grounded reply with missing drill-down sources.
+    pub async fn complete_with_evidence(
+        &self,
+        leased: &ConversationRun,
+        body: &str,
+        evidence_ids: &[Uuid],
+    ) -> Result<ConversationMessage> {
         validate_body(body)?;
+        if evidence_ids.len() > 32 {
+            return Err(ConversationError::InvalidRecord);
+        }
         let mut tx = self.pool.begin().await?;
         let conversation = self.lock(&mut tx, leased.conversation_id).await?;
         let run = sqlx::query_as::<_, ConversationRun>(
@@ -424,6 +438,15 @@ impl ConversationStore {
         .bind(run.input_message_id)
         .fetch_one(&mut *tx)
         .await?;
+        for evidence_id in evidence_ids {
+            let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM conversation_evidence WHERE conversation_id = ? AND id = ?)")
+                .bind(conversation.id).bind(evidence_id).fetch_one(&mut *tx).await?;
+            if !exists {
+                return Err(ConversationError::NotFound);
+            }
+            sqlx::query("INSERT INTO conversation_message_evidence (conversation_id, message_id, evidence_id, relationship) VALUES (?, ?, ?, 'supporting') ON CONFLICT DO NOTHING")
+                .bind(conversation.id).bind(message.id).bind(evidence_id).execute(&mut *tx).await?;
+        }
         let run = sqlx::query_as::<_, ConversationRun>(
             "UPDATE conversation_runs SET output_message_id = ? WHERE id = ? RETURNING *",
         )
@@ -536,3 +559,4 @@ async fn emit(
 mod tests;
 
 pub mod records;
+mod worker;

@@ -30,12 +30,27 @@ supervisor action dispatch/confirmations and executor integration acceptance rem
 Database validation now includes 31 passing tests covering additive legacy-history
 migration, concurrent writers, restart/replay, evidence retention, scoped retrieval,
 forgetting, deletion and rollback. API/delivery check status and commands are in
-HANDOFF.md. No UI, configured supervisor model, provider or Android client is delivered.
+HANDOFF.md. The first global UI is implemented; configured supervisor model,
+provider, Android client and full integration acceptance remain open.
+
+The global launcher/panel now lives above host-scoped navigation, with local-authority
+history/replay, retry identity, raw-source drill-down, activity, memory forgetting,
+export and deletion. Workspace text rendering stays unchanged. Six API tests, five
+replay reducer tests, web-core/local-web typechecks and focused lint pass. Browser
+fixture assets build, but Chromium cannot launch under the scheduled sandbox
+(`shutdown: Operation not permitted`); no visual/accessibility acceptance is claimed.
+
+The supervisor run engine and local read tools are now implemented against a
+provider-neutral model contract. They enforce renewable leases, bounded tool
+context, safe failures, source-linked atomic replies and cancellation. Initial ten
+fake-model integration tests pass. A hosted adapter/startup consumer, complete
+project/attention projection and mutating action policy are still required.
 
 ## Next implementation
 
-Finish current API/type generation checks, then move to the global UI and the
-configured supervisor worker/context/policy. Complete shared dispatch integration
+Connect the configured hosted model adapter and startup readiness, then extend
+context/policy and complete supervisor dispatch.
+The initial global UI and its generated API contracts are ready for integration. Complete shared dispatch integration
 and its real execution-boundary acceptance alongside that work. Prepare the early
 spoken-text corpus before live voice integration. Do not rework the tested storage
 foundation without a concrete integration failure or missing acceptance outcome.

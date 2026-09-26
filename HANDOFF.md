@@ -1,3 +1,64 @@
+## September 26: leased supervisor worker and local read tools
+
+`crates/services/src/services/conversation/` now contains the provider-neutral
+model contract, a durable run worker and bounded local context tools. The worker
+claims one pending turn, renews its lease alongside DB work, bounds tool calls and
+context, records source/version and model/usage manifests, drops in-flight model
+requests on shutdown/cancellation/timeout, and persists safe terminal failure
+codes. It never automatically retries a failed run. Final replies and source
+links commit together. Queued inputs see earlier replies without inheriting later
+user instructions. Run-scoped evidence writes also check the active generation.
+
+Read tools cover literal name lookup, workspace/session/process state, paged
+coding-agent history, exact retained report pages, existing evidence and scoped
+preferences. Report content remains untrusted tool data; unknown tools and extra
+arguments fail schema validation. Current model capabilities are read-only.
+Ordinary workspace history/output is preserved. These services are exercised
+through deterministic test models; no hosted adapter or deployment startup
+consumer is connected, so production send acceptance remains unavailable.
+
+The initial ten worker integration tests passed (`vk-chat-worker-tests.log`),
+covering concurrent workers, cancellation/transport drop, timeout/shutdown,
+terminal provider failure, citation rejection, raw report preservation, Unicode
+report paging, failed atomic source linkage, current-state revisions, memory scope
+and future-turn isolation. A subsequent regression run includes lease/DB contention
+coverage; its final result is recorded below when complete. No live model output,
+voice, Android/car or real executor dispatch acceptance is implied.
+
+Next: hosted model adapter plus shared startup/capability readiness and real-model
+spoken-text evaluation when a funded provider is supplied. Extend the local entity
+projection with explicit synthetic/remote project links and live approvals/native
+goals before claiming complete routing or attention reporting. Current project
+IDs come from task/project rows; repository display names are searchable for
+workspace-first work, but synthetic project IDs are not yet projected. Action
+policy/dispatch and model-driven memory changes remain separate open work. Keep
+provider secrets out of model identity, manifests, events and logs.
+
+## September 26: global supervisor UI prepared
+
+The local application now mounts a persistent supervisor provider above host-scoped
+navigation, with desktop/mobile launchers and a Radix panel. All requests explicitly
+target local authority. Saved history/replay, idempotent retry, activity/source
+drill-down, scoped preference forgetting, export and deletion are implemented.
+Message evidence metadata has its own scoped API; exact retained reports load on
+request. Ordinary workspace chat remains unchanged. Production message acceptance
+still reports model unavailable until worker integration.
+
+Validation: six real Axum API tests and five replay reducer tests pass; regenerated
+shared types, web-core/local-web typechecks and focused feature/component lint pass.
+Full formatting passed before two small UI state/accessibility fixes; rerun it with
+next edits. Logs: `/mnt/vk-storage/capacity-build-tmp/vk-chat-ui-*.log`.
+The browser fixture bundles successfully, but Chromium fails a sandbox syscall
+(`shutdown: Operation not permitted`), before assertions. Browser accessibility,
+visual/navigation and live multi-client/worker acceptance remain unverified; do not
+repeat the blocked launch without an environment change or bypass the restriction.
+The native `supervisor_ui` requirement remains open.
+
+Next: implement the supervisor worker, bounded context retrieval and model/policy
+boundary against fake-model integration tests, then the configured hosted adapter.
+Funded API provider selection remains pending; independent work can proceed. No
+provider calls, real agent actions, production changes or implementation push.
+
 ## September 26: durable delivery, supervisor records and API continuation
 
 Current implementation extends the foundation below. See

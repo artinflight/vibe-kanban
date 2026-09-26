@@ -14,9 +14,17 @@ until model-worker integration. Existing raw workspace history is preserved.
 
 The existing session queue has moved to durable delivery rows with transactional
 process correlation and recovery. Supervisor action authorisation/dispatch,
-real execution-boundary acceptance, global UI, configured model and later
-milestones remain open. This is source implementation, not a deployed feature.
-See STREAM.md and HANDOFF.md for current validation and next work.
+real execution-boundary acceptance, configured model and later milestones remain
+open. The initial global UI implements persistent local-authority history/replay,
+activity/evidence drill-down and data controls. Six API tests, five reducer tests,
+typechecks and focused lint pass. Browser acceptance is blocked by the scheduled
+sandbox Chromium launch restriction; live model and multi-client integration remain. This is source implementation, not a deployed feature.
+A leased supervisor worker and bounded local read tools now run against a
+provider-neutral model interface with deterministic integration tests. Final
+answers and evidence links persist atomically; cancellation, timeout and model
+failures stop work without automatic retries. Hosted adapter/startup integration,
+complete project/attention retrieval and action policy remain open. See STREAM.md
+and HANDOFF.md for current validation and next work.
 
 ## Recommended first slice
 

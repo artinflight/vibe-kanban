@@ -286,11 +286,37 @@ impl ConversationStore {
         revision: &str,
         report: &str,
     ) -> Result<ConversationEvidence> {
+        self.retain_evidence_inner(id, None, source, revision, report)
+            .await
+    }
+
+    pub async fn retain_run_evidence(
+        &self,
+        run: &ConversationRun,
+        source: &EvidenceSource,
+        revision: &str,
+        report: &str,
+    ) -> Result<ConversationEvidence> {
+        self.retain_evidence_inner(run.conversation_id, Some(run), source, revision, report)
+            .await
+    }
+
+    async fn retain_evidence_inner(
+        &self,
+        id: Uuid,
+        run: Option<&ConversationRun>,
+        source: &EvidenceSource,
+        revision: &str,
+        report: &str,
+    ) -> Result<ConversationEvidence> {
         if revision.trim().is_empty() || revision.len() > 256 || report.len() > 1024 * 1024 {
             return Err(ConversationError::InvalidRecord);
         }
         let mut tx = self.pool.begin().await?;
         self.lock(&mut tx, id).await?;
+        if let Some(run) = run {
+            self.check_lease(&mut tx, run).await?;
+        }
         match source {
             EvidenceSource::AgentReport {
                 session_id,

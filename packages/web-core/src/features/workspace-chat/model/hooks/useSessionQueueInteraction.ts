@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queueApi } from '@/shared/lib/api';
+import { createMessageId } from '@/shared/lib/createMessageId';
 import type { ExecutorConfig, QueueStatus } from 'shared/types';
 
 interface UseSessionQueueInteractionOptions {
@@ -35,8 +36,8 @@ const QUEUED_STATUS_REFRESH_MS = 3000;
 
 /**
  * Hook to manage follow-up interaction for session messages.
- * The server steers active Codex turns when possible and otherwise falls back
- * to a queued follow-up.
+ * The server steers active Codex turns when possible; unavailable Codex steering
+ * stays a conflict. Other agents use the existing follow-up queue.
  * Uses TanStack Query for caching and mutation handling.
  */
 export function useSessionQueueInteraction({
@@ -71,13 +72,16 @@ export function useSessionQueueInteraction({
     mutationFn: ({
       message,
       executorConfig,
+      clientMessageId,
     }: {
       message: string;
       executorConfig: ExecutorConfig;
+      clientMessageId: string;
     }) =>
       queueApi.queue(sessionId!, {
         message,
         executor_config: executorConfig,
+        client_message_id: clientMessageId,
       }),
     onSuccess: (status) => {
       queryClient.setQueryData([QUEUE_STATUS_KEY, sessionId], status);
@@ -98,6 +102,7 @@ export function useSessionQueueInteraction({
       await followUpMutation.mutateAsync({
         message,
         executorConfig,
+        clientMessageId: createMessageId(),
       });
     },
     [sessionId, followUpMutation]

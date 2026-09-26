@@ -1425,3 +1425,47 @@ IDs come from task/project rows; repository display names are searchable for
 workspace-first work, but synthetic project IDs are not yet projected. Action
 policy/dispatch and model-driven memory changes remain separate open work. Keep
 provider secrets out of model identity, manifests, events and logs.
+
+## September 26: durable direct steering integrated
+
+Migration `20260926000004_durable_steering_receipts.sql` adds delivery mode and a
+retained steering acknowledgement to the shared ledger. The existing session queue
+route now uses `services::steering::steer`: record the exact execution before the
+RPC, then persist its outcome. Concurrent/repeated request IDs never issue another
+RPC. Timeout, RPC error, lost receipt write or expired in-flight attempt becomes
+`unknown_delivery`; recovery never converts it into queued work. A conclusive late
+acknowledgement may resolve that same attempt. Process completion does not erase
+the acknowledgement, so a retry still reports the original acceptance.
+
+The local executor adapter now accepts an exact process ID and rechecks its
+session, workspace lifecycle, running state and executor before steering. The
+workspace send hook supplies a per-submission UUID, retained by transport retries,
+using Web Crypto compatible with existing non-HTTPS local origins. Raw prompts,
+workspace history, completion output and controls are unchanged; this primitive
+has no supervisor memory/model dependency. Known unavailable Codex steering still
+returns conflict without queue fallback. Non-Codex queue behavior is preserved.
+
+Eight new real-database steering tests pass (`vk-chat-steering-tests.log`), covering
+acknowledgement replay after completion, concurrent retry, process replacement,
+known rejection, uncertain RPC errors, crash recovery, injected receipt-write
+failure, changed-content identity rejection and unavailable targets. Current
+web-core typecheck and focused changed-file lint pass. Full formatting passed.
+Server integration and updated broad DB/service regressions are being checked;
+record their terminal results before claiming that integration validated.
+
+The previous worker regression completed with 31 database and 29 service tests
+passing (`vk-chat-worker-regression.log`), including renewal contention on a
+single-connection pool. The earlier worker handoff's pending regression note is
+superseded by this result. No real executor RPC, model/provider, deployment or
+phone/car acceptance has run. Dispatch remains open: connect authorised supervisor
+and voice origins/action receipts to this primitive, implement action policy and
+confirmations, close direct/process admission races, and prove actual executor,
+capacity/native-goal and approval boundaries. The hosted adapter/startup consumer
+and remaining native goal requirements are also still open.
+
+2026-09-26 steering validation completed: all 31 DB + 37 service tests, six
+conversation API tests and two session queue regression tests pass after migration
+20260926000004. Current web-core typecheck, focused lint, full formatting, ops
+governance and diff whitespace checks pass. No real executor/model/provider call
+or deployment was performed. Supervisor action authorisation/receipt linkage,
+admission-race repair and executor acceptance remain the next dispatch work.

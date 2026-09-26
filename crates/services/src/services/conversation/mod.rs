@@ -90,7 +90,9 @@ impl SupervisorWorker {
                 interval.tick().await;
                 loop {
                     interval.tick().await;
-                    if let Err(error) = store.renew(&run).await { break error; }
+                    if let Err(error) = store.renew(&run).await {
+                        break error;
+                    }
                 }
             };
             tokio::pin!(keepalive);

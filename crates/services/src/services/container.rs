@@ -185,6 +185,17 @@ pub trait ContainerService {
         Ok(false)
     }
 
+    /// Exact-process transport used after a durable steering attempt is stored.
+    /// Implementations must never resolve a replacement process here.
+    async fn try_steer_process(
+        &self,
+        _session: &Session,
+        _data: &DraftFollowUpData,
+        _process_id: Uuid,
+    ) -> Result<bool, ContainerError> {
+        Ok(false)
+    }
+
     async fn discover_executor_options(
         &self,
         executor_profile_id: ExecutorProfileId,

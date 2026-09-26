@@ -181,9 +181,12 @@ async fn worker_reads_real_sources_persists_grounded_reply_and_preserves_raw_cha
     // connection: neither future may prevent the other from making progress.
     worker.heartbeat = Duration::from_millis(1);
     let RunOutcome::Completed { message_id } = tokio::time::timeout(
-        Duration::from_secs(3), worker.run_one(f.id, &CancellationToken::new()))
-        .await.unwrap().unwrap()
-    else {
+        Duration::from_secs(3),
+        worker.run_one(f.id, &CancellationToken::new()),
+    )
+    .await
+    .unwrap()
+    .unwrap() else {
         panic!("run failed")
     };
     let refs = f

@@ -26,6 +26,11 @@ prompt projection and Codex steering behavior. Batch claims correlate process
 creation in one transaction; recovery retries only unadmitted work, retains uncertain
 outcomes, and reconciles capacity denial without losing newer messages. Actual
 supervisor action dispatch/confirmations and executor integration acceptance remain.
+The direct session steering route now records exact-process attempts and durable
+acknowledgements; eight new DB-backed tests prove retry/crash boundaries. Current
+regression passes 31 DB, 37 service, six conversation API and two queue-route tests. Unknown
+acknowledgements never enter the queue. The source/permission connection from
+supervisor actions to this shared primitive remains to implement.
 
 Database validation now includes 31 passing tests covering additive legacy-history
 migration, concurrent writers, restart/replay, evidence retention, scoped retrieval,
@@ -43,7 +48,8 @@ fixture assets build, but Chromium cannot launch under the scheduled sandbox
 The supervisor run engine and local read tools are now implemented against a
 provider-neutral model contract. They enforce renewable leases, bounded tool
 context, safe failures, source-linked atomic replies and cancellation. Initial ten
-fake-model integration tests pass. A hosted adapter/startup consumer, complete
+fake-model integration tests pass; the worker regression passed all 31 database
+and 29 service tests. A hosted adapter/startup consumer, complete
 project/attention projection and mutating action policy are still required.
 
 ## Next implementation

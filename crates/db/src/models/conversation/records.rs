@@ -141,6 +141,7 @@ pub struct ConversationExport {
     pub runs: Vec<ConversationRun>,
     pub events: Vec<ConversationEvent>,
     pub actions: Vec<ConversationAction>,
+    pub confirmations: Vec<super::actions::ActionConfirmation>,
     pub evidence: Vec<ConversationEvidence>,
     pub message_evidence: Vec<MessageEvidence>,
     pub memories: Vec<ConversationMemory>,
@@ -570,6 +571,7 @@ impl ConversationStore {
         .bind(id)
         .fetch_all(&mut *tx)
         .await?;
+        let confirmations = sqlx::query_as("SELECT * FROM conversation_confirmations WHERE conversation_id=? ORDER BY created_at,id").bind(id).fetch_all(&mut *tx).await?;
         let evidence = sqlx::query_as(
             "SELECT * FROM conversation_evidence WHERE conversation_id = ? ORDER BY captured_at",
         )
@@ -597,6 +599,7 @@ impl ConversationStore {
             runs,
             events,
             actions,
+            confirmations,
             evidence,
             message_evidence,
             memories,

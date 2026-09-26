@@ -242,6 +242,7 @@ impl ConversationStore {
             tx.commit().await?;
             return Ok(AcceptedConversationMessage { message, run });
         }
+        actions::invalidate_pending(&mut tx,id).await?;
         if conversation.archived_at.is_some() {
             return Err(ConversationError::Archived);
         }
@@ -502,6 +503,7 @@ impl ConversationStore {
             .await?
             .ok_or(ConversationError::NotFound)?
         };
+        actions::invalidate_pending(&mut tx,id).await?;
         tx.commit().await?;
         Ok(run)
     }
@@ -559,4 +561,5 @@ async fn emit(
 mod tests;
 
 pub mod records;
+pub mod actions;
 mod worker;

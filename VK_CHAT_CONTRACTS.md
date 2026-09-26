@@ -20,7 +20,7 @@ Shared delivery and voice metadata below do not create a second workspace chat.
 | `conversation_events` | `(conversation_id, seq)` primary key, `event_id` unique, `type`, `schema_version`, `entity_id`, `entity_revision`, `payload`, `occurred_at`. Durable user-visible changes and action transitions; transient token/ASR deltas are not durable events |
 | `conversation_runs` | `id`, `conversation_id`, `input_message_id`, `input_revision`, `status`, `generation`, `lease_owner`, `lease_until`, `context_manifest`, `model_config`, `usage`, `error`. One active leased generation per conversation; status covers pending/running/completed/interrupted/failed |
 | `conversation_actions` | `id`, `run_id` nullable for explicitly authorised supervisor actions outside a model run, `conversation_id`, `origin_message_id`, `intent_kind`, `payload`, `payload_digest`, `state`, `route_evidence`, `authorisation_source`, `created_at`. Immutable authorised payload; corrections create new actions |
-| `agent_deliveries` | `id`, nullable supervisor `action_id`, `source_kind` (supervisor/session/voice), `source_id`, `idempotency_key`, fully qualified target, `executor_config`, `target_revision`, `message`, `state`, `attempt_count`, `not_before`, `lease_generation`, nullable `execution_process_id`, `provider_receipt`, `error`. Unique `(source_kind, source_id, idempotency_key, target_session_key)`; shared session queue consumes these rows without requiring a supervisor action for direct sends |
+| `agent_deliveries` | `id`, nullable supervisor `action_id`, `source_kind` (supervisor/session/voice), `source_id`, `idempotency_key`, fully qualified target, `executor_config`, `target_revision`, `message`, `state`, `attempt_count`, `not_before`, `lease_generation`, nullable `execution_process_id`, `delivery_mode` (queue/steer), `steering_acknowledged_at`, `provider_receipt`, `error`. Unique `(source_kind, source_id, idempotency_key, target_session_key)`; shared session queue consumes these rows without requiring a supervisor action for direct sends |
 | `conversation_confirmations` | `id`, `action_id`, `principal_id`, `payload_digest`, `target_revision`, `expires_at`, `state`, `answered_message_id`. Durable, one-use, compare-and-swap acceptance |
 | `conversation_evidence` | `id`, typed source key (authority/session/process/turn/log entry or repo state), `source_revision`, `content_hash`, `availability`, `captured_at`, optional retained raw report. Unique source/revision; stable references, no arbitrary filesystem paths from callers |
 | `conversation_message_evidence` | `(message_id, evidence_id)`, optional excerpt locator, `relationship` (summarised/quoted/supporting). Supports many reports per answer |
@@ -196,7 +196,13 @@ final result; mark that grouping rather than fabricate one answer per instructio
 “Ask why” can remain awaiting an answer even after a generic completion report.
 Action aggregate state derives from recipient states, preserving partial success.
 
-For a running session use `try_steer_active_turn` only if supported. Current Codex
+For a running session use the shared durable steering wrapper only if supported.
+The implemented `services::steering::steer` persists an attempt before calling
+`ContainerService::try_steer_process` with the exact recorded execution ID. A
+receipt with `delivery_mode = steer` and `steering_acknowledged_at` set represents
+acknowledged steering; its execution may subsequently complete or fail without
+erasing that acknowledgement. Replay must never select a replacement process.
+Current Codex
 queue route returns conflict when steering is unavailable, deliberately without
 queue fallback. Preserve this behaviour: surface retryable not-ready; do not
 silently save a Codex correction for a later turn. For other agents, use the

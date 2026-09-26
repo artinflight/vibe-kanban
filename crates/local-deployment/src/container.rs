@@ -1684,6 +1684,38 @@ impl ContainerService for LocalContainerService {
             return Ok(false);
         };
 
+        self.try_steer_process(session, data, process.id).await
+    }
+
+    async fn try_steer_process(
+        &self,
+        session: &Session,
+        data: &DraftFollowUpData,
+        process_id: Uuid,
+    ) -> Result<bool, ContainerError> {
+        let Some(process) = ExecutionProcess::find_by_id(&self.db.pool, process_id).await? else {
+            return Ok(false);
+        };
+        if process.session_id != session.id
+            || process.dropped
+            || process.status != ExecutionProcessStatus::Running
+            || process.run_reason != ExecutionProcessRunReason::CodingAgent
+        {
+            return Ok(false);
+        }
+        let Some(current_session) = Session::find_by_id(&self.db.pool, session.id).await? else {
+            return Ok(false);
+        };
+        if current_session.workspace_id != session.workspace_id {
+            return Ok(false);
+        }
+        let Some(workspace) = Workspace::find_by_id(&self.db.pool, session.workspace_id).await?
+        else {
+            return Ok(false);
+        };
+        if workspace.archived || workspace.worktree_deleted {
+            return Ok(false);
+        }
         let action = process.executor_action()?;
         if action.base_executor() != Some(BaseCodingAgent::Codex)
             || data.executor_config.executor != BaseCodingAgent::Codex

@@ -1,3 +1,45 @@
+## September 26: durable direct steering integrated
+
+Migration `20260926000004_durable_steering_receipts.sql` adds delivery mode and a
+retained steering acknowledgement to the shared ledger. The existing session queue
+route now uses `services::steering::steer`: record the exact execution before the
+RPC, then persist its outcome. Concurrent/repeated request IDs never issue another
+RPC. Timeout, RPC error, lost receipt write or expired in-flight attempt becomes
+`unknown_delivery`; recovery never converts it into queued work. A conclusive late
+acknowledgement may resolve that same attempt. Process completion does not erase
+the acknowledgement, so a retry still reports the original acceptance.
+
+The local executor adapter now accepts an exact process ID and rechecks its
+session, workspace lifecycle, running state and executor before steering. The
+workspace send hook supplies a per-submission UUID, retained by transport retries,
+using Web Crypto compatible with existing non-HTTPS local origins. Raw prompts,
+workspace history, completion output and controls are unchanged; this primitive
+has no supervisor memory/model dependency. Known unavailable Codex steering still
+returns conflict without queue fallback. Non-Codex queue behavior is preserved.
+
+Eight new real-database steering tests pass (`vk-chat-steering-tests.log`), covering
+acknowledgement replay after completion, concurrent retry, process replacement,
+known rejection, uncertain RPC errors, crash recovery, injected receipt-write
+failure, changed-content identity rejection and unavailable targets. Current
+web-core typecheck and focused changed-file lint pass. Full formatting passed.
+The server and local-deployment code compile, and both queue-route regressions
+pass. The updated full DB/service run passes all 31 database and 37 service tests;
+all six conversation API tests pass after the new migration. Terminal logs are
+`vk-chat-steering-server-tests.log`, `vk-chat-steering-regression.log` and
+`vk-chat-steering-api-tests.log` under `/mnt/vk-storage/capacity-build-tmp/`.
+Ops governance and `git diff --check` also pass. These tests use deterministic
+executor callbacks; they do not certify the real Codex RPC boundary.
+
+The previous worker regression completed with 31 database and 29 service tests
+passing (`vk-chat-worker-regression.log`), including renewal contention on a
+single-connection pool. The earlier worker handoff's pending regression note is
+superseded by this result. No real executor RPC, model/provider, deployment or
+phone/car acceptance has run. Dispatch remains open: connect authorised supervisor
+and voice origins/action receipts to this primitive, implement action policy and
+confirmations, close direct/process admission races, and prove actual executor,
+capacity/native-goal and approval boundaries. The hosted adapter/startup consumer
+and remaining native goal requirements are also still open.
+
 ## September 26: leased supervisor worker and local read tools
 
 `crates/services/src/services/conversation/` now contains the provider-neutral

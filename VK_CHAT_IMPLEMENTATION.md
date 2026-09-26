@@ -13,7 +13,9 @@ provides history/replay and record access, with production send acceptance disab
 until model-worker integration. Existing raw workspace history is preserved.
 
 The existing session queue has moved to durable delivery rows with transactional
-process correlation and recovery. Supervisor action authorisation/dispatch,
+process correlation and recovery. Direct session steering now persists exact-process
+attempts/acknowledgements with an eight-test crash/idempotency suite. Uncertain
+steering never falls back to queued replay. Supervisor action authorisation/dispatch,
 real execution-boundary acceptance, configured model and later milestones remain
 open. The initial global UI implements persistent local-authority history/replay,
 activity/evidence drill-down and data controls. Six API tests, five reducer tests,

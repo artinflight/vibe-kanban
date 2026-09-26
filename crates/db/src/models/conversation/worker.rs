@@ -103,6 +103,7 @@ impl ConversationStore {
             &failed,
         )
         .await?;
+        super::actions::invalidate_pending(&mut tx,run.conversation_id).await?;
         tx.commit().await?;
         Ok(())
     }

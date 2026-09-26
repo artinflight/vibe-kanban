@@ -16,7 +16,10 @@ use super::{
 pub struct AgentDelivery {
     pub id: Uuid,
     pub position: i64,
+    pub action_id: Option<Uuid>,
     pub source_kind: String,
+    pub delivery_mode: String,
+    pub steering_acknowledged_at: Option<DateTime<Utc>>,
     pub source_id: Uuid,
     pub idempotency_key: Uuid,
     pub session_id: Uuid,
@@ -64,6 +67,7 @@ impl AgentDelivery {
                 serde_json::to_value(&data).map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
             if serde_json::to_value(&old.data.0).map_err(|e| sqlx::Error::Encode(Box::new(e)))?
                 != value
+                || old.delivery_mode != "queue"
                 || old.requested_capacity != capacity
             {
                 return Err(sqlx::Error::Protocol(
@@ -215,6 +219,10 @@ impl AgentDelivery {
 
     pub async fn reconcile(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         let mut tx = pool.begin().await?;
+        // A steering RPC can have taken effect before its acknowledgement was
+        // persisted. Expiry is uncertainty, never permission to resend it.
+        sqlx::query("UPDATE agent_deliveries SET state = 'unknown_delivery', lease_until = NULL, error = 'steering_acknowledgement_uncertain', updated_at = datetime('now','subsec') WHERE delivery_mode = 'steer' AND state = 'dispatching' AND lease_until <= unixepoch()")
+            .execute(&mut *tx).await?;
         // No spawn can occur before atomic admission, so only unadmitted leases retry.
         sqlx::query("UPDATE agent_deliveries SET state = CASE WHEN wait_for_capacity THEN 'waiting_capacity' ELSE 'queued' END, claim_id = NULL, lease_until = NULL, updated_at = datetime('now','subsec') WHERE state = 'dispatching' AND execution_process_id IS NULL AND lease_until <= unixepoch()")
             .execute(&mut *tx).await?;
@@ -234,3 +242,5 @@ impl AgentDelivery {
             .fetch_all(pool).await
     }
 }
+
+pub mod steering;

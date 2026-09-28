@@ -1,3 +1,11 @@
+## September 28 — two concurrent selected capacity goals
+
+Added bounded two-agent admission and per-session stop, retaining shared allocation,
+independent native/OS deadlines, same-workspace exclusion and interactive priority.
+See [VK_CAPACITY_CONCURRENCY.md](VK_CAPACITY_CONCURRENCY.md) for API semantics,
+real two-native-goal acceptance and deployment requirements. Companion CU changes
+are required; old clients keep one slot. Production deployment remains operator-owned.
+
 # Capacity Cutover Lock
 
 Current scope: implement authenticated ownership release/acquire with fresh

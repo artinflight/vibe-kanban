@@ -280,11 +280,32 @@ impl Controller {
         stop: u64,
         now: u64,
     ) -> io::Result<CapacityExecution> {
+        let active = self
+            .state
+            .goals
+            .values()
+            .filter(|g| g.grant.is_some())
+            .collect::<Vec<_>>();
         if self.state.foreground_until_ms > now
-            || self.state.goals.values().any(|g| g.grant.is_some())
+            || active.len() >= 2
+            || active.iter().any(|g| {
+                let grant = g.grant.as_ref().unwrap();
+                g.session_id == session
+                    || grant.stopping
+                    || grant.execution_id.is_none()
+                    || grant.expires_at_ms.saturating_sub(now) <= 2000
+                    || grant.epoch != self.state.epoch
+                    || grant.allocation_id != allocation
+                    || grant.stop_at_ms != stop
+                    || self
+                        .state
+                        .goals
+                        .get(&session)
+                        .is_some_and(|next| next.thread_id == g.thread_id)
+            })
         {
             return Err(invalid(
-                "Interactive priority or unreconciled background execution",
+                "Interactive priority, two-agent limit, or unreconciled background execution",
             ));
         }
         if self.state.issued_ids.contains(&id)
@@ -457,12 +478,26 @@ impl Controller {
         save(&file, &lease)
     }
     pub fn revoke_all(&mut self, reason: &str, foreground_until: Option<u64>) -> io::Result<()> {
+        self.revoke(reason, foreground_until, None)
+    }
+    pub fn revoke_session(&mut self, session: Uuid, reason: &str) -> io::Result<()> {
+        self.revoke(reason, None, Some(session))
+    }
+    fn revoke(
+        &mut self,
+        reason: &str,
+        foreground_until: Option<u64>,
+        session: Option<Uuid>,
+    ) -> io::Result<()> {
         self.ensure_owner()?;
         let mut next = self.state.clone();
         if let Some(until) = foreground_until {
             next.foreground_until_ms = next.foreground_until_ms.max(until);
         }
         for goal in next.goals.values_mut() {
+            if session.is_some_and(|id| id != goal.session_id) {
+                continue;
+            }
             if let Some(grant) = &mut goal.grant {
                 grant.stopping = true;
                 goal.reason = reason.into();
@@ -940,6 +975,106 @@ mod tests {
             let _ = fs::remove_dir_all(&self.root);
         }
     }
+    #[test]
+    fn two_grants_have_independent_revocation_and_a_hard_concurrency_limit() {
+        let mut f = Fixture::new();
+        let first = f.issue();
+        let first_lease = f.launch(&first);
+        let c = f.c.as_mut().unwrap();
+        let second_session = Uuid::new_v4();
+        let mut second = c.state.goals[&f.session].clone();
+        second.session_id = second_session;
+        second.grant = None;
+        c.enroll(second.clone()).unwrap();
+        assert!(
+            c.issue(
+                second_session,
+                Uuid::new_v4(),
+                "old-week:day".into(),
+                30_000,
+                90_000,
+                1000
+            )
+            .is_err(),
+            "same native thread cannot run twice"
+        );
+        second.thread_id = "second-thread".into();
+        c.enroll(second).unwrap();
+        assert!(
+            c.issue(
+                second_session,
+                Uuid::new_v4(),
+                "different-allocation".into(),
+                30_000,
+                90_000,
+                1000
+            )
+            .is_err()
+        );
+        let request = c
+            .issue(
+                second_session,
+                Uuid::new_v4(),
+                "old-week:day".into(),
+                30_000,
+                90_000,
+                1000,
+            )
+            .unwrap();
+        let execution = Uuid::new_v4();
+        c.bind(&request, "second-thread", execution, 1000).unwrap();
+        let second_lease = Lease {
+            id: request.id.clone(),
+            execution_id: execution.to_string(),
+            ..first_lease.clone()
+        };
+        save(Path::new(&request.lease_file), &second_lease).unwrap();
+        let third_session = Uuid::new_v4();
+        let mut third = c.state.goals[&second_session].clone();
+        third.session_id = third_session;
+        third.thread_id = "third-thread".into();
+        third.grant = None;
+        c.enroll(third).unwrap();
+        assert!(
+            c.issue(
+                third_session,
+                Uuid::new_v4(),
+                "old-week:day".into(),
+                30_000,
+                90_000,
+                1000
+            )
+            .is_err()
+        );
+        c.revoke_session(second_session, "Individual cap reached")
+            .unwrap();
+        assert!(
+            capacity_guard::read_lease(Path::new(&request.lease_file))
+                .unwrap()
+                .revoked
+        );
+        assert!(
+            !capacity_guard::read_lease(Path::new(&first.lease_file))
+                .unwrap()
+                .revoked
+        );
+        c.renew(
+            f.session,
+            Uuid::parse_str(&first.id).unwrap(),
+            "old-week:day",
+            0,
+            40_000,
+            10_000,
+        )
+        .unwrap();
+        c.revoke_all("Interactive work", Some(600_000)).unwrap();
+        assert!(
+            capacity_guard::read_lease(Path::new(&first.lease_file))
+                .unwrap()
+                .revoked
+        );
+    }
+
     #[tokio::test]
     async fn optional_controller_failure_only_blocks_scheduled_launches() {
         let session = Uuid::new_v4();

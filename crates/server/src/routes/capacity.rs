@@ -126,8 +126,14 @@ async fn status(
             );
         }
     }
+    let mut workspace_ids = serde_json::Map::new();
+    for goal in state.goals.values() {
+        if let Some(session) = Session::find_by_id(&deployment.db().pool, goal.session_id).await? {
+            workspace_ids.insert(goal.session_id.to_string(), json!(session.workspace_id));
+        }
+    }
     Ok(Json(
-        json!({"state":state, "foregroundActive":foreground(&deployment, &state).await?, "runningExecutionIds":running.iter().map(|p|p.id).collect::<Vec<_>>(), "executionStates":execution_states, "checkedAtMs":wall_ms()}),
+        json!({"workspaceIds":workspace_ids,"capabilities":{"maxConcurrentGoals":2,"targetedStop":true},"state":state, "foregroundActive":foreground(&deployment, &state).await?, "runningExecutionIds":running.iter().map(|p|p.id).collect::<Vec<_>>(), "executionStates":execution_states, "checkedAtMs":wall_ms()}),
     ))
 }
 async fn candidate(
@@ -331,6 +337,18 @@ async fn start(
         if foreground(&deployment, &c.state).await? {
             return Err(ApiError::Conflict("Interactive work takes priority".into()));
         }
+        for other in c.state.goals.values().filter(|g| g.grant.is_some()) {
+            let other_session = Session::find_by_id(&deployment.db().pool, other.session_id)
+                .await?
+                .ok_or(ApiError::Conflict(
+                    "Existing background session is unavailable".into(),
+                ))?;
+            if other_session.workspace_id == session.workspace_id {
+                return Err(ApiError::Conflict(
+                    "Only one background agent may write to a workspace at a time".into(),
+                ));
+            }
+        }
         c.issue(
             session.id,
             input.grant_id,
@@ -370,7 +388,7 @@ async fn start(
             controller()?
                 .lock()
                 .await
-                .revoke_all("Launch failed; reconciling", None)?;
+                .revoke_session(session.id, "Launch failed; reconciling")?;
             Err(error.into())
         }
     }
@@ -416,6 +434,8 @@ struct Stop {
     epoch: String,
     revision: u64,
     reason: String,
+    #[serde(default)]
+    session_id: Option<Uuid>,
 }
 async fn stop(
     State(_deployment): State<DeploymentImpl>,
@@ -430,10 +450,15 @@ async fn stop(
         if input.reason.len() > 500 {
             return Err(ApiError::BadRequest("Stop reason too long".into()));
         }
-        c.revoke_all(&input.reason, None)?;
+        if let Some(session) = input.session_id {
+            c.revoke_session(session, &input.reason)?;
+        } else {
+            c.revoke_all(&input.reason, None)?;
+        }
         c.state
             .goals
             .values()
+            .filter(|g| input.session_id.is_none_or(|id| g.session_id == id))
             .filter_map(|g| g.grant.clone().map(|x| (g.session_id, x)))
             .collect::<Vec<_>>()
     };

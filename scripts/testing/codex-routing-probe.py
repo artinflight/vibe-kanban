@@ -22,6 +22,7 @@ def main():
     parser.add_argument('--output', required=True)
     parser.add_argument('--verify', action='store_true', help='One short inference turn per model (maximum seven).')
     parser.add_argument('--models', nargs='+', default=MODELS, help='Exact IDs; new releases need no code changes.')
+    parser.add_argument('--effort', choices=['low', 'medium', 'high', 'xhigh', 'max'], help='Verify this exact effort instead of the default per model.')
     args = parser.parse_args()
     if len(args.models) > 7 or len(set(args.models)) != len(args.models):
         parser.error('Use at most seven distinct model IDs per bounded probe')
@@ -81,7 +82,7 @@ def main():
         for model in args.models:
             m = native.get(model)
             efforts = [x['reasoningEffort'] for x in m['supportedReasoningEfforts']] if m else []
-            effort = 'high' if model == 'gpt-6-astra' else 'medium'
+            effort = args.effort or ('high' if model == 'gpt-6-astra' else 'medium')
             row = {'id': model, 'discovered': m is not None, 'supported_efforts': efforts,
                    'verified_efforts': [], 'verified_at': None}
             evidence['models'].append(row)

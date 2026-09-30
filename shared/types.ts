@@ -605,7 +605,7 @@ permission_policy?: PermissionPolicy | null, };
 
 export type RoutingMode = "manual" | "shadow" | "auto";
 
-export type CapabilityFloor = "routine" | "workhorse" | "frontier";
+export type CapabilityFloor = "assessed" | "routine" | "workhorse" | "frontier";
 
 export type RoutingPolicy = { mode: RoutingMode, floor: CapabilityFloor, denied_models: Array<string>,
 /**

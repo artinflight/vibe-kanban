@@ -22,8 +22,9 @@ pub enum RoutingMode {
 )]
 #[serde(rename_all = "snake_case")]
 pub enum CapabilityFloor {
-    Routine,
     #[default]
+    Assessed,
+    Routine,
     Workhorse,
     Frontier,
 }
@@ -61,6 +62,24 @@ pub struct RoutingDecision {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Qualification {
+    pub effort: String,
+    pub envelope: String,
+    pub status: QualificationStatus,
+    pub floor: CapabilityFloor,
+    pub preference_rank: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum QualificationStatus {
+    Qualified,
+    Experimental,
+    Denied,
+    MinimumRequired,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelPolicy {
     pub id: String,
     pub released: bool,
@@ -68,6 +87,8 @@ pub struct ModelPolicy {
     pub floor: CapabilityFloor,
     /// Operator-adjustable preference, not a claimed Codex allowance multiplier.
     pub cost_rank: u32,
+    #[serde(default)]
+    pub qualifications: Vec<Qualification>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,6 +118,27 @@ pub fn model_policies() -> Result<Vec<ModelPolicy>, String> {
     let mut ids = std::collections::HashSet::new();
     if models.is_empty() || models.iter().any(|m| m.id.is_empty() || !ids.insert(&m.id)) {
         return Err("Routing model policies must have unique nonempty IDs".into());
+    }
+    for model in &models {
+        let mut pairs = std::collections::HashSet::new();
+        for q in &model.qualifications {
+            if !model.efforts.contains(&q.effort)
+                || !["low", "medium", "high", "xhigh", "max"].contains(&q.effort.as_str())
+                || ![
+                    "mechanical",
+                    "bounded",
+                    "validated_fix",
+                    "normal",
+                    "complex",
+                    "protected",
+                ]
+                .contains(&q.envelope.as_str())
+                || q.floor == CapabilityFloor::Assessed
+                || !pairs.insert((&q.effort, &q.envelope))
+            {
+                return Err("Invalid or duplicate model/effort/envelope qualification".into());
+            }
+        }
     }
     Ok(models)
 }
@@ -149,7 +191,7 @@ pub fn resolve_action(
         if let Err(error) = result {
             let c = config(action).expect("shadow policy has config");
             action.routing_decision = Some(Box::new(RoutingDecision {
-                version: 1,
+                version: 2,
                 id: uuid::Uuid::new_v4().to_string(),
                 mode: RoutingMode::Shadow,
                 floor: c.routing.as_ref().unwrap().floor,
@@ -228,9 +270,18 @@ fn resolve_action_inner(
         let base_model = model.trim_end_matches("-fast");
         let models = model_policies()?;
         if policy.denied_models.iter().any(|id| id == base_model)
-            || !models
-                .iter()
-                .any(|m| m.id == base_model && m.floor >= policy.floor)
+            || !models.iter().any(|m| {
+                m.id == base_model
+                    && m.qualifications.iter().any(|q| {
+                        Some(q.effort.as_str()) == prior.reasoning_id.as_deref()
+                            && q.floor >= policy.floor
+                            && matches!(
+                                q.status,
+                                QualificationStatus::Qualified
+                                    | QualificationStatus::MinimumRequired
+                            )
+                    })
+            })
         {
             return Err("Pinned native model conflicts with the current floor/exclusions; choose a manual model at a safe boundary".into());
         }
@@ -248,30 +299,32 @@ fn resolve_action_inner(
         action.routing_decision = Some(decision);
         return Ok(());
     }
-    let mut floor = policy.floor;
+    let assessment = crate::routing_assessment::assess(prompt);
+    let mut floor = policy.floor.max(assessment.floor);
     if let Some(prior) = previous.and_then(|p| p.routing_decision.as_ref()) {
-        floor = floor.max(prior.floor); // Follow-up wording cannot silently lower the established floor.
+        floor = floor.max(prior.floor); // Never silently lower an established session floor.
     }
-    let lower = prompt.to_lowercase();
-    if [
-        "migration",
-        "security",
-        "authentication",
-        "authorization",
-        "production",
-        "delete data",
-        "credentials",
-        "concurrency",
-        "cryptograph",
-    ]
-    .iter()
-    .any(|word| lower.contains(word))
-    {
-        floor = CapabilityFloor::Frontier;
+    let risk_expansion = previous
+        .and_then(|p| p.routing_decision.as_ref())
+        .is_some_and(|d| assessment.floor > d.floor);
+    if risk_expansion && !policy.allow_escalation && policy.mode == RoutingMode::Auto {
+        return Err("Task scope exceeds the established capability; allow boundary escalation or select a manual model".into());
     }
-    let mut reason = "capability_floor".to_string();
-    let escalated = failed;
+    let reported_failure = previous.is_some() && assessment.validation_failure;
+    let failed = failed || reported_failure;
+    let mut reason = format!("assessed_{}: {}", assessment.envelope, assessment.evidence);
+    let escalated = failed || risk_expansion;
+    if risk_expansion {
+        reason = format!(
+            "risk_expansion_{}: {}",
+            assessment.envelope, assessment.evidence
+        );
+    }
     if failed {
+        let mut failed_floor = previous
+            .and_then(|p| p.routing_decision.as_ref())
+            .map(|d| d.floor)
+            .unwrap_or(policy.floor.max(CapabilityFloor::Routine));
         // A failed manual model is not evidence that a lower auto tier is safe.
         if let Some(prior_model) = previous
             .and_then(config)
@@ -282,26 +335,41 @@ fn resolve_action_inner(
                 .iter()
                 .find(|m| m.id == prior_model.trim_end_matches("-fast"))
                 .ok_or("Failed model has no known capability policy; manual diagnosis required")?;
-            floor = floor.max(prior.floor);
+            failed_floor = failed_floor.max(prior.floor);
         }
         if !policy.allow_escalation && policy.mode == RoutingMode::Auto {
             return Err("Previous execution failed. Inspect the failure, then choose a manual model or allow boundary escalation".into());
         }
-        floor = match floor {
-            CapabilityFloor::Routine => CapabilityFloor::Workhorse,
+        let raised = match failed_floor {
+            CapabilityFloor::Assessed | CapabilityFloor::Routine => CapabilityFloor::Workhorse,
             CapabilityFloor::Workhorse => CapabilityFloor::Frontier,
             CapabilityFloor::Frontier if policy.mode == RoutingMode::Auto => {
                 return Err("Frontier execution failed; manual diagnosis required".into());
             }
             CapabilityFloor::Frontier => CapabilityFloor::Frontier,
         };
-        reason = "previous_execution_failed".into();
+        floor = floor.max(raised);
+        reason = if reported_failure {
+            "operator_reported_validation_failure"
+        } else {
+            "previous_execution_failed"
+        }
+        .into();
     }
     let result = load_availability().and_then(|availability| {
         let models = model_policies()?;
-        let chosen = choose(
+        let chosen = choose_assessed(
             &policy,
             floor,
+            if failed {
+                if floor == CapabilityFloor::Frontier {
+                    "protected"
+                } else {
+                    "normal"
+                }
+            } else {
+                assessment.envelope
+            },
             &models,
             &availability,
             chrono::Utc::now().timestamp(),
@@ -309,7 +377,7 @@ fn resolve_action_inner(
         Ok((chosen, availability))
     });
     let mut decision = RoutingDecision {
-        version: 1,
+        version: 2,
         id: uuid::Uuid::new_v4().to_string(),
         mode: policy.mode,
         floor,
@@ -370,16 +438,38 @@ pub fn choose(
     availability: &Availability,
     now: i64,
 ) -> Result<(String, String), String> {
-    let efforts = ["low", "medium", "high", "xhigh", "max"];
-    let minimum = if floor == CapabilityFloor::Frontier {
-        2
-    } else {
-        1
-    };
+    choose_assessed(
+        policy,
+        floor,
+        match floor {
+            CapabilityFloor::Assessed | CapabilityFloor::Routine => "bounded",
+            CapabilityFloor::Workhorse => "normal",
+            CapabilityFloor::Frontier => "protected",
+        },
+        models,
+        availability,
+        now,
+    )
+}
+
+pub fn choose_assessed(
+    policy: &RoutingPolicy,
+    floor: CapabilityFloor,
+    envelope: &str,
+    models: &[ModelPolicy],
+    availability: &Availability,
+    now: i64,
+) -> Result<(String, String), String> {
     let mut eligible = Vec::new();
+    // Minimum-required rows form a configurable protected-work allowlist.
+    let protected = models.iter().any(|m| {
+        m.qualifications
+            .iter()
+            .any(|q| q.envelope == envelope && q.status == QualificationStatus::MinimumRequired)
+    });
     for model in models
         .iter()
-        .filter(|m| m.released && m.floor >= floor && !policy.denied_models.contains(&m.id))
+        .filter(|m| m.released && !policy.denied_models.contains(&m.id))
     {
         let Some(proof) = availability.models.iter().find(|a| {
             a.id == model.id
@@ -388,19 +478,27 @@ pub fn choose(
         }) else {
             continue;
         };
-        for (rank, effort) in efforts.iter().enumerate().skip(minimum) {
-            if model.efforts.iter().any(|e| e == effort)
-                && proof.verified_efforts.iter().any(|e| e == effort)
-                && (!proof.discovered || proof.supported_efforts.iter().any(|e| e == effort))
+        for q in &model.qualifications {
+            if q.envelope != envelope
+                || q.floor < floor
+                || q.status == QualificationStatus::Denied
+                || (q.status == QualificationStatus::Experimental
+                    && policy.mode != RoutingMode::Shadow)
+                || (protected && q.status != QualificationStatus::MinimumRequired)
             {
-                eligible.push((model.cost_rank, rank, model.id.clone(), effort.to_string()));
-                break;
+                continue;
+            }
+            if model.efforts.contains(&q.effort)
+                && proof.verified_efforts.contains(&q.effort)
+                && (!proof.discovered || proof.supported_efforts.contains(&q.effort))
+            {
+                eligible.push((q.preference_rank, model.id.clone(), q.effort.clone()));
             }
         }
     }
     eligible.sort();
-    eligible.into_iter().next().map(|(_, _, model, effort)| (model, effort))
-        .ok_or_else(|| "No executable model/effort meets the routing safety floor and exclusions; choose a manual model or refresh verification".into())
+    eligible.into_iter().next().map(|(_, model, effort)| (model, effort))
+        .ok_or_else(|| "No verified qualified model/effort meets the assessed envelope, safety floor and exclusions; manual diagnosis or policy qualification required".into())
 }
 
 pub fn account_fingerprint(account: &serde_json::Value) -> String {
@@ -459,6 +557,112 @@ mod tests {
             ),
             None,
         )
+    }
+
+    #[test]
+    fn assessed_pairs_route_downward_without_a_routine_label() {
+        let (mut p, m, mut a) = fixture();
+        p.floor = CapabilityFloor::Assessed;
+        for (prompt, expected) in [
+            ("Fix the typo in README.md", "gpt-5.6-luna"),
+            (
+                "Fix button spacing in one component with an existing pattern and snapshot test",
+                "gpt-6-luna",
+            ),
+            ("Fix an isolated bug with a regression test", "gpt-6-sol"),
+            ("Implement a feature", "gpt-6.1-sol"),
+            ("Investigate an intermittent failure", "gpt-6.1-sol"),
+            ("Update authentication permissions", "gpt-6-astra"),
+        ] {
+            let assessment = crate::routing_assessment::assess(prompt);
+            assert_eq!(
+                choose_assessed(
+                    &p,
+                    p.floor.max(assessment.floor),
+                    assessment.envelope,
+                    &m,
+                    &a,
+                    100
+                )
+                .unwrap()
+                .0,
+                expected
+            );
+        }
+        // Low effort is qualified but cannot be picked before exact execution proof.
+        let first =
+            choose_assessed(&p, CapabilityFloor::Routine, "mechanical", &m, &a, 100).unwrap();
+        assert_eq!(first.1, "medium");
+        for proof in &mut a.models {
+            proof.verified_efforts.push("low".into());
+            proof.supported_efforts.push("low".into());
+        }
+        assert_eq!(
+            choose_assessed(&p, CapabilityFloor::Routine, "mechanical", &m, &a, 100)
+                .unwrap()
+                .1,
+            "low"
+        );
+        // Stronger model at low effort is shadow-only until deliberately qualified.
+        p.mode = RoutingMode::Shadow;
+        assert_eq!(
+            choose_assessed(&p, CapabilityFloor::Routine, "bounded", &m, &a, 100).unwrap(),
+            ("gpt-6-sol".into(), "low".into())
+        );
+        p.mode = RoutingMode::Auto;
+        assert_eq!(
+            choose_assessed(&p, CapabilityFloor::Routine, "bounded", &m, &a, 100)
+                .unwrap()
+                .0,
+            "gpt-6-luna"
+        );
+        assert_eq!(
+            choose_assessed(&p, CapabilityFloor::Workhorse, "mechanical", &m, &a, 100)
+                .unwrap()
+                .0,
+            "gpt-6.1-sol"
+        );
+        p.denied_models.push("gpt-6-astra".into());
+        assert!(choose_assessed(&p, CapabilityFloor::Frontier, "protected", &m, &a, 100).is_err());
+    }
+
+    #[test]
+    fn qualification_is_explicit_and_preference_is_configurable() {
+        let (p, mut m, a) = fixture();
+        for model in &mut m {
+            model.qualifications.clear();
+        }
+        assert!(choose_assessed(&p, CapabilityFloor::Routine, "mechanical", &m, &a, 100).is_err());
+        m[0].qualifications.push(Qualification {
+            effort: "medium".into(),
+            envelope: "mechanical".into(),
+            status: QualificationStatus::Denied,
+            floor: CapabilityFloor::Routine,
+            preference_rank: 0,
+        });
+        assert!(choose_assessed(&p, CapabilityFloor::Routine, "mechanical", &m, &a, 100).is_err());
+        m[0].qualifications[0].status = QualificationStatus::Qualified;
+        assert_eq!(
+            choose_assessed(&p, CapabilityFloor::Routine, "mechanical", &m, &a, 100)
+                .unwrap()
+                .0,
+            "gpt-5.6-luna"
+        );
+    }
+
+    #[test]
+    fn reported_validation_failure_requires_consent_before_inference() {
+        let (policy, _, _) = fixture();
+        let previous = action(None);
+        let mut next = action(Some(policy));
+        if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut next.typ {
+            r.prompt = "The tests still fail after that fix".into();
+        }
+        assert!(
+            resolve_action(&mut next, Some(&previous), false)
+                .unwrap_err()
+                .contains("Previous execution failed")
+        );
     }
 
     #[test]

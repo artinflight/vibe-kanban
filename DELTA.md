@@ -1351,3 +1351,12 @@ Isolated validated commits df3e973a5/162770f73/9b334d1a3 from preserved V2 and
 rebased onto staging56792a72c. Retained both sides of continuity-document conflicts;
 no source conflicts or V1 execution-path redesign. See VK_AUTOSWITCH_V1_STAGING.md.
 Task scope ends at the staging merge; operator owns deployment.
+
+## Automatic assessment and pair qualification
+
+Extended accepted V1 with assessed minimum, explicit configurable model/effort/
+envelope qualification and pair preference ranks. Added cheap prompt risk/scope
+assessment, consented operator-reported validation/risk escalation, preserved
+manual constraints and policyVersion2 telemetry. Exact low-effort probes passed
+for 5.6 Luna and Sol6; no repeated V1 native trials or production changes.
+See VK_AUTOSWITCH_FULL_ROUTER.md for rollout gates and qualification limitations.

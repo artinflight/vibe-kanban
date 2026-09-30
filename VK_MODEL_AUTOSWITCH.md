@@ -1,3 +1,8 @@
+> Current extension: [automatic assessed router](VK_AUTOSWITCH_FULL_ROUTER.md).
+> The V1 lifecycle and integration below are accepted. V2 replaces its manual-floor-only
+> selection with task assessment and explicit pair qualification; V1 rollout evidence
+> remains valid for unchanged execution/state-preservation mechanisms.
+
 # VK Model AutoSwitch: safe V1 implementation
 
 Updated 2026-09-30 on `vk/5a81-autoswitch-cu-recovery`. This replaces the planning-only

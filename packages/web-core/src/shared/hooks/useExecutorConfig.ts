@@ -390,10 +390,11 @@ export function useExecutorConfig({
           !('routing' in partial)
         ) {
           next.routing = {
-            mode: 'manual',
-            floor: 'workhorse',
+            floor: 'assessed',
             denied_models: [],
             allow_escalation: false,
+            ...(prev.routing ?? executorConfig?.routing),
+            mode: 'manual',
           };
         }
         if ('model_id' in partial && !('reasoning_id' in partial)) {
@@ -414,7 +415,13 @@ export function useExecutorConfig({
         return next;
       });
     },
-    [executor.effective, persistenceKey, variant.resolved, persist]
+    [
+      executor.effective,
+      executorConfig?.routing,
+      persistenceKey,
+      variant.resolved,
+      persist,
+    ]
   );
 
   return {

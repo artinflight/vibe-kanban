@@ -10,7 +10,7 @@ UNIT_FILE="$STATE_DIR/unit"
 TAILNET_PORT_FILE="$STATE_DIR/tailnet-port"
 
 HOST="${VK_PREVIEW_HOST:-127.0.0.1}"
-BACKEND_PORT="${VK_PREVIEW_BACKEND_PORT:-4311}"
+BACKEND_PORT="${VK_PREVIEW_BACKEND_PORT:-4511}"
 PORT_START="${VK_PREVIEW_PORT_START:-3002}"
 REQUESTED_PORT="${VK_PREVIEW_PORT:-}"
 TAILNET_PORT_START="${VK_PREVIEW_TAILNET_PORT_START:-18446}"
@@ -409,7 +409,9 @@ start_background() {
     if [[ -n "$tailnet_port" ]]; then
       ensure_tailnet_route "$port" "$tailnet_port"
     fi
-    echo "Vibe Kanban lightweight preview: $(preview_url "$port" "$tailnet_port")"
+    echo "Vibe Kanban lightweight preview (tailnet only): $(preview_url "$port" "$tailnet_port")"
+    echo "Backend proxy: http://127.0.0.1:${BACKEND_PORT}"
+    echo "For public browser review, follow docs/self-hosting/lightweight-agent-preview.mdx."
     if is_unit_active "$unit"; then
       echo "Unit: ${unit}"
       echo "Logs: journalctl --user -u ${unit}"
@@ -487,7 +489,7 @@ show_status() {
   tailnet_port="$(read_tailnet_port || true)"
 
   if is_unit_active "$unit"; then
-    echo "Lightweight preview is running: $(preview_url "$port" "$tailnet_port")"
+    echo "Lightweight preview is running (tailnet only): $(preview_url "$port" "$tailnet_port")"
     echo "Unit: ${unit}"
     echo "Logs: journalctl --user -u ${unit}"
     return 0
@@ -498,7 +500,7 @@ show_status() {
 
   if is_running "$pid"; then
     [[ -n "$port" ]] || port="unknown"
-    echo "Lightweight preview is running: $(preview_url "$port" "$tailnet_port")"
+    echo "Lightweight preview is running (tailnet only): $(preview_url "$port" "$tailnet_port")"
     echo "PID: ${pid}"
     echo "Logs: ${LOG_FILE}"
   else
@@ -548,7 +550,7 @@ case "${1:-start}" in
 Usage: bash scripts/vk-preview.sh [run|start|restart|stop|status|logs]
 
 Environment:
-  VK_PREVIEW_BACKEND_PORT  Existing Vibe Kanban backend port. Default: 4311
+  VK_PREVIEW_BACKEND_PORT  Existing Vibe Kanban backend port. Default: 4511
   VK_PREVIEW_PORT          Exact frontend preview port to use.
   VK_PREVIEW_PORT_START    First frontend port to try. Default: 3002
   VK_PREVIEW_TAILNET_PORT  Exact Tailscale HTTPS port to expose.

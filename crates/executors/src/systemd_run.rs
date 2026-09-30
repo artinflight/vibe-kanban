@@ -62,6 +62,50 @@ pub fn spawn_transient_unit(
     env_vars: &HashMap<String, String>,
     stdin_mode: StdinMode,
 ) -> std::io::Result<AsyncGroupChild> {
+    spawn_transient_unit_inner(
+        unit_name,
+        description,
+        current_dir,
+        program,
+        args,
+        env_vars,
+        stdin_mode,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn spawn_capacity_unit(
+    unit_name: &str,
+    current_dir: &Path,
+    program: &Path,
+    args: &[String],
+    env_vars: &HashMap<String, String>,
+    capacity: &crate::capacity::PreparedCapacity,
+) -> std::io::Result<AsyncGroupChild> {
+    spawn_transient_unit_inner(
+        unit_name,
+        "VK scheduled capacity execution",
+        current_dir,
+        program,
+        args,
+        env_vars,
+        StdinMode::Piped,
+        Some(capacity),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn spawn_transient_unit_inner(
+    unit_name: &str,
+    description: &str,
+    current_dir: &Path,
+    program: &Path,
+    args: &[String],
+    env_vars: &HashMap<String, String>,
+    stdin_mode: StdinMode,
+    capacity: Option<&crate::capacity::PreparedCapacity>,
+) -> std::io::Result<AsyncGroupChild> {
     let mut command = Command::new("systemd-run");
     command
         .kill_on_drop(true)
@@ -88,6 +132,55 @@ pub fn spawn_transient_unit(
         command.arg(format!("--setenv={key}={value}"));
     }
 
+    if let Some(capacity) = capacity {
+        let now = crate::capacity::wall_ms();
+        capacity
+            .lease
+            .validate(now)
+            .map_err(std::io::Error::other)?;
+        // RuntimeMaxSec is relative to actual service start, so also arm an
+        // absolute realtime kill timer BEFORE spawning. Startup delay or a
+        // stalled guard must not move the immutable deadline into fresh quota.
+        let runtime_ms = capacity
+            .lease
+            .stop_at_ms
+            .saturating_sub(now)
+            .saturating_sub(2000);
+        if runtime_ms < 1000 {
+            return Err(std::io::Error::other("Capacity deadline is too close"));
+        }
+        let kill_at = capacity.lease.stop_at_ms.saturating_sub(500);
+        let timer = std::process::Command::new("systemd-run")
+            .args(["--user", "--quiet", "--collect"])
+            .arg(format!(
+                "--unit={}-deadline",
+                unit_name.trim_end_matches(".service")
+            ))
+            .arg(format!("--on-calendar=@{}", kill_at / 1000))
+            .arg("--timer-property=AccuracySec=100ms")
+            .arg("--timer-property=Persistent=true")
+            .args([
+                "/usr/bin/systemctl",
+                "--user",
+                "kill",
+                "--kill-whom=all",
+                "--signal=KILL",
+                unit_name,
+            ])
+            .output()?;
+        if !timer.status.success() {
+            return Err(std::io::Error::other(
+                "Could not arm independent capacity deadline",
+            ));
+        }
+        command
+            .arg(format!("--property=RuntimeMaxSec={}ms", runtime_ms))
+            .arg("--property=TimeoutStopSec=1s")
+            .arg("--property=KillMode=control-group")
+            .arg("--property=Restart=no")
+            .arg(&capacity.guard)
+            .arg(&capacity.file);
+    }
     command.arg(program);
     command.args(args);
 

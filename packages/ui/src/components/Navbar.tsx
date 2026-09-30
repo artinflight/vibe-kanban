@@ -437,10 +437,7 @@ export function Navbar({
       </div>
 
       {/* Center - Breadcrumbs or Workspace Title */}
-      <div
-        data-tauri-drag-region
-        className="flex-1 flex items-center justify-center min-w-0"
-      >
+      <div className="flex-1 flex items-center justify-center min-w-0">
         {breadcrumbs && breadcrumbs.length > 0 ? (
           <NavbarBreadcrumbs
             breadcrumbs={breadcrumbs}
@@ -448,8 +445,8 @@ export function Navbar({
           />
         ) : (
           <p
-            data-tauri-drag-region
-            className="text-base text-low truncate cursor-default select-none"
+            className="text-base text-low truncate cursor-text select-text"
+            title={workspaceTitle ?? undefined}
           >
             {workspaceTitle ?? ''}
           </p>

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "cuUnit": "codexusage-preview.service",
+  "stateDir": "/mnt/vk-storage/codexusage-capacity/runtime/controller",
+  "tokenFile": "/mnt/vk-storage/codexusage-capacity/runtime/control.token",
+  "codexHome": "/home/mcp/.local/share/vibe-kanban-green-codex-home",
+  "database": "/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite",
+  "gatewayOrigin": "http://127.0.0.1:4720",
+  "gatewayRoute": "/mnt/vk-storage/vk-cutover-20260911/production-route.json",
+  "modelProvider": "openai",
+  "buildRoots": ["/mnt/vk-storage/capacity-build-tmp", "/mnt/vk-storage/cargo-target"]
+}

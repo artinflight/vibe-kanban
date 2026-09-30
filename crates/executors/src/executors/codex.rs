@@ -1,4 +1,5 @@
 pub mod client;
+pub mod goals;
 pub mod jsonrpc;
 pub mod normalize_logs;
 pub mod review;
@@ -222,6 +223,112 @@ mod tests {
     }
 
     #[test]
+    fn routed_overrides_reach_start_and_resume_parameters() {
+        use crate::executors::StandardCodingAgentExecutor;
+        let mut codex: Codex = serde_json::from_value(serde_json::json!({})).unwrap();
+        let mut config = ExecutorConfig::new(crate::executors::BaseCodingAgent::Codex);
+        config.model_id = Some("gpt-6.1-sol".into());
+        config.reasoning_id = Some("medium".into());
+        codex.apply_overrides(&config);
+        let start = codex.build_thread_start_params(std::path::Path::new("/workspace"));
+        assert_eq!(start.model.as_deref(), Some("gpt-6.1-sol"));
+        assert_eq!(
+            start.config.as_ref().unwrap()["model_reasoning_effort"],
+            "medium"
+        );
+        let resumed = super::resume_params_from("existing-thread".into(), start);
+        assert_eq!(resumed.thread_id, "existing-thread");
+        assert_eq!(resumed.model.as_deref(), Some("gpt-6.1-sol"));
+        assert_eq!(
+            resumed.config.as_ref().unwrap()["model_reasoning_effort"],
+            "medium"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "One bounded real inference; requires explicit routing verification environment"]
+    async fn routed_native_follow_up_acceptance() {
+        use tokio::io::AsyncReadExt;
+
+        use crate::{
+            actions::{
+                Executable, ExecutorAction, ExecutorActionType,
+                coding_agent_follow_up::CodingAgentFollowUpRequest,
+            },
+            env::{ExecutionEnv, RepoContext},
+            executors::{BaseCodingAgent, ExecutorExitResult},
+            routing::{CapabilityFloor, RoutingMode, RoutingPolicy},
+        };
+        let dir = std::path::PathBuf::from(
+            std::env::var("VK_ROUTING_TEST_DIR").expect("isolated fixture directory"),
+        );
+        let thread = std::env::var("VK_ROUTING_TEST_THREAD").expect("existing fixture thread");
+        let before = std::fs::read(dir.join("dirty.txt")).unwrap();
+        let mut config = ExecutorConfig::new(BaseCodingAgent::Codex);
+        config.permission_policy = Some(crate::model_selector::PermissionPolicy::Supervised);
+        config.routing = Some(Box::new(RoutingPolicy {
+            mode: RoutingMode::Auto,
+            floor: CapabilityFloor::Workhorse,
+            denied_models: vec![],
+            allow_escalation: false,
+        }));
+        let mut action = ExecutorAction::new(
+            ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+                capacity: None,
+                prompt: "Use no tools and change no files. Reply exactly ROUTING_OK glacier spoon."
+                    .into(),
+                session_id: thread,
+                reset_to_message_id: None,
+                executor_config: config,
+                working_dir: None,
+            }),
+            None,
+        );
+        crate::routing::resolve_action(&mut action, None, false).unwrap();
+        assert_eq!(
+            action
+                .routing_decision
+                .as_ref()
+                .unwrap()
+                .selected_model
+                .as_deref(),
+            Some("gpt-6.1-sol")
+        );
+        let env = ExecutionEnv::new(RepoContext::new(dir.clone(), vec![]), false, String::new());
+        let mut child = action
+            .spawn(
+                &dir,
+                std::sync::Arc::new(crate::approvals::NoopExecutorApprovalService {}),
+                &env,
+            )
+            .await
+            .unwrap();
+        let mut stdout = child.child.inner().stdout.take().unwrap();
+        let output = tokio::spawn(async move {
+            let mut text = String::new();
+            let _ = stdout.read_to_string(&mut text).await;
+            text
+        });
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(90),
+            child.exit_signal.take().unwrap(),
+        )
+        .await;
+        if let Some(cancel) = child.cancel {
+            cancel.cancel();
+        }
+        let _ = child.child.kill().await;
+        let text = output.await.unwrap();
+        std::fs::write(dir.join("vk-executor-protocol.jsonl"), &text).unwrap();
+        assert!(
+            matches!(result, Ok(Ok(ExecutorExitResult::Success))),
+            "executor failed; inspect fixture protocol log"
+        );
+        assert!(text.contains("vk/routing") && text.contains("ROUTING_OK"));
+        assert_eq!(std::fs::read(dir.join("dirty.txt")).unwrap(), before);
+    }
+
+    #[test]
     fn codex_auto_permission_override_exits_plan_mode() {
         let mut codex = Codex {
             append_prompt: AppendPrompt::default(),
@@ -244,6 +351,7 @@ mod tests {
         };
 
         codex.apply_overrides(&ExecutorConfig {
+            routing: None,
             executor: BaseCodingAgent::Codex,
             variant: Some("PLAN".to_string()),
             model_id: None,
@@ -510,6 +618,7 @@ impl StandardCodingAgentExecutor for Codex {
         };
 
         ExecutorConfig {
+            routing: None,
             executor: BaseCodingAgent::Codex,
             variant: None,
             model_id: self.model.clone(),
@@ -538,8 +647,9 @@ impl StandardCodingAgentExecutor for Codex {
             .map(|e| e.as_ref().to_string()),
         );
 
-        let options = ExecutorDiscoveredOptions {
+        let mut options = ExecutorDiscoveredOptions {
             model_selector: ModelSelectorConfig {
+                supports_routing: Some(true),
                 models: vec![
                     ModelInfo {
                         id: "gpt-5.6-sol".to_string(),
@@ -629,6 +739,10 @@ impl StandardCodingAgentExecutor for Codex {
             },
             slash_commands: vec![
                 SlashCommandDescription {
+                    name: "goal".to_string(),
+                    description: Some("autonomous objective; /goal status, pause, or resume".to_string()),
+                },
+                SlashCommandDescription {
                     name: "compact".to_string(),
                     description: Some(
                         "summarize conversation to prevent hitting the context limit".to_string(),
@@ -659,6 +773,42 @@ impl StandardCodingAgentExecutor for Codex {
             ],
             ..Default::default()
         };
+        // Released/represented entries are visible even during an account rollout.
+        // Discovery is advisory; only verified entries can be selected automatically.
+        if let Ok(models) = crate::routing::model_policies() {
+            let availability = crate::routing::load_availability().ok();
+            for model in models {
+                if options
+                    .model_selector
+                    .models
+                    .iter()
+                    .any(|m| m.id == model.id)
+                {
+                    continue;
+                }
+                let efforts = availability
+                    .as_ref()
+                    .and_then(|a| a.models.iter().find(|m| m.id == model.id))
+                    .map(|m| {
+                        if m.discovered {
+                            m.supported_efforts.clone()
+                        } else {
+                            m.verified_efforts.clone()
+                        }
+                    })
+                    .unwrap_or_else(|| model.efforts.clone());
+                options.model_selector.models.push(ModelInfo {
+                    name: model.id.clone(),
+                    id: model.id,
+                    provider_id: None,
+                    reasoning_options: ReasoningOption::from_names(
+                        efforts
+                            .into_iter()
+                            .filter(|e| ReasoningEffort::from_str(e).is_ok()),
+                    ),
+                });
+            }
+        }
         Ok(Box::pin(futures::stream::once(async move {
             patch::executor_discovered_options(options)
         })))
@@ -760,7 +910,12 @@ impl Codex {
             config,
             base_instructions: self.base_instructions.clone(),
             model_provider: self.model_provider.clone(),
-            developer_instructions: self.developer_instructions.clone(),
+            developer_instructions: Some(format!(
+                "{}\n\n{}",
+                self.developer_instructions.as_deref().unwrap_or_default(),
+                goals::INSTRUCTIONS
+            )),
+            dynamic_tools: Some(vec![goals::tool_spec()]),
             service_tier,
             ..Default::default()
         }
@@ -807,8 +962,19 @@ impl Codex {
         resume_session: Option<&str>,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
-        let params = self.build_thread_start_params(current_dir);
+        let mut params = self.build_thread_start_params(current_dir);
+        let routing = env
+            .get("VK_ROUTING_DECISION")
+            .map(|json| serde_json::from_str::<crate::routing::RoutingDecision>(json))
+            .transpose()?;
+        if routing
+            .as_ref()
+            .is_some_and(|d| d.mode == crate::routing::RoutingMode::Auto)
+        {
+            params.service_tier = Some(None); // Explicitly clear a resumed Fast setting.
+        }
         let resume_session = resume_session.map(|s| s.to_string());
+        let telemetry_env = env.clone();
 
         self.spawn_app_server(
             current_dir,
@@ -817,7 +983,15 @@ impl Codex {
             move |client, _| async move {
                 match action {
                     CodexSessionAction::Chat { prompt } => {
-                        Self::launch_codex_agent(params, resume_session, prompt, client).await
+                        Self::launch_codex_agent(
+                            params,
+                            resume_session,
+                            prompt,
+                            client,
+                            routing,
+                            &telemetry_env,
+                        )
+                        .await
                     }
                     CodexSessionAction::Review { target } => {
                         review::launch_codex_review(params, resume_session, target, client).await
@@ -833,6 +1007,8 @@ impl Codex {
         resume_session: Option<String>,
         combined_prompt: String,
         client: Arc<AppServerClient>,
+        routing: Option<crate::routing::RoutingDecision>,
+        telemetry_env: &ExecutionEnv,
     ) -> Result<(), ExecutorError> {
         let account = client.get_account().await?;
         if account.requires_openai_auth && account.account.is_none() {
@@ -841,22 +1017,100 @@ impl Codex {
             ));
         }
 
-        let (thread_id, resolved_model) = match resume_session {
-            None => {
-                let response = client.thread_start(thread_start_params).await?;
-                (response.thread.id, response.model)
+        if let Some(decision) = &routing
+            && decision.mode == crate::routing::RoutingMode::Auto
+        {
+            client.lock_routed_model();
+            let identity = serde_json::to_value(&account.account)?;
+            if identity["type"] != "chatgpt" || identity["email"].as_str().is_none_or(str::is_empty)
+            {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Automatic routing requires a verifiable signed-in Work/Codex account",
+                )));
             }
-            Some(session_id) => {
-                let response = client
-                    .thread_resume(resume_params_from(session_id, thread_start_params))
-                    .await?;
-                tracing::debug!("resumed thread_id={}", response.thread.id);
-                (response.thread.id, response.model)
+            let fingerprint = crate::routing::account_fingerprint(&identity);
+            if decision.account_fingerprint.as_deref() != Some(fingerprint.as_str()) {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Routing account changed; refresh executable-model verification",
+                )));
             }
-        };
+        }
+        let (thread_id, resolved_model, resolved_effort, resolved_tier, resolved_provider) =
+            match resume_session {
+                None => {
+                    let response = client.thread_start(thread_start_params).await?;
+                    (
+                        response.thread.id,
+                        response.model,
+                        response.reasoning_effort,
+                        response.service_tier,
+                        response.model_provider,
+                    )
+                }
+                Some(session_id) => {
+                    let response = client
+                        .thread_resume(resume_params_from(session_id, thread_start_params))
+                        .await?;
+                    tracing::debug!("resumed thread_id={}", response.thread.id);
+                    (
+                        response.thread.id,
+                        response.model,
+                        response.reasoning_effort,
+                        response.service_tier,
+                        response.model_provider,
+                    )
+                }
+            };
 
+        if let Some(decision) = &routing
+            && decision.mode == crate::routing::RoutingMode::Auto
+        {
+            let effort = serde_json::to_value(resolved_effort)?;
+            if decision.selected_model.as_deref() != Some(resolved_model.as_str())
+                || decision.selected_effort.as_deref() != effort.as_str()
+                || resolved_tier.is_some()
+                || resolved_provider != "openai"
+            {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Codex did not apply routed model/effort/standard tier; stopped before inference",
+                )));
+            }
+            if let Some(effort) = resolved_effort {
+                client.set_routed_effort(effort);
+            }
+            tracing::info!(routing_decision_id = %decision.id, native_thread_id = %thread_id,
+                model = %resolved_model, effort = %effort, "Routed Codex settings verified");
+        }
+        if let Some(decision) = &routing {
+            client
+                .log_writer()
+                .log_raw(
+                    &serde_json::json!({
+                        "method": "vk/routing",
+                        "params": { "decision": decision, "native_thread_id": thread_id,
+                            "resolved_model": resolved_model, "resolved_effort": resolved_effort,
+                            "resolved_service_tier": resolved_tier }
+                    })
+                    .to_string(),
+                )
+                .await?;
+        }
+        if let Some(effort) = resolved_effort {
+            client.set_routed_effort(effort);
+        }
+        if let Some(binding) = crate::routing_telemetry::NativeBinding::new(
+            telemetry_env,
+            routing.as_ref(),
+            serde_json::json!({
+                "model": resolved_model, "reasoningEffort": resolved_effort,
+                "serviceTier": resolved_tier,
+            }),
+        ) {
+            client.set_routing_telemetry(binding);
+        }
         client.set_resolved_model(resolved_model);
         client.register_session(&thread_id).await?;
+        client.refresh_goal().await?;
         let collaboration_mode = client.initial_collaboration_mode()?;
         client
             .turn_start_with_mode(
@@ -896,9 +1150,53 @@ impl Codex {
             return Err(error);
         }
 
-        let (program_path, args) = command_parts.into_resolved().await?;
+        let (program_path, mut args) = command_parts.into_resolved().await?;
+        if env.capacity.is_some() {
+            crate::capacity::policy::verify_launcher(
+                self.cmd.base_command_override.as_deref(),
+                &Self::base_command(),
+            )?;
+            // Some native tool families are initialized at process startup,
+            // before thread config overrides. Restrict both layers.
+            for feature in crate::capacity::policy::DISABLED_FEATURES {
+                args.extend(["-c".to_string(), format!("features.{feature}=false")]);
+            }
+            args.extend([
+                "-c".into(),
+                "agents.max_depth=0".into(),
+                "-c".into(),
+                "agents.max_concurrent_threads_per_session=1".into(),
+            ]);
+        }
 
-        let effective_env = env.clone().with_profile(&self.cmd);
+        let mut effective_env = env.clone().with_profile(&self.cmd);
+        if let Some(capacity) = effective_env.capacity.clone() {
+            if let Some(root) = crate::capacity::policy::configured_build_roots(&capacity)?.first()
+            {
+                // Compilers need a writable temporary directory too. Only the
+                // scheduled process receives this override, never ordinary work.
+                effective_env.insert("TMPDIR", root.clone());
+            }
+            if let Some(home) = effective_env.get("CODEX_HOME") {
+                let expected = codex_home().ok_or_else(|| {
+                    ExecutorError::Io(std::io::Error::other("Codex home is unavailable"))
+                })?;
+                if std::fs::canonicalize(home)? != std::fs::canonicalize(expected)? {
+                    return Err(ExecutorError::Io(std::io::Error::other(
+                        "Scheduled goals must use the supervised Codex account home",
+                    )));
+                }
+            }
+            if effective_env
+                .get("VK_EXECUTION_PROCESS_ID")
+                .map(String::as_str)
+                != Some(capacity.lease.execution_id.as_str())
+            {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Capacity execution identity cannot be overridden by a profile",
+                )));
+            }
+        }
         let mut transient_unit_name = None;
         let mut child = if systemd_run::enabled() {
             let mut env_vars = effective_env.vars.clone();
@@ -920,18 +1218,40 @@ impl Codex {
             env_vars.insert("NODE_NO_WARNINGS".to_string(), "1".to_string());
             env_vars.insert("NO_COLOR".to_string(), "1".to_string());
             env_vars.insert("RUST_LOG".to_string(), "error".to_string());
-            let unit_name = systemd_run::build_unit_name("codex");
+            let unit_name = if let Some(capacity) = &effective_env.capacity {
+                crate::capacity::unit_name(
+                    Uuid::parse_str(&capacity.lease.execution_id).map_err(std::io::Error::other)?,
+                )
+            } else {
+                systemd_run::build_unit_name("codex")
+            };
             transient_unit_name = Some(unit_name.clone());
-            systemd_run::spawn_transient_unit(
-                &unit_name,
-                "VK Codex execution",
-                current_dir,
-                &program_path,
-                &args,
-                &env_vars,
-                StdinMode::Piped,
-            )?
+            if let Some(capacity) = &effective_env.capacity {
+                systemd_run::spawn_capacity_unit(
+                    &unit_name,
+                    current_dir,
+                    &program_path,
+                    &args,
+                    &env_vars,
+                    capacity,
+                )?
+            } else {
+                systemd_run::spawn_transient_unit(
+                    &unit_name,
+                    "VK Codex execution",
+                    current_dir,
+                    &program_path,
+                    &args,
+                    &env_vars,
+                    StdinMode::Piped,
+                )?
+            }
         } else {
+            if effective_env.capacity.is_some() {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Capacity execution requires systemd",
+                )));
+            }
             let mut process = Command::new(program_path);
             process
                 .kill_on_drop(true)
@@ -974,6 +1294,7 @@ impl Codex {
             .get("VK_EXECUTION_PROCESS_ID")
             .and_then(|value| Uuid::parse_str(value).ok());
         let cancel_for_task = cancel.clone();
+        let capacity_for_task = effective_env.capacity.clone();
 
         tokio::spawn(async move {
             let exit_signal_tx = ExitSignalSender::new(exit_signal_tx);
@@ -1002,16 +1323,27 @@ impl Codex {
                 AppServerClient::register_active_execution(execution_process_id, &client);
             }
 
+            let scheduled = capacity_for_task.is_some();
             let result = async {
                 client.initialize().await?;
+                client.set_exit_signal(exit_signal_tx.clone());
+                if let Some(capacity) = capacity_for_task {
+                    client.watch_capacity(capacity);
+                }
                 task(client, exit_signal_tx.clone()).await
             }
             .await;
-            if let Some(execution_process_id) = execution_process_id {
+            if result.is_err()
+                && let Some(execution_process_id) = execution_process_id
+            {
                 AppServerClient::unregister_active_execution(execution_process_id);
             }
 
             if let Err(err) = result {
+                if scheduled && let Some(execution) = execution_process_id {
+                    crate::capacity::controller::record_launch_failure(execution, &err.to_string())
+                        .await;
+                }
                 match &err {
                     ExecutorError::Io(io_err)
                         if io_err.kind() == std::io::ErrorKind::BrokenPipe =>

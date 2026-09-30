@@ -709,6 +709,8 @@ function CollapsedKanbanColumn({
  */
 export function KanbanContainer() {
   const isMobile = useIsMobile();
+  const workspaceColors = useUiPreferencesStore((s) => s.workspaceColors);
+  const setWorkspaceColor = useUiPreferencesStore((s) => s.setWorkspaceColor);
   const { t } = useTranslation('common');
   const appNavigation = useAppNavigation();
   const routeState = useCurrentKanbanRouteState();
@@ -1248,16 +1250,11 @@ export function KanbanContainer() {
 
     for (const issue of issues) {
       const nonArchivedWorkspaces = getWorkspacesForIssue(issue.id)
-        .filter(
-          (workspace) =>
-            !workspace.archived &&
-            !!workspace.local_workspace_id &&
-            localWorkspacesById.has(workspace.local_workspace_id)
-        )
+        .filter((workspace) => !workspace.archived)
         .map((workspace) => {
-          const localWorkspace = localWorkspacesById.get(
-            workspace.local_workspace_id!
-          );
+          const localWorkspace = workspace.local_workspace_id
+            ? localWorkspacesById.get(workspace.local_workspace_id)
+            : undefined;
 
           return {
             id: workspace.id,
@@ -1853,6 +1850,39 @@ export function KanbanContainer() {
                                 <KanbanCardContent
                                   displayId={issue.simple_id}
                                   title={issue.title}
+                                  primaryContent={
+                                    issueWorkspaces.length > 0 ? (
+                                      <div className="flex flex-col gap-half">
+                                        {issueWorkspaces.map((workspace) => (
+                                          <IssueWorkspaceCard
+                                            key={workspace.id}
+                                            workspace={workspace}
+                                            color={
+                                              workspaceColors[workspace.id]
+                                            }
+                                            onColorChange={(color) =>
+                                              setWorkspaceColor(
+                                                workspace.id,
+                                                color
+                                              )
+                                            }
+                                            onClick={
+                                              workspace.localWorkspaceId
+                                                ? () =>
+                                                    openIssueWorkspace(
+                                                      issue.id,
+                                                      workspace.localWorkspaceId!
+                                                    )
+                                                : undefined
+                                            }
+                                            showOwner={false}
+                                            showStatusBadge={false}
+                                            showNoPrText={false}
+                                          />
+                                        ))}
+                                      </div>
+                                    ) : undefined
+                                  }
                                   description={issue.description}
                                   priority={issue.priority}
                                   needsReviewFlag={issueHasFlag(
@@ -1911,28 +1941,6 @@ export function KanbanContainer() {
                                     ),
                                   }}
                                 />
-                                {issueWorkspaces.length > 0 && (
-                                  <div className="mt-base flex flex-col gap-half">
-                                    {issueWorkspaces.map((workspace) => (
-                                      <IssueWorkspaceCard
-                                        key={workspace.id}
-                                        workspace={workspace}
-                                        onClick={
-                                          workspace.localWorkspaceId
-                                            ? () =>
-                                                openIssueWorkspace(
-                                                  issue.id,
-                                                  workspace.localWorkspaceId!
-                                                )
-                                            : undefined
-                                        }
-                                        showOwner={false}
-                                        showStatusBadge={false}
-                                        showNoPrText={false}
-                                      />
-                                    ))}
-                                  </div>
-                                )}
                               </KanbanCard>
                             );
                           })}

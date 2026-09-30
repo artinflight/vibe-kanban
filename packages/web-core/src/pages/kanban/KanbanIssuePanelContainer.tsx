@@ -42,6 +42,7 @@ import {
   selectIsCreateDraftDirty,
 } from './kanban-issue-panel-state';
 import { useUiPreferencesStore } from '@/shared/stores/useUiPreferencesStore';
+import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { useAzureAttachments } from '@/shared/hooks/useAzureAttachments';
 import {
   commitIssueAttachments,
@@ -85,6 +86,8 @@ export function KanbanIssuePanelContainer({
   const { openWorkspaceCreateFromState } = useProjectWorkspaceCreateDraft();
   const { workspaces } = useUserContext();
   const { activeWorkspaces, archivedWorkspaces } = useWorkspaceContext();
+  const { sharedApiBase } = useUserSystem();
+  const useLocalAttachments = sharedApiBase === null;
 
   // Build set of local workspace IDs that exist on this machine
   const localWorkspaceIds = useMemo(
@@ -522,6 +525,7 @@ export function KanbanIssuePanelContainer({
     issueId: kanbanCreateMode
       ? undefined
       : (selectedKanbanIssueId ?? undefined),
+    useLocalAttachments,
     onMarkdownInsert: handleDescriptionInsert,
     onAttachmentSourceReplace: handleDescriptionSourceReplace,
     onAttachmentSourceRemove: handleDescriptionSourceRemove,

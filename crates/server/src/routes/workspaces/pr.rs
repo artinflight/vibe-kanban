@@ -162,6 +162,7 @@ async fn trigger_pr_description_follow_up(
     // Build the action type (follow-up if session exists, otherwise initial)
     let action_type = if let Some(info) = latest_session_info {
         ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+            capacity: None,
             prompt,
             session_id: info.session_id,
             reset_to_message_id: None,

@@ -1,5 +1,14 @@
 # DELTA.md
 
+## September 28 — two concurrent selected capacity goals
+
+Added bounded two-agent admission and per-session stop, retaining shared allocation,
+independent native/OS deadlines, same-workspace exclusion and interactive priority.
+See [VK_CAPACITY_CONCURRENCY.md](VK_CAPACITY_CONCURRENCY.md) for API semantics,
+real two-native-goal acceptance and deployment requirements. Companion CU changes
+are required; old clients keep one slot. Production deployment remains operator-owned.
+
+
 ## 2026-08-20T00:00:00Z | vk/13c6-vk-multi-line-pa | multiline paste line-ending hardening
 
 - Intent: fix the remaining multiline paste failure in VK prompt fields after
@@ -1097,3 +1106,248 @@
 - Deployed no-restart frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260626Tmultiline-rich-paste`; live asset `/assets/index-DXMultilinePaste.js`; backend PID stayed running and no service restart was performed.
 - Verified: UI typecheck, targeted diff check, live curl marker checks, and live `python3 scripts/vk_live_regression_smoke.py`.
 - Guard: future frontend/restart packages must carry forward this source fix and not roll back below `20260626Tmultiline-rich-paste`.
+
+## 2026-09-11 — Native autonomous goals
+
+- Prepared instance-wide Codex goal lifecycle support, durable requirement evidence,
+  bounded stagnation/run guards, explicit pause/resume and Stop persistence.
+- Reused native Codex scheduling instead of synthesizing continue messages.
+- Real seven-turn implementation and offline refinement/input/tool scenarios passed;
+  the green backend still needs the separate approved deployment workflow.
+
+- Follow-up: Stop/resume native fixtures and goal-state restore validation passed.
+  Matching release artifacts are built on the task SSD; draft PR #103 targets
+  staging. No live activation occurred; release gates remain explicit.
+
+2026-09-11: Built-candidate isolated HTTP smoke passed: one VK execution, eight native goal turns, eight completed requirements, final completed status. No production deployment.
+
+2026-09-11 recovery-first clarification: six stagnant turns now initiate automatic goal-wide redirection, with persisted recovery plans and three recovery windows before failed-recovery handoff. Removed the fifty-turn stop for productive runs. The older release candidate is superseded; no deployment or restart occurred.
+
+2026-09-11: User authorized PR #103 integration into staging for the staging management agent to deploy at the next restart. Fresh fetch and rebase found the branch current with staging; recovery revision CI is green. Deployment handoff explicitly rejects the superseded binary and preserves goal backup requirements.
+
+
+## 2026-09-12 — Long-thread pagination prepared
+
+- `vk/ab54-vk-long-threads`: latest-40 completed log pages, 50-entry upward
+  loading, stable indices, scoped cancellation/retry and reading-position restore.
+- Bounded revision-keyed finite-replay cache; existing running streams preserved.
+- See `VK_LONG_THREADS.md` and latest handoff for tests and limitations. No live
+  runtime change; matching-backend browser validation and latency measurement remain.
+
+
+## 2026-09-13 — Long-thread staging integration requested
+
+- PR111 targets staging by explicit operator request, retaining the combined
+  frontend/backend implementation; this does not authorize deployment.
+- Completed six locale translations for the history controls. React regression
+  tests passed again; full local Cargo validation hits missing GLib desktop
+  development files. PR111 records CI and remaining runtime limitations.
+
+## 2026-09-14 — Unused capacity execution fences
+
+Isolated branch `feature/unused-capacity` adds the capacity-guard crate, systemd
+lease/deadline enforcement and native active-turn suspension. Real user-systemd
+failure scenarios and offline native same-goal resume checks pass. Controller,
+managed restart/queue gates and CU scheduler/UI integration remain. No deployment.
+See `VK_UNUSED_CAPACITY.md`.
+
+## 2026-09-14 — Durable managed goal controller
+
+Added private bearer-authenticated scheduling endpoints, fsynced controller state,
+exclusive ownership, shared grants, restart/revision/late-renewal fencing and
+lease-creation revalidation. Ordinary entry points revoke background authority;
+managed native resume verifies objective identity. Six authority tests and actual
+managed native expiry/resume acceptance pass. CU bridge added with four tests.
+Scheduler/UI and full integrated release validation remain. No live rollout.
+
+## September 14 CU scheduler and HTTP acceptance checkpoint
+
+CU now implements durable shared scheduling and private owner controls. Real
+isolated VK HTTP/SQLite/systemd/native Codex tests passed long-turn stale-quota
+interruption, same-goal/evidence resume, independent expiry after CU supervision
+loss, restart reconciliation, shared quota-floor stop and zero reset calls.
+Artifacts: `/mnt/vk-storage/codexusage-capacity/vk-continuation-http-9uy_k779`.
+CU drivers: `ops/test-capacity-integration.mjs` and `ops/test-capacity-controls.mjs`.
+Browser selection/window/owner checks passed at desktop and mobile sizes.
+
+VK source changes after controller commit: status reports running IDs and process
+states; start reloads workspace after ensure_container_exists (real HTTP exposed
+the stale container_ref bug). Candidates and actual native admission preserve
+needs-input/budget pauses. Native regression passed for those final changes, including needs-input and
+budget-limit rejection: vk-continuation-acceptance-06p90z_e/results.json.
+
+Remaining: prevent/enforce remote or external worker escapes; define honest
+interactive priority for clients outside VK; broader cross-system reset/restart
+acceptance and final prepared deployment. Keep production disabled. This feature
+worktree's debug dev_assets holds only isolated fixture data, never live data.
+The isolated 127.0.0.1:49173 backend is stopped; no running DB executions or
+outstanding grants remain. Preserve SSD evidence.
+No production VK service, database, frontend pointer or account allowance changed.
+
+## September 14 enforcement and reset acceptance
+
+Scheduled admission now verifies the effective native permission profile before
+activating the goal: only its workspace is writable, shell networking is disabled,
+and external MCP/browser/app/plugin tools and delegated agents are disabled.
+Resolved inherited MCP servers must each be disabled; an empty override table
+merges with inherited entries and is insufficient. Runtime MCP inventory is checked.
+Canonical path checks reject a writable workspace containing the lease, guard or
+Codex home, including symlink aliases. Account-home overrides and unverifiable
+alternate native profiles/hooks are rejected. Ordinary resume restores normal
+permissions; the temporary restriction is not a permanent goal setting.
+
+Real installed-Codex acceptance passed at
+`/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-9tbq06x9/results.json`:
+local edits work, TCP/systemd sockets are denied, outside writes fail, a detached
+TERM-ignoring child stops, inherited MCP never starts, delegated launch is rejected,
+and the same goal/evidence resumes. Tool advertisement alone is not admission:
+the native response still advertises a multi-agent namespace, while the attempted
+launch is rejected. Two policy tests cover broadened/ignored settings and symlinks.
+The earlier 62 executor tests passed; the new scope test raises this to 63.
+
+Actual CU/VK crash and restart acceptance is recorded in
+`/mnt/vk-storage/codexusage-capacity/vk-continuation-http-9uy_k779/restart-results.json`.
+SIGKILL of the isolated VK backend left OS enforcement effective (583ms measured
+stop), restart did not replay old permission, and fresh authority resumed the same
+goal. The final server build passed. The real HTTP reset-boundary driver also
+passed: renewed work stops at weekly-reset shutdown headroom, and synthetic fresh
+weekly quota cannot reopen the preceding overnight period. Evidence is
+`reset-boundary-results.json` in that same HTTP fixture directory. No reset credit
+was consumed. The isolated backend on 49173 is stopped and its grant was revoked.
+
+Enforcement is sufficiently validated; delivery remains open. Remaining delivery
+work includes a clean source/release bundle, representative development-workflow
+validation, current-runtime compatibility, deployment rehearsal and final handoff.
+The current local-only profile cannot write external shared build caches, including
+VK's required shared Cargo target. Do not claim arbitrary existing development
+goals can run unchanged: decide and validate narrowly scoped build-cache support
+before release. Network/external-tool work requires ordinary execution. VK
+foreground launches preempt background work; outside-client usage reduces the
+same quota floor, but instant outside-client activity detection is not implemented.
+Physical phone/live Rainmeter rendering remains unverified.
+
+Read-only service inventory confirms live Blue 4711/4712 and retained Green
+4511/4512. No production service, route, state or reset was changed. Final cutover
+requires the explicit approval in VK_BACKEND_RESTART_PROTOCOL.md after a concrete
+candidate and rehearsal; preparation is not cutover authorization.
+
+
+## Scheduled build directories — September 14
+
+`VK_CAPACITY_BUILD_ROOTS` is an optional JSON array of at most eight existing
+absolute directories, configured on the VK service by the administrator. They are
+canonicalized, deduplicated, and checked against the permission directory, guard
+and Codex home before launch. Roots inside or containing those protected paths
+are rejected. The effective native writable-root list must match exactly before
+goal activation; a goal/profile cannot add its own writable roots. The first
+configured directory supplies TMPDIR only for scheduled processes, so compilers
+can create temporary files without opening unrestricted /tmp access.
+
+Use narrowly scoped output/cache directories on mounted SSD. In particular, place
+the deployed guard outside the writable Cargo target. Registry/dependency caches
+must be prepared during ordinary work; scheduled shell networking remains off.
+Existing project build commands still need their cache environment to agree with
+the configured roots. This is not permission to make all of /home or /mnt writable.
+
+Real native acceptance now compiles a Rust program into an approved external
+cache and executes it successfully during both managed resumes. TCP and systemd
+socket creation remain denied, outside writes fail, and a detached child stops.
+The full seven-row native suite passes at
+`/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-y5tknu8y/results.json`.
+All 64 executor unit tests passed after adding build-root admission coverage.
+Formatting and ops governance passed. The feature remains undeployed.
+
+
+## Approved launcher/provider binding — September 14
+
+A scheduled profile cannot replace VK_CODEX_BASE_COMMAND with a different
+per-goal launch command. The service administrator must use an actual local Codex
+launcher. Native resume must also report the supervised provider before activation:
+VK_CAPACITY_MODEL_PROVIDER defaults to openai. Other providers require explicit
+service configuration tied to the quota supervisor; selecting a goal alone does
+not approve them. Ordinary profile behavior is unchanged. Read-only preflight
+confirms the live DEFAULT profile matches the default launcher/provider policy.
+
+All 65 executor unit tests and the full real native suite pass, including two
+managed builds, external-access denial, independent interruption, and ordinary
+resume. Latest evidence:
+/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-imdb07uj/results.json.
+The offline fixture explicitly configures its local fixture launcher/provider.
+Frontend local/remote/web-core/UI type checks and frontend/UI lint passed. Broad
+Rust check/lint reach the existing Tauri dependency and fail because glib-2.0.pc
+is unavailable. The first optimized backend/guard build passed with an existing
+unused_mut warning in services/remote_client.rs. Frontend production build passed
+with existing chunk/Tailwind warnings; Sentry authentication is absent and no
+successful Sentry upload is claimed. Final backend packaging must include this
+admission change and the completed frontend, then undergo release acceptance.
+
+## September 14 — PR112 review repair
+
+Preserved full scheduled executor choices/newer saved selection; integrated the
+live checkpoint renderer. Four native/offline cases and desktop/mobile acceptance
+pass with same goal/progress and effective model/reasoning verified. Exact
+artifacts, local checks and teardown limitation: PR112_REVIEW_FIXES.md and
+`/mnt/vk-storage/codexusage-capacity/pr112-repair/manifest.json`. No deployment.
+
+## 2026-09-14 — VK Errors 2
+
+Restored VK::Error's clean relocated worktree with a compatibility symlink;
+verified live follow-up preflight clears the workspace gate without starting an
+execution. PR #115 adds scoped Codex error-category compatibility, preserving real
+error text/status. Captured154-turn decode, 323 server tests and offline HTTP
+same-thread resume pass. Candidate binary and isolated handover/recovery are
+prepared on SSD; production is still the incumbent 5031 backend. See VK_ERRORS_2.md.
+
+- 2026-09-15: Version capacity deployment settings and candidate-bound installation/verification in VK; preserve separate Errors 2 stream and production runtime.
+
+## 2026-09-30 — Model AutoSwitch feasibility investigation
+
+- Added VK_MODEL_AUTOSWITCH.md with selection/RPC/usage architecture findings,
+  native four-model catalog, settings limitations, quality gates and pilot plan.
+- Read-only Codex 0.153.4 model/list completed; no inference or live changes.
+- Routing safety and relative allowance savings remain experimental, not proven.
+
+## 2026-09-30 — Opt-in Codex model routing V1
+
+- Continued the AutoSwitch investigation into source implementation on
+  `vk/5a81-vk-model-autoswi`. Replaced the planning-only catalog with separate
+  representable/released/discovered/executable states and all seven requested IDs.
+- Added configurable model/effort policy, fresh launcher/account-bound evidence,
+  manual/shadow/auto controls, explicit floors and exclusions, consent-gated
+  failed-execution escalation, pinned native resumes, and protection against
+  automatic retry/reset. Resolution uses existing execution admission and stores
+  concrete settings/decision without a new scheduler or profile mutation.
+- Added native model/effort/provider/tier verification, reroute failure handling,
+  standard-tier protocol compatibility and versioned routing events. Documented
+  CU joins through execution, predecessor, session, native thread and turn IDs in
+  `VK_CODEX_ROUTING_CONTRACT.md`; no CodexUsage repository files were changed.
+- Isolated CLI 0.159.2 discovered and executed all seven models using the same
+  account/home; six at medium, Astra at high. Old CLI 0.153.4 still discovered only
+  four after cache refresh. Direct native Luna-to-Sol 6.1 continuation preserved
+  conversation, checkpoint and dirty file. These are access/continuity checks,
+  not model-quality equivalence or measured savings.
+- The opt-in real VK executor test was blocked before inference by the existing
+  20-active/8-limit capacity gate. The limit was preserved. Combined candidate
+  UI/API acceptance, newer-launcher deployment QA and a reviewed real-task pilot
+  remain enablement gates; full workspace/Tauri suites were not run.
+- Automated validation and exact reproduction steps are in the current HANDOFF.
+  No production deployment/restart, preview, PR or push; version stays 0.1.42.
+
+## 2026-09-30 AutoSwitch CU integration and recovery
+
+Recovered producer source after external deletion of the active managed worktree.
+Added CU-compatible immutable lifecycle JSONL alongside raw routing logs; native
+failure reporting and manual collaboration effort corrected. All seven exact
+candidate model probes, native executor boundary test and four real private HTTP
+executions passed; escalation preserved dirty state. 94 executor tests and focused
+Clippy passed. CU consumer import/replay and completed-turn native counter
+comparison passed; interrupted-turn usage is unavailable and CU owner review
+remains pending. Production untouched. See
+VK_AUTOSWITCH_ROLLOUT.md and CU_ACCEPTANCE_HANDOFF.json on mounted SSD.
+
+## AutoSwitch V1 staging integration
+
+Isolated validated commits df3e973a5/162770f73/9b334d1a3 from preserved V2 and
+rebased onto staging56792a72c. Retained both sides of continuity-document conflicts;
+no source conflicts or V1 execution-path redesign. See VK_AUTOSWITCH_V1_STAGING.md.
+Task scope ends at the staging merge; operator owns deployment.

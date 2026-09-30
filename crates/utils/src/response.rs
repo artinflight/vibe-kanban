@@ -49,6 +49,11 @@ impl<T, E> ApiResponse<T, E> {
         self.message.as_deref()
     }
 
+    /// Consumes the response, returning its typed error payload if present.
+    pub fn into_error_data(self) -> Option<E> {
+        self.error_data
+    }
+
     /// Consumes the response, returning the data payload if present.
     pub fn into_data(self) -> Option<T> {
         self.data

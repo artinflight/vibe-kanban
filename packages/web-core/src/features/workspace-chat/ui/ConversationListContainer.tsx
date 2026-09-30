@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -18,6 +19,7 @@ import {
 import { deriveConversationEntries } from '../model/deriveConversationEntries';
 import { deriveConversationTimeline } from '../model/deriveConversationTimeline';
 import { useConversationVirtualizer } from '../model/useConversationVirtualizer';
+import { useResumeConversationAtBottom } from '../model/useResumeConversationAtBottom';
 import { useScrollCommandExecutor } from '../model/useScrollCommandExecutor';
 
 import DisplayConversationEntry from './DisplayConversationEntry';
@@ -153,7 +155,10 @@ export const ConversationList = forwardRef<
 ) {
   const { t } = useTranslation('common');
   const repos = reposProp;
-  const resetAction = useResetProcess(attempt.id, attempt.session?.id);
+  const onResetSuccessRef = useRef<(() => void) | null>(null);
+  const resetAction = useResetProcess(attempt.id, attempt.session?.id, () => {
+    onResetSuccessRef.current?.();
+  });
   const conversationScopeKey = `${attempt.id}:${sessionScopeId ?? attempt.session?.id ?? 'new'}`;
   const [filteredEntries, setFilteredEntries] = useState<DisplayEntry[]>([]);
   const [dataVersion, setDataVersion] = useState(0);
@@ -170,6 +175,8 @@ export const ConversationList = forwardRef<
   const scrollOnEntriesChangedRef = useRef<
     ((addType: AddEntryType, isInitialLoad: boolean) => void) | null
   >(null);
+  const historyRequestedRef = useRef(false);
+  const historyAnchorRef = useRef<{ index: number; top: number } | null>(null);
   const pendingUpdateRef = useRef<{
     source: ConversationTimelineSource;
     addType: AddEntryType;
@@ -234,6 +241,8 @@ export const ConversationList = forwardRef<
       rafIdRef.current = null;
     }
     pendingUpdateRef.current = null;
+    historyRequestedRef.current = false;
+    historyAnchorRef.current = null;
     scriptOutputCacheRef.current.clear();
     if (planRevealSpacerRef.current) {
       planRevealSpacerRef.current.style.height = '0px';
@@ -257,6 +266,7 @@ export const ConversationList = forwardRef<
   }, []);
 
   // ---- TanStack Virtual plumbing ----
+  const contentContainerRef = useRef<HTMLDivElement | null>(null);
   const tanstackScrollRef = useRef<HTMLDivElement | null>(null);
 
   const clearPendingInteractionAnchor = useCallback(() => {
@@ -335,6 +345,37 @@ export const ConversationList = forwardRef<
     rafIdRef.current = null;
     const pending = pendingUpdateRef.current;
     if (!pending) return;
+    pendingUpdateRef.current = null;
+
+    // Capture the reader's current position when the page arrives, rather than
+    // at request time: they may have kept scrolling while the request ran.
+    let historyAnchor: { patchKey: string; top: number } | null = null;
+    const scrollEl = tanstackScrollRef.current;
+    if (
+      historyRequestedRef.current &&
+      pending.addType === 'historic' &&
+      scrollEl
+    ) {
+      historyRequestedRef.current = false;
+      const containerTop = scrollEl.getBoundingClientRect().top;
+      for (const node of scrollEl.querySelectorAll<HTMLElement>(
+        '[data-row-index]'
+      )) {
+        if (node.getBoundingClientRect().bottom <= containerTop + 1) continue;
+        const row = prevRowsRef.current[Number(node.dataset.rowIndex)];
+        if (!row) continue;
+        const entry = row.entry;
+        const patchKey =
+          'entries' in entry
+            ? (entry.entries.at(-1)?.patchKey ?? entry.patchKey)
+            : entry.patchKey;
+        historyAnchor = {
+          patchKey,
+          top: node.getBoundingClientRect().top - containerTop,
+        };
+        break;
+      }
+    }
 
     const derivedEntries = deriveConversationEntries({
       source: pending.source,
@@ -351,6 +392,17 @@ export const ConversationList = forwardRef<
       prevEntriesRef.current,
       prevRowsRef.current
     );
+
+    if (historyAnchor) {
+      const { patchKey, top } = historyAnchor;
+      const index = derivedTimeline.rows.findIndex(
+        ({ entry }) =>
+          entry.patchKey === patchKey ||
+          ('entries' in entry &&
+            entry.entries.some((item) => item.patchKey === patchKey))
+      );
+      if (index >= 0) historyAnchorRef.current = { index, top };
+    }
 
     prevEntriesRef.current = derivedTimeline.displayEntries;
     prevRowsRef.current = derivedTimeline.rows;
@@ -371,11 +423,20 @@ export const ConversationList = forwardRef<
     addType: AddEntryType,
     newLoading: boolean
   ) => {
+    const effectiveAddType =
+      historyRequestedRef.current &&
+      pendingUpdateRef.current?.addType === 'historic'
+        ? 'historic'
+        : addType;
     pendingUpdateRef.current = {
       source,
-      addType,
+      addType: effectiveAddType,
       loading: newLoading,
-      isInitialLoad: addType === 'initial',
+      // Keep the initial-bottom request when history/stream updates are
+      // coalesced into the same animation frame.
+      isInitialLoad:
+        addType === 'initial' ||
+        pendingUpdateRef.current?.isInitialLoad === true,
     };
 
     if (rafIdRef.current === null) {
@@ -383,12 +444,17 @@ export const ConversationList = forwardRef<
     }
   };
 
-  const { isFirstTurn, isLoadingHistory, hasMoreHistory, loadMoreHistory } =
-    useConversationHistory({
-      attempt,
-      onTimelineUpdated,
-      scopeKey: conversationScopeKey,
-    });
+  const {
+    isFirstTurn,
+    isLoadingHistory,
+    hasMoreHistory,
+    historyError,
+    loadMoreHistory,
+  } = useConversationHistory({
+    attempt,
+    onTimelineUpdated,
+    scopeKey: conversationScopeKey,
+  });
 
   const prevEntriesRef = useRef<DisplayEntry[]>([]);
   const prevRowsRef = useRef<ConversationRow[]>([]);
@@ -465,6 +531,7 @@ export const ConversationList = forwardRef<
     contentVersion: dataVersion,
     totalRowCount: conversationRows.length,
     scrollContainerRef: tanstackScrollRef,
+    contentContainerRef,
     onAtBottomChange,
     shouldSuppressSizeAdjustment: shouldSuppressInteractionDrivenSizeAdjustment,
   });
@@ -541,6 +608,27 @@ export const ConversationList = forwardRef<
     [conversationVirtualizer]
   );
 
+  useEffect(() => {
+    onResetSuccessRef.current = () => {
+      // Reset removes the selected process and everything after it. Move to
+      // the new end immediately so the subsequent history update keeps
+      // following that exact reset boundary instead of preserving a
+      // now-removed anchor.
+      clearPendingInteractionAnchor();
+      scrollToBottomAndClearSpacer('auto');
+    };
+
+    return () => {
+      onResetSuccessRef.current = null;
+    };
+  }, [clearPendingInteractionAnchor, scrollToBottomAndClearSpacer]);
+
+  useResumeConversationAtBottom(conversationScopeKey, () => {
+    clearPendingInteractionAnchor();
+    historyAnchorRef.current = null;
+    scrollToBottomAndClearSpacer('auto');
+  });
+
   const scrollExecutor = useScrollCommandExecutor({
     virtualizer: conversationVirtualizer.virtualizer,
     itemCount: conversationRows.length,
@@ -563,6 +651,44 @@ export const ConversationList = forwardRef<
     !hasRunningProcess &&
     hasEntries &&
     isFirstTurn;
+
+  const { releaseBottomLock } = conversationVirtualizer;
+  const historyScrollToIndexRef = useRef(scrollToAbsoluteIndex);
+  historyScrollToIndexRef.current = scrollToAbsoluteIndex;
+
+  useLayoutEffect(() => {
+    const anchor = historyAnchorRef.current;
+    if (!anchor) return;
+    historyAnchorRef.current = null;
+    releaseBottomLock();
+    let frame = 0;
+    let attempts = 0;
+    const correct = () => {
+      const scrollEl = tanstackScrollRef.current;
+      if (!scrollEl || attempts++ >= 6) return;
+      programmaticScrollDeadlineRef.current = performance.now() + 250;
+      const node = scrollEl.querySelector<HTMLElement>(
+        `[data-row-index="${anchor.index}"]`
+      );
+      if (!node) {
+        historyScrollToIndexRef.current(anchor.index, 'start', 'auto');
+      } else {
+        scrollEl.scrollTop +=
+          node.getBoundingClientRect().top -
+          scrollEl.getBoundingClientRect().top -
+          anchor.top;
+      }
+      frame = requestAnimationFrame(correct);
+    };
+    correct();
+    return () => cancelAnimationFrame(frame);
+  }, [dataVersion, releaseBottomLock]);
+
+  const loadOlderHistory = useCallback(async () => {
+    historyRequestedRef.current = true;
+    releaseBottomLock();
+    await loadMoreHistory();
+  }, [loadMoreHistory, releaseBottomLock]);
 
   // Expose scroll functionality via ref — delegates to TanStack Virtual
   const scrollToPreviousUserMessage = useCallback(() => {
@@ -744,7 +870,8 @@ export const ConversationList = forwardRef<
   );
 
   const showLoader = loading && conversationRows.length === 0;
-  const showEmptyState = !loading && conversationRows.length === 0;
+  const showEmptyState =
+    !loading && !historyError && conversationRows.length === 0;
 
   const { virtualItems, totalSize, measureElement } = conversationVirtualizer;
 
@@ -760,24 +887,38 @@ export const ConversationList = forwardRef<
       return;
     }
 
+    let previousTop = scrollEl.scrollTop;
     const maybeLoadOlderHistory = () => {
-      if (!hasMoreHistory || isLoadingHistory || loading) {
+      const movedUp = scrollEl.scrollTop < previousTop;
+      previousTop = scrollEl.scrollTop;
+      if (
+        !movedUp ||
+        !hasMoreHistory ||
+        isLoadingHistory ||
+        loading ||
+        historyError
+      ) {
         return;
       }
       if (scrollEl.scrollTop <= 80) {
-        void loadMoreHistory();
+        void loadOlderHistory();
       }
     };
 
     scrollEl.addEventListener('scroll', maybeLoadOlderHistory, {
       passive: true,
     });
-    maybeLoadOlderHistory();
 
     return () => {
       scrollEl.removeEventListener('scroll', maybeLoadOlderHistory);
     };
-  }, [hasMoreHistory, isLoadingHistory, loadMoreHistory, loading]);
+  }, [
+    hasMoreHistory,
+    isLoadingHistory,
+    loadOlderHistory,
+    loading,
+    historyError,
+  ]);
 
   return (
     <ApprovalFormProvider>
@@ -793,118 +934,142 @@ export const ConversationList = forwardRef<
           style={{ overflowAnchor: 'none', contain: 'strict' }}
           onClickCapture={handleConversationClickCapture}
         >
-          <div className="pt-2">
-            {showSetupPlaceholder && (
-              <div className="my-base px-double">
-                <ChatScriptPlaceholder
-                  type="setup"
-                  onConfigure={canConfigure ? handleConfigureSetup : undefined}
+          <div ref={contentContainerRef}>
+            <div className="pt-2">
+              {showSetupPlaceholder && (
+                <div className="my-base px-double">
+                  <ChatScriptPlaceholder
+                    type="setup"
+                    onConfigure={
+                      canConfigure ? handleConfigureSetup : undefined
+                    }
+                  />
+                </div>
+              )}
+            </div>
+
+            {(hasMoreHistory || historyError) &&
+              !isLoadingHistory &&
+              !loading && (
+                <div className="flex flex-col items-center gap-2 px-double py-3">
+                  {historyError && (
+                    <span role="alert" className="text-sm text-error">
+                      {t('conversation.historyLoadFailed')}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    data-scroll-anchor-ignore
+                    className="text-sm text-low underline hover:text-high"
+                    onClick={() => void loadOlderHistory()}
+                  >
+                    {t('conversation.loadEarlierMessages')}
+                  </button>
+                </div>
+              )}
+
+            {isLoadingHistory && !showLoader && (
+              <div className="flex flex-col items-center gap-2 px-double py-3">
+                <div className="flex w-full max-w-md flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2.5 w-16 animate-pulse rounded-full bg-foreground/10" />
+                    <div className="h-2.5 flex-1 animate-pulse rounded-full bg-foreground/[0.06]" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-2.5 w-24 animate-pulse rounded-full bg-foreground/[0.07]"
+                      style={{ animationDelay: '150ms' }}
+                    />
+                    <div
+                      className="h-2.5 w-32 animate-pulse rounded-full bg-foreground/[0.05]"
+                      style={{ animationDelay: '150ms' }}
+                    />
+                  </div>
+                </div>
+                <span className="text-xs text-low">
+                  {t('conversation.loadingEarlierMessages')}
+                </span>
+              </div>
+            )}
+
+            {showEmptyState && (
+              <div className="flex min-h-full items-center justify-center px-double py-12">
+                <ChatEmptyState
+                  title={t('conversation.emptyTitle', {
+                    defaultValue: 'Send a message to start the conversation.',
+                  })}
+                  description={t('conversation.emptyDescription', {
+                    defaultValue:
+                      'Your workspace conversation will appear here once a new turn starts.',
+                  })}
                 />
               </div>
             )}
-          </div>
 
-          {isLoadingHistory && !showLoader && (
-            <div className="flex flex-col items-center gap-2 px-double py-3">
-              <div className="flex w-full max-w-md flex-col gap-1.5">
-                <div className="flex items-center gap-2">
-                  <div className="h-2.5 w-16 animate-pulse rounded-full bg-foreground/10" />
-                  <div className="h-2.5 flex-1 animate-pulse rounded-full bg-foreground/[0.06]" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <div
-                    className="h-2.5 w-24 animate-pulse rounded-full bg-foreground/[0.07]"
-                    style={{ animationDelay: '150ms' }}
-                  />
-                  <div
-                    className="h-2.5 w-32 animate-pulse rounded-full bg-foreground/[0.05]"
-                    style={{ animationDelay: '150ms' }}
-                  />
-                </div>
-              </div>
-              <span className="text-xs text-low">
-                {t('conversation.loadingEarlierMessages')}
-              </span>
-            </div>
-          )}
-
-          {showEmptyState && (
-            <div className="flex min-h-full items-center justify-center px-double py-12">
-              <ChatEmptyState
-                title={t('conversation.emptyTitle', {
-                  defaultValue: 'Send a message to start the conversation.',
-                })}
-                description={t('conversation.emptyDescription', {
-                  defaultValue:
-                    'Your workspace conversation will appear here once a new turn starts.',
-                })}
-              />
-            </div>
-          )}
-
-          {virtualizedRows.length > 0 && (
-            <div
-              style={{
-                height: `${totalSize}px`,
-                width: '100%',
-                position: 'relative',
-              }}
-            >
-              {virtualItems.map((virtualItem) => {
-                const row = virtualizedRows[virtualItem.index];
-                if (!row) return null;
-                return (
-                  <div
-                    key={row.semanticKey}
-                    data-index={virtualItem.index}
-                    data-row-index={virtualItem.index}
-                    data-semantic-key={row.semanticKey}
-                    ref={measureElement}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                  >
-                    {renderRowContent(row.entry, attempt, resetAction, repos)}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {unvirtualizedTailRows.map((row, tailIndex) => {
-            const rowIndex = firstUnvirtualizedRowIndex + tailIndex;
-            return (
+            {virtualizedRows.length > 0 && (
               <div
-                key={row.semanticKey}
-                data-row-index={rowIndex}
-                data-semantic-key={row.semanticKey}
+                style={{
+                  height: `${totalSize}px`,
+                  width: '100%',
+                  position: 'relative',
+                }}
               >
-                {renderRowContent(row.entry, attempt, resetAction, repos)}
+                {virtualItems.map((virtualItem) => {
+                  const row = virtualizedRows[virtualItem.index];
+                  if (!row) return null;
+                  return (
+                    <div
+                      key={row.semanticKey}
+                      data-index={virtualItem.index}
+                      data-row-index={virtualItem.index}
+                      data-semantic-key={row.semanticKey}
+                      ref={measureElement}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualItem.start}px)`,
+                      }}
+                    >
+                      {renderRowContent(row.entry, attempt, resetAction, repos)}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            )}
 
-          {/* Plan-reveal spacer: provides extra scroll room so plan-reveal
+            {unvirtualizedTailRows.map((row, tailIndex) => {
+              const rowIndex = firstUnvirtualizedRowIndex + tailIndex;
+              return (
+                <div
+                  key={row.semanticKey}
+                  data-row-index={rowIndex}
+                  data-semantic-key={row.semanticKey}
+                >
+                  {renderRowContent(row.entry, attempt, resetAction, repos)}
+                </div>
+              );
+            })}
+
+            {/* Plan-reveal spacer: provides extra scroll room so plan-reveal
               can align the plan entry to the top of the viewport. Height is set
               imperatively in scrollToAbsoluteIndex and cleared on scrollToBottom. */}
-          <div ref={planRevealSpacerRef} style={{ height: 0 }} />
+            <div ref={planRevealSpacerRef} style={{ height: 0 }} />
 
-          {/* Footer placeholder */}
-          <div className="pb-2">
-            {showCleanupPlaceholder && (
-              <div className="my-base px-double">
-                <ChatScriptPlaceholder
-                  type="cleanup"
-                  onConfigure={
-                    canConfigure ? handleConfigureCleanup : undefined
-                  }
-                />
-              </div>
-            )}
+            {/* Footer placeholder */}
+            <div className="pb-2">
+              {showCleanupPlaceholder && (
+                <div className="my-base px-double">
+                  <ChatScriptPlaceholder
+                    type="cleanup"
+                    onConfigure={
+                      canConfigure ? handleConfigureCleanup : undefined
+                    }
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

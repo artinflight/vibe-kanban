@@ -1,4 +1,5 @@
 pub mod coding_agent_turn;
+pub mod durable_ui_preferences;
 pub mod execution_process;
 pub mod execution_process_logs;
 pub mod execution_process_repo_state;
@@ -8,6 +9,7 @@ pub mod project;
 pub mod pull_request;
 pub mod repo;
 pub mod requests;
+pub mod saved_chat_message;
 pub mod scratch;
 pub mod session;
 pub mod subagent_job;

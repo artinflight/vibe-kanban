@@ -7,8 +7,10 @@ use tower_http::{compression::CompressionLayer, validate_request::ValidateReques
 use crate::{DeploymentImpl, middleware};
 
 pub mod approvals;
+pub mod capacity;
 pub mod config;
 pub mod containers;
+pub mod durable_ui_preferences;
 pub mod filesystem;
 // pub mod github;
 pub mod attachments;
@@ -26,6 +28,7 @@ pub mod relay_auth;
 pub mod releases;
 pub mod remote;
 pub mod repo;
+pub mod saved_chat_messages;
 pub mod scratch;
 pub mod search;
 pub mod sessions;
@@ -51,6 +54,8 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(events::router(&deployment))
         .merge(approvals::router())
         .merge(scratch::router(&deployment))
+        .merge(saved_chat_messages::router())
+        .merge(durable_ui_preferences::router())
         .merge(search::router(&deployment))
         .merge(preview::api_router())
         .merge(releases::router())
@@ -71,6 +76,7 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .with_state(deployment.clone());
 
     let api_routes = Router::new()
+        .merge(capacity::router())
         .merge(relay_auth::router())
         .merge(host_relay::router(&deployment))
         .merge(relay_signed_routes)

@@ -47,13 +47,9 @@ function resolveLocalWorkspaceId(
     local_workspace_id: string | null;
     name: string | null;
   },
-  localWorkspacesById: Map<string, LocalWorkspaceSummary>,
   localWorkspaces: LocalWorkspaceSummary[]
 ): string | null {
-  if (
-    remoteWorkspace.local_workspace_id &&
-    localWorkspacesById.has(remoteWorkspace.local_workspace_id)
-  ) {
+  if (remoteWorkspace.local_workspace_id) {
     return remoteWorkspace.local_workspace_id;
   }
 
@@ -120,7 +116,6 @@ export function IssueWorkspacesSectionContainer({
     return rawWorkspaces.map((workspace) => {
       const resolvedLocalWorkspaceId = resolveLocalWorkspaceId(
         workspace,
-        localWorkspacesById,
         allLocalWorkspaces
       );
       const localWorkspace = resolvedLocalWorkspaceId

@@ -1,5 +1,24 @@
 # VK_WORKFLOW.md
 
+## Established Backend Restart Protocol
+
+Follow [the backend restart protocol](VK_BACKEND_RESTART_PROTOCOL.md). Keep
+Green usable while Blue is built, isolated, tested and backed up. Rehearse and
+measure the complete interruption before offering a window, then wait for an
+explicit operator "cut over now". Preparation approval is not restart approval.
+Never promote stale rehearsal data or promise instant post-write rollback.
+
+## September 11 Authority Correction
+
+The historical service/path examples below describe retired blue and are not
+current deployment commands. Green is production. Do not start the retired
+`vibe-kanban.service`, overwrite its binary as a deployment shortcut, or seed a
+candidate into green's directories. Discover current services and routing first.
+Use [the restart lessons and proposed cutover](VK_RESTART_LESSONS_LEARNED.md)
+and the deployment runbook for the next changeover. Two generations require one
+authoritative writer and a rollback plan that preserves post-cutover writes.
+Bulk staging belongs on verified mounted `/mnt/vk-storage`; backups belong on
+Desktop `B:/vk-backups/`, not the historical system-disk paths below.
 For active agent deploy/restart work, read `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
 after this file. `VK_WORKFLOW.md` describes the stable local model; the runbook
 contains the current live checks and the operational checklist agents must use.
@@ -166,6 +185,20 @@ Required settings:
 - `VK_CODEX_MAX_ACTIVE_EXECUTIONS=8`
 - `VK_CODEX_BASE_COMMAND=/home/mcp/.local/bin/codex`
 - `VK_ALLOWED_ORIGINS=https://vibe.local`
+- `CARGO_TARGET_DIR=/home/mcp/.local/share/vibe-kanban-green-build/cargo-target`
+- `CARGO_INCREMENTAL=0`
+
+The Cargo target is intentionally shared by green-launched VK workspaces. It
+deduplicates dependency output across concurrent worktrees; Cargo serialises
+conflicting writes itself. Keep the root outside `/home/mcp/.cache`, worktrees,
+and every VK data or attachment tree. Do not point blue at this root. Capacity
+reclamation for this directory must first verify that no Cargo/Rust process is
+using it and must preserve the directory root.
+
+`DISABLE_WORKTREE_CLEANUP=1` disables only age-based expiry. Do not set
+`DISABLE_STATUS_WORKTREE_CLEANUP`: green must honour cleanup requests created
+when linked issues enter `In Staging` or `Done`. VK preserves pinned, running,
+process-referenced, and Git-dirty worktrees.
 
 Run `pnpm run ops:live-runtime-guardrails` from a branch that contains the May 3 guardrail check before restart/deploy. If that script is not available on the current branch, manually verify `systemctl --user show vibe-kanban.service -p Environment` contains the settings above.
 

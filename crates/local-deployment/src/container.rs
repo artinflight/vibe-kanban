@@ -358,6 +358,38 @@ impl LocalContainerService {
             expired_workspaces.len()
         );
         for workspace in &expired_workspaces {
+            if workspace.pinned {
+                tracing::info!(
+                    "Preserving expired workspace {} because it is pinned",
+                    workspace.id
+                );
+                continue;
+            }
+            if self.workspace_has_external_processes(workspace).await {
+                tracing::info!(
+                    "Deferring expired workspace cleanup for {} because a host process is using its path",
+                    workspace.id
+                );
+                continue;
+            }
+            match self.is_container_clean(workspace).await {
+                Ok(true) => {}
+                Ok(false) => {
+                    tracing::warn!(
+                        "Preserving expired workspace {} because it contains uncommitted or untracked files",
+                        workspace.id
+                    );
+                    continue;
+                }
+                Err(error) => {
+                    tracing::error!(
+                        "Unable to verify whether expired workspace {} is clean; preserving it: {}",
+                        workspace.id,
+                        error
+                    );
+                    continue;
+                }
+            }
             if let Err(error) = self.cleanup_workspace(workspace).await {
                 tracing::error!(
                     "Failed to clean up expired workspace {}; it remains eligible for retry: {}",
@@ -1454,6 +1486,7 @@ impl LocalContainerService {
 
         let action_type = if let Some(info) = latest_session_info {
             ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+                capacity: None,
                 prompt: queued_data.message.clone(),
                 session_id: info.session_id,
                 reset_to_message_id: None,
@@ -1736,6 +1769,15 @@ impl ContainerService for LocalContainerService {
         execution_process: &ExecutionProcess,
         executor_action: &ExecutorAction,
     ) -> Result<(), ContainerError> {
+        if executor_action.base_executor().is_some() {
+            let background = matches!(executor_action.typ(), ExecutorActionType::CodingAgentFollowUpRequest(request) if request.capacity.is_some());
+            executors::capacity::controller::before_launch(
+                execution_process.session_id,
+                background,
+            )
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
+        }
         // Get the worktree path
         let container_ref = workspace
             .container_ref
@@ -1826,6 +1868,19 @@ impl ContainerService for LocalContainerService {
         execution_process: &ExecutionProcess,
         status: ExecutionProcessStatus,
     ) -> Result<(), ContainerError> {
+        // Persist user Stop before killing app-server, so a later ordinary
+        // follow-up cannot silently reactivate the native goal.
+        if let Err(error) =
+            executors::executors::codex::client::AppServerClient::pause_execution_goal(
+                execution_process.id,
+            )
+            .await
+        {
+            tracing::warn!(
+                "Could not persist goal pause before stopping execution {}: {error}",
+                execution_process.id
+            );
+        }
         let child = self
             .get_child_from_store(&execution_process.id)
             .await

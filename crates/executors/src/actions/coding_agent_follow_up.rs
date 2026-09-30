@@ -16,6 +16,8 @@ use crate::{
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
 pub struct CodingAgentFollowUpRequest {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capacity: Option<Box<crate::capacity::CapacityExecution>>,
     pub prompt: String,
     pub session_id: String,
     #[serde(default)]
@@ -52,6 +54,35 @@ impl Executable for CodingAgentFollowUpRequest {
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
         let effective_dir = self.effective_dir(current_dir);
+        let mut execution_env = env.clone();
+        if let Some(capacity) = &self.capacity {
+            if self.base_executor() != BaseCodingAgent::Codex
+                || self.prompt != "/goal resume"
+                || self.reset_to_message_id.is_some()
+            {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Capacity execution must resume an existing Codex goal",
+                )));
+            }
+            let execution_id = env.get("VK_EXECUTION_PROCESS_ID").ok_or_else(|| {
+                ExecutorError::Io(std::io::Error::other("Missing execution identity"))
+            })?;
+            // Hold the controller lock through lease creation: revocation must
+            // not race a previously queued launch into creating fresh authority.
+            if let Some(controller) = crate::capacity::controller::configured()? {
+                let mut controller = controller.lock().await;
+                controller.bind(
+                    capacity,
+                    &self.session_id,
+                    uuid::Uuid::parse_str(execution_id).map_err(std::io::Error::other)?,
+                    crate::capacity::wall_ms(),
+                )?;
+                execution_env.capacity = Some(capacity.prepare(execution_id)?);
+            } else {
+                execution_env.capacity = Some(capacity.prepare(execution_id)?);
+            }
+        }
+        let env = &execution_env;
 
         #[cfg(feature = "qa-mode")]
         {

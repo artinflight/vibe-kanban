@@ -27,6 +27,14 @@ import {
   type ProjectCustomization,
 } from '@/shared/stores/useUiPreferencesStore';
 import type { RepoAction } from '@vibe/ui/components/RepoCard';
+import { useAppRuntime } from '@/shared/hooks/useAppRuntime';
+import { savedChatMessagesApi } from '@/shared/lib/api';
+import {
+  ApiError,
+  durableUiPreferencesApi,
+  type DurableUiPreferencesRecord,
+  type WorkspaceCardColorRecord,
+} from '@/shared/lib/api';
 
 type UiPreferencesScratchData = UiPreferencesData & {
   local_project_order?: string[];
@@ -39,6 +47,43 @@ type UiPreferencesScratchData = UiPreferencesData & {
 // Using a fixed UUID ensures all users/sessions share the same preferences record
 const UI_PREFERENCES_ID = '00000000-0000-0000-0000-000000000001';
 const SAVED_CHAT_MESSAGES_FALLBACK_URL = '/vk-saved-chat-messages.json';
+const WORKSPACE_COLORS_FALLBACK_STORAGE_KEY = 'vk-workspace-colors';
+
+function loadWorkspaceColorsFallback(): Record<string, string> {
+  try {
+    return normalizeWorkspaceColors(
+      JSON.parse(
+        window.localStorage.getItem(WORKSPACE_COLORS_FALLBACK_STORAGE_KEY) ??
+          '{}'
+      )
+    );
+  } catch {
+    return {};
+  }
+}
+
+function saveWorkspaceColorsFallback(colors: Record<string, string>): void {
+  try {
+    window.localStorage.setItem(
+      WORKSPACE_COLORS_FALLBACK_STORAGE_KEY,
+      JSON.stringify(colors)
+    );
+  } catch (error) {
+    console.error('Failed to save workspace colors locally:', error);
+  }
+}
+
+function normalizeWorkspaceColors(
+  colors: UiPreferencesScratchData['workspace_colors']
+): Record<string, string> {
+  if (!colors) return {};
+
+  return Object.fromEntries(
+    Object.entries(colors).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string'
+    )
+  );
+}
 
 async function loadSavedChatMessagesFallback(): Promise<SavedChatMessage[]> {
   try {
@@ -88,6 +133,7 @@ function storeToScratchData(state: {
   selectedProjectId: string | null;
   localProjectOrder: string[];
   localProjectCustomizations: Record<string, ProjectCustomization>;
+  workspaceColors: Record<string, string>;
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
   savedChatMessages: SavedChatMessage[];
@@ -136,6 +182,7 @@ function storeToScratchData(state: {
     selected_project_id: state.selectedProjectId,
     local_project_order: state.localProjectOrder,
     local_project_customizations: localProjectCustomizations,
+    workspace_colors: state.workspaceColors,
     create_draft_workspace_by_default: state.createDraftWorkspaceByDefault,
     show_left_column_links: state.showLeftColumnLinks,
     saved_chat_messages: state.savedChatMessages,
@@ -168,6 +215,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
   selectedProjectId: string | null;
   localProjectOrder: string[];
   localProjectCustomizations: Record<string, ProjectCustomization>;
+  workspaceColors: Record<string, string>;
   createDraftWorkspaceByDefault: boolean;
   showLeftColumnLinks: boolean;
   savedChatMessages: SavedChatMessage[];
@@ -230,6 +278,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
     localProjectOrder: data.local_project_order ?? [],
     localProjectCustomizations: (data.local_project_customizations ??
       {}) as Record<string, ProjectCustomization>,
+    workspaceColors: normalizeWorkspaceColors(data.workspace_colors),
     createDraftWorkspaceByDefault:
       data.create_draft_workspace_by_default ??
       DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT,
@@ -262,6 +311,7 @@ function scratchDataToStore(data: UiPreferencesScratchData): {
  * Should be used once at the app root level.
  */
 export function useUiPreferencesScratch() {
+  const runtime = useAppRuntime();
   const { scratch, updateScratch, isLoading, isConnected } = useScratch(
     ScratchType.UI_PREFERENCES,
     UI_PREFERENCES_ID
@@ -271,6 +321,15 @@ export function useUiPreferencesScratch() {
   const hasInitializedRef = useRef(false);
   // Track whether we're currently applying server data to prevent save loops
   const isApplyingServerDataRef = useRef(false);
+  // Older local backends do not expose the durable saved-message routes. Keep
+  // messages in scratch storage until a successful API read proves support.
+  const hasDurableSavedChatMessagesRef = useRef(false);
+  const hasHydratedSavedChatMessagesRef = useRef(false);
+  const hasDurableUiPreferencesRef = useRef(false);
+  const durableUiPreferencesRef = useRef<DurableUiPreferencesRecord | null>(
+    null
+  );
+  const durableWriteChainRef = useRef(Promise.resolve());
   const lastSavedPayloadRef = useRef<string | null>(null);
 
   // Get current store state
@@ -291,6 +350,7 @@ export function useUiPreferencesScratch() {
     selectedProjectId: state.selectedProjectId,
     localProjectOrder: state.localProjectOrder,
     localProjectCustomizations: state.localProjectCustomizations,
+    workspaceColors: state.workspaceColors,
     createDraftWorkspaceByDefault: state.createDraftWorkspaceByDefault,
     showLeftColumnLinks: state.showLeftColumnLinks,
     savedChatMessages: state.savedChatMessages,
@@ -329,6 +389,7 @@ export function useUiPreferencesScratch() {
       selectedProjectId: currentState.selectedProjectId,
       localProjectOrder: currentState.localProjectOrder,
       localProjectCustomizations: currentState.localProjectCustomizations,
+      workspaceColors: currentState.workspaceColors,
       createDraftWorkspaceByDefault: currentState.createDraftWorkspaceByDefault,
       showLeftColumnLinks: currentState.showLeftColumnLinks,
       savedChatMessages: currentState.savedChatMessages,
@@ -339,6 +400,13 @@ export function useUiPreferencesScratch() {
       ...(scratchData ?? {}),
       ...nextData,
     };
+    if (runtime === 'local' && hasDurableSavedChatMessagesRef.current) {
+      delete data.saved_chat_messages;
+    }
+    if (runtime === 'local' && hasDurableUiPreferencesRef.current) {
+      delete (data as Partial<UiPreferencesScratchData>).local_project_order;
+      delete data.workspace_colors;
+    }
 
     const serialized = JSON.stringify(data);
     if (serialized === lastSavedPayloadRef.current) {
@@ -356,9 +424,152 @@ export function useUiPreferencesScratch() {
     } catch (e) {
       console.error('[useUiPreferencesScratch] Failed to save:', e);
     }
-  }, [scratchData, updateScratch]);
+  }, [runtime, scratchData, updateScratch]);
 
   const { debounced: debouncedSave } = useDebouncedCallback(saveToServer, 500);
+
+  const loadLocalSavedChatMessages = useCallback(
+    async (fallbackMessages: SavedChatMessage[]) => {
+      try {
+        let durableMessages = await savedChatMessagesApi.list();
+        hasDurableSavedChatMessagesRef.current = true;
+        if (durableMessages.length === 0 && fallbackMessages.length > 0) {
+          durableMessages = await Promise.all(
+            fallbackMessages.map((message, position) =>
+              savedChatMessagesApi.upsert({ ...message, position })
+            )
+          );
+        }
+        return durableMessages.map(({ id, title, content }) => ({
+          id,
+          title,
+          content,
+        }));
+      } catch (error) {
+        console.error('Failed to load durable saved chat messages:', error);
+        return fallbackMessages.length > 0
+          ? fallbackMessages
+          : loadSavedChatMessagesFallback();
+      }
+    },
+    []
+  );
+
+  const loadDurableUiPreferences = useCallback(async () => {
+    try {
+      let preferences = await durableUiPreferencesApi.get();
+      hasDurableUiPreferencesRef.current = true;
+      const fallbackColors = loadWorkspaceColorsFallback();
+      if (
+        Object.keys(preferences.workspace_colors).length === 0 &&
+        Object.keys(fallbackColors).length > 0
+      ) {
+        const workspaceColors = { ...preferences.workspace_colors };
+        for (const [workspaceId, color] of Object.entries(fallbackColors)) {
+          const saved = await durableUiPreferencesApi.updateWorkspaceColor(
+            workspaceId,
+            color,
+            null
+          );
+          if (saved) workspaceColors[workspaceId] = saved;
+        }
+        preferences = { ...preferences, workspace_colors: workspaceColors };
+      }
+      durableUiPreferencesRef.current = preferences;
+      return preferences;
+    } catch (error) {
+      console.error('Failed to load durable UI preferences:', error);
+      return null;
+    }
+  }, []);
+
+  const applyDurableUiPreferences = useCallback(
+    (preferences: DurableUiPreferencesRecord) => {
+      durableUiPreferencesRef.current = preferences;
+      isApplyingServerDataRef.current = true;
+      useUiPreferencesStore.setState({
+        localProjectOrder: preferences.project_order.project_ids,
+        workspaceColors: Object.fromEntries(
+          Object.entries(preferences.workspace_colors).map(
+            ([workspaceId, record]) => [workspaceId, record.color]
+          )
+        ),
+      });
+      setTimeout(() => {
+        isApplyingServerDataRef.current = false;
+      }, 100);
+    },
+    []
+  );
+
+  const persistDurableUiPreferences = useCallback(
+    async (projectIds: string[], workspaceColors: Record<string, string>) => {
+      let durable = durableUiPreferencesRef.current;
+      if (!durable) return;
+
+      try {
+        if (
+          JSON.stringify(projectIds) !==
+          JSON.stringify(durable.project_order.project_ids)
+        ) {
+          const projectOrder = await durableUiPreferencesApi.updateProjectOrder(
+            projectIds,
+            durable.project_order.revision
+          );
+          durable = { ...durable, project_order: projectOrder };
+          durableUiPreferencesRef.current = durable;
+        }
+
+        const workspaceIds = new Set([
+          ...Object.keys(durable.workspace_colors),
+          ...Object.keys(workspaceColors),
+        ]);
+        for (const workspaceId of workspaceIds) {
+          const existing = durable.workspace_colors[workspaceId];
+          const color = workspaceColors[workspaceId] ?? null;
+          if ((existing?.color ?? null) === color) continue;
+
+          const updated = await durableUiPreferencesApi.updateWorkspaceColor(
+            workspaceId,
+            color,
+            existing?.revision ?? null
+          );
+          const nextColors: Record<string, WorkspaceCardColorRecord> = {
+            ...durable.workspace_colors,
+          };
+          if (updated) {
+            nextColors[workspaceId] = updated;
+          } else {
+            delete nextColors[workspaceId];
+          }
+          durable = { ...durable, workspace_colors: nextColors };
+          durableUiPreferencesRef.current = durable;
+        }
+      } catch (error) {
+        if (error instanceof ApiError && error.statusCode === 409) {
+          const canonical = await loadDurableUiPreferences();
+          if (canonical) applyDurableUiPreferences(canonical);
+          return;
+        }
+        console.error('Failed to save durable UI preferences:', error);
+      }
+    },
+    [applyDurableUiPreferences, loadDurableUiPreferences]
+  );
+
+  // Saved messages must remain available even when the UI-preferences scratch
+  // stream is missing or delayed. This also supports frontend-only deploys
+  // against an older backend by loading the immutable sidecar fallback.
+  useEffect(() => {
+    if (runtime !== 'local' || hasHydratedSavedChatMessagesRef.current) return;
+
+    hasHydratedSavedChatMessagesRef.current = true;
+    void loadLocalSavedChatMessages([]).then((savedChatMessages) => {
+      if (savedChatMessages.length > 0) {
+        useUiPreferencesStore.setState({ savedChatMessages });
+      }
+    });
+  }, [loadLocalSavedChatMessages, runtime]);
 
   // Initialize store from server data when first loaded
   useEffect(() => {
@@ -373,10 +584,26 @@ export function useUiPreferencesScratch() {
 
       void (async () => {
         const serverState = scratchDataToStore(scratchData);
-        const savedChatMessages =
+        const durablePreferences =
+          runtime === 'local' ? await loadDurableUiPreferences() : null;
+        const workspaceColors = durablePreferences
+          ? Object.fromEntries(
+              Object.entries(durablePreferences.workspace_colors).map(
+                ([workspaceId, record]) => [workspaceId, record.color]
+              )
+            )
+          : {
+              ...loadWorkspaceColorsFallback(),
+              ...serverState.workspaceColors,
+            };
+        const fallbackMessages =
           serverState.savedChatMessages.length > 0
             ? serverState.savedChatMessages
             : await loadSavedChatMessagesFallback();
+        const savedChatMessages =
+          runtime === 'local'
+            ? await loadLocalSavedChatMessages(fallbackMessages)
+            : fallbackMessages;
 
         useUiPreferencesStore.setState({
           repoActions: serverState.repoActions,
@@ -393,8 +620,11 @@ export function useUiPreferencesScratch() {
           workspaceSort: serverState.workspaceSort,
           selectedOrgId: serverState.selectedOrgId,
           selectedProjectId: serverState.selectedProjectId,
-          localProjectOrder: serverState.localProjectOrder,
+          localProjectOrder:
+            durablePreferences?.project_order.project_ids ??
+            serverState.localProjectOrder,
           localProjectCustomizations: serverState.localProjectCustomizations,
+          workspaceColors,
           createDraftWorkspaceByDefault:
             serverState.createDraftWorkspaceByDefault,
           showLeftColumnLinks: serverState.showLeftColumnLinks,
@@ -403,24 +633,42 @@ export function useUiPreferencesScratch() {
           kanbanProjectViewPreferences:
             serverState.kanbanProjectViewPreferences,
         });
+        saveWorkspaceColorsFallback(workspaceColors);
 
         setTimeout(() => {
           isApplyingServerDataRef.current = false;
         }, 100);
       })();
     }
-  }, [isLoading, isConnected, scratchData]);
+  }, [
+    isLoading,
+    isConnected,
+    loadLocalSavedChatMessages,
+    loadDurableUiPreferences,
+    runtime,
+    scratchData,
+  ]);
 
   // Subscribe to store changes and save to server
   useEffect(() => {
     const unsubscribe = useUiPreferencesStore.subscribe(() => {
       if (!isApplyingServerDataRef.current && hasInitializedRef.current) {
+        const state = useUiPreferencesStore.getState();
+        saveWorkspaceColorsFallback(state.workspaceColors);
+        if (hasDurableUiPreferencesRef.current) {
+          durableWriteChainRef.current = durableWriteChainRef.current.then(() =>
+            persistDurableUiPreferences(
+              state.localProjectOrder,
+              state.workspaceColors
+            )
+          );
+        }
         debouncedSave();
       }
     });
 
     return unsubscribe;
-  }, [debouncedSave]);
+  }, [debouncedSave, persistDurableUiPreferences]);
 
   return {
     isLoading,

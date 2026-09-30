@@ -62,6 +62,8 @@
     "subagent": {
       "defaultType": "サブエージェント"
     },
+    "loadEarlierMessages": "以前のメッセージを読み込む",
+    "historyLoadFailed": "メッセージを読み込めませんでした。もう一度お試しください。",
     "loadingEarlierMessages": "以前のメッセージを読み込み中"
   },
   "language": {
@@ -507,7 +509,18 @@
     "permissionPlan": "計画",
     "agent": "エージェント",
     "default": "デフォルト",
-    "model": "モデル"
+    "model": "モデル",
+    "routing": "Model routing",
+    "routing_manual": "Manual — lock selected model and effort",
+    "routing_shadow": "Recommend only — retain selected model",
+    "routing_auto": "Automatic — select at next execution",
+    "routingFloor": "Minimum capability (routine is experimental)",
+    "routing_routine": "Routine — bounded, independently checked work",
+    "routing_workhorse": "Workhorse — general development",
+    "routing_frontier": "Frontier — high-impact or uncertain work",
+    "routingEscalation": "Allow escalation after a failed execution",
+    "routingAutoLabel": "Automatic · {{floor}}",
+    "routingNeverAstra": "Never use Astra automatically"
   },
   "crashScreen": {
     "title": "問題が発生しました",

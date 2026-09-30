@@ -77,6 +77,7 @@ impl RepoContext {
 /// Environment variables to inject into executor processes
 #[derive(Debug, Clone)]
 pub struct ExecutionEnv {
+    pub capacity: Option<crate::capacity::PreparedCapacity>,
     pub vars: HashMap<String, String>,
     pub repo_context: RepoContext,
     pub commit_reminder: bool,
@@ -90,6 +91,7 @@ impl ExecutionEnv {
         commit_reminder_prompt: String,
     ) -> Self {
         Self {
+            capacity: None,
             vars: HashMap::new(),
             repo_context,
             commit_reminder,

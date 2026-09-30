@@ -1,5 +1,6 @@
 pub mod actions;
 pub mod approvals;
+pub mod capacity;
 pub mod command;
 pub mod env;
 pub mod executor_discovery;
@@ -8,5 +9,8 @@ pub mod logs;
 pub mod mcp_config;
 pub mod model_selector;
 pub mod profile;
+pub mod routing;
 pub mod stdout_dup;
 pub mod systemd_run;
+
+pub mod routing_telemetry;

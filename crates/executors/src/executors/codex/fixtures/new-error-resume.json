@@ -1,0 +1,43 @@
+{
+  "model": "gpt-6-astra",
+  "modelProvider": "openai",
+  "serviceTier": null,
+  "approvalPolicy": "on-request",
+  "approvalsReviewer": "user",
+  "sandbox": {
+    "type": "dangerFullAccess"
+  },
+  "reasoningEffort": "xhigh",
+  "cwd": "/workspace",
+  "thread": {
+    "id": "thread-fixture",
+    "preview": "test",
+    "ephemeral": false,
+    "modelProvider": "openai",
+    "createdAt": 0,
+    "updatedAt": 0,
+    "status": {
+      "type": "idle"
+    },
+    "path": null,
+    "cwd": "/workspace",
+    "cliVersion": "0.153.4",
+    "source": "exec",
+    "agentNickname": null,
+    "agentRole": null,
+    "gitInfo": null,
+    "name": null,
+    "turns": [
+      {
+        "id": "failed-turn",
+        "items": [],
+        "status": "failed",
+        "error": {
+          "message": "This request was blocked by our safety systems. Reason: Potentially unintended activity.",
+          "codexErrorInfo": "misalignmentPolicyViolation",
+          "additionalDetails": null
+        }
+      }
+    ]
+  }
+}

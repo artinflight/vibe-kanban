@@ -9,7 +9,7 @@ use db::models::{
     execution_process::ExecutionProcess, scratch::DraftFollowUpData, session::Session,
 };
 use deployment::Deployment;
-use executors::profile::ExecutorConfig;
+use executors::{executors::BaseCodingAgent, profile::ExecutorConfig};
 use serde::Deserialize;
 use services::services::{container::ContainerService, queued_message::QueueStatus};
 use ts_rs::TS;
@@ -26,13 +26,48 @@ struct QueueMessageRequest {
     pub executor_config: ExecutorConfig,
 }
 
-/// Steer the active agent, or queue the message for the next run when steering
-/// is not available.
+/// Steer an active Codex turn, or queue the message for agents without steering.
 async fn queue_message(
     Extension(session): Extension<Session>,
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<QueueMessageRequest>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    let scheduled = if let Ok(Some(controller)) = executors::capacity::controller::configured() {
+        controller
+            .lock()
+            .await
+            .state
+            .goals
+            .get(&session.id)
+            .is_some_and(|g| g.grant.is_some())
+    } else {
+        false
+    };
+    if scheduled {
+        // The active-turn send UI uses this route. A manual message must take
+        // over from scheduled work, rather than steer inside its restricted lease.
+        let response = super::follow_up(
+            Extension(session),
+            State(deployment),
+            Json(super::CreateFollowUpAttempt {
+                prompt: payload.message,
+                executor_config: payload.executor_config,
+                retry_process_id: None,
+                force_when_dirty: None,
+                perform_git_reset: None,
+            }),
+        )
+        .await?
+        .0;
+        return if response.is_success() {
+            Ok(ResponseJson(ApiResponse::success(QueueStatus::Empty)))
+        } else {
+            let queued = response.into_error_data().ok_or_else(|| {
+                ApiError::Conflict("Manual takeover could not be started or queued".into())
+            })?;
+            Ok(ResponseJson(ApiResponse::success(queued)))
+        };
+    }
     if !ExecutionProcess::has_running_queue_consumer_for_session(&deployment.db().pool, session.id)
         .await?
     {
@@ -44,6 +79,8 @@ async fn queue_message(
         ));
     }
 
+    let may_fall_back_to_queue =
+        should_queue_when_steer_is_unavailable(&payload.executor_config.executor);
     let data = DraftFollowUpData {
         message: payload.message,
         executor_config: payload.executor_config,
@@ -67,6 +104,13 @@ async fn queue_message(
         return Ok(ResponseJson(ApiResponse::success(QueueStatus::Empty)));
     }
 
+    if !may_fall_back_to_queue {
+        return Err(ApiError::Conflict(
+            "The active Codex turn is not ready to accept a correction. Retry while the agent is working."
+                .to_string(),
+        ));
+    }
+
     let queued = deployment
         .queued_message_service()
         .queue_message(session.id, data);
@@ -84,6 +128,10 @@ async fn queue_message(
     Ok(ResponseJson(ApiResponse::success(QueueStatus::Queued {
         message: queued,
     })))
+}
+
+fn should_queue_when_steer_is_unavailable(executor: &BaseCodingAgent) -> bool {
+    executor != &BaseCodingAgent::Codex
 }
 
 /// Cancel a queued follow-up message
@@ -131,4 +179,23 @@ pub(super) fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
             deployment.clone(),
             load_session_middleware,
         ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unavailable_codex_steer_never_falls_back_to_queue() {
+        assert!(!should_queue_when_steer_is_unavailable(
+            &BaseCodingAgent::Codex
+        ));
+    }
+
+    #[test]
+    fn non_codex_follow_up_keeps_queue_fallback() {
+        assert!(should_queue_when_steer_is_unavailable(
+            &BaseCodingAgent::ClaudeCode
+        ));
+    }
 }

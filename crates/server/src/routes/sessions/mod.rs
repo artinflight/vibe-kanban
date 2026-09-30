@@ -172,6 +172,19 @@ pub async fn follow_up(
             .await?;
     }
 
+    if payload.retry_process_id.is_some()
+        && payload
+            .executor_config
+            .routing
+            .as_ref()
+            .is_some_and(|p| p.mode == executors::routing::RoutingMode::Auto)
+    {
+        return Err(ApiError::Conflict("Automatic routing uses a new follow-up without Git reset; select manual mode to retry/reset".into()));
+    }
+    // Give an explicit owner message priority before acquiring an executor slot
+    // or resetting files. This can stop an active scheduled run of this session.
+    executors::capacity::controller::before_launch(session.id, false).await?;
+
     if let Some(proc_id) = payload.retry_process_id {
         let force_when_dirty = payload.force_when_dirty.unwrap_or(false);
         let perform_git_reset = payload.perform_git_reset.unwrap_or(true);
@@ -185,10 +198,22 @@ pub async fn follow_up(
     let interrupted_context =
         CodingAgentTurn::find_interrupted_context_since_latest_success(pool, session.id).await?;
 
-    let prompt = CodingAgentTurn::prompt_with_interrupted_context(
-        payload.prompt.clone(),
-        &interrupted_context,
-    );
+    // Native control commands must reach the executor parser unchanged. Adding
+    // recovery prose before /goal resume turns it into an ordinary user turn.
+    // The native thread already retains its objective/history; ordinary prompts
+    // still receive all recovered instructions below.
+    let native_command = payload.executor_config.executor
+        == executors::executors::BaseCodingAgent::Codex
+        && executors::executors::codex::slash_commands::CodexSlashCommand::parse(&payload.prompt)
+            .is_some();
+    let prompt = if native_command {
+        payload.prompt.clone()
+    } else {
+        CodingAgentTurn::prompt_with_interrupted_context(
+            payload.prompt.clone(),
+            &interrupted_context,
+        )
+    };
 
     let repos = WorkspaceRepo::find_repos_for_workspace(pool, workspace.id).await?;
     let cleanup_action = deployment.container().cleanup_actions_for_repos(&repos);
@@ -202,6 +227,7 @@ pub async fn follow_up(
     let action_type = if let Some(info) = latest_session_info {
         let is_reset = payload.retry_process_id.is_some();
         ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+            capacity: None,
             prompt: prompt.clone(),
             session_id: info.session_id,
             reset_to_message_id: if is_reset { info.message_id } else { None },

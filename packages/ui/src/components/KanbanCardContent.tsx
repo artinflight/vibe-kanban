@@ -127,6 +127,7 @@ function formatKanbanDescriptionPreview(
 export type KanbanCardContentProps<TTag extends KanbanTag = KanbanTag> = {
   displayId: string;
   title: string;
+  primaryContent?: ReactNode;
   description?: string | null;
   priority: PriorityLevel | null;
   tags: KanbanTag[];
@@ -148,6 +149,7 @@ export type KanbanCardContentProps<TTag extends KanbanTag = KanbanTag> = {
 export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
   displayId,
   title,
+  primaryContent,
   description,
   priority,
   tags,
@@ -186,11 +188,16 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
 
   const tagsDisplay = (
     <>
-      {tags.slice(0, 2).map((tag) => (
-        <KanbanBadge key={tag.id} name={tag.name} color={tag.color} />
+      {tags.slice(0, 1).map((tag) => (
+        <KanbanBadge
+          key={tag.id}
+          name={tag.name}
+          color={tag.color}
+          className="max-w-20"
+        />
       ))}
-      {tags.length > 2 && (
-        <span className="text-sm text-low">+{tags.length - 2}</span>
+      {tags.length > 1 && (
+        <span className="shrink-0 text-sm text-low">+{tags.length - 1}</span>
       )}
       {tagEditProps && tags.length === 0 && (
         <PlusIcon className="size-icon-xs text-low" weight="bold" />
@@ -201,15 +208,25 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
     <button
       type="button"
       onClick={(e) => e.stopPropagation()}
-      className="flex items-center gap-half cursor-pointer hover:bg-secondary rounded-sm transition-colors"
+      className="flex max-w-28 shrink-0 items-center gap-half rounded-sm cursor-pointer hover:bg-secondary transition-colors"
+      title={tags.map((tag) => tag.name).join(', ') || 'Add tag'}
     >
       {tagsDisplay}
     </button>
   );
+  const tagControl = tagEditProps
+    ? (tagEditProps.renderTagEditor?.({
+        allTags: tagEditProps.allTags,
+        selectedTagIds: tagEditProps.selectedTagIds,
+        onTagToggle: tagEditProps.onTagToggle,
+        onCreateTag: tagEditProps.onCreateTag,
+        trigger: tagEditorTrigger,
+      }) ?? tagEditorTrigger)
+    : tagsDisplay;
 
   return (
     <div className={cn('flex flex-col gap-half min-w-0', className)}>
-      {/* Row 1: Task ID + sub-issue indicator + loading dots + more actions */}
+      {/* Row 1: Task ID + compact issue controls */}
       <div className="flex items-center justify-between gap-half">
         <div className="flex items-center gap-half min-w-0">
           {isSubIssue && (
@@ -222,84 +239,18 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
           </span>
           {isLoading && <RunningDots />}
         </div>
-        {onMoreActionsClick && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onMoreActionsClick();
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className={cn(
-              'p-half -m-half rounded-sm text-low hover:text-normal hover:bg-secondary shrink-0',
-              isMobile
-                ? ''
-                : 'invisible opacity-0 group-hover:visible group-hover:opacity-100',
-              'transition-[opacity,color,background-color]'
-            )}
-            aria-label="More actions"
-            title="More actions"
-          >
-            <DotsThreeIcon className="size-icon-xs" weight="bold" />
-          </button>
-        )}
-      </div>
-
-      {/* Row 2: Title + description toggle */}
-      <div className="flex items-start justify-between gap-half">
-        <span className="min-w-0 flex-1 whitespace-normal break-words text-base leading-tight text-normal">
-          {title}
-        </span>
-        {previewDescription && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsDescriptionExpanded((expanded) => !expanded);
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="mt-px shrink-0 rounded-sm p-half text-low transition-colors hover:bg-secondary hover:text-normal"
-            aria-label={t('kanban.toggleCardDescription', {
-              defaultValue: '{{action}} description',
-              action: isDescriptionExpanded ? 'Hide' : 'Show',
-            })}
-            title={t('kanban.toggleCardDescription', {
-              defaultValue: '{{action}} description',
-              action: isDescriptionExpanded ? 'Hide' : 'Show',
-            })}
-          >
-            {isDescriptionExpanded ? (
-              <CaretDownIcon className="size-icon-xs" weight="bold" />
-            ) : (
-              <CaretRightIcon className="size-icon-xs" weight="bold" />
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* Row 3: Description (optional, collapsed by default) */}
-      {previewDescription && isDescriptionExpanded && (
-        <p
-          className={cn(
-            'text-sm text-low m-0',
-            isMobile
-              ? 'leading-tight line-clamp-2'
-              : 'leading-relaxed line-clamp-4'
+        <div className="flex min-w-0 items-center justify-end gap-half">
+          {(tags.length > 0 || tagEditProps) && (
+            <div className="flex shrink-0 items-center gap-half">
+              {tagControl}
+            </div>
           )}
-        >
-          {previewDescription}
-        </p>
-      )}
-
-      {/* Row 4: Priority + Assignee */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-half min-w-0">
           {onPriorityClick ? (
             <button
               type="button"
               onClick={onPriorityClick}
               onMouseDown={(e) => e.stopPropagation()}
-              className="flex items-center cursor-pointer hover:bg-secondary rounded-sm transition-colors"
+              className="flex shrink-0 cursor-pointer items-center rounded-sm transition-colors hover:bg-secondary"
             >
               <PriorityIcon priority={priority} />
               {!priority && (
@@ -318,7 +269,7 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
               onClick={onNeedsReviewFlagToggle}
               onMouseDown={(e) => e.stopPropagation()}
               className={cn(
-                'rounded-sm p-half transition-colors hover:bg-secondary',
+                'shrink-0 rounded-sm p-half transition-colors hover:bg-secondary',
                 needsReviewFlag
                   ? 'text-warning hover:text-warning'
                   : 'text-low hover:text-normal'
@@ -337,45 +288,93 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
               />
             </button>
           )}
-        </div>
-        {onAssigneeClick ? (
-          <button
-            type="button"
-            onClick={onAssigneeClick}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="cursor-pointer hover:bg-secondary rounded-sm transition-colors"
-          >
+          {onAssigneeClick ? (
+            <button
+              type="button"
+              onClick={onAssigneeClick}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="shrink-0 cursor-pointer rounded-sm transition-colors hover:bg-secondary"
+            >
+              <KanbanAssignee assignees={assignees} />
+            </button>
+          ) : (
             <KanbanAssignee assignees={assignees} />
-          </button>
-        ) : (
-          <KanbanAssignee assignees={assignees} />
-        )}
+          )}
+          {onMoreActionsClick && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoreActionsClick();
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className={cn(
+                'shrink-0 rounded-sm p-half -m-half text-low hover:text-normal hover:bg-secondary',
+                isMobile
+                  ? ''
+                  : 'invisible opacity-0 group-hover:visible group-hover:opacity-100',
+                'transition-[opacity,color,background-color]'
+              )}
+              aria-label="More actions"
+              title="More actions"
+            >
+              <DotsThreeIcon className="size-icon-xs" weight="bold" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Row 5: Tags, PRs, Relationships (own row to prevent overflow) */}
-      {(tags.length > 0 ||
-        tagEditProps ||
-        pullRequests.length > 0 ||
-        relationships.length > 0) && (
-        <div className="flex items-center gap-half flex-wrap min-w-0">
-          {tagEditProps ? (
-            (tagEditProps.renderTagEditor?.({
-              allTags: tagEditProps.allTags,
-              selectedTagIds: tagEditProps.selectedTagIds,
-              onTagToggle: tagEditProps.onTagToggle,
-              onCreateTag: tagEditProps.onCreateTag,
-              trigger: tagEditorTrigger,
-            }) ?? tagEditorTrigger)
-          ) : (
-            <>
-              {tags.slice(0, 2).map((tag) => (
-                <KanbanBadge key={tag.id} name={tag.name} color={tag.color} />
-              ))}
-              {tags.length > 2 && (
-                <span className="text-sm text-low">+{tags.length - 2}</span>
+      {/* Row 2: Visible workspace content, or the issue title as a fallback. */}
+      {primaryContent ?? (
+        <div className="flex items-start justify-between gap-half">
+          <span className="min-w-0 flex-1 whitespace-normal break-words text-base leading-tight text-normal">
+            {title}
+          </span>
+          {previewDescription && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDescriptionExpanded((expanded) => !expanded);
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="mt-px shrink-0 rounded-sm p-half text-low transition-colors hover:bg-secondary hover:text-normal"
+              aria-label={t('kanban.toggleCardDescription', {
+                defaultValue: '{{action}} description',
+                action: isDescriptionExpanded ? 'Hide' : 'Show',
+              })}
+              title={t('kanban.toggleCardDescription', {
+                defaultValue: '{{action}} description',
+                action: isDescriptionExpanded ? 'Hide' : 'Show',
+              })}
+            >
+              {isDescriptionExpanded ? (
+                <CaretDownIcon className="size-icon-xs" weight="bold" />
+              ) : (
+                <CaretRightIcon className="size-icon-xs" weight="bold" />
               )}
-            </>
+            </button>
           )}
+        </div>
+      )}
+
+      {/* Row 3: Description (optional, collapsed by default) */}
+      {!primaryContent && previewDescription && isDescriptionExpanded && (
+        <p
+          className={cn(
+            'text-sm text-low m-0',
+            isMobile
+              ? 'leading-tight line-clamp-2'
+              : 'leading-relaxed line-clamp-4'
+          )}
+        >
+          {previewDescription}
+        </p>
+      )}
+
+      {/* Row 4: PRs and relationships */}
+      {(pullRequests.length > 0 || relationships.length > 0) && (
+        <div className="flex items-center gap-half flex-wrap min-w-0">
           {pullRequests.slice(0, 2).map((pr) => (
             <PrBadge
               key={pr.id}

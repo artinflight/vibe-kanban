@@ -65,19 +65,14 @@ import { CODE_HIGHLIGHT_CLASSES } from '@vibe/ui/lib/code-highlight-theme';
 import { LinkNode } from '@lexical/link';
 import { TableNode, TableRowNode, TableCellNode } from '@lexical/table';
 import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
-import {
-  $getRoot,
-  $isParagraphNode,
-  type EditorState,
-  type LexicalEditor,
-  type LexicalNode,
-} from 'lexical';
+import { $getRoot, type EditorState, type LexicalEditor } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useDiffPaths } from '@/shared/stores/useWorkspaceDiffStore';
 import { useSlashCommands } from '@/shared/hooks/useExecutorDiscovery';
 import { useUiPreferencesStore } from '@/shared/stores/useUiPreferencesStore';
 import { useHostId } from '@/shared/providers/HostIdProvider';
 import { cn } from '@/shared/lib/utils';
+import { findSummaryMetadataChildren } from '@/shared/lib/summaryMetadata';
 import { repoApi } from '@/shared/lib/api';
 import { searchTagsAndFiles } from '@/shared/lib/searchTagsAndFiles';
 import { Button } from '@vibe/ui/components/Button';
@@ -256,55 +251,6 @@ function EditorRefPlugin({
     editorRef.current = editor;
   }, [editor, editorRef]);
   return null;
-}
-
-const SUMMARY_METADATA_LABELS = [
-  'PR',
-  'Docs',
-  'Churn',
-  'Human Needed',
-  'Commit/Push',
-  'Preview URL',
-  'Branch',
-  'Worktree',
-] as const;
-const SUMMARY_METADATA_LABEL_VARIANTS: readonly (readonly string[])[] = [
-  [...SUMMARY_METADATA_LABELS, 'Version'],
-  SUMMARY_METADATA_LABELS,
-];
-
-function isSummaryMetadataLine(text: string, label: string): boolean {
-  return text.trimStart().startsWith(`${label}::`);
-}
-
-function findSummaryMetadataChildren(children: LexicalNode[]): LexicalNode[] {
-  for (const labels of SUMMARY_METADATA_LABEL_VARIANTS) {
-    const lastChild = children.at(-1);
-    const lastChildLines = lastChild?.getTextContent().split('\n') ?? [];
-    if (
-      $isParagraphNode(lastChild) &&
-      lastChildLines.length === labels.length &&
-      lastChildLines.every((line, index) =>
-        isSummaryMetadataLine(line, labels[index])
-      )
-    ) {
-      return [lastChild];
-    }
-
-    const candidates = children.slice(-labels.length);
-    if (
-      candidates.length === labels.length &&
-      candidates.every(
-        (node, index) =>
-          $isParagraphNode(node) &&
-          isSummaryMetadataLine(node.getTextContent(), labels[index])
-      )
-    ) {
-      return candidates;
-    }
-  }
-
-  return [];
 }
 
 function CompactSummaryMetadataPlugin() {

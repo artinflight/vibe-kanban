@@ -62,6 +62,8 @@
     "subagent": {
       "defaultType": "서브에이전트"
     },
+    "loadEarlierMessages": "이전 메시지 불러오기",
+    "historyLoadFailed": "메시지를 불러오지 못했습니다. 다시 시도해 주세요.",
     "loadingEarlierMessages": "이전 메시지 불러오는 중"
   },
   "language": {
@@ -507,7 +509,18 @@
     "permissionPlan": "계획",
     "agent": "에이전트",
     "default": "기본값",
-    "model": "모델"
+    "model": "모델",
+    "routing": "Model routing",
+    "routing_manual": "Manual — lock selected model and effort",
+    "routing_shadow": "Recommend only — retain selected model",
+    "routing_auto": "Automatic — select at next execution",
+    "routingFloor": "Minimum capability (routine is experimental)",
+    "routing_routine": "Routine — bounded, independently checked work",
+    "routing_workhorse": "Workhorse — general development",
+    "routing_frontier": "Frontier — high-impact or uncertain work",
+    "routingEscalation": "Allow escalation after a failed execution",
+    "routingAutoLabel": "Automatic · {{floor}}",
+    "routingNeverAstra": "Never use Astra automatically"
   },
   "crashScreen": {
     "title": "문제가 발생했습니다",

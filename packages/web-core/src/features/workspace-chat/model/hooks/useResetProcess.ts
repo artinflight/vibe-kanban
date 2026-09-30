@@ -16,12 +16,16 @@ export interface UseResetProcessResult {
  */
 export function useResetProcess(
   workspaceId: string | undefined,
-  selectedSessionId: string | undefined
+  selectedSessionId: string | undefined,
+  onSuccess?: () => void
 ): UseResetProcessResult {
   const { data: branchStatus } = useBranchStatus(workspaceId);
   const { executionProcessesAll: processes } = useExecutionProcessesContext();
 
-  const resetMutation = useResetProcessMutation(selectedSessionId ?? '');
+  const resetMutation = useResetProcessMutation(
+    selectedSessionId ?? '',
+    onSuccess
+  );
   const isResetPending = resetMutation.isPending;
 
   const hasCodingProcess = useMemo(

@@ -181,6 +181,7 @@ impl McpServer {
             repos: workspace_repos,
             linked_issue,
             executor_config: ExecutorConfig {
+                routing: None,
                 executor: base_executor,
                 variant,
                 model_id: None,

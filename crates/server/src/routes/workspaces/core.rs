@@ -48,6 +48,13 @@ pub async fn update_workspace(
 ) -> Result<ResponseJson<ApiResponse<Workspace>>, ApiError> {
     let pool = &deployment.db().pool;
     let is_archiving = request.archived == Some(true) && !workspace.archived;
+    let is_unarchiving = request.archived == Some(false) && workspace.archived;
+
+    if is_archiving {
+        Workspace::request_worktree_cleanup(pool, workspace.id).await?;
+    } else if is_unarchiving {
+        Workspace::clear_worktree_cleanup_request(pool, workspace.id).await?;
+    }
 
     Workspace::update(
         pool,
@@ -81,8 +88,23 @@ pub async fn update_workspace(
         });
     }
 
-    if is_archiving && let Err(e) = deployment.container().archive_workspace(workspace.id).await {
-        tracing::error!("Failed to archive workspace {}: {}", workspace.id, e);
+    if is_archiving {
+        if let Err(e) = deployment.container().archive_workspace(workspace.id).await {
+            tracing::error!("Failed to archive workspace {}: {}", workspace.id, e);
+        } else if let Err(e) = deployment
+            .container()
+            .retry_archived_workspace_cleanup_after_execution(
+                workspace.id,
+                &db::models::execution_process::ExecutionProcessRunReason::CleanupScript,
+            )
+            .await
+        {
+            tracing::error!(
+                "Failed to start guarded cleanup for archived workspace {}: {}",
+                workspace.id,
+                e
+            );
+        }
     }
 
     Ok(ResponseJson(ApiResponse::success(updated)))

@@ -1,10 +1,342 @@
+## September23: Ownership Handover Source Ready For Review
+
+Branch fix/capacity-cutover-lock implements explicit authenticated capacity
+release/acquire and inert standby startup. Real copied-data HTTP acceptance
+verified same-PID return with latest data and failure recovery; details and
+limitations are in HANDOFF.md and VK_CAPACITY_OWNERSHIP.md. This is branch-local
+implementation evidence, not a staging or production deployment claim.
+Production Green is unchanged. Current Green lacks the endpoints, so adoption
+requires a separately approved initial upgrade and production preparation.
+The operator is working in VK and forbids final cutover without fresh permission.
+
+## September23: Cutover Ownership Barrier
+
+Branch fix/capacity-cutover-lock adds a read-only existing-inode capacity lock
+check with real kernel-lock regression tests. Pausing a lock owner is now
+explicitly rejected by the barrier. Configuration checks alone are not readiness.
+The production read-only probe fails as expected while Green1674994 runs; no
+production settings or process changed. A restart-based alternative passed a
+real-binary, shared-root copied-data rehearsal, but requires a changed operator
+approval and refreshed full package before production. See VK_CAPACITY_DEPLOYMENT.md.
+
+## September 20: chat-scroll frontend live
+
+User-authorized frontend-only publication is complete. Live frontend source
+`3da008db2` retains the prior model-selector fix and adds chat-bottom resume with
+late layout following. Backend unchanged (PID 1674994). Exact validation and
+rollback: [VK_CHAT_SCROLL_DEPLOYMENT.md](VK_CHAT_SCROLL_DEPLOYMENT.md).
+
+## September 20: chat resume behavior
+
+Chat scroll work is tracked in STREAM.md/HANDOFF.md on the feature branch.
+It changes only the shared frontend; production deployment state is unchanged.
+
+## September 15: capacity deployment configuration in VK staging
+
+The post-PR114 missing-configuration fix is now versioned in VK: see
+[VK_CAPACITY_DEPLOYMENT.md](VK_CAPACITY_DEPLOYMENT.md). The deployment tool binds
+both VK/CU settings to the actual candidate service and release guard; missing
+configuration fails readiness. Eleven Python regressions and the current host
+read-only configuration check pass. No runtime configuration or production
+process was changed by this patch. VK::Errors 2 remains a separate stream.
+
+## September 14 late runtime check and chat recovery
+
+Observed production routing points to port 5031 and
+`vibe-kanban-blue-pr114-production-20260914.service` PID 2150526, source 75276e79f.
+The retained Green 4511 and historical Blue 4711 processes are frozen standbys;
+do not treat their listening sockets as healthy active backends or restart them.
+
+VK::Error's relocated clean worktree is restored to its expected managed path;
+the live follow-up handler now passes workspace validation. The original branch,
+commit and conversation are preserved. PR #115 repairs newer Codex error-category
+compatibility; its built candidate passes the captured 154-turn decode and offline
+HTTP same-thread resume. It is not deployed. See [VK_ERRORS_2.md](VK_ERRORS_2.md)
+for evidence and remaining cutover boundaries. Older runtime statements below
+are historical unless corroborated by current service/routing checks.
+
+## PR112 review repairs — September 14
+
+Both P1 findings are repaired in application commit `a6106d2e0`: scheduled resumes
+preserve complete model/reasoning choices (including newer saved chat selections),
+and the fresh frontend retains the live structured goal-checkpoint renderer.
+All14 database tests, six rendering tests, four native/offline model-selection
+runs, fresh desktop/mobile browser acceptance, focused Clippy, UI checks/lint,
+formatting and ops checks passed. Details and limits: [PR112_REVIEW_FIXES.md](PR112_REVIEW_FIXES.md).
+New candidate: `/mnt/vk-storage/codexusage-capacity/pr112-repair/manifest.json`.
+The fixture teardown emitted a Tokio shutdown panic after successful runs; zero
+executions/grants/listeners remained. Production handover is not certified.
+PR112 remains draft/unmerged and undeployed; CU PR7 and separate production
+rollout preparation/approval remain required. Older review/readiness notes below
+are historical. Do not deploy the superseded pre-repair VK package.
+
+## September 14 Review Status
+
+PR112 requires changes before merge; its prepared release is not approved for
+deployment. See [PR112_REVIEW_FIXES.md](PR112_REVIEW_FIXES.md): preserve explicit
+per-chat model/reasoning on scheduled resume and retain the live goal-checkpoint
+frontend fix. Existing passing tests do not close these findings. This is a
+documentation handoff, not an application fix or production cutover approval.
+
+## Current delivery continuation
+
+Launcher/provider binding, build-cache support and native stop/resume pass 65
+executor tests plus real acceptance. See VK_UNUSED_CAPACITY.md for exact evidence.
+Release packaging/rehearsal remain open; no production cutover has occurred.
+
+## Scheduled build directories — September 14
+
+`VK_CAPACITY_BUILD_ROOTS` is an optional JSON array of at most eight existing
+absolute directories, configured on the VK service by the administrator. They are
+canonicalized, deduplicated, and checked against the permission directory, guard
+and Codex home before launch. Roots inside or containing those protected paths
+are rejected. The effective native writable-root list must match exactly before
+goal activation; a goal/profile cannot add its own writable roots. The first
+configured directory supplies TMPDIR only for scheduled processes, so compilers
+can create temporary files without opening unrestricted /tmp access.
+
+Use narrowly scoped output/cache directories on mounted SSD. In particular, place
+the deployed guard outside the writable Cargo target. Registry/dependency caches
+must be prepared during ordinary work; scheduled shell networking remains off.
+Existing project build commands still need their cache environment to agree with
+the configured roots. This is not permission to make all of /home or /mnt writable.
+
+Real native acceptance now compiles a Rust program into an approved external
+cache and executes it successfully during both managed resumes. TCP and systemd
+socket creation remain denied, outside writes fail, and a detached child stops.
+The full seven-row native suite passes at
+`/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-y5tknu8y/results.json`.
+All 64 executor unit tests passed after adding build-root admission coverage.
+Formatting and ops governance passed. The feature remains undeployed.
+
+## September 14 enforcement and reset acceptance
+
+Scheduled admission now verifies the effective native permission profile before
+activating the goal: only its workspace is writable, shell networking is disabled,
+and external MCP/browser/app/plugin tools and delegated agents are disabled.
+Resolved inherited MCP servers must each be disabled; an empty override table
+merges with inherited entries and is insufficient. Runtime MCP inventory is checked.
+Canonical path checks reject a writable workspace containing the lease, guard or
+Codex home, including symlink aliases. Account-home overrides and unverifiable
+alternate native profiles/hooks are rejected. Ordinary resume restores normal
+permissions; the temporary restriction is not a permanent goal setting.
+
+Real installed-Codex acceptance passed at
+`/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-9tbq06x9/results.json`:
+local edits work, TCP/systemd sockets are denied, outside writes fail, a detached
+TERM-ignoring child stops, inherited MCP never starts, delegated launch is rejected,
+and the same goal/evidence resumes. Tool advertisement alone is not admission:
+the native response still advertises a multi-agent namespace, while the attempted
+launch is rejected. Two policy tests cover broadened/ignored settings and symlinks.
+The earlier 62 executor tests passed; the new scope test raises this to 63.
+
+Actual CU/VK crash and restart acceptance is recorded in
+`/mnt/vk-storage/codexusage-capacity/vk-continuation-http-9uy_k779/restart-results.json`.
+SIGKILL of the isolated VK backend left OS enforcement effective (583ms measured
+stop), restart did not replay old permission, and fresh authority resumed the same
+goal. The final server build passed. The real HTTP reset-boundary driver also
+passed: renewed work stops at weekly-reset shutdown headroom, and synthetic fresh
+weekly quota cannot reopen the preceding overnight period. Evidence is
+`reset-boundary-results.json` in that same HTTP fixture directory. No reset credit
+was consumed. The isolated backend on 49173 is stopped and its grant was revoked.
+
+Enforcement is sufficiently validated; delivery remains open. Remaining delivery
+work includes a clean source/release bundle, representative development-workflow
+validation, current-runtime compatibility, deployment rehearsal and final handoff.
+The current local-only profile cannot write external shared build caches, including
+VK's required shared Cargo target. Do not claim arbitrary existing development
+goals can run unchanged: decide and validate narrowly scoped build-cache support
+before release. Network/external-tool work requires ordinary execution. VK
+foreground launches preempt background work; outside-client usage reduces the
+same quota floor, but instant outside-client activity detection is not implemented.
+Physical phone/live Rainmeter rendering remains unverified.
+
+Read-only service inventory confirms live Blue 4711/4712 and retained Green
+4511/4512. No production service, route, state or reset was changed. Final cutover
+requires the explicit approval in VK_BACKEND_RESTART_PROTOCOL.md after a concrete
+candidate and rehearsal; preparation is not cutover authorization.
+
+## September 14 CU scheduler and HTTP acceptance checkpoint
+
+CU now implements durable shared scheduling and private owner controls. Real
+isolated VK HTTP/SQLite/systemd/native Codex tests passed long-turn stale-quota
+interruption, same-goal/evidence resume, independent expiry after CU supervision
+loss, restart reconciliation, shared quota-floor stop and zero reset calls.
+Artifacts: `/mnt/vk-storage/codexusage-capacity/vk-continuation-http-9uy_k779`.
+CU drivers: `ops/test-capacity-integration.mjs` and `ops/test-capacity-controls.mjs`.
+Browser selection/window/owner checks passed at desktop and mobile sizes.
+
+VK source changes after controller commit: status reports running IDs and process
+states; start reloads workspace after ensure_container_exists (real HTTP exposed
+the stale container_ref bug). Candidates and actual native admission preserve
+needs-input/budget pauses. Native regression passed for those final changes, including needs-input and
+budget-limit rejection: vk-continuation-acceptance-06p90z_e/results.json.
+
+Remaining: prevent/enforce remote or external worker escapes; define honest
+interactive priority for clients outside VK; broader cross-system reset/restart
+acceptance and final prepared deployment. Keep production disabled. This feature
+worktree's debug dev_assets holds only isolated fixture data, never live data.
+The isolated 127.0.0.1:49173 backend is stopped; no running DB executions or
+outstanding grants remain. Preserve SSD evidence.
+No production VK service, database, frontend pointer or account allowance changed.
+
 # STATE.md
+
+## Source work: unused daily capacity
+
+The isolated `feature/unused-capacity` branch adds bounded background execution
+enforcement for CodexUsage. It is not deployed or enabled. Integration and
+remaining release gates are documented in `VK_UNUSED_CAPACITY.md`. Existing
+runtime statements below are unchanged; verify actual routing before deployment.
+
+**LATEST:** September12 V3 cutover is live on new Blue 4711/4712; original Green
+PID2669659 is frozen for same-latest-data cutback. Read `VK_BLUE_LIVE_20260912.md`
+for actual acceptance, backups, known UI/historical gaps and recovery constraints.
+Older runtime/readiness statements below are historical, not launch instructions.
+
+## Source compatibility: completed conversation paging
+
+The completed-log paging frontend requires a matching backend with the
+`/api/execution-processes/{id}/log-history` route. It cannot be enabled by a
+frontend-only asset swap. See `VK_LONG_THREADS.md` for the source contract and
+validation boundaries; this note makes no deployment claim.
 
 ## Current Objective
 
 - Keep the local Vibe Kanban install stable, local-only, recoverable, and usable for day-to-day project work without sidebar clutter.
 
 ## Confirmed Current State
+
+- 2026-09-11 online readiness: isolated old/new/old handover passed same-thread
+  continuation, steering versus Stop, native goals, saved-message/attachment
+  retention and desktop/mobile reconnect. Measured switch 35.07 seconds and
+  rollback 5.86 seconds; not a five-second guarantee. Green remains production.
+  Read `VK_BLUE_READINESS_20260911.md` for scope, backup verification, historical
+  exceptions and the separate approval/live-acceptance boundaries.
+
+- 2026-09-11 latest authority: `VK_BACKEND_RESTART_PROTOCOL.md` establishes
+  online preparation, isolated Blue testing, a measured interruption and fresh
+  explicit cutover approval. The attempted switch aborted before production Blue
+  or the final snapshot. Green is active on the same data with guarded rollback
+  artifact `58263e051`; application baseline is `c184c75e5` with PR104's attachment
+  protection, followed by documentation-only staging `3b3a65855`.
+  Green frontend remains the `20260831T1436Z-staging-main-84a55972d` release.
+  Historical runtime bullets below are not current deployment instructions.
+
+- 2026-09-11 planning: `VK_RESTART_LESSONS_LEARNED.md` records the incident
+  analysis and proposed new-blue handover. Green remains production; retired blue
+  is not the new candidate. The older workflow paths are historical. A reversible
+  route change is not a lossless rollback after new writes; isolation, fencing
+  and compatible state recovery still require implementation and rehearsal.
+
+- 2026-09-11 autonomous Codex goals are implemented and runtime-validated in the
+  staging application baseline, not deployed to green. The native engine owns the
+  objective and scheduling; VK adds a durable checklist and bounded progress
+  guard. The recovery-first revision redirects stalled work automatically before
+  its last-resort failed-recovery handoff; productive runs have no fifty-turn cap.
+  No per-repository configuration is required. A real seven-turn task and
+  deterministic refinement/input/tool scenarios passed. Other executor workflows
+  remain unchanged. See `VK_AUTONOMOUS_GOALS.md` and the latest handoff.
+
+- 2026-09-01 active Codex correction regression is corrected in source:
+  - the first `turn/steer` integration silently used the normal queued-follow-up
+    path when the live client or active turn ID was not immediately available
+  - VK now waits up to two seconds for active-turn registration, then either
+    steers that turn or returns a visible retryable conflict
+  - Codex corrections cannot execute later as end-of-turn queued follow-ups;
+    non-Codex agents retain their existing queue behavior
+  - this requires a matching backend build and restart; no live deploy,
+    frontend swap, restart, or data mutation occurred
+
+- 2026-08-31 durable local UI state is prepared for the next coordinated
+  backend/frontend deployment:
+  - project navigation order moves from shared scratch JSON into one atomic,
+    revision-checked record with append-only history
+  - workspace card colors move into independently revisioned records with
+    per-workspace history
+  - saved messages retain their dedicated table/API and now use optimistic
+    revisions plus insert/update/delete history
+  - migration `20260831000000` imports existing scratch values; the compatible
+    frontend seeds browser-only workspace colors and omits all three fields from
+    later scratch rewrites once the durable API is available
+  - the saved-message migration was renumbered to `20260829000001` to resolve
+    its pre-existing SQLx version collision with local Kanban tags
+  - a disposable copy of the live green database migrated successfully with
+    13 project-order IDs and all nine saved messages
+  - no backend restart, live frontend swap, or live database mutation occurred
+
+- 2026-08-31 saved-message compatibility hydration is live:
+  - the running `0.1.42` backend does not expose the durable
+    `/api/saved-chat-messages` routes; GET falls through to frontend HTML and
+    PUT returns `405`
+  - PR `#99` rebase-merged into `staging` as `a1ccb73e3`
+  - the frontend now hydrates saved messages independently of scratch-stream
+    availability and retains scratch persistence until a successful durable
+    API read proves backend support
+  - live frontend release:
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tsaved-messages-a1ccb73e31`
+  - live assets are `/assets/index-Dw4SbUxk.js` and
+    `/assets/index-QO1t6__J.css`
+  - all nine saved messages remain in the compatibility sidecar with SHA-256
+    `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - backend PID remained `3112780`; no backend restart or migration occurred
+
+- 2026-08-31 workspace colors persist across refreshes without a backend
+  restart:
+  - the running backend still strips the newly typed `workspace_colors` field
+    until its next normal restart, so the frontend mirrors selections into
+    browser storage and merges them during UI-preference hydration
+  - PR `#97` rebase-merged into `staging` as `98eb580f3`
+  - live frontend release:
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tworkspace-color-refresh-98eb580f3`
+  - live assets are `/assets/index-DlRW8gpD.js` and
+    `/assets/index-QO1t6__J.css`
+  - all nine saved messages remain in the compatibility sidecar with SHA-256
+    `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - backend PID remained `3112780`; no backend restart or migration occurred
+
+- 2026-08-30 light-theme workspace card tint correction is live:
+  - the neutral `bg-panel` utility was emitted after the light workspace tint
+    and overrode it, leaving only the colored inset edge visible
+  - selected workspace colors now explicitly override the neutral background
+    in light and dark themes and preserve a slightly stronger tint on hover
+  - PR `#93` rebase-merged into `staging` as `b4f57707f`
+  - live frontend release:
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260830Tlight-workspace-tint-b4f57707f`
+  - the release retains all nine saved messages in the compatibility sidecar;
+    its SHA-256 is `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - backend PID remained `3112780`; no backend restart or migration occurred
+
+- 2026-08-29 colored Kanban workspaces are live:
+  - linked workspace cards provide a three-dot pastel color picker and clear
+    action in Kanban
+  - colors persist through UI-preferences scratch and adapt their tint strength
+    for light and dark themes
+  - PR `#91` rebase-merged into `staging` as `4a314b61b`
+  - frontend release:
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcolored-workspaces-4a314b61b`
+  - live assets: `/assets/index-CbeyxDjT.js` and
+    `/assets/index-BeAK0y4J.css`
+  - the homelab nginx frontend route was restored to the dedicated static
+    service on `4313`; `/api/` and `/v1/` remain on green `4511`
+  - backend PID remained `3112780`; no backend restart or migration occurred
+
+- 2026-08-29 disk-capacity policy prepared on `vk/156f-vk-disk-space-is`:
+  - VK Cargo incremental compilation is disabled in repository configuration
+  - green runtime rules require one dedicated shared Cargo target outside
+    caches, worktrees, attachments, databases, and session trees
+  - manual archive now joins In Staging and Done in requesting guarded worktree
+    cleanup
+  - automatic whole-worktree cleanup preserves pinned, running,
+    process-referenced, Git-dirty, and unverifiable worktrees
+  - no live green restart or runtime environment change has been performed
+
+- 2026-08-29 compact Kanban metadata and responsive project rail are live:
+  - PR `#85` rebase-merged into `staging` as `46014edcf`
+  - frontend release: `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260829Tcompact-cards-project-rail-46014edcf`
+  - live JS: `/assets/index-Cv38gUEL.js`, sha256 `3a2a1ac59a204c5923e08e48544b5f0a8180eabf3eb31db9e3084b478fcb0e67`
+  - backend PID remained `3112780`; no restart occurred
+  - rollback: `/home/mcp/backups/vk-frontend-fixed-pre-compact-rail-20260829T094000Z`
 
 - 2026-08-28 restart incident lessons are documented in:
   - `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
@@ -20,8 +352,8 @@
   state may still be recoverable from Desktop archives and must be imported
   selectively, not blindly restored over green.
 - Current green frontend is pinned to:
-  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260826Tstaging-main-fc312a073`
-  with assets `index-BiiblWjF.js` and `index-DnGjt7Sn.css`.
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tsaved-messages-a1ccb73e31`
+  with assets `index-Dw4SbUxk.js` and `index-QO1t6__J.css`.
 - That frontend release has a live `index.html` saved-message shim and
   `/vk-saved-chat-messages.json` sidecar because the running backend strips
   `saved_chat_messages` from `UI_PREFERENCES` API/WebSocket serialization.
@@ -63,6 +395,19 @@
     `20260714Tbrowser-notifications`
   - rollback backup is
     `/home/mcp/backups/profiles-live-pre-codex-sol-xhigh-20260714.json`
+- 2026-08-31 left-nav project reorder is live without backend restart:
+  - live frontend pointer is
+    `/home/mcp/.local/share/vibe-kanban/frontend-dist/current -> /home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260831Tleft-nav-reorder-4538b96c`
+  - live frontend asset is `/assets/index-LxC8hBXR.js`, sha256
+    `710900a655030796ac2914ecd1805b64d23b20b6429c852628772f5c0615c441`
+  - left-nav project icons remain fixed-size and the project list scrolls, so
+    drag reorder hitboxes stay usable with many projects
+  - saved-message sidecar was retained with SHA-256
+    `b46579c2d1f41634828018825a61c3f6f8daf7718d5bc3d08c667d74ad1b468d`
+  - live regression smoke now expects green service
+    `vibe-kanban-green.service`, the current project order, the attachment
+    upload route, `workspace_colors`, and left-nav reorder markers
+  - backend PID remained `3112780`; no backend restart or migration occurred
 - 2026-06-26 multi-line rich clipboard paste hotfix is live without backend restart:
   - live frontend pointer is `/home/mcp/.local/share/vibe-kanban/frontend-dist/current -> /home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260626Tmultiline-rich-paste`
   - live frontend asset is `/assets/index-DXMultilinePaste.js`, sha256 `bdbd9860c6a240e1256dabc8715d42ab4b96c8f1c098d6e283f3d2bdd972f268`
@@ -1129,3 +1474,35 @@ Codex follow-up state, 2026-04-20:
   - `missing_in_isolated_but_found_shared = 0`
   - `missing_both = 0`
 - Do not restart VK just for this repair; no restart is needed when only copying Codex rollout files and active agents may be running.
+# September 11 V2 Recovery Supersedes Earlier Readiness
+
+The approved23:14 cutover returned to guarded Green before final capture or Blue
+activation due to an already removed transient service being stopped twice.
+Green recovery checks passed on the same latest data. Readiness is withdrawn;
+see VK_BLUE_READINESS_20260911.md. No old database was restored. Historical
+recovery exceptions and new-feature live acceptance remain open.
+
+## September 21: scheduled resume wire-status correction
+
+The installed app-server returns `usageLimited`; SQLite stores `usage_limited`.
+The capacity executor must accept the wire spelling. Genuine checkpoint input
+requests, completed checklists, `budgetLimited`, `blocked` and unknown statuses
+remain rejected with distinct reasons. Keep quota authorization and independent
+execution deadlines unchanged. Regression uses the captured response shape.
+
+
+## Capacity workflow invariants — September 21
+
+Selected idle goals allow ordinary continuation. Manual messages to a managed
+active goal revoke permission and verify its execution unit has exited before
+opening a normal continuation; selection stays saved. Admission precedes executor
+slot acquisition, including the active-turn queue route. Native slash commands
+must reach the executor parser unchanged even after interrupted turns. Candidate
+and pre-grant checks agree with native goal state/identity; SQLite snake_case is
+explicitly translated to app-server camelCase. See CAPACITY_WORKFLOW_AUDIT.md
+for final-source native/systemd/CU acceptance and the operator-owned deployment.
+
+September 30 branch fix: capacity-managed native goal resumes preserve recovery
+history and accumulated turns; manual resume behavior is unchanged. See HANDOFF
+for validation/delivery status. This does not change the Chat Orchestration
+workspace implementation or remove the independent capacity stop protections.

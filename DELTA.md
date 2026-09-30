@@ -1360,3 +1360,12 @@ assessment, consented operator-reported validation/risk escalation, preserved
 manual constraints and policyVersion2 telemetry. Exact low-effort probes passed
 for 5.6 Luna and Sol6; no repeated V1 native trials or production changes.
 See VK_AUTOSWITCH_FULL_ROUTER.md for rollout gates and qualification limitations.
+
+## 2026-09-30 — V2 follow-up qualification and offline recommendations
+
+Resumed preserved V2 without rebasing or touching V1 PR127/deployment. Persisted
+optional assessed envelope, retained stricter follow-up qualification, preserved
+cheap exact continuations, and repaired lexical low-risk evidence. Added a
+read-only JSONL recommendation example using actual policy/availability admission.
+Seventeen routing tests, type generation, web-core checking and focused Clippy
+passed. See VK_AUTOSWITCH_FULL_ROUTER.md for remaining live Shadow/release gates.

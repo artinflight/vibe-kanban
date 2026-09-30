@@ -49,6 +49,9 @@ pub struct RoutingDecision {
     pub mode: RoutingMode,
     pub floor: CapabilityFloor,
     pub reason: String,
+    /// Persist qualification context independently of human-readable reasons.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub assessed_envelope: Option<String>,
     pub requested_model: Option<String>,
     pub selected_model: Option<String>,
     pub selected_effort: Option<String>,
@@ -191,6 +194,7 @@ pub fn resolve_action(
         if let Err(error) = result {
             let c = config(action).expect("shadow policy has config");
             action.routing_decision = Some(Box::new(RoutingDecision {
+                assessed_envelope: None,
                 version: 2,
                 id: uuid::Uuid::new_v4().to_string(),
                 mode: RoutingMode::Shadow,
@@ -299,7 +303,25 @@ fn resolve_action_inner(
         action.routing_decision = Some(decision);
         return Ok(());
     }
-    let assessment = crate::routing_assessment::assess(prompt);
+    let prior_envelope = previous.and_then(|p| {
+        p.routing_decision
+            .as_ref()
+            .and_then(|d| d.assessed_envelope.clone())
+            .or_else(|| match &p.typ {
+                ExecutorActionType::CodingAgentInitialRequest(r) => Some(
+                    crate::routing_assessment::assess(&r.prompt)
+                        .envelope
+                        .to_owned(),
+                ),
+                ExecutorActionType::CodingAgentFollowUpRequest(r) => Some(
+                    crate::routing_assessment::assess(&r.prompt)
+                        .envelope
+                        .to_owned(),
+                ),
+                _ => None,
+            })
+    });
+    let assessment = crate::routing_assessment::assess_follow_up(prompt, prior_envelope.as_deref());
     let mut floor = policy.floor.max(assessment.floor);
     if let Some(prior) = previous.and_then(|p| p.routing_decision.as_ref()) {
         floor = floor.max(prior.floor); // Never silently lower an established session floor.
@@ -356,20 +378,21 @@ fn resolve_action_inner(
         }
         .into();
     }
+    let envelope = if failed {
+        if floor == CapabilityFloor::Frontier {
+            "protected"
+        } else {
+            "normal"
+        }
+    } else {
+        assessment.envelope
+    };
     let result = load_availability().and_then(|availability| {
         let models = model_policies()?;
         let chosen = choose_assessed(
             &policy,
             floor,
-            if failed {
-                if floor == CapabilityFloor::Frontier {
-                    "protected"
-                } else {
-                    "normal"
-                }
-            } else {
-                assessment.envelope
-            },
+            envelope,
             &models,
             &availability,
             chrono::Utc::now().timestamp(),
@@ -377,6 +400,7 @@ fn resolve_action_inner(
         Ok((chosen, availability))
     });
     let mut decision = RoutingDecision {
+        assessed_envelope: Some(envelope.into()),
         version: 2,
         id: uuid::Uuid::new_v4().to_string(),
         mode: policy.mode,
@@ -651,6 +675,59 @@ mod tests {
     }
 
     #[test]
+    fn shadow_followups_persist_context_and_never_change_execution_settings() {
+        let (mut policy, _, _) = fixture();
+        policy.mode = RoutingMode::Shadow;
+        policy.floor = CapabilityFloor::Assessed;
+        let mut prior = action(Some(policy.clone()));
+        if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut prior.typ {
+            r.prompt = "Investigate an intermittent failure".into();
+        }
+        // Covers old persisted actions that have no structured envelope.
+        for prompt in ["Fix the typo in README.md", "continue", "please continue"] {
+            let template = action(Some(policy.clone()));
+            let mut next = ExecutorAction::new(
+                ExecutorActionType::CodingAgentFollowUpRequest(
+                    crate::actions::coding_agent_follow_up::CodingAgentFollowUpRequest {
+                        prompt: prompt.into(),
+                        executor_config: config(&template).unwrap().clone(),
+                        session_id: "existing-thread".into(),
+                        reset_to_message_id: None,
+                        working_dir: None,
+                        capacity: None,
+                    },
+                ),
+                None,
+            );
+            let before = serde_json::to_value(&next.typ).unwrap();
+            resolve_action(&mut next, Some(&prior), false).unwrap();
+            assert_eq!(serde_json::to_value(&next.typ).unwrap(), before);
+            assert_eq!(
+                next.routing_decision
+                    .as_ref()
+                    .unwrap()
+                    .assessed_envelope
+                    .as_deref(),
+                Some("complex")
+            );
+            // Exercise the actual persistence boundary between each follow-up.
+            prior = serde_json::from_value(serde_json::to_value(next).unwrap()).unwrap();
+        }
+        let event = crate::routing_telemetry::decision(
+            &prior,
+            "execution",
+            "session",
+            "workspace",
+            None,
+            "2026-09-30T00:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(event["schema"], "vk.routing.v1");
+        assert_eq!(event["policyVersion"], "vk-autoswitch-v2");
+        assert!(event["taskId"].is_null());
+    }
+
+    #[test]
     fn reported_validation_failure_requires_consent_before_inference() {
         let (policy, _, _) = fixture();
         let previous = action(None);
@@ -704,6 +781,7 @@ mod tests {
         let (mut policy, _, _) = fixture();
         let mut previous = action(None);
         previous.routing_decision = Some(Box::new(RoutingDecision {
+            assessed_envelope: None,
             version: 1,
             id: "prior".into(),
             mode: RoutingMode::Auto,

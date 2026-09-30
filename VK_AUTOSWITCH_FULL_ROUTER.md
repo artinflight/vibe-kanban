@@ -114,7 +114,7 @@ pairs stay Shadow until explicitly promoted. No 24–40 task benchmark is requir
 Release QA and the existing explicit production-cutover approval remain gates;
 accepted V1 dirty-state/native/CU acceptance is not repeated by this change.
 
-## Validation for this change
+## Validation for initial V2
 
 Fourteen focused Rust routing/assessment/telemetry tests passed on the final
 source, including downward pair choice, unsupported/stale proof, shadow-only
@@ -127,3 +127,58 @@ frontend check lacked recovered dependencies; restoring dependencies and rerunni
 passed. Two new low-effort native probes passed; accepted V1 seven-model/execution
 trials were not repeated. Full workspace tests, rebuilt browser/deployment QA and
 live Shadow task recommendations were not performed in this implementation turn.
+
+## V2 continuation after V1 staging merge
+
+V1 is integrated separately through PR127. This work stays on the preserved V2
+branch; it does not rebase onto staging, change its release package or activate a
+runtime. The CU wire contract remains byte-for-byte unchanged.
+
+Qualification context is now persisted as optional `assessed_envelope` in VK's
+RoutingDecision. Follow-ups retain the stricter envelope, not just its coarse
+Routine/Workhorse/Frontier floor. This prevents a complex task's minor follow-up
+from silently admitting a pair qualified only for normal/mechanical work. Exact
+continuations such as “continue” retain a bounded task's envelope rather than
+unnecessarily upgrading it. Older decisions fall back to assessing their stored
+prompt. An unknown persisted envelope fails conservatively to protected work.
+Escalations persist the envelope actually used for candidate qualification.
+
+Low-risk evidence now uses lexical boundaries: “latest” does not count as a test,
+and “splinter” does not count as lint. Bug/refactor/parser/algorithm work cannot
+enter the bounded UI envelope merely by also mentioning a button or unit test.
+These rules are conservative admission heuristics, not proof of code correctness.
+
+For inexpensive policy inspection, `cargo run -p executors --example
+routing_recommend` reads JSONL from stdin. Example input:
+
+```json
+{"prompt":"Fix button spacing in one component and run snapshot tests"}
+{"prompt":"Continue.","previous_envelope":"bounded"}
+{"prompt":"Change authentication","denied_models":["gpt-6-astra"]}
+```
+
+Use the candidate's actual `CODEX_HOME`, launcher environment and
+`VK_CODEX_ROUTING_AVAILABILITY`. The command uses the same policy and availability
+checks, and reports Auto and Shadow candidates separately. Missing/stale proof is
+reported as a blocker, never replaced with fictional execution evidence. Output
+omits prompts, does not emit CU execution records and is explicitly offline. It
+cannot replace live Shadow acceptance. Failure reports require VK's persisted
+execution history and produce a blocker in this command.
+
+The remaining rollout gate is still a matching V2 candidate and a few real Shadow
+recommendations, followed by ordinary release QA/approval. V1 deployment is owned
+separately. No production usage-savings claim is made from offline recommendations.
+
+Current continuation validation: all 17 focused routing/assessment/telemetry tests,
+web-core TypeScript, generated shared types and focused executor/example Clippy
+passed. Tests cover persisted multi-follow-up context, protected subsystem names,
+false lexical validation evidence, unchanged Shadow execution settings and nullable
+CU task identity. No native executor lifecycle code or CU producer was changed;
+accepted V1 native acceptance was not repeated.
+
+The built recommendation command passed seven bounded smoke cases against the
+existing exact-launcher proof: mechanical Luna5.6/low, bounded Luna6/medium,
+validated fixes Sol6/medium, retained cheap continuation, retained complex context,
+Astra exclusion pause and failure-context refusal. Experimental Sol6/low appeared
+only as the bounded Shadow candidate. No new inference or live execution occurred.
+Evidence: `/mnt/vk-storage/vk-model-autoswitch-20260930/v2-continuation/`.

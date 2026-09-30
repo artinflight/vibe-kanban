@@ -302,10 +302,11 @@ export function ModelSelectorContainer({
     onOverrideChange({
       model_id: modelOverride,
       routing: {
-        mode: 'manual',
-        floor: 'workhorse',
+        floor: 'assessed',
         denied_models: [],
         allow_escalation: false,
+        ...executorConfig?.routing,
+        mode: 'manual',
       },
     });
 
@@ -336,10 +337,11 @@ export function ModelSelectorContainer({
     onOverrideChange({
       reasoning_id: reasoningId,
       routing: {
-        mode: 'manual',
-        floor: 'workhorse',
+        floor: 'assessed',
         denied_models: [],
         allow_escalation: false,
+        ...executorConfig?.routing,
+        mode: 'manual',
       },
     });
     pendingReasoningRef.current = reasoningId;
@@ -496,7 +498,7 @@ export function ModelSelectorContainer({
                     onOverrideChange({
                       routing: {
                         mode,
-                        floor: executorConfig?.routing?.floor ?? 'workhorse',
+                        floor: executorConfig?.routing?.floor ?? 'assessed',
                         denied_models:
                           executorConfig?.routing?.denied_models ?? [],
                         allow_escalation:
@@ -514,25 +516,25 @@ export function ModelSelectorContainer({
                     <DropdownMenuLabel>
                       {t('modelSelector.routingFloor')}
                     </DropdownMenuLabel>
-                    {(['routine', 'workhorse', 'frontier'] as const).map(
-                      (floor) => (
-                        <DropdownMenuItem
-                          key={floor}
-                          icon={
-                            executorConfig.routing?.floor === floor
-                              ? CheckIcon
-                              : undefined
-                          }
-                          onClick={() =>
-                            onOverrideChange({
-                              routing: { ...executorConfig.routing!, floor },
-                            })
-                          }
-                        >
-                          {t(`modelSelector.routing_${floor}`)}
-                        </DropdownMenuItem>
-                      )
-                    )}
+                    {(
+                      ['assessed', 'routine', 'workhorse', 'frontier'] as const
+                    ).map((floor) => (
+                      <DropdownMenuItem
+                        key={floor}
+                        icon={
+                          executorConfig.routing?.floor === floor
+                            ? CheckIcon
+                            : undefined
+                        }
+                        onClick={() =>
+                          onOverrideChange({
+                            routing: { ...executorConfig.routing!, floor },
+                          })
+                        }
+                      >
+                        {t(`modelSelector.routing_${floor}`)}
+                      </DropdownMenuItem>
+                    ))}
                     <DropdownMenuItem
                       icon={
                         executorConfig.routing.denied_models.includes(

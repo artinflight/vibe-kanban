@@ -1571,12 +1571,14 @@ pub fn normalize_logs(
                         timestamp: None,
                         entry_type: NormalizedEntryType::SystemMessage,
                         content: format!(
-                            "Model routing ({}): {} · {}; recommendation: {}; reason: {}",
+                            "Model routing ({}): {} · {}; recommendation: {}; reason: {}; floor: {}; escalated: {}",
                             decision["mode"].as_str().unwrap_or("unknown"),
                             params["resolved_model"].as_str().unwrap_or("unknown"),
                             params["resolved_effort"].as_str().unwrap_or("default"),
                             decision["selected_model"].as_str().unwrap_or("unavailable"),
-                            decision["reason"].as_str().unwrap_or("unknown")
+                            decision["reason"].as_str().unwrap_or("unknown"),
+                            decision["floor"].as_str().unwrap_or("unknown"),
+                            decision["escalated"].as_bool().unwrap_or(false)
                         ),
                         metadata: Some(event.clone()),
                     },

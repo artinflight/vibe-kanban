@@ -516,6 +516,7 @@
     "routing_auto": "Automatic — select at next execution",
     "routingFloor": "Minimum capability (routine is experimental)",
     "routing_routine": "Routine — bounded, independently checked work",
+    "routing_assessed": "Automatic — assess this task",
     "routing_workhorse": "Workhorse — general development",
     "routing_frontier": "Frontier — high-impact or uncertain work",
     "routingEscalation": "Allow escalation after a failed execution",

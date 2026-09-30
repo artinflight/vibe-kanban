@@ -70,7 +70,7 @@ pub fn decision(
             "workspaceId": workspace, "taskId": task, "sessionId": session,
             "mode": d.map(|d| d.mode).unwrap_or(crate::routing::RoutingMode::Manual),
             "action": if escalate { "escalate" } else if changed { "switch" } else { "initial" },
-            "policyVersion": "vk-autoswitch-v1", "parentExecutionId": parent,
+            "policyVersion": if d.is_some_and(|d| d.version >= 2) { "vk-autoswitch-v2" } else { "vk-autoswitch-v1" }, "parentExecutionId": parent,
             "transitionId": if escalate || changed { Some(format!("transition:{route}")) } else { None },
             "reasonCode": d.and_then(|d| d.reason.split(':').next()).unwrap_or("explicit_manual"),
             "selected": { "model": d.map_or(config.model_id.as_ref(), |d| d.selected_model.as_ref()),

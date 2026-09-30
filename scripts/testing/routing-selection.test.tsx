@@ -47,6 +47,7 @@ test("saved per-chat routing survives hydration, explicit model choice locks it"
     current.setOverrides({ model_id: "gpt-6-astra", reasoning_id: "high" }),
   );
   assert.equal(current.executorConfig?.routing?.mode, "manual");
+  assert.equal(current.executorConfig?.routing?.floor, "workhorse");
   assert.equal(current.executorConfig?.model_id, "gpt-6-astra");
   assert.equal(current.executorConfig?.reasoning_id, "high");
   act(() => renderer!.unmount());
@@ -66,5 +67,17 @@ test("explicit effort selection locks the model; routing can be re-enabled expli
   );
   assert.equal(current.executorConfig?.routing?.mode, "shadow");
   assert.equal(current.executorConfig?.reasoning_id, "high");
+  act(() => renderer!.unmount());
+});
+
+ test("manual lock retains hydrated exclusions and automatic minimum", () => {
+  let renderer: ReactTestRenderer;
+  const scratch = { ...automatic, routing: { ...automatic.routing!, floor: "assessed" as const, denied_models: ["gpt-6-astra"], allow_escalation: true } };
+  act(() => { renderer = create(<Harness scratch={scratch} />); });
+  act(() => current.setOverrides({ reasoning_id: "high" }));
+  assert.equal(current.executorConfig?.routing?.mode, "manual");
+  assert.equal(current.executorConfig?.routing?.floor, "assessed");
+  assert.deepEqual(current.executorConfig?.routing?.denied_models, ["gpt-6-astra"]);
+  assert.equal(current.executorConfig?.routing?.allow_escalation, true);
   act(() => renderer!.unmount());
 });

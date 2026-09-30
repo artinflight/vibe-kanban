@@ -10,6 +10,7 @@ pub mod mcp_config;
 pub mod model_selector;
 pub mod profile;
 pub mod routing;
+pub mod routing_assessment;
 pub mod stdout_dup;
 pub mod systemd_run;
 

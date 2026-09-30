@@ -1,3 +1,39 @@
+## Automatic assessment / qualified-pair router
+
+The operator accepted V1 architecture and integration; do not reopen its prior
+acceptance gates as a new research program. V2 implementation is on the same
+recovered branch. Read [VK_AUTOSWITCH_FULL_ROUTER.md](VK_AUTOSWITCH_FULL_ROUTER.md).
+
+New Auto defaults to an assessed minimum. Positive prompt evidence permits
+mechanical text work on 5.6 Luna/low, bounded patterns on Luna6/medium and local
+validated fixes on Sol6/medium. Uncertain/normal/complex work retains Sol6.1;
+protected work requires Astra. Model/effort/envelope qualification and pair ranks
+are configurable; explicit floor, exclusions, fresh proof and prior session floor
+remain hard constraints. Experimental pairs are Shadow-only. Manual choices
+retain existing constraints, including after scratch hydration.
+
+Operator-reported validation/review failure and higher-risk scope can request
+consented escalation at a new boundary. No raw-output test inference, confidence
+heuristic, active-turn switch, reset or autonomous retry was introduced. CU wire
+schema remains v1 with policyVersion vk-autoswitch-v2 for new decisions.
+
+Two bounded new probes verified 5.6 Luna/low and Sol6/low using the exact candidate
+CLI0.159.2 wrapper/account/home; previous seven-model acceptance was not repeated.
+Combined proof preserves old verification timestamps. Files and validation logs:
+`/mnt/vk-storage/vk-model-autoswitch-v1/full-router-*`.
+
+Validation: 14 focused routing tests and 4 React selector tests passed; web-core
+TypeScript, focused ESLint, executor/server Clippy, shared-type generation, format, ops and Python checks
+passed. No full workspace benchmark or repeated V1 native trial was run.
+
+Matching frontend/backend packaging, a few real live Shadow recommendations and
+the existing explicit production-cutover approval remain the daily-use gates.
+No production services or profiles changed. Legacy saved Workhorse floors remain
+Workhorse; choose Automatic minimum once to permit assessment on those chats.
+Do not claim live Shadow results or demonstrated usage savings yet.
+
+## Accepted V1 integration history (superseded gates retained below)
+
 ## October 1: Preparation Integration Accepted
 
 The operator authorized staging integration and isolated handover acceptance.

@@ -1,3 +1,18 @@
+## September 30: Model AutoSwitch investigation
+
+Read [VK_MODEL_AUTOSWITCH.md](VK_MODEL_AUTOSWITCH.md) for the feasibility plan,
+source references, native model/settings inventory and staged evaluation gates.
+Boundary-based routing fits existing ExecutorConfig/thread-resume paths. Active
+turn and native goal switching need separate lifecycle work. The CU scanner's
+session-level model attribution needs improvement before mixed-model savings
+can be measured reliably. CU source has existing local changes; it was not edited.
+No model inference, production change or routing implementation was performed.
+Validation: native catalog RPC, full repository formatting (existing SSD Prettier
+on PATH), ops:check, local link checks and diff whitespace checks passed.
+Application suites and inference benchmarks were not run for documentation changes.
+Next: agree pilot cost/quality criteria and run bounded isolated continuity and
+paired-task experiments before opting into automatic routing.
+
 ## September 28 — two concurrent selected capacity goals
 
 Added bounded two-agent admission and per-session stop, retaining shared allocation,

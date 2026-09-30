@@ -1,5 +1,30 @@
 # HANDOFF.md
 
+## September30: Staging Cutover Preparation, Not Activation
+
+Built exact fork staging620bd7eb9 as replacement Green. Blue764264 on5121 remains
+live; CU2139576 and production routing are unchanged. Main32c556f3e is not merged.
+Read `VK_GREEN_PREPARATION_20260930.md` and the runtime preparation directory
+`/mnt/vk-storage/vk-green-refresh-20260930`. No approval/attempt file exists.
+
+Build, frontend checks, non-Tauri Rust tests, isolated thread/Steer/Stop/goal/
+attachment and desktop/mobile-layout checks pass. Same-PID ownership/cutback
+rehearsal preserved latest saved messages, model profiles and settings. The
+combined CU candidate passes173 tests and recorded-native reporting acceptance.
+Full aggregate check/lint remain blocked by the host's missing GTK dependency.
+
+Fresh5.12GB online archive is SHA-256 verified on Desktop B; all30 SQLite payloads
+were extracted and integrity-checked. Required September11 base archives were
+freshly hashed on Desktop. This is not the final boundary capture. The read-only
+change journal remains active; historical missing-history/attachment exceptions
+are retained. Candidate/CU/controller unit files are prepared, not installed.
+Source integration/QA and the coordinated CU package need operator review before
+main promotion/readiness authorization. Do not infer cutover permission here.
+Prepared software264,529,505bytes is also hash-verified on Desktop; runtime
+readiness explicitly remains false/prepared-for-review.346 non-Tauri tests pass
+with five ignored. Maintenance ops/diff checks pass; its formatter still lacks
+Prettier, although exact candidate-source formatting passed. No commit/push ran.
+
 ## September30: Extended SSD Cleanup Complete
 
 The first pass was not comprehensive. A broader audit of six deployment roots

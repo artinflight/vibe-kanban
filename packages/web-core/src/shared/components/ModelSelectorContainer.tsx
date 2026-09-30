@@ -299,7 +299,15 @@ export function ModelSelectorContainer({
       if (providerId) return `${providerId}/${modelId}`;
       return modelId;
     })();
-    onOverrideChange({ model_id: modelOverride });
+    onOverrideChange({
+      model_id: modelOverride,
+      routing: {
+        mode: 'manual',
+        floor: 'workhorse',
+        denied_models: [],
+        allow_escalation: false,
+      },
+    });
 
     pendingModelRef.current =
       modelId && config
@@ -325,7 +333,15 @@ export function ModelSelectorContainer({
   };
 
   const handleReasoningSelect = (reasoningId: string | null) => {
-    onOverrideChange({ reasoning_id: reasoningId });
+    onOverrideChange({
+      reasoning_id: reasoningId,
+      routing: {
+        mode: 'manual',
+        floor: 'workhorse',
+        denied_models: [],
+        allow_escalation: false,
+      },
+    });
     pendingReasoningRef.current = reasoningId;
   };
 
@@ -463,6 +479,112 @@ export function ModelSelectorContainer({
             <DropdownMenuItem disabled>{presetLabel}</DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
+          {agent === 'CODEX' && config.supports_routing === true && (
+            <>
+              <DropdownMenuLabel>
+                {t('modelSelector.routing')}
+              </DropdownMenuLabel>
+              {(['manual', 'shadow', 'auto'] as const).map((mode) => (
+                <DropdownMenuItem
+                  key={mode}
+                  icon={
+                    (executorConfig?.routing?.mode ?? 'manual') === mode
+                      ? CheckIcon
+                      : undefined
+                  }
+                  onClick={() =>
+                    onOverrideChange({
+                      routing: {
+                        mode,
+                        floor: executorConfig?.routing?.floor ?? 'workhorse',
+                        denied_models:
+                          executorConfig?.routing?.denied_models ?? [],
+                        allow_escalation:
+                          executorConfig?.routing?.allow_escalation ?? false,
+                      },
+                    })
+                  }
+                >
+                  {t(`modelSelector.routing_${mode}`)}
+                </DropdownMenuItem>
+              ))}
+              {executorConfig?.routing &&
+                executorConfig.routing.mode !== 'manual' && (
+                  <>
+                    <DropdownMenuLabel>
+                      {t('modelSelector.routingFloor')}
+                    </DropdownMenuLabel>
+                    {(['routine', 'workhorse', 'frontier'] as const).map(
+                      (floor) => (
+                        <DropdownMenuItem
+                          key={floor}
+                          icon={
+                            executorConfig.routing?.floor === floor
+                              ? CheckIcon
+                              : undefined
+                          }
+                          onClick={() =>
+                            onOverrideChange({
+                              routing: { ...executorConfig.routing!, floor },
+                            })
+                          }
+                        >
+                          {t(`modelSelector.routing_${floor}`)}
+                        </DropdownMenuItem>
+                      )
+                    )}
+                    <DropdownMenuItem
+                      icon={
+                        executorConfig.routing.denied_models.includes(
+                          'gpt-6-astra'
+                        )
+                          ? CheckIcon
+                          : undefined
+                      }
+                      onClick={() =>
+                        onOverrideChange({
+                          routing: {
+                            ...executorConfig.routing!,
+                            denied_models:
+                              executorConfig.routing!.denied_models.includes(
+                                'gpt-6-astra'
+                              )
+                                ? executorConfig.routing!.denied_models.filter(
+                                    (id) => id !== 'gpt-6-astra'
+                                  )
+                                : [
+                                    ...executorConfig.routing!.denied_models,
+                                    'gpt-6-astra',
+                                  ],
+                          },
+                        })
+                      }
+                    >
+                      {t('modelSelector.routingNeverAstra')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      icon={
+                        executorConfig.routing.allow_escalation
+                          ? CheckIcon
+                          : undefined
+                      }
+                      onClick={() =>
+                        onOverrideChange({
+                          routing: {
+                            ...executorConfig.routing!,
+                            allow_escalation:
+                              !executorConfig.routing!.allow_escalation,
+                          },
+                        })
+                      }
+                    >
+                      {t('modelSelector.routingEscalation')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuItem icon={GearIcon} onClick={onAdvancedSettings}>
             {t('modelSelector.custom')}
           </DropdownMenuItem>
@@ -476,7 +598,13 @@ export function ModelSelectorContainer({
           trigger={
             <DropdownMenuTriggerButton
               size="sm"
-              label={modelLabel}
+              label={
+                agent === 'CODEX' && executorConfig?.routing?.mode === 'auto'
+                  ? t('modelSelector.routingAutoLabel', {
+                      floor: executorConfig.routing.floor,
+                    })
+                  : modelLabel
+              }
               disabled={loadingModels}
             />
           }

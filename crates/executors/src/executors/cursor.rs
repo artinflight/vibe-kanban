@@ -632,6 +632,7 @@ impl StandardCodingAgentExecutor for CursorAgent {
 
     fn get_preset_options(&self) -> ExecutorConfig {
         ExecutorConfig {
+            routing: None,
             executor: BaseCodingAgent::CursorAgent,
             variant: None,
             model_id: self.model.clone(),

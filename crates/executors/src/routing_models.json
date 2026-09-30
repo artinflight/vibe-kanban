@@ -1,0 +1,93 @@
+[
+  {
+    "id": "gpt-5.6-luna",
+    "released": true,
+    "floor": "routine",
+    "cost_rank": 20,
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ]
+  },
+  {
+    "id": "gpt-5.6-terra",
+    "released": true,
+    "floor": "routine",
+    "cost_rank": 40,
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ]
+  },
+  {
+    "id": "gpt-5.6-sol",
+    "released": true,
+    "floor": "workhorse",
+    "cost_rank": 50,
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ]
+  },
+  {
+    "id": "gpt-6-luna",
+    "released": true,
+    "floor": "routine",
+    "cost_rank": 10,
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ]
+  },
+  {
+    "id": "gpt-6-sol",
+    "released": true,
+    "floor": "workhorse",
+    "cost_rank": 31,
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ]
+  },
+  {
+    "id": "gpt-6.1-sol",
+    "released": true,
+    "floor": "workhorse",
+    "cost_rank": 30,
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ]
+  },
+  {
+    "id": "gpt-6-astra",
+    "released": true,
+    "floor": "frontier",
+    "cost_rank": 100,
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ]
+  }
+]

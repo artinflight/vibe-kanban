@@ -1306,3 +1306,29 @@ prepared on SSD; production is still the incumbent 5031 backend. See VK_ERRORS_2
   native four-model catalog, settings limitations, quality gates and pilot plan.
 - Read-only Codex 0.153.4 model/list completed; no inference or live changes.
 - Routing safety and relative allowance savings remain experimental, not proven.
+
+## 2026-09-30 — Opt-in Codex model routing V1
+
+- Continued the AutoSwitch investigation into source implementation on
+  `vk/5a81-vk-model-autoswi`. Replaced the planning-only catalog with separate
+  representable/released/discovered/executable states and all seven requested IDs.
+- Added configurable model/effort policy, fresh launcher/account-bound evidence,
+  manual/shadow/auto controls, explicit floors and exclusions, consent-gated
+  failed-execution escalation, pinned native resumes, and protection against
+  automatic retry/reset. Resolution uses existing execution admission and stores
+  concrete settings/decision without a new scheduler or profile mutation.
+- Added native model/effort/provider/tier verification, reroute failure handling,
+  standard-tier protocol compatibility and versioned routing events. Documented
+  CU joins through execution, predecessor, session, native thread and turn IDs in
+  `VK_CODEX_ROUTING_CONTRACT.md`; no CodexUsage repository files were changed.
+- Isolated CLI 0.159.2 discovered and executed all seven models using the same
+  account/home; six at medium, Astra at high. Old CLI 0.153.4 still discovered only
+  four after cache refresh. Direct native Luna-to-Sol 6.1 continuation preserved
+  conversation, checkpoint and dirty file. These are access/continuity checks,
+  not model-quality equivalence or measured savings.
+- The opt-in real VK executor test was blocked before inference by the existing
+  20-active/8-limit capacity gate. The limit was preserved. Combined candidate
+  UI/API acceptance, newer-launcher deployment QA and a reviewed real-task pilot
+  remain enablement gates; full workspace/Tauri suites were not run.
+- Automated validation and exact reproduction steps are in the current HANDOFF.
+  No production deployment/restart, preview, PR or push; version stays 0.1.42.

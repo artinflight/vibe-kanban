@@ -223,6 +223,112 @@ mod tests {
     }
 
     #[test]
+    fn routed_overrides_reach_start_and_resume_parameters() {
+        use crate::executors::StandardCodingAgentExecutor;
+        let mut codex: Codex = serde_json::from_value(serde_json::json!({})).unwrap();
+        let mut config = ExecutorConfig::new(crate::executors::BaseCodingAgent::Codex);
+        config.model_id = Some("gpt-6.1-sol".into());
+        config.reasoning_id = Some("medium".into());
+        codex.apply_overrides(&config);
+        let start = codex.build_thread_start_params(std::path::Path::new("/workspace"));
+        assert_eq!(start.model.as_deref(), Some("gpt-6.1-sol"));
+        assert_eq!(
+            start.config.as_ref().unwrap()["model_reasoning_effort"],
+            "medium"
+        );
+        let resumed = super::resume_params_from("existing-thread".into(), start);
+        assert_eq!(resumed.thread_id, "existing-thread");
+        assert_eq!(resumed.model.as_deref(), Some("gpt-6.1-sol"));
+        assert_eq!(
+            resumed.config.as_ref().unwrap()["model_reasoning_effort"],
+            "medium"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "One bounded real inference; requires explicit routing verification environment"]
+    async fn routed_native_follow_up_acceptance() {
+        use tokio::io::AsyncReadExt;
+
+        use crate::{
+            actions::{
+                Executable, ExecutorAction, ExecutorActionType,
+                coding_agent_follow_up::CodingAgentFollowUpRequest,
+            },
+            env::{ExecutionEnv, RepoContext},
+            executors::{BaseCodingAgent, ExecutorExitResult},
+            routing::{CapabilityFloor, RoutingMode, RoutingPolicy},
+        };
+        let dir = std::path::PathBuf::from(
+            std::env::var("VK_ROUTING_TEST_DIR").expect("isolated fixture directory"),
+        );
+        let thread = std::env::var("VK_ROUTING_TEST_THREAD").expect("existing fixture thread");
+        let before = std::fs::read(dir.join("dirty.txt")).unwrap();
+        let mut config = ExecutorConfig::new(BaseCodingAgent::Codex);
+        config.permission_policy = Some(crate::model_selector::PermissionPolicy::Supervised);
+        config.routing = Some(Box::new(RoutingPolicy {
+            mode: RoutingMode::Auto,
+            floor: CapabilityFloor::Workhorse,
+            denied_models: vec![],
+            allow_escalation: false,
+        }));
+        let mut action = ExecutorAction::new(
+            ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+                capacity: None,
+                prompt: "Use no tools and change no files. Reply exactly ROUTING_OK glacier spoon."
+                    .into(),
+                session_id: thread,
+                reset_to_message_id: None,
+                executor_config: config,
+                working_dir: None,
+            }),
+            None,
+        );
+        crate::routing::resolve_action(&mut action, None, false).unwrap();
+        assert_eq!(
+            action
+                .routing_decision
+                .as_ref()
+                .unwrap()
+                .selected_model
+                .as_deref(),
+            Some("gpt-6.1-sol")
+        );
+        let env = ExecutionEnv::new(RepoContext::new(dir.clone(), vec![]), false, String::new());
+        let mut child = action
+            .spawn(
+                &dir,
+                std::sync::Arc::new(crate::approvals::NoopExecutorApprovalService {}),
+                &env,
+            )
+            .await
+            .unwrap();
+        let mut stdout = child.child.inner().stdout.take().unwrap();
+        let output = tokio::spawn(async move {
+            let mut text = String::new();
+            let _ = stdout.read_to_string(&mut text).await;
+            text
+        });
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(90),
+            child.exit_signal.take().unwrap(),
+        )
+        .await;
+        if let Some(cancel) = child.cancel {
+            cancel.cancel();
+        }
+        let _ = child.child.kill().await;
+        let text = output.await.unwrap();
+        std::fs::write(dir.join("vk-executor-protocol.jsonl"), &text).unwrap();
+        assert!(
+            matches!(result, Ok(Ok(ExecutorExitResult::Success))),
+            "executor failed; inspect fixture protocol log"
+        );
+        assert!(text.contains("vk/routing") && text.contains("ROUTING_OK"));
+        assert_eq!(std::fs::read(dir.join("dirty.txt")).unwrap(), before);
+    }
+
+    #[test]
     fn codex_auto_permission_override_exits_plan_mode() {
         let mut codex = Codex {
             append_prompt: AppendPrompt::default(),
@@ -245,6 +351,7 @@ mod tests {
         };
 
         codex.apply_overrides(&ExecutorConfig {
+            routing: None,
             executor: BaseCodingAgent::Codex,
             variant: Some("PLAN".to_string()),
             model_id: None,
@@ -511,6 +618,7 @@ impl StandardCodingAgentExecutor for Codex {
         };
 
         ExecutorConfig {
+            routing: None,
             executor: BaseCodingAgent::Codex,
             variant: None,
             model_id: self.model.clone(),
@@ -539,8 +647,9 @@ impl StandardCodingAgentExecutor for Codex {
             .map(|e| e.as_ref().to_string()),
         );
 
-        let options = ExecutorDiscoveredOptions {
+        let mut options = ExecutorDiscoveredOptions {
             model_selector: ModelSelectorConfig {
+                supports_routing: Some(true),
                 models: vec![
                     ModelInfo {
                         id: "gpt-5.6-sol".to_string(),
@@ -664,6 +773,42 @@ impl StandardCodingAgentExecutor for Codex {
             ],
             ..Default::default()
         };
+        // Released/represented entries are visible even during an account rollout.
+        // Discovery is advisory; only verified entries can be selected automatically.
+        if let Ok(models) = crate::routing::model_policies() {
+            let availability = crate::routing::load_availability().ok();
+            for model in models {
+                if options
+                    .model_selector
+                    .models
+                    .iter()
+                    .any(|m| m.id == model.id)
+                {
+                    continue;
+                }
+                let efforts = availability
+                    .as_ref()
+                    .and_then(|a| a.models.iter().find(|m| m.id == model.id))
+                    .map(|m| {
+                        if m.discovered {
+                            m.supported_efforts.clone()
+                        } else {
+                            m.verified_efforts.clone()
+                        }
+                    })
+                    .unwrap_or_else(|| model.efforts.clone());
+                options.model_selector.models.push(ModelInfo {
+                    name: model.id.clone(),
+                    id: model.id,
+                    provider_id: None,
+                    reasoning_options: ReasoningOption::from_names(
+                        efforts
+                            .into_iter()
+                            .filter(|e| ReasoningEffort::from_str(e).is_ok()),
+                    ),
+                });
+            }
+        }
         Ok(Box::pin(futures::stream::once(async move {
             patch::executor_discovered_options(options)
         })))
@@ -817,7 +962,17 @@ impl Codex {
         resume_session: Option<&str>,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
-        let params = self.build_thread_start_params(current_dir);
+        let mut params = self.build_thread_start_params(current_dir);
+        let routing = env
+            .get("VK_ROUTING_DECISION")
+            .map(|json| serde_json::from_str::<crate::routing::RoutingDecision>(json))
+            .transpose()?;
+        if routing
+            .as_ref()
+            .is_some_and(|d| d.mode == crate::routing::RoutingMode::Auto)
+        {
+            params.service_tier = Some(None); // Explicitly clear a resumed Fast setting.
+        }
         let resume_session = resume_session.map(|s| s.to_string());
 
         self.spawn_app_server(
@@ -827,7 +982,8 @@ impl Codex {
             move |client, _| async move {
                 match action {
                     CodexSessionAction::Chat { prompt } => {
-                        Self::launch_codex_agent(params, resume_session, prompt, client).await
+                        Self::launch_codex_agent(params, resume_session, prompt, client, routing)
+                            .await
                     }
                     CodexSessionAction::Review { target } => {
                         review::launch_codex_review(params, resume_session, target, client).await
@@ -843,6 +999,7 @@ impl Codex {
         resume_session: Option<String>,
         combined_prompt: String,
         client: Arc<AppServerClient>,
+        routing: Option<crate::routing::RoutingDecision>,
     ) -> Result<(), ExecutorError> {
         let account = client.get_account().await?;
         if account.requires_openai_auth && account.account.is_none() {
@@ -851,20 +1008,84 @@ impl Codex {
             ));
         }
 
-        let (thread_id, resolved_model) = match resume_session {
-            None => {
-                let response = client.thread_start(thread_start_params).await?;
-                (response.thread.id, response.model)
+        if let Some(decision) = &routing
+            && decision.mode == crate::routing::RoutingMode::Auto
+        {
+            client.lock_routed_model();
+            let identity = serde_json::to_value(&account.account)?;
+            if identity["type"] != "chatgpt" || identity["email"].as_str().is_none_or(str::is_empty)
+            {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Automatic routing requires a verifiable signed-in Work/Codex account",
+                )));
             }
-            Some(session_id) => {
-                let response = client
-                    .thread_resume(resume_params_from(session_id, thread_start_params))
-                    .await?;
-                tracing::debug!("resumed thread_id={}", response.thread.id);
-                (response.thread.id, response.model)
+            let fingerprint = crate::routing::account_fingerprint(&identity);
+            if decision.account_fingerprint.as_deref() != Some(fingerprint.as_str()) {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Routing account changed; refresh executable-model verification",
+                )));
             }
-        };
+        }
+        let (thread_id, resolved_model, resolved_effort, resolved_tier, resolved_provider) =
+            match resume_session {
+                None => {
+                    let response = client.thread_start(thread_start_params).await?;
+                    (
+                        response.thread.id,
+                        response.model,
+                        response.reasoning_effort,
+                        response.service_tier,
+                        response.model_provider,
+                    )
+                }
+                Some(session_id) => {
+                    let response = client
+                        .thread_resume(resume_params_from(session_id, thread_start_params))
+                        .await?;
+                    tracing::debug!("resumed thread_id={}", response.thread.id);
+                    (
+                        response.thread.id,
+                        response.model,
+                        response.reasoning_effort,
+                        response.service_tier,
+                        response.model_provider,
+                    )
+                }
+            };
 
+        if let Some(decision) = &routing
+            && decision.mode == crate::routing::RoutingMode::Auto
+        {
+            let effort = serde_json::to_value(resolved_effort)?;
+            if decision.selected_model.as_deref() != Some(resolved_model.as_str())
+                || decision.selected_effort.as_deref() != effort.as_str()
+                || resolved_tier.is_some()
+                || resolved_provider != "openai"
+            {
+                return Err(ExecutorError::Io(std::io::Error::other(
+                    "Codex did not apply routed model/effort/standard tier; stopped before inference",
+                )));
+            }
+            if let Some(effort) = resolved_effort {
+                client.set_routed_effort(effort);
+            }
+            tracing::info!(routing_decision_id = %decision.id, native_thread_id = %thread_id,
+                model = %resolved_model, effort = %effort, "Routed Codex settings verified");
+        }
+        if let Some(decision) = &routing {
+            client
+                .log_writer()
+                .log_raw(
+                    &serde_json::json!({
+                        "method": "vk/routing",
+                        "params": { "decision": decision, "native_thread_id": thread_id,
+                            "resolved_model": resolved_model, "resolved_effort": resolved_effort,
+                            "resolved_service_tier": resolved_tier }
+                    })
+                    .to_string(),
+                )
+                .await?;
+        }
         client.set_resolved_model(resolved_model);
         client.register_session(&thread_id).await?;
         client.refresh_goal().await?;

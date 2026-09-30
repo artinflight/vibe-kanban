@@ -1335,3 +1335,12 @@ Clippy passed. CU consumer import/replay and completed-turn native counter
 comparison passed; interrupted-turn usage is unavailable and CU owner review
 remains pending. Production untouched. See
 VK_AUTOSWITCH_ROLLOUT.md and CU_ACCEPTANCE_HANDOFF.json on mounted SSD.
+
+## Automatic assessment and pair qualification
+
+Extended accepted V1 with assessed minimum, explicit configurable model/effort/
+envelope qualification and pair preference ranks. Added cheap prompt risk/scope
+assessment, consented operator-reported validation/risk escalation, preserved
+manual constraints and policyVersion2 telemetry. Exact low-effort probes passed
+for 5.6 Luna and Sol6; no repeated V1 native trials or production changes.
+See VK_AUTOSWITCH_FULL_ROUTER.md for rollout gates and qualification limitations.

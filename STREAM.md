@@ -1,3 +1,16 @@
+# Automatic assessed router (V2)
+
+Current branch: `vk/5a81-autoswitch-cu-recovery`.
+Extends accepted V1 with default task assessment, explicit model/effort/envelope
+qualification, configurable pair preference, operator-reported validation and
+risk-expansion escalation. See [VK_AUTOSWITCH_FULL_ROUTER.md](VK_AUTOSWITCH_FULL_ROUTER.md).
+Auto can choose older Luna/low, Luna6/medium and Sol6/medium without Routine labels.
+Manual and explicit floors/exclusions remain authoritative; no scheduler or reset.
+Experimental pairs remain shadow-only. Matching release deployment and a small
+live Shadow sanity check remain pending; no production activation in this stream.
+
+## Accepted V1 history
+
 # VK Model AutoSwitch V1
 
 Current branch: `vk/5a81-autoswitch-cu-recovery`.

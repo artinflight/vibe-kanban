@@ -1,5 +1,13 @@
 # September 30 Green Preparation
 
+## Superseding Result
+
+The approved attempt failed its final backup stability check before Green
+started. Blue recovered on latest data. Read `VK_GREEN_ROLLBACK_20260930.md` for
+current authority, live checks, remaining writer gap and exact runtime status.
+Do not retry the consumed attempt. The preparation record below is historical;
+its ready/pending/no-interruption statements do not describe the current result.
+
 ## Current State
 
 The operator requested staging-to-main preparation and clarified that the final

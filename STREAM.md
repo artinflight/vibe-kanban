@@ -1,5 +1,10 @@
 # STREAM.md
 
+September30 continuation scope: verify recovered Blue after failed final capture,
+not another cutover. Recovery acceptance is recorded in VK_GREEN_ROLLBACK_20260930.md.
+Green never activated; the concurrent repository writer remains a readiness gap.
+The consumed attempt/approval cannot authorize a retry. Earlier scope is history.
+
 September30 latest authorization: finish normal staging-to-production promotion
 and cutover. PR128 passed CI and merged as main dcd51cc12; verify activation from
 the independent controller status. CLI0.159.2 and shared telemetry are enforced.

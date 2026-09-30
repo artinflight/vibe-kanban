@@ -1,5 +1,24 @@
 # HANDOFF.md
 
+## September30: Blue Recovered, Deployment Incomplete
+
+Read `VK_GREEN_ROLLBACK_20260930.md` and the consumed attempt's status/acceptance
+receipts before any service action. Final capture rejected changing Git metadata
+in hyroxready-app. The writer has not been identified. Green never started;
+Blue764264 recovered using the same latest data and original thread. CU2205788
+is connected/reconciled. CLI remains0.153.4;0.159.2/shared telemetry are not live.
+No retry is permitted by this continuation. PR128/main dcd51cc12 is merged,
+candidate620bd7eb9 remains prepared but cannot be called cutover-ready after this
+failed boundary. Preserve all backup and attempt evidence; never restore old data.
+
+Recovery checks pass with documented draft/timestamp and historical exceptions:
+all prior IDs,12 saved messages,333 attachment hashes,6036 native paths,
+original model/thread, capacity ownership/goals, new attachment round-trip and
+desktop/mobile browser layouts. Correct the missed-writer inventory and rehearse
+before seeking a new cutover approval. No broad V1 suite or handover was repeated.
+
+The following pending-handover section is the pre-attempt historical record.
+
 ## September30: Main Promoted, Authorized Handover Pending
 
 Latest instruction authorizes the normal staging-to-production workflow and

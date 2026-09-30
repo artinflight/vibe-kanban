@@ -1,5 +1,14 @@
 # STATE.md
 
+**September30 current authority: Green activation aborted, Blue recovered.**
+The final backup detected concurrent Git metadata writes before Green started.
+Blue764264 remains live on latest data; Green is inactive; CU2205788 is
+connected/reconciled. Recovery preservation, original-thread/model, saved-message
+desktop/mobile layouts and attachment round-trip pass. Actual runtime remains
+Codex0.153.4;0.159.2/shared telemetry are not deployed. PR128 is merged to main
+dcd51cc12 but not activated. Read `VK_GREEN_ROLLBACK_20260930.md`. Do not retry the
+consumed attempt or restore an old DB. Earlier readiness claims are historical.
+
 **September30 authorized deployment in progress:** the operator now authorizes
 normal staging-to-production promotion and cutover. PR128 passed CI and merged
 as main dcd51cc12; its tree matches the built staging620bd7eb9 exactly.

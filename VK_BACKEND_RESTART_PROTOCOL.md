@@ -4,6 +4,23 @@ Established by the operator on 2026-09-11. This is the authority for future
 backend restart windows; older stop-and-switch examples are historical.
 An established protocol is not evidence that a particular candidate is ready.
 
+## Frozen Capture Writer Coverage
+
+The September30 attempt failed before activation because Git metadata changed
+outside the paused VK/native-process inventory. Inventory writers against the
+entire protected backup scope, including repository common Git directories and
+background fetch/maintenance, not just running agent rows. Identify and coordinate
+unrelated consumers rather than killing them or assuming the incumbent freeze
+stops their writes. Keep the final stability assertion; a checksum-verified
+archive alone is not a verified frozen boundary. A failed attempt is consumed,
+not authorization to retry. See `VK_GREEN_ROLLBACK_20260930.md`.
+
+After recovery, verify the actual incumbent runtime/configuration separately
+from candidate readiness. Report preexisting exceptions and lifecycle changes
+explicitly: a cleared maintenance draft is acceptable only with evidence that
+its exact text was already submitted in the original thread. Do not silently
+omit all scratch rows from preservation checks.
+
 ## September 30 Runtime And Telemetry Requirements
 
 For the AutoSwitch V1 deployment, pin production to the verified Codex CLI/runtime

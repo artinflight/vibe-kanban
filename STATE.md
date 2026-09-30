@@ -1,12 +1,22 @@
 # STATE.md
 
-**September30 preparation only:** replacement Green is built from fork staging
+**September30 authorized deployment in progress:** the operator now authorizes
+normal staging-to-production promotion and cutover. PR128 passed CI and merged
+as main dcd51cc12; its tree matches the built staging620bd7eb9 exactly.
+CLI0.159.2, all seven discovered models, matching proof identity/freshness and
+the common private VK/CU telemetry path pass preflight. Blue remains live until
+the independent controller handover. Older preparation-only approval notes below
+are superseded, not evidence that deployment is already complete.
+
+**Earlier September30 preparation-only snapshot:** replacement Green is built from fork staging
 620bd7eb9; production remains Blue764264 on5121/5122, with CU2139576. Main32c556f3e
 and all live routing/services are unchanged. Local validation and a fresh verified
-Desktop online backup are complete; candidate/CU settings are inert. CU inclusion
+Desktop online backup are complete; candidate settings are installed but inactive.
+Official capacity configuration check passes; CU retains incumbent software until
+the approved window. Local cutover preparation is ready. CU inclusion
 is explicitly approved, isolated source committed406f19b. Successful CI5238153
-covers the identical entire staging tree. Main promotion awaits permission for
-automatically triggered Actions, not a known failing release test. Read
+covers the identical entire staging tree. Main is not promoted; no PR or Actions
+was launched. Repository promotion is separate from local technical readiness. Read
 `VK_GREEN_PREPARATION_20260930.md` for evidence and the exact approval boundaries.
 No final cutover or frozen boundary capture is authorized by preparation.
 

@@ -1,18 +1,25 @@
 # HANDOFF.md
 
-## September30: Staging Cutover Preparation, Not Activation
+## September30: Main Promoted, Authorized Handover Pending
+
+Latest instruction authorizes the normal staging-to-production workflow and
+complete cutover, after exact CLI0.159.2 and shared private routing-feed checks.
+PR128 passed CI and merged to main dcd51cc129f81d82e87dee32886091f5a507cd10.
+Canonical main/staging checkouts are current. Main's tree exactly matches built
+staging620bd7eb9, so no rebuild is needed. No handover yet.
+Runtime/account/home identity matches the under24-hour seven-model
+proof; no fresh inference or broad V1 test rerun was needed. The controller now
+enforces both requirements before interruption and on actual live environments.
 
 Latest operator correction: include the reconciled CU package. CU406f19b is
 committed on deploy/vk-green-20260930, not pushed, with a verified Git bundle.
-Seven controller tests and four real-binary ownership/cutback cases pass.
-Successful CI5238153 covers the identical entire staging620bd7eb9 tree.
-The only outstanding promotion decision is permission for Actions automatically
-triggered by a staging-to-main PR; the question is unanswered. Do not open the
-PR, trigger workflows, or claim cutover readiness until that is resolved.
-This is preparation only; fresh cutover permission remains separately required.
+Eight controller tests and four real-binary ownership/cutback cases pass.
+Local cutover preparation is ready and the operator has authorized execution.
+Bind current readiness/current-writer identities before starting the independent
+controller; approval is not permission to skip the final backup or active-work drain.
 
 Built exact fork staging620bd7eb9 as replacement Green. Blue764264 on5121 remains
-live; CU2139576 and production routing are unchanged. Main32c556f3e is not merged.
+live; CU2139576 and production routing are unchanged until the controller runs.
 Read `VK_GREEN_PREPARATION_20260930.md` and the runtime preparation directory
 `/mnt/vk-storage/vk-green-refresh-20260930`. No approval/attempt file exists.
 
@@ -28,13 +35,20 @@ freshly hashed on Desktop. This is not the final boundary capture. The read-only
 replacement change journal remains active; a test-directory move invalidated the
 old journal, so a fresh watcher/baseline replaced it without ignoring the error.
 Historical missing-history/attachment exceptions
-are retained. Candidate/CU/controller unit files are prepared, not installed.
-Main promotion waits for the specific Actions permission above. Runtime
-readiness explicitly remains false while promotion is held.346 non-Tauri tests pass
+are retained. Inactive candidate/controller definitions and reciprocal guards
+are installed. CU still starts the incumbent software; its dependencies include
+both generations for coordinated ownership. Official installed capacity check
+passes with no restart.346 non-Tauri tests pass
 with five ignored. Maintenance ops/diff checks pass; its formatter still lacks
-Prettier, although exact candidate-source formatting passed. No production change
-or remote push ran. Use the current software-package-receipt.json, not the
+Prettier, although exact candidate-source formatting passed. No production runtime
+change occurred before handover. Main promotion is merged remotely. Use the current software-package-receipt.json, not the
 superseded264,529,505byte package, for the final prepared tools.
+
+After continuation: read cutover-attempt.json and its folder/status.json first.
+Never repeat handover. Run live_acceptance.py only when Green is routed, then
+LIVE_BASE=https://vibe.local node live-ui-check.mjs for desktop/mobile layouts.
+Inspect logs, record actual runtime/main version and latest-data Blue standby,
+update durable docs and commit state, then send exactly one final Ops report.
 
 ## September30: Extended SSD Cleanup Complete
 

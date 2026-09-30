@@ -5,6 +5,12 @@ Vibe Kanban. Follow it before editing, building, or deploying this repo.
 For the planned clean self-development project/preview model, read
 `VK_SELF_DEVELOPMENT_WORKFLOW.md` as well.
 
+September30 AutoSwitch deployment: follow the runtime/telemetry requirements in
+VK_BACKEND_RESTART_PROTOCOL.md. Production must use verified Codex0.159.2 and
+the same private VK/CU routing feed. Check the seven-model proof's launcher,
+account, home and24-hour freshness; refresh only bounded availability when needed.
+Check actual running process environments after activation, not just unit files.
+
 ## Required Existing-Chat Model Check
 
 Include the model catalog and reasoning dropdown, not only selected labels and

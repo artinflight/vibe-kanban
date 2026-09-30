@@ -3,15 +3,23 @@
 ## Current State
 
 The operator requested staging-to-main preparation and clarified that the final
-action is a cutover, not an ordinary restart. No cutover permission was given.
+action is a cutover, not an ordinary restart. The latest instruction authorizes
+the normal staging-to-production promotion and full cutover, with the runtime
+and telemetry requirements below. No handover has occurred yet.
 Production Blue remains PID764264, ports5121/5122, unit
 `vibe-kanban-blue-production-20260921.service`. CU remains PID2139576.
-No production service was stopped, paused, restarted or rerouted.
+No production service was stopped, paused, restarted or rerouted. Inactive Green
+and controller definitions plus reciprocal start guards are now installed.
+CU's next-start software remains the original live release; only its coordinated
+dependency includes prepared Green as well as Blue. The official installed
+capacity `check` passes without starting Green or restarting either live service.
 
 Candidate source is exact fork staging620bd7eb9bced30711cd560108e5f1c5a798dd5a,
-version0.1.42. Main remains32c556f3e6dd455f5ad4651ba82e74f6e2148967.
-The promotion merge-tree has no conflicts. No promotion PR, main merge or
-GitHub Actions launch was performed. The prepared production port is5261/5262.
+version0.1.42. PR128 passed CI36767754212 and merged as main
+dcd51cc129f81d82e87dee32886091f5a507cd10. Its tree matches the built staging
+tree exactly; canonical main/staging checkouts are current. Private remote
+checks were skipped without a deploy key; the local VK checks passed.
+The prepared production port is5261/5262.
 
 ## Included Work
 
@@ -61,11 +69,13 @@ Root: `/mnt/vk-storage/vk-green-refresh-20260930`.
   The shipped handover primitives are exercised; CU's dependency gate uses a
   sentinel process. Its3.32second private test excludes Desktop transfer and
   live work draining, and is not a production downtime promise.
-- `test_controller.py`: seven outer-controller policy/failure tests pass using
+- `test_controller.py`: eight outer-controller policy/failure tests pass using
   substituted service calls. Failed main/emergency recovery does not resume
   writers without a healthy routed owner. Repeated cutback handles an already
   released/frozen candidate. `install_prepared.py` passes its default dry run;
-  it requires separately bound approval before installing any production files.
+  its preparation mode installs inactive settings without starting services,
+  preserves CU's incumbent package, and runs the official installed-settings check.
+  Final controller execution still requires separately bound cutover approval.
 - Refreshed read-only production preflight passes with active work still running.
   Blue764264/CU2139576 remain unchanged. The HTTPS API returned200 using the
   existing local-certificate bypass; host curl does not trust this CA, so this
@@ -109,15 +119,26 @@ delete historical recovery evidence. Bulky files remain on the mounted SSD.
 
 ## Remaining Boundary
 
-The operator approved the combined CU package. Opening the staging-to-main PR
-automatically launches GitHub Actions; the previous explicit prohibition still
-applies. A specific permission question was sent and remains unanswered. Main
-promotion is held for that decision, not for a known failing release test.
-Candidate, CU and
-independent controller unit files remain under `prepared-units`, not installed.
-This prevents an unrelated service recovery from activating new settings early.
-Validate the effective installed settings after approval, before fencing traffic.
-Do not advertise the cutover as ready while the requested main promotion is held.
+The operator approved the combined CU package and then explicitly authorized
+normal staging-to-production promotion and cutover. PR128 passed CI and merged;
+promotion-result.json records the exact main commit and tree. The earlier note
+blocking technical cutover preparation on PR permission was an unnecessary gate.
+The prepared Green, controller and interlock settings are installed and the
+official capacity `check` passes. CU retains the incumbent executable/working
+directory until the approved window, so unrelated recovery cannot load new CU
+software early. Green is inactive, not a second writer. Revalidate effective
+settings immediately before fencing traffic. Local preparation is ready;
+the final catch-up backup and handover are authorized by the latest instruction,
+but their approval record must still bind the exact package and current writers.
+
+Codex CLI0.159.2 was checked directly. Read-only model discovery sees all seven
+models, including GPT-6 Luna/Sol and GPT-6.1 Sol; launcher, account fingerprint
+and Codex home match the accepted proof, which is less than24 hours old.
+No new inference probes or broader V1 acceptance rerun were needed.
+Both telemetry variables resolve to the private file
+`/mnt/vk-storage/codexusage-android/monitor/vk-routing-events-v1.jsonl`.
+The controller checks these requirements before interruption and against actual
+running process environments after activation. See latest-runtime-requirements.json.
 
 Fresh cutover permission must bind the final readiness digest and exact source.
 Recheck staging, live frontend, active/queued work, journal health, backup coverage

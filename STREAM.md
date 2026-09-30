@@ -1,9 +1,15 @@
 # STREAM.md
 
+September30 latest authorization: finish normal staging-to-production promotion
+and cutover. PR128 passed CI and merged as main dcd51cc12; verify activation from
+the independent controller status. CLI0.159.2 and shared telemetry are enforced.
+Earlier preparation-only authorization notes are superseded.
+
 September30 current scope: prepare staging620bd7eb9 and the explicitly approved
 CU406f19b companion for main promotion and a later Blue-to-Green cutover.
-Blue764264 remains live; no cutover permission exists. Opening the promotion PR
-requires resolution of the prior Actions prohibition. Read
+Blue764264 remains live; no cutover permission exists. Local preparation is ready,
+with inactive settings installed and checked. Main promotion remains separate;
+no PR or Actions was launched. Read
 VK_GREEN_PREPARATION_20260930.md; earlier generation/readiness notes are history.
 
 September21 scope: prepare new Blue from exact staging df49b0207 while Green

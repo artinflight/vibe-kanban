@@ -4,6 +4,25 @@ Established by the operator on 2026-09-11. This is the authority for future
 backend restart windows; older stop-and-switch examples are historical.
 An established protocol is not evidence that a particular candidate is ready.
 
+## September 30 Runtime And Telemetry Requirements
+
+For the AutoSwitch V1 deployment, pin production to the verified Codex CLI/runtime
+0.159.2 through the qualified launcher. Check the exact launcher, signed-in account
+fingerprint and Codex home against the seven-model availability proof, including
+GPT-6 Luna, GPT-6 Sol and GPT-6.1 Sol. If that identity changes or proof age reaches
+24 hours at deployment, rerun only the bounded availability verification against
+the actual production identity. Do not rerun the broader V1 acceptance suite for
+a proof refresh. Do not alter proof timestamps or expose account credentials.
+
+VK_ROUTING_EVENTS_FILE and CU_ROUTING_EVENTS_FILE must resolve to the same private
+file. Verify candidate settings before handover and actual process environments
+after activation; a prepared CU drop-in alone is not proof that live CU uses it.
+For September30 the feed is
+`/mnt/vk-storage/codexusage-android/monitor/vk-routing-events-v1.jsonl`.
+The controller verifies these requirements before interruption and after routing,
+with latest-data rollback if live verification fails. Preserve manual model
+choices, existing configuration and the normal staging-to-main promotion path.
+
 ## Generation Roles
 
 September23 current authority: ownership-capable Blue764264 is live on5121/5122.

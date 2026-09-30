@@ -132,9 +132,12 @@ messages do not call either module. The first adapter uses OpenAI Responses with
 seven typed read tools and a structured final `{text, evidence_ids}` response. A
 configured local deployment also supplies the action service/transport: this adds
 `propose_agent_message` and `read_action`, and advertises `agent_actions` while the
-consumer is ready. Read-only test/alternate deployments can omit the action service.
-Memory mutation, native-goal controls and executor approvals remain unavailable
-as model tools. Workspace messages retain their separate raw path.
+consumer is ready. Deployments may omit the agent-action service; memory support
+is a separate model capability.
+The configured adapter also exposes `propose_memory_change` for scoped supervisor
+knowledge, with its own tool-free intent assessment. Native-goal controls and
+executor approvals remain unavailable as model tools. Workspace messages retain
+their separate raw path.
 
 Configuration is explicit and supervisor-specific:
 
@@ -260,7 +263,7 @@ results remain data rather than policy instructions. The proposal tool accepts o
 message text and session IDs, never its own approval/risk fields. Structured policy
 output distinguishes ordinary, consequential, unclear and unsupported-control
 requests, with an authorization judgment and retained explanation. Invalid/refused/
-unavailable assessment cannot authorize delivery. Prompt version `supervisor-v3`,
+unavailable assessment cannot authorize delivery. Prompt version `supervisor-v4`,
 assessment version `supervisor-message-assessment-v1` and known combined usage are
 recorded. Real-model semantic/security evaluation remains a release gate.
 
@@ -434,6 +437,40 @@ attachment handling remain the raw view.
 Direct text/voice never creates a conversation model run. A supervisor model outage
 or missing model credential cannot block ordinary workspace interaction. Cancelling
 workspace speech playback only stops audio; it does not cancel the coding-agent run.
+
+### Conversational memory writes — implemented boundary
+
+`propose_memory_change` accepts a scope, stable claim key, concise body, typed
+entity references and an optional exact prior memory ID/revision. It cannot supply
+its own source message, author, approval or active state. The worker binds the
+proposal to the current user input. The configured adapter independently assesses
+that input, earlier user references, bounded entity context, the selected prior
+claim and the proposed change. Raw reports and unrelated preferences are excluded.
+`remember` activates explicit standing instructions/corrections; `propose` records
+an inferred claim without applying it; `clarify`/`decline` write nothing. Temporary
+runtime facts, secrets and permission overrides are inappropriate memory. Actual
+semantic judgments remain a real-model evaluation gate.
+
+`put_run_memory` checks the current worker lease and source identity inside the
+same SQLite writer transaction as scope validation/supersession. Cancellation
+while assessment is running cannot persist a later preference. Exact repeated
+proposals in a user turn recover the record without another assessment or revision.
+Existing direct store edits retain their strict revision-conflict behavior.
+The user source, scope, author/state and superseded revision remain durable; model
+options record `supervisor-memory-assessment-v1`, and combined usage includes the
+assessment. Active global/conversation preferences refresh in the current model
+request and its version manifest after a change.
+
+`search_memory` accepts an optional workspace and/or exact session; inconsistent
+session/workspace pairs are rejected. It returns active `memories` and separately
+labelled `proposed_memories` within bounded scoped retrieval. Pending claims never
+enter active preferences; an explicit correction/acceptance can supersede their
+exact revision. Project/repository/workspace/session knowledge stays in its
+applicable context. Existing global settings show the records and support scoped
+forgetting, which continues to fence stale in-flight context. Conversational
+forgetting/rescoping and richer preference editing still need their own integrated
+flows; the tool does not claim those capabilities. Raw workspace chat neither reads
+nor writes any of these supervisor memories.
 
 ### Current attention retrieval — implemented boundary
 

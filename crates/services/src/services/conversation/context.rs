@@ -93,7 +93,9 @@ impl LocalContext {
                 workspace_id,
                 offset,
             } => self.attention(run, *workspace_id, *offset).await?,
-            SupervisorTool::ProposeAgentMessage { .. } | SupervisorTool::ReadAction { .. } => {
+            SupervisorTool::ProposeAgentMessage { .. }
+            | SupervisorTool::ReadAction { .. }
+            | SupervisorTool::ProposeMemoryChange { .. } => {
                 return Err(ConversationError::InvalidRecord);
             }
             SupervisorTool::FindContext {
@@ -124,11 +126,28 @@ impl LocalContext {
                     None => json!({"evidence_id":evidence.id,"availability":"unavailable"}),
                 }
             }
-            SupervisorTool::SearchMemory { workspace_id } => {
+            SupervisorTool::SearchMemory {
+                workspace_id,
+                session_id,
+            } => {
                 let mut scopes = vec![MemoryScope::Conversation(run.conversation_id)];
+                let mut workspace_id = *workspace_id;
+                if let Some(session) = session_id {
+                    let parent: Uuid =
+                        sqlx::query_scalar("SELECT workspace_id FROM sessions WHERE id=?")
+                            .bind(session)
+                            .fetch_optional(&self.pool)
+                            .await?
+                            .ok_or(ConversationError::NotFound)?;
+                    if workspace_id.is_some_and(|id| id != parent) {
+                        return Err(ConversationError::InvalidRecord);
+                    }
+                    workspace_id = Some(parent);
+                    scopes.push(MemoryScope::Session(*session));
+                }
                 if let Some(id) = workspace_id {
-                    let row = self.candidate(*id).await?;
-                    scopes.push(MemoryScope::Workspace(*id));
+                    let row = self.candidate(id).await?;
+                    scopes.push(MemoryScope::Workspace(id));
                     if let Some(project) = row.project_id {
                         scopes.push(MemoryScope::Project(project));
                     }
@@ -136,7 +155,7 @@ impl LocalContext {
                         .bind(id).fetch_all(&self.pool).await?;
                     scopes.extend(repos.into_iter().map(MemoryScope::Repository));
                 }
-                json!({"memories":self.store.memories(run.conversation_id, &scopes, 16384).await?})
+                json!({"memories":self.store.memories(run.conversation_id, &scopes, 16384).await?,"proposed_memories":self.store.proposed_memories(run.conversation_id,&scopes,8192).await?})
             }
         };
         Ok(

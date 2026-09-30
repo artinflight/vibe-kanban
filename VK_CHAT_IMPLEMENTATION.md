@@ -49,8 +49,11 @@ runtime approvals/capacity/native-owner reads. It separates pending responses fr
 unread completions, failures, capacity waits and paused goals, and retains the
 observed state as citable evidence without changing workspace seen/history state.
 Explicit coverage limits prevent incomplete local results from being treated as
-an all-clear. Scoped conversational memory mutation, report-level classification,
-review watermarks and completion subscriptions still need implementation.
+an all-clear. Scoped conversational creation/correction now uses a separate intent assessment
+and run-fenced existing-store writes. Inferred claims remain proposed; exact
+session retrieval keeps applicable memories separate. Conversational forgetting/
+rescoping, report-level classification, review watermarks and completion
+subscriptions still need implementation.
 
 ## Recommended first slice
 

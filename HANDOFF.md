@@ -1,3 +1,37 @@
+## September 30: conversational supervisor preferences
+
+Attention work was saved by VK as `838533c46` when the scheduled permission ended.
+Current work moves to `memory_summaries`: a new supervisor memory proposal tool,
+separate tool-free intent assessment, exact-revision creation/correction, scoped
+pending-claim retrieval and current-turn preference refresh. Code lives in
+`services/conversation/memory.rs`, the model/adapter/worker, and the existing
+`db/models/conversation/records.rs`. Prompt version is `supervisor-v4`.
+
+The current user's message supplies provenance; the proposing model cannot supply
+approval/author/source fields. Only assessed explicit instructions become active;
+inferences remain proposed, ambiguity/temporary facts are not saved. Store writes
+check the run lease and source inside the writer transaction. Same-turn identical
+tools recover a receipt without re-assessment. The first regression caught an
+unwanted change to ordinary store CAS behavior: retry recovery is now limited to
+the run-aware method, preserving strict conflicts for pre-existing direct edits.
+`search_memory` now accepts an exact session and returns proposed memories
+separately from active preferences. Raw workspace history is unchanged.
+
+Validation: all **53 database tests and 76 service tests pass** in
+`vk-chat-memory-regression.log`, including five new memory integration tests and
+one adapter-wire test. All **eight conversation API tests pass** in
+`vk-chat-memory-api.log` (137 Rust tests across these suites). Full format, ops and
+diff checks pass. Logs live under
+`/mnt/vk-storage/capacity-build-tmp`. Existing generated public Rust/TS shapes are
+unchanged by this slice; model tool/request types are internal. No frontend code
+changed. Deterministic policy fixtures do not validate real semantic judgments.
+
+Next: conversational forgetting/rescoping, reviewed-source
+watermarks and completion/report ingestion. Real model/speech evaluation,
+executor/browser/provider/device acceptance, native voice/Android and release
+checks remain. There are no external calls, deployments or runtime settings
+changes in this slice. Full goal/checklist completion remains unclaimed.
+
 ## September 30: supervisor attention and policy integration
 
 This entry supersedes the earlier implementation snapshots below. The policy,

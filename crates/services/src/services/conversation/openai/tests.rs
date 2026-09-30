@@ -300,7 +300,7 @@ async fn adapter_worker_reads_real_report_and_replays_reasoning_only_in_the_curr
         assert_eq!(request["parallel_tool_calls"], false);
         assert!(request.get("previous_response_id").is_none());
         assert!(request.get("conversation").is_none());
-        assert_eq!(request["tools"].as_array().unwrap().len(), 7);
+        assert_eq!(request["tools"].as_array().unwrap().len(), 8);
     }
     let second = requests[1]["input"].as_array().unwrap();
     assert!(second.contains(&reasoning));
@@ -386,13 +386,72 @@ async fn policy_assessment_has_no_tools_continuation_or_provider_storage_and_rej
         .is_err()
     );
     assert!(
-        tools(false)
+        tools(false, false)
             .iter()
             .all(|t| t["name"] != "propose_agent_message")
     );
     assert!(
-        tools(true)
+        tools(true, false)
             .iter()
             .any(|t| t["name"] == "propose_agent_message")
+    );
+}
+
+#[tokio::test]
+async fn memory_assessment_is_tool_free_scoped_and_cannot_be_forged_by_the_proposal() {
+    let decision = json!({"decision":"remember","explanation":"The user explicitly corrected a global communication preference."});
+    let transport = Arc::new(ScriptedTransport {
+        requests: Mutex::new(vec![]),
+        replies: Mutex::new(VecDeque::from([response(vec![
+            json!({"type":"message","role":"assistant","content":[{"type":"output_text","text":decision.to_string()}]}),
+        ])])),
+    });
+    let mut model = OpenAiModel::new("selected-model".into(), "private-test-key", 4096).unwrap();
+    model.transport = transport.clone();
+    let proposal = MemoryProposal {
+        scope: db::models::conversation::records::MemoryScope::Global,
+        claim_key: "communication.detail".into(),
+        body: "Leave successful validation out.".into(),
+        entity_refs: vec![],
+        replaces: None,
+    };
+    let request = MemoryAssessmentRequest {
+        current_user_request: "Unless validation fails, leave it out.".into(),
+        previous_user_requests: vec![],
+        entity_context: vec![],
+        existing: None,
+        proposed: proposal.clone(),
+    };
+    let result = model.assess_memory(&request).await.unwrap();
+    assert!(matches!(
+        result.assessment.decision,
+        MemoryDecision::Remember
+    ));
+    assert_eq!(result.usage.input_tokens, 30);
+    let requests = transport.requests.lock().unwrap();
+    assert_eq!(requests[0]["tools"], json!([]));
+    assert_eq!(requests[0]["store"], false);
+    assert_eq!(requests[0]["text"]["format"]["name"], "memory_assessment");
+    assert!(requests[0].get("previous_response_id").is_none());
+    drop(requests);
+    let mut forged = serde_json::to_value(proposal).unwrap();
+    forged["explicit"] = json!(true);
+    assert!(
+        decode(response(vec![call(
+            "propose_memory_change",
+            json!({"proposal":forged}),
+            "forged"
+        )]))
+        .is_err()
+    );
+    assert!(
+        !tools(false, false)
+            .iter()
+            .any(|t| t["name"] == "propose_memory_change")
+    );
+    assert!(
+        tools(false, true)
+            .iter()
+            .any(|t| t["name"] == "propose_memory_change")
     );
 }

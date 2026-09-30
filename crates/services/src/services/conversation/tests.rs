@@ -14,6 +14,7 @@ use tokio::sync::Notify;
 use super::{model::*, *};
 
 mod attention;
+mod memory;
 
 struct Fixture {
     pool: SqlitePool,
@@ -804,6 +805,7 @@ async fn retrieval_does_not_mix_workspace_preferences_and_forgetting_fences_mode
         .execute(
             &run,
             &SupervisorTool::SearchMemory {
+                session_id: None,
                 workspace_id: Some(f.workspace),
             },
         )

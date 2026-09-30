@@ -16,6 +16,7 @@ mod attention;
 pub mod context;
 pub mod dispatch;
 pub mod dispatch_gate;
+mod memory;
 pub mod model;
 pub mod openai;
 pub mod runtime;
@@ -157,6 +158,7 @@ impl SupervisorWorker {
             },
             prompt_version: PROMPT_VERSION,
             agent_actions: self.actions.is_some(),
+            memory_changes: self.model.supports_memory_changes(),
             input: store.run_input(run).await?,
             history: store.run_history(run).await?,
             preferences: store
@@ -172,7 +174,7 @@ impl SupervisorWorker {
             "history":request.history.iter().map(|m|json!({"id":m.id,"revision":m.revision})).collect::<Vec<_>>(),
             "memories":request.preferences.iter().map(|m|json!({"id":m.id,"revision":m.revision})).collect::<Vec<_>>(),
             "tools":[]});
-        let model = json!({"identity":identity,"prompt_version":PROMPT_VERSION,"options":self.model.options(),"agent_actions":self.actions.is_some()});
+        let model = json!({"identity":identity,"prompt_version":PROMPT_VERSION,"options":self.model.options(),"agent_actions":self.actions.is_some(),"memory_changes":request.memory_changes});
         let mut usage = ModelUsage::default();
         let mut call_ids = HashSet::new();
         let mut evidence_seen = HashSet::new();
@@ -228,6 +230,41 @@ impl SupervisorWorker {
                         return Err(WorkError::Safe("model_invalid_tool_call"));
                     }
                     let executed = match &call.tool {
+                        model::SupervisorTool::ProposeMemoryChange { proposal } => {
+                            if request.memory_changes {
+                                let (result, assessed_usage) = self
+                                    .context
+                                    .change_memory(run, &request, self.model.as_ref(), proposal)
+                                    .await?;
+                                usage.input_tokens = usage
+                                    .input_tokens
+                                    .checked_add(assessed_usage.input_tokens)
+                                    .ok_or(WorkError::Safe("model_invalid_usage"))?;
+                                usage.output_tokens = usage
+                                    .output_tokens
+                                    .checked_add(assessed_usage.output_tokens)
+                                    .ok_or(WorkError::Safe("model_invalid_usage"))?;
+                                // A changed preference is applicable to following model
+                                // steps immediately, as well as later durable turns.
+                                request.preferences = store
+                                    .memories(
+                                        run.conversation_id,
+                                        &[MemoryScope::Conversation(run.conversation_id)],
+                                        16384,
+                                    )
+                                    .await?;
+                                manifest["memories"] = json!(
+                                    request
+                                        .preferences
+                                        .iter()
+                                        .map(|m| json!({"id":m.id,"revision":m.revision}))
+                                        .collect::<Vec<_>>()
+                                );
+                                Ok(result)
+                            } else {
+                                Ok(json!({"error":"memory_changes_unavailable"}))
+                            }
+                        }
                         model::SupervisorTool::ProposeAgentMessage { message, sessions } => {
                             if let Some(actions) = &self.actions {
                                 match actions

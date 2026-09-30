@@ -1629,3 +1629,25 @@ this slice.
   `/mnt/vk-storage/capacity-build-tmp/vk-chat-attention-*.log`. The recovered
   baseline also passed 53 DB + 64 service tests. Full workspace/PR and live model/
   executor/browser/provider/phone/car acceptance remain unverified.
+
+
+## 2026-09-30 — conversational supervisor preferences
+
+- Added scoped memory proposals and separate user-intent assessment. Explicit
+  standing instructions/corrections activate knowledge; inferred claims remain
+  proposed. Main-model tool arguments cannot assert their own approval/source.
+- Added transactional source/lease fencing and same-turn receipt recovery on the
+  existing store. Preserved strict CAS for ordinary edits after a regression
+  exposed overly broad idempotency. Active preferences refresh within the turn.
+- Scoped memory retrieval supports an exact session and separates proposed claims.
+  Existing settings/forgetting continue to work; ordinary workspace chat is untouched.
+- New worker/store/adapter tests and documentation are present. Final validation
+  status is in the top HANDOFF entry; no live semantic/provider/device claim follows
+  from deterministic fixtures. No deployment/provider configuration occurred.
+
+- Final memory-slice validation: 53 DB + 76 service + eight conversation API tests
+  pass (137 total), including five new memory behavior tests and the policy-wire
+  test. Full format, ops governance and diff whitespace checks pass. Logs are
+  `vk-chat-memory-{regression,api,format,ops}.log` in the mounted SSD task directory.
+  Real model semantics, browser/device/provider and full workspace/PR validation
+  remain open. Memory source edits remain uncommitted/unpushed.

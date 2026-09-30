@@ -35,9 +35,16 @@ retain exact observed state. Queries leave raw workspace history and seen flags
 unchanged. Coverage limitations and concurrent changes are explicit; inactive
 native goals, report semantics and remote hosts need further integration.
 
+The supervisor now has scoped conversational memory proposals and a separate
+intent assessment for explicit preference creation/correction. Run-fenced writes
+reuse the existing memory store; duplicate calls recover one record. Inferred
+claims remain proposed, while active preferences refresh within the turn. Scoped
+search now supports exact sessions and separates active from proposed memories.
+The existing settings view and forgetting API remain in use.
+
 ## Remaining implementation
 
-Finish memory mutation/scoping and source-review watermarks, semantic report
+Finish conversational forgetting/rescoping and source-review watermarks, semantic report
 classification and completion subscriptions; extend project/remote context where
 required by existing project navigation. Validate the configured routing/policy
 and early speech corpus with a funded model. Browser/multi-client/accessibility

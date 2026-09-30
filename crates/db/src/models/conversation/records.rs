@@ -395,6 +395,26 @@ impl ConversationStore {
     /// A user correction supersedes one exact revision. Inferred changes are
     /// proposals; they cannot replace a user's active instruction.
     pub async fn put_memory(&self, id: Uuid, change: &MemoryChange) -> Result<ConversationMemory> {
+        self.put_memory_inner(id, None, change).await
+    }
+
+    /// Conversational writes must still belong to the active user turn when the
+    /// writer lock is acquired, including after a slow intent assessment.
+    pub async fn put_run_memory(
+        &self,
+        run: &ConversationRun,
+        change: &MemoryChange,
+    ) -> Result<ConversationMemory> {
+        self.put_memory_inner(run.conversation_id, Some(run), change)
+            .await
+    }
+
+    async fn put_memory_inner(
+        &self,
+        id: Uuid,
+        run: Option<&ConversationRun>,
+        change: &MemoryChange,
+    ) -> Result<ConversationMemory> {
         validate_body(&change.body)?;
         if change.claim_key.trim().is_empty()
             || change.claim_key.len() > 200
@@ -405,6 +425,12 @@ impl ConversationStore {
         }
         let mut tx = self.pool.begin().await?;
         self.lock(&mut tx, id).await?;
+        if let Some(run) = run {
+            self.check_lease(&mut tx, run).await?;
+            if change.source_message_id != run.input_message_id {
+                return Err(ConversationError::InvalidRecord);
+            }
+        }
         self.validate_scope(&mut tx, id, &change.scope).await?;
         for scope in &change.entity_refs {
             self.validate_scope(&mut tx, id, scope).await?;
@@ -418,6 +444,27 @@ impl ConversationStore {
         }
         let current = sqlx::query_as::<_, ConversationMemory>("SELECT * FROM conversation_memory WHERE conversation_id = ? AND scope_kind = ? AND scope_id = ? AND claim_key = ? AND state IN ('active','proposed')")
             .bind(id).bind(kind).bind(scope_id).bind(&change.claim_key).fetch_optional(&mut *tx).await?;
+        if let Some(old) = &current
+            && run.is_some()
+            && old.source_message_id == change.source_message_id
+            && old.body == change.body
+            && old.entity_refs.0 == change.entity_refs
+            && old.valid_until == change.valid_until
+            && old.state
+                == if change.explicit {
+                    "active"
+                } else {
+                    "proposed"
+                }
+            && old.supersedes_id == change.replaces.map(|(id, _)| id)
+            && old.revision
+                == change
+                    .replaces
+                    .map_or(1, |(_, revision)| revision.saturating_add(1))
+        {
+            tx.commit().await?;
+            return Ok(old.clone());
+        }
         let revision = match (&current, change.replaces) {
             (None, None) => 1,
             (Some(old), Some((old_id, revision)))
@@ -461,6 +508,28 @@ impl ConversationStore {
         scopes: &[MemoryScope],
         budget_bytes: usize,
     ) -> Result<Vec<ConversationMemory>> {
+        self.memories_in_state(id, scopes, budget_bytes, "active")
+            .await
+    }
+
+    /// Proposed knowledge is review data, never part of active preferences.
+    pub async fn proposed_memories(
+        &self,
+        id: Uuid,
+        scopes: &[MemoryScope],
+        budget_bytes: usize,
+    ) -> Result<Vec<ConversationMemory>> {
+        self.memories_in_state(id, scopes, budget_bytes, "proposed")
+            .await
+    }
+
+    async fn memories_in_state(
+        &self,
+        id: Uuid,
+        scopes: &[MemoryScope],
+        budget_bytes: usize,
+        state: &str,
+    ) -> Result<Vec<ConversationMemory>> {
         self.get(id).await?;
         if scopes.len() > 32 {
             return Err(ConversationError::InvalidRecord);
@@ -476,8 +545,8 @@ impl ConversationStore {
         for scope in &requested {
             self.validate_scope(&mut tx, id, scope).await?;
             let (kind, scope_id) = scope.key();
-            let records = sqlx::query_as::<_, ConversationMemory>("SELECT * FROM conversation_memory WHERE conversation_id = ? AND scope_kind = ? AND scope_id = ? AND state = 'active' AND (valid_until IS NULL OR julianday(valid_until) > julianday('now')) ORDER BY created_at DESC LIMIT 200")
-                .bind(id).bind(kind).bind(scope_id).fetch_all(&mut *tx).await?;
+            let records = sqlx::query_as::<_, ConversationMemory>("SELECT * FROM conversation_memory WHERE conversation_id = ? AND scope_kind = ? AND scope_id = ? AND state = ? AND (valid_until IS NULL OR julianday(valid_until) > julianday('now')) ORDER BY created_at DESC LIMIT 200")
+                .bind(id).bind(kind).bind(scope_id).bind(state).fetch_all(&mut *tx).await?;
             for record in records {
                 if record.body.len() <= remaining
                     && !result

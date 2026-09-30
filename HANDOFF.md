@@ -1,3 +1,11 @@
+## V2 resumed after V1 staging integration
+
+Continue on `vk/5a81-autoswitch-cu-recovery`; V1 PR127/deployment is separate and
+must remain untouched. Follow-up qualification persistence and lexical assessment
+repairs are implemented, plus a read-only policy recommendation command. Details:
+[VK_AUTOSWITCH_FULL_ROUTER.md](VK_AUTOSWITCH_FULL_ROUTER.md). This is not live
+activation or live Shadow evidence. No V1 model acceptance campaign was repeated.
+
 ## Automatic assessment / qualified-pair router
 
 The operator accepted V1 architecture and integration; do not reopen its prior

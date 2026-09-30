@@ -617,7 +617,13 @@ export type RoutingDecision = { version: number, id: string, mode: RoutingMode, 
 /**
  * Persist qualification context independently of human-readable reasons.
  */
-assessed_envelope?: string | null, requested_model: string | null, selected_model: string | null, selected_effort: string | null, service_tier: string, previous_model: string | null, previous_execution_id: string | null, escalated: boolean, catalog_observed_at: number | null, account_fingerprint: string | null, };
+assessed_envelope?: string | null, triage?: TaskTriage | null, requested_model: string | null, selected_model: string | null, selected_effort: string | null, service_tier: string, previous_model: string | null, previous_execution_id: string | null, escalated: boolean, catalog_observed_at: number | null, account_fingerprint: string | null, };
+
+export type TaskTriage = { version: number, intent: string, scope: string, pattern: string, ambiguity: string, horizon: string, validation: string, risk: Array<string>,
+/**
+ * Evidence strength, not a model's self-reported probability of success.
+ */
+uncertainty: string, needs_repo_inspection: boolean, evidence: Array<string>, inspected_entries: number, inspected_files: number, };
 
 export type ScriptContext = "SetupScript" | "CleanupScript" | "ArchiveScript" | "DevServer" | "ToolInstallScript";
 

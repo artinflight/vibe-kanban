@@ -182,3 +182,71 @@ validated fixes Sol6/medium, retained cheap continuation, retained complex conte
 Astra exclusion pause and failure-context refusal. Experimental Sol6/low appeared
 only as the bounded Shadow candidate. No new inference or live execution occurred.
 Evidence: `/mnt/vk-storage/vk-model-autoswitch-20260930/v2-continuation/`.
+
+## Natural-language outcome triage (focused V2 continuation)
+
+Admission now includes a compact `TaskTriage` record, persisted on RoutingDecision
+and therefore available through the existing raw routing log. This is a
+**deterministic, compositional outcome recognizer plus bounded repository scout**,
+not a general language-model classifier. It recognizes a requested presentation
+change on a named UI surface without requiring engineering vocabulary. Unrecognized
+requests continue at the safer existing workhorse tier. There is no paid planning
+pass, new agent, scheduler, runtime dependency or change to the CU wire contract.
+
+For example, “Add a tooltip to the settings page and make sure it works” identifies
+UI help on one likely surface. A matching Settings page/component, an existing
+Tooltip pattern, and a recognized package check (such as tsc, Vitest or ESLint)
+permit the existing bounded envelope and its qualified model/effort selection.
+“Make sure it works” is not itself evidence that validation exists or passed.
+Without repository corroboration the same request retains Workhorse, with high
+uncertainty and `needs_repo_inspection: true`. The operator need not supply file
+names or technical scope labels; the existing execution boundary supplies the
+session worktree. An unrelated SettingsButton is not a Settings-page match.
+
+Plain-language access, deletion and shared-state consequences override cheap UI
+intent, as do protected imports/paths in a matched component. Compound, cross-page,
+novel or ambiguous requests do not receive the small-UI qualification. Existing
+explicit risk guards and deterministic text-edit/explicit-scope rules remain as
+additional signals. This is deliberately limited coverage, not a claim of complete
+semantic understanding, dependency analysis or proven test coverage.
+
+The structured record contains version, intent, likely scope, existing-pattern
+evidence, ambiguity, expected horizon, validation availability, risk categories,
+uncertainty, inspection-needed flag, evidence codes and inspected entry/file counts.
+Uncertainty is categorical evidence strength, not a self-reported success
+probability. Available checks are explicitly labeled `package_check_available_not_run`;
+legacy explicit validation requests are `requested_not_verified`. Retained session
+qualification is recorded separately from the current request's inferred intent.
+
+Inspection runs only for recognized outcomes where it could improve qualification.
+It uses conventional UI source roots, at most 768 directory entries, eight bounded
+file reads (16 KiB each), depth eight and a cooperative 40 ms budget. It does not
+follow source symlinks, run repository scripts, execute tools from repository text,
+read credential stores or send source to a model. Slow individual filesystem calls are
+not forcibly interrupted; work runs off the async admission thread. Missing,
+oversized, unreadable, unsupported or incomplete evidence cannot authorize a new
+routine classification. No cache can go stale because the small inspection uses
+the current working tree. Unusual repo layouts safely retain Workhorse.
+
+Manual mode bypasses triage. Native pinned resumes, prior floors, escalation
+consent, exclusions, qualification ranks, exact model proof and Shadow behavior
+remain authoritative. A newly discovered protected component can raise the
+existing follow-up risk-expansion gate. No active-turn switching or retry was added.
+
+The offline `routing_recommend` example accepts optional `repo_root` in each JSONL
+row and returns the same compact triage record. It still performs no inference,
+emits no fake CU execution events and cannot replace live Shadow QA. The V1
+release/deployment path remains separate and untouched.
+
+Validation for natural-language triage: 22 focused routing/assessment/telemetry
+regressions passed, including the unchanged V2 manual, floor, Shadow and escalation
+checks plus five new triage tests. Services check, focused executor/services Clippy,
+shared-type generation, web-core TypeScript, format and ops governance passed.
+The recommendation executable passed five cases against existing runtime proof:
+ordinary tooltip request with repo evidence -> Luna6/medium; no repo evidence ->
+Sol6.1/medium; protected component -> Astra/high; compound task -> Sol6.1/medium;
+protected task with Astra excluded -> pause. These used synthetic repository
+fixtures, not live workload acceptance, and made zero native/model calls.
+The initial compound-request regression failed and was corrected before the final
+passing run. Evidence: `/mnt/vk-storage/vk-model-autoswitch-20260930/v2-triage/`.
+Live V2 Shadow/release QA remains pending; V1 acceptance was not rerun.

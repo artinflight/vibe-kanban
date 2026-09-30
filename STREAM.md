@@ -1,3 +1,11 @@
+## Natural-language triage continuation
+
+V2 now recognizes common presentation outcomes on named UI surfaces and corroborates
+them with bounded repository evidence at the existing execution boundary. Structured
+triage includes uncertainty, validation availability and inspection counts; missing
+context retains Workhorse. No planning model call, registry change, CU contract change
+or V1 deployment work. Read VK_AUTOSWITCH_FULL_ROUTER.md for scope and limits.
+
 ## V2 resumed after V1 staging integration
 
 Continue on `vk/5a81-autoswitch-cu-recovery`; V1 PR127/deployment is separate and

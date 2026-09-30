@@ -2,6 +2,15 @@
 
 ## September30: Staging Cutover Preparation, Not Activation
 
+Latest operator correction: include the reconciled CU package. CU406f19b is
+committed on deploy/vk-green-20260930, not pushed, with a verified Git bundle.
+Seven controller tests and four real-binary ownership/cutback cases pass.
+Successful CI5238153 covers the identical entire staging620bd7eb9 tree.
+The only outstanding promotion decision is permission for Actions automatically
+triggered by a staging-to-main PR; the question is unanswered. Do not open the
+PR, trigger workflows, or claim cutover readiness until that is resolved.
+This is preparation only; fresh cutover permission remains separately required.
+
 Built exact fork staging620bd7eb9 as replacement Green. Blue764264 on5121 remains
 live; CU2139576 and production routing are unchanged. Main32c556f3e is not merged.
 Read `VK_GREEN_PREPARATION_20260930.md` and the runtime preparation directory
@@ -13,17 +22,19 @@ rehearsal preserved latest saved messages, model profiles and settings. The
 combined CU candidate passes173 tests and recorded-native reporting acceptance.
 Full aggregate check/lint remain blocked by the host's missing GTK dependency.
 
-Fresh5.12GB online archive is SHA-256 verified on Desktop B; all30 SQLite payloads
+Refreshed5.12GB online archive181003Z is SHA-256 verified on Desktop B; all30 SQLite payloads
 were extracted and integrity-checked. Required September11 base archives were
 freshly hashed on Desktop. This is not the final boundary capture. The read-only
-change journal remains active; historical missing-history/attachment exceptions
+replacement change journal remains active; a test-directory move invalidated the
+old journal, so a fresh watcher/baseline replaced it without ignoring the error.
+Historical missing-history/attachment exceptions
 are retained. Candidate/CU/controller unit files are prepared, not installed.
-Source integration/QA and the coordinated CU package need operator review before
-main promotion/readiness authorization. Do not infer cutover permission here.
-Prepared software264,529,505bytes is also hash-verified on Desktop; runtime
-readiness explicitly remains false/prepared-for-review.346 non-Tauri tests pass
+Main promotion waits for the specific Actions permission above. Runtime
+readiness explicitly remains false while promotion is held.346 non-Tauri tests pass
 with five ignored. Maintenance ops/diff checks pass; its formatter still lacks
-Prettier, although exact candidate-source formatting passed. No commit/push ran.
+Prettier, although exact candidate-source formatting passed. No production change
+or remote push ran. Use the current software-package-receipt.json, not the
+superseded264,529,505byte package, for the final prepared tools.
 
 ## September30: Extended SSD Cleanup Complete
 

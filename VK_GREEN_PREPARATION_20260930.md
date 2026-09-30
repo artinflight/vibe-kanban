@@ -29,11 +29,11 @@ intentionally removed by a86dfe6a5. None is an omitted feature based on this aud
 CU reporting cannot safely deploy from the dirty canonical checkout: that branch
 predates capacity code already running. An isolated reconciliation preserves the
 actual live CU release and adds only V1 telemetry. Its source is on
-`deploy/vk-green-20260930` at the runtime directory's `cu-source`, uncommitted and
-not pushed. The live CU checkout and service were not modified. The operator was
-asked whether to include this companion or leave new reporting inactive; no reply
-was received during preparation. The proposed package includes the companion,
-subject to review, rather than silently dropping reporting or capacity features.
+`deploy/vk-green-20260930` at the runtime directory's `cu-source`, committed as
+406f19b and not pushed. The operator explicitly approved including this package.
+The live CU checkout and service were not modified. The clean isolated source
+and a verified Git bundle preserve the reconciliation; it is not claimed merged
+into CU main or staging.
 
 ## Evidence
 
@@ -59,24 +59,32 @@ Root: `/mnt/vk-storage/vk-green-refresh-20260930`.
   reject competing/stale ownership, recover from backup abort and return to the
   same original PID with the latest message/model/settings/controller state.
   The shipped handover primitives are exercised; CU's dependency gate uses a
-  sentinel process. Its7.53second private test excludes Desktop transfer and
+  sentinel process. Its3.32second private test excludes Desktop transfer and
   live work draining, and is not a production downtime promise.
-- `test_controller.py`: five outer-controller policy/failure tests pass using
-  substituted service calls. Read-only production preflight also passes.
+- `test_controller.py`: seven outer-controller policy/failure tests pass using
+  substituted service calls. Failed main/emergency recovery does not resume
+  writers without a healthy routed owner. Repeated cutback handles an already
+  released/frozen candidate. `install_prepared.py` passes its default dry run;
+  it requires separately bound approval before installing any production files.
+- Refreshed read-only production preflight passes with active work still running.
+  Blue764264/CU2139576 remain unchanged. The HTTPS API returned200 using the
+  existing local-certificate bypass; host curl does not trust this CA, so this
+  is availability evidence, not new TLS trust validation.
 - `companion-acceptance.json`:173 CU tests and private HTTP/catalog checks pass;
   four previously recorded native executions reproduce98,093 tokens and one
   transition. Twelve duplicate imports are rejected. No paid model calls ran.
 
 Existing CI was inspected only: the exact staging tip has passing ops governance
-and skipped application jobs. Accepted V1 CI/native evidence is retained, and
-the executor/RPC/container paths are byte-identical to accepted67c4a5b62. Do not
-describe skipped exact-tip jobs as newly passing full CI.
+and skipped application jobs. Successful accepted CI at52381535641bc23c8adfedcf0251b772fcb7b608
+covers the identical entire staging tree c399d1faa1317a6ace906b71e0a3a0569b886a8e.
+`ci-tree-equivalence.json` records the comparison. This is stronger than the
+previous subset comparison, but is not a newly launched exact-tip CI run.
 
 ## Preservation
 
 Desktop destination: `desktop:B:/vk-backups/vk-green-refresh-20260930/`.
-Online archive: `online-refresh-20260930T172948Z.tar.zst`,5,116,122,626bytes,
-SHA-256 `bd672a5d8603b30ee3efe09ad901e6c139657f03ce23a6a0b21087ddb41de515`.
+Online archive: `online-refresh-20260930T181003Z.tar.zst`,5,116,791,972bytes,
+SHA-256 `4add9d0ffc58e644998a7422866dcca865cf3b387d194e11ebd9ac2fbf983997`.
 Desktop matched the hash; all30 SQLite payloads were extracted and passed
 integrity checks. Required September11 baseline archives were freshly hashed on
 Desktop; existing full baseline restore evidence is retained, not rerun as a
@@ -89,18 +97,27 @@ files match their recorded hashes. Historical unavailable attachments and2282
 missing VK rollout paths remain exceptions;2824 missing paths across both native
 homes is the wider backup-audit scope, not a new-loss count.
 
-The read-only journal `vk-green-prep-journal-20260930.service` tracks work performed
-after the online snapshot. Final frozen capture is reserved for the approved
+An active test run moved a watched directory, invalidating the original change
+journal. That error was not ignored: a new watcher and fresh online baseline
+were created while production remained usable. Old archive/receipt are retained.
+The read-only journal `vk-green-prep-journal-refresh-20260930.service` now tracks
+work after this baseline. A newer journal socket invalidates an older baseline;
+preflight and final capture enforce that relationship. The old watcher is stopped.
+Final frozen capture is reserved for the approved
 window. Never activate from `runtime`, restore old data over production, or
 delete historical recovery evidence. Bulky files remain on the mounted SSD.
 
 ## Remaining Boundary
 
-Review the combined CU candidate and user-facing changes before promotion; resolve
-the CI/QA requirement without silently launching paid Actions. Candidate, CU and
+The operator approved the combined CU package. Opening the staging-to-main PR
+automatically launches GitHub Actions; the previous explicit prohibition still
+applies. A specific permission question was sent and remains unanswered. Main
+promotion is held for that decision, not for a known failing release test.
+Candidate, CU and
 independent controller unit files remain under `prepared-units`, not installed.
 This prevents an unrelated service recovery from activating new settings early.
 Validate the effective installed settings after approval, before fencing traffic.
+Do not advertise the cutover as ready while the requested main promotion is held.
 
 Fresh cutover permission must bind the final readiness digest and exact source.
 Recheck staging, live frontend, active/queued work, journal health, backup coverage

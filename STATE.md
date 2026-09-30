@@ -3,8 +3,11 @@
 **September30 preparation only:** replacement Green is built from fork staging
 620bd7eb9; production remains Blue764264 on5121/5122, with CU2139576. Main32c556f3e
 and all live routing/services are unchanged. Local validation and a fresh verified
-Desktop online backup are complete; candidate/CU settings are inert. Read
-`VK_GREEN_PREPARATION_20260930.md` for remaining promotion/QA/approval boundaries.
+Desktop online backup are complete; candidate/CU settings are inert. CU inclusion
+is explicitly approved, isolated source committed406f19b. Successful CI5238153
+covers the identical entire staging tree. Main promotion awaits permission for
+automatically triggered Actions, not a known failing release test. Read
+`VK_GREEN_PREPARATION_20260930.md` for evidence and the exact approval boundaries.
 No final cutover or frozen boundary capture is authorized by preparation.
 
 **September23 live ownership-capable Blue:** staging1b31e1874/PR124 is deployed

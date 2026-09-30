@@ -1,5 +1,11 @@
 # STREAM.md
 
+September30 current scope: prepare staging620bd7eb9 and the explicitly approved
+CU406f19b companion for main promotion and a later Blue-to-Green cutover.
+Blue764264 remains live; no cutover permission exists. Opening the promotion PR
+requires resolution of the prior Actions prohibition. Read
+VK_GREEN_PREPARATION_20260930.md; earlier generation/readiness notes are history.
+
 September21 scope: prepare new Blue from exact staging df49b0207 while Green
 remains live; preserve CU local corrections and current frontend rollback.
 No production cutover is authorized. Read VK_BLUE_READY_20260921.md and the

@@ -1510,6 +1510,37 @@ pub trait ContainerService {
             return Err(ContainerError::ExecutorError(error));
         }
 
+        // Route only here, after queue admission and before persisting the action.
+        // A routing failure cannot reset Git or create another continuation loop.
+        let mut resolved_action = executor_action.clone();
+        if executors::routing::config(&resolved_action)
+            .and_then(|c| c.routing.as_ref())
+            .is_some_and(|p| p.mode != executors::routing::RoutingMode::Manual)
+        {
+            let previous: Option<(Uuid, String, String)> = sqlx::query_as(
+                "SELECT id, status, executor_action FROM execution_processes WHERE session_id = ? AND run_reason = 'codingagent' AND dropped = FALSE ORDER BY created_at DESC, rowid DESC LIMIT 1",
+            ).bind(session.id).fetch_optional(&self.db().pool).await?;
+            let previous_action = previous
+                .as_ref()
+                .map(|(_, _, json)| serde_json::from_str::<ExecutorAction>(json))
+                .transpose()
+                .map_err(|e| ContainerError::Other(anyhow!(e)))?;
+            executors::routing::resolve_action(
+                &mut resolved_action,
+                previous_action.as_ref(),
+                previous
+                    .as_ref()
+                    .is_some_and(|(_, status, _)| status == "failed"),
+            )
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
+            if let Some(decision) = &mut resolved_action.routing_decision {
+                decision.previous_execution_id = previous.as_ref().map(|(id, _, _)| id.to_string());
+            }
+        } else {
+            resolved_action.routing_decision = None;
+        }
+        let executor_action = &resolved_action;
+
         // Create new execution process record
         // Capture current HEAD per repository as the "before" commit for this execution
         let repositories =

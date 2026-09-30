@@ -1,351 +1,228 @@
-# VK Model AutoSwitch: feasibility and investigation plan
+# VK Model AutoSwitch: safe V1 implementation
 
-Investigated 2026-09-30 against VK `1b31e18748ea347c7303688deb9eb1704a764550`
-on `vk/5a81-vk-model-autoswi`. Status: planning, not an implemented router.
+Updated 2026-09-30 on `vk/5a81-vk-model-autoswi`. This replaces the planning-only
+state in commit `df3e973a5`; that commit retains the original investigation.
+The full relevant family is a product requirement. One runtime's discovery
+response is an observation, not the product's model definition.
 
-## Recommendation
+## What V1 does
 
-**Routing is technically feasible at new-execution and follow-up boundaries.**
-VK already carries model and reasoning overrides into Codex thread start/resume.
-There is no demonstrated safe hot-swap inside an active turn, and no evidence yet
-that a particular cheaper model preserves Astra-quality results on our workload.
-Build an opt-in recommendation/shadow phase before automatic selection; qualify
-narrow task classes through measured outcomes before enabling execution changes.
+VK now resolves opt-in routing at its existing execution admission boundary,
+before persisting `ExecutorAction` and launching Codex. It introduces no scheduler,
+background retry loop, Git reset, global profile mutation or active-turn swap.
+Manual remains the default. The shared model selector offers Manual, Recommend
+(shadow), and Automatic, plus a capability floor, Astra exclusion and consent to
+escalate after a failed execution. A backend capability flag hides these controls
+when a frontend is connected to an older backend.
 
-The minimum safe tier should be an empirical eligibility rule for a task, repo,
-validation environment and model/settings combination—not a universal ranking.
-First filter for quality, capability, availability and user constraints; then
-minimize expected **total accepted-task cost**, including review and rework.
-If the safe set is empty or unaffordable, pause/defer rather than lower the floor.
+The initial policy is deliberately simple. Choose the lowest configured cost
+rank among recently verified model/effort combinations at or above the floor.
+The default floor is **workhorse**; explicitly bounded routine work can opt into
+**routine**. Prompts mentioning migrations, security/authentication/authorization,
+production, data deletion, credentials, concurrency or cryptography raise the
+floor to **frontier**. This is a conservative heuristic, not a reliable semantic
+risk classifier. Ambiguity or sensitive work should use the frontier/manual
+control; a small diff or successful test is not proof of safety.
 
-## Evidence and scope
+With the verified catalog from this task:
 
-Read the selection, action persistence, Codex RPC, queue, native-goal, log and
-capacity paths listed below; inspected recent Git history and continuity reports.
-Ran a read-only `initialize` → `initialized` → `model/list` probe using installed
-`codex-cli 0.153.4` and Green's Codex home. The response had no next page, including
-hidden models. No inference turn, task replay, production restart, profile change
-or deployment was performed. Discovery establishes an advertised catalog, not
-successful execution or account entitlement for each model.
+| Floor | First selection | Effort | Intended first use |
+| --- | --- | --- | --- |
+| Routine | `gpt-6-luna` | medium | Explicitly bounded, independently checked work; experimental |
+| Workhorse | `gpt-6.1-sol` | medium | General development under existing review/test requirements |
+| Frontier | `gpt-6-astra` | high | High-impact work or an escalated floor |
 
-Local cache corroboration: Green `models_cache.json`, fetched
-`2026-09-30T11:29:09.547475896Z`, client `0.153.4`. Only model metadata and selected
-nonsecret config fields were read; credentials were not inspected. The probe
-used the installed CLI and Green home; this does not establish the executable or
-configuration of every already-running VK agent. Recheck the actual launcher,
-provider and account identity before a pilot.
+These capability assignments are configurable starting policies, **not measured
+quality equivalence**. The implementation makes the Sol/Luna hypotheses immediately
+testable on real work. It does not claim a percentage saving or Astra-equivalent
+code quality. The earlier proposal for a large historical cohort is optional
+future qualification, not a prerequisite to this opt-in V1.
 
-CodexUsage source was inspected read-only at `/home/mcp/code/codexusage`, HEAD
-`400fa63f029adf64ebeb610ddc195cf15309dbdd` **with existing local changes**. Findings
-refer to those files as observed, not a clean commit or verified live service.
-No statistical workload audit or cross-model quality benchmark was run.
+## Current model and runtime evidence
 
-## Models and settings actually discovered
+There are four distinct facts:
 
-All four models below were returned by native `model/list`, are represented in
-this session's model options, and can be represented by VK's executor config.
-Their task suitability remains a hypothesis requiring local evaluation.
+1. **Representable:** `ExecutorConfig.model_id` accepts exact string IDs; adding a
+   model does not require a new enum or architecture.
+2. **Released/policy-known:** the administrator's model registry records release
+   status, capability floor, supported VK efforts and preference rank.
+3. **Discovered:** the native catalog returned the ID for this launcher/account.
+4. **Executable:** a completed inference on that launcher/account verified an exact
+   model/effort. Discovery alone does not authorize automatic selection. A released
+   model absent from discovery can qualify through successful direct verification.
 
-| Exact ID        | Native description/role                                   | Native default effort | Native efforts                       | VK usable efforts |
-| --------------- | --------------------------------------------------------- | --------------------- | ------------------------------------ | ----------------- |
-| `gpt-5.6-luna`  | Fast, efficient older model                               | medium                | low, medium, high, xhigh, max        | same              |
-| `gpt-5.6-terra` | Balanced older model for straightforward work             | medium                | low, medium, high, xhigh, max, ultra | low through max   |
-| `gpt-5.6-sol`   | Older workhorse                                           | low                   | low, medium, high, xhigh, max, ultra | low through max   |
-| `gpt-6-astra`   | Frontier model for demanding work; native catalog default | medium                | low, medium, high, xhigh, max, ultra | low through max   |
+| ID | CLI 0.153.4 catalog | CLI 0.159.2 catalog | Verified on 0.159.2 |
+| --- | --- | --- | --- |
+| `gpt-5.6-luna` | yes | yes | medium |
+| `gpt-5.6-terra` | yes | yes | medium |
+| `gpt-5.6-sol` | yes | yes | medium |
+| `gpt-6-luna` | no | yes | medium |
+| `gpt-6-sol` | no | yes | medium |
+| `gpt-6.1-sol` | no | yes | medium |
+| `gpt-6-astra` | yes | yes | high |
 
-Native metadata reports text/image input for all four, multi-agent version `v2`
-for Astra/Sol/Terra and `v1` for Luna. This is a compatibility distinction, not a
-quality score. The cache reports a 272,000-token context window for each; public
-API pages advertise 1,050,000. Use the effective Codex runtime limit, not the API
-maximum, when estimating whether a handoff fits.
+The old launcher is `/home/mcp/.local/bin/codex`, a wrapper that removes newer
+subagent log items; inspection found no model filtering there. A fresh probe on
+0.153.4 still returned only the four earlier models, and direct new-model requests
+did not complete. An isolated 0.159.2 installation, using the **same account and
+Codex home**, discovered all seven and completed all seven tiny inference probes.
+This establishes CLI/catalog compatibility as a material cause in this environment;
+A final read-only recheck of 0.153.4 after the newer CLI refreshed the same
+home still returned only four IDs, so shared-cache refresh alone did not fix it.
+The exact bundled-catalog versus versioned-server mechanism remains unproven. There is no remaining account-access blocker
+for these IDs on the tested 0.159.2 runtime.
 
-The native catalog describes `ultra` as reasoning with automatic delegation.
-VK's `ReasoningEffort` enum cannot represent it. Public API `none` is likewise
-absent from VK and this native catalog. Neither belongs in the initial router.
-Delegation must remain subject to the task's permission and agent policies.
+The newer CLI is staged at
+`/mnt/vk-storage/vk-model-autoswitch-v1/codex-current/node_modules/.bin/codex`.
+The host wrapper/live service was **not upgraded or restarted**. Updating the
+production launcher still requires its normal compatibility and release workflow.
+Model probes may refresh the native model cache; no credential was copied or
+printed and no active user thread was used for the test.
 
-Native Fast/priority is advertised for all four, with increased usage and speed
-claims of 2x for Astra and 1.5x for the others. Those are **speed descriptions,
-not measured allowance multipliers**. VK maps a `-fast` model suffix into a base
-model plus `ServiceTier::Fast`; `/fast` is another control. Treat service tier as
-a separate setting and explicitly preserve/reset it on transitions. Default
-routing experiments should use standard service, subject to an explicit lock.
+Native supported efforts are low/medium/high/xhigh/max for Luna models, with
+`ultra` additionally advertised for Sol/Terra/Astra. VK V1 supports only its existing
+low-through-max enum. API `none` and native `ultra` are not automatically selected.
+The registry, runtime-discovered effort list and successfully verified pairs are
+intersected. A stronger verified effort can serve as a fallback; unsupported or
+unverified combinations are not guessed.
 
-The public catalog also mentions GPT-6 Sol/Luna and a GPT-6.1 Sol ID. None was
-returned by this native probe, even with hidden models included. Do not invent
-aliases or add these to the routable set until discovery and execution validation
-agree. Public model lists are not account entitlement lists; the official
-[app-server integration guide](https://developers.openai.com/siwc/token-sharing-open-source/codex-app-server)
-also cautions that discovery may return a bundled catalog.
+Official references confirm the new models' positioning and effort distinctions:
+[GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol),
+[GPT-6 Sol](https://developers.openai.com/api/docs/models/gpt-6-sol), and
+[GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna).
+Near-Astra positioning is a reason to trial Sol 6.1, not local quality evidence.
+Cost ranks are explicit initial preferences, not measured dollar or allowance
+costs. API prices are not Codex weekly allowance weights. Calibrate these ranks
+against accepted-task usage as the pilot produces evidence.
 
-### Cost: API prices are not Codex allowance weights
+## Manual control, safety and escalation
 
-Published standard API USD per million tokens, fetched on the investigation date:
+- No routing policy, or `mode: manual`, preserves existing model/effort behavior.
+  Selecting a model or effort explicitly locks manual mode. A saved per-chat
+  policy persists; unrelated last-used settings cannot opt another chat into auto.
+- Shadow keeps the requested action unchanged, logs the recommendation, and does
+  not reject execution because the router cannot recommend a model.
+- Auto retains the previous routing floor across follow-ups. A later short prompt
+  cannot silently lower a frontier task to routine. Model exclusions are hard
+  constraints. No candidate, stale evidence or incompatible launcher/profile
+  returns an actionable error before an execution is launched.
+- Ordinary follow-ups may change model. Native control commands and scheduled
+  goal resumes retain the previous concrete model/effort, while honoring current
+  floor/exclusion constraints. Native goal turns remain pinned within an execution.
+  Automatic mode cannot first be enabled by a native resume; use an ordinary
+  follow-up or keep manual mode. Choose manual mode to deliberately change a
+  pinned goal's model. A failed pinned execution pauses for diagnosis rather than
+  automatically retrying the same model.
+- A failed predecessor blocks auto by default. With explicit escalation consent,
+  the **next requested execution** raises the floor one step. Failure at frontier
+  requires manual diagnosis. There is no autonomous retry. This detects executor
+  failure, not every failed tool command or test assertion; quality-triggered
+  escalation still relies on review and selecting a higher floor/manual model.
+  Infrastructure errors may need repair rather than a stronger model.
+- Auto retry requests that could invoke the existing Git-reset path are rejected;
+  use a normal follow-up to preserve dirty work. Manual retry behavior is unchanged.
+- Auto uses standard service tier and explicitly clears inherited Fast mode.
+  Manual/shadow preserve existing service-tier behavior. The executor validates
+  account fingerprint and returned model, effort, provider and tier before inference.
+  It also pins effort in collaboration mode so mode defaults cannot undo routing.
+  A native `model/rerouted` notification fails automatic execution for review.
+- Reviews remain manual for V1; shadow is observational. Custom native profiles,
+  providers or command/environment overrides cannot automatically reuse proof
+  generated for the default launcher. These requests fail closed. Automatic
+  mode currently requires a signed-in Work/Codex account with an email identity;
+  API-key accounts retain manual mode pending an equally strong identity binding.
 
-| Model         |  Input | Cached input | Output | Official source                                                         |
-| ------------- | -----: | -----------: | -----: | ----------------------------------------------------------------------- |
-| GPT-5.6 Luna  |  $0.20 |        $0.02 |  $1.20 | [Luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna.md)   |
-| GPT-5.6 Terra |  $2.00 |        $0.20 | $12.00 | [Terra](https://developers.openai.com/api/docs/models/gpt-5.6-terra.md) |
-| GPT-5.6 Sol   |  $4.00 |        $0.40 | $20.00 | [Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol.md)     |
-| GPT-6 Astra   | $10.00 |        $1.00 | $50.00 | [Astra](https://developers.openai.com/api/docs/models/gpt-6-astra.md)   |
+A newly queued execution is resolved when admitted. Existing capacity limits,
+leases, permissions, stop behavior and goal ownership remain authoritative.
+The router never grants more permission or creates/resumes a goal on its own.
 
-These pages also specify long-input/cache pricing qualifications; Sol's current
-pricing is promotional through at least November 21, 2026. Store dated prices,
-not permanent constants. API estimates require the actual token categories,
-service tier and applicable pricing rules. They do not establish what percentage
-of this account's weekly Codex allowance a task consumes. The relative allowance
-costs remain unknown; do not label API-dollar estimates as measured plan savings.
+## Configuration and source integration
 
-Reasoning effort is a useful second dimension: compare Sol xhigh with Sol medium
-before assuming a model downgrade is necessary. Lower effort may reduce usage
-or may cause more retries. Measure the outcome. Native default, VK fallback and
-account config differ: VK's fallback and the inspected Green config use Sol
-xhigh, while native Sol discovery defaults to low.
+The bundled [model policy](crates/executors/src/routing_models.json) contains all
+seven IDs. `VK_CODEX_ROUTING_MODELS=/absolute/path/policy.json` replaces it with an
+administrator-maintained JSON array of `{id, released, efforts, floor, cost_rank}`.
+New exact IDs require configuration and verification, not Rust changes.
 
-## How VK currently selects and launches models
+`VK_CODEX_ROUTING_AVAILABILITY=/absolute/path/availability.json` points to sanitized
+probe evidence, bound to canonical Codex home, launcher string and account
+fingerprint. Evidence expires after 24 hours and future timestamps are rejected.
+Keep both files in administrator-controlled storage outside task worktrees.
+Changes to the executable behind the same launcher path warrant fresh verification;
+V1 binds the launcher string, not the binary's transitive dependency hashes.
 
-| Layer / source                                                                                                                                                                                 | Observed behavior and routing implication                                                                                                                                                                                                                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [useExecutorConfig.ts](packages/web-core/src/shared/hooks/useExecutorConfig.ts)                                                                                                                | Resolves explicit selection, matching draft/last-used config and preset/defaults; create-mode preset preference has separate precedence. Reasoning reuse is guarded by matching model. The fallback is Sol/xhigh. Preserve this provenance rather than treating every populated model field as a human lock. |
-| [codexModelSelector.ts](packages/web-core/src/shared/lib/codexModelSelector.ts), [codex.rs](crates/executors/src/executors/codex.rs) `discover_options`                                        | Backend catalog is static; frontend filters pre-5.6 GPT entries and adds Astra/five effort options. A menu entry is not live capability discovery.                                                                                                                                                           |
-| [profile.rs](crates/executors/src/profile.rs), [initial](crates/executors/src/actions/coding_agent_initial.rs) and [follow-up actions](crates/executors/src/actions/coding_agent_follow_up.rs) | `ExecutorConfig` carries executor/variant, model, reasoning and permission overrides. Actions resolve cached profiles then apply overrides. Do not mutate global profiles to route one task.                                                                                                                 |
-| [sessions/mod.rs](crates/server/src/routes/sessions/mod.rs), [queue.rs](crates/server/src/routes/sessions/queue.rs), [review.rs](crates/server/src/routes/sessions/review.rs)                  | Follow-ups/reviews/queued requests carry config. Session validation locks executor family, not a particular Codex model. Retry may reset Git by default: escalation must not blindly use retry/reset.                                                                                                        |
-| [services/container.rs](crates/services/src/services/container.rs) `start_execution`                                                                                                           | Persists the executor action and pre-execution repository HEADs before spawn. Resolve and record routing before this point so persisted config describes the launched action. Revalidate queued work when admitted.                                                                                          |
-| [local container](crates/local-deployment/src/container.rs)                                                                                                                                    | Consumes queues, enforces capacity admission and injects workspace/session/execution IDs. Use existing lifecycle and execution identity, not a second worker/scheduler.                                                                                                                                      |
-| [codex.rs](crates/executors/src/executors/codex.rs) `build_thread_start_params`, `resume_params_from`, `launch_codex_agent`                                                                    | Model, reasoning config and service tier reach thread start/resume. Later VK follow-ups can select another model while preserving the native thread. Native behavior still needs cross-model continuity acceptance.                                                                                          |
-| [client.rs](crates/executors/src/executors/codex/client.rs)                                                                                                                                    | Ordinary `turn/start` inherits settings; collaboration mode uses a resolved model stored in `OnceLock`. Steering sends text and expected turn ID, no model override. Native autonomous continuation is not the same as a new VK execution.                                                                   |
-| [capacity.rs](crates/server/src/routes/capacity.rs)                                                                                                                                            | Scheduled resume uses the latest execution config or a newer saved draft. Preserve this explicit intent and existing grant/lease checks. CU start payload does not supply a routing choice.                                                                                                                  |
+The [probe](scripts/testing/codex-routing-probe.py) performs discovery without
+inference by default. `--verify` explicitly enables at most seven short inference
+requests, one per supplied model, with MCP/delegation disabled and no file edits.
+It never retries an uncertain billed request automatically. `--models` accepts
+new exact IDs. Run with the same `CODEX_HOME` and `VK_CODEX_BASE_COMMAND` as the
+candidate VK process. A probe proves execution access, not coding quality.
 
-The locally pinned Codex protocol (`38771c9`, `app-server-protocol/src/protocol/v2.rs`,
-`TurnStartParams`) accepts `model`, `effort` and `service_tier` overrides for later
-turns. Its collaboration mode takes precedence over model/effort. Merely adding
-`model` to VK's next `turn/start` could therefore be ineffective unless that mode
-is updated too. `TurnSteerParams` has no model field. This agrees with the
-[official turn configuration contract](https://learn.chatgpt.com/docs/app-server#turns).
+Example candidate-only setup (do not apply to live service without deployment QA):
 
-**Feasibility by boundary:** task creation and later user follow-ups fit existing
-APIs; queue admission needs consistent resolution; same-process next-turn routing
-requires client changes and tests; changing a running turn requires orderly
-interrupt/drain and a new turn, not steering. Native goal loops may start turns
-without passing through VK's execution admission. Initially pin the model for a
-native goal run and route only at an explicit pause/resume boundary. Do not add a
-competing continuation loop or automatically restart a completed/paused goal.
+```bash
+export CODEX_HOME=/home/mcp/.local/share/vibe-kanban-green-codex-home
+export VK_CODEX_BASE_COMMAND=/mnt/vk-storage/vk-model-autoswitch-v1/codex-current/node_modules/.bin/codex
+export VK_CODEX_ROUTING_AVAILABILITY=/mnt/vk-storage/vk-model-autoswitch-v1/availability-current.json
+# Refresh only when needed; --verify consumes bounded inference:
+python3 scripts/testing/codex-routing-probe.py --verify --output "$VK_CODEX_ROUTING_AVAILABILITY"
+```
 
-## Estimating the minimum safe capability
+Main implementation locations:
 
-Available before launch: prompt, attachments, linked task metadata where present,
-workspace/repo identities, branch/base revision, existing conversation and diffs,
-selected profile, permissions and goal state. Task metadata is incomplete for
-workspace-first chats. Repo inspection can add affected paths, ownership,
-dependency breadth, existing patterns and test commands; that is extra work, not
-information already reliably structured in a task title.
+- [routing.rs](crates/executors/src/routing.rs): capability policies, evidence
+  admission, choice, pinning and boundary escalation.
+- [container.rs](crates/services/src/services/container.rs): shared resolution
+  before persisted execution creation, including predecessor identity.
+- [profile.rs](crates/executors/src/profile.rs) and
+  [actions](crates/executors/src/actions/mod.rs): optional policy/decision fields,
+  compatible with existing stored actions and queues; no database migration.
+- [Codex executor](crates/executors/src/executors/codex.rs),
+  [client](crates/executors/src/executors/codex/client.rs) and
+  [RPC compatibility](crates/executors/src/executors/codex/jsonrpc.rs): native
+  override verification, effort pinning, reroute stop and standard-tier decoding.
+- [selector](packages/web-core/src/shared/components/ModelSelectorContainer.tsx)
+  and [configuration hook](packages/web-core/src/shared/hooks/useExecutorConfig.ts):
+  opt-in controls and explicit selection precedence.
 
-Use a small structured assessment: requirement clarity, change scope/coupling,
-novelty, failure impact/reversibility, validation strength, expected horizon,
-context/tool needs and explicit constraints. A bounded read-only scout may clarify
-unknown scope; include its cost. Repository/prompt text is untrusted evidence and
-cannot override server policy. Missing evidence raises uncertainty, not confidence.
+## Observability and CodexUsage
 
-Candidate starting points below are **pilot hypotheses, not approved safe tiers**:
+A decision is stored on the execution action; a `vk/routing` raw-log event joins
+it to the native thread and actual resolved settings. The chat shows a system
+message with mode, actual model/effort, recommendation and reason. The decision
+references the previous execution so transitions can be attributed without charging
+an entire native thread to its last model. Existing native events supply turn IDs.
 
-| Work envelope                                                                           | Candidate to compare                                             | Required protection / higher-tier trigger                                                                                       |
-| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Exact mechanical edits, factual docs with supplied sources                              | Luna low/medium; Terra medium                                    | Deterministic diff/source checks; operational/security guidance is not automatically low-risk docs.                             |
-| Isolated UI, boilerplate, tests matching an established pattern                         | Terra medium vs Sol medium                                       | Typecheck, independent behavior checks and browser/accessibility review where relevant; auth/data-flow changes raise the floor. |
-| Reproduced isolated bug or local refactor with strong coverage                          | Sol medium/high; Terra only after qualification                  | Preserve APIs/invariants; regression test must fail on the starting commit.                                                     |
-| Cross-repo changes, unfamiliar systems, difficult debugging, architecture               | Sol high/xhigh vs Astra                                          | Strong baseline until representative evidence supports a reduction; scope and ambiguity dominate line count.                    |
-| Migrations, auth/security, concurrency, production control, destructive/data-loss paths | Astra baseline plus specialist/human review                      | High-tier reasoning does not replace permissions, rehearsal, rollback or independent review.                                    |
-| Ambiguous or long-horizon autonomous work                                               | Strong model for clarification/planning; pin execution initially | Require finite outcomes and independently checked milestones; cheap bounded subtasks only after explicit scope separation.      |
+See [VK_CODEX_ROUTING_CONTRACT.md](VK_CODEX_ROUTING_CONTRACT.md) for the versioned
+consumer contract and the proposed optional allowance snapshot. CU changes are
+independent. V1 does not read weekly pressure, change resets, or estimate plan
+savings. Its telemetry enables later per-attempt accounting without blocking use
+on a perfect analytics system.
 
-Recent VK history contains compact UI work (chat scroll/model selector), protocol
-compatibility fixes, completion evidence reconciliation, and capacity ownership /
-production recovery. These support the distinction between bounded presentation
-changes and distributed state/lifecycle work. Even the UI examples exposed subtle
-regressions, so “frontend” alone is not a sufficient classifier. This is a
-qualitative sample from Git/continuity, not a measured distribution of all VK tasks.
+## Validation and rollout boundary
 
-## Escalation and failure handling
+Evidence is under `/mnt/vk-storage/vk-model-autoswitch-v1/`.
+All seven model IDs completed small native inference probes. A Luna→Sol 6.1
+process-restart handoff preserved the same thread, conversation passphrase,
+checkpoint and operator dirty file. Its initial harness assertion exposed native
+`serviceTier: "default"`; the corrected harness completed the existing thread,
+and VK now narrowly normalizes that value to standard without treating unknown
+or priority tiers as standard. No production task state was reset.
 
-Combine independent observations with an agent's request for help. A low-tier
-model need not correctly diagnose its own limitations for the system to escalate.
+Targeted automated validation covers manual authority, per-chat UI persistence,
+exclusions/floors, stale/unverified model-effort pairs, native pinning, escalation
+consent, parameter propagation and protocol compatibility. The ignored native
+executor acceptance test is explicitly opt-in because it consumes one short turn.
+Its attempted run was rejected before inference by the existing host capacity
+limit (20 active, limit 8); it remains an enablement gate and the limit was not
+bypassed. No claim of full VK end-to-end acceptance follows from the direct RPC
+checks. New locale strings currently use English fallback text.
+Final command results and limits are recorded in HANDOFF.md.
 
-| Signal                                                                                            | Proposed response                                                                                                      |
-| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Scope crosses protected paths or reveals migration/security/concurrency risk                      | Stop before further mutation; reassess floor and route to qualified tier/reviewer.                                     |
-| Same relevant failure persists after two materially different fixes                               | Escalation candidate after checking baseline/environment; “two” is a pilot threshold to calibrate.                     |
-| Tests weakened/deleted, unexplained dependencies, unrelated churn, invariant violation            | Block acceptance and request independent review; escalation alone does not clear the defect.                           |
-| Repeated command/error loop, repeated rejected patch, no verified milestone within attempt budget | Trigger diagnostic checkpoint; use tool/test/diff evidence rather than confident prose.                                |
-| Contradictory assumptions, review corrections, missing acceptance evidence                        | Reassess task and validation; clarify requirements if a stronger model cannot resolve the unknown.                     |
-| Context near effective limit, repeated compaction, token/time budget exhaustion                   | Preserve state and consider stronger model/structured handoff; not proof of low capability by itself.                  |
-| Rate limit, provider outage, missing SDK/system package, permission denial                        | Classify as infrastructure/policy; wait, repair or ask. Do not spend higher-tier attempts on unchanged infrastructure. |
-
-Proposed escalation sequence: record a request with reason/evidence → check latest
-user policy and budget → reach a safe turn boundary (or interrupt and confirm tool
-processes have drained) → preserve working tree plus verified checkpoint → resolve
-new config → resume once with a durable transition ID. Reconcile after crashes or
-ambiguous RPC responses before retrying. Never reset dirty files just to switch.
-The receiving model must inspect actual diffs/tests and original requirements,
-not trust a predecessor's summary. Track rejected work and recovery cost.
-
-Initially permit at most one automatic model escalation per attempt, with a
-bounded retry/token/time budget and no automatic downgrade within the task.
-If still unsuccessful, pause for diagnosis/human input. These are proposed pilot
-limits, not existing VK behavior. Respect newer user messages, cancel/stop,
-approval requirements and capacity expiry throughout the transition.
-
-## Human control and proposed design
-
-Add explicit routing intent alongside the concrete executor config:
-`manual` (locked model/settings), `recommend` (no execution change), and `auto`.
-Policy includes allowed/denied model IDs, minimum qualified capability, escalation
-`allowed | approval-required | disabled`, and attempt budget. Keep the selected
-model control; show resolved model/effort and a short reason before launch and in
-history. “Use Astra” locks it; “never Astra” excludes it. If the exclusion leaves
-no safe candidate, pause rather than quietly violating either constraint.
-Existing sessions should remain manual by default. Persist policy separately
-from draft text and preserve it through queues, reviews, retries and scheduling.
-Resolve races using a policy revision; user choices always supersede stale router
-recommendations. A model's tool request cannot grant itself escalation authority.
-
-Implement a backend policy service shared by initial/follow-up/review admission,
-with a pure, testable decision core. Inputs are task evidence, user policy,
-qualified model/settings registry, capability snapshot and optional fresh usage
-snapshot. Output is `select`, `recommend`, `pause` or `defer`, with reason codes,
-evidence references and policy version. Persist the decision and concrete action
-together before launch; final admission checks availability and policy revision.
-Do not bury routing solely in React or rewrite the global default profile.
-
-Use native discovery with account/provider/CLI identity, timestamp, freshness,
-and successful-execution evidence. Intersect it with VK-supported settings and
-our qualification registry. Unknown models remain manual/experimental. Validate
-effort combinations explicitly: current override parsing can ignore an invalid
-reasoning string and leave a profile's effort in effect. Record requested versus
-resolved model/effort/service tier to detect silent fallback and catalog drift.
-Generated TypeScript must continue to come from Rust when these types change.
-
-## Usage tracker integration and measurement
-
-Observed CU components:
-
-- `src/usage-monitor.js` normalizes account windows, allowance usage, reset times,
-  account identity, limit status and freshness; correctly distinguishes a weekly-
-  only account from an unknown short window. `src/daily-allocation.js` owns the
-  quota allocation ledger.
-- `src/usage-scanner.js` aggregates rollout token events, accounts for replayed
-  history, reports cached/input/output/reasoning tokens and groups by session
-  model. Its parser does not attribute `turn_context` model transitions to token
-  segments. Existing session-model rankings would misattribute mixed-model work.
-- `src/vk-capacity.js` and VK `/api/capacity/*` coordinate goal grants and leases.
-  CU owns allowance policy; VK owns permission to execute. This source contract
-  is not a claim that every feature is deployed in the live backend.
-
-Introduce a small authenticated, read-only usage snapshot contract instead of
-scraping CU's UI or taking over reset controls. Include account fingerprint,
-observation time, freshness/error, limit-pool IDs, remaining weekly/short-window
-capacity and reset times. Existing `/api/usage` and monitor views are candidate
-inputs, but their service-to-service contract and deployment need validation.
-Do not copy credentials into task prompts or telemetry.
-
-Usage pressure may choose a cheaper **qualified** candidate, disable optional
-Fast mode, or defer nonurgent work until reset. It cannot relax the quality floor,
-manual lock, approval gate or capacity lease. Stale/absent usage means unknown,
-not unlimited headroom; preserve manual behavior and defer budget-sensitive
-background automation. Model switching is not permission to reset allowance or
-bypass an account-wide limit. No known per-model plan multiplier was established.
-
-VK already persists actions, execution status/exit codes, turn summaries, repo
-HEADs and logs. Its normalized `TokenUsageInfo` retains last total tokens/context
-window, losing the richer categories needed for cost attribution. Add structured
-telemetry rather than inferring success from a final “done” summary:
-
-| Record             | Minimum fields                                                                                                                                                                      |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Decision           | Task/session/execution IDs, native thread/turn IDs, policy/catalog version, task features, constraints, proposed and resolved model/effort/tier, reason, usage snapshot reference   |
-| Attempt/transition | Parent attempt, before/after revision and diff identity, start/end time, stop reason, escalation trigger, retries, infrastructure failures, human intervention                      |
-| Usage segment      | Model/effort/tier valid for that interval, input/cached/output/reasoning tokens with provider semantics, cumulative baseline, dedup key, missing-data flag, account/window identity |
-| Quality outcome    | Required tests and baseline results, acceptance/review result, correction size/severity, regression/revert linkage, reviewer identity, observation window                           |
-
-Avoid double counting cumulative events, resumed/forked history and reasoning
-already included in output totals. Join across native goals containing several
-turns per VK execution. Include delegated-agent usage when enabled. Keep prompt
-content out of aggregate metrics and apply retention/access controls to evidence.
-
-Report accepted-without-rework rate, failure/retry/escalation rates, regression
-severity, review corrections, total tokens, API estimate (if applicable), observed
-allowance movement and completion latency, by task stratum and settings. Include
-failed/abandoned attempts and review/handoff costs. Whole-account allowance changes
-are delayed/coarse and contaminated by concurrent agents: serialize calibration
-windows or label them non-attributable. Never infer exact per-task quota cost by
-subtracting two busy-account readings.
-
-## Practical validation and rollout gates
-
-1. **Catalog/continuity acceptance, before routing code.** In isolated worktrees
-   and test sessions, verify one bounded tool/edit/test task for each of the four
-   model IDs; then a Terra→Sol and Sol→Astra handoff on one unfinished task. Check
-   effective model/effort, prior instructions, dirty files, goal state, tool
-   capability and token attribution. Exercise unsupported model/effort, manual
-   lock, approval-required escalation, stale quota, unavailable stronger model,
-   queue/user races, stop and restart recovery. Never use production operations
-   as the test. A billed pilot budget and task set must be agreed before runs.
-2. **Historical cohort.** Select roughly 24–40 real completed VK tasks across the
-   envelopes above, including failures and difficult examples, using original
-   starting revisions and requirements. Include scroll/selector, protocol-resume
-   and capacity work. Curate hidden acceptance checks and exclude later fixes,
-   summaries and solution commits from model-visible inputs. Deduplicate related
-   tasks and hold out projects/time periods to reduce leakage.
-3. **Paired pilot.** Compare the established Astra settings against Sol at lower
-   effort, then Terra and Luna only in low-risk strata. Hold tool/permission/test
-   environments constant, randomize run order, repeat variable cases, and use
-   blinded independent review. Record both baseline infrastructure failures and
-   model-induced failures. Historical Astra success alone is selection-biased
-   and cannot establish what another model would have done.
-4. **Quality gate.** Agree a non-inferiority margin for accepted-without-rework
-   rate and a regression observation window before scoring. Require all task
-   acceptance checks and no unresolved critical defect; report uncertainty and
-   sample sizes. A 24–40 task pilot can reject poor candidates but cannot establish
-   rare-event safety (even zero failures in 30 trials has an approximate 95%
-   upper failure bound of 10%). High-risk categories remain strong/manual.
-5. **Shadow then opt-in canary.** Record recommendations without changing models;
-   compare to operator decisions. Enable automatic selection only for qualified
-   low-risk classes, initially a small fraction of opted-in tasks, with a kill
-   switch back to manual. Stop a cohort on a critical regression, override breach
-   or attribution failure. Expand only when quality and total cost both improve;
-   requalify after model/CLI/tool/prompt changes. Validate in this fork's local VK
-   instance before staging promotion under the existing release workflow.
-
-A useful cost comparison is:
-`initial attempt + validation/review + escalation probability × recovery cost`.
-A cheaper first attempt can lose when it creates expensive rework or consumes
-context. A stronger model may have no advantage on deterministic edits, but that
-must be demonstrated rather than inferred from token prices.
-
-## Decisions and remaining unknowns
-
-Before implementation, decide the primary optimization target (Codex allowance,
-API dollars, latency, or a defined combination), acceptable quality margin,
-pilot budget/task owner, default opt-in mode and escalation approval policy.
-Agree protected task/path categories, the fallback when the safe set is empty,
-telemetry retention, and which VK/CU versions will form the tested integration.
-
-Remaining experiments must establish actual execution access to all four models,
-relative plan consumption, cross-model handoff fidelity, effective service-tier
-reset behavior, native goal switching boundaries, independent quality signals,
-and lower-tier performance on our workload. Public capability descriptions,
-self-confidence and green tests alone cannot establish a safe tier.
-
-First implementation direction after those decisions: capability/decision
-telemetry and shadow recommendations; then opt-in routing at execution boundaries;
-then evidence-triggered escalation. Defer active-turn/native-loop switching until
-its lifecycle and continuity tests pass. This investigation changes documentation
-only and supplies no production-routing readiness claim.
-
-## Investigation validation
-
-Native catalog RPC completed successfully; local source links were checked.
-`pnpm run format` passed using the existing SSD-hosted Prettier on PATH after
-the checkout-local command initially failed with missing Prettier.
-`pnpm run ops:check` and `git diff --check` passed. Only this plan and continuity
-documents changed. No application test suite, browser smoke, inference benchmark
-or production integration test was run for this documentation-only task.
-Formatting logs: `/mnt/vk-storage/vk-model-autoswitch-20260930/`.
+Before normal-task enablement: validate the built frontend/backend together in an
+isolated/local VK instance, adopt the verified CLI through the existing deployment
+workflow, install fresh candidate-bound evidence, and start with a few operator-
+selected tasks at workhorse floor. Routine Luna should get independent diff/test
+review; raise the floor when results warrant it. A critical defect, ignored manual
+choice, unsafe fallback or attribution failure is a stop condition. No large
+historical benchmark is required. Broader quality/usage qualification continues
+on real work; automatic production deployment is not part of this implementation.

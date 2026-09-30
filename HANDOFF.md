@@ -1,17 +1,58 @@
-## September 30: Model AutoSwitch investigation
+## September 30: Model AutoSwitch V1 implemented, not enabled
 
-Read [VK_MODEL_AUTOSWITCH.md](VK_MODEL_AUTOSWITCH.md) for the feasibility plan,
-source references, native model/settings inventory and staged evaluation gates.
-Boundary-based routing fits existing ExecutorConfig/thread-resume paths. Active
-turn and native goal switching need separate lifecycle work. The CU scanner's
-session-level model attribution needs improvement before mixed-model savings
-can be measured reliably. CU source has existing local changes; it was not edited.
-No model inference, production change or routing implementation was performed.
-Validation: native catalog RPC, full repository formatting (existing SSD Prettier
-on PATH), ops:check, local link checks and diff whitespace checks passed.
-Application suites and inference benchmarks were not run for documentation changes.
-Next: agree pilot cost/quality criteria and run bounded isolated continuity and
-paired-task experiments before opting into automatic routing.
+Read [VK_MODEL_AUTOSWITCH.md](VK_MODEL_AUTOSWITCH.md) and the versioned
+[CodexUsage contract](VK_CODEX_ROUTING_CONTRACT.md). Model policy is configurable;
+all seven IDs are represented separately from discovery/execution evidence.
+Manual is default. Auto prefers verified Sol 6.1/medium at workhorse floor,
+Luna 6/medium at explicitly chosen routine floor, and Astra/high at frontier.
+These are trial capability assignments, not demonstrated quality equivalence.
+Explicit model/effort choices lock manual. Shadow never changes execution.
+Auto preserves prior floors, exclusions and state; failed-execution escalation
+requires consent and happens only on a newly requested follow-up. Native goal
+resumes retain prior automatic settings; first-time opt-in requires an ordinary
+boundary. Retry/reset requests are rejected in automatic mode before Git reset.
+
+Validation evidence lives at `/mnt/vk-storage/vk-model-autoswitch-v1/`:
+
+- CLI 0.159.2 discovered and completed bounded probes for all seven models;
+  medium for all except Astra/high. Old CLI 0.153.4 lacked the three new models.
+- Direct native Luna-to-Sol 6.1 process restart/resume preserved thread history,
+  passphrase, checkpoint and operator dirty bytes. Harness initially rejected
+  native standard tier `default`; after reconciling that response it resumed the
+  same thread successfully. VK has a targeted decoder compatibility regression.
+- The real VK executor acceptance test was attempted but capacity admission
+  rejected it at 20 active / limit 8, before inference. No limit was bypassed.
+  It remains ignored by default and must pass once capacity permits.
+- `cargo test -p executors --lib --offline`: 92 passed, 4 ignored (including
+  the explicitly opt-in native acceptance test).
+- `cargo check -p server --offline`, generated TypeScript from Rust, web-core
+  type-check (NODE_OPTIONS=--max-old-space-size=4096), focused selector/hook
+  ESLint, 3 React selection tests, `pnpm run format`, `pnpm run ops:check`,
+  local document links, Python syntax and diff whitespace checks passed.
+  The initial default-heap TypeScript run exhausted memory; the larger-heap
+  rerun passed. Full workspace/Tauri suites and browser/API acceptance were
+  not run. `cargo clippy -p executors -p server --lib --offline -- -D warnings`
+  passed after keeping optional routing metadata behind indirection, avoiding
+  action/queue enum size regressions without changing the serialized contract.
+
+To rerun the real VK executor test, use the candidate environment shown in the
+planning document, `VK_USE_SYSTEMD_RUN=0`,
+`VK_ROUTING_TEST_DIR=/mnt/vk-storage/vk-model-autoswitch-v1/boundary`,
+`VK_ROUTING_TEST_THREAD=01a0f265-4f71-77b1-a44b-379e1cb19c1a`, the shared
+`CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target`, `CARGO_INCREMENTAL=0`, and
+`cargo test -p executors --lib --offline routed_native_follow_up_acceptance -- --ignored --nocapture`.
+It consumes one short turn on the existing isolated fixture, never a user task.
+Refresh candidate evidence only when needed; do not override host capacity.
+
+Minimum next work: run the opt-in native executor acceptance test when host
+capacity permits, then exercise the built frontend/backend together in a local
+candidate (new execution, manual lock, follow-up escalation, logs and scratch).
+Adopt the newer launcher and fresh verification evidence through deployment QA;
+start a small reviewed real-work pilot. No large benchmark prerequisite. Existing
+host launcher, live profiles and running Green remain untouched; CU files were
+not edited. API-key account binding, automatic test-result interpretation, usage
+pressure input, full localization and broader quality calibration are deferred.
+Version remains 0.1.42. No PR, push, preview or production deployment for V1.
 
 ## September 28 — two concurrent selected capacity goals
 

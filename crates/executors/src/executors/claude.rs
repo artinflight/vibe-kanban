@@ -275,6 +275,7 @@ fn default_discovered_options() -> crate::executor_discovery::ExecutorDiscovered
 
     ExecutorDiscoveredOptions {
         model_selector: ModelSelectorConfig {
+            supports_routing: None,
             providers: vec![],
             models: [
                 ("opus", "Opus"),
@@ -577,6 +578,7 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         };
 
         ExecutorConfig {
+            routing: None,
             executor: BaseCodingAgent::ClaudeCode,
             variant: None,
             model_id: self.model.clone(),

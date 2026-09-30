@@ -82,6 +82,8 @@ pub struct AppServerClient {
     auto_approve: bool,
     plan_mode: bool,
     resolved_model: OnceLock<String>,
+    routing_locked: AtomicBool,
+    routed_effort: OnceLock<codex_protocol::openai_models::ReasoningEffort>,
     pending_plan: Mutex<Option<PendingPlan>>,
     repo_context: RepoContext,
     commit_reminder: bool,
@@ -245,6 +247,8 @@ impl AppServerClient {
             auto_approve,
             plan_mode,
             resolved_model: OnceLock::new(),
+            routing_locked: AtomicBool::new(false),
+            routed_effort: OnceLock::new(),
             pending_plan: Mutex::new(None),
             thread_id: Mutex::new(None),
             current_turn_id: Mutex::new(None),
@@ -635,6 +639,14 @@ impl AppServerClient {
         Ok(false)
     }
 
+    pub fn set_routed_effort(&self, effort: codex_protocol::openai_models::ReasoningEffort) {
+        let _ = self.routed_effort.set(effort);
+    }
+
+    pub fn lock_routed_model(&self) {
+        self.routing_locked.store(true, Ordering::SeqCst);
+    }
+
     pub fn set_resolved_model(&self, model: String) {
         let _ = self.resolved_model.set(model);
     }
@@ -735,7 +747,7 @@ impl AppServerClient {
             mode,
             settings: Settings {
                 model,
-                reasoning_effort: None,
+                reasoning_effort: self.routed_effort.get().copied(),
                 developer_instructions: None,
             },
         })
@@ -1548,6 +1560,11 @@ impl JsonRpcCallbacks for AppServerClient {
             self.log_writer.log_raw(raw).await?;
         }
 
+        if method == "model/rerouted" && self.routing_locked.load(Ordering::SeqCst) {
+            return Err(ExecutorError::Io(io::Error::other(
+                "Provider changed an automatically routed model; execution stopped for review",
+            )));
+        }
         if method == "thread/goal/updated"
             && let Some(params) = notification.params.as_ref()
             && params.get("threadId").and_then(Value::as_str)

@@ -183,6 +183,7 @@ impl StandardCodingAgentExecutor for Gemini {
     fn get_preset_options(&self) -> ExecutorConfig {
         use crate::model_selector::*;
         ExecutorConfig {
+            routing: None,
             executor: BaseCodingAgent::Gemini,
             variant: None,
             model_id: self.model.clone(),

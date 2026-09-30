@@ -10,9 +10,68 @@ pub struct Assessment {
     pub validation_failure: bool,
 }
 
+// Match lexical boundaries rather than accepting "test" inside "latest".
+fn contains_term(text: &str, term: &str) -> bool {
+    text.match_indices(term).any(|(start, _)| {
+        let end = start + term.len();
+        let word = |c: char| c.is_alphanumeric();
+        (!term.starts_with(word) || !text[..start].ends_with(word))
+            && (!term.ends_with(word) || !text[end..].starts_with(word))
+    })
+}
+
+fn envelope_rank(envelope: &str) -> Option<usize> {
+    [
+        "mechanical",
+        "bounded",
+        "validated_fix",
+        "normal",
+        "complex",
+        "protected",
+    ]
+    .iter()
+    .position(|e| *e == envelope)
+}
+
+/// Retain qualification context across follow-ups, including terse continuations.
+/// This is not model confidence or inferred validation success.
+pub fn assess_follow_up(prompt: &str, previous_envelope: Option<&str>) -> Assessment {
+    let mut assessment = assess(prompt);
+    let Some(previous) = previous_envelope else {
+        return assessment;
+    };
+    let previous = match previous {
+        "mechanical" => "mechanical",
+        "bounded" => "bounded",
+        "validated_fix" => "validated_fix",
+        "normal" => "normal",
+        "complex" => "complex",
+        "protected" => "protected",
+        _ => "protected", // Unknown persisted qualification must not lower admission.
+    };
+    let continuation = matches!(
+        prompt
+            .trim()
+            .trim_end_matches(['.', '!'])
+            .to_lowercase()
+            .as_str(),
+        "continue" | "continue please" | "please continue" | "proceed" | "go ahead"
+    );
+    if continuation || envelope_rank(previous) > envelope_rank(assessment.envelope) {
+        assessment.envelope = previous;
+        assessment.floor = match previous {
+            "mechanical" | "bounded" => CapabilityFloor::Routine,
+            "protected" => CapabilityFloor::Frontier,
+            _ => CapabilityFloor::Workhorse,
+        };
+        assessment.evidence = "retained_session_qualification";
+    }
+    assessment
+}
+
 pub fn assess(prompt: &str) -> Assessment {
     let text = prompt.to_lowercase();
-    let has = |words: &[&str]| words.iter().any(|w| text.contains(w));
+    let has = |words: &[&str]| words.iter().any(|w| contains_term(&text, w));
     let validation_failure = has(&[
         "tests still fail",
         "test still fails",
@@ -23,34 +82,45 @@ pub fn assess(prompt: &str) -> Assessment {
         "no verified progress",
         "fix did not work",
     ]);
-    let (envelope, floor, evidence) = if has(&[
-        "security",
-        "authentication",
-        "authorization",
-        "permissions",
-        "credential",
-        "migration",
-        "delete data",
-        "drop table",
-        "destructive",
-        "production",
-        "control plane",
-        "control-plane",
-        "concurrency",
-        "distributed",
-        "race condition",
-        "cryptograph",
-        "payment",
-        "secret",
-        "access control",
-        "oauth",
-        "jwt",
-        "encryption",
-        "sudo",
-        "firewall",
-        "deploy",
-        "rollback database",
-    ]) {
+    // Keep protected-risk detection broad for subsystem identifiers such as
+    // authenticationService; lexical precision is a low-risk admission requirement.
+    let has_risk = |words: &[&str]| words.iter().any(|w| text.contains(w));
+    let (envelope, floor, evidence) = if has(&["auth"])
+        || has_risk(&[
+            "security",
+            "authentication",
+            "authorization",
+            "permissions",
+            "permission",
+            "credential",
+            "credentials",
+            "migration",
+            "migrations",
+            "delete data",
+            "drop table",
+            "destructive",
+            "production",
+            "control plane",
+            "control-plane",
+            "concurrency",
+            "distributed",
+            "race condition",
+            "cryptography",
+            "cryptographic",
+            "payment",
+            "secret",
+            "secrets",
+            "access control",
+            "oauth",
+            "jwt",
+            "encryption",
+            "sudo",
+            "firewall",
+            "deploy",
+            "deployment",
+            "deploying",
+            "rollback database",
+        ]) {
         ("protected", CapabilityFloor::Frontier, "high_impact_intent")
     } else if has(&[
         "architecture",
@@ -95,19 +165,24 @@ pub fn assess(prompt: &str) -> Assessment {
         )
     } else if has(&[
         "typo",
+        "typos",
         "spelling",
         "format markdown",
         "broken link",
+        "broken links",
         "rename a label",
         "update the readme",
         "fix punctuation",
     ]) && has(&[
         "readme",
         "documentation",
+        "docs",
         "docs/",
         ".md",
         "label",
+        "labels",
         "comment",
+        "comments",
     ]) && !has(&[
         "implement",
         "refactor",
@@ -133,7 +208,7 @@ pub fn assess(prompt: &str) -> Assessment {
         "skip tests",
         "do not run",
         "don't run",
-    ]) && has(&["test", "typecheck", "lint", "snapshot"])
+    ]) && has(&["test", "tests", "typecheck", "lint", "snapshot"])
         && has(&[
             "single",
             "one component",
@@ -144,6 +219,7 @@ pub fn assess(prompt: &str) -> Assessment {
             "follow the existing",
             "same pattern",
         ])
+        && !has(&["bug", "refactor", "regression", "parser", "algorithm"])
         && has(&[
             "button",
             "css",
@@ -199,9 +275,62 @@ pub fn assess(prompt: &str) -> Assessment {
 mod tests {
     use super::*;
     #[test]
+    fn lexical_evidence_does_not_confuse_incidental_substrings() {
+        for prompt in [
+            "Change button spacing in one component to the latest style",
+            "Change button spacing in one component, use the splinter style",
+            "Fix a single unit test and refactor the parser",
+        ] {
+            assert_ne!(assess(prompt).envelope, "bounded", "{prompt}");
+        }
+        for prompt in [
+            "Update credentials",
+            "Add migrations",
+            "Change deployment settings",
+            "Fix a typo in authenticationService",
+            "Fix button spacing in auth_panel with a snapshot test",
+        ] {
+            assert_eq!(assess(prompt).envelope, "protected", "{prompt}");
+        }
+        assert_eq!(
+            assess("Fix button spacing in one component and run tests").envelope,
+            "bounded"
+        );
+    }
+
+    #[test]
+    fn followups_retain_qualification_without_inventing_failures() {
+        let mut envelope = "complex";
+        for prompt in ["Fix the typo in README.md", "continue", "go ahead"] {
+            let assessment = assess_follow_up(prompt, Some(envelope));
+            assert_eq!(assessment.envelope, "complex");
+            assert!(!assessment.validation_failure);
+            envelope = assessment.envelope;
+        }
+        assert_eq!(
+            assess_follow_up("Continue.", Some("bounded")).envelope,
+            "bounded"
+        );
+        assert_eq!(
+            assess_follow_up("Implement a new feature", Some("bounded")).envelope,
+            "normal"
+        );
+        assert_eq!(
+            assess_follow_up("Change authentication", Some("bounded")).floor,
+            CapabilityFloor::Frontier
+        );
+        assert!(assess_follow_up("Tests still fail", Some("bounded")).validation_failure);
+        assert_eq!(
+            assess_follow_up("continue", Some("unknown_future_envelope")).floor,
+            CapabilityFloor::Frontier
+        );
+    }
+
+    #[test]
     fn low_risk_needs_positive_scope_evidence_and_risk_wins() {
         for (prompt, envelope) in [
             ("Fix the spelling typo in README.md", "mechanical"),
+            ("Fix typos in docs", "mechanical"),
             (
                 "Fix the button spacing in one component, follow the existing pattern and run its snapshot test",
                 "bounded",

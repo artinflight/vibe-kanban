@@ -1,5 +1,26 @@
 # HANDOFF.md
 
+## September30: Extended SSD Cleanup Complete
+
+The first pass was not comprehensive. A broader audit of six deployment roots
+and eight related maintenance roots retired another 87.95 GiB: four inactive
+history copies, seventeen database test copies, five mirrored backup archives
+and seven extracted software packages. Total across both passes: 93.67 GiB;
+SSD now has about 196 GiB free (57% used). All retired payloads remain recoverable
+from verified archives; see `VK_SSD_CLEANUP_20260930.md` and the SSD audit folder.
+New archives/manifests are on `desktop:B:/vk-backups/ssd-cleanup-20260930/`.
+Location notes identify archived paths. Old readiness records are historical,
+not permission to run an emptied test runtime or reuse a consumed cutover.
+
+Blue764264/CU2545246 stayed active. Saved-message hashes, baseline IDs, native
+paths/previously available files, SQLite quick checks and attachment round-trip
+passed. Historical missing-file exceptions were not repaired. One WebSocket
+reset warning is recorded; no missing-path/upload errors were found. No service
+was stopped, restarted or rerouted. Original source worktrees, current backups,
+live/recovery software and service-linked or mixed-data rehearsals remain.
+Do not describe the pass as deletion of every historical artifact. Ops/diff
+checks pass; full formatting is still blocked by missing Prettier.
+
 ## September30: Conservative SSD Cleanup Complete
 
 Removed nine SHA-256-identical extracted verification copies, freeing 5.72 GiB

@@ -1,11 +1,111 @@
 # SSD Cleanup: September 30, 2026
 
-## Scope
+## Extended Pass Complete
+
+The operator correctly challenged the first pass as incomplete. It removed
+only easy duplicates, not all deployment leftovers. The follow-up inventories
+six deployment/test roots and records consumers in `extended-inventory.json`.
+Do not describe this as an exhaustive host-wide cleanup.
+
+Completed removals, measured as allocated file bytes:
+
+| Group | Count | Bytes Removed |
+| --- | ---: | ---: |
+| Inactive history test copies | 4 | 54,890,143,744 |
+| Database restore-test copies | 17 | 19,341,225,984 |
+| Older mirrored backup archives | 5 | 15,737,974,784 |
+| Obsolete prepared package copies | 7 | 4,468,252,672 |
+| **Extended pass total** | **33** | **94,437,597,184** |
+
+The extended pass freed 87.95 GiB of file allocation. Together with the first
+pass, 100,576,956,416 bytes (93.67 GiB) were retired from the SSD. Final `df`
+reports 196 GiB available and 57% used. Active unrelated workloads mean the
+filesystem-wide free-space change is not an exact isolated measure.
+
+All 21 new offload receipts are complete. Their Desktop archives total
+27,364,382,166 compressed bytes; those and their per-file manifests were
+SHA-256 verified remotely. The five old archives remain in their established
+Desktop locations. Seven package archives remain both locally and on Desktop.
+Temporary archive staging for completed offloads was removed.
+
+Final live acceptance passed (`extended-live-after.json`):
+
+- Blue764264 and CU2545246 remained active with unchanged PIDs; Green recovery
+  remained inactive. No service lifecycle or routing changes occurred.
+- All 12 saved-message rows matched their pre-cleanup hashes. Baseline IDs for
+  40 projects, 968 tasks, 990 workspaces, 1,031 sessions and 876 attachments
+  remained present.
+- All 6,032 baseline native thread paths remained unchanged, and every file
+  available before cleanup remained available. The baseline already had
+  2,282 index entries pointing to absent files: this is not a claim to repair
+  historical recovery gaps or prove all indexed conversations resumable.
+- VK and native SQLite `quick_check` returned `ok`. Required attachment-root
+  ownership and permissions were unchanged. Live health and attachment
+  upload/download passed; retained test attachment ID:
+  `d761a0fa-64fc-42d0-a3da-145e0b3e81d4`.
+- The service log showed one approvals WebSocket reset warning at 13:28:12 UTC,
+  but no missing-path or upload errors in the reviewed cleanup window. No
+  cause is attributed to that warning by this cleanup audit.
+
+Ops and diff checks passed. Full formatting again passed Rust formatting and
+stopped at missing Prettier; application code was not changed.
+
+The extended allowlists and receipts live in the same SSD audit directory:
+
+- `offload-approved.json`: four inactive runtime Codex-home copies, separately
+  archived by generation. Live native indexes do not reference these copies.
+- `restore-offload-approved.json`: seventeen inactive database restore-test
+  payloads previously excluded for differing SQLite sidecars. Preserve the
+  actual contents in new archives rather than assuming the differences harmless.
+- `old-archive-approved.json`: five older online-backup archives. Retire their
+  SSD copies only after a fresh Desktop hash matches the local file.
+- `packages-reviewed.json`: seven obsolete extracted software packages,
+  checked file by file against retained local archives whose Desktop hashes
+  also match. `packages-removed.json` records retirement; the latest prepared
+  deployment package is excluded.
+
+New archives and per-file manifests go to
+`desktop:B:/vk-backups/ssd-cleanup-20260930/`. Archive contents are streamed and
+checked against source SHA-256 values before transfer. Remote archive and
+manifest hashes must match before SSD payload removal. The source inventory
+and consumer checks are repeated before retirement. All directory roots remain,
+with adjacent and internal location notes. A `*.offload.json` receipt with
+`complete: true` is the authority for each completed offload. An incomplete
+receipt needs reconciliation, not an automatic rerun.
+
+No services are stopped or restarted. Existing loaded test environments,
+production/recovery releases, original worktrees, current recovery archives
+and original backup payloads remain. The live-before evidence records native
+thread paths/availability, saved-message hashes and project/task/workspace/
+session/attachment identities for the final functional check.
+
+### Retained Boundaries
+
+- Production state, session stores, attachment roots, original worktrees,
+  shared Cargo storage, live Blue software and Green recovery software.
+- September 11 test/warm services and their referenced readiness files;
+  old loaded production generations and installed rehearsal definitions.
+  This cleanup does not authorise starting, stopping or thawing them.
+- The base backup chain, current final backup and original backup payloads.
+- `vk-cutover-20260911/window-rehearsals` mixes fixture Git repositories and
+  attachment copies. The whole root is not a safe blanket-deletion candidate.
+- Feature source/evidence folders inventoried in `auxiliary-inventory.json`,
+  including model-selector, goal-rendering and ownership-handover work.
+
+The audit covers six deployment/test roots and eight related maintenance roots.
+It does not classify other agents' media, projects or shared host tooling as
+disposable, and it cannot inspect privileged process internals without sudo.
+Remaining installed-service references and mixed repositories/attachments need
+their own retirement review. No claim is made that every remaining byte is
+essential or that every historical file created by this conversation is gone.
+
+## Initial Pass Scope
 
 The operator requested removal of old backups and no-longer-needed SSD files.
-This pass targets only nine redundant extracted backup verification copies.
-No deployment, restart, database restore, worktree removal, archive removal,
-attachment retention change or session cleanup is authorised by this log.
+The initial pass targeted only nine redundant extracted backup verification
+copies. It did not perform deployment, restart, database restore, worktree
+removal, archive removal, attachment retention changes or session cleanup.
+The separately reviewed extended pass is described above.
 
 Audit and exact allowlist:
 `/mnt/vk-storage/vk-ssd-cleanup-20260930/`.
@@ -82,6 +182,7 @@ download passed through `https://vibe.local`; the retained test artifact ID is
 during the deletion/validation window. This is not a claim to have tested
 every VK feature or historical recovery exception.
 
-No broader cleanup was performed. In particular, runtime replicas, shared
-build storage, user media, and the seventeen differing database extraction
-copies remain. Any future cleanup needs its own consumer and recovery checks.
+At the end of the initial pass, no broader cleanup had been performed. Runtime
+replicas, shared build storage, user media and seventeen differing database
+extraction copies remained. The extended pass above supersedes that initial
+disposition for its explicitly reviewed paths only.

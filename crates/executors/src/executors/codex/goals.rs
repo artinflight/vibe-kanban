@@ -462,9 +462,11 @@ mod tests {
 
     #[test]
     fn scheduled_resume_preserves_recovery_and_input_holds() {
-        let mut p = Progress::default();
-        p.turns = 12;
-        p.stagnant_turns = 7;
+        let mut p = Progress {
+            turns: 12,
+            stagnant_turns: 7,
+            ..Default::default()
+        };
         p.recovery_plans
             .push("Try a different validation path".into());
         p.pause_reason = Some("Operator must resolve access".into());

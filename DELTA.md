@@ -1353,3 +1353,14 @@ cheap exact continuations, and repaired lexical low-risk evidence. Added a
 read-only JSONL recommendation example using actual policy/availability admission.
 Seventeen routing tests, type generation, web-core checking and focused Clippy
 passed. See VK_AUTOSWITCH_FULL_ROUTER.md for remaining live Shadow/release gates.
+
+## 2026-09-30 — Natural-language outcome/context triage
+
+Added compact outcome triage with explicit uncertainty and bounded repository
+corroboration at the existing boundary. Ordinary presentation requests no longer
+require technical scope/test phrases to qualify downward when matching code,
+patterns and a check command are found. Missing context retains Workhorse;
+protected consequences/context retain Frontier. No classifier model call, registry
+or CU wire changes. Twenty-two routing tests, services check, focused Clippy,
+generated types, web-core checking, format/ops and five offline recommendation
+cases pass. V1 deployment untouched; live V2 Shadow acceptance remains pending.

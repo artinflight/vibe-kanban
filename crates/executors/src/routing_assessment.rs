@@ -8,6 +8,7 @@ pub struct Assessment {
     pub floor: CapabilityFloor,
     pub evidence: &'static str,
     pub validation_failure: bool,
+    pub triage: crate::routing_triage::TaskTriage,
 }
 
 // Match lexical boundaries rather than accepting "test" inside "latest".
@@ -36,7 +37,15 @@ fn envelope_rank(envelope: &str) -> Option<usize> {
 /// Retain qualification context across follow-ups, including terse continuations.
 /// This is not model confidence or inferred validation success.
 pub fn assess_follow_up(prompt: &str, previous_envelope: Option<&str>) -> Assessment {
-    let mut assessment = assess(prompt);
+    assess_follow_up_with_context(prompt, previous_envelope, None)
+}
+
+pub fn assess_follow_up_with_context(
+    prompt: &str,
+    previous_envelope: Option<&str>,
+    root: Option<&std::path::Path>,
+) -> Assessment {
+    let mut assessment = assess_with_context(prompt, root);
     let Some(previous) = previous_envelope else {
         return assessment;
     };
@@ -65,11 +74,19 @@ pub fn assess_follow_up(prompt: &str, previous_envelope: Option<&str>) -> Assess
             _ => CapabilityFloor::Workhorse,
         };
         assessment.evidence = "retained_session_qualification";
+        assessment
+            .triage
+            .evidence
+            .push("retained_session_qualification".into());
     }
     assessment
 }
 
 pub fn assess(prompt: &str) -> Assessment {
+    assess_with_context(prompt, None)
+}
+
+pub fn assess_with_context(prompt: &str, root: Option<&std::path::Path>) -> Assessment {
     let text = prompt.to_lowercase();
     let has = |words: &[&str]| words.iter().any(|w| contains_term(&text, w));
     let validation_failure = has(&[
@@ -85,7 +102,7 @@ pub fn assess(prompt: &str) -> Assessment {
     // Keep protected-risk detection broad for subsystem identifiers such as
     // authenticationService; lexical precision is a low-risk admission requirement.
     let has_risk = |words: &[&str]| words.iter().any(|w| text.contains(w));
-    let (envelope, floor, evidence) = if has(&["auth"])
+    let (mut envelope, mut floor, mut evidence) = if has(&["auth"])
         || has_risk(&[
             "security",
             "authentication",
@@ -263,7 +280,59 @@ pub fn assess(prompt: &str) -> Assessment {
             "insufficient_evidence_for_routine",
         )
     };
+    let mut triage = crate::routing_triage::triage(
+        prompt,
+        if floor == CapabilityFloor::Frontier {
+            None
+        } else {
+            root
+        },
+    );
+    if !triage.risk.is_empty() {
+        envelope = "protected";
+        floor = CapabilityFloor::Frontier;
+        evidence = "triage_high_impact_outcome";
+    } else if envelope == "normal"
+        && !triage.needs_repo_inspection
+        && triage.uncertainty == "medium"
+    {
+        envelope = "bounded";
+        floor = CapabilityFloor::Routine;
+        evidence = "triage_ui_outcome_with_repo_evidence";
+    }
+    if triage.intent == "unknown" {
+        triage.intent = envelope.into();
+        if matches!(envelope, "mechanical" | "bounded" | "validated_fix") {
+            triage.scope = if envelope == "mechanical" {
+                "text_only"
+            } else {
+                "operator_scoped"
+            }
+            .into();
+            triage.validation = if envelope == "mechanical" {
+                "direct_text_comparison"
+            } else {
+                "requested_not_verified"
+            }
+            .into();
+            triage.uncertainty = if envelope == "mechanical" {
+                "low"
+            } else {
+                "medium"
+            }
+            .into();
+            triage.needs_repo_inspection = false;
+        }
+    }
+    if envelope == "protected" {
+        if triage.risk.is_empty() {
+            triage.risk.push("explicit_high_impact_intent".into());
+        }
+        triage.needs_repo_inspection = false; // Already safe to require the protected tier.
+        triage.uncertainty = "medium".into();
+    }
     Assessment {
+        triage,
         envelope,
         floor,
         evidence,

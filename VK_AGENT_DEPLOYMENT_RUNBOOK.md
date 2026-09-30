@@ -36,6 +36,12 @@ remain unresolved. Preserve choices and drafts, and do not bulk-reset chats.
 
 ## Current Live Truth
 
+September30 authority: Green2506054 is live on5261/5262 and vibe.local with
+Codex0.159.2; Blue764264 is frozen/boot-disabled for latest-data cutback.
+CU2506120 is connected/reconciled and shares VK's private routing event feed.
+Read VK_GREEN_LIVE_20260930.md and the v2 attempt receipts. Both September30
+attempts are consumed. The dated inventories below are historical.
+
 September15 authority: Green1674994 is live on5091/5092. Blue2150526 is frozen
 for latest-data cutback; old Green2778969 and historical Blue2590517 remain
 frozen separately. CU1674995 is connected/reconciled with automation off. Read

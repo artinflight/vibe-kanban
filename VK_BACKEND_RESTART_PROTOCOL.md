@@ -48,6 +48,11 @@ choices, existing configuration and the normal staging-to-main promotion path.
 
 ## Generation Roles
 
+September30 authority: Green2506054 is live/enabled on5261/5262; original
+Blue764264 remains frozen/disabled for same-latest-data ownership cutback.
+CU2506120 runs the reconciled406f19b companion. Read VK_GREEN_LIVE_20260930.md.
+Both original and v2 September30 attempts are consumed; never repeat them.
+
 September23 current authority: ownership-capable Blue764264 is live on5121/5122.
 Legacy Green is stopped/disabled, not frozen, with original release retained for
 latest-data restart recovery. Read VK_OWNERSHIP_CUTOVER_20260923.md. The initial

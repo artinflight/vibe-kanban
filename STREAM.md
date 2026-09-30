@@ -1,5 +1,11 @@
 # STREAM.md
 
+September30 final scope result: renewed cutover and live acceptance completed.
+Green2506054 serves main dcd51cc12 via staging620bd7eb9 artifacts; Blue764264
+remains paused for latest-data recovery. Read VK_GREEN_LIVE_20260930.md. This
+maintenance branch records evidence, not application release source. No repeat
+handover or old-database restore is authorized. Earlier scope notes are history.
+
 September30 renewed scope: "Get it done" authorizes correcting the observed
 fitrdy-manager Git writer gap and executing a new v2 cutover with latest data.
 Preserve the original attempt; do not infer success from preparation. Existing

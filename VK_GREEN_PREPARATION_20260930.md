@@ -1,5 +1,12 @@
 # September 30 Green Preparation
 
+## Accepted Deployment
+
+The renewed v2 attempt203427Z succeeded and passed live acceptance. Green2506054
+now serves this release; Blue764264 is paused for latest-data cutback. Read
+VK_GREEN_LIVE_20260930.md. The failed original attempt and preparation statements
+below are history; neither attempt may be repeated.
+
 ## Superseding Result
 
 The approved attempt failed its final backup stability check before Green

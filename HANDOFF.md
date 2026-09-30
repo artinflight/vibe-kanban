@@ -1,5 +1,27 @@
 # HANDOFF.md
 
+## September30: Green Live And Accepted
+
+Renewed attempt203427Z completed in39.17seconds. Green2506054 is live/enabled on
+5261/5262 and vibe.local; Blue764264 remains frozen/disabled for latest-data
+cutback. CU2506120 is connected/reconciled. VK uses Codex0.159.2 and the shared
+private routing feed; current original-thread events are imported by CU.
+Read `VK_GREEN_LIVE_20260930.md` and the runtime cutover-attempt-v2.json receipts.
+Never repeat either consumed attempt or restore an older DB over production.
+
+PR128/main dcd51cc12 is now deployed via identical staging620bd7eb9 artifacts.
+All baseline IDs/protected tables,334 attachment hashes and6036 native paths
+passed preservation. Original thread/model,12 saved messages, attachment round-
+trip, desktop/mobile layouts and seven-model/Astra effort menus pass live checks.
+Historical recovery exceptions and known log warnings remain explicit.
+The Fitrdy Manager polling process and external writers are resumed; the Caspian
+agent completed naturally before interruption. Blue alone is retained paused.
+Final archive203434Z and software203014Z are verified on Desktop;969 software
+hashes passed isolated restore. Full formatting still lacks Prettier; ops/diff pass.
+No additional approval or cutover is needed to use the accepted Green release.
+
+The sections below are historical preparation and failed-attempt records.
+
 ## September30: Renewed Cutover Authorization
 
 The operator said "Get it done" after the rollback report. This authorizes a

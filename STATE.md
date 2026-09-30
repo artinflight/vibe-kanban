@@ -1,5 +1,14 @@
 # STATE.md
 
+**September30 current authority: Green live and accepted.** The renewed39.17s
+handover deployed PR128/main dcd51cc12 (identical staging620bd7eb9 tree).
+Green2506054 runs5261/5262 and vibe.local; Blue764264 is frozen for latest-data
+cutback. CU2506120 is connected/reconciled, sharing the private telemetry feed.
+VK's actual Codex runtime is0.159.2. Preservation, original thread/model, saved
+messages, attachments and desktop/mobile seven-model menus pass. Read
+`VK_GREEN_LIVE_20260930.md`. Earlier failure/readiness states below are history.
+Neither consumed attempt may be repeated; never restore an old production DB.
+
 **September30 renewed authorization:** the operator's "Get it done" authorizes a
 new v2 attempt after the failed capture. The missed writer is now observed:
 fitrdy-manager.service PID1147 performs Git operations in hyroxready-app. Prepared

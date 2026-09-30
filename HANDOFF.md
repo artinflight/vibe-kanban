@@ -1,5 +1,17 @@
 # HANDOFF.md
 
+## September30: Conservative SSD Cleanup Complete
+
+Removed nine SHA-256-identical extracted verification copies, freeing 5.72 GiB
+of allocated file data. SSD now has about 109 GiB free. See
+`VK_SSD_CLEANUP_20260930.md` and `/mnt/vk-storage/vk-ssd-cleanup-20260930/`
+for the exact removal list, retained-copy locations, checksums and checks.
+All archives, live/recovery software, worktrees, sessions and attachment roots
+were retained. Seventeen differing SQLite extraction copies were left alone.
+Blue764264 and CU2545246 stayed active; Green stayed inactive. Attachment
+upload/download passed. No restart or cutover occurred. Ops check passed;
+full format stopped after Rust formatting because Prettier is not installed.
+
 ## September23: Ownership-Capable Blue Live
 
 The separately authorized cutover-20260923T185406Z completed in28.53seconds.

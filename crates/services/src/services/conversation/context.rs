@@ -95,7 +95,9 @@ impl LocalContext {
             } => self.attention(run, *workspace_id, *offset).await?,
             SupervisorTool::ProposeAgentMessage { .. }
             | SupervisorTool::ReadAction { .. }
-            | SupervisorTool::ProposeMemoryChange { .. } => {
+            | SupervisorTool::ProposeMemoryChange { .. }
+            | SupervisorTool::ForgetMemory { .. }
+            | SupervisorTool::RescopeMemory { .. } => {
                 return Err(ConversationError::InvalidRecord);
             }
             SupervisorTool::FindContext {

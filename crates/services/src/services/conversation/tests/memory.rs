@@ -80,7 +80,7 @@ impl ConversationModel for MemoryModel {
         })
     }
 }
-async fn drive(f: &Fixture, model: Arc<MemoryModel>, text: &str) -> RunOutcome {
+async fn drive(f: &Fixture, model: Arc<dyn ConversationModel>, text: &str) -> RunOutcome {
     f.context.store.accept(f.id, &input(text)).await.unwrap();
     SupervisorWorker::new(f.pool.clone(), model)
         .await
@@ -95,7 +95,7 @@ async fn explicit_memory_persists_across_workers_and_duplicate_tools_recover_one
     let f = fixture().await;
     let model = Arc::new(MemoryModel::new(
         MemoryScope::Global,
-        MemoryDecision::Remember,
+        MemoryDecision::Apply,
     ));
     assert!(matches!(
         drive(
@@ -145,13 +145,13 @@ async fn memory_corrections_supersede_exact_revision_and_forgetting_removes_late
         &f,
         Arc::new(MemoryModel::new(
             MemoryScope::Global,
-            MemoryDecision::Remember,
+            MemoryDecision::Apply,
         )),
         "Remember: leave validation detail out.",
     )
     .await;
     let old = f.context.store.list_memories(f.id).await.unwrap().remove(0);
-    let mut correction = MemoryModel::new(MemoryScope::Global, MemoryDecision::Remember);
+    let mut correction = MemoryModel::new(MemoryScope::Global, MemoryDecision::Apply);
     correction.proposal.body =
         "Mention failed validation and explain what still needs checking.".into();
     correction.proposal.replaces = Some(MemoryRevision {
@@ -254,7 +254,7 @@ async fn inferred_memory_stays_proposed_until_explicit_acceptance_and_is_scoped(
         .unwrap();
     let mut accept = MemoryModel::new(
         MemoryScope::Workspace(f.workspace),
-        MemoryDecision::Remember,
+        MemoryDecision::Apply,
     );
     accept.proposal.replaces = Some(MemoryRevision {
         id: pending.id,
@@ -311,7 +311,7 @@ async fn memory_policy_failure_clarification_and_cancellation_never_write_active
         );
     }
     let f = fixture().await;
-    let mut unavailable = MemoryModel::new(MemoryScope::Global, MemoryDecision::Remember);
+    let mut unavailable = MemoryModel::new(MemoryScope::Global, MemoryDecision::Apply);
     unavailable.unavailable = true;
     assert_eq!(
         drive(&f, Arc::new(unavailable), "Remember this preference.").await,
@@ -327,7 +327,7 @@ async fn memory_policy_failure_clarification_and_cancellation_never_write_active
             .unwrap()
             .is_empty()
     );
-    let mut cancelled = MemoryModel::new(MemoryScope::Global, MemoryDecision::Remember);
+    let mut cancelled = MemoryModel::new(MemoryScope::Global, MemoryDecision::Apply);
     cancelled.cancel = Some(f.pool.clone());
     assert_eq!(
         drive(&f, Arc::new(cancelled), "Remember this preference.").await,
@@ -397,4 +397,127 @@ async fn memory_run_transaction_rejects_foreign_source_and_expired_lease() {
             .unwrap()
             .is_empty()
     );
+}
+
+struct ControlModel {
+    steps: Vec<SupervisorTool>,
+    requests: Mutex<Vec<ModelRequest>>,
+    policy: MemoryDecision,
+    assessments: Mutex<Vec<Value>>,
+    cancel: Option<SqlitePool>,
+}
+#[async_trait]
+impl ConversationModel for ControlModel {
+    fn identity(&self) -> ModelIdentity { identity() }
+    fn supports_memory_changes(&self) -> bool { true }
+    async fn next(&self, request: &ModelRequest) -> Result<ModelResponse, ModelError> {
+        let mut requests = self.requests.lock().unwrap();
+        let step = requests.len();
+        requests.push(request.clone());
+        if let Some(tool) = self.steps.get(step) {
+            Ok(ModelResponse {
+                step:ModelStep::Tool{call:ToolCall{id:format!("control_{step}"),tool:tool.clone()}},
+                continuation:ModelContinuation(vec![json!({"old_context":"discard-this-continuation"})]),
+                usage:ModelUsage::default(),
+            })
+        } else {
+            let mut answer = reply("I have updated that preference and checked the requested work.");
+            if let ModelStep::Reply{ evidence_ids, .. } = &mut answer.step {
+                *evidence_ids = request.exchanges.iter().filter_map(|e| e.result["data"]["evidence_id"].as_str().and_then(|s|Uuid::parse_str(s).ok())).collect();
+            }
+            Ok(answer)
+        }
+    }
+    async fn assess_memory(&self, request:&MemoryAssessmentRequest)->Result<MemoryAssessmentResponse, ModelError> {
+        self.assessments.lock().unwrap().push(serde_json::to_value(request).unwrap());
+        if let Some(pool) = &self.cancel {
+            sqlx::query("UPDATE conversation_runs SET status='cancelled',lease_owner=NULL,lease_until=NULL WHERE status='running'").execute(pool).await.unwrap();
+        }
+        Ok(MemoryAssessmentResponse {assessment:MemoryAssessment{decision:self.policy.clone(),explanation:"Fixture policy only.".into()},usage:ModelUsage{input_tokens:7,output_tokens:3}})
+    }
+}
+fn control(steps:Vec<SupervisorTool>, policy:MemoryDecision)->ControlModel {
+    ControlModel{steps,requests:Mutex::new(vec![]),policy,assessments:Mutex::new(vec![]),cancel:None}
+}
+async fn remembered(f:&Fixture)->MemoryRevision {
+    drive(f, Arc::new(MemoryModel::new(MemoryScope::Global, MemoryDecision::Apply)), "Remember my communication preference.").await;
+    let memory=f.context.store.list_memories(f.id).await.unwrap().remove(0);
+    MemoryRevision{id:memory.id,revision:memory.revision}
+}
+
+#[tokio::test]
+async fn conversational_forgetting_discards_old_reasoning_tools_and_manifest_then_finishes_mixed_request() {
+    let f=fixture().await;
+    let memory=remembered(&f).await;
+    let model=Arc::new(control(vec![
+        SupervisorTool::SearchMemory{workspace_id:None,session_id:None},
+        SupervisorTool::ForgetMemory{memory:memory.clone()},
+        SupervisorTool::ForgetMemory{memory:memory.clone()},
+        SupervisorTool::ReadAgentReport{process_id:f.process,offset:0},
+    ],MemoryDecision::Apply));
+    assert!(matches!(drive(&f,model.clone(),"Forget that preference, and tell me what the Android agent did.").await,RunOutcome::Completed{..}));
+    let requests=model.requests.lock().unwrap();
+    assert!(!requests[0].preferences.is_empty());
+    assert!(!requests[1].exchanges[0].continuation.0.is_empty());
+    let fresh=&requests[2];
+    assert!(fresh.exchanges.is_empty());
+    assert!(fresh.preferences.is_empty());
+    assert!(matches!(&fresh.effects[..],[TurnEffect::MemoryForgotten{memory:r}] if r.id==memory.id));
+    assert_eq!(requests[3].exchanges[0].result["data"]["already_recorded"],true);
+    assert_eq!(model.assessments.lock().unwrap().len(),1);
+    assert_eq!(model.assessments.lock().unwrap()[0]["operation"],"forget");
+    drop(requests);
+    let exported=f.context.store.export(f.id).await.unwrap();
+    let run=exported.runs.last().unwrap();
+    assert_eq!(run.status,"completed");
+    assert!(!run.context_manifest.contains("Leave routine"));
+    assert!(!run.context_manifest.contains("search_memory"));
+    assert!(!run.context_manifest.contains("discard-this-continuation"));
+    assert_eq!(exported.evidence.last().unwrap().raw_report.as_deref(), Some(f.raw.as_str()));
+    assert!(f.context.store.list_memories(f.id).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn conversational_rescope_refreshes_context_preserves_body_and_recovers_duplicate_receipt() {
+    let f=fixture().await;
+    let memory=remembered(&f).await;
+    let scope=MemoryScope::Workspace(f.workspace);
+    let step=SupervisorTool::RescopeMemory{memory:memory.clone(),scope:scope.clone(),entity_refs:vec![]};
+    let model=Arc::new(control(vec![step.clone(),step,SupervisorTool::SearchMemory{workspace_id:Some(f.workspace),session_id:None}],MemoryDecision::Apply));
+    assert!(matches!(drive(&f,model.clone(),"That preference should apply only to Android.").await,RunOutcome::Completed{..}));
+    assert_eq!(model.assessments.lock().unwrap().len(),1);
+    assert_eq!(model.assessments.lock().unwrap()[0]["operation"],"rescope");
+    let requests=model.requests.lock().unwrap();
+    assert!(requests[1].preferences.is_empty());
+    assert!(requests[1].exchanges.is_empty());
+    assert_eq!(requests[3].exchanges[0].result["data"]["memories"][0]["scope_id"],f.workspace.to_string());
+    drop(requests);
+    let moved=f.context.store.list_memories(f.id).await.unwrap().remove(0);
+    assert_eq!(moved.supersedes_id,Some(memory.id));
+    assert_eq!(moved.revision,2);
+    assert!(f.context.store.memories(f.id,&[],16384).await.unwrap().is_empty());
+    assert_eq!(f.context.store.memories(f.id,&[scope],16384).await.unwrap()[0].id,moved.id);
+}
+
+#[tokio::test]
+async fn forgetting_requires_explicit_assessment_current_revision_and_live_lease() {
+    for decision in [MemoryDecision::Propose,MemoryDecision::Clarify,MemoryDecision::Decline] {
+        let f=fixture().await;
+        let memory=remembered(&f).await;
+        let model=Arc::new(control(vec![SupervisorTool::ForgetMemory{memory}],decision));
+        drive(&f,model.clone(),"What did I ask you to remember?").await;
+        assert_eq!(f.context.store.list_memories(f.id).await.unwrap().len(),1);
+        assert!(model.requests.lock().unwrap()[1].effects.is_empty());
+    }
+    let f=fixture().await;
+    let memory=remembered(&f).await;
+    let stale=MemoryRevision{id:memory.id,revision:memory.revision+1};
+    let model=Arc::new(control(vec![SupervisorTool::ForgetMemory{memory:stale}],MemoryDecision::Apply));
+    drive(&f,model.clone(),"Forget the preference.").await;
+    assert!(model.assessments.lock().unwrap().is_empty());
+    assert_eq!(model.requests.lock().unwrap()[1].exchanges[0].result["error"],"memory_changed_reload");
+    let mut cancelled=control(vec![SupervisorTool::ForgetMemory{memory}],MemoryDecision::Apply);
+    cancelled.cancel=Some(f.pool.clone());
+    assert_eq!(drive(&f,Arc::new(cancelled),"Forget the preference.").await,RunOutcome::Fenced);
+    assert_eq!(f.context.store.list_memories(f.id).await.unwrap().len(),1);
 }

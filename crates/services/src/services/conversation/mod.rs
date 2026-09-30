@@ -169,6 +169,7 @@ impl SupervisorWorker {
                 )
                 .await?,
             exchanges: Vec::new(),
+            effects: Vec::new(),
         };
         let mut manifest = json!({"input_id":request.input.id,"input_revision":request.input.revision,
             "history":request.history.iter().map(|m|json!({"id":m.id,"revision":m.revision})).collect::<Vec<_>>(),
@@ -229,7 +230,24 @@ impl SupervisorWorker {
                     {
                         return Err(WorkError::Safe("model_invalid_tool_call"));
                     }
+                    let mut reset_effect = None;
                     let executed = match &call.tool {
+                        model::SupervisorTool::ForgetMemory { memory }
+                        | model::SupervisorTool::RescopeMemory { memory, .. } => {
+                            if request.memory_changes {
+                                let destination = match &call.tool {
+                                    model::SupervisorTool::RescopeMemory { scope, entity_refs, .. } => Some((scope, entity_refs.as_slice())),
+                                    _ => None,
+                                };
+                                let (result, assessed_usage, effect) = self.context.control_memory(run, &request, self.model.as_ref(), memory, destination).await?;
+                                usage.input_tokens = usage.input_tokens.checked_add(assessed_usage.input_tokens).ok_or(WorkError::Safe("model_invalid_usage"))?;
+                                usage.output_tokens = usage.output_tokens.checked_add(assessed_usage.output_tokens).ok_or(WorkError::Safe("model_invalid_usage"))?;
+                                reset_effect = effect;
+                                Ok(result)
+                            } else {
+                                Ok(json!({"error":"memory_changes_unavailable"}))
+                            }
+                        }
                         model::SupervisorTool::ProposeMemoryChange { proposal } => {
                             if request.memory_changes {
                                 let (result, assessed_usage) = self
@@ -317,6 +335,32 @@ impl SupervisorWorker {
                     tool_bytes += encoded.len();
                     if tool_bytes > TOOL_BUDGET {
                         return Err(WorkError::Safe("context_budget_exceeded"));
+                    }
+                    // Preserve only IDs of completed effects when forgetting drops
+                    // old model reasoning/tool results. A fresh request can inspect
+                    // these receipts instead of repeating an instruction.
+                    if matches!(call.tool, model::SupervisorTool::ProposeAgentMessage { .. })
+                        && let Some(action_id) = result["data"]["action"]["id"].as_str().and_then(|s|Uuid::parse_str(s).ok()) {
+                        request.effects.push(model::TurnEffect::AgentAction {action_id});
+                    }
+                    if matches!(call.tool, model::SupervisorTool::ProposeMemoryChange { .. })
+                        && let (Some(id), Some(revision)) = (result["data"]["memory"]["id"].as_str().and_then(|s|Uuid::parse_str(s).ok()), result["data"]["memory"]["revision"].as_i64()) {
+                        request.effects.push(model::TurnEffect::MemorySaved {memory:model::MemoryRevision{id,revision}});
+                    }
+                    if let Some(effect) = reset_effect {
+                        request.effects.push(effect);
+                        request.exchanges.clear();
+                        evidence_seen.clear();
+                        request.history = store.run_history(run).await?;
+                        request.preferences = store.memories(run.conversation_id, &[MemoryScope::Conversation(run.conversation_id)], 16384).await?;
+                        manifest = json!({"input_id":request.input.id,"input_revision":request.input.revision,
+                            "history":request.history.iter().map(|m|json!({"id":m.id,"revision":m.revision})).collect::<Vec<_>>(),
+                            "memories":request.preferences.iter().map(|m|json!({"id":m.id,"revision":m.revision})).collect::<Vec<_>>(),
+                            "effects":request.effects,"tools":[]});
+                        persist(store, run, &manifest, &model, &usage).await?;
+                        // In particular, do not append this response's encrypted
+                        // continuation: it still holds the removed preference.
+                        continue;
                     }
                     if let Some(id) = result["data"]["evidence_id"]
                         .as_str()

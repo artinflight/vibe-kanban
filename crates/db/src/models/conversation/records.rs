@@ -569,12 +569,39 @@ impl ConversationStore {
     /// Erase the claim's revisions and prevent automatic re-extraction. The
     /// original user conversation remains history until separately deleted.
     pub async fn forget_memory(&self, id: Uuid, memory_id: Uuid, revision: i64) -> Result<()> {
+        self.forget_memory_inner(id, memory_id, revision, None).await
+    }
+
+    /// The owning worker must discard all provider continuation and tool context
+    /// after success. Other in-flight readers are fenced by the transaction.
+    pub async fn forget_run_memory(
+        &self,
+        run: &ConversationRun,
+        memory_id: Uuid,
+        revision: i64,
+    ) -> Result<()> {
+        self.forget_memory_inner(run.conversation_id, memory_id, revision, Some(run))
+            .await
+    }
+
+    async fn forget_memory_inner(
+        &self,
+        id: Uuid,
+        memory_id: Uuid,
+        revision: i64,
+        owner: Option<&ConversationRun>,
+    ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
         self.lock(&mut tx, id).await?;
-        let current = sqlx::query_as::<_, ConversationMemory>("SELECT * FROM conversation_memory WHERE conversation_id = ? AND id = ? AND state IN ('active','proposed') AND revision = ?")
+        if let Some(run) = owner {
+            self.check_lease(&mut tx, run).await?;
+        }
+        sqlx::query_as::<_, ConversationMemory>("SELECT * FROM conversation_memory WHERE conversation_id = ? AND id = ? AND state IN ('active','proposed') AND revision = ?")
             .bind(id).bind(memory_id).bind(revision).fetch_optional(&mut *tx).await?.ok_or(ConversationError::RevisionConflict)?;
-        let previous = sqlx::query_as::<_, ConversationMemory>("SELECT * FROM conversation_memory WHERE conversation_id = ? AND scope_kind = ? AND scope_id = ? AND claim_key = ?")
-            .bind(id).bind(&current.scope_kind).bind(current.scope_id).bind(&current.claim_key).fetch_all(&mut *tx).await?;
+        // Follow this claim across scope moves. An unrelated later claim may
+        // reuse its old key/scope and must not be erased with it.
+        let previous = sqlx::query_as::<_, ConversationMemory>("WITH RECURSIVE lineage AS (SELECT * FROM conversation_memory WHERE conversation_id=? AND id=? UNION SELECT m.* FROM conversation_memory m JOIN lineage l ON l.supersedes_id=m.id WHERE m.conversation_id=?) SELECT * FROM lineage")
+            .bind(id).bind(memory_id).bind(id).fetch_all(&mut *tx).await?;
         for memory in previous {
             sqlx::query("INSERT OR IGNORE INTO conversation_forgotten_memory (conversation_id,source_message_id,claim_key,scope_kind,scope_id) VALUES (?, ?, ?, ?, ?)")
                 .bind(id).bind(memory.source_message_id).bind(&memory.claim_key).bind(&memory.scope_kind).bind(memory.scope_id).execute(&mut *tx).await?;
@@ -584,20 +611,7 @@ impl ConversationStore {
         }
         // Contexts contain references, never the sole copy of knowledge. Clear
         // any cached context immediately, including in-flight manifests.
-        invalidate_context(&mut tx, id).await?;
-        sqlx::query(
-            "UPDATE conversation_runs SET context_manifest = '{}' WHERE conversation_id = ?",
-        )
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
-        // Fence a model already holding the forgotten preference. Accepted
-        // actions remain independently visible; this cannot unsend instructions.
-        let interrupted = sqlx::query_as::<_, ConversationRun>("UPDATE conversation_runs SET status = 'interrupted', generation = generation + 1, lease_owner = NULL, lease_until = NULL, error = 'memory_forgotten' WHERE conversation_id = ? AND status = 'running' RETURNING *")
-            .bind(id).fetch_all(&mut *tx).await?;
-        for run in interrupted {
-            emit(&mut tx, id, "run.status", run.id, run.generation + 1, &run).await?;
-        }
+        reset_memory_context(&mut tx, id, owner, "memory_forgotten").await?;
         emit(
             &mut tx,
             id,
@@ -609,6 +623,55 @@ impl ConversationStore {
         .await?;
         tx.commit().await?;
         Ok(())
+    }
+
+    /// Move one exact claim, without changing its body or promoting an inferred
+    /// claim. Destination collisions fail atomically. The owner must rebuild its
+    /// model context after success, just as for conversational forgetting.
+    pub async fn rescope_run_memory(
+        &self,
+        run: &ConversationRun,
+        memory_id: Uuid,
+        revision: i64,
+        scope: &MemoryScope,
+        entity_refs: &[MemoryScope],
+    ) -> Result<ConversationMemory> {
+        if entity_refs.len() > 16 {
+            return Err(ConversationError::InvalidRecord);
+        }
+        let id = run.conversation_id;
+        let mut tx = self.pool.begin().await?;
+        self.lock(&mut tx, id).await?;
+        self.check_lease(&mut tx, run).await?;
+        self.validate_scope(&mut tx, id, scope).await?;
+        for reference in entity_refs {
+            self.validate_scope(&mut tx, id, reference).await?;
+        }
+        let current = sqlx::query_as::<_, ConversationMemory>("SELECT * FROM conversation_memory WHERE conversation_id=? AND id=? AND revision=? AND state IN ('active','proposed')")
+            .bind(id).bind(memory_id).bind(revision).fetch_optional(&mut *tx).await?.ok_or(ConversationError::RevisionConflict)?;
+        let (kind, scope_id) = scope.key();
+        let forgotten: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM conversation_forgotten_memory WHERE conversation_id=? AND source_message_id=? AND claim_key=? AND scope_kind=? AND scope_id=?)")
+            .bind(id).bind(run.input_message_id).bind(&current.claim_key).bind(kind).bind(scope_id).fetch_one(&mut *tx).await?;
+        if forgotten {
+            return Err(ConversationError::InvalidRecord);
+        }
+        if current.scope_kind == kind && current.scope_id == scope_id && current.entity_refs.0 == entity_refs {
+            tx.commit().await?;
+            return Ok(current);
+        }
+        let collision: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM conversation_memory WHERE conversation_id=? AND scope_kind=? AND scope_id=? AND claim_key=? AND state IN ('active','proposed') AND id!=?)")
+            .bind(id).bind(kind).bind(scope_id).bind(&current.claim_key).bind(memory_id).fetch_one(&mut *tx).await?;
+        if collision {
+            return Err(ConversationError::RevisionConflict);
+        }
+        sqlx::query("UPDATE conversation_memory SET state='superseded' WHERE id=?")
+            .bind(memory_id).execute(&mut *tx).await?;
+        let record = sqlx::query_as::<_, ConversationMemory>("INSERT INTO conversation_memory (id,conversation_id,scope_kind,scope_id,claim_key,body,entity_refs,state,revision,supersedes_id,source_message_id,author_kind,valid_until) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *")
+            .bind(Uuid::new_v4()).bind(id).bind(kind).bind(scope_id).bind(&current.claim_key).bind(&current.body).bind(Json(entity_refs)).bind(&current.state).bind(revision+1).bind(memory_id).bind(run.input_message_id).bind(&current.author_kind).bind(current.valid_until).fetch_one(&mut *tx).await?;
+        reset_memory_context(&mut tx, id, Some(run), "memory_rescoped").await?;
+        emit(&mut tx, id, "memory.changed", record.id, record.revision, &record).await?;
+        tx.commit().await?;
+        Ok(record)
     }
 
     /// A consistent snapshot; only owned supervisor records and their deliveries
@@ -753,6 +816,24 @@ fn hash(content: &[u8]) -> String {
 async fn invalidate_context(conn: &mut SqliteConnection, id: Uuid) -> Result<()> {
     sqlx::query("UPDATE conversation_context SET summary = '', source_versions = '{}', revision = revision + 1, invalidated_at = datetime('now','subsec') WHERE conversation_id = ?")
         .bind(id).execute(conn).await?;
+    Ok(())
+}
+
+async fn reset_memory_context(
+    conn: &mut SqliteConnection,
+    id: Uuid,
+    owner: Option<&ConversationRun>,
+    error: &str,
+) -> Result<()> {
+    invalidate_context(conn, id).await?;
+    sqlx::query("UPDATE conversation_runs SET context_manifest='{}' WHERE conversation_id=?")
+        .bind(id).execute(&mut *conn).await?;
+    // This fences stale readers; it cannot unsend accepted agent instructions.
+    let interrupted = sqlx::query_as::<_, ConversationRun>("UPDATE conversation_runs SET status='interrupted',generation=generation+1,lease_owner=NULL,lease_until=NULL,error=? WHERE conversation_id=? AND status='running' AND (? IS NULL OR id!=?) RETURNING *")
+        .bind(error).bind(id).bind(owner.map(|r|r.id)).bind(owner.map(|r|r.id)).fetch_all(&mut *conn).await?;
+    for run in interrupted {
+        emit(&mut *conn, id, "run.status", run.id, run.generation + 1, &run).await?;
+    }
     Ok(())
 }
 

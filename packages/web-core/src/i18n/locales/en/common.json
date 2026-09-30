@@ -565,6 +565,7 @@
     "loading": "Loading…",
     "noSources": "No linked agent report for this response.",
     "originalReport": "Original report {{number}}",
+    "attentionSnapshot": "Attention snapshot {{number}}",
     "sourceUnavailable": "The original report is unavailable.",
     "relationship": {
       "supporting": "supporting evidence",

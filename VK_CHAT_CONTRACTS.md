@@ -129,7 +129,7 @@ fully qualified. No client-to-model credentials or arbitrary tool execution API.
 `services/conversation/openai.rs` implements the existing `ConversationModel`
 interface; `runtime.rs` owns its lifecycle inside `LocalDeployment`. Workspace
 messages do not call either module. The first adapter uses OpenAI Responses with
-six typed read tools and a structured final `{text, evidence_ids}` response. A
+seven typed read tools and a structured final `{text, evidence_ids}` response. A
 configured local deployment also supplies the action service/transport: this adds
 `propose_agent_message` and `read_action`, and advertises `agent_actions` while the
 consumer is ready. Read-only test/alternate deployments can omit the action service.
@@ -260,7 +260,7 @@ results remain data rather than policy instructions. The proposal tool accepts o
 message text and session IDs, never its own approval/risk fields. Structured policy
 output distinguishes ordinary, consequential, unclear and unsupported-control
 requests, with an authorization judgment and retained explanation. Invalid/refused/
-unavailable assessment cannot authorize delivery. Prompt version `supervisor-v2`,
+unavailable assessment cannot authorize delivery. Prompt version `supervisor-v3`,
 assessment version `supervisor-message-assessment-v1` and known combined usage are
 recorded. Real-model semantic/security evaluation remains a release gate.
 
@@ -434,6 +434,40 @@ attachment handling remain the raw view.
 Direct text/voice never creates a conversation model run. A supervisor model outage
 or missing model credential cannot block ordinary workspace interaction. Cancelling
 workspace speech playback only stops audio; it does not cancel the coding-agent run.
+
+### Current attention retrieval — implemented boundary
+
+`list_attention({workspace_id, offset})` scans up to twenty local sessions per
+page, across active workspaces or one resolved workspace. It examines each
+session, so a second agent is not hidden by the most recent workspace process.
+The latest coding result excludes devservers and dropped processes. Output keeps
+pending executor responses, failed/interrupted executions, unread successful
+completions, capacity waiting, uncertain deliveries and paused native goals as
+separate signals. None of unread completion, capacity waiting or an intentionally
+paused goal proves that the user owes an answer. Read agent reports separately
+for failed validation, questions expressed in prose and their rationale.
+
+Configured deployment supplies the existing approvals/capacity/native-goal
+projection through the action service; missing runtime is explicitly unknown.
+Active native owners are inspected without starting/resuming a process. Runtime
+calls have two-second bounds and at most four session observations run together.
+A process finishing during its goal read is reported as changed, not still paused.
+Inactive native goals and remote hosts are not inspected by this local tool.
+Existing workspace seen flags and reports are never written. Names, repositories
+and workspace links provide routing context without host paths or scripts.
+
+The first page also reports this conversation's still-valid pending confirmations,
+filtered by owner, live/completed origin run, exact action revision/digest, expiry
+and optional workspace.
+This is a live paged scan, not an atomic snapshot of the whole installation;
+`next_offset` must be followed even when a quiet page has no attention items.
+Truncation, observation start/end and coverage limits are explicit. Missing signals
+cannot justify an installation-wide all-clear. The complete returned observation
+is retained as `EvidenceSource::AttentionSnapshot`, hashed and linked through the
+same evidence/reply/export/deletion path as reports. The global UI labels this as
+an attention snapshot rather than an original agent report. Each later query
+reads live state while earlier evidence remains reviewable. Source-review watermarks,
+semantic report classification and completion subscriptions remain separate work.
 
 ## Spoken output contract
 

@@ -14,7 +14,7 @@ export type ConversationMessage = { id: string, conversation_id: string, created
 
 export type MemoryScope = { "kind": "global" } | { "kind": "project", "id": string } | { "kind": "repository", "id": string } | { "kind": "workspace", "id": string } | { "kind": "conversation", "id": string } | { "kind": "session", "id": string };
 
-export type EvidenceSource = { "kind": "agent_report", session_id: string, process_id: string, } | { "kind": "repository", repo_id: string, };
+export type EvidenceSource = { "kind": "agent_report", session_id: string, process_id: string, } | { "kind": "repository", repo_id: string, } | { "kind": "attention_snapshot" };
 
 export type ConversationAction = { id: string, conversation_id: string, request_id: string, run_id: string | null, origin_message_id: string, intent_kind: string, payload: unknown, payload_digest: string, route_evidence: unknown, authorisation_source: string | null, state: string, revision: number, created_at: string, };
 

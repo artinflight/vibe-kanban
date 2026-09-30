@@ -4,7 +4,7 @@ Design source: [architecture](VK_CHAT_ARCHITECTURE.md),
 [contracts](VK_CHAT_CONTRACTS.md), [voice](VK_CHAT_VOICE.md).
 Implementation entry instruction: [handoff prompt](VK_CHAT_HANDOFF.md).
 
-## Implementation progress — 2026-09-26
+## Implementation progress — 2026-09-30
 
 Milestone 1 now includes supervisor history/run/event storage; immutable action
 proposals; exact retained evidence and message links; scoped/versioned memory;
@@ -39,10 +39,18 @@ failures stop work without automatic retries. The OpenAI Responses adapter/start
 consumer is now implemented, with explicit supervisor-only configuration and
 transient provider continuation state. API receipt retries survive worker loss;
 bounded status pages and UI show failed/interrupted replies after reload. Complete
-project/attention retrieval, outcome ingestion, model settings and actual provider/
+project retrieval, outcome ingestion, model settings and actual provider/
 speech evaluation remain open. Policy integration has deterministic coverage;
 actual policy judgments still require funded-model evaluation. See STREAM.md
 and HANDOFF.md for current validation and next work.
+
+Milestone 4 now has a bounded local `list_attention` model tool using existing
+runtime approvals/capacity/native-owner reads. It separates pending responses from
+unread completions, failures, capacity waits and paused goals, and retains the
+observed state as citable evidence without changing workspace seen/history state.
+Explicit coverage limits prevent incomplete local results from being treated as
+an all-clear. Scoped conversational memory mutation, report-level classification,
+review watermarks and completion subscriptions still need implementation.
 
 ## Recommended first slice
 

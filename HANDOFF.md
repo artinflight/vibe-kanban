@@ -1,3 +1,54 @@
+## September 30: supervisor attention and policy integration
+
+This entry supersedes the earlier implementation snapshots below. The policy,
+confirmation API/global UI and real deployment action transport were already
+implemented in commit `3b48fcc53`. Do not rebuild that work because an older note
+says `agent_actions` is false. The capability follows the configured consumer and
+action service; no production model settings or runtime were enabled here.
+
+New `services/conversation/attention.rs` implements `list_attention`: bounded
+active local session scanning, pending executor responses, failed/interrupted work,
+unread successful completion, capacity waiting, uncertain deliveries and active
+native-goal pause/availability. It uses deployment-supplied runtime projections,
+with bounded concurrent reads. Quiet pages still advance their cursor. Expired,
+revised, cancelled or foreign-owner confirmations are excluded. Unread or paused
+work is not automatically a user question. A goal finishing during observation is
+reported as changed. Inactive native goals, prose/report-level blockers and remote
+hosts are explicitly outside this tool's current coverage.
+
+Each observation is retained as citable `AttentionSnapshot` evidence with its time
+range and limits. The global UI distinguishes this from an original agent report.
+Current-state queries re-read VK; historical snapshots remain available for
+review/export/deletion. No workspace response/history/seen flag is modified, and
+there is no new direct-chat model or memory path. The model has seven read tools
+plus optional proposal/status tools; prompt version is `supervisor-v3`.
+
+Validation: recovered policy baseline passed **53 DB + 64 service tests** in
+`vk-chat-policy-regression.log`. The final supervisor suite passes **43 tests**,
+including six attention tests, in `vk-chat-attention-services.log`. All **eight
+conversation API tests** and **two ordinary queue-route tests** pass in
+`vk-chat-attention-{api,queue-api}.log`; they include confirmation receipt recovery
+after worker shutdown and direct Codex no-queue-fallback. `cargo run --offline
+--bin generate_types` regenerated `shared/types.ts` successfully. Both
+web-core/local-web typechecks, focused ESLint using the local-web configuration,
+full `pnpm run format`, ops checks and `git diff --check` pass. Logs use the
+`vk-chat-attention-` prefix under `/mnt/vk-storage/capacity-build-tmp`.
+JavaScript dependencies were restored offline from the named SSD pnpm store.
+
+This is deterministic integration evidence, not live model/executor/browser/voice/
+device acceptance or the full workspace/PR baseline. No deployment, provider call
+or runtime settings change occurred. The source and continuity edits in this
+continuation remain uncommitted/unpushed. The build SSD had 6.8 GiB free after type
+generation; recheck before larger Android/release builds, and follow the storage
+policy rather than deleting caches or moving outputs onto the system disk.
+
+**Next:** implement scoped conversational memory updates and source-review
+watermarks/result ingestion using the existing store. Preserve the distinction
+between user-confirmed knowledge and current state. Complete report classification
+and subscriptions, richer project context, actual model/speech evaluation, UI
+browser acceptance, native voice transport/Android Telecom and release/restore
+validation. The full goal remains open; only persistence is checkpoint-complete.
+
 ## September 26: supervisor delivery runtime and native-goal boundary
 
 The authorised-action dispatcher now lives in

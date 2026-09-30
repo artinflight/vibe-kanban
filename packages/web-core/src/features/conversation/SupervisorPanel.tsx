@@ -139,7 +139,13 @@ function SourceDetails({
       {reports.map((report, index) => (
         <details key={report.id} className="mt-base">
           <summary className="cursor-pointer">
-            {t('supervisor.originalReport', { number: index + 1 })} ·{' '}
+            {t(
+              report.source.kind === 'attention_snapshot'
+                ? 'supervisor.attentionSnapshot'
+                : 'supervisor.originalReport',
+              { number: index + 1 }
+            )}{' '}
+            ·{' '}
             {t(
               `supervisor.relationship.${sources[index]?.relationship ?? 'supporting'}`
             )}

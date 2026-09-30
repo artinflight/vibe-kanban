@@ -12,6 +12,7 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 pub mod action_service;
+mod attention;
 pub mod context;
 pub mod dispatch;
 pub mod dispatch_gate;
@@ -72,6 +73,7 @@ impl SupervisorWorker {
     }
 
     pub fn with_actions(mut self, actions: Arc<action_service::SupervisorActions>) -> Self {
+        self.context.runtime = Some(actions.runtime.clone());
         self.actions = Some(actions);
         self
     }

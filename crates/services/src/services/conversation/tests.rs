@@ -13,6 +13,8 @@ use tokio::sync::Notify;
 
 use super::{model::*, *};
 
+mod attention;
+
 struct Fixture {
     pool: SqlitePool,
     context: LocalContext,

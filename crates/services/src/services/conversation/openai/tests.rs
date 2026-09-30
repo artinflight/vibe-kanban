@@ -300,7 +300,7 @@ async fn adapter_worker_reads_real_report_and_replays_reasoning_only_in_the_curr
         assert_eq!(request["parallel_tool_calls"], false);
         assert!(request.get("previous_response_id").is_none());
         assert!(request.get("conversation").is_none());
-        assert_eq!(request["tools"].as_array().unwrap().len(), 6);
+        assert_eq!(request["tools"].as_array().unwrap().len(), 7);
     }
     let second = requests[1]["input"].as_array().unwrap();
     assert!(second.contains(&reasoning));

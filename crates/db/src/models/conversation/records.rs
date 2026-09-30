@@ -33,8 +33,15 @@ impl MemoryScope {
 #[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum EvidenceSource {
-    AgentReport { session_id: Uuid, process_id: Uuid },
-    Repository { repo_id: Uuid },
+    AgentReport {
+        session_id: Uuid,
+        process_id: Uuid,
+    },
+    Repository {
+        repo_id: Uuid,
+    },
+    /// A supervisor-owned observation, not a replacement for workspace reports.
+    AttentionSnapshot,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, FromRow)]
@@ -319,6 +326,7 @@ impl ConversationStore {
             self.check_lease(&mut tx, run).await?;
         }
         match source {
+            EvidenceSource::AttentionSnapshot => {}
             EvidenceSource::AgentReport {
                 session_id,
                 process_id,

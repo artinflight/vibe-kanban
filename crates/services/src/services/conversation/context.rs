@@ -1,5 +1,7 @@
 //! Bounded local entity projection. The trusted local operator can read local VK
 //! rows; relay or remote principals must not be mapped to this context service.
+use std::sync::Arc;
+
 use db::models::conversation::{
     ConversationError, ConversationRun, ConversationScope, ConversationStore,
     records::{EvidenceSource, MemoryScope},
@@ -18,8 +20,9 @@ const REPORT_PAGE_CHARS: usize = 16_384;
 
 #[derive(Clone)]
 pub struct LocalContext {
-    pool: SqlitePool,
+    pub(super) pool: SqlitePool,
     pub(super) store: ConversationStore,
+    pub(super) runtime: Option<Arc<dyn super::dispatch_gate::RuntimeState>>,
 }
 
 #[derive(Debug, FromRow, Serialize)]
@@ -78,6 +81,7 @@ impl LocalContext {
         Ok(Self {
             store: ConversationStore::new(pool.clone(), scope),
             pool,
+            runtime: None,
         })
     }
 
@@ -85,6 +89,10 @@ impl LocalContext {
         // Recheck scope and cancellation before each read or retained-evidence write.
         self.store.renew(run).await?;
         let data = match tool {
+            SupervisorTool::ListAttention {
+                workspace_id,
+                offset,
+            } => self.attention(run, *workspace_id, *offset).await?,
             SupervisorTool::ProposeAgentMessage { .. } | SupervisorTool::ReadAction { .. } => {
                 return Err(ConversationError::InvalidRecord);
             }

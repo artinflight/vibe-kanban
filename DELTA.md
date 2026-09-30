@@ -1602,3 +1602,30 @@ this slice.
   `/mnt/vk-storage/capacity-build-tmp/vk-chat-dispatch-{regression,api-tests,queue-api-tests,format,ops}.log`
   and `vk-chat-goal-gate-tests.log`. Full workspace/PR baseline and live
   executor/model/browser/device acceptance remain unverified.
+
+
+## 2026-09-30 — supervisor attention retrieval
+
+- Recovered the previous policy/confirmation work from `3b48fcc53`; baseline
+  database/service regression passes 53 + 64 tests. Restored missing frontend
+  dependencies offline and corrected focused lint invocation to use local-web's
+  actual configuration. No runtime or provider credentials were changed.
+- Added bounded local session attention retrieval to the supervisor model. Runtime
+  approvals, capacity/native owner reads and existing delivery state feed separate
+  signals. Unread completion is not a pending answer; paused goals may be intentional.
+  Missing runtime/coverage and a process finishing during observation remain explicit.
+- Retain exact dated attention snapshots through existing evidence persistence and
+  label them separately in global drill-down. Preserve raw workspace text/history/
+  seen state. New tests cover classification, freshness, missing runtime, pagination,
+  confirmation scope/expiry, retained citations/cancellation and the finishing race.
+- Reconciled STREAM, contracts, implementation progress and HANDOFF with current
+  source. Memory mutation/watermarks, outcome ingestion, real model/speech/provider,
+  browser/device and release acceptance remain; no broad requirement was falsely
+  marked complete. Final validation details belong to the top HANDOFF entry.
+
+- Final validation: 43 supervisor tests (six new attention tests), eight conversation
+  API tests and two direct queue tests pass; generated types, web-core/local-web
+  typechecks, focused ESLint, full format, ops and diff checks pass. Logs:
+  `/mnt/vk-storage/capacity-build-tmp/vk-chat-attention-*.log`. The recovered
+  baseline also passed 53 DB + 64 service tests. Full workspace/PR and live model/
+  executor/browser/provider/phone/car acceptance remain unverified.

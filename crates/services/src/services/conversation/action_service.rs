@@ -30,6 +30,7 @@ pub enum ActionError {
 pub struct SupervisorActions {
     dispatcher: ActionDispatcher,
     transport: Arc<dyn AgentTransport>,
+    pub(super) runtime: Arc<dyn super::dispatch_gate::RuntimeState>,
 }
 impl SupervisorActions {
     pub async fn new(
@@ -42,6 +43,7 @@ impl SupervisorActions {
             ConversationScope::local_operator(&pool).await?,
         );
         Ok(Self {
+            runtime: gate.runtime.clone(),
             dispatcher: ActionDispatcher::new(pool, store, gate),
             transport,
         })

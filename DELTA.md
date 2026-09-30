@@ -1290,3 +1290,10 @@ same-thread resume pass. Candidate binary and isolated handover/recovery are
 prepared on SSD; production is still the incumbent 5031 backend. See VK_ERRORS_2.md.
 
 - 2026-09-15: Version capacity deployment settings and candidate-bound installation/verification in VK; preserve separate Errors 2 stream and production runtime.
+
+## 2026-09-30 — Model AutoSwitch feasibility investigation
+
+- Added VK_MODEL_AUTOSWITCH.md with selection/RPC/usage architecture findings,
+  native four-model catalog, settings limitations, quality gates and pilot plan.
+- Read-only Codex 0.153.4 model/list completed; no inference or live changes.
+- Routing safety and relative allowance savings remain experimental, not proven.

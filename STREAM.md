@@ -1,3 +1,16 @@
+# VK Model AutoSwitch investigation
+
+Current branch: `vk/5a81-vk-model-autoswi`.
+Scope: model-routing feasibility and planning only. Findings and proposed
+validation gates are in [VK_MODEL_AUTOSWITCH.md](VK_MODEL_AUTOSWITCH.md).
+No router implementation, inference benchmark, model-default change or deployment.
+The read-only native catalog probe lists Astra and GPT-5.6 Sol/Terra/Luna;
+execution entitlement and quality/cost qualification remain pilot questions.
+
+## Inherited integration context
+
+The following notes describe inherited work, not this branch's task scope.
+
 # Capacity Cutover Lock
 
 Current scope: implement authenticated ownership release/acquire with fresh

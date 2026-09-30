@@ -1,58 +1,34 @@
-## September 30: Model AutoSwitch V1 implemented, not enabled
+## September 30: CU producer recovered and native acceptance passed
 
-Read [VK_MODEL_AUTOSWITCH.md](VK_MODEL_AUTOSWITCH.md) and the versioned
-[CodexUsage contract](VK_CODEX_ROUTING_CONTRACT.md). Model policy is configurable;
-all seven IDs are represented separately from discovery/execution evidence.
-Manual is default. Auto prefers verified Sol 6.1/medium at workhorse floor,
-Luna 6/medium at explicitly chosen routine floor, and Astra/high at frontier.
-These are trial capability assignments, not demonstrated quality equivalence.
-Explicit model/effort choices lock manual. Shadow never changes execution.
-Auto preserves prior floors, exclusions and state; failed-execution escalation
-requires consent and happens only on a newly requested follow-up. Native goal
-resumes retain prior automatic settings; first-time opt-in requires an ordinary
-boundary. Retry/reset requests are rejected in automatic mode before Git reset.
+Current source is `/mnt/vk-storage/vk-model-autoswitch-20260930/source`, branch
+`vk/5a81-autoswitch-cu-recovery`, based on committed V1 `162770f73`. The dirty
+managed worktree was externally deleted around 14:01 UTC; producer source was
+reconstructed and validated outside managed cleanup. Do not recreate the old
+path over concurrent work. Cause remains unverified.
 
-Validation evidence lives at `/mnt/vk-storage/vk-model-autoswitch-v1/`:
+Read [VK_AUTOSWITCH_ROLLOUT.md](VK_AUTOSWITCH_ROLLOUT.md) for exact execution IDs,
+launcher, feed, evidence and release gates. CU canonical contract and fixture
+are mirrored byte-for-byte. VK emits decision/turn_bound/execution_end while
+preserving raw vk/routing events. Failed native turns/unexpected EOF now report
+failure; manual effort is pinned. Optional feed delivery failures only warn.
 
-- CLI 0.159.2 discovered and completed bounded probes for all seven models;
-  medium for all except Astra/high. Old CLI 0.153.4 lacked the three new models.
-- Direct native Luna-to-Sol 6.1 process restart/resume preserved thread history,
-  passphrase, checkpoint and operator dirty bytes. Harness initially rejected
-  native standard tier `default`; after reconciling that response it resumed the
-  same thread successfully. VK has a targeted decoder compatibility regression.
-- The real VK executor acceptance test was attempted but capacity admission
-  rejected it at 20 active / limit 8, before inference. No limit was bypassed.
-  It remains ignored by default and must pass once capacity permits.
-- `cargo test -p executors --lib --offline`: 92 passed, 4 ignored (including
-  the explicitly opt-in native acceptance test).
-- `cargo check -p server --offline`, generated TypeScript from Rust, web-core
-  type-check (NODE_OPTIONS=--max-old-space-size=4096), focused selector/hook
-  ESLint, 3 React selection tests, `pnpm run format`, `pnpm run ops:check`,
-  local document links, Python syntax and diff whitespace checks passed.
-  The initial default-heap TypeScript run exhausted memory; the larger-heap
-  rerun passed. Full workspace/Tauri suites and browser/API acceptance were
-  not run. `cargo clippy -p executors -p server --lib --offline -- -D warnings`
-  passed after keeping optional routing metadata behind indirection, avoiding
-  action/queue enum size regressions without changing the serialized contract.
+Fresh exact-launcher CLI 0.159.2 probes passed for all seven models. The formerly
+blocked real native executor test passed under the unchanged managed capacity
+limit. Four private HTTP executions passed normal Sol 6.1 routing, controlled
+failure, Astra escalation with dirty state intact, and explicit Sol 6/medium.
+Twelve unique lifecycle records were emitted with real thread/turn IDs and null
+task IDs. 94 executor tests, focused Clippy, server/guard builds, formatting and
+ops checks passed. The isolated backend is stopped; production is unchanged.
 
-To rerun the real VK executor test, use the candidate environment shown in the
-planning document, `VK_USE_SYSTEMD_RUN=0`,
-`VK_ROUTING_TEST_DIR=/mnt/vk-storage/vk-model-autoswitch-v1/boundary`,
-`VK_ROUTING_TEST_THREAD=01a0f265-4f71-77b1-a44b-379e1cb19c1a`, the shared
-`CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target`, `CARGO_INCREMENTAL=0`, and
-`cargo test -p executors --lib --offline routed_native_follow_up_acceptance -- --ignored --nocapture`.
-It consumes one short turn on the existing isolated fixture, never a user task.
-Refresh candidate evidence only when needed; do not override host capacity.
-
-Minimum next work: run the opt-in native executor acceptance test when host
-capacity permits, then exercise the built frontend/backend together in a local
-candidate (new execution, manual lock, follow-up escalation, logs and scratch).
-Adopt the newer launcher and fresh verification evidence through deployment QA;
-start a small reviewed real-work pilot. No large benchmark prerequisite. Existing
-host launcher, live profiles and running Green remain untouched; CU files were
-not edited. API-key account binding, automatic test-result interpretation, usage
-pressure input, full localization and broader quality calibration are deferred.
-Version remains 0.1.42. No PR, push, preview or production deployment for V1.
+Read-only CU consumer import/replay passed: native normal, escalated and manual
+usage counters match exactly, with zero binding/settings conflicts. The interrupted
+attempt has no native token-count event; usage stays unknown. CU owner review
+and exact failed-attempt consumption remain outstanding via
+`/mnt/vk-storage/vk-model-autoswitch-20260930/CU_ACCEPTANCE_HANDOFF.json`; do not
+claim accounting acceptance before CU publishes evidence. Deployment config is
+rendered but uninstalled, with candidate artifact hashes. Source is version0.1.42.
+Normal release/combined UI QA and fresh explicit production cutover approval
+remain necessary; no PR, push, live preview or production rollout in this task.
 
 ## September23: Ownership Handover Implemented, Not Deployed
 

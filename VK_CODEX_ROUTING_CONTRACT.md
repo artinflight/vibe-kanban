@@ -1,4 +1,26 @@
-# VK → CodexUsage routing contract, version 1
+# VK AutoSwitch producer implementation notes
+
+The authoritative wire contract is [VK_ROUTING_TELEMETRY_V1.md](VK_ROUTING_TELEMETRY_V1.md),
+mirrored byte-for-byte from CodexUsage. The source structures described below are
+not alternative CU wire records. VK now produces that JSONL feed alongside the
+existing `vk/routing` raw log; native acceptance is recorded in the handoff.
+
+Set `VK_ROUTING_EVENTS_FILE` for the VK process and `CU_ROUTING_EVENTS_FILE` for
+CU to the same private absolute file. Decisions are emitted after VK creates the
+execution record, native bindings after turn/start responses or turn/started
+notifications (including goal continuations), and end records after persisted
+completion on normal, failed-start, interrupted and recovery paths. Stable hashed
+event IDs, file locking, duplicate checks and partial trailing-write recovery
+preserve immutable records. Delivery errors warn in VK logs without changing
+routing, execution state or retries. There is no delivery daemon; resolve the
+file error and replay preserved records where available. Missing bindings remain
+unattributed rather than guessed. Do not rotate an unimported feed.
+
+Manual execution IDs also serve as their routing IDs. Automatic/shadow executions
+retain their existing RoutingDecision UUID. `taskId` is null for standalone
+chats. `completed` means process success, not reviewed/accepted code. No exclusive
+account allowance claim is emitted. A null native tier remains unknown in the CU
+adapter even when the requested automatic tier is standard.
 
 Owner: VK persists selection and execution identity; CodexUsage owns token/allowance
 accounting. This contract adds no CU dependency and no new scheduler. It is a

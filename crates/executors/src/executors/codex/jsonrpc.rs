@@ -84,6 +84,7 @@ impl JsonRpcPeer {
         tokio::spawn(async move {
             let mut reader = BufReader::new(stdout);
             let mut buffer = String::new();
+            let mut completed_normally = false;
 
             loop {
                 buffer.clear();
@@ -145,7 +146,7 @@ impl JsonRpcPeer {
                                             .await
                                         {
                                             // finished
-                                            Ok(true) => break,
+                                            Ok(true) => { completed_normally = true; break; },
                                             Ok(false) => {}
                                             Err(error) => {
                                                 tracing::error!("Codex notification callback failed: {error}");
@@ -170,7 +171,13 @@ impl JsonRpcPeer {
                 }
             }
 
-            exit_tx.send_exit_signal(ExecutorExitResult::Success).await;
+            exit_tx
+                .send_exit_signal(if completed_normally {
+                    ExecutorExitResult::Success
+                } else {
+                    ExecutorExitResult::Failure
+                })
+                .await;
             let _ = reader_peer.shutdown().await;
         });
 
@@ -428,6 +435,70 @@ mod tests {
     use serde_json::json;
 
     use super::sanitize_response_value;
+
+    #[tokio::test]
+    async fn unexpected_eof_and_failed_native_turn_are_not_success() {
+        use std::process::Stdio;
+
+        use crate::{
+            env::RepoContext,
+            executors::{
+                ExecutorExitResult,
+                codex::client::{AppServerClient, LogWriter},
+            },
+        };
+        for status in [None, Some("failed"), Some("completed")] {
+            let mut command = tokio::process::Command::new("sh");
+            match status {
+                None => {
+                    command.args(["-c", "exit 0"]);
+                }
+                Some(status) => {
+                    command.args(["-c", "printf '%s\\n' \"$1\"", "fixture"]).arg(serde_json::json!({
+                    "method":"turn/completed", "params":{"threadId":"root", "turn":{"id":"turn", "status":status, "items":[], "error":null}}
+                }).to_string());
+                }
+            }
+            let mut child = command
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .spawn()
+                .unwrap();
+            let cancel = tokio_util::sync::CancellationToken::new();
+            let client = AppServerClient::new(
+                LogWriter::new(tokio::io::sink()),
+                None,
+                false,
+                false,
+                RepoContext::default(),
+                false,
+                String::new(),
+                cancel.clone(),
+            );
+            client.register_session("root").await.unwrap();
+            let (tx, rx) = tokio::sync::oneshot::channel();
+            let _peer = super::JsonRpcPeer::spawn(
+                child.stdin.take().unwrap(),
+                child.stdout.take().unwrap(),
+                client,
+                super::ExitSignalSender::new(tx),
+                cancel,
+            );
+            let result = tokio::time::timeout(std::time::Duration::from_secs(3), rx)
+                .await
+                .unwrap()
+                .unwrap();
+            assert!(
+                matches!(
+                    (&result, status),
+                    (ExecutorExitResult::Success, Some("completed"))
+                        | (ExecutorExitResult::Failure, None | Some("failed"))
+                ),
+                "unexpected result: {result:?}"
+            );
+            child.wait().await.unwrap();
+        }
+    }
 
     #[test]
     fn explicit_standard_tier_is_compatible_but_priority_is_not_silently_downgraded() {

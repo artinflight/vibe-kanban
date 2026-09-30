@@ -1581,6 +1581,16 @@ pub trait ContainerService {
             &repo_states,
         )
         .await?;
+        if let Some(event) = executors::routing_telemetry::decision(
+            executor_action,
+            &execution_process.id.to_string(),
+            &session.id.to_string(),
+            &workspace.id.to_string(),
+            workspace.task_id.map(|id| id.to_string()),
+            &execution_process.created_at.to_rfc3339(),
+        ) {
+            executors::routing_telemetry::emit(event).await;
+        }
         if *run_reason != ExecutionProcessRunReason::ArchiveScript {
             Workspace::set_archived(&self.db().pool, workspace.id, false).await?;
         }

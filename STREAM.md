@@ -1,6 +1,6 @@
 # VK Model AutoSwitch V1
 
-Current branch: `vk/5a81-vk-model-autoswi`.
+Current branch: `vk/5a81-autoswitch-cu-recovery`.
 Scope: opt-in model/effort routing at existing Codex execution boundaries.
 [VK_MODEL_AUTOSWITCH.md](VK_MODEL_AUTOSWITCH.md) supersedes the planning-only
 catalog and describes policy, implementation and enablement gates.
@@ -9,8 +9,11 @@ All seven required models execute on isolated CLI 0.159.2 using the existing
 account. Default host CLI 0.153.4 and production VK remain unchanged.
 Manual, shadow and automatic modes preserve per-chat control; automatic routing
 requires fresh executable-pair evidence and pauses rather than violating floors.
-Native executor acceptance is still blocked by host capacity; combined VK UI/API
-acceptance and launcher deployment QA remain required before normal-task use.
+CU-compatible lifecycle telemetry is implemented. Native executor acceptance
+passes at the existing capacity limit; private candidate API acceptance and CU
+correlation evidence are tracked in VK_AUTOSWITCH_ROLLOUT.md. The active worktree
+was externally deleted; recovered source is outside the managed worktree tree at
+`/mnt/vk-storage/vk-model-autoswitch-20260930/source`.
 No production restart, deployment, global profile change or autonomous retry.
 
 ## Inherited integration context

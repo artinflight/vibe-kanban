@@ -83,6 +83,7 @@ pub struct AppServerClient {
     plan_mode: bool,
     resolved_model: OnceLock<String>,
     routing_locked: AtomicBool,
+    routing_telemetry: OnceLock<crate::routing_telemetry::NativeBinding>,
     routed_effort: OnceLock<codex_protocol::openai_models::ReasoningEffort>,
     pending_plan: Mutex<Option<PendingPlan>>,
     repo_context: RepoContext,
@@ -248,6 +249,7 @@ impl AppServerClient {
             plan_mode,
             resolved_model: OnceLock::new(),
             routing_locked: AtomicBool::new(false),
+            routing_telemetry: OnceLock::new(),
             routed_effort: OnceLock::new(),
             pending_plan: Mutex::new(None),
             thread_id: Mutex::new(None),
@@ -639,6 +641,9 @@ impl AppServerClient {
         Ok(false)
     }
 
+    pub fn set_routing_telemetry(&self, binding: crate::routing_telemetry::NativeBinding) {
+        let _ = self.routing_telemetry.set(binding);
+    }
     pub fn set_routed_effort(&self, effort: codex_protocol::openai_models::ReasoningEffort) {
         let _ = self.routed_effort.set(effort);
     }
@@ -727,13 +732,17 @@ impl AppServerClient {
         let request = ClientRequest::TurnStart {
             request_id: self.next_request_id(),
             params: TurnStartParams {
-                thread_id,
+                thread_id: thread_id.clone(),
                 input,
                 collaboration_mode,
                 ..Default::default()
             },
         };
-        self.send_request(request, "turn/start").await
+        let response: TurnStartResponse = self.send_request(request, "turn/start").await?;
+        if let Some(binding) = self.routing_telemetry.get() {
+            binding.turn(&thread_id, &response.turn.id).await;
+        }
+        Ok(response)
     }
 
     fn collaboration_mode(&self, mode: ModeKind) -> Result<CollaborationMode, ExecutorError> {
@@ -1628,6 +1637,9 @@ impl JsonRpcCallbacks for AppServerClient {
                 let mut guard = self.current_turn_id.lock().await;
                 guard.replace(started.turn.id.clone());
             }
+            if let Some(binding) = self.routing_telemetry.get() {
+                binding.turn(&started.thread_id, &started.turn.id).await;
+            }
             self.interrupt_current_turn_if_pending().await?;
             self.supply_goal_context(started.turn.id);
         }
@@ -1660,6 +1672,11 @@ impl JsonRpcCallbacks for AppServerClient {
                     }
                 }
 
+                if completed.turn.status == TurnStatus::Failed {
+                    return Err(ExecutorError::Io(io::Error::other(
+                        "Codex native turn failed",
+                    )));
+                }
                 if completed.turn.status == TurnStatus::Interrupted {
                     tracing::debug!("codex turn interrupted; flushing feedback queue");
                     if self.flush_pending_feedback().await {

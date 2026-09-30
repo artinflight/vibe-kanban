@@ -1,6 +1,6 @@
 # VK Model AutoSwitch: safe V1 implementation
 
-Updated 2026-09-30 on `vk/5a81-vk-model-autoswi`. This replaces the planning-only
+Updated 2026-09-30 on `vk/5a81-autoswitch-cu-recovery`. This replaces the planning-only
 state in commit `df3e973a5`; that commit retains the original investigation.
 The full relevant family is a product requirement. One runtime's discovery
 response is an observation, not the product's model definition.
@@ -161,8 +161,8 @@ Example candidate-only setup (do not apply to live service without deployment QA
 
 ```bash
 export CODEX_HOME=/home/mcp/.local/share/vibe-kanban-green-codex-home
-export VK_CODEX_BASE_COMMAND=/mnt/vk-storage/vk-model-autoswitch-v1/codex-current/node_modules/.bin/codex
-export VK_CODEX_ROUTING_AVAILABILITY=/mnt/vk-storage/vk-model-autoswitch-v1/availability-current.json
+export VK_CODEX_BASE_COMMAND=/mnt/vk-storage/vk-model-autoswitch-v1/integration/runtime/codex.mjs
+export VK_CODEX_ROUTING_AVAILABILITY=/mnt/vk-storage/vk-model-autoswitch-v1/integration/availability.json
 # Refresh only when needed; --verify consumes bounded inference:
 python3 scripts/testing/codex-routing-probe.py --verify --output "$VK_CODEX_ROUTING_AVAILABILITY"
 ```
@@ -192,8 +192,16 @@ message with mode, actual model/effort, recommendation and reason. The decision
 references the previous execution so transitions can be attributed without charging
 an entire native thread to its last model. Existing native events supply turn IDs.
 
-See [VK_CODEX_ROUTING_CONTRACT.md](VK_CODEX_ROUTING_CONTRACT.md) for the versioned
-consumer contract and the proposed optional allowance snapshot. CU changes are
+Set `VK_ROUTING_EVENTS_FILE` to a private absolute JSONL path and point CU
+`CU_ROUTING_EVENTS_FILE` at the same file. VK emits immutable/idempotent
+`decision`, `turn_bound`, and `execution_end` records at persisted admission,
+actual native turn binding, and terminal database update respectively. Native
+thread/turn IDs are never inferred; standalone `taskId` remains null. The existing
+raw log is retained. Optional delivery errors warn without changing execution.
+
+See [the canonical wire mirror](VK_ROUTING_TELEMETRY_V1.md) and
+[VK producer notes](VK_CODEX_ROUTING_CONTRACT.md) for delivery limits, identity
+mapping and the proposed optional allowance snapshot. CU changes are
 independent. V1 does not read weekly pressure, change resets, or estimate plan
 savings. Its telemetry enables later per-attempt accounting without blocking use
 on a perfect analytics system.
@@ -212,10 +220,13 @@ Targeted automated validation covers manual authority, per-chat UI persistence,
 exclusions/floors, stale/unverified model-effort pairs, native pinning, escalation
 consent, parameter propagation and protocol compatibility. The ignored native
 executor acceptance test is explicitly opt-in because it consumes one short turn.
-Its attempted run was rejected before inference by the existing host capacity
-limit (20 active, limit 8); it remains an enablement gate and the limit was not
-bypassed. No claim of full VK end-to-end acceptance follows from the direct RPC
-checks. New locale strings currently use English fallback text.
+The previously rejected native executor test now passes using the actual candidate
+systemd execution path, with its unchanged limit of eight managed executions.
+The earlier direct-process probe counted unrelated processes; no capacity limit
+was raised or bypassed. A private candidate HTTP acceptance also exercises normal
+Sol 6.1 routing, controlled failure, Astra escalation, dirty-state preservation
+and explicit Sol 6/medium selection. Detailed evidence and remaining CU/release
+gates are tracked in [VK_AUTOSWITCH_ROLLOUT.md](VK_AUTOSWITCH_ROLLOUT.md). New locale strings currently use English fallback text.
 Final command results and limits are recorded in HANDOFF.md.
 
 Before normal-task enablement: validate the built frontend/backend together in an

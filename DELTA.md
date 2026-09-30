@@ -1323,3 +1323,15 @@ prepared on SSD; production is still the incumbent 5031 backend. See VK_ERRORS_2
   remain enablement gates; full workspace/Tauri suites were not run.
 - Automated validation and exact reproduction steps are in the current HANDOFF.
   No production deployment/restart, preview, PR or push; version stays 0.1.42.
+
+## 2026-09-30 AutoSwitch CU integration and recovery
+
+Recovered producer source after external deletion of the active managed worktree.
+Added CU-compatible immutable lifecycle JSONL alongside raw routing logs; native
+failure reporting and manual collaboration effort corrected. All seven exact
+candidate model probes, native executor boundary test and four real private HTTP
+executions passed; escalation preserved dirty state. 94 executor tests and focused
+Clippy passed. CU consumer import/replay and completed-turn native counter
+comparison passed; interrupted-turn usage is unavailable and CU owner review
+remains pending. Production untouched. See
+VK_AUTOSWITCH_ROLLOUT.md and CU_ACCEPTANCE_HANDOFF.json on mounted SSD.

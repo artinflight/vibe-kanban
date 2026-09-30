@@ -221,7 +221,7 @@ impl Codex {
                             client.set_resolved_model(model);
                             client.register_session(&thread_id).await?;
                             client.refresh_goal().await?;
-                            client.reset_goal_run().await?;
+                            client.reset_goal_run(capacity.is_some()).await?;
                             let params = if arguments == "resume" {
                                 json!({"threadId": thread_id, "status":"active"})
                             } else {

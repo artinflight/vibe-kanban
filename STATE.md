@@ -1501,3 +1501,8 @@ must reach the executor parser unchanged even after interrupted turns. Candidate
 and pre-grant checks agree with native goal state/identity; SQLite snake_case is
 explicitly translated to app-server camelCase. See CAPACITY_WORKFLOW_AUDIT.md
 for final-source native/systemd/CU acceptance and the operator-owned deployment.
+
+September 30 branch fix: capacity-managed native goal resumes preserve recovery
+history and accumulated turns; manual resume behavior is unchanged. See HANDOFF
+for validation/delivery status. This does not change the Chat Orchestration
+workspace implementation or remove the independent capacity stop protections.

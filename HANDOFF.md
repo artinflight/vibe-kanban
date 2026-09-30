@@ -3891,3 +3891,12 @@ capture or production Blue activation occurred. Recovery acceptance passed.
 Read VK_BLUE_READINESS_20260911.md's withdrawal before any further action.
 Do not repeat the attempt. Correct and rehearse the service-lifecycle defect;
 new feature live acceptance remains pending. Local readiness is now false.
+
+## Scheduled resume history — September 30
+
+`/goal resume` now passes whether it is capacity-managed into progress resume.
+Automatic starts preserve all recovery state; manual starts retain the existing
+counter reset. Unit coverage verifies repeated automatic resumes and manual
+behavior. CU's offline two-agent acceptance additionally seeds recovery history
+and checks it after repeated real native stop/resume cycles. Changes target
+staging for the operator's normal deployment; this task does not cut over VK.

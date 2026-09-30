@@ -400,10 +400,10 @@ impl AppServerClient {
         });
     }
 
-    pub async fn reset_goal_run(&self) -> Result<(), ExecutorError> {
+    pub async fn reset_goal_run(&self, scheduled: bool) -> Result<(), ExecutorError> {
         let mut guard = self.goal.lock().await;
         if let Some((goal, progress)) = guard.as_mut() {
-            progress.resume();
+            progress.resume(scheduled);
             goals::save(&goal.thread_id, progress).await?;
         }
         Ok(())
@@ -2122,7 +2122,7 @@ for line in sys.stdin:
         };
         let params = if resume_thread.is_some() {
             client.refresh_goal().await.unwrap();
-            client.reset_goal_run().await.unwrap();
+            client.reset_goal_run(false).await.unwrap();
             serde_json::json!({"threadId": id, "status":"active"})
         } else {
             serde_json::json!({"threadId": id, "objective":objective, "status":"active"})

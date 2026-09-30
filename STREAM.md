@@ -43,3 +43,11 @@ verification is supporting evidence, not an independent audit of the objective.
 Backend and shared frontend changes are pushed for
 [PR #123](https://github.com/artinflight/vibe-kanban/pull/123) into staging.
 They are not deployed. See HANDOFF.md for validation and deployment boundaries.
+
+## September 30: scheduled resume history
+
+Scope: scheduled capacity resumes preserve native-goal supporting progress,
+turn/stagnation counters, recovery plans and substantive input holds. Explicit
+manual resumes retain their current fresh-attempt behavior. No scheduling,
+quota, containment or selected-agent admission limits are relaxed. This is the
+manager-side fix; the active Chat Orchestration implementation is separate.

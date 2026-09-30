@@ -174,6 +174,17 @@ impl ConversationStore {
         Ok(sqlx::query_as("SELECT * FROM conversation_memory WHERE conversation_id = ? AND state IN ('active','proposed') ORDER BY created_at DESC LIMIT 200").bind(id).fetch_all(&self.pool).await?)
     }
 
+    /// Resolve an already selected claim independently of the recent-list limit.
+    pub async fn current_memory(
+        &self,
+        id: Uuid,
+        memory_id: Uuid,
+    ) -> Result<Option<ConversationMemory>> {
+        self.get(id).await?;
+        Ok(sqlx::query_as("SELECT * FROM conversation_memory WHERE conversation_id=? AND id=? AND state IN ('active','proposed')")
+            .bind(id).bind(memory_id).fetch_optional(&self.pool).await?)
+    }
+
     async fn validate_scope(
         &self,
         conn: &mut SqliteConnection,
@@ -569,7 +580,8 @@ impl ConversationStore {
     /// Erase the claim's revisions and prevent automatic re-extraction. The
     /// original user conversation remains history until separately deleted.
     pub async fn forget_memory(&self, id: Uuid, memory_id: Uuid, revision: i64) -> Result<()> {
-        self.forget_memory_inner(id, memory_id, revision, None).await
+        self.forget_memory_inner(id, memory_id, revision, None)
+            .await
     }
 
     /// The owning worker must discard all provider continuation and tool context
@@ -655,7 +667,10 @@ impl ConversationStore {
         if forgotten {
             return Err(ConversationError::InvalidRecord);
         }
-        if current.scope_kind == kind && current.scope_id == scope_id && current.entity_refs.0 == entity_refs {
+        if current.scope_kind == kind
+            && current.scope_id == scope_id
+            && current.entity_refs.0 == entity_refs
+        {
             tx.commit().await?;
             return Ok(current);
         }
@@ -665,11 +680,21 @@ impl ConversationStore {
             return Err(ConversationError::RevisionConflict);
         }
         sqlx::query("UPDATE conversation_memory SET state='superseded' WHERE id=?")
-            .bind(memory_id).execute(&mut *tx).await?;
+            .bind(memory_id)
+            .execute(&mut *tx)
+            .await?;
         let record = sqlx::query_as::<_, ConversationMemory>("INSERT INTO conversation_memory (id,conversation_id,scope_kind,scope_id,claim_key,body,entity_refs,state,revision,supersedes_id,source_message_id,author_kind,valid_until) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *")
             .bind(Uuid::new_v4()).bind(id).bind(kind).bind(scope_id).bind(&current.claim_key).bind(&current.body).bind(Json(entity_refs)).bind(&current.state).bind(revision+1).bind(memory_id).bind(run.input_message_id).bind(&current.author_kind).bind(current.valid_until).fetch_one(&mut *tx).await?;
         reset_memory_context(&mut tx, id, Some(run), "memory_rescoped").await?;
-        emit(&mut tx, id, "memory.changed", record.id, record.revision, &record).await?;
+        emit(
+            &mut tx,
+            id,
+            "memory.changed",
+            record.id,
+            record.revision,
+            &record,
+        )
+        .await?;
         tx.commit().await?;
         Ok(record)
     }
@@ -827,12 +852,22 @@ async fn reset_memory_context(
 ) -> Result<()> {
     invalidate_context(conn, id).await?;
     sqlx::query("UPDATE conversation_runs SET context_manifest='{}' WHERE conversation_id=?")
-        .bind(id).execute(&mut *conn).await?;
+        .bind(id)
+        .execute(&mut *conn)
+        .await?;
     // This fences stale readers; it cannot unsend accepted agent instructions.
     let interrupted = sqlx::query_as::<_, ConversationRun>("UPDATE conversation_runs SET status='interrupted',generation=generation+1,lease_owner=NULL,lease_until=NULL,error=? WHERE conversation_id=? AND status='running' AND (? IS NULL OR id!=?) RETURNING *")
         .bind(error).bind(id).bind(owner.map(|r|r.id)).bind(owner.map(|r|r.id)).fetch_all(&mut *conn).await?;
     for run in interrupted {
-        emit(&mut *conn, id, "run.status", run.id, run.generation + 1, &run).await?;
+        emit(
+            &mut *conn,
+            id,
+            "run.status",
+            run.id,
+            run.generation + 1,
+            &run,
+        )
+        .await?;
     }
     Ok(())
 }

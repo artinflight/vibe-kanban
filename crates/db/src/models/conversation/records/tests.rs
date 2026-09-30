@@ -544,26 +544,88 @@ async fn rescope_is_atomic_preserves_pending_status_and_rejects_stale_or_invalid
     let mut collision = proposed.clone();
     collision.scope = scope.clone();
     let occupied = store.put_memory(id, &collision).await.unwrap();
-    store.complete(&run, "Recorded the proposed claims.").await.unwrap();
-    store.accept(id, &input("Move the global claim into this workspace after forgetting its duplicate.")).await.unwrap();
+    store
+        .complete(&run, "Recorded the proposed claims.")
+        .await
+        .unwrap();
+    store
+        .accept(
+            id,
+            &input("Move the global claim into this workspace after forgetting its duplicate."),
+        )
+        .await
+        .unwrap();
     let run = store.claim_next(id, Uuid::new_v4()).await.unwrap().unwrap();
-    assert!(matches!(store.rescope_run_memory(&run, old.id, old.revision, &scope, &[]).await, Err(ConversationError::RevisionConflict)));
-    assert!(matches!(store.rescope_run_memory(&run, old.id, old.revision, &MemoryScope::Workspace(Uuid::new_v4()), &[]).await, Err(ConversationError::NotFound)));
+    assert!(matches!(
+        store
+            .rescope_run_memory(&run, old.id, old.revision, &scope, &[])
+            .await,
+        Err(ConversationError::RevisionConflict)
+    ));
+    assert!(matches!(
+        store
+            .rescope_run_memory(
+                &run,
+                old.id,
+                old.revision,
+                &MemoryScope::Workspace(Uuid::new_v4()),
+                &[]
+            )
+            .await,
+        Err(ConversationError::NotFound)
+    ));
     assert_eq!(store.list_memories(id).await.unwrap().len(), 2);
     // Remove only the destination collision while preserving this worker.
-    store.forget_run_memory(&run, occupied.id, occupied.revision).await.unwrap();
-    let moved = store.rescope_run_memory(&run, old.id, old.revision, &scope, &[]).await.unwrap();
+    store
+        .forget_run_memory(&run, occupied.id, occupied.revision)
+        .await
+        .unwrap();
+    let moved = store
+        .rescope_run_memory(&run, old.id, old.revision, &scope, &[])
+        .await
+        .unwrap();
     assert_eq!(moved.state, "proposed");
     assert_eq!(moved.author_kind, "inferred");
     assert_eq!(moved.body, old.body);
     assert_eq!(moved.supersedes_id, Some(old.id));
     assert_eq!(moved.source_message_id, run.input_message_id);
-    assert!(store.memories(id, &[scope.clone()], 8000).await.unwrap().is_empty());
-    assert_eq!(store.proposed_memories(id, &[scope.clone()], 8000).await.unwrap()[0].id, moved.id);
-    assert!(matches!(store.rescope_run_memory(&run, old.id, old.revision, &scope, &[]).await, Err(ConversationError::RevisionConflict)));
-    store.complete(&run, "Moved the proposed preference; it remains pending.").await.unwrap();
-    assert!(matches!(store.forget_run_memory(&run, moved.id, moved.revision).await, Err(ConversationError::StaleLease)));
-    assert!(matches!(store.rescope_run_memory(&run, moved.id, moved.revision, &MemoryScope::Global, &[]).await, Err(ConversationError::StaleLease)));
+    assert!(
+        store
+            .memories(id, &[scope.clone()], 8000)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        store
+            .proposed_memories(id, &[scope.clone()], 8000)
+            .await
+            .unwrap()[0]
+            .id,
+        moved.id
+    );
+    assert!(matches!(
+        store
+            .rescope_run_memory(&run, old.id, old.revision, &scope, &[])
+            .await,
+        Err(ConversationError::RevisionConflict)
+    ));
+    store
+        .complete(&run, "Moved the proposed preference; it remains pending.")
+        .await
+        .unwrap();
+    assert!(matches!(
+        store
+            .forget_run_memory(&run, moved.id, moved.revision)
+            .await,
+        Err(ConversationError::StaleLease)
+    ));
+    assert!(matches!(
+        store
+            .rescope_run_memory(&run, moved.id, moved.revision, &MemoryScope::Global, &[])
+            .await,
+        Err(ConversationError::StaleLease)
+    ));
 }
 
 #[tokio::test]
@@ -573,27 +635,59 @@ async fn forgetting_moved_claim_erases_its_lineage_without_erasing_reused_old_sc
     let run = store.claim_next(id, Uuid::new_v4()).await.unwrap().unwrap();
     let a = MemoryScope::Workspace(workspace(&pool).await);
     let b = MemoryScope::Workspace(workspace(&pool).await);
-    let moved = store.rescope_run_memory(&run, original.id, original.revision, &a, &[]).await.unwrap();
-    let last = store.rescope_run_memory(&run, moved.id, moved.revision, &b, &[]).await.unwrap();
+    let moved = store
+        .rescope_run_memory(&run, original.id, original.revision, &a, &[])
+        .await
+        .unwrap();
+    let last = store
+        .rescope_run_memory(&run, moved.id, moved.revision, &b, &[])
+        .await
+        .unwrap();
     let mut independent = change(message);
     independent.body = "An independent replacement in the original global scope.".into();
     let separate = store.put_memory(id, &independent).await.unwrap();
-    store.forget_run_memory(&run, last.id, last.revision).await.unwrap();
-    let active = store.memories(id, &[a.clone(), b.clone()], 8000).await.unwrap();
+    store
+        .forget_run_memory(&run, last.id, last.revision)
+        .await
+        .unwrap();
+    let active = store
+        .memories(id, &[a.clone(), b.clone()], 8000)
+        .await
+        .unwrap();
     assert_eq!(active.len(), 1);
     assert_eq!(active[0].id, separate.id);
     let exported = store.export(id).await.unwrap();
-    for memory in exported.memories.iter().filter(|m|m.id!=separate.id) {
+    for memory in exported.memories.iter().filter(|m| m.id != separate.id) {
         assert_eq!(memory.state, "retracted");
         assert!(memory.body.is_empty());
-        assert!(exported.events.iter().filter(|e|e.entity_id==memory.id).all(|e|!e.payload.contains(&original.body)));
+        assert!(
+            exported
+                .events
+                .iter()
+                .filter(|e| e.entity_id == memory.id)
+                .all(|e| !e.payload.contains(&original.body))
+        );
     }
     for scope in [MemoryScope::Global, a, b] {
         let mut resurrect = change(message);
         resurrect.scope = scope;
-        assert!(matches!(store.put_memory(id, &resurrect).await, Err(ConversationError::InvalidRecord)));
+        assert!(matches!(
+            store.put_memory(id, &resurrect).await,
+            Err(ConversationError::InvalidRecord)
+        ));
     }
     // The owning worker survives for a fresh-context answer; history stays raw.
-    store.complete(&run, "Forgot that preference.").await.unwrap();
-    assert!(store.export(id).await.unwrap().messages.iter().any(|m|m.id==message));
+    store
+        .complete(&run, "Forgot that preference.")
+        .await
+        .unwrap();
+    assert!(
+        store
+            .export(id)
+            .await
+            .unwrap()
+            .messages
+            .iter()
+            .any(|m| m.id == message)
+    );
 }

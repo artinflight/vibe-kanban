@@ -40,11 +40,16 @@ intent assessment for explicit preference creation/correction. Run-fenced writes
 reuse the existing memory store; duplicate calls recover one record. Inferred
 claims remain proposed, while active preferences refresh within the turn. Scoped
 search now supports exact sessions and separates active from proposed memories.
-The existing settings view and forgetting API remain in use.
+The existing settings view and forgetting API remain in use. Conversational
+forgetting and scope changes now have exact-revision, run-fenced transactions and
+separate explicit intent assessment. The worker discards stale tool/continuation
+context, reloads applicable preferences and keeps minimal receipts for already
+performed effects. Scope moves preserve claim status/body; forgetting follows
+revision lineage across scopes without erasing an unrelated replacement.
 
 ## Remaining implementation
 
-Finish conversational forgetting/rescoping and source-review watermarks, semantic report
+Finish source-review watermarks, semantic report
 classification and completion subscriptions; extend project/remote context where
 required by existing project navigation. Validate the configured routing/policy
 and early speech corpus with a funded model. Browser/multi-client/accessibility

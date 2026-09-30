@@ -51,9 +51,14 @@ observed state as citable evidence without changing workspace seen/history state
 Explicit coverage limits prevent incomplete local results from being treated as
 an all-clear. Scoped conversational creation/correction now uses a separate intent assessment
 and run-fenced existing-store writes. Inferred claims remain proposed; exact
-session retrieval keeps applicable memories separate. Conversational forgetting/
-rescoping, report-level classification, review watermarks and completion
-subscriptions still need implementation.
+session retrieval keeps applicable memories separate. Conversational forgetting
+and scope moves now use exact revisions, explicit intent assessment, atomic
+lineage changes and fresh model context. A move preserves pending/active status;
+forgetting removes ancestor claims without erasing unrelated replacements. Minimal
+operation receipts let the worker continue mixed requests after discarding stale
+reasoning and tool results. Report-level classification, review watermarks and
+completion subscriptions still need implementation. Real-model semantic validation
+remains open.
 
 ## Recommended first slice
 

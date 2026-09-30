@@ -424,10 +424,7 @@ async fn memory_assessment_is_tool_free_scoped_and_cannot_be_forged_by_the_propo
         proposed: proposal.clone(),
     };
     let result = model.assess_memory(&request).await.unwrap();
-    assert!(matches!(
-        result.assessment.decision,
-        MemoryDecision::Apply
-    ));
+    assert!(matches!(result.assessment.decision, MemoryDecision::Apply));
     assert_eq!(result.usage.input_tokens, 30);
     let requests = transport.requests.lock().unwrap();
     assert_eq!(requests[0]["tools"], json!([]));
@@ -458,43 +455,121 @@ async fn memory_assessment_is_tool_free_scoped_and_cannot_be_forged_by_the_propo
 }
 
 #[tokio::test]
-async fn conversational_forgetting_starts_fresh_provider_request_with_receipt_and_no_old_reasoning() {
+async fn conversational_forgetting_starts_fresh_provider_request_with_receipt_and_no_old_reasoning()
+{
     use db::models::conversation::records::{MemoryChange, MemoryScope};
-    let pool=SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
     sqlx::migrate!("../db/migrations").run(&pool).await.unwrap();
-    let store=ConversationStore::new(pool.clone(),ConversationScope::local_operator(&pool).await.unwrap());
-    let id=store.resolve().await.unwrap().id;
-    let input=|body:&str|AcceptConversationMessage{client_message_id:Uuid::new_v4(),body:body.into(),origin:ConversationInputOrigin::Typed,reply_to_id:None};
-    let first=store.accept(id,&input("Remember the communication preference.")).await.unwrap();
-    let memory=store.put_memory(id,&MemoryChange{scope:MemoryScope::Global,claim_key:"communication".into(),body:"obsolete-memory-body".into(),entity_refs:vec![],source_message_id:first.message.id,replaces:None,explicit:true,valid_until:None}).await.unwrap();
-    let run=store.claim_next(id,Uuid::new_v4()).await.unwrap().unwrap();
-    store.complete(&run,"Remembered.").await.unwrap();
-    store.accept(id,&input("Forget my communication preference.")).await.unwrap();
-    let reasoning=json!({"type":"reasoning","id":"old","summary":[],"encrypted_content":"discard-old-private-reasoning"});
-    let transport=Arc::new(ScriptedTransport{requests:Mutex::new(vec![]),replies:Mutex::new(VecDeque::from([
-        response(vec![reasoning.clone(),call("search_memory",json!({"workspace_id":null,"session_id":null}),"search")]),
-        response(vec![reasoning.clone(),call("forget_memory",json!({"memory":{"id":memory.id,"revision":memory.revision}}),"forget")]),
-        response(vec![json!({"type":"message","role":"assistant","content":[{"type":"output_text","text":json!({"decision":"apply","explanation":"The current user explicitly requested forgetting this claim."}).to_string()}]})]),
-        response(vec![answer("I've forgotten that preference.",vec![])]),
-    ]))});
-    let mut model=OpenAiModel::new("selected-model".into(),"private-test-key",4096).unwrap();
-    model.transport=transport.clone();
-    let worker=SupervisorWorker::new(pool.clone(),Arc::new(model)).await.unwrap();
-    assert!(matches!(worker.run_one(id,&CancellationToken::new()).await.unwrap(),RunOutcome::Completed{..}));
-    let requests=transport.requests.lock().unwrap();
-    assert_eq!(requests.len(),4);
-    assert!(requests[1]["input"].to_string().contains("obsolete-memory-body"));
-    assert!(requests[1]["input"].as_array().unwrap().contains(&reasoning));
-    assert_eq!(requests[2]["tools"],json!([]));
-    let assessment:Value=serde_json::from_str(requests[2]["input"][0]["content"].as_str().unwrap()).unwrap();
-    assert_eq!(assessment["operation"],"forget");
-    let fresh=&requests[3];
+    let store = ConversationStore::new(
+        pool.clone(),
+        ConversationScope::local_operator(&pool).await.unwrap(),
+    );
+    let id = store.resolve().await.unwrap().id;
+    let input = |body: &str| AcceptConversationMessage {
+        client_message_id: Uuid::new_v4(),
+        body: body.into(),
+        origin: ConversationInputOrigin::Typed,
+        reply_to_id: None,
+    };
+    let first = store
+        .accept(id, &input("Remember the communication preference."))
+        .await
+        .unwrap();
+    let memory = store
+        .put_memory(
+            id,
+            &MemoryChange {
+                scope: MemoryScope::Global,
+                claim_key: "communication".into(),
+                body: "obsolete-memory-body".into(),
+                entity_refs: vec![],
+                source_message_id: first.message.id,
+                replaces: None,
+                explicit: true,
+                valid_until: None,
+            },
+        )
+        .await
+        .unwrap();
+    let run = store.claim_next(id, Uuid::new_v4()).await.unwrap().unwrap();
+    store.complete(&run, "Remembered.").await.unwrap();
+    store
+        .accept(id, &input("Forget my communication preference."))
+        .await
+        .unwrap();
+    let reasoning = json!({"type":"reasoning","id":"old","summary":[],"encrypted_content":"discard-old-private-reasoning"});
+    let transport = Arc::new(ScriptedTransport {
+        requests: Mutex::new(vec![]),
+        replies: Mutex::new(VecDeque::from([
+            response(vec![
+                reasoning.clone(),
+                call(
+                    "search_memory",
+                    json!({"workspace_id":null,"session_id":null}),
+                    "search",
+                ),
+            ]),
+            response(vec![
+                reasoning.clone(),
+                call(
+                    "forget_memory",
+                    json!({"memory":{"id":memory.id,"revision":memory.revision}}),
+                    "forget",
+                ),
+            ]),
+            response(vec![
+                json!({"type":"message","role":"assistant","content":[{"type":"output_text","text":json!({"decision":"apply","explanation":"The current user explicitly requested forgetting this claim."}).to_string()}]}),
+            ]),
+            response(vec![answer("I've forgotten that preference.", vec![])]),
+        ])),
+    });
+    let mut model = OpenAiModel::new("selected-model".into(), "private-test-key", 4096).unwrap();
+    model.transport = transport.clone();
+    let worker = SupervisorWorker::new(pool.clone(), Arc::new(model))
+        .await
+        .unwrap();
+    assert!(matches!(
+        worker.run_one(id, &CancellationToken::new()).await.unwrap(),
+        RunOutcome::Completed { .. }
+    ));
+    let requests = transport.requests.lock().unwrap();
+    assert_eq!(requests.len(), 4);
+    assert!(
+        requests[1]["input"]
+            .to_string()
+            .contains("obsolete-memory-body")
+    );
+    assert!(
+        requests[1]["input"]
+            .as_array()
+            .unwrap()
+            .contains(&reasoning)
+    );
+    assert_eq!(requests[2]["tools"], json!([]));
+    let assessment: Value =
+        serde_json::from_str(requests[2]["input"][0]["content"].as_str().unwrap()).unwrap();
+    assert_eq!(assessment["operation"], "forget");
+    let fresh = &requests[3];
     assert!(!fresh["input"].to_string().contains("obsolete-memory-body"));
-    assert!(!fresh["input"].to_string().contains("discard-old-private-reasoning"));
+    assert!(
+        !fresh["input"]
+            .to_string()
+            .contains("discard-old-private-reasoning")
+    );
     assert!(fresh["input"].to_string().contains("memory_forgotten"));
     assert!(fresh["input"].to_string().contains(&memory.id.to_string()));
-    assert!(fresh["input"].as_array().unwrap().iter().all(|item|item.get("type").is_none()));
-    assert_eq!(fresh["store"],false);
+    assert!(
+        fresh["input"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|item| item.get("type").is_none())
+    );
+    assert_eq!(fresh["store"], false);
     assert!(fresh.get("previous_response_id").is_none());
     assert!(store.list_memories(id).await.unwrap().is_empty());
 }

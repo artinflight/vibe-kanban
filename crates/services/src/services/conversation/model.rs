@@ -118,10 +118,19 @@ pub struct ModelRequest {
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "operation", rename_all = "snake_case")]
 pub enum TurnEffect {
-    AgentAction { action_id: Uuid },
-    MemorySaved { memory: MemoryRevision },
-    MemoryForgotten { memory: MemoryRevision },
-    MemoryRescoped { previous: MemoryRevision, memory: MemoryRevision },
+    AgentAction {
+        action_id: Uuid,
+    },
+    MemorySaved {
+        memory: MemoryRevision,
+    },
+    MemoryForgotten {
+        memory: MemoryRevision,
+    },
+    MemoryRescoped {
+        previous: MemoryRevision,
+        memory: MemoryRevision,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -236,12 +236,31 @@ impl SupervisorWorker {
                         | model::SupervisorTool::RescopeMemory { memory, .. } => {
                             if request.memory_changes {
                                 let destination = match &call.tool {
-                                    model::SupervisorTool::RescopeMemory { scope, entity_refs, .. } => Some((scope, entity_refs.as_slice())),
+                                    model::SupervisorTool::RescopeMemory {
+                                        scope,
+                                        entity_refs,
+                                        ..
+                                    } => Some((scope, entity_refs.as_slice())),
                                     _ => None,
                                 };
-                                let (result, assessed_usage, effect) = self.context.control_memory(run, &request, self.model.as_ref(), memory, destination).await?;
-                                usage.input_tokens = usage.input_tokens.checked_add(assessed_usage.input_tokens).ok_or(WorkError::Safe("model_invalid_usage"))?;
-                                usage.output_tokens = usage.output_tokens.checked_add(assessed_usage.output_tokens).ok_or(WorkError::Safe("model_invalid_usage"))?;
+                                let (result, assessed_usage, effect) = self
+                                    .context
+                                    .control_memory(
+                                        run,
+                                        &request,
+                                        self.model.as_ref(),
+                                        memory,
+                                        destination,
+                                    )
+                                    .await?;
+                                usage.input_tokens = usage
+                                    .input_tokens
+                                    .checked_add(assessed_usage.input_tokens)
+                                    .ok_or(WorkError::Safe("model_invalid_usage"))?;
+                                usage.output_tokens = usage
+                                    .output_tokens
+                                    .checked_add(assessed_usage.output_tokens)
+                                    .ok_or(WorkError::Safe("model_invalid_usage"))?;
                                 reset_effect = effect;
                                 Ok(result)
                             } else {
@@ -340,19 +359,38 @@ impl SupervisorWorker {
                     // old model reasoning/tool results. A fresh request can inspect
                     // these receipts instead of repeating an instruction.
                     if matches!(call.tool, model::SupervisorTool::ProposeAgentMessage { .. })
-                        && let Some(action_id) = result["data"]["action"]["id"].as_str().and_then(|s|Uuid::parse_str(s).ok()) {
-                        request.effects.push(model::TurnEffect::AgentAction {action_id});
+                        && let Some(action_id) = result["data"]["action"]["id"]
+                            .as_str()
+                            .and_then(|s| Uuid::parse_str(s).ok())
+                    {
+                        request
+                            .effects
+                            .push(model::TurnEffect::AgentAction { action_id });
                     }
                     if matches!(call.tool, model::SupervisorTool::ProposeMemoryChange { .. })
-                        && let (Some(id), Some(revision)) = (result["data"]["memory"]["id"].as_str().and_then(|s|Uuid::parse_str(s).ok()), result["data"]["memory"]["revision"].as_i64()) {
-                        request.effects.push(model::TurnEffect::MemorySaved {memory:model::MemoryRevision{id,revision}});
+                        && let (Some(id), Some(revision)) = (
+                            result["data"]["memory"]["id"]
+                                .as_str()
+                                .and_then(|s| Uuid::parse_str(s).ok()),
+                            result["data"]["memory"]["revision"].as_i64(),
+                        )
+                    {
+                        request.effects.push(model::TurnEffect::MemorySaved {
+                            memory: model::MemoryRevision { id, revision },
+                        });
                     }
                     if let Some(effect) = reset_effect {
                         request.effects.push(effect);
                         request.exchanges.clear();
                         evidence_seen.clear();
                         request.history = store.run_history(run).await?;
-                        request.preferences = store.memories(run.conversation_id, &[MemoryScope::Conversation(run.conversation_id)], 16384).await?;
+                        request.preferences = store
+                            .memories(
+                                run.conversation_id,
+                                &[MemoryScope::Conversation(run.conversation_id)],
+                                16384,
+                            )
+                            .await?;
                         manifest = json!({"input_id":request.input.id,"input_revision":request.input.revision,
                             "history":request.history.iter().map(|m|json!({"id":m.id,"revision":m.revision})).collect::<Vec<_>>(),
                             "memories":request.preferences.iter().map(|m|json!({"id":m.id,"revision":m.revision})).collect::<Vec<_>>(),

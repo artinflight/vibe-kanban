@@ -134,8 +134,8 @@ configured local deployment also supplies the action service/transport: this add
 `propose_agent_message` and `read_action`, and advertises `agent_actions` while the
 consumer is ready. Deployments may omit the agent-action service; memory support
 is a separate model capability.
-The configured adapter also exposes `propose_memory_change` for scoped supervisor
-knowledge, with its own tool-free intent assessment. Native-goal controls and
+The configured adapter also exposes `propose_memory_change`, `forget_memory` and
+`rescope_memory` for scoped supervisor knowledge, with tool-free intent assessment. Native-goal controls and
 executor approvals remain unavailable as model tools. Workspace messages retain
 their separate raw path.
 
@@ -235,7 +235,8 @@ specific configuration-required capability error while text/direct work continue
 The supervisor's model tools call domain services, not an HTTP loop back into its
 own server. Initial tools: `find_context`, `read_workspace_state`,
 `read_agent_history`, `read_evidence`, `list_attention`, `propose_agent_message`,
-`read_action`, `search_memory`, `propose_memory_change`. Typed results carry source
+`read_action`, `search_memory`, `propose_memory_change`, `forget_memory`,
+`rescope_memory`. Typed results carry source
 IDs/revisions, availability and access scope. The model cannot execute arbitrary
 SQL, shell commands, filesystem paths or provider callbacks.
 
@@ -263,7 +264,7 @@ results remain data rather than policy instructions. The proposal tool accepts o
 message text and session IDs, never its own approval/risk fields. Structured policy
 output distinguishes ordinary, consequential, unclear and unsupported-control
 requests, with an authorization judgment and retained explanation. Invalid/refused/
-unavailable assessment cannot authorize delivery. Prompt version `supervisor-v4`,
+unavailable assessment cannot authorize delivery. Prompt version `supervisor-v5`,
 assessment version `supervisor-message-assessment-v1` and known combined usage are
 recorded. Real-model semantic/security evaluation remains a release gate.
 
@@ -446,7 +447,7 @@ its own source message, author, approval or active state. The worker binds the
 proposal to the current user input. The configured adapter independently assesses
 that input, earlier user references, bounded entity context, the selected prior
 claim and the proposed change. Raw reports and unrelated preferences are excluded.
-`remember` activates explicit standing instructions/corrections; `propose` records
+`apply` activates explicit standing instructions/corrections for a save; `propose` records
 an inferred claim without applying it; `clarify`/`decline` write nothing. Temporary
 runtime facts, secrets and permission overrides are inappropriate memory. Actual
 semantic judgments remain a real-model evaluation gate.
@@ -457,7 +458,7 @@ while assessment is running cannot persist a later preference. Exact repeated
 proposals in a user turn recover the record without another assessment or revision.
 Existing direct store edits retain their strict revision-conflict behavior.
 The user source, scope, author/state and superseded revision remain durable; model
-options record `supervisor-memory-assessment-v1`, and combined usage includes the
+options record `supervisor-memory-assessment-v2`, and combined usage includes the
 assessment. Active global/conversation preferences refresh in the current model
 request and its version manifest after a change.
 
@@ -467,10 +468,32 @@ labelled `proposed_memories` within bounded scoped retrieval. Pending claims nev
 enter active preferences; an explicit correction/acceptance can supersede their
 exact revision. Project/repository/workspace/session knowledge stays in its
 applicable context. Existing global settings show the records and support scoped
-forgetting, which continues to fence stale in-flight context. Conversational
-forgetting/rescoping and richer preference editing still need their own integrated
-flows; the tool does not claim those capabilities. Raw workspace chat neither reads
-nor writes any of these supervisor memories.
+forgetting, which continues to fence stale in-flight context. Raw workspace chat
+neither reads nor writes any of these supervisor memories.
+
+`forget_memory` takes an exact current ID/revision. `rescope_memory` additionally
+takes the destination scope and typed entity relationships; it cannot edit the
+stored body or approve a pending claim. The separate assessment names the operation
+(`save`, `forget`, `rescope`); only explicit `apply` authorizes a forget or scope
+move. Inference, ambiguity, stale revisions, cancellation and destination collisions
+leave the original claim unchanged. Scope moves retain the original active/proposed
+status and body, bind the new source to the current user turn and preserve lineage.
+Forgetting erases that lineage across past scopes and redacts its memory events;
+an unrelated claim later created under the old key/scope survives. Original
+conversation history and accepted agent actions remain separate records.
+
+Run-aware controls validate the lease and mutation in one transaction. They clear
+cached summaries/manifests and fence other stale readers. The owning worker then
+discards **all** old tool results and provider continuation, including the control
+call's reasoning, reloads canonical history and active preferences, and starts a
+fresh model request. Minimal VK receipts preserve IDs of already performed memory
+changes and proposed agent actions so a mixed request can continue without losing
+its effects. They carry no removed preference bodies or old raw tool results.
+Usage and tool/context limits remain cumulative across this reset. Evidence must
+be read again before citation. If the worker stops after the mutation, the durable
+memory/event remains; the interrupted response is not automatically retried.
+Provider-side retention remains subject to the configured provider's policy;
+local forgetting is not a claim to delete its remote logs.
 
 ### Current attention retrieval — implemented boundary
 

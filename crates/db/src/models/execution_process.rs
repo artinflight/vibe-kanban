@@ -470,6 +470,40 @@ impl ExecutionProcess {
         .execute(pool)
         .await?;
 
+        if let Some(at) = completed_at
+            && std::env::var_os("VK_ROUTING_EVENTS_FILE").is_some()
+        {
+            // Observe every persisted exit path; observability must not change completion.
+            match Self::find_by_id(pool, id).await {
+                Ok(Some(process)) => {
+                    if let Ok(action) = process.executor_action()
+                        && action.base_executor()
+                            == Some(executors::executors::BaseCodingAgent::Codex)
+                    {
+                        let execution = id.to_string();
+                        let route = executors::routing_telemetry::routing_id(action, &execution);
+                        let outcome = match status {
+                            ExecutionProcessStatus::Completed => "completed",
+                            ExecutionProcessStatus::Failed => "failed",
+                            ExecutionProcessStatus::Killed => "interrupted",
+                            ExecutionProcessStatus::Running => unreachable!(),
+                        };
+                        executors::routing_telemetry::emit(executors::routing_telemetry::record(
+                            "execution_end",
+                            &execution,
+                            &route,
+                            &at.to_rfc3339(),
+                            serde_json::json!({"outcome": outcome}),
+                        ))
+                        .await;
+                    }
+                }
+                Err(error) => {
+                    tracing::warn!(%id, %error, "CU routing completion observation failed")
+                }
+                _ => {}
+            }
+        }
         Ok(())
     }
 

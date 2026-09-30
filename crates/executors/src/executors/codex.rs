@@ -974,6 +974,7 @@ impl Codex {
             params.service_tier = Some(None); // Explicitly clear a resumed Fast setting.
         }
         let resume_session = resume_session.map(|s| s.to_string());
+        let telemetry_env = env.clone();
 
         self.spawn_app_server(
             current_dir,
@@ -982,8 +983,15 @@ impl Codex {
             move |client, _| async move {
                 match action {
                     CodexSessionAction::Chat { prompt } => {
-                        Self::launch_codex_agent(params, resume_session, prompt, client, routing)
-                            .await
+                        Self::launch_codex_agent(
+                            params,
+                            resume_session,
+                            prompt,
+                            client,
+                            routing,
+                            &telemetry_env,
+                        )
+                        .await
                     }
                     CodexSessionAction::Review { target } => {
                         review::launch_codex_review(params, resume_session, target, client).await
@@ -1000,6 +1008,7 @@ impl Codex {
         combined_prompt: String,
         client: Arc<AppServerClient>,
         routing: Option<crate::routing::RoutingDecision>,
+        telemetry_env: &ExecutionEnv,
     ) -> Result<(), ExecutorError> {
         let account = client.get_account().await?;
         if account.requires_openai_auth && account.account.is_none() {
@@ -1085,6 +1094,19 @@ impl Codex {
                     .to_string(),
                 )
                 .await?;
+        }
+        if let Some(effort) = resolved_effort {
+            client.set_routed_effort(effort);
+        }
+        if let Some(binding) = crate::routing_telemetry::NativeBinding::new(
+            telemetry_env,
+            routing.as_ref(),
+            serde_json::json!({
+                "model": resolved_model, "reasoningEffort": resolved_effort,
+                "serviceTier": resolved_tier,
+            }),
+        ) {
+            client.set_routing_telemetry(binding);
         }
         client.set_resolved_model(resolved_model);
         client.register_session(&thread_id).await?;

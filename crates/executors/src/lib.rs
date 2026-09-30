@@ -12,3 +12,5 @@ pub mod profile;
 pub mod routing;
 pub mod stdout_dup;
 pub mod systemd_run;
+
+pub mod routing_telemetry;

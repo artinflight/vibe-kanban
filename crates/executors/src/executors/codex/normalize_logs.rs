@@ -1559,6 +1559,30 @@ pub fn normalize_logs(
         let mut stdout_lines = msg_store.stdout_lines_stream();
 
         while let Some(Ok(line)) = stdout_lines.next().await {
+            if let Ok(event) = serde_json::from_str::<serde_json::Value>(&line)
+                && event["method"] == "vk/routing"
+            {
+                let params = &event["params"];
+                let decision = &params["decision"];
+                add_normalized_entry(
+                    &msg_store,
+                    &entry_index,
+                    NormalizedEntry {
+                        timestamp: None,
+                        entry_type: NormalizedEntryType::SystemMessage,
+                        content: format!(
+                            "Model routing ({}): {} · {}; recommendation: {}; reason: {}",
+                            decision["mode"].as_str().unwrap_or("unknown"),
+                            params["resolved_model"].as_str().unwrap_or("unknown"),
+                            params["resolved_effort"].as_str().unwrap_or("default"),
+                            decision["selected_model"].as_str().unwrap_or("unavailable"),
+                            decision["reason"].as_str().unwrap_or("unknown")
+                        ),
+                        metadata: Some(event.clone()),
+                    },
+                );
+                continue;
+            }
             if let Ok(error) = serde_json::from_str::<Error>(&line) {
                 add_normalized_entry(&msg_store, &entry_index, error.to_normalized_entry());
                 continue;

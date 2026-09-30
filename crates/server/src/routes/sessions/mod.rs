@@ -172,6 +172,15 @@ pub async fn follow_up(
             .await?;
     }
 
+    if payload.retry_process_id.is_some()
+        && payload
+            .executor_config
+            .routing
+            .as_ref()
+            .is_some_and(|p| p.mode == executors::routing::RoutingMode::Auto)
+    {
+        return Err(ApiError::Conflict("Automatic routing uses a new follow-up without Git reset; select manual mode to retry/reset".into()));
+    }
     // Give an explicit owner message priority before acquiring an executor slot
     // or resetting files. This can stop an active scheduled run of this session.
     executors::capacity::controller::before_launch(session.id, false).await?;

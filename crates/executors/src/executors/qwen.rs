@@ -178,6 +178,7 @@ impl StandardCodingAgentExecutor for QwenCode {
     fn get_preset_options(&self) -> ExecutorConfig {
         use crate::model_selector::*;
         ExecutorConfig {
+            routing: None,
             executor: BaseCodingAgent::QwenCode,
             variant: None,
             model_id: self.model.clone(),

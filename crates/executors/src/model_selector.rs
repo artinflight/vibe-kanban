@@ -63,6 +63,9 @@ pub enum PermissionPolicy {
 /// Full model selector configuration
 #[derive(Debug, Clone, Serialize, Deserialize, TS, Default)]
 pub struct ModelSelectorConfig {
+    /// Backend capability handshake; absent on servers without routing support.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supports_routing: Option<bool>,
     /// Available providers
     pub providers: Vec<ModelProvider>,
 

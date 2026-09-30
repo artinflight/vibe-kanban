@@ -280,6 +280,15 @@ where
 }
 
 pub(super) fn sanitize_response_value(label: &str, mut value: Value) -> Value {
+    // Codex 0.159 reports standard tier explicitly; the pinned protocol uses null.
+    // Never map an unknown/priority tier to standard.
+    if matches!(
+        label,
+        "thread/start" | "thread/resume" | "thread/fork" | "thread/read"
+    ) && value.get("serviceTier").and_then(Value::as_str) == Some("default")
+    {
+        value["serviceTier"] = Value::Null;
+    }
     if matches!(label, "thread/resume" | "thread/fork" | "thread/read") {
         drop_unknown_thread_items(label, &mut value);
     }
@@ -419,6 +428,28 @@ mod tests {
     use serde_json::json;
 
     use super::sanitize_response_value;
+
+    #[test]
+    fn explicit_standard_tier_is_compatible_but_priority_is_not_silently_downgraded() {
+        for method in [
+            "thread/start",
+            "thread/resume",
+            "thread/fork",
+            "thread/read",
+        ] {
+            let mut value = new_error_response();
+            value["serviceTier"] = json!("default");
+            value["thread"]["turns"] = json!([]);
+            let response: codex_app_server_protocol::ThreadResumeResponse =
+                serde_json::from_value(sanitize_response_value(method, value)).unwrap();
+            assert!(response.service_tier.is_none());
+            let value = json!({"serviceTier":"priority"});
+            assert_eq!(
+                sanitize_response_value(method, value)["serviceTier"],
+                "priority"
+            );
+        }
+    }
 
     fn new_error_response() -> serde_json::Value {
         serde_json::from_str(include_str!("fixtures/new-error-resume.json")).unwrap()

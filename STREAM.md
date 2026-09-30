@@ -1,11 +1,17 @@
-# VK Model AutoSwitch investigation
+# VK Model AutoSwitch V1
 
 Current branch: `vk/5a81-vk-model-autoswi`.
-Scope: model-routing feasibility and planning only. Findings and proposed
-validation gates are in [VK_MODEL_AUTOSWITCH.md](VK_MODEL_AUTOSWITCH.md).
-No router implementation, inference benchmark, model-default change or deployment.
-The read-only native catalog probe lists Astra and GPT-5.6 Sol/Terra/Luna;
-execution entitlement and quality/cost qualification remain pilot questions.
+Scope: opt-in model/effort routing at existing Codex execution boundaries.
+[VK_MODEL_AUTOSWITCH.md](VK_MODEL_AUTOSWITCH.md) supersedes the planning-only
+catalog and describes policy, implementation and enablement gates.
+[VK_CODEX_ROUTING_CONTRACT.md](VK_CODEX_ROUTING_CONTRACT.md) defines usage joins.
+All seven required models execute on isolated CLI 0.159.2 using the existing
+account. Default host CLI 0.153.4 and production VK remain unchanged.
+Manual, shadow and automatic modes preserve per-chat control; automatic routing
+requires fresh executable-pair evidence and pauses rather than violating floors.
+Native executor acceptance is still blocked by host capacity; combined VK UI/API
+acceptance and launcher deployment QA remain required before normal-task use.
+No production restart, deployment, global profile change or autonomous retry.
 
 ## Inherited integration context
 

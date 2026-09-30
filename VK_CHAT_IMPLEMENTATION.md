@@ -3,6 +3,21 @@
 Design source: [architecture](VK_CHAT_ARCHITECTURE.md),
 [contracts](VK_CHAT_CONTRACTS.md), [voice](VK_CHAT_VOICE.md).
 Implementation entry instruction: [handoff prompt](VK_CHAT_HANDOFF.md).
+Execution/resume procedure: [VK_CHAT_EXECUTION.md](VK_CHAT_EXECUTION.md).
+
+## Current execution priority — September 30 audit
+
+Repair the three specific test issues recorded in the current HANDOFF.md and close
+that validation slice. Then demonstrate global text UI, retrieval, an authorized
+existing-agent instruction and source-linked result end to end. Do not restart
+completed storage work or let optional backend refinements displace this outcome.
+The latest saved code is not fully validated: 36 DB and 53 service tests passed,
+one service test failed, and the final added server test remains uncompiled.
+Earlier green results below are historical evidence for their own source snapshots.
+
+Use observable outcomes, bounded work-window planning and recoverable job evidence
+as specified in VK_CHAT_EXECUTION.md. Preserve all acceptance criteria below;
+this prioritization is not a reduction of the full goal.
 
 ## Implementation progress — 2026-09-30
 

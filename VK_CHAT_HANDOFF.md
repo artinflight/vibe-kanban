@@ -1,17 +1,26 @@
 # Future implementation prompt
 
-Copy the following prompt to start development:
+For this existing branch, read the current HANDOFF.md and
+[execution/resume procedures](VK_CHAT_EXECUTION.md) first. Implemented foundations
+must not be rebuilt from this original handoff's fresh-start sequence.
+
+Copy the following prompt to start or resume authorized development:
 
 > Implement VK's persistent conversational orchestration layer. Read AGENTS.md,
-> STATE.md, STREAM.md and HANDOFF.md, then VK_CHAT_ARCHITECTURE.md,
+> STATE.md, STREAM.md, HANDOFF.md and VK_CHAT_EXECUTION.md, then VK_CHAT_ARCHITECTURE.md,
 > VK_CHAT_CONTRACTS.md, VK_CHAT_VOICE.md and VK_CHAT_IMPLEMENTATION.md. Treat those
 > design documents as the design source of truth unless repository reality has
 > materially changed since baseline commit
 > `2fd585ac30bfa75975f6319585e4a66bb684fdcf`. Reconcile relevant changes, then begin
 > implementation; do not produce another architecture pass. Follow the documented
-> milestones, starting with durable supervisor conversation storage and shared
-> delivery to existing sessions, unless concrete repository evidence justifies
-> adjusting the sequence.
+> milestones while reconciling current implementation and evidence. On this existing
+> branch, first close the exact failing/unvalidated work in HANDOFF.md, then
+> demonstrate the usable global text path before discretionary backend refinements.
+> For a fresh implementation, start with durable history and shared delivery to
+> existing sessions. Do not redo foundations already supported by current evidence.
+> Set one observable outcome and estimated time allocation for each authorized
+> work window, recover existing jobs, preserve per-attempt evidence and report
+> demonstrated milestones instead of uncalibrated percentages.
 > Deliver the global supervisor with persistent text/voice history, scoped memory,
 > natural-language routing, cross-project coordination, attention reporting, clean
 > summaries and raw-evidence drill-down. Preserve existing workspace/session text

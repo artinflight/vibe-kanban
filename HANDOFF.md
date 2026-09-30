@@ -1,3 +1,59 @@
+## September 30: current pickup — close validation, then demonstrate usable text
+
+Read [VK_CHAT_EXECUTION.md](VK_CHAT_EXECUTION.md). This entry supersedes the dated
+history below. The full product is unfinished; do not infer completion or a live
+native goal from auto-save commits or older continuation messages. Confirm current
+runtime ownership/authorization rather than recreating a missing goal.
+
+**Source:** branch `vk/d498-vk-chat-orchestr`, implementation saved through
+`d862c52ee` (02:08 UTC). `afdbf2cac` saved conversational forgetting/rescoping;
+`d862c52ee` added exact older-memory lookup, integration-test work and docs. The
+user subsequently requested an audit and safe-resume documentation, not another
+feature-development run. Current prompt version is `supervisor-v5`.
+
+**Latest evidence:** `vk-chat-memory-controls.log` under
+`/mnt/vk-storage/capacity-build-tmp/` has 36 DB tests passed and 53 service tests
+passed, one failed. The earlier `vk-chat-memory-{regression,api}.log` results
+(53 DB + 76 services + 8 API) apply to the earlier preference slice, not HEAD.
+The final new server integration test has not been compiled/validated. No test
+process is asserted to be live here; recover actual job identity before restarting.
+
+**First next actions on authorized implementation resume:**
+
+1. Check actual mounted SSD headroom and live jobs. The latest documentation check
+   found about 103 GB free, superseding earlier 91 MB/158 MB observations. No cleanup
+   occurred in this task. Current session restrictions also differ from earlier
+   scheduled runs; probe capability instead of repeating an obsolete blocker.
+2. Repair the failed older-memory fixture in
+   `crates/services/src/services/conversation/tests/memory.rs`: its date-only
+   `created_at='2000-01-01'` is incompatible with the inspected datetime decoder.
+   This is a likely cause, not a claim that a corrected rerun already passes.
+3. Repair the unvalidated mixed-action/forget test in
+   `crates/server/src/routes/conversations/tests/actions.rs`: `with_actions` expects
+   an Arc rather than `Some(actions)`; acknowledged steering uses state `started`
+   plus an acknowledgement timestamp, not a state named `acknowledged`.
+4. Run the focused memory/worker suites and conversation API integration suite;
+   retain per-attempt logs with source identity, command and exit status. Run
+   required format/ops checks. Record precisely what was demonstrated. Do not
+   expand into optional memory edge cases once this slice is sufficiently closed.
+5. Demonstrate the global text UI -> relevant workspace lookup -> source-linked
+   response -> authorized existing-agent instruction -> delivery/result/evidence
+   path. Keep raw direct chat unchanged. Resolve real model access and any isolated
+   backend authorization needed by the existing runbook early; fixtures are not
+   live acceptance. Preserve full remaining voice/Android/car/release requirements.
+
+**Reporting:** state user-visible capability, observed evidence, remaining gaps and
+next outcome. No unsupported completion percentage. A time allocation must serve
+an observable result and fit actual authorization; it is not an invented native
+budget. Recover healthy jobs, preserve failed attempts, and reserve pickup time.
+
+**Report for the managing orchestration agent:**
+`/mnt/vk-storage/reports/vk-chat-orchestration/2026-09-30-resumable-goal-audit.md`.
+It separates confirmed findings, interpretations, current blockers and proposed
+manager safeguards. Those safeguards have not been installed by this docs task.
+
+## Historical pickup notes
+
 ## September 30: conversational supervisor preferences
 
 Attention work was saved by VK as `838533c46` when the scheduled permission ended.

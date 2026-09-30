@@ -1651,3 +1651,30 @@ this slice.
   `vk-chat-memory-{regression,api,format,ops}.log` in the mounted SSD task directory.
   Real model semantics, browser/device/provider and full workspace/PR validation
   remain open. Memory source edits remain uncommitted/unpushed.
+
+
+## 2026-09-30 — resumable-work audit and execution correction
+
+- User challenged repeated unsupported progress percentages and requested a quick
+  audit, then durable next-agent procedures and a report for the goal manager.
+- Audited four overnight saves and retained logs. Attention and scoped preference
+  creation/correction had passing deterministic suites; latest forget/rescope work
+  has one failed service test and an uncompiled server test with identified issues.
+  Test counts describe their source snapshots, not current release readiness.
+- Added VK_CHAT_EXECUTION.md and made STREAM/HANDOFF/implementation handoff/plan
+  lead with closing the exact defects and demonstrating usable text orchestration.
+  Procedures require observable outcomes, job recovery, unique attempt evidence,
+  timely dependency checks and honest milestone/usage reporting.
+- Saved the separate managing-agent report outside the worktree at
+  /mnt/vk-storage/reports/vk-chat-orchestration/2026-09-30-resumable-goal-audit.md.
+  Manager changes are recommendations, not installed runtime behavior. No precise
+  wasted-token or wasted-time fraction is supported by this audit.
+- Rechecked storage: mounted SSD now has about 103 GB free, superseding earlier
+  near-full observations. No cleanup or feature/runtime change was performed.
+  Validate actual goal availability and environment on resume; do not recreate a
+  goal based on stale branch text or reset the full requirement checklist.
+- Documentation validation: required full formatter ran successfully; its incidental
+  formatting of an existing Rust test was removed to preserve this docs-only diff.
+  Ops check, diff whitespace check and all newly added local link targets passed.
+  A broad link scan encountered a pre-existing historical example attachment link;
+  no unrelated historical links were changed. No application tests/builds were run.

@@ -1,5 +1,10 @@
 # STREAM.md
 
+September30 renewed scope: "Get it done" authorizes correcting the observed
+fitrdy-manager Git writer gap and executing a new v2 cutover with latest data.
+Preserve the original attempt; do not infer success from preparation. Existing
+active work must drain before interruption. Finish acceptance in this thread.
+
 September30 continuation scope: verify recovered Blue after failed final capture,
 not another cutover. Recovery acceptance is recorded in VK_GREEN_ROLLBACK_20260930.md.
 Green never activated; the concurrent repository writer remains a readiness gap.

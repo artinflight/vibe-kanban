@@ -1,5 +1,22 @@
 # HANDOFF.md
 
+## September30: Renewed Cutover Authorization
+
+The operator said "Get it done" after the rollback report. This authorizes a
+new, separately identified v2 attempt, not replay of the consumed20:08 attempt.
+Observed Git processes identified fitrdy-manager.service PID1147 as the missed
+hyroxready-app repository writer. The prepared controller pauses that polling
+parent, drains existing Git children without killing them, and resumes the same
+parent after healthy routing/recovery. The final stability assertion is unchanged.
+Private real-process pause/drain/thaw and eight controller tests pass.
+
+New markers are cutover-attempt-v2.json and cutover-approval-v2.json under the
+same preparation root; the original markers/tools/receipts remain preserved.
+Read the v2 status first after continuation. Do not run another handover if that
+marker exists. Main dcd51cc12 still matches staging620bd7eb9. Refresh packaging,
+verify Desktop hashes and drain other active work before the approved switch.
+Blue remains live until the new controller status proves otherwise.
+
 ## September30: Blue Recovered, Deployment Incomplete
 
 Read `VK_GREEN_ROLLBACK_20260930.md` and the consumed attempt's status/acceptance

@@ -1,5 +1,12 @@
 # STATE.md
 
+**September30 renewed authorization:** the operator's "Get it done" authorizes a
+new v2 attempt after the failed capture. The missed writer is now observed:
+fitrdy-manager.service PID1147 performs Git operations in hyroxready-app. Prepared
+pause/drain/thaw coverage is tested; final backup stability checks remain strict.
+Blue remains production until v2 status says otherwise. Original consumed attempt
+and pre-v2 tools are preserved. Read HANDOFF.md and the runtime v2 marker.
+
 **September30 current authority: Green activation aborted, Blue recovered.**
 The final backup detected concurrent Git metadata writes before Green started.
 Blue764264 remains live on latest data; Green is inactive; CU2205788 is

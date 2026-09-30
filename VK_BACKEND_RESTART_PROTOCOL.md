@@ -15,6 +15,12 @@ stops their writes. Keep the final stability assertion; a checksum-verified
 archive alone is not a verified frozen boundary. A failed attempt is consumed,
 not authorization to retry. See `VK_GREEN_ROLLBACK_20260930.md`.
 
+September30 diagnosis identified fitrdy-manager.service background Git polling.
+For the renewed authorized window, pause its verified polling parent and drain
+any existing Git children before capture; preserve/resume the same parent after
+healthy routing/recovery. Bind its process identity into approval and recovery
+receipts. Do not stop the unrelated application or weaken backup exclusions.
+
 After recovery, verify the actual incumbent runtime/configuration separately
 from candidate readiness. Report preexisting exceptions and lifecycle changes
 explicitly: a cleared maintenance draft is acceptable only with evidence that

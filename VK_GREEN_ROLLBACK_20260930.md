@@ -1,5 +1,22 @@
 # September 30 Failed Green Activation
 
+## Subsequent Authorization And Diagnosis
+
+The operator subsequently said "Get it done", authorizing a new v2 attempt.
+Read HANDOFF.md and cutover-attempt-v2.json for that attempt; the original result
+below remains historical evidence. Read-only process observation repeatedly
+captured Git children of fitrdy-manager.service PID1147 in hyroxready-app.
+Its discovery.mjs calls fetchRepoBranches, implemented in git.mjs as git fetch.
+The observer polls independently of VK, explaining the missed writer boundary.
+
+The corrected controller pauses the known observer parent, allows existing Git
+children to finish, and records/thaws the same process after healthy routing or
+recovery. A private actual polling-parent/child test proves child completion,
+no writes while paused and resumed writes on the same PID. Eight controller
+failure/policy tests pass. No whole Git directory or metadata stability exclusion
+was added. Original markers, software and receipts remain preserved; v2 uses
+distinct attempt and approval marker names.
+
 ## Current Authority
 
 Attempt `cutover-20260930T200841Z` is consumed. The continuation explicitly

@@ -1,3 +1,12 @@
+## AutoSwitch V1 staging-only release
+
+Branch `release/autoswitch-v1` rebases validated V1 onto staging56792a72c.
+See [VK_AUTOSWITCH_V1_STAGING.md](VK_AUTOSWITCH_V1_STAGING.md) for exact commit
+mapping, preservation of newer staging behavior and operator deployment notes.
+V2 remains untouched on `vk/5a81-autoswitch-cu-recovery` at64e9cb5bd and is
+excluded. Only continuity documents conflicted; no source conflicts. The operator
+owns all post-merge actions. Do not contact or trigger a deployment/staging agent.
+
 # VK Model AutoSwitch V1
 
 Current branch: `vk/5a81-autoswitch-cu-recovery`.

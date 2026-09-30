@@ -1344,3 +1344,10 @@ Clippy passed. CU consumer import/replay and completed-turn native counter
 comparison passed; interrupted-turn usage is unavailable and CU owner review
 remains pending. Production untouched. See
 VK_AUTOSWITCH_ROLLOUT.md and CU_ACCEPTANCE_HANDOFF.json on mounted SSD.
+
+## AutoSwitch V1 staging integration
+
+Isolated validated commits df3e973a5/162770f73/9b334d1a3 from preserved V2 and
+rebased onto staging56792a72c. Retained both sides of continuity-document conflicts;
+no source conflicts or V1 execution-path redesign. See VK_AUTOSWITCH_V1_STAGING.md.
+Task scope ends at the staging merge; operator owns deployment.

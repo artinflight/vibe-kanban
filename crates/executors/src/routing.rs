@@ -52,6 +52,8 @@ pub struct RoutingDecision {
     /// Persist qualification context independently of human-readable reasons.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub assessed_envelope: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub triage: Option<crate::routing_triage::TaskTriage>,
     pub requested_model: Option<String>,
     pub selected_model: Option<String>,
     pub selected_effort: Option<String>,
@@ -184,17 +186,27 @@ pub fn resolve_action(
     previous: Option<&ExecutorAction>,
     failed: bool,
 ) -> Result<(), String> {
+    resolve_action_with_context(action, previous, failed, None)
+}
+
+pub fn resolve_action_with_context(
+    action: &mut ExecutorAction,
+    previous: Option<&ExecutorAction>,
+    failed: bool,
+    root: Option<&std::path::Path>,
+) -> Result<(), String> {
     let original = action.clone();
     let shadow = config(action)
         .and_then(|c| c.routing.as_ref())
         .is_some_and(|p| p.mode == RoutingMode::Shadow);
-    let result = resolve_action_inner(action, previous, failed);
+    let result = resolve_action_inner(action, previous, failed, root);
     if shadow {
         action.typ = original.typ;
         if let Err(error) = result {
             let c = config(action).expect("shadow policy has config");
             action.routing_decision = Some(Box::new(RoutingDecision {
                 assessed_envelope: None,
+                triage: None,
                 version: 2,
                 id: uuid::Uuid::new_v4().to_string(),
                 mode: RoutingMode::Shadow,
@@ -220,6 +232,7 @@ fn resolve_action_inner(
     action: &mut ExecutorAction,
     previous: Option<&ExecutorAction>,
     failed: bool,
+    root: Option<&std::path::Path>,
 ) -> Result<(), String> {
     action.routing_decision = None; // Never trust a client-supplied decision.
     let Some(original) = config(action).cloned() else {
@@ -321,7 +334,11 @@ fn resolve_action_inner(
                 _ => None,
             })
     });
-    let assessment = crate::routing_assessment::assess_follow_up(prompt, prior_envelope.as_deref());
+    let assessment = crate::routing_assessment::assess_follow_up_with_context(
+        prompt,
+        prior_envelope.as_deref(),
+        root,
+    );
     let mut floor = policy.floor.max(assessment.floor);
     if let Some(prior) = previous.and_then(|p| p.routing_decision.as_ref()) {
         floor = floor.max(prior.floor); // Never silently lower an established session floor.
@@ -401,6 +418,7 @@ fn resolve_action_inner(
     });
     let mut decision = RoutingDecision {
         assessed_envelope: Some(envelope.into()),
+        triage: Some(assessment.triage),
         version: 2,
         id: uuid::Uuid::new_v4().to_string(),
         mode: policy.mode,
@@ -782,6 +800,7 @@ mod tests {
         let mut previous = action(None);
         previous.routing_decision = Some(Box::new(RoutingDecision {
             assessed_envelope: None,
+            triage: None,
             version: 1,
             id: "prior".into(),
             mode: RoutingMode::Auto,

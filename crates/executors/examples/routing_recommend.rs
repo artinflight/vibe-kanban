@@ -8,7 +8,7 @@ use executors::{
         CapabilityFloor, RoutingMode, RoutingPolicy, choose_assessed, load_availability,
         model_policies,
     },
-    routing_assessment::assess_follow_up,
+    routing_assessment::assess_follow_up_with_context,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -18,6 +18,7 @@ use serde_json::json;
 struct Task {
     prompt: String,
     previous_envelope: Option<String>,
+    repo_root: Option<std::path::PathBuf>,
     #[serde(default)]
     floor: CapabilityFloor,
     #[serde(default)]
@@ -33,7 +34,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             continue;
         }
         let task: Task = serde_json::from_str(&line)?;
-        let assessment = assess_follow_up(&task.prompt, task.previous_envelope.as_deref());
+        let assessment = assess_follow_up_with_context(
+            &task.prompt,
+            task.previous_envelope.as_deref(),
+            task.repo_root.as_deref(),
+        );
         let floor = task.floor.max(assessment.floor);
         let mut policy = RoutingPolicy {
             mode: RoutingMode::Auto,
@@ -70,7 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "{}",
             json!({
                 "kind": "offline_recommendation", "envelope": assessment.envelope,
-                "minimum": floor, "evidence": assessment.evidence,
+                "minimum": floor, "evidence": assessment.evidence, "triage": assessment.triage,
                 "requires_failure_review": assessment.validation_failure,
                 "auto_candidate": auto.as_ref().ok(), "auto_blocker": auto.as_ref().err(),
                 "shadow_candidate": shadow.as_ref().ok(), "shadow_blocker": shadow.as_ref().err(),

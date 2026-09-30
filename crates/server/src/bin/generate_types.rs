@@ -205,6 +205,7 @@ fn generate_types_content() -> String {
         executors::routing::CapabilityFloor::decl(),
         executors::routing::RoutingPolicy::decl(),
         executors::routing::RoutingDecision::decl(),
+        executors::routing_triage::TaskTriage::decl(),
         executors::actions::script::ScriptContext::decl(),
         executors::actions::script::ScriptRequest::decl(),
         executors::actions::script::ScriptRequestLanguage::decl(),

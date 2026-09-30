@@ -151,7 +151,12 @@ impl Progress {
         }
     }
 
-    pub fn resume(&mut self) {
+    pub fn resume(&mut self, scheduled: bool) {
+        // A new time window is not a new attempt at the objective. Preserve
+        // recovery history and substantive input holds on automatic resumes.
+        if scheduled {
+            return;
+        }
         self.turns = 0;
         self.stagnant_turns = 0;
         self.pause_reason = None;
@@ -449,10 +454,36 @@ mod tests {
             p.completed.insert(n.to_string(), "evidence".into());
             assert!(p.finish_turn(&n.to_string()).is_none());
         }
-        p.resume();
+        p.resume(false);
         assert_eq!(p.completed.len(), 60);
         assert_eq!(p.turns, 0);
         assert!(p.pause_reason.is_none());
+    }
+
+    #[test]
+    fn scheduled_resume_preserves_recovery_and_input_holds() {
+        let mut p = Progress {
+            turns: 12,
+            stagnant_turns: 7,
+            ..Default::default()
+        };
+        p.recovery_plans
+            .push("Try a different validation path".into());
+        p.pause_reason = Some("Operator must resolve access".into());
+        p.last_turn = Some("previous-turn".into());
+        p.requirements
+            .insert("test".into(), "Verify outcome".into());
+        let before = serde_json::to_value(&p).unwrap();
+        for _ in 0..3 {
+            p.resume(true);
+            assert_eq!(serde_json::to_value(&p).unwrap(), before);
+        }
+        p.resume(false);
+        assert_eq!(p.turns, 0);
+        assert_eq!(p.stagnant_turns, 0);
+        assert!(p.recovery_plans.is_empty());
+        assert!(p.pause_reason.is_none());
+        assert_eq!(p.requirements.len(), 1);
     }
 
     #[test]

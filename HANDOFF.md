@@ -1,5 +1,19 @@
 # HANDOFF.md
 
+## October 1 Evening: Conditional Green Cutover
+
+The operator authorized another restart once every other agent and queue has
+drained. Read VK_SCOPE_CUTOVER_20261001.md and
+/mnt/vk-storage/vk-autoswitch-scope-release-20261001/PROGRESS.md. Reuse the prepared
+main95deaafe6/stagingb0f4c10a9 identical-tree release, full restore proof and
+incremental chain. Do not rebuild or take another full backup unnecessarily.
+Blue1504649 remains live until the independent attempt status proves otherwise.
+Do not replay a consumed attempt or replace this original maintenance thread.
+The controller now targets the correct thread;45 focused operational tests pass.
+The new Desktop incremental passed in69 seconds. Preparation/package verification
+and fresh agent drain precede the authorized cutover; acceptance remains pending.
+Earlier "no new cutover authorized" notes are superseded by this new request.
+
 ## October 1: SSD And Desktop Cleanup
 
 Read VK_STORAGE_CLEANUP_20261001.md and /mnt/vk-storage/vk-cleanup-20261001.

@@ -1,5 +1,14 @@
 # STATE.md
 
+**October1 evening preparation:** the operator authorized a new Green cutover
+after all other agents and queues drain. Candidate main95deaafe6 and staging
+b0f4c10a9 have the identical tree, with all ten compatibility PR136 checks passed.
+Blue1504649 remains production until the task's independent status says otherwise.
+Build/full-backup/restore/model evidence is reused; the current incremental passed
+in69 seconds. Read VK_SCOPE_CUTOVER_20261001.md for original-thread protections,
+targeted moved-directory backup validation and complete timing requirements.
+This is preparation, not a claim that live acceptance is complete.
+
 **October1 storage cleanup:** about98GB of SSD duplicates/generated software
 and26GB net Desktop backup storage reclaimed. Live Blue, frozen Green recovery,
 production data, histories, current checkpoint/five-delta chain and backup journal

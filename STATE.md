@@ -1,5 +1,16 @@
 # STATE.md
 
+**October1 preparation, not activation:** AutoSwitch V2 PR130 is merged into
+staging adfa7c051. New Blue is being prepared at
+`/mnt/vk-storage/vk-blue-autoswitch-v2-20261001`; production remains
+Green2506054/main dcd51cc12 with CU2506120, and Blue764264 remains frozen.
+Build/private workflow/browser/real Shadow/native identity/latest-data rollback
+checks pass. The full Desktop-verified checkpoint passed isolated restoration;
+inactive service settings and runtime/shared-feed checks pass without restart.
+Promotion and separate monitor.local writer-pause coordination remain pending. Read
+`VK_AUTOSWITCH_V2_PREPARATION_20261001.md`; do not infer a cutover from source merge
+or private acceptance. There is no new handover attempt to continue or replay.
+
 **September30 current authority: Green live and accepted.** The renewed39.17s
 handover deployed PR128/main dcd51cc12 (identical staging620bd7eb9 tree).
 Green2506054 runs5261/5262 and vibe.local; Blue764264 is frozen for latest-data

@@ -1,5 +1,12 @@
 # STREAM.md
 
+October1 scope: observe AutoSwitch V2's completed staging merge, then prepare
+staging adfa7c051 for production using the improved preparation tools and complete
+elapsed timing. Green2506054 remains production; this maintenance branch records
+evidence, not the application build. Read VK_AUTOSWITCH_V2_PREPARATION_20261001.md.
+Normal PR checks and a brief separate monitoring pause require outstanding
+operator clarification. No new handover has started or been declared ready.
+
 September30 final scope result: renewed cutover and live acceptance completed.
 Green2506054 serves main dcd51cc12 via staging620bd7eb9 artifacts; Blue764264
 remains paused for latest-data recovery. Read VK_GREEN_LIVE_20260930.md. This

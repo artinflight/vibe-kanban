@@ -1,5 +1,45 @@
 # HANDOFF.md
 
+## October 1: AutoSwitch V2 Deployment Preparation In Progress
+
+The operator requested watching AutoSwitch's V2 merge and beginning the improved
+staging-to-production restart procedure. PR130 merged at 09:41:09Z as
+`adfa7c0512c0ceeb72cea0fbc6329f71504a93bf`; the source agent completed.
+Read `VK_AUTOSWITCH_V2_PREPARATION_20261001.md` and
+`/mnt/vk-storage/vk-blue-autoswitch-v2-20261001/PROGRESS.md` for current evidence.
+Green2506054 remains production. No handover has started; no production database,
+route, running process or user configuration has been replaced. Earlier completion below
+describes PR129 only, not V2 production activation.
+
+V2 builds, inherited identical-tree validation, private workflow/desktop/mobile
+checks, three real Shadow executions and native model/effort checks pass. The
+actual Green/new Blue binaries pass same-process latest-data rollback with the
+new rolling backup callback. The20.61GB checkpoint and descriptor are verified
+on Desktop; full isolated restoration passed in26m44s. The first348MB incremental
+refresh is also verified on Desktop. Inactive next-start settings are installed;
+capacity dependencies, Codex0.159.2, seven-model identity/freshness and private
+shared-feed checks pass. Green/CU process IDs are unchanged. Read the task's
+software-package-receipt.json and preparation-completion.json for final package
+delivery and complete elapsed timing; those files, not a partial log, certify it.
+Normal PR checks would automatically use GitHub
+Actions; an operator clarification is outstanding because earlier restart
+instructions prohibited Actions. No production promotion PR has been opened.
+Separate monitor.local PID1179 writes continuously into the protected backup
+scope; a brief monitoring pause also needs the requested operator coordination.
+Prepared policy tests reject unapproved or changed writer identities. No service
+has been paused, and no final cutover readiness is claimed.
+
+The first production-scale backup exposed exclusion-scan overhead, ordinary
+deleted-directory watch handling and online-only missing CLI scratch files.
+Task-local tested adapters preserve tracked deletion records and strict final
+boundary checks. Do not modify or replay the September30 controllers. The fresh
+package retains historical missing-history exceptions, not a claim of recovery.
+Twenty-one focused operational tests pass. The corrected configuration retains
+the established dual VK/CU dependency during preparation; an initial failed
+check restored old settings automatically before the correction. No activation
+was attempted. The full isolated restore copy is retained on SSD, separate from
+production; do not confuse it with an authoritative data root.
+
 ## October 1: Preparation Improvements Merged Into Staging
 
 [PR #129](https://github.com/artinflight/vibe-kanban/pull/129) is rebase-merged

@@ -7,7 +7,9 @@ checked-in preparation runner, verified artifact/evidence reuse, rolling online
 checkpoints and fresh concurrent queue checks. Count elapsed time from the
 operator's deployment request, not just the stopped/paused window. These tools
 do not authorize a cutover or replace final consistent capture and latest-data
-rollback. Rehearse new backup-format compatibility in the next fresh package.
+rollback. The rolling backup's fenced callback passed a real private handover,
+backup-failure return and latest-data cutback; use that API contract in fresh
+packages and retain release-specific readiness/approval checks.
 All dated service/port inventories below require fresh discovery.
 
 ## Required MCP capacity deployment configuration

@@ -22,6 +22,12 @@ def generation(path):
     return {suffix: file_identity(str(path) + suffix) for suffix in ("", "-wal")}
 
 
+def content_event(database, watched):
+    changed = set(watched["changed"])
+    return any(raw in changed and watched.get("events", {}).get(raw) != 0x8
+               for raw in (database, database + "-wal"))
+
+
 def check_journal(value, plan):
     if (not value.get("ready") or value.get("errors") or not value.get("instance")
             or value.get("scope_sha256") != identity(scope(plan))):
@@ -77,7 +83,7 @@ def verified_parent(parent, plan, watched):
         raise ValueError("Journal sequence moved backwards")
 
 
-def capture(plan, root, journal, mirror, parent=None, publish=None):
+def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fence=None):
     root = storage(root)
     if any(root.is_relative_to(Path(path).resolve()) for path in plan["sources"]):
         raise ValueError("Backup staging must be outside watched source roots")
@@ -85,6 +91,13 @@ def capture(plan, root, journal, mirror, parent=None, publish=None):
         raise ValueError("Missing source roots require an explicit reconciled backup plan")
     timings = {}
     started = time.monotonic()
+    fence_before = None
+    if verify_fence is not None:
+        if parent is None or publish is None:
+            raise ValueError("Final boundary requires a verified online parent and metadata delivery")
+        fence_before = verify_fence()
+        if not isinstance(fence_before, dict) or fence_before.get("verified") is not True:
+            raise ValueError("Final boundary writers are not verified fenced")
     with measured(timings, "journal_and_parent"):
         before = journal(0 if parent is None else parent["journal_sequence"])
         check_journal(before, plan)
@@ -101,8 +114,9 @@ def capture(plan, root, journal, mirror, parent=None, publish=None):
         paths = {path for path in paths if not excluded(path, plan)}
         absent = sorted(path for path in paths if not Path(path).exists() and not Path(path).is_symlink())
         files = sorted(paths - set(absent))
-        databases = {str(Path(raw).resolve()) for raw in plan.get("sqlite_snapshots", [])}
-        databases.update(str(Path(raw).resolve()) for raw in plan.get("critical_sqlite", []))
+        required_databases = {str(Path(raw).resolve()) for raw in
+                              [*plan.get("sqlite_snapshots", []), *plan.get("critical_sqlite", [])]}
+        databases = set(required_databases)
         proofs = dict(parent.get("database_proofs", {})) if parent else {}
         databases.update(parent.get("databases", []) if parent else [])
         for raw in files:
@@ -114,21 +128,43 @@ def capture(plan, root, journal, mirror, parent=None, publish=None):
         for raw in databases:
             if not any(Path(raw).is_relative_to(Path(source).resolve()) for source in plan["sources"]):
                 raise ValueError("Database is outside journal coverage: " + raw)
-        changed = {str(Path(raw).resolve()) for raw in before["changed"]}
     snapshots, readers, versions, signatures, reused = {}, {}, {}, {}, []
+
+    def stable_boundary():
+        watched = journal(before["sequence"])
+        check_journal(watched, plan)
+        if watched["instance"] != before["instance"] or watched["sequence"] < before["sequence"]:
+            raise ValueError("Final boundary journal identity changed")
+        # SQLite reader bookkeeping is not content; DB/WAL generations are checked separately.
+        shm = {raw + "-shm" for raw in databases}
+        database_files = {raw + suffix for raw in databases for suffix in ("", "-wal")}
+        changes = [raw for raw in watched["changed"] if str(Path(raw).resolve()) not in shm
+                   and not (raw in database_files and watched.get("events", {}).get(raw) == 0x8)]
+        generations = {raw: {"before": value, "after": generation(raw)} for raw, value in signatures.items()
+                       if generation(raw) != value}
+        logical_changes = [raw for raw, connection in readers.items()
+                           if connection.execute("PRAGMA data_version").fetchone()[0] != versions[raw]]
+        if changes or generations or logical_changes:
+            save(folder / "boundary-instability.json", {"changed_paths": changes, "database_generations": generations,
+                                                       "logical_database_changes": logical_changes,
+                                                       "sequence_before": before["sequence"], "sequence_after": watched["sequence"]})
+            raise ValueError("Protected data changed during final boundary capture")
+        if verify_fence() != fence_before:
+            raise ValueError("Final boundary writer fence changed")
+
     try:
         with measured(timings, "sqlite_snapshot_and_integrity"):
             for raw in sorted(databases):
                 path = Path(raw)
                 if not path.exists():
                     proofs.pop(raw, None)
-                    if parent is None or raw in plan.get("sqlite_snapshots", []):
+                    if parent is None or raw in required_databases:
                         raise ValueError("Required SQLite database is missing: " + raw)
                     continue
                 signatures[raw] = generation(path)
                 previous = proofs.get(raw)
                 if (previous and previous.get("generation") == signatures[raw]
-                        and not any(raw + suffix in changed for suffix in ("", "-wal"))):
+                        and not content_event(raw, before)):
                     reused.append(raw)
                     continue
                 source = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
@@ -155,7 +191,8 @@ def capture(plan, root, journal, mirror, parent=None, publish=None):
         manifest = {"schema": 1, "at": time.time(), "scope_sha256": identity(scope(plan)), "plan_sha256": identity(plan),
                     "journal_instance": before["instance"], "journal_sequence": before["sequence"],
                     "parent": parent_ref, "sqlite_snapshots": snapshots, "absent_paths": absent,
-                    "online_preparation": True, "production_boundary": False}
+                    "online_preparation": verify_fence is None, "production_boundary": False,
+                    "frozen_boundary_requested": verify_fence is not None}
         save(payload / "manifest.json", manifest)
         archive = folder / (folder.parent.name + "-" + folder.name + ".tar.zst")
         with measured(timings, "archive"):
@@ -163,7 +200,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None):
                 result = subprocess.run(["tar", "--use-compress-program=zstd -T2 -3", "-cf", str(archive),
                                          "-C", "/", "--no-recursion", "--null", "-T", str(file_list),
                                          "--recursion", "-C", str(folder), "payload"], stderr=log)
-            if result.returncode not in (0, 1):
+            if result.returncode not in ((0,) if verify_fence is not None else (0, 1)):
                 raise RuntimeError("Backup archive failed; inspect " + str(folder / "tar.log"))
         with measured(timings, "archive_restore_verify"):
             restored = folder / "verified-payload"
@@ -180,17 +217,19 @@ def capture(plan, root, journal, mirror, parent=None, publish=None):
         check_journal(after, plan)
         if after["instance"] != before["instance"] or after["sequence"] < before["sequence"]:
             raise ValueError("Journal changed during backup; refuse to advance the checkpoint")
-        after_changed = {str(Path(raw).resolve()) for raw in after["changed"]}
         for raw in signatures:
             changed_version = raw in readers and readers[raw].execute("PRAGMA data_version").fetchone()[0] != versions[raw]
             if (generation(raw) != signatures[raw] or changed_version
-                    or any(raw + suffix in after_changed for suffix in ("", "-wal"))):
+                    or content_event(raw, after)):
                 proofs.pop(raw, None)
+        if verify_fence is not None:
+            stable_boundary()
         result = {**manifest, "folder": str(folder), "archive": archive.name, "receipt": receipt,
                   "database_proofs": proofs, "databases": sorted(databases), "reused_sqlite_snapshots": reused,
                   "copied_files": len(files), "changes_during_capture": after["changed"],
                   "timings": timings, "total_preparation_seconds": time.monotonic() - started,
-                  "passed": True, "cutover_authorized": False}
+                  "passed": True, "cutover_authorized": False,
+                  "frozen_boundary_verified": verify_fence is not None, "writer_fence": fence_before}
         if publish is not None:
             metadata = folder / (archive.name + ".result.json")
             save(metadata, result)
@@ -199,6 +238,8 @@ def capture(plan, root, journal, mirror, parent=None, publish=None):
             if receipt.get("desktop_verified") is not True or receipt["sha256"] != digest(metadata):
                 raise ValueError("Backup recovery metadata delivery is unverified")
             result["metadata_receipt"] = receipt
+        if verify_fence is not None:
+            stable_boundary()
         result["total_preparation_seconds"] = time.monotonic() - started
         save(folder / "result.json", result)
         save(root / "latest-result.json", result)

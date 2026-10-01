@@ -146,15 +146,51 @@ result; it cannot be an existing directory or any production path. The fixtures
 exercise this off-machine round trip. Production recovery remains governed by
 the restart protocol: never put an old backup over current production data.
 
-### Boundary Compatibility Is Still Required
+### Final Capture Integration
 
-An online checkpoint is not a quiescent production boundary. Do not feed this new
-format blindly into an older dated final-snapshot/controller implementation.
-For the next fresh package, use the new runner for static work and the new journal
-for rolling online preparation. Rehearse the package's complete final capture,
-refresh, routing and rollback against that exact chain before claiming readiness.
-Until that compatibility is proven, retain the established final consistent
-capture and recovery mechanism. Its checks and operator approval are unchanged.
+An online checkpoint is not a quiescent production boundary. The Python
+`capture()` API now accepts a `verify_fence` callback from the approving
+controller. This mode requires a verified parent and Desktop metadata delivery.
+The callback must verify the paused original process and its identity, ownership
+release, stopped candidate, and every other writer identified by preflight; it
+returns a stable receipt containing `verified: true`. Missing or changed fencing,
+actual file writes, changed SQLite generations, archive warnings, lost journal
+coverage, or failed delivery reject the boundary and leave the previous verified
+backup current. The callback is checked before capture and after archive and
+metadata delivery. The CLI does not offer a flag that fabricates this receipt.
+
+Use the result's `frozen_boundary_verified` and verified delivery receipts in the
+existing ownership handover boundary callback. `cutover_authorized` remains false:
+the independent controller owns approval, execution, routing, and latest-data
+recovery. The capture library does not start, stop, freeze, or route any service.
+Consumed historical controllers and their production configuration remain retired;
+the next package still needs release-specific inventory and rehearsal.
+
+The October 1 integration uses the existing September 30 ownership primitives
+unchanged with real VK binaries, two private filesystem-isolated units, private
+routes, and actual Desktop transfer. It proves failed-backup return, successful
+handover, same-process cutback preserving subsequent saved-message/settings/model
+changes, repeated recovery, and restoration of the checkpoint plus final delta.
+The private switch measured 13.27 seconds, including 13.10 seconds for capture and
+fencing; this small fixture does not predict production timing or exercise CU
+polling/native inference. All private units were stopped and removed afterward.
+Evidence: `/mnt/vk-storage/vk-preparation-20261001/integration/`
+`handover-6c3bfe31bc85448a931abc43618d850b/result.json`.
+
+The rehearsal caught SQLite `CLOSE_WRITE` events without content/generation
+changes. The journal now retains event types per checkpoint boundary; a close-only
+event for a known DB/WAL is accepted only with unchanged file generations and
+logical SQLite version where open. Actual writes, missing event-type evidence,
+and unexplained changes still reject the boundary. This also avoids recopying an
+unchanged database just because a prior reader closed a writable WAL descriptor.
+Required databases in `critical_sqlite` cannot silently disappear between captures.
+
+Reproduce with `scripts/deployment/rehearse_vk_backup_boundary.py`, supplying a
+new SSD `--root`, the reviewed `--handover-directory`, immutable `--release`, and
+private Desktop `--desktop-directory`. The harness checks filesystem isolation,
+restricts service actions to its own unique units, and records artifact hashes.
+It has no production-cutover entrypoint. Review a different controller's callback
+contract before substituting it.
 
 ## Faster Fresh Queue Checks
 
@@ -175,6 +211,12 @@ python3 scripts/deployment/vk_prepare.py queues \
 The regression suite uses real Git, SQLite, tar/zstd, Linux file-change watches,
 and private HTTP fixtures. It covers cache invalidation, interrupted coverage,
 online writes, failed delivery, corrupted ancestors, and protected-data restore.
+All 54 tests passed after final-boundary integration, including late writes
+during archive/metadata delivery, changed writer identity, critical DB removal,
+and close-only WAL events. Syntax checks, formatting, Ops and diff checks passed.
+Application source and build inputs match staging620bd7eb9 exactly, so the broader
+Rust/frontend suites were not rerun for these Python deployment tools; their
+existing GTK aggregate limitation remains recorded, not represented as passing.
 Run it with SSD `TMPDIR`:
 
 ```bash

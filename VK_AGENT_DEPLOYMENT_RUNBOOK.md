@@ -6,8 +6,9 @@ Read [VK_PREPARATION_PERFORMANCE.md](VK_PREPARATION_PERFORMANCE.md) before the
 next preparation. Use the checked-in runner and verified static cache, count the
 whole preparation period, keep backups caught up online, and repeat only the
 volatile checks at approval/execution. Package immutable verified artifacts,
-not mutable shared build outputs. New checkpoint/delta compatibility must be
-rehearsed before changing a final capture controller. Production switching and
+not mutable shared build outputs. The documented fenced backup callback has
+passed real private handover and recovery; follow its verified contract when
+preparing the next controller. Production switching and
 latest-data rollback still follow the backend restart protocol. The dated live
 inventories below are historical, not current deployment instructions.
 

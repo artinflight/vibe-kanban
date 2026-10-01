@@ -1,5 +1,10 @@
 ## October 1: Preparation Tooling Scope
 
+The new fenced backup callback passed an isolated real-binary handover and
+latest-data return, including a failed-backup abort. All 54 focused regressions
+pass. The operator approved staging integration; no production cutover is part
+of this tooling task. See HANDOFF.md for acceptance evidence and delivery status.
+
 Preparation optimizations are developed on `fix/vk-precutover-preparation` from
 fork/staging620bd7eb9; see VK_PREPARATION_PERFORMANCE.md for implementation,
 guardrails and validation limits. This does not deploy an application change.

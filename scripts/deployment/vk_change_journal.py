@@ -36,7 +36,7 @@ class Journal:
             raise OSError(ctypes.get_errno(), "inotify_init1")
         self.roots = {str(Path(path).resolve()) for path in self.plan["sources"]}
         self.excluded = {str(Path(path).resolve()) for path in self.plan["excluded_rebuildable_directories"]}
-        self.watches, self.changed, self.errors = {}, {}, []
+        self.watches, self.changed, self.events, self.errors = {}, {}, {}, []
         self.seq, self.ready = 0, False
         self.lock = threading.RLock()
 
@@ -67,6 +67,11 @@ class Journal:
                 return
             self.seq += 1
             self.changed[path] = self.seq
+            bits = self.events.setdefault(path, {})
+            for bit in range(32):
+                flag = 1 << bit
+                if mask & flag:
+                    bits[flag] = self.seq
             if mask & 0x800:
                 self.errors.append({"directory_moved": path})
             if mask & IGNORED:
@@ -95,7 +100,9 @@ class Journal:
             return {"ready": self.ready and not self.errors, "sequence": self.seq,
                     "instance": self.instance, "scope_sha256": identity(self.plan),
                     "watches": len(self.watches), "errors": list(self.errors),
-                    "changed": [path for path, sequence in self.changed.items() if sequence > since]}
+                    "changed": [path for path, sequence in self.changed.items() if sequence > since],
+                    "events": {path: sum(flag for flag, sequence in bits.items() if sequence > since)
+                               for path, bits in self.events.items() if self.changed[path] > since}}
 
     def close(self):
         os.close(self.fd)

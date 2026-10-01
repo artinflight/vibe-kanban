@@ -1,5 +1,10 @@
 # STREAM.md
 
+October1 live acceptance is complete on Blue/main329963d18, with original
+Green frozen for latest-data recovery. Current remaining scope is committing
+the measured preparation audit and tested isolated tool backfill. No new cutover
+or old-data restore is authorized. Read VK_BLUE_LIVE_20261001.md.
+
 October1 current scope: the operator authorizes complete V2 cutover after active
 agents finish, then diagnosing/fixing the whole preparation-time bottleneck.
 PR131 promotes same-tree staging a2733eea5 to main329963d18. Source/build/private

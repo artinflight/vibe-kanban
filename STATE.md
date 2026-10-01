@@ -1,5 +1,13 @@
 # STATE.md
 
+**October1 live authority:** Blue1504649 serves main329963d18 (same accepted
+PR130 tree), version0.1.42/CLI0.159.2. Green2506054 remains frozen for
+same-latest-data cutback. Original-thread/model,Steer/Stop/goals,12 messages,
+attachments,desktop/mobile-sized seven-model/V2 controls and CU correlation pass.
+Consumed132828Z attempt is accepted. Read VK_BLUE_LIVE_20261001.md. The
+preparation audit/tool backfill is separate; no further production interruption
+is required. Earlier preparation/Green-live states below are historical.
+
 **October1 authorized cutover:** staging a2733eea5 (ancestry-only PR132) is
 promoted through PR131 to main329963d18. Both have the exact tested/built V2
 tree b804fcbb9. Green2506054 remains production until the new controller status

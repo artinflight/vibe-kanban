@@ -1,5 +1,26 @@
 # HANDOFF.md
 
+## October 1: Blue Accepted, Preparation Audit Follow-Up
+
+Blue1504649 is live at vibe.local on main329963d18/Codex0.159.2. Original
+Green2506054 remains frozen for same-latest-data cutback. The consumed132828Z
+attempt is accepted; do not repeat it, create a replacement thread or restore
+old production data. Read VK_BLUE_LIVE_20261001.md for complete live acceptance,
+Desktop backup chain, warnings and accurate whole-preparation timings.
+
+Original thread/model, Steer/Stop/goals,12 saved messages, desktop/mobile-sized
+model/V2 menus, attachment round-trip and CU telemetry pass. The operator can
+work now; source-tool follow-up does not interrupt production. Tested fixes and
+the full86m39s preparation audit are isolated at
+/mnt/vk-storage/vk-preparation-production-20261001/source on
+fix/vk-production-preparation-costs. Keep this unrelated maintenance branch local.
+The tool backfill is committed/pushed at b954bfc7b and open as PR133 into staging:
+https://github.com/artinflight/vibe-kanban/pull/133. All71 regressions, formatting,
+Ops, branch policy and diff checks pass. Final real-binary four-case handover
+and Desktop-downloaded restoration receipt is integration/handover-f95bfbbc52c946a48b3f288bd3c41576/result.json
+under that source task. PR review/CI remain separate from already accepted Blue.
+Earlier preparation/unactivated entries below are historical.
+
 ## October 1: Authorized Cutover And Required Timing Audit
 
 The operator authorizes cutover once current agents finish, then investigation

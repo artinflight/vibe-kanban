@@ -387,3 +387,18 @@ shared types plus generation check, web-core TypeScript with a 2 GiB Node heap
 (the initial default-heap run exhausted memory), repository formatting
 and ops governance pass. No full-workspace test campaign, browser UI run or
 production execution was needed for this focused backend extension.
+
+## Delegated work extension (2026-10-01)
+
+[VK_AUTOSWITCH_DELEGATION.md](VK_AUTOSWITCH_DELEGATION.md) describes the added
+`vk_delegate` admission path, reuse of this registry/triage, compact child briefs,
+capacity/overlap/duplicate controls, boundary escalation and additive hierarchy
+telemetry. Existing top-level routing and the CU v1 contract remain intact.
+Manual delegation is unchanged. Auto/Shadow use controlled native leaf threads on
+fresh chats; native goals and scheduled capacity runs cannot use the gateway.
+
+Offline policy/lifecycle checks are available. The paid two-turn child harness
+stopped at the existing execution-capacity guard before inference; its exact
+native model/effort and state-preservation assertions remain unverified. This is
+the bounded outstanding acceptance check before the complete V2 live Shadow test.
+No staging or deployment action was taken and no capacity bypass was attempted.

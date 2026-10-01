@@ -1377,3 +1377,14 @@ samples plus two zero-inference controls demonstrate bounded downward routing an
 conservative ambiguous/private-data behavior; six native calls total including the
 initial transport check. No V1 acceptance repeat, staging, deployment, CU consumer
 change or external-agent coordination. Details: VK_AUTOSWITCH_FULL_ROUTER.md.
+
+## 2026-10-01 — AutoSwitch delegated-work development
+
+Added controlled leaf admission using the existing Codex dynamic-tool/RPC lifecycle;
+reused V2 delta triage, qualification, hard floors and exclusions. Added bounded
+briefs, duplicate/scope and capacity controls, native interrupt, boundary escalation,
+private continuation journal and compatible child turn bindings with hierarchy
+telemetry sidecar. See VK_AUTOSWITCH_DELEGATION.md. Native paid acceptance was
+capacity-blocked before inference; source-only, no deployment or staging work.
+Validation: 119 executor tests pass; executor/services Clippy, format/ops and CU
+contract byte comparison pass. Native child acceptance remains capacity-blocked.

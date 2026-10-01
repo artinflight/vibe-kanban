@@ -137,7 +137,7 @@ pub async fn emit(event: Value) {
     }
 }
 
-fn append_once(path: &Path, event: &Value) -> std::io::Result<()> {
+pub(crate) fn append_once(path: &Path, event: &Value) -> std::io::Result<()> {
     use std::io::{Error, ErrorKind};
     if !path.is_absolute() {
         return Err(Error::other("Routing feed path must be absolute"));

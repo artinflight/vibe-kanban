@@ -1,3 +1,23 @@
+## Delegated work continuation (2026-10-01)
+
+AutoSwitch now admits native leaf children through `vk_delegate` on the existing
+app-server connection. Auto reuses V2 subtask assessment/qualification; Shadow keeps
+qualified parent settings and records recommendations. Explicit/protected floors,
+exclusions, bounded briefs, duplicate/overlap checks, existing capacity, native
+interrupt and consented boundary escalation apply. Native child settings are checked
+before inference; child logs cannot replace root identity. CU v1 remains unchanged,
+with child turn bindings plus additive `vk.delegation.v1` hierarchy/usage events.
+
+Read [VK_AUTOSWITCH_DELEGATION.md](VK_AUTOSWITCH_DELEGATION.md). New chats are needed
+for dynamic tools; leaf-only delegation is disabled for native goals/scheduled runs.
+The paid two-turn native harness was attempted once and blocked before inference
+by the existing execution-capacity guard. Do not claim native child acceptance or
+live V2 Shadow has passed. Finish that bounded check when capacity is genuinely
+available, then the planned full Shadow check. No staging/deployment changes or
+agent coordination occurred. Prior V1 deployment and V2 work remain preserved.
+Validation: 119 executor tests pass (five opt-in runtime tests ignored),
+executor/services Clippy, format/ops and CU contract byte comparison pass.
+
 ## Semantic fallback continuation (2026-10-01)
 
 Auto/Shadow now adds one bounded gpt-5.6-luna/low/standard classification turn only

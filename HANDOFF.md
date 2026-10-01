@@ -1,30 +1,28 @@
-## Native child acceptance retry (2026-10-01 08:33 UTC)
+## Native child acceptance and capacity correction (2026-10-01)
 
-The operator-requested bounded test retry stopped before inference: existing
-capacity guard reported 14 active processes, limit 8. Runtime proof was still
-fresh (18.58 hours). No limit override, process cancellation, model execution,
-staging or deployment occurred. Native child acceptance remains unverified.
-Evidence: `/mnt/vk-storage/vk-model-autoswitch-20260930/v2-delegation/retry-20261001-0833/test.log`.
+The bounded native child test now passes. The prior pgrep count included Node
+launcher wrappers and diagnostic command text; it was not a count of active agents.
+Linux fallback accounting now counts native app-server chains once. Idle servers
+still count conservatively. Default limit eight and systemd accounting are unchanged.
 
-## Delegated work continuation (2026-10-01)
+The first admitted trial completed Luna5.6/low but exposed loaded-thread resume
+ignoring escalation settings. The safety check blocked the second turn. VK now
+applies next-turn settings, waits for native confirmation, and rechecks before
+inference. The final test completed Luna5.6/low then Sol6.1/medium on the same child
+thread, preserved the tracked dirty sentinel, reused duplicate starts, and retained
+parent/child identity. Native rollout turn_context matches both CU v1 bindings.
+Escalation failure triggers were injected fixtures; root execution identity is a
+harness fixture, with no parent inference. Three actual child turns total this pass.
 
-AutoSwitch now admits native leaf children through `vk_delegate` on the existing
-app-server connection. Auto reuses V2 subtask assessment/qualification; Shadow keeps
-qualified parent settings and records recommendations. Explicit/protected floors,
-exclusions, bounded briefs, duplicate/overlap checks, existing capacity, native
-interrupt and consented boundary escalation apply. Native child settings are checked
-before inference; child logs cannot replace root identity. CU v1 remains unchanged,
-with child turn bindings plus additive `vk.delegation.v1` hierarchy/usage events.
+Validation: 122 executor regressions pass, five opt-in tests ignored in the normal
+suite; the opt-in native test separately passes; executor Clippy, format/ops and
+canonical CU contract comparison pass. Native usage preserves both latest-request
+and cumulative-thread fields. Evidence: `v2-delegation/capacity-fix-20261001/verified`
+under `/mnt/vk-storage/vk-model-autoswitch-20260930`.
 
-Read [VK_AUTOSWITCH_DELEGATION.md](VK_AUTOSWITCH_DELEGATION.md). New chats are needed
-for dynamic tools; leaf-only delegation is disabled for native goals/scheduled runs.
-The paid two-turn native harness was attempted once and blocked before inference
-by the existing execution-capacity guard. Do not claim native child acceptance or
-live V2 Shadow has passed. Finish that bounded check when capacity is genuinely
-available, then the planned full Shadow check. No staging/deployment changes or
-agent coordination occurred. Prior V1 deployment and V2 work remain preserved.
-Validation: 119 executor tests pass (five opt-in runtime tests ignored),
-executor/services Clippy, format/ops and CU contract byte comparison pass.
+Next is the first complete live V2 Shadow test on a fresh ordinary chat, handled
+separately. No staging, deployment, production cutover or external-agent interaction.
+Read [VK_AUTOSWITCH_DELEGATION.md](VK_AUTOSWITCH_DELEGATION.md). Version 0.1.42.
 
 ## Semantic fallback continuation (2026-10-01)
 

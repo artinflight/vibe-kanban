@@ -1,3 +1,13 @@
+## Production-Scale Preparation Follow-Up (2026-10-01)
+
+Branch `fix/vk-production-preparation-costs` backfills tested preparation fixes
+after accepted V2 Blue deployment. Scope is operational Python/documentation,
+not live application/data/route changes. Read the production timing audit.
+Historical integration scopes below are not this branch's current scope.
+
+The current task also integrates the closed-WAL correction with latest staging,
+preserving its application code. This is preparation only; no production switch.
+The inherited application-release notes below are historical context.
 ## AutoSwitch release compatibility (2026-10-01)
 
 Scope/savings fixes are merged through PR134 (staging) and PR135 (main).

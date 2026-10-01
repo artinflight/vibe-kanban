@@ -2,6 +2,10 @@
 
 ## Operator Outcome
 
+Read `VK_PREPARATION_PRODUCTION_AUDIT_20261001.md` for the first full-scale
+measurement: 86m39s initial preparation, not 19.37s. Fixture timings below are
+not a whole-production preparation estimate.
+
 Preparation time counts from the start of the operator's deployment request,
 not from the moment production is paused. Keep production usable while preparing.
 Report preparation, the interruption, and post-switch acceptance separately.
@@ -13,6 +17,22 @@ established ownership handover or latest-data rollback. They run outside VK and
 do not need a backend restart. They do not authorize or perform a cutover.
 
 ## What Was Inefficient
+
+October1 closed-database follow-up: the first correction copied a closed primary
+file privately and then copied it again through SQLite. The verified fenced path
+now uses its first copy as the snapshot, with a full integrity check and unchanged
+source-generation, writer-fence and journal checks. WAL or rollback-journal
+presence retains normal SQLite backup. Immutable mode is confined to the private
+snapshot, never applied to live or unfenced database files.
+
+Final archive verification now streams the decompressed snapshot members and
+manifest through SHA256 rather than writing and rereading a second large
+extraction. Missing/duplicate/wrong members or decompression failures reject
+readiness. Online resume artifacts retain their extraction format. A separate
+Desktop-downloaded full restore remains required as rehearsal evidence.
+Run production-sized rehearsals through vk_bulk_job.py and the verified direct
+Desktop route in both directions. Agent MemoryHigh throttling and default SSH
+download routing can otherwise erase the gains during preparation.
 
 - A fixed September 11 backup cutoff made each refresh copy cumulative changes
   rather than changes since the most recent verified checkpoint.
@@ -86,6 +106,28 @@ exact launcher/account/Codex home differs. Do not repeat the whole V1 acceptance
 suite for an unchanged, valid identity.
 
 ## Rolling Online Backups
+
+Nested deletion under a continuously watched parent now preserves tombstones.
+Exclusion paths resolve once per capture and are checked before publication.
+Declare `online_ephemeral_roots` only for known disposable CLI scratch, never
+history or work. Tar warnings require journal evidence; unrelated missing files
+and every frozen-boundary warning remain failures.
+
+Use `vk_bulk_job.py` for bulky captures/restores outside the Codex memory cgroup.
+It defaults to4G/6G memory-high/max and reduced CPU/IO priority; review host
+capacity for the job. Production service and agent limits are unchanged. A
+direct Desktop address requires both `--desktop-hostname` and the verified
+existing `--desktop-host-key-alias`; shared SSH aliases remain unchanged. SFTP
+resumes uniquely named partial archives and checks full remote SHA256. Unexpected
+sizes or hashes remain failures.
+
+After an online delivery failure, `resume-delivery` accepts the original
+`--folder`, plan, root, socket, parent if applicable, and Desktop directory.
+It requires the unchanged archive/payload and continuous coverage. It does not
+recapture data or certify a frozen boundary. Later writes stay due for another
+delta. Keep verified parent chains and applicable restore evidence across turns.
+New archives place manifests first to avoid a second full discovery pass; full
+recovery validation and legacy archive support remain.
 
 `vk_change_journal.py` and `vk_rolling_backup.py` provide a new, versioned online
 checkpoint/delta format. The explicit private plan lists source directories in

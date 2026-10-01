@@ -1,3 +1,47 @@
+## Current Integration: Corrected Green Preparation
+
+The final-boundary path now avoids redundant large writes: a verified fenced,
+sidecar-free primary file is copied once into the private snapshot, then fully
+integrity-checked there. Immutable reads apply only to that private copy.
+Archive verification streams and hashes the actual decompressed SQLite members
+and manifest; it does not skip verification. Online capture and resumable-delivery
+extractions remain unchanged. All77 focused tests pass, including committed WAL,
+late writer rejection, corrupted snapshots and missing/wrong archive members.
+The independent production-sized handover rehearsal passed in28.44 seconds;
+Desktop-downloaded restoration and latest-data cutback also passed. This is not
+measured production downtime or a hard guarantee; live coordination adds overhead.
+No cutover is authorized by these preparation results.
+
+The operator requests a running isolated Green candidate and a verified brief
+cutover package, without switching production yet. Blue1504649 remains live.
+This branch reconciles current staging with the external backup correction;
+application files retain staging exactly. The consumed 202033Z attempt is never
+replayed. Earlier release notes below are historical, not renewed permission.
+
+## October 1 Evening: Closed-WAL Frozen Capture Correction
+
+The maintenance handover returned to unchanged Blue before starting Green.
+A read-only source connection creates empty WAL sidecars when the last writer
+has closed the database, invalidating the strict boundary check. Reproduced the
+failure in a real SQLite/inotify/archive test before fixing it. The fenced path
+now copies only sources with no WAL/rollback journal into private SSD staging
+before opening SQLite. Source identity and final fence checks remain strict;
+committed WAL frames retain normal SQLite backup. All73 focused tests pass.
+No production retry or installation into the consumed package is part of this
+source correction. The maintenance checkout owns the recovery acceptance record.
+
+## Production Preparation Follow-Up (2026-10-01)
+
+Blue serves main329963d18/Codex0.159.2; Green2506054 remains frozen for
+latest-data cutback. Do not repeat handover or restore old production data.
+This operational branch backfills the production-scale preparation fixes.
+Read VK_PREPARATION_PRODUCTION_AUDIT_20261001.md and the performance guide.
+No backend restart is needed for external tools. Private real-binary handover,
+failed-backup recovery, latest-data cutback and Desktop restoration pass; receipts
+are under /mnt/vk-storage/vk-preparation-production-20261001/integration.
+The separate maintenance checkout owns complete live acceptance receipts.
+
+The following staging release notes are preserved as historical source evidence.
 ## AutoSwitch release compatibility (2026-10-01)
 
 Scope/savings fixes are merged through PR134 (staging) and PR135 (main).

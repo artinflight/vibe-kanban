@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     io,
     sync::{
         Arc, Mutex as StdMutex, OnceLock, Weak,
@@ -74,6 +74,8 @@ fn active_codex_clients() -> &'static StdMutex<HashMap<Uuid, Weak<AppServerClien
 
 pub struct AppServerClient {
     rpc: OnceLock<JsonRpcPeer>,
+    delegation: OnceLock<Arc<super::delegation::Delegation>>,
+    delegation_requests: Mutex<HashSet<RequestId>>,
     log_writer: LogWriter,
     approvals: Option<Arc<dyn ExecutorApprovalService>>,
     thread_id: Mutex<Option<String>>,
@@ -243,6 +245,8 @@ impl AppServerClient {
     ) -> Arc<Self> {
         let client = Arc::new(Self {
             rpc: OnceLock::new(),
+            delegation: OnceLock::new(),
+            delegation_requests: Mutex::new(HashSet::new()),
             log_writer,
             approvals,
             auto_approve,
@@ -270,6 +274,54 @@ impl AppServerClient {
         });
         let _ = client.self_ref.set(Arc::downgrade(&client));
         client
+    }
+
+    pub async fn delegation_turn_current(&self, turn: &str) -> bool {
+        !self.cancel.is_cancelled()
+            && self.current_turn_id.lock().await.as_deref() == Some(turn)
+            && self
+                .goal
+                .lock()
+                .await
+                .as_ref()
+                .is_none_or(|(g, _)| g.status != "active")
+    }
+
+    pub fn set_delegation(&self, control: Arc<super::delegation::Delegation>) {
+        let _ = self.delegation.set(control);
+    }
+
+    pub async fn abort_delegation_execution(&self, reason: &str) {
+        tracing::error!(%reason, "Stopping execution with uncertain delegated state");
+        let _ = super::slash_commands::log_event_raw(
+            self.log_writer(),
+            format!("Delegation stopped: {reason}"),
+        )
+        .await;
+        if let Some(signal) = self.exit_signal.get() {
+            signal
+                .send_exit_signal(crate::executors::ExecutorExitResult::Failure)
+                .await;
+        }
+        self.cancel.cancel();
+    }
+
+    pub async fn delegation_request(
+        &self,
+        method: &str,
+        params: Value,
+    ) -> Result<Value, ExecutorError> {
+        let id = self.next_request_id();
+        self.delegation_requests.lock().await.insert(id.clone());
+        let request = serde_json::json!({"id":id,"method":method,"params":params});
+        // Retain timed-out IDs until a late response arrives, so it cannot become a root session ID.
+        tokio::time::timeout(
+            Duration::from_secs(10),
+            self.rpc()
+                .request(id, &request, method, self.cancel.clone()),
+        )
+        .await
+        .map_err(|_| ExecutorError::Io(io::Error::other("Delegation API timed out")))?
     }
 
     pub fn set_exit_signal(&self, signal: ExitSignalSender) {
@@ -338,6 +390,16 @@ impl AppServerClient {
             serde_json::from_value(value).map_err(|e| ExecutorError::Io(io::Error::other(e)))?;
         if self.thread_id.lock().await.as_deref() != Some(goal.thread_id.as_str()) {
             return Ok(()); // Descendant agents never own the root goal.
+        }
+        if goal.status == "active"
+            && let Some(control) = self.delegation.get()
+            && control.active().await
+        {
+            control.close();
+            self.abort_delegation_execution("Native goal activated with independent children; stop before bypassing goal accounting").await;
+            return Err(ExecutorError::Io(io::Error::other(
+                "Collect delegated work before starting a native goal",
+            )));
         }
         let mut guard = self.goal.lock().await;
         if let Some((old, progress)) = guard.as_mut()
@@ -1018,6 +1080,57 @@ impl AppServerClient {
                 Ok(())
             }
             ServerRequest::DynamicToolCall { request_id, params } => {
+                if params.tool == super::delegation::TOOL {
+                    let root = self.thread_id.lock().await.as_deref()
+                        == Some(params.thread_id.as_str())
+                        && self.current_turn_id.lock().await.as_deref()
+                            == Some(params.turn_id.as_str());
+                    let goal_active = self
+                        .goal
+                        .lock()
+                        .await
+                        .as_ref()
+                        .is_some_and(|(g, _)| g.status == "active");
+                    let control = self.delegation.get().cloned();
+                    if !root
+                        || goal_active
+                        || self.capacity_stopped.load(Ordering::SeqCst)
+                        || control.is_none()
+                    {
+                        return send_server_response(peer, request_id, DynamicToolCallResponse {
+                            content_items:vec![DynamicToolCallOutputContentItem::InputText {text:"Delegation requires the current root turn, a configured router, and no active native goal or scheduled capacity run.".into()}],success:false}).await;
+                    }
+                    let client = self
+                        .self_ref
+                        .get()
+                        .and_then(Weak::upgrade)
+                        .expect("live client");
+                    let peer = peer.clone();
+                    // Never block the JSON-RPC reader while the tool makes nested native requests.
+                    tokio::spawn(async move {
+                        let result = control
+                            .unwrap()
+                            .handle(client, params.turn_id, params.arguments)
+                            .await;
+                        let success = result.is_ok();
+                        let text = result.map(|v| v.to_string()).unwrap_or_else(|e| e);
+                        if let Err(error) = send_server_response(
+                            &peer,
+                            request_id,
+                            DynamicToolCallResponse {
+                                content_items: vec![DynamicToolCallOutputContentItem::InputText {
+                                    text,
+                                }],
+                                success,
+                            },
+                        )
+                        .await
+                        {
+                            tracing::warn!(%error,"Delegation tool response unavailable");
+                        }
+                    });
+                    return Ok(());
+                }
                 if params.tool == goals::TOOL {
                     if self.thread_id.lock().await.as_deref() != Some(params.thread_id.as_str())
                         || self.current_turn_id.lock().await.as_deref()
@@ -1544,8 +1657,11 @@ impl JsonRpcCallbacks for AppServerClient {
         &self,
         _peer: &JsonRpcPeer,
         raw: &str,
-        _response: &JSONRPCResponse,
+        response: &JSONRPCResponse,
     ) -> Result<(), ExecutorError> {
+        if self.delegation_requests.lock().await.remove(&response.id) {
+            return self.log_writer.log_raw(&serde_json::json!({"method":"vk/delegation/native","params":{"response":response}}).to_string()).await;
+        }
         self.log_writer.log_raw(raw).await
     }
 
@@ -1553,8 +1669,17 @@ impl JsonRpcCallbacks for AppServerClient {
         &self,
         _peer: &JsonRpcPeer,
         raw: &str,
-        _error: &JSONRPCError,
+        error: &JSONRPCError,
     ) -> Result<(), ExecutorError> {
+        if self.delegation_requests.lock().await.remove(&error.id) {
+            return self
+                .log_writer
+                .log_raw(
+                    &serde_json::json!({"method":"vk/delegation/native","params":{"error":error}})
+                        .to_string(),
+                )
+                .await;
+        }
         self.log_writer.log_raw(raw).await
     }
 
@@ -1565,6 +1690,24 @@ impl JsonRpcCallbacks for AppServerClient {
         notification: JSONRPCNotification,
     ) -> Result<bool, ExecutorError> {
         let method = notification.method.as_str();
+        if let Some(control) = self.delegation.get() {
+            match control
+                .observe(
+                    self,
+                    method,
+                    notification.params.as_ref().unwrap_or(&Value::Null),
+                    raw,
+                )
+                .await
+            {
+                Ok(true) => return Ok(false),
+                Ok(false) => {}
+                Err(error) => {
+                    self.abort_delegation_execution(&error).await;
+                    return Err(ExecutorError::Io(io::Error::other(error)));
+                }
+            }
+        }
         if should_log_notification(method) {
             self.log_writer.log_raw(raw).await?;
         }
@@ -1672,6 +1815,26 @@ impl JsonRpcCallbacks for AppServerClient {
                     }
                 }
 
+                if let Some(control) = self.delegation.get()
+                    && control.active().await
+                {
+                    control.close();
+                    let control = control.clone();
+                    let client = self
+                        .self_ref
+                        .get()
+                        .and_then(Weak::upgrade)
+                        .expect("live client");
+                    tokio::spawn(async move {
+                        let _ = tokio::time::timeout(
+                            Duration::from_secs(2),
+                            control.cancel_all(&client),
+                        )
+                        .await;
+                        client.abort_delegation_execution("Parent ended before collecting active children; children interrupted, working files preserved").await;
+                    });
+                    return Ok(false);
+                }
                 if completed.turn.status == TurnStatus::Failed {
                     return Err(ExecutorError::Io(io::Error::other(
                         "Codex native turn failed",
@@ -2342,5 +2505,268 @@ assert p.returncode!=0 and '4' in p.stderr, (p.returncode,p.stderr)
             );
         }
         child.kill().await.ok();
+    }
+}
+
+#[cfg(test)]
+mod delegation_tests {
+    use super::*;
+    use crate::{
+        env::ExecutionEnv,
+        executors::codex::delegation::Delegation,
+        routing::{RoutingDecision, RoutingPolicy},
+    };
+
+    /// Two bounded native turns, no parent inference and no live VK server. Explicit opt-in only.
+    #[tokio::test]
+    #[ignore = "uses two native child inference turns; requires candidate launcher/proof and task artifact directory"]
+    async fn native_delegation_boundaries() {
+        eprintln!(
+            "Native capacity inventory: {} app-server chains; configured limit {}",
+            super::super::active_codex_execution_count(),
+            super::super::codex_max_active_executions()
+        );
+        if let Some(error) = super::super::codex_execution_limit_error() {
+            panic!("Native execution capacity unavailable; do not bypass it: {error}");
+        }
+        let dir = std::path::PathBuf::from(
+            std::env::var("VK_DELEGATION_TEST_DIR").expect("artifact directory"),
+        );
+        assert!(dir.starts_with("/mnt/vk-storage/"));
+        tokio::fs::create_dir_all(&dir).await.unwrap();
+        let work = dir.join("work");
+        tokio::fs::create_dir_all(&work).await.unwrap();
+        if !work.join(".git").exists() {
+            tokio::fs::write(work.join("dirty.txt"), "baseline\n")
+                .await
+                .unwrap();
+            for args in [
+                vec!["init", "-q"],
+                vec!["add", "dirty.txt"],
+                vec![
+                    "-c",
+                    "user.name=VK fixture",
+                    "-c",
+                    "user.email=fixture@example.invalid",
+                    "commit",
+                    "-qm",
+                    "Fixture baseline",
+                ],
+            ] {
+                assert!(
+                    tokio::process::Command::new("git")
+                        .args(args)
+                        .current_dir(&work)
+                        .status()
+                        .await
+                        .unwrap()
+                        .success()
+                );
+            }
+        }
+        tokio::fs::write(
+            work.join("README.md"),
+            "This is teh example.\nAnother teh example.\n",
+        )
+        .await
+        .unwrap();
+        tokio::fs::write(work.join("dirty.txt"), "operator work, preserve exactly\n")
+            .await
+            .unwrap();
+        let launcher = std::env::var("VK_CODEX_BASE_COMMAND").unwrap();
+        // The checked candidate launcher is an executable path, never shell-evaluated.
+        let mut command = tokio::process::Command::new(&launcher);
+        command
+            .args([
+                "app-server",
+                "-c",
+                "features.multi_agent=false",
+                "-c",
+                "features.multi_agent_v2=false",
+            ])
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .kill_on_drop(true);
+        use workspace_utils::command_ext::GroupSpawnNoWindowExt;
+        let mut process = command.group_spawn_no_window().unwrap();
+        let cancel = CancellationToken::new();
+        let (tx, mut rx) = tokio::sync::oneshot::channel();
+        let signal = ExitSignalSender::new(tx);
+        let client = AppServerClient::new(
+            LogWriter::new(
+                tokio::fs::File::create(dir.join("native.jsonl"))
+                    .await
+                    .unwrap(),
+            ),
+            None,
+            true,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        let peer = JsonRpcPeer::spawn(
+            process.inner().stdin.take().unwrap(),
+            process.inner().stdout.take().unwrap(),
+            client.clone(),
+            signal.clone(),
+            cancel.clone(),
+        );
+        client.connect(peer.clone());
+        client.set_exit_signal(signal);
+        client.initialize().await.unwrap();
+        let account = client.get_account().await.unwrap();
+        let proof = crate::routing::load_availability().unwrap();
+        assert_eq!(
+            crate::routing::account_fingerprint(&serde_json::to_value(account.account).unwrap()),
+            proof.account_fingerprint
+        );
+        let config = client
+            .goal_request("config/read", serde_json::json!({"includeLayers":false}))
+            .await
+            .unwrap();
+        let mut overrides = std::collections::HashMap::new();
+        for feature in [
+            "multi_agent",
+            "multi_agent_v2",
+            "goals",
+            "apps",
+            "plugins",
+            "hooks",
+            "plugin_hooks",
+        ] {
+            overrides.insert(format!("features.{feature}"), serde_json::json!(false));
+        }
+        if let Some(servers) = config
+            .pointer("/config/mcp_servers")
+            .and_then(Value::as_object)
+        {
+            for name in servers.keys() {
+                overrides.insert(
+                    format!("mcp_servers.{name}.enabled"),
+                    serde_json::json!(false),
+                );
+            }
+        }
+        overrides.insert("model_reasoning_effort".into(), serde_json::json!("medium"));
+        let params = ThreadStartParams {
+            model: Some("gpt-6.1-sol".into()),
+            cwd: Some(work.to_string_lossy().into()),
+            approval_policy: Some(codex_app_server_protocol::AskForApproval::Never),
+            sandbox: Some(codex_app_server_protocol::SandboxMode::DangerFullAccess),
+            config: Some(overrides),
+            dynamic_tools: Some(vec![super::super::delegation::tool_spec()]),
+            ..Default::default()
+        };
+        let root = client.thread_start(params.clone()).await.unwrap();
+        client.register_session(&root.thread.id).await.unwrap();
+        let parent_turn = "harness-parent-boundary";
+        *client.current_turn_id.lock().await = Some(parent_turn.into());
+        let policy: RoutingPolicy = serde_json::from_value(
+            serde_json::json!({"mode":"auto","floor":"assessed","allow_escalation":true}),
+        )
+        .unwrap();
+        let decision:RoutingDecision=serde_json::from_value(serde_json::json!({"version":2,"id":Uuid::new_v4(),"mode":"auto","floor":"workhorse","reason":"native development harness","assessed_envelope":"normal","service_tier":"standard","escalated":false,"account_fingerprint":proof.account_fingerprint})).unwrap();
+        let mut env = ExecutionEnv::new(RepoContext::default(), false, String::new());
+        let execution = Uuid::new_v4().to_string();
+        env.insert("VK_EXECUTION_PROCESS_ID", execution.clone());
+        let control=Delegation::new(policy,decision,root.thread.id.clone(),params,env,serde_json::json!({"model":"gpt-6.1-sol","reasoningEffort":"medium","accountFingerprint":proof.account_fingerprint}),1).await.unwrap();
+        client.set_delegation(control.clone());
+        let args = serde_json::json!({"action":"start","task":"spelling","message":"Fix spelling typos in README.md","context":"Replace both occurrences of teh with the. Preserve dirty.txt exactly. Use no network. Report the number of corrected occurrences.","paths":["README.md"],"independent":true,"size":"batch","read_only":false});
+        let initial = tokio::time::timeout(
+            Duration::from_secs(45),
+            control.handle(client.clone(), parent_turn.into(), args.clone()),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(initial["effective"]["model"], "gpt-5.6-luna");
+        assert_eq!(initial["effective"]["reasoningEffort"], "low");
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(90);
+        while control.active().await {
+            assert!(tokio::time::Instant::now() < deadline);
+            sleep(Duration::from_millis(200)).await;
+        }
+        let initial = control
+            .handle(
+                client.clone(),
+                parent_turn.into(),
+                serde_json::json!({"action":"status","task":"spelling"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(initial["status"], "completed");
+        assert!(rx.try_recv().is_err(), "Child completion must not end root");
+        assert_eq!(
+            client.thread_id.lock().await.as_deref(),
+            Some(root.thread.id.as_str())
+        );
+        assert_eq!(
+            tokio::fs::read_to_string(work.join("README.md"))
+                .await
+                .unwrap(),
+            "This is the example.\nAnother the example.\n"
+        );
+        let duplicate = control
+            .handle(client.clone(), parent_turn.into(), args.clone())
+            .await
+            .unwrap();
+        assert_eq!(duplicate["reused"], true);
+        // Deterministic fixture of two distinct native validation failures: test escalation admission
+        // without manufacturing a destructive implementation or paying for repeated bad fixes.
+        for item in ["validation-a", "validation-b", "validation-b"] {
+            let params = serde_json::json!({"threadId":initial["native_thread_id"],"turnId":initial["native_turn_id"],"item":{"id":item,"type":"commandExecution","command":"node --test regression.js","exitCode":1}});
+            let raw = serde_json::json!({"method":"item/completed","params":params}).to_string();
+            control
+                .observe(&client, "item/completed", &params, &raw)
+                .await
+                .unwrap();
+        }
+        let mut follow = args;
+        follow["action"] = serde_json::json!("follow_up");
+        follow["message"] = serde_json::json!(
+            "Continue the spelling task. Verify the previous corrections and preserve all working files."
+        );
+        let follow = control
+            .handle(client.clone(), parent_turn.into(), follow)
+            .await
+            .unwrap();
+        assert_eq!(follow["effective"]["model"], "gpt-6.1-sol");
+        assert_eq!(follow["effective"]["reasoningEffort"], "medium");
+        assert_eq!(follow["native_thread_id"], initial["native_thread_id"]);
+        assert_eq!(follow["delegation_id"], initial["delegation_id"]);
+        assert_eq!(follow["recommended"]["escalated"], true);
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(90);
+        while control.active().await {
+            assert!(tokio::time::Instant::now() < deadline);
+            sleep(Duration::from_millis(200)).await;
+        }
+        let follow = control
+            .handle(
+                client.clone(),
+                parent_turn.into(),
+                serde_json::json!({"action":"status","task":"spelling"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(follow["status"], "completed");
+        assert_eq!(
+            tokio::fs::read_to_string(work.join("dirty.txt"))
+                .await
+                .unwrap(),
+            "operator work, preserve exactly\n"
+        );
+        assert_eq!(super::super::delegation::active_count(), 0);
+        let evidence = serde_json::json!({"parentThreadId":root.thread.id,"parentTurn":"harness-only; no parent inference","executionId":execution,"initial":initial,"followup":follow,"failureEvidence":"two injected distinct command-completed failures, one duplicate ignored","dirtyStatePreserved":true,"duplicateStartReused":true});
+        tokio::fs::write(
+            dir.join("result.json"),
+            serde_json::to_vec_pretty(&evidence).unwrap(),
+        )
+        .await
+        .unwrap();
+        cancel.cancel();
+        process.kill().await.unwrap();
     }
 }

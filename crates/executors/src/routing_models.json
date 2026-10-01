@@ -10,6 +10,22 @@
       "high",
       "xhigh",
       "max"
+    ],
+    "qualifications": [
+      {
+        "effort": "medium",
+        "envelope": "mechanical",
+        "status": "qualified",
+        "floor": "routine",
+        "preference_rank": 8
+      },
+      {
+        "effort": "low",
+        "envelope": "mechanical",
+        "status": "qualified",
+        "floor": "routine",
+        "preference_rank": 4
+      }
     ]
   },
   {
@@ -23,6 +39,22 @@
       "high",
       "xhigh",
       "max"
+    ],
+    "qualifications": [
+      {
+        "effort": "medium",
+        "envelope": "mechanical",
+        "status": "qualified",
+        "floor": "routine",
+        "preference_rank": 20
+      },
+      {
+        "effort": "medium",
+        "envelope": "bounded",
+        "status": "qualified",
+        "floor": "routine",
+        "preference_rank": 20
+      }
     ]
   },
   {
@@ -36,6 +68,36 @@
       "high",
       "xhigh",
       "max"
+    ],
+    "qualifications": [
+      {
+        "effort": "medium",
+        "envelope": "mechanical",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 40
+      },
+      {
+        "effort": "medium",
+        "envelope": "bounded",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 40
+      },
+      {
+        "effort": "medium",
+        "envelope": "validated_fix",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 40
+      },
+      {
+        "effort": "medium",
+        "envelope": "normal",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 40
+      }
     ]
   },
   {
@@ -49,6 +111,29 @@
       "high",
       "xhigh",
       "max"
+    ],
+    "qualifications": [
+      {
+        "effort": "medium",
+        "envelope": "mechanical",
+        "status": "qualified",
+        "floor": "routine",
+        "preference_rank": 10
+      },
+      {
+        "effort": "medium",
+        "envelope": "bounded",
+        "status": "qualified",
+        "floor": "routine",
+        "preference_rank": 10
+      },
+      {
+        "effort": "low",
+        "envelope": "mechanical",
+        "status": "qualified",
+        "floor": "routine",
+        "preference_rank": 5
+      }
     ]
   },
   {
@@ -62,6 +147,50 @@
       "high",
       "xhigh",
       "max"
+    ],
+    "qualifications": [
+      {
+        "effort": "medium",
+        "envelope": "mechanical",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 35
+      },
+      {
+        "effort": "medium",
+        "envelope": "bounded",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 35
+      },
+      {
+        "effort": "medium",
+        "envelope": "validated_fix",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 25
+      },
+      {
+        "effort": "medium",
+        "envelope": "normal",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 35
+      },
+      {
+        "effort": "medium",
+        "envelope": "complex",
+        "status": "experimental",
+        "floor": "workhorse",
+        "preference_rank": 35
+      },
+      {
+        "effort": "low",
+        "envelope": "bounded",
+        "status": "experimental",
+        "floor": "workhorse",
+        "preference_rank": 9
+      }
     ]
   },
   {
@@ -75,6 +204,43 @@
       "high",
       "xhigh",
       "max"
+    ],
+    "qualifications": [
+      {
+        "effort": "medium",
+        "envelope": "mechanical",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 30
+      },
+      {
+        "effort": "medium",
+        "envelope": "bounded",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 30
+      },
+      {
+        "effort": "medium",
+        "envelope": "validated_fix",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 30
+      },
+      {
+        "effort": "medium",
+        "envelope": "normal",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 30
+      },
+      {
+        "effort": "medium",
+        "envelope": "complex",
+        "status": "qualified",
+        "floor": "workhorse",
+        "preference_rank": 30
+      }
     ]
   },
   {
@@ -88,6 +254,50 @@
       "high",
       "xhigh",
       "max"
+    ],
+    "qualifications": [
+      {
+        "effort": "high",
+        "envelope": "mechanical",
+        "status": "qualified",
+        "floor": "frontier",
+        "preference_rank": 100
+      },
+      {
+        "effort": "high",
+        "envelope": "bounded",
+        "status": "qualified",
+        "floor": "frontier",
+        "preference_rank": 100
+      },
+      {
+        "effort": "high",
+        "envelope": "validated_fix",
+        "status": "qualified",
+        "floor": "frontier",
+        "preference_rank": 100
+      },
+      {
+        "effort": "high",
+        "envelope": "normal",
+        "status": "qualified",
+        "floor": "frontier",
+        "preference_rank": 100
+      },
+      {
+        "effort": "high",
+        "envelope": "complex",
+        "status": "qualified",
+        "floor": "frontier",
+        "preference_rank": 100
+      },
+      {
+        "effort": "high",
+        "envelope": "protected",
+        "status": "minimum_required",
+        "floor": "frontier",
+        "preference_rank": 100
+      }
     ]
   }
 ]

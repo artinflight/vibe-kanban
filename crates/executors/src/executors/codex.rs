@@ -1,7 +1,10 @@
 pub mod client;
+pub mod delegation;
 pub mod goals;
 pub mod jsonrpc;
 pub mod normalize_logs;
+#[cfg(any(target_os = "linux", test))]
+mod process_capacity;
 pub mod review;
 pub mod slash_commands;
 use std::{
@@ -120,7 +123,7 @@ fn env_flag_enabled(name: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn codex_execution_disabled() -> bool {
+pub(crate) fn codex_execution_disabled() -> bool {
     env_flag_enabled("VK_DISABLE_CODEX_EXECUTIONS")
         || env_flag_enabled("VK_LAB_DISABLE_CODEX_EXECUTIONS")
 }
@@ -167,6 +170,10 @@ fn active_codex_execution_count() -> usize {
             .unwrap_or(0);
     }
 
+    #[cfg(target_os = "linux")]
+    return process_capacity::app_server_count();
+
+    #[cfg(not(target_os = "linux"))]
     std::process::Command::new("pgrep")
         .args(["-fc", "codex app-server"])
         .output()
@@ -183,7 +190,7 @@ fn active_codex_execution_count() -> usize {
 
 pub fn codex_execution_limit_error() -> Option<ExecutorError> {
     let max_active = codex_max_active_executions();
-    let active = active_codex_execution_count();
+    let active = active_codex_execution_count().saturating_add(delegation::active_count());
     if active >= max_active {
         Some(ExecutorError::ExecutionLimitReached {
             active,
@@ -973,6 +980,27 @@ impl Codex {
         {
             params.service_tier = Some(None); // Explicitly clear a resumed Fast setting.
         }
+        if routing
+            .as_ref()
+            .is_some_and(|d| d.mode != crate::routing::RoutingMode::Manual)
+            && env.capacity.is_none()
+        {
+            for feature in ["multi_agent", "multi_agent_v2"] {
+                params
+                    .config
+                    .get_or_insert_default()
+                    .insert(format!("features.{feature}"), serde_json::json!(false));
+            }
+            params
+                .dynamic_tools
+                .get_or_insert_default()
+                .push(delegation::tool_spec());
+            params.developer_instructions = Some(format!(
+                "{}\n\n{}",
+                params.developer_instructions.as_deref().unwrap_or_default(),
+                delegation::INSTRUCTIONS
+            ));
+        }
         let resume_session = resume_session.map(|s| s.to_string());
         let telemetry_env = env.clone();
 
@@ -1010,6 +1038,7 @@ impl Codex {
         routing: Option<crate::routing::RoutingDecision>,
         telemetry_env: &ExecutionEnv,
     ) -> Result<(), ExecutorError> {
+        let child_params = thread_start_params.clone();
         let account = client.get_account().await?;
         if account.requires_openai_auth && account.account.is_none() {
             return Err(ExecutorError::AuthRequired(
@@ -1108,6 +1137,47 @@ impl Codex {
         ) {
             client.set_routing_telemetry(binding);
         }
+        if let Some(decision) = routing
+            .as_ref()
+            .filter(|d| d.mode != crate::routing::RoutingMode::Manual)
+            && telemetry_env.capacity.is_none()
+            && let Some(policy) = telemetry_env.get("VK_ROUTING_POLICY")
+        {
+            let config = client
+                .goal_request("config/read", serde_json::json!({"includeLayers": false}))
+                .await?;
+            let max = config
+                .pointer("/config/agents/max_concurrent_threads_per_session")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(4)
+                .saturating_sub(1) as usize;
+            let max = std::env::var("VK_CODEX_MAX_CHILDREN")
+                .ok()
+                .and_then(|v| v.parse::<usize>().ok())
+                .map_or(max, |n| n.min(max));
+            let inherited = serde_json::json!({"model": resolved_model, "reasoningEffort":resolved_effort,"accountFingerprint":crate::routing::account_fingerprint(&serde_json::to_value(&account.account)?)});
+            match delegation::Delegation::new(
+                serde_json::from_str(policy)?,
+                decision.clone(),
+                thread_id.clone(),
+                child_params,
+                telemetry_env.clone(),
+                inherited,
+                max,
+            )
+            .await
+            {
+                Ok(control) => client.set_delegation(control),
+                Err(error) => {
+                    tracing::warn!(%error, "Delegation unavailable; parent execution remains usable");
+                    slash_commands::log_event_raw(
+                        client.log_writer(),
+                        format!("AutoSwitch delegation unavailable: {error}"),
+                    )
+                    .await?;
+                }
+            }
+        }
         client.set_resolved_model(resolved_model);
         client.register_session(&thread_id).await?;
         client.refresh_goal().await?;
@@ -1151,6 +1221,15 @@ impl Codex {
         }
 
         let (program_path, mut args) = command_parts.into_resolved().await?;
+        if env
+            .get("VK_ROUTING_DECISION")
+            .and_then(|v| serde_json::from_str::<crate::routing::RoutingDecision>(v).ok())
+            .is_some_and(|d| d.mode != crate::routing::RoutingMode::Manual)
+        {
+            for feature in ["multi_agent", "multi_agent_v2"] {
+                args.extend(["-c".into(), format!("features.{feature}=false")]);
+            }
+        }
         if env.capacity.is_some() {
             crate::capacity::policy::verify_launcher(
                 self.cmd.base_command_override.as_deref(),

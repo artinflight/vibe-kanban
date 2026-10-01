@@ -1,3 +1,149 @@
+## AutoSwitch V2 staging integration (2026-10-01)
+
+The operator now authorizes the full V2 PR/push/rebase merge into staging.
+See [VK_AUTOSWITCH_V2_STAGING.md](VK_AUTOSWITCH_V2_STAGING.md) for base, exact
+commit mapping and validation limits. Seven V2 commits are rebased onto
+staging198d55a20; V1 is already present. Only continuity documents conflicted;
+all source patches and newer staging functionality are preserved. No deployment
+or full live Shadow test is included. Earlier development-only scope below is history.
+
+## Native child acceptance and capacity correction (2026-10-01)
+
+The bounded native child test now passes. The prior pgrep count included Node
+launcher wrappers and diagnostic command text; it was not a count of active agents.
+Linux fallback accounting now counts native app-server chains once. Idle servers
+still count conservatively. Default limit eight and systemd accounting are unchanged.
+
+The first admitted trial completed Luna5.6/low but exposed loaded-thread resume
+ignoring escalation settings. The safety check blocked the second turn. VK now
+applies next-turn settings, waits for native confirmation, and rechecks before
+inference. The final test completed Luna5.6/low then Sol6.1/medium on the same child
+thread, preserved the tracked dirty sentinel, reused duplicate starts, and retained
+parent/child identity. Native rollout turn_context matches both CU v1 bindings.
+Escalation failure triggers were injected fixtures; root execution identity is a
+harness fixture, with no parent inference. Three actual child turns total this pass.
+
+Validation: 122 executor regressions pass, five opt-in tests ignored in the normal
+suite; the opt-in native test separately passes; executor Clippy, format/ops and
+canonical CU contract comparison pass. Native usage preserves both latest-request
+and cumulative-thread fields. Evidence: `v2-delegation/capacity-fix-20261001/verified`
+under `/mnt/vk-storage/vk-model-autoswitch-20260930`.
+
+Next is the first complete live V2 Shadow test on a fresh ordinary chat, handled
+separately. No staging, deployment, production cutover or external-agent interaction.
+Read [VK_AUTOSWITCH_DELEGATION.md](VK_AUTOSWITCH_DELEGATION.md). Version 0.1.42.
+
+## Semantic fallback continuation (2026-10-01)
+
+Auto/Shadow now adds one bounded gpt-5.6-luna/low/standard classification turn only
+for materially uncertain deterministic assessments. Known envelopes, manual/pinned
+execution and protected floors skip inference. Closed structured output feeds the
+existing qualification/floor/exclusion and consented escalation logic. No tools,
+implementation loop, staging/deployment changes or agent coordination.
+
+Native sample: ordinary assignee display -> Luna6/medium; private-project access
+-> Astra/high; vague/persistence/intermittent-failure requests -> Sol6.1/medium.
+Two deterministic controls incur zero calls. Five final classifier calls measured
+3,978–3,986 input tokens, 78–133 output and 4.344–8.664 seconds each. One initial
+transport check also ran. Classification attempts/usage persist in decisions and
+a separate vk.classification.v1 feed; CU vk.routing.v1 is unchanged.
+Read VK_AUTOSWITCH_FULL_ROUTER.md for configuration, bounds and actual evidence.
+Validation: 29 focused regressions, executor/services Clippy, generated-type and
+web-core TypeScript checks, format and ops pass. Source-only; live V2 Shadow QA
+and net-savings measurement remain pending.
+
+## Natural-language triage continuation
+
+V2 now recognizes common presentation outcomes on named UI surfaces and corroborates
+them with bounded repository evidence at the existing execution boundary. Structured
+triage includes uncertainty, validation availability and inspection counts; missing
+context retains Workhorse. No planning model call, registry change, CU contract change
+or V1 deployment work. Read VK_AUTOSWITCH_FULL_ROUTER.md for scope and limits.
+Validation: 22 routing tests, services check, focused Clippy, generated types,
+web-core TypeScript, format/ops and five zero-inference recommendation cases pass.
+Source is not deployed; real V2 Shadow recommendations remain a release gate.
+
+## V2 resumed after V1 staging integration
+
+Continue on `vk/5a81-autoswitch-cu-recovery`; V1 PR127/deployment is separate and
+must remain untouched. Follow-up qualification persistence and lexical assessment
+repairs are implemented, plus a read-only policy recommendation command. Details:
+[VK_AUTOSWITCH_FULL_ROUTER.md](VK_AUTOSWITCH_FULL_ROUTER.md). This is not live
+activation or live Shadow evidence. No V1 model acceptance campaign was repeated.
+
+## Automatic assessment / qualified-pair router
+
+The operator accepted V1 architecture and integration; do not reopen its prior
+acceptance gates as a new research program. V2 implementation is on the same
+recovered branch. Read [VK_AUTOSWITCH_FULL_ROUTER.md](VK_AUTOSWITCH_FULL_ROUTER.md).
+
+New Auto defaults to an assessed minimum. Positive prompt evidence permits
+mechanical text work on 5.6 Luna/low, bounded patterns on Luna6/medium and local
+validated fixes on Sol6/medium. Uncertain/normal/complex work retains Sol6.1;
+protected work requires Astra. Model/effort/envelope qualification and pair ranks
+are configurable; explicit floor, exclusions, fresh proof and prior session floor
+remain hard constraints. Experimental pairs are Shadow-only. Manual choices
+retain existing constraints, including after scratch hydration.
+
+Operator-reported validation/review failure and higher-risk scope can request
+consented escalation at a new boundary. No raw-output test inference, confidence
+heuristic, active-turn switch, reset or autonomous retry was introduced. CU wire
+schema remains v1 with policyVersion vk-autoswitch-v2 for new decisions.
+
+Two bounded new probes verified 5.6 Luna/low and Sol6/low using the exact candidate
+CLI0.159.2 wrapper/account/home; previous seven-model acceptance was not repeated.
+Combined proof preserves old verification timestamps. Files and validation logs:
+`/mnt/vk-storage/vk-model-autoswitch-v1/full-router-*`.
+
+Validation: 14 focused routing tests and 4 React selector tests passed; web-core
+TypeScript, focused ESLint, executor/server Clippy, shared-type generation, format, ops and Python checks
+passed. No full workspace benchmark or repeated V1 native trial was run.
+
+Matching frontend/backend packaging, a few real live Shadow recommendations and
+the existing explicit production-cutover approval remain the daily-use gates.
+No production services or profiles changed. Legacy saved Workhorse floors remain
+Workhorse; choose Automatic minimum once to permit assessment on those chats.
+Do not claim live Shadow results or demonstrated usage savings yet.
+
+## Accepted V1 integration history (superseded gates retained below)
+
+## October 1: Preparation Integration Accepted
+
+The operator authorized staging integration and isolated handover acceptance.
+All 54 regressions pass. The new fenced capture callback passed with unchanged
+September 30 ownership primitives and real VK binaries: backup abort returns the
+same process; handover takes the latest data; cutback preserves newer messages,
+settings and model choice; repeated recovery and backup restoration pass.
+The final private switch took 15.03 seconds including Desktop verification.
+Restoration used archives/metadata downloaded back from Desktop. Evidence:
+`/mnt/vk-storage/vk-preparation-20261001/integration/`
+`handover-628d03d9d47446efb5295f4d117bc55a/result.json`.
+The watcher now distinguishes close-only SQLite WAL events from writes and keeps
+critical databases required across increments. Production Green remains running;
+the rehearsal units are removed. No production cutover, model call or CU polling.
+Application/build inputs are identical to staging620bd7eb9; broad application
+suites were not repeated. Read VK_PREPARATION_PERFORMANCE.md for the callback
+contract and limits. The earlier implementation record below is historical.
+
+## October 1: Faster Pre-Cutover Preparation
+
+Worktree `/mnt/vk-storage/vk-preparation-20261001/source`, branch
+`fix/vk-precutover-preparation`, baseline fork/staging620bd7eb9. The operator
+requested implementation, not another switch. Production is untouched.
+Read VK_PREPARATION_PERFORMANCE.md and use `scripts/deployment/vk_prepare.py`
+for the next fresh preparation; it never authorizes or performs a cutover.
+The new rolling backup format requires final-package compatibility rehearsal;
+do not reuse consumed attempts or overwrite current production with old data.
+Regression/benchmark evidence is in `/mnt/vk-storage/vk-preparation-20261001`.
+All45 focused Python regressions, syntax compilation, repository formatting,
+`ops:check` and diff checks pass. The real Desktop archive/metadata download and
+three-generation restore pass; file-only refresh is789 bytes versus a
+17,828,870-byte checkpoint, with unchanged DB reuse. This is not a measured
+production preparation SLA. Generated recipe acceptance at `e1bf06f7b` passed:
+12.24seconds first run,1.46seconds repeat; static evidence reused, diff refreshed,
+and elapsed preparation clock retained. No broad application suite, new inference, service
+action or production backup. Inherited notes below are historical unless checked.
+
 ## AutoSwitch V1 staging-only release
 
 Branch `release/autoswitch-v1` rebases validated V1 onto staging56792a72c.

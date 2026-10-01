@@ -1,3 +1,8 @@
+> V2 policy update: the wire schema stays `vk.routing.v1`. RoutingDecision version2
+> emits `policyVersion: vk-autoswitch-v2`; reasonCode includes the assessed envelope
+> or operator-reported failure/risk-expansion trigger. Manual/older records retain
+> the v1 policy value. Canonical wire mirror and fixtures remain unchanged.
+
 # VK AutoSwitch producer implementation notes
 
 The authoritative wire contract is [VK_ROUTING_TELEMETRY_V1.md](VK_ROUTING_TELEMETRY_V1.md),

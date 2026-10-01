@@ -1525,13 +1525,31 @@ pub trait ContainerService {
                 .map(|(_, _, json)| serde_json::from_str::<ExecutorAction>(json))
                 .transpose()
                 .map_err(|e| ContainerError::Other(anyhow!(e)))?;
-            executors::routing::resolve_action(
-                &mut resolved_action,
-                previous_action.as_ref(),
-                previous
-                    .as_ref()
-                    .is_some_and(|(_, status, _)| status == "failed"),
-            )
+            let failed = previous
+                .as_ref()
+                .is_some_and(|(_, status, _)| status == "failed");
+            let workspace_root = workspace.container_ref.clone();
+            let working_dir = session.agent_working_dir.clone();
+            // Bounded read-only triage must not block Tokio's execution admission thread.
+            resolved_action = tokio::task::spawn_blocking(move || {
+                let root = workspace_root.and_then(|root| {
+                    let root = std::path::PathBuf::from(root).canonicalize().ok()?;
+                    let candidate = working_dir
+                        .as_ref()
+                        .map_or_else(|| root.clone(), |dir| root.join(dir));
+                    let candidate = candidate.canonicalize().ok()?;
+                    candidate.starts_with(&root).then_some(candidate)
+                });
+                executors::routing::resolve_action_with_semantics(
+                    &mut resolved_action,
+                    previous_action.as_ref(),
+                    failed,
+                    root.as_deref(),
+                )?;
+                Ok::<_, String>(resolved_action)
+            })
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?
             .map_err(|e| ContainerError::Other(anyhow!(e)))?;
             if let Some(decision) = &mut resolved_action.routing_decision {
                 decision.previous_execution_id = previous.as_ref().map(|(id, _, _)| id.to_string());

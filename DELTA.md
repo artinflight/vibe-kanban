@@ -1351,3 +1351,85 @@ Isolated validated commits df3e973a5/162770f73/9b334d1a3 from preserved V2 and
 rebased onto staging56792a72c. Retained both sides of continuity-document conflicts;
 no source conflicts or V1 execution-path redesign. See VK_AUTOSWITCH_V1_STAGING.md.
 Task scope ends at the staging merge; operator owns deployment.
+
+## Automatic assessment and pair qualification
+
+Extended accepted V1 with assessed minimum, explicit configurable model/effort/
+envelope qualification and pair preference ranks. Added cheap prompt risk/scope
+assessment, consented operator-reported validation/risk escalation, preserved
+manual constraints and policyVersion2 telemetry. Exact low-effort probes passed
+for 5.6 Luna and Sol6; no repeated V1 native trials or production changes.
+See VK_AUTOSWITCH_FULL_ROUTER.md for rollout gates and qualification limitations.
+
+## 2026-09-30 — V2 follow-up qualification and offline recommendations
+
+Resumed preserved V2 without rebasing or touching V1 PR127/deployment. Persisted
+optional assessed envelope, retained stricter follow-up qualification, preserved
+cheap exact continuations, and repaired lexical low-risk evidence. Added a
+read-only JSONL recommendation example using actual policy/availability admission.
+Seventeen routing tests, type generation, web-core checking and focused Clippy
+passed. See VK_AUTOSWITCH_FULL_ROUTER.md for remaining live Shadow/release gates.
+
+## 2026-09-30 — Natural-language outcome/context triage
+
+Added compact outcome triage with explicit uncertainty and bounded repository
+corroboration at the existing boundary. Ordinary presentation requests no longer
+require technical scope/test phrases to qualify downward when matching code,
+patterns and a check command are found. Missing context retains Workhorse;
+protected consequences/context retain Frontier. No classifier model call, registry
+or CU wire changes. Twenty-two routing tests, services check, focused Clippy,
+generated types, web-core checking, format/ops and five offline recommendation
+cases pass. V1 deployment untouched; live V2 Shadow acceptance remains pending.
+
+
+## 2026-10-01 — bounded semantic fallback for uncertain V2 requests
+
+Added a single structured native classifier turn after the free deterministic
+path, preserving existing policy/manual controls, protected risks and prior session
+qualification. Native usage and UUID/thread/turn identity are observable in the
+routing decision and a separate classifier audit feed. Shadow explains the path,
+classification, uncertainty/risk and model/effort recommendation. Five final native
+samples plus two zero-inference controls demonstrate bounded downward routing and
+conservative ambiguous/private-data behavior; six native calls total including the
+initial transport check. No V1 acceptance repeat, staging, deployment, CU consumer
+change or external-agent coordination. Details: VK_AUTOSWITCH_FULL_ROUTER.md.
+
+## 2026-10-01 — AutoSwitch delegated-work development
+
+Added controlled leaf admission using the existing Codex dynamic-tool/RPC lifecycle;
+reused V2 delta triage, qualification, hard floors and exclusions. Added bounded
+briefs, duplicate/scope and capacity controls, native interrupt, boundary escalation,
+private continuation journal and compatible child turn bindings with hierarchy
+telemetry sidecar. See VK_AUTOSWITCH_DELEGATION.md. Native paid acceptance was
+capacity-blocked before inference; source-only, no deployment or staging work.
+Validation: 119 executor tests pass; executor/services Clippy, format/ops and CU
+contract byte comparison pass. Native child acceptance remains capacity-blocked.
+
+## 2026-10-01 08:33 UTC — Requested native child test retry
+
+Reran only native_delegation_boundaries. The unchanged capacity guard rejected
+admission (14 active, limit 8) before native/model startup. Proof was still fresh.
+No bypass, model inference, source-code change, staging or deployment. See
+`v2-delegation/retry-20261001-0833/test.log` in the SSD task evidence directory.
+
+## 2026-10-01 — Capacity false positive corrected; native child test passed
+
+The previous pgrep readings counted wrapper processes/text mentions, not active
+agents. Linux fallback now counts app-server engines/chains without changing limits.
+The admitted native trial revealed resume retaining old settings; added confirmed
+next-turn settings updates before escalation. Native two-turn acceptance now passes:
+Luna5.6/low -> Sol6.1/medium, same thread, exact native/CU binding, dirty state intact.
+Three actual child turns total including the diagnostic trial; escalation triggers
+are injected fixtures. Preserve full native tokenUsage scopes instead of mistaking
+latest-request tokens for a turn total. 122 regressions, separate native acceptance,
+executor Clippy, format/ops and canonical CU comparison pass. No deployment/staging
+or agent coordination. First full live V2 Shadow remains pending. See
+VK_AUTOSWITCH_DELEGATION.md for evidence, token observations and runtime boundary.
+
+## 2026-10-01 — AutoSwitch V2 staging integration authorized
+
+Rebased seven V2 commits onto staging198d55a20, excluding already-landed V1.
+Retained both sides of three continuity-document conflicts; source patches are
+unchanged. Original branch preserved at ec94e7f49. See VK_AUTOSWITCH_V2_STAGING.md
+for commit mapping and integration evidence. No deployment or agent coordination;
+complete live Shadow and measured savings remain outside this merge task.

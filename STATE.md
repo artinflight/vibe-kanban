@@ -1,3 +1,18 @@
+## October 1: Preparation Tooling Scope
+
+The new fenced backup callback passed an isolated real-binary handover and
+latest-data return, including a failed-backup abort. All 54 focused regressions
+pass. The operator approved staging integration; no production cutover is part
+of this tooling task. See HANDOFF.md for acceptance evidence and delivery status.
+
+Preparation optimizations are developed on `fix/vk-precutover-preparation` from
+fork/staging620bd7eb9; see VK_PREPARATION_PERFORMANCE.md for implementation,
+guardrails and validation limits. This does not deploy an application change.
+On read-only discovery, production is September30 Green at source620bd7eb9
+(main promotiondcd51cc12), VK0.1.42, with Codex0.159.2 and Blue frozen for rollback.
+Re-discover identity before acting. Older dated runtime statements below are
+historical and are not evidence for the current service or deployment approval.
+
 ## September23: Ownership Handover Source Ready For Review
 
 Branch fix/capacity-cutover-lock implements explicit authenticated capacity

@@ -97,6 +97,9 @@ impl Executable for ExecutorAction {
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
         let mut env = env.clone();
+        if let Some(policy) = crate::routing::config(self).and_then(|c| c.routing.as_ref()) {
+            env.insert("VK_ROUTING_POLICY", serde_json::to_string(policy)?);
+        }
         if let Some(decision) = &self.routing_decision {
             env.insert("VK_ROUTING_DECISION", serde_json::to_string(decision)?);
         }

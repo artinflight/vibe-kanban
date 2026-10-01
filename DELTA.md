@@ -1425,3 +1425,11 @@ latest-request tokens for a turn total. 122 regressions, separate native accepta
 executor Clippy, format/ops and canonical CU comparison pass. No deployment/staging
 or agent coordination. First full live V2 Shadow remains pending. See
 VK_AUTOSWITCH_DELEGATION.md for evidence, token observations and runtime boundary.
+
+## 2026-10-01 — AutoSwitch V2 staging integration authorized
+
+Rebased seven V2 commits onto staging198d55a20, excluding already-landed V1.
+Retained both sides of three continuity-document conflicts; source patches are
+unchanged. Original branch preserved at ec94e7f49. See VK_AUTOSWITCH_V2_STAGING.md
+for commit mapping and integration evidence. No deployment or agent coordination;
+complete live Shadow and measured savings remain outside this merge task.

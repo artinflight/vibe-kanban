@@ -1,3 +1,12 @@
+## AutoSwitch V2 staging integration (2026-10-01)
+
+The operator now authorizes the full V2 PR/push/rebase merge into staging.
+See [VK_AUTOSWITCH_V2_STAGING.md](VK_AUTOSWITCH_V2_STAGING.md) for base, exact
+commit mapping and validation limits. Seven V2 commits are rebased onto
+staging198d55a20; V1 is already present. Only continuity documents conflicted;
+all source patches and newer staging functionality are preserved. No deployment
+or full live Shadow test is included. Earlier development-only scope below is history.
+
 ## Native child acceptance and capacity correction (2026-10-01)
 
 The bounded native child test now passes. The prior pgrep count included Node

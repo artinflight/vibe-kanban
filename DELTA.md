@@ -1433,3 +1433,12 @@ Retained both sides of three continuity-document conflicts; source patches are
 unchanged. Original branch preserved at ec94e7f49. See VK_AUTOSWITCH_V2_STAGING.md
 for commit mapping and integration evidence. No deployment or agent coordination;
 complete live Shadow and measured savings remain outside this merge task.
+
+## 2026-10-01 TF::Build Shadow continuity repair
+
+Added bounded metadata-only catalog renewal with runtime/account binding and
+retained historical exact execution proof; restored same-session routing after
+draft clear/remount without inheriting another chat’s consent. Native refresh
+passed in 0.90s on a private proof copy, seven selector regressions and 127 executor
+tests passed. Production remains untouched; live Shadow acceptance is pending
+normal release adoption. See VK_AUTOSWITCH_SHADOW_FIX.md and HANDOFF.md.

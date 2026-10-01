@@ -1,3 +1,23 @@
+## TF::Build Shadow continuity repair (2026-10-01)
+
+Branch `fix/autoswitch-shadow-continuity` fixes expired availability renewal and
+same-session routing hydration. Read [VK_AUTOSWITCH_SHADOW_FIX.md](VK_AUTOSWITCH_SHADOW_FIX.md).
+Catalog renewal is bounded, metadata-only and identity-checked; historical exact
+execution proof is retained without changing verification timestamps. Manual
+choices, fresh-chat opt-in, policy floors and CU wire format remain authoritative.
+This is development only; no live proof/profile/service mutation or deployment.
+Validation: 127 executor tests passed (six opt-in ignored); the metadata-only native
+refresh passed separately in 0.90s against a private copy of the production proof.
+All seven models remained discovered; all exact verification timestamps/efforts
+were preserved and the production proof hash stayed unchanged. Seven React selector
+regressions, web-core TypeScript, executor Clippy, targeted ESLint, formatting
+and ops checks passed.
+CU canonical contract remains byte-identical. No billed inference or deployment.
+Evidence: `/mnt/vk-storage/vk-model-autoswitch-20260930/shadow-fix`.
+Normal release adoption and a full live Shadow run remain pending. TF::Build's
+later manual state must be explicitly changed back to Shadow; do not silently
+reinterpret an existing manual execution as routing consent.
+
 ## AutoSwitch V2 staging integration (2026-10-01)
 
 The operator now authorizes the full V2 PR/push/rebase merge into staging.

@@ -289,6 +289,7 @@ mod tests {
             serde_json::from_str(include_str!("routing_models.json")).unwrap();
         let availability = crate::routing::Availability {
             version: 1,
+            runtime: None,
             observed_at: 100,
             codex_home: String::new(),
             launcher: String::new(),

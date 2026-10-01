@@ -397,8 +397,11 @@ telemetry. Existing top-level routing and the CU v1 contract remain intact.
 Manual delegation is unchanged. Auto/Shadow use controlled native leaf threads on
 fresh chats; native goals and scheduled capacity runs cannot use the gateway.
 
-Offline policy/lifecycle checks are available. The paid two-turn child harness
-stopped at the existing execution-capacity guard before inference; its exact
-native model/effort and state-preservation assertions remain unverified. This is
-the bounded outstanding acceptance check before the complete V2 live Shadow test.
-No staging or deployment action was taken and no capacity bypass was attempted.
+Offline policy/lifecycle checks and the bounded native two-turn acceptance now
+pass. Linux capacity accounting was corrected to collapse launcher wrappers and
+exclude diagnostic text. Loaded-child escalation now applies and confirms next-turn
+settings before inference. The actual Luna5.6/low -> Sol6.1/medium test preserved
+native thread identity and dirty state; native rollout and CU binding settings agree.
+See the delegated-work document for fixture boundaries and measured usage. The
+first complete V2 live Shadow test remains pending. No staging/deployment action
+or capacity bypass occurred.

@@ -3,6 +3,8 @@ pub mod delegation;
 pub mod goals;
 pub mod jsonrpc;
 pub mod normalize_logs;
+#[cfg(any(target_os = "linux", test))]
+mod process_capacity;
 pub mod review;
 pub mod slash_commands;
 use std::{
@@ -168,6 +170,10 @@ fn active_codex_execution_count() -> usize {
             .unwrap_or(0);
     }
 
+    #[cfg(target_os = "linux")]
+    return process_capacity::app_server_count();
+
+    #[cfg(not(target_os = "linux"))]
     std::process::Command::new("pgrep")
         .args(["-fc", "codex app-server"])
         .output()
@@ -184,7 +190,7 @@ fn active_codex_execution_count() -> usize {
 
 pub fn codex_execution_limit_error() -> Option<ExecutorError> {
     let max_active = codex_max_active_executions();
-    let active = active_codex_execution_count() + delegation::active_count();
+    let active = active_codex_execution_count().saturating_add(delegation::active_count());
     if active >= max_active {
         Some(ExecutorError::ExecutionLimitReached {
             active,

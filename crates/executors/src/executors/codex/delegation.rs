@@ -94,6 +94,7 @@ impl Record {
 struct State {
     records: BTreeMap<String, Record>,
     permits: HashMap<String, Permit>,
+    settings: HashMap<String, Value>,
 }
 
 pub struct Delegation {
@@ -197,6 +198,7 @@ impl Delegation {
             state: Mutex::new(State {
                 records,
                 permits: HashMap::new(),
+                settings: HashMap::new(),
             }),
             changed: Notify::new(),
             closing: AtomicBool::new(false),
@@ -545,19 +547,63 @@ impl Delegation {
             return Err("Parent turn ended during classification".into());
         }
         let mut wire = serde_json::to_value(params).map_err(|e| e.to_string())?;
-        let thread = if let Some(id) = previous.and_then(|p| p.thread.as_ref()) {
+        let mut thread = if let Some(id) = previous.and_then(|p| p.thread.as_ref()) {
             wire.as_object_mut().unwrap().remove("dynamicTools");
             wire["threadId"] = json!(id);
             client
-                .delegation_request("thread/resume", wire)
+                .delegation_request("thread/resume", wire.clone())
                 .await
                 .map_err(|e| e.to_string())?
         } else {
             client
-                .delegation_request("thread/start", wire)
+                .delegation_request("thread/start", wire.clone())
                 .await
                 .map_err(|e| e.to_string())?
         };
+        // A loaded thread ignores resume overrides. Update its next-turn settings,
+        // wait for native acknowledgement of application, then verify a fresh snapshot.
+        // Never use an update acknowledgement alone as proof of effective settings.
+        if let Some(id) = previous.and_then(|p| p.thread.as_ref())
+            && thread["thread"]["id"] == *id
+            && (thread["model"] != model || thread["reasoningEffort"] != effort)
+        {
+            self.state.lock().await.settings.remove(id);
+            client
+                .delegation_request(
+                    "thread/settings/update",
+                    json!({
+                        "threadId":id,"model":model,"effort":effort,"serviceTier":null
+                    }),
+                )
+                .await
+                .map_err(|e| e.to_string())?;
+            tokio::time::timeout(std::time::Duration::from_secs(10), async {
+                loop {
+                    let changed = self.changed.notified();
+                    tokio::pin!(changed);
+                    changed.as_mut().enable();
+                    if self
+                        .state
+                        .lock()
+                        .await
+                        .settings
+                        .get(id)
+                        .is_some_and(|s| s["model"] == model && s["effort"] == effort)
+                    {
+                        break;
+                    }
+                    changed.await;
+                }
+            })
+            .await
+            .map_err(
+                |_| "Native next-turn settings were not confirmed; stopped before inference",
+            )?;
+            thread = client
+                .delegation_request("thread/resume", wire)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
         if thread["model"] != model
             || thread["reasoningEffort"] != effort
             || thread["modelProvider"] != "openai"
@@ -684,6 +730,15 @@ impl Delegation {
         let Some(task) = task else {
             return Ok(true);
         };
+        if method == "thread/settings/updated" {
+            self.state
+                .lock()
+                .await
+                .settings
+                .insert(thread.into(), params["threadSettings"].clone());
+            self.changed.notify_waiters();
+            return Ok(true);
+        }
         if method == "turn/started" {
             if let Some(turn) = params["turn"]["id"].as_str() {
                 self.bind(client, &task, turn).await?;
@@ -720,7 +775,7 @@ impl Delegation {
                         r.validation_failures += 1;
                     }
                 }
-                "thread/tokenUsage/updated" => r.usage = Some(params["tokenUsage"]["last"].clone()),
+                "thread/tokenUsage/updated" => r.usage = Some(params["tokenUsage"].clone()),
                 "turn/completed" => {
                     if !matches!(
                         params["turn"]["status"].as_str(),
@@ -876,16 +931,22 @@ mod tests {
         std::fs::create_dir(&dir).unwrap();
         let mut process=tokio::process::Command::new("python3").args(["-u","-c",r#"
 import sys,json
+model,effort='gpt-5.6-luna','low'
 for line in sys.stdin:
     d=json.loads(line)
     if d.get('method') in ('thread/start','thread/resume'):
         p=d['params']
-        assert p['model']=='gpt-5.6-luna' and p['config']['model_reasoning_effort']=='low'
+        assert p['model'] in ('gpt-5.6-luna','gpt-6.1-sol')
         assert p['config']['features.multi_agent'] is False and p['config']['features.multi_agent_v2'] is False
         assert 'PARENT_PRIVATE_HISTORY' not in json.dumps(p)
-        print(json.dumps({'id':d['id'],'result':{'thread':{'id':'11111111-1111-4111-8111-111111111111'},'model':p['model'],'reasoningEffort':p['config']['model_reasoning_effort'],'modelProvider':'openai','serviceTier':None}}),flush=True)
+        print(json.dumps({'id':d['id'],'result':{'thread':{'id':'11111111-1111-4111-8111-111111111111'},'model':model,'reasoningEffort':effort,'modelProvider':'openai','serviceTier':None}}),flush=True)
+    elif d.get('method')=='thread/settings/update':
+        p=d['params']; model,effort=p['model'],p['effort']
+        assert (model,effort)==('gpt-6.1-sol','medium') and p['serviceTier'] is None
+        print(json.dumps({'id':d['id'],'result':{}}),flush=True)
+        print(json.dumps({'method':'thread/settings/updated','params':{'threadId':p['threadId'],'threadSettings':{'model':model,'effort':effort}}}),flush=True)
     elif d.get('method')=='turn/start':
-        p=d['params']; assert p['model']=='gpt-5.6-luna' and p['effort']=='low'
+        p=d['params']; assert p['model']==model and p['effort']==effort
         assert 'Delegated assignment:' in p['input'][0]['text']
         print(json.dumps({'id':d['id'],'result':{'turn':{'id':'native-fixture-turn'}}}),flush=True)
         print(json.dumps({'method':'turn/started','params':{'threadId':p['threadId'],'turn':{'id':'native-fixture-turn','status':'inProgress'}}}),flush=True)
@@ -967,6 +1028,7 @@ for line in sys.stdin:
             state: Mutex::new(State {
                 records: BTreeMap::from([("child".into(), record)]),
                 permits: HashMap::new(),
+                settings: HashMap::new(),
             }),
             changed: Notify::new(),
             closing: AtomicBool::new(false),
@@ -1048,8 +1110,36 @@ for line in sys.stdin:
         .unwrap();
         let record = control.state.lock().await.records["child"].clone();
         assert_eq!(record.status, "completed");
-        assert_eq!(record.usage.unwrap()["cachedInputTokens"], 11);
+        assert_eq!(record.usage.unwrap()["last"]["cachedInputTokens"], 11);
         assert!(client.delegation_turn_current("parent-turn").await);
+        let previous = control.state.lock().await.records["child"].clone();
+        {
+            let mut state = control.state.lock().await;
+            let r = state.records.get_mut("child").unwrap();
+            r.status = "starting".into();
+            r.turn = None;
+            r.attempt += 1;
+        }
+        let follow = control
+            .launch_choice(
+                &client,
+                &assignment,
+                Some(&previous),
+                ChildChoice {
+                    envelope: "normal".into(),
+                    floor: crate::routing::CapabilityFloor::Workhorse,
+                    model: "gpt-6.1-sol".into(),
+                    effort: "medium".into(),
+                    source: "fixture".into(),
+                    semantic: None,
+                    escalated: true,
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(follow["effective"]["model"], "gpt-6.1-sol");
+        assert_eq!(follow["effective"]["reasoningEffort"], "medium");
+        assert_eq!(follow["native_thread_id"], bound["native_thread_id"]);
         control.close();
         assert!(
             control

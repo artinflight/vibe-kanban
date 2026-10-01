@@ -1,5 +1,13 @@
 # STREAM.md
 
+Current goal: Green running as an isolated current-staging candidate and ready
+for an approximately30-second approved cutover. Blue stays production. The
+corrected preparation tools, full-sized rehearsal and final package are recorded
+in VK_GREEN_READY_20261001.md. This maintenance branch records readiness, not
+application changes; fixes are separately committed/pushed in PR133. No production
+switch or replay of the consumed attempt is within preparation authorization.
+All earlier scopes below are historical.
+
 October1 current scope: operator-requested SSD/Desktop cleanup, with verified
 archive preservation and no production interruption. Read
 VK_STORAGE_CLEANUP_20261001.md for removals and retained recovery locations.

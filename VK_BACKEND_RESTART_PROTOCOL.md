@@ -20,6 +20,17 @@ through normal SQLite backup. Never ignore all WAL changes or use a main-file
 copy for a live database. This external-tool fix does not require a backend
 restart. See VK_SCOPE_CUTOVER_20261001.md for the consumed attempt and validation.
 
+The corrected fenced path uses that private copy directly as the snapshot,
+with a full integrity check. Immutable reads are permitted only on the private
+copy, never on live/unfenced data. Final archive verification streams and hashes
+all expected SQLite members and the manifest instead of duplicating extraction
+I/O; online resumable-delivery artifacts keep their original format. Retain a
+separate full Desktop-downloaded restore rehearsal. Run large rehearsals in the
+bounded independent bulk unit, and use the verified direct Desktop route for
+downloads too. See VK_GREEN_READY_20261001.md for the77-test correction and
+28.44-second production-sized private rehearsal; do not promise that as a hard
+production deadline or substitute a small fixture for full-sized evidence.
+
 ## Frozen Capture Writer Coverage
 
 The September30 attempt failed before activation because Git metadata changed

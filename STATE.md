@@ -1,5 +1,15 @@
 # STATE.md
 
+**October1 Green preparation:** Blue1504649 remains production. Green's isolated
+current-staging candidate runs on5421 and passes functional/browser checks.
+The corrected external backup package has77 tool and45 controller tests passing;
+production-sized private switch/rollback/restoration passed, switch28.44 seconds.
+The target is about30 seconds, not guaranteed production downtime. Read
+VK_GREEN_READY_20261001.md and the new package's exact Desktop-restore receipt.
+PR133 conflicts are resolved; af0eb4369 is pushed and packaged, not merged.
+No production cutover is authorized or performed by preparation. Older failed
+attempt notes below remain historical, not current readiness instructions.
+
 **October1 evening final state:** Blue1504649 remains production on the same
 latest data; candidate Green never started. The202033Z attempt failed because
 the backup's own read-only SQLite readers created empty WAL sidecars after agent

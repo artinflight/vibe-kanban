@@ -1,5 +1,18 @@
 # HANDOFF.md
 
+## October 1: Green Prepared, Blue Still Production
+
+The active objective is preparation only. Read VK_GREEN_READY_20261001.md and
+/mnt/vk-storage/vk-green-ready-20261001/readiness.json plus its Desktop software
+restore receipt. Green's isolated test instance is running on5421; production
+Green5411 is inactive. Blue1504649 remains live. Candidate current-staging features,
+thread/Steer/Stop/goals,12 messages, attachments and desktop/mobile controls pass.
+The production-sized optimized rehearsal passed in28.44 seconds, not a production
+downtime guarantee. Tools af0eb4369 are committed/pushed in open PR133 and included
+in the package; its prior document conflicts are resolved. No handover is started.
+Fresh approval and a current online refresh/drain precede the final short switch.
+Never replay202033Z, replace this thread or restore older data over production.
+
 ## October 1 Evening: Blue Recovery Accepted, No Retry
 
 The202033Z attempt failed its final backup before Green started. Blue1504649 is

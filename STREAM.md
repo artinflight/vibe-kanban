@@ -1,5 +1,11 @@
 # STREAM.md
 
+October1 current scope: operator-requested SSD/Desktop cleanup, with verified
+archive preservation and no production interruption. Read
+VK_STORAGE_CLEANUP_20261001.md for removals and retained recovery locations.
+Earlier preparation follow-up is committed/pushed in PR133; this maintenance
+branch records cleanup evidence only and remains local.
+
 October1 live acceptance is complete on Blue/main329963d18, with original
 Green frozen for latest-data recovery. Current remaining scope is committing
 the measured preparation audit and tested isolated tool backfill. No new cutover

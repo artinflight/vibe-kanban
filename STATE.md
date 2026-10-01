@@ -1,5 +1,12 @@
 # STATE.md
 
+**October1 storage cleanup:** about98GB of SSD duplicates/generated software
+and26GB net Desktop backup storage reclaimed. Live Blue, frozen Green recovery,
+production data, histories, current checkpoint/five-delta chain and backup journal
+are preserved. Saved-message and attachment checks pass. The isolated full-restore
+copy is retired; see VK_STORAGE_CLEANUP_20261001.md for exact recovery locations.
+This does not change the deployed application or resolve historical exceptions.
+
 **October1 live authority:** Blue1504649 serves main329963d18 (same accepted
 PR130 tree), version0.1.42/CLI0.159.2. Green2506054 remains frozen for
 same-latest-data cutback. Original-thread/model,Steer/Stop/goals,12 messages,

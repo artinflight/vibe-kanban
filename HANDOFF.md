@@ -1,5 +1,20 @@
 # HANDOFF.md
 
+## October 1: SSD And Desktop Cleanup
+
+Read VK_STORAGE_CLEANUP_20261001.md and /mnt/vk-storage/vk-cleanup-20261001.
+Removed about98GB of SSD restore copies/generated packages and reclaimed about26GB
+on Desktop by compacting verified historical copies and removing superseded
+software. No live data, worktrees, histories or current backup-chain archives
+were removed. Blue1504649 remains live; Green2506054 remains frozen for cutback.
+Saved messages, attachment upload/retrieval and protected paths pass.
+
+The extracted October1 full restore no longer exists; its verified checkpoint,
+five-delta chain, receipts and live journal remain. Do not confuse the historical
+restore-test receipt with a retained extracted directory. Desktop historical
+loose-copy paths have compressed-archive location notes; all6311 files remain
+recoverable. B: still has only about53GB free. No new cutover is authorized.
+
 ## October 1: Blue Accepted, Preparation Audit Follow-Up
 
 Blue1504649 is live at vibe.local on main329963d18/Codex0.159.2. Original

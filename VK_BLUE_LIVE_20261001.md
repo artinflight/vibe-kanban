@@ -58,13 +58,19 @@ upload, ownership or permission failure was found.
 
 ## Backup And Timing
 
-The full20.61GB checkpoint and isolated restore are retained, with incremental
+The full20.61GB checkpoint is retained, with incremental
 chains and recovery metadata verified on Desktop
 `B:/vk-backups/vk-blue-autoswitch-v2-20261001`. The final56,974,217byte delta
 SHA256dd658522cdecaff3760fe2473095817c92ba3e0bdd0bd1246fc1ef850e65ded1
 passed full Desktop checksum verification and strict all-writer/data fencing.
 No production restore occurred. Preserve this chain and independently running
 journal; do not delete or reset them because another turn ended.
+
+October1 cleanup retired the completed isolated restore and disposable SQLite
+preparation/verification copies, not these archives or descriptors. The full
+restore receipt remains evidence of the successful test, not a claim that its
+extracted directory still exists. See VK_STORAGE_CLEANUP_20261001.md and the
+exact audit at /mnt/vk-storage/vk-cleanup-20261001 before further cleanup.
 
 The switch took19.37seconds, including14.23seconds for final capture. But initial
 preparation after V2 merge took86m39s, including a26m44s full restore. Merge wait

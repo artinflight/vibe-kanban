@@ -1,5 +1,15 @@
 # Backend Restart Protocol
 
+## Preparation Timing And Reuse
+
+Use [VK_PREPARATION_PERFORMANCE.md](VK_PREPARATION_PERFORMANCE.md) for the
+checked-in preparation runner, verified artifact/evidence reuse, rolling online
+checkpoints and fresh concurrent queue checks. Count elapsed time from the
+operator's deployment request, not just the stopped/paused window. These tools
+do not authorize a cutover or replace final consistent capture and latest-data
+rollback. Rehearse new backup-format compatibility in the next fresh package.
+All dated service/port inventories below require fresh discovery.
+
 ## Required MCP capacity deployment configuration
 
 Follow [VK_CAPACITY_DEPLOYMENT.md](VK_CAPACITY_DEPLOYMENT.md) for every candidate.

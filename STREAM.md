@@ -1,3 +1,12 @@
+## October 1: Pre-Cutover Preparation Performance
+
+Branch `fix/vk-precutover-preparation`, based on fork/staging620bd7eb9.
+Scope: versioned preparation-only tools, verified static evidence/artifact reuse,
+rolling online backup checkpoints, bounded concurrent queue inspection, and
+whole-preparation timing. See VK_PREPARATION_PERFORMANCE.md. No production
+pause/restart/reroute, application feature change, or final controller replacement.
+Inherited stream notes below describe other work, not this branch's authority.
+
 ## AutoSwitch V1 staging-only release
 
 Branch `release/autoswitch-v1` rebases validated V1 onto staging56792a72c.

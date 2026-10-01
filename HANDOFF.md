@@ -1,3 +1,20 @@
+## October 1: Faster Pre-Cutover Preparation
+
+Worktree `/mnt/vk-storage/vk-preparation-20261001/source`, branch
+`fix/vk-precutover-preparation`, baseline fork/staging620bd7eb9. The operator
+requested implementation, not another switch. Production is untouched.
+Read VK_PREPARATION_PERFORMANCE.md and use `scripts/deployment/vk_prepare.py`
+for the next fresh preparation; it never authorizes or performs a cutover.
+The new rolling backup format requires final-package compatibility rehearsal;
+do not reuse consumed attempts or overwrite current production with old data.
+Regression/benchmark evidence is in `/mnt/vk-storage/vk-preparation-20261001`.
+All45 focused Python regressions, syntax compilation, repository formatting,
+`ops:check` and diff checks pass. The real Desktop archive/metadata download and
+three-generation restore pass; file-only refresh is789 bytes versus a
+17,828,870-byte checkpoint, with unchanged DB reuse. This is not a measured
+production preparation SLA. No broad application suite, new inference, service
+action or production backup. Inherited notes below are historical unless checked.
+
 ## AutoSwitch V1 staging-only release
 
 Branch `release/autoswitch-v1` rebases validated V1 onto staging56792a72c.

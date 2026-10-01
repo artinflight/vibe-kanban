@@ -2521,6 +2521,11 @@ mod delegation_tests {
     #[tokio::test]
     #[ignore = "uses two native child inference turns; requires candidate launcher/proof and task artifact directory"]
     async fn native_delegation_boundaries() {
+        eprintln!(
+            "Native capacity inventory: {} app-server chains; configured limit {}",
+            super::super::active_codex_execution_count(),
+            super::super::codex_max_active_executions()
+        );
         if let Some(error) = super::super::codex_execution_limit_error() {
             panic!("Native execution capacity unavailable; do not bypass it: {error}");
         }
@@ -2583,7 +2588,8 @@ mod delegation_tests {
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::null())
             .kill_on_drop(true);
-        let mut process = command.spawn().unwrap();
+        use workspace_utils::command_ext::GroupSpawnNoWindowExt;
+        let mut process = command.group_spawn_no_window().unwrap();
         let cancel = CancellationToken::new();
         let (tx, mut rx) = tokio::sync::oneshot::channel();
         let signal = ExitSignalSender::new(tx);
@@ -2602,8 +2608,8 @@ mod delegation_tests {
             cancel.clone(),
         );
         let peer = JsonRpcPeer::spawn(
-            process.stdin.take().unwrap(),
-            process.stdout.take().unwrap(),
+            process.inner().stdin.take().unwrap(),
+            process.inner().stdout.take().unwrap(),
             client.clone(),
             signal.clone(),
             cancel.clone(),

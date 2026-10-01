@@ -115,8 +115,9 @@ using the `.delegation.jsonl` suffix, and mirrored as `vk/delegation` raw events
 - Decision, turn binding, usage, attempt end, blocked and cancellation-request events;
   recommended versus actual pair, source, semantic classifier ID, escalation and
   brief size/hash. Idempotent event IDs exclude timestamps.
-- Native per-turn token usage is preserved as reported, including cache/output and
-  reasoning fields when exposed. Missing usage remains unknown, never estimated.
+- Native token usage retains the full `tokenUsage` object: `last` is the latest
+  request and `total` is cumulative thread usage, not an individual turn total.
+  Cache/output/reasoning fields are preserved when exposed. Missing usage remains unknown, never estimated.
 - Semantic classification records also carry routing ID/task-key correlation even
   when later qualification refuses the child. Failed first attempts remain part of
   the same delegated task's cost across escalation and owner-execution transitions.
@@ -128,9 +129,28 @@ The UI displays compact child decisions and retains the full event as metadata.
 The existing CU consumer can correlate the v1 bindings; a future sidecar consumer
 can provide hierarchy-specific analytics. No CU consumer changes were made here.
 
+## Loaded-thread settings and process inventory
+
+A loaded native thread can ignore model/effort overrides in `thread/resume`.
+For an inactive child whose requested pair changed, VK queues
+`thread/settings/update`, waits up to ten seconds for the corresponding
+`thread/settings/updated` evidence, then verifies a new resume snapshot before
+inference. A rejected, missing or mismatched update fails closed. Thread identity,
+working state and the normal parent-turn eligibility checks remain authoritative.
+This follows the next-turn settings API in the candidate runtime; no active-turn
+switch, unload, new child or retry loop is introduced. See the
+[official app-server documentation](https://learn.chatgpt.com/docs/app-server).
+
+On Linux without systemd execution accounting, the capacity fallback inventories
+actual `/proc` argv/parent relationships. It counts native engines once, collapses
+Node launcher chains and excludes shell/diagnostic text mentions. Idle servers
+still count conservatively; this is a process inventory, not proof that agents
+are doing inference. The default limit remains eight; systemd unit accounting is
+unchanged. The native harness owns a process group for cleanup on failure.
+
 ## Validation and next boundary
 
-Validation passed: 119 executor unit/regression tests (five opt-in runtime tests
+Validation passed: 122 executor unit/regression tests (five opt-in runtime tests
 ignored), executor/services Clippy with warnings denied, required formatting, ops
 governance and byte comparison with the canonical CU v1 contract. No public shared
 types changed. Focused policy and offline dynamic-tool lifecycle checks cover downward selection,
@@ -144,20 +164,38 @@ validation-failure fixtures. It checks exact native settings, duplicate-start re
 parent lifetime, attribution and preservation of a tracked working-file sentinel.
 The injected failures are test fixtures, not claimed real failed model fixes.
 
-The paid harness was attempted once on 2026-10-01 and stopped at the existing
-capacity guard **before any app-server or model inference started**. The diagnostic
-snapshot found 13 matching native processes against the default limit of eight;
-no capacity bypass or retry was performed. Native acceptance of this new gateway
-therefore remains unverified. No seven-model campaign, deployment, staging operation
-or live production Shadow test was performed.
+The earlier attempts were blocked before inference by a misleading fallback count
+(13/14 matching processes, limit eight): launcher wrappers and diagnostic text
+were included. This was not evidence of 13/14 active agents. The corrected fallback
+count admitted the native test without changing any limit or stopping other servers.
 
-The operator-requested retry at 2026-10-01 08:33 UTC also stopped before inference:
-14 matching active processes against limit eight. Runtime proof remained fresh
-(18.58 hours); no model turn started and no limit was changed. Evidence is in
-`v2-delegation/retry-20261001-0833/test.log` under the existing SSD task directory.
+On 2026-10-01 the first admitted trial completed Luna5.6/low, then stopped before
+escalated inference because native resume retained the loaded thread's old settings.
+After the next-turn settings correction, the two-turn harness passed in 46.16 seconds:
 
-When genuine capacity is available, run the two-turn harness with the candidate
-launcher, account/home and fresh availability proof; then run the planned complete
-V2 Shadow test on a fresh ordinary chat. Observe parent, cheap child, protected-child
-recommendation, actual versus recommended settings, cancellation and aggregate
-accepted-task usage. Goal/scheduled execution delegation remains deliberately disabled.
+- GPT-5.6 Luna / low, followed by GPT-6.1 Sol / medium, standard tier.
+- Same native child thread and delegation ID; distinct exact native turn IDs.
+- Native rollout `turn_context` confirms each actual pair and agrees with CU bindings.
+- Tracked dirty sentinel preserved byte-for-byte; duplicate start reused its handle;
+  child completion did not end or rename the parent; active child count returned to zero.
+- Two distinct injected validation failures (one duplicate ignored) triggered escalation.
+  They are fixtures, not claims of real unsuccessful model repairs. Parent execution
+  identity is a harness fixture and the parent incurred no inference.
+
+Three child inference turns were used in this investigation: the initial diagnostic
+turn plus the two passing turns. Final-test native usage: first turn 68,016 input
+(54,016 cached), 715 output; follow-up cumulative delta 58,035 input (38,016 cached),
+448 output. These are native token observations, not allowance weights or proof of
+net savings. The compact brief was 600 bytes; runtime tools/instructions and multiple
+model requests still contribute significant input. No additional benchmark ran.
+
+Evidence: `/mnt/vk-storage/vk-model-autoswitch-20260930/v2-delegation/capacity-fix-20261001/verified`:
+`native-test.log`, sanitized `native/result.json`, `correlation.json`, `routing.jsonl`
+and `routing.delegation.jsonl`. Raw native protocol logs remain local and are excluded
+from the shareable ZIP. Canonical CU contract bytes are unchanged.
+
+The first complete V2 live Shadow test remains pending on a fresh ordinary chat.
+Observe parent, cheap child, protected-child recommendation, actual versus recommended
+settings, cancellation and aggregate accepted-task usage. Goal/scheduled execution
+delegation remains disabled. No staging, deployment, production Shadow test or
+external-agent coordination occurred in this pass.

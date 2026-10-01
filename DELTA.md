@@ -1395,3 +1395,17 @@ Reran only native_delegation_boundaries. The unchanged capacity guard rejected
 admission (14 active, limit 8) before native/model startup. Proof was still fresh.
 No bypass, model inference, source-code change, staging or deployment. See
 `v2-delegation/retry-20261001-0833/test.log` in the SSD task evidence directory.
+
+## 2026-10-01 — Capacity false positive corrected; native child test passed
+
+The previous pgrep readings counted wrapper processes/text mentions, not active
+agents. Linux fallback now counts app-server engines/chains without changing limits.
+The admitted native trial revealed resume retaining old settings; added confirmed
+next-turn settings updates before escalation. Native two-turn acceptance now passes:
+Luna5.6/low -> Sol6.1/medium, same thread, exact native/CU binding, dirty state intact.
+Three actual child turns total including the diagnostic trial; escalation triggers
+are injected fixtures. Preserve full native tokenUsage scopes instead of mistaking
+latest-request tokens for a turn total. 122 regressions, separate native acceptance,
+executor Clippy, format/ops and canonical CU comparison pass. No deployment/staging
+or agent coordination. First full live V2 Shadow remains pending. See
+VK_AUTOSWITCH_DELEGATION.md for evidence, token observations and runtime boundary.

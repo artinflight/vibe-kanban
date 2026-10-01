@@ -1,5 +1,70 @@
 # October 1 Evening AutoSwitch Cutover
 
+## Final State: Blue Recovered, Green Not Deployed
+
+Attempt20261001T202033Z is consumed. Blue's original PID1504649 is serving5301
+and vibe.local using the same latest data. Candidate Green never started.
+CodexUsage restarted as2365629; monitoring and external writers resumed.
+No older database was restored and no second attempt was made.
+
+The final backup detected newly created zero-length WAL files for goals_1.sqlite
+and thread_history_1.sqlite, with unchanged database files and no logical changes.
+A real SQLite regression reproduced this: the backup's read-only connection
+creates empty sidecars when the last agent has closed a WAL database. The check
+correctly refused certification, but preparation lacked this closed-database
+case. Do not label the archive a successful frozen backup or the failure a
+successful deployment.
+
+The fix is on the separate preparation-tool branch: only for a verified fenced
+database with neither WAL nor rollback-journal sidecar, copy its primary file
+into private SSD staging before SQLite opens it. Recheck source generations and
+sidecars; keep the final journal/fence assertions. Databases with committed WAL
+frames still use normal SQLite backup, never a primary-file-only copy. All73
+focused tests pass, including the reproduced failure and committed-WAL recovery.
+The consumed deployment package was not changed into a retry. A new package
+binding and fresh cutover approval are still required.
+
+The correction is committed and pushed as c09181eed on
+`fix/vk-production-preparation-costs` in open PR133. It is not merged or installed
+into the consumed package. Formatting, Ops governance and diff checks also pass;
+application-wide tests were not repeated for this external Python correction.
+GitHub currently reports PR133 as conflicting with staging. Resolve that
+integration conflict and validate the merged tool source before packaging it;
+the pushed fix alone is not cutover readiness.
+
+Recovery acceptance passes: database quick_check, all pre-boundary entity IDs,
+protected values,342 attachment hashes and6046 native thread records. The2282
+historically missing rollouts remain unchanged. One global draft record has only
+a newer updated_at timestamp; its payload and creation time are byte-identical.
+This precise exception is recorded rather than excluding scratch preferences.
+The original native thread and model settings resumed; CU imported its decision
+and turn events; runtime remains0.159.2 with the same private telemetry feed.
+Attachment90de611c-1bbc-4718-9302-b989b471a0c6 passed upload/download. Desktop1440px
+and mobile390px browser checks show all12 saved messages and working WebSockets
+at https://vibe.local with no JavaScript errors. These are browser viewports,
+not physical-phone tests. Existing Steer/Stop/goal evidence belongs to the same
+unchanged incumbent; no new agent/goal exercise was claimed.
+
+The additional live menu check passes all seven models, low/medium/high/xhigh
+reasoning and the V2 routing controls at both viewport sizes. That inspection
+blocked all API mutations and left the production model selection unchanged.
+
+A fresh online backup after recovery was verified on Desktop in 35.5 seconds:
+`delta--29662dd180ad40faa0cd417a501f1313.tar.zst`, 189904870 bytes, SHA256
+31c5fdae31ef48b09b1550b2c7e103116ac70055ac6825734d06f73875805cf7.
+It snapshots nine databases and retains 64 reusable database proofs. This is
+an online recovery checkpoint, not certification of the failed frozen boundary.
+
+Known warning classes remain: historical missing cache image0fa37354..., unknown
+native-item filtering and reconnect subscriber lag. Persisted histories pass;
+these warnings are not described as fixed or as a clean application log.
+
+Preparation reached readiness in18m45s. Another11m25s elapsed before the final
+other agent finished, followed by fresh checks and approval binding. The attempt
+returned to Blue about33m31s after the original request, with roughly35 seconds
+of interruption. This is not a successful restart timing. Recovery diagnosis and
+acceptance are additional time and the earlier source agent's work was reused.
+
 ## Authority And Source
 
 The operator requested preparation and conditional cutover at
@@ -76,4 +141,6 @@ finish live acceptance and send exactly one final Ops report afterward.
 Measure this task from19:47:42Z, separating ready-to-switch time, agent-drain
 waiting, final capture/switch and acceptance. The source agent previously spent
 time building and validating this package; reuse is not proof that its earlier
-work took no time. Actual overall savings await the completed timing record.
+work took no time. The consumed attempt failed; its timing cannot establish a
+successful restart speedup. The recovery outcome and off-machine evidence receipt
+are recorded separately under the release task's `recovery-outcome.json`.

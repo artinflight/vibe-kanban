@@ -4,6 +4,22 @@ Established by the operator on 2026-09-11. This is the authority for future
 backend restart windows; older stop-and-switch examples are historical.
 An established protocol is not evidence that a particular candidate is ready.
 
+## Closed SQLite Databases After Agent Drain
+
+The October1 evening attempt returned to Blue because backup readers created
+empty WAL files for goals and thread history after the last agent closed those
+databases. Online-backup success did not exercise this state. Include both a
+closed/checkpointed WAL database and a database with committed live WAL frames
+in frozen-boundary regression tests; test after closing the writer, not only
+while an app-server connection keeps its sidecars open.
+
+For a verified fenced source with no WAL or rollback journal, the corrected tool
+reads from a private SSD copy, rechecks source generation/sidecars and keeps the
+strict final stability assertion. When WAL exists, preserve its committed frames
+through normal SQLite backup. Never ignore all WAL changes or use a main-file
+copy for a live database. This external-tool fix does not require a backend
+restart. See VK_SCOPE_CUTOVER_20261001.md for the consumed attempt and validation.
+
 ## Frozen Capture Writer Coverage
 
 The September30 attempt failed before activation because Git metadata changed

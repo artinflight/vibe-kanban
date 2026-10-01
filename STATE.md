@@ -1,5 +1,16 @@
 # STATE.md
 
+**October1 evening final state:** Blue1504649 remains production on the same
+latest data; candidate Green never started. The202033Z attempt failed because
+the backup's own read-only SQLite readers created empty WAL sidecars after agent
+drain. Recovery acceptance passed, without database restoration or another
+handover. The73-test preparation-tool correction is separate from the consumed
+package; it is committed and pushed as c09181eed in open PR133, not merged.
+The fresh online recovery backup is verified on Desktop. New Green deployment
+remains incomplete and requires a fresh package
+and new approval. Read VK_SCOPE_CUTOVER_20261001.md; older readiness entries below
+do not supersede this outcome.
+
 **October1 evening preparation:** the operator authorized a new Green cutover
 after all other agents and queues drain. Candidate main95deaafe6 and staging
 b0f4c10a9 have the identical tree, with all ten compatibility PR136 checks passed.

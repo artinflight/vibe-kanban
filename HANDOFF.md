@@ -1,5 +1,26 @@
 # HANDOFF.md
 
+## October 1 Evening: Blue Recovery Accepted, No Retry
+
+The202033Z attempt failed its final backup before Green started. Blue1504649 is
+live on the same latest data. Read VK_SCOPE_CUTOVER_20261001.md and the task's
+status/rollback-preservation/browser receipts. No old database was restored.
+Original thread/model,12 saved messages,342 attachment hashes, history IDs,
+upload/download, desktop/mobile layouts and CU telemetry pass. Historical
+exceptions and known warning classes remain. The failed attempt is consumed;
+the continuation explicitly forbids retrying it.
+
+The backup reader itself created empty WAL files after agents closed their
+databases. The failure was reproduced and fixed on the preparation-tool branch;
+all73 focused tests pass. Commit c09181eed is pushed to open PR133. That fix is
+not merged or installed into the consumed package; GitHub reports staging merge
+conflicts that must be resolved before integration. Seven-model, reasoning and
+V2 menu checks also pass with API writes blocked at both viewport sizes.
+A fresh online backup (29662dd180ad40faa0cd417a501f1313) is verified on Desktop;
+it does not certify the failed frozen boundary.
+Prepare a fresh package binding and obtain new cutover approval before any
+further interruption. Green's new backend has NOT been deployed.
+
 ## October 1 Evening: Conditional Green Cutover
 
 The operator authorized another restart once every other agent and queue has

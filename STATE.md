@@ -1,3 +1,12 @@
+## October 1: Blue Live And Preparation Follow-Up
+
+Blue1504649 serves main329963d18, version0.1.42/CLI0.159.2. Original Green
+2506054 is frozen for same-latest-data cutback. Live original-thread/model,
+Steer/Stop/goals,12 saved messages, attachment round-trip, desktop/mobile layouts,
+V2 controls and VK/CU telemetry pass. Consumed attempt132828Z is under
+/mnt/vk-storage/vk-blue-autoswitch-v2-20261001. Known cache/history/reconnect
+warnings remain documented. External-tool follow-up is not another cutover.
+
 ## October 1: Preparation Tooling Scope
 
 The new fenced backup callback passed an isolated real-binary handover and

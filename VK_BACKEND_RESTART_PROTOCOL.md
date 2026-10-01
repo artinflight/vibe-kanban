@@ -1,5 +1,20 @@
 # Backend Restart Protocol
 
+## Production Preparation Timing
+
+Read VK_PREPARATION_PERFORMANCE.md and the October1 production audit. Count
+request-to-ready time, not just the final pause. Check ancestry, writer/operation
+policy, Desktop transport and bulk resource placement before long builds or
+backups. Retain continuous journaling and a verified recovery chain across turns.
+Report cold and warm costs separately; fixtures are not production guarantees.
+
+Freeze coordinated periodic monitor writers as whole services, not just parents:
+a stopped parent cannot drain child stdout pipes. Verify the unit-wide freezer
+and exact original identity, reject active user operations/unknown children, and
+thaw the same unit after routing or recovery. `vk_writer_fence.py` provides this
+mechanism, not permission or writer-specific policy. Keep existing latest-data
+ownership handover. Never relax final fencing or omit irreplaceable work for speed.
+
 ## Preparation Timing And Reuse
 
 Use [VK_PREPARATION_PERFORMANCE.md](VK_PREPARATION_PERFORMANCE.md) for the

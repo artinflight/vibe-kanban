@@ -1,3 +1,10 @@
+## Production-Scale Preparation Follow-Up (2026-10-01)
+
+Branch `fix/vk-production-preparation-costs` backfills tested preparation fixes
+after accepted V2 Blue deployment. Scope is operational Python/documentation,
+not live application/data/route changes. Read the production timing audit.
+Historical integration scopes below are not this branch's current scope.
+
 ## AutoSwitch V2 staging integration (2026-10-01)
 
 The operator now authorizes the full V2 PR/push/rebase merge into staging.

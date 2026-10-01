@@ -1,3 +1,14 @@
+## Production Preparation Follow-Up (2026-10-01)
+
+Blue serves main329963d18/Codex0.159.2; Green2506054 remains frozen for
+latest-data cutback. Do not repeat handover or restore old production data.
+This operational branch backfills the production-scale preparation fixes.
+Read VK_PREPARATION_PRODUCTION_AUDIT_20261001.md and the performance guide.
+No backend restart is needed for external tools. Private real-binary handover,
+failed-backup recovery, latest-data cutback and Desktop restoration pass; receipts
+are under /mnt/vk-storage/vk-preparation-production-20261001/integration.
+The separate maintenance checkout owns complete live acceptance receipts.
+
 ## AutoSwitch V2 staging integration (2026-10-01)
 
 The operator now authorizes the full V2 PR/push/rebase merge into staging.

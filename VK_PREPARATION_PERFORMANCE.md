@@ -202,3 +202,10 @@ concurrent 0.456 seconds, with matching results. That modest saving alone does
 not explain or fix the hour of preparation. Evidence reuse and smaller online
 refreshes address the substantial repeated work. No complete next production
 preparation or cutover has been timed with these new tools yet.
+
+The generated preparation-only recipe was executed twice at implementation
+commit `e1bf06f7b`: first run 12.24 seconds, repeat 1.46 seconds. The repeat verified
+and reused the Python regression/ops evidence, while its uncached diff check ran
+again. Reports are under `runner-acceptance/` in the evidence root. The durable
+elapsed preparation clock kept running rather than resetting to the short repeat
+duration. This measures that recipe, not a cold Rust build or full deployment.

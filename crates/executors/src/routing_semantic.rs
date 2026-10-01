@@ -558,6 +558,17 @@ pub fn classify(
     a: &Assessment,
     policy: &RoutingPolicy,
 ) -> SemanticTrace {
+    classify_scoped(prompt, previous, a, policy, Value::Null)
+}
+
+/// Optional delegation correlation is recorded even when qualification later refuses a child.
+pub fn classify_scoped(
+    prompt: &str,
+    previous: Option<&str>,
+    a: &Assessment,
+    policy: &RoutingPolicy,
+    correlation: Value,
+) -> SemanticTrace {
     let started = Instant::now();
     let mut trace = SemanticTrace {
         id: uuid::Uuid::new_v4().to_string(),
@@ -589,7 +600,7 @@ pub fn classify(
     trace.elapsed_ms = started.elapsed().as_millis() as u64;
     if let Ok(path) = std::env::var("VK_CODEX_ROUTING_AVAILABILITY") {
         let path = Path::new(&path).with_extension("classification.jsonl");
-        let event = json!({"schema":"vk.classification.v1","timestamp":chrono::Utc::now().to_rfc3339(),"classifier":trace});
+        let event = json!({"schema":"vk.classification.v1","timestamp":chrono::Utc::now().to_rfc3339(),"classifier":trace,"correlation":correlation});
         let result = append_trace(&path, &event);
         if let Err(error) = result {
             tracing::warn!(%error,classifier_id=%trace.id,"Classifier usage feed delivery failed");

@@ -1560,6 +1560,51 @@ pub fn normalize_logs(
 
         while let Some(Ok(line)) = stdout_lines.next().await {
             if let Ok(event) = serde_json::from_str::<serde_json::Value>(&line)
+                && event["method"] == "vk/delegation"
+            {
+                let p = &event["params"];
+                if matches!(
+                    p["kind"].as_str(),
+                    Some("decision" | "blocked" | "attempt_end" | "cancel_requested")
+                ) {
+                    let data = &p["data"];
+                    add_normalized_entry(
+                        &msg_store,
+                        &entry_index,
+                        NormalizedEntry {
+                            timestamp: None,
+                            entry_type: NormalizedEntryType::SystemMessage,
+                            content: format!(
+                                "Delegation {} ({}): {}; actual {} · {}; recommendation {} · {}; class {}; floor {}; source {}; context {}; escalated {}; {}",
+                                p["taskKey"].as_str().unwrap_or("unknown"),
+                                p["mode"].as_str().unwrap_or("unknown"),
+                                p["kind"].as_str().unwrap_or("unknown"),
+                                data["effective"]["model"].as_str().unwrap_or("—"),
+                                data["effective"]["reasoningEffort"].as_str().unwrap_or("—"),
+                                data["selected"]["model"].as_str().unwrap_or("—"),
+                                data["selected"]["reasoningEffort"].as_str().unwrap_or("—"),
+                                data["envelope"].as_str().unwrap_or("—"),
+                                data["floor"].as_str().unwrap_or("—"),
+                                data["classificationSource"].as_str().unwrap_or("—"),
+                                data["contextMode"].as_str().unwrap_or("—"),
+                                data["escalated"].as_bool().unwrap_or(false),
+                                data["reason"]
+                                    .as_str()
+                                    .or(data["outcome"].as_str())
+                                    .unwrap_or("")
+                            ),
+                            metadata: Some(event.clone()),
+                        },
+                    );
+                }
+                continue;
+            }
+            if let Ok(event) = serde_json::from_str::<serde_json::Value>(&line)
+                && event["method"] == "vk/delegation/native"
+            {
+                continue;
+            }
+            if let Ok(event) = serde_json::from_str::<serde_json::Value>(&line)
                 && event["method"] == "vk/routing"
             {
                 let params = &event["params"];
@@ -2897,6 +2942,35 @@ mod tests {
         }
 
         latest_normalized_entries(&msg_store)
+    }
+
+    #[tokio::test]
+    async fn delegation_shadow_display_keeps_child_native_logs_out_of_root() {
+        let store = Arc::new(MsgStore::new());
+        store.push_session_id("root".into());
+        store.push_stdout(format!("{}\n",json!({"method":"vk/delegation/native","params":{"notification":{"method":"codex/event/session_configured","params":{"msg":{"type":"session_configured","session_id":"child"}}}}})));
+        store.push_stdout(format!("{}\n",json!({"method":"vk/delegation","params":{"schema":"vk.delegation.v1","taskKey":"docs","mode":"shadow","kind":"decision","data":{"effective":{"model":"gpt-6.1-sol","reasoningEffort":"medium"},"selected":{"model":"gpt-5.6-luna","reasoningEffort":"low"},"envelope":"mechanical","floor":"routine","classificationSource":"deterministic","contextMode":"brief_no_parent_history","escalated":false}}})));
+        store.push_finished();
+        for task in normalize_logs(store.clone(), Path::new("/tmp/test-worktree")) {
+            task.await.unwrap();
+        }
+        let sessions: Vec<_> = store
+            .get_history()
+            .into_iter()
+            .filter_map(|v| {
+                if let LogMsg::SessionId(id) = v {
+                    Some(id)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(sessions, vec!["root"]);
+        let entries = latest_normalized_entries(&store);
+        assert_eq!(entries.len(), 1);
+        assert!(entries[0].content.contains("gpt-5.6-luna · low"));
+        assert!(entries[0].content.contains("gpt-6.1-sol · medium"));
+        assert!(entries[0].metadata.is_some());
     }
 
     #[tokio::test]

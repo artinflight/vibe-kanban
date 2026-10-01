@@ -631,7 +631,7 @@ uncertainty: string, needs_repo_inspection: boolean, evidence: Array<string>, in
 
 export type SemanticClass = { envelope: string, scope: string, novelty: string, ambiguity: string, horizon: string, validation: string, risks: Array<string>, uncertainty: string, inspection_needed: boolean, reason: string, };
 
-export type SemanticTrace = { id: string, status: string, model: string, effort: string, service_tier: string, elapsed_ms: number, native_thread_id: string | null, native_turn_id: string | null, input_tokens: number | null, cached_input_tokens: number | null, output_tokens: number | null, reasoning_tokens: number | null, classification: SemanticClass | null, detail: string, };
+export type SemanticTrace = { id: string, status: string, model: string, effort: string, service_tier: string, elapsed_ms: number, native_thread_id: string | null, native_turn_id: string | null, input_tokens: number | null, cached_input_tokens: number | null, output_tokens: number | null, reasoning_tokens: number | null, classification: SemanticClass | null, scope_relation?: string | null, detail: string, };
 
 export type ScriptContext = "SetupScript" | "CleanupScript" | "ArchiveScript" | "DevServer" | "ToolInstallScript";
 

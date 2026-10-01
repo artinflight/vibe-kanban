@@ -5,6 +5,96 @@ after accepted V2 Blue deployment. Scope is operational Python/documentation,
 not live application/data/route changes. Read the production timing audit.
 Historical integration scopes below are not this branch's current scope.
 
+The current task also integrates the closed-WAL correction with latest staging,
+preserving its application code. This is preparation only; no production switch.
+The inherited application-release notes below are historical context.
+## AutoSwitch release compatibility (2026-10-01)
+
+Scope/savings fixes are merged through PR134 (staging) and PR135 (main).
+The live backend is still PID1504649/sourceadfa7c051; the release has not switched.
+Release preparation found a rollback reader incompatibility: the old binary
+rejects added fields inside `SemanticClass`. Scope relationship now persists on
+its extensible parent `SemanticTrace`; native classification and safety logic are
+unchanged. The generated API types follow that persisted shape.
+
+Release artifacts and current evidence live at
+`/mnt/vk-storage/vk-autoswitch-scope-release-20261001`. Desktop has the verified
+checkpoint and delta under `B:/vk-backups/vk-autoswitch-scope-release-20261001/`.
+The full checkpoint restored successfully into an isolated directory. These are
+online backups, not the final fenced cutover capture. Read-only inventory found
+an unexpectedly restarted September14 standby (PID2828009); it had no clients or
+children and was returned to its frozen state. The routed server and data remain
+unchanged. No candidate production startup or route switch has occurred.
+Read the package readiness/status files before any activation; never reuse a
+consumed cutover controller. Existing Shadow/manual choices must remain intact.
+
+## AutoSwitch scope and savings correction (2026-10-01)
+
+Current development fixes permanent Frontier inheritance and the false security
+promotion of configuration notes. Read [VK_AUTOSWITCH_SCOPE_FIX.md](VK_AUTOSWITCH_SCOPE_FIX.md).
+Independent small work can choose Luna after protected work; ambiguous continuation,
+protected paths, explicit floors and failure handling remain conservative. Native
+recommendation tests cover real TF::Build wording and ordinary UI/documentation
+work. This is source-only: no backend restart, deployment or live routing-policy
+change. The earlier no-restart workaround below remains the actual live state.
+Validation passed: 131 executor tests (six opt-in ignored), generated shared types,
+web-core TypeScript, executor Clippy with warnings denied, formatting/governance
+and diff checks. CU contract bytes are unchanged. Five native classification calls
+used 20,883 input tokens (3,840 cached), 915 output, 4.5–9.3s each; five controls
+needed no inference. The real preceding TF::Build request was included in one
+replay. These are recommendation checks, not measured accepted-task savings.
+Evidence: `/mnt/vk-storage/vk-model-autoswitch-20260930/scope-fix`.
+Next: adopt the backend changes through the normal release path when worthwhile,
+then measure total accepted-task usage; no restart or release was done here.
+
+## AutoSwitch no-restart testing workaround live (2026-10-01)
+
+Operator authorized the temporary no-restart path. Frontend source `8d4b9ead2`
+is live on the existing backend at `https://vibe.local`; backend PID1504649 and
+binary are unchanged. Only the two chat-setting frontend files differ from the
+previous frontend source. All old hashed assets remain available, and the prior
+frontend/proof have verified rollback copies on mounted SSD.
+
+Nine genuine one-reply checks refreshed all seven models and the two additional
+low-effort pairs in the existing availability file. No retries or background
+paid refresh were installed. The current backend's 24-hour rule still applies:
+proof expires **2026-10-02 16:10:26 UTC**. Native counters total50,254 input tokens
+(11,904 cached) and72 output tokens; these are not allowance charges.
+
+TF::Build's empty follow-up draft is now Shadow/assessed; manual model and effort
+remain Sol6.1/xhigh. Actual browser selection/reload checks passed at desktop and
+mobile sizes without errors. No new development execution was submitted and no
+phone operation occurred. Reload the operator's page to receive the updated UI;
+previous explicit browser-local manual overrides remain authoritative.
+
+Read `VK_AUTOSWITCH_SHADOW_FIX.md`. Evidence, deployment manifest, test scripts,
+screenshots and rollback are at
+`/mnt/vk-storage/vk-model-autoswitch-20260930/no-restart`.
+The permanent backend auto-refresh fix remains undeployed. Further Shadow work
+can use this temporary window; refresh genuine proof on demand if testing extends
+past expiry. Never merely advance timestamps or add unattended paid probes.
+A complete new live routed task/child acceptance is still pending operator work.
+
+## TF::Build Shadow continuity repair (2026-10-01)
+
+Branch `fix/autoswitch-shadow-continuity` fixes expired availability renewal and
+same-session routing hydration. Read [VK_AUTOSWITCH_SHADOW_FIX.md](VK_AUTOSWITCH_SHADOW_FIX.md).
+Catalog renewal is bounded, metadata-only and identity-checked; historical exact
+execution proof is retained without changing verification timestamps. Manual
+choices, fresh-chat opt-in, policy floors and CU wire format remain authoritative.
+This is development only; no live proof/profile/service mutation or deployment.
+Validation: 127 executor tests passed (six opt-in ignored); the metadata-only native
+refresh passed separately in 0.90s against a private copy of the production proof.
+All seven models remained discovered; all exact verification timestamps/efforts
+were preserved and the production proof hash stayed unchanged. Seven React selector
+regressions, web-core TypeScript, executor Clippy, targeted ESLint, formatting
+and ops checks passed.
+CU canonical contract remains byte-identical. No billed inference or deployment.
+Evidence: `/mnt/vk-storage/vk-model-autoswitch-20260930/shadow-fix`.
+Normal release adoption and a full live Shadow run remain pending. TF::Build's
+later manual state must be explicitly changed back to Shadow; do not silently
+reinterpret an existing manual execution as routing consent.
+
 ## AutoSwitch V2 staging integration (2026-10-01)
 
 The operator now authorizes the full V2 PR/push/rebase merge into staging.

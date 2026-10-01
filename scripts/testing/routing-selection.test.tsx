@@ -20,11 +20,12 @@ const profiles = {
   CODEX: { configurations: { DEFAULT: {} } },
 } as unknown as Record<string, ExecutorProfile>;
 let current: ReturnType<typeof useExecutorConfig>;
-function Harness({ scratch }: { scratch?: ExecutorConfig }) {
+function Harness({ scratch, session }: { scratch?: ExecutorConfig; session?: ExecutorConfig }) {
   current = useExecutorConfig({
     profiles,
     lastUsedConfig: automatic,
     scratchConfig: scratch,
+    sessionConfig: session,
   });
   return null;
 }
@@ -79,5 +80,31 @@ test("explicit effort selection locks the model; routing can be re-enabled expli
   assert.equal(current.executorConfig?.routing?.floor, "assessed");
   assert.deepEqual(current.executorConfig?.routing?.denied_models, ["gpt-6-astra"]);
   assert.equal(current.executorConfig?.routing?.allow_escalation, true);
+  act(() => renderer!.unmount());
+});
+
+for (const mode of ["shadow", "auto"] as const) {
+  test(`${mode} survives a cleared draft and remount in the same session`, () => {
+    let renderer: ReactTestRenderer;
+    const session = { ...automatic, routing: { ...automatic.routing!, mode } };
+    act(() => { renderer = create(<Harness scratch={session} session={session} />); });
+    act(() => { renderer!.update(<Harness session={session} />); });
+    assert.equal(current.executorConfig?.routing?.mode, mode);
+    act(() => renderer!.unmount());
+    act(() => { renderer = create(<Harness session={session} />); });
+    assert.equal(current.executorConfig?.routing?.mode, mode);
+    act(() => current.setOverrides({ reasoning_id: "high" }));
+    assert.equal(current.executorConfig?.routing?.mode, "manual");
+    act(() => renderer!.unmount());
+  });
+}
+test("manual scratch and different profile remain authoritative over session routing", () => {
+  let renderer: ReactTestRenderer;
+  const manual = { ...automatic, routing: { ...automatic.routing!, mode: "manual" as const } };
+  act(() => { renderer = create(<Harness scratch={manual} session={automatic} />); });
+  assert.equal(current.executorConfig?.routing?.mode, "manual");
+  act(() => renderer!.unmount());
+  act(() => { renderer = create(<Harness session={{ ...automatic, variant: "OTHER" }} />); });
+  assert.equal(current.executorConfig?.routing, undefined);
   act(() => renderer!.unmount());
 });

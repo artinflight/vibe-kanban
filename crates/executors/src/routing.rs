@@ -103,6 +103,9 @@ pub struct ModelPolicy {
 pub struct Availability {
     pub version: u32,
     pub observed_at: i64,
+    /// Native initialize identity, retained from the bounded verification probe.
+    #[serde(default)]
+    pub runtime: Option<String>,
     pub codex_home: String,
     pub launcher: String,
     pub account_fingerprint: String,
@@ -115,6 +118,24 @@ pub struct ModelAvailability {
     pub supported_efforts: Vec<String>,
     pub verified_efforts: Vec<String>,
     pub verified_at: Option<i64>,
+}
+
+impl Availability {
+    /// Execution success is historical evidence, not a daily inference lease.
+    /// Retain it only while fresh discovery confirms support on the same runtime.
+    /// Undiscovered releases and legacy proofs still require recent execution.
+    pub fn has_execution_proof(&self, model: &ModelAvailability, now: i64) -> bool {
+        let Some(at) = model.verified_at else {
+            return false;
+        };
+        if at > now || !(0..=86400).contains(&(now - self.observed_at)) {
+            return false;
+        }
+        (0..=86400).contains(&(now - at))
+            || (model.discovered
+                && self.runtime.as_ref().is_some_and(|r| !r.is_empty())
+                && at <= self.observed_at)
+    }
 }
 
 pub fn model_policies() -> Result<Vec<ModelPolicy>, String> {
@@ -155,21 +176,24 @@ pub fn load_availability() -> Result<Availability, String> {
     let path = std::env::var("VK_CODEX_ROUTING_AVAILABILITY").map_err(
         |_| "Routing requires VK_CODEX_ROUTING_AVAILABILITY; run the catalog probe first",
     )?;
-    let data = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let data = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let a: Availability = serde_json::from_str(&data).map_err(|e| e.to_string())?;
     let home = crate::executors::codex::codex_home()
         .and_then(|p| p.canonicalize().ok())
         .ok_or("Codex home unavailable")?;
-    let age = chrono::Utc::now().timestamp() - a.observed_at;
     if a.version != 1
-        || !(0..=86400).contains(&age)
         || a.codex_home != home.to_string_lossy()
         || a.launcher != Codex::base_command()
         || a.account_fingerprint.is_empty()
     {
-        return Err(
-            "Routing availability is stale or belongs to another runtime; refresh the probe".into(),
-        );
+        return Err("Routing availability belongs to another runtime; refresh executable-model verification".into());
+    }
+    let now = chrono::Utc::now().timestamp();
+    if a.observed_at > now {
+        return Err("Routing availability timestamp is in the future".into());
+    }
+    if now - a.observed_at > 86400 {
+        return crate::routing_availability::refresh(std::path::Path::new(&path), a);
     }
     Ok(a)
 }
@@ -384,10 +408,13 @@ fn resolve_action_inner(
     };
     let assessment =
         crate::routing_assessment::retain_previous(assessment, prompt, prior_envelope.as_deref());
-    let mut floor = policy.floor.max(assessment.floor);
-    if let Some(prior) = previous.and_then(|p| p.routing_decision.as_ref()) {
-        floor = floor.max(prior.floor); // Never silently lower an established session floor.
-    }
+    let mut floor = crate::routing_assessment::boundary_floor(
+        &assessment,
+        policy.floor,
+        previous
+            .and_then(|p| p.routing_decision.as_ref())
+            .map(|d| d.floor),
+    );
     let risk_expansion = previous
         .and_then(|p| p.routing_decision.as_ref())
         .is_some_and(|d| assessment.floor > d.floor);
@@ -559,11 +586,11 @@ pub fn choose_assessed(
         .iter()
         .filter(|m| m.released && !policy.denied_models.contains(&m.id))
     {
-        let Some(proof) = availability.models.iter().find(|a| {
-            a.id == model.id
-                && a.verified_at
-                    .is_some_and(|at| (0..=86400).contains(&(now - at)))
-        }) else {
+        let Some(proof) = availability
+            .models
+            .iter()
+            .find(|a| a.id == model.id && availability.has_execution_proof(a, now))
+        else {
             continue;
         };
         for q in &model.qualifications {
@@ -614,6 +641,7 @@ mod tests {
         let availability = Availability {
             version: 1,
             observed_at: 100,
+            runtime: None,
             codex_home: "test".into(),
             launcher: "codex".into(),
             account_fingerprint: "test".into(),
@@ -772,7 +800,11 @@ mod tests {
                     .unwrap()
                     .assessed_envelope
                     .as_deref(),
-                Some("complex")
+                Some("mechanical")
+            );
+            assert_eq!(
+                next.routing_decision.as_ref().unwrap().floor,
+                CapabilityFloor::Routine
             );
             // Exercise the actual persistence boundary between each follow-up.
             prior = serde_json::from_value(serde_json::to_value(next).unwrap()).unwrap();
@@ -789,6 +821,77 @@ mod tests {
         assert_eq!(event["schema"], "vk.routing.v1");
         assert_eq!(event["policyVersion"], "vk-autoswitch-v2");
         assert!(event["taskId"].is_null());
+    }
+
+    #[test]
+    fn action_boundaries_release_old_protection_only_for_independent_safe_work() {
+        let (mut policy, models, availability) = fixture();
+        policy.mode = RoutingMode::Shadow;
+        policy.floor = CapabilityFloor::Assessed;
+        let mut previous = action(Some(policy.clone()));
+        if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut previous.typ {
+            r.prompt = "Change authentication permissions".into();
+        }
+        resolve_action(&mut previous, None, false).unwrap();
+        assert_eq!(
+            previous.routing_decision.as_ref().unwrap().floor,
+            CapabilityFloor::Frontier
+        );
+        for (prompt, explicit, expected) in [
+            (
+                "Fix the typo in README.md",
+                CapabilityFloor::Assessed,
+                CapabilityFloor::Routine,
+            ),
+            (
+                "Fix the typo in README.md",
+                CapabilityFloor::Workhorse,
+                CapabilityFloor::Workhorse,
+            ),
+            (
+                "Fix the typo in README.md",
+                CapabilityFloor::Frontier,
+                CapabilityFloor::Frontier,
+            ),
+            (
+                "okay, carry on",
+                CapabilityFloor::Assessed,
+                CapabilityFloor::Frontier,
+            ),
+            (
+                "Fix a typo in auth_panel",
+                CapabilityFloor::Assessed,
+                CapabilityFloor::Frontier,
+            ),
+        ] {
+            policy.floor = explicit;
+            let mut next = action(Some(policy.clone()));
+            if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut next.typ {
+                r.prompt = prompt.into();
+            }
+            let before = serde_json::to_value(&next.typ).unwrap();
+            resolve_action(&mut next, Some(&previous), false).unwrap();
+            assert_eq!(serde_json::to_value(&next.typ).unwrap(), before);
+            let d = next.routing_decision.unwrap();
+            assert_eq!(d.floor, expected, "{prompt}");
+            let pair = choose_assessed(
+                &policy,
+                d.floor,
+                d.assessed_envelope.as_deref().unwrap(),
+                &models,
+                &availability,
+                100,
+            )
+            .unwrap();
+            assert_eq!(
+                pair.0,
+                match expected {
+                    CapabilityFloor::Routine => "gpt-5.6-luna",
+                    CapabilityFloor::Workhorse => "gpt-6.1-sol",
+                    _ => "gpt-6-astra",
+                }
+            );
+        }
     }
 
     #[test]

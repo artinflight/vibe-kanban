@@ -1,3 +1,11 @@
+## October 1 Evening: Corrected Green Preparation
+
+Blue1504649 remains authoritative. The 202033Z attempt failed final backup before
+Green started; latest-data recovery passed without restoring an older database.
+The operator now requests readiness only. This tool branch integrates staging
+without changing application files and fixes closed-WAL backup side effects.
+Do not infer cutover permission from preparation. Earlier entries are history.
+
 ## October 1: Blue Live And Preparation Follow-Up
 
 Blue1504649 serves main329963d18, version0.1.42/CLI0.159.2. Original Green
@@ -6,6 +14,14 @@ Steer/Stop/goals,12 saved messages, attachment round-trip, desktop/mobile layout
 V2 controls and VK/CU telemetry pass. Consumed attempt132828Z is under
 /mnt/vk-storage/vk-blue-autoswitch-v2-20261001. Known cache/history/reconnect
 warnings remain documented. External-tool follow-up is not another cutover.
+## October 1: AutoSwitch scope release preparation
+
+PR134/135 merged the downward-routing scope correction into staging/main. It is
+not yet the active backend: `vibe.local` still routes to the October1 Blue server
+PID1504649/sourceadfa7c051, version0.1.42. The rollback decoder compatibility
+repair is tracked in HANDOFF.md. The unexpectedly running September14 Green
+standby PID2828009 was found idle and returned to a frozen state; its data and
+process were preserved. Re-discover all process identities before cutover.
 
 ## October 1: Preparation Tooling Scope
 

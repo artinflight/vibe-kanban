@@ -11,6 +11,7 @@ pub mod model_selector;
 pub mod profile;
 pub mod routing;
 pub mod routing_assessment;
+mod routing_availability;
 pub mod routing_delegation;
 pub mod routing_semantic;
 pub mod routing_triage;

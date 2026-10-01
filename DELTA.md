@@ -1433,3 +1433,39 @@ Retained both sides of three continuity-document conflicts; source patches are
 unchanged. Original branch preserved at ec94e7f49. See VK_AUTOSWITCH_V2_STAGING.md
 for commit mapping and integration evidence. No deployment or agent coordination;
 complete live Shadow and measured savings remain outside this merge task.
+
+## 2026-10-01 TF::Build Shadow continuity repair
+
+Added bounded metadata-only catalog renewal with runtime/account binding and
+retained historical exact execution proof; restored same-session routing after
+draft clear/remount without inheriting another chat’s consent. Native refresh
+passed in 0.90s on a private proof copy, seven selector regressions and 127 executor
+tests passed. Production remains untouched; live Shadow acceptance is pending
+normal release adoption. See VK_AUTOSWITCH_SHADOW_FIX.md and HANDOFF.md.
+
+## 2026-10-01 AutoSwitch temporary no-restart activation
+
+Operator authorized browser-only activation and genuine model-proof renewal.
+Frontend8d4b9ead2 is served; backend PID1504649 remains unchanged. Nine short
+checks passed once, all seven models retained, proof valid through October2
+16:10:26 UTC. TF::Build Shadow selection survives reload with Sol6.1/xhigh
+unchanged; no task or phone action was started. No automated paid refresh.
+Permanent backend renewal awaits a later worthwhile restart. See HANDOFF.md.
+
+## 2026-10-01 AutoSwitch scope-sensitive downward routing
+
+Removed permanent inheritance of an earlier inferred Frontier requirement when
+positive evidence establishes a separate request. Explicit floors and current
+protected risk remain authoritative; ambiguous continuations retain protection.
+Classifier scope evidence distinguishes configuration facts from security changes.
+131 executor tests passed; native recommendations selected Luna for independent
+UI/documentation and retained Astra for actual security changes. Five native
+classifier calls, no retries; backend unchanged. See VK_AUTOSWITCH_SCOPE_FIX.md.
+
+## 2026-10-01 — AutoSwitch rollback compatibility
+
+PR134/135 merge the scope/savings repair into staging/main. Release preparation
+identified the incumbent's strict nested classification decoder; persist new scope
+evidence on the extensible trace instead. Runtime behavior is unchanged. No
+production activation yet; release/backup evidence is on mounted SSD in
+`vk-autoswitch-scope-release-20261001`.

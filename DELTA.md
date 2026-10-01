@@ -1451,3 +1451,13 @@ checks passed once, all seven models retained, proof valid through October2
 16:10:26 UTC. TF::Build Shadow selection survives reload with Sol6.1/xhigh
 unchanged; no task or phone action was started. No automated paid refresh.
 Permanent backend renewal awaits a later worthwhile restart. See HANDOFF.md.
+
+## 2026-10-01 AutoSwitch scope-sensitive downward routing
+
+Removed permanent inheritance of an earlier inferred Frontier requirement when
+positive evidence establishes a separate request. Explicit floors and current
+protected risk remain authoritative; ambiguous continuations retain protection.
+Classifier scope evidence distinguishes configuration facts from security changes.
+131 executor tests passed; native recommendations selected Luna for independent
+UI/documentation and retained Astra for actual security changes. Five native
+classifier calls, no retries; backend unchanged. See VK_AUTOSWITCH_SCOPE_FIX.md.

@@ -159,6 +159,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
             if not any(Path(raw).is_relative_to(Path(source).resolve()) for source in plan["sources"]):
                 raise ValueError("Database is outside journal coverage: " + raw)
     snapshots, readers, versions, signatures, reused = {}, {}, {}, {}, []
+    source_copies = folder / "fenced-source-copies"
 
     def stable_boundary():
         exclusions.validate()
@@ -198,7 +199,17 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                         and not content_event(raw, before)):
                     reused.append(raw)
                     continue
-                source = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
+                source_path = path
+                sidecars = (raw + "-wal", raw + "-journal")
+                if verify_fence is not None and not any(os.path.lexists(p) for p in sidecars):
+                    # A read-only WAL connection can create empty source sidecars.
+                    # Only a fenced, fully checkpointed database can be copied first.
+                    source_copies.mkdir(exist_ok=True, mode=0o700)
+                    source_path = source_copies / (hashlib.sha256(raw.encode()).hexdigest() + ".sqlite")
+                    shutil.copyfile(path, source_path)
+                    if generation(path) != signatures[raw] or any(os.path.lexists(p) for p in sidecars):
+                        raise ValueError("Fenced database changed while copying: " + raw)
+                source = sqlite3.connect(source_path.as_uri() + "?mode=ro", uri=True)
                 readers[raw] = source
                 versions[raw] = source.execute("PRAGMA data_version").fetchone()[0]
                 target = payload / "sqlite" / (hashlib.sha256(raw.encode()).hexdigest() + ".sqlite")
@@ -298,6 +309,8 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
     finally:
         for connection in readers.values():
             connection.close()
+        if source_copies.exists():
+            shutil.rmtree(source_copies)
 
 
 def resume_delivery(plan, root, folder, journal, mirror, publish, parent=None):

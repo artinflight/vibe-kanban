@@ -247,6 +247,40 @@ class BackupTests(unittest.TestCase):
     def test_online_capture_does_not_claim_frozen_boundary(self):
         self.assertFalse(self.backup()["frozen_boundary_verified"])
 
+    def test_frozen_closed_wal_database_does_not_create_source_sidecars(self):
+        first = self.backup()
+        db = sqlite3.connect(self.database)
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("UPDATE settings SET value='latest closed WAL work'")
+        db.commit()
+        db.close()
+        self.assertFalse(Path(str(self.database) + "-wal").exists())
+        result = capture(self.plan, self.backups, self.journal.report, self.mirror,
+                         first, self.mirror, verify_fence=lambda: {"verified": True})
+        self.assertTrue(result["frozen_boundary_verified"])
+        self.assertFalse(Path(str(self.database) + "-wal").exists())
+        self.assertFalse(Path(str(self.database) + "-shm").exists())
+        restored = self.restored(result)
+        with sqlite3.connect(restored / self.database.name) as db:
+            self.assertEqual(db.execute("SELECT value FROM settings").fetchone()[0], "latest closed WAL work")
+
+    def test_frozen_database_retains_committed_wal_frames(self):
+        first = self.backup()
+        db = sqlite3.connect(self.database)
+        try:
+            db.execute("PRAGMA journal_mode=WAL")
+            db.execute("UPDATE settings SET value='committed frames still in WAL'")
+            db.commit()
+            self.assertGreater(Path(str(self.database) + "-wal").stat().st_size, 0)
+            result = capture(self.plan, self.backups, self.journal.report, self.mirror,
+                             first, self.mirror, verify_fence=lambda: {"verified": True})
+            restored = self.restored(result)
+            with sqlite3.connect(restored / self.database.name) as restored_db:
+                self.assertEqual(restored_db.execute("SELECT value FROM settings").fetchone()[0],
+                                 "committed frames still in WAL")
+        finally:
+            db.close()
+
     def test_boundary_refuses_missing_or_changed_writer_fence(self):
         first = self.backup()
         for initial in ({"verified": False}, None):

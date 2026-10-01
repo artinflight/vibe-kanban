@@ -1,3 +1,15 @@
+## October 1 Evening: Closed-WAL Frozen Capture Correction
+
+The maintenance handover returned to unchanged Blue before starting Green.
+A read-only source connection creates empty WAL sidecars when the last writer
+has closed the database, invalidating the strict boundary check. Reproduced the
+failure in a real SQLite/inotify/archive test before fixing it. The fenced path
+now copies only sources with no WAL/rollback journal into private SSD staging
+before opening SQLite. Source identity and final fence checks remain strict;
+committed WAL frames retain normal SQLite backup. All73 focused tests pass.
+No production retry or installation into the consumed package is part of this
+source correction. The maintenance checkout owns the recovery acceptance record.
+
 ## Production Preparation Follow-Up (2026-10-01)
 
 Blue serves main329963d18/Codex0.159.2; Green2506054 remains frozen for

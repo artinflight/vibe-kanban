@@ -103,3 +103,28 @@ Observed warm phases: static runner7.56s, online catch-ups10.55s/29.98s, frozen
 capture14.23s. These are not whole-deployment estimates. Measure the next complete
 cold and warm request-to-ready intervals, separate from operator waiting,
 interruption and acceptance, before promising quantified total savings.
+
+## Evening Closed-WAL Regression
+
+The202033Z attempt returned to the same Blue process before Green was started.
+After agents closed their last connections, goals_1.sqlite and
+thread_history_1.sqlite had no WAL files. The read-only backup reader itself
+created empty WAL files, causing the correctly strict boundary assertion to
+reject the archive. No logical database change or main-file change was recorded.
+
+A new real SQLite/inotify test reproduced the failure before the correction.
+Only for a verified fenced source with no WAL or rollback journal, the tool now
+copies the database into private SSD staging before opening SQLite. It rechecks
+the original generation/sidecars and retains all final journal/fence assertions.
+Normal SQLite backup still handles sources with committed WAL frames; a second
+test verifies those frames reach the restored database. The private temporary
+copies are removed after readers close. Online behavior is unchanged. All73
+focused tests pass. A fresh deployment package and new authorization remain
+necessary; this source correction does not rerun a consumed handover.
+
+This maintenance task reached initial readiness in18m45s by reusing prior source
+build/acceptance and a restored full checkpoint. Another11m25s elapsed before
+the final other agent finished. It returned to Blue33m31s after the request,
+including final checks and approximately35s interruption. Recovery diagnosis and
+acceptance took additional time. These are failed-attempt measurements, not a
+successful faster deployment; prior source-agent preparation is not erased.

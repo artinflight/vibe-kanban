@@ -1,3 +1,12 @@
+## October 1: AutoSwitch scope release preparation
+
+PR134/135 merged the downward-routing scope correction into staging/main. It is
+not yet the active backend: `vibe.local` still routes to the October1 Blue server
+PID1504649/sourceadfa7c051, version0.1.42. The rollback decoder compatibility
+repair is tracked in HANDOFF.md. The unexpectedly running September14 Green
+standby PID2828009 was found idle and returned to a frozen state; its data and
+process were preserved. Re-discover all process identities before cutover.
+
 ## October 1: Preparation Tooling Scope
 
 The new fenced backup callback passed an isolated real-binary handover and

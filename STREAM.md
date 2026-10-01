@@ -1,3 +1,23 @@
+## AutoSwitch release compatibility (2026-10-01)
+
+Scope/savings fixes are merged through PR134 (staging) and PR135 (main).
+The live backend is still PID1504649/sourceadfa7c051; the release has not switched.
+Release preparation found a rollback reader incompatibility: the old binary
+rejects added fields inside `SemanticClass`. Scope relationship now persists on
+its extensible parent `SemanticTrace`; native classification and safety logic are
+unchanged. The generated API types follow that persisted shape.
+
+Release artifacts and current evidence live at
+`/mnt/vk-storage/vk-autoswitch-scope-release-20261001`. Desktop has the verified
+checkpoint and delta under `B:/vk-backups/vk-autoswitch-scope-release-20261001/`.
+The full checkpoint restored successfully into an isolated directory. These are
+online backups, not the final fenced cutover capture. Read-only inventory found
+an unexpectedly restarted September14 standby (PID2828009); it had no clients or
+children and was returned to its frozen state. The routed server and data remain
+unchanged. No candidate production startup or route switch has occurred.
+Read the package readiness/status files before any activation; never reuse a
+consumed cutover controller. Existing Shadow/manual choices must remain intact.
+
 ## AutoSwitch scope and savings correction (2026-10-01)
 
 Current development fixes permanent Frontier inheritance and the false security

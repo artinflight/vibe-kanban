@@ -49,8 +49,10 @@ static CLASSIFIER: Mutex<()> = Mutex::new(());
 #[serde(deny_unknown_fields)]
 pub struct SemanticClass {
     pub envelope: String,
-    /// Legacy classifier records have no scope evidence and remain conservative.
-    #[serde(default = "unknown_relation")]
+    /// Native response only; persisted scope evidence lives on SemanticTrace so
+    /// rollback binaries can still read their strict classification shape.
+    #[serde(default = "unknown_relation", skip_serializing)]
+    #[ts(skip)]
     pub scope_relation: String,
     pub scope: String,
     pub novelty: String,
@@ -87,6 +89,8 @@ pub struct SemanticTrace {
     #[ts(type = "number | null")]
     pub reasoning_tokens: Option<i64>,
     pub classification: Option<SemanticClass>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope_relation: Option<String>,
     pub detail: String,
 }
 
@@ -133,7 +137,8 @@ fn schema() -> Value {
 }
 
 fn validate(c: &SemanticClass) -> bool {
-    let value = serde_json::to_value(c).unwrap();
+    let mut value = serde_json::to_value(c).unwrap();
+    value["scope_relation"] = json!(c.scope_relation);
     let schema = schema();
     schema["properties"]
         .as_object()
@@ -624,12 +629,14 @@ pub fn classify_scoped(
         output_tokens: None,
         reasoning_tokens: None,
         classification: None,
+        scope_relation: None,
         detail: String::new(),
     };
     match invoke(prompt, previous, a, policy, &mut trace) {
         Ok(c) => {
             trace.status = "completed".into();
             trace.detail = c.reason.clone();
+            trace.scope_relation = Some(c.scope_relation.clone());
             trace.classification = Some(c);
         }
         Err(error) => {
@@ -695,6 +702,47 @@ mod tests {
             inspection_needed: false,
             reason: "A small presentation change with a direct visual check.".into(),
         }
+    }
+
+    #[test]
+    fn persisted_trace_preserves_scope_without_extending_strict_legacy_class() {
+        // The incumbent rejects unknown nested classification fields, but its
+        // trace permits additive fields. Keep the on-disk classification exact.
+        let mut native = serde_json::to_value(bounded()).unwrap();
+        native["scope_relation"] = json!("independent");
+        let c: SemanticClass = serde_json::from_value(native).unwrap();
+        assert!(validate(&c));
+        assert_eq!(c.scope_relation, "independent");
+        let mut trace: SemanticTrace = serde_json::from_value(json!({
+            "id":"trace", "status":"completed", "model":"gpt-5.6-luna", "effort":"low",
+            "service_tier":"standard", "elapsed_ms":0, "detail":""
+        }))
+        .unwrap();
+        trace.scope_relation = Some(c.scope_relation.clone());
+        trace.classification = Some(c);
+        let stored = serde_json::to_value(&trace).unwrap();
+        assert_eq!(stored["scope_relation"], "independent");
+        let expected = [
+            "envelope",
+            "scope",
+            "novelty",
+            "ambiguity",
+            "horizon",
+            "validation",
+            "risks",
+            "uncertainty",
+            "inspection_needed",
+            "reason",
+        ];
+        let nested = stored["classification"].as_object().unwrap();
+        assert_eq!(nested.len(), expected.len());
+        assert!(expected.iter().all(|field| nested.contains_key(*field)));
+        let restored: SemanticTrace = serde_json::from_value(stored).unwrap();
+        assert_eq!(restored.scope_relation.as_deref(), Some("independent"));
+        assert_eq!(restored.classification.unwrap().scope_relation, "unknown");
+        let mut invalid = bounded();
+        invalid.scope_relation = "guess".into();
+        assert!(!validate(&invalid));
     }
 
     #[test]

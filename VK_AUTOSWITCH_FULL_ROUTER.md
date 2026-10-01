@@ -1,3 +1,7 @@
+> Scope correction: prior inferred floors are no longer permanent across clearly
+> independent assignments. See [scope and savings repair](VK_AUTOSWITCH_SCOPE_FIX.md).
+> This source change is not yet in the running backend.
+
 > October 1 repair: catalog freshness now renews without inference; historical
 > verified pairs remain usable under matching fresh discovery. Same-session routing
 > survives cleared drafts. See [Shadow continuity repair](VK_AUTOSWITCH_SHADOW_FIX.md).

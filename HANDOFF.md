@@ -1,3 +1,22 @@
+## Semantic fallback continuation (2026-10-01)
+
+Auto/Shadow now adds one bounded gpt-5.6-luna/low/standard classification turn only
+for materially uncertain deterministic assessments. Known envelopes, manual/pinned
+execution and protected floors skip inference. Closed structured output feeds the
+existing qualification/floor/exclusion and consented escalation logic. No tools,
+implementation loop, staging/deployment changes or agent coordination.
+
+Native sample: ordinary assignee display -> Luna6/medium; private-project access
+-> Astra/high; vague/persistence/intermittent-failure requests -> Sol6.1/medium.
+Two deterministic controls incur zero calls. Five final classifier calls measured
+3,978–3,986 input tokens, 78–133 output and 4.344–8.664 seconds each. One initial
+transport check also ran. Classification attempts/usage persist in decisions and
+a separate vk.classification.v1 feed; CU vk.routing.v1 is unchanged.
+Read VK_AUTOSWITCH_FULL_ROUTER.md for configuration, bounds and actual evidence.
+Validation: 29 focused regressions, executor/services Clippy, generated-type and
+web-core TypeScript checks, format and ops pass. Source-only; live V2 Shadow QA
+and net-savings measurement remain pending.
+
 ## Natural-language triage continuation
 
 V2 now recognizes common presentation outcomes on named UI surfaces and corroborates

@@ -1564,6 +1564,20 @@ pub fn normalize_logs(
             {
                 let params = &event["params"];
                 let decision = &params["decision"];
+                let semantic = &decision["semantic"];
+                let triage = if semantic.is_object() {
+                    format!(
+                        "semantic fallback {}; {}; uncertainty: {}; risks: {}",
+                        semantic["status"].as_str().unwrap_or("unknown"),
+                        semantic["detail"].as_str().unwrap_or("unknown"),
+                        semantic["classification"]["uncertainty"]
+                            .as_str()
+                            .unwrap_or("high"),
+                        semantic["classification"]["risks"],
+                    )
+                } else {
+                    "deterministic triage; no classifier inference".to_owned()
+                };
                 add_normalized_entry(
                     &msg_store,
                     &entry_index,
@@ -1571,11 +1585,14 @@ pub fn normalize_logs(
                         timestamp: None,
                         entry_type: NormalizedEntryType::SystemMessage,
                         content: format!(
-                            "Model routing ({}): {} · {}; recommendation: {}; reason: {}; floor: {}; escalated: {}",
+                            "Model routing ({}): {} · {}; recommendation: {} · {}; class: {}; {}; reason: {}; floor: {}; escalated: {}",
                             decision["mode"].as_str().unwrap_or("unknown"),
                             params["resolved_model"].as_str().unwrap_or("unknown"),
                             params["resolved_effort"].as_str().unwrap_or("default"),
                             decision["selected_model"].as_str().unwrap_or("unavailable"),
+                            decision["selected_effort"].as_str().unwrap_or("default"),
+                            decision["assessed_envelope"].as_str().unwrap_or("unknown"),
+                            triage,
                             decision["reason"].as_str().unwrap_or("unknown"),
                             decision["floor"].as_str().unwrap_or("unknown"),
                             decision["escalated"].as_bool().unwrap_or(false)

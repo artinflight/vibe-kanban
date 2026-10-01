@@ -54,6 +54,9 @@ pub struct RoutingDecision {
     pub assessed_envelope: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub triage: Option<crate::routing_triage::TaskTriage>,
+    /// Bounded classifier usage and result; absent when deterministic triage suffices.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantic: Option<crate::routing_semantic::SemanticTrace>,
     pub requested_model: Option<String>,
     pub selected_model: Option<String>,
     pub selected_effort: Option<String>,
@@ -195,11 +198,31 @@ pub fn resolve_action_with_context(
     failed: bool,
     root: Option<&std::path::Path>,
 ) -> Result<(), String> {
+    resolve_action_impl(action, previous, failed, root, false)
+}
+
+/// Live admission: one optional bounded semantic turn before normal qualification.
+pub fn resolve_action_with_semantics(
+    action: &mut ExecutorAction,
+    previous: Option<&ExecutorAction>,
+    failed: bool,
+    root: Option<&std::path::Path>,
+) -> Result<(), String> {
+    resolve_action_impl(action, previous, failed, root, true)
+}
+
+fn resolve_action_impl(
+    action: &mut ExecutorAction,
+    previous: Option<&ExecutorAction>,
+    failed: bool,
+    root: Option<&std::path::Path>,
+    semantic_enabled: bool,
+) -> Result<(), String> {
     let original = action.clone();
     let shadow = config(action)
         .and_then(|c| c.routing.as_ref())
         .is_some_and(|p| p.mode == RoutingMode::Shadow);
-    let result = resolve_action_inner(action, previous, failed, root);
+    let result = resolve_action_inner(action, previous, failed, root, semantic_enabled);
     if shadow {
         action.typ = original.typ;
         if let Err(error) = result {
@@ -207,6 +230,7 @@ pub fn resolve_action_with_context(
             action.routing_decision = Some(Box::new(RoutingDecision {
                 assessed_envelope: None,
                 triage: None,
+                semantic: None,
                 version: 2,
                 id: uuid::Uuid::new_v4().to_string(),
                 mode: RoutingMode::Shadow,
@@ -233,6 +257,7 @@ fn resolve_action_inner(
     previous: Option<&ExecutorAction>,
     failed: bool,
     root: Option<&std::path::Path>,
+    semantic_enabled: bool,
 ) -> Result<(), String> {
     action.routing_decision = None; // Never trust a client-supplied decision.
     let Some(original) = config(action).cloned() else {
@@ -334,11 +359,31 @@ fn resolve_action_inner(
                 _ => None,
             })
     });
-    let assessment = crate::routing_assessment::assess_follow_up_with_context(
-        prompt,
-        prior_envelope.as_deref(),
-        root,
-    );
+    let mut assessment = crate::routing_assessment::assess_with_context(prompt, root);
+    let semantic = if semantic_enabled
+        && crate::routing_semantic::eligible(
+            &assessment,
+            failed,
+            &policy,
+            prompt,
+            prior_envelope.as_deref(),
+        ) {
+        let previous_prompt = previous.and_then(|p| match &p.typ {
+            ExecutorActionType::CodingAgentInitialRequest(r) => Some(r.prompt.as_str()),
+            ExecutorActionType::CodingAgentFollowUpRequest(r) => Some(r.prompt.as_str()),
+            _ => None,
+        });
+        let trace =
+            crate::routing_semantic::classify(prompt, previous_prompt, &assessment, &policy);
+        if let Some(classification) = &trace.classification {
+            crate::routing_semantic::apply(&mut assessment, classification);
+        }
+        Some(trace)
+    } else {
+        None
+    };
+    let assessment =
+        crate::routing_assessment::retain_previous(assessment, prompt, prior_envelope.as_deref());
     let mut floor = policy.floor.max(assessment.floor);
     if let Some(prior) = previous.and_then(|p| p.routing_decision.as_ref()) {
         floor = floor.max(prior.floor); // Never silently lower an established session floor.
@@ -419,6 +464,7 @@ fn resolve_action_inner(
     let mut decision = RoutingDecision {
         assessed_envelope: Some(envelope.into()),
         triage: Some(assessment.triage),
+        semantic,
         version: 2,
         id: uuid::Uuid::new_v4().to_string(),
         mode: policy.mode,
@@ -764,7 +810,7 @@ mod tests {
     fn manual_is_authoritative_even_after_failure() {
         let mut a = action(None);
         let before = serde_json::to_value(&a).unwrap();
-        resolve_action(&mut a, None, true).unwrap();
+        resolve_action_with_semantics(&mut a, None, true, None).unwrap();
         assert_eq!(serde_json::to_value(a).unwrap(), before);
     }
 
@@ -801,6 +847,7 @@ mod tests {
         previous.routing_decision = Some(Box::new(RoutingDecision {
             assessed_envelope: None,
             triage: None,
+            semantic: None,
             version: 1,
             id: "prior".into(),
             mode: RoutingMode::Auto,

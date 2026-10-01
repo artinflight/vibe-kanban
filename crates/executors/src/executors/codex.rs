@@ -120,7 +120,7 @@ fn env_flag_enabled(name: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn codex_execution_disabled() -> bool {
+pub(crate) fn codex_execution_disabled() -> bool {
     env_flag_enabled("VK_DISABLE_CODEX_EXECUTIONS")
         || env_flag_enabled("VK_LAB_DISABLE_CODEX_EXECUTIONS")
 }

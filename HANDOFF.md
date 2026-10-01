@@ -12,7 +12,9 @@ All45 focused Python regressions, syntax compilation, repository formatting,
 `ops:check` and diff checks pass. The real Desktop archive/metadata download and
 three-generation restore pass; file-only refresh is789 bytes versus a
 17,828,870-byte checkpoint, with unchanged DB reuse. This is not a measured
-production preparation SLA. No broad application suite, new inference, service
+production preparation SLA. Generated recipe acceptance at `e1bf06f7b` passed:
+12.24seconds first run,1.46seconds repeat; static evidence reused, diff refreshed,
+and elapsed preparation clock retained. No broad application suite, new inference, service
 action or production backup. Inherited notes below are historical unless checked.
 
 ## AutoSwitch V1 staging-only release

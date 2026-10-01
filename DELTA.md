@@ -1442,3 +1442,12 @@ draft clear/remount without inheriting another chat’s consent. Native refresh
 passed in 0.90s on a private proof copy, seven selector regressions and 127 executor
 tests passed. Production remains untouched; live Shadow acceptance is pending
 normal release adoption. See VK_AUTOSWITCH_SHADOW_FIX.md and HANDOFF.md.
+
+## 2026-10-01 AutoSwitch temporary no-restart activation
+
+Operator authorized browser-only activation and genuine model-proof renewal.
+Frontend8d4b9ead2 is served; backend PID1504649 remains unchanged. Nine short
+checks passed once, all seven models retained, proof valid through October2
+16:10:26 UTC. TF::Build Shadow selection survives reload with Sol6.1/xhigh
+unchanged; no task or phone action was started. No automated paid refresh.
+Permanent backend renewal awaits a later worthwhile restart. See HANDOFF.md.

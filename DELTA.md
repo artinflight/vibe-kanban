@@ -1469,3 +1469,11 @@ identified the incumbent's strict nested classification decoder; persist new sco
 evidence on the extensible trace instead. Runtime behavior is unchanged. No
 production activation yet; release/backup evidence is on mounted SSD in
 `vk-autoswitch-scope-release-20261001`.
+
+## 2026-10-01 — No-restart intent and restart ownership
+
+Operator reaffirmed live behavior without restart; VK::Staging owns all restarts
+and cutovers. Prepared AutoSwitch activation is held. Added a standalone Shadow
+resolver helper and three passing interface tests; no live integration or paid
+inference. Full automatic live replacement is blocked by the missing external
+resolver hook; clarification of the interim Shadow scope is pending.

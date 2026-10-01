@@ -1,3 +1,31 @@
+## No-restart routing correction — October 1
+
+The operator means live behavior without restarting VK. VK::Staging exclusively
+owns restarts/cutovers for continuity; this AutoSwitch task must not execute them.
+The previously prepared switch request is withdrawn and its readiness is disabled.
+No updated VK backend has been activated.
+
+The actual running source adfa7c051 reloads availability/model policy data, but
+its assessment, previous-floor retention and qualification call are compiled in.
+There is no existing external top-level resolver hook. Do not represent refreshed
+model data, offline tests or a browser-only update as a live classifier repair.
+
+Branch `fix/autoswitch-live-shadow` preserves a first standalone Shadow helper,
+`crates/executors/examples/routing_shadow.rs`, based on stagingb0f4c10a9. It calls
+the existing full boundary resolver with previous action/failure context, refuses
+Manual/Auto input, preserves execution settings, and permits semantic calls only
+with `--semantic`. Its build and three focused interface tests pass; no inference
+was spent. This is a development helper, not a live UI/service integration.
+
+A required scope question is pending: live corrected Shadow recommendations while
+actual selections retain the current backend, or actual Auto selection changing
+without restart as well. The latter has no safe supported hook in the current
+binary. Do not silently substitute the former for the latter or weaken policy,
+rewrite historical decisions, reset sessions, or bypass native settings checks.
+No production endpoint, gateway, launcher, model policy or service was changed in
+this pass. Prepared release artifacts remain held under
+`/mnt/vk-storage/vk-autoswitch-scope-release-20261001` for operator-directed use.
+
 ## AutoSwitch release compatibility (2026-10-01)
 
 Scope/savings fixes are merged through PR134 (staging) and PR135 (main).

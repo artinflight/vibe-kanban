@@ -1364,3 +1364,16 @@ protected consequences/context retain Frontier. No classifier model call, regist
 or CU wire changes. Twenty-two routing tests, services check, focused Clippy,
 generated types, web-core checking, format/ops and five offline recommendation
 cases pass. V1 deployment untouched; live V2 Shadow acceptance remains pending.
+
+
+## 2026-10-01 — bounded semantic fallback for uncertain V2 requests
+
+Added a single structured native classifier turn after the free deterministic
+path, preserving existing policy/manual controls, protected risks and prior session
+qualification. Native usage and UUID/thread/turn identity are observable in the
+routing decision and a separate classifier audit feed. Shadow explains the path,
+classification, uncertainty/risk and model/effort recommendation. Five final native
+samples plus two zero-inference controls demonstrate bounded downward routing and
+conservative ambiguous/private-data behavior; six native calls total including the
+initial transport check. No V1 acceptance repeat, staging, deployment, CU consumer
+change or external-agent coordination. Details: VK_AUTOSWITCH_FULL_ROUTER.md.

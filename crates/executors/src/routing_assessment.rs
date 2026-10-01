@@ -45,7 +45,14 @@ pub fn assess_follow_up_with_context(
     previous_envelope: Option<&str>,
     root: Option<&std::path::Path>,
 ) -> Assessment {
-    let mut assessment = assess_with_context(prompt, root);
+    retain_previous(assess_with_context(prompt, root), prompt, previous_envelope)
+}
+
+pub fn retain_previous(
+    mut assessment: Assessment,
+    prompt: &str,
+    previous_envelope: Option<&str>,
+) -> Assessment {
     let Some(previous) = previous_envelope else {
         return assessment;
     };
@@ -58,15 +65,10 @@ pub fn assess_follow_up_with_context(
         "protected" => "protected",
         _ => "protected", // Unknown persisted qualification must not lower admission.
     };
-    let continuation = matches!(
-        prompt
-            .trim()
-            .trim_end_matches(['.', '!'])
-            .to_lowercase()
-            .as_str(),
-        "continue" | "continue please" | "please continue" | "proceed" | "go ahead"
-    );
-    if continuation || envelope_rank(previous) > envelope_rank(assessment.envelope) {
+    let continuation = is_continuation(prompt);
+    if (continuation && assessment.evidence != "semantic_classification")
+        || envelope_rank(previous) > envelope_rank(assessment.envelope)
+    {
         assessment.envelope = previous;
         assessment.floor = match previous {
             "mechanical" | "bounded" => CapabilityFloor::Routine,
@@ -80,6 +82,17 @@ pub fn assess_follow_up_with_context(
             .push("retained_session_qualification".into());
     }
     assessment
+}
+
+pub fn is_continuation(prompt: &str) -> bool {
+    matches!(
+        prompt
+            .trim()
+            .trim_end_matches(['.', '!'])
+            .to_lowercase()
+            .as_str(),
+        "continue" | "continue please" | "please continue" | "proceed" | "go ahead"
+    )
 }
 
 pub fn assess(prompt: &str) -> Assessment {
@@ -330,6 +343,22 @@ pub fn assess_with_context(prompt: &str, root: Option<&std::path::Path>) -> Asse
         }
         triage.needs_repo_inspection = false; // Already safe to require the protected tier.
         triage.uncertainty = "medium".into();
+    }
+    // Preserve explicit validation restrictions as hard evidence for the semantic
+    // layer; missing evidence is the only normal-work default it may lower.
+    if envelope == "normal"
+        && has(&[
+            "no tests",
+            "without tests",
+            "untested",
+            "cannot test",
+            "skip tests",
+            "do not run",
+            "don't run",
+        ])
+    {
+        evidence = "validation_explicitly_unavailable";
+        triage.validation = "explicitly_unavailable".into();
     }
     Assessment {
         triage,

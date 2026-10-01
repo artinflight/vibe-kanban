@@ -139,7 +139,8 @@ function useEffectiveOverrides(
   lastUsedConfig: ExecutorConfig | null,
   variantWasUserSelected: boolean,
   presetOptions: ExecutorConfig | null | undefined,
-  preferPresetOverrides: boolean
+  preferPresetOverrides: boolean,
+  sessionConfig: ExecutorConfig | null | undefined
 ) {
   return useMemo((): ExecutorConfig | null => {
     if (!effectiveExecutor) return null;
@@ -163,10 +164,18 @@ function useEffectiveOverrides(
 
     for (const field of OVERRIDE_FIELDS) {
       if (field === 'routing') {
-        // Routing consent is per chat; never inherit it from unrelated last-used settings.
+        // Only this session may restore consent after a draft is cleared.
+        // Unrelated last-used settings must never opt a new chat into routing.
         resolved.routing =
           userSelections.routing ??
-          (scratchMatches ? scratchConfig?.routing : undefined);
+          (scratchMatches ? scratchConfig?.routing : undefined) ??
+          (sessionConfig &&
+          getProfileKey(
+            sessionConfig.executor,
+            sessionConfig.variant ?? null
+          ) === profileKey
+            ? sessionConfig.routing
+            : undefined);
         continue;
       }
       const modelMustMatch = field === 'reasoning_id';
@@ -202,6 +211,7 @@ function useEffectiveOverrides(
     lastUsedConfig,
     presetOptions,
     preferPresetOverrides,
+    sessionConfig,
     variantWasUserSelected,
   ]);
 }
@@ -210,6 +220,8 @@ interface UseExecutorConfigOptions {
   profiles: Record<string, ExecutorProfile> | null;
   lastUsedConfig: ExecutorConfig | null;
   scratchConfig?: ExecutorConfig | null;
+  /** Latest execution in this chat only; never a previous/unrelated session. */
+  sessionConfig?: ExecutorConfig | null;
   configExecutorProfile?: ExecutorProfileId | null;
   persistenceKey?: string | null;
   onPersist?: (config: ExecutorConfig) => void;
@@ -278,6 +290,7 @@ export function useExecutorConfig({
   profiles,
   lastUsedConfig,
   scratchConfig,
+  sessionConfig,
   configExecutorProfile,
   persistenceKey,
   onPersist,
@@ -321,7 +334,8 @@ export function useExecutorConfig({
     lastUsedConfig,
     variant.wasUserSelected,
     presetOptions,
-    preferPresetOverrides
+    preferPresetOverrides,
+    sessionConfig
   );
 
   const profileKey = getProfileKey(executor.effective, variant.resolved);

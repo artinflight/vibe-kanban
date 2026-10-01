@@ -1,3 +1,8 @@
+> October 1 repair: catalog freshness now renews without inference; historical
+> verified pairs remain usable under matching fresh discovery. Same-session routing
+> survives cleared drafts. See [Shadow continuity repair](VK_AUTOSWITCH_SHADOW_FIX.md).
+> Earlier 24-hour execution-proof expiry notes below describe the pre-fix behavior.
+
 # Automatic task assessment and qualified-pair routing
 
 This extends accepted V1 on `vk/5a81-autoswitch-cu-recovery`; it does not replace

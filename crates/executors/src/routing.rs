@@ -103,6 +103,9 @@ pub struct ModelPolicy {
 pub struct Availability {
     pub version: u32,
     pub observed_at: i64,
+    /// Native initialize identity, retained from the bounded verification probe.
+    #[serde(default)]
+    pub runtime: Option<String>,
     pub codex_home: String,
     pub launcher: String,
     pub account_fingerprint: String,
@@ -115,6 +118,24 @@ pub struct ModelAvailability {
     pub supported_efforts: Vec<String>,
     pub verified_efforts: Vec<String>,
     pub verified_at: Option<i64>,
+}
+
+impl Availability {
+    /// Execution success is historical evidence, not a daily inference lease.
+    /// Retain it only while fresh discovery confirms support on the same runtime.
+    /// Undiscovered releases and legacy proofs still require recent execution.
+    pub fn has_execution_proof(&self, model: &ModelAvailability, now: i64) -> bool {
+        let Some(at) = model.verified_at else {
+            return false;
+        };
+        if at > now || !(0..=86400).contains(&(now - self.observed_at)) {
+            return false;
+        }
+        (0..=86400).contains(&(now - at))
+            || (model.discovered
+                && self.runtime.as_ref().is_some_and(|r| !r.is_empty())
+                && at <= self.observed_at)
+    }
 }
 
 pub fn model_policies() -> Result<Vec<ModelPolicy>, String> {
@@ -155,21 +176,24 @@ pub fn load_availability() -> Result<Availability, String> {
     let path = std::env::var("VK_CODEX_ROUTING_AVAILABILITY").map_err(
         |_| "Routing requires VK_CODEX_ROUTING_AVAILABILITY; run the catalog probe first",
     )?;
-    let data = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let data = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let a: Availability = serde_json::from_str(&data).map_err(|e| e.to_string())?;
     let home = crate::executors::codex::codex_home()
         .and_then(|p| p.canonicalize().ok())
         .ok_or("Codex home unavailable")?;
-    let age = chrono::Utc::now().timestamp() - a.observed_at;
     if a.version != 1
-        || !(0..=86400).contains(&age)
         || a.codex_home != home.to_string_lossy()
         || a.launcher != Codex::base_command()
         || a.account_fingerprint.is_empty()
     {
-        return Err(
-            "Routing availability is stale or belongs to another runtime; refresh the probe".into(),
-        );
+        return Err("Routing availability belongs to another runtime; refresh executable-model verification".into());
+    }
+    let now = chrono::Utc::now().timestamp();
+    if a.observed_at > now {
+        return Err("Routing availability timestamp is in the future".into());
+    }
+    if now - a.observed_at > 86400 {
+        return crate::routing_availability::refresh(std::path::Path::new(&path), a);
     }
     Ok(a)
 }
@@ -559,11 +583,11 @@ pub fn choose_assessed(
         .iter()
         .filter(|m| m.released && !policy.denied_models.contains(&m.id))
     {
-        let Some(proof) = availability.models.iter().find(|a| {
-            a.id == model.id
-                && a.verified_at
-                    .is_some_and(|at| (0..=86400).contains(&(now - at)))
-        }) else {
+        let Some(proof) = availability
+            .models
+            .iter()
+            .find(|a| a.id == model.id && availability.has_execution_proof(a, now))
+        else {
             continue;
         };
         for q in &model.qualifications {
@@ -614,6 +638,7 @@ mod tests {
         let availability = Availability {
             version: 1,
             observed_at: 100,
+            runtime: None,
             codex_home: "test".into(),
             launcher: "codex".into(),
             account_fingerprint: "test".into(),

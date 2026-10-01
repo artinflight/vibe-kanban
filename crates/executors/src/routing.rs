@@ -408,10 +408,13 @@ fn resolve_action_inner(
     };
     let assessment =
         crate::routing_assessment::retain_previous(assessment, prompt, prior_envelope.as_deref());
-    let mut floor = policy.floor.max(assessment.floor);
-    if let Some(prior) = previous.and_then(|p| p.routing_decision.as_ref()) {
-        floor = floor.max(prior.floor); // Never silently lower an established session floor.
-    }
+    let mut floor = crate::routing_assessment::boundary_floor(
+        &assessment,
+        policy.floor,
+        previous
+            .and_then(|p| p.routing_decision.as_ref())
+            .map(|d| d.floor),
+    );
     let risk_expansion = previous
         .and_then(|p| p.routing_decision.as_ref())
         .is_some_and(|d| assessment.floor > d.floor);
@@ -797,7 +800,11 @@ mod tests {
                     .unwrap()
                     .assessed_envelope
                     .as_deref(),
-                Some("complex")
+                Some("mechanical")
+            );
+            assert_eq!(
+                next.routing_decision.as_ref().unwrap().floor,
+                CapabilityFloor::Routine
             );
             // Exercise the actual persistence boundary between each follow-up.
             prior = serde_json::from_value(serde_json::to_value(next).unwrap()).unwrap();
@@ -814,6 +821,77 @@ mod tests {
         assert_eq!(event["schema"], "vk.routing.v1");
         assert_eq!(event["policyVersion"], "vk-autoswitch-v2");
         assert!(event["taskId"].is_null());
+    }
+
+    #[test]
+    fn action_boundaries_release_old_protection_only_for_independent_safe_work() {
+        let (mut policy, models, availability) = fixture();
+        policy.mode = RoutingMode::Shadow;
+        policy.floor = CapabilityFloor::Assessed;
+        let mut previous = action(Some(policy.clone()));
+        if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut previous.typ {
+            r.prompt = "Change authentication permissions".into();
+        }
+        resolve_action(&mut previous, None, false).unwrap();
+        assert_eq!(
+            previous.routing_decision.as_ref().unwrap().floor,
+            CapabilityFloor::Frontier
+        );
+        for (prompt, explicit, expected) in [
+            (
+                "Fix the typo in README.md",
+                CapabilityFloor::Assessed,
+                CapabilityFloor::Routine,
+            ),
+            (
+                "Fix the typo in README.md",
+                CapabilityFloor::Workhorse,
+                CapabilityFloor::Workhorse,
+            ),
+            (
+                "Fix the typo in README.md",
+                CapabilityFloor::Frontier,
+                CapabilityFloor::Frontier,
+            ),
+            (
+                "okay, carry on",
+                CapabilityFloor::Assessed,
+                CapabilityFloor::Frontier,
+            ),
+            (
+                "Fix a typo in auth_panel",
+                CapabilityFloor::Assessed,
+                CapabilityFloor::Frontier,
+            ),
+        ] {
+            policy.floor = explicit;
+            let mut next = action(Some(policy.clone()));
+            if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut next.typ {
+                r.prompt = prompt.into();
+            }
+            let before = serde_json::to_value(&next.typ).unwrap();
+            resolve_action(&mut next, Some(&previous), false).unwrap();
+            assert_eq!(serde_json::to_value(&next.typ).unwrap(), before);
+            let d = next.routing_decision.unwrap();
+            assert_eq!(d.floor, expected, "{prompt}");
+            let pair = choose_assessed(
+                &policy,
+                d.floor,
+                d.assessed_envelope.as_deref().unwrap(),
+                &models,
+                &availability,
+                100,
+            )
+            .unwrap();
+            assert_eq!(
+                pair.0,
+                match expected {
+                    CapabilityFloor::Routine => "gpt-5.6-luna",
+                    CapabilityFloor::Workhorse => "gpt-6.1-sol",
+                    _ => "gpt-6-astra",
+                }
+            );
+        }
     }
 
     #[test]

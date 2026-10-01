@@ -20,6 +20,7 @@ use serde_json::json;
 struct Task {
     prompt: String,
     previous_envelope: Option<String>,
+    previous_prompt: Option<String>,
     repo_root: Option<std::path::PathBuf>,
     #[serde(default)]
     floor: CapabilityFloor,
@@ -52,7 +53,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &task.prompt,
                 task.previous_envelope.as_deref(),
             ) {
-            let trace = routing_semantic::classify(&task.prompt, None, &assessment, &policy);
+            let trace = routing_semantic::classify(
+                &task.prompt,
+                task.previous_prompt.as_deref(),
+                &assessment,
+                &policy,
+            );
             if let Some(c) = &trace.classification {
                 routing_semantic::apply(&mut assessment, c);
             }

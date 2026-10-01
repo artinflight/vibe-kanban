@@ -1,3 +1,22 @@
+## AutoSwitch scope and savings correction (2026-10-01)
+
+Current development fixes permanent Frontier inheritance and the false security
+promotion of configuration notes. Read [VK_AUTOSWITCH_SCOPE_FIX.md](VK_AUTOSWITCH_SCOPE_FIX.md).
+Independent small work can choose Luna after protected work; ambiguous continuation,
+protected paths, explicit floors and failure handling remain conservative. Native
+recommendation tests cover real TF::Build wording and ordinary UI/documentation
+work. This is source-only: no backend restart, deployment or live routing-policy
+change. The earlier no-restart workaround below remains the actual live state.
+Validation passed: 131 executor tests (six opt-in ignored), generated shared types,
+web-core TypeScript, executor Clippy with warnings denied, formatting/governance
+and diff checks. CU contract bytes are unchanged. Five native classification calls
+used 20,883 input tokens (3,840 cached), 915 output, 4.5–9.3s each; five controls
+needed no inference. The real preceding TF::Build request was included in one
+replay. These are recommendation checks, not measured accepted-task savings.
+Evidence: `/mnt/vk-storage/vk-model-autoswitch-20260930/scope-fix`.
+Next: adopt the backend changes through the normal release path when worthwhile,
+then measure total accepted-task usage; no restart or release was done here.
+
 ## AutoSwitch no-restart testing workaround live (2026-10-01)
 
 Operator authorized the temporary no-restart path. Frontend source `8d4b9ead2`

@@ -158,6 +158,9 @@ actual file writes, changed SQLite generations, archive warnings, lost journal
 coverage, or failed delivery reject the boundary and leave the previous verified
 backup current. The callback is checked before capture and after archive and
 metadata delivery. The CLI does not offer a flag that fabricates this receipt.
+Desktop metadata is a restore descriptor, explicitly pending handover acceptance;
+only the successful local result certifies the post-delivery fence check. Do not
+use an uploaded descriptor from an aborted attempt as a cutover readiness record.
 
 Use the result's `frozen_boundary_verified` and verified delivery receipts in the
 existing ownership handover boundary callback. `cutover_authorized` remains false:
@@ -171,11 +174,12 @@ unchanged with real VK binaries, two private filesystem-isolated units, private
 routes, and actual Desktop transfer. It proves failed-backup return, successful
 handover, same-process cutback preserving subsequent saved-message/settings/model
 changes, repeated recovery, and restoration of the checkpoint plus final delta.
-The private switch measured 13.27 seconds, including 13.10 seconds for capture and
+The final private switch measured 15.03 seconds, including 14.84 seconds for capture and
 fencing; this small fixture does not predict production timing or exercise CU
 polling/native inference. All private units were stopped and removed afterward.
 Evidence: `/mnt/vk-storage/vk-preparation-20261001/integration/`
-`handover-6c3bfe31bc85448a931abc43618d850b/result.json`.
+`handover-628d03d9d47446efb5295f4d117bc55a/result.json`. This final run binds the
+tool hashes and restores from archives and metadata downloaded back from Desktop.
 
 The rehearsal caught SQLite `CLOSE_WRITE` events without content/generation
 changes. The journal now retains event types per checkpoint boundary; a close-only

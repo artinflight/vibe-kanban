@@ -1,3 +1,31 @@
+## AutoSwitch no-restart testing workaround live (2026-10-01)
+
+Operator authorized the temporary no-restart path. Frontend source `8d4b9ead2`
+is live on the existing backend at `https://vibe.local`; backend PID1504649 and
+binary are unchanged. Only the two chat-setting frontend files differ from the
+previous frontend source. All old hashed assets remain available, and the prior
+frontend/proof have verified rollback copies on mounted SSD.
+
+Nine genuine one-reply checks refreshed all seven models and the two additional
+low-effort pairs in the existing availability file. No retries or background
+paid refresh were installed. The current backend's 24-hour rule still applies:
+proof expires **2026-10-02 16:10:26 UTC**. Native counters total50,254 input tokens
+(11,904 cached) and72 output tokens; these are not allowance charges.
+
+TF::Build's empty follow-up draft is now Shadow/assessed; manual model and effort
+remain Sol6.1/xhigh. Actual browser selection/reload checks passed at desktop and
+mobile sizes without errors. No new development execution was submitted and no
+phone operation occurred. Reload the operator's page to receive the updated UI;
+previous explicit browser-local manual overrides remain authoritative.
+
+Read `VK_AUTOSWITCH_SHADOW_FIX.md`. Evidence, deployment manifest, test scripts,
+screenshots and rollback are at
+`/mnt/vk-storage/vk-model-autoswitch-20260930/no-restart`.
+The permanent backend auto-refresh fix remains undeployed. Further Shadow work
+can use this temporary window; refresh genuine proof on demand if testing extends
+past expiry. Never merely advance timestamps or add unattended paid probes.
+A complete new live routed task/child acceptance is still pending operator work.
+
 ## TF::Build Shadow continuity repair (2026-10-01)
 
 Branch `fix/autoswitch-shadow-continuity` fixes expired availability renewal and

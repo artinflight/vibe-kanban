@@ -1,5 +1,20 @@
 # TF::Build Shadow continuity repair
 
+## Temporary no-restart activation (October 1)
+
+The operator authorized fresh genuine model checks and the browser-only fix.
+Frontend commit `8d4b9ead2` is live; backend PID1504649 is unchanged. All nine
+previously verified model/effort pairs were retested once, with no retries.
+Proof expires October2 at16:10:26 UTC under the still-running backend’s original
+24-hour rule. TF::Build now has a Shadow follow-up draft. Desktop/mobile browser
+checks confirm reload persistence and unchanged Sol6.1/xhigh selection. No task
+was submitted. Reload the page before continuing ordinary Shadow work.
+
+The permanent backend refresh code described below remains undeployed.
+Activation evidence and verified rollback copies are in
+`/mnt/vk-storage/vk-model-autoswitch-20260930/no-restart`.
+The following delivery-boundary paragraph records the earlier development pass.
+
 ## Observed failure (October 1, 2026)
 
 TF::Build execution `96b68847-44f1-4498-90da-780153404667` began at

@@ -232,7 +232,9 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                   "frozen_boundary_verified": verify_fence is not None, "writer_fence": fence_before}
         if publish is not None:
             metadata = folder / (archive.name + ".result.json")
-            save(metadata, result)
+            # A restore descriptor cannot certify the still-pending post-delivery fence check.
+            save(metadata, {**result, "frozen_boundary_verified": False,
+                            "handover_acceptance_pending": verify_fence is not None})
             with measured(timings, "desktop_metadata_transfer_and_verify"):
                 receipt = publish(metadata)
             if receipt.get("desktop_verified") is not True or receipt["sha256"] != digest(metadata):

@@ -138,7 +138,10 @@ def main():
     result = {"passed": False, "production_modified": False, "cutover_authorized": False,
               "root": str(root), "units": units, "cases": [],
               "server_sha256": digest(release / "server"),
-              "handover_sha256": digest(legacy / "ownership_handover.py")}
+              "handover_sha256": digest(legacy / "ownership_handover.py"),
+              "tool_sha256": {name: digest(Path(__file__).with_name(name)) for name in
+                              ("vk_rolling_backup.py", "vk_change_journal.py", "vk_prep_common.py",
+                               "rehearse_vk_backup_boundary.py")}}
     try:
         for role in ("incumbent", "candidate"):
             port = configuration[role + "_port"]
@@ -228,7 +231,17 @@ def main():
         result["cases"].append("Same-process cutback preserves writes and model/settings changes made after handover")
         handover.recovery(configuration, before, lambda role: None)
         result["cases"].append("Repeated recovery preserves the released candidate and current owner")
-        restored = restore_chain(boundary_result, root / "backups/isolated-restoration")
+        downloaded = root / "desktop-archives"
+        downloaded.mkdir()
+        for name, checksum in [(row["archive"], row["receipt"]["sha256"]) for row in (parent, boundary_result)] + [
+                (boundary_result["metadata_receipt"]["name"], boundary_result["metadata_receipt"]["sha256"])]:
+            subprocess.run(["scp", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15",
+                            "desktop:" + args.desktop_directory + "/" + name, str(downloaded)], check=True, timeout=120)
+            require(digest(downloaded / name) == checksum, "Desktop recovery download changed")
+        descriptor = json.loads((downloaded / boundary_result["metadata_receipt"]["name"]).read_text())
+        require(descriptor["handover_acceptance_pending"] and not descriptor["frozen_boundary_verified"],
+                "Desktop restore metadata must not claim handover acceptance")
+        restored = restore_chain(descriptor, root / "backups/isolated-restoration", downloaded)
         restored_runtime = Path(restored["destination"]) / "files" / str(runtime).lstrip("/")
         for original in (history, dirty, attachment):
             require(digest(original) == digest(restored_runtime / original.relative_to(runtime)), "Restored fixture mismatch")

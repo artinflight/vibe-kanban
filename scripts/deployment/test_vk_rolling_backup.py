@@ -227,9 +227,17 @@ class BackupTests(unittest.TestCase):
         self.note.write_text("work since online checkpoint")
         with sqlite3.connect(self.database) as db:
             db.execute("UPDATE settings SET value='latest frozen settings'")
-        result = capture(self.plan, self.backups, self.journal.report, self.mirror, first, self.mirror,
+        descriptors = []
+
+        def publish(path):
+            descriptors.append(json.loads(path.read_text()))
+            return self.mirror(path)
+
+        result = capture(self.plan, self.backups, self.journal.report, self.mirror, first, publish,
                          verify_fence=lambda: {"verified": True, "pid": 123})
         self.assertTrue(result["frozen_boundary_verified"])
+        self.assertFalse(descriptors[0]["frozen_boundary_verified"])
+        self.assertTrue(descriptors[0]["handover_acceptance_pending"])
         self.assertFalse(result["cutover_authorized"])
         restored = self.restored(result)
         self.assertEqual((restored / self.note.name).read_text(), self.note.read_text())

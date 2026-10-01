@@ -5,9 +5,10 @@ All 54 regressions pass. The new fenced capture callback passed with unchanged
 September 30 ownership primitives and real VK binaries: backup abort returns the
 same process; handover takes the latest data; cutback preserves newer messages,
 settings and model choice; repeated recovery and backup restoration pass.
-The private switch took 13.27 seconds including Desktop verification. Evidence:
+The final private switch took 15.03 seconds including Desktop verification.
+Restoration used archives/metadata downloaded back from Desktop. Evidence:
 `/mnt/vk-storage/vk-preparation-20261001/integration/`
-`handover-6c3bfe31bc85448a931abc43618d850b/result.json`.
+`handover-628d03d9d47446efb5295f4d117bc55a/result.json`.
 The watcher now distinguishes close-only SQLite WAL events from writes and keeps
 critical databases required across increments. Production Green remains running;
 the rehearsal units are removed. No production cutover, model call or CU polling.

@@ -248,6 +248,8 @@ class Preparation:
 
     def run_locked(self):
         started = time.monotonic()
+        save(self.root / "latest-result.json", {"passed": False, "state": "running-or-interrupted",
+                                               "cutover_authorized": False, "run": str(self.run_root)})
         tree = clean_tree(self.source)
         clock = self.root / "preparation-clock.json"
         if not clock.exists():

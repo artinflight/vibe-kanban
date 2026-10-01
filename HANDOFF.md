@@ -1,5 +1,30 @@
 # HANDOFF.md
 
+## October 1: Authorized Cutover And Required Timing Audit
+
+The operator authorizes cutover once current agents finish, then investigation
+and fixes for the FULL preparation time. Only this original maintenance agent
+is running; the queue is empty. PR132 reconciled main ancestry without changing
+files. PR131 promotes staging a2733eea5 into main329963d18; the tree is identical
+to built adfa7c051 and accepted PR130. The fresh schema CI job failed before
+checking code because GitHub's compiler-cache storage returned HTTP503. All ten
+passing PR130 checks from this morning remain exact-tree validation evidence;
+do not claim the new promotion run is all green.
+
+Green2506054 remains live until the independent controller records otherwise.
+Read `/mnt/vk-storage/vk-blue-autoswitch-v2-20261001/cutover-attempt.json`, if
+present, and the named status before acting. NEVER repeat a consumed handover.
+Continue this ORIGINAL thread, verify live workflows and preservation, then
+complete the preparation-time audit and versioned tool fixes described in
+`/mnt/vk-storage/vk-blue-autoswitch-v2-20261001/continuation-task.md`. The task
+does not end at process health. Previous clarification holds are superseded by
+the operator's full normal-cutover instruction, including necessary short
+writer coordination. No old backup may replace current production data.
+
+The latest incremental backup is verified on Desktop, including ongoing work;
+the existing full restored checkpoint/journal chain is retained. Report exactly
+once at the end, after live acceptance, timing investigation and docs/commits.
+
 ## October 1: AutoSwitch V2 Deployment Preparation In Progress
 
 The operator requested watching AutoSwitch's V2 merge and beginning the improved

@@ -1,5 +1,13 @@
 # STREAM.md
 
+October1 current scope: the operator authorizes complete V2 cutover after active
+agents finish, then diagnosing/fixing the whole preparation-time bottleneck.
+PR131 promotes same-tree staging a2733eea5 to main329963d18. Source/build/private
+acceptance evidence is retained without unnecessary rebuilds. Read latest
+HANDOFF, runtime PROGRESS and consumed-attempt status before continuation.
+Issue one final report only after live acceptance and the timing audit/fixes.
+Earlier clarification holds below are historical, not current authorization.
+
 October1 scope: observe AutoSwitch V2's completed staging merge, then prepare
 staging adfa7c051 for production using the improved preparation tools and complete
 elapsed timing. Green2506054 remains production; this maintenance branch records

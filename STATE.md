@@ -1,5 +1,15 @@
 # STATE.md
 
+**October1 authorized cutover:** staging a2733eea5 (ancestry-only PR132) is
+promoted through PR131 to main329963d18. Both have the exact tested/built V2
+tree b804fcbb9. Green2506054 remains production until the new controller status
+says otherwise. The operator authorizes cutover after agent drain and the
+subsequent full preparation-time investigation. Earlier clarification holds
+are superseded. All ten same-tree PR130 CI checks passed this morning; PR131's
+repeated schema job failed before source validation on GitHub cache HTTP503.
+Do not report that promotion run as all green. Read the current HANDOFF and
+runtime PROGRESS/attempt status; never replay a handover or restore old data.
+
 **October1 preparation, not activation:** AutoSwitch V2 PR130 is merged into
 staging adfa7c051. New Blue is being prepared at
 `/mnt/vk-storage/vk-blue-autoswitch-v2-20261001`; production remains

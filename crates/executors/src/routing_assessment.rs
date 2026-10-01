@@ -34,7 +34,7 @@ fn envelope_rank(envelope: &str) -> Option<usize> {
     .position(|e| *e == envelope)
 }
 
-/// Retain qualification context across follow-ups, including terse continuations.
+/// Retain qualification for continuations, not unrelated work in the same chat.
 /// This is not model confidence or inferred validation success.
 pub fn assess_follow_up(prompt: &str, previous_envelope: Option<&str>) -> Assessment {
     assess_follow_up_with_context(prompt, previous_envelope, None)
@@ -56,18 +56,20 @@ pub fn retain_previous(
     let Some(previous) = previous_envelope else {
         return assessment;
     };
+    let known = envelope_rank(previous).is_some();
     let previous = match previous {
         "mechanical" => "mechanical",
         "bounded" => "bounded",
         "validated_fix" => "validated_fix",
         "normal" => "normal",
         "complex" => "complex",
-        "protected" => "protected",
-        _ => "protected", // Unknown persisted qualification must not lower admission.
+        _ => "protected", // Unknown persisted qualification stays fail-closed.
     };
-    let continuation = is_continuation(prompt);
-    if (continuation && assessment.evidence != "semantic_classification")
-        || envelope_rank(previous) > envelope_rank(assessment.envelope)
+    let independent = known && independent_request(&assessment, prompt);
+    if !independent
+        && (envelope_rank(previous) > envelope_rank(assessment.envelope)
+            || (is_continuation(prompt)
+                && assessment.evidence == "insufficient_evidence_for_routine"))
     {
         assessment.envelope = previous;
         assessment.floor = match previous {
@@ -75,23 +77,105 @@ pub fn retain_previous(
             "protected" => CapabilityFloor::Frontier,
             _ => CapabilityFloor::Workhorse,
         };
+    }
+    if !independent {
         assessment.evidence = "retained_session_qualification";
         assessment
             .triage
             .evidence
             .push("retained_session_qualification".into());
+    } else {
+        assessment
+            .triage
+            .evidence
+            .push("current_request_reassessed".into());
     }
     assessment
 }
 
+/// A new request must carry positive scope evidence. Pronoun-only changes and
+/// generic approvals cannot erase the task they refer to, even after a classifier call.
+pub fn independent_request(a: &Assessment, prompt: &str) -> bool {
+    if is_continuation(prompt) || a.validation_failure {
+        return false;
+    }
+    let lowered = prompt.to_lowercase();
+    let mut text = lowered.trim().trim_end_matches(['.', '!']);
+    for suffix in [
+        " and make sure it works",
+        " and check it works",
+        " and test it",
+    ] {
+        text = text.strip_suffix(suffix).unwrap_or(text);
+    }
+    if [
+        "this",
+        "that",
+        "it",
+        "same",
+        "continue",
+        "carry on",
+        "remaining",
+    ]
+    .iter()
+    .any(|term| contains_term(text, term))
+    {
+        return false;
+    }
+    // "One component" alone could still mean the previous protected component.
+    // Named documentation or an inspected UI surface provides an independent target;
+    // otherwise the semantic scope check must establish the relationship.
+    ((a.evidence == "deterministic_text_edit"
+        && (contains_term(text, "readme") || text.contains(".md")))
+        || a.evidence == "triage_ui_outcome_with_repo_evidence")
+        || (a
+            .triage
+            .evidence
+            .iter()
+            .any(|e| e == "semantic_independent_request")
+            && a.triage.ambiguity == "low"
+            && a.triage.uncertainty != "high"
+            && !a.triage.needs_repo_inspection)
+}
+
+pub fn boundary_floor(
+    assessment: &Assessment,
+    explicit: CapabilityFloor,
+    previous: Option<CapabilityFloor>,
+) -> CapabilityFloor {
+    let floor = explicit.max(assessment.floor);
+    if assessment
+        .triage
+        .evidence
+        .iter()
+        .any(|e| e == "retained_session_qualification")
+    {
+        floor.max(previous.unwrap_or_default())
+    } else {
+        floor
+    }
+}
+
 pub fn is_continuation(prompt: &str) -> bool {
+    let text = prompt.trim().trim_end_matches(['.', '!']).to_lowercase();
+    let text = text
+        .strip_prefix("okay, ")
+        .or_else(|| text.strip_prefix("ok, "))
+        .unwrap_or(&text);
     matches!(
-        prompt
-            .trim()
-            .trim_end_matches(['.', '!'])
-            .to_lowercase()
-            .as_str(),
-        "continue" | "continue please" | "please continue" | "proceed" | "go ahead"
+        text,
+        "continue"
+            | "continue please"
+            | "please continue"
+            | "proceed"
+            | "go ahead"
+            | "carry on"
+            | "ready"
+            | "yes"
+            | "okay"
+            | "ok"
+            | "do it"
+            | "finish it"
     )
 }
 
@@ -397,13 +481,27 @@ mod tests {
     }
 
     #[test]
-    fn followups_retain_qualification_without_inventing_failures() {
-        let mut envelope = "complex";
-        for prompt in ["Fix the typo in README.md", "continue", "go ahead"] {
-            let assessment = assess_follow_up(prompt, Some(envelope));
-            assert_eq!(assessment.envelope, "complex");
-            assert!(!assessment.validation_failure);
-            envelope = assessment.envelope;
+    fn followups_retain_relevant_context_but_release_unrelated_work() {
+        assert_eq!(
+            assess_follow_up("Fix the typo in README.md", Some("complex")).envelope,
+            "mechanical"
+        );
+        assert_eq!(
+            assess_follow_up("Fix the typo in README.md", Some("protected")).envelope,
+            "mechanical"
+        );
+        for prompt in [
+            "continue",
+            "okay, carry on",
+            "ready",
+            "make it better",
+            "finish the remaining work",
+        ] {
+            assert_eq!(
+                assess_follow_up(prompt, Some("protected")).envelope,
+                "protected",
+                "{prompt}"
+            );
         }
         assert_eq!(
             assess_follow_up("Continue.", Some("bounded")).envelope,
@@ -420,6 +518,27 @@ mod tests {
         assert!(assess_follow_up("Tests still fail", Some("bounded")).validation_failure);
         assert_eq!(
             assess_follow_up("continue", Some("unknown_future_envelope")).floor,
+            CapabilityFloor::Frontier
+        );
+        let a = assess_follow_up("Fix the typo in README.md", Some("protected"));
+        assert_eq!(
+            boundary_floor(
+                &a,
+                CapabilityFloor::Assessed,
+                Some(CapabilityFloor::Frontier)
+            ),
+            CapabilityFloor::Routine
+        );
+        assert_eq!(
+            boundary_floor(
+                &a,
+                CapabilityFloor::Workhorse,
+                Some(CapabilityFloor::Frontier)
+            ),
+            CapabilityFloor::Workhorse
+        );
+        assert_eq!(
+            boundary_floor(&a, CapabilityFloor::Frontier, None),
             CapabilityFloor::Frontier
         );
     }

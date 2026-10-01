@@ -629,7 +629,11 @@ export type TaskTriage = { version: number, intent: string, scope: string, patte
  */
 uncertainty: string, needs_repo_inspection: boolean, evidence: Array<string>, inspected_entries: number, inspected_files: number, };
 
-export type SemanticClass = { envelope: string, scope: string, novelty: string, ambiguity: string, horizon: string, validation: string, risks: Array<string>, uncertainty: string, inspection_needed: boolean, reason: string, };
+export type SemanticClass = { envelope: string,
+/**
+ * Legacy classifier records have no scope evidence and remain conservative.
+ */
+scope_relation: string, scope: string, novelty: string, ambiguity: string, horizon: string, validation: string, risks: Array<string>, uncertainty: string, inspection_needed: boolean, reason: string, };
 
 export type SemanticTrace = { id: string, status: string, model: string, effort: string, service_tier: string, elapsed_ms: number, native_thread_id: string | null, native_turn_id: string | null, input_tokens: number | null, cached_input_tokens: number | null, output_tokens: number | null, reasoning_tokens: number | null, classification: SemanticClass | null, detail: string, };
 

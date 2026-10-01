@@ -1,5 +1,23 @@
 # HANDOFF.md
 
+## October1: Preparation Optimizations Implemented Separately
+
+The operator requested faster pre-cutover preparation, not another switch.
+Implementation is on `fix/vk-precutover-preparation` from fork/staging620bd7eb9
+at `/mnt/vk-storage/vk-preparation-20261001/source`; read its
+`VK_PREPARATION_PERFORMANCE.md` and checked-in `scripts/deployment/` tools.
+It adds input-bound static evidence/artifact reuse, rolling online checkpoints,
+bounded fresh queue inspection and full preparation timing. All45 regressions,
+formatting, ops and syntax/diff checks pass. Real Desktop fixture recovery of
+three backup generations passed. The generated recipe at e1bf06f7b took12.24s
+initially and1.46s on repeat; the file-only refresh was789bytes vs17,828,870bytes.
+These are bounded measurements, not a production preparation SLA. The next
+fresh release must rehearse new backup-format/final-controller compatibility
+before using it at a production boundary. Existing ownership and latest-data
+rollback are unchanged. Changes are locally committed, not pushed or merged.
+Green2506054 remains running and Blue764264 frozen; no production action or
+production backup was performed. Do not repeat consumed cutover attempts.
+
 ## September30: Green Live And Accepted
 
 Renewed attempt203427Z completed in39.17seconds. Green2506054 is live/enabled on

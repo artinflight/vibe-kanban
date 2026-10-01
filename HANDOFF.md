@@ -1,5 +1,33 @@
 # HANDOFF.md
 
+## October 1: Preparation Improvements Merged Into Staging
+
+[PR #129](https://github.com/artinflight/vibe-kanban/pull/129) is rebase-merged
+into staging at `198d55a20ca6bc65a091ee1cc5aa884488ca0027`. Canonical staging
+is current. Implementation remains at
+`/mnt/vk-storage/vk-preparation-20261001/source`, branch
+`fix/vk-precutover-preparation`, pushed at `9525fe1f2` with an identical tree.
+Read its `VK_PREPARATION_PERFORMANCE.md` for the preparation runner, verified
+backup chain and fenced handover callback. The compatibility gap described in
+the earlier implementation note below is now closed by private acceptance.
+
+All 54 focused regressions, formatting, Ops, syntax, branch-policy and diff
+checks pass. Real VK binaries and the existing ownership helper passed failed
+backup recovery, latest-data handover, same-process cutback preserving newer
+messages/settings/model choice, and repeated recovery. Backup restoration used
+archives and metadata downloaded from Desktop. The final private switch took
+15.03 seconds; this is not a full-production timing guarantee. Evidence:
+`/mnt/vk-storage/vk-preparation-20261001/integration/handover-628d03d9d47446efb5295f4d117bc55a/result.json`.
+Application/build inputs remain identical to staging620bd7eb9; broad application
+suites, native inference and CU polling were not repeated. No GitHub Actions ran.
+
+Production Green2506054 remains running; Blue764264 remains frozen for rollback.
+All private rehearsal units are removed. No production restart, configuration
+change, backup restore or route change occurred. Use these tools for the next
+fresh preparation; its release-specific readiness and cutover approval are still
+required. Never replay a consumed attempt or restore old data over production.
+The following dated implementation notes are historical, not current delivery state.
+
 ## October1: Preparation Optimizations Implemented Separately
 
 The operator requested faster pre-cutover preparation, not another switch.

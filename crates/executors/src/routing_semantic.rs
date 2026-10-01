@@ -339,8 +339,7 @@ fn invoke(
             m.id == trace.model
                 && m.verified_efforts.contains(&trace.effort)
                 && (!m.discovered || m.supported_efforts.contains(&trace.effort))
-                && m.verified_at
-                    .is_some_and(|t| (0..=86400).contains(&(now - t)))
+                && availability.has_execution_proof(m, now)
         })
     {
         return Err("classifier model/effort lacks fresh executable proof".into());

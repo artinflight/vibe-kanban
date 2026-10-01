@@ -1,5 +1,17 @@
 ## Current Integration: Corrected Green Preparation
 
+The final-boundary path now avoids redundant large writes: a verified fenced,
+sidecar-free primary file is copied once into the private snapshot, then fully
+integrity-checked there. Immutable reads apply only to that private copy.
+Archive verification streams and hashes the actual decompressed SQLite members
+and manifest; it does not skip verification. Online capture and resumable-delivery
+extractions remain unchanged. All77 focused tests pass, including committed WAL,
+late writer rejection, corrupted snapshots and missing/wrong archive members.
+The independent production-sized handover rehearsal passed in28.44 seconds;
+Desktop-downloaded restoration and latest-data cutback also passed. This is not
+measured production downtime or a hard guarantee; live coordination adds overhead.
+No cutover is authorized by these preparation results.
+
 The operator requests a running isolated Green candidate and a verified brief
 cutover package, without switching production yet. Blue1504649 remains live.
 This branch reconciles current staging with the external backup correction;

@@ -7,10 +7,11 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from vk_change_journal import Journal, OVERFLOW
 from vk_prep_common import digest
-from vk_rolling_backup import capture, restore_chain
+from vk_rolling_backup import capture, restore_chain, verify_snapshot_archive
 
 
 class BackupTests(unittest.TestCase):
@@ -280,6 +281,67 @@ class BackupTests(unittest.TestCase):
                                  "committed frames still in WAL")
         finally:
             db.close()
+
+    def test_closed_fenced_copy_is_validated_without_opening_live_database(self):
+        first = self.backup()
+        db = sqlite3.connect(self.database)
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("UPDATE settings SET value='single private snapshot'")
+        db.commit()
+        db.close()
+        real_connect = sqlite3.connect
+        opened = []
+
+        def connect(path, *args, **kwargs):
+            opened.append(str(path))
+            self.assertNotIn(str(self.database), str(path))
+            self.assertIn("/payload/sqlite/", str(path))
+            self.assertTrue(str(path).endswith("?immutable=1"))
+            return real_connect(path, *args, **kwargs)
+
+        with patch("vk_rolling_backup.sqlite3.connect", side_effect=connect):
+            result = capture(self.plan, self.backups, self.journal.report, self.mirror,
+                             first, self.mirror, verify_fence=lambda: {"verified": True})
+        self.assertEqual(len(opened), 1)
+        self.assertTrue(result["frozen_boundary_verified"])
+        row = result["sqlite_snapshots"][str(self.database)]
+        self.assertEqual(row["sha256"], digest(self.database))
+        self.assertFalse((Path(result["folder"]) / "verified-payload").exists())
+
+    def test_stream_verification_rejects_wrong_snapshot_hash(self):
+        first = self.backup()
+        changed = copy.deepcopy(first["sqlite_snapshots"])
+        changed[str(self.database)]["sha256"] = "0" * 64
+        folder = Path(first["folder"])
+        with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+            verify_snapshot_archive(folder / first["archive"], changed, folder / "payload/manifest.json")
+
+    def test_stream_verification_rejects_missing_snapshot(self):
+        first = self.backup()
+        changed = copy.deepcopy(first["sqlite_snapshots"])
+        changed["missing"] = {"path": "sqlite/missing.sqlite", "sha256": "0" * 64}
+        folder = Path(first["folder"])
+        with self.assertRaisesRegex(ValueError, "Incomplete"):
+            verify_snapshot_archive(folder / first["archive"], changed, folder / "payload/manifest.json")
+
+    def test_corrupt_private_snapshot_is_rejected_before_delivery(self):
+        first = self.backup()
+        db = sqlite3.connect(self.database)
+        db.execute("UPDATE settings SET value='changed before final capture'")
+        db.commit()
+        db.close()
+        delivered = []
+
+        def corrupt(_source, target):
+            Path(target).write_bytes(b"not a SQLite database")
+
+        with patch("vk_rolling_backup.shutil.copyfile", side_effect=corrupt):
+            with self.assertRaises(sqlite3.DatabaseError):
+                capture(self.plan, self.backups, self.journal.report,
+                        lambda path: delivered.append(path), first, self.mirror,
+                        verify_fence=lambda: {"verified": True})
+        self.assertEqual(delivered, [])
+        self.assertEqual(json.loads((self.backups / "latest-result.json").read_text())["archive"], first["archive"])
 
     def test_boundary_refuses_missing_or_changed_writer_fence(self):
         first = self.backup()

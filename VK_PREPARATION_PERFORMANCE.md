@@ -18,6 +18,22 @@ do not need a backend restart. They do not authorize or perform a cutover.
 
 ## What Was Inefficient
 
+October1 closed-database follow-up: the first correction copied a closed primary
+file privately and then copied it again through SQLite. The verified fenced path
+now uses its first copy as the snapshot, with a full integrity check and unchanged
+source-generation, writer-fence and journal checks. WAL or rollback-journal
+presence retains normal SQLite backup. Immutable mode is confined to the private
+snapshot, never applied to live or unfenced database files.
+
+Final archive verification now streams the decompressed snapshot members and
+manifest through SHA256 rather than writing and rereading a second large
+extraction. Missing/duplicate/wrong members or decompression failures reject
+readiness. Online resume artifacts retain their extraction format. A separate
+Desktop-downloaded full restore remains required as rehearsal evidence.
+Run production-sized rehearsals through vk_bulk_job.py and the verified direct
+Desktop route in both directions. Agent MemoryHigh throttling and default SSH
+download routing can otherwise erase the gains during preparation.
+
 - A fixed September 11 backup cutoff made each refresh copy cumulative changes
   rather than changes since the most recent verified checkpoint.
 - The September 30 online backup was 5.116 GB and took about 292 seconds. It was

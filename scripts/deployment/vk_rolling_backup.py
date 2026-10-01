@@ -112,6 +112,36 @@ def verified_parent(parent, plan, watched):
         raise ValueError("Journal sequence moved backwards")
 
 
+def verify_snapshot_archive(archive, snapshots, manifest_path):
+    expected = {"payload/" + row["path"]: row["sha256"] for row in snapshots.values()}
+    expected["payload/manifest.json"] = digest(manifest_path)
+    seen = set()
+    process = subprocess.Popen(["zstd", "-dc", str(archive)], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    try:
+        with tarfile.open(fileobj=process.stdout, mode="r|") as contents:
+            for member in contents:
+                if member.name not in expected:
+                    continue
+                if member.name in seen or not member.isfile():
+                    raise ValueError("Duplicate or invalid snapshot archive member")
+                checksum = hashlib.sha256()
+                with contents.extractfile(member) as stream:
+                    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                        checksum.update(chunk)
+                if checksum.hexdigest() != expected[member.name]:
+                    raise ValueError("Restored SQLite snapshot checksum mismatch")
+                seen.add(member.name)
+        while process.stdout.read(1024 * 1024):
+            pass
+        if process.wait() != 0 or seen != set(expected):
+            raise ValueError("Incomplete or corrupt snapshot archive")
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.wait()
+        process.stdout.close()
+
+
 def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fence=None):
     root = storage(root)
     if any(root.is_relative_to(Path(path).resolve()) for path in plan["sources"]):
@@ -159,7 +189,6 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
             if not any(Path(raw).is_relative_to(Path(source).resolve()) for source in plan["sources"]):
                 raise ValueError("Database is outside journal coverage: " + raw)
     snapshots, readers, versions, signatures, reused = {}, {}, {}, {}, []
-    source_copies = folder / "fenced-source-copies"
 
     def stable_boundary():
         exclusions.validate()
@@ -201,26 +230,30 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                     continue
                 source_path = path
                 sidecars = (raw + "-wal", raw + "-journal")
-                if verify_fence is not None and not any(os.path.lexists(p) for p in sidecars):
-                    # A read-only WAL connection can create empty source sidecars.
-                    # Only a fenced, fully checkpointed database can be copied first.
-                    source_copies.mkdir(exist_ok=True, mode=0o700)
-                    source_path = source_copies / (hashlib.sha256(raw.encode()).hexdigest() + ".sqlite")
+                target = payload / "sqlite" / (hashlib.sha256(raw.encode()).hexdigest() + ".sqlite")
+                target.parent.mkdir(exist_ok=True)
+                private_snapshot = verify_fence is not None and not any(os.path.lexists(p) for p in sidecars)
+                if private_snapshot:
+                    # A fenced, fully checkpointed copy is already the snapshot.
+                    # Immutable reading is confined to that private copy, never live data.
+                    source_path = target
                     shutil.copyfile(path, source_path)
                     if generation(path) != signatures[raw] or any(os.path.lexists(p) for p in sidecars):
                         raise ValueError("Fenced database changed while copying: " + raw)
-                source = sqlite3.connect(source_path.as_uri() + "?mode=ro", uri=True)
+                source = sqlite3.connect(source_path.as_uri() + ("?immutable=1" if private_snapshot else "?mode=ro"), uri=True)
                 readers[raw] = source
                 versions[raw] = source.execute("PRAGMA data_version").fetchone()[0]
-                target = payload / "sqlite" / (hashlib.sha256(raw.encode()).hexdigest() + ".sqlite")
-                target.parent.mkdir(exist_ok=True)
-                with sqlite3.connect(target) as destination:
-                    source.execute("BEGIN")
-                    source.execute("SELECT name FROM sqlite_master LIMIT 1").fetchone()
-                    source.backup(destination, pages=4096)
-                    source.rollback()
-                    if destination.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                if private_snapshot:
+                    if source.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                         raise ValueError("SQLite snapshot integrity failed: " + raw)
+                else:
+                    with sqlite3.connect(target) as destination:
+                        source.execute("BEGIN")
+                        source.execute("SELECT name FROM sqlite_master LIMIT 1").fetchone()
+                        source.backup(destination, pages=4096)
+                        source.rollback()
+                        if destination.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                            raise ValueError("SQLite snapshot integrity failed: " + raw)
                 target.chmod(path.stat().st_mode & 0o777)
                 snapshots[raw] = {"path": str(target.relative_to(payload)), "sha256": digest(target)}
                 proofs[raw] = {"generation": signatures[raw], "snapshot_sha256": snapshots[raw]["sha256"]}
@@ -255,12 +288,15 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                 raise ValueError("Journal changed during archive")
             warnings = validate_archive_warnings((folder / "tar.log").read_text(), watched, plan, verify_fence is None)
         with measured(timings, "archive_restore_verify"):
-            restored = folder / "verified-payload"
-            restored.mkdir()
-            subprocess.run(["tar", "--zstd", "-xf", str(archive), "-C", str(restored), "payload"], check=True)
-            for row in snapshots.values():
-                if digest(restored / "payload" / row["path"]) != row["sha256"]:
-                    raise ValueError("Restored SQLite snapshot checksum mismatch")
+            if verify_fence is not None:
+                verify_snapshot_archive(archive, snapshots, payload / "manifest.json")
+            else:
+                restored = folder / "verified-payload"
+                restored.mkdir()
+                subprocess.run(["tar", "--zstd", "-xf", str(archive), "-C", str(restored), "payload"], check=True)
+                for row in snapshots.values():
+                    if digest(restored / "payload" / row["path"]) != row["sha256"]:
+                        raise ValueError("Restored SQLite snapshot checksum mismatch")
         if verify_fence is None:
             save(folder / "pending-delivery.json", {**manifest, "folder": str(folder), "archive": archive.name,
                 "archive_sha256": digest(archive), "database_proofs": proofs, "databases": sorted(databases),
@@ -309,8 +345,6 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
     finally:
         for connection in readers.values():
             connection.close()
-        if source_copies.exists():
-            shutil.rmtree(source_copies)
 
 
 def resume_delivery(plan, root, folder, journal, mirror, publish, parent=None):

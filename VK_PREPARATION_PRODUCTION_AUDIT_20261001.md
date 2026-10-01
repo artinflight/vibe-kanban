@@ -1,5 +1,28 @@
 # October 1 Preparation-Time Audit
 
+## Evening Closed-Database Follow-Up
+
+Green preparation exposed additional duplicate I/O after the empty-WAL fix.
+Fully fenced checkpointed databases now use one private copy, with integrity
+verification; frozen archive contents are streamed and hashed instead of being
+extracted and reread. All77 focused regressions pass. Online backup/resume format,
+committed WAL handling, final fence checks and Desktop checksum requirements are
+unchanged. No source primary-file copy is accepted without a verified fence and
+absence of WAL/rollback sidecars. The running production instance is untouched.
+
+The measured package is /mnt/vk-storage/vk-green-ready-20261001. It retains the
+earlier consumed attempt separately and runs an isolated candidate from current
+staging. Its scale-optimized-rehearsal result, not the8.7-second tiny fixture,
+determines the proposed interruption. Read that receipt and the final readiness
+manifest before approval. The optimized production-sized rehearsal passed in
+28.44 seconds (26.69-second fenced capture, including Desktop verification).
+All four recovery/handover cases and the Desktop-downloaded full restore passed.
+Nine closed production database copies were forced dirty. This is a private
+same-binary rehearsal, not measured production downtime; CU coordination and live
+preservation checks can add overhead. The live target is about30 seconds, not a
+guaranteed deadline. Earlier unoptimized trials took60-71 seconds and are retained
+as evidence rather than described as successful short windows.
+
 ## Outcome And Clock
 
 AutoSwitch V2 is deployed on Blue at `https://vibe.local`, production main

@@ -1461,3 +1461,11 @@ Classifier scope evidence distinguishes configuration facts from security change
 131 executor tests passed; native recommendations selected Luna for independent
 UI/documentation and retained Astra for actual security changes. Five native
 classifier calls, no retries; backend unchanged. See VK_AUTOSWITCH_SCOPE_FIX.md.
+
+## 2026-10-01 — AutoSwitch rollback compatibility
+
+PR134/135 merge the scope/savings repair into staging/main. Release preparation
+identified the incumbent's strict nested classification decoder; persist new scope
+evidence on the extensible trace instead. Runtime behavior is unchanged. No
+production activation yet; release/backup evidence is on mounted SSD in
+`vk-autoswitch-scope-release-20261001`.

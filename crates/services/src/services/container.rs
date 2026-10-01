@@ -1540,7 +1540,7 @@ pub trait ContainerService {
                     let candidate = candidate.canonicalize().ok()?;
                     candidate.starts_with(&root).then_some(candidate)
                 });
-                executors::routing::resolve_action_with_context(
+                executors::routing::resolve_action_with_semantics(
                     &mut resolved_action,
                     previous_action.as_ref(),
                     failed,

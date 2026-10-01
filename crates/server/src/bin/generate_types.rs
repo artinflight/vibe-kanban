@@ -206,6 +206,8 @@ fn generate_types_content() -> String {
         executors::routing::RoutingPolicy::decl(),
         executors::routing::RoutingDecision::decl(),
         executors::routing_triage::TaskTriage::decl(),
+        executors::routing_semantic::SemanticClass::decl(),
+        executors::routing_semantic::SemanticTrace::decl(),
         executors::actions::script::ScriptContext::decl(),
         executors::actions::script::ScriptRequest::decl(),
         executors::actions::script::ScriptRequestLanguage::decl(),

@@ -11,6 +11,7 @@ pub mod model_selector;
 pub mod profile;
 pub mod routing;
 pub mod routing_assessment;
+pub mod routing_semantic;
 pub mod routing_triage;
 pub mod stdout_dup;
 pub mod systemd_run;

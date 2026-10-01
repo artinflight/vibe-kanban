@@ -161,6 +161,7 @@ class BackupTests(unittest.TestCase):
             capture(self.plan, self.backups, self.journal.report, self.mirror,
                     publish=lambda path: {"desktop_verified": False, "sha256": digest(path)})
         self.assertEqual((self.backups / "latest-result.json").read_bytes(), before)
+        self.assertEqual(len(list(self.backups.glob("checkpoint-/*/result.json"))), 1)
 
     def test_corrupt_parent_blocks_incremental_backup(self):
         first = self.backup()

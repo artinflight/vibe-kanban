@@ -191,7 +191,6 @@ def capture(plan, root, journal, mirror, parent=None, publish=None):
                   "copied_files": len(files), "changes_during_capture": after["changed"],
                   "timings": timings, "total_preparation_seconds": time.monotonic() - started,
                   "passed": True, "cutover_authorized": False}
-        save(folder / "result.json", result)
         if publish is not None:
             metadata = folder / (archive.name + ".result.json")
             save(metadata, result)

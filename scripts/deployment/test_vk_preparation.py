@@ -121,9 +121,11 @@ class PreparationTests(unittest.TestCase):
         self.assertFalse(self.counter.exists())
 
     def test_dirty_source_refuses_reuse(self):
+        self.run_plan()
         (self.source / "source.txt").write_text("uncommitted")
         with self.assertRaisesRegex(ValueError, "dirty"):
             self.run_plan()
+        self.assertFalse(json.loads((self.cache / "latest-result.json").read_text())["passed"])
 
     def test_source_mutating_check_refuses_evidence(self):
         self.plan["steps"][0]["command"] = [sys.executable, "-c", "from pathlib import Path; Path('source.txt').write_text('changed')"]

@@ -3,8 +3,10 @@
 Branch `fix/vk-precutover-preparation`, based on fork/staging620bd7eb9.
 Scope: versioned preparation-only tools, verified static evidence/artifact reuse,
 rolling online backup checkpoints, bounded concurrent queue inspection, and
-whole-preparation timing. See VK_PREPARATION_PERFORMANCE.md. No production
-pause/restart/reroute, application feature change, or final controller replacement.
+whole-preparation timing. The fenced capture callback now has real private
+handover/recovery acceptance and is approved for staging integration. See
+VK_PREPARATION_PERFORMANCE.md. No production pause/restart/reroute, application
+feature change, or replacement of an existing production controller.
 Inherited stream notes below describe other work, not this branch's authority.
 
 ## AutoSwitch V1 staging-only release

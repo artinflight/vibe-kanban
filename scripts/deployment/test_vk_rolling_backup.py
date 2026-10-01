@@ -215,6 +215,114 @@ class BackupTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "outside watched"):
             capture(self.plan, self.source / "backups", self.journal.report, self.mirror)
 
+    def test_critical_database_deletion_blocks_child(self):
+        self.plan["critical_sqlite"] = self.plan.pop("sqlite_snapshots")
+        first = self.backup()
+        self.database.unlink()
+        with self.assertRaisesRegex(ValueError, "Required SQLite"):
+            self.backup(first)
+
+    def test_frozen_boundary_captures_latest_work_and_restores(self):
+        first = self.backup()
+        self.note.write_text("work since online checkpoint")
+        with sqlite3.connect(self.database) as db:
+            db.execute("UPDATE settings SET value='latest frozen settings'")
+        result = capture(self.plan, self.backups, self.journal.report, self.mirror, first, self.mirror,
+                         verify_fence=lambda: {"verified": True, "pid": 123})
+        self.assertTrue(result["frozen_boundary_verified"])
+        self.assertFalse(result["cutover_authorized"])
+        restored = self.restored(result)
+        self.assertEqual((restored / self.note.name).read_text(), self.note.read_text())
+        with sqlite3.connect(restored / self.database.name) as db:
+            self.assertEqual(db.execute("SELECT value FROM settings").fetchone()[0], "latest frozen settings")
+
+    def test_online_capture_does_not_claim_frozen_boundary(self):
+        self.assertFalse(self.backup()["frozen_boundary_verified"])
+
+    def test_boundary_refuses_missing_or_changed_writer_fence(self):
+        first = self.backup()
+        for initial in ({"verified": False}, None):
+            with self.assertRaisesRegex(ValueError, "fenced"):
+                capture(self.plan, self.backups, self.journal.report, self.mirror, first, self.mirror,
+                        verify_fence=lambda: initial)
+        calls = []
+
+        def changed():
+            calls.append(True)
+            return {"verified": True, "pid": len(calls)}
+
+        with self.assertRaisesRegex(ValueError, "fence changed"):
+            capture(self.plan, self.backups, self.journal.report, self.mirror, first, self.mirror,
+                    verify_fence=changed)
+
+    def test_boundary_detects_write_during_archive_delivery(self):
+        first = self.backup()
+
+        def writer(archive):
+            self.note.write_text("unexpected live writer")
+            return self.mirror(archive)
+
+        with self.assertRaisesRegex(ValueError, "Protected data changed"):
+            capture(self.plan, self.backups, self.journal.report, writer, first, self.mirror,
+                    verify_fence=lambda: {"verified": True})
+        self.assertEqual(json.loads((self.backups / "latest-result.json").read_text())["archive"], first["archive"])
+
+    def test_boundary_detects_write_during_metadata_delivery(self):
+        first = self.backup()
+
+        def writer(metadata):
+            with sqlite3.connect(self.database) as db:
+                db.execute("UPDATE settings SET value='unexpected late writer'")
+            return self.mirror(metadata)
+
+        with self.assertRaisesRegex(ValueError, "Protected data changed"):
+            capture(self.plan, self.backups, self.journal.report, self.mirror, first, writer,
+                    verify_fence=lambda: {"verified": True})
+        self.assertEqual(json.loads((self.backups / "latest-result.json").read_text())["archive"], first["archive"])
+
+    def test_unchanged_wal_close_does_not_invalidate_snapshot(self):
+        keeper = sqlite3.connect(self.database)
+        try:
+            keeper.execute("PRAGMA journal_mode=WAL")
+            keeper.execute("UPDATE settings SET value='WAL fixture'")
+            keeper.commit()
+            first = self.backup()
+            os.close(os.open(str(self.database) + "-wal", os.O_RDWR))
+            second = self.backup(first)
+            self.assertEqual(second["sqlite_snapshots"], {})
+        finally:
+            keeper.close()
+
+    def test_frozen_boundary_accepts_only_unchanged_wal_close(self):
+        keeper = sqlite3.connect(self.database)
+        try:
+            keeper.execute("PRAGMA journal_mode=WAL")
+            keeper.execute("UPDATE settings SET value='WAL fixture'")
+            keeper.commit()
+            first = self.backup()
+
+            def close_only(path):
+                os.close(os.open(str(self.database) + "-wal", os.O_RDWR))
+                return self.mirror(path)
+
+            second = capture(self.plan, self.backups, self.journal.report, self.mirror, first, close_only,
+                             verify_fence=lambda: {"verified": True})
+            self.assertTrue(second["frozen_boundary_verified"])
+            self.restored(second)
+        finally:
+            keeper.close()
+
+    def test_journal_event_masks_do_not_hide_earlier_write(self):
+        first = self.journal.report()["sequence"]
+        self.note.write_text("real write")
+        os.close(os.open(self.note, os.O_RDWR))
+        observed = self.journal.report(first)
+        self.assertTrue(observed["events"][str(self.note)] & 0x2)
+        boundary = observed["sequence"]
+        os.close(os.open(self.note, os.O_RDWR))
+        later = self.journal.report(boundary)
+        self.assertEqual(later["events"][str(self.note)], 0x8)
+
 
 if __name__ == "__main__":
     unittest.main()

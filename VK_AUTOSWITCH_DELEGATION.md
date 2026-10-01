@@ -151,6 +151,11 @@ no capacity bypass or retry was performed. Native acceptance of this new gateway
 therefore remains unverified. No seven-model campaign, deployment, staging operation
 or live production Shadow test was performed.
 
+The operator-requested retry at 2026-10-01 08:33 UTC also stopped before inference:
+14 matching active processes against limit eight. Runtime proof remained fresh
+(18.58 hours); no model turn started and no limit was changed. Evidence is in
+`v2-delegation/retry-20261001-0833/test.log` under the existing SSD task directory.
+
 When genuine capacity is available, run the two-turn harness with the candidate
 launcher, account/home and fresh availability proof; then run the planned complete
 V2 Shadow test on a fresh ordinary chat. Observe parent, cheap child, protected-child

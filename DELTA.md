@@ -1404,3 +1404,10 @@ telemetry sidecar. See VK_AUTOSWITCH_DELEGATION.md. Native paid acceptance was
 capacity-blocked before inference; source-only, no deployment or staging work.
 Validation: 119 executor tests pass; executor/services Clippy, format/ops and CU
 contract byte comparison pass. Native child acceptance remains capacity-blocked.
+
+## 2026-10-01 08:33 UTC — Requested native child test retry
+
+Reran only native_delegation_boundaries. The unchanged capacity guard rejected
+admission (14 active, limit 8) before native/model startup. Proof was still fresh.
+No bypass, model inference, source-code change, staging or deployment. See
+`v2-delegation/retry-20261001-0833/test.log` in the SSD task evidence directory.

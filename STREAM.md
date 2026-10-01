@@ -1,3 +1,11 @@
+## Native child acceptance retry (2026-10-01 08:33 UTC)
+
+The operator-requested bounded test retry stopped before inference: existing
+capacity guard reported 14 active processes, limit 8. Runtime proof was still
+fresh (18.58 hours). No limit override, process cancellation, model execution,
+staging or deployment occurred. Native child acceptance remains unverified.
+Evidence: `/mnt/vk-storage/vk-model-autoswitch-20260930/v2-delegation/retry-20261001-0833/test.log`.
+
 ## Delegated work continuation (2026-10-01)
 
 AutoSwitch now admits native leaf children through `vk_delegate` on the existing

@@ -1,5 +1,14 @@
 # Backend Restart Protocol
 
+## Workspace Attention Preservation
+
+Issue/task statuses are not workspace review flags. See
+VK_ATTENTION_PRESERVATION.md for intentional review, pagination, targeted recovery
+and actual desktop/mobile acceptance. Block real writes in browser checks but
+allow POST/workspaces/summaries, which is read-only. Preserve validated live
+frontend and companion updates in both deployment and latest-data recovery.
+The October2 repair needs no backend restart. Existing tabs must reload.
+
 Established by the operator on 2026-09-11. This is the authority for future
 backend restart windows; older stop-and-switch examples are historical.
 An established protocol is not evidence that a particular candidate is ready.

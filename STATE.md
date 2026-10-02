@@ -1,5 +1,16 @@
 # STATE.md
 
+**October2 attention correction:** the prior issue-status comparison and goal
+completion claim did not establish review-marker preservation. Frontend069cb835d
+(PR138) is live in Blue and prepared Green;28 original completed-turn seen flags
+were recovered across11 workspaces without replacing any database. Live desktop
+and mobile-sized tests show16 Needs Attention workspaces, navigation does not
+clear them, and isolated explicit review passes. All12 saved messages and original
+turn content/IDs remain. Blue1504649 is unchanged. Refresh old open tabs.
+Read VK_ATTENTION_PRESERVATION.md and current package receipts; other agents
+must drain and the operator must approve before activation. An old completed
+native goal is not authorization or proof that the final activation gate passes.
+
 **October1 Green preparation:** Blue1504649 remains production. Green's isolated
 current-staging candidate runs on5421 and passes functional/browser checks.
 The corrected external backup package has77 tool and45 controller tests passing;

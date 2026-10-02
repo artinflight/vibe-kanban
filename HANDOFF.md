@@ -1,5 +1,18 @@
 # HANDOFF.md
 
+## October 2: Attention Restored, Do Not Repeat The Claim
+
+Read VK_ATTENTION_PRESERVATION.md and /mnt/vk-storage/vk-attention-recovery-20261002.
+The previous answer checked issue statuses instead of review flags and ended
+with unresolved UI acceptance. Source069cb835d in PR138 is installed in live Blue
+and prepared Green without a backend restart. Only28 missing completed-turn
+flags were recovered; live desktop/mobile tests show16 attention workspaces.
+Prompts, summaries, IDs, issue statuses and12 saved messages remain unchanged.
+Opening does not clear flags; Mark reviewed is now explicit. Refresh old tabs.
+Green's prepared package binds the repair and CU's already-live Android0.4.0
+download. Current receipts, agent drain and fresh approval govern activation;
+never reuse a consumed handover or overwrite current data with an older backup.
+
 ## October 1: Green Prepared, Blue Still Production
 
 The active objective is preparation only. Read VK_GREEN_READY_20261001.md and

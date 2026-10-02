@@ -1,5 +1,14 @@
 # VK Agent Deployment Runbook
 
+## Attention Acceptance Before Completion
+
+Read VK_ATTENTION_PRESERVATION.md. Compare original turn seen/review flags
+independently from issue statuses; verify live desktop/mobile sections with the
+read-only summaries POST permitted, including older items beyond50. Navigation
+must not clear attention; review is explicit. Preserve live frontend repairs in
+candidate and cutback bundles and rebind source/hash/Desktop recovery evidence.
+Do not mark a readiness goal complete with an unresolved reported regression.
+
 This file is the pickup guide for agents working on Vibe Kanban from inside
 Vibe Kanban. Follow it before editing, building, or deploying this repo.
 For the planned clean self-development project/preview model, read

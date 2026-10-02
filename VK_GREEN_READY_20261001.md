@@ -1,5 +1,20 @@
 # Green Cutover Readiness, October 1
 
+## October 2 Correction
+
+The prior completion claim missed workspace attention acceptance. Issue statuses
+and unread turn flags are different. The frontend repair069cb835d (PR138) is now
+installed in Blue and Green: explicit review replaces automatic clearing, and
+older actionable items remain visible past50. Only28 proven missing flags across
+11 workspaces were restored; live1440/390px checks show16 attention workspaces.
+Read VK_ATTENTION_PRESERVATION.md and the refreshed current readiness/software
+receipts. The original backend release and28.44-second private handover evidence
+are reused, not claims of a new production cutover or guaranteed downtime.
+CU's already-live Android0.4.0 page/APK is preserved without runtime changes.
+Activation still requires current agent/queue drain and operator approval; do not
+interpret the prematurely completed native goal or historical readiness as a pass
+of that volatile gate. Old tabs must reload to receive the repaired frontend.
+
 ## Current State
 
 Blue1504649 remains production at vibe.local, main329963d18, VK0.1.42 and

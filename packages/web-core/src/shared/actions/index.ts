@@ -14,6 +14,7 @@ import {
   RowsIcon,
   TextAlignLeftIcon,
   EyeSlashIcon,
+  CheckCircleIcon,
   SidebarSimpleIcon,
   ChatsTeardropIcon,
   GitDiffIcon,
@@ -438,6 +439,19 @@ export const Actions = {
       await StartReviewDialog.show({
         workspaceId,
       });
+    },
+  },
+
+  MarkWorkspaceReviewed: {
+    id: 'mark-workspace-reviewed',
+    label: 'Mark reviewed',
+    icon: CheckCircleIcon,
+    requiresTarget: ActionTargetType.WORKSPACE,
+    isVisible: (ctx) => ctx.hasWorkspace,
+    getTooltip: () => 'Mark reviewed',
+    execute: async (ctx, workspaceId) => {
+      await workspacesApi.markSeen(workspaceId);
+      invalidateWorkspaceQueries(ctx.queryClient, workspaceId);
     },
   },
 

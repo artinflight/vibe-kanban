@@ -1,3 +1,11 @@
+# Workspace Attention Preservation
+
+Branch `fix/workspace-attention-preservation` starts at staging `b0f4c10a9`.
+Scope: intentional review clearing and actionable sidebar pagination, with
+focused tests and evidence-backed flag recovery. No backend, schema, model,
+capacity, restart controller or issue-status changes belong in this stream.
+See VK_ATTENTION_PRESERVATION.md. Older stream entries below are historical.
+
 ## AutoSwitch release compatibility (2026-10-01)
 
 Scope/savings fixes are merged through PR134 (staging) and PR135 (main).

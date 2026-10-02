@@ -1,3 +1,14 @@
+## October 2: Workspace Attention Correction
+
+Read VK_ATTENTION_PRESERVATION.md. The issue-status comparison did not verify
+review markers, and the prior completion claim omitted this UI failure.
+Opening a workspace no longer clears unread flags; use Mark reviewed explicitly.
+Actionable older items are no longer excluded by accordion pagination.
+Production deployment/recovery receipts are under
+/mnt/vk-storage/vk-attention-recovery-20261002; re-read them before claiming live
+acceptance. Blue remains the production backend; do not perform a handover as
+part of this frontend correction or restore old data over production.
+
 ## AutoSwitch release compatibility (2026-10-01)
 
 Scope/savings fixes are merged through PR134 (staging) and PR135 (main).

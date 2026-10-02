@@ -1502,3 +1502,12 @@ saved index on mounted SSD; Desktop SSH rejected its exec channel, so the tiny
 rollback index was not copied there. Source is isolated on
 `fix/autoswitch-recommended-default`; the new default has not been merged.
 Refresh the browser once to load it; this does not enable Auto execution.
+
+## Preserve Recommended when editing model or reasoning — October 2
+
+The model selector had explicitly forced Manual for every model/effort edit,
+overriding the new Shadow default. Both selectors now use the shared override
+handler: Shadow stays Shadow with the chosen execution settings, while Auto
+changes to Manual for an explicit model/effort choice. Explicit routing choices,
+capability floors and exclusions remain authoritative. This is frontend-only.
+Evidence: `/mnt/vk-storage/vk-autoswitch-shadow-selection-20261002`.

@@ -1,3 +1,12 @@
+## Preserve Recommended when editing model or reasoning — October 2
+
+The model selector had explicitly forced Manual for every model/effort edit,
+overriding the new Shadow default. Both selectors now use the shared override
+handler: Shadow stays Shadow with the chosen execution settings, while Auto
+changes to Manual for an explicit model/effort choice. Explicit routing choices,
+capability floors and exclusions remain authoritative. This is frontend-only.
+Evidence: `/mnt/vk-storage/vk-autoswitch-shadow-selection-20261002`.
+
 ## Recommended default published — October 2
 
 The frontend-only default is live at `https://vibe.local/` from `304535c76`.

@@ -417,12 +417,15 @@ export function useExecutorConfig({
           ('model_id' in partial || 'reasoning_id' in partial) &&
           !('routing' in partial)
         ) {
+          const routing = prev.routing ?? executorConfig?.routing;
           next.routing = {
             floor: 'assessed',
             denied_models: [],
             allow_escalation: false,
-            ...(prev.routing ?? executorConfig?.routing),
-            mode: 'manual',
+            ...routing,
+            // Shadow compares against the selected settings; editing those
+            // settings must keep recommendations on. Auto still locks manually.
+            mode: routing?.mode === 'shadow' ? 'shadow' : 'manual',
           };
         }
         if ('model_id' in partial && !('reasoning_id' in partial)) {

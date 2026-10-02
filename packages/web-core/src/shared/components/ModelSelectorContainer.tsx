@@ -301,13 +301,6 @@ export function ModelSelectorContainer({
     })();
     onOverrideChange({
       model_id: modelOverride,
-      routing: {
-        floor: 'assessed',
-        denied_models: [],
-        allow_escalation: false,
-        ...executorConfig?.routing,
-        mode: 'manual',
-      },
     });
 
     pendingModelRef.current =
@@ -336,13 +329,6 @@ export function ModelSelectorContainer({
   const handleReasoningSelect = (reasoningId: string | null) => {
     onOverrideChange({
       reasoning_id: reasoningId,
-      routing: {
-        floor: 'assessed',
-        denied_models: [],
-        allow_escalation: false,
-        ...executorConfig?.routing,
-        mode: 'manual',
-      },
     });
     pendingReasoningRef.current = reasoningId;
   };

@@ -1,5 +1,12 @@
 # STATE.md
 
+**October2 live authority:** Green3059021 serves main95deaafe6/stagingb0f4c10a9
+with corrected opening-clears frontend caef5f3b6/PR138, VK0.1.42/CLI0.159.2.
+Blue1504649 remains frozen for same-latest-data cutback. Consumed094117Z handover
+and live acceptance pass;13513 existing review flags and original turn content
+are unchanged. Read VK_GREEN_LIVE_20261002.md for exact evidence, open source
+follow-up PRs and preserved historical exceptions. No replay or old DB restore.
+
 **October2 operator correction:** manual-only review was an agent overreach.
 Frontend caef5f3b6/PR138 restores clearing when opening a visible chat; hidden
 mobile/background panels and summary polling retain unread. Both prepared roles

@@ -1,5 +1,10 @@
 # STREAM.md
 
+October2 current result: authorized Green cutover and original-thread acceptance
+complete. Read VK_GREEN_LIVE_20261002.md. This branch records deployment evidence;
+the frontend correction is pushed in PR138. No further production interruption
+is in progress. Prior preparation scopes below are historical.
+
 Current scope, October2: restore opening-clears-attention per operator correction,
 then execute the authorized Green cutover and complete live acceptance in this
 original thread. PR138 contains the frontend correction; the prepared current

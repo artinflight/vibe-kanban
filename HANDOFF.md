@@ -1,5 +1,18 @@
 # HANDOFF.md
 
+## October 2: Green Live And Accepted
+
+Read VK_GREEN_LIVE_20261002.md. Green3059021 now serves5411/5412 and vibe.local;
+Blue1504649 is frozen for latest-data cutback. The consumed094117Z attempt
+completed in34.05seconds; do not replay it. Existing13513 review flags and turn
+content are unchanged. Opening visible chats clears attention again, hidden
+views/polling do not; desktop/mobile-sized tests, saved messages, models,
+attachments, original-thread continuity and CU correlation pass. Runtime0.159.2.
+Backend main95deaafe6/stagingb0f4c10a9 plus frontend PR138/caef5f3b6 overlay.
+PR138's ten checks pass; it remains open. Maintenance docs are locally committed.
+The operator can work. No additional restart, old-data restoration or replacement
+conversation is needed. Earlier preparation-only/manual-review notes are history.
+
 ## October 2: Restore Opening-Clears And Execute Authorized Cutover
 
 The operator rejected manual-only review and explicitly authorized "fix that

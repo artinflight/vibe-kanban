@@ -15,6 +15,15 @@ allow POST/workspaces/summaries, which is read-only. Preserve validated live
 frontend and companion updates in both deployment and latest-data recovery.
 The October2 repair needs no backend restart. Existing tabs must reload.
 
+For read/unread recovery, identify a single verified production snapshot at the
+agreed loss boundary; do not union flags across old snapshots or build backups.
+Keep source database path/time/hash provenance, preserve later reviews and new
+completions, and use guarded per-turn writes after a current Desktop backup.
+If the available audit cannot distinguish review from hidden-panel clearing,
+state the uncertainty and resolve the boundary before claiming exact restoration.
+Preserving flags across a cutover does not prove a previous repair chose the right
+flags. The October2 stale-restoration correction is in VK_ATTENTION_PRESERVATION.md.
+
 Established by the operator on 2026-09-11. This is the authority for future
 backend restart windows; older stop-and-switch examples are historical.
 An established protocol is not evidence that a particular candidate is ready.

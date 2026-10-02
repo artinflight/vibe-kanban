@@ -10,6 +10,13 @@ polling must not; do not replace this workflow with manual-only review. Preserve
 candidate and cutback bundles and rebind source/hash/Desktop recovery evidence.
 Do not mark a readiness goal complete with an unresolved reported regression.
 
+Review-state recovery must use one verified production boundary and preserve
+later reviews/new completions. Never union every historical unread flag or treat
+an old build DB inside a fresh archive as current production. The October2 union
+repair revived stale work; see the corrected incident evidence in
+VK_ATTENTION_PRESERVATION.md. Where requester/visibility history is missing,
+report the exact reconstruction limit instead of claiming restored review intent.
+
 This file is the pickup guide for agents working on Vibe Kanban from inside
 Vibe Kanban. Follow it before editing, building, or deploying this repo.
 For the planned clean self-development project/preview model, read

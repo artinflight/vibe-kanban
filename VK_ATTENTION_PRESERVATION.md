@@ -1,5 +1,55 @@
 # Attention Incident And Recovery, October 2
 
+## October 2: Stale Restoration Corrected, Exact Loss Boundary Unproven
+
+The earlier claim that all 28 flags were proven missing was incorrect. The repair
+at 01:53:08 UTC unioned unread turns from several snapshots, including
+`db.v2.sqlite.backup-build-local-2026-10-01T140820752Z.sqlite`. Copying that old
+database into a newer backup did not make its review state current. Sixteen flags
+were sourced only from that historical build copy; actual production snapshots
+show their later read transitions. The recovery incorrectly revived them.
+
+At 10:20:39 UTC, a targeted transaction undid 13 of those stale flag writes. Three
+others had already been reviewed again today and were left untouched. Each write
+required the exact earlier repair timestamp and unseen flag, with a completed
+execution and nonarchived workspace. Every other flag, original turn content/ID,
+and every other database table was checked unchanged inside the transaction.
+The production database was not replaced, and no service was restarted.
+
+The first operator loss report was October 1 at 23:37:11 UTC. Verified production
+backups show read transitions at different times, not one proven bulk database
+wipe. Five recent workspace flags cleared between 20:53:01 and 20:55:31 UTC;
+the last backup before that group is 20:37:32 UTC, SHA256
+d4eb37afe90f70ccdb9a76ac374ac60bd9fa1696a470dadcd962a19bc2ba07db.
+Two later completions cleared at 21:08 and 21:17. Requester identity and visible-chat
+state were not recorded, so these timestamps cannot distinguish actual review
+from hidden-panel auto-clearing or prove the exact intended loss boundary.
+
+The 20:37 production snapshot is proposed as the recent recovery boundary; the
+operator has been asked to choose it or retain only the confirmed stale repair.
+That further point-in-time reconciliation is not performed or certified here.
+Do not silently choose a boundary, restore old databases, overwrite later reviews,
+or mark all old workspaces read merely because their completions are old. Some old
+unread items already existed in every relevant production snapshot.
+
+Current audit, guarded repair, full current-state backup and Desktop SHA256
+receipts are under /mnt/vk-storage/vk-attention-point-recovery-20261002 and
+Desktop B:/vk-backups/vk-attention-point-recovery-20261002. Selection tests cover
+later reads/unread changes, archived/running work, post-boundary completions and
+unrelated rows. Earlier recovery notes below describe historical actions, not
+proof of the operator's intended read/unread state.
+
+## Recovery Evidence Requirements
+
+Use one time-qualified authoritative production snapshot for the chosen boundary,
+not a union of anything ever unread. Record the original source database path,
+snapshot generation time and SHA256; the surrounding archive timestamp alone is
+not sufficient. Build backups, isolated candidates and fixture databases are not
+production authority. Preserve subsequent deliberate review/unread actions and
+new completions. Use per-turn compare-and-set, verify unaffected data, and back up
+the current state to Desktop before a repair. If missing audit data prevents an
+exact reconstruction, state that limit and obtain the genuine boundary decision.
+
 ## Operator Correction: Opening Clears Attention
 
 The manual-only review behavior described below was rejected. It was an agent
@@ -33,8 +83,8 @@ installed in live Blue and prepared Green, retaining old immutable assets and
 Desktop-backed index rollback. No backend was restarted or production route
 changed. Old open tabs must reload to use the fix.
 
-The recovery restored28 original flags across11 nonarchived workspaces using
-compare-and-set, excluding interrupted executions. A current before-state,
+The now-invalidated recovery restored 28 original flags across 11 nonarchived
+workspaces using compare-and-set, excluding interrupted executions. A current before-state,
 original flag plan, repair result and frontend bundle are SHA256-verified on
 Desktop B:/vk-backups/vk-attention-recovery-20261002. Production was not replaced
 with an older database. Original prompts, summaries, execution IDs, issue

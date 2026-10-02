@@ -1,5 +1,21 @@
 # HANDOFF.md
 
+## October 2: Stale Read/Unread Recovery Partially Reconciled
+
+The operator rejected the union-based historical flag restoration. Read
+VK_ATTENTION_PRESERVATION.md and /mnt/vk-storage/vk-attention-point-recovery-20261002.
+The incorrect 01:53 repair drew 16 flags only from a stale build backup. The guarded
+10:20 transaction undid 13 unchanged repair writes and preserved 3 later reviews;
+all other flags, turn content and database tables are unchanged. A fresh current
+backup, plan and result are SHA256-verified on Desktop B:/vk-backups/.
+The 20:37 UTC October 1 production backup predates five recent clear transitions,
+but requester/visible-chat intent was not audited. The operator was asked to choose
+that boundary or only the confirmed stale repair. Do not claim exact-point recovery
+until that decision and guarded reconciliation are complete. Preserve later
+reviews and new completions. No restart, cutover or old database restoration.
+Report once using the AGENTS.md metadata block for this branch's own commit/PR
+state; do not combine source-PR, deployment and maintenance branch states in a field.
+
 ## October 2: Green Live And Accepted
 
 Read VK_GREEN_LIVE_20261002.md. Green3059021 now serves5411/5412 and vibe.local;

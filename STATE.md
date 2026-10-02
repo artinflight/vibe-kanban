@@ -1,5 +1,17 @@
 # STATE.md
 
+**October 2 review-state correction:** the 01:53 repair incorrectly unioned unread
+flags from multiple snapshots, including an old build database. At 10:20:39 UTC,
+13 confirmed stale repair writes were undone; 3 already-reviewed rows were left
+alone. All other flags/tables/content are unchanged, with a current backup and
+SHA256 receipts on Desktop. Exact loss/review intent is not reconstructible from
+the existing request audit. The operator has been asked whether to use the actual
+October 1 20:37 production snapshot for recent flags; that further reconciliation
+is pending, not certified complete. Read VK_ATTENTION_PRESERVATION.md and the
+vk-attention-point-recovery-20261002 evidence. No restart or route change occurred.
+The updated production remains usable; preservation during cutover does not
+validate the earlier recovery's choice of historical flags.
+
 **October2 live authority:** Green3059021 serves main95deaafe6/stagingb0f4c10a9
 with corrected opening-clears frontend caef5f3b6/PR138, VK0.1.42/CLI0.159.2.
 Blue1504649 remains frozen for same-latest-data cutback. Consumed094117Z handover

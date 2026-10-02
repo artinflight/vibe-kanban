@@ -140,7 +140,8 @@ function useEffectiveOverrides(
   variantWasUserSelected: boolean,
   presetOptions: ExecutorConfig | null | undefined,
   preferPresetOverrides: boolean,
-  sessionConfig: ExecutorConfig | null | undefined
+  sessionConfig: ExecutorConfig | null | undefined,
+  isNewSession: boolean
 ) {
   return useMemo((): ExecutorConfig | null => {
     if (!effectiveExecutor) return null;
@@ -164,8 +165,8 @@ function useEffectiveOverrides(
 
     for (const field of OVERRIDE_FIELDS) {
       if (field === 'routing') {
-        // Only this session may restore consent after a draft is cleared.
-        // Unrelated last-used settings must never opt a new chat into routing.
+        // Restore this chat's explicit choice first. New Codex chats default to
+        // recommendations only; never inherit routing from an unrelated chat.
         resolved.routing =
           userSelections.routing ??
           (scratchMatches ? scratchConfig?.routing : undefined) ??
@@ -175,6 +176,14 @@ function useEffectiveOverrides(
             sessionConfig.variant ?? null
           ) === profileKey
             ? sessionConfig.routing
+            : undefined) ??
+          (isNewSession && effectiveExecutor === BaseCodingAgent.CODEX
+            ? {
+                mode: 'shadow',
+                floor: 'assessed',
+                denied_models: [],
+                allow_escalation: false,
+              }
             : undefined);
         continue;
       }
@@ -212,6 +221,7 @@ function useEffectiveOverrides(
     presetOptions,
     preferPresetOverrides,
     sessionConfig,
+    isNewSession,
     variantWasUserSelected,
   ]);
 }
@@ -226,6 +236,8 @@ interface UseExecutorConfigOptions {
   persistenceKey?: string | null;
   onPersist?: (config: ExecutorConfig) => void;
   preferPresetOverrides?: boolean;
+  /** Apply recommendation defaults only when creating a new chat. */
+  isNewSession?: boolean;
 }
 
 interface UseExecutorConfigResult {
@@ -295,6 +307,7 @@ export function useExecutorConfig({
   persistenceKey,
   onPersist,
   preferPresetOverrides = false,
+  isNewSession = false,
 }: UseExecutorConfigOptions): UseExecutorConfigResult {
   const [userSelections, setUserSelections] = useState<Partial<ExecutorConfig>>(
     () => readPersistedSelections(persistenceKey)
@@ -335,7 +348,8 @@ export function useExecutorConfig({
     variant.wasUserSelected,
     presetOptions,
     preferPresetOverrides,
-    sessionConfig
+    sessionConfig,
+    isNewSession
   );
 
   const profileKey = getProfileKey(executor.effective, variant.resolved);

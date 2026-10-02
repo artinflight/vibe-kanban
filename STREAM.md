@@ -1,3 +1,17 @@
+## Recommended default for new agents — October 2
+
+Branch `fix/autoswitch-recommended-default` makes new Codex workspaces and new
+sessions default to Shadow (Recommend only), assessed floor, no automatic
+escalation. Explicit draft/browser choices win; existing sessions keep their
+settings. This is a frontend-only change based on the exact live frontend
+`caef5f3b6`, preserving the attention-indicator repairs from PR138. The separate
+`fix/autoswitch-live-shadow` helper branch is preserved and excluded.
+
+The corrected backend is now live, activated separately by VK::Staging. This
+stream owns no restarts or main promotion. Validation and frontend publication
+evidence are under `/mnt/vk-storage/vk-autoswitch-recommended-default-20261002`.
+No task executions or model calls are needed to validate this default.
+
 # Workspace Attention Preservation
 
 Branch `fix/workspace-attention-preservation` starts at staging `b0f4c10a9`.

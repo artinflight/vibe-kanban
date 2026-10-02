@@ -1,3 +1,26 @@
+## Terminal identity recovery and Sol 6.1 High default — October 2
+
+Shadow stopped after the 24-hour discovery expiry: the saved native user agent
+contained terminal `dumb`, while the service's identical Codex0.159.2 reported
+`unknown`. Recovery compared both metadata responses under the actual service
+environment, account/home and unchanged launcher, then atomically refreshed the
+catalog/runtime label while preserving every verified-at timestamp and effort.
+No execution proof was fabricated; no service restart or runtime upgrade occurred.
+
+The permanent Rust matcher ignores only the terminal component; version,
+platform, architecture, client and account checks remain strict. Three focused
+matcher tests and the executor Rust check pass. A stale isolated copy renewed
+using the existing compiled resolver without inference, then selected Luna5.6/low
+for a mechanical request. One CC::Inventory semantic replay succeeded with
+Sol6.1/medium: 4,487 input, 217 output tokens, 7.9 seconds; no agent work reran.
+This is replay evidence, not a new live development execution or measured savings.
+
+The supported live profiles API now stores CODEX DEFAULT as gpt-6.1-sol/high;
+other fields are preserved. Frontend fallback and both creation paths follow
+that default while explicit draft choices and existing sessions remain intact.
+Permanent Rust changes remain source-only; live recovery uses refreshed data.
+Evidence and rollback: `/mnt/vk-storage/vk-autoswitch-identity-repair-20261002`.
+
 ## Preserve Recommended when editing model or reasoning — October 2
 
 The model selector had explicitly forced Manual for every model/effort edit,

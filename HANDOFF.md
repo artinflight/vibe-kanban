@@ -1,5 +1,19 @@
 # HANDOFF.md
 
+## October 2: Restore Opening-Clears And Execute Authorized Cutover
+
+The operator rejected manual-only review and explicitly authorized "fix that
+and cutover". Source caef5f3b6 is committed/pushed in PR138. Opening a visible
+chat clears attention again; hidden mobile/background views and summary polling
+do not. Older actionable sidebar entries remain visible. Blue and prepared Green
+frontends carry this correction. Read open-chat-* receipts under
+/mnt/vk-storage/vk-attention-recovery-20261002 and current PROGRESS/status under
+/mnt/vk-storage/vk-green-ready-20261001. The operator's latest instruction
+supersedes older preparation-only holds. Drain other work, use the verified
+latest backup, execute the independent controller once and complete acceptance
+in this original conversation. Do not restore old data or replay an attempt.
+The earlier manual-review behavior below is rejected history, not the protocol.
+
 ## October 2: Attention Restored, Do Not Repeat The Claim
 
 Read VK_ATTENTION_PRESERVATION.md and /mnt/vk-storage/vk-attention-recovery-20261002.

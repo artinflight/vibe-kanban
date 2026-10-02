@@ -4,8 +4,9 @@
 
 Read VK_ATTENTION_PRESERVATION.md. Compare original turn seen/review flags
 independently from issue statuses; verify live desktop/mobile sections with the
-read-only summaries POST permitted, including older items beyond50. Navigation
-must not clear attention; review is explicit. Preserve live frontend repairs in
+read-only summaries POST permitted, including older items beyond50. Opening a
+visible chat must clear attention. Hidden mobile/background views and summary
+polling must not; do not replace this workflow with manual-only review. Preserve live frontend repairs in
 candidate and cutback bundles and rebind source/hash/Desktop recovery evidence.
 Do not mark a readiness goal complete with an unresolved reported regression.
 

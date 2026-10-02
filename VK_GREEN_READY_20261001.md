@@ -1,5 +1,14 @@
 # Green Cutover Readiness, October 1
 
+## October 2 Authorized Activation
+
+The operator explicitly authorized "fix that and cutover". PR138 caef5f3b6
+supersedes the rejected manual-only review behavior below: opening a visible
+chat clears, hidden chat/background and summary polling do not. Both roles have
+the correction. Follow current runtime PROGRESS/readiness/status, using latest
+data and original-thread continuation. Do not infer that activation succeeded
+from this preparation note or ask for the same authorization again.
+
 ## October 2 Correction
 
 The prior completion claim missed workspace attention acceptance. Issue statuses

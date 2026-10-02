@@ -1,5 +1,13 @@
 # STATE.md
 
+**October2 operator correction:** manual-only review was an agent overreach.
+Frontend caef5f3b6/PR138 restores clearing when opening a visible chat; hidden
+mobile/background panels and summary polling retain unread. Both prepared roles
+carry it. The operator explicitly authorizes correction and Green cutover;
+read current independent status before claiming activation. Previous approval
+holds and manual-review instructions below are historical. No additional marker
+restoration is intended; existing current data remains authoritative.
+
 **October2 attention correction:** the prior issue-status comparison and goal
 completion claim did not establish review-marker preservation. Frontend069cb835d
 (PR138) is live in Blue and prepared Green;28 original completed-turn seen flags

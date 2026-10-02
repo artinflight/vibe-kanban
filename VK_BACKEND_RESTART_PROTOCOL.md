@@ -2,6 +2,12 @@
 
 ## Workspace Attention Preservation
 
+Opening a visible chat clears attention. Hidden mobile/background panels and
+summary polling must not clear new completions. The initial October2 manual-only
+review change was rejected; it is not the established interaction contract.
+Keep immutable readiness evidence separate from timestamped live check outputs;
+fresh runtime checks must not invalidate their own bound software package.
+
 Issue/task statuses are not workspace review flags. See
 VK_ATTENTION_PRESERVATION.md for intentional review, pagination, targeted recovery
 and actual desktop/mobile acceptance. Block real writes in browser checks but

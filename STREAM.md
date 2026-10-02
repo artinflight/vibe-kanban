@@ -1,5 +1,10 @@
 # STREAM.md
 
+Current scope, October2: restore opening-clears-attention per operator correction,
+then execute the authorized Green cutover and complete live acceptance in this
+original thread. PR138 contains the frontend correction; the prepared current
+staging backend is unchanged. Earlier preparation-only scopes are superseded.
+
 Current goal: Green running as an isolated current-staging candidate and ready
 for an approximately30-second approved cutover. Blue stays production. The
 corrected preparation tools, full-sized rehearsal and final package are recorded

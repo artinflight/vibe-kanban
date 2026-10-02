@@ -1,5 +1,22 @@
 # Attention Incident And Recovery, October 2
 
+## Operator Correction: Opening Clears Attention
+
+The manual-only review behavior described below was rejected. It was an agent
+overreach, not the desired design. Source caef5f3b6 in PR138 restores automatic
+clearing when a visible chat opens, removes Mark reviewed, and keeps Mark unread.
+Hidden mobile panels/background documents and summary polling do not clear
+flags. Older actionable items remain visible beyond50. Real isolated-database
+tests and live read-only browser checks pass at1440/390px, with17 live attention
+workspaces visible at test time. Tests did not change production review flags.
+Both Blue and prepared Green frontends carry the correction; publication and
+old-index recovery are checksum-verified on Desktop. Current evidence is
+open-chat-* under /mnt/vk-storage/vk-attention-recovery-20261002. Old tabs reload
+for the corrected code. The operator explicitly authorizes the separate backend
+cutover; read the independent attempt status for its outcome.
+
+## Earlier Incident
+
 The agent failed to verify the full reported state and stopped too early.
 Matching issue/task statuses did not establish that workspace unread/review flags
 survived. The earlier completed goal and readiness answer were therefore not

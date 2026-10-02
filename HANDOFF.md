@@ -2,12 +2,15 @@
 
 Read VK_ATTENTION_PRESERVATION.md. The issue-status comparison did not verify
 review markers, and the prior completion claim omitted this UI failure.
-Opening a workspace no longer clears unread flags; use Mark reviewed explicitly.
+Opening a visible chat clears unread flags again. The operator rejected the
+manual-only review behavior. Hidden mobile chat and background document do not
+clear flags; summary polling cannot clear a new completion while already open.
 Actionable older items are no longer excluded by accordion pagination.
 Production deployment/recovery receipts are under
 /mnt/vk-storage/vk-attention-recovery-20261002; re-read them before claiming live
-acceptance. Blue remains the production backend; do not perform a handover as
-part of this frontend correction or restore old data over production.
+acceptance. The operator has separately authorized the prepared Green cutover.
+Read its independent status before any service action; never replay a handover
+or restore old data over production.
 
 ## AutoSwitch release compatibility (2026-10-01)
 

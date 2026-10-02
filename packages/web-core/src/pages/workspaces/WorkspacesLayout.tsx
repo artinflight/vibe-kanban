@@ -6,6 +6,9 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
+import { workspacesApi } from '@/shared/lib/api';
+import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 import { Group, Layout, Panel, Separator } from 'react-resizable-panels';
 import type { CreateModeInitialState } from '@/shared/types/createMode';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
@@ -134,6 +137,40 @@ export function WorkspacesLayout() {
     setLeftSidebarVisible,
     setLeftMainPanelVisible,
   } = useWorkspacePanelState(isCreateMode ? undefined : workspaceId);
+
+  const queryClient = useQueryClient();
+  const visibleWorkspaceId =
+    !isCreateMode &&
+    !isLoading &&
+    selectedWorkspace?.id === workspaceId &&
+    (isMobile ? mobileTab === 'chat' : isLeftMainPanelVisible)
+      ? workspaceId
+      : undefined;
+
+  useEffect(() => {
+    if (!visibleWorkspaceId) return;
+
+    const markVisibleChatSeen = () => {
+      if (document.visibilityState !== 'visible') return;
+      void workspacesApi
+        .markSeen(visibleWorkspaceId)
+        .then(() => {
+          void queryClient.invalidateQueries({
+            queryKey: workspaceSummaryKeys.all,
+          });
+        })
+        .catch((error) => {
+          console.warn('Failed to mark workspace as seen:', error);
+        });
+    };
+
+    // Clear when the chat is opened, not when polling reports a new completion.
+    markVisibleChatSeen();
+    document.addEventListener('visibilitychange', markVisibleChatSeen);
+    return () => {
+      document.removeEventListener('visibilitychange', markVisibleChatSeen);
+    };
+  }, [visibleWorkspaceId, queryClient]);
 
   const {
     config,

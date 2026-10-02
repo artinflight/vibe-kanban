@@ -12,6 +12,7 @@ pub mod profile;
 pub mod routing;
 pub mod routing_assessment;
 mod routing_availability;
+pub mod routing_context;
 pub mod routing_delegation;
 mod routing_runtime_identity;
 pub mod routing_semantic;

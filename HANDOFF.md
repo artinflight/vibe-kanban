@@ -1,3 +1,28 @@
+## Completed context and cheaper follow-ups — October 2
+
+Source-only follow-up repair on `fix/autoswitch-recommended-default`; no runtime,
+frontend, policy or service was changed in this pass. Read
+[VK_AUTOSWITCH_FOLLOWUP_CONTEXT.md](VK_AUTOSWITCH_FOLLOWUP_CONTEXT.md).
+
+Admission now supplies up to 3,000 characters from the immediately preceding
+successful same-session reply. A clearly bounded step can shed the surrounding
+assignment's inferred complexity; uncertain steps and protected changes cannot.
+Narrow unambiguous reference lookups skip inference. The surrounding assignment
+is remembered for later continuation; manual choices/floors, exclusions, failure
+rules and native-resume safety remain authoritative. CU wire types are unchanged.
+
+48 focused executor tests pass (one opt-in native test ignored), services compile,
+and the exact admission SQL passes isolated context-selection checks. Four native
+classifier calls consumed 18,763 input / 649 output tokens, 31.5 seconds combined.
+A real dimensions request now yields Auto Luna6/medium and Shadow Sol6/low; missing
+shopping-list facts and recurring errors stay conservative. These are recommendation
+replays, not proof of accepted-task savings. Evidence:
+`/mnt/vk-storage/vk-autoswitch-context-20261002`.
+
+The backend must still be integrated and adopted by VK::Staging through its normal
+workflow. This task did not restart, merge staging/main, contact another agent or
+change live recommendations. Existing live defaults and discovery repair remain.
+
 ## Terminal identity recovery and Sol 6.1 High default — October 2
 
 Shadow stopped after the 24-hour discovery expiry: the saved native user agent

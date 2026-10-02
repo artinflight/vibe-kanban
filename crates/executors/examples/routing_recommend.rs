@@ -21,6 +21,7 @@ struct Task {
     prompt: String,
     previous_envelope: Option<String>,
     previous_prompt: Option<String>,
+    previous_reply: Option<String>,
     repo_root: Option<std::path::PathBuf>,
     #[serde(default)]
     floor: CapabilityFloor,
@@ -39,6 +40,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         let task: Task = serde_json::from_str(&line)?;
         let mut assessment = assess_with_context(&task.prompt, task.repo_root.as_deref());
+        executors::routing_context::apply_reference_context(
+            &mut assessment,
+            &task.prompt,
+            task.previous_reply.as_deref(),
+        );
         let mut policy = RoutingPolicy {
             mode: RoutingMode::Auto,
             floor: task.floor,
@@ -53,9 +59,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &task.prompt,
                 task.previous_envelope.as_deref(),
             ) {
-            let trace = routing_semantic::classify(
+            let trace = routing_semantic::classify_with_context(
                 &task.prompt,
                 task.previous_prompt.as_deref(),
+                task.previous_reply.as_deref(),
                 &assessment,
                 &policy,
             );

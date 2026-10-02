@@ -1542,3 +1542,12 @@ other fields are preserved. Frontend fallback and both creation paths follow
 that default while explicit draft choices and existing sessions remain intact.
 Permanent Rust changes remain source-only; live recovery uses refreshed data.
 Evidence and rollback: `/mnt/vk-storage/vk-autoswitch-identity-repair-20261002`.
+
+The live profile update and frontend `e082c4648` are applied without restart.
+Candidate desktop/mobile checks verify new workspaces and new agents default to
+Sol6.1/High + Recommended, model/effort edits retain Shadow, and manual selection
+remains authoritative. Build/types/lint/format/Ops pass. The served asset receipt
+and live-browser checks are in the evidence directory above. Backend PID3059021
+is unchanged. Refresh the browser once; no rerun of existing development work is
+needed. The source-only permanent matcher requires a later normal release;
+current live discovery data already matches the service and renews correctly.

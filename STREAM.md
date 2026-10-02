@@ -1,5 +1,11 @@
 # STREAM.md
 
+October 2 current scope/result: correct only the remaining false FR::IOS
+sub-agent activity. Nine proven-finished native spawn links are closed with
+Desktop-backed snapshots and compare-and-set protection. Live desktop/mobile-sized
+checks show Idle; review flags, execution history and current work are preserved.
+No restart, cutover or application feature change is part of this correction.
+
 October 2 current scope/result: complete the operator-requested visible review
 state repair and install protection against another ambiguous recovery. Eight
 specific flags are corrected, recent/later activity is preserved, and full and

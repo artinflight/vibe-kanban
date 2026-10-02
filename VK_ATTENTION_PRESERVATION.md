@@ -1,5 +1,41 @@
 # Attention Incident And Recovery, October 2
 
+## October 2: Remaining iOS Activity Indicator Corrected
+
+FR::IOS (`e745dce7-ff0a-4f88-9375-e6b7c2a13247`) incorrectly appeared Running
+with nine sub-agents. Its native root was recorded in a September 8 execution,
+but the thread continued in later executions through September 13. Nine spawn
+links remained open after their child turns finished. The backend's timestamp
+heuristic used the earlier root-bearing execution's completion, so those later
+child timestamps looked active. A spawn link and a thread update timestamp are
+not sufficient proof that an agent is currently running.
+
+At 12:16:54 UTC, a bounded transaction closed only the nine links whose rollouts
+ended in September 13 task_complete events. The latest parent execution remained
+completed, and no iOS workspace/native-thread process existed. Exact link,
+child metadata and rollout hashes guarded against resumed work; the VK write
+boundary prevented a new workspace execution during the short transaction.
+No execution was relabelled successful. Original rollouts, thread metadata, VK
+data and every other native database table were unchanged. A production-sized
+private trial and a changed-child refusal/rollback test passed first.
+
+Current review snapshots and a full online native database backup were verified
+by SHA256 on Desktop before mutation. After-state snapshots show all 13529
+existing review flags unchanged and two concurrent new turns retained. Live
+HTTPS 1440/390 tests show FR::IOS in Idle, not Running, with zero active/unresolved
+sub-agents and 12 saved messages. Browser API mutations were blocked; no physical
+phone test, restart or route switch was performed. Evidence is under
+/mnt/vk-storage/vk-ios-activity-repair-20261002 and Desktop
+B:/vk-backups/vk-ios-activity-repair-20261002.
+
+For future sub-agent/activity repairs, supplement the VK review snapshot with
+the current native Codex database, spawn links, root-to-execution mapping and
+child lifecycle evidence. Verify Desktop copies before mutation. Recheck live
+processes and newer executions; use exact expected-state guards and preserve
+rollouts/results and unrelated flags. Do not close agents merely because they
+are old, change timestamps to hide them, or reset review flags. This bounded
+data correction does not install a general automatic stale-agent detector.
+
 ## October 2: Visible Reminders Reconciled And Ongoing Protection Installed
 
 The operator reported that the previous partial correction made no useful change

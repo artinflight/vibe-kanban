@@ -1,5 +1,18 @@
 # HANDOFF.md
 
+## October 2: FR::IOS Is Idle, Not Running
+
+The nine stale native spawn links are closed at 12:16:54 UTC, after verifying
+each child's September 13 task_complete and the absence of an iOS execution or
+process. VK data and all other native tables were unchanged. Live 1440/390 checks
+show FR::IOS in Idle with zero active/unresolved sub-agents; 12 saved messages,
+13529 existing review flags and two concurrent new turns remain. Evidence and
+guarded repair are under /mnt/vk-storage/vk-ios-activity-repair-20261002, with
+before/after snapshots and the full native backup verified on Desktop B:.
+Do not replay the repair, reset unread flags or restart. Future activity repairs
+also need native spawn-link/thread snapshots, not only the VK review snapshot;
+read VK_ATTENTION_PRESERVATION.md for the evidence and concurrency requirements.
+
 ## October 2: Visible Reminders Fixed, Snapshot And Journal Required
 
 Read VK_ATTENTION_PRESERVATION.md and /mnt/vk-storage/vk-review-state-completion-20261002.

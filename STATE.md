@@ -1,5 +1,16 @@
 # STATE.md
 
+**October 2 iOS false activity corrected:** FR::IOS had nine open native Codex
+spawn links although every corresponding child finished on September 13 and no
+iOS execution/process was active. At 12:16:54 UTC only those nine links were
+closed, with exact metadata/rollout guards and no VK database writes. Desktop
+SHA256-verified before/after review snapshots and a fresh native database backup
+are under vk-ios-activity-repair-20261002. Live desktop/mobile-sized checks show
+Idle, zero active sub-agents, all 12 saved messages and unchanged review status.
+All 13529 existing review flags and two concurrent new turns are preserved.
+No restart, route change, history deletion or older-database restoration occurred.
+Read VK_ATTENTION_PRESERVATION.md before further activity-marker repairs.
+
 **October 2 visible review list repaired:** at 11:25:59 UTC, eight guarded flag
 updates removed six newly exposed July reminders and two incorrect older
 restorations. Recent response reminders, subsequent reviews and all other data

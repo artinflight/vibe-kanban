@@ -1,3 +1,22 @@
+## Recommended default published — October 2
+
+The frontend-only default is live at `https://vibe.local/` from `304535c76`.
+Backend PID3059021, service, routing, model policy and telemetry are unchanged;
+no restart or main/staging merge occurred. New Codex workspaces and sessions
+start in Recommend only (Shadow); explicit choices and existing chats win.
+The live attention-indicator fixes from `caef5f3b6` are preserved.
+
+Build, web-core type checking, focused ESLint, formatting, Ops and diff checks
+passed. Candidate desktop/mobile browser checks cover both creation paths,
+explicit Manual and existing TF::Build Shadow. Live browser evidence and served
+hashes are in `/mnt/vk-storage/vk-autoswitch-recommended-default-20261002`.
+No development execution or paid model inference was submitted by the checks.
+All old assets and the service worker remain intact. Rollback needs only the
+saved index on mounted SSD; Desktop SSH rejected its exec channel, so the tiny
+rollback index was not copied there. Source is isolated on
+`fix/autoswitch-recommended-default`; the new default has not been merged.
+Refresh the browser once to load it; this does not enable Auto execution.
+
 ## Recommended default for new agents — October 2
 
 Branch `fix/autoswitch-recommended-default` makes new Codex workspaces and new

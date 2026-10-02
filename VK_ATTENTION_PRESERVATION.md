@@ -1,5 +1,91 @@
 # Attention Incident And Recovery, October 2
 
+## October 2: Visible Reminders Reconciled And Ongoing Protection Installed
+
+The operator reported that the previous partial correction made no useful change
+to the list. Further inspection identified six July completions exposed by the
+new accordion pagination. They were outside the old first 50 rows (positions
+267-279 under the default activity ordering), not missing current agent responses.
+The earlier partial repair did not touch them, so they still crowded the list.
+
+At 11:25:59 UTC, the operator's request to remove the stale reminders and finish
+the repair was applied to eight specific turn IDs: the six newly exposed July
+reminders and two incorrect restorations already read in the October 1 20:37
+production snapshot. No date-based automatic cleanup or blanket workspace reset
+was introduced. Compare-and-set protected later reviews and active work. The
+recent CP Report Cards, FR Promo Code and VL Organic Content reminders remain;
+new responses in other workspaces remain independent. Issue statuses, projects,
+worktrees, attachments, original turn content and every other review flag are
+unchanged. No service restart or production-route change was needed.
+
+A full fresh database backup and complete semantic before/after snapshots are
+SHA256-verified on Desktop B:/vk-backups/vk-review-state-completion-20261002.
+Evidence is under /mnt/vk-storage/vk-review-state-completion-20261002. Live HTTPS
+desktop 1440/mobile 390 checks verify all seven stale workspace entries absent
+from Needs Attention and the recent responses present, with all 12 saved messages.
+Tests blocked production writes; no physical-phone check was performed.
+
+The journal migration was validated on a production-sized private copy, then
+installed live without changing existing rows or marking a SQLx migration applied.
+Future `seen` inserts/updates/deletes now append timestamped old/new flags with
+turn, execution, session and workspace IDs to `workspace_review_events`.
+Summary streaming does not add noise, and transaction rollback reverts the event
+too. A subsequent actual review was observed in the journal, separate from the
+eight repair events. Later normal migration runs are idempotent. Keep this journal
+in whole-database backups and same-latest-data cutback; do not delete its history.
+
+The prior missing requester/visibility history cannot be invented retroactively.
+This is a bounded recent-state reconciliation plus removal of the historical
+reminders the operator rejected, not proof of an exact unrecorded loss instant.
+The previous pending-boundary notes below are history, not a current approval hold.
+
+## Mandatory Snapshot Before State-Affecting Work
+
+Before any restart/cutover, frontend publication, database/review repair, migration,
+or other operation that could affect review state or its display, capture the
+actual production state with `scripts/vk_workspace_review_snapshot.py`. Snapshot
+before production mutation, not after discovering a regression. Capture the
+before/after flags and workspace/issue/project/session/repository mappings,
+archive/pin flags, issue columns, branches, paths and execution statuses. Retain
+the source path/time, SHA256 and journal cursor; these are not counts alone.
+
+The tool takes a consistent SQLite read transaction including committed WAL,
+checks the live API's identities/review flags, writes only to the mounted SSD,
+and verifies the Desktop copy by full SHA256. Missing Desktop, SSD, identity
+parity or required journaling blocks the operation. It deliberately excludes
+prompts, summaries, executor request bodies and credentials. Browser-local
+layout/filter preferences are not available from this server snapshot; capture
+relevant browser preferences separately before intentionally changing them.
+
+For the currently verified production backend, an example is:
+
+```bash
+python3 scripts/vk_workspace_review_snapshot.py \
+  --database /home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite \
+  --api-url http://127.0.0.1:5411 \
+  --output /mnt/vk-storage/vk-review-snapshots/<unique-operation>-before.json \
+  --reason <operation> --require-journal
+```
+
+Discover the live paths/ports again before future use. The default transfer uses
+SSH alias `desktop`; this incident used verified direct LAN overrides
+`--ssh-option Hostname=10.0.0.109 --ssh-option HostKeyAlias=100.70.23.123`.
+Do not silently select another account, host identity or disk. The frontend
+publication script now requires an explicit `VK_STATE_DIR`, a verified API URL
+in `VK_REVIEW_SNAPSHOT_API_URL`, active journaling and a Desktop-verified snapshot
+before touching the production assets/pointer. External maintenance controllers
+must include this tool/receipt gate in their next fresh package; consumed packages
+are immutable and must not be retrofitted or replayed.
+
+Take the online snapshot before freezing production. At a final fenced boundary,
+use the already verified SQLite backup copy for comparison, not another read
+that creates WAL sidecars in the frozen source. After activation/repair, capture
+again and reconcile every changed flag against journal entries and intentional
+operator reviews/new completions. Verify the actual desktop/mobile list too.
+Do not revive old hidden reminders during unrelated pagination changes or union
+unread flags across historical databases. Changes to review-state display require
+an isolated before/after list comparison and explicit operator QA.
+
 ## October 2: Stale Restoration Corrected, Exact Loss Boundary Unproven
 
 The earlier claim that all 28 flags were proven missing was incorrect. The repair

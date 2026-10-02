@@ -1,5 +1,27 @@
 # HANDOFF.md
 
+## October 2: Visible Reminders Fixed, Snapshot And Journal Required
+
+Read VK_ATTENTION_PRESERVATION.md and /mnt/vk-storage/vk-review-state-completion-20261002.
+At 11:25:59 UTC the repair cleared six exposed July reminders plus two incorrect
+older restorations, using exact expected flags/timestamps and preserving current
+work. Live 1440/390 checks show the stale entries gone and recent responses present;
+all 12 saved messages remain. Before/after semantic snapshots and a full fresh DB
+backup are SHA256-verified on Desktop B:/vk-backups/vk-review-state-completion-20261002.
+Production remains on the accepted updated version; no restart or cutover occurred.
+
+`workspace_review_events` and its three flag-change triggers are live after a
+production-sized private validation. The source migration is idempotent and was
+not falsely marked applied in `_sqlx_migrations`. Actual subsequent reviews are
+logged. Include the journal in normal database backups/cutback and carry its
+migration into subsequent releases. Before anything affecting review state/display,
+use the new snapshot tool with the verified current production DB/API, require
+Desktop full-SHA256 coverage and compare after-state against intentional journal
+events. Frontend publication now fails closed without these prerequisites.
+Fresh external controller packages must adopt the same gate; do not modify/replay
+consumed handovers. The old pending-boundary question is superseded by the operator's
+request to finish; missing historical intent remains a documented limitation.
+
 ## October 2: Stale Read/Unread Recovery Partially Reconciled
 
 The operator rejected the union-based historical flag restoration. Read

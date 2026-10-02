@@ -1,5 +1,19 @@
 # STATE.md
 
+**October 2 visible review list repaired:** at 11:25:59 UTC, eight guarded flag
+updates removed six newly exposed July reminders and two incorrect older
+restorations. Recent response reminders, subsequent reviews and all other data
+are preserved. Live desktop/mobile-sized checks pass; all 12 saved messages remain.
+Fresh full backup plus semantic before/after snapshots are Desktop-verified under
+vk-review-state-completion-20261002. The review event journal is live and records
+subsequent actual reviews without a restart. New tooling/migration and the frontend
+publication snapshot gate are source changes, not a new backend deployment.
+Every operation affecting review state/display now requires an explicit current
+production snapshot before mutation, Desktop SHA256 verification and after-state
+reconciliation. Read VK_ATTENTION_PRESERVATION.md. No pending boundary decision,
+blanket age cleanup or old database restoration is needed; exact pre-incident
+requester intent remains historically unrecorded.
+
 **October 2 review-state correction:** the 01:53 repair incorrectly unioned unread
 flags from multiple snapshots, including an old build database. At 10:20:39 UTC,
 13 confirmed stale repair writes were undone; 3 already-reviewed rows were left

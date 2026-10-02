@@ -2,6 +2,16 @@
 
 ## Attention Acceptance Before Completion
 
+Before any operation that can change review state or its display, take a current
+production semantic snapshot with `scripts/vk_workspace_review_snapshot.py`,
+verify it on Desktop, and preserve the live `workspace_review_events` journal.
+Afterwards compare per-turn flags/mappings and the displayed desktop/mobile list;
+account for legitimate reviews and new completions using the journal. The snapshot
+is mandatory for frontend swaps, data repairs and migrations too, not only backend
+restarts. Read the mandatory-snapshot section in VK_ATTENTION_PRESERVATION.md.
+The frontend publication script enforces this gate; fresh external controller
+packages must adopt it before use, without rewriting consumed recovery artifacts.
+
 Read VK_ATTENTION_PRESERVATION.md. Compare original turn seen/review flags
 independently from issue statuses; verify live desktop/mobile sections with the
 read-only summaries POST permitted, including older items beyond50. Opening a

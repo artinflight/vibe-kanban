@@ -1,5 +1,14 @@
 # STREAM.md
 
+October 2 current scope/result: complete the operator-requested visible review
+state repair and install protection against another ambiguous recovery. Eight
+specific flags are corrected, recent/later activity is preserved, and full and
+semantic before/after backups are Desktop-verified. Add tested review snapshot
+tooling, a live event journal with idempotent migration, and a fail-closed frontend
+publication gate. No restart, new handover, route switch or unrelated feature
+deployment is within this task. Prior pending-boundary/preparation scopes below
+are historical. See VK_ATTENTION_PRESERVATION.md for validation and limitations.
+
 October2 current result: authorized Green cutover and original-thread acceptance
 complete. Read VK_GREEN_LIVE_20261002.md. This branch records deployment evidence;
 the frontend correction is pushed in PR138. No further production interruption

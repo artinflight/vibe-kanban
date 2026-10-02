@@ -2,6 +2,18 @@
 
 ## Workspace Attention Preservation
 
+Before a state/display-affecting change, take and Desktop-verify a complete
+semantic review snapshot using `scripts/vk_workspace_review_snapshot.py` against
+the verified live DB/API. Preserve the workspace/issue/project/session mappings,
+flags, timestamps, branches, archive/pin state and `workspace_review_events` cursor,
+not merely totals. Keep the journal in whole-DB backups and latest-data cutback.
+New frontend publications fail closed without this snapshot and journaling;
+fresh controller packages must include the same pre-mutation gate. Take snapshots
+online before freezing; compare frozen-boundary flags from the verified backup
+copy to avoid introducing WAL sidecars. Capture after activation and explain every
+change by journal events/intentional reviews/new work. Validate the actual list.
+See VK_ATTENTION_PRESERVATION.md for the October 2 correction and exact tooling.
+
 Opening a visible chat clears attention. Hidden mobile/background panels and
 summary polling must not clear new completions. The initial October2 manual-only
 review change was rejected; it is not the established interaction contract.

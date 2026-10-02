@@ -50,3 +50,16 @@ code. No backend restart is required for this correction.
 
 Local artifacts: `/mnt/vk-storage/vk-attention-recovery-20261002`.
 Desktop recovery: `B:/vk-backups/vk-attention-recovery-20261002`.
+
+The actual repair restored28 flags across11 workspaces. Subsequent live browser
+checks rendered16 attention workspaces on desktop and mobile-sized viewports.
+Original prompts, summaries, execution IDs,12 saved messages and issue statuses
+matched the verified before-state. Real explicit review passed against Green's
+isolated copy; production browser review requests were intercepted. Blue's
+backend PID1504649 stayed unchanged. Counts can change with subsequent work.
+
+Frontend code commit069cb835d is published in PR138 into staging and installed
+as a validated overlay in live Blue and prepared Green. Green's backend remains
+the exact main95deaafe6/stagingb0f4c10a9 compatible release; no Rust rebuild is
+required by this frontend-only change. The refreshed recovery package also
+preserves CU's already-live Android0.4.0 page/download without runtime changes.

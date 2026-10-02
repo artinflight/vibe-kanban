@@ -7,6 +7,14 @@ changes to Manual for an explicit model/effort choice. Explicit routing choices,
 capability floors and exclusions remain authoritative. This is frontend-only.
 Evidence: `/mnt/vk-storage/vk-autoswitch-shadow-selection-20261002`.
 
+Published frontend `49ce55538` without restarting backend PID3059021.
+Build, types, focused lint, formatting and Ops passed. Desktop/mobile candidate
+checks prove model and effort changes retain Shadow, Auto changes lock Manual,
+explicit Manual remains authoritative, and both new-agent paths retain the
+default. No model calls or development executions were submitted. Existing
+assets and service worker are preserved; rollback index is on mounted SSD.
+Refresh once; a draft already saved as Manual needs Recommend selected once.
+
 ## Recommended default published — October 2
 
 The frontend-only default is live at `https://vibe.local/` from `304535c76`.

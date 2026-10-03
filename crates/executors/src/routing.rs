@@ -222,7 +222,7 @@ pub fn resolve_action_with_context(
     failed: bool,
     root: Option<&std::path::Path>,
 ) -> Result<(), String> {
-    resolve_action_impl(action, previous, failed, root, false)
+    resolve_action_impl(action, previous, failed, root, false, None)
 }
 
 /// Live admission: one optional bounded semantic turn before normal qualification.
@@ -232,7 +232,18 @@ pub fn resolve_action_with_semantics(
     failed: bool,
     root: Option<&std::path::Path>,
 ) -> Result<(), String> {
-    resolve_action_impl(action, previous, failed, root, true)
+    resolve_action_impl(action, previous, failed, root, true, None)
+}
+
+/// Same-session completed reply supplied by admission, never caller-controlled history.
+pub fn resolve_action_with_history(
+    action: &mut ExecutorAction,
+    previous: Option<&ExecutorAction>,
+    failed: bool,
+    root: Option<&std::path::Path>,
+    completed_reply: Option<&str>,
+) -> Result<(), String> {
+    resolve_action_impl(action, previous, failed, root, true, completed_reply)
 }
 
 fn resolve_action_impl(
@@ -241,12 +252,20 @@ fn resolve_action_impl(
     failed: bool,
     root: Option<&std::path::Path>,
     semantic_enabled: bool,
+    completed_reply: Option<&str>,
 ) -> Result<(), String> {
     let original = action.clone();
     let shadow = config(action)
         .and_then(|c| c.routing.as_ref())
         .is_some_and(|p| p.mode == RoutingMode::Shadow);
-    let result = resolve_action_inner(action, previous, failed, root, semantic_enabled);
+    let result = resolve_action_inner(
+        action,
+        previous,
+        failed,
+        root,
+        semantic_enabled,
+        completed_reply,
+    );
     if shadow {
         action.typ = original.typ;
         if let Err(error) = result {
@@ -282,6 +301,7 @@ fn resolve_action_inner(
     failed: bool,
     root: Option<&std::path::Path>,
     semantic_enabled: bool,
+    completed_reply: Option<&str>,
 ) -> Result<(), String> {
     action.routing_decision = None; // Never trust a client-supplied decision.
     let Some(original) = config(action).cloned() else {
@@ -326,6 +346,9 @@ fn resolve_action_inner(
         let prior_decision = previous.and_then(|p| p.routing_decision.as_ref())
             .filter(|d| d.mode == RoutingMode::Auto)
             .ok_or("Native resume cannot enable automatic routing; select manual or use an ordinary follow-up first")?;
+        if crate::routing_context::surrounding_envelope(prior_decision).is_some() {
+            return Err("Native resume after a bounded side step requires an ordinary follow-up to reassess the surrounding assignment".into());
+        }
         let prior = previous
             .and_then(config)
             .ok_or("A native resume requires an existing execution configuration")?;
@@ -368,7 +391,11 @@ fn resolve_action_inner(
     let prior_envelope = previous.and_then(|p| {
         p.routing_decision
             .as_ref()
-            .and_then(|d| d.assessed_envelope.clone())
+            .and_then(|d| {
+                crate::routing_context::surrounding_envelope(d)
+                    .map(str::to_owned)
+                    .or_else(|| d.assessed_envelope.clone())
+            })
             .or_else(|| match &p.typ {
                 ExecutorActionType::CodingAgentInitialRequest(r) => Some(
                     crate::routing_assessment::assess(&r.prompt)
@@ -384,6 +411,9 @@ fn resolve_action_inner(
             })
     });
     let mut assessment = crate::routing_assessment::assess_with_context(prompt, root);
+    // A failed boundary cannot use successful-looking prose to erase failure evidence.
+    let completed_reply = completed_reply.filter(|text| !failed && !text.trim().is_empty());
+    crate::routing_context::apply_reference_context(&mut assessment, prompt, completed_reply);
     let semantic = if semantic_enabled
         && crate::routing_semantic::eligible(
             &assessment,
@@ -397,8 +427,13 @@ fn resolve_action_inner(
             ExecutorActionType::CodingAgentFollowUpRequest(r) => Some(r.prompt.as_str()),
             _ => None,
         });
-        let trace =
-            crate::routing_semantic::classify(prompt, previous_prompt, &assessment, &policy);
+        let trace = crate::routing_semantic::classify_with_context(
+            prompt,
+            previous_prompt,
+            completed_reply,
+            &assessment,
+            &policy,
+        );
         if let Some(classification) = &trace.classification {
             crate::routing_semantic::apply(&mut assessment, classification);
         }
@@ -892,6 +927,118 @@ mod tests {
                 }
             );
         }
+    }
+
+    #[test]
+    fn completed_reference_boundary_keeps_shadow_manual_and_failure_guards() {
+        let (mut policy, models, availability) = fixture();
+        policy.mode = RoutingMode::Shadow;
+        policy.floor = CapabilityFloor::Assessed;
+        let mut prior = action(Some(policy.clone()));
+        if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut prior.typ {
+            r.prompt = "Investigate an intermittent failure".into();
+        }
+        resolve_action(&mut prior, None, false).unwrap();
+        for (explicit, expected) in [
+            (CapabilityFloor::Assessed, CapabilityFloor::Routine),
+            (CapabilityFloor::Workhorse, CapabilityFloor::Workhorse),
+            (CapabilityFloor::Frontier, CapabilityFloor::Frontier),
+        ] {
+            policy.floor = explicit;
+            let mut next = action(Some(policy.clone()));
+            if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut next.typ {
+                r.prompt = "Send me the link to that component".into();
+            }
+            let before = serde_json::to_value(&next.typ).unwrap();
+            resolve_action_impl(
+                &mut next,
+                Some(&prior),
+                false,
+                None,
+                false,
+                Some("Selected component: https://example.invalid/item"),
+            )
+            .unwrap();
+            assert_eq!(serde_json::to_value(&next.typ).unwrap(), before);
+            let d = next.routing_decision.as_ref().unwrap();
+            assert_eq!(d.floor, expected);
+            assert!(d.semantic.is_none());
+            let pair = choose_assessed(
+                &policy,
+                d.floor,
+                d.assessed_envelope.as_deref().unwrap(),
+                &models,
+                &availability,
+                100,
+            )
+            .unwrap();
+            assert_eq!(
+                pair.0,
+                match expected {
+                    CapabilityFloor::Routine => "gpt-6-luna",
+                    CapabilityFloor::Workhorse => "gpt-6.1-sol",
+                    _ => "gpt-6-astra",
+                }
+            );
+            // A later ambiguous continuation resumes the harder assignment,
+            // not the temporary cheap lookup (including through persistence).
+            let saved: ExecutorAction =
+                serde_json::from_value(serde_json::to_value(&next).unwrap()).unwrap();
+            let mut resume = action(Some(policy.clone()));
+            if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut resume.typ {
+                r.prompt = "continue".into();
+            }
+            resolve_action(&mut resume, Some(&saved), false).unwrap();
+            assert_eq!(
+                resume
+                    .routing_decision
+                    .as_ref()
+                    .unwrap()
+                    .assessed_envelope
+                    .as_deref(),
+                Some("complex")
+            );
+            let mut excluded = policy.clone();
+            excluded.denied_models = models.iter().map(|m| m.id.clone()).collect();
+            assert!(
+                choose_assessed(
+                    &excluded,
+                    d.floor,
+                    d.assessed_envelope.as_deref().unwrap(),
+                    &models,
+                    &availability,
+                    100
+                )
+                .is_err()
+            );
+        }
+        policy.mode = RoutingMode::Auto;
+        policy.floor = CapabilityFloor::Assessed;
+        let mut failed = action(Some(policy));
+        let before = serde_json::to_value(&failed).unwrap();
+        assert!(
+            resolve_action_impl(
+                &mut failed,
+                Some(&prior),
+                true,
+                None,
+                false,
+                Some("Successful reply: https://example.invalid/item")
+            )
+            .is_err()
+        );
+        assert_eq!(serde_json::to_value(failed).unwrap(), before);
+        let mut manual = action(None);
+        let before = serde_json::to_value(&manual).unwrap();
+        resolve_action_with_history(
+            &mut manual,
+            Some(&prior),
+            false,
+            None,
+            Some("Selected component: https://example.invalid/item"),
+        )
+        .unwrap();
+        assert_eq!(serde_json::to_value(manual).unwrap(), before);
     }
 
     #[test]

@@ -1,5 +1,16 @@
 # STATE.md
 
+## October 3 Evening: Previous Version Remains Production
+
+The approved attempt at231800Z failed its90-second final backup deadline before
+candidate startup. Same Green PID3059021 recovered on latest data; Blue5461 is
+inactive. New main e53ae4a7e/staging86d1c083a is promoted in Git, not deployed.
+Read VK_CUTOVER_RECOVERY_20261003.md for recovery acceptance and the consumed
+attempt. No old database was restored and no retry is authorized by continuation.
+Records, histories,12 saved messages, per-chat configuration,366 existing attachment
+hashes, actual attention list and1440/390 public browser checks pass. Historical
+missing-history exceptions remain unchanged. Normal work can continue.
+
 **October 3 preparation, not deployment:** PR140/141 promote staging86d1c083a to
 maine53ae4a7e, exact built tree6963ed5d5dc174e1f40a84e71e8975cd82c716cc. Current
 Green3059021 still serves the prior accepted application and attention frontend.

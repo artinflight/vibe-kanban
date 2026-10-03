@@ -1,5 +1,11 @@
 # STREAM.md
 
+October3 evening scope/result: the separately authorized cutover failed before
+candidate activation. Complete recovery acceptance, preserve the consumed attempt,
+record the timeout and current production truth. No repeat handover is authorized.
+Read VK_CUTOVER_RECOVERY_20261003.md. Current same-process production is usable;
+the promoted release remains undeployed. Earlier preparation scope below is history.
+
 October 3 current scope: prepare the opposite-role candidate from current staging
 and safely reclaim SSD space. No production interruption is authorized. Source
 promotion PR140/141, isolated validation, backups and inert service preparation

@@ -1,5 +1,19 @@
 # HANDOFF.md
 
+## October 3 Evening: Cutover Failed, Previous Version Recovered
+
+Read VK_CUTOVER_RECOVERY_20261003.md. The approved 231800Z attempt timed out
+after 90 seconds in final backup delivery/verification, before the candidate
+started. Current production is the same Green3059021 on5411 with latest data;
+Blue5461 remains inactive. The original thread resumed. Do not retry this consumed
+attempt or restore an older DB. Recovery checks pass for records, model settings,
+12 messages, attachments, review flags and public1440/390 layouts. Two current
+Needs Attention workspaces remain; no historical flags were restored. The new
+main e53ae4a7e release is NOT deployed. The broader recopy coverage added during
+catch-up was not remeasured against the interruption budget; the earlier49.31s
+rehearsal did not establish this final package's timing. Fix and rehearse that
+workload in a new preparation package before requesting fresh cutover approval.
+
 ## October 3: Restart Preparation And SSD Cleanup
 
 Read VK_PREPARATION_20261003.md and /mnt/vk-storage/vk-blue-prepare-20261003/PROGRESS.md.

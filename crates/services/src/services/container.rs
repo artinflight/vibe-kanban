@@ -1517,17 +1517,18 @@ pub trait ContainerService {
             .and_then(|c| c.routing.as_ref())
             .is_some_and(|p| p.mode != executors::routing::RoutingMode::Manual)
         {
-            let previous: Option<(Uuid, String, String)> = sqlx::query_as(
-                "SELECT id, status, executor_action FROM execution_processes WHERE session_id = ? AND run_reason = 'codingagent' AND dropped = FALSE ORDER BY created_at DESC, rowid DESC LIMIT 1",
+            let previous: Option<(Uuid, String, String, Option<String>)> = sqlx::query_as(
+                "SELECT id, status, executor_action, CASE WHEN status = 'completed' AND exit_code = 0 THEN (SELECT substr(summary, 1, 3000) FROM coding_agent_turns WHERE execution_process_id = execution_processes.id AND summary IS NOT NULL ORDER BY created_at DESC, rowid DESC LIMIT 1) ELSE NULL END FROM execution_processes WHERE session_id = ? AND run_reason = 'codingagent' AND dropped = FALSE ORDER BY created_at DESC, rowid DESC LIMIT 1",
             ).bind(session.id).fetch_optional(&self.db().pool).await?;
             let previous_action = previous
                 .as_ref()
-                .map(|(_, _, json)| serde_json::from_str::<ExecutorAction>(json))
+                .map(|(_, _, json, _)| serde_json::from_str::<ExecutorAction>(json))
                 .transpose()
                 .map_err(|e| ContainerError::Other(anyhow!(e)))?;
             let failed = previous
                 .as_ref()
-                .is_some_and(|(_, status, _)| status == "failed");
+                .is_some_and(|(_, status, _, _)| status == "failed");
+            let completed_reply = previous.as_ref().and_then(|(_, _, _, text)| text.clone());
             let workspace_root = workspace.container_ref.clone();
             let working_dir = session.agent_working_dir.clone();
             // Bounded read-only triage must not block Tokio's execution admission thread.
@@ -1540,11 +1541,12 @@ pub trait ContainerService {
                     let candidate = candidate.canonicalize().ok()?;
                     candidate.starts_with(&root).then_some(candidate)
                 });
-                executors::routing::resolve_action_with_semantics(
+                executors::routing::resolve_action_with_history(
                     &mut resolved_action,
                     previous_action.as_ref(),
                     failed,
                     root.as_deref(),
+                    completed_reply.as_deref(),
                 )?;
                 Ok::<_, String>(resolved_action)
             })
@@ -1552,7 +1554,8 @@ pub trait ContainerService {
             .map_err(|e| ContainerError::Other(anyhow!(e)))?
             .map_err(|e| ContainerError::Other(anyhow!(e)))?;
             if let Some(decision) = &mut resolved_action.routing_decision {
-                decision.previous_execution_id = previous.as_ref().map(|(id, _, _)| id.to_string());
+                decision.previous_execution_id =
+                    previous.as_ref().map(|(id, _, _, _)| id.to_string());
             }
         } else {
             resolved_action.routing_decision = None;

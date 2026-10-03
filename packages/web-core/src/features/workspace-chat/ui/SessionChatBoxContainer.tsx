@@ -511,6 +511,8 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
   } = useExecutorConfig({
     profiles,
     lastUsedConfig: latestConfig,
+    isNewSession: isNewSessionMode,
+    preferPresetOverrides: isNewSessionMode,
     sessionConfig: isNewSessionMode
       ? undefined
       : getLatestConfigFromProcesses(processes),

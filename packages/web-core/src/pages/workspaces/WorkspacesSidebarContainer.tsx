@@ -56,6 +56,7 @@ import {
 import { useRemoteCloudHostsAppBarModel } from '@/shared/hooks/useRemoteCloudHosts';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { projectsApi } from '@/shared/lib/api';
+import { paginateWorkspaceSidebar } from './workspaceSidebarPagination';
 
 export type WorkspaceLayoutMode = 'flat' | 'accordion';
 
@@ -570,13 +571,16 @@ export function WorkspacesSidebarContainer({
     [filteredArchivedWorkspaces, sortWorkspaces]
   );
 
-  // Apply pagination (only when not searching)
+  // Keep every attention/running item available to the accordion sections.
   const paginatedActiveWorkspaces = useMemo(
     () =>
-      isSearching
-        ? sortedActiveWorkspaces
-        : sortedActiveWorkspaces.slice(0, displayLimit),
-    [sortedActiveWorkspaces, displayLimit, isSearching]
+      paginateWorkspaceSidebar(
+        sortedActiveWorkspaces,
+        displayLimit,
+        isSearching,
+        isAccordionLayout
+      ),
+    [sortedActiveWorkspaces, displayLimit, isSearching, isAccordionLayout]
   );
 
   const paginatedArchivedWorkspaces = useMemo(

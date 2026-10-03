@@ -145,6 +145,7 @@ export function CreateChatBoxContainer({
     scratchConfig,
     configExecutorProfile: config?.executor_profile,
     preferPresetOverrides: true,
+    isNewSession: true,
     onPersist: (cfg) => setDraftConfig(cfg),
   });
 

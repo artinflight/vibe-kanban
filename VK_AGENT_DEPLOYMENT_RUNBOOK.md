@@ -1,5 +1,16 @@
 # VK Agent Deployment Runbook
 
+## Workspace Attention Is Separate State
+
+Read [VK_ATTENTION_PRESERVATION.md](VK_ATTENTION_PRESERVATION.md). Matching issue
+statuses does not prove unread/review flags survived. Browser acceptance must
+allow the read-only summaries POST and verify actual desktop/mobile attention
+sections and older actionable items beyond50. Opening a visible chat clears
+attention; hidden chat/background mounting and summary polling do not. Do not
+replace this workflow with a manual review action. Recover only evidence-backed turn flags;
+never overwrite current data with an older database. Preserve a live frontend
+repair in the prepared cutover and cutback package and bind its exact source/hash.
+
 ## Faster Preparation Without Skipping Safety
 
 Read [VK_PREPARATION_PERFORMANCE.md](VK_PREPARATION_PERFORMANCE.md) before the

@@ -65,7 +65,15 @@ pub fn retain_previous(
         "complex" => "complex",
         _ => "protected", // Unknown persisted qualification stays fail-closed.
     };
-    let independent = known && independent_request(&assessment, prompt);
+    let bounded_step =
+        known && crate::routing_context::reassess_step(&assessment, prompt, previous);
+    let independent = known && (independent_request(&assessment, prompt) || bounded_step);
+    if bounded_step && envelope_rank(previous) > envelope_rank(assessment.envelope) {
+        assessment
+            .triage
+            .evidence
+            .push(format!("surrounding_assignment:{previous}"));
+    }
     if !independent
         && (envelope_rank(previous) > envelope_rank(assessment.envelope)
             || (is_continuation(prompt)

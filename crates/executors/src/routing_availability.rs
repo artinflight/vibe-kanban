@@ -136,7 +136,8 @@ fn refresh_file(path: &Path, old: Availability) -> Result<Availability, String> 
 }
 
 fn validate_identity(old: &Availability, init: &Value, account: &Value) -> Result<(), String> {
-    if init["userAgent"].as_str() != old.runtime.as_deref() {
+    if !crate::routing_runtime_identity::matches(old.runtime.as_deref(), init["userAgent"].as_str())
+    {
         return Err("Native runtime changed; refresh executable-model verification".into());
     }
     let account = &account["account"];

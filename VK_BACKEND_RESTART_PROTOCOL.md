@@ -1,5 +1,16 @@
 # Backend Restart Protocol
 
+## Preserve Review Markers And Live Repairs
+
+Workspace attention flags are independent of issue/task statuses. Check both;
+do not complete a readiness goal while a reported UI discrepancy is unresolved.
+See [VK_ATTENTION_PRESERVATION.md](VK_ATTENTION_PRESERVATION.md) for intentional
+review, pagination and read-only browser acceptance. A frontend-only repair does
+not require a backend restart, but both candidate and cutback must retain it.
+Recheck companion software for legitimate updates made during preparation;
+preserve and validate those updates rather than reverting them or merely
+accepting changed hashes. Agent/queue drain remains required before activation.
+
 ## Preparation Timing And Reuse
 
 Use [VK_PREPARATION_PERFORMANCE.md](VK_PREPARATION_PERFORMANCE.md) for the

@@ -1469,3 +1469,27 @@ identified the incumbent's strict nested classification decoder; persist new sco
 evidence on the extensible trace instead. Runtime behavior is unchanged. No
 production activation yet; release/backup evidence is on mounted SSD in
 `vk-autoswitch-scope-release-20261001`.
+
+## October 3: AutoSwitch staging integration
+
+Clean branch `fix/autoswitch-followup-staging` starts at staging `b0f4c10a9`.
+It carries the exact AutoSwitch source from `dd41b5de1`, including the October 2
+Recommended default/selector behavior, Sol6.1 High default, terminal-independent
+runtime identity, and completed-context follow-up repair. Original development
+branch `fix/autoswitch-recommended-default` remains preserved. No source conflicts
+or routing changes were introduced when extracting this release scope.
+
+The unrelated attention/sidebar changes from open PR138 are deliberately excluded.
+They are already in the live frontend; VK::Staging must account for PR138 before
+replacing that frontend to avoid losing the live attention fixes. This integration
+does not merge or modify that separate PR. It also does not restart services,
+change main, or contact/trigger staging or deployment agents.
+
+Existing focused/native evidence is in VK_AUTOSWITCH_FOLLOWUP_CONTEXT.md and
+`/mnt/vk-storage/vk-autoswitch-context-20261002`; no inference acceptance is repeated
+because the source is byte-identical. Fresh integration checks and PR metadata
+are recorded under `/mnt/vk-storage/vk-autoswitch-staging-20261003` and in the PR.
+The host lacks Tauri GTK development packages and has under 1 GiB free SSD space;
+full workspace/desktop checks therefore rely on the repository CI runners rather
+than risking the live host. Local checks cover the changed executor, services and
+frontend sources, formatting/governance, and byte-identical CU wire compatibility.

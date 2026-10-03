@@ -1,3 +1,10 @@
+# October 3 Restart Candidate
+
+Prepare current staging AutoSwitch changes together with the live PR138 attention
+fix, preserving the current review journal. Keep production usable and measure
+the whole preparation. Do not activate the candidate without separate approval.
+The source-stream notes below are retained as history.
+
 ## October 3: AutoSwitch staging integration
 
 Clean branch `fix/autoswitch-followup-staging` starts at staging `b0f4c10a9`.
@@ -21,6 +28,13 @@ The host lacks Tauri GTK development packages and has under 1 GiB free SSD space
 full workspace/desktop checks therefore rely on the repository CI runners rather
 than risking the live host. Local checks cover the changed executor, services and
 frontend sources, formatting/governance, and byte-identical CU wire compatibility.
+# Workspace Attention Preservation
+
+Branch `fix/workspace-attention-preservation` starts at staging `b0f4c10a9`.
+Scope: intentional review clearing and actionable sidebar pagination, with
+focused tests and evidence-backed flag recovery. No backend, schema, model,
+capacity, restart controller or issue-status changes belong in this stream.
+See VK_ATTENTION_PRESERVATION.md. Older stream entries below are historical.
 
 ## AutoSwitch release compatibility (2026-10-01)
 

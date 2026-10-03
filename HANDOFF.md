@@ -1,5 +1,20 @@
 # HANDOFF.md
 
+## October 3: Restart Preparation And SSD Cleanup
+
+Read VK_PREPARATION_20261003.md and /mnt/vk-storage/vk-blue-prepare-20261003/PROGRESS.md.
+PR140/141 integrate current staging, retain the live attention fixes and promote
+the identical built tree to main. Current production remains Green3059021; the
+updated Blue candidate is isolated on5471 and production5461 is inactive. No
+cutover is authorized. Require readiness.json plus its matching Desktop software
+receipt before requesting approval; do not infer readiness from this note alone.
+Backups include a new carConsole supplement. Preserve the latest review journal
+and snapshots, all model choices and historical recovery exceptions. Same-process
+rollback passes; current-sized rehearsal49.31seconds means allow about a minute,
+up to two, not a guaranteed30seconds. Major verified restore-test copies were
+retired; archives remain and roughly80GiB is free before final packaging. No
+production database restoration, pause, restart or frontend switch occurred.
+
 ## October 2: FR::IOS Is Idle, Not Running
 
 The nine stale native spawn links are closed at 12:16:54 UTC, after verifying

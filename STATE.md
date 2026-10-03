@@ -1,5 +1,17 @@
 # STATE.md
 
+**October 3 preparation, not deployment:** PR140/141 promote staging86d1c083a to
+maine53ae4a7e, exact built tree6963ed5d5dc174e1f40a84e71e8975cd82c716cc. Current
+Green3059021 still serves the prior accepted application and attention frontend.
+An isolated updated candidate passes functional/browser checks; production Blue5461
+is installed inactive. Cutover requires fresh approval and final current-data
+capture. Read VK_PREPARATION_20261003.md and the sealed readiness/software receipt
+under /mnt/vk-storage/vk-blue-prepare-20261003. CLI0.159.2 and shared private VK/CU
+telemetry are preserved; model qualification is refreshed. SSD cleanup removed
+only verified generated restore/test copies, retaining archives, live data and
+worktrees; roughly80GiB is free before software packaging. Read/unread flags were
+not reset. Same-process latest-data rollback passes; no production handover yet.
+
 **October 2 iOS false activity corrected:** FR::IOS had nine open native Codex
 spawn links although every corresponding child finished on September 13 and no
 iOS execution/process was active. At 12:16:54 UTC only those nine links were

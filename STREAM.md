@@ -1,5 +1,11 @@
 # STREAM.md
 
+October 3 current scope: prepare the opposite-role candidate from current staging
+and safely reclaim SSD space. No production interruption is authorized. Source
+promotion PR140/141, isolated validation, backups and inert service preparation
+are in VK_PREPARATION_20261003.md. Retain current data and latest-data rollback;
+final cutover needs a new explicit instruction. Earlier scopes below are history.
+
 October 2 current scope/result: correct only the remaining false FR::IOS
 sub-agent activity. Nine proven-finished native spawn links are closed with
 Desktop-backed snapshots and compare-and-set protection. Live desktop/mobile-sized

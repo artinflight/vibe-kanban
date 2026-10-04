@@ -1,5 +1,15 @@
 # HANDOFF.md
 
+## Current Operator Hold: Await Parent Accounting Checkpoint
+
+The latest instruction explicitly HOLDS restart and cutover. Do not deploy,
+restart, switch routing or interrupt any agent. Wait for explicit parent
+confirmation of the accounting safe checkpoint before proceeding. The observed
+completed accounting execution is not a substitute for that confirmation.
+This supersedes earlier automatic drain-then-cutover authorization. Current
+Green3059021 remains routed; no October4 request, approval or attempt was created.
+The evening backup coverage revision is incomplete and not sealed for deployment.
+
 ## October 4: Authorized Cutover After Agent Drain
 
 The operator explicitly said "wait for current agents to finish and cutover at

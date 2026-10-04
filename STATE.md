@@ -1,5 +1,13 @@
 # STATE.md
 
+## Current Hold: Parent Confirmation Required
+
+The operator has held restart/cutover pending explicit parent confirmation of
+the accounting safe checkpoint. No deployment, restart, routing switch or agent
+interruption is permitted until that confirmation. Earlier automatic cutover
+permission is suspended. Current Green3059021 remains production; the evening
+preparation revision is incomplete and must be verified before future activation.
+
 ## October 4: Drain-Then-Cutover Authorized
 
 The operator authorizes the fresh cutover at the next opportunity after other

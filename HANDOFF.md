@@ -1,5 +1,24 @@
 # HANDOFF.md
 
+## October 4: Authorized Cutover After Agent Drain
+
+The operator explicitly said "wait for current agents to finish and cutover at
+next opportunity". This supersedes the pending-authorization note below. Do not
+interrupt other executions or queued work. Current Green3059021 remains live.
+The unconsumed vk-blue-reprepare-20261004 package is being revised after online
+catch-up found moved plugin folders outside its previous bounded coverage.
+Read its PROGRESS.md and fresh readiness/software receipt; old readiness is
+invalid until resealed. Seventy-one operational tests and the socket check pass,
+including nested move/deletion and fail-closed coverage tests. New Desktop backup
+da1fa979e22a4119a1356901ade0f1d9 passes. Ten-root full-workload rehearsal passes
+all four cases and Desktop restore, measured127.47seconds. Capture timeout is now
+150seconds and controller watchdog360seconds; the operator was told to expect
+two to three minutes. Revised software package154759Z is Desktop verified and
+all2491 bound files pass downloaded restoration. No production pause or
+handover has occurred in this turn. VK_BACKUP_DRAIN_20261004.patch records the
+revision against the first October4 package; old software archives are retained.
+Preserve this original conversation and all latest data; never replay October3.
+
 ## October 4: Backup Fixes And Fresh Cutover Preparation
 
 Read VK_PREPARATION_20261004.md and the matching readiness/software receipt under

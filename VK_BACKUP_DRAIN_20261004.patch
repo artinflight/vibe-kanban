@@ -1,0 +1,123 @@
+--- a/journal_compat.py
++++ b/journal_compat.py
+@@ -11 +11,15 @@
+-def reconcile(value, full, roots, covered, recreated_covered):
++def recopy_cover(path, allowed, roots, covered):
++    matches=[root for root in allowed if root in path.parents]
++    assert len(matches)==1, 'Moved or failed-watch path lacks unique bounded coverage'
++    parent=matches[0]
++    assert parent not in roots and roots.intersection(parent.parents)
++    assert covered(parent), 'Recopy subtree has no covering parent watch'
++    return parent
++
++def observed_move(path, mask):
++    moved_in=mask&0x40000880==0x40000880
++    removed=(not path.exists() and not path.is_symlink()
++             and mask&(MASK|0x800)==(MASK|0x800))
++    assert moved_in or removed, 'Missing move-in or complete deletion evidence'
++
++def reconcile(value, full, roots, covered, recreated_covered, recopy_covered=lambda p:False):
+@@ -20 +34,2 @@
+-        if full['events'].get(str(path),0)&MASK != MASK:return value
++        mask=full['events'].get(str(path),0)
++        if mask&MASK != MASK and not (mask&0x8400==0x8400 and recopy_covered(path)):return value
+@@ -72,3 +87,2 @@
+-            path=Path(error['directory_moved']);parent=path.parent
+-            assert parent in allowed and parent not in roots and roots.intersection(parent.parents)
+-            assert covered(parent), 'Moved subtree has no covering parent watch'
++            path=Path(error['directory_moved'])
++            parent=recopy_cover(path,allowed,roots,covered)
+@@ -77 +91 @@
+-            assert full['events'].get(str(path),0)&0x40000880==0x40000880, 'Missing observed move-in and move-self'
++            observed_move(path,full['events'].get(str(path),0))
+@@ -89,5 +103 @@
+-            matches=[Path(p) for p in recopy_roots if Path(p) in path.parents]
+-            assert len(matches)==1, 'Failed watch outside bounded recopy coverage'
+-            parent=matches[0]
+-            assert parent not in roots and roots.intersection(parent.parents)
+-            assert covered(parent), 'Failed-watch subtree lacks a covering parent watch'
++            parent=recopy_cover(path,{Path(p) for p in recopy_roots},roots,covered)
+@@ -103 +113,2 @@
+-    result=reconcile(value,full,roots,covered,lambda p: recreated(p) or any(Path(r)==p or Path(r) in p.parents for r in repair))
++    bounded=lambda p:any(Path(r) in p.parents for r in repair)
++    result=reconcile(value,full,roots,covered,lambda p: bounded(p) or recreated(p),bounded)
+--- a/online_backup.py
++++ b/online_backup.py
+@@ -17,0 +18,2 @@
++ '/home/mcp/.codex/.tmp',
++ '/home/mcp/.local/share/vibe-kanban-green-codex-home/plugins/cache/created-by-me-remote',
+--- a/test_journal_compat.py
++++ b/test_journal_compat.py
+@@ -3 +3,2 @@
+-from journal_compat import reconcile,MASK
++from journal_compat import reconcile,MASK,recopy_cover,observed_move
++from unittest.mock import Mock
+@@ -4,0 +6,31 @@
++ def test_partial_deleted_watch_requires_recopy(self):
++  v=self.fixture();p=Path(next(iter(v['events'])));v['events'][str(p)]=0x8400
++  self.assertFalse(self.run_case(v)['ready'])
++  self.assertTrue(reconcile(v,v,{Path('/protected')},lambda p:True,lambda p:False,lambda p:True)['ready'])
++ def test_recopy_does_not_hide_unknown_watch_loss(self):
++  v=self.fixture();v['events'][next(iter(v['events']))]=0x8000
++  self.assertFalse(reconcile(v,v,{Path('/protected')},lambda p:True,lambda p:True,lambda p:True)['ready'])
++ def test_deleted_move_requires_complete_evidence(self):
++  p=Mock();p.exists.return_value=False;p.is_symlink.return_value=False
++  observed_move(p,MASK|0x800)
++  for missing in (0x200,0x400,0x800,0x8000):
++   with self.assertRaises(AssertionError):observed_move(p,(MASK|0x800)&~missing)
++ def test_recreated_move_requires_move_in(self):
++  p=Mock();p.exists.return_value=True
++  with self.assertRaises(AssertionError):observed_move(p,MASK|0x800)
++  observed_move(p,0x40000880)
++ def test_deleted_symlink_not_accepted(self):
++  p=Mock();p.exists.return_value=False;p.is_symlink.return_value=True
++  with self.assertRaises(AssertionError):observed_move(p,MASK|0x800)
++ def test_nested_move_has_bounded_ancestor(self):
++  self.assertEqual(recopy_cover(Path('/protected/tmp/deleted/repo'),{Path('/protected/tmp')},{Path('/protected')},lambda p:True),Path('/protected/tmp'))
++ def test_move_outside_explicit_coverage_rejected(self):
++  with self.assertRaises(AssertionError):recopy_cover(Path('/protected/other/repo'),{Path('/protected/tmp')},{Path('/protected')},lambda p:True)
++ def test_whole_source_cannot_be_recopy_exception(self):
++  with self.assertRaises(AssertionError):recopy_cover(Path('/protected/repo'),{Path('/protected')},{Path('/protected')},lambda p:True)
++ def test_overlapping_coverage_rejected(self):
++  with self.assertRaises(AssertionError):recopy_cover(Path('/protected/tmp/nested/repo'),{Path('/protected/tmp'),Path('/protected/tmp/nested')},{Path('/protected')},lambda p:True)
++ def test_missing_covering_watch_rejected(self):
++  with self.assertRaises(AssertionError):recopy_cover(Path('/protected/tmp/repo'),{Path('/protected/tmp')},{Path('/protected')},lambda p:False)
++ def test_recopy_root_itself_moved_rejected(self):
++  with self.assertRaises(AssertionError):recopy_cover(Path('/protected/tmp'),{Path('/protected/tmp')},{Path('/protected')},lambda p:True)
+--- a/build_readiness.py
++++ b/build_readiness.py
+@@ -16 +16 @@
+-assert 'Ran 60 tests' in (root/'operational-tests.log').read_text()
++assert 'Ran 71 tests' in (root/'operational-tests.log').read_text()
+@@ -23 +23 @@
+-scales=list((root/'scale-optimized-rehearsal').glob('handover-*/result.json'))
++scales=list((root/'scale-drain-rehearsal').glob('handover-*/result.json'))
+@@ -27 +27 @@
+-adapter=json.loads((root/'scale-optimized-rehearsal-adapter-costs.json').read_text())
++adapter=json.loads((root/'scale-drain-rehearsal-adapter-costs.json').read_text())
+@@ -30 +30 @@
+-assert adapter['production_journal_seconds'] and scale['timings']['total_seconds'] < 90
++assert adapter['production_journal_seconds'] and scale['timings']['total_seconds'] < 150
+@@ -51 +51 @@
+-       'review-before-preparation.json','review-before-preparation.json.receipt.json','scale-optimized-rehearsal-adapter-costs.json',
++       'review-before-preparation.json','review-before-preparation.json.receipt.json','scale-drain-rehearsal-adapter-costs.json',
+@@ -69,2 +69,2 @@
+-                 'expected_interruption':'about 90 seconds; allow up to two minutes',
+-                 'hard_guarantee':False,'production_downtime_measured':False,'maximum_capture_seconds':90,
++                 'expected_interruption':'about two to three minutes; full private rehearsal took 127.47 seconds',
++                 'hard_guarantee':False,'production_downtime_measured':False,'maximum_capture_seconds':150,
+--- a/package_maintenance.py
++++ b/package_maintenance.py
+@@ -32 +32 @@
+-    controller_tests_passed=60,original_thread_preserved=True,
++    controller_tests_passed=71,original_thread_preserved=True,
+--- a/scale_rehearsal.py
++++ b/scale_rehearsal.py
+@@ -20 +20 @@
+-assert stage in ('scale-rehearsal','scale-bulk-rehearsal','scale-optimized-rehearsal')
++assert stage in ('scale-rehearsal','scale-bulk-rehearsal','scale-optimized-rehearsal','scale-drain-rehearsal')
+--- a/prepared-units/vk-blue-controller-20261004.service
++++ b/prepared-units/vk-blue-controller-20261004.service
+@@ -8 +8 @@
+-TimeoutStartSec=240
++TimeoutStartSec=360

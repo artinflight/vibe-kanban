@@ -1,5 +1,46 @@
 # October 4 Cutover Preparation
 
+## Authorized Drain Revision
+
+The operator subsequently instructed: "wait for current agents to finish and
+cutover at next opportunity". No further approval question is needed for this
+fresh package after agent/queue drain and passing checks. The consumed October3
+attempt is not reused. Current production remains unchanged at this writing.
+
+Online catch-up found new plugin moves under /home/mcp/.codex/.tmp and the
+created-by-me-remote cache. Explicit watched ancestor coverage now includes those
+two roots, with complete independent hash inventories at every fence. Nested
+moves/deletions require observed move/removal evidence; partial deleted-watch
+events require an already verified bounded recopy root. Unknown errors, missing
+covering watches, overlapping coverage and source-root deletion still fail.
+The71 operational tests and socket check pass;77 unchanged backup tests are reused.
+VK_BACKUP_DRAIN_20261004.patch applies to the earlier October4 package, as verified
+by a dry run against its Desktop-downloaded software restoration. Preserve that
+archive and pre-drain-revision; the new package must be resealed and restored.
+
+New online baseline da1fa979e22a4119a1356901ade0f1d9 includes9SQLite snapshots,
+59generation proofs and12828copiedfiles,535382938bytes. Desktop archive SHA256:
+bc4fe2a7a9382be98268d1c32e5809c2ed01b62892c22f7cd376e3bed5520ecc.
+Its authenticated metadata is also Desktop verified. A prior online attempt
+was rejected when a finishing agent removed a shell snapshot; it is not certified.
+
+The ten-root rehearsal under scale-drain-rehearsal/handover-bf9536a4a85e4cb792ab0a7eb09e3499
+passes failed-backup recovery, activation, latest-data/model/settings cutback,
+repeated recovery and Desktop-downloaded restore. Measured switch127.474seconds
+exceeds the earlier90-second allowance. The capture deadline is explicitly revised
+to150seconds and controller watchdog360seconds, retaining all backup/fencing and
+rollback assertions. The operator was informed before cutover: expect about two
+to three minutes. This replaces the older71.52second timing below, not a claim of
+faster performance or measured production downtime. Production is still usable.
+
+Revised sealed software archive maintenance-software-20261004T154759Z.tar.zst
+is408745580bytes, Desktop SHA25690d3325c977acad14d81c29fe56e291701ad517049deba8ee43bf8e7f28b5724.
+Downloaded restoration verifies all2491 bound files; readiness SHA256 is
+721f01b46ab707d43667abf00d372fc38023a554a544e8f1435f4466d192d344.
+This receipt supersedes the earlier142429Z package for this unconsumed attempt.
+Formatting, Ops Playbook checks and diff checks pass. Final online catch-up and
+fresh approval binding still follow the other-agent/queue drain.
+
 ## Current State
 
 The current version remains usable on Green3059021,5411/5412 and vibe.local.

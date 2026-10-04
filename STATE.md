@@ -1,5 +1,17 @@
 # STATE.md
 
+## October 4: Drain-Then-Cutover Authorized
+
+The operator authorizes the fresh cutover at the next opportunity after other
+agents and queued messages finish. The current version remains live. Online
+catch-up identified newly moved plugin folders; the unconsumed October4 package
+has passed bounded backup-coverage validation, full rehearsal and resealing.
+Current matching readiness721f01b4 and Desktop software archive154759Z verify
+all2491 bound files. The full workload measured127.47seconds; capture ceiling is
+150seconds and controller watchdog360seconds. Other agents still must drain.
+No new handover or production pause has occurred. Earlier permission-pending
+statements below are superseded; the consumed October3 attempt remains consumed.
+
 ## October 4: Fresh Preparation, Not A Deployment
 
 The previous version remains live as Green3059021 on5411. The new application

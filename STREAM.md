@@ -1,5 +1,11 @@
 # STREAM.md
 
+October4 current instruction: wait for other agents and queued messages to finish,
+then perform the fresh cutover automatically when the final checks pass. Correct
+newly discovered plugin-move backup coverage, validate and reseal the unconsumed
+package first. Preserve current production, original thread and latest-data
+rollback. No additional permission question is needed for this authorized switch.
+
 October4 current scope: fix the final-backup bottleneck and prepare a new,
 unconsumed cutover package after the operator's "go". Clarification of permission
 for actual cutover is pending. Keep the current version usable; do not repeat

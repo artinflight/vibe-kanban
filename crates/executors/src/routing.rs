@@ -802,6 +802,53 @@ mod tests {
     }
 
     #[test]
+    fn diagnostic_reassessment_uses_workhorse_pair_without_overriding_manual_floor() {
+        let (mut policy, models, availability) = fixture();
+        policy.floor = CapabilityFloor::Assessed;
+        let prompt = "Still connecting and disconnecting";
+        let mut a = crate::routing_assessment::assess(prompt);
+        crate::routing_context::apply_reference_context(
+            &mut a,
+            prompt,
+            Some("Initialization completed; connection stability remains to be checked."),
+        );
+        let c = serde_json::from_value(serde_json::json!({
+            "envelope":"complex", "scope_relation":"diagnostic_step",
+            "scope":"localized", "novelty":"unknown", "ambiguity":"low",
+            "horizon":"short", "validation":"unknown", "risks":[],
+            "uncertainty":"medium", "inspection_needed":true,
+            "reason":"Investigate the current connection symptom."
+        }))
+        .unwrap();
+        crate::routing_semantic::apply(&mut a, &c);
+        let a = crate::routing_assessment::retain_previous(a, prompt, Some("protected"));
+        for mode in [RoutingMode::Auto, RoutingMode::Shadow] {
+            policy.mode = mode;
+            let floor = crate::routing_assessment::boundary_floor(
+                &a,
+                policy.floor,
+                Some(CapabilityFloor::Frontier),
+            );
+            assert_eq!(
+                choose_assessed(&policy, floor, a.envelope, &models, &availability, 100).unwrap(),
+                ("gpt-6.1-sol".into(), "medium".into())
+            );
+        }
+        policy.floor = CapabilityFloor::Frontier;
+        let floor = crate::routing_assessment::boundary_floor(
+            &a,
+            policy.floor,
+            Some(CapabilityFloor::Frontier),
+        );
+        assert_eq!(
+            choose_assessed(&policy, floor, a.envelope, &models, &availability, 100).unwrap(),
+            ("gpt-6-astra".into(), "high".into())
+        );
+        policy.denied_models.push("gpt-6-astra".into());
+        assert!(choose_assessed(&policy, floor, a.envelope, &models, &availability, 100).is_err());
+    }
+
+    #[test]
     fn shadow_followups_persist_context_and_never_change_execution_settings() {
         let (mut policy, _, _) = fixture();
         policy.mode = RoutingMode::Shadow;

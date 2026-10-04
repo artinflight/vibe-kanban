@@ -1,3 +1,16 @@
+# October 4: AutoSwitch risk and diagnostic-phase correction
+
+Branch `fix/autoswitch-negated-risk` starts from `fork/staging` at `86d1c083a`.
+Scope: correct the non-destructive false positive and allow a clearly limited
+post-operation diagnostic phase to release an inferred Frontier floor to
+Workhorse. Existing manual constraints, protected risks, failure escalation,
+qualification registry and CU wire contract remain authoritative.
+
+Development only. No main/staging merge, live configuration change, deployment,
+restart, or contact with staging/deployment agents. VK::Staging owns activation.
+See VK_AUTOSWITCH_RISK_PHASE.md for bounded replay evidence and limitations.
+Older preparation/runtime entries below are historical.
+
 # October 3 Restart Candidate
 
 Prepare current staging AutoSwitch changes together with the live PR138 attention

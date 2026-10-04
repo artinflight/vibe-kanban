@@ -74,19 +74,35 @@ pub fn surrounding_envelope(decision: &crate::routing::RoutingDecision) -> Optio
 
 pub fn reassess_step(a: &Assessment, prompt: &str, previous: &str) -> bool {
     let has = |s: &str| a.triage.evidence.iter().any(|e| e == s);
-    !a.validation_failure
-        && !crate::routing_assessment::is_continuation(prompt)
-        && has("completed_session_context")
-        && a.triage.risk.is_empty()
-        && a.triage.uncertainty == "low"
+    if a.validation_failure
+        || crate::routing_assessment::is_continuation(prompt)
+        || !has("completed_session_context")
+        || !a.triage.risk.is_empty()
+    {
+        return false;
+    }
+    // Investigating a symptom after a completed protected operation is still
+    // complex work, not routine. Unknown cause can require inspection without
+    // making the authorized diagnostic scope ambiguous. Preserve surrounding
+    // qualification so later continuation cannot resume protected operations
+    // at this lower floor.
+    let diagnosis = has("semantic_diagnostic_step")
+        && a.envelope == "complex"
+        && a.floor == CapabilityFloor::Workhorse
+        && a.triage.scope == "localized"
+        && a.triage.horizon == "short"
         && a.triage.ambiguity == "low"
-        && !a.triage.needs_repo_inspection
-        && matches!(a.envelope, "mechanical" | "bounded")
-        && (has("completed_context_reference_lookup")
+        && a.triage.uncertainty != "high";
+    diagnosis
+        || (a.triage.uncertainty == "low"
+            && a.triage.ambiguity == "low"
+            && !a.triage.needs_repo_inspection
+            && matches!(a.envelope, "mechanical" | "bounded")
+            && (has("completed_context_reference_lookup")
             || has("semantic_reference_lookup")
             // Same protected assignment keeps its floor for changes. A pure
             // reference lookup performs no operation in that protected system.
-            || (previous != "protected" && has("semantic_bounded_step")))
+            || (previous != "protected" && has("semantic_bounded_step"))))
 }
 
 #[cfg(test)]

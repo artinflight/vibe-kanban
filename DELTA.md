@@ -1493,3 +1493,22 @@ The host lacks Tauri GTK development packages and has under 1 GiB free SSD space
 full workspace/desktop checks therefore rely on the repository CI runners rather
 than risking the live host. Local checks cover the changed executor, services and
 frontend sources, formatting/governance, and byte-identical CU wire compatibility.
+
+## October 4: AutoSwitch negated-risk and diagnostic-phase correction
+
+New branch `fix/autoswitch-negated-risk` starts at staging `86d1c083a`.
+The deterministic classifier no longer treats standalone non-destructive
+constraints as destructive intent. Positive destructive operations, disabled
+safeguards, protected identifiers and other protected risks remain protected.
+The existing semantic call can identify a localized diagnostic phase after a
+reported completed protected operation; that phase stays at least Workhorse,
+with the surrounding assignment retained for later resumption. Explicit floors,
+unknown/ambiguous scope and failure constraints are unchanged.
+
+Two classification-only historical replays used the accepted CLI/account/home,
+with copied availability and unchanged capacity controls. USB diagnosis moves
+from Astra/high to Sol6.1/medium. Media verification loses the false deterministic
+match but remains Astra/high on a fresh semantic data-risk assessment involving
+conditional drive-protection limits and a safely stopped job. Production hotfix
+control remains Astra/high without inference. These are recommendations, not
+accepted-task savings or live changes. See VK_AUTOSWITCH_RISK_PHASE.md.

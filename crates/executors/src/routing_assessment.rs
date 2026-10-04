@@ -21,6 +21,27 @@ fn contains_term(text: &str, term: &str) -> bool {
     })
 }
 
+// A stated non-destructive constraint is not destructive intent. Keep broad
+// matching for identifiers and positive occurrences elsewhere in the request;
+// this deliberately does not negate other protected categories.
+fn destructive_intent(text: &str) -> bool {
+    use std::sync::LazyLock;
+
+    use regex::Regex;
+
+    static NON_DESTRUCTIVE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"\bnon[-‐‑ ]?destructive\b").unwrap());
+    static DOUBT: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\b(not|never|no|cannot|can't|can’t|isn't|isn’t|disable|bypass|remove|override)\s+(?:\w+\s+){0,2}$")
+            .unwrap()
+    });
+    text.match_indices("destructive").any(|(start, _)| {
+        !NON_DESTRUCTIVE
+            .find_iter(text)
+            .any(|m| m.start() <= start && start < m.end() && !DOUBT.is_match(&text[..m.start()]))
+    })
+}
+
 fn envelope_rank(envelope: &str) -> Option<usize> {
     [
         "mechanical",
@@ -208,6 +229,7 @@ pub fn assess_with_context(prompt: &str, root: Option<&std::path::Path>) -> Asse
     // authenticationService; lexical precision is a low-risk admission requirement.
     let has_risk = |words: &[&str]| words.iter().any(|w| text.contains(w));
     let (mut envelope, mut floor, mut evidence) = if has(&["auth"])
+        || destructive_intent(&text)
         || has_risk(&[
             "security",
             "authentication",
@@ -220,7 +242,6 @@ pub fn assess_with_context(prompt: &str, root: Option<&std::path::Path>) -> Asse
             "migrations",
             "delete data",
             "drop table",
-            "destructive",
             "production",
             "control plane",
             "control-plane",
@@ -549,6 +570,35 @@ mod tests {
             boundary_floor(&a, CapabilityFloor::Frontier, None),
             CapabilityFloor::Frontier
         );
+    }
+
+    #[test]
+    fn non_destructive_constraint_does_not_create_destructive_intent() {
+        for constraint in [
+            "NON-DESTRUCTIVE",
+            "nondestructive",
+            "non destructive",
+            "non‑destructive",
+        ] {
+            let prompt =
+                format!("Continue destination-only {constraint} verification of copied media.");
+            let a = assess(&prompt);
+            assert_ne!(a.floor, CapabilityFloor::Frontier, "{prompt}");
+            assert!(a.triage.risk.is_empty());
+            assert_ne!(a.floor, CapabilityFloor::Routine);
+        }
+        for prompt in [
+            "Do a non-destructive check, then perform destructive initialization",
+            "This operation is not non-destructive",
+            "We cannot guarantee non-destructive behavior",
+            "Disable non-destructive safeguards",
+            "Change nonDestructiveHandler",
+            "Perform non-destructive production deployment verification",
+            "Perform non-destructive checks in authenticationService",
+            "Do non-destructive checks before the data migration",
+        ] {
+            assert_eq!(assess(prompt).floor, CapabilityFloor::Frontier, "{prompt}");
+        }
     }
 
     #[test]

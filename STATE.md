@@ -1,5 +1,17 @@
 # STATE.md
 
+## Parent-Confirmed Cutover Resumption
+
+Seamus explicitly authorizes fixing backup readiness and the VK cutover after
+all safety checks pass. Accounting is independently confirmed safely idle and
+the parent is holding it idle. The earlier hold is superseded. Current production
+is unchanged; only the VK Model AutoSwitch release is in deployment scope.
+The evening backup revision is verified and sealed: readiness e34c2af9 matches
+Desktop software193909Z and2491 restored files. All77 backup regressions,
+78 operational tests and the full twelve-root100.304s recovery rehearsal pass.
+Read VK_PREPARATION_RESUME_20261004.md. Fresh catch-up/drain and approval binding
+remain before the authorized controller; deployment is not yet claimed.
+
 ## Current Hold: Parent Confirmation Required
 
 The operator has held restart/cutover pending explicit parent confirmation of

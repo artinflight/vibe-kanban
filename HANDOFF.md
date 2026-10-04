@@ -1,5 +1,20 @@
 # HANDOFF.md
 
+## Parent-Confirmed Resume: Fix Backup And Cut Over
+
+The parent independently confirms accountingafe094a1 completed exit0 at19:12:38UTC,
+pushed8f985c202 and is held idle with queue empty. Seamus explicitly says Go.
+The hold below is superseded. Fix the backup safety check and refresh readiness,
+then execute the authorized VK Model AutoSwitch cutover after fresh safe drain.
+No HYROX/accounting deployment. Current Green3059021 is still routed; no new
+cutover request, approval or attempt exists. The evening revision is now sealed
+and Desktop-restored: software193909Z verifies all2491 files against readiness
+e34c2af9. All77 backup regressions and78 operational tests pass. The full twelve-root
+rehearsal passes latest-data activation, cutback and repeated recovery in100.304s.
+Read VK_PREPARATION_RESUME_20261004.md. Refresh catch-up/drain, bind this authorized
+request and execute the independent controller once; then finish live acceptance
+in this original conversation. No handover has occurred at this writing.
+
 ## Current Operator Hold: Await Parent Accounting Checkpoint
 
 The latest instruction explicitly HOLDS restart and cutover. Do not deploy,

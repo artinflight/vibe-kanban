@@ -1,0 +1,112 @@
+--- a/journal_compat.py
++++ b/journal_compat.py
+@@ -23,0 +24,10 @@
++
++def source_removal(path, parent, events, roots, covered, move_sources):
++    if any(mask&0x40000040==0x40000040 and parent in Path(p).parents
++           for p,mask in events.items()):
++        return
++    source=Path(move_sources.get(str(path),''))
++    assert source.is_absolute() and source!=path and source.name==path.name, 'No explicit observed move source'
++    assert source not in roots and roots.intersection(source.parents), 'Move source outside protected scope'
++    assert events.get(str(source),0)&0x40000040==0x40000040, 'Missing observed source removal'
++    assert any(covered(ancestor) for ancestor in source.parents), 'Move source has no covering watch'
+@@ -57 +67 @@
+-def journal(root,since=0,recopy_roots=()):
++def journal(root,since=0,recopy_roots=(),move_sources=None):
+@@ -92,2 +102 @@
+-            assert any(mask&0x40000040==0x40000040 and parent in Path(p).parents
+-                       for p,mask in full['events'].items()), 'Missing observed source removal'
++            source_removal(path,parent,full['events'],roots,covered,move_sources or {})
+@@ -124 +133 @@
+-        'writer_fence_verified':False},indent=2))
++        'explicit_move_sources':move_sources or {},'writer_fence_verified':False},indent=2))
+--- a/online_backup.py
++++ b/online_backup.py
+@@ -19,0 +20,2 @@
++ '/mnt/vk-storage/worktrees/0752-fr-v5-generation',
++ '/mnt/vk-storage/worktrees/hyroxready-app/codex-content-first-pilot/docs/organic-content/videos',
+@@ -20,0 +23,6 @@
++EXTERNAL_MOVE_SOURCES={
++ '/mnt/vk-storage/worktrees/0752-fr-v5-generation/hyroxready-app':
++ '/mnt/vk-storage/worktrees/0752-v5-generation-ef/hyroxready-app',
++ '/mnt/vk-storage/worktrees/hyroxready-app/codex-content-first-pilot/docs/organic-content/videos/001-workout-isnt-a-plan':
++ '/mnt/vk-storage/worktrees/hyroxready-app/codex-content-first-pilot/assets/organic-content/videos/001-workout-isnt-a-plan',
++}
+@@ -22 +30 @@
+-def capture_journal(parent=None):return RecopyJournal(lambda since:read_journal(ROOT,since,recopy_roots=RECOPY_ROOTS),parent)
++def capture_journal(parent=None):return RecopyJournal(lambda since:read_journal(ROOT,since,recopy_roots=RECOPY_ROOTS,move_sources=EXTERNAL_MOVE_SOURCES),parent)
+--- a/subtree_recopy.py
++++ b/subtree_recopy.py
+@@ -66 +66 @@
+-                           if any(Path(p).is_relative_to(root) for root in roots)
++                           if any(p==root or p.startswith(root+os.sep) for root in roots)
+--- a/supplemental_backup.py
++++ b/supplemental_backup.py
+@@ -12 +12,2 @@
+-SOURCES = ['/home/mcp/code/carconsole']
++SOURCES = ['/home/mcp/code/carconsole','/home/mcp/code/vibe-dot-connector',
++           '/home/mcp/.config/vibe-dot-connector']
+--- a/test_journal_compat.py
++++ b/test_journal_compat.py
+@@ -3 +3 @@
+-from journal_compat import reconcile,MASK,recopy_cover,observed_move
++from journal_compat import reconcile,MASK,recopy_cover,observed_move,source_removal
+@@ -5,0 +6,21 @@
++ def move_fixture(self):
++  path=Path('/protected/new/repo');source='/protected/old/repo'
++  return path,Path('/protected/new'),{source:0x40000040},{Path('/protected')},lambda p:True,{str(path):source}
++ def test_explicit_cross_parent_source_keeps_tombstones(self):
++  args=self.move_fixture();events=dict(args[2]);source_removal(*args)
++  self.assertEqual(events,args[2])
++ def test_unmapped_cross_parent_move_rejected(self):
++  args=list(self.move_fixture());args[-1]={}
++  with self.assertRaises(AssertionError):source_removal(*args)
++ def test_cross_parent_missing_source_event_rejected(self):
++  args=list(self.move_fixture());args[2]={}
++  with self.assertRaises(AssertionError):source_removal(*args)
++ def test_cross_parent_source_outside_scope_rejected(self):
++  args=list(self.move_fixture());args[-1]={str(args[0]):'/outside/repo'};args[2]={'/outside/repo':0x40000040}
++  with self.assertRaises(AssertionError):source_removal(*args)
++ def test_cross_parent_source_watch_missing_rejected(self):
++  args=list(self.move_fixture());args[-2]=lambda p:False
++  with self.assertRaises(AssertionError):source_removal(*args)
++ def test_file_move_cannot_substitute_directory_source(self):
++  args=list(self.move_fixture());args[2]={'/protected/old/repo':0x40}
++  with self.assertRaises(AssertionError):source_removal(*args)
+--- a/test_incremental_recopy.py
++++ b/test_incremental_recopy.py
+@@ -28,0 +29,6 @@
++    def test_prefix_sibling_is_outside_covered_root(self):
++        self.parent['recopy_baseline']['files'][str(self.root)+'-sibling/work']=['unrelated']
++        verified={k:v for k,v in self.parent.items() if k!='metadata_receipt'}
++        self.metadata.write_text(json.dumps(verified))
++        self.parent['metadata_receipt']['sha256']=hashlib.sha256(self.metadata.read_bytes()).hexdigest()
++        self.assertEqual(self.reader()()['changed'],[])
+--- a/build_readiness.py
++++ b/build_readiness.py
+@@ -16 +16 @@
+-assert 'Ran 71 tests' in (root/'operational-tests.log').read_text()
++assert 'Ran 78 tests' in (root/'operational-tests.log').read_text()
+@@ -23 +23 @@
+-scales=list((root/'scale-drain-rehearsal').glob('handover-*/result.json'))
++scales=list((root/'scale-resume-rehearsal').glob('handover-*/result.json'))
+@@ -27 +27 @@
+-adapter=json.loads((root/'scale-drain-rehearsal-adapter-costs.json').read_text())
++adapter=json.loads((root/'scale-resume-rehearsal-adapter-costs.json').read_text())
+@@ -51 +51 @@
+-       'review-before-preparation.json','review-before-preparation.json.receipt.json','scale-drain-rehearsal-adapter-costs.json',
++       'review-before-preparation.json','review-before-preparation.json.receipt.json','scale-resume-rehearsal-adapter-costs.json',
+@@ -69 +69 @@
+-                 'expected_interruption':'about two to three minutes; full private rehearsal took 127.47 seconds',
++                 'expected_interruption':'about two to three minutes; see current measured rehearsal time',
+--- a/package_maintenance.py
++++ b/package_maintenance.py
+@@ -32 +32 @@
+-    controller_tests_passed=71,original_thread_preserved=True,
++    controller_tests_passed=78,original_thread_preserved=True,
+--- a/scale_rehearsal.py
++++ b/scale_rehearsal.py
+@@ -20 +20 @@
+-assert stage in ('scale-rehearsal','scale-bulk-rehearsal','scale-optimized-rehearsal','scale-drain-rehearsal')
++assert stage in ('scale-rehearsal','scale-bulk-rehearsal','scale-optimized-rehearsal','scale-drain-rehearsal','scale-resume-rehearsal')

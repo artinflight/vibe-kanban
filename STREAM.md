@@ -1,5 +1,13 @@
 # STREAM.md
 
+October4 current scope: fix the final-backup bottleneck and prepare a new,
+unconsumed cutover package after the operator's "go". Clarification of permission
+for actual cutover is pending. Keep the current version usable; do not repeat
+October3. Fresh complete-workload rehearsal, protected review snapshot, model
+verification, backup coverage and package restoration govern readiness. Read
+VK_PREPARATION_20261004.md. The patch artifact records operational tooling changes,
+not an application release or a new production deployment.
+
 October3 evening scope/result: the separately authorized cutover failed before
 candidate activation. Complete recovery acceptance, preserve the consumed attempt,
 record the timeout and current production truth. No repeat handover is authorized.

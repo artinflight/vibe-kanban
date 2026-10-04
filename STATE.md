@@ -1,5 +1,15 @@
 # STATE.md
 
+## October 4: Fresh Preparation, Not A Deployment
+
+The previous version remains live as Green3059021 on5411. The new application
+release is unchanged from main e53ae4a7e/staging86d1c083a and remains undeployed.
+Backup performance fixes and a newly measured71.52-second complete rehearsal
+are in /mnt/vk-storage/vk-blue-reprepare-20261004; read VK_PREPARATION_20261004.md.
+Require its matching readiness/Desktop software receipt and fresh authorization
+before activation. No current production process was restarted or paused during
+this preparation. CLI0.159.2 and exact-identity model proof are freshly verified.
+
 ## October 3 Evening: Previous Version Remains Production
 
 The approved attempt at231800Z failed its90-second final backup deadline before

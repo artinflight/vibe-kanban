@@ -1,0 +1,300 @@
+--- a/subtree_recopy.py
++++ b/subtree_recopy.py
+@@ -9,6 +9,7 @@
+ import os
+ from pathlib import Path
+ import stat
++import json
+ 
+ 
+ def snapshot(root):
+@@ -32,23 +33,43 @@
+ 
+ 
+ class RecopyJournal:
+-    def __init__(self,reader):
++    def __init__(self,reader,parent=None):
+         self.reader=reader
+         self.before=None
+         self.roots=None
++        self.prior={}
++        if parent and 'recopy_baseline' in parent:
++            receipt=parent.get('metadata_receipt',{})
++            name=receipt.get('name','')
++            assert name == parent['archive']+'.result.json'
++            metadata=Path(parent['folder'])/name
++            assert receipt.get('desktop_verified') is True
++            with metadata.open('rb') as stream:
++                assert hashlib.file_digest(stream,'sha256').hexdigest()==receipt['sha256']
++            verified=json.loads(metadata.read_text())
++            for key in ('recopy_baseline','journal_instance','journal_sequence','scope_sha256','plan_sha256','archive'):
++                assert verified[key]==parent[key], 'Unverified recopy parent: '+key
++            assert verified['receipt']['sha256']==parent['receipt']['sha256']
++            self.prior=verified['recopy_baseline']
+ 
+     def __call__(self,since=0):
+         value=copy.deepcopy(self.reader(since))
+         roots=value.get('required_subtree_recopy',[])
+-        current={p:signature for root in roots for p,signature in snapshot(root).items()}
++        current={p:list(signature) for root in roots for p,signature in snapshot(root).items()}
+         if self.before is None:
+             self.before=current
+             self.roots=roots
+-            changed=set(roots)
++            prior_roots=self.prior.get('roots',[])
++            prior_files=self.prior.get('files',{})
++            changed={root for root in roots if root not in prior_roots}
++            changed.update(p for p in set(current)|set(prior_files)
++                           if any(Path(p).is_relative_to(root) for root in roots)
++                           and current.get(p)!=prior_files.get(p))
+         else:
+             assert roots==self.roots,'Additional moved subtree requires a new capture'
+             changed={p for p in set(current)|set(self.before) if current.get(p)!=self.before.get(p)}
+         value['changed']=sorted(set(value['changed'])|changed)
+         for path in changed:
+             value.setdefault('events',{})[path]=value.get('events',{}).get(path,0)|0x2
++        value['recopy_baseline']={'roots':roots,'files':self.before}
+         return value
+--- a/journal_compat.py
++++ b/journal_compat.py
+@@ -12,11 +12,11 @@
+     assert value['instance']==full['instance'] and value['scope_sha256']==full['scope_sha256']
+     if not value['errors']:return value
+     accepted=[]
+-    for error in value['errors']:
++    for error in {json.dumps(e,sort_keys=True):e for e in value['errors']}.values():
+         if set(error)!={'watch_removed'}:return value
+         path=Path(error['watch_removed'])
+         if not path.is_absolute() or str(path)!=os.path.normpath(str(path)):return value
+-        if path in roots or not any(root in path.parents for root in roots):return value
++        if path in roots or not roots.intersection(path.parents):return value
+         if full['events'].get(str(path),0)&MASK != MASK:return value
+         if not any(covered(parent) for parent in path.parents):return value
+         if path.exists() and not recreated_covered(path):return value
+@@ -63,41 +63,44 @@
+             if any((Path(directory)/d).is_symlink() for d in dirs):return False
+         return count>0
+     roots={Path(p).resolve() for p in plan['sources']}
+-    moved=[error for error in full['errors'] if set(error)=={'directory_moved'}]
++    unique=list({json.dumps(e,sort_keys=True):e for e in full['errors']}.values())
++    moved=[error for error in unique if set(error)=={'directory_moved'}]
+     repair=set()
+     if moved and recopy_roots:
+         allowed={Path(p) for p in recopy_roots}
+         for error in moved:
+             path=Path(error['directory_moved']);parent=path.parent
+-            assert parent in allowed and parent not in roots and any(p in parent.parents for p in roots)
++            assert parent in allowed and parent not in roots and roots.intersection(parent.parents)
+             assert covered(parent), 'Moved subtree has no covering parent watch'
+             # RecopyJournal hashes the whole explicit subtree before and after
+             # capture. Interior watch gaps cannot certify a frozen boundary.
+             assert full['events'].get(str(path),0)&0x40000880==0x40000880, 'Missing observed move-in and move-self'
+-            assert any(parent in Path(p).parents and mask&0x40000040==0x40000040
++            assert any(mask&0x40000040==0x40000040 and parent in Path(p).parents
+                        for p,mask in full['events'].items()), 'Missing observed source removal'
+             repair.add(str(parent))
+         full=copy.deepcopy(full);value=copy.deepcopy(value)
+         full['errors']=[e for e in full['errors'] if e not in moved]
+         value['errors']=[e for e in value['errors'] if e not in moved]
+-    failed=[error for error in full['errors'] if set(error)=={'watch_failed','errno'}]
++    failed=[error for error in unique if set(error)=={'watch_failed','errno'}]
+     if failed and recopy_roots:
+         for error in failed:
+             path=Path(error['watch_failed'])
+-            assert error['errno']==2 and not path.exists() and not path.is_symlink()
++            assert error['errno']==2 and not path.is_symlink()
+             matches=[Path(p) for p in recopy_roots if Path(p) in path.parents]
+             assert len(matches)==1, 'Failed watch outside bounded recopy coverage'
+             parent=matches[0]
+-            assert parent not in roots and any(p in parent.parents for p in roots)
++            assert parent not in roots and roots.intersection(parent.parents)
+             assert covered(parent), 'Failed-watch subtree lacks a covering parent watch'
+-            assert any(not ancestor.exists() and full['events'].get(str(ancestor),0)&0x40000240
++            assert any(full['events'].get(str(ancestor),0)&0x40000240
+                        and full['events'].get(str(ancestor),0)&0x240
+                        for ancestor in (path,*path.parents) if parent in ancestor.parents), 'No observed removal for missing watch'
+             repair.add(str(parent))
+         full=copy.deepcopy(full);value=copy.deepcopy(value)
+         full['errors']=[e for e in full['errors'] if e not in failed]
+         value['errors']=[e for e in value['errors'] if e not in failed]
+-    result=reconcile(value,full,roots,covered,recreated)
++    # A recreated directory inside a recopy root is independently inventoried
++    # and hashed at both capture fences, even if an interior watch was lost.
++    result=reconcile(value,full,roots,covered,lambda p: recreated(p) or any(Path(r)==p or Path(r) in p.parents for r in repair))
+     if repair:
+         result['required_subtree_recopy']=sorted(repair)
+         if not result['errors']:
+--- a/online_backup.py
++++ b/online_backup.py
+@@ -13,11 +13,13 @@
+  '/home/mcp/.local/share/vibe-kanban-green-codex-home/plugins/cache/openai-curated-remote',
+  '/home/mcp/.codex/packages/app-server-daemon/releases',
+  '/home/mcp/.codex/plugins/cache/openai-curated-remote',
++ '/home/mcp/.local/share/vibe-kanban-green-codex-home/skills',
++ '/home/mcp/.codex/tmp/arg0',
+ )
+ def journal(since=0):return read_journal(ROOT,since)
+-def capture_journal():return RecopyJournal(lambda since:read_journal(ROOT,since,recopy_roots=RECOPY_ROOTS))
++def capture_journal(parent=None):return RecopyJournal(lambda since:read_journal(ROOT,since,recopy_roots=RECOPY_ROOTS),parent)
+ def baseline_journal(baseline):
+  plan=json.loads((ROOT/'backup-plan.json').read_text())
+- watched=capture_journal()(baseline['journal_sequence']);check_journal(watched,plan)
++ watched=capture_journal(baseline)(baseline['journal_sequence']);check_journal(watched,plan)
+  verified_parent(baseline,plan,watched)
+  return watched
+--- a/refresh_checkpoint.py
++++ b/refresh_checkpoint.py
+@@ -10,6 +10,6 @@
+ plan=json.loads((root/'backup-plan.json').read_text()); validate=install(backup,plan)
+ parent=json.loads((root/'backups/latest-result.json').read_text())
+ mirror=lambda p:mirror_desktop(p,'B:/vk-backups/vk-autoswitch-scope-release-20261001')
+-result=backup.capture(plan,root/'backups',capture_journal(),mirror,parent,mirror)
++result=backup.capture(plan,root/'backups',capture_journal(parent),mirror,parent,mirror)
+ validate();save(root/'online-backup-result.json',result)
+ print(json.dumps({'passed':True,'receipt':result['receipt'],'copied_files':result['copied_files'],'snapshots':len(result['sqlite_snapshots']),'proofs':len(result['database_proofs'])}))
+--- a/final_capture.py
++++ b/final_capture.py
+@@ -55,7 +55,7 @@
+     def validated_fence():
+         validate()
+         return fence()
+-    result = capture(plan, ROOT / 'backups', capture_journal(), mirror, parent, mirror, verify_fence=validated_fence)
++    result = capture(plan, ROOT / 'backups', capture_journal(parent), mirror, parent, mirror, verify_fence=validated_fence)
+     from supplemental_backup import verify as verify_supplement
+     result['supplemental_backups'] = [verify_supplement()]
+     Path(sys.argv[1]).write_text(json.dumps(result, indent=2) + '\n')
+--- a/deployment-tools/vk_rolling_backup.py
++++ b/deployment-tools/vk_rolling_backup.py
+@@ -269,6 +269,8 @@
+                     "parent": parent_ref, "sqlite_snapshots": snapshots, "absent_paths": absent,
+                     "online_preparation": verify_fence is None, "production_boundary": False,
+                     "frozen_boundary_requested": verify_fence is not None}
++        if "recopy_baseline" in before:
++            manifest["recopy_baseline"] = before["recopy_baseline"]
+         save(payload / "manifest.json", manifest)
+         archive = folder / (folder.parent.name + "-" + folder.name + ".tar.zst")
+         with measured(timings, "archive"):
+--- a/scale_rehearsal.py
++++ b/scale_rehearsal.py
+@@ -5,6 +5,7 @@
+ import sqlite3
+ import subprocess
+ import sys
++import time
+ 
+ ROOT=Path(__file__).resolve().parent
+ sys.path.insert(0,str(ROOT/'deployment-tools'))
+@@ -12,6 +13,8 @@
+ import vk_rolling_backup as backup
+ from vk_prep_common import digest
+ from desktop_transport import mirror_desktop, OPTIONS
++from online_backup import RECOPY_ROOTS, capture_journal
++from subtree_recopy import RecopyJournal
+ 
+ stage=sys.argv[1] if len(sys.argv)>1 else 'scale-rehearsal'
+ assert stage in ('scale-rehearsal','scale-bulk-rehearsal','scale-optimized-rehearsal')
+@@ -24,6 +27,8 @@
+ 
+ sample=json.loads((ROOT/'online-backup-result.json').read_text())
+ copies=[]
++recopy_copies=[]
++journal_costs=[]
+ real_journal=r.Journal
+ class SizedJournal(real_journal):
+     def __init__(self,plan):
+@@ -36,11 +41,29 @@
+             shutil.copy2(original,target)
+             copies.append({'original':raw,'copy':str(target),'bytes':target.stat().st_size})
+             plan['sqlite_snapshots'].append(str(target))
++        for index,raw in enumerate(RECOPY_ROOTS):
++            target=runtime/'recopy-copies'/str(index)
++            shutil.copytree(raw,target,symlinks=True)
++            recopy_copies.append(str(target))
+         super().__init__(plan)
+ r.Journal=SizedJournal
+ real_capture=r.capture
+ def capture(*args,**kwargs):
+-    result=real_capture(*args,**kwargs)
++    arguments=list(args)
++    reader=arguments[2]
++    parent=arguments[4] if len(arguments)>4 else None
++    def private_journal(since):
++        # Exercise the exact production journal parsing/hash workload read-only;
++        # private writer fencing still governs only the isolated fixture.
++        start=time.monotonic()
++        observed=capture_journal(sample)(sample['journal_sequence'])
++        assert observed['ready'] and not observed['errors']
++        journal_costs.append(time.monotonic()-start)
++        value=reader(since)
++        value['required_subtree_recopy']=recopy_copies
++        return value
++    arguments[2]=RecopyJournal(private_journal,parent)
++    result=real_capture(*arguments,**kwargs)
+     if result['parent'] is None:
+         for row in copies:
+             with sqlite3.connect(row['copy']) as db:
+@@ -64,3 +87,6 @@
+     r.main()
+ finally:
+     (ROOT/(stage+'-samples.json')).write_text(json.dumps({'copies':copies,'production_modified':False},indent=2))
++    (ROOT/(stage+'-adapter-costs.json')).write_text(json.dumps({'recopy_copies':recopy_copies,
++        'production_journal_seconds':journal_costs,'production_journal_read_only':True,
++        'private_writer_fencing':True,'full_adapter_workload_in_timed_capture':True},indent=2))
+--- /dev/null
++++ b/test_incremental_recopy.py
+@@ -0,0 +1,55 @@
++from pathlib import Path
++import hashlib
++import json
++import tempfile
++import unittest
++from subtree_recopy import RecopyJournal
++
++
++class Cases(unittest.TestCase):
++    def setUp(self):
++        self.tmp=tempfile.TemporaryDirectory(dir=Path(__file__).parent/'tmp')
++        self.base=Path(self.tmp.name)
++        self.root=self.base/'files';self.root.mkdir()
++        self.file=self.root/'work';self.file.write_text('before')
++        self.value={'required_subtree_recopy':[str(self.root)],'changed':[], 'events':{}}
++        first=RecopyJournal(lambda since:self.value)()
++        self.parent={'archive':'capture.tar.zst','folder':str(self.base),
++            'recopy_baseline':first['recopy_baseline'],'journal_instance':'one',
++            'journal_sequence':42,'scope_sha256':'scope','plan_sha256':'plan',
++            'receipt':{'sha256':'archive-proof'}}
++        self.metadata=self.base/'capture.tar.zst.result.json'
++        self.metadata.write_text(json.dumps(self.parent))
++        self.parent['metadata_receipt']={'name':self.metadata.name,'desktop_verified':True,
++            'sha256':hashlib.sha256(self.metadata.read_bytes()).hexdigest()}
++    def tearDown(self):self.tmp.cleanup()
++    def reader(self):return RecopyJournal(lambda since:self.value,self.parent)
++    def test_unchanged_parent_copies_no_subtree(self):
++        self.assertEqual(self.reader()()['changed'],[])
++    def test_changed_file_copied_without_whole_root(self):
++        self.file.write_text('after')
++        value=self.reader()()
++        self.assertIn(str(self.file),value['changed'])
++        self.assertNotIn(str(self.root),value['changed'])
++    def test_deletion_is_not_lost(self):
++        self.file.unlink()
++        self.assertIn(str(self.file),self.reader()()['changed'])
++    def test_change_after_capture_starts_remains_in_both_fences(self):
++        reader=self.reader();reader()
++        self.file.write_text('while capturing')
++        for _ in range(2):self.assertIn(str(self.file),reader()['changed'])
++    def test_tampered_local_baseline_rejected(self):
++        self.parent['recopy_baseline']['files']={}
++        with self.assertRaises(AssertionError):self.reader()
++    def test_tampered_metadata_rejected(self):
++        self.metadata.write_text('{}')
++        with self.assertRaises(AssertionError):self.reader()
++    def test_unverified_desktop_metadata_rejected(self):
++        self.parent['metadata_receipt']['desktop_verified']=False
++        with self.assertRaises(AssertionError):self.reader()
++    def test_old_parent_forces_whole_subtree(self):
++        self.parent.pop('recopy_baseline')
++        self.assertIn(str(self.root),self.reader()()['changed'])
++
++
++if __name__=='__main__':unittest.main()

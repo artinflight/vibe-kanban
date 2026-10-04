@@ -1,5 +1,19 @@
 # HANDOFF.md
 
+## October 4: Backup Fixes And Fresh Cutover Preparation
+
+Read VK_PREPARATION_20261004.md and the matching readiness/software receipt under
+/mnt/vk-storage/vk-blue-reprepare-20261004. The fresh package uses authenticated
+incremental subtree hashes and cheaper journal reconciliation.77 backup tests,
+60 operational tests and the socket test pass. The real-binary/full-workload
+rehearsal passes activation, latest-data cutback and Desktop-downloaded restore
+in71.52seconds. No production cutover occurred; Green3059021 remains live and
+Blue5461's new20261004 production unit is inactive. Original conversation and
+current review state remain protected. The operator's "go" authorized preparation;
+explicit clarification of final cutover permission is pending. Never inherit or
+repeat the consumed October3 attempt. A future approved switch still requires
+fresh online catch-up, queue/writer drain and binding to this new package.
+
 ## October 3 Evening: Cutover Failed, Previous Version Recovered
 
 Read VK_CUTOVER_RECOVERY_20261003.md. The approved 231800Z attempt timed out

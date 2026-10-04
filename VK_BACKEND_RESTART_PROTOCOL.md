@@ -1,5 +1,25 @@
 # Backend Restart Protocol
 
+## Boot Finalization And Recovery Ordering
+
+October4 activation/preservation passed, but boot finalization failed because
+the new service's drop-in parent directory was missing. Inert installation must
+create that directory before approval, and preflight must check it. Create the
+active-owner file only after verified ownership; setting active ownership before
+candidate startup breaks the standby handover. Finalization should tolerate an
+already existing parent. Test a genuinely missing nested parent, not only a file
+whose parent was prepared by a mock fixture.
+
+An outer-controller failure after healthy routing/continuation is not permission
+to disrupt the verified active owner. Inspect preservation, ownership, current
+routing and original paused PID before emergency cutback. Do not place a healthy
+new owner in maintenance or stop its companion just because boot bookkeeping
+failed. Repair finalization without another handover when those checks pass.
+Actual failed acceptance still requires established latest-data recovery and
+safe drain; never bypass either or kill the resumed writer to make recovery run.
+See VK_UPDATED_LIVE_20261004.md and its fourteen-test correction patch. Preserve
+the consumed sealed package; integrate/retest/reseal in the next fresh package.
+
 ## Workspace Attention Preservation
 
 Before a state/display-affecting change, take and Desktop-verify a complete

@@ -1,5 +1,17 @@
 # HANDOFF.md
 
+## Updated Version Accepted October 4
+
+Read VK_UPDATED_LIVE_20261004.md. Updated PID1369037 serves vibe.local/5461;
+previous PID3059021 stays frozen for latest-data cutback. The consumed194755Z
+attempt activated successfully but its missing boot-directory finalization failed.
+Finalization alone was repaired without repeating handover or restoring a DB.
+Live preservation, original-thread, saved messages, review journal, attachment,
+model/mobile-sized browser, shared feed/CU and dot connector checks pass. Original
+failure/emergency evidence remains. The14-test isolated finalization patch must
+be incorporated/resealed into the next fresh preparation; never replay this one.
+Earlier preparation/hold notes below are historical.
+
 ## Parent-Confirmed Resume: Fix Backup And Cut Over
 
 The parent independently confirms accountingafe094a1 completed exit0 at19:12:38UTC,

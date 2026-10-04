@@ -1,5 +1,13 @@
 # STREAM.md
 
+October4 current outcome: authorized Model AutoSwitch cutover and live acceptance
+completed. Updated version serves production; original process remains frozen
+for same-latest-data cutback. Missing boot-directory finalization was repaired
+without repeating the consumed handover. Record tested next-package correction,
+Desktop acceptance evidence and commit/push before the single final report.
+Read VK_UPDATED_LIVE_20261004.md. No HYROX/accounting release or further backend
+interruption is within scope; earlier preparation/hold entries below are history.
+
 October4 current instruction: wait for other agents and queued messages to finish,
 then perform the fresh cutover automatically when the final checks pass. Correct
 newly discovered plugin-move backup coverage, validate and reseal the unconsumed

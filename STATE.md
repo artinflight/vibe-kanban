@@ -1,5 +1,16 @@
 # STATE.md
 
+## October 4 Updated Version Is Production
+
+Current accepted release is main e53ae4a7e/staging86d1c083a, actual backend
+fb70e951 and frontend index-Va7ho6jA.js. Updated1369037 routes through4720 to5461;
+original3059021 remains frozen for latest-data rollback. A boot-directory
+finalization failure after activation was repaired without another handover or
+older-DB restoration. Existing data/settings/history,12 messages,367 attachments,
+review flags and dot connector survive; CLI0.159.2 and shared private VK/CU feed
+are live. Read VK_UPDATED_LIVE_20261004.md for warnings, timings and the tested
+next-package correction. All earlier hold/preparation-only entries are historical.
+
 ## Parent-Confirmed Cutover Resumption
 
 Seamus explicitly authorizes fixing backup readiness and the VK cutover after

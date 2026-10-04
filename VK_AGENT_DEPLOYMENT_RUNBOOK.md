@@ -1,5 +1,16 @@
 # VK Agent Deployment Runbook
 
+## Next-package Operational Source
+
+Read [VK_BACKUP_MOVE_FOLLOWUP.md](VK_BACKUP_MOVE_FOLLOWUP.md). The moved-folder
+and service-settings finalization corrections must be installed through the
+checked-in `vk_prepare.py package-tools` path before sealing a fresh package.
+Verify the source/hash receipt in preparation, readiness and final preflight.
+Do not treat an unmerged branch, unapplied patch or old rehearsal as delivery.
+Until review/merge, explicitly pin the published operational follow-up commit.
+Preserve accepted live status and historical records separately; an early
+preparation-completion snapshot cannot override accepted cutover evidence.
+
 ## Workspace Attention Is Separate State
 
 Read [VK_ATTENTION_PRESERVATION.md](VK_ATTENTION_PRESERVATION.md). Matching issue

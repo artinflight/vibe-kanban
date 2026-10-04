@@ -1,3 +1,13 @@
+# October 4 Operational Backup Follow-up
+
+Branch `fix/vk-backup-move-preflight` from staging `86d1c083a` strengthens exact
+cross-parent move evidence, fail-closed backup coverage and next-package tool
+integration. Keep the accepted production deployment running. No restart,
+routing change, database restore, application change or unrelated agent work
+is authorized. Read VK_BACKUP_MOVE_FOLLOWUP.md. The old maintenance branch is
+preserved; PR133 overlaps prerequisites and must not replace current staging.
+The earlier scope notes below are retained as history.
+
 # October 3 Restart Candidate
 
 Prepare current staging AutoSwitch changes together with the live PR138 attention

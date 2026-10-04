@@ -1,3 +1,22 @@
+# October 4 After-cutover Operational Follow-up
+
+Cutover acceptance is complete; do not replay the handover. Read
+VK_UPDATED_LIVE_20261004.md and VK_BACKUP_MOVE_FOLLOWUP.md. This branch is
+`fix/vk-backup-move-preflight` from staging `86d1c083a`, focused on backup and
+package checks, not application deployment. 135 deployment regressions pass,
+including the actual cross-parent move/archive/restore and package gates.
+Production remains running and the old process frozen for latest-data cutback.
+
+Next preparation must use the published operational fix through `vk_prepare.py
+package-tools` before sealing; its receipt is checked by preparation, readiness
+and controller preflight. Review/merge the draft follow-up into staging; account
+for overlapping PR133 without importing its stale full application tree. Read
+`post-package/next-preparation-tools.json` under the October 4 package for the
+exact published pin and isolated actual-template proof. The stale early
+completion snapshot is historical; use accepted status and the separate
+completion reconciliation. The old 30-second timing claim is not verified.
+Older notes below are historical.
+
 # October 3 Restart Candidate
 
 This isolated preparation combines current staging AutoSwitch updates with the

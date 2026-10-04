@@ -16,6 +16,7 @@ import uuid
 
 from vk_change_journal import request, scope
 from vk_prep_common import digest, file_identity, identity, measured, save, storage
+from vk_desktop_transport import DesktopTransport
 
 
 def generation(path):
@@ -38,37 +39,62 @@ def excluded(path, plan):
     return any(Path(path).is_relative_to(Path(raw).resolve()) for raw in plan.get("excluded_rebuildable_directories", []))
 
 
-def scan(roots, plan):
+class Exclusions:
+    def __init__(self, plan):
+        self.raw = tuple(plan.get("excluded_rebuildable_directories", []))
+        self.roots = tuple(Path(raw).resolve() for raw in self.raw)
+        self.exact = frozenset(map(str, self.roots))
+        self.prefixes = tuple(str(root).rstrip("/") + "/" for root in self.roots)
+
+    def __call__(self, path):
+        value = str(Path(path))
+        return value in self.exact or value.startswith(self.prefixes)
+
+    def validate(self):
+        if tuple(Path(raw).resolve() for raw in self.raw) != self.roots:
+            raise ValueError("Exclusion link target changed during capture")
+
+
+def scan(roots, plan, exclusions=None):
+    exclusions = exclusions or Exclusions(plan)
     paths = set()
     for root in roots:
         root = Path(root)
         paths.add(str(root))
         if root.is_symlink():
             # Preserve the link plus its separately addressed target, never follow it on restore.
-            paths.update(scan([root.resolve()], plan))
+            paths.update(scan([root.resolve()], plan, exclusions))
         elif root.is_dir():
             for directory, dirs, names in os.walk(root, followlinks=False):
-                dirs[:] = [name for name in dirs if not excluded(Path(directory) / name, plan)]
+                dirs[:] = [name for name in dirs if not exclusions(Path(directory) / name)]
                 paths.update(str(Path(directory) / name) for name in dirs + names
-                             if not excluded(Path(directory) / name, plan))
+                             if not exclusions(Path(directory) / name))
     return paths
 
 
 def mirror_desktop(archive, destination):
-    if (not re.fullmatch(r"B:/vk-backups/[A-Za-z0-9_./-]+", destination)
-            or ".." in PurePosixPath(destination).parts):
-        raise ValueError("Use a Desktop B:/vk-backups task directory")
-    options = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=15"]
-    command = "powershell -NoProfile -Command \"New-Item -ItemType Directory -Force -Path '" + destination + "' | Out-Null\""
-    subprocess.run(["ssh", *options, "desktop", command], check=True, timeout=60)
-    subprocess.run(["scp", *options, str(archive), "desktop:" + destination + "/"], check=True, timeout=1800)
-    command = "powershell -NoProfile -Command \"(Get-FileHash -Algorithm SHA256 -LiteralPath '" + destination + "/" + archive.name + "').Hash\""
-    remote = subprocess.check_output(["ssh", *options, "desktop", command], text=True, timeout=1800).strip().lower()
-    checksum = digest(archive)
-    if remote != checksum:
-        raise ValueError("Desktop backup checksum mismatch")
-    return {"name": archive.name, "sha256": checksum, "bytes": archive.stat().st_size,
-            "desktop_verified": True, "desktop_directory": destination}
+    return DesktopTransport(Path(archive).parent / "transport").mirror(archive, destination)
+
+
+def validate_archive_warnings(log, watched, plan, online):
+    allowed = []
+    roots = [Path(raw).resolve() for raw in plan.get("online_ephemeral_roots", [])]
+    for line in log.splitlines():
+        if line == "tar: Exiting with failure status due to previous errors" and allowed:
+            continue
+        missing = re.fullmatch(r"tar: (.+?): (?:Warning: )?Cannot stat: No such file or directory", line)
+        changed = re.fullmatch(r"tar: (.+?): (?:Warning: )?file changed as we read it", line)
+        match = missing or changed
+        raw = "/" + match.group(1).lstrip("/") if match else ""
+        covered = raw in watched["changed"]
+        if not online or not match or not covered:
+            raise ValueError("Unexpected archive warning: " + line)
+        if missing and (not any(Path(raw).is_relative_to(root) for root in roots)
+                        or not watched.get("events", {}).get(raw, 0) & (0x200 | 0x400)
+                        or Path(raw).exists() or Path(raw).is_symlink()):
+            raise ValueError("Missing source is not a proven ephemeral deletion: " + raw)
+        allowed.append(raw)
+    return allowed
 
 
 def verified_parent(parent, plan, watched):
@@ -76,11 +102,44 @@ def verified_parent(parent, plan, watched):
         raise ValueError("Changed scope or journal instance requires a new online checkpoint")
     if parent["plan_sha256"] != identity(plan):
         raise ValueError("Backup plan changed; take a new online checkpoint")
+    if ("exclusion_targets" in parent
+            and parent["exclusion_targets"] != list(map(str, Exclusions(plan).roots))):
+        raise ValueError("Parent exclusion targets changed; take a new online checkpoint")
     receipt = parent["receipt"]
     if receipt.get("desktop_verified") is not True or digest(Path(parent["folder"]) / parent["archive"]) != receipt["sha256"]:
         raise ValueError("Parent backup is unavailable or unverified")
     if watched["sequence"] < parent["journal_sequence"]:
         raise ValueError("Journal sequence moved backwards")
+
+
+def verify_snapshot_archive(archive, snapshots, manifest_path):
+    expected = {"payload/" + row["path"]: row["sha256"] for row in snapshots.values()}
+    expected["payload/manifest.json"] = digest(manifest_path)
+    seen = set()
+    process = subprocess.Popen(["zstd", "-dc", str(archive)], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    try:
+        with tarfile.open(fileobj=process.stdout, mode="r|") as contents:
+            for member in contents:
+                if member.name not in expected:
+                    continue
+                if member.name in seen or not member.isfile():
+                    raise ValueError("Duplicate or invalid snapshot archive member")
+                checksum = hashlib.sha256()
+                with contents.extractfile(member) as stream:
+                    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                        checksum.update(chunk)
+                if checksum.hexdigest() != expected[member.name]:
+                    raise ValueError("Restored SQLite snapshot checksum mismatch")
+                seen.add(member.name)
+        while process.stdout.read(1024 * 1024):
+            pass
+        if process.wait() != 0 or seen != set(expected):
+            raise ValueError("Incomplete or corrupt snapshot archive")
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.wait()
+        process.stdout.close()
 
 
 def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fence=None):
@@ -90,6 +149,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
     if any(not Path(path).exists() for path in plan["sources"]):
         raise ValueError("Missing source roots require an explicit reconciled backup plan")
     timings = {}
+    exclusions = Exclusions(plan)
     started = time.monotonic()
     fence_before = None
     if verify_fence is not None:
@@ -108,10 +168,10 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
     payload = folder / "payload"
     payload.mkdir(mode=0o700)
     with measured(timings, "inventory"):
-        paths = scan(plan["sources"], plan) if parent is None else set(before["changed"])
+        paths = scan(plan["sources"], plan, exclusions) if parent is None else set(before["changed"])
         if parent is not None:
-            paths.update(scan([path for path in paths if Path(path).is_dir()], plan))
-        paths = {path for path in paths if not excluded(path, plan)}
+            paths.update(scan([path for path in paths if Path(path).is_dir()], plan, exclusions))
+        paths = {path for path in paths if not exclusions(path)}
         absent = sorted(path for path in paths if not Path(path).exists() and not Path(path).is_symlink())
         files = sorted(paths - set(absent))
         required_databases = {str(Path(raw).resolve()) for raw in
@@ -131,6 +191,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
     snapshots, readers, versions, signatures, reused = {}, {}, {}, {}, []
 
     def stable_boundary():
+        exclusions.validate()
         watched = journal(before["sequence"])
         check_journal(watched, plan)
         if watched["instance"] != before["instance"] or watched["sequence"] < before["sequence"]:
@@ -167,18 +228,32 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                         and not content_event(raw, before)):
                     reused.append(raw)
                     continue
-                source = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
-                readers[raw] = source
-                versions[raw] = source.execute("PRAGMA data_version").fetchone()[0]
+                source_path = path
+                sidecars = (raw + "-wal", raw + "-journal")
                 target = payload / "sqlite" / (hashlib.sha256(raw.encode()).hexdigest() + ".sqlite")
                 target.parent.mkdir(exist_ok=True)
-                with sqlite3.connect(target) as destination:
-                    source.execute("BEGIN")
-                    source.execute("SELECT name FROM sqlite_master LIMIT 1").fetchone()
-                    source.backup(destination, pages=4096)
-                    source.rollback()
-                    if destination.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                private_snapshot = verify_fence is not None and not any(os.path.lexists(p) for p in sidecars)
+                if private_snapshot:
+                    # A fenced, fully checkpointed copy is already the snapshot.
+                    # Immutable reading is confined to that private copy, never live data.
+                    source_path = target
+                    shutil.copyfile(path, source_path)
+                    if generation(path) != signatures[raw] or any(os.path.lexists(p) for p in sidecars):
+                        raise ValueError("Fenced database changed while copying: " + raw)
+                source = sqlite3.connect(source_path.as_uri() + ("?immutable=1" if private_snapshot else "?mode=ro"), uri=True)
+                readers[raw] = source
+                versions[raw] = source.execute("PRAGMA data_version").fetchone()[0]
+                if private_snapshot:
+                    if source.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                         raise ValueError("SQLite snapshot integrity failed: " + raw)
+                else:
+                    with sqlite3.connect(target) as destination:
+                        source.execute("BEGIN")
+                        source.execute("SELECT name FROM sqlite_master LIMIT 1").fetchone()
+                        source.backup(destination, pages=4096)
+                        source.rollback()
+                        if destination.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                            raise ValueError("SQLite snapshot integrity failed: " + raw)
                 target.chmod(path.stat().st_mode & 0o777)
                 snapshots[raw] = {"path": str(target.relative_to(payload)), "sha256": digest(target)}
                 proofs[raw] = {"generation": signatures[raw], "snapshot_sha256": snapshots[raw]["sha256"]}
@@ -189,27 +264,47 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
         parent_ref = None if parent is None else {"folder": parent["folder"], "archive": parent["archive"],
                                                   "sha256": parent["receipt"]["sha256"]}
         manifest = {"schema": 1, "at": time.time(), "scope_sha256": identity(scope(plan)), "plan_sha256": identity(plan),
+                    "exclusion_targets": list(map(str, exclusions.roots)),
                     "journal_instance": before["instance"], "journal_sequence": before["sequence"],
                     "parent": parent_ref, "sqlite_snapshots": snapshots, "absent_paths": absent,
                     "online_preparation": verify_fence is None, "production_boundary": False,
                     "frozen_boundary_requested": verify_fence is not None}
+        if "recopy_baseline" in before:
+            manifest["recopy_baseline"] = before["recopy_baseline"]
         save(payload / "manifest.json", manifest)
         archive = folder / (folder.parent.name + "-" + folder.name + ".tar.zst")
         with measured(timings, "archive"):
             with (folder / "tar.log").open("wb") as log:
-                result = subprocess.run(["tar", "--use-compress-program=zstd -T2 -3", "-cf", str(archive),
-                                         "-C", "/", "--no-recursion", "--null", "-T", str(file_list),
-                                         "--recursion", "-C", str(folder), "payload"], stderr=log)
+                online_options = ["--ignore-failed-read"] if verify_fence is None else []
+                payload_members = ["payload/manifest.json"]
+                if (payload / "sqlite").exists():
+                    payload_members.append("payload/sqlite")
+                result = subprocess.run(["tar", *online_options, "--use-compress-program=zstd -T2 -3", "-cf", str(archive),
+                                         "--recursion", "-C", str(folder), *payload_members,
+                                         "-C", "/", "--no-recursion", "--null", "-T", str(file_list)], stderr=log)
             if result.returncode not in ((0,) if verify_fence is not None else (0, 1)):
                 raise RuntimeError("Backup archive failed; inspect " + str(folder / "tar.log"))
+            watched = journal(before["sequence"])
+            check_journal(watched, plan)
+            if watched["instance"] != before["instance"]:
+                raise ValueError("Journal changed during archive")
+            warnings = validate_archive_warnings((folder / "tar.log").read_text(), watched, plan, verify_fence is None)
         with measured(timings, "archive_restore_verify"):
-            restored = folder / "verified-payload"
-            restored.mkdir()
-            subprocess.run(["tar", "--zstd", "-xf", str(archive), "-C", str(restored), "payload"], check=True)
-            for row in snapshots.values():
-                if digest(restored / "payload" / row["path"]) != row["sha256"]:
-                    raise ValueError("Restored SQLite snapshot checksum mismatch")
+            if verify_fence is not None:
+                verify_snapshot_archive(archive, snapshots, payload / "manifest.json")
+            else:
+                restored = folder / "verified-payload"
+                restored.mkdir()
+                subprocess.run(["tar", "--zstd", "-xf", str(archive), "-C", str(restored), "payload"], check=True)
+                for row in snapshots.values():
+                    if digest(restored / "payload" / row["path"]) != row["sha256"]:
+                        raise ValueError("Restored SQLite snapshot checksum mismatch")
+        if verify_fence is None:
+            save(folder / "pending-delivery.json", {**manifest, "folder": str(folder), "archive": archive.name,
+                "archive_sha256": digest(archive), "database_proofs": proofs, "databases": sorted(databases),
+                "copied_files": len(files), "timings": dict(timings), "passed": False})
         with measured(timings, "desktop_transfer_and_verify"):
+            exclusions.validate()
             receipt = mirror(archive)
             if receipt.get("desktop_verified") is not True or receipt["sha256"] != digest(archive):
                 raise ValueError("Backup delivery is unverified")
@@ -224,12 +319,14 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                 proofs.pop(raw, None)
         if verify_fence is not None:
             stable_boundary()
+        exclusions.validate()
         result = {**manifest, "folder": str(folder), "archive": archive.name, "receipt": receipt,
                   "database_proofs": proofs, "databases": sorted(databases), "reused_sqlite_snapshots": reused,
                   "copied_files": len(files), "changes_during_capture": after["changed"],
                   "timings": timings, "total_preparation_seconds": time.monotonic() - started,
                   "passed": True, "cutover_authorized": False,
                   "frozen_boundary_verified": verify_fence is not None, "writer_fence": fence_before}
+        result["online_archive_warnings_recaptured_by_next_delta"] = warnings
         if publish is not None:
             metadata = folder / (archive.name + ".result.json")
             # A restore descriptor cannot certify the still-pending post-delivery fence check.
@@ -242,6 +339,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
             result["metadata_receipt"] = receipt
         if verify_fence is not None:
             stable_boundary()
+        exclusions.validate()
         result["total_preparation_seconds"] = time.monotonic() - started
         save(folder / "result.json", result)
         save(root / "latest-result.json", result)
@@ -249,6 +347,71 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
     finally:
         for connection in readers.values():
             connection.close()
+
+
+def resume_delivery(plan, root, folder, journal, mirror, publish, parent=None):
+    """Deliver an unchanged completed online archive, never a frozen boundary."""
+    root, folder = storage(root), storage(folder)
+    if folder.parent.parent != root or (folder / "result.json").exists():
+        raise ValueError("Resume requires an unpublished archive in this backup root")
+    pending = json.loads((folder / "pending-delivery.json").read_text())
+    if (pending["folder"] != str(folder) or not pending["online_preparation"]
+            or pending["frozen_boundary_requested"] or pending["plan_sha256"] != identity(plan)):
+        raise ValueError("Resume is only for the exact completed online backup plan")
+    exclusions = Exclusions(plan)
+    if pending["exclusion_targets"] != list(map(str, exclusions.roots)):
+        raise ValueError("Resume exclusion targets changed")
+    watched = journal(pending["journal_sequence"])
+    check_journal(watched, plan)
+    if watched["instance"] != pending["journal_instance"]:
+        raise ValueError("Resume journal instance changed")
+    if parent:
+        verified_parent(parent, plan, watched)
+    expected = None if parent is None else {"folder": parent["folder"], "archive": parent["archive"],
+                                           "sha256": parent["receipt"]["sha256"]}
+    if pending["parent"] != expected:
+        raise ValueError("Resume parent changed")
+    if Path(pending["archive"]).name != pending["archive"]:
+        raise ValueError("Invalid backup archive name")
+    archive = folder / pending["archive"]
+    if digest(archive) != pending["archive_sha256"]:
+        raise ValueError("Pending archive checksum mismatch")
+    restored = folder / "verified-payload/payload"
+    manifest = json.loads((restored / "manifest.json").read_text())
+    for key in manifest:
+        if manifest[key] != pending[key]:
+            raise ValueError("Pending archive manifest changed")
+    for row in pending["sqlite_snapshots"].values():
+        if digest(restored / row["path"]) != row["sha256"]:
+            raise ValueError("Pending restored SQLite checksum mismatch")
+    validate_archive_warnings((folder / "tar.log").read_text(), watched, plan, True)
+    started = time.monotonic()
+    receipt = mirror(archive)
+    if receipt.get("desktop_verified") is not True or receipt["sha256"] != digest(archive):
+        raise ValueError("Backup delivery is unverified")
+    # Conservatively drop proofs for any DB changed since the archive inventory.
+    watched = journal(0 if parent is None else parent["journal_sequence"])
+    check_journal(watched, plan)
+    if watched["instance"] != pending["journal_instance"]:
+        raise ValueError("Resume journal changed during delivery")
+    proofs = {raw: proof for raw, proof in pending["database_proofs"].items()
+              if generation(raw) == proof["generation"] and not content_event(raw, watched)}
+    result = {**pending, "receipt": receipt, "database_proofs": proofs, "passed": True,
+              "delivery_resumed_without_recapture": True, "frozen_boundary_verified": False,
+              "writer_fence": None, "cutover_authorized": False,
+              "changes_during_capture": watched["changed"],
+              "total_preparation_seconds": time.time() - pending["at"]}
+    result["timings"] = {**pending["timings"], "resumed_delivery": time.monotonic() - started}
+    metadata = folder / (archive.name + ".result.json")
+    save(metadata, result)
+    delivered = publish(metadata)
+    if delivered.get("desktop_verified") is not True or delivered["sha256"] != digest(metadata):
+        raise ValueError("Backup recovery metadata delivery is unverified")
+    result["metadata_receipt"] = delivered
+    exclusions.validate()
+    save(folder / "result.json", result)
+    save(root / "latest-result.json", result)
+    return result
 
 
 def restore_chain(result, destination, archive_directory=None):
@@ -277,10 +440,15 @@ def restore_chain(result, destination, archive_directory=None):
                 for member in tar:
                     if member.name == "payload/manifest.json":
                         found = json.load(tar.extractfile(member))
+                        break
                 if found is None:
                     raise ValueError("Missing backup manifest")
-            if decompressor.wait():
-                raise ValueError("Backup decompression failed")
+            # The archive's full SHA256 is already checked. Stop the header lookup
+            # once found; recovery below still reads and validates the whole stream.
+            decompressor.stdout.close()
+            if decompressor.poll() is None:
+                decompressor.terminate()
+            decompressor.wait()
         current = found["parent"]
     links, directory_modes = {}, {}
     for archive in reversed(archives):
@@ -378,6 +546,15 @@ def restore_chain(result, destination, archive_directory=None):
             "production_restored": False, "absolute_symlinks_materialized": False}
 
 
+def configured_reader(plan_path, endpoint, parent=None):
+    plan = json.loads(plan_path.read_text())
+    if plan.get('move_coverage') or (plan_path.parent/'move-coverage.json').exists():
+        from journal_compat import journal as covered_journal
+        from subtree_recopy import RecopyJournal
+        return RecopyJournal(lambda since: covered_journal(plan_path.parent, since, plan_path=plan_path), parent)
+    return lambda since: request(endpoint, since)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="action", required=True)
@@ -387,17 +564,37 @@ def main():
     backup.add_argument("--socket", required=True, type=Path)
     backup.add_argument("--parent", type=Path)
     backup.add_argument("--desktop-directory", required=True)
+    backup.add_argument("--desktop-hostname")
+    backup.add_argument("--desktop-host-key-alias")
+    resume = commands.add_parser("resume-delivery")
+    resume.add_argument("--plan", required=True, type=Path)
+    resume.add_argument("--root", required=True, type=Path)
+    resume.add_argument("--folder", required=True, type=Path)
+    resume.add_argument("--socket", required=True, type=Path)
+    resume.add_argument("--parent", type=Path)
+    resume.add_argument("--desktop-directory", required=True)
+    resume.add_argument("--desktop-hostname")
+    resume.add_argument("--desktop-host-key-alias")
     restore = commands.add_parser("verify-restore")
     restore.add_argument("--result", required=True, type=Path)
     restore.add_argument("--destination", required=True, type=Path)
     restore.add_argument("--archive-directory", type=Path, help="Directory of archive copies fetched from Desktop")
     args = parser.parse_args()
     os.umask(0o077)
-    if args.action == "capture":
-        result = capture(json.loads(args.plan.read_text()), args.root, lambda since: request(args.socket, since),
-                         lambda archive: mirror_desktop(archive, args.desktop_directory),
-                         json.loads(args.parent.read_text()) if args.parent else None,
-                         lambda metadata: mirror_desktop(metadata, args.desktop_directory))
+    if args.action in ("capture", "resume-delivery"):
+        transport = DesktopTransport(args.root / "transport", hostname=args.desktop_hostname,
+                                     host_key_alias=args.desktop_host_key_alias)
+        mirror = lambda archive: transport.mirror(archive, args.desktop_directory)
+        parent = json.loads(args.parent.read_text()) if args.parent else None
+        reader = configured_reader(args.plan, args.socket, parent)
+        if args.action == "resume-delivery":
+            result = resume_delivery(json.loads(args.plan.read_text()), args.root, args.folder,
+                                     reader, mirror, mirror, parent)
+            print(json.dumps(result, indent=2))
+            return
+        plan = json.loads(args.plan.read_text())
+        result = capture(plan, args.root, reader,
+                         mirror, parent, mirror)
     else:
         result = restore_chain(json.loads(args.result.read_text()), args.destination, args.archive_directory)
     print(json.dumps(result, indent=2))

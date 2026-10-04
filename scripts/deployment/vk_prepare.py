@@ -34,6 +34,13 @@ def clean_tree(source):
     return git(source, "rev-parse", "HEAD^{tree}").decode().strip()
 
 
+def promotion_ancestry(source, production):
+    result = subprocess.run(["git", "-C", str(source), "merge-base", "--is-ancestor", production, "HEAD"])
+    if result.returncode:
+        raise ValueError("Production ancestry is absent; reconcile staging before expensive preparation")
+    return git(source, "rev-parse", production).decode().strip()
+
+
 def deployment_kind(source, deployed):
     names = git(source, "diff", "--name-only", "-z", deployed, "HEAD").decode().split("\0")
     names = [name for name in names if name]
@@ -102,7 +109,8 @@ def default_plan(source, root, deployed):
             {"id": "non-tauri-tests", "command": ["cargo", "test", "--workspace", "--exclude", "vibe-kanban-tauri", "-j", "3", "--offline"],
              "tools": rust, "inputs": inputs, "context_files": context, "cacheable": True},
         ])
-    return {"schema": 1, "deployment_kind": kind, "cache_directory": "/mnt/vk-storage/vk-preparation-cache",
+    return {"schema": 1, "deployment_kind": kind, "production_ancestor": deployed,
+            "cache_directory": "/mnt/vk-storage/vk-preparation-cache",
             "environment": {"CARGO_TARGET_DIR": "/mnt/vk-storage/cargo-target", "CARGO_INCREMENTAL": "0",
                             "SQLX_OFFLINE": "true", "NODE_OPTIONS": "--max-old-space-size=8192",
                             "PYTHONDONTWRITEBYTECODE": "1"},
@@ -194,6 +202,9 @@ class Preparation:
                          "helpers_sha256": digest(Path(__file__).with_name("vk_prep_common.py"))})
 
     def run(self):
+        if (self.root/'cutover_controller.py').exists():
+            from vk_operational_package import verify
+            verify(self.root)
         with (self.cache / ".preparation.lock").open("a") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             return self.run_locked()
@@ -236,11 +247,13 @@ class Preparation:
                     raise ValueError("Candidate output path escapes isolated source")
                 source = Path(output["path"])
                 if source.is_dir():
-                    temporary = target.with_name(target.name + "." + uuid.uuid4().hex + ".new")
-                    temporary.parent.mkdir(parents=True, exist_ok=True)
+                    staging = self.run_root / "materialized" / uuid.uuid4().hex
+                    staging.mkdir(parents=True)
+                    temporary = staging / "new"
                     shutil.copytree(source, temporary)
+                    target.parent.mkdir(parents=True, exist_ok=True)
                     if target.exists():
-                        target.replace(target.with_name(target.name + "." + uuid.uuid4().hex + ".previous"))
+                        target.replace(staging / "previous")
                     temporary.replace(target)
                 else:
                     target.parent.mkdir(parents=True, exist_ok=True)
@@ -263,6 +276,8 @@ class Preparation:
         try:
             # Discover missing prerequisites before a long build, not afterwards.
             with measured(self.timings, "prerequisites"):
+                if self.plan.get("production_ancestor"):
+                    promotion_ancestry(self.source, self.plan["production_ancestor"])
                 for step in steps:
                     for command in step.get("tools", []):
                         self.tool(command)
@@ -340,6 +355,9 @@ def main():
     queues.add_argument("--database", required=True, type=Path)
     queues.add_argument("--workers", type=int, default=8)
     queues.add_argument("--out", required=True, type=Path)
+    package = commands.add_parser('package-tools')
+    package.add_argument('--root',required=True,type=Path)
+    package.add_argument('--coverage',required=True,type=Path)
     args = parser.parse_args()
     os.umask(0o077)
     if args.action == "start":
@@ -360,6 +378,9 @@ def main():
     elif args.action == "classify":
         clean_tree(args.source)
         result = {"deployment_kind": deployment_kind(args.source, args.deployed), "cutover_authorized": False}
+    elif args.action == 'package-tools':
+        from vk_operational_package import install
+        result = install(args.root,json.loads(args.coverage.read_text()))
     else:
         result = read_only_queues(args.origin, database_sessions(args.database), args.workers)
         save(storage(args.out), result)

@@ -176,5 +176,21 @@ class PackageTests(unittest.TestCase):
         tools.symlink_to(outside,target_is_directory=True)
         with self.assertRaisesRegex(ValueError,'Operational package changed'):verify(self.package)
 
+    def test_module_enabled_package_rejects_missing_published_module(self):
+        units=self.package/'prepared-units';units.mkdir()
+        (units/'candidate.service').write_text('[Service]\nEnvironment=VK_CODEX_ROUTING_MODULE=/missing/current\n')
+        with self.assertRaisesRegex(ValueError,'Publish the candidate routing module'):
+            self.install()
+        self.assertFalse((self.package/'operational-tools.json').exists())
+        self.assertEqual((self.package/'cutover_controller.py').read_text(),CONTROLLER)
+
+    def test_module_enabled_package_rejects_unknown_recovery_template(self):
+        units=self.package/'prepared-units';units.mkdir()
+        (units/'candidate.service').write_text('[Service]\nEnvironment=VK_CODEX_ROUTING_MODULE=/fixture/current\n')
+        (self.package/'autoswitch-module/current').mkdir(parents=True)
+        with self.assertRaises(Exception):self.install()
+        self.assertFalse((self.package/'operational-tools.json').exists())
+        self.assertEqual((self.package/'cutover_controller.py').read_text(),CONTROLLER)
+
 
 if __name__=='__main__':unittest.main()

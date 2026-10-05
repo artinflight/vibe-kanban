@@ -1,0 +1,89 @@
+--- a/package_maintenance.py
++++ b/package_maintenance.py
+@@ -1,7 +1,9 @@
+ """Mirror exact recovery tools and verify their restore without recopying data."""
+ import json
++import re
+ from pathlib import Path
+ import subprocess
++import tarfile
+ import time
+ from desktop_transport import mirror_desktop, OPTIONS
+ from online_backup import ROOT
+@@ -12,6 +14,16 @@
+ assert ready['ready']
+ plan=json.loads((ROOT/'production-plan.json').read_text())
+ files={ROOT/raw for raw in ready['sha256']}
++module=ROOT/'autoswitch-module'
++assert (module/'current').is_symlink() and (module/'current').resolve().is_relative_to(module/'releases')
++module_target=str((module/'current').resolve())
++module_links=ROOT/'module-links.tar'
++subprocess.run(['tar','-cf',str(module_links),'-C','/','--no-recursion',str(module/'current').lstrip('/')],check=True)
++files.update(p for p in module.rglob('*') if p.is_file())
++files.update([module_links,ROOT/'module-readiness.json',ROOT/'source/scripts/vk-autoswitch-module.py',
++              ROOT/'operational-tools.json',ROOT/'online-restore-check.json',ROOT/'handover-rehearsal.json'])
++files.update(ROOT/name for name in ('unsealed-readiness-repair.json','full-checkpoint-proof.json',
++             'checkpoint-transition.json','module-package-patch-proof.json') if (ROOT/name).exists())
+ files.update(ROOT/name for name in ('PROGRESS.md','maintenance-request.json',
+     'package_maintenance.py','bind_maintenance_approval.py',
+     'source/scripts/vk-capacity-ownership.py','source/crates/executors/default_profiles.json'))
+@@ -29,7 +41,7 @@
+     ready['sha256'][raw]=checksum
+ ready.update(restart_owner='VK::Staging',source_staging_commit=plan['staging_commit'],
+     source_tree=plan['source_tree'],live_generation=plan['incumbent_color'],candidate_generation=plan['candidate_color'],
+-    controller_tests_passed=78,original_thread_preserved=True,
++    controller_tests_passed=int(re.findall(r'Ran (\d+) tests', (ROOT/'operational-tests.log').read_text())[-1]),original_thread_preserved=True,
+     reused_full_restore=True,bounded_model_availability_refreshed=True,
+     bounded_recopy_roots=__import__('online_backup').RECOPY_ROOTS)
+ save(ROOT/'readiness.json',ready)
+@@ -42,7 +54,7 @@
+ subprocess.run(['tar','--dereference','--use-compress-program=zstd -T2 -3','-cf',str(archive),
+     '-C','/','--no-recursion','--null','-T',str(listing)],check=True)
+ archive.chmod(0o600)
+-receipt=mirror_desktop(archive,'B:/vk-backups/vk-blue-reprepare-20261004')
++receipt=mirror_desktop(archive,'B:/vk-backups/'+ROOT.name)
+ restored=ROOT/('software-restore-'+str(time.time_ns()));restored.mkdir(mode=0o700)
+ download=restored/name
+ subprocess.run(['scp',*OPTIONS,'desktop:'+receipt['desktop_directory']+'/'+name,str(download)],
+@@ -52,6 +64,13 @@
+ for raw,expected in ready['sha256'].items():
+     assert digest(restored/str(ROOT/raw).lstrip('/'))==expected,raw
+ assert digest(restored/str(ROOT/'readiness.json').lstrip('/'))==digest(ROOT/'readiness.json')
++with tarfile.open(restored/str(module_links).lstrip('/')) as links:
++    entries=links.getmembers()
++    assert len(entries)==1 and entries[0].issym() and entries[0].linkname==module_target
++    assert entries[0].name==str(module/'current').lstrip('/')
++restored_module=restored/module_target.lstrip('/')
++subprocess.run([str(restored/str(module/'validator').lstrip('/')),'--verify-release',str(restored_module)],check=True)
++receipt['module_pointer_and_payload_restored']=True
+ receipt.update(software_restore_passed=True,restored_files=len(ready['sha256']),
+     readiness_sha256=digest(ROOT/'readiness.json'),seconds=time.monotonic()-started)
+ save(ROOT/'software-package-receipt.json',receipt)
+--- a/verify_runtime_requirements.py
++++ b/verify_runtime_requirements.py
+@@ -37,6 +37,16 @@
+     assert all(m['discovered'] and m['verified_efforts'] and 0<=time.time()-m['verified_at']<86400 for m in proof['models'])
+     version=subprocess.check_output([launcher,'--version'],text=True).strip()
+     assert version=='codex-cli 0.159.2',version
++    module_root=ROOT/'autoswitch-module'
++    assert vk['VK_CODEX_ROUTING_MODULE']==str(module_root/'current')
++    assert (module_root/'current').is_symlink() and (module_root/'current').resolve().is_relative_to(module_root/'releases')
++    command=['python3','-B',str(ROOT/'source/scripts/vk-autoswitch-module.py'),'check',
++             '--root',str(module_root),'--unit',config['candidate']]
++    if live:command.append('--live')
++    module=json.loads(subprocess.check_output(command,text=True))
++    expected=json.loads((ROOT/'module-readiness.json').read_text())['module']['release']
++    assert module['passed'] and module['release']['manifestHash']==expected['manifestHash']
++    assert module['release']['workerSha256']==expected['workerSha256']
+     env=os.environ.copy();env.update(CODEX_HOME=home,VK_CODEX_BASE_COMMAND=launcher)
+     observed=ROOT/'latest-model-identity.json'
+     subprocess.run(['python3','-B',str(ROOT/'source/scripts/testing/codex-routing-probe.py'),
+@@ -54,7 +64,7 @@
+     result={'passed':True,'at':time.time(),'live_process_environments':live,'runtime':version,
+         'launcher':launcher,'codex_home':home,'account_matches':True,'models':sorted(MODELS),
+         'proof_age_seconds':int(time.time()-proof['observed_at']),'shared_private_feed':str(feed),
+-        'new_inference_calls':0,'availability_reprobe_required':False}
++        'new_inference_calls':0,'availability_reprobe_required':False,'module':module}
+     (ROOT/'latest-runtime-requirements.json').write_text(json.dumps(result,indent=2))
+     return result
+ if __name__=='__main__':

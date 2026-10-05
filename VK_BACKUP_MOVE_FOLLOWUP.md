@@ -67,6 +67,15 @@ authorizes cutover or replaces a fresh release-specific rehearsal/drain/backup.
 
 ## Service-settings Finalization Prevention
 
+For a candidate using `VK_CODEX_ROUTING_MODULE`, publish its module into the new
+package before installing tools. Installation also applies
+`VK_MODULE_RECOVERY_PACKAGE_20261005.patch`: the exact module payload and pointer
+must be backed up and restore-verified, and final runtime checks require the
+expected manifest/worker hashes and candidate environment. Copying an absolute
+`current` link from an earlier preparation is insufficient. The actual private
+backend must report the intended module without a fallback warning. Both module
+package files become hash-bound; unknown templates or absent modules fail closed.
+
 The installer applies `VK_HANDOVER_FINALIZATION_20261004.patch` automatically
 to the new known template. Inert installation creates the required boot-override
 parent directory; preflight checks it; finalization creates it idempotently.

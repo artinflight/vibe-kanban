@@ -10,6 +10,7 @@ from vk_prep_common import digest, identity, save, storage
 
 REPO = Path(__file__).resolve().parents[2]
 PATCH = REPO / 'VK_HANDOVER_FINALIZATION_20261004.patch'
+MODULE_PATCH = REPO / 'VK_MODULE_RECOVERY_PACKAGE_20261005.patch'
 FORBIDDEN = ('readiness.json', 'software-package-receipt.json', 'cutover-attempt.json',
              'cutover-approval.json', 'cutover-request.json')
 REQUIRED = ('journal_compat.py', 'subtree_recopy.py', 'vk_rolling_backup.py',
@@ -87,6 +88,13 @@ def install(root, coverage, *, require_clean=True):
         raise ValueError('Unknown or linked handover template')
     subprocess.run(['patch','--dry-run','--forward','-p1','-d',str(root),'-i',str(PATCH)],check=True,
                    stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    module_enabled = any('VK_CODEX_ROUTING_MODULE' in path.read_text()
+                         for path in (root/'prepared-units').rglob('*') if path.is_file())
+    if module_enabled:
+        if not (root/'autoswitch-module/current').exists():
+            raise ValueError('Publish the candidate routing module before packaging')
+        subprocess.run(['patch','--dry-run','--forward','-p1','-d',str(root),'-i',str(MODULE_PATCH)],check=True,
+                       stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     online = (root/'online_backup.py').read_text()
     online = replace_assignment(online, 'RECOPY_ROOTS',
         "RECOPY_ROOTS=tuple(json.loads((ROOT/'move-coverage.json').read_text())['recopy_roots'])")
@@ -131,6 +139,10 @@ def install(root, coverage, *, require_clean=True):
     (root/'build_readiness.py').write_text(readiness)
     subprocess.run(['patch','--forward','-p1','-d',str(root),'-i',str(PATCH)],check=True,
                    stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    if module_enabled:
+        subprocess.run(['patch','--forward','-p1','-d',str(root),'-i',str(MODULE_PATCH)],check=True,
+                       stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        targets.extend(root/name for name in ('package_maintenance.py','verify_runtime_requirements.py'))
     # Coverage adds proof, not a different backup scope or a reason to lose the
     # authenticated parent chain. Keep the original backup plan byte-for-byte.
     save(root/'move-coverage.json',coverage)

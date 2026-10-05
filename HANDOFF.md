@@ -1,5 +1,20 @@
 # HANDOFF.md
 
+## October 5 Authorized Preparation Continues
+
+The latest native goal authorizes completing restart/cutover after safety checks,
+superseding the recovery-only hold below. Once ready, the operator requests
+"pause work" through Turn Steer to active VK agents; wait for safe completion,
+never start a competing follow-up or kill their work. Current production is still
+PID1369037 on5461. No October5 cutover has happened at this writing.
+Read VK_CUTOVER_PREPARATION_20261005.md and the current package at
+/mnt/vk-storage/vk-green-cutover-20261005. PR145 is merged to mainfa8122a50 with
+the exact staging8b562265d tree. Candidate workflow/browser/module checks pass.
+The original journal and backup chain remain; a separate watched full checkpoint
+is being verified on Desktop. Later unbacked recovery edits remain unaccounted.
+Do not infer readiness from passing app tests: backup delivery, current-sized
+rollback rehearsal, sealed recovery package and final safe drain remain required.
+
 ## October 5 Recovery Verified; Restart Held
 
 The latest owner handoff authorizes recovery/readiness only, not restart,

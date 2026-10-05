@@ -1,5 +1,18 @@
 # STATE.md
 
+## October 5 Promotion And Authorized Preparation
+
+PR145 promotes staging8b562265d to mainfa8122a50, tree9dd2bd10a; canonical main
+is updated. This is Git promotion, not yet a production switch. Current live
+PID1369037 remains on the October4 release. The operator's latest goal authorizes
+completing the cutover after fresh safety checks and safely draining active agents
+through Turn Steer. Earlier recovery-only holds below are historical.
+Read VK_CUTOVER_PREPARATION_20261005.md. The new isolated candidate passes workflow,
+saved-message, read/unread, model controls and actual module-adoption checks.
+The full current-data checkpoint and rollback/readiness work remain in progress;
+no older database has been restored over production. Historical recovery limits
+and the original journal/chain are retained, not reset or reclassified as fixed.
+
 ## October 5 Recovery And Current Restart Hold
 
 The five missing roots are restored and independently verified against the

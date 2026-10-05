@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from vk_operational_package import install, verify
+from vk_operational_package import OLD_INTERLOCK, CURRENT_INTERLOCK
 
 CONTROLLER = '''
 def preflight(executing=False):
@@ -86,6 +87,8 @@ class PackageTests(unittest.TestCase):
     def install(self):return install(self.package,self.coverage,require_clean=False)
 
     def test_installed_modules_and_gate_are_bound_into_real_preparation(self):
+        with (self.package/'build_readiness.py').open('a') as stream:
+            stream.write(OLD_INTERLOCK+'\n')
         original_plan=(self.package/'backup-plan.json').read_bytes()
         result=self.install()
         self.assertTrue(result['passed'])
@@ -100,6 +103,8 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(online['RECOPY_ROOTS'],tuple(self.coverage['recopy_roots']))
         self.assertEqual(online['EXTERNAL_MOVE_SOURCES'],self.coverage['move_sources'])
         self.assertIn("assert 'Ran '",(self.package/'build_readiness.py').read_text())
+        self.assertIn(CURRENT_INTERLOCK,(self.package/'build_readiness.py').read_text())
+        self.assertNotIn(OLD_INTERLOCK,(self.package/'build_readiness.py').read_text())
 
     def test_missing_nested_boot_directory_is_created_without_a_restart(self):
         self.install()

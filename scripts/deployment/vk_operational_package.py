@@ -14,6 +14,36 @@ FORBIDDEN = ('readiness.json', 'software-package-receipt.json', 'cutover-attempt
              'cutover-approval.json', 'cutover-request.json')
 REQUIRED = ('journal_compat.py', 'subtree_recopy.py', 'vk_rolling_backup.py',
             'vk_prepare.py', 'vk_operational_package.py')
+OLD_INTERLOCK = "assert 'vk-blue-reprepare-20261004/production_guard.py' in c.control.prop(c.CONFIG['incumbent'],'ExecStartPre')"
+CURRENT_INTERLOCK = "assert str(root/'production_guard.py')+' '+c.CONFIG['incumbent_color'] in c.control.prop(c.CONFIG['incumbent'],'ExecStartPre')"
+
+
+def repair_unsealed_readiness(root):
+    """Correct only the known stale interlock assertion, retaining prior proof."""
+    root = storage(root)
+    if any((root/name).exists() for name in FORBIDDEN):
+        raise ValueError('Never revise a sealed or consumed package')
+    verify(root)
+    if subprocess.check_output(['git','-C',str(REPO),'status','--porcelain']).strip():
+        raise ValueError('Commit readiness repair before packaging')
+    path = root/'build_readiness.py'
+    code = path.read_text()
+    if code.count(OLD_INTERLOCK) != 1:
+        raise ValueError('Unknown readiness interlock template')
+    previous = json.loads((root/'operational-tools.json').read_text())
+    code = code.replace(OLD_INTERLOCK, CURRENT_INTERLOCK)
+    ast.parse(code)
+    record = root/'unsealed-readiness-repair.json'
+    if record.exists():
+        raise ValueError('Readiness repair already consumed')
+    save(record, {'previous_receipt': previous, 'source_commit': subprocess.check_output(
+        ['git','-C',str(REPO),'rev-parse','HEAD'],text=True).strip(), 'production_modified': False})
+    path.write_text(code)
+    revised = json.loads(json.dumps(previous))
+    revised['sha256']['build_readiness.py'] = digest(path)
+    revised['readiness_repair'] = {'record':record.name,'sha256':digest(record)}
+    save(root/'operational-tools.json', revised)
+    return verify(root)
 
 
 def replace_assignment(code, name, replacement):
@@ -81,6 +111,7 @@ def install(root, coverage, *, require_clean=True):
             if isinstance(left, ast.Constant) and left.value in ('Ran 77 tests','Ran 78 tests'):
                 lines[node.lineno-1] = lines[node.lineno-1].replace(left.value, 'Ran ')
     readiness = ''.join(lines)
+    readiness = readiness.replace(OLD_INTERLOCK, CURRENT_INTERLOCK)
     old_workload = "assert len(adapter['recopy_copies']) == len(__import__('online_backup').RECOPY_ROOTS)"
     if old_workload in readiness:
         readiness = readiness.replace(old_workload,
@@ -115,6 +146,10 @@ def install(root, coverage, *, require_clean=True):
 def verify(root):
     root = Path(root)
     proof = json.loads((root/'operational-tools.json').read_text())
+    if 'readiness_repair' in proof:
+        repair = proof['readiness_repair']
+        if repair['record'] != 'unsealed-readiness-repair.json' or digest(root/repair['record']) != repair['sha256']:
+            raise ValueError('Unsealed readiness repair provenance changed')
     if not proof['installed_before_sealing'] or proof['production_modified']:
         raise ValueError('Invalid operational installation proof')
     for name in REQUIRED:
@@ -135,8 +170,10 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root',required=True,type=Path)
     parser.add_argument('--coverage',type=Path)
+    parser.add_argument('--repair-readiness',action='store_true')
     args=parser.parse_args()
-    result=install(args.root,json.loads(args.coverage.read_text())) if args.coverage else verify(args.root)
+    result=(repair_unsealed_readiness(args.root) if args.repair_readiness else
+            install(args.root,json.loads(args.coverage.read_text())) if args.coverage else verify(args.root))
     print(json.dumps(result))
 
 

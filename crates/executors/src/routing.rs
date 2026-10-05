@@ -139,11 +139,18 @@ impl Availability {
 }
 
 pub fn model_policies() -> Result<Vec<ModelPolicy>, String> {
+    if let Some(models) = crate::routing_module::models() {
+        return Ok(models);
+    }
     let json = match std::env::var("VK_CODEX_ROUTING_MODELS") {
         Ok(path) => std::fs::read_to_string(path).map_err(|e| e.to_string())?,
         Err(_) => include_str!("routing_models.json").to_owned(),
     };
-    let models: Vec<ModelPolicy> = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    parse_model_policies(json.as_bytes())
+}
+
+pub(crate) fn parse_model_policies(json: &[u8]) -> Result<Vec<ModelPolicy>, String> {
+    let models: Vec<ModelPolicy> = serde_json::from_slice(json).map_err(|e| e.to_string())?;
     let mut ids = std::collections::HashSet::new();
     if models.is_empty() || models.iter().any(|m| m.id.is_empty() || !ids.insert(&m.id)) {
         return Err("Routing model policies must have unique nonempty IDs".into());
@@ -323,6 +330,7 @@ fn resolve_action_inner(
     if policy.mode == RoutingMode::Manual {
         return Ok(());
     }
+    let _module_scope = crate::routing_module::Scope::enter();
     let (prompt, pinned) = match &action.typ {
         ExecutorActionType::CodingAgentInitialRequest(r) => (r.prompt.as_str(), false),
         ExecutorActionType::CodingAgentFollowUpRequest(r) => (
@@ -410,39 +418,22 @@ fn resolve_action_inner(
                 _ => None,
             })
     });
-    let mut assessment = crate::routing_assessment::assess_with_context(prompt, root);
-    // A failed boundary cannot use successful-looking prose to erase failure evidence.
-    let completed_reply = completed_reply.filter(|text| !failed && !text.trim().is_empty());
-    crate::routing_context::apply_reference_context(&mut assessment, prompt, completed_reply);
-    let semantic = if semantic_enabled
-        && crate::routing_semantic::eligible(
-            &assessment,
-            failed,
-            &policy,
-            prompt,
-            prior_envelope.as_deref(),
-        ) {
-        let previous_prompt = previous.and_then(|p| match &p.typ {
-            ExecutorActionType::CodingAgentInitialRequest(r) => Some(r.prompt.as_str()),
-            ExecutorActionType::CodingAgentFollowUpRequest(r) => Some(r.prompt.as_str()),
-            _ => None,
-        });
-        let trace = crate::routing_semantic::classify_with_context(
-            prompt,
-            previous_prompt,
-            completed_reply,
-            &assessment,
-            &policy,
-        );
-        if let Some(classification) = &trace.classification {
-            crate::routing_semantic::apply(&mut assessment, classification);
-        }
-        Some(trace)
-    } else {
-        None
-    };
-    let assessment =
-        crate::routing_assessment::retain_previous(assessment, prompt, prior_envelope.as_deref());
+    let previous_prompt = previous.and_then(|p| match &p.typ {
+        ExecutorActionType::CodingAgentInitialRequest(r) => Some(r.prompt.as_str()),
+        ExecutorActionType::CodingAgentFollowUpRequest(r) => Some(r.prompt.as_str()),
+        _ => None,
+    });
+    let (assessment, semantic) = crate::routing_module::assess(
+        prompt,
+        previous_prompt,
+        completed_reply,
+        prior_envelope.as_deref(),
+        root,
+        failed,
+        &policy,
+        semantic_enabled,
+        serde_json::Value::Null,
+    );
     let mut floor = crate::routing_assessment::boundary_floor(
         &assessment,
         policy.floor,
@@ -501,6 +492,9 @@ fn resolve_action_inner(
             "previous_execution_failed"
         }
         .into();
+    }
+    if let Some(warning) = crate::routing_module::warning() {
+        reason = format!("{reason}: module_warning={warning}; safe fallback retained");
     }
     let envelope = if failed {
         if floor == CapabilityFloor::Frontier {
@@ -799,6 +793,53 @@ mod tests {
                 .0,
             "gpt-5.6-luna"
         );
+    }
+
+    #[test]
+    fn diagnostic_reassessment_uses_workhorse_pair_without_overriding_manual_floor() {
+        let (mut policy, models, availability) = fixture();
+        policy.floor = CapabilityFloor::Assessed;
+        let prompt = "Still connecting and disconnecting";
+        let mut a = crate::routing_assessment::assess(prompt);
+        crate::routing_context::apply_reference_context(
+            &mut a,
+            prompt,
+            Some("Initialization completed; connection stability remains to be checked."),
+        );
+        let c = serde_json::from_value(serde_json::json!({
+            "envelope":"complex", "scope_relation":"diagnostic_step",
+            "scope":"localized", "novelty":"unknown", "ambiguity":"low",
+            "horizon":"short", "validation":"unknown", "risks":[],
+            "uncertainty":"medium", "inspection_needed":true,
+            "reason":"Investigate the current connection symptom."
+        }))
+        .unwrap();
+        crate::routing_semantic::apply(&mut a, &c);
+        let a = crate::routing_assessment::retain_previous(a, prompt, Some("protected"));
+        for mode in [RoutingMode::Auto, RoutingMode::Shadow] {
+            policy.mode = mode;
+            let floor = crate::routing_assessment::boundary_floor(
+                &a,
+                policy.floor,
+                Some(CapabilityFloor::Frontier),
+            );
+            assert_eq!(
+                choose_assessed(&policy, floor, a.envelope, &models, &availability, 100).unwrap(),
+                ("gpt-6.1-sol".into(), "medium".into())
+            );
+        }
+        policy.floor = CapabilityFloor::Frontier;
+        let floor = crate::routing_assessment::boundary_floor(
+            &a,
+            policy.floor,
+            Some(CapabilityFloor::Frontier),
+        );
+        assert_eq!(
+            choose_assessed(&policy, floor, a.envelope, &models, &availability, 100).unwrap(),
+            ("gpt-6-astra".into(), "high".into())
+        );
+        policy.denied_models.push("gpt-6-astra".into());
+        assert!(choose_assessed(&policy, floor, a.envelope, &models, &availability, 100).is_err());
     }
 
     #[test]

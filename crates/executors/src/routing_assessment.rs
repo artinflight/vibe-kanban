@@ -2,11 +2,11 @@
 //! missing context is not evidence that a task is routine.
 use super::routing::CapabilityFloor;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Assessment {
     pub envelope: &'static str,
     pub floor: CapabilityFloor,
-    pub evidence: &'static str,
+    pub evidence: String,
     pub validation_failure: bool,
     pub triage: crate::routing_triage::TaskTriage,
 }
@@ -108,7 +108,7 @@ pub fn retain_previous(
         };
     }
     if !independent {
-        assessment.evidence = "retained_session_qualification";
+        assessment.evidence = "retained_session_qualification".into();
         assessment
             .triage
             .evidence
@@ -477,7 +477,7 @@ pub fn assess_with_context(prompt: &str, root: Option<&std::path::Path>) -> Asse
         triage,
         envelope,
         floor,
-        evidence,
+        evidence: evidence.into(),
         validation_failure,
     }
 }

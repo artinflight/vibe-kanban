@@ -14,6 +14,7 @@ pub mod routing_assessment;
 mod routing_availability;
 pub mod routing_context;
 pub mod routing_delegation;
+pub mod routing_module;
 mod routing_runtime_identity;
 pub mod routing_semantic;
 pub mod routing_triage;

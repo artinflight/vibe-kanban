@@ -349,6 +349,48 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
             connection.close()
 
 
+def recover_online_checkpoint(plan, root, folder, journal):
+    """Validate a fully written, unpublished archive before resuming delivery.
+
+    No database reuse proof is reconstructed. The next delta snapshots every DB.
+    This cannot accept a changed scope, lost journal or a frozen capture.
+    """
+    root, folder = storage(root), storage(folder)
+    if folder.parent.parent != root or any((folder / name).exists() for name in
+            ('result.json', 'pending-delivery.json')):
+        raise ValueError('Recovery requires an unpublished checkpoint')
+    manifest_path = folder / 'payload/manifest.json'
+    manifest = json.loads(manifest_path.read_text())
+    if (manifest['parent'] is not None or not manifest['online_preparation']
+            or manifest['frozen_boundary_requested'] or manifest['plan_sha256'] != identity(plan)
+            or manifest['scope_sha256'] != identity(scope(plan))):
+        raise ValueError('Recovery requires the original full online checkpoint plan')
+    exclusions = Exclusions(plan)
+    if manifest['exclusion_targets'] != list(map(str, exclusions.roots)):
+        raise ValueError('Recovery exclusion targets changed')
+    watched = journal(manifest['journal_sequence'])
+    check_journal(watched, plan)
+    if watched['instance'] != manifest['journal_instance'] or watched['sequence'] < manifest['journal_sequence']:
+        raise ValueError('Recovery journal continuity lost')
+    validate_archive_warnings((folder / 'tar.log').read_text(), watched, plan, True)
+    archives = list(folder.glob('*.tar.zst'))
+    if len(archives) != 1:
+        raise ValueError('Recovery requires exactly one complete archive')
+    archive = archives[0]
+    verify_snapshot_archive(archive, manifest['sqlite_snapshots'], manifest_path)
+    restored = folder / 'verified-payload'
+    restored.mkdir()
+    subprocess.run(['tar', '--zstd', '-xf', str(archive), '-C', str(restored), 'payload'], check=True)
+    exclusions.validate()
+    pending = {**manifest, 'folder': str(folder), 'archive': archive.name,
+               'archive_sha256': digest(archive), 'database_proofs': {},
+               'databases': sorted(manifest['sqlite_snapshots']),
+               'copied_files': len((folder / 'paths.nul').read_bytes().split(b'\0')) - 1,
+               'timings': {}, 'passed': False, 'recovered_online_archive': True}
+    save(folder / 'pending-delivery.json', pending)
+    return pending
+
+
 def resume_delivery(plan, root, folder, journal, mirror, publish, parent=None):
     """Deliver an unchanged completed online archive, never a frozen boundary."""
     root, folder = storage(root), storage(folder)

@@ -91,6 +91,22 @@ and leaves historical errors and archives intact. Missing/unwatched/linked roots
 remain fail-closed. All139 deployment regressions pass with these four additions.
 This does not prove recovery of later unbacked edits.
 
+The full October5 checkpoint also encountered a Codex launcher scratch directory
+removed normally during bounded model verification. The package now permits only
+the named launcher members under the exact protected Codex homes, with journal
+deletion evidence and no remaining file or symlink. Workspaces, sessions, unknown
+scratch members and frozen-boundary warnings remain fatal. An unpublished full
+online archive can be finished without recopying source data only after its exact
+plan, journal continuity, full archive stream, manifest and SQLite payload hashes
+pass verification. Database reuse proofs are discarded; the next delta snapshots
+them again. No production restore occurs.
+
+Readiness now compares measured recopy work to the actual journal requirement.
+A clean replacement journal needs a verified full current-data checkpoint rather
+than a fabricated nonempty recopy list. New moved roots invalidate that workload
+proof. These additions bring the focused suite to144 tests; package installation
+binds and uses the updated tools before sealing, not an unintegrated source copy.
+
 The expanded suite covers the original 77 backup regressions, closed SQLite
 databases and committed WAL, full/delta archives, delivery resumption and
 authenticated recopy. A real filesystem/inotify cross-parent move test captures

@@ -62,6 +62,9 @@ def install(root, coverage, *, require_clean=True):
         "RECOPY_ROOTS=tuple(json.loads((ROOT/'move-coverage.json').read_text())['recopy_roots'])")
     online = replace_assignment(online, 'EXTERNAL_MOVE_SOURCES',
         "EXTERNAL_MOVE_SOURCES=json.loads((ROOT/'move-coverage.json').read_text())['move_sources']")
+    online += ('\nimport vk_rolling_backup as _backup\n'
+               'from vk_runtime_ephemeral import install as _install_ephemeral\n'
+               '_install_ephemeral(_backup)\n')
     controller = (root/'cutover_controller.py').read_text()
     assert controller.count('def preflight(executing=False):') == 1
     controller = controller.replace('def preflight(executing=False):',
@@ -78,12 +81,19 @@ def install(root, coverage, *, require_clean=True):
             if isinstance(left, ast.Constant) and left.value in ('Ran 77 tests','Ran 78 tests'):
                 lines[node.lineno-1] = lines[node.lineno-1].replace(left.value, 'Ran ')
     readiness = ''.join(lines)
+    old_workload = "assert len(adapter['recopy_copies']) == len(__import__('online_backup').RECOPY_ROOTS)"
+    if old_workload in readiness:
+        readiness = readiness.replace(old_workload,
+            "from vk_backup_readiness import verify_workload\n"
+            "baseline=json.loads((root/'online-backup-result.json').read_text())\n"
+            "verify_workload(root,adapter,baseline,__import__('online_backup').capture_journal(baseline)(baseline['journal_sequence']))")
+        readiness = readiness.replace("assert json.loads((root/'online-backup-result.json').read_text())['recopy_baseline']['roots']", '')
     for code in (online, controller, readiness): ast.parse(code)
     tools = root/'deployment-tools'
     if tools.is_symlink(): raise ValueError('Do not modify a linked tool tree')
     tools.mkdir(exist_ok=True)
     for path in source.glob('*.py'): shutil.copy2(path, tools/path.name)
-    for name in ('journal_compat.py','subtree_recopy.py','vk_operational_package.py'):
+    for name in ('journal_compat.py','subtree_recopy.py','vk_operational_package.py','vk_backup_readiness.py'):
         shutil.copy2(source/name, root/name)
     (root/'online_backup.py').write_text(online)
     (root/'cutover_controller.py').write_text(controller)
@@ -93,7 +103,7 @@ def install(root, coverage, *, require_clean=True):
     # Coverage adds proof, not a different backup scope or a reason to lose the
     # authenticated parent chain. Keep the original backup plan byte-for-byte.
     save(root/'move-coverage.json',coverage)
-    bound = [*targets, root/'journal_compat.py', root/'subtree_recopy.py', root/'vk_operational_package.py',
+    bound = [*targets, root/'journal_compat.py', root/'subtree_recopy.py', root/'vk_operational_package.py', root/'vk_backup_readiness.py',
              root/'backup-plan.json', root/'move-coverage.json', *(tools/path.name for path in source.glob('*.py'))]
     receipt = {'schema':1, 'source_commit':commit, 'installed_before_sealing':True,
                'production_modified':False, 'move_coverage_sha256':identity(coverage),

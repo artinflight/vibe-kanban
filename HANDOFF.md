@@ -1,5 +1,17 @@
 # HANDOFF.md
 
+## October 5: Preparation Blocked Before Any Cutover
+
+Read VK_RESTART_PREPARATION_20261005.md and the new package's
+preparation-status.json. The operator authorizes cutover once safe and idle,
+but five protected worktree roots present in yesterday's verified inventory
+are now absent with deletion events. Do not bypass backup coverage or silently
+accept these as historical exceptions. No production interruption occurred.
+The isolated replacement and module pass focused tests; published PR142 tools
+and the finalization fix are bound into the new package. PR145 is open for
+staging-to-main promotion, not merged. Current production1369037 remains live.
+Reconcile the missing folders before fresh backup/rehearsal/sealing and cutover.
+
 ## Updated Version Accepted October 4
 
 Read VK_UPDATED_LIVE_20261004.md. Updated PID1369037 serves vibe.local/5461;

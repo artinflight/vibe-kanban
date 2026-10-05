@@ -1,5 +1,17 @@
 # STATE.md
 
+## October 5 Restart Preparation
+
+Current production remains October4 PID1369037 on5461; previous3059021 is frozen.
+No October5 cutover or production settings change occurred. The new isolated
+replacement includes staging PR143/144 plus the required published module.
+Read VK_RESTART_PREPARATION_20261005.md: backup readiness is blocked by five
+previously protected worktree roots now absent with deletion events. Do not
+ignore/reset the backup journal or overwrite production from a prior backup.
+Promotion PR145 is open; canonical staging8b562265d includes the unchanged-tree
+main ancestry reconciliation. Conditional cutover approval is recorded, but
+does not waive preservation, backup, rehearsal or final drain checks.
+
 ## October 4 Updated Version Is Production
 
 Current accepted release is main e53ae4a7e/staging86d1c083a, actual backend

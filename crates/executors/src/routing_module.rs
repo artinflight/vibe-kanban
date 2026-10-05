@@ -491,6 +491,24 @@ fn checked(mut reply: Reply, request: &Request) -> Result<Reply, String> {
     {
         return Err("Module attempted to weaken hard evidence".into());
     }
+    if let Some(value) = &request.semantic {
+        let class: SemanticClass =
+            serde_json::from_value(value.clone()).map_err(|_| "Invalid semantic evidence")?;
+        if !crate::routing_semantic::validate(&class) {
+            return Err("Invalid semantic evidence".into());
+        }
+        if ((!class.risks.is_empty() || class.envelope == "protected")
+            && (a.floor != CapabilityFloor::Frontier || a.envelope != "protected"))
+            || class.risks.iter().any(|r| !a.triage.risk.contains(r))
+            || ((class.envelope == "complex"
+                || class.scope == "cross_cutting"
+                || class.novelty == "novel"
+                || class.horizon == "extended")
+                && a.floor < CapabilityFloor::Workhorse)
+        {
+            return Err("Module attempted to erase semantic risk or complexity evidence".into());
+        }
+    }
     if request.stage == "after"
         && let Some(prior) = &request.previous_envelope
     {
@@ -647,6 +665,14 @@ mod tests {
         let cheap = evaluate(probe_request()).unwrap();
         assert!(checked(cheap, &request).is_err());
         request.seed.validation_failure = true;
+        assert!(checked(evaluate(probe_request()).unwrap(), &request).is_err());
+        request = probe_request();
+        request.stage = "after".into();
+        request.semantic = Some(
+            serde_json::json!({"envelope":"protected","scope_relation":"independent","scope":"localized",
+            "novelty":"established","ambiguity":"low","horizon":"short","validation":"deterministic_test",
+            "risks":["security"],"uncertainty":"low","inspection_needed":false,"reason":"Protected change"}),
+        );
         assert!(checked(evaluate(probe_request()).unwrap(), &request).is_err());
         request = probe_request();
         request.stage = "after".into();

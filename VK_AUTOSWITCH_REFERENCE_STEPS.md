@@ -91,3 +91,18 @@ Rollback is bounded: publish the preserved prior module version
 `staging-a661a8156-20261005` with the module tool; atomically restore the retained
 launcher bytes only if no later owner has changed its current hash. Do not
 restart or restore an old database. No rollback was needed or performed.
+
+## First genuine post-publication observation
+
+A real Recommend admission at16:27:40 UTC carries the new release hash and a
+completed Luna5.6/low classifier (4,673 input/234 output tokens,10,609ms).
+Actual execution retains operator-selected Sol6.1/high with native thread/turn
+attribution. This confirms startup recovery in the live backend, not just replay.
+The question about locating an existing feature was still classified uncertain
+because its screen location was absent from the last reply. The refined classifier
+instructions separate answer availability from ambiguity about authorized scope:
+a clearly read-only lookup of an established feature can be bounded, with its
+answer verified in existing UI/code. No uploads, data changes, access repair,
+financial judgments or unclear referents gain that exception. Backend hard guards
+and the qualification registry are unchanged. No second paid replay is run;
+qualification of the revised instruction awaits subsequent real Recommend work.

@@ -24,7 +24,10 @@ pub fn apply_reference_context(a: &mut Assessment, prompt: &str, reply: Option<&
     static OPERATIONS: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"\b(and|then|also|change|edit|update|delete|remove|buy|order|search|find|compare|install|run|execute|password|token|key|safe|correct|right|best|recommended|required|should|suitable|compatible|will|can|how|why)\b").unwrap()
     });
-    if OPERATIONS.is_match(&text) {
+    static LINK_PRESENTATION: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"^(?:please )?(?:(?:i )?(?:can't|cannot|can’t) click (?:the |those |these |your )?links|(?:make|render|format) (?:the |those |these |your )?links (?:clickable|as hyperlinks)|(?:show|give|send|paste)(?: me)? (?:the |those |these |your )?links)[.!?]*$").unwrap()
+    });
+    if OPERATIONS.is_match(&text) && !LINK_PRESENTATION.is_match(&text) {
         return;
     }
     static LINK: LazyLock<Regex> = LazyLock::new(|| {
@@ -39,8 +42,18 @@ pub fn apply_reference_context(a: &mut Assessment, prompt: &str, reply: Option<&
     // presence of a URL or number does not establish the requested referent.
     static URL: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r#"https?://[^\s<>\)\]\"]+"#).unwrap());
+    // Re-presenting a known collection does not require choosing one referent.
+    // Keep this limited to presentation requests, never broken-link diagnosis,
+    // hosting, access repair or changing application click behaviour.
+    static SENSITIVE_URL: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)(https?://[^/\s]+@|[?&#](?:token|key|secret|password|signature|sig|auth|access_token|api_key)=)").unwrap()
+    });
     let links: std::collections::HashSet<_> = URL.find_iter(reply).map(|m| m.as_str()).collect();
-    let known_reference = (LINK.is_match(&text) && links.len() == 1)
+    let collection_presentation = LINK_PRESENTATION.is_match(&text)
+        && (1..=8).contains(&links.len())
+        && links.iter().all(|link| !SENSITIVE_URL.is_match(link));
+    let known_reference = collection_presentation
+        || (LINK.is_match(&text) && links.len() == 1 && !SENSITIVE_URL.is_match(reply))
         || (DIMENSIONS.is_match(&text) && UNITS.find_iter(&reply.to_lowercase()).count() == 1);
     if !known_reference {
         return;
@@ -164,6 +177,50 @@ mod tests {
             let mut a = assess(prompt);
             apply_reference_context(&mut a, prompt, reply);
             assert!(!reassess_step(&a, prompt, "complex"), "{prompt}");
+        }
+    }
+
+    #[test]
+    fn known_link_collection_is_presentation_not_protected_project_work() {
+        let reply = "Preview https://example.invalid/preview; PR https://example.invalid/pr";
+        for prompt in [
+            "Can't click those links",
+            "Please make the links clickable",
+            "Paste me the links",
+        ] {
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, Some(reply));
+            let a = retain_previous(a, prompt, Some("protected"));
+            assert_eq!(a.envelope, "bounded", "{prompt}");
+            assert_eq!(a.floor, CapabilityFloor::Routine);
+            assert!(
+                a.triage
+                    .evidence
+                    .contains(&"surrounding_assignment:protected".into())
+            );
+            assert_eq!(
+                boundary_floor(&a, CapabilityFloor::Frontier, None),
+                CapabilityFloor::Frontier
+            );
+        }
+        for (prompt, context) in [
+            ("Which link should I use?", reply),
+            ("Fix the links in the app", reply),
+            ("The links return access denied", reply),
+            ("Make the links clickable and deploy", reply),
+            ("Can't click those links", "No links supplied"),
+            (
+                "Can't click those links",
+                "https://example.invalid/?token=private",
+            ),
+            (
+                "Can't click those links",
+                "https://user:password@example.invalid/",
+            ),
+        ] {
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, Some(context));
+            assert_ne!(a.evidence, "completed_context_reference_lookup", "{prompt}");
         }
     }
 }

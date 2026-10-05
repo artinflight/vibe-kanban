@@ -1,5 +1,17 @@
 # HANDOFF.md
 
+## October 5 Cutover Accepted
+
+Read VK_UPDATED_LIVE_20261005.md and the153237Z attempt's status/live evidence
+under /mnt/vk-storage/vk-green-cutover-20261005. Updated3027197 serves5511;
+previous1369037 stays frozen. The21.972second handover passed without rollback,
+older-DB restore or boot-finalization repair. Original-thread, model/flags/messages,
+attachments, desktop/mobile-size UI, shared feed/CU and dot compatibility pass.
+No other VK agent or queued message was present, so no pause steering was needed.
+Do not repeat handover or change sealed PROGRESS/readiness. Current acceptance
+lives in the attempt and POST_CUTOVER.md. Historical recovery limits remain.
+Next preparation must use published PR142 pin528282d00 until integrated.
+
 ## October 5 Authorized Preparation Continues
 
 The latest native goal authorizes completing restart/cutover after safety checks,

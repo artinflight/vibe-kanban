@@ -1,5 +1,17 @@
 # STATE.md
 
+## October 5 Updated Version Is Production
+
+The authorized cutover and live acceptance succeeded. Updated PID3027197 serves
+vibe.local/5511 from mainfa8122a50, staging8b562265d, tree9dd2bd10a, runtime0.159.2.
+Previous1369037 remains frozen for coordinated latest-data cutback. Protected
+handover took21.972seconds; no rollback or older-database restore occurred.
+Read VK_UPDATED_LIVE_20261005.md for preservation, live UI/runtime/module/CU/dot,
+attachments, original-thread and journal evidence. Historical recovery exceptions
+remain explicit. PR142 operational pin528282d00 is published and used by the
+package; next preparation must load it until integrated. Earlier hold/preparation
+entries below describe prior states, not current authority or production.
+
 ## October 5 Promotion And Authorized Preparation
 
 PR145 promotes staging8b562265d to mainfa8122a50, tree9dd2bd10a; canonical main

@@ -1,5 +1,11 @@
 # STREAM.md
 
+October5 current outcome: authorized restart/cutover and live acceptance are
+complete. Updated3027197 serves production; previous1369037 is frozen for
+latest-data cutback. Record final docs/commit/Desktop acceptance evidence and
+send one final report. No further handover is required. Read
+VK_UPDATED_LIVE_20261005.md; all earlier hold/preparation entries are historical.
+
 October5 current scope: review the five-root recovery, safely reconcile three
 missing Git registrations, rerun backup verification and record truthful readiness.
 The owner explicitly holds restart, cutover and CU resumption. Recovery contents

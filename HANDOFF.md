@@ -10,10 +10,13 @@ PID1369037 on5461. No October5 cutover has happened at this writing.
 Read VK_CUTOVER_PREPARATION_20261005.md and the current package at
 /mnt/vk-storage/vk-green-cutover-20261005. PR145 is merged to mainfa8122a50 with
 the exact staging8b562265d tree. Candidate workflow/browser/module checks pass.
-The original journal and backup chain remain; a separate watched full checkpoint
-is being verified on Desktop. Later unbacked recovery edits remain unaccounted.
-Do not infer readiness from passing app tests: backup delivery, current-sized
-rollback rehearsal, sealed recovery package and final safe drain remain required.
+The original journal and backup chain remain; the new full checkpoint and delta
+are Desktop-verified. Latest-data rollback rehearsal passed in113.386seconds.
+Published PR142 pin528282d00 is required for the next preparation;146 deployment
+regressions and80 package tests pass. Later unbacked recovery edits remain
+unaccounted. Do not infer readiness from app tests: sealed recovery package,
+fresh capture and final safe drain remain required. New minspend repository
+coverage is included in the supplemental backup rather than dropping a guard.
 
 ## October 5 Recovery Verified; Restart Held
 

@@ -1,5 +1,25 @@
 # Backend Restart Protocol
 
+## October 5 Operational Tool Pin
+
+Until draft PR142 is integrated, every new preparation must explicitly load and
+verify published `fix/vk-backup-move-preflight` commit528282d00 or a verified
+descendant. Staging application promotion alone does not install these tools.
+The package receipt, unsealed readiness-repair provenance and module patch proof
+must match the actual packaged files. This pin includes protected-root/watch
+checks, cross-parent move evidence, closed-DB/committed-WAL tests and narrow
+launcher-scratch handling; missing work and unexplained journal gaps still block.
+Discover newly registered repositories at preflight and extend verified backup
+coverage before proceeding. Never remove a missing protected root to pass.
+
+Include immutable AutoSwitch module payloads and their `current` pointer in
+Desktop recovery. The software archive carries the pointer separately in
+`module-links.tar`; recovery must restore both pointer and payload, validate the
+module, and preserve the same latest database. Verify actual candidate module
+identity and sandbox validation, not only an environment variable. Preserve all
+historical recovery limits. See VK_CUTOVER_PREPARATION_20261005.md for receipts,
+146 deployment regressions,80 package checks and the113.386-second rehearsal.
+
 ## Boot Finalization And Recovery Ordering
 
 October4 activation/preservation passed, but boot finalization failed because

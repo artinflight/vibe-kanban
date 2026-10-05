@@ -65,10 +65,24 @@ This is not a production restore or permission to erase historical journal gaps.
 Draft PR142, `fix/vk-backup-move-preflight`, contains the durable tools.
 Published3f15a4796 is installed and hash-bound in the new package;6483d394b also
 corrects the stale readiness interlock reference before sealing and records the
-prior receipt. All144 deployment regressions and80 package operational tests pass.
+prior receipt. Published528282d00 additionally protects module payload/pointer
+recovery and checks the actual candidate module identity. All146 deployment
+regressions and80 package operational tests pass.
 The consumed October4 package and finalization fault evidence remain unchanged.
 Next preparation must explicitly load these published tools until integrated into
-staging; an old staging-only tool copy is insufficient.
+staging; an old staging-only tool copy is insufficient. The next preparation pin
+is528282d00 or a verified descendant of `fix/vk-backup-move-preflight` until PR142
+is integrated. Verify the package receipt and module patch proof, not just branch
+presence. October4's boot-directory finalization prevention remains required.
+
+Full checkpoint b8b117feb1db474f9481096447b762c1 and delta60210d02fd8349a388db57cbd7265f82
+are Desktop-SHA256-verified. The archive stream and67 SQLite payloads were verified;
+targeted extraction verifies all3366 restored entries. This does not claim a new
+full extraction of every source file. The exact current-binary handover rehearsal
+passed all four cases and Desktop restoration in113.386 seconds. Its generated
+copies were retired only after consumer checks and archive verification.
+The newly registered minspend repository is added to the whole-tree supplemental
+capture, leaving the original checkpoint plan and historical journal unchanged.
 
 The current preparation also verified and removed only18 completed private
 rehearsal copies, freeing29,130,399,744 bytes. Six backing archives were freshly
@@ -77,9 +91,8 @@ No user worktree, source, production data, attachment or archive was deleted.
 
 ## Remaining Before Switch
 
-Require completed Desktop receipts for the full checkpoint and software package,
-the exact current-sized backup/ownership/latest-data rollback rehearsal, current
-installed-but-inactive settings and preflight, and a fresh review-state snapshot.
+Require sealed Desktop software recovery, current installed-but-inactive settings,
+preflight and a fresh review-state snapshot before consuming the controller.
 The preliminary snapshot protects13711 turn flags and is SHA256-verified on
 Desktop. Refresh immediately before interruption. Do not replace current flags
 or model choices with an older snapshot. Drain agents with the supported steering

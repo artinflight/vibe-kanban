@@ -56,6 +56,61 @@ class MoveIntegration(unittest.TestCase):
     def reader(self, parent=None):
         return RecopyJournal(lambda since:covered_journal(self.package,since),parent)
 
+    def test_clean_journal_still_rejects_missing_protected_recopy_root(self):
+        absent=self.source/'already-missing'
+        self.plan['move_coverage']['recopy_roots']=[str(absent)]
+        (self.package/'backup-plan.json').write_text(json.dumps(self.plan))
+        with patch('vk_change_journal.request',side_effect=lambda endpoint,since:self.journal.report(since)), \
+             patch('journal_compat.kernel_watches',side_effect=self.watches):
+            self.assertFalse(self.journal.report()['errors'])
+            with self.assertRaisesRegex(AssertionError,'missing or linked'):
+                self.reader()(0)
+
+    def test_clean_journal_still_rejects_unwatched_protected_recopy_root(self):
+        with patch('vk_change_journal.request',side_effect=lambda endpoint,since:self.journal.report(since)), \
+             patch('journal_compat.kernel_watches',return_value=set()):
+            with self.assertRaisesRegex(AssertionError,'no current kernel watch'):
+                self.reader()(0)
+
+    def test_clean_journal_still_rejects_symlink_recovery_root(self):
+        linked=self.source/'alias'
+        linked.symlink_to(self.new.parent,target_is_directory=True)
+        self.plan['move_coverage']['recopy_roots']=[str(linked)]
+        (self.package/'backup-plan.json').write_text(json.dumps(self.plan))
+        with patch('vk_change_journal.request',side_effect=lambda endpoint,since:self.journal.report(since)), \
+             patch('journal_compat.kernel_watches',side_effect=self.watches):
+            with self.assertRaisesRegex(AssertionError,'missing or linked'):
+                self.reader()(0)
+
+    def test_fresh_full_checkpoint_preserves_data_and_old_journal_evidence(self):
+        with patch('vk_change_journal.request',side_effect=lambda endpoint,since:self.journal.report(since)), \
+             patch('journal_compat.kernel_watches',side_effect=self.watches):
+            previous=capture(self.plan,self.root/'old-backups',self.reader(),self.mirror,publish=self.mirror)
+            self.journal.errors.append({'directory_moved':str(self.new.parent/'unknown-old-move')})
+            historical=self.journal.report()
+            with self.assertRaises(AssertionError):
+                self.reader(previous)(previous['journal_sequence'])
+            old=self.journal
+            fresh=Journal(self.plan)
+            fresh.tree(self.source)
+            fresh.ready=True
+            self.journal=fresh
+            try:
+                with self.assertRaisesRegex(ValueError,'journal instance'):
+                    capture(self.plan,self.root/'new-backups',self.reader(previous),self.mirror,previous,self.mirror)
+                checkpoint=capture(self.plan,self.root/'new-backups',self.reader(),self.mirror,publish=self.mirror)
+                self.assertIsNone(checkpoint['parent'])
+                destination=self.root/'new-backups'/'restored'
+                restore_chain(checkpoint,destination)
+                recovered=destination/'files'/str(self.old).lstrip('/')
+                self.assertEqual((recovered/'dirty-work').read_text(),'uncommitted agent work')
+                self.assertEqual((recovered/'rollout.jsonl').read_text(),'original thread history\n')
+                self.assertEqual(old.report()['errors'],historical['errors'])
+                self.assertTrue(Path(previous['folder'],previous['archive']).is_file())
+            finally:
+                fresh.close()
+                self.journal=old
+
     def test_cli_reader_uses_sidecar_without_changing_parent_plan(self):
         coverage=self.plan.pop('move_coverage')
         plan_path=self.package/'custom-plan.json'

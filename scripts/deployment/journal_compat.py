@@ -24,6 +24,14 @@ def observed_move(path, mask):
              and mask&(MASK|0x800)==(MASK|0x800))
     assert moved_in or removed, 'Missing move-in or complete deletion evidence'
 
+def require_recopy_roots(allowed, roots, covered):
+    for path in allowed:
+        assert path.is_absolute() and str(path)==os.path.normpath(str(path)), 'Invalid protected recopy root'
+        assert path not in roots and roots.intersection(path.parents), 'Protected recopy root outside bounded scope'
+        assert path.is_dir() and not path.is_symlink(), 'Protected recopy root is missing or linked'
+        assert not any(parent.is_symlink() for parent in path.parents), 'Protected recopy root traverses a symlink'
+        assert covered(path), 'Protected recopy root has no current kernel watch'
+
 def source_removal(path, parent, events, roots, covered, move_sources):
     explicit=move_sources.get(str(path))
     candidates=[Path(p) for p,mask in events.items()
@@ -100,6 +108,9 @@ def journal(root,since=0,recopy_roots=None,move_sources=None,*,plan_path=None):
             if any((Path(directory)/d).is_symlink() for d in dirs):return False
         return count>0
     roots={Path(p).resolve() for p in plan['sources']}
+    # A clean/new journal cannot certify a protected folder that was already
+    # missing before it started. Check declared recovery roots on every read.
+    require_recopy_roots({Path(p) for p in recopy_roots},roots,covered)
     unique=list({json.dumps(e,sort_keys=True):e for e in full['errors']}.values())
     moved=[error for error in unique if set(error)=={'directory_moved'}]
     repair=set()

@@ -79,6 +79,18 @@ The consumed October 4 package remains unchanged as historical evidence.
 
 ## Validation And Limits
 
+October5 adds an unconditional check of every declared bounded recovery root:
+it must exist, remain within protected scope, avoid symlinks and have a current
+kernel watch even when the journal has no errors. Starting a new journal does
+not turn a missing folder into an accepted baseline. When historical rename
+pairing cannot be established, preserve the original journal/chain and recovery
+limits, then make a complete new current-data checkpoint. Never reuse the old
+incremental parent with a new journal identity. A real-journal regression proves
+this path restores dirty files and original thread data, rejects old-parent reuse
+and leaves historical errors and archives intact. Missing/unwatched/linked roots
+remain fail-closed. All139 deployment regressions pass with these four additions.
+This does not prove recovery of later unbacked edits.
+
 The expanded suite covers the original 77 backup regressions, closed SQLite
 databases and committed WAL, full/delta archives, delivery resumption and
 authenticated recopy. A real filesystem/inotify cross-parent move test captures

@@ -1,5 +1,13 @@
 # October 4 After-cutover Operational Follow-up
 
+October5 addition: all declared recopy roots must exist and be currently watched
+even when a fresh journal reports no errors. Historical move pairing that cannot
+be proved requires a new full checkpoint with the old journal/archives retained,
+not a fabricated mapping or cross-journal delta. New integration regressions cover
+missing, unwatched and linked roots plus full checkpoint recovery with historical
+evidence preserved. This tooling branch is pinned into the new preparation;
+production activation remains owned by the maintenance controller and live checks.
+
 Cutover acceptance is complete; do not replay the handover. Read
 VK_UPDATED_LIVE_20261004.md and VK_BACKUP_MOVE_FOLLOWUP.md. This branch is
 `fix/vk-backup-move-preflight` from staging `86d1c083a`, focused on backup and

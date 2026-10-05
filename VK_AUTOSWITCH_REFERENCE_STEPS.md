@@ -58,3 +58,36 @@ Future backend hard-guard/protocol changes remain VK::Staging's release concern;
 these module/launcher corrections need no backend restart. Real savings still
 require useful downward recommendations and total accepted-task usage including
 classification, rework and children. Auto requires separate authorization.
+
+## Delivered October 5 without restart
+
+Published `reference-steps-aac5bd457-20261005` through the running Green module
+root. Manifest hash: `056385f9931db5e9b619fadbf5e8db18d160fea7dee80da39e2fb9c73e914811`.
+The trusted validator is unchanged; backend PID3027197 and its start time are
+unchanged. The shared launcher has the reviewed classifier-only adapter;
+its previous bytes/hashes are retained in `launcher-before.mjs` and
+`launcher-preparation.json`. Existing native turns and ordinary agent frames
+are untouched. Live check and loader/sandbox verification passed.
+
+Exactly one real previously failed classification was replayed, not a development
+execution: Luna5.6/low completed in9,823ms with4,711 input (zero cached),259 output
+and168 reasoning tokens. Native thread/turn and model/effort were confirmed. Its
+unclear troubleshooting scope remains protected/Astra; this is a positive safety
+control, not a downward-routing failure. No paid retry or synthetic benchmark was
+run. The separate known-link replay uses no inference and admits qualified
+Luna6/medium; existing Recommend experimental ordering suggests Sol6/low instead.
+Actual paid development still follows the operator's choice in Recommend.
+
+Receipts: LIVE_PUBLICATION.json, NATIVE_CLASSIFIER_ACCEPTANCE.json, replay-results.json,
+context-tests.log, routing-tests.log, selection-tests.log and clippy.log in the
+private evidence root. Routing tests:56 passed across two disjoint filters,
+one existing opt-in test ignored. Three adapter tests pass. Formatting/governance
+and CU wire/fixture byte checks pass. No frontend/schema change is involved;
+full workspace/desktop CI remains the generic PR validation path. A future genuine
+Recommend admission must carry this version/hash before claiming production
+recommendation improvement; no accepted-task savings are claimed from replays.
+
+Rollback is bounded: publish the preserved prior module version
+`staging-a661a8156-20261005` with the module tool; atomically restore the retained
+launcher bytes only if no later owner has changed its current hash. Do not
+restart or restore an old database. No rollback was needed or performed.

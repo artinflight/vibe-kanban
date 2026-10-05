@@ -1525,3 +1525,5 @@ See VK_AUTOSWITCH_RELOAD.md for mandatory next-candidate packaging and remaining
 acceptance/ownership dependencies; CU credit budgeting is a separate issue.
 
 2026-10-05 AutoSwitch reference-step correction: classify known link collections as presentation using completed context; preserve surrounding protection and explicit floors. Repair oversized native config metadata for restricted classifiers only. See VK_AUTOSWITCH_REFERENCE_STEPS.md and retained private receipts. No backend restart or Auto activation.
+
+2026-10-05 Hot publication receipt: reference-steps-aac5bd457-20261005 active, PID3027197 unchanged, validator unchanged. Native classifier repaired (one real replay:4,711 input/259 output,9,823ms); unknown troubleshooting remains protected. Known-link replay admits Luna6/medium with no inference; Recommend experimental candidate Sol6/low. See private LIVE_PUBLICATION.json.

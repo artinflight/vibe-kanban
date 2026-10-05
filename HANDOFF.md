@@ -6,7 +6,12 @@ The no-restart module is live on October5 Green PID3027197/port5511, source
 for known-link presentation plus a classifier-only config metadata adapter for
 the existing native launcher. Native config exceeded the current reader limit;
 ordinary agent frames and authoritative restrictions/settings/usage remain intact.
-Local tests and zero-inference real-request replay passed. Publication/turn receipts
+Live publication and old-core sandbox verification passed without restart;
+backend PID3027197 is unchanged. Release `reference-steps-aac5bd457-20261005`.
+The known-link replay admits Luna6/medium (Recommend: experimental Sol6/low).
+One formerly failed native classifier replay now completes on Luna5.6/low;
+4,711 input/259 output tokens and9,823ms, no retry. Ambiguous work stays Astra.
+56 routing regressions and three adapter tests passed; no net savings claim yet. Publication/turn receipts
 are retained outside Git under `/mnt/vk-storage/vk-autoswitch-reference-steps-20261005`.
 No restart, cutover, Auto enablement or staging-owner coordination. Recommend stays
 required; complete useful routing deadline remains October30 (allowance20x →10x).

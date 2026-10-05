@@ -144,7 +144,7 @@ fn schema() -> Value {
     json!({"type":"object","properties":properties,"required":required,"additionalProperties":false})
 }
 
-fn validate(c: &SemanticClass) -> bool {
+pub(crate) fn validate(c: &SemanticClass) -> bool {
     let mut value = serde_json::to_value(c).unwrap();
     value["scope_relation"] = json!(c.scope_relation);
     let schema = schema();

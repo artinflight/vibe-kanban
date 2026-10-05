@@ -1,3 +1,17 @@
+# October 5: AutoSwitch reference-step and classifier startup correction
+
+Current branch `fix/autoswitch-reference-steps` begins at staging `8b562265d`.
+The no-restart module is live on October5 Green PID3027197/port5511, source
+`a661a8156`. See VK_AUTOSWITCH_REFERENCE_STEPS.md. Scope is a hot module fix
+for known-link presentation plus a classifier-only config metadata adapter for
+the existing native launcher. Native config exceeded the current reader limit;
+ordinary agent frames and authoritative restrictions/settings/usage remain intact.
+Local tests and zero-inference real-request replay passed. Publication/turn receipts
+are retained outside Git under `/mnt/vk-storage/vk-autoswitch-reference-steps-20261005`.
+No restart, cutover, Auto enablement or staging-owner coordination. Recommend stays
+required; complete useful routing deadline remains October30 (allowance20x →10x).
+Older entries below are historical.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

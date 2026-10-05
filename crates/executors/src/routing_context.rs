@@ -47,7 +47,7 @@ pub fn apply_reference_context(a: &mut Assessment, prompt: &str, reply: Option<&
     }
     a.envelope = "bounded";
     a.floor = CapabilityFloor::Routine;
-    a.evidence = "completed_context_reference_lookup";
+    a.evidence = "completed_context_reference_lookup".into();
     a.triage.intent = "reference_lookup".into();
     a.triage.scope = "localized".into();
     a.triage.pattern = "established".into();

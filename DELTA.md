@@ -1512,3 +1512,14 @@ match but remains Astra/high on a fresh semantic data-risk assessment involving
 conditional drive-protection limits and a safely stopped job. Production hotfix
 control remains Astra/high without inference. These are recommendations, not
 accepted-task savings or live changes. See VK_AUTOSWITCH_RISK_PHASE.md.
+
+## 2026-10-05: AutoSwitch separately reloadable classification module
+
+Added a versioned sandboxed pure worker at existing parent/controlled-child
+routing boundaries, snapshot-pinned prompts/qualification/model-effort policy,
+last-good/built-in visible fallback and an SSD-only prepare/publish/check tool.
+Native inference/execution, safety constraints and CU wire contract remain in VK.
+Recommend is required; no deployment/restart/cutover or Auto activation. Deadline
+for full useful router readiness is before October 30, 2026 (20x becomes 10x).
+See VK_AUTOSWITCH_RELOAD.md for mandatory next-candidate packaging and remaining
+acceptance/ownership dependencies; CU credit budgeting is a separate issue.

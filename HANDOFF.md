@@ -1,5 +1,26 @@
 # HANDOFF.md
 
+## October 5 Recovery Verified; Restart Held
+
+The latest owner handoff authorizes recovery/readiness only, not restart,
+cutover or CU resumption. This supersedes the older conditional cutover note.
+Read the recovery update in VK_RESTART_PREPARATION_20261005.md and
+/mnt/vk-storage/five-root-recovery-20261005/backup-coverage-recheck.json.
+All3366 recovered entries, including3052 regular files, independently match
+the October4 19:48:19 snapshot. Three Git administrative directories are restored
+from checksum-verified archives using atomic no-replace placement. HEAD/index
+objects and registrations verify; shared refs and recovered contents are unchanged.
+The scoped repair archive and receipt are SHA256-verified on Desktop B:.
+All135 checked-in operational regressions pass. Current production1369037 and
+dot2937772 remain running; previous3059021 remains frozen. No production DB restore,
+settings change, route change, service interruption or CU resumption occurred.
+All12 protected recopy roots exist, but backup verification still fails closed
+on unproven rename-source evidence. Three repair moves also need explicit bounded
+coverage. Do not reset the journal, drop roots, mutate the bound coverage receipt,
+or claim a full current backup from the scoped repair archive. Later unbacked
+edits and exact deletion timing/CU causality remain unproven. Preparation is not
+cutover-ready; promotion PR145 remains open with current CI passing.
+
 ## October 5: Preparation Blocked Before Any Cutover
 
 Read VK_RESTART_PREPARATION_20261005.md and the new package's

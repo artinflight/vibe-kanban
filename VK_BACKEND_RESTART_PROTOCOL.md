@@ -220,7 +220,16 @@ routing back. Verify the production entrypoint, not just the thawed process.
 Downloaded model catalogues and debug telemetry are not native conversations.
 Document narrow regenerable/diagnostic exclusions and retained baseline copies;
 never apply them to histories, goals, settings, execution output or worktrees.
-Refresh the journal and online baseline after a lost/moved-directory watch.
+Refresh journal coverage and the online baseline after a lost/moved-directory
+watch without clearing its history or silently accepting missing protected work.
+Restoring folders does not establish later-edit recovery or make old rename-source
+evidence valid. Missing Git administrative directories can be recovered separately
+from checksum-verified backups, preserving HEAD/index and current shared refs;
+never recreate the worktree by checkout over recovered contents. Atomic registration
+placement itself produces directory-move events: account for its exact source and
+destination in a new authenticated bounded-coverage revision before sealing.
+Keep unresolved historical events and recovery limits visible. A scoped repair
+archive is not a complete production backup or permission to restart.
 Pin an online SQLite read snapshot where continuous writes would otherwise keep
 restarting backup. Frozen-boundary committed-generation checks still apply.
 

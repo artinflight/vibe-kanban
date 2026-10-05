@@ -1,5 +1,21 @@
 # STATE.md
 
+## October 5 Recovery And Current Restart Hold
+
+The five missing roots are restored and independently verified against the
+October4 19:48:19 snapshot:3366 entries/3052 regular files match hashes, modes
+and symlinks. Their three missing Git registrations are restored without changing
+shared refs or recovered working files; each index's referenced objects exists.
+Read the recovery update in VK_RESTART_PREPARATION_20261005.md. A scoped recovery
+archive is verified on Desktop; it is not a fresh full production backup.
+The existing backup scope and journal remain unchanged, including original gaps.
+All12 recopy roots exist, but current backup verification remains fail-closed on
+rename evidence and needs coverage for the three registration-repair moves.
+Later unbacked edits remain unaccounted, and exact deletion timing/CU causality
+are not established. The latest owner handoff explicitly maintains restart,
+cutover and CU-resumption holds. Current production1369037 is unchanged; previous
+3059021 stays frozen. No old production DB was restored. Preparation is not ready.
+
 ## October 5 Restart Preparation
 
 Current production remains October4 PID1369037 on5461; previous3059021 is frozen.

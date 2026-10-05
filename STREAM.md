@@ -1,5 +1,13 @@
 # STREAM.md
 
+October5 current scope: review the five-root recovery, safely reconcile three
+missing Git registrations, rerun backup verification and record truthful readiness.
+The owner explicitly holds restart, cutover and CU resumption. Recovery contents
+and registrations now verify without overwriting newer work or moving refs.
+Backup verification still rejects unresolved rename evidence; retain the entire
+journal and protected scope. Read VK_RESTART_PREPARATION_20261005.md for the scoped
+Desktop backup, validation and remaining preparation gaps. No deployment occurred.
+
 October4 current outcome: authorized Model AutoSwitch cutover and live acceptance
 completed. Updated version serves production; original process remains frozen
 for same-latest-data cutback. Missing boot-directory finalization was repaired

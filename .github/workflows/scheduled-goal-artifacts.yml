@@ -50,4 +50,3 @@ jobs:
           path: ${{ env.VK_ARTIFACT_DIR }}
           retention-days: 14
           if-no-files-found: error
-

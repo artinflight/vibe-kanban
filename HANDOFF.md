@@ -1,6 +1,30 @@
 # HANDOFF.md
 
+## October 6 Rollout Gates Follow-Up; No Deployment
+
+Read VK_FIRST_RUN_STOP_REVIEW_20261006.md, VK_FIRST_RUN_FRONTEND_20261006.md and
+VK_ARCHIVE_DEPENDENCY_REVIEW_20261006.md. Original input worker exited before the
+ten-second HTTP timeout; two pinned reproductions returned398/468ms with empty
+cgroups and no later provider work. Exact acknowledgement delay remains open.
+Developer516148dc2 adds stalled-stop evidence without production-code changes;
+its review/CI is separate from the86f62b2 artifacts. Do not call42 assertions full
+acceptance. A real765-file frontend now builds in124seconds using the installed
+bounded bulk tool and is packaged with the verified candidate/v2 fallback/guard/
+CU source.772 payload hashes verify; browser asset/local-shell smoke passes at
+1440/390px, with a documented pre-existing mobile onboarding overflow and expected
+unconfigured-remote auth errors. No full UX acceptance is claimed.
+Exact receipts are under /mnt/vk-storage/vk-first-run-gates-20261006.
+No production restart, routing, owner-setting change, cleanup or paid test.
+SchedulingON/creditsOFF stay preserved. Parent review and explicit approval,
+fresh backups/drain/configuration binding and compatible CU-first rollout remain.
+All21 older archive ancestors remain uncleared pending full Desktop-chain restore,
+resource/availability agreement, consumer checks and separate deletion approval;
+the six direct parents stay local. Protected-process cleanup stays blocked.
+
 ## October 6 Combined First-Run Acceptance Executed; Rollout Held
+
+This earlier entry is historical; the follow-up above supersedes its missing
+frontend statement, not its unresolved stop finding or rollout hold.
 
 Read VK_FIRST_RUN_ROLLOUT_PLAN_20261006.md and the combined-acceptance.json under
 /mnt/vk-storage/vk-first-run-staging-acceptance-20261006. Final candidates are

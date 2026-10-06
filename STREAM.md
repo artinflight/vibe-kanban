@@ -1,12 +1,17 @@
 # STREAM.md
 
-October6 current scope: preparation and combined synthetic acceptance planning
-for VK PR147/CU PR38 scheduled native first run. No production restart, merge,
-deploy, routing/settings change or agent interruption is authorized. Parent review
-is independent; do not modify development branches. Read
-VK_FIRST_RUN_ROLLOUT_PLAN_20261006.md. Existing receipts verify, but actual combined
-HTTP/scheduler acceptance is blocked by SSD headroom and missing source-bound
-server/fallback artifacts; PR147 backend-test CI also fails. Earlier approvals
+October6 current scope: close rollout gates for VK PR147/CU PR38 scheduled native
+first run. No production restart, merge, deploy, routing/settings change or agent
+interruption is authorized. Parent review is independent; do not modify development
+branches. Read VK_FIRST_RUN_ROLLOUT_PLAN_20261006.md and
+VK_FIRST_RUN_STOP_REVIEW_20261006.md. Six isolated groups passed42 assertions, but
+the original stop acknowledgement timeout remains unresolved. Two focused
+reproductions stopped promptly; independent guard containment is distinct from
+the HTTP response. Candidate/fallback artifacts and11 green checks for86f62b2 are
+available; the real frontend/payload now builds and passes asset/local-shell smoke.
+Later regression-only516148dc2 CI/review and final approval remain explicit gates.
+The older CI/artifact blockers are superseded. Archive retirement is read-only review;
+no cleanup can bypass protected-process or chain dependencies. Earlier approvals
 below are historical, not authority for this feature rollout.
 
 October5 current outcome: authorized restart/cutover and live acceptance are

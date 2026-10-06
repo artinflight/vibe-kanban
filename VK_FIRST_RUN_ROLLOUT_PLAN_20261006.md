@@ -4,8 +4,10 @@
 
 October 6 staging acceptance only. **Not approved for rollout.** Six isolated
 HTTP/CU/native test groups passed their assertions; the earlier stop timeout
-still requires review, the supplied frontend is a placeholder, and independent
-final-delta review plus an explicit rollout checkpoint remain outstanding.
+still requires review. A real paired frontend/payload is now built and verified;
+independent final-delta review plus an explicit rollout checkpoint remain
+outstanding. See VK_FIRST_RUN_STOP_REVIEW_20261006.md for the exact incident and
+VK_FIRST_RUN_FRONTEND_20261006.md for the package and browser limitations.
 No production restart, merge, deployment, routing change, database restore,
 settings write, paid inference or real Android test occurred.
 
@@ -39,8 +41,12 @@ checked before each fixture. Developer source trees remained tracked-clean.
 - The old27d9562d2 audit and its CI/artifact/headroom blockers are historical,
   superseded by this receipt. Its retained evidence was not deleted.
 
-The HTTP bundle explicitly contains a placeholder frontend. It is not a complete
-production release and not browser acceptance of the eventual paired frontend.
+The original HTTP bundle contains a placeholder frontend and is unchanged.
+The separate source-pinned payload documented in VK_FIRST_RUN_FRONTEND_20261006.md
+supplies the real external frontend. Its deployment must set
+`VK_FRONTEND_DIST_DIR` to that payload, never fall back to the embedded placeholder.
+Developer regression-only follow-up516148dc2 is now pushed; its new CI/final
+review is separate from the86f62b2 artifact checks. Production code is unchanged.
 
 ## Exact Combined Receipts
 
@@ -87,6 +93,11 @@ Initial root `vk-continuation-http-lcp7ys3k` reached authentic initialization
 but CU's ten-second stop request timed out during the input-hold case.
 `driver.log`, HTTP receipts, backend log and `fixture-cleanup.json` remain.
 No failed prompt/start was retried. Cleanup confirmed all its workers inactive.
+The original journal now proves the input worker exited at19:33:18.299685UTC,
+18.585seconds before lease expiry. Two focused reproductions returned in398/468ms,
+with no later provider work. Developer stalled-stop tests separately support the
+independent guard. Exact original HTTP acknowledgement delay remains unresolved;
+all timelines/uncertainties are in VK_FIRST_RUN_STOP_REVIEW_20261006.md.
 Later full runs passed, but that is not evidence that the original timeout
 cannot recur. Review bounded stop/transport reconciliation before release;
 do not erase this finding or change developer code without coordinating review.
@@ -138,7 +149,11 @@ or drop holds/receipts to make an old reader start.
    AutoSwitch module, shared private telemetry and dot connector. User selection
    stays inert until the saved night window. No paid/real Android test is implied.
 
-Work can continue during preparation. Final service changes affect CU scheduling
+Work can continue during preparation. The proposed operator checkpoint is:
+approve the reviewed final commits and compatible CU-first/VK-second rollout,
+then agree a safe drain of active VK turns and the saved scheduler window.
+No pause steering, service change or real-goal enrollment is authorized now.
+Final service changes affect CU scheduling
 and VK agent execution only after a safe drain. No full-scale handover timing
 for this candidate has been measured. October5's21.972 seconds is historical,
 not a promise for this deployment. Any cutback uses the compatible reader and

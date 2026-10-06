@@ -31,7 +31,6 @@ jobs:
     env:
       CARGO_INCREMENTAL: '0'
       CARGO_TARGET_DIR: ${{ github.workspace }}/../vk-scheduled-goal-target
-      VK_ARTIFACT_DIR: ${{ runner.temp }}/vk-scheduled-goal-artifacts
       VK_EXPECTED_SOURCE: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v6
@@ -43,10 +42,12 @@ jobs:
           toolchain: nightly-2025-12-04
           cache-key: scheduled-goal-artifacts-${{ runner.os }}-${{ runner.arch }}
       - name: Build source-fenced HTTP, rollback and test artifacts
+        env:
+          VK_ARTIFACT_DIR: ${{ runner.temp }}/vk-scheduled-goal-artifacts
         run: python3 -B scripts/build-scheduled-goal-artifacts.py
       - uses: actions/upload-artifact@v6
         with:
           name: scheduled-goal-${{ env.VK_EXPECTED_SOURCE }}
-          path: ${{ env.VK_ARTIFACT_DIR }}
+          path: ${{ runner.temp }}/vk-scheduled-goal-artifacts
           retention-days: 14
           if-no-files-found: error

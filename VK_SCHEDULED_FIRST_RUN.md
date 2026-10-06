@@ -188,10 +188,19 @@ proofs, logs and `acceptance.json` remain locally intact. Inventory and the froz
 one-file cleanup allowlist are under the evidence root. No shared cache, fixture
 evidence, worktree, attachment, application data or service was deleted.
 
-Artifact checksums/source must be verified again after transfer. Local HTTP
-placement and combined acceptance remain blocked unless staging obtains enough
-approved bulk storage; artifact existence does not authorize cleanup, deployment
-or restart. Retain latest v2 data on rollback, including post-cutover writes.
+Artifact checksums/source must be verified again after transfer. The reviewed
+driver now accepts `--binary-stdin --expected-sha256 <manifest hash>`: executable
+bytes (maximum 256 MiB) enter a sealed memfd, then only a read-only bind-data
+mount at the fixture's `validation-binary` path is added to the original boundary.
+Host root/socket/PID/network/supervisor restrictions stay intact. Bubblewrap
+0.9's bind-data temporary file is on its private namespace root tmpfs; no bulk
+payload goes to SSD or system disk. Small fixture state/proofs remain on mounted
+SSD. A read-only executable/tamper probe verifies the transport before use.
+This can run test binaries or read-only `--capacity-build-info` even at low disk
+capacity. Persistent local HTTP placement remains a storage blocker; staging
+must use this namespace-only read-only transport or obtain approved bulk storage
+for its combined runner. No root-disk fallback or extra cleanup is authorized.
+Retain latest v2 data on rollback, including post-cutover writes.
 
 ## Combined acceptance and release requirements (staging owner)
 

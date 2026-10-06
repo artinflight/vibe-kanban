@@ -1,5 +1,5 @@
 """Staging-only orchestration inside the unchanged reviewed CU boundary."""
-import argparse, hashlib, json, os, selectors, sqlite3, subprocess, sys, time, uuid
+import argparse, hashlib, json, os, selectors, sqlite3, subprocess, sys, time, uuid, threading
 from pathlib import Path
 from urllib.request import Request,urlopen
 from urllib.error import HTTPError
@@ -7,7 +7,7 @@ sys.dont_write_bytecode=True
 OUT=Path(__file__).resolve().parent
 VK=Path('/mnt/vk-storage/worktrees/fa60-vk-scheduled-goa/_vibe_kanban_repo')
 CU=Path('/mnt/vk-storage/worktrees/d750-cu-credit-aware/codexusage')
-BUNDLE=Path('/mnt/vk-storage/vk-scheduled-first-run-20261006/bundle-86f62b2a4a1baff54cde715749b97f283907b8f6')
+BUNDLE=Path('/mnt/vk-storage/vk-scheduled-first-run-20261006/bundle-9b3f8253879abdc5ebc88b3c3411946ce6f6a3b4')
 sys.path.insert(0,str(CU/'ops'))
 from fixture_isolation import provision,prove,command,environment,wrapper,require
 from fixture_manager import FixtureManager
@@ -18,7 +18,7 @@ def put(p,x):p.write_text(json.dumps(x,indent=2)+'\n')
 
 def outer():
     manifest=json.loads((BUNDLE/'manifest.json').read_text())
-    require(manifest['sourceCommit']=='86f62b2a4a1baff54cde715749b97f283907b8f6','Wrong source')
+    require(manifest['sourceCommit']=='9b3f8253879abdc5ebc88b3c3411946ce6f6a3b4','Wrong source')
     require(subprocess.check_output(['git','-C',str(CU),'rev-parse','HEAD'],text=True).strip()=='95e7aea47e137015daa8efcbb210184ee7ce723c','Wrong CU')
     for name,entry in manifest['artifacts'].items():require(sha(BUNDLE/name)==entry['sha256'],name)
     for name,value in manifest['trackedHashes'].items():require(sha(VK/name)==value,name)
@@ -28,6 +28,30 @@ def outer():
     (root/'controller').mkdir();(root/'home').mkdir()
     manager=FixtureManager(root,BUNDLE/'vk-capacity-guard')
     publication=Publication(root)
+    done=threading.Event()
+    def observe():
+        with publication.open_text('host-observer.jsonl') as log:
+            while not done.is_set():
+                with manager.lock:units=list(manager.units)
+                for unit in units:
+                    if not unit.endswith('.service'):continue
+                    actual=manager.prefix+unit
+                    try:
+                        output=subprocess.check_output(['systemctl','--user','show',actual,'-p','MainPID','-p','ActiveState','-p','SubState','-p','Result','-p','ExecMainStatus','-p','ControlGroup'],text=True,timeout=2)
+                        properties=dict(line.split('=',1) for line in output.splitlines() if '=' in line)
+                        group=properties.get('ControlGroup','');procs=Path('/sys/fs/cgroup'+group+'/cgroup.procs')
+                        members=procs.read_text().splitlines() if group and procs.exists() else []
+                        log.write(json.dumps({'atMs':time.time()*1000,'unit':actual,'properties':properties,'cgroupPids':members})+'\n');log.flush()
+                    except Exception as error:log.write(json.dumps({'atMs':time.time()*1000,'unit':actual,'error':str(error)})+'\n');log.flush()
+                for path in (root/'controller').glob('*.json'):
+                    if path.name=='state.json':continue
+                    try:
+                        value=json.loads(path.read_text())
+                        if 'revoked' in value:log.write(json.dumps({'atMs':time.time()*1000,'leaseFile':path.name,'lease':value})+'\n');log.flush()
+                    except (OSError,ValueError):pass
+                done.wait(.1)
+    observer=threading.Thread(target=observe)
+    if os.environ.get('VK_STAGING_ACCEPTANCE_PHASE') in ('stalled','lock-only'):observer.start()
     try:
         proof=prove(root,evidence)
         wrapper(root,BUNDLE/'vk-capacity-guard','isolated-capacity-guard')
@@ -38,6 +62,9 @@ def outer():
         publication.write_text('driver-result.json',json.dumps(dict(exitCode=p.returncode,productionChanged=False,paidProvider=False)))
         require(boundary=={n:sha(CU/'ops'/n) for n in boundary},'Boundary changed')
     finally:
+        done.set()
+        if observer.is_alive():observer.join(timeout=5)
+        require(not observer.is_alive(),'Observer still running')
         manager.close();publication.close()
     print((root/'driver.log').read_text()[-12000:],flush=True)
     return p.returncode
@@ -56,15 +83,27 @@ def inner(root,phase):
          'VK_CAPACITY_MODEL_PROVIDER':'fixture','VK_CAPACITY_SCHEDULED_GOAL_INITIALIZATION':'1','VK_USE_SYSTEMD_RUN':'1',
          'VK_CODEX_BASE_COMMAND':'python3 '+str(provider),'VK_GOAL_TEST_CODEX':native,'HOST':'127.0.0.1','BACKEND_PORT':'49174',
          'GIT_CONFIG_NOSYSTEM':'1','RUST_LOG':'info','VK_GOAL_TEST_CAPTURE':'1'}
+    if phase=='frontend':env['VK_FRONTEND_DIST_DIR']='/mnt/vk-storage/vk-first-run-gates-20261006/frontend-86f62b2/source/packages/local-web/dist'
     profiles={'executors':{'CODEX':{}}}
     variants=['success','input','failure','empty','plan','pending','race','concurrent1','concurrent2','concurrent3','race-goal','race-thread','race-objective','race-created','race-anchor','revoke','cutoff','interrupted','withdrawn']
+    if phase in ('stalled','lock-only'):
+        variants+=['stalled-one','stalled-two-a','stalled-two-b','stalled-unconfirmed','stalled-lock']
+        if phase=='lock-only':variants=['pending','stalled-lock']
+        faults=root/'fault-bin';faults.mkdir()
+        for name in ('systemctl','systemd-run'):(faults/name).symlink_to(OUT/'fault-manager.py')
+        env['PATH']=str(faults)+':'+env['PATH']
+        env['VK_SYNTHETIC_ROOT']=str(root)
+        env['VK_CODEX_BASE_COMMAND']='python3 '+str(OUT/'stall-provider.py')
     for variant in variants:
         scenario='capacity-first-run-'+variant if variant in ('input','failure','empty') else 'capacity-first-run'
         profiles['executors']['CODEX'][variant.upper()]={'CODEX':{'model':'gpt-6','model_provider':'fixture','sandbox':'danger-full-access','ask_for_approval':'never',
             'plan':variant=='plan','base_command_override':'python3 '+str(provider),
             'env':{'VK_GOAL_TEST_SCENARIO':scenario,'VK_GOAL_TEST_CODEX':native,'VK_GOAL_TEST_CAPTURE':'1'}}}
-    profiles['executors']['CODEX']['DEFAULT']=profiles['executors']['CODEX']['SUCCESS']
-    profiles['executors']['CODEX']['DELAYED']={'CODEX':{**profiles['executors']['CODEX']['SUCCESS']['CODEX'],'base_command_override':'python3 '+str(OUT/'delay-provider.py')}}
+        if variant.startswith('stalled-'):
+            profiles['executors']['CODEX'][variant.upper()]['CODEX'].update(base_command_override='python3 '+str(OUT/'stall-provider.py'))
+            profiles['executors']['CODEX'][variant.upper()]['CODEX']['env'].update(VK_GOAL_TEST_SCENARIO='capacity-first-run-stalled',VK_STALLED_TIMELINE=variant+'-timeline.jsonl')
+    profiles['executors']['CODEX']['DEFAULT']=profiles['executors']['CODEX'].get('SUCCESS',profiles['executors']['CODEX']['PENDING'])
+    profiles['executors']['CODEX']['DELAYED']={'CODEX':{**profiles['executors']['CODEX']['DEFAULT']['CODEX'],'base_command_override':'python3 '+str(OUT/'delay-provider.py')}}
     if phase in ('fencing','launcher'):env['VK_CODEX_BASE_COMMAND']='python3 '+str(OUT/'delay-provider.py')
     put(xdg/'vibe-kanban/profiles.json',profiles)
     origin='http://127.0.0.1:49174'
@@ -92,6 +131,11 @@ def inner(root,phase):
         process=None
     try:
         initial=start();require(initial['state']['version']==1,'Wire compatibility')
+        if phase=='frontend':
+            result=subprocess.run(['node','/mnt/vk-storage/vk-first-run-gates-20261006/frontend-browser.mjs',str(root),origin,env['VK_FRONTEND_DIST_DIR']],env=env,timeout=120)
+            require(result.returncode==0,'Frontend browser failed')
+            put(root/'combined-result.json',{'passed':True,'phase':phase,'productionChanged':False,'paidProvider':False})
+            return
         stop()
         dbpath=xdg/'vibe-kanban/db.v2.sqlite'
         with sqlite3.connect(dbpath) as db:
@@ -147,6 +191,7 @@ def inner(root,phase):
                 db.execute('INSERT INTO workspace_repos(id,workspace_id,repo_id,target_branch) VALUES(?,?,?,?)',(uuid.uuid4().bytes,wid,rid,'main'))
                 db.execute('INSERT INTO sessions(id,workspace_id,executor,name) VALUES(?,?,?,?)',(sid,wid,'CODEX','Synthetic '+f['variant']))
                 profile=f['variant'].upper() if f['variant'] in ('input','failure','empty','plan') else 'SUCCESS'
+                if f['variant'].startswith('stalled-'):profile=f['variant'].upper().replace('-','_')
                 if f['variant'] in ('cutoff','interrupted','withdrawn'):profile='DELAYED'
                 if phase=='launcher':profile='DELAYED'
                 action={'typ':{'type':'CodingAgentFollowUpRequest','prompt':'Record an ordinary synthetic seed anchor.','session_id':f['threadId'],'executor_config':{'executor':'CODEX','variant':profile},'working_dir':None},'next_action':None}

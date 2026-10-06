@@ -1,5 +1,10 @@
 # October 6 First-Run Frontend And Candidate Payload
 
+**Current payload:** VK_FIRST_RUN_FINAL_ACCEPTANCE_20261006.md binds this
+unchanged frontend to final9b3f82538 candidate and disabled-v2 fallback, with a
+fresh final-backend browser check and773 verified members. The earlier86f62b2
+backend payload below remains historical evidence, not the release to deploy.
+
 ## Result
 
 The real VK frontend is built from exact source

@@ -1,5 +1,12 @@
 # Scheduled First Run: Stop Incident Review
 
+**Historical investigation:** final9b3f82538 acceptance is recorded in
+VK_FIRST_RUN_FINAL_ACCEPTANCE_20261006.md. Parent review cleared observed
+containment; final-source real HTTP stalls and lock contention now pass bounded
+responses with fail-closed reconciliation. The original exact revoke/provider
+timestamps and exact acknowledgement delay remain unavailable. The retained
+investigation below is not current release readiness and must not be erased.
+
 ## Decision
 
 The original ten-second CU stop timeout is **not resolved**. It is not evidence

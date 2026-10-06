@@ -1,5 +1,22 @@
 # HANDOFF.md
 
+## October 6 Final9b3f82538 Acceptance; Production Unchanged
+
+Read VK_FIRST_RUN_FINAL_ACCEPTANCE_20261006.md first. Final VK9b3f82538/CU95e7aea47
+passed47 distinct real CU/HTTP/native assertions plus final-backend real frontend
+smoke. One/two stalled stop responses2.720/2.484s; unconfirmed exits retain exact
+stopping grants/holds, then reconcile. Initial/final lock errors are bounded;
+latest-v2 fallback passes both gate configurations. Developer internal-stall
+proofs complement, not substitute for, HTTP transport-fault tests. Original
+incident revoke/provider timestamps remain unavailable. Nine final receipt groups
+and773-member release payload live at /mnt/vk-storage/vk-first-run-final-20261006.
+Only about345MB SSD free after packaging: fresh backup/full-workload rehearsal,
+sealed config/runtime/module binding, safe drain, promotion and explicit rollout
+approval remain. CU compatibility goes first. No current candidate exposure,
+production change, paid test, Android goal resume or cleanup. Use installed PR142;
+retain historical recovery gaps and only latest-data v2-safe fallback. The older
+October6 sections below describe superseded artifacts/findings, not current gates.
+
 ## October 6 Rollout Gates Follow-Up; No Deployment
 
 Read VK_FIRST_RUN_STOP_REVIEW_20261006.md, VK_FIRST_RUN_FRONTEND_20261006.md and

@@ -1,5 +1,13 @@
 # STREAM.md
 
+October6 final-source outcome: see VK_FIRST_RUN_FINAL_ACCEPTANCE_20261006.md.
+VK9b3f82538/CU95e7aea47 isolated acceptance and inert real-frontend payload pass.
+Production unchanged. Explicit rollout approval, safe SSD headroom (about345MB
+available), fresh backup/rehearsal, configuration binding, source promotion and
+safe drain remain. No deletion or cutover is authorized. Below is historical
+scope: old86f62b2/516148dc readiness and open-stop wording are superseded, not
+permission to discard original incident evidence or recovery exceptions.
+
 October6 current scope: close rollout gates for VK PR147/CU PR38 scheduled native
 first run. No production restart, merge, deploy, routing/settings change or agent
 interruption is authorized. Parent review is independent; do not modify development

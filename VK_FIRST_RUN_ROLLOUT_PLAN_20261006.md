@@ -1,5 +1,12 @@
 # Scheduled First Run: Combined Acceptance And Rollout
 
+**Superseded acceptance inputs:** read VK_FIRST_RUN_FINAL_ACCEPTANCE_20261006.md
+for final9b3f82538/CU95e7aea47 receipts, verified payload, bounded stop results
+and current gates. The rest of this file retains the earlier86f62b2 investigation.
+It does not represent current artifact identity or unresolved containment status.
+Production remains unchanged; storage, fresh deployment binding and approval are
+still required. The CU-first and same-latest-data v2-safe rollback rules still apply.
+
 ## Decision And Authority
 
 October 6 staging acceptance only. **Not approved for rollout.** Six isolated

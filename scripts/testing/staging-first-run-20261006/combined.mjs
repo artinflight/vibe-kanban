@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
-import {readFile,writeFile,stat,mkdir} from 'node:fs/promises';
+import {readFile,writeFile,stat,mkdir,unlink} from 'node:fs/promises';
 import {DatabaseSync} from 'node:sqlite';
 import {createServer} from 'node:http';
 import {randomUUID} from 'node:crypto';
+import {spawn} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
 const [root,origin,repo,mode]=process.argv.slice(2);
 assert.match(root,/\/vk-continuation-http-[a-z0-9_]+$/);
@@ -15,8 +17,9 @@ const {allocationPeriod,initialCapacityState}=await import(`${repo}/src/daily-al
 const fixtures=JSON.parse(await readFile(`${root}/fixtures.json`,'utf8'));
 const receipts=[],http=[],findings=[];
 const vk=new VkCapacity({origin,tokenFile:`${root}/token`,fetchImpl:async(url,options)=>{
+  const startedAt=Date.now();
   const response=await fetch(url,options);const body=await response.clone().json();
-  http.push({at:Date.now(),url,method:options.method,request:options.body?JSON.parse(options.body):null,status:response.status,body});
+  http.push({startedAt,elapsedMs:Date.now()-startedAt,at:Date.now(),url,method:options.method,request:options.body?JSON.parse(options.body):null,status:response.status,body});
   return response;
 }});
 const goals=new DatabaseSync(`${root}/home/goals_1.sqlite`,{readOnly:true});
@@ -120,6 +123,97 @@ try{
       assert.deepEqual(JSON.parse(await readFile(`${root}/home/vk-goal-progress/${f.threadId}.json`,'utf8')).requirements,JSON.parse(progress).requirements);
       record('rollback-allows-later-normal-same-thread-resume-retains-authentic-checklist',{executionId:resumed.executionId});
     }
+  }else if(mode==='stalled'||mode==='lock-only'){
+    const timeline=async f=>{try{return (await readFile(`${root}/home/${f.variant}-timeline.jsonl`,'utf8')).trim().split('\n').map(JSON.parse);}catch(e){if(e.code==='ENOENT')return [];throw e;}};
+    async function holdController(tag){
+      const pending=fixtures.find(f=>f.variant==='pending');
+      const child=spawn('python3',['-B',fileURLToPath(new URL('./hold-progress.py',import.meta.url)),root,pending.threadId,tag],{stdio:'inherit'});
+      const exited=new Promise((resolve,reject)=>{child.on('error',reject);child.on('exit',code=>code===0?resolve():reject(Error('Private FIFO failed: '+code)));});
+      await until(async()=>stat(`${root}/${tag}-ready`).then(()=>true,()=>false),10000);
+      const discovery=vk.candidates();
+      await until(async()=>stat(`${root}/${tag}-connected`).then(()=>true,()=>false),10000);
+      return async()=>{await writeFile(`${root}/${tag}-release`,'release');await discovery;await exited;};
+    }
+    {
+      const before=await ledger(),s=(await vk.status()).state;
+      const release=await holdController('initial-lock');
+      const started=Date.now();
+      try{await assert.rejects(vk.stop(s,'Synthetic initial lock contention'),/busy|unconfirmed/i);assert.ok(Date.now()-started<1500);}
+      finally{await release();}
+      assert.deepEqual((await ledger()).goals,before.goals);assert.deepEqual((await ledger()).issuedIds,before.issuedIds);
+      record('real-http-initial-controller-lock-bounded-unconfirmed',{elapsedMs:Date.now()-started});
+    }
+    for(const variants of (mode==='lock-only'?[]:[['stalled-one'],['stalled-two-a','stalled-two-b'],['stalled-unconfirmed']])){
+      const peers=variants.map(v=>fixtures.find(f=>f.variant===v));
+      for(const f of peers){await select(f);await launch(f);}
+      await until(async()=>{for(const f of peers)if(!(await timeline(f)).some(e=>e.event==='providerRequest'))return false;return true;});
+      const state=(await vk.status()).state;
+      const before=await ledger();
+      const nativeBefore=peers.map(native);
+      const uncertain=variants[0]==='stalled-unconfirmed';
+      if(uncertain)await writeFile(`${root}/deny-exit-confirmation`,'Synthetic denial only');
+      const startedAt=Date.now();
+      if(uncertain)await assert.rejects(scheduler.suspend(state,'Synthetic unverified-exit acceptance'),/confirm process shutdown/);
+      else await scheduler.suspend(state,'Synthetic stalled-graceful acceptance');
+      const endedAt=Date.now();assert.ok(endedAt-startedAt<10000,`CU stop took ${endedAt-startedAt}ms`);
+      const stopped=await ledger();assert.deepEqual(stopped.issuedIds,before.issuedIds);
+      const stops=http.filter(h=>h.url===origin+'/api/capacity/stop'&&h.startedAt>=startedAt);
+      assert.equal(stops.length,1);assert.ok(stops[0].elapsedMs<10000);
+      for(let i=0;i<peers.length;i++){
+        const f=peers[i],g=stopped.goals[f.sessionId];
+        assert.equal(g.initializationState,'held');assert.equal(g.eligible,false);
+        for(const k of ['goalId','threadId','objective','createdAt','binding'])assert.deepEqual(g[k],before.goals[f.sessionId][k]);
+        for(const k of ['goal_id','thread_id','objective','created_at_ms'])assert.equal(native(f)[k],nativeBefore[i][k]);
+        assert.equal(native(f).status,'active');
+        if(uncertain){assert.equal(g.grant.stopping,true);assert.equal(g.grant.id,before.goals[f.sessionId].grant.id);assert.equal(g.grant.executionId,before.goals[f.sessionId].grant.executionId);}
+        else assert.equal(g.grant,null);
+        const events=await timeline(f);assert.equal(events.filter(e=>e.event==='providerRequest').length,1);assert.ok(events.some(e=>e.event==='providerTerminating'));
+        const dropped=(await readFile(`${root}/home/dropped-${f.variant}-timeline.jsonl`,'utf8')).trim().split('\n').map(JSON.parse);
+        assert.ok(dropped.some(e=>e.method==='thread/goal/set'));
+      }
+      if(uncertain){
+        const g=stopped.goals[peers[0].sessionId];
+        await assert.rejects(vk.renew((await vk.status()).state,{sessionId:g.sessionId,grantId:g.grant.id,allocationId:g.grant.allocationId,sequence:g.grant.sequence,expiresAtMs:Date.now()+10000}));
+        assert.equal((await ledger()).goals[g.sessionId].grant.stopping,true);
+        assert.equal(scheduler.ledger().pending,true);
+        await unlink(`${root}/deny-exit-confirmation`);
+        await scheduler.suspend((await vk.status()).state,'Verify same retained execution after fault removal');
+        const reconciled=(await ledger()).goals[g.sessionId];assert.equal(reconciled.grant,null);
+        for(const k of ['goalId','threadId','objective','createdAt','binding','initializationState','initializationReceipt'])assert.deepEqual(reconciled[k],g[k]);
+      }
+      for(const f of peers){
+        const held=(await ledger()).goals[f.sessionId];
+        await control({action:'eligibility',sessionId:f.sessionId,eligible:true,firstRun:identity(held)},409);
+        const s=(await vk.status()).state;
+        await assert.rejects(vk.start(s,{sessionId:f.sessionId,grantId:randomUUID(),allocationId:'must-not-replay',expiresAtMs:Date.now()+10000,stopAtMs:Date.now()+15000,firstRun:identity(held)}));
+        await remove(f);
+      }
+      await fresh();await scheduler.tick();assert.deepEqual((await ledger()).issuedIds,before.issuedIds);
+      await delay(350);
+      for(const f of peers)assert.equal((await timeline(f)).filter(e=>e.event==='providerRequest').length,1);
+      await until(async()=>!(await vk.status()).runningExecutionIds.length,15000);
+      record('real-cu-http-'+variants.join('+')+'-bounded-no-replay-truthful-active-hold',{startedAt,endedAt,elapsedMs:endedAt-startedAt,httpElapsedMs:stops[0].elapsedMs,unverifiedExit:uncertain,before,stopped,nativeBefore,nativeAfter:peers.map(native),timelines:await Promise.all(peers.map(timeline))});
+    }
+    {
+      const f=fixtures.find(f=>f.variant==='stalled-lock');await select(f);await launch(f);
+      await until(async()=>(await timeline(f)).some(e=>e.event==='providerRequest'));
+      const before=await ledger(),s=(await vk.status()).state,started=Date.now();
+      const request=scheduler.suspend(s,'Synthetic final lock contention').then(()=>({ok:true}),error=>({ok:false,error:error.message}));
+      await until(async()=>JSON.parse(await readFile(`${root}/controller/${before.goals[f.sessionId].grant.id}.json`,'utf8')).revoked,3000);
+      const release=await holdController('final-lock');
+      let result;
+      let responseMs;
+      try{result=await request;responseMs=Date.now()-started;assert.equal(result.ok,false);assert.match(result.error,/rejected request \(500\)/);assert.ok(responseMs<10000);assert.equal(scheduler.ledger().pending,true);}
+      finally{await release();}
+      const held=(await ledger()).goals[f.sessionId];assert.equal(held.grant.stopping,true);assert.equal(held.grant.id,before.goals[f.sessionId].grant.id);assert.equal(native(f).status,'active');
+      await scheduler.suspend((await vk.status()).state,'Reconcile after controller read fault removed');
+      const after=(await ledger()).goals[f.sessionId];assert.equal(after.grant,null);
+      for(const k of ['goalId','threadId','objective','createdAt','binding','initializationState','initializationReceipt'])assert.deepEqual(after[k],held[k]);
+      assert.deepEqual((await ledger()).issuedIds,before.issuedIds);
+      await until(async()=>!(await vk.status()).runningExecutionIds.length,15000);
+      record('real-http-final-controller-lock-bounded-unconfirmed-exact-grant-reconciled',{responseMs,elapsedWithReconciliationMs:Date.now()-started,result,held,after});
+    }
+    await select(fixtures.find(f=>f.variant==='pending'));
   }else if(mode==='launcher'){
     const nativeWrite=new DatabaseSync(`${root}/home/goals_1.sqlite`),vkdb=new DatabaseSync(`${root}/xdg/vibe-kanban/db.v2.sqlite`);
     try{

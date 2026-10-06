@@ -2747,6 +2747,14 @@ for line in sys.stdin:
             let now = crate::capacity::wall_ms();
             let (request, prepared) = {
                 let mut c = controller.lock().await;
+                // Concurrent grants share the actual scheduled window cutoff;
+                // admission deliberately rejects differing hard deadlines.
+                let stop_at = c
+                    .state
+                    .goals
+                    .values()
+                    .find_map(|g| g.grant.as_ref().map(|grant| grant.stop_at_ms))
+                    .unwrap_or(now + 12000);
                 let request = c
                     .issue_with_first_run(
                         session,
@@ -2757,7 +2765,7 @@ for line in sys.stdin:
                         } else {
                             9000
                         },
-                        now + 12000,
+                        stop_at,
                         now,
                         first.then(|| first_run::FirstRun::from_native(&native)),
                         None,

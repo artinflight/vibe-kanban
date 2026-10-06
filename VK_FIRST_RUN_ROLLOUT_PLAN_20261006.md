@@ -1,167 +1,166 @@
 # Scheduled First Run: Combined Acceptance And Rollout
 
-## Authority And Current Decision
+## Decision And Authority
 
-October 6 staging-owner preparation only. **Not ready for rollout.** No production
-restart, route change, merge, deployment, setting change, paid inference or agent
-interruption is authorized by this task. Parent independent review and an explicit
-rollout checkpoint are required. Earlier restart approvals do not apply.
+October 6 staging acceptance only. **Not approved for rollout.** Six isolated
+HTTP/CU/native test groups passed their assertions; the earlier stop timeout
+still requires review, the supplied frontend is a placeholder, and independent
+final-delta review plus an explicit rollout checkpoint remain outstanding.
+No production restart, merge, deployment, routing change, database restore,
+settings write, paid inference or real Android test occurred.
 
-Desired behavior: select an uninitialized goal now without starting it; its first
-native turn initializes the checklist during the saved overnight window. No manual
-start/stop workaround. Development owns source fixes; staging owns combined
-acceptance, release provenance, preservation and the proposed rollout.
+The desired workflow is selection now, automatic first native initialization
+during the saved overnight window, then ordinary scheduled continuation.
+Development owns feature fixes; staging owns combined acceptance and rollout.
+No manual start/stop workaround is proposed for the user's workflow.
 
-## Exact Candidates
+## Exact Provenance
 
-| Component | Candidate | Base | Status observed |
-| --- | --- | --- | --- |
-| VK PR147 | `27d9562d2003836ae607f3b1bfdd54322588fb36` | staging `8b562265d25a3f8ee6d4fa602144e71caddfbc85` | Draft, mergeable, backend-test failed |
-| CU PR38 | `95e7aea47e137015daa8efcbb210184ee7ce723c` | staging `c8213e81d18123671bce9a262c9dedf1a788a7bf` | Draft, mergeable, no listed CI checks |
+| Component | Verified source | Release status |
+| --- | --- | --- |
+| VK draft PR147 | `86f62b2a4a1baff54cde715749b97f283907b8f6` | Base staging `8b562265d25a3f8ee6d4fa602144e71caddfbc85`; all11 listed checks green |
+| CU draft PR38 | `95e7aea47e137015daa8efcbb210184ee7ce723c` | Base staging `c8213e81d18123671bce9a262c9dedf1a788a7bf`; not deployed |
+| Native test runtime | Codex CLI `0.159.2` | Actual app-server, credential-free offline provider |
 
-Read contracts in VK `VK_SCHEDULED_FIRST_RUN.md` and CU
-`docs/scheduled-first-run-vk-contract.md` at these exact revisions. Both candidate
-tracked trees were clean. CU's existing untracked Python caches were left alone.
-There were no published GitHub reviews at inspection; that does not mean the
-parent's independent review is finished. Changed heads require revised provenance
-and affected acceptance, not silent substitution.
+Read the developer's `revision-staging-handoff.md` and bundle under
+`/mnt/vk-storage/vk-scheduled-first-run-20261006/`. The bundle suffix is the
+full VK SHA above. All five artifact hashes and2371 tracked source hashes were
+checked before each fixture. Developer source trees remained tracked-clean.
 
-VK backend-test job `112424355475`, run `37508783715`, failed in
-`routing_triage::tests::simple_language_and_discovered_protected_context_raise_the_floor`,
-`crates/executors/src/routing_triage.rs:509`: actual `Workhorse`, expected
-`Frontier`. Cause and resolution belong with development/review; this audit does
-not classify it as harmless or unrelated. Backend-schema was still running when
-the receipt was captured. Existing CI was read, not dispatched or rerun.
+- Candidate HTTP server SHA256:
+  `26390884877b6c53e7335067c5b7b81695e6eca323be4f6c8e800319c88cdb12`.
+- Compile-disabled v2 rollback HTTP server SHA256:
+  `e5aab6ad020c127797f9c0eba5989f9ff4492634dd7d4ad7fcee6b4b582fc0ed`.
+- Guard SHA256:
+  `04ee7fc587b162c14e642e2c96cea3905af3990ce77956983aef6bc2569f7b53`.
+- Existing standard CI run37513209788 and hosted build37513209967 were read,
+  not dispatched. The developer's156 candidate tests,157 rollback tests,
+  six native offline cases and406 backend CI passes were not redundantly rerun.
+- The old27d9562d2 audit and its CI/artifact/headroom blockers are historical,
+  superseded by this receipt. Its retained evidence was not deleted.
 
-## Evidence Checked, Not Repeated
+The HTTP bundle explicitly contains a placeholder frontend. It is not a complete
+production release and not browser acceptance of the eventual paired frontend.
 
-Audit root: `/mnt/vk-storage/vk-first-run-staging-acceptance-20261006/`.
-`audit.py` independently checks retained receipts and current read-only identity;
-`audit.json` records exact SHA256s, service identities, PR status and blockers.
-Its result is `audit_passed: true`, **`combined_acceptance_passed: false`**.
-Audit receipt SHA256:
-`06774385159722b5dab44be4a76589edc7c751f86a76dcb41cdb4f08ede010ad`.
-Auditor SHA256:
-`d7fafe69d9b75dbbf0ca68fc94d961681afa8a4f97e6a2df860a07e02a91207a`.
-The read-only audit passed; `pnpm run format`, `pnpm run ops:check` and
-`git diff --check` passed for this documentation-only preparation. No new native,
-HTTP/scheduler, full workspace or paid test execution is claimed.
+## Exact Combined Receipts
 
-- VK retained index: `/mnt/vk-storage/vk-scheduled-first-run-20261006/acceptance.json`.
-  Seven result/proof pairs under `/mnt/vk-storage/vk-sfr-20261006/` verify: 155
-  executor tests plus six offline native cases (success/later resume, input,
-  provider failure, identity race, plan review and empty checklist). These were
-  not rerun. Each proof's boundary source hashes and result hash were checked.
-- Their exact executable is `executors-ea5da41c91a59f7a`, SHA256
-  `a854d6158f061d8fa60c14f5badfbf6cbe0b99b5f5036eccd16b1c0775f6c787`.
-  It is an executor test binary, **not** an HTTP server release.
-- CU package: `/mnt/vk-storage/cu-credit-aware/first-run-identity-release-20261006-8xs89s8c/`.
-  `acceptance.json` SHA256
-  `e3521f5e33b59edd109b252ced1078e3d5223e5664444b585a2bffc841c3589a`.
-  Retained receipts cover 229 tests, scanner and desktop/mobile-sized UI. All
-  referenced receipt hashes and 164 packaged file hashes verify. The 14 protected
-  live files still match. These tests used mocked VK, not combined HTTP acceptance.
-- Installed PR142 operational package verification passed; pin
-  `528282d00c985230aad3033dc235d8cd943e5f4d` in
-  `/mnt/vk-storage/vk-green-cutover-20261005`. Retain its 146 regression evidence;
-  do not substitute older workspace scripts or repeat unrelated suites.
+Receipt root: `/mnt/vk-storage/vk-first-run-staging-acceptance-20261006/`.
+Final index: `combined-acceptance.json`, SHA256
+`97ade57c3199c82a50686bc41662f9cc80ea8644c5319904a9eebfa1e5e9e7d0`.
+It records hashes of per-run HTTP bodies, assertions, latest ledgers, source
+provenance, reviewed-boundary proofs and fixture-owned unit cleanup.
 
-Production remains VK PID3027197, October 5 release/main `fa8122a50`, version
-0.1.42, CLI0.159.2. CU PID414400 serves the goal-list package with deployed source
-reference `02769eab8424d6cfc85d33900b5aa319045834bc`. Read-only CU control confirms
-scheduling ON, credits OFF, connected, zero active grants. Saved window is
-21:00-04:00 America/New_York. These observations are not permission to change
-settings and not a substitute for a fresh agent/grant/queue drain at rollout.
+Each suffix below is under
+`/mnt/vk-storage/vk-sfr-http-20261006/vk-continuation-http-`:
 
-## Combined Acceptance Still Required
-
-All rows below are **pending actual combined execution**, even where unit/offline
-receipts cover part of the behavior. Use the reviewed CU fixture isolation and
-bounded fixture-manager boundary, exact candidate HTTP server/guard and CU
-scheduler, synthetic workspaces/native threads, offline provider and private
-state only. No real Android goal, production credentials, real provider traffic,
-denied-prompt retry, live manager access or permissive substitute harness.
-
-| Case | Required observable receipt |
+| Suffix | Executed acceptance |
 | --- | --- |
-| Select without launch | HTTP selection round-trip binds goal/thread/objective/native-seconds createdAt, session/workspace/path and turn anchor; pending persists; no execution, provider call, checklist or unpause occurs before the window. |
-| Scheduled first native turn | CU saved-window tick with included quota dispatches exactly once through actual VK HTTP; successful authentic native root checkpoint has nonempty requirements; same-turn completion promotes eligibility. A file-only or empty checklist cannot promote. |
-| Holds and restart | Provider failure, input, plan review, malformed/empty checkpoint, budget/window cutoff and ambiguous restart become durable holds. Reloading both services, another scheduler tick or reselecting cannot silently retry or launder the hold. Denied request is not retried. |
-| Capability withdrawal | Capability 1 to 0 rejects new pending admission and prevents continuation of an initialization grant; safe removal remains possible. Existing hold evidence survives. |
-| Legacy dispatch | Old CU request lacking exact firstRun identity is rejected for pending goals with zero launches; already checkpointed normal resume remains compatible. |
-| Races and concurrency | Change each bound identity/turn anchor after selection and before worker; duplicate/concurrent requests, foreground work, lease ownership and the existing two-goal limit reject or serialize safely. Record execution/provider counts and no cross-workspace launch. |
-| Revocation | Revoke before dispatch and during initialization; no stale grant launches/resumes afterward, holds/receipts remain accurate and removal is possible without retry. |
-| Later normal resume | After successful initialization, an ordinary eligible window resumes the same native thread without firstRun or a second initialization. |
-| Rollback reader | Upgrade private v1 state to v2, create each hold, switch to the proposed compatible fallback and reload; all identities/holds remain, unauthorized retries remain zero and allowed removal works. |
+| `san47vda` | Authenticated owner/API; inert identity-bound selection; all four stale-card identities; legacy/manual/weekly rejection; authentic nonempty native root checklist; later genuine same-thread resume; input/provider-failure/empty/plan holds; failure exactly one provider request; removal/reselection denial; both rollback gates |
+| `nhp5uups` | Four native identity changes and completed-anchor change before dispatch; stale revision/revocation; duplicate scheduler ticks; two actual native workers, third waits; revocation drains workers; persisted CU reload preserves pending selection; rollback ordinary native resume |
+| `q6r1xg1x` | Interruption and cutoff before provider; actual fixture backend restart with spent pending receipt; capability withdrawal; no initialization replay; hold-preserving rollback removal |
+| `j0ksim2i` | Outside saved window; corrupt/empty/mismatched/input-held/already-checkpointed sidecars cannot gain first-run authority; complete/budget-limited native goals rejected; foreground record blocks dispatch; archived workspace excluded |
+| `lf34_bhn` | Actual delayed worker rejects goal ID/thread/objective/creation and anchor changes after issuance, before any provider work; rollback removal after synthetic session deletion preserves native goal and hold |
+| `279xj4la` | Actual CU/HTTP same-workspace cross-session exclusion; compatible rollback permits ordinary initialized-thread resume |
 
-Receipts must bind both source and executable hashes, boundary hashes, HTTP
-requests/responses without secrets, synthetic identities, private before/after
-ledger/checkpoint state, scheduler time/window, execution/provider counts and
-case outcomes. Preserve canary/masking proofs: host worktrees read-only, no real
-service-manager route, no live sockets/config and no external provider egress.
-The existing executor driver and checkpointed-goal integration test alone cannot
-satisfy this matrix. Do not run those drivers against live endpoints.
+There are42 distinct passing assertion names across these six successful groups,
+not42 additional unit suites. Earlier unsuccessful fixture attempts remain
+retained and are not counted as whole-run passes. Every worker in each final
+cleanup receipt is inactive/failed; shared services were not modified.
 
-## Rollback Compatibility Is A Release Blocker
+The actual CU control handler, owner authentication, scheduler and quota ledger
+communicated with actual VK HTTP servers. Real native app-server turns authored
+positive checklists. Invalid sidecars were deliberate negative fixtures only.
+Test account/quota/time are synthetic; no paid quota redemption occurred.
+Source-backed isolation and bounded supervisor files were unchanged and hashed.
+Host roots/worktrees were read-only, host-manager and other sockets masked,
+external networking isolated, canaries unchanged. No copied live database or
+real Android goal was used. Only fixture-owned service names were reachable.
 
-PR147's controller accepts stored version1 or2 but commits version2 even with
-`VK_CAPACITY_SCHEDULED_GOAL_INITIALIZATION` disabled, including ownership
-acquisition. Disabling the feature is **not** a downgrade of the stored format.
-Current production and its paused fallback are old readers and cannot be used as
-the post-upgrade rollback reader. Do not erase fields/holds or restore an older
-ledger/database to make an old reader start.
+The dated driver is retained in
+`scripts/testing/staging-first-run-20261006/`. It is not a production launcher.
+Its narrow delayed-provider shim supplies an interruption window inside the
+same boundary; it does not replace the native engine or fabricate a checklist.
 
-Development must provide a reviewed version2-aware fallback artifact, or evidence
-that a proposed exact candidate with admission disabled is an adequate fallback.
-The latter disables new first runs but does not roll back candidate code defects.
-Staging must exercise its latest-data hold preservation/removal behavior in the
-same isolated boundary before calling rollback ready. Preserve original thread,
-model selections, read/unread flags, saved messages, attachments, wrappers,
-AutoSwitch module, shared private routing feed and other services.
+## Finding Requiring Review
 
-## Minimal Proposed Rollout After Approval
+Initial root `vk-continuation-http-lcp7ys3k` reached authentic initialization
+but CU's ten-second stop request timed out during the input-hold case.
+`driver.log`, HTTP receipts, backend log and `fixture-cleanup.json` remain.
+No failed prompt/start was retried. Cleanup confirmed all its workers inactive.
+Later full runs passed, but that is not evidence that the original timeout
+cannot recur. Review bounded stop/transport reconciliation before release;
+do not erase this finding or change developer code without coordinating review.
 
-1. Finish parent review, resolve CI, obtain source-bound HTTP/guard and compatible
-   fallback artifacts, complete the combined matrix and release-source checks.
-   Prepare while existing agents keep working; no production interruption needed.
-2. Publish the reviewed CU-compatible version first against current VK capability0.
-   Preserve scheduling ON/credits OFF and monitor state. Verify capability0 is
-   inert, normal checkpointed resume remains compatible, and no pending native
-   first turn is dispatched. This is a future CU-only service change, not permission
-   to make it now; verify its capacity worker state before interruption.
-3. At the explicit rollout checkpoint, use the pinned PR142 tools for fresh
-   Desktop-backed capture, moved-root/journal verification, review-state snapshot,
-   exact runtime/module/shared-feed checks and latest-data rollback rehearsal.
-   Keep preparation separate from the short final pause; do not reuse a consumed
-   handover or call October5 backup evidence a current backup.
-4. Safely drain VK executions, queued prompts and CU grants immediately before
-   the one coordinated backend handover. Active agents must finish/checkpoint;
-   any requested pause uses Turn Steer, never a competing writer or forced kill.
-   Bind feature-gate configuration to the approved release so another restart is
-   not casually required. Switch frontend/API together; retain compatible recovery.
-5. Verify actual routing/release, original sessions, owner settings and protected
-   data. Enable no paid test or real Android test. User selection is inert and
-   normal scheduled work waits for the saved window. Report updated/current version
-   plainly, not merely a color. Any cutback keeps the same latest state and holds.
+Other failed attempts were harness setup/expectation corrections: Unix socket
+path length, buffered native protocol reading, missing synthetic repo links,
+profile canonicalization, native milliseconds versus wire seconds, an
+unapproved delayed-launcher configuration, a lease too close to expiry and
+synthetic quota-clock/period expectations. Their rejection evidence is retained.
+None changed production or relaxed the reviewed isolation/launcher guards.
 
-Expected user impact: work continues throughout preparation; a short agreed final
-drain/handover affects VK agents. No measured duration for this candidate exists
-yet. Prior 21.972-second switch is historical, not a promise for this release.
+Accordingly the index truthfully records `executedAssertionsPassed: true`,
+`fullHandoffMatrixClosed: false`, and `rolloutAuthorized: false`.
+Do not confuse successful bounded tests with final review/release approval.
 
-## Remaining Blockers And Ownership
+## Compatible Rollback
 
-- SSD has only 28,258,304 bytes free at audit. Parent/storage owner must arrange
-  safe headroom or an approved adequately sized isolated location. No shared-tree
-  cleanup, bulk copy, system-disk build or backup fallback was performed.
-- Development must supply exact PR147 server/guard provenance; existing inspected
-  old servers and the executor test executable are insufficient.
-- Development/review must resolve the failed backend test and complete required CI.
-- Reviewed combined HTTP/scheduler harness execution and compatible rollback-reader
-  evidence are missing. These are not waived by the retained unit-test counts.
-- Parent independent review and explicit rollout checkpoint remain required.
+Stored ledger format is2; wire `state.version` stays1. Both rollback service
+gate configurations (absent and forced1) advertise capability0. Actual latest
+pending/held/checkpointed state, native goals, bindings, receipts and issued IDs
+survive. Legacy and explicit pending starts fail; removal remains safe, including
+a gone synthetic session. Ordinary checkpointed continuation still works.
+
+Current production and its old paused fallback are **unsafe old readers** of
+the new ledger, even with initialization OFF. Retain their artifacts, but do
+not use them as post-upgrade v2 fallback. Use the reviewed compile-disabled
+v2-aware rollback with the same latest state. Never restore an older database
+or drop holds/receipts to make an old reader start.
+
+## Minimal Rollout After Review And Explicit Approval
+
+1. Resolve the stop finding and final independent review; bind the final VK/CU
+   commits, real external frontend, guard, runtime, module and configuration.
+   Recheck only affected acceptance if identities change. Prepare while users work.
+2. Deploy compatible CU first against capability0. Preserve scheduling ON,
+   credits OFF, original monitor state and owner selections; prove no pending
+   first run is launched. This is a future CU-only service change, not authorized now.
+3. Use installed PR142 pin `528282d00c985230aad3033dc235d8cd943e5f4d`.
+   Its October5 package was reverified;146 retained regressions were not rerun.
+   Take a fresh Desktop-backed capture with moved-root/journal checks, review-state
+   snapshot, thread/model/settings preservation and latest-data rollback proof.
+   October5 success and old backups are not current deployment evidence.
+4. At the agreed checkpoint, safely drain VK executions, queued prompts and CU
+   grants. Use supported Turn Steer only if a pause is authorized; wait for safe
+   completion, never a competing writer or abrupt kill. Perform one coordinated
+   backend/frontend handover with feature-gate intent bound to the release.
+5. Check actual routed version/frontend, original sessions, saved messages,
+   read/unread flags, attachments, model/effort choices, runtime wrappers,
+   AutoSwitch module, shared private telemetry and dot connector. User selection
+   stays inert until the saved night window. No paid/real Android test is implied.
+
+Work can continue during preparation. Final service changes affect CU scheduling
+and VK agent execution only after a safe drain. No full-scale handover timing
+for this candidate has been measured. October5's21.972 seconds is historical,
+not a promise for this deployment. Any cutback uses the compatible reader and
+same latest data.
+
+## Live State, Storage And Preservation
+
+Read-only check at19:53:54UTC: current VK PID3027197, October5 mainfa8122a50,
+version0.1.42; executable SHA remains
+`5e7948921f962b9ea74597781ca2e1b0c7bd745edc0d1901a8274dab444097a2`.
+CU414400 remains the goal-list deployment, not PR38. Scheduling ON, credits OFF,
+connected, zero capacity grants. These are observations, not rollout-drain proof.
+
+SSD available bytes were4,292,698,112 at that check. Staging cleanup reclaimed0:
+SFTP2324526/2324527 exited, but PID19071 and privileged process visibility remain
+unresolved. See `VK_OWNED_TEMP_CLEANUP_20261006.md` for the4.13GiB allowlist and
+exact read-only evidence request. Do not bypass access controls. OP's86 duplicate
+deletions and27 original archives are outside this scope; local-parent archive
+dependencies still require a retention decision. Shared Rust output is protected.
 
 Retain `/mnt/vk-storage/vk-green-cutover-20261005/historical-recovery-receipt.json`:
-five-root later-unbacked edits remain unaccounted; deletion timing/CU causality is
-not proven; historical missing rollouts remain exceptions. Do not drop protected
-roots, reset journals or reclassify historical loss as repaired. No new production
-backup or Desktop payload was created for this bounded preparation audit.
+later unbacked five-root edits remain unaccounted; precise deletion timing/CU
+causality and historical missing rollouts remain exceptions. Protected roots,
+workspaces, backups, journals, attachments and all pending release/fallback
+artifacts remain. No Desktop payload was deleted or production backup restored.

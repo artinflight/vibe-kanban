@@ -1,33 +1,37 @@
 # HANDOFF.md
 
+## October 6 Combined First-Run Acceptance Executed; Rollout Held
+
+Read VK_FIRST_RUN_ROLLOUT_PLAN_20261006.md and the combined-acceptance.json under
+/mnt/vk-storage/vk-first-run-staging-acceptance-20261006. Final candidates are
+VK147 86f62b2a4 and CU38 95e7aea47. VK's11 checks are green; five delivered
+binary hashes and2371 tracked inputs verify. Six reviewed-isolation test groups
+passed42 distinct assertions through actual HTTP/CU/native paths: inert selection,
+authentic scheduled checklist, holds/restart, identity/anchor races before and
+after issuance, two-worker and same-workspace limits, revocation/cutoff, policy
+exclusions, and latest-v2 rollback including gone-session removal/normal resume.
+Original ten-second stop timeout in lcp7ys3k remains a review finding; later passes
+do not erase it. Real external frontend is still missing (bundle placeholder).
+Parent review and explicit rollout checkpoint remain required. No production
+restart/merge/deploy/settings change, paid request or real Android test occurred.
+Current VK3027197 and CU414400 remain unchanged, schedulingON/creditsOFF/zero
+grants at19:53:54UTC. Pinned PR142 tools verify; old readers are unsafe for v2.
+Future rollout is compatible CU first, fresh approved backup/drain, then one
+paired VK/frontend handover with the v2-aware same-latest-data fallback.
+The dated driver is in scripts/testing/staging-first-run-20261006.
+
 ## October 6 Owned Temporary Cleanup Held
 
 Read VK_OWNED_TEMP_CLEANUP_20261006.md. Exact1966-file allowlist accounts for
 4,434,825,216 allocated bytes of reproducible October5 test copies; archive/member
-hashes verify, originals/evidence remain. No deletion occurred: current SSH/SFTP
-PIDs2324526/2324527 and gpg-agent19071 are not fully inspectable, so the parent/OP
+hashes verify, originals/evidence remain. No deletion occurred: SSH/SFTP
+PIDs2324526/2324527 have exited, but gpg-agent19071 remains uninspectable; parent/OP
 owner was asked for privileged read-only reference evidence. Do not weaken the
 gate or interrupt transfers. Receipt root is
 /mnt/vk-storage/vk-staging-owned-cleanup-20261006. Live services/route/protected
-roots are unchanged; about5.36GB free is from concurrent OP cleanup, not ours.
+roots are unchanged;4,292,698,112 bytes free at19:53:54UTC is not reclaimed by us.
 OP's86 files/27 archives, shared Rust target, workspaces and pending PR147 server/
 fallback artifacts are excluded. No restart/deployment is authorized.
-
-## October 6 First-Run Acceptance Preparation
-
-Read VK_FIRST_RUN_ROLLOUT_PLAN_20261006.md and
-/mnt/vk-storage/vk-first-run-staging-acceptance-20261006/audit.json.
-Exact draft heads verified: VK147 27d9562d2, CU38 95e7aea47. Existing receipt and
-package hashes pass; combined HTTP/scheduler acceptance has NOT run. SSD has27MiB
-free, no source-verified PR147 HTTP server/fallback was provided, and backend-test
-CI fails routing_triage's protected-context floor assertion (Workhorse vs Frontier).
-Parent review remains pending. PR147 writes controller v2 even with admission off;
-old production/fallback readers are unsafe after upgrade. Require tested v2-aware
-latest-data hold-preserving fallback. No production interruption/settings change,
-paid tests or real Android test occurred. SchedulingON/creditsOFF/zero grants were
-confirmed read-only. Use PR142 pin528282d00, preserve historical recovery exceptions,
-and await headroom/build evidence before combined fixture execution. Final rollout
-requires an explicit new checkpoint. Do not reuse earlier deployment approvals.
 
 ## October 5 Cutover Accepted
 

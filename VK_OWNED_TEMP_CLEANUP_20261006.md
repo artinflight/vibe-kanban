@@ -7,7 +7,8 @@ from the successful October5 restart. This does not authorize another restart,
 deployment, cleanup of workspaces or removal of current overnight candidates.
 **Deletion is held: 0 bytes reclaimed by this task.** Reproducibility is verified
 for 4,434,825,216 allocated bytes (4.13 GiB), but the final process visibility
-check cannot rule out use by a currently active SFTP process.
+check still lacks protected-process visibility. The SFTP PIDs have now exited;
+this does not resolve the other visibility gaps.
 
 Do not confuse free-space changes caused by the concurrent OP::DiskSpace task
 with this task's result. OP owns exactly86 approved duplicate restore-test DB
@@ -48,8 +49,9 @@ plans/manifests. No candidate references were found in those readable sources.
 Both exact October5 rehearsal units are inactive with MainPID0.
 
 However, kernel permissions deny descriptor/mapping inspection of same-user
-`gpg-agent` PID19071 and current SSH/SFTP PIDs2324526/2324527. The SFTP transfer
-started October6 19:10:28UTC; it must not be interrupted. Privileged system
+`gpg-agent` PID19071. SSH/SFTP PIDs2324526/2324527, previously active at19:10UTC,
+were absent at the later combined-acceptance check. No transfer was interrupted.
+Fresh reads of PID19071's cwd/exe/maps remain denied. Privileged system
 processes and the login PAM helper also have reported visibility limits.
 `sudo -n` and `sudo -n -l` require a password. No new privilege was acquired and
 no process was stopped. This is missing evidence, not a claim of an actual path
@@ -96,3 +98,17 @@ bounded upload/retrieval check and inspect logs as required by the disk runbook.
 Removing protected backup/recovery/state areas would need a separate explicit
 retention decision and dependency/restore proof. The user has not granted that
 scope, and no amount of headroom is promised from it. No Desktop file was removed.
+
+## Later Acceptance Handoff
+
+OP reports its86 approved duplicate database files removed, reclaiming5.109GiB,
+and27 original archives checksum-verified both locally and on Desktop. Those
+archives still have local-parent backup-code dependencies; verification alone
+does not authorize retirement. They remain outside this cleanup allowlist.
+Combined acceptance proceeded independently in small synthetic SSD fixtures.
+Its dated `combined-acceptance.json` records later available bytes and unchanged
+production identity. All new receipts and pending candidate/fallback artifacts
+remain protected. This task still reclaimed **0 bytes**. No privileged approval
+tool was offered by this runtime; the exact outstanding request remains a
+read-only alias/inode/open/mapped/dependency check against `plan.json` for the
+processes the guard cannot inspect. Do not bypass permissions or request secrets.

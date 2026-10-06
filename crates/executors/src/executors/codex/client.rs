@@ -2468,11 +2468,14 @@ for line in sys.stdin:
         tokio::fs::create_dir_all(&work).await.unwrap();
         // Native paused goal plus one real, ordinary offline seed turn. The
         // provider's seed reply has no checkpoint, and the goal never runs here.
-        let mut command = Command::new("python3");
-        command.arg(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../scripts/testing/codex_goal_provider.py"
-        ));
+        // The reviewed driver supplies the local approved provider path. This
+        // permits a source-verified CI-built test binary without assuming the
+        // builder's absolute source path exists on the acceptance host.
+        let approved = std::env::var("VK_CODEX_BASE_COMMAND").unwrap();
+        let launcher = shlex::split(&approved).unwrap();
+        assert_eq!(launcher.first().map(String::as_str), Some("python3"));
+        let mut command = Command::new(&launcher[0]);
+        command.args(&launcher[1..]);
         use workspace_utils::command_ext::GroupSpawnNoWindowExt;
         let mut child = command
             .stdin(std::process::Stdio::piped())

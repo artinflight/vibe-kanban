@@ -1087,6 +1087,85 @@ mod tests {
         c.enroll(goal.clone()).unwrap();
         goal.identity()
     }
+
+    #[cfg(feature = "scheduled-goal-initialization-disabled")]
+    #[test]
+    fn rollback_reader_preserves_v2_intents_and_rejects_pending_launches() {
+        assert!(!first_run::enabled()); // Even with the fixture's service gate = 1.
+        let mut f = Fixture::new();
+        let held_session = Uuid::new_v4();
+        let used = Uuid::new_v4();
+        let c = f.c.as_mut().unwrap();
+        let mut next = c.state.clone();
+        let pending = next.goals.get_mut(&f.session).unwrap();
+        pending.goal_id = Uuid::new_v4().to_string();
+        pending.thread_id = Uuid::new_v4().to_string();
+        pending.initialization_state = InitializationState::Pending;
+        pending.binding = Some(Binding {
+            workspace_id: Uuid::new_v4(),
+            workspace_root: "/synthetic/work".into(),
+            agent_working_dir: Some("src".into()),
+            account_home: "/synthetic/home".into(),
+            database: "/synthetic/db".into(),
+            anchor_execution_id: Uuid::new_v4(),
+            anchor_turn_id: Uuid::new_v4(),
+            anchor_message_id: Some("original-anchor".into()),
+        });
+        let original = pending.clone();
+        let mut held = original.clone();
+        held.session_id = held_session;
+        held.initialization_state = InitializationState::Held;
+        held.eligible = false;
+        held.initialization_receipt = Some(Receipt {
+            grant_id: used,
+            execution_id: Some(Uuid::new_v4()),
+            checkpoint_turn_id: Some("authentic-root-turn".into()),
+        });
+        next.goals.insert(held_session, held.clone());
+        next.issued_ids.insert(used);
+        c.commit(next).unwrap();
+        f.c.take();
+        let mut c = Controller::open(f.root.clone(), f.guard.clone(), "rollback".into()).unwrap();
+        assert_eq!(c.state.version, 2);
+        assert!(c.state.issued_ids.contains(&used));
+        assert_eq!(
+            serde_json::to_value(&c.state.goals[&held_session]).unwrap(),
+            serde_json::to_value(&held).unwrap()
+        );
+        assert_eq!(c.state.goals[&f.session].identity(), original.identity());
+        assert_eq!(c.state.goals[&f.session].binding, original.binding);
+        for intent in [None, Some(original.identity())] {
+            assert!(
+                c.issue_with_first_run(
+                    f.session,
+                    Uuid::new_v4(),
+                    "included-night".into(),
+                    30_000,
+                    90_000,
+                    1000,
+                    intent,
+                    None
+                )
+                .is_err()
+            );
+        }
+        for session in [f.session, held_session] {
+            let mut goal = c.state.goals[&session].clone();
+            goal.eligible = false;
+            c.enroll(goal).unwrap();
+        }
+        assert_eq!(c.state.goals[&f.session].identity(), original.identity());
+        assert_eq!(
+            serde_json::to_value(&c.state.goals[&held_session].initialization_receipt).unwrap(),
+            serde_json::to_value(&held.initialization_receipt).unwrap()
+        );
+        assert!(c.state.issued_ids.contains(&used));
+        let disk: State =
+            serde_json::from_slice(&fs::read(f.root.join("state.json")).unwrap()).unwrap();
+        assert_eq!(disk.version, 2);
+        assert!(disk.issued_ids.contains(&used));
+        f.c = Some(c);
+    }
     fn first_issue(f: &mut Fixture, identity: FirstRun) -> CapacityExecution {
         f.c.as_mut()
             .unwrap()

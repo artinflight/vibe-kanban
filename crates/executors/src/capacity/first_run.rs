@@ -63,7 +63,8 @@ fn db_error(error: sqlx::Error) -> io::Error {
 
 pub fn enabled() -> bool {
     // Rollout owner sets this only after compatible CU is deployed.
-    std::env::var("VK_CAPACITY_SCHEDULED_GOAL_INITIALIZATION").as_deref() == Ok("1")
+    !cfg!(feature = "scheduled-goal-initialization-disabled")
+        && std::env::var("VK_CAPACITY_SCHEDULED_GOAL_INITIALIZATION").as_deref() == Ok("1")
 }
 
 impl FirstRun {

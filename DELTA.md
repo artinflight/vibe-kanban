@@ -1531,3 +1531,13 @@ explicit firstRun admission, native-root checklist receipts, and fail-closed
 restart/hold behavior. No production, Android, paid inference or live-settings
 operation. See VK_SCHEDULED_FIRST_RUN.md and HANDOFF for validation and the
 CU-first combined acceptance/rollback gate.
+
+## PR147 staging acceptance blockers
+
+CI identified a cold/deadline-sensitive routing-triage assertion. Repair keeps
+the production budget and separately verifies semantic discovery and unknown
+fallback. Added source-fenced hosted HTTP/guard/test artifact builds and a
+compile-time disabled, v2-compatible rollback variant. Own old test binary was
+verified on Desktop B: before exact local removal; all evidence and shared data
+retained. Combined runtime acceptance and final CI are mandatory. No production
+operation or paid inference.

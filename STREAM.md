@@ -1,3 +1,17 @@
+# PR147 staging acceptance repair
+
+Backend-test CI failed in a deadline-sensitive routing-triage test; its semantic
+and exhausted-budget assertions are repaired. Final CI and same-source artifact
+validation remain required. Read VK_SCHEDULED_FIRST_RUN.md's artifact section.
+The hosted workflow produces matching HTTP/guard/test binaries and a v2-aware,
+compile-time initialization-disabled rollback backend with source/hash manifest.
+Desktop destination: `B:/vk-builds/scheduled-first-run-pr147/<sourceCommit>/`.
+Only this stream's old test executable was removed after verifying its retained
+Desktop copy; all fixture evidence, shared cache, worktrees/user data and services
+were preserved. SSD capacity remains a local HTTP placement blocker. No deploy,
+restart, real Android initialization or paid inference. Staging owns combined
+HTTP/CU/native and rollback acceptance; Recommend remains required.
+
 # October 6: Scheduled native first run
 
 Branch `vk/fa60-vk-scheduled-goa` starts at fork staging `8b562265d`.

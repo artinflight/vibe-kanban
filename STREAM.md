@@ -1,5 +1,14 @@
 # STREAM.md
 
+October6 current scope: preparation and combined synthetic acceptance planning
+for VK PR147/CU PR38 scheduled native first run. No production restart, merge,
+deploy, routing/settings change or agent interruption is authorized. Parent review
+is independent; do not modify development branches. Read
+VK_FIRST_RUN_ROLLOUT_PLAN_20261006.md. Existing receipts verify, but actual combined
+HTTP/scheduler acceptance is blocked by SSD headroom and missing source-bound
+server/fallback artifacts; PR147 backend-test CI also fails. Earlier approvals
+below are historical, not authority for this feature rollout.
+
 October5 current outcome: authorized restart/cutover and live acceptance are
 complete. Updated3027197 serves production; previous1369037 is frozen for
 latest-data cutback. Record final docs/commit/Desktop acceptance evidence and

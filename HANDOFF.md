@@ -1,5 +1,21 @@
 # HANDOFF.md
 
+## October 6 First-Run Acceptance Preparation
+
+Read VK_FIRST_RUN_ROLLOUT_PLAN_20261006.md and
+/mnt/vk-storage/vk-first-run-staging-acceptance-20261006/audit.json.
+Exact draft heads verified: VK147 27d9562d2, CU38 95e7aea47. Existing receipt and
+package hashes pass; combined HTTP/scheduler acceptance has NOT run. SSD has27MiB
+free, no source-verified PR147 HTTP server/fallback was provided, and backend-test
+CI fails routing_triage's protected-context floor assertion (Workhorse vs Frontier).
+Parent review remains pending. PR147 writes controller v2 even with admission off;
+old production/fallback readers are unsafe after upgrade. Require tested v2-aware
+latest-data hold-preserving fallback. No production interruption/settings change,
+paid tests or real Android test occurred. SchedulingON/creditsOFF/zero grants were
+confirmed read-only. Use PR142 pin528282d00, preserve historical recovery exceptions,
+and await headroom/build evidence before combined fixture execution. Final rollout
+requires an explicit new checkpoint. Do not reuse earlier deployment approvals.
+
 ## October 5 Cutover Accepted
 
 Read VK_UPDATED_LIVE_20261005.md and the153237Z attempt's status/live evidence

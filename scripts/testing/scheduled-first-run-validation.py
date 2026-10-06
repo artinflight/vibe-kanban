@@ -25,7 +25,8 @@ binary_source.add_argument('--binary-stdin', action='store_true',
 parser.add_argument('--expected-sha256', help='Required for stdin executable bytes')
 parser.add_argument('--guard', type=Path, required=True)
 parser.add_argument('--native', action='store_true')
-parser.add_argument('--variant', choices=['success', 'input', 'failure', 'race', 'plan', 'empty'], default='success')
+parser.add_argument('--variant', choices=['success', 'input', 'failure', 'race', 'plan', 'empty',
+                                        'stalled-revocation', 'stalled-expiry'], default='success')
 parser.add_argument('test_args', nargs=argparse.REMAINDER)
 a = parser.parse_args()
 boundary = a.boundary_dir.resolve(strict=True)

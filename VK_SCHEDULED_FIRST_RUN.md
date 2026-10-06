@@ -172,34 +172,38 @@ Run both executor binaries through the reviewed boundary. The rollback build
 adds a feature-specific regression proving v2 pending/held intent, binding,
 root-turn receipt and issued IDs survive reopen/removal, and both explicit and
 legacy pending launches are denied with the fixture service flag set to `1`.
-Run all six actual-native first-run cases on the candidate. Then staging must
+Run all eight actual-native first-run cases on the candidate, including
+stalled graceful stop after revocation and after last-lease expiry. Then staging must
 exercise both real HTTP servers with CU inside the same boundary; unit or build
 metadata output is not combined acceptance.
 
-The host inventory found 27 MiB free on mounted SSD, 43 GiB on the protected
+The initial host inventory found 27 MiB free on mounted SSD, 43 GiB on the protected
 system disk, 66 GiB in the shared Cargo target, 97 MiB of task fixtures, and
 approximately 97 MiB of task-source-associated build outputs. Shared cache and
 all worktrees/user data are retained. No bulk build falls back to the root disk.
 Desktop B: has approximately 304 GiB free and is the artifact destination:
 `desktop:B:/vk-builds/scheduled-first-run-pr147/<sourceCommit>/`.
-The old 47,387,656-byte test executable was checksum-verified there before
-removing only that exact superseded task-owned output. All fixture databases,
-proofs, logs and `acceptance.json` remain locally intact. Inventory and the frozen
-one-file cleanup allowlist are under the evidence root. No shared cache, fixture
-evidence, worktree, attachment, application data or service was deleted.
+Three exact task-owned compilation files (90,032,674 bytes total: the old
+47,387,656-byte test executable and two obsolete utils archives) were removed
+only after checksum-verified Desktop copies and inactive-file checks. Frozen
+allowlists and receipts are retained in the evidence root. Other shared cache,
+all fixture databases/proofs/logs, worktrees, attachments, application data and
+services were retained. Independent host free-space increases later permitted
+regular verified artifacts on mounted SSD; current exact paths and source/hash
+receipts are in the delivery handoff. No root-disk bulk fallback was used.
 
-Artifact checksums/source must be verified again after transfer. The reviewed
-driver now accepts `--binary-stdin --expected-sha256 <manifest hash>`: executable
-bytes (maximum 256 MiB) enter a sealed memfd, then only a read-only bind-data
-mount at the fixture's `validation-binary` path is added to the original boundary.
-Host root/socket/PID/network/supervisor restrictions stay intact. Bubblewrap
-0.9's bind-data temporary file is on its private namespace root tmpfs; no bulk
-payload goes to SSD or system disk. Small fixture state/proofs remain on mounted
-SSD. A read-only executable/tamper probe verifies the transport before use.
-This can run test binaries or read-only `--capacity-build-info` even at low disk
-capacity. Persistent local HTTP placement remains a storage blocker; staging
-must use this namespace-only read-only transport or obtain approved bulk storage
-for its combined runner. No root-disk fallback or extra cleanup is authorized.
+Artifact checksums/source must be verified after transfer. The reviewed driver
+also supports `--binary-stdin --expected-sha256 <manifest hash>`: sealed memfd
+bytes (maximum 256 MiB) mount read-only within the original boundary; host
+root/socket/PID/network/supervisor restrictions remain intact. Bubblewrap 0.9's
+bind-data temporary is in its private namespace tmpfs. Both server metadata
+checks and transport tamper probes pass. However, controller unit fixtures use
+`current_exe` as an existing guard path, and memory bind-data resolves to a deleted
+inode; those fixtures correctly reject it. Use the original reviewed `--binary`
+file transport for executor/native regressions. The failed memory unit attempt
+and partial transfers are retained; do not bypass guard checks or open the host
+manager to work around it. Staging must verify actual isolated HTTP/CU behavior;
+metadata or unit results do not replace it.
 Retain latest v2 data on rollback, including post-cutover writes.
 
 ## Combined acceptance and release requirements (staging owner)
@@ -247,3 +251,49 @@ Disable first-run exposure and return CU to its compatible fallback. Test
 rollback decoding and removal with version-2 pending and held records. An older
 unmodified controller is not a safe unattended rollback target. If a migration
 is proposed, review it separately; no destructive downgrade is included here.
+
+
+## Stalled graceful stop: source finding and measured regression
+
+`suspend_capacity` has awaits outside its two 1-second RPC deadlines (client
+mutexes, log writer and exit signal). Thus graceful completion or the HTTP stop
+response can stall. Stop and foreground paths revoke controller permission first;
+renewal then fails closed. An independent `vk-capacity-guard` process polls the
+last lease every 100 ms, signals the child group with TERM, waits 250 ms and sends
+KILL. Its exit invokes `KillMode=control-group` / `TimeoutStopSec=1s`. RuntimeMaxSec
+and a pre-armed absolute KILL timer retain the immutable hard-deadline margin.
+The guard does not await the client, log writer, exit signal or HTTP handler.
+
+The new `scheduled_first_run_runtime` variants `stalled-revocation` and
+`stalled-expiry` hold the real owning client's thread mutex with an authentic
+native offline request outstanding. They observe proxy exit and an inactive or
+unloaded, empty worker cgroup while graceful stop is still blocked, before any
+explicit OS stop/cancellation. The private provider records request, active and
+TERM timestamps and stays silent after worker exit. The test records last lease
+expiry, hard stop, revocation write interval (null before exit in expiry case),
+provider timestamps/count, proxy and cgroup exit observations and hold/receipt
+reconciliation in `home/stalled-stop-measurements.json`. Both cases assert one
+request, no replay/promotion, identity and receipt retained and a durable first-run
+hold. Normal successful initialization and later resume remain in the original
+success case. No fake engine checklist or goal completion is introduced.
+
+Local validated measurements on guard SHA
+`04ee7fc587b162c14e642e2c96cea3905af3990ce77956983aef6bc2569f7b53`:
+revocation provider TERM +46 ms, worker exit observed +480 ms; expiry provider TERM
++7 ms, worker exit observed +567 ms. Each exits before its immutable hard stop.
+The assertion allows the existing 100 ms poll + 250 ms group kill + 1 s cgroup
+cleanup, with 150 ms observation tolerance; this changes no permission or runtime
+limit. These measurements found no worker-bound failure requiring a production
+stop redesign. They establish these synthetic conditions, not staging's earlier
+incident or a successful combined HTTP stop response. Production source remains
+unchanged; only regression/fixture/docs were added.
+
+Current immutable-source CI/artifacts and measured receipts are in
+`/mnt/vk-storage/vk-scheduled-first-run-20261006/stalled-stop-handoff.md`.
+Staging must retain/export `lcp7ys3k` and correlate execution/grant/unit, last
+persisted lease sequence/expiry, revocation before/after write, provider request
+start/activity and actual worker/cgroup exit on the same clock. A request timeout
+alone proves neither running work nor termination. Check that permission cannot
+renew/replay after stop, latest v2 holds/receipts survive reconciliation/rollback,
+and normal same-goal checkpointed resume still works. This adds no rollout,
+real Android, provider spending, live settings or shared-service authorization.

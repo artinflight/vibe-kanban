@@ -1541,3 +1541,6 @@ compile-time disabled, v2-compatible rollback variant. Own old test binary was
 verified on Desktop B: before exact local removal; all evidence and shared data
 retained. Combined runtime acceptance and final CI are mandatory. No production
 operation or paid inference.
+
+
+2026-10-06 PR147 stalled graceful stop: added cfg(test) native revocation/expiry regression with actual client mutex held, outstanding private offline request and independent worker/cgroup observations. Local provider TERM/worker exit were +46/+480 ms after revocation and +7/+567 ms after last expiry; one request in each, graceful future still blocked, first-run holds/identity/receipts retained. No production enforcement change; non-test client source is unchanged from 86f62b2. Current immutable CI/build/runtime receipts and staging lcp7ys3k comparison are in /mnt/vk-storage/vk-scheduled-first-run-20261006/stalled-stop-handoff.md. Recommend/default-off/CU-first and no production/Android/paid/live-service boundaries retained.

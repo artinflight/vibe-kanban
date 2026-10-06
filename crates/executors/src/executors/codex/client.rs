@@ -2628,6 +2628,7 @@ for line in sys.stdin:
             .await
             .unwrap();
         let variant = std::env::var("VK_SCHEDULED_FIRST_RUN_VARIANT").unwrap();
+        let stalled = variant.starts_with("stalled-");
         let codex: Codex = serde_json::from_value(
             serde_json::json!({"model":"fixture","model_provider":"fixture",
             "sandbox":"danger-full-access","ask_for_approval":"never","plan":variant == "plan",
@@ -2649,7 +2650,11 @@ for line in sys.stdin:
                     session,
                     Uuid::new_v4(),
                     "synthetic-included-night".into(),
-                    now + 9000,
+                    now + if variant == "stalled-expiry" {
+                        7000
+                    } else {
+                        9000
+                    },
                     now + 12000,
                     now,
                     first.then(|| first_run::FirstRun::from_native(&native)),
@@ -2697,6 +2702,8 @@ for line in sys.stdin:
                 "VK_GOAL_TEST_SCENARIO",
                 if variant == "success" || variant == "race" || variant == "plan" {
                     "capacity-first-run"
+                } else if stalled {
+                    "capacity-first-run-stalled"
                 } else if variant == "empty" {
                     "capacity-first-run-empty"
                 } else if variant == "input" {
@@ -2717,6 +2724,240 @@ for line in sys.stdin:
                 let mut out = tokio::fs::File::create(log).await.unwrap();
                 tokio::io::copy(&mut stdout, &mut out).await.unwrap();
             });
+            if stalled {
+                let timeline = home.join("stalled-provider-timeline.jsonl");
+                tokio::time::timeout(Duration::from_secs(4), async {
+                    while !timeline.exists() {
+                        sleep(Duration::from_millis(10)).await;
+                    }
+                })
+                .await
+                .unwrap();
+                let client = active_codex_clients()
+                    .lock()
+                    .unwrap()
+                    .get(&execution)
+                    .and_then(Weak::upgrade)
+                    .unwrap();
+                // Stall the actual first unbounded graceful-stop await. The
+                // controller runtime still runs; its OS worker is independent.
+                let held_thread = client.thread_id.lock().await;
+                let lease =
+                    capacity_guard::read_lease(std::path::Path::new(&request.lease_file)).unwrap();
+                let held_at_ms = crate::capacity::wall_ms();
+                let revocation = if variant == "stalled-revocation" {
+                    let before = crate::capacity::wall_ms();
+                    controller
+                        .lock()
+                        .await
+                        .revoke_session(session, "Synthetic stalled graceful stop")
+                        .unwrap();
+                    let after = crate::capacity::wall_ms();
+                    assert!(
+                        capacity_guard::read_lease(std::path::Path::new(&request.lease_file))
+                            .unwrap()
+                            .revoked
+                    );
+                    Some((before, after))
+                } else {
+                    None
+                };
+                let graceful = tokio::spawn(AppServerClient::suspend_capacity_execution(
+                    execution,
+                    "Synthetic stalled graceful stop".into(),
+                ));
+                tokio::time::timeout(Duration::from_secs(1), async {
+                    while !client.capacity_stopped.load(Ordering::SeqCst) {
+                        sleep(Duration::from_millis(10)).await;
+                    }
+                })
+                .await
+                .unwrap();
+                // No explicit systemctl stop, cancellation, proxy kill or exit
+                // signal is used before observing independent worker shutdown.
+                tokio::time::timeout(Duration::from_secs(10), spawned.child.wait())
+                    .await
+                    .unwrap()
+                    .unwrap();
+                let proxy_exit_ms = crate::capacity::wall_ms();
+                let unit = crate::capacity::unit_name(execution);
+                let shutdown = tokio::time::timeout(Duration::from_secs(2), async {
+                    loop {
+                        let output = Command::new("systemctl")
+                            .args([
+                                "--user",
+                                "show",
+                                &unit,
+                                "--property=LoadState",
+                                "--property=ActiveState",
+                                "--property=ControlGroup",
+                            ])
+                            .kill_on_drop(true)
+                            .output()
+                            .await
+                            .unwrap();
+                        let text = String::from_utf8(output.stdout).unwrap();
+                        let fields: std::collections::HashMap<_, _> = text
+                            .lines()
+                            .filter_map(|line| line.split_once('='))
+                            .collect();
+                        if fields.get("LoadState") == Some(&"not-found") {
+                            break text;
+                        }
+                        assert!(output.status.success());
+                        if matches!(fields.get("ActiveState"), Some(&"inactive" | &"failed")) {
+                            let group = fields.get("ControlGroup").unwrap();
+                            assert!(
+                                group.is_empty()
+                                    || (group.starts_with('/') && !group.contains(".."))
+                            );
+                            if group.is_empty() {
+                                break text;
+                            }
+                            match tokio::fs::read_to_string(format!(
+                                "/sys/fs/cgroup{group}/cgroup.events"
+                            ))
+                            .await
+                            {
+                                Ok(events) if events.lines().any(|line| line == "populated 0") => {
+                                    break text;
+                                }
+                                Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                                    break text;
+                                }
+                                _ => {}
+                            }
+                        }
+                        sleep(Duration::from_millis(10)).await;
+                    }
+                })
+                .await
+                .unwrap();
+                let worker_exit_ms = crate::capacity::wall_ms();
+                assert!(
+                    !graceful.is_finished(),
+                    "Graceful stop must still be blocked when the worker exits"
+                );
+                let events_before = std::fs::read(&timeline).unwrap();
+                sleep(Duration::from_millis(300)).await;
+                assert_eq!(
+                    std::fs::read(&timeline).unwrap(),
+                    events_before,
+                    "Provider activity must stop with its worker"
+                );
+                let events: Vec<serde_json::Value> = std::str::from_utf8(&events_before)
+                    .unwrap()
+                    .lines()
+                    .map(|line| serde_json::from_str(line).unwrap())
+                    .collect();
+                let requests: Vec<_> = events
+                    .iter()
+                    .filter(|event| event["event"] == "providerRequest")
+                    .collect();
+                assert_eq!(requests.len(), 1, "No additional provider request or retry");
+                let last_request_ms = requests[0]["wallMs"].as_u64().unwrap();
+                let last_activity_ms = events
+                    .iter()
+                    .filter(|event| event["event"] == "providerActive")
+                    .map(|event| event["wallMs"].as_u64().unwrap())
+                    .max()
+                    .unwrap();
+                let termination_ms = events
+                    .iter()
+                    .find(|event| event["event"] == "providerTerminating")
+                    .unwrap()["wallMs"]
+                    .as_u64()
+                    .unwrap();
+                let boundary_ms = revocation.map_or(lease.expires_at_ms, |(_, after)| after);
+                // 100ms guard poll + 250ms group kill + 1s cgroup stop;
+                // retain 150ms observation tolerance, never extend hard stop.
+                assert!(worker_exit_ms <= boundary_ms + 1500);
+                assert!(worker_exit_ms < lease.stop_at_ms);
+                assert!(last_request_ms < boundary_ms);
+                assert!(last_activity_ms <= boundary_ms + 1500);
+                assert!(termination_ms <= worker_exit_ms);
+                if revocation.is_none() {
+                    assert!(
+                        termination_ms >= lease.expires_at_ms,
+                        "Expiry case must reach the independent lease fence"
+                    );
+                }
+                let reconciled_at_ms = crate::capacity::wall_ms();
+                let mut c = controller.lock().await;
+                c.revoke_session(
+                    session,
+                    "Verified independent worker exit; retain first-run hold",
+                )
+                .unwrap();
+                let held = &c.state.goals[&session];
+                assert_eq!(held.initialization_state, InitializationState::Held);
+                assert!(!held.eligible);
+                assert_eq!(held.identity(), first_run::FirstRun::from_native(&native));
+                assert!(
+                    held.initialization_receipt
+                        .as_ref()
+                        .unwrap()
+                        .checkpoint_turn_id
+                        .is_none()
+                );
+                let retained_receipt = held.initialization_receipt.clone();
+                c.stopped(
+                    session,
+                    Uuid::parse_str(&request.id).unwrap(),
+                    "Independent guarded exit verified".into(),
+                )
+                .unwrap();
+                assert_eq!(
+                    serde_json::to_value(&c.state.goals[&session].initialization_receipt).unwrap(),
+                    serde_json::to_value(&retained_receipt).unwrap()
+                );
+                assert!(
+                    c.issue_with_first_run(
+                        session,
+                        Uuid::new_v4(),
+                        "synthetic-included-night".into(),
+                        now + 20000,
+                        now + 30000,
+                        crate::capacity::wall_ms(),
+                        Some(first_run::FirstRun::from_native(&native)),
+                        None
+                    )
+                    .is_err()
+                );
+                drop(c);
+                assert_eq!(
+                    first_run::FirstRun::from_native(&first_run::native(&thread).await.unwrap()),
+                    first_run::FirstRun::from_native(&native)
+                );
+                std::fs::write(home.join("stalled-stop-measurements.json"), serde_json::to_vec_pretty(&serde_json::json!({
+                    "variant": variant, "executionId": execution, "grantId": request.id,
+                    "lastLeaseExpiryMs": lease.expires_at_ms, "hardStopMs": lease.stop_at_ms,
+                    "gracefulLockHeldMs": held_at_ms,
+                    "revocationBeforeMs": revocation.map(|(before, _)| before),
+                    "revocationConfirmedMs": revocation.map(|(_, after)| after),
+                    "lastProviderRequestMs": last_request_ms, "providerRequestCount": requests.len(),
+                    "lastProviderActivityMs": last_activity_ms, "providerTerminatingMs": termination_ms,
+                    "proxyExitObservedMs": proxy_exit_ms, "workerExitObservedMs": worker_exit_ms,
+                    "workerState": shutdown, "gracefulStillBlockedAtWorkerExit": true,
+                    "containmentObservationAllowanceMs": 1500, "reconciledAtMs": reconciled_at_ms,
+                    "firstRunHeld": true, "identityAndReceiptRetained": true,
+                    "explicitOsStopBeforeWorkerExit": false,
+                })).unwrap()).unwrap();
+                // Test-owned stalled task only. Do not turn delayed native RPC
+                // into a success receipt or discard the retained goal/hold.
+                graceful.abort();
+                assert!(graceful.await.unwrap_err().is_cancelled());
+                drop(held_thread);
+                if let Some(cancel) = spawned.cancel {
+                    cancel.cancel();
+                }
+                drop(client); // Release the test-owned log writer before EOF.
+                tokio::time::timeout(Duration::from_secs(4), drain)
+                    .await
+                    .unwrap()
+                    .unwrap();
+                continue;
+            }
             let outcome =
                 tokio::time::timeout(Duration::from_secs(14), spawned.exit_signal.take().unwrap())
                     .await

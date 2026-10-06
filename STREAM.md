@@ -1,16 +1,26 @@
-# PR147 staging acceptance repair
+# PR147 stalled graceful stop verification
 
-Backend-test CI failed in a deadline-sensitive routing-triage test; its semantic
-and exhausted-budget assertions are repaired. Final CI and same-source artifact
-validation remain required. Read VK_SCHEDULED_FIRST_RUN.md's artifact section.
-The hosted workflow produces matching HTTP/guard/test binaries and a v2-aware,
-compile-time initialization-disabled rollback backend with source/hash manifest.
-Desktop destination: `B:/vk-builds/scheduled-first-run-pr147/<sourceCommit>/`.
-Only this stream's old test executable was removed after verifying its retained
-Desktop copy; all fixture evidence, shared cache, worktrees/user data and services
-were preserved. SSD capacity remains a local HTTP placement blocker. No deploy,
-restart, real Android initialization or paid inference. Staging owns combined
-HTTP/CU/native and rollback acceptance; Recommend remains required.
+The production stop/client/controller/guard behavior remains unchanged from
+`86f62b2`. A new opt-in native regression stalls the actual client mutex while
+an offline provider request is outstanding and independently measures persisted
+revocation or last-lease expiry, provider activity and worker/cgroup exit. Local
+revocation: provider TERM +46 ms, worker exit observed +480 ms. Local expiry:
+provider TERM +7 ms, worker exit observed +567 ms. Both retain first-run identity,
+receipt and held intent; no explicit OS stop precedes observation. Graceful HTTP
+completion is unbounded, but these cases found no worker-bound failure. See the
+bounded-stop section in VK_SCHEDULED_FIRST_RUN.md.
+
+Current exact CI/build hashes, artifacts, timelines and staging comparison checks
+are retained at `/mnt/vk-storage/vk-scheduled-first-run-20261006/stalled-stop-handoff.md`.
+Use that delivery receipt rather than treating historical binary notes below as
+latest-source acceptance. The verified `86f62b2` HTTP/disabled-v2-reader bundle
+and its current-source ten runtime receipts remain preserved. New source changes
+are regression/fixture/docs only; final same-source CI and artifact checks remain
+required. Combined HTTP/CU/native and latest-v2 rollback acceptance belong to
+staging through the parent. Compare staging's retained `lcp7ys3k` timeline by
+last persisted lease, revocation and actual worker/provider events, never HTTP
+timeout alone. No production/settings/Android/paid-provider/service change.
+Recommend and CU-compatibility-before-pending-exposure remain required.
 
 # October 6: Scheduled native first run
 

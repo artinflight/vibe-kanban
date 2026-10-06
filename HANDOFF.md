@@ -1,5 +1,18 @@
 # HANDOFF.md
 
+## October 6 Owned Temporary Cleanup Held
+
+Read VK_OWNED_TEMP_CLEANUP_20261006.md. Exact1966-file allowlist accounts for
+4,434,825,216 allocated bytes of reproducible October5 test copies; archive/member
+hashes verify, originals/evidence remain. No deletion occurred: current SSH/SFTP
+PIDs2324526/2324527 and gpg-agent19071 are not fully inspectable, so the parent/OP
+owner was asked for privileged read-only reference evidence. Do not weaken the
+gate or interrupt transfers. Receipt root is
+/mnt/vk-storage/vk-staging-owned-cleanup-20261006. Live services/route/protected
+roots are unchanged; about5.36GB free is from concurrent OP cleanup, not ours.
+OP's86 files/27 archives, shared Rust target, workspaces and pending PR147 server/
+fallback artifacts are excluded. No restart/deployment is authorized.
+
 ## October 6 First-Run Acceptance Preparation
 
 Read VK_FIRST_RUN_ROLLOUT_PLAN_20261006.md and

@@ -1523,3 +1523,11 @@ Recommend is required; no deployment/restart/cutover or Auto activation. Deadlin
 for full useful router readiness is before October 30, 2026 (20x becomes 10x).
 See VK_AUTOSWITCH_RELOAD.md for mandatory next-candidate packaging and remaining
 acceptance/ownership dependencies; CU credit budgeting is a separate issue.
+
+## October 6, 2026 — scheduled first native goal run (development)
+
+Separate workspace at staging 8b562265d implements identity-bound pending intent,
+explicit firstRun admission, native-root checklist receipts, and fail-closed
+restart/hold behavior. No production, Android, paid inference or live-settings
+operation. See VK_SCHEDULED_FIRST_RUN.md and HANDOFF for validation and the
+CU-first combined acceptance/rollback gate.

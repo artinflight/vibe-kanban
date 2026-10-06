@@ -13,11 +13,23 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use super::{CapacityExecution, issuer_epoch, wall_ms};
+use super::{
+    CapacityExecution,
+    first_run::{self, Binding, FirstRun, InitializationState, Receipt},
+    issuer_epoch, wall_ms,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ManagedGoal {
+    #[serde(default)]
+    pub goal_id: String,
+    #[serde(default)]
+    pub initialization_state: InitializationState,
+    #[serde(default)]
+    pub binding: Option<Binding>,
+    #[serde(default)]
+    pub initialization_receipt: Option<Receipt>,
     pub session_id: Uuid,
     pub thread_id: String,
     pub objective: String,
@@ -25,6 +37,101 @@ pub struct ManagedGoal {
     pub eligible: bool,
     pub reason: String,
     pub grant: Option<Grant>,
+}
+impl ManagedGoal {
+    pub fn identity(&self) -> FirstRun {
+        FirstRun {
+            goal_id: self.goal_id.clone(),
+            thread_id: self.thread_id.clone(),
+            objective: self.objective.clone(),
+            created_at: self.created_at,
+        }
+    }
+    pub fn pending_identity(&self) -> Option<FirstRun> {
+        (self.initialization_state == InitializationState::Pending).then(|| self.identity())
+    }
+    pub fn same_native_identity(&self, other: &Self) -> bool {
+        self.thread_id == other.thread_id
+            && self.objective == other.objective
+            && self.created_at == other.created_at
+            && (self.goal_id.is_empty() || self.goal_id == other.goal_id)
+    }
+    pub fn check_first_run(&self, intent: Option<&FirstRun>) -> io::Result<()> {
+        match self.initialization_state {
+            InitializationState::Pending
+                if first_run::enabled()
+                    && self.initialization_receipt.is_none()
+                    && intent == Some(&self.identity()) =>
+            {
+                self.identity().validate()
+            }
+            InitializationState::Checkpointed if intent.is_none() => Ok(()),
+            _ => Err(invalid(
+                "Explicit matching firstRun authority required; held or legacy pending launches cannot run",
+            )),
+        }
+    }
+    pub async fn revalidate(&self, own: Option<Uuid>, bootstrap: bool) -> io::Result<()> {
+        let current = first_run::native(&self.thread_id).await?;
+        if current.thread_id != self.thread_id
+            || current.objective != self.objective
+            || current.created_at != self.created_at
+            || (!self.goal_id.is_empty() && current.goal_id != self.goal_id)
+        {
+            return Err(invalid(
+                "Native goal identity changed; explicit selection required",
+            ));
+        }
+        if let Some(expected) = &self.binding {
+            let actual = first_run::binding(
+                Path::new(&expected.database),
+                self.session_id,
+                &self.thread_id,
+                own,
+            )
+            .await?;
+            if actual != *expected {
+                return Err(invalid("Session/workspace/account/turn anchor changed"));
+            }
+        } else if self.initialization_state == InitializationState::Pending {
+            return Err(invalid("First run has no native session binding"));
+        }
+        let p = first_run::read_progress(&current)?;
+        match self.initialization_state {
+            InitializationState::Pending => {
+                if !first_run::enabled() || current.status != "paused" {
+                    return Err(invalid("First run is no longer paused and admissible"));
+                }
+                if p.is_some()
+                    && !(bootstrap
+                        && self
+                            .initialization_receipt
+                            .as_ref()
+                            .is_some_and(|r| r.execution_id == own))
+                {
+                    return Err(invalid(
+                        "Pending first run already has progress; inspect before dispatch",
+                    ));
+                }
+                if let Some(p) = p
+                    && (!p.requirements.is_empty()
+                        || !p.completed.is_empty()
+                        || p.turns != 0
+                        || p.last_turn.is_some()
+                        || p.pause_reason.is_some())
+                {
+                    return Err(invalid("Unexpected bootstrap evidence"));
+                }
+                Ok(())
+            }
+            InitializationState::Checkpointed => {
+                let p = p.ok_or_else(|| invalid("Checkpointed goal lost its progress"))?;
+                first_run::valid_checklist(&p)?;
+                validate_native_readiness(&current, &p)
+            }
+            InitializationState::Held => Err(invalid("First native run requires inspection")),
+        }
+    }
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -81,6 +188,88 @@ fn save(path: &Path, value: &impl Serialize) -> io::Result<()> {
     result
 }
 impl Controller {
+    /// Authenticated root-turn tool/message receipt, never file presence alone.
+    pub fn initialization_checkpoint(
+        &mut self,
+        execution: Uuid,
+        native: &crate::executors::codex::goals::NativeGoal,
+        progress: &crate::executors::codex::goals::Progress,
+        turn: &str,
+    ) -> io::Result<()> {
+        let mut next = self.state.clone();
+        let Some(goal) = next.goals.values_mut().find(|g| {
+            g.initialization_state == InitializationState::Pending
+                && g.initialization_receipt
+                    .as_ref()
+                    .is_some_and(|r| r.execution_id == Some(execution))
+        }) else {
+            return Ok(());
+        };
+        if goal.identity() != FirstRun::from_native(native) || turn.is_empty() {
+            return Err(invalid("First native checkpoint identity changed"));
+        }
+        let receipt = goal.initialization_receipt.as_mut().unwrap();
+        if progress.pause_reason.is_some() {
+            return Err(invalid("First native turn requires user input"));
+        }
+        first_run::valid_checklist(progress)?;
+        if receipt
+            .checkpoint_turn_id
+            .as_deref()
+            .is_some_and(|id| id != turn)
+        {
+            return Err(invalid("First native checkpoint moved to another turn"));
+        }
+        receipt.checkpoint_turn_id = Some(turn.into());
+        self.commit(next)
+    }
+    pub fn promote_initialization(
+        &mut self,
+        execution: Uuid,
+        native: &crate::executors::codex::goals::NativeGoal,
+        progress: &crate::executors::codex::goals::Progress,
+        turn: &str,
+        now: u64,
+    ) -> io::Result<()> {
+        let mut next = self.state.clone();
+        let Some(goal) = next.goals.values_mut().find(|g| {
+            g.initialization_state == InitializationState::Pending
+                && g.initialization_receipt
+                    .as_ref()
+                    .is_some_and(|r| r.execution_id == Some(execution))
+        }) else {
+            return Ok(());
+        };
+        let receipt = goal.initialization_receipt.as_ref().unwrap();
+        let grant = goal
+            .grant
+            .as_ref()
+            .ok_or_else(|| invalid("First native run lost its grant"))?;
+        if !first_run::enabled()
+            || goal.identity() != FirstRun::from_native(native)
+            || progress.objective != goal.objective
+            || progress.created_at != goal.created_at
+            || receipt.checkpoint_turn_id.as_deref() != Some(turn)
+            || progress.last_turn.as_deref() != Some(turn)
+            || grant.stopping
+            || grant.epoch != self.state.epoch
+            || grant.expires_at_ms.saturating_sub(now) <= 2000
+            || grant.stop_at_ms.saturating_sub(now) <= 2000
+            || progress.pause_reason.is_some()
+            || !matches!(native.status.as_str(), "active" | "complete")
+        {
+            return Err(invalid(
+                "First native turn was not safely completed with authentic checklist evidence",
+            ));
+        }
+        first_run::valid_checklist(progress)?;
+        goal.initialization_state = InitializationState::Checkpointed;
+        goal.reason = "Native first turn verified; checkpointed continuation available".into();
+        if progress.all_complete() || native.status == "complete" {
+            goal.eligible = false;
+        }
+        self.commit(next)
+    }
     pub fn standby(root: PathBuf, guard: PathBuf) -> io::Result<Self> {
         if !root.is_absolute() || !guard.is_absolute() || !guard.is_file() {
             return Err(invalid(
@@ -183,7 +372,7 @@ impl Controller {
             },
             Err(e) => return Err(e),
         };
-        if state.version != 1 || state.goals.len() > 100 {
+        if !matches!(state.version, 1 | 2) || state.goals.len() > 100 {
             return Err(invalid("Unsupported capacity state"));
         }
         if let Some((expected_epoch, revision)) = expected {
@@ -205,6 +394,15 @@ impl Controller {
                 grant.stopping = true;
                 goal.reason = "VK restarted; reconciling stopped execution".into();
             }
+            if goal.initialization_state == InitializationState::Pending
+                && goal.initialization_receipt.is_some()
+            {
+                goal.initialization_state = InitializationState::Held;
+                goal.eligible = false;
+                goal.reason =
+                    "First native run interrupted by restart; inspect before any further work"
+                        .into();
+            }
         }
         state.epoch = epoch;
         let mut this = Self {
@@ -219,6 +417,8 @@ impl Controller {
     }
     fn commit(&mut self, mut next: State) -> io::Result<()> {
         self.ensure_owner()?;
+        // Old binaries must refuse this ledger rather than erase first-run holds.
+        next.version = 2;
         next.revision = self
             .state
             .revision
@@ -261,12 +461,37 @@ impl Controller {
         if self.state.goals.len() >= 100 && !self.state.goals.contains_key(&goal.session_id) {
             return Err(invalid("Too many eligible goals"));
         }
+        if let Some(old) = self.state.goals.get(&goal.session_id)
+            && old.same_native_identity(&goal)
+        {
+            if goal.eligible && old.initialization_state != goal.initialization_state {
+                return Err(invalid(
+                    "Initialization evidence/state changed; inspect the stored goal rather than replacing its receipt",
+                ));
+            }
+            if goal.eligible && old.initialization_state == InitializationState::Held {
+                return Err(invalid(
+                    "First native run is held; inspect it rather than reselecting it",
+                ));
+            }
+            // Removal/reselection cannot launder a spent initialization receipt.
+            goal.initialization_receipt = old.initialization_receipt.clone();
+            goal.initialization_state = old.initialization_state.clone();
+        }
         goal.reason = if goal.eligible {
             "Waiting for unused capacity"
         } else {
             "Not eligible"
         }
         .into();
+        if goal.initialization_state == InitializationState::Held {
+            goal.reason = self
+                .state
+                .goals
+                .get(&goal.session_id)
+                .map(|g| g.reason.clone())
+                .unwrap_or_else(|| "First native run requires inspection".into());
+        }
         let mut next = self.state.clone();
         next.goals.insert(goal.session_id, goal);
         self.commit(next)
@@ -279,6 +504,20 @@ impl Controller {
         expires: u64,
         stop: u64,
         now: u64,
+    ) -> io::Result<CapacityExecution> {
+        self.issue_with_first_run(session, id, allocation, expires, stop, now, None, None)
+    }
+    #[allow(clippy::too_many_arguments)]
+    pub fn issue_with_first_run(
+        &mut self,
+        session: Uuid,
+        id: Uuid,
+        allocation: String,
+        expires: u64,
+        stop: u64,
+        now: u64,
+        first_run: Option<FirstRun>,
+        binding: Option<Binding>,
     ) -> io::Result<CapacityExecution> {
         let active = self
             .state
@@ -320,6 +559,7 @@ impl Controller {
             .get(&session)
             .filter(|g| g.eligible)
             .ok_or_else(|| invalid("Goal is not eligible"))?;
+        goal.check_first_run(first_run.as_ref())?;
         let lease = Lease {
             version: 1,
             id: id.to_string(),
@@ -347,9 +587,21 @@ impl Controller {
             execution_id: None,
             stopping: false,
         });
+        if let Some(binding) = binding {
+            goal.binding = Some(binding);
+        }
         goal.reason = "Starting scheduled goal".into();
+        if first_run.is_some() {
+            goal.initialization_receipt = Some(Receipt {
+                grant_id: id,
+                execution_id: None,
+                checkpoint_turn_id: None,
+            });
+        }
         self.commit(next)?;
         Ok(CapacityExecution {
+            first_run,
+            controller_revision: self.state.revision,
             // Process identity protects persisted actions; controller epochs
             // separately rotate each time this process reacquires ownership.
             issuer_epoch: issuer_epoch().into(),
@@ -392,12 +644,27 @@ impl Controller {
             || grant.stop_at_ms != request.stop_at_ms
             || request.lease_file != self.lease_path(id).to_string_lossy()
             || request.guard_binary != self.guard.to_string_lossy()
+            || request.first_run.as_ref() != goal.pending_identity().as_ref()
+            || (request.first_run.is_some() && request.controller_revision != self.state.revision)
         {
             return Err(invalid(
                 "Launch permission was revoked, changed, expired or already bound",
             ));
         }
         let mut next = self.state.clone();
+        if request.first_run.is_some() {
+            let receipt = next
+                .goals
+                .get_mut(session)
+                .unwrap()
+                .initialization_receipt
+                .as_mut()
+                .ok_or_else(|| invalid("Missing owned initialization receipt"))?;
+            if receipt.grant_id != id || receipt.execution_id.is_some() {
+                return Err(invalid("Initialization already attempted"));
+            }
+            receipt.execution_id = Some(execution);
+        }
         next.goals
             .get_mut(session)
             .unwrap()
@@ -501,6 +768,12 @@ impl Controller {
             if let Some(grant) = &mut goal.grant {
                 grant.stopping = true;
                 goal.reason = reason.into();
+                if goal.initialization_state == InitializationState::Pending
+                    && goal.initialization_receipt.is_some()
+                {
+                    goal.initialization_state = InitializationState::Held;
+                    goal.eligible = false;
+                }
             }
         }
         // Persistence failure must never leave in-memory renewal authority open.
@@ -548,6 +821,12 @@ impl Controller {
         }
         goal.grant = None;
         goal.reason = reason;
+        if goal.initialization_state == InitializationState::Pending
+            && goal.initialization_receipt.is_some()
+        {
+            goal.initialization_state = InitializationState::Held;
+            goal.eligible = false;
+        }
         self.commit(next)
     }
 }
@@ -699,17 +978,22 @@ pub async fn stop_execution_unit(execution: Uuid) -> io::Result<bool> {
 pub async fn record_launch_failure(execution: Uuid, reason: &str) {
     if let Ok(Some(controller)) = configured() {
         let mut c = controller.lock().await;
-        let mut next = c.state.clone();
-        if let Some(goal) = next.goals.values_mut().find(|g| {
-            g.grant
-                .as_ref()
-                .is_some_and(|grant| grant.execution_id == Some(execution))
-        }) {
-            goal.reason = format!(
+        if let Some(session) = c
+            .state
+            .goals
+            .values()
+            .find(|g| {
+                g.grant
+                    .as_ref()
+                    .is_some_and(|grant| grant.execution_id == Some(execution))
+            })
+            .map(|g| g.session_id)
+        {
+            let reason = format!(
                 "Could not start: {}",
                 reason.chars().take(500).collect::<String>()
             );
-            if let Err(error) = c.commit(next) {
+            if let Err(error) = c.revoke_session(session, &reason) {
                 tracing::warn!(%error, "Could not persist scheduled launch failure");
             }
         }
@@ -732,19 +1016,28 @@ pub async fn validate_native(lease: &Lease, snapshot: &serde_json::Value) -> io:
         .ok_or_else(|| invalid("Scheduled goal authority changed"))?;
     let native: crate::executors::codex::goals::NativeGoal =
         serde_json::from_value(snapshot["goal"].clone())?;
-    let progress: crate::executors::codex::goals::Progress = serde_json::from_slice(&fs::read(
-        crate::executors::codex::goals::progress_path(&goal.thread_id)?,
-    )?)?;
-    validate_native_readiness(&native, &progress)?;
+    let native = first_run::resolve_wire(native).await?;
+    match goal.initialization_state {
+        InitializationState::Pending if native.status == "paused" => {}
+        InitializationState::Checkpointed => {
+            let progress =
+                first_run::read_progress(&native)?.ok_or_else(|| invalid("Missing checkpoint"))?;
+            validate_native_readiness(&native, &progress)?;
+        }
+        _ => return Err(invalid("Native status no longer permits dispatch")),
+    }
     if native.thread_id != goal.thread_id
         || native.objective != goal.objective
         || native.created_at != goal.created_at
         || native.status == "complete"
+        || (!goal.goal_id.is_empty() && native.goal_id != goal.goal_id)
     {
         return Err(invalid(
             "Native goal changed; select its new objective explicitly",
         ));
     }
+    goal.revalidate(Uuid::parse_str(&lease.execution_id).ok(), false)
+        .await?;
     Ok(())
 }
 
@@ -753,6 +1046,10 @@ pub fn validate_native_readiness(
     native: &crate::executors::codex::goals::NativeGoal,
     progress: &crate::executors::codex::goals::Progress,
 ) -> io::Result<()> {
+    if progress.objective != native.objective || progress.created_at != native.created_at {
+        return Err(invalid("Native checkpoint identity changed"));
+    }
+    first_run::valid_checklist(progress)?;
     if let Some(reason) = &progress.pause_reason {
         return Err(invalid(&format!(
             "Goal is waiting for your input: {reason}"
@@ -781,6 +1078,305 @@ pub fn validate_native_readiness(
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn pending(f: &mut Fixture) -> FirstRun {
+        let c = f.c.as_mut().unwrap();
+        let mut goal = c.state.goals[&f.session].clone();
+        goal.goal_id = Uuid::new_v4().to_string();
+        goal.created_at += 1; // a distinct synthetic uninitialized identity
+        goal.initialization_state = InitializationState::Pending;
+        c.enroll(goal.clone()).unwrap();
+        goal.identity()
+    }
+    fn first_issue(f: &mut Fixture, identity: FirstRun) -> CapacityExecution {
+        f.c.as_mut()
+            .unwrap()
+            .issue_with_first_run(
+                f.session,
+                Uuid::new_v4(),
+                "old-week:day".into(),
+                30_000,
+                90_000,
+                1000,
+                Some(identity),
+                None,
+            )
+            .unwrap()
+    }
+    #[test]
+    fn lost_checkpoint_cannot_be_reclassified_as_a_pending_first_run() {
+        let mut f = Fixture::new();
+        let c = f.c.as_mut().unwrap();
+        let mut goal = c.state.goals[&f.session].clone();
+        goal.initialization_state = InitializationState::Pending;
+        goal.goal_id = Uuid::new_v4().to_string();
+        assert!(c.enroll(goal).is_err());
+        assert_eq!(
+            c.state.goals[&f.session].initialization_state,
+            InitializationState::Checkpointed
+        );
+    }
+    #[test]
+    fn first_run_selection_is_inert_and_removal_survives_restart() {
+        if !first_run::enabled() {
+            return;
+        }
+        let mut f = Fixture::new();
+        let identity = pending(&mut f);
+        let c = f.c.as_mut().unwrap();
+        assert!(c.state.goals[&f.session].grant.is_none());
+        assert!(c.state.goals[&f.session].initialization_receipt.is_none());
+        assert!(
+            !crate::executors::codex::goals::progress_path(&identity.thread_id)
+                .unwrap()
+                .exists()
+        );
+        assert_eq!(fs::read_dir(&f.root).unwrap().count(), 2); // ledger and owner lock only
+        f.c.take();
+        let mut c = Controller::open(f.root.clone(), f.guard.clone(), "restarted".into()).unwrap();
+        assert_eq!(
+            c.state.goals[&f.session].initialization_state,
+            InitializationState::Pending
+        );
+        let mut goal = c.state.goals[&f.session].clone();
+        goal.eligible = false;
+        c.enroll(goal).unwrap();
+        assert!(
+            c.issue_with_first_run(
+                f.session,
+                Uuid::new_v4(),
+                "old-week:day".into(),
+                30_000,
+                90_000,
+                1000,
+                Some(identity.clone()),
+                None
+            )
+            .is_err()
+        );
+        assert_eq!(c.state.goals[&f.session].identity(), identity);
+        f.c = Some(c);
+    }
+    #[test]
+    fn first_run_rejects_legacy_identity_races_and_revision_changes() {
+        if !first_run::enabled() {
+            return;
+        }
+        let mut f = Fixture::new();
+        let identity = pending(&mut f);
+        let c = f.c.as_mut().unwrap();
+        assert!(
+            c.issue(
+                f.session,
+                Uuid::new_v4(),
+                "old-week:day".into(),
+                30_000,
+                90_000,
+                1000
+            )
+            .is_err()
+        );
+        for field in 0..4 {
+            let mut changed = identity.clone();
+            match field {
+                0 => changed.goal_id = Uuid::new_v4().to_string(),
+                1 => changed.thread_id = "different".into(),
+                2 => changed.objective.push('!'),
+                _ => changed.created_at += 1,
+            }
+            assert!(
+                c.issue_with_first_run(
+                    f.session,
+                    Uuid::new_v4(),
+                    "old-week:day".into(),
+                    30_000,
+                    90_000,
+                    1000,
+                    Some(changed),
+                    None
+                )
+                .is_err()
+            );
+        }
+        let request = first_issue(&mut f, identity);
+        let c = f.c.as_mut().unwrap();
+        let mut legacy = request.clone();
+        legacy.first_run = None;
+        assert!(
+            c.bind(&legacy, "native-thread", Uuid::new_v4(), 1000)
+                .is_err()
+        );
+        let mut stale = request.clone();
+        stale.controller_revision -= 1;
+        assert!(
+            c.bind(&stale, "native-thread", Uuid::new_v4(), 1000)
+                .is_err()
+        );
+        c.bind(&request, "native-thread", Uuid::new_v4(), 1000)
+            .unwrap();
+        assert!(
+            c.bind(&request, "native-thread", Uuid::new_v4(), 1000)
+                .is_err()
+        );
+    }
+    #[test]
+    fn ambiguous_first_dispatch_is_held_and_cannot_be_laundered_by_reselection() {
+        if !first_run::enabled() {
+            return;
+        }
+        let mut f = Fixture::new();
+        let identity = pending(&mut f);
+        let request = first_issue(&mut f, identity.clone());
+        f.c.take();
+        let mut c = Controller::open(f.root.clone(), f.guard.clone(), "restart".into()).unwrap();
+        assert_eq!(
+            c.state.goals[&f.session].initialization_state,
+            InitializationState::Held
+        );
+        assert!(!c.state.goals[&f.session].eligible);
+        c.stopped(
+            f.session,
+            Uuid::parse_str(&request.id).unwrap(),
+            "Verified exit; still ambiguous".into(),
+        )
+        .unwrap();
+        let mut goal = c.state.goals[&f.session].clone();
+        goal.eligible = true;
+        assert!(c.enroll(goal.clone()).is_err());
+        goal.eligible = false;
+        c.enroll(goal).unwrap();
+        assert!(
+            c.issue_with_first_run(
+                f.session,
+                Uuid::new_v4(),
+                "old-week:day".into(),
+                30_000,
+                90_000,
+                1000,
+                Some(identity),
+                None
+            )
+            .is_err()
+        );
+        assert!(
+            !crate::executors::codex::goals::progress_path("native-thread")
+                .unwrap()
+                .exists()
+        );
+        f.c = Some(c);
+    }
+    #[test]
+    fn first_run_promotion_requires_owned_root_checkpoint_and_completed_turn() {
+        if !first_run::enabled() {
+            return;
+        }
+        use crate::executors::codex::goals::{NativeGoal, Progress};
+        let mut f = Fixture::new();
+        let identity = pending(&mut f);
+        let request = first_issue(&mut f, identity.clone());
+        let execution = Uuid::new_v4();
+        let c = f.c.as_mut().unwrap();
+        c.bind(&request, "native-thread", execution, 1000).unwrap();
+        let native = NativeGoal {
+            goal_id: identity.goal_id,
+            thread_id: identity.thread_id,
+            objective: identity.objective.clone(),
+            created_at: identity.created_at,
+            status: "active".into(),
+        };
+        let mut p = Progress {
+            objective: native.objective.clone(),
+            created_at: native.created_at,
+            ..Default::default()
+        };
+        p.finish_turn("one");
+        assert!(
+            c.promote_initialization(execution, &native, &p, "one", 2000)
+                .is_err()
+        );
+        p.checkpoint(serde_json::json!({"requirements":{"deliver":"Deliver requested outcome"},"completed":{},"disposition":"continue","reason":""})).unwrap();
+        assert!(
+            c.promote_initialization(execution, &native, &p, "one", 2000)
+                .is_err()
+        );
+        c.initialization_checkpoint(execution, &native, &p, "one")
+            .unwrap();
+        assert!(
+            c.promote_initialization(execution, &native, &p, "different", 2000)
+                .is_err()
+        );
+        assert!(
+            c.promote_initialization(execution, &native, &p, "one", 29_000)
+                .is_err()
+        );
+        let mut held = p.clone();
+        held.pause_reason = Some("Choose behavior".into());
+        assert!(
+            c.promote_initialization(execution, &native, &held, "one", 2000)
+                .is_err()
+        );
+        c.promote_initialization(execution, &native, &p, "one", 2000)
+            .unwrap();
+        assert_eq!(
+            c.state.goals[&f.session].initialization_state,
+            InitializationState::Checkpointed
+        );
+        c.stopped(
+            f.session,
+            Uuid::parse_str(&request.id).unwrap(),
+            "Verified exit".into(),
+        )
+        .unwrap();
+        assert!(
+            c.issue(
+                f.session,
+                Uuid::new_v4(),
+                "old-week:day".into(),
+                30_000,
+                90_000,
+                2000
+            )
+            .is_ok()
+        );
+    }
+    #[test]
+    fn revoked_first_run_never_promotes_or_reissues() {
+        if !first_run::enabled() {
+            return;
+        }
+        let mut f = Fixture::new();
+        let identity = pending(&mut f);
+        let request = first_issue(&mut f, identity.clone());
+        let c = f.c.as_mut().unwrap();
+        c.revoke_session(f.session, "Cutoff or stale quota")
+            .unwrap();
+        assert!(
+            c.bind(&request, "native-thread", Uuid::new_v4(), 1000)
+                .is_err()
+        );
+        c.stopped(
+            f.session,
+            Uuid::parse_str(&request.id).unwrap(),
+            "Stopped".into(),
+        )
+        .unwrap();
+        assert!(
+            c.issue_with_first_run(
+                f.session,
+                Uuid::new_v4(),
+                "old-week:day".into(),
+                30_000,
+                90_000,
+                1000,
+                Some(identity),
+                None
+            )
+            .is_err()
+        );
+        assert_eq!(
+            c.state.goals[&f.session].initialization_state,
+            InitializationState::Held
+        );
+    }
     #[test]
     fn native_usage_limited_wire_response_can_resume_but_user_and_budget_stops_cannot() {
         use crate::executors::codex::goals::{NativeGoal, Progress};
@@ -793,7 +1389,11 @@ mod tests {
             "createdAt": 1789223198, "updatedAt": 1789327215
         }))
         .unwrap();
-        let mut progress = Progress::default();
+        let mut progress = Progress {
+            objective: native.objective.clone(),
+            created_at: native.created_at,
+            ..Default::default()
+        };
         progress
             .requirements
             .insert("work".into(), "Finish remaining work".into());
@@ -844,6 +1444,10 @@ mod tests {
             let mut c = Controller::open(root.clone(), guard.clone(), "test-epoch".into()).unwrap();
             let session = Uuid::new_v4();
             c.enroll(ManagedGoal {
+                goal_id: String::new(),
+                initialization_state: InitializationState::Checkpointed,
+                binding: None,
+                initialization_receipt: None,
                 session_id: session,
                 thread_id: "native-thread".into(),
                 objective: "Preserve full development objective".into(),
@@ -1381,6 +1985,10 @@ mod native_acceptance {
             .lock()
             .await
             .enroll(ManagedGoal {
+                goal_id: String::new(),
+                initialization_state: InitializationState::Checkpointed,
+                binding: None,
+                initialization_receipt: None,
                 session_id: session,
                 thread_id: thread.clone(),
                 objective: before.objective.clone(),

@@ -1,3 +1,30 @@
+# October 6: Scheduled native first run — tested draft source
+
+Branch `vk/fa60-vk-scheduled-goa` starts at fork staging `8b562265d`.
+Read VK_SCHEDULED_FIRST_RUN.md for the pinned CU contract, provenance, isolation,
+wire interface, combined acceptance and rollback requirements. No production
+deploy/restart/settings writes, real Android initialization or paid inference.
+Pending exposure is default-off and belongs to the later staging rollout after
+CU compatibility. Recommend is preserved. Local development checks listed below pass; combined CU/private-HTTP acceptance
+and rollout remain with the parent/staging owner.
+
+Validated on the final offline binary SHA-256
+`a854d6158f061d8fa60c14f5badfbf6cbe0b99b5f5036eccd16b1c0775f6c787`:
+155 executor unit tests; six real-native offline scenarios (authentic first
+turn/promotion/later resume; required input hold; one-request provider failure;
+identity changed after lease preparation rejected before model work; plan review
+hold; completed first turn without a checklist held without promotion). All used
+the reviewed CU kernel/supervisor boundary and zero host-workspace mutation
+attempts. Receipts: `/mnt/vk-storage/vk-scheduled-first-run-20261006/acceptance.json`.
+Focused executor/server all-target Clippy, frontend type checks/lint, formatting
+and ops checks pass. Broad check/lint are blocked by missing host GTK/GLib/GIO;
+full workspace tests and shared-generation checks remain CI requirements. No
+remote source paths changed. No unrestricted fixture backend was run; the
+CU/private-capacity-HTTP combined rehearsal and legacy-CU/durable rollback
+acceptance remain explicit release requirements in VK_SCHEDULED_FIRST_RUN.md.
+No backend release package or production restart was attempted.
+
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

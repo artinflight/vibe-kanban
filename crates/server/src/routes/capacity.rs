@@ -19,24 +19,15 @@ use executors::{
     },
     capacity::{
         controller::{self, ManagedGoal},
+        first_run::{self, FirstRun, InitializationState},
         wall_ms,
     },
-    executors::{
-        BaseCodingAgent,
-        codex::{
-            client::AppServerClient,
-            goals::{NativeGoal, Progress, progress_path},
-        },
-    },
+    executors::{BaseCodingAgent, codex::client::AppServerClient},
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
 use services::services::container::ContainerService;
 use sha2::{Digest, Sha256};
-use sqlx::{
-    Connection, Row,
-    sqlite::{SqliteConnectOptions, SqliteConnection},
-};
 use uuid::Uuid;
 
 use crate::{DeploymentImpl, error::ApiError};
@@ -104,6 +95,15 @@ async fn foreground(
                 })
         }))
 }
+// HTTP protocol version stays compatible with CU's version-1 parser. The
+// independently versioned durable ledger remains v2 so old VK binaries cannot
+// discard initialization receipts or holds on rollback.
+fn wire_state(state: &controller::State) -> controller::State {
+    let mut wire = state.clone();
+    wire.version = 1;
+    wire
+}
+
 async fn status(
     State(deployment): State<DeploymentImpl>,
     headers: HeaderMap,
@@ -133,7 +133,7 @@ async fn status(
         }
     }
     Ok(Json(
-        json!({"workspaceIds":workspace_ids,"capabilities":{"maxConcurrentGoals":2,"targetedStop":true},"state":state, "foregroundActive":foreground(&deployment, &state).await?, "runningExecutionIds":running.iter().map(|p|p.id).collect::<Vec<_>>(), "executionStates":execution_states, "checkedAtMs":wall_ms()}),
+        json!({"workspaceIds":workspace_ids,"capabilities":{"maxConcurrentGoals":2,"targetedStop":true,"scheduledGoalInitialization":if first_run::enabled() {1} else {0}},"state":wire_state(&state), "foregroundActive":foreground(&deployment, &state).await?, "runningExecutionIds":running.iter().map(|p|p.id).collect::<Vec<_>>(), "executionStates":execution_states, "checkedAtMs":wall_ms()}),
     ))
 }
 async fn candidate(
@@ -143,57 +143,28 @@ async fn candidate(
     let info = CodingAgentTurn::find_latest_session_info(&deployment.db().pool, session.id)
         .await?
         .ok_or_else(|| ApiError::BadRequest("No existing native thread".into()))?;
-    let progress: Progress =
-        serde_json::from_slice(&tokio::fs::read(progress_path(&info.session_id)?).await?)
-            .map_err(|e| ApiError::BadRequest(e.to_string()))?;
-    if progress.objective.trim().is_empty()
-        || progress.all_complete()
-        || progress.pause_reason.is_some()
-    {
-        return Err(ApiError::BadRequest(
-            "No unfinished goal available without user input".into(),
-        ));
-    }
-    // Read-only discovery must agree with the native resume gate. The progress
-    // sidecar alone can outlive a replaced/completed/budget-limited native goal.
-    let home = executors::executors::codex::codex_home()
-        .ok_or_else(|| ApiError::BadRequest("Codex home unavailable".into()))?;
-    let mut native_db = SqliteConnection::connect_with(
-        &SqliteConnectOptions::new()
-            .filename(home.join("goals_1.sqlite"))
-            .read_only(true)
-            .create_if_missing(false),
+    let native = first_run::native(&info.session_id)
+        .await
+        .map_err(conflict)?;
+    let progress = first_run::read_progress(&native).map_err(conflict)?;
+    let initialization_state = first_run::classify(&native, progress.as_ref()).map_err(conflict)?;
+    let binding = first_run::binding(
+        &utils::assets::asset_dir().join("db.v2.sqlite"),
+        session.id,
+        &info.session_id,
+        None,
     )
-    .await?;
-    let row =
-        sqlx::query("SELECT objective,status,created_at_ms FROM thread_goals WHERE thread_id=?")
-            .bind(&info.session_id)
-            .fetch_optional(&mut native_db)
-            .await?
-            .ok_or_else(|| ApiError::BadRequest("Native goal no longer exists".into()))?;
-    let stored_status: String = row.try_get("status")?;
-    let native = NativeGoal {
-        thread_id: info.session_id.clone(),
-        objective: row.try_get("objective")?,
-        created_at: row.try_get::<i64, _>("created_at_ms")? / 1000,
-        // SQLite stores snake_case; app-server uses camelCase on the wire.
-        status: match stored_status.as_str() {
-            "usage_limited" => "usageLimited".into(),
-            "budget_limited" => "budgetLimited".into(),
-            _ => stored_status,
-        },
-    };
-    if native.objective != progress.objective || native.created_at != progress.created_at {
-        return Err(ApiError::BadRequest(
-            "Goal changed; refresh its progress before selecting it".into(),
-        ));
-    }
-    controller::validate_native_readiness(&native, &progress).map_err(conflict)?;
+    .await
+    .map_err(conflict)?;
     Ok(ManagedGoal {
+        goal_id: native.goal_id,
+        initialization_state,
+        binding: Some(binding),
+        initialization_receipt: None,
         session_id: session.id,
         thread_id: info.session_id,
-        objective: progress.objective,
-        created_at: progress.created_at,
+        objective: native.objective,
+        created_at: native.created_at,
         eligible: true,
         reason: String::new(),
         grant: None,
@@ -204,11 +175,28 @@ async fn candidates(
     headers: HeaderMap,
 ) -> Result<Json<Value>, ApiError> {
     authorize(&headers)?;
-    controller()?;
+    let c = controller()?.lock().await;
+    c.ensure_owner().map_err(conflict)?;
     let sessions = sqlx::query_as::<_, Session>("SELECT s.* FROM sessions s JOIN workspaces w ON w.id = s.workspace_id WHERE lower(s.executor) = 'codex' AND w.archived = 0 ORDER BY s.updated_at DESC LIMIT 100").fetch_all(&deployment.db().pool).await?;
     let mut values = vec![];
     for session in sessions {
+        if c.state
+            .goals
+            .get(&session.id)
+            .is_some_and(|g| g.grant.is_some())
+        {
+            continue;
+        }
         if let Ok(goal) = candidate(&deployment, &session).await {
+            if c.state.goals.get(&session.id).is_some_and(|old| {
+                old.same_native_identity(&goal)
+                    && (old.initialization_state != goal.initialization_state
+                        || old.initialization_state == InitializationState::Held
+                        || (old.initialization_state == InitializationState::Pending
+                            && old.initialization_receipt.is_some()))
+            }) {
+                continue;
+            }
             values.push(json!({"sessionId":session.id, "workspaceId":session.workspace_id, "name":session.name, "goal":goal}));
         }
     }
@@ -221,6 +209,7 @@ struct Enrollment {
     revision: u64,
     session_id: Uuid,
     eligible: bool,
+    first_run: Option<FirstRun>,
 }
 async fn enroll(
     State(deployment): State<DeploymentImpl>,
@@ -228,34 +217,33 @@ async fn enroll(
     Json(input): Json<Enrollment>,
 ) -> Result<Json<Value>, ApiError> {
     authorize(&headers)?;
-    let session = Session::find_by_id(&deployment.db().pool, input.session_id)
-        .await?
-        .ok_or(ApiError::BadRequest("Unknown session".into()))?;
+    // Discovery and enrollment share the same epoch/revision fence. Discovery
+    // never loads the native engine or creates a checkpoint.
+    let mut c = controller()?.lock().await;
+    c.check_revision(&input.epoch, input.revision)
+        .map_err(conflict)?;
     let mut goal = if input.eligible {
-        candidate(&deployment, &session).await?
+        let session = Session::find_by_id(&deployment.db().pool, input.session_id)
+            .await?
+            .ok_or(ApiError::BadRequest("Unknown session".into()))?;
+        let goal = candidate(&deployment, &session).await?;
+        goal.check_first_run(input.first_run.as_ref())
+            .map_err(conflict)?;
+        goal.revalidate(None, false).await.map_err(conflict)?;
+        goal
     } else {
-        controller()?
-            .lock()
-            .await
-            .state
+        if input.first_run.is_some() {
+            return Err(ApiError::BadRequest("Removal must omit firstRun".into()));
+        }
+        c.state
             .goals
-            .get(&session.id)
+            .get(&input.session_id)
             .cloned()
             .ok_or(ApiError::BadRequest("Session is not managed".into()))?
     };
     goal.eligible = input.eligible;
-    if ExecutionProcess::has_running_coding_agent_for_session(&deployment.db().pool, session.id)
-        .await?
-    {
-        return Err(ApiError::Conflict(
-            "Pause the existing goal before changing eligibility".into(),
-        ));
-    }
-    let mut c = controller()?.lock().await;
-    c.check_revision(&input.epoch, input.revision)
-        .map_err(conflict)?;
     c.enroll(goal).map_err(conflict)?;
-    Ok(Json(json!({"state":c.state})))
+    Ok(Json(json!({"state":wire_state(&c.state)})))
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -267,6 +255,7 @@ struct Start {
     allocation_id: String,
     expires_at_ms: u64,
     stop_at_ms: u64,
+    first_run: Option<FirstRun>,
 }
 async fn start(
     State(deployment): State<DeploymentImpl>,
@@ -279,7 +268,7 @@ async fn start(
         .ok_or(ApiError::BadRequest("Unknown session".into()))?;
     let workspace = Workspace::find_by_id(&deployment.db().pool, session.workspace_id)
         .await?
-        .filter(|w| !w.archived)
+        .filter(|w| !w.archived && !w.worktree_deleted)
         .ok_or(ApiError::BadRequest("Workspace is unavailable".into()))?;
     let (mut executor_config, selected_at) =
         ExecutionProcess::latest_executor_config_for_session(&deployment.db().pool, session.id)
@@ -306,21 +295,13 @@ async fn start(
     let info = CodingAgentTurn::find_latest_session_info(&deployment.db().pool, session.id)
         .await?
         .ok_or(ApiError::BadRequest("Existing goal required".into()))?;
-    let ready = candidate(&deployment, &session).await?;
-    deployment
-        .container()
-        .ensure_container_exists(&workspace)
-        .await?;
-    // Creation/migration can update container_ref. Launch with the persisted
-    // workspace rather than the stale record read before preparation.
-    let workspace = Workspace::find_by_id(&deployment.db().pool, workspace.id)
-        .await?
-        .filter(|w| !w.archived)
-        .ok_or(ApiError::BadRequest("Workspace is unavailable".into()))?;
+    // Scheduled authority cannot recreate a removed workspace. Admission and
+    // the worker require its existing directory and completed native anchor.
     let capacity = {
         let mut c = controller()?.lock().await;
         c.check_revision(&input.epoch, input.revision)
             .map_err(conflict)?;
+        let ready = candidate(&deployment, &session).await?;
         let selected = c
             .state
             .goals
@@ -329,11 +310,19 @@ async fn start(
         if selected.thread_id != ready.thread_id
             || selected.objective != ready.objective
             || selected.created_at != ready.created_at
+            || (!selected.goal_id.is_empty() && selected.goal_id != ready.goal_id)
+            || selected.initialization_state != ready.initialization_state
+            || (selected.initialization_state == InitializationState::Pending
+                && selected.binding != ready.binding)
         {
             return Err(ApiError::BadRequest(
                 "Selected goal changed; select its new objective explicitly".into(),
             ));
         }
+        selected
+            .check_first_run(input.first_run.as_ref())
+            .map_err(conflict)?;
+        ready.revalidate(None, false).await.map_err(conflict)?;
         if foreground(&deployment, &c.state).await? {
             return Err(ApiError::Conflict("Interactive work takes priority".into()));
         }
@@ -349,13 +338,17 @@ async fn start(
                 ));
             }
         }
-        c.issue(
+        // Checkpointed resumes advance the completed anchor only after checking
+        // the enrolled native identity; first runs require the original anchor.
+        c.issue_with_first_run(
             session.id,
             input.grant_id,
             input.allocation_id,
             input.expires_at_ms,
             input.stop_at_ms,
             wall_ms(),
+            input.first_run,
+            ready.binding,
         )
         .map_err(conflict)?
     };
@@ -382,7 +375,7 @@ async fn start(
         .await
     {
         Ok(process) => Ok(Json(
-            json!({"executionId":process.id, "state":controller()?.lock().await.state}),
+            json!({"executionId":process.id, "state":wire_state(&controller()?.lock().await.state)}),
         )),
         Err(error) => {
             controller()?
@@ -426,7 +419,7 @@ async fn renew(
         wall_ms(),
     )
     .map_err(conflict)?;
-    Ok(Json(json!({"state":c.state})))
+    Ok(Json(json!({"state":wire_state(&c.state)})))
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -476,7 +469,9 @@ async fn stop(
             .stopped(session, grant.id, input.reason.clone())
             .map_err(conflict)?;
     }
-    Ok(Json(json!({"state":controller()?.lock().await.state})))
+    Ok(Json(
+        json!({"state":wire_state(&controller()?.lock().await.state)}),
+    ))
 }
 pub fn router() -> Router<DeploymentImpl> {
     Router::new()
@@ -503,7 +498,7 @@ async fn ownership(headers: HeaderMap) -> Result<Json<Value>, ApiError> {
     authorize(&headers)?;
     let c = controller()?.lock().await;
     Ok(Json(json!({"protocolVersion":1,"owned":c.is_owner(),
-        "state":if c.is_owner() { Some(&c.state) } else { None }})))
+        "state":if c.is_owner() { Some(wire_state(&c.state)) } else { None }})))
 }
 
 async fn release_ownership(
@@ -523,7 +518,7 @@ async fn release_ownership(
     }
     let state = c.release(&input.epoch, input.revision).map_err(conflict)?;
     Ok(Json(
-        json!({"protocolVersion":1,"owned":false,"state":state}),
+        json!({"protocolVersion":1,"owned":false,"state":wire_state(&state)}),
     ))
 }
 
@@ -544,6 +539,6 @@ async fn acquire_ownership(
     }
     c.acquire(&input.epoch, input.revision).map_err(conflict)?;
     Ok(Json(
-        json!({"protocolVersion":1,"owned":true,"state":c.state}),
+        json!({"protocolVersion":1,"owned":true,"state":wire_state(&c.state)}),
     ))
 }

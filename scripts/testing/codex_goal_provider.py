@@ -28,6 +28,15 @@ class Provider(http.server.BaseHTTPRequestHandler):
         global turn, recovery_stage
         request_body = self.rfile.read(int(self.headers.get('Content-Length', 0))).decode()
         turn += 1
+        if scenario == 'capacity-first-run-failure':
+            Path(os.environ['CODEX_HOME'], 'first-run-provider-count').write_text(str(turn))
+            data = json.dumps({'error': {'message': 'Synthetic ambiguous first request', 'type': 'server_error'}}).encode()
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
         if os.environ.get('VK_GOAL_TEST_CAPTURE') == '1':
             body = json.loads(request_body)
             with Path(os.environ['CODEX_HOME'], 'capacity-model-requests.jsonl').open('a') as log:
@@ -46,7 +55,10 @@ class Provider(http.server.BaseHTTPRequestHandler):
         if scenario == 'stop':
             time.sleep(0.05)
         requirements = {str(n): f'Verify parity requirement {n}' for n in range(8)}
-        if scenario == 'capacity-containment' and turn == 1:
+        if scenario in ('scheduled-seed', 'capacity-first-run-empty'):
+            item = dict(type='message', id=f'msg{turn}', role='assistant',
+                        content=[dict(type='output_text', text='Existing synthetic paused goal seed anchor.')], phase='final_answer')
+        elif scenario == 'capacity-containment' and turn == 1:
             probe = '''import json, os, socket, subprocess, time
 from pathlib import Path
 results = {"workspace_write": True}
@@ -134,7 +146,7 @@ print(json.dumps(results))'''
             checkpoint = dict(requirements=requirements if turn == 1 else {},
                               completed={str(stage): f'Integration validation {stage}'},
                               disposition='continue', reason='')
-            if scenario == 'needs_input':
+            if scenario in ('needs_input', 'capacity-first-run-input'):
                 checkpoint.update(disposition='needs_input', reason='Choose API compatibility policy')
             text = f'Stage {stage} validated.\n<vk_goal_checkpoint>{json.dumps(checkpoint)}</vk_goal_checkpoint>'
             item = dict(type='message', id=f'msg{turn}', role='assistant',

@@ -26,7 +26,7 @@ parser.add_argument('--expected-sha256', help='Required for stdin executable byt
 parser.add_argument('--guard', type=Path, required=True)
 parser.add_argument('--native', action='store_true')
 parser.add_argument('--variant', choices=['success', 'input', 'failure', 'race', 'plan', 'empty',
-                                        'stalled-revocation', 'stalled-expiry'], default='success')
+                                        'stalled-revocation', 'stalled-expiry', 'stalled-two'], default='success')
 parser.add_argument('test_args', nargs=argparse.REMAINDER)
 a = parser.parse_args()
 boundary = a.boundary_dir.resolve(strict=True)

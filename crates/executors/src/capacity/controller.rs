@@ -895,20 +895,12 @@ async fn admit_launch(
         // app-server to touch the same native thread. Keep the selection saved.
         drop(c);
         if let Some(grant) = owned {
-            if let Some(execution) = grant.execution_id {
-                let _ = tokio::time::timeout(
-                    std::time::Duration::from_secs(3),
-                    crate::executors::codex::client::AppServerClient::suspend_capacity_execution(
-                        execution,
-                        "Manual work takes priority".into(),
-                    ),
-                )
-                .await;
-                if !stop_execution_unit(execution).await? {
-                    return Err(invalid(
-                        "Background work is still stopping; retry your message shortly",
-                    ));
-                }
+            if let Some(execution) = grant.execution_id
+                && !stop_capacity_execution(execution, "Manual work takes priority".into()).await
+            {
+                return Err(invalid(
+                    "Background work is still stopping; retry your message shortly",
+                ));
             }
             let mut c = controller.lock().await;
             if c.state
@@ -924,6 +916,69 @@ async fn admit_launch(
     Ok(())
 }
 
+/// Graceful RPC is best effort, never proof of worker exit. Always follow it
+/// with independent OS stop/verification, including on timeout or missing client.
+pub async fn stop_capacity_execution(execution: Uuid, reason: String) -> bool {
+    let _ = crate::executors::codex::client::AppServerClient::suspend_capacity_execution(
+        execution, reason,
+    )
+    .await;
+    stop_execution_unit(execution).await.unwrap_or(false)
+}
+
+/// Workers stop concurrently: 2s entire graceful attempt + 3s OS stop + 2s
+/// verification, rather than multiplying the budget by the worker count.
+/// Keep revoked grants/holds until verification and same-grant reconciliation.
+pub async fn stop_revoked_grants(
+    controller: &Mutex<Controller>,
+    grants: Vec<(Uuid, Grant)>,
+    reason: String,
+) -> io::Result<State> {
+    stop_revoked_grants_with(controller, grants, reason, stop_capacity_execution).await
+}
+
+async fn stop_revoked_grants_with<F, Fut>(
+    controller: &Mutex<Controller>,
+    grants: Vec<(Uuid, Grant)>,
+    reason: String,
+    stop_worker: F,
+) -> io::Result<State>
+where
+    F: Fn(Uuid, String) -> Fut,
+    Fut: std::future::Future<Output = bool>,
+{
+    let exits = futures::future::join_all(grants.into_iter().map(|(session, grant)| {
+        let stopped = grant
+            .execution_id
+            .map(|execution| stop_worker(execution, reason.clone()));
+        async move {
+            let verified = match stopped {
+                Some(stopped) => stopped.await,
+                None => true,
+            };
+            (session, grant, verified)
+        }
+    }))
+    .await;
+    let mut c = tokio::time::timeout(std::time::Duration::from_millis(500), controller.lock())
+        .await
+        .map_err(|_| invalid("Stop remains unconfirmed; controller busy, reconcile"))?;
+    for (session, grant, verified) in exits {
+        if verified
+            && c.state
+                .goals
+                .get(&session)
+                .and_then(|g| g.grant.as_ref())
+                .is_some_and(|g| {
+                    g.id == grant.id && g.execution_id == grant.execution_id && g.stopping
+                })
+        {
+            c.stopped(session, grant.id, reason.clone())?;
+        }
+    }
+    Ok(c.state.clone())
+}
+
 pub async fn stop_execution_unit(execution: Uuid) -> io::Result<bool> {
     let unit = crate::capacity::unit_name(execution);
     let _ = tokio::time::timeout(
@@ -934,29 +989,40 @@ pub async fn stop_execution_unit(execution: Uuid) -> io::Result<bool> {
             .output(),
     )
     .await;
-    let output = tokio::time::timeout(
+    // Include cgroup filesystem I/O in the verification budget as well.
+    tokio::time::timeout(
         std::time::Duration::from_secs(2),
-        tokio::process::Command::new("systemctl")
-            .args([
-                "--user",
-                "show",
-                &unit,
-                "--property=LoadState",
-                "--property=ActiveState",
-                "--property=ControlGroup",
-            ])
-            .kill_on_drop(true)
-            .output(),
+        verify_execution_unit(&unit),
     )
     .await
-    .map_err(|_| invalid("Cannot verify execution shutdown"))??;
+    .map_err(|_| invalid("Cannot verify execution shutdown"))?
+}
+
+async fn verify_execution_unit(unit: &str) -> io::Result<bool> {
+    let output = tokio::process::Command::new("systemctl")
+        .args([
+            "--user",
+            "show",
+            unit,
+            "--property=LoadState",
+            "--property=ActiveState",
+            "--property=ControlGroup",
+        ])
+        .kill_on_drop(true)
+        .output()
+        .await?;
     let text = String::from_utf8_lossy(&output.stdout);
     let values: std::collections::HashMap<_, _> =
         text.lines().filter_map(|l| l.split_once('=')).collect();
-    if values.get("LoadState") == Some(&"not-found") {
+    if values.get("LoadState") == Some(&"not-found")
+        && values.get("ActiveState") == Some(&"inactive")
+        && values.get("ControlGroup") == Some(&"")
+    {
         return Ok(true);
     }
-    if !matches!(values.get("ActiveState"), Some(&"inactive" | &"failed")) {
+    if !output.status.success()
+        || !matches!(values.get("ActiveState"), Some(&"inactive" | &"failed"))
+    {
         return Ok(false);
     }
     let Some(group) = values.get("ControlGroup") else {
@@ -1756,6 +1822,86 @@ mod tests {
                 .unwrap()
                 .revoked
         );
+    }
+
+    #[tokio::test]
+    async fn two_worker_full_stop_budget_is_shared_and_unconfirmed_is_retained() {
+        let mut f = Fixture::new();
+        let first = f.issue();
+        f.launch(&first);
+        let c = f.c.as_mut().unwrap();
+        let second = Uuid::new_v4();
+        let mut goal = c.state.goals[&f.session].clone();
+        goal.session_id = second;
+        goal.thread_id = "second-native-thread".into();
+        goal.grant = None;
+        c.enroll(goal).unwrap();
+        let request = c
+            .issue(
+                second,
+                Uuid::new_v4(),
+                "old-week:day".into(),
+                30_000,
+                90_000,
+                1000,
+            )
+            .unwrap();
+        c.bind(&request, "second-native-thread", Uuid::new_v4(), 1000)
+            .unwrap();
+        c.revoke_all("Synthetic stop", None).unwrap();
+        let grants: Vec<_> = c
+            .state
+            .goals
+            .values()
+            .map(|g| (g.session_id, g.grant.clone().unwrap()))
+            .collect();
+        let controller = Mutex::new(f.c.take().unwrap());
+        let started = std::time::Instant::now();
+        // Exhaust each existing phase budget with an offline synthetic stop
+        // boundary. Serial handling would take 14s and exceed CU's 10s fetch.
+        let state = stop_revoked_grants_with(
+            &controller,
+            grants.clone(),
+            "Synthetic unconfirmed".into(),
+            |_, _| async {
+                for seconds in [2, 3, 2] {
+                    tokio::time::sleep(std::time::Duration::from_secs(seconds)).await;
+                }
+                false
+            },
+        )
+        .await
+        .unwrap();
+        assert!(started.elapsed() < std::time::Duration::from_secs(8));
+        assert!(
+            state
+                .goals
+                .values()
+                .all(|g| g.grant.as_ref().unwrap().stopping)
+        );
+        let held_lock = controller.lock().await;
+        let started = std::time::Instant::now();
+        assert!(
+            stop_revoked_grants_with(
+                &controller,
+                Vec::new(),
+                "Controller busy".into(),
+                |_, _| async { true }
+            )
+            .await
+            .is_err()
+        );
+        assert!(started.elapsed() < std::time::Duration::from_millis(700));
+        drop(held_lock);
+        let state = stop_revoked_grants_with(
+            &controller,
+            grants,
+            "Verified synthetic exit".into(),
+            |_, _| async { true },
+        )
+        .await
+        .unwrap();
+        assert!(state.goals.values().all(|g| g.grant.is_none()));
     }
 
     #[tokio::test]

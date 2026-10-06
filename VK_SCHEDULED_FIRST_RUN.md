@@ -253,47 +253,62 @@ unmodified controller is not a safe unattended rollback target. If a migration
 is proposed, review it separately; no destructive downgrade is included here.
 
 
-## Stalled graceful stop: source finding and measured regression
+## Bounded graceful stop and independent containment
 
-`suspend_capacity` has awaits outside its two 1-second RPC deadlines (client
-mutexes, log writer and exit signal). Thus graceful completion or the HTTP stop
-response can stall. Stop and foreground paths revoke controller permission first;
-renewal then fails closed. An independent `vk-capacity-guard` process polls the
-last lease every 100 ms, signals the child group with TERM, waits 250 ms and sends
-KILL. Its exit invokes `KillMode=control-group` / `TimeoutStopSec=1s`. RuntimeMaxSec
-and a pre-armed absolute KILL timer retain the immutable hard-deadline margin.
-The guard does not await the client, log writer, exit signal or HTTP handler.
+The complete `suspend_capacity` attempt now has one 2-second deadline covering
+thread/current-turn mutexes, both RPCs, log I/O and exit-signal delivery. The
+client registry lookup is nonblocking. Timeout leaves execution stop/pausing
+latches set and cannot replay delayed initialization. Stop logs describe a stop
+request rather than claiming a persisted native pause.
 
-The new `scheduled_first_run_runtime` variants `stalled-revocation` and
-`stalled-expiry` hold the real owning client's thread mutex with an authentic
-native offline request outstanding. They observe proxy exit and an inactive or
-unloaded, empty worker cgroup while graceful stop is still blocked, before any
-explicit OS stop/cancellation. The private provider records request, active and
-TERM timestamps and stays silent after worker exit. The test records last lease
-expiry, hard stop, revocation write interval (null before exit in expiry case),
-provider timestamps/count, proxy and cgroup exit observations and hold/receipt
-reconciliation in `home/stalled-stop-measurements.json`. Both cases assert one
-request, no replay/promotion, identity and receipt retained and a durable first-run
-hold. Normal successful initialization and later resume remain in the original
-success case. No fake engine checklist or goal completion is introduced.
+HTTP stop revokes permission first, then runs worker stops concurrently using the
+same helper as foreground preemption. Each graceful attempt is followed by
+independent OS stop (3 seconds) and verification (2 seconds, including cgroup
+filesystem reads). Controller acquisition and final reconciliation each have a
+500 ms lock deadline. Two workers therefore share the 7-second worker budget;
+lock waits bring the designed aggregate to at most 8 seconds within CU's actual
+10-second VK fetch budget, with remaining transport/scheduling headroom. This is
+an async deadline budget, not a hard realtime guarantee for synchronous durable
+filesystem writes or an unscheduled runtime.
 
-Local validated measurements on guard SHA
-`04ee7fc587b162c14e642e2c96cea3905af3990ce77956983aef6bc2569f7b53`:
-revocation provider TERM +46 ms, worker exit observed +480 ms; expiry provider TERM
-+7 ms, worker exit observed +567 ms. Each exits before its immutable hard stop.
-The assertion allows the existing 100 ms poll + 250 ms group kill + 1 s cgroup
-cleanup, with 150 ms observation tolerance; this changes no permission or runtime
-limit. These measurements found no worker-bound failure requiring a production
-stop redesign. They establish these synthetic conditions, not staging's earlier
-incident or a successful combined HTTP stop response. Production source remains
-unchanged; only regression/fixture/docs were added.
+Only verified inactive/unloaded and empty worker containment permits same-grant
+reconciliation. OS timeout, verification failure or a busy controller leaves
+stopping grants intact or returns a stop-unconfirmed error. CU already treats
+retained grants as unconfirmed. No permission, lease or hard-stop limit changes.
+The independent guard still polls at 100 ms, sends TERM then KILL after 250 ms,
+and uses control-group cleanup with TimeoutStopSec=1s, RuntimeMaxSec and the
+pre-armed immutable absolute KILL timer.
 
-Current immutable-source CI/artifacts and measured receipts are in
-`/mnt/vk-storage/vk-scheduled-first-run-20261006/stalled-stop-handoff.md`.
-Staging must retain/export `lcp7ys3k` and correlate execution/grant/unit, last
-persisted lease sequence/expiry, revocation before/after write, provider request
-start/activity and actual worker/cgroup exit on the same clock. A request timeout
-alone proves neither running work nor termination. Check that permission cannot
-renew/replay after stop, latest v2 holds/receipts survive reconciliation/rollback,
-and normal same-goal checkpointed resume still works. This adds no rollout,
-real Android, provider spending, live settings or shared-service authorization.
+Focused regressions hold thread, log and exit-signal mutexes through timeout and
+assert no late success signal. Native offline variants `stalled-revocation`,
+`stalled-two` and `stalled-expiry` use authentic matching goals and outstanding
+private provider requests. One/two-worker stop uses the actual HTTP stop helper,
+measures aggregate response/reconciliation, verifies unconfirmed grants survive,
+and independently observes provider activity and cgroup exit. Expiry retains the
+no-explicit-OS-stop proof. Per-worker measurements are in
+`home/stalled-stop-measurements-N.json`, provider timelines in
+`home/stalled-provider-timeline-N.jsonl`, and aggregate responses in
+`home/stop-response.json`. All retain identity, held intent, receipts and issued
+IDs, deny replay/promotion, and leave native stored status untouched. Original
+successful initialization and later checkpointed resume remain separate checks.
+
+A failed pause RPC can leave native status active after verified worker exit.
+Recovery must inspect/reconcile this exact goal and its existing hold/receipt;
+active status is neither proof of liveness nor authority for automatic resume.
+Do not erase the goal, fabricate paused state, promote an empty checklist or
+replay uncertain initialization. Latest-v2 compile-disabled rollback must retain
+these records and deny initialization even with the environment flag enabled.
+
+Independent review of staging's retained incident at `22034d9b6` cleared the
+observed containment concern: the original worker exited before its lease
+deadline. Exact original revoke-write and last provider-request timestamps are
+unavailable; synthetic timestamps must never be substituted for them. HTTP
+timeout alone is neither a worker-exit receipt nor proof of runaway spending.
+
+Current final-source CI/artifact hashes and measured receipts are in
+`/mnt/vk-storage/vk-scheduled-first-run-20261006/stop-response-handoff.md`.
+Staging must exercise real CU/HTTP with one/two workers in its isolated fixture,
+including unconfirmed verification, exact-goal recovery and latest-v2 rollback.
+Compatible CU identity binding must be deployed before exposing pending
+candidates. Recommend mode remains required. No production rollout, real Android,
+provider spending, live settings or shared-service changes are authorized.

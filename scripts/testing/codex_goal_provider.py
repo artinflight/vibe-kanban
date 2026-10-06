@@ -22,7 +22,7 @@ recovery_stage = 0
 
 
 def stalled_event(event, **fields):
-    path = Path(os.environ['CODEX_HOME'], 'stalled-provider-timeline.jsonl')
+    path = Path(os.environ['CODEX_HOME'], os.environ.get('VK_STALLED_TIMELINE', 'stalled-provider-timeline.jsonl'))
     with path.open('a') as log:
         log.write(json.dumps(dict(event=event, wallMs=time.time_ns() // 1_000_000,
                                  monotonicNs=time.monotonic_ns(), **fields)) + '\n')

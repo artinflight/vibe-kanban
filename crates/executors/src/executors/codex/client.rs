@@ -267,8 +267,12 @@ impl AppServerClient {
         reason: String,
     ) -> Result<(), ExecutorError> {
         let client = active_codex_clients()
-            .lock()
-            .expect("active client registry")
+            .try_lock()
+            .map_err(|_| {
+                ExecutorError::Io(io::Error::other(
+                    "Codex client registry busy; stop remains unconfirmed",
+                ))
+            })?
             .get(&execution_id)
             .and_then(Weak::upgrade)
             .ok_or_else(|| {
@@ -276,15 +280,28 @@ impl AppServerClient {
                     "No owning Codex client; reconcile execution state",
                 ))
             })?;
-        client.suspend_capacity(reason).await;
+        client.suspend_capacity(reason).await
+    }
+
+    async fn suspend_capacity(&self, reason: String) -> Result<(), ExecutorError> {
+        if self.capacity_stopped.swap(true, Ordering::SeqCst) {
+            return Ok(());
+        }
+        self.goal_pausing.store(true, Ordering::SeqCst);
+        // Bound the entire attempt: mutex acquisition, RPCs, log I/O and the
+        // exit signal. Cancellation leaves the stop/pausing latches set; no
+        // delayed pause or initialization may be replayed by this execution.
+        tokio::time::timeout(Duration::from_secs(2), self.graceful_capacity_stop(reason))
+            .await
+            .map_err(|_| {
+                ExecutorError::Io(io::Error::other(
+                    "Graceful capacity stop timed out; native goal pause unconfirmed",
+                ))
+            })?;
         Ok(())
     }
 
-    async fn suspend_capacity(&self, reason: String) {
-        if self.capacity_stopped.swap(true, Ordering::SeqCst) {
-            return;
-        }
-        self.goal_pausing.store(true, Ordering::SeqCst);
+    async fn graceful_capacity_stop(&self, reason: String) {
         let thread_id = self.thread_id.lock().await.clone();
         if let Some(thread_id) = thread_id {
             // Bound each call independently. The OS guard remains armed even
@@ -316,7 +333,9 @@ impl AppServerClient {
         }
         let _ = super::slash_commands::log_event_raw(
             self.log_writer(),
-            format!("Scheduled goal paused: {reason}"),
+            format!(
+                "Scheduled goal stop requested: {reason}; reconcile native status before resuming"
+            ),
         )
         .await;
         if let Some(signal) = self.exit_signal.get() {
@@ -341,7 +360,7 @@ impl AppServerClient {
                 Ok(fence) => fence,
                 Err(reason) => {
                     if let Some(client) = weak.upgrade() {
-                        client.suspend_capacity(reason.into()).await;
+                        let _ = client.suspend_capacity(reason.into()).await;
                     }
                     return;
                 }
@@ -376,7 +395,7 @@ impl AppServerClient {
                         .then_some("Scheduled initialization capability withdrawn")
                 });
                 if let Some(reason) = reason {
-                    client.suspend_capacity(reason.into()).await;
+                    let _ = client.suspend_capacity(reason.into()).await;
                     return;
                 }
             }
@@ -2443,8 +2462,87 @@ for line in sys.stdin:
     }
 
     #[tokio::test]
+    async fn capacity_graceful_attempt_bounds_mutex_log_and_exit_signal() {
+        for stall in ["thread", "log", "exit"] {
+            let client = AppServerClient::new(
+                LogWriter::new(tokio::io::sink()),
+                None,
+                false,
+                false,
+                RepoContext::default(),
+                false,
+                String::new(),
+                CancellationToken::new(),
+            );
+            let (tx, mut rx) = tokio::sync::oneshot::channel();
+            let signal = ExitSignalSender::new(tx);
+            client.set_exit_signal(signal.clone());
+            let thread = if stall == "thread" {
+                Some(client.thread_id.lock().await)
+            } else {
+                None
+            };
+            let log = if stall == "log" {
+                Some(client.log_writer.writer.lock().await)
+            } else {
+                None
+            };
+            let exit = if stall == "exit" {
+                Some(signal.hold_for_stop_test().await)
+            } else {
+                None
+            };
+            let started = std::time::Instant::now();
+            assert!(
+                tokio::time::timeout(
+                    Duration::from_millis(2300),
+                    client.suspend_capacity("Synthetic stalled attempt".into())
+                )
+                .await
+                .unwrap()
+                .is_err()
+            );
+            assert!(started.elapsed() < Duration::from_millis(2300));
+            assert!(client.capacity_stopped.load(Ordering::SeqCst));
+            assert!(client.goal_pausing.load(Ordering::SeqCst));
+            drop(thread);
+            drop(log);
+            drop(exit);
+            sleep(Duration::from_millis(20)).await;
+            assert!(
+                matches!(
+                    rx.try_recv(),
+                    Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+                ),
+                "Timed out graceful attempt cannot send a late success"
+            );
+        }
+    }
+
+    #[tokio::test]
     #[ignore = "requires the reviewed scheduled-first-run-validation.py offline boundary"]
     async fn scheduled_first_run_runtime() {
+        let workers =
+            if std::env::var("VK_SCHEDULED_FIRST_RUN_VARIANT").as_deref() == Ok("stalled-two") {
+                2
+            } else {
+                1
+            };
+        let ready = Arc::new(tokio::sync::Barrier::new(workers));
+        let finished = Arc::new(tokio::sync::Barrier::new(workers));
+        let seed = Arc::new(tokio::sync::Mutex::new(()));
+        futures::future::join_all((0..workers).map(|index| {
+            scheduled_first_run_worker(index, ready.clone(), finished.clone(), seed.clone())
+        }))
+        .await;
+    }
+
+    async fn scheduled_first_run_worker(
+        index: usize,
+        ready: Arc<tokio::sync::Barrier>,
+        finished: Arc<tokio::sync::Barrier>,
+        seed: Arc<tokio::sync::Mutex<()>>,
+    ) {
         use sqlx::{Connection, sqlite::SqliteConnectOptions};
 
         use crate::{
@@ -2464,13 +2562,16 @@ for line in sys.stdin:
             home.to_string_lossy()
                 .contains("vk-continuation-first-run-")
         );
-        let work = home.join("work");
+        let work = home.join(format!("work-{index}"));
         tokio::fs::create_dir_all(&work).await.unwrap();
         // Native paused goal plus one real, ordinary offline seed turn. The
         // provider's seed reply has no checkpoint, and the goal never runs here.
         // The reviewed driver supplies the local approved provider path. This
         // permits a source-verified CI-built test binary without assuming the
         // builder's absolute source path exists on the acceptance host.
+        // Serialize fixture seed/bootstrap migrations in this shared native
+        // home. Actual guarded first-run workers below still run concurrently.
+        let seed_guard = seed.lock().await;
         let approved = std::env::var("VK_CODEX_BASE_COMMAND").unwrap();
         let launcher = shlex::split(&approved).unwrap();
         assert_eq!(launcher.first().map(String::as_str), Some("python3"));
@@ -2480,7 +2581,7 @@ for line in sys.stdin:
         let mut child = command
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::null())
+            .stderr(std::fs::File::create(home.join(format!("seed-stderr-{index}.log"))).unwrap())
             .kill_on_drop(true)
             .group_spawn_no_window()
             .unwrap();
@@ -2489,7 +2590,7 @@ for line in sys.stdin:
         let cancel = CancellationToken::new();
         let client = AppServerClient::new(
             LogWriter::new(
-                tokio::fs::File::create(home.join("seed-protocol.jsonl"))
+                tokio::fs::File::create(home.join(format!("seed-protocol-{index}.jsonl")))
                     .await
                     .unwrap(),
             ),
@@ -2547,6 +2648,7 @@ for line in sys.stdin:
         child.kill().await.unwrap();
         child.wait().await.unwrap();
         drop(client);
+        drop(seed_guard);
         let native = first_run::native(&thread).await.unwrap();
         assert_eq!(native.status, "paused");
         let path = goals::progress_path(&thread).unwrap();
@@ -2555,7 +2657,7 @@ for line in sys.stdin:
         let workspace = Uuid::new_v4();
         let seed_execution = Uuid::new_v4();
         let seed_turn = Uuid::new_v4();
-        let database = home.join("fixture-vk.sqlite");
+        let database = home.join(format!("fixture-vk-{index}.sqlite"));
         let mut db = sqlx::SqliteConnection::connect_with(
             &SqliteConnectOptions::new()
                 .filename(&database)
@@ -2643,41 +2745,40 @@ for line in sys.stdin:
         for first in runs {
             let execution = Uuid::new_v4();
             let now = crate::capacity::wall_ms();
-            let request = controller
-                .lock()
-                .await
-                .issue_with_first_run(
-                    session,
-                    Uuid::new_v4(),
-                    "synthetic-included-night".into(),
-                    now + if variant == "stalled-expiry" {
-                        7000
-                    } else {
-                        9000
-                    },
-                    now + 12000,
-                    now,
-                    first.then(|| first_run::FirstRun::from_native(&native)),
-                    None,
-                )
-                .unwrap();
-            sqlx::query(
-                "INSERT INTO execution_processes VALUES(?,?,'codingagent',0,'running',NULL,2)",
-            )
-            .bind(execution)
-            .bind(session)
-            .execute(&mut db)
-            .await
-            .unwrap();
-            let prepared = {
+            let (request, prepared) = {
                 let mut c = controller.lock().await;
+                let request = c
+                    .issue_with_first_run(
+                        session,
+                        Uuid::new_v4(),
+                        "synthetic-included-night".into(),
+                        now + if variant == "stalled-expiry" {
+                            7000
+                        } else {
+                            9000
+                        },
+                        now + 12000,
+                        now,
+                        first.then(|| first_run::FirstRun::from_native(&native)),
+                        None,
+                    )
+                    .unwrap();
+                sqlx::query(
+                    "INSERT INTO execution_processes VALUES(?,?,'codingagent',0,'running',NULL,2)",
+                )
+                .bind(execution)
+                .bind(session)
+                .execute(&mut db)
+                .await
+                .unwrap();
                 c.state.goals[&session]
                     .revalidate(Some(execution), false)
                     .await
                     .unwrap();
                 c.bind(&request, &thread, execution, crate::capacity::wall_ms())
                     .unwrap();
-                request.prepare(&execution.to_string()).unwrap()
+                let prepared = request.prepare(&execution.to_string()).unwrap();
+                (request, prepared)
             };
             if variant == "race" {
                 let mut native_db = sqlx::SqliteConnection::connect_with(
@@ -2712,6 +2813,10 @@ for line in sys.stdin:
                     "capacity-first-run-failure"
                 },
             );
+            env.insert(
+                "VK_STALLED_TIMELINE",
+                format!("stalled-provider-timeline-{index}.jsonl"),
+            );
             env.capacity = Some(prepared);
             let mut spawned = codex
                 .spawn_follow_up(&work, "/goal resume", &thread, None, &env)
@@ -2725,7 +2830,7 @@ for line in sys.stdin:
                 tokio::io::copy(&mut stdout, &mut out).await.unwrap();
             });
             if stalled {
-                let timeline = home.join("stalled-provider-timeline.jsonl");
+                let timeline = home.join(format!("stalled-provider-timeline-{index}.jsonl"));
                 tokio::time::timeout(Duration::from_secs(4), async {
                     while !timeline.exists() {
                         sleep(Duration::from_millis(10)).await;
@@ -2739,105 +2844,159 @@ for line in sys.stdin:
                     .get(&execution)
                     .and_then(Weak::upgrade)
                     .unwrap();
-                // Stall the actual first unbounded graceful-stop await. The
+                // Stall the actual first graceful-stop mutex await. The
                 // controller runtime still runs; its OS worker is independent.
                 let held_thread = client.thread_id.lock().await;
                 let lease =
                     capacity_guard::read_lease(std::path::Path::new(&request.lease_file)).unwrap();
                 let held_at_ms = crate::capacity::wall_ms();
-                let revocation = if variant == "stalled-revocation" {
-                    let before = crate::capacity::wall_ms();
-                    controller
-                        .lock()
-                        .await
-                        .revoke_session(session, "Synthetic stalled graceful stop")
+                let observed_exit = tokio::spawn(async move {
+                    let unit = crate::capacity::unit_name(execution);
+                    let shutdown = tokio::time::timeout(Duration::from_secs(12), async {
+                        loop {
+                            let output = Command::new("systemctl")
+                                .args([
+                                    "--user",
+                                    "show",
+                                    &unit,
+                                    "--property=LoadState",
+                                    "--property=ActiveState",
+                                    "--property=ControlGroup",
+                                ])
+                                .kill_on_drop(true)
+                                .output()
+                                .await
+                                .unwrap();
+                            let text = String::from_utf8(output.stdout).unwrap();
+                            let fields: std::collections::HashMap<_, _> = text
+                                .lines()
+                                .filter_map(|line| line.split_once('='))
+                                .collect();
+                            if fields.get("LoadState") == Some(&"not-found") {
+                                break text;
+                            }
+                            assert!(output.status.success());
+                            if matches!(fields.get("ActiveState"), Some(&"inactive" | &"failed")) {
+                                let group = fields.get("ControlGroup").unwrap();
+                                assert!(
+                                    group.is_empty()
+                                        || (group.starts_with('/') && !group.contains(".."))
+                                );
+                                if group.is_empty() {
+                                    break text;
+                                }
+                                match tokio::fs::read_to_string(format!(
+                                    "/sys/fs/cgroup{group}/cgroup.events"
+                                ))
+                                .await
+                                {
+                                    Ok(events)
+                                        if events.lines().any(|line| line == "populated 0") =>
+                                    {
+                                        break text;
+                                    }
+                                    Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                                        break text;
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            sleep(Duration::from_millis(10)).await;
+                        }
+                    })
+                    .await
+                    .unwrap();
+                    (crate::capacity::wall_ms(), shutdown)
+                });
+                ready.wait().await;
+                let response_started = std::time::Instant::now();
+                let revocation = if variant != "stalled-expiry" {
+                    if index == 0 {
+                        let before = crate::capacity::wall_ms();
+                        controller
+                            .lock()
+                            .await
+                            .revoke_all("Synthetic stalled graceful stop", None)
+                            .unwrap();
+                        let after = crate::capacity::wall_ms();
+                        assert!(
+                            capacity_guard::read_lease(std::path::Path::new(&request.lease_file))
+                                .unwrap()
+                                .revoked
+                        );
+                        std::fs::write(
+                            home.join("stop-revocation.json"),
+                            serde_json::to_vec(&(before, after)).unwrap(),
+                        )
                         .unwrap();
-                    let after = crate::capacity::wall_ms();
-                    assert!(
-                        capacity_guard::read_lease(std::path::Path::new(&request.lease_file))
-                            .unwrap()
-                            .revoked
-                    );
-                    Some((before, after))
+                        let grants: Vec<_> = controller
+                            .lock()
+                            .await
+                            .state
+                            .goals
+                            .values()
+                            .filter_map(|g| g.grant.clone().map(|grant| (g.session_id, grant)))
+                            .collect();
+                        let state = crate::capacity::controller::stop_revoked_grants(
+                            controller,
+                            grants,
+                            "Synthetic stalled graceful stop".into(),
+                        )
+                        .await
+                        .unwrap();
+                        assert!(state.goals.values().all(|g| g.grant.is_none()));
+                        let elapsed = response_started.elapsed().as_millis() as u64;
+                        assert!(
+                            elapsed < 8000,
+                            "Stop/reconciliation must fit CU's 10s request budget"
+                        );
+                        std::fs::write(home.join("stop-response.json"), serde_json::to_vec(&serde_json::json!({"workers": if variant == "stalled-two" { 2 } else { 1 }, "responseElapsedMs": elapsed, "verified": true})).unwrap()).unwrap();
+                    }
+                    finished.wait().await;
+                    Some(
+                        serde_json::from_slice::<(u64, u64)>(
+                            &std::fs::read(home.join("stop-revocation.json")).unwrap(),
+                        )
+                        .unwrap(),
+                    )
                 } else {
                     None
                 };
-                let graceful = tokio::spawn(AppServerClient::suspend_capacity_execution(
-                    execution,
-                    "Synthetic stalled graceful stop".into(),
-                ));
-                tokio::time::timeout(Duration::from_secs(1), async {
-                    while !client.capacity_stopped.load(Ordering::SeqCst) {
-                        sleep(Duration::from_millis(10)).await;
-                    }
-                })
-                .await
-                .unwrap();
-                // No explicit systemctl stop, cancellation, proxy kill or exit
-                // signal is used before observing independent worker shutdown.
+                let graceful = if revocation.is_none() {
+                    Some(tokio::spawn(async move {
+                        let result = AppServerClient::suspend_capacity_execution(
+                            execution,
+                            "Synthetic stalled graceful stop".into(),
+                        )
+                        .await;
+                        (crate::capacity::wall_ms(), result)
+                    }))
+                } else {
+                    None
+                };
+                // The expiry case uses no explicit OS stop or cancellation.
+                // Revocation cases use the same bounded helper as HTTP stop.
                 tokio::time::timeout(Duration::from_secs(10), spawned.child.wait())
                     .await
                     .unwrap()
                     .unwrap();
                 let proxy_exit_ms = crate::capacity::wall_ms();
-                let unit = crate::capacity::unit_name(execution);
-                let shutdown = tokio::time::timeout(Duration::from_secs(2), async {
-                    loop {
-                        let output = Command::new("systemctl")
-                            .args([
-                                "--user",
-                                "show",
-                                &unit,
-                                "--property=LoadState",
-                                "--property=ActiveState",
-                                "--property=ControlGroup",
-                            ])
-                            .kill_on_drop(true)
-                            .output()
+                let (worker_exit_ms, shutdown) = observed_exit.await.unwrap();
+                // Expiry still proves independent guard containment without
+                // explicit OS stop. The graceful future must now terminate even
+                // while its thread mutex remains held.
+                let graceful_completed_ms = if let Some(graceful) = graceful {
+                    let (completed, result) =
+                        tokio::time::timeout(Duration::from_millis(2100), graceful)
                             .await
+                            .unwrap()
                             .unwrap();
-                        let text = String::from_utf8(output.stdout).unwrap();
-                        let fields: std::collections::HashMap<_, _> = text
-                            .lines()
-                            .filter_map(|line| line.split_once('='))
-                            .collect();
-                        if fields.get("LoadState") == Some(&"not-found") {
-                            break text;
-                        }
-                        assert!(output.status.success());
-                        if matches!(fields.get("ActiveState"), Some(&"inactive" | &"failed")) {
-                            let group = fields.get("ControlGroup").unwrap();
-                            assert!(
-                                group.is_empty()
-                                    || (group.starts_with('/') && !group.contains(".."))
-                            );
-                            if group.is_empty() {
-                                break text;
-                            }
-                            match tokio::fs::read_to_string(format!(
-                                "/sys/fs/cgroup{group}/cgroup.events"
-                            ))
-                            .await
-                            {
-                                Ok(events) if events.lines().any(|line| line == "populated 0") => {
-                                    break text;
-                                }
-                                Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                                    break text;
-                                }
-                                _ => {}
-                            }
-                        }
-                        sleep(Duration::from_millis(10)).await;
-                    }
-                })
-                .await
-                .unwrap();
-                let worker_exit_ms = crate::capacity::wall_ms();
-                assert!(
-                    !graceful.is_finished(),
-                    "Graceful stop must still be blocked when the worker exits"
-                );
+                    result.unwrap_err();
+                    assert!(completed <= held_at_ms + 2300);
+                    Some(completed)
+                } else {
+                    None
+                };
                 let events_before = std::fs::read(&timeline).unwrap();
                 sleep(Duration::from_millis(300)).await;
                 assert_eq!(
@@ -2871,6 +3030,11 @@ for line in sys.stdin:
                 let boundary_ms = revocation.map_or(lease.expires_at_ms, |(_, after)| after);
                 // 100ms guard poll + 250ms group kill + 1s cgroup stop;
                 // retain 150ms observation tolerance, never extend hard stop.
+                // Response may include the full 2s graceful budget after the
+                // independently revoked worker already exited. Use the provider
+                // termination timestamp for containment, and cgroup verification
+                // as observed independently by the stop helper.
+                assert!(termination_ms <= boundary_ms + 1500);
                 assert!(worker_exit_ms <= boundary_ms + 1500);
                 assert!(worker_exit_ms < lease.stop_at_ms);
                 assert!(last_request_ms < boundary_ms);
@@ -2901,12 +3065,38 @@ for line in sys.stdin:
                         .is_none()
                 );
                 let retained_receipt = held.initialization_receipt.clone();
-                c.stopped(
-                    session,
-                    Uuid::parse_str(&request.id).unwrap(),
-                    "Independent guarded exit verified".into(),
-                )
-                .unwrap();
+                if revocation.is_none() {
+                    let mut unknown = c.state.goals[&session].grant.clone().unwrap();
+                    unknown.execution_id = Some(Uuid::new_v4());
+                    drop(c);
+                    // The private broker denies unregistered unit inspection.
+                    // No exit verification means no reconciliation, even when
+                    // the native row is active and a worker previously exited.
+                    let unconfirmed = crate::capacity::controller::stop_revoked_grants(
+                        controller,
+                        vec![(session, unknown)],
+                        "Synthetic unverifiable exit".into(),
+                    )
+                    .await
+                    .unwrap();
+                    let held = &unconfirmed.goals[&session];
+                    assert!(held.grant.as_ref().unwrap().stopping);
+                    assert_eq!(held.initialization_state, InitializationState::Held);
+                    assert!(!held.eligible);
+                    assert_eq!(
+                        serde_json::to_value(&held.initialization_receipt).unwrap(),
+                        serde_json::to_value(&retained_receipt).unwrap()
+                    );
+                    c = controller.lock().await;
+
+                    c.stopped(
+                        session,
+                        Uuid::parse_str(&request.id).unwrap(),
+                        "Independent guarded exit verified".into(),
+                    )
+                    .unwrap();
+                }
+                assert!(c.state.goals[&session].grant.is_none());
                 assert_eq!(
                     serde_json::to_value(&c.state.goals[&session].initialization_receipt).unwrap(),
                     serde_json::to_value(&retained_receipt).unwrap()
@@ -2925,28 +3115,31 @@ for line in sys.stdin:
                     .is_err()
                 );
                 drop(c);
+                let preserved_native = first_run::native(&thread).await.unwrap();
                 assert_eq!(
-                    first_run::FirstRun::from_native(&first_run::native(&thread).await.unwrap()),
+                    preserved_native.status, "active",
+                    "A blocked pause RPC must not fabricate persisted paused state"
+                );
+                assert_eq!(
+                    first_run::FirstRun::from_native(&preserved_native),
                     first_run::FirstRun::from_native(&native)
                 );
-                std::fs::write(home.join("stalled-stop-measurements.json"), serde_json::to_vec_pretty(&serde_json::json!({
+                std::fs::write(home.join(format!("stalled-stop-measurements-{index}.json")), serde_json::to_vec_pretty(&serde_json::json!({
                     "variant": variant, "executionId": execution, "grantId": request.id,
                     "lastLeaseExpiryMs": lease.expires_at_ms, "hardStopMs": lease.stop_at_ms,
-                    "gracefulLockHeldMs": held_at_ms,
+                    "gracefulLockHeldMs": held_at_ms, "gracefulAttemptCompletedMs": graceful_completed_ms,
                     "revocationBeforeMs": revocation.map(|(before, _)| before),
                     "revocationConfirmedMs": revocation.map(|(_, after)| after),
                     "lastProviderRequestMs": last_request_ms, "providerRequestCount": requests.len(),
                     "lastProviderActivityMs": last_activity_ms, "providerTerminatingMs": termination_ms,
                     "proxyExitObservedMs": proxy_exit_ms, "workerExitObservedMs": worker_exit_ms,
-                    "workerState": shutdown, "gracefulStillBlockedAtWorkerExit": true,
+                    "workerState": shutdown, "gracefulAttemptBounded": true,
                     "containmentObservationAllowanceMs": 1500, "reconciledAtMs": reconciled_at_ms,
-                    "firstRunHeld": true, "identityAndReceiptRetained": true,
-                    "explicitOsStopBeforeWorkerExit": false,
+                    "firstRunHeld": true, "identityAndReceiptRetained": true, "nativeStatus": preserved_native.status,
+                    "explicitOsStopRequested": revocation.is_some(),
                 })).unwrap()).unwrap();
                 // Test-owned stalled task only. Do not turn delayed native RPC
                 // into a success receipt or discard the retained goal/hold.
-                graceful.abort();
-                assert!(graceful.await.unwrap_err().is_cancelled());
                 drop(held_thread);
                 if let Some(cancel) = spawned.cancel {
                     cancel.cancel();

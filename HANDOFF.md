@@ -1,26 +1,23 @@
-# PR147 stalled graceful stop verification
+# PR147 bounded stop-response reliability
 
-The production stop/client/controller/guard behavior remains unchanged from
-`86f62b2`. A new opt-in native regression stalls the actual client mutex while
-an offline provider request is outstanding and independently measures persisted
-revocation or last-lease expiry, provider activity and worker/cgroup exit. Local
-revocation: provider TERM +46 ms, worker exit observed +480 ms. Local expiry:
-provider TERM +7 ms, worker exit observed +567 ms. Both retain first-run identity,
-receipt and held intent; no explicit OS stop precedes observation. Graceful HTTP
-completion is unbounded, but these cases found no worker-bound failure. See the
-bounded-stop section in VK_SCHEDULED_FIRST_RUN.md.
+The complete graceful attempt has a 2-second deadline, including mutex, RPC,
+log and exit-signal awaits. Independent OS stop and cgroup verification follow
+regardless of graceful outcome. HTTP worker stops run concurrently: 2+3+2 seconds
+per worker, with bounded controller lock waits, within CU's 10-second request
+budget for two workers. Unverified exit retains stopping grants and first-run
+holds/identities/receipts; native active status is never fabricated as paused or
+used as replay permission. Lease and hard-stop enforcement remain unchanged.
 
-Current exact CI/build hashes, artifacts, timelines and staging comparison checks
-are retained at `/mnt/vk-storage/vk-scheduled-first-run-20261006/stalled-stop-handoff.md`.
-Use that delivery receipt rather than treating historical binary notes below as
-latest-source acceptance. The verified `86f62b2` HTTP/disabled-v2-reader bundle
-and its current-source ten runtime receipts remain preserved. New source changes
-are regression/fixture/docs only; final same-source CI and artifact checks remain
-required. Combined HTTP/CU/native and latest-v2 rollback acceptance belong to
-staging through the parent. Compare staging's retained `lcp7ys3k` timeline by
-last persisted lease, revocation and actual worker/provider events, never HTTP
-timeout alone. No production/settings/Android/paid-provider/service change.
-Recommend and CU-compatibility-before-pending-exposure remain required.
+Focused isolated regressions cover thread/log/exit-signal stalls, actual one/two
+native workers, unverifiable exit and independent lease expiry. Original authentic
+promotion/later resume remain mandatory. Final-source CI/artifacts/evidence and
+staging's exact remaining CU/HTTP/rollback acceptance are recorded in
+`/mnt/vk-storage/vk-scheduled-first-run-20261006/stop-response-handoff.md`.
+Previous evidence remains preserved in stalled-stop-handoff.md. Independent
+review at 22034d9b6 cleared observed worker containment; original revoke-write and
+last provider-request timestamps remain unavailable. No runaway claim is made.
+No production deployment/restart, Android/provider use, settings change or cleanup.
+Keep Recommend and deploy compatible CU before exposing pending candidates.
 
 # October 6: Scheduled native first run — tested draft source
 

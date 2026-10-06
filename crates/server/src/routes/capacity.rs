@@ -22,7 +22,7 @@ use executors::{
         first_run::{self, FirstRun, InitializationState},
         wall_ms,
     },
-    executors::{BaseCodingAgent, codex::client::AppServerClient},
+    executors::BaseCodingAgent,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -436,8 +436,13 @@ async fn stop(
     Json(input): Json<Stop>,
 ) -> Result<Json<Value>, ApiError> {
     authorize(&headers)?;
+    let control = controller()?;
     let grants = {
-        let mut c = controller()?.lock().await;
+        let mut c = tokio::time::timeout(std::time::Duration::from_millis(500), control.lock())
+            .await
+            .map_err(|_| {
+                ApiError::Conflict("Stop unconfirmed; controller busy, reconcile".into())
+            })?;
         c.check_revision(&input.epoch, input.revision)
             .map_err(conflict)?;
         if input.reason.len() > 500 {
@@ -452,27 +457,15 @@ async fn stop(
             .goals
             .values()
             .filter(|g| input.session_id.is_none_or(|id| g.session_id == id))
-            .filter_map(|g| g.grant.clone().map(|x| (g.session_id, x)))
+            .filter_map(|g| g.grant.clone().map(|grant| (g.session_id, grant)))
             .collect::<Vec<_>>()
     };
-    for (session, grant) in grants {
-        if let Some(execution) = grant.execution_id {
-            let _ =
-                AppServerClient::suspend_capacity_execution(execution, input.reason.clone()).await;
-            if !controller::stop_execution_unit(execution).await? {
-                continue;
-            }
-        }
-        controller()?
-            .lock()
-            .await
-            .stopped(session, grant.id, input.reason.clone())
-            .map_err(conflict)?;
-    }
-    Ok(Json(
-        json!({"state":wire_state(&controller()?.lock().await.state)}),
-    ))
+    let state = controller::stop_revoked_grants(control, grants, input.reason).await?;
+    // CU regards any retained grant as stop-unconfirmed. Never clear one based
+    // on a timeout or a native stored status; only independent exit verification.
+    Ok(Json(json!({"state":wire_state(&state)})))
 }
+
 pub fn router() -> Router<DeploymentImpl> {
     Router::new()
         .route("/capacity", get(status))

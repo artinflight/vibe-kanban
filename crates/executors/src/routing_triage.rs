@@ -62,7 +62,7 @@ fn protected_context(text: &str) -> bool {
     PROTECTED.is_match(text)
 }
 
-fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
+fn inspect(root: &Path, surface: &str, tooltip: bool, budget: Duration) -> RepoEvidence {
     let mut result = RepoEvidence::default();
     let Ok(root) = root.canonicalize() else {
         result.incomplete = true;
@@ -103,10 +103,7 @@ fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
                     && !e.file_type().is_symlink()
             })
         {
-            if result.entries >= 768
-                || start.elapsed() > Duration::from_millis(40)
-                || result.files >= 8
-            {
+            if result.entries >= 768 || start.elapsed() >= budget || result.files >= 8 {
                 result.incomplete = true;
                 return result;
             }
@@ -175,7 +172,7 @@ fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
                     if !parent.join("package.json").is_file() {
                         continue;
                     }
-                    if result.files >= 8 || start.elapsed() > Duration::from_millis(40) {
+                    if result.files >= 8 || start.elapsed() >= budget {
                         result.incomplete = true;
                         return result;
                     }
@@ -380,7 +377,7 @@ pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
     let Some(root) = root else {
         return result;
     };
-    let repo = inspect(root, &surfaces[0].0, tooltip);
+    let repo = inspect(root, &surfaces[0].0, tooltip, Duration::from_millis(40));
     result.inspected_entries = repo.entries;
     result.inspected_files = repo.files;
     if repo.protected {
@@ -504,8 +501,32 @@ mod tests {
                 "{prompt}"
             );
         }
-        std::fs::write(repo.0.join("src/pages/Settings.tsx"), "import {checkPermissions} from './permissions'; export const Settings = () => <Tooltip/>;").unwrap();
+        let protected = "import {checkPermissions} from './permissions'; export const Settings = () => <Tooltip/>;";
+        assert!(super::protected_context(protected));
+        std::fs::write(repo.0.join("src/pages/Settings.tsx"), protected).unwrap();
+        // Assert semantic inspection independently of the production deadline.
+        // Nextest runs this in a cold process; CI scheduling can consume the
+        // 40ms budget before the component is visited. That must remain a safe
+        // unknown-context fallback, not an assertion that discovery occurred.
+        let inspected = super::inspect(&repo.0, "settings", true, std::time::Duration::MAX);
+        assert!(inspected.protected);
         let result = assess_with_context("Add a tooltip to the settings page", Some(&repo.0));
+        if !result
+            .triage
+            .risk
+            .contains(&"protected_component_context".into())
+        {
+            assert_eq!(result.floor, CapabilityFloor::Workhorse);
+            assert!(result.triage.needs_repo_inspection);
+            assert_eq!(result.triage.uncertainty, "high");
+            assert!(
+                result
+                    .triage
+                    .evidence
+                    .contains(&"inspection_incomplete_or_budget_exhausted".into())
+            );
+            return;
+        }
         assert_eq!(result.floor, CapabilityFloor::Frontier);
         assert!(
             result
@@ -513,6 +534,16 @@ mod tests {
                 .risk
                 .contains(&"protected_component_context".into())
         );
+    }
+
+    #[test]
+    fn exhausted_inspection_budget_preserves_unknown_context() {
+        let repo = Repo::new();
+        let inspected = super::inspect(&repo.0, "settings", true, std::time::Duration::ZERO);
+        assert!(inspected.incomplete);
+        assert!(!inspected.surface);
+        assert!(!inspected.protected);
+        assert_eq!(inspected.entries, 0);
     }
 
     #[cfg(unix)]

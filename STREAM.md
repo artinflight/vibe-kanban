@@ -1,3 +1,51 @@
+# PR147 bounded stop-response reliability
+
+The complete graceful attempt has a 2-second deadline, including mutex, RPC,
+log and exit-signal awaits. Independent OS stop and cgroup verification follow
+regardless of graceful outcome. HTTP worker stops run concurrently: 2+3+2 seconds
+per worker, with bounded controller lock waits, within CU's 10-second request
+budget for two workers. Unverified exit retains stopping grants and first-run
+holds/identities/receipts; native active status is never fabricated as paused or
+used as replay permission. Lease and hard-stop enforcement remain unchanged.
+
+Focused isolated regressions cover thread/log/exit-signal stalls, actual one/two
+native workers, unverifiable exit and independent lease expiry. Original authentic
+promotion/later resume remain mandatory. Final-source CI/artifacts/evidence and
+staging's exact remaining CU/HTTP/rollback acceptance are recorded in
+`/mnt/vk-storage/vk-scheduled-first-run-20261006/stop-response-handoff.md`.
+Previous evidence remains preserved in stalled-stop-handoff.md. Independent
+review at 22034d9b6 cleared observed worker containment; original revoke-write and
+last provider-request timestamps remain unavailable. No runaway claim is made.
+No production deployment/restart, Android/provider use, settings change or cleanup.
+Keep Recommend and deploy compatible CU before exposing pending candidates.
+
+# October 6: Scheduled native first run
+
+Branch `vk/fa60-vk-scheduled-goa` starts at fork staging `8b562265d`.
+Read VK_SCHEDULED_FIRST_RUN.md for the pinned CU contract, provenance, isolation,
+wire interface, combined acceptance and rollback requirements. No production
+deploy/restart/settings writes, real Android initialization or paid inference.
+Pending exposure is default-off and belongs to the later staging rollout after
+CU compatibility. Recommend is preserved. Local development checks listed below pass; combined CU/private-HTTP acceptance
+and rollout remain with the parent/staging owner.
+
+Validated on the final offline binary SHA-256
+`a854d6158f061d8fa60c14f5badfbf6cbe0b99b5f5036eccd16b1c0775f6c787`:
+155 executor unit tests; six real-native offline scenarios (authentic first
+turn/promotion/later resume; required input hold; one-request provider failure;
+identity changed after lease preparation rejected before model work; plan review
+hold; completed first turn without a checklist held without promotion). All used
+the reviewed CU kernel/supervisor boundary and zero host-workspace mutation
+attempts. Receipts: `/mnt/vk-storage/vk-scheduled-first-run-20261006/acceptance.json`.
+Focused executor/server all-target Clippy, frontend type checks/lint, formatting
+and ops checks pass. Broad check/lint are blocked by missing host GTK/GLib/GIO;
+full workspace tests and shared-generation checks remain CI requirements. No
+remote source paths changed. No unrestricted fixture backend was run; the
+CU/private-capacity-HTTP combined rehearsal and legacy-CU/durable rollback
+acceptance remain explicit release requirements in VK_SCHEDULED_FIRST_RUN.md.
+No backend release package or production restart was attempted.
+
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

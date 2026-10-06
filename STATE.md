@@ -1,3 +1,12 @@
+## October 6: Scheduled first-run development boundary
+
+VK scheduled initialization is being implemented on a separate development
+branch at staging `8b562265d`. It is not deployed. The default-off service gate
+must remain off until compatible CU and combined private-API/native acceptance
+are verified by the staging owner. Recommend and the existing scheduling
+restrictions remain authoritative. Version-2 controller receipts require a
+compatible rollback reader. See VK_SCHEDULED_FIRST_RUN.md for exact requirements.
+
 ## October 1: AutoSwitch scope release preparation
 
 PR134/135 merged the downward-routing scope correction into staging/main. It is

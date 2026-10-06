@@ -1523,3 +1523,32 @@ Recommend is required; no deployment/restart/cutover or Auto activation. Deadlin
 for full useful router readiness is before October 30, 2026 (20x becomes 10x).
 See VK_AUTOSWITCH_RELOAD.md for mandatory next-candidate packaging and remaining
 acceptance/ownership dependencies; CU credit budgeting is a separate issue.
+
+## October 6, 2026 — scheduled first native goal run (development)
+
+Separate workspace at staging 8b562265d implements identity-bound pending intent,
+explicit firstRun admission, native-root checklist receipts, and fail-closed
+restart/hold behavior. No production, Android, paid inference or live-settings
+operation. See VK_SCHEDULED_FIRST_RUN.md and HANDOFF for validation and the
+CU-first combined acceptance/rollback gate.
+
+## PR147 staging acceptance blockers
+
+CI identified a cold/deadline-sensitive routing-triage assertion. Repair keeps
+the production budget and separately verifies semantic discovery and unknown
+fallback. Added source-fenced hosted HTTP/guard/test artifact builds and a
+compile-time disabled, v2-compatible rollback variant. Own old test binary was
+verified on Desktop B: before exact local removal; all evidence and shared data
+retained. Combined runtime acceptance and final CI are mandatory. No production
+operation or paid inference.
+
+
+2026-10-06 PR147 stalled graceful stop: added cfg(test) native revocation/expiry regression with actual client mutex held, outstanding private offline request and independent worker/cgroup observations. Local provider TERM/worker exit were +46/+480 ms after revocation and +7/+567 ms after last expiry; one request in each, graceful future still blocked, first-run holds/identity/receipts retained. No production enforcement change; non-test client source is unchanged from 86f62b2. Current immutable CI/build/runtime receipts and staging lcp7ys3k comparison are in /mnt/vk-storage/vk-scheduled-first-run-20261006/stalled-stop-handoff.md. Recommend/default-off/CU-first and no production/Android/paid/live-service boundaries retained.
+
+## 2026-10-06 — PR147 stop-response reliability
+
+Bound the complete graceful attempt, make HTTP one/two-worker OS stop/verification
+concurrent, and reconcile only verified matching grants. Preserve native active
+status and uncertain first-run holds/receipts. Focused offline runner regressions
+plus final source-fenced candidate/disabled-v2 rollback validation receipts belong
+to stop-response-handoff.md on the mounted SSD. No production action or cleanup.

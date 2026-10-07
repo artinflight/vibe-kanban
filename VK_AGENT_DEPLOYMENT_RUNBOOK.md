@@ -2,6 +2,14 @@
 
 ## Desktop-Backed Recovery Tools For Next Preparation
 
+Current sole-provider authority supersedes the older tool pin below: use PR149
+312ac0b20 or a verified descendant. Read VK_BACKEND_RESTART_PROTOCOL.md's
+Desktop B policy and /mnt/vk-storage/vk-desktop-provider-20261007 receipts.
+The hardlink defect is corrected and192regressions pass. Do not retain duplicate
+SSD archive chains as a standing requirement or use full simultaneous filesystem
+extraction as the only provider acceptance method. Exact deletion approval and
+separate production rollout approval remain required.
+
 Read VK_DESKTOP_ARCHIVE_MIGRATION_20261007.md. Draft PR149 operational pin
 6bd0b39e546ba1f2337cac5dbf27f3b14446fe91 includes PR142 plus authenticated
 Desktop-only legacy-chain resolution. The new64-file recovery package and

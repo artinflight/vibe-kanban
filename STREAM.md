@@ -1,5 +1,13 @@
 # STREAM.md
 
+October7 latest outcome: Desktop B sole-provider implementation and bounded
+real-chain acceptance complete at PR149 pin312ac0b20. Read
+VK_DESKTOP_PROVIDER_ACCEPTANCE_20261007.md. Exact27 redundant local archive copies
+are proposed for retirement, not deleted or approved. Keeping SSD duplicates is
+not a standing requirement. Full overnight backup/rehearsal and rollout remain
+separate gates; no production change. Older capacity/provider holds below are
+historical and superseded by the measured bounded acceptance.
+
 October7 current scope: Desktop-backed archive integration and SSD-only preparation,
 not a production switch. See VK_DESKTOP_ARCHIVE_MIGRATION_20261007.md. PR149
 6bd0b39e5 and its Desktop-verified recovery package are tested; all27 original

@@ -1,5 +1,20 @@
 # HANDOFF.md
 
+## October 7 Sole Desktop Provider Accepted; Retirement Needs Approval
+
+Read VK_DESKTOP_PROVIDER_ACCEPTANCE_20261007.md. This supersedes the older
+unfixed-hardlink/provider-capacity hold below, not historical recovery exceptions.
+PR149 code pin312ac0b20 fixes regular/SQLite hardlink replacement and makes B
+the default archive provider.192 operational regressions pass. All27 B hashes,
+six chains, real capture/resume/rehearsal consumers and the next-package installer
+verify. Bounded actual-reader recovery restores all67 databases and32 selected
+files in382.720s, with4.597GiB sampled stage peak and13.276GiB minimum free.
+The complete non-database tree was not materialized; full overnight deployment
+rehearsal remains separate. Retained B tool package and exact27-file retirement
+manifest are under /mnt/vk-storage/vk-desktop-provider-20261007. No protected
+archives were deleted;69,178,728,448 allocated bytes await specific unlink approval
+and fresh checks/breadcrumbs. Production, Recommend and pending release unchanged.
+
 ## October 7 Hardlink Review: Private Restore Bug Confirmed
 
 Read the PR149 source document VK_RESTORE_HARDLINK_REVIEW_20261007.md at

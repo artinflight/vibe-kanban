@@ -85,7 +85,7 @@ pub fn surrounding_envelope(decision: &crate::routing::RoutingDecision) -> Optio
         .find_map(|e| e.strip_prefix("surrounding_assignment:"))
 }
 
-pub fn reassess_step(a: &Assessment, prompt: &str, previous: &str) -> bool {
+pub fn reassess_step(a: &Assessment, prompt: &str, _previous: &str) -> bool {
     let has = |s: &str| a.triage.evidence.iter().any(|e| e == s);
     if a.validation_failure
         || crate::routing_assessment::is_continuation(prompt)
@@ -109,13 +109,18 @@ pub fn reassess_step(a: &Assessment, prompt: &str, previous: &str) -> bool {
     diagnosis
         || (a.triage.uncertainty == "low"
             && a.triage.ambiguity == "low"
+            && a.triage.scope == "localized"
+            && a.triage.pattern == "established"
+            && a.triage.horizon == "short"
+            && a.triage.validation != "unknown"
             && !a.triage.needs_repo_inspection
             && matches!(a.envelope, "mechanical" | "bounded")
             && (has("completed_context_reference_lookup")
             || has("semantic_reference_lookup")
-            // Same protected assignment keeps its floor for changes. A pure
-            // reference lookup performs no operation in that protected system.
-            || (previous != "protected" && has("semantic_bounded_step"))))
+            // Protection belongs to relevant current work, not the chat. A
+            // positively classified bounded step may release inferred history;
+            // current risk, missing context and uncertainty still forbid it.
+            || has("semantic_bounded_step")))
 }
 
 #[cfg(test)]

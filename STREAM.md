@@ -1,3 +1,30 @@
+# October 7: AutoSwitch current-step risk correction
+
+Branch `fix/autoswitch-current-step-risk` preserves `fix/autoswitch-reference-steps`
+at `bb5fe5f40852d48dfa0049c1fd797ee829ff1265`. See
+[VK_AUTOSWITCH_CURRENT_STEP_RISK.md](VK_AUTOSWITCH_CURRENT_STEP_RISK.md).
+Scope: release inferred session protection for positively classified, resolved
+bounded follow-ups; retain the surrounding assignment for generic resumes;
+recognize explicit deployment/restart prohibitions without erasing positive
+protected operations. The stable module validator now requires native bounded
+scope evidence, and agrees with built-in independent-request handling.
+
+Recommend remains required; no Auto, credit/model configuration, deployment,
+restart, live module publication or staging-owner interaction is authorized here.
+This changes backend safety guards, so it requires backend-matched adoption by
+VK::Staging; publishing only the worker to the old backend would fail closed.
+The October 30 readiness deadline (20x to 10x allowance) remains authoritative.
+Validation: 153 executor unit tests passed (seven opt-in tests not invoked),
+15 completed real assessments replayed without inference, sandboxed module reload
+and all-target executor Clippy passed, formatting/governance and exact CU wire
+compatibility passed. Three prior Astra recommendations become Sol6/low; their
+Auto-qualified option is Luna6/medium. The other twelve are unchanged. No actual
+model changes or accepted-task savings are claimed. Frontend type checks passed
+with the larger Node heap; full desktop/workspace checks require CI because the
+host lacks GLib development metadata. Receipts:
+`/mnt/vk-storage/vk-autoswitch-current-step-risk-20261007`.
+Older entries below are historical.
+
 # October 5: AutoSwitch reference-step and classifier startup correction
 
 Current branch `fix/autoswitch-reference-steps` begins at staging `8b562265d`.

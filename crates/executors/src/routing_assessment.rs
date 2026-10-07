@@ -21,6 +21,39 @@ fn contains_term(text: &str, term: &str) -> bool {
     })
 }
 
+/// Remove only explicit operational prohibitions from risk matching. This is
+/// deliberately not general negation: safeguards, protected identifiers and
+/// positive operations elsewhere in the request must remain visible.
+pub(crate) fn risk_text(text: &str) -> String {
+    use std::sync::LazyLock;
+
+    use regex::Regex;
+
+    static PROHIBITED_OPERATION: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(concat!(
+            r"(?m)(?:^|[\n.,:;!?]|\band\b)\s*(?:[-*]\s*)?",
+            r"(?:do not|don't|don’t|never|no|without)\s+",
+            r"(?:(?:perform|start|trigger|initiate|run)\s+)?",
+            r"(?:(?:a|any|another|new|live|production|staging|backend|service)\s+)*",
+            r"(?:deploy(?:ment|ments|ing)?|restart(?:s|ing)?|cutover|cut over)\b",
+            r"(?:\s+(?:(?:to|on|of|the|any|a|an|into)\s+)*",
+            r"(?:production|staging|services?|backend|instances?|runtime|servers?|system)\b)?"
+        ))
+        .unwrap()
+    });
+    // Retain delimiters and byte offsets. Spaces cannot accidentally join two
+    // identifiers into a new term, and later positive occurrences stay intact.
+    let mut bytes = text.as_bytes().to_vec();
+    for matched in PROHIBITED_OPERATION.find_iter(text) {
+        for byte in &mut bytes[matched.start()..matched.end()] {
+            if !matches!(*byte, b'\n' | b'.' | b';' | b'!' | b'?') {
+                *byte = b' ';
+            }
+        }
+    }
+    String::from_utf8(bytes).expect("risk mask preserves UTF-8")
+}
+
 // A stated non-destructive constraint is not destructive intent. Keep broad
 // matching for identifiers and positive occurrences elsewhere in the request;
 // this deliberately does not negate other protected categories.
@@ -227,7 +260,8 @@ pub fn assess_with_context(prompt: &str, root: Option<&std::path::Path>) -> Asse
     ]);
     // Keep protected-risk detection broad for subsystem identifiers such as
     // authenticationService; lexical precision is a low-risk admission requirement.
-    let has_risk = |words: &[&str]| words.iter().any(|w| text.contains(w));
+    let risk_text = risk_text(&text);
+    let has_risk = |words: &[&str]| words.iter().any(|w| risk_text.contains(w));
     let (mut envelope, mut floor, mut evidence) = if has(&["auth"])
         || destructive_intent(&text)
         || has_risk(&[
@@ -485,6 +519,44 @@ pub fn assess_with_context(prompt: &str, root: Option<&std::path::Path>) -> Asse
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn operational_prohibitions_do_not_become_requests_to_deploy() {
+        for constraint in [
+            "Do not deploy.",
+            "DO NOT deploy to production.",
+            "No production deployment or live-account writes.",
+            "Never restart production services.",
+            "Do not perform a restart.",
+            "Do not perform production deployment.",
+            "No deployment: keep the current runtime.",
+            "Don't deploy the changes until approved.",
+            "Do not deploy or restart services.",
+        ] {
+            let prompt = format!("Fix a spelling typo in README.md. {constraint}");
+            assert_eq!(assess(&prompt).floor, CapabilityFloor::Routine, "{prompt}");
+        }
+        assert_eq!(
+            assess("Fix a spelling typo in README.md, no production deployment.").floor,
+            CapabilityFloor::Routine
+        );
+        for prompt in [
+            "Do not deploy until verified; then deploy to production",
+            "No production deployment. Change authenticationService",
+            "Do not deploy or change permissions; fix the permission race",
+            "Do not remove the deployment safeguards",
+            "Never bypass production checks",
+            "Test whether the do not deploy guard works",
+            "Fix a typo in deploymentConfig",
+            "Do not restart services. Review the data migration",
+        ] {
+            assert_eq!(assess(prompt).floor, CapabilityFloor::Frontier, "{prompt}");
+        }
+        // A restriction does not supply positive evidence that unknown work is cheap.
+        assert_eq!(
+            assess("Make this better. Do not deploy.").floor,
+            CapabilityFloor::Workhorse
+        );
+    }
     #[test]
     fn lexical_evidence_does_not_confuse_incidental_substrings() {
         for prompt in [

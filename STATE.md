@@ -1,3 +1,14 @@
+## October 7: AutoSwitch current-step safety invariant
+
+Protection must follow relevant current work, not become a permanent chat label.
+A resolved, positively classified bounded follow-up may release an inferred
+historical floor; current protected risks, uncertainty, explicit user/child floors,
+locks, exclusions and failure escalation remain authoritative. The surrounding
+assignment stays recorded for generic continuation. Operational prohibitions do
+not authorize deployment. This branch changes stable backend guards; see
+VK_AUTOSWITCH_CURRENT_STEP_RISK.md. Recommend remains required, with no Auto
+activation or release performed. VK::Staging owns backend adoption/cutover.
+
 ## October 1: AutoSwitch scope release preparation
 
 PR134/135 merged the downward-routing scope correction into staging/main. It is

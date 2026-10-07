@@ -527,18 +527,45 @@ fn checked(mut reply: Reply, request: &Request) -> Result<Reply, String> {
                 "protected",
             ]
             .contains(&prior.as_str());
-            let safe_step = request.completed_reply.is_some()
+            let bounded_proof = !a
+                .triage
+                .evidence
+                .iter()
+                .any(|e| e == "semantic_bounded_step")
+                || request.semantic.as_ref().is_some_and(|value| {
+                    serde_json::from_value::<SemanticClass>(value.clone())
+                        .is_ok_and(|c| crate::routing_semantic::qualified_bounded_step(&c))
+                });
+            let safe_step = request
+                .completed_reply
+                .as_ref()
+                .is_some_and(|r| !r.trim().is_empty())
+                && bounded_proof
                 && crate::routing_context::reassess_step(&a, &request.prompt, prior);
-            if !known
-                || !(safe_step
-                    || (prior != "protected"
-                        && crate::routing_assessment::independent_request(&a, &request.prompt)))
-            {
+            // Match built-in independent-request behavior. Native classification
+            // or the unchanged deterministic seed must establish independence;
+            // a worker cannot invent a marker to discard protected history.
+            let independent = crate::routing_assessment::independent_request(&a, &request.prompt)
+                && (crate::routing_assessment::independent_request(
+                    &request.seed.clone().into_assessment()?,
+                    &request.prompt,
+                ) || request.semantic.as_ref().is_some_and(|value| {
+                    serde_json::from_value::<SemanticClass>(value.clone()).is_ok_and(|c| {
+                        c.scope_relation == "independent"
+                            && c.risks.is_empty()
+                            && c.ambiguity == "low"
+                            && c.uncertainty != "high"
+                            && !c.inspection_needed
+                    })
+                }));
+            if !known || !(safe_step || independent) {
                 return Err("Module attempted to discard protected session context".into());
             }
-            let surrounding = format!("surrounding_assignment:{prior}");
-            if !reply.assessment.triage.evidence.contains(&surrounding) {
-                reply.assessment.triage.evidence.push(surrounding);
+            if safe_step {
+                let surrounding = format!("surrounding_assignment:{prior}");
+                if !reply.assessment.triage.evidence.contains(&surrounding) {
+                    reply.assessment.triage.evidence.push(surrounding);
+                }
             }
         }
     }
@@ -681,6 +708,147 @@ mod tests {
         assert!(checked(evaluate(probe_request()).unwrap(), &request).is_err());
         request.previous_envelope = Some("future_unknown_envelope".into());
         assert!(checked(evaluate(probe_request()).unwrap(), &request).is_err());
+    }
+
+    fn bounded_request() -> Request {
+        let mut request = probe_request();
+        request.prompt =
+            "Record the settled design choice in those notes; do not redesign the architecture"
+                .into();
+        request.seed = (&crate::routing_assessment::assess(&request.prompt)).into();
+        request.completed_reply =
+            Some("The design choice is settled; documentation remains.".into());
+        request.previous_envelope = Some("protected".into());
+        request
+    }
+
+    fn stages(mut request: Request) -> Result<Reply, String> {
+        let semantic = request.semantic.take();
+        let mut copy: Request =
+            serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap();
+        request.seed = checked(evaluate(copy)?, &request)?.assessment;
+        request.stage = "after".into();
+        request.semantic = semantic;
+        copy = serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap();
+        checked(evaluate(copy)?, &request)
+    }
+
+    #[test]
+    fn bounded_history_release_needs_native_scope_evidence_and_preserves_resume() {
+        let mut request = bounded_request();
+        request.semantic = Some(
+            serde_json::json!({"envelope":"bounded","scope_relation":"bounded_step","scope":"localized",
+            "novelty":"established","ambiguity":"low","horizon":"short","validation":"text_comparison",
+            "risks":[],"uncertainty":"low","inspection_needed":false,"reason":"Record a settled choice in existing notes."}),
+        );
+        let reply =
+            stages(serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap())
+                .unwrap();
+        assert_eq!(reply.assessment.floor, CapabilityFloor::Routine);
+        assert!(
+            reply
+                .assessment
+                .triage
+                .evidence
+                .contains(&"surrounding_assignment:protected".into())
+        );
+        // A worker's marker alone cannot create the native proof.
+        request.stage = "after".into();
+        request.semantic = None;
+        assert!(checked(reply, &request).is_err());
+        assert_eq!(
+            crate::routing_assessment::assess_follow_up("continue", Some("protected")).floor,
+            CapabilityFloor::Frontier
+        );
+        let mut no_proof = bounded_request();
+        let reply =
+            stages(serde_json::from_value(serde_json::to_value(&no_proof).unwrap()).unwrap())
+                .unwrap();
+        assert_eq!(reply.assessment.floor, CapabilityFloor::Frontier);
+        no_proof.previous_envelope = Some("unknown_future_envelope".into());
+        assert_eq!(
+            stages(no_proof).unwrap().assessment.floor,
+            CapabilityFloor::Frontier
+        );
+    }
+
+    #[test]
+    fn module_and_builtin_agree_on_named_independent_documentation() {
+        let mut request = bounded_request();
+        request.prompt = "Fix the spelling typo in README.md".into();
+        request.seed = (&crate::routing_assessment::assess(&request.prompt)).into();
+        let result = stages(request).unwrap();
+        assert_eq!(result.assessment.floor, CapabilityFloor::Routine);
+        assert!(
+            !result
+                .assessment
+                .triage
+                .evidence
+                .contains(&"surrounding_assignment:protected".into())
+        );
+    }
+
+    /// Reuse completed real assessments. This never starts Codex or inference.
+    #[test]
+    #[ignore = "requires a private captured real-work case file; zero inference"]
+    fn captured_real_work_replay() {
+        let path =
+            std::env::var_os("VK_ROUTING_REPLAY_FILE").expect("private replay file required");
+        let replay: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        let availability: crate::routing::Availability =
+            serde_json::from_value(replay["availability"].clone()).unwrap();
+        let models: Vec<ModelPolicy> = serde_json::from_value(replay["models"].clone()).unwrap();
+        for case in replay["cases"].as_array().unwrap() {
+            let mut request = probe_request();
+            request.prompt = case["prompt"].as_str().unwrap().into();
+            request.completed_reply = case["completed_reply"].as_str().map(str::to_owned);
+            request.previous_envelope = case["previous_envelope"].as_str().map(str::to_owned);
+            request.seed = (&crate::routing_assessment::assess(&request.prompt)).into();
+            request.semantic = case.get("semantic").filter(|c| !c.is_null()).cloned();
+            let reply = stages(request).unwrap();
+            assert_eq!(
+                reply.assessment.envelope,
+                case["expected_envelope"].as_str().unwrap(),
+                "{}",
+                case["execution"]
+            );
+            let a = reply.assessment.into_assessment().unwrap();
+            let mut policy = RoutingPolicy {
+                mode: crate::routing::RoutingMode::Shadow,
+                floor: CapabilityFloor::Assessed,
+                denied_models: vec![],
+                allow_escalation: false,
+            };
+            let shadow = crate::routing::choose_assessed(
+                &policy,
+                a.floor,
+                a.envelope,
+                &models,
+                &availability,
+                availability.observed_at,
+            )
+            .unwrap();
+            policy.mode = crate::routing::RoutingMode::Auto;
+            let qualified = crate::routing::choose_assessed(
+                &policy,
+                a.floor,
+                a.envelope,
+                &models,
+                &availability,
+                availability.observed_at,
+            )
+            .unwrap();
+            assert_eq!(shadow.0, case["expected_shadow_model"].as_str().unwrap());
+            if a.envelope == "bounded" {
+                assert_eq!(shadow, ("gpt-6-sol".into(), "low".into()));
+                assert_eq!(qualified, ("gpt-6-luna".into(), "medium".into()));
+            }
+            println!(
+                "{} -> {}; Recommend={:?}; qualified={:?}",
+                case["execution"], a.envelope, shadow, qualified
+            );
+        }
     }
 
     #[test]

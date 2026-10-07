@@ -1,5 +1,17 @@
 # HANDOFF.md
 
+## October 7 Combined Release: Conditional Authority, Not Ready
+
+Read VK_COMBINED_RELEASE_PREPARATION_20261007.md. Reviewed PR1479b3f82538 and
+PR148cb0b441a2 are integrated in isolated pushed branch
+release/overnight-autoswitch-20261007 at4e1fb9025; CU remains95e7aea47.
+No staging/main/production change. Connector writer cce7b2dc remains active and
+its reviewed patch is required before final build. Specific27-file retirement
+approval is still absent. Fresh complete68-DB sizing and45-error journal evidence
+are preserved; projected79.856GiB after retirement is not full rehearsal proof.
+Use PR149312ac0b20. Conditional cutover authority exists only after all listed
+release/space/recovery/safe-use gates pass; keep Recommend and credits OFF.
+
 ## October 7 Sole Desktop Provider Accepted; Retirement Needs Approval
 
 Read VK_DESKTOP_PROVIDER_ACCEPTANCE_20261007.md. This supersedes the older

@@ -1,5 +1,13 @@
 # STREAM.md
 
+October7 renewed scope: prepare the combined PR147/PR148/CU38 release plus the
+required reviewed connector patch, then own conditional cutover only after all
+space, fresh-backup, restore/rollback, combined-validation and actual-use gates.
+Read VK_COMBINED_RELEASE_PREPARATION_20261007.md. Integration branch4e1fb9025 is
+pushed; staging/main and production unchanged. Connector handoff and separate
+27-file deletion approval are outstanding. Earlier no-cutover authority below
+describes prior turns; it is not permission to bypass these current conditions.
+
 October7 latest outcome: Desktop B sole-provider implementation and bounded
 real-chain acceptance complete at PR149 pin312ac0b20. Read
 VK_DESKTOP_PROVIDER_ACCEPTANCE_20261007.md. Exact27 redundant local archive copies

@@ -11,6 +11,40 @@ pub struct Assessment {
     pub triage: crate::routing_triage::TaskTriage,
 }
 
+/// Merge immutable, bounded repository observations into the policy assessment.
+/// Prompt intent and qualification remain the selected worker's responsibility.
+pub fn apply_repository_context(a: &mut Assessment, context: &crate::routing_triage::TaskTriage) {
+    for evidence in &context.evidence {
+        if !a.triage.evidence.contains(evidence) {
+            a.triage.evidence.push(evidence.clone());
+        }
+    }
+    a.triage.inspected_entries = context.inspected_entries;
+    a.triage.inspected_files = context.inspected_files;
+    if !context.risk.is_empty() {
+        a.envelope = "protected";
+        a.floor = CapabilityFloor::Frontier;
+        a.evidence = "confirmed_repository_risk".into();
+        for risk in &context.risk {
+            if !a.triage.risk.contains(risk) {
+                a.triage.risk.push(risk.clone());
+            }
+        }
+    } else if a.triage.scope == "single_surface_likely" {
+        a.triage.pattern = context.pattern.clone();
+        a.triage.validation = context.validation.clone();
+        if !context.needs_repo_inspection {
+            a.triage.needs_repo_inspection = false;
+            a.triage.uncertainty = "medium".into();
+            if a.envelope == "normal" {
+                a.envelope = "bounded";
+                a.floor = CapabilityFloor::Routine;
+                a.evidence = "triage_ui_outcome_with_repo_evidence".into();
+            }
+        }
+    }
+}
+
 // Match lexical boundaries rather than accepting "test" inside "latest".
 fn contains_term(text: &str, term: &str) -> bool {
     text.match_indices(term).any(|(start, _)| {
@@ -463,6 +497,9 @@ pub fn assess_with_context(prompt: &str, root: Option<&std::path::Path>) -> Asse
     if triage.intent == "unknown" {
         triage.intent = envelope.into();
         if matches!(envelope, "mechanical" | "bounded" | "validated_fix") {
+            triage.ambiguity = "low".into();
+            triage.horizon = "short".into();
+            triage.pattern = "established".into();
             triage.scope = if envelope == "mechanical" {
                 "text_only"
             } else {

@@ -11,6 +11,17 @@ Until review/merge, explicitly pin the published operational follow-up commit.
 Preserve accepted live status and historical records separately; an early
 preparation-completion snapshot cannot override accepted cutover evidence.
 
+## AutoSwitch next-candidate requirement
+
+For this AutoSwitch release, follow [VK_AUTOSWITCH_RELOAD.md](VK_AUTOSWITCH_RELOAD.md).
+The candidate must include the new backend hook, backend-matched validator,
+verified published module and VK_CODEX_ROUTING_MODULE setting. Run the module
+check against the nominated unit before adoption and the live environment check
+after separately authorized cutover; then inspect a genuine Recommend decision
+for the release hash. Backend-only merge or an environment setting on an old
+binary is not module acceptance. Preserve Recommend; Auto needs separate approval.
+VK::Staging owns installation, restarts and cutover.
+
 ## Workspace Attention Is Separate State
 
 Read [VK_ATTENTION_PRESERVATION.md](VK_ATTENTION_PRESERVATION.md). Matching issue

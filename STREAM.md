@@ -16,6 +16,48 @@ is authorized. Read VK_BACKUP_MOVE_FOLLOWUP.md. The old maintenance branch is
 preserved; PR133 overlaps prerequisites and must not replace current staging.
 The earlier scope notes below are retained as history.
 
+# October 5: AutoSwitch reloadable module
+
+Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.
+See VK_AUTOSWITCH_RELOAD.md. The next restart candidate must include this backend
+hook, a published module and its verified service setting; backend-only adoption
+will not activate reloads. VK::Staging owns installation/cutover/live acceptance.
+Recommend remains required; no Auto activation is authorized. Full useful router
+readiness is due before October 30, 2026 (allowance reduces 20x to 10x).
+Remaining dependencies: CI/integration, owner adoption, one genuine complete V2
+Recommend acceptance with native/CU/child attribution, practical cheaper-step
+corrections and net usage/quality evidence. CU expiring-credit budgeting remains
+separate in issue `0aeb028e-2856-40c3-943b-aacf32ec4808`.
+Older entries below are historical and do not describe this delivery's scope.
+
+Local development validation passed: 55 routing regressions (one existing opt-in
+native test not repeated), the opt-in real-worker reload/admission test, executor
+all-target Clippy, formatting/governance and unchanged CU contract/fixture.
+The reload test stayed in one PID; code/prompt/model-policy/classifier-settings
+updates affected subsequent admissions, manual/Shadow choices and child floors
+remained authoritative, failure fallback/rollback preserved the dirty sentinel.
+The observed initial before/after helper stages took 33/18 ms in the latest run;
+this is local timing, not a production guarantee or savings measurement. No paid
+inference was performed. Generic CI/staging integration and owner live acceptance
+remain release dependencies until their receipts are recorded.
+Prepared initial package: `/mnt/vk-storage/vk-autoswitch-reload-design-20261005/package`;
+rendered next-candidate setting: adjacent `candidate-autoswitch.conf`. No service
+file was installed. The read-only current-production readiness check correctly
+rejected the absent module setting; live backend PID1369037 remains unchanged.
+
+# October 4: AutoSwitch risk and diagnostic-phase correction
+
+Branch `fix/autoswitch-negated-risk` starts from `fork/staging` at `86d1c083a`.
+Scope: correct the non-destructive false positive and allow a clearly limited
+post-operation diagnostic phase to release an inferred Frontier floor to
+Workhorse. Existing manual constraints, protected risks, failure escalation,
+qualification registry and CU wire contract remain authoritative.
+
+Development only. No main/staging merge, live configuration change, deployment,
+restart, or contact with staging/deployment agents. VK::Staging owns activation.
+See VK_AUTOSWITCH_RISK_PHASE.md for bounded replay evidence and limitations.
+Older preparation/runtime entries below are historical.
+
 # October 3 Restart Candidate
 
 Prepare current staging AutoSwitch changes together with the live PR138 attention

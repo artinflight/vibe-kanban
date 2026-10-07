@@ -6,8 +6,7 @@ use sha2::{Digest, Sha256};
 
 use crate::{
     routing::{CapabilityFloor, RoutingDecision, RoutingMode, RoutingPolicy},
-    routing_assessment::{assess_with_context, retain_previous},
-    routing_semantic::{self, SemanticTrace},
+    routing_semantic::SemanticTrace,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -144,37 +143,30 @@ pub fn choose(
     semantic_enabled: bool,
 ) -> Result<ChildChoice, String> {
     assignment.validate(root)?;
+    let _module_scope = crate::routing_module::Scope::enter();
     let prompt = format!(
         "{}\n{}\nScope references: {}",
         assignment.message,
         assignment.context,
         assignment.paths.join(" ")
     );
-    let mut assessment = assess_with_context(&prompt, Some(root));
     let mut child_policy = policy.clone();
     child_policy.floor = hard_floor(policy, parent);
     let prior_envelope = previous.map(|p| p.envelope.as_str());
-    let semantic = if semantic_enabled
-        && routing_semantic::eligible(&assessment, failed, &child_policy, &prompt, prior_envelope)
-    {
-        let trace = routing_semantic::classify_scoped(
-            &prompt,
-            Some(&format!(
-                "Parent envelope: {:?}; hard floor: {:?}",
-                parent.assessed_envelope, child_policy.floor
-            )),
-            &assessment,
-            &child_policy,
-            serde_json::json!({"routingId":parent.id,"taskKey":assignment.task,"workKind":"delegated"}),
-        );
-        if let Some(class) = &trace.classification {
-            routing_semantic::apply(&mut assessment, class);
-        }
-        Some(trace)
-    } else {
-        None
-    };
-    let mut assessment = retain_previous(assessment, &assignment.message, prior_envelope);
+    let (mut assessment, semantic) = crate::routing_module::assess(
+        &prompt,
+        Some(&format!(
+            "Parent envelope: {:?}; hard floor: {:?}",
+            parent.assessed_envelope, child_policy.floor
+        )),
+        None,
+        prior_envelope,
+        Some(root),
+        failed,
+        &child_policy,
+        semantic_enabled,
+        serde_json::json!({"routingId":parent.id,"taskKey":assignment.task,"workKind":"delegated"}),
+    );
     let mut floor = child_policy.floor.max(assessment.floor);
     if let Some(previous) = previous {
         floor = floor.max(previous.floor);
@@ -215,7 +207,7 @@ pub fn choose(
         floor,
         model,
         effort,
-        source: assessment.evidence.into(),
+        source: crate::routing_module::source(&assessment),
         semantic,
         escalated: failed || expanded,
     })
@@ -258,6 +250,7 @@ pub fn actual_pair_qualified(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::routing_assessment::assess_with_context;
     fn policy() -> RoutingPolicy {
         RoutingPolicy {
             mode: RoutingMode::Auto,

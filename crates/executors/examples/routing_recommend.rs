@@ -9,8 +9,7 @@ use executors::{
         CapabilityFloor, RoutingMode, RoutingPolicy, choose_assessed, load_availability,
         model_policies,
     },
-    routing_assessment::{assess_with_context, retain_previous},
-    routing_semantic,
+    routing_module,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -31,7 +30,6 @@ struct Task {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let semantic_enabled = std::env::args().any(|arg| arg == "--semantic");
-    let models = model_policies().map_err(io::Error::other)?;
     let availability = load_availability();
     for line in io::stdin().lock().lines() {
         let line = line?;
@@ -39,42 +37,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             continue;
         }
         let task: Task = serde_json::from_str(&line)?;
-        let mut assessment = assess_with_context(&task.prompt, task.repo_root.as_deref());
-        executors::routing_context::apply_reference_context(
-            &mut assessment,
-            &task.prompt,
-            task.previous_reply.as_deref(),
-        );
+        let _scope = routing_module::Scope::enter();
+        let models = model_policies().map_err(io::Error::other)?;
         let mut policy = RoutingPolicy {
             mode: RoutingMode::Auto,
             floor: task.floor,
             denied_models: task.denied_models,
             allow_escalation: false,
         };
-        let semantic = if semantic_enabled
-            && routing_semantic::eligible(
-                &assessment,
-                false,
-                &policy,
-                &task.prompt,
-                task.previous_envelope.as_deref(),
-            ) {
-            let trace = routing_semantic::classify_with_context(
-                &task.prompt,
-                task.previous_prompt.as_deref(),
-                task.previous_reply.as_deref(),
-                &assessment,
-                &policy,
-            );
-            if let Some(c) = &trace.classification {
-                routing_semantic::apply(&mut assessment, c);
-            }
-            Some(trace)
-        } else {
-            None
-        };
-        let assessment =
-            retain_previous(assessment, &task.prompt, task.previous_envelope.as_deref());
+        let (assessment, semantic) = routing_module::assess(
+            &task.prompt,
+            task.previous_prompt.as_deref(),
+            task.previous_reply.as_deref(),
+            task.previous_envelope.as_deref(),
+            task.repo_root.as_deref(),
+            false,
+            &policy,
+            semantic_enabled,
+            serde_json::Value::Null,
+        );
         let floor = task.floor.max(assessment.floor);
         policy.floor = floor;
         // This tool evaluates initial admission only; failure escalation needs the

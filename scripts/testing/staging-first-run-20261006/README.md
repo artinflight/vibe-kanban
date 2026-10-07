@@ -1,7 +1,14 @@
 # October 6 Combined First-Run Acceptance
 
+October7 pin: the driver now uses combined5ec572245/CU95e7aea47 and that exact
+hosted bundle. Candidate, extended, stalled and real-frontend groups passed on
+this source; the earlier remaining groups are retained baseline evidence, not
+claimed as rerun. See VK_RECOVERY_INCIDENT_20261007.md: subsequent host-side
+verification caused an incident, and deployment/full handover remain blocked.
+Never inspect these executables outside the reviewed isolation boundary.
+
 This is the retained staging test driver, not a production deployment command.
-It is pinned to PR147 `9b3f8253879abdc5ebc88b3c3411946ce6f6a3b4`, CU PR38
+Its original October6 pin was PR147 `9b3f8253879abdc5ebc88b3c3411946ce6f6a3b4`, CU PR38
 `95e7aea47e137015daa8efcbb210184ee7ce723c`, the delivered five-file binary
 manifest and the existing reviewed CU controller/worker isolation boundary.
 It rejects source or binary drift and runs only in a new synthetic SSD root.

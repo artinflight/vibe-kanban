@@ -1,5 +1,14 @@
 # STREAM.md
 
+October7 current scope is recovery reconciliation and blocked release preparation.
+Read VK_RECOVERY_INCIDENT_20261007.md. The staging agent's unisolated wrong-argument
+server launch caused a shared-worktree incident. Baseline files and registrations
+are recovered without overwrite; post-backup edit uncertainty remains. Do not
+perform a cutover until recovery review, source hardening, compatible v2 rollback
+controller adoption and fresh full preparation succeed. PR1505ec572245 is still
+a draft candidate, not deployed. Earlier conditional authority does not waive
+these newly failed safety gates.
+
 October7 renewed scope: prepare the combined PR147/PR148/CU38 release plus the
 required reviewed connector patch, then own conditional cutover only after all
 space, fresh-backup, restore/rollback, combined-validation and actual-use gates.

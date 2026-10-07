@@ -1,5 +1,15 @@
 # STATE.md
 
+## October 7 Recovery Incident Blocks Pending Deployment
+
+The October5 production service remains live; no overnight release cutover has
+occurred. During verification, an incorrectly launched unisolated candidate
+process deleted shared worktree paths. It was killed, and verified B recovery
+restored all106286 missing baseline paths without replacing surviving work.
+Post-backup edit preservation is not fully proven. Read
+VK_RECOVERY_INCIDENT_20261007.md before further deployment or cleanup; do not
+equate healthy production HTTP or passing candidate tests with incident closure.
+
 ## October 5 Updated Version Is Production
 
 The authorized cutover and live acceptance succeeded. Updated PID3027197 serves

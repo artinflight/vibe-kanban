@@ -1,5 +1,19 @@
 # VK Agent Deployment Runbook
 
+## Candidate Executables Cannot Be Inspected Directly On The Host
+
+Read VK_RECOVERY_INCIDENT_20261007.md. Never guess a server flag or run a candidate
+directly against the host for version/help/build inspection. An unrecognized
+argument can fall through to normal startup and shared-worktree deletion.
+Verify source/manifest without execution first. When execution is necessary, use
+the existing reviewed `scheduled-first-run-validation.py` isolation boundary with
+the bound binary hash, private filesystem/PID/network/manager and bounded lifetime.
+The current source supports `--capacity-build-info`; knowing that spelling is not
+permission to bypass isolation. Environment-only path overrides are insufficient.
+Only the separately sealed, approved production controller may launch a candidate
+with real production paths. Wrong-argument rejection and positive cleanup ownership
+need development-owner regression coverage before this pending rollout proceeds.
+
 ## Desktop-Backed Recovery Tools For Next Preparation
 
 Current sole-provider authority supersedes the older tool pin below: use PR149

@@ -8,7 +8,7 @@ import time
 
 home = Path(os.environ['CODEX_HOME'])
 assert '/vk-continuation-http-' in str(home)
-provider = '/mnt/vk-storage/worktrees/fa60-vk-scheduled-goa/_vibe_kanban_repo/scripts/testing/codex_goal_provider.py'
+provider = '/mnt/vk-storage/vk-combined-release-20261007/source/scripts/testing/codex_goal_provider.py'
 child = subprocess.Popen([sys.executable, '-B', provider, *sys.argv[1:]], stdin=subprocess.PIPE)
 try:
     for line in sys.stdin.buffer:

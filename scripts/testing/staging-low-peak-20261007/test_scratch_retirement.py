@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from scratch_retirement import CASES, FLOOR, ScratchRetirement, SpaceBudget, digest, require_full_workload
 
-PINNED = Path('/mnt/vk-storage/vk-green-reprepare-20261005/operational-source/scripts/deployment')
+PINNED = Path('/mnt/vk-storage/vk-desktop-provider-20261007/recovery-package-49cf82d60/tools')
 sys.path.insert(0, str(PINNED))
 from vk_rolling_backup import verify_snapshot_archive
 
@@ -77,6 +77,37 @@ class RetirementTests(unittest.TestCase):
         subprocess.run(['tar', '--zstd', '-xf', str(self.archive), '-C', str(restored)], check=True)
         self.assertEqual(digest(self.original), digest(restored / self.copy.relative_to(self.folder)))
         self.assertEqual(self.receipts[-1]['state'], 'retired')
+
+    def test_completed_checkpoint_payload_restores_without_local_snapshot(self):
+        original = digest(self.original)
+        self.guard.retire(self.plan('checkpoint-payload-verified'), self.receipts.append)
+        self.assertFalse(self.copy.exists())
+        self.assertTrue(self.manifest_path.exists())
+        verify_snapshot_archive(self.archive, self.manifest['sqlite_snapshots'], self.manifest_path)
+        restored = self.root / 'checkpoint-restoration'
+        restored.mkdir()
+        subprocess.run(['tar', '--zstd', '-xf', str(self.archive), '-C', str(restored)], check=True)
+        self.assertEqual(digest(restored / self.copy.relative_to(self.folder)), original)
+        self.assertEqual(digest(self.original), original)
+
+    def test_checkpoint_payload_rejects_incomplete_checkpoint(self):
+        (self.folder / 'result.json').write_text(json.dumps({'passed': False}))
+        with self.assertRaisesRegex(ValueError, 'completed'):
+            self.plan('checkpoint-payload-verified')
+        self.assertTrue(self.copy.exists())
+
+    def test_checkpoint_payload_rejects_delta(self):
+        self.manifest['parent'] = {'id': 'parent'}
+        self.manifest_path.write_text(json.dumps(self.manifest))
+        subprocess.run(['tar', '--zstd', '-cf', str(self.archive), '-C', str(self.folder), 'payload'], check=True)
+        with self.assertRaisesRegex(ValueError, 'cannot retire a delta'):
+            self.plan('checkpoint-payload-verified')
+
+    def test_checkpoint_payload_uncertain_consumer_preserves_copy(self):
+        self.guard.verify_consumers = lambda _: False
+        with self.assertRaisesRegex(ValueError, 'consumers'):
+            self.plan('checkpoint-payload-verified')
+        self.assertTrue(self.copy.exists())
 
     def test_incomplete_assertions_rejected(self):
         for cases in ((), CASES[:3], CASES[::-1]):

@@ -88,13 +88,19 @@ async fn main() {
             reply["index"] == row["identity"]["message_index"]
                 && reply["sha256"] == row["identity"]["reply_sha256"]
         });
-        all_passed &= finished && matches;
+        let content_matches = observed.as_ref().is_some_and(|reply| {
+            reply["sha256"] == row["identity"]["reply_sha256"]
+        });
+        // Historical index reconciliation and writer closure are separate gates;
+        // this audit proves parsing/content compatibility, never permission to mark.
+        all_passed &= finished && content_matches && rejected.is_empty();
         println!(
             "{}",
             json!({"execution": row["identity"]["execution_id"], "raw_sha256": hash,
             "raw_bytes": bytes.len(), "strict_replay_finished": finished, "error": error,
             "rejected_native_events": rejected,
             "observed_final_reply": observed, "receipt_identity_matches": matches,
+            "reply_content_matches": content_matches, "historical_receipt_eligible": false,
             "historical_writer_fence_certified": false, "production_changed": false})
         );
     }

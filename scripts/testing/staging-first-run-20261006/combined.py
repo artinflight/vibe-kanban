@@ -5,9 +5,9 @@ from urllib.request import Request,urlopen
 from urllib.error import HTTPError
 sys.dont_write_bytecode=True
 OUT=Path(__file__).resolve().parent
-VK=Path('/mnt/vk-storage/worktrees/fa60-vk-scheduled-goa/_vibe_kanban_repo')
+VK=Path('/mnt/vk-storage/vk-combined-release-20261007/source')
 CU=Path('/mnt/vk-storage/worktrees/d750-cu-credit-aware/codexusage')
-BUNDLE=Path('/mnt/vk-storage/vk-scheduled-first-run-20261006/bundle-9b3f8253879abdc5ebc88b3c3411946ce6f6a3b4')
+BUNDLE=Path('/mnt/vk-storage/vk-scheduled-first-run-20261006/bundle-5ec5722455d9b12ae8a9b00b371351ad12a685ef')
 sys.path.insert(0,str(CU/'ops'))
 from fixture_isolation import provision,prove,command,environment,wrapper,require
 from fixture_manager import FixtureManager
@@ -18,7 +18,7 @@ def put(p,x):p.write_text(json.dumps(x,indent=2)+'\n')
 
 def outer():
     manifest=json.loads((BUNDLE/'manifest.json').read_text())
-    require(manifest['sourceCommit']=='9b3f8253879abdc5ebc88b3c3411946ce6f6a3b4','Wrong source')
+    require(manifest['sourceCommit']=='5ec5722455d9b12ae8a9b00b371351ad12a685ef','Wrong source')
     require(subprocess.check_output(['git','-C',str(CU),'rev-parse','HEAD'],text=True).strip()=='95e7aea47e137015daa8efcbb210184ee7ce723c','Wrong CU')
     for name,entry in manifest['artifacts'].items():require(sha(BUNDLE/name)==entry['sha256'],name)
     for name,value in manifest['trackedHashes'].items():require(sha(VK/name)==value,name)

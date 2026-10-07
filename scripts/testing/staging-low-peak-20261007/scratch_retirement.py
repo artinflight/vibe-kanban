@@ -1,6 +1,6 @@
 """Fail-closed retirement of private rehearsal SQLite duplicates, never sources.
 
-Only the two verified phases below are supported. Archives, manifests, restore
+Only the explicitly verified phases below are supported. Archives, manifests, restore
 outputs and the runtime are retained. Callers supply the existing archive member
 verifier and a fresh Desktop full-hash verifier, not a cached boolean assertion.
 """
@@ -120,14 +120,15 @@ class ScratchRetirement:
                 re.fullmatch(r'B:/vk-backups/[A-Za-z0-9_./-]+', remote.get('desktop_directory', '')) and
                 '..' not in Path(remote['desktop_directory']).parts,
                 'Desktop recovery locator is missing or changed')
-        if phase == 'checkpoint-verified':
+        if phase in ('checkpoint-verified', 'checkpoint-payload-verified'):
             require(manifest['parent'] is None, 'Checkpoint phase cannot retire a delta')
             result_path = folder / 'result.json'
             require_real_path(result_path, self.root)
             result = json.loads(result_path.read_text())
             require(result.get('passed') is True and result['receipt']['sha256'] == archive_hash,
                     'Checkpoint has not completed verification/delivery')
-            subtrees = ['verified-payload/payload']
+            subtrees = ['payload' if phase == 'checkpoint-payload-verified'
+                        else 'verified-payload/payload']
         elif phase == 'handover-assertions-complete':
             require(tuple(cases) == CASES, 'All four handover/cutback assertions must pass first')
             subtrees = ['payload']

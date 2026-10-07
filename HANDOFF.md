@@ -1,5 +1,21 @@
 # HANDOFF.md
 
+## October 7 Verification Incident: Deployment Blocked
+
+Read VK_RECOVERY_INCIDENT_20261007.md first. Combined5ec572245/CU95e7aea47
+feature acceptance passed, but the staging agent then bypassed isolation with an
+unsupported server argument. The unintended server deleted shared worktree paths;
+its exact PID2670802 is killed. Production3027197/CU414400 were not restarted.
+Fresh B recovery restored all106286 missing baseline paths across85 roots without
+overwriting survivors;171 worktree/registration operations completed. Owner edits
+were reconstructed from pushed422fe5ba0 and this original transcript. Post-backup
+edits to existing files remain unproven; historical exceptions are preserved.
+No release cutover or full handover success is claimed. Source argument/cleanup
+hardening, independent recovery review, actual v2-safe controller adoption, fresh
+backup/rehearsal and final safety checks remain. Do not repeat consumed scripts.
+Evidence: /mnt/vk-storage/vk-combined-release-20261007/incident-2316.
+Earlier blocker/readiness entries below are chronology, not current approval.
+
 ## October 7 Runtime Backup Blocker Resolved; Release Still Blocked
 
 Read VK_RUNTIME_BACKUP_RECOVERY_20261007.md. PR149 tool49cf82d60 is pushed;

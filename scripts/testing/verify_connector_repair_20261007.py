@@ -12,6 +12,12 @@ SOURCE = Path('/mnt/vk-storage/vk-combined-release-20261007/source')
 ROOT = SOURCE.parent / 'repair-acceptance'
 BINDING = Path('/mnt/vk-storage/vibe-dot-connector-maintenance/backend/review-repair-binding.json')
 REVISION = '2bc909d6375e13d0dd47f370eec0100fae3b2075'
+COMPATIBILITY = '--compatibility' in sys.argv
+if COMPATIBILITY:
+    ROOT = SOURCE.parent / 'compatibility-acceptance'
+    BINDING = BINDING.with_name('review-compatibility-binding.json')
+    REVISION = '5ec5722455d9b12ae8a9b00b371351ad12a685ef'
+    sys.argv.remove('--compatibility')
 
 
 def digest(path):
@@ -21,6 +27,28 @@ def digest(path):
 
 def verify():
     manifest = json.loads(BINDING.read_text())
+    if COMPATIBILITY:
+        assert digest(BINDING) == 'fc7ee37a050bd18621f430b4fe235f0d705dae92d458598787ee7c2e7041703e'
+        assert manifest['source_commit'] == REVISION
+        for name, expected in manifest['patches'].items():
+            assert digest(BINDING.parent / name) == expected, name
+        for name, expected in manifest['delta_files'].items():
+            assert digest(SOURCE / name) == expected, name
+        for name, expected in manifest['evidence_files'].items():
+            published = BINDING.parent / 'compatibility-evidence' / name
+            original = Path('/mnt/vk-storage/vk-connector-repair-20261007/evidence') / name
+            copies = [p for p in (published, original) if p.exists()]
+            assert copies and all(digest(p) == expected for p in copies), name
+        assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=SOURCE, text=True).strip() == REVISION
+        assert not subprocess.check_output(['git', 'status', '--porcelain'], cwd=SOURCE)
+        result = {'revision': REVISION, 'binding_sha256': digest(BINDING),
+                  'source_files': len(manifest['delta_files']),
+                  'evidence_files': len(manifest['evidence_files']),
+                  'production_changed': False, 'verified_at': time.time()}
+        with (ROOT / 'binding-verification.json').open('x') as stream:
+            json.dump(result, stream, indent=2)
+        print(json.dumps(result), flush=True)
+        return
     assert manifest['revised_commit'] == REVISION
     assert digest(manifest['patch']) == '88c4c1299ab25ea1b20d4e5092eb2d4ef18e97ba2d8c809d0cb485878adf8a57'
     assert digest(BINDING) == '3974d7840b1d987f8b98c34fe11b4cadf80da688249235192d25d5f4827eb405'
@@ -57,6 +85,9 @@ def run_checks():
         'normalizer': ['cargo', 'test', '--offline', '-p', 'executors', '--lib', 'codex::normalize_logs::tests', '--', '--test-threads=1'],
         'compile': ['cargo', 'check', '--offline', '-p', 'server', '--bin', 'server', '--tests'],
     }
+    if COMPATIBILITY:
+        env.pop('VK_REVIEW_ACCEPTANCE_ROOT', None)
+        commands['installed-connector'] = ['cargo', 'test', '--offline', '-p', 'server', '--lib', 'installed_connector_tool_receipt', '--', '--ignored', '--test-threads=1']
     for name, command in commands.items():
         minimum = os.statvfs(ROOT).f_bavail * os.statvfs(ROOT).f_frsize
         assert minimum > 4 * 1024**3

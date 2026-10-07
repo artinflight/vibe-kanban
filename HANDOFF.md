@@ -1,5 +1,30 @@
 # HANDOFF.md
 
+## October 7 Corrected Repair Verified: New Concrete Blockers
+
+Current combined source is pushed2bc909d6375e13d0dd47f370eec0100fae3b2075,
+draft PR150. Read VK_CONNECTOR_REAL_LOG_REVIEW_20261007.md and
+VK_COMBINED_BACKUP_BLOCKERS_20261007.md. Independent31 Rust tests, compile,
+94 connector tests and exact-source hosted artifact hashes pass. Four unchanged
+historical logs all FAIL strict replay: legitimate goal-cleared/sleep events are
+rejected. CI also finds two new result_large_err errors and missing HTTP fixture
+isolation setup (370passed,3failed,67not run). Developer repair is
+required; no competing agent or blanket badge clearing. Production3027197 and
+CU414400 remain running; previous1369037 stays frozen. No cutover attempted.
+
+Fresh full capture includes69 SQLite snapshots and all14 protected roots, but
+failed warning validation after878.144s. Its21.832GiB archive remains unpublished,
+not an accepted backup. Minimum free49.092GiB; latest about49.057GiB free.
+PR149 successor6db1a43e1 fixes only a verified Codex IPC socket;194 tests pass,
+new70-file recovery package and full-hash B copy verified. Even this new package
+correctly rejects the journal-observed missing shell snapshot; writer-lock
+deletion also needs classification. Keep evidence and old45 journal errors.
+Do not recopy retired27 archives, weaken warnings, resume a consumed capture,
+or claim full restore/latest-data rollback proven. New read-only preparation
+journal remains available for continuation. Conditional cutover approval remains
+valid once real gates pass; no new approval is requested by these blockers.
+Earlier sections below are historical, not the current source/readiness state.
+
 ## October 7 Approved Archive Retirement Complete
 
 Read VK_ARCHIVE_RETIREMENT_20261007.md. The user's specific20:18:33UTC approval

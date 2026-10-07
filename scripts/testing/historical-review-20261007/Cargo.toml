@@ -1,0 +1,14 @@
+[package]
+name = "vk-historical-review-audit"
+version = "0.0.0"
+edition = "2024"
+
+[workspace]
+
+[dependencies]
+services = { path = "/mnt/vk-storage/vk-combined-release-20261007/source/crates/services" }
+executors = { path = "/mnt/vk-storage/vk-combined-release-20261007/source/crates/executors" }
+utils = { path = "/mnt/vk-storage/vk-combined-release-20261007/source/crates/utils" }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+tokio = { version = "1.0", features = ["full"] }
+sha2 = "0.10"

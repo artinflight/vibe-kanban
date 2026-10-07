@@ -1,5 +1,18 @@
 # Combined Overnight And AutoSwitch Release Preparation
 
+## Current Boundary: Corrected Source Still Blocked
+
+The current combined source is2bc909d6375e13d0dd47f370eec0100fae3b2075,
+published in draft PR150. Read VK_CONNECTOR_REAL_LOG_REVIEW_20261007.md and
+VK_COMBINED_BACKUP_BLOCKERS_20261007.md for the current evidence and remaining
+sequence.31 independent Rust tests and compile pass,94 connector tests pass,
+but4/4 real historical logs reject legitimate goal/sleep events and two new
+Clippy errors fail CI. The fresh69-DB full capture failed warning validation;
+no accepted new backup or full rehearsal is claimed. New backup tool6db1a43e1
+is published, packaged and verified on B. Production remains unchanged.
+The27-file retirement was already completed; no deletion approval is pending.
+All older sections below are retained chronology, not current execution steps.
+
 ## Specific Archive Retirement Completed
 
 Read VK_ARCHIVE_RETIREMENT_20261007.md. Exactly27 approved local copies are

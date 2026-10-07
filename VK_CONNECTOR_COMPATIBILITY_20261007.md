@@ -50,3 +50,9 @@ First draft CI exposed assertions_on_constants on the fixture's debug assertion.
 The guard is now a compile-time const assertion, as required by Clippy, without
 suppression or removal. Release-mode fixture compilation is rejected before any
 storage access. Original CI/failure receipts remain in the maintenance evidence.
+
+Full nextest CI then reached the real-writer integration fixture after the earlier
+HTTP fail-fast blocker and found its duplicated MCP-only prerequisite. HTTP and
+writer fixtures now share the same checkout/debug/SSD isolation guard. Existing
+writer closure and damage checks are unchanged; run both suites without the
+optional root environment variable to verify CI prerequisites explicitly.

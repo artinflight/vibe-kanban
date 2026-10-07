@@ -1,3 +1,6 @@
+#[path = "fixtures/review_storage_root.rs"]
+mod review_storage_root;
+
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use futures_util::StreamExt;
@@ -122,23 +125,7 @@ async fn complete_untruncated_history_preserves_report_before_finished() {
 async fn writer_fixture(store: MsgStore) -> (SqlitePool, Uuid, Uuid) {
     // Debug asset_dir is this task's isolated source/dev_assets. Never run the
     // real deployment constructor or any agent/cleanup fixture.
-    let assets = utils::assets::asset_dir();
-    let root = std::path::PathBuf::from(
-        std::env::var("VK_REVIEW_ACCEPTANCE_ROOT")
-            .expect("Explicit isolated acceptance root required"),
-    );
-    assert!(root.starts_with("/mnt/vk-storage/"));
-    assert_eq!(
-        assets.canonicalize().unwrap(),
-        root.join("dev_assets").canonicalize().unwrap()
-    );
-    assert_eq!(
-        root.canonicalize().unwrap(),
-        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../..")
-            .canonicalize()
-            .unwrap()
-    );
+    review_storage_root::assert_fixture_root();
     let pool = fixture().await;
     let execution = Uuid::new_v4();
     let session = Uuid::new_v4();

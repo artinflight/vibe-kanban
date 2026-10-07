@@ -13,34 +13,10 @@ use utils::{assets::asset_dir, msg_store::MsgStore};
 
 use super::*;
 
-fn assert_fixture_root() {
-    // Debug asset storage is scoped to the compiled checkout. Never fall back
-    // to production's home/XDG storage, including release-mode tests.
-    const {
-        assert!(
-            cfg!(debug_assertions),
-            "Review fixtures require checkout-local debug storage"
-        );
-    }
-    let compiled_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .unwrap();
-    assert_eq!(
-        asset_dir().canonicalize().unwrap(),
-        compiled_root.join("dev_assets").canonicalize().unwrap()
-    );
-    if let Ok(requested_root) = std::env::var("VK_REVIEW_ACCEPTANCE_ROOT") {
-        assert_eq!(
-            PathBuf::from(requested_root).canonicalize().unwrap(),
-            compiled_root
-        );
-    }
-    // CI runners use their ephemeral checkout. This MCP host must use its SSD.
-    if std::path::Path::new("/home/mcp/code/vibe-dot-connector").exists() {
-        assert!(compiled_root.starts_with("/mnt/vk-storage/"));
-    }
-}
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/review_storage_root.rs"
+));
 
 #[derive(Clone)]
 struct Fixture {

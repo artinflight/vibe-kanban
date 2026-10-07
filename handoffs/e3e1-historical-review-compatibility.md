@@ -31,3 +31,9 @@ text hashes. Two full-replay indices differ from old UI approvals (236 vs78 and
 are rewritten. Draft PR151 is isolated validation, not integration/merge authority.
 Its first lint pass caught assertions_on_constants; converted the same guard to a
 compile-time const assertion before the second exact-head CI run.
+
+Full nextest CI then reached the real-writer integration fixture after the earlier
+HTTP fail-fast blocker and found its duplicated MCP-only prerequisite. HTTP and
+writer fixtures now share the same checkout/debug/SSD isolation guard. Existing
+writer closure and damage checks are unchanged; run both suites without the
+optional root environment variable to verify CI prerequisites explicitly.

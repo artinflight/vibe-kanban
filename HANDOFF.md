@@ -1,5 +1,23 @@
 # HANDOFF.md
 
+## October 7 Hardlink Review: Private Restore Bug Confirmed
+
+Read the PR149 source document VK_RESTORE_HARDLINK_REVIEW_20261007.md at
+/mnt/vk-storage/vk-desktop-backup-20261007/source. Two private hardlinked-file
+atomic replacements restore incorrectly while the reader reports success;
+unchanged/same-delta-linked controls pass. A private detach-before-write prototype
+passes all four, but the source reader and sealed packages remain unchanged.
+The checksum-bound27real member inventories contain zero tar hardlinks, ruling
+out this specific mechanism there, not proving full restore correctness or actual
+data loss. Receipts: /mnt/vk-storage/vk-hardlink-review-20261007/. No deletion or
+cutover occurred. The earlier176-test pass omitted this new failing case.
+Capacity at the new receipt:17.939GiBfree; retaining all original archives needs
+64.047GiBadditional for historical restore including floor/reserve, or76.275GiB
+additional for conservative fresh capture BEFORE rehearsal. Conditional all27
+retirement would leave only0.381GiBhistorical margin and11.847GiBfresh-capture gap.
+No retirement is approved. Existing restore guards require a fresh child under
+the owning task's backups root on mounted /mnt/vk-storage, not arbitrary scratch.
+
 ## October 7 Desktop Recovery Integration; Production Unchanged
 
 Read VK_DESKTOP_ARCHIVE_MIGRATION_20261007.md and the corrected full-checkpoint

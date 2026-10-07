@@ -1,3 +1,13 @@
+## October 7: Verification Incident Blocks Pending Release
+
+Production remains the October5 service3027197 on5511, version0.1.42/mainfa8122a50;
+CU414400 is running. No new cutover occurred. A staging verification command
+bypassed isolation and started a server that removed shared worktree paths.
+That exact process is killed. Verified B recovery restored all106286 missing
+baseline paths without overwriting survivors, but post-backup edit preservation
+is not fully proven. Read VK_RECOVERY_INCIDENT_20261007.md. Passing candidate
+feature tests do not close the incident or establish deployment readiness.
+
 ## October 1: AutoSwitch scope release preparation
 
 PR134/135 merged the downward-routing scope correction into staging/main. It is

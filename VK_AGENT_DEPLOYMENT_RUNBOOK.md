@@ -1,5 +1,20 @@
 # VK Agent Deployment Runbook
 
+## Candidate Inspection Must Stay Isolated
+
+Read VK_RECOVERY_INCIDENT_20261007.md. Never run candidate executables directly
+on the host for help/version/build information or guess a flag: an unsupported
+argument can start the server and destructive orphan cleanup. Verify source and
+artifact manifest first, then use the existing reviewed
+`scheduled-first-run-validation.py` private filesystem/PID/network/manager
+boundary and a bounded lifetime. That helper lives in the pending combined
+release, not this older staging baseline; do not substitute a bare server command
+when it is absent. `--capacity-build-info` is the supported argument on5ec572245,
+but its spelling does not waive isolation. Only a separately sealed and approved
+production controller may launch the candidate with real production paths.
+Unknown-argument rejection and positive shared-root cleanup ownership need
+development-owner regression coverage before the pending rollout proceeds.
+
 ## AutoSwitch next-candidate requirement
 
 For this AutoSwitch release, follow [VK_AUTOSWITCH_RELOAD.md](VK_AUTOSWITCH_RELOAD.md).

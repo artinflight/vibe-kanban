@@ -1,13 +1,16 @@
-## October 7: AutoSwitch current-step safety invariant
+## October 7: AutoSwitch reload boundary invariant
 
-Protection must follow relevant current work, not become a permanent chat label.
-A resolved, positively classified bounded follow-up may release an inferred
-historical floor; current protected risks, uncertainty, explicit user/child floors,
-locks, exclusions and failure escalation remain authoritative. The surrounding
-assignment stays recorded for generic continuation. Operational prohibitions do
-not authorize deployment. This branch changes stable backend guards; see
-VK_AUTOSWITCH_CURRENT_STEP_RISK.md. Recommend remains required, with no Auto
-activation or release performed. VK::Staging owns backend adoption/cutover.
+Prompt classification and inferred follow-up qualification belong to the reviewed,
+versioned module. The backend's fallback prompt guess cannot veto a newer policy.
+VK-read repository and input-completeness facts, reported native/current risks, explicit manual/child
+floors, exclusions, failure escalation and execution lifecycle remain core guards.
+Protection follows relevant current work, not a permanent chat label; completed
+bounded steps preserve their surrounding assignment for generic continuation.
+Internal protocol 2 deliberately rejects incompatible old modules/validators.
+One owner backend adoption is required to remove the old duplicate classifier;
+subsequent ordinary policy changes must work without backend restarts. See
+VK_AUTOSWITCH_RELOAD.md. Recommend remains required; no live adoption or Auto
+activation is performed by development. VK::Staging owns adoption/cutover.
 
 ## October 1: AutoSwitch scope release preparation
 

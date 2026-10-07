@@ -1,5 +1,11 @@
 # AutoSwitch: recommendations for the current step
 
+**Historical delivery, superseded:** the October 7 protocol-2 correction in
+[VK_AUTOSWITCH_RELOAD.md](VK_AUTOSWITCH_RELOAD.md) replaces the fixed-backend
+classification/history guards described below with a genuine reloadable policy
+boundary. The retained replay findings remain useful evidence; the old
+`current-step-665d836db-20261007` package is not the current adoption target.
+
 The October 7 review covered 77 real recommendation admissions in 25 chats,
 from October 6 00:39:39 UTC through October 7 11:25:20 UTC. It excluded the
 review itself and the previous 16-request sample. There were 76 Astra/high

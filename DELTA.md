@@ -1539,3 +1539,28 @@ become Sol6/low recommendations (qualified Auto option Luna6/medium); twelve
 unchanged. No observed savings claimed. Recommend/live deployment unchanged;
 backend guard adoption belongs to VK::Staging before October30 readiness.
 See VK_AUTOSWITCH_CURRENT_STEP_RISK.md and SSD validation receipts.
+
+
+## 2026-10-07: repair incomplete AutoSwitch no-restart boundary
+
+The earlier module failed the requested scope: backend prompt guesses and
+mirrored history classification could veto a corrected policy. Protocol2 separates
+bounded immutable repo/native/budget/lifecycle facts from worker-owned prompt,
+semantic eligibility and inferred-history interpretation. One-time owner adoption
+removes old vetoes; later ordinary policy changes truly reload. No live action or
+Auto enablement. Implementation 09dcd2cb2 is pushed on the existing PR148 branch.
+
+Same-process sandbox proof kept PID3305974: code updates change negative-wording
+and bounded-followup decisions; 15 saved native assessments replay with three
+cheaper recommendations and 12 unchanged. Safe/manual/child/escalation/rollback/dirty
+state checks pass, including unsafe/old-protocol rejection. Zero paid calls.
+Final unit suite: 156 passed / 7 opt-in ignored; all-target Clippy and formatting/ops/CU
+bytes pass. Full local desktop/workspace checks encounter missing GLib metadata;
+use exact-head CI. A whole-suite timing assumption initially failed and was
+replaced with the directly relevant stalled-helper termination assertion.
+
+Fresh private protocol2 package/validator and receipts are under
+`/mnt/vk-storage/vk-autoswitch-module-boundary-20261007`; prepared stripped dev
+helper is not a deployed server. Old package665d836db is superseded, not deleted.
+Live PID3027197/module protocol1 remain unchanged. VK::Staging owns adoption;
+October30 readiness and separate Auto permission remain requirements.

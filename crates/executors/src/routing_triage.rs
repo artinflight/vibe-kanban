@@ -222,6 +222,16 @@ fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
 /// component can be protected even when the request includes harmless cautions.
 pub fn repository_context(prompt: &str, root: Option<&Path>) -> TaskTriage {
     let mut result = unknown();
+    // A bounded classifier must not silently miss requirements beyond its input.
+    // This is an observed budget fact, independent of any prompt-language rule.
+    if prompt.chars().nth(6144).is_some() {
+        result
+            .risk
+            .push("classification_input_exceeds_bound".into());
+        result
+            .evidence
+            .push("request_not_fully_visible_to_module".into());
+    }
     let Some(root) = root else {
         return result;
     };
@@ -520,6 +530,23 @@ mod tests {
         let context = super::repository_context(prompt, Some(&repo.0));
         assert!(context.risk.contains(&"protected_component_context".into()));
         let mut assessment = crate::routing_assessment::assess(prompt);
+        crate::routing_assessment::apply_repository_context(&mut assessment, &context);
+        assert_eq!(assessment.floor, CapabilityFloor::Frontier);
+    }
+
+    #[test]
+    fn omitted_prompt_tail_cannot_hide_risk_from_bounded_module() {
+        let prompt = format!(
+            "Fix spelling typos in README.md. {} Change authentication permissions.",
+            " ".repeat(6144)
+        );
+        let context = super::repository_context(&prompt, None);
+        assert!(
+            context
+                .risk
+                .contains(&"classification_input_exceeds_bound".into())
+        );
+        let mut assessment = crate::routing_assessment::assess("Fix spelling typos in README.md");
         crate::routing_assessment::apply_repository_context(&mut assessment, &context);
         assert_eq!(assessment.floor, CapabilityFloor::Frontier);
     }

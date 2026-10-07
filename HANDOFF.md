@@ -1,5 +1,25 @@
 # HANDOFF.md
 
+## October 7 Connector Integration Review: Release Blocked
+
+The final connector backend candidate13a3458eb is now applied to isolated
+release/overnight-autoswitch-20261007, pushed at eacafb3a1, not production. The
+separate compile correction is9638eb413. Read its
+VK_CONNECTOR_INTEGRATION_REVIEW_20261007.md under
+/mnt/vk-storage/vk-combined-release-20261007/source. Combined Rust check passes
+after correcting PR148's new inspect call to pass PR147's40ms budget. Private
+migration/writer regressions ran:4passed,4failed. New foreign keys block deletion;
+the actual writer publishes completion proof for an empty log after history
+eviction. Strict replay also needs correction. This is not rollout readiness.
+All four historical report hashes match receipts, but no writer closure was
+certified or live fence populated. Correctly reassembled chunk streams have
+native completion events in all four; the initial per-chunk scan is superseded
+by candidate-provenance-and-historical-terminals-v2.json. Final formatted Rust
+rerun reproduces the same4failures/4passes. No badges cleared. Production3027197 and
+CU414400 remain unchanged; previous1369037 remains frozen. Specific27-archive
+deletion approval is still unanswered. Earlier waiting-for-handoff text below
+is historical; final source is received, integration is not yet accepted.
+
 ## October 7 Combined Release: Conditional Authority, Not Ready
 
 Read VK_COMBINED_RELEASE_PREPARATION_20261007.md. Reviewed PR1479b3f82538 and

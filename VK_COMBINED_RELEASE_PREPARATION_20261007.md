@@ -1,5 +1,22 @@
 # Combined Overnight And AutoSwitch Release Preparation
 
+## Connector Handoff Received: Integration Blocked
+
+Final backend candidate13a3458eb is applied in the isolated combined source.
+Combined branch is committed/pushed at eacafb3a1; the separate compile repair
+is9638eb413. This is a blocked review branch, not a staging promotion or release.
+See that worktree's VK_CONNECTOR_INTEGRATION_REVIEW_20261007.md and receipts
+under connector-review. A narrow40ms inspect-argument correction resolves the
+PR147/148 compile incompatibility; combined server/test compile passes. A new
+migration deletion failure is reproduced; writer/replay integrity must be fixed
+before release. Both compiled test runs (including final formatted source) give
+4passes/4failures, proving the deletion and false-finalization failures. Exact
+logs/receipts are in connector-review; no full route/workflow pass is claimed.
+Historical4/4 receipt hashes match and reassembled native events complete, but closed writers are not
+certified and no live receipts/fences/badges were changed. No deployment or
+archive deletion occurred. The older awaiting-handoff and no-compile statements
+below describe the earlier preparation boundary, not current review progress.
+
 ## Authority And Current State
 
 The October7 voice instruction conditionally authorizes the complete restart and

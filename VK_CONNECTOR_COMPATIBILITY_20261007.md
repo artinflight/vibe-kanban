@@ -37,3 +37,16 @@ still needed: cached14 tool metadata/no client delivery callback prevents an
 end-to-end automatic-delivery claim. No polling or inferred delivery is added.
 
 Acceptance and final artifact bindings are supplied in the maintenance handoff.
+
+The first compatibility replay passes all native lines and yields all four approved
+text hashes unchanged. Full finite replay indices are AutoSwitch236 (approved78),
+Visily57, categorization103 (approved92), watcher30. Exact historical receipt
+eligibility therefore remains false; no index translation or new source evidence
+is invented. The earlier failing exact-index receipt remains retained. Independent
+replay acceptance checks the actual full index/hash and production reducer, while
+separately asserting/reporting that the original approved identity does not match.
+
+First draft CI exposed assertions_on_constants on the fixture's debug assertion.
+The guard is now a compile-time const assertion, as required by Clippy, without
+suppression or removal. Release-mode fixture compilation is rejected before any
+storage access. Original CI/failure receipts remain in the maintenance evidence.

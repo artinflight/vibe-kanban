@@ -16,10 +16,12 @@ use super::*;
 fn assert_fixture_root() {
     // Debug asset storage is scoped to the compiled checkout. Never fall back
     // to production's home/XDG storage, including release-mode tests.
-    assert!(
-        cfg!(debug_assertions),
-        "Review fixtures require checkout-local debug storage"
-    );
+    const {
+        assert!(
+            cfg!(debug_assertions),
+            "Review fixtures require checkout-local debug storage"
+        );
+    }
     let compiled_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
         .canonicalize()

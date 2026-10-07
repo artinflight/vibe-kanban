@@ -24,3 +24,10 @@ historical-compat harness. Never use shared cache to certify compiled fixture pa
 Do not create historical closure fences, consume live approvals or infer delivery.
 Remaining: exact four historical replays, compiled suite and relevant CI; root owns
 integration/backend adoption and actual caller delivery signal. No user decision.
+
+Further verification: all four unchanged historical copies replay to the approved
+text hashes. Two full-replay indices differ from old UI approvals (236 vs78 and
+103 vs92); the exact receipt guard remains fail-closed. No approved ledger entries
+are rewritten. Draft PR151 is isolated validation, not integration/merge authority.
+Its first lint pass caught assertions_on_constants; converted the same guard to a
+compile-time const assertion before the second exact-head CI run.

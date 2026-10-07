@@ -1,3 +1,13 @@
+# October 7: Verification Incident Review
+
+Branch ops/review-verification-incident-20261007 starts at fork/staging8b562265d.
+This draft contains only the incident record, isolated recovery source and a
+candidate-execution guard in the runbook. It does not merge/deploy the pending
+PR150 application or change production settings. The deployment owner's fuller
+acceptance/preparation history is separately pushed at5bea9abcd. Independent
+recovery review, source hardening, compatible rollback-controller adoption and
+fresh full preparation remain; read VK_RECOVERY_INCIDENT_20261007.md.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

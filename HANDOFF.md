@@ -1,3 +1,15 @@
+# October 7: Verification Incident Review
+
+Read VK_RECOVERY_INCIDENT_20261007.md and the retained incident source README.
+This is a draft operational review, not production readiness. Existing production
+remains online. The unintended server is stopped; missing baseline paths are
+restored with no replacement, while post-backup edits remain an explicit limit.
+Evidence is hash-verified at B:/vk-backups/vk-incident-20261007T2316/
+incident-20261007T2316-evidence.tar.zst, SHA256
+bf757ac1e257c7b9ca5edacba7491177b300c1db9677f0e94018dae9e8d88aa7.
+Never replay the consumed recovery/cleanup scripts. No backend safety repair or
+v2 production rollback-controller adoption is claimed by this documentation PR.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

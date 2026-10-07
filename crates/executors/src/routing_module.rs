@@ -20,6 +20,7 @@ use crate::{
     routing_triage::TaskTriage,
 };
 
+pub const PROTOCOL: u32 = 2;
 const LIMIT: u64 = 65536;
 const DEADLINE: Duration = Duration::from_millis(750);
 
@@ -83,6 +84,8 @@ pub struct Request {
     pub failed: bool,
     pub policy: RoutingPolicy,
     pub seed: WireAssessment,
+    /// VK-read repository facts, never replaceable prompt/history guesses.
+    pub context: TaskTriage,
     pub semantic: Option<serde_json::Value>,
 }
 #[derive(Serialize, Deserialize)]
@@ -95,10 +98,17 @@ pub struct Reply {
 
 /// Pure worker implementation: no native runtime, repository reads or tools.
 pub fn evaluate(request: Request) -> Result<Reply, String> {
-    if request.protocol != 1 || !["before", "after"].contains(&request.stage.as_str()) {
+    if request.protocol != PROTOCOL || !["before", "after"].contains(&request.stage.as_str()) {
         return Err("Unsupported routing module protocol".into());
     }
-    let mut a = request.seed.into_assessment()?;
+    let mut a = if request.stage == "before" {
+        // Always execute the selected policy's own classifier. The backend's
+        // built-in classifier is a fallback, not an immutable floor for updates.
+        crate::routing_assessment::assess(&request.prompt)
+    } else {
+        request.seed.into_assessment()?
+    };
+    crate::routing_assessment::apply_repository_context(&mut a, &request.context);
     if request.stage == "before" {
         crate::routing_context::apply_reference_context(
             &mut a,
@@ -126,7 +136,7 @@ pub fn evaluate(request: Request) -> Result<Reply, String> {
             request.previous_envelope.as_deref(),
         );
     Ok(Reply {
-        protocol: 1,
+        protocol: PROTOCOL,
         assessment: (&a).into(),
         needs_semantic,
     })
@@ -246,7 +256,7 @@ fn load_release(path: &Path, previous: Option<&Arc<Release>>) -> Result<Arc<Rele
     }
     let manifest: Manifest =
         serde_json::from_slice(&data).map_err(|_| "Invalid module manifest")?;
-    if manifest.protocol != 1
+    if manifest.protocol != PROTOCOL
         || manifest.version.is_empty()
         || manifest.version.len() > 80
         || !manifest
@@ -287,12 +297,33 @@ fn load_release(path: &Path, previous: Option<&Arc<Release>>) -> Result<Arc<Rele
     });
     let request = probe_request();
     checked(invoke(&release, &request)?, &request)?;
+    // Adoption contracts, not a second live classifier. A reviewed policy may
+    // evolve its language rules, but cannot wholesale forget protected work.
+    for prompt in [
+        "Change authentication permissions",
+        "Run a destructive data migration on production",
+        "Fix the distributed concurrency race condition",
+    ] {
+        let mut request = probe_request();
+        request.prompt = prompt.into();
+        request.seed = (&crate::routing_assessment::assess(prompt)).into();
+        let before = checked(invoke(&release, &request)?, &request)?;
+        if before.assessment.floor != CapabilityFloor::Frontier
+            || before.assessment.envelope != "protected"
+            || before.assessment.triage.risk.is_empty()
+        {
+            return Err("Module failed protected-intent adoption contract".into());
+        }
+        request.stage = "after".into();
+        request.seed = before.assessment;
+        checked(invoke(&release, &request)?, &request)?;
+    }
     Ok(release)
 }
 
 fn probe_request() -> Request {
     Request {
-        protocol: 1,
+        protocol: PROTOCOL,
         stage: "before".into(),
         prompt: "Fix spelling typos in README.md".into(),
         previous_envelope: None,
@@ -305,6 +336,7 @@ fn probe_request() -> Request {
             allow_escalation: false,
         },
         seed: (&crate::routing_assessment::assess("Fix spelling typos in README.md")).into(),
+        context: crate::routing_triage::repository_context("Fix spelling typos in README.md", None),
         semantic: None,
     }
 }
@@ -312,7 +344,7 @@ fn probe_request() -> Request {
 pub fn verify_release(path: &Path) -> Result<serde_json::Value, String> {
     let release = load_release(path, None)?;
     Ok(
-        serde_json::json!({"protocol":1,"version":release.manifest.version,"manifestHash":release.manifest_hash,
+        serde_json::json!({"protocol":PROTOCOL,"version":release.manifest.version,"manifestHash":release.manifest_hash,
         "root":release.root,"workerSha256":release.manifest.worker_sha256,"models":release.models.iter().map(|m| &m.id).collect::<Vec<_>>(),
         "classifierModel":release.manifest.classifier_model,"classifierEffort":release.manifest.classifier_effort,"sandboxVerified":true}),
     )
@@ -474,22 +506,28 @@ fn invoke(release: &Release, request: &Request) -> Result<Reply, String> {
         return Err("Module process failed".into());
     }
     let reply: Reply = serde_json::from_slice(&bytes).map_err(|_| "Invalid module output")?;
-    if reply.protocol != 1 {
+    if reply.protocol != PROTOCOL {
         return Err("Unsupported module reply".into());
     }
     Ok(reply)
 }
 
-fn checked(mut reply: Reply, request: &Request) -> Result<Reply, String> {
+fn checked(reply: Reply, request: &Request) -> Result<Reply, String> {
     let a = reply.assessment.clone().into_assessment()?;
     let seed = &request.seed;
-    if (seed.validation_failure && !a.validation_failure)
-        || seed.triage.risk.iter().any(|r| !a.triage.risk.contains(r))
-        || ((seed.floor == CapabilityFloor::Frontier || !a.triage.risk.is_empty())
+    if request
+        .context
+        .risk
+        .iter()
+        .any(|r| !a.triage.risk.contains(r))
+        || (!request.context.risk.is_empty()
             && (a.floor != CapabilityFloor::Frontier || a.envelope != "protected"))
-        || ((request.failed || seed.validation_failure) && a.floor < seed.floor)
+        || (request.stage == "after"
+            && ((seed.validation_failure && !a.validation_failure)
+                || seed.triage.risk.iter().any(|r| !a.triage.risk.contains(r))
+                || (seed.floor == CapabilityFloor::Frontier && a.floor < seed.floor)))
     {
-        return Err("Module attempted to weaken hard evidence".into());
+        return Err("Module attempted to weaken confirmed/current evidence".into());
     }
     if let Some(value) = &request.semantic {
         let class: SemanticClass =
@@ -527,18 +565,51 @@ fn checked(mut reply: Reply, request: &Request) -> Result<Reply, String> {
                 "protected",
             ]
             .contains(&prior.as_str());
-            let safe_step = request.completed_reply.is_some()
-                && crate::routing_context::reassess_step(&a, &request.prompt, prior);
+            // Inferred history is policy, not a hard floor. Enforce lifecycle
+            // evidence without repeating the worker's request/relationship rules.
+            let reassessed = a
+                .triage
+                .evidence
+                .iter()
+                .any(|e| e == "current_request_reassessed");
+            let scoped = a
+                .triage
+                .evidence
+                .iter()
+                .any(|e| e == &format!("surrounding_assignment:{prior}"));
+            let context = request
+                .completed_reply
+                .as_ref()
+                .is_some_and(|r| !r.trim().is_empty());
+            let explicit_failure = request.failed || seed.validation_failure;
             if !known
-                || !(safe_step
-                    || (prior != "protected"
-                        && crate::routing_assessment::independent_request(&a, &request.prompt)))
+                || explicit_failure
+                || !reassessed
+                || a.triage.uncertainty == "high"
+                || (scoped && !context)
             {
-                return Err("Module attempted to discard protected session context".into());
+                return Err("Module attempted an unsupported history release".into());
             }
-            let surrounding = format!("surrounding_assignment:{prior}");
-            if !reply.assessment.triage.evidence.contains(&surrounding) {
-                reply.assessment.triage.evidence.push(surrounding);
+            if let Some(value) = &request.semantic {
+                let class: SemanticClass =
+                    serde_json::from_value(value.clone()).map_err(|_| "Invalid scope evidence")?;
+                if matches!(
+                    class.scope_relation.as_str(),
+                    "continuation" | "context_only" | "unknown"
+                ) || class.uncertainty == "high"
+                    || class.ambiguity == "high"
+                    || (class.scope_relation != "independent" && (!scoped || !context))
+                {
+                    return Err("Module attempted to erase unresolved native scope".into());
+                }
+            } else if a.triage.validation == "unknown"
+                || a.triage.needs_repo_inspection
+                || a.triage
+                    .evidence
+                    .iter()
+                    .any(|e| e.starts_with("semantic_") || e == "bounded_semantic_fallback")
+            {
+                return Err("Module attempted an ungrounded deterministic history release".into());
             }
         }
     }
@@ -573,6 +644,13 @@ fn run(request: &Request) -> Option<Reply> {
     }
 }
 
+/// Offline diagnostic of the pinned worker and the actual backend validator.
+/// This never starts inference or an execution; captured native classifications
+/// can be supplied to verify policy updates without spending on synthetic jobs.
+pub fn verify_active_case(request: &Request) -> Result<Reply, String> {
+    run(request).ok_or_else(|| "Pinned module verification failed".into())
+}
+
 /// Uses one pinned release for deterministic, semantic, history and policy stages.
 #[allow(clippy::too_many_arguments)]
 pub fn assess(
@@ -586,10 +664,12 @@ pub fn assess(
     semantic_enabled: bool,
     correlation: serde_json::Value,
 ) -> (Assessment, Option<SemanticTrace>) {
-    let mut a = crate::routing_assessment::assess_with_context(prompt, root);
+    let context = crate::routing_triage::repository_context(prompt, root);
+    let mut a = crate::routing_assessment::assess(prompt);
+    crate::routing_assessment::apply_repository_context(&mut a, &context);
     let reply = completed_reply.filter(|r| !failed && !r.trim().is_empty());
     let mut request = Request {
-        protocol: 1,
+        protocol: PROTOCOL,
         stage: "before".into(),
         prompt: prompt.chars().take(6144).collect(),
         previous_envelope: previous_envelope.map(str::to_owned),
@@ -597,6 +677,7 @@ pub fn assess(
         failed,
         policy: policy.clone(),
         seed: (&a).into(),
+        context,
         semantic: None,
     };
     let pre = run(&request);
@@ -613,8 +694,7 @@ pub fn assess(
         && !a.validation_failure
         && a.triage.risk.is_empty()
         && a.floor != CapabilityFloor::Frontier
-        && policy.floor != CapabilityFloor::Frontier
-        && !(previous_envelope.is_some() && crate::routing_assessment::is_continuation(prompt));
+        && policy.floor != CapabilityFloor::Frontier;
     let semantic = if semantic_enabled
         && hard_allows
         && want_semantic.unwrap_or_else(|| {
@@ -662,9 +742,14 @@ mod tests {
         let mut request = probe_request();
         request.prompt = "Change authentication permissions".into();
         request.seed = (&crate::routing_assessment::assess(&request.prompt)).into();
+        request
+            .context
+            .risk
+            .push("protected_component_context".into());
         let cheap = evaluate(probe_request()).unwrap();
         assert!(checked(cheap, &request).is_err());
         request.seed.validation_failure = true;
+        request.stage = "after".into();
         assert!(checked(evaluate(probe_request()).unwrap(), &request).is_err());
         request = probe_request();
         request.stage = "after".into();
@@ -681,6 +766,180 @@ mod tests {
         assert!(checked(evaluate(probe_request()).unwrap(), &request).is_err());
         request.previous_envelope = Some("future_unknown_envelope".into());
         assert!(checked(evaluate(probe_request()).unwrap(), &request).is_err());
+    }
+
+    #[test]
+    fn fresh_worker_interpretation_is_not_locked_to_fallback_keyword_guesses() {
+        let mut request = probe_request();
+        request.prompt = "Fix spelling typos in README.md. No production deployment.".into();
+        // Simulate a backend built before the negative-wording fix. This is a
+        // soft fallback guess, not confirmed repository or native evidence.
+        request.seed.envelope = "protected".into();
+        request.seed.floor = CapabilityFloor::Frontier;
+        request
+            .seed
+            .triage
+            .risk
+            .push("explicit_high_impact_intent".into());
+        let copy = serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap();
+        let before = checked(evaluate(copy).unwrap(), &request).unwrap();
+        assert_eq!(before.assessment.floor, CapabilityFloor::Routine);
+        assert!(before.assessment.triage.risk.is_empty());
+        // The same module can never erase actual facts provided by VK.
+        request
+            .context
+            .risk
+            .push("protected_component_context".into());
+        assert!(checked(before, &request).is_err());
+        let copy = serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap();
+        assert_eq!(
+            checked(evaluate(copy).unwrap(), &request)
+                .unwrap()
+                .assessment
+                .floor,
+            CapabilityFloor::Frontier
+        );
+    }
+
+    fn bounded_request() -> Request {
+        let mut request = probe_request();
+        request.prompt =
+            "Record the settled design choice in those notes; do not redesign the architecture"
+                .into();
+        request.seed = (&crate::routing_assessment::assess(&request.prompt)).into();
+        request.completed_reply =
+            Some("The design choice is settled; documentation remains.".into());
+        request.previous_envelope = Some("protected".into());
+        request
+    }
+
+    fn stages(mut request: Request) -> Result<Reply, String> {
+        let semantic = request.semantic.take();
+        let mut copy: Request =
+            serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap();
+        request.seed = checked(evaluate(copy)?, &request)?.assessment;
+        request.stage = "after".into();
+        request.semantic = semantic;
+        copy = serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap();
+        checked(evaluate(copy)?, &request)
+    }
+
+    #[test]
+    fn bounded_history_release_needs_native_scope_evidence_and_preserves_resume() {
+        let mut request = bounded_request();
+        request.semantic = Some(
+            serde_json::json!({"envelope":"bounded","scope_relation":"bounded_step","scope":"localized",
+            "novelty":"established","ambiguity":"low","horizon":"short","validation":"text_comparison",
+            "risks":[],"uncertainty":"low","inspection_needed":false,"reason":"Record a settled choice in existing notes."}),
+        );
+        let reply =
+            stages(serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap())
+                .unwrap();
+        assert_eq!(reply.assessment.floor, CapabilityFloor::Routine);
+        assert!(
+            reply
+                .assessment
+                .triage
+                .evidence
+                .contains(&"surrounding_assignment:protected".into())
+        );
+        // A worker's marker alone cannot create the native proof.
+        request.stage = "after".into();
+        request.semantic = None;
+        assert!(checked(reply, &request).is_err());
+        assert_eq!(
+            crate::routing_assessment::assess_follow_up("continue", Some("protected")).floor,
+            CapabilityFloor::Frontier
+        );
+        let mut no_proof = bounded_request();
+        let reply =
+            stages(serde_json::from_value(serde_json::to_value(&no_proof).unwrap()).unwrap())
+                .unwrap();
+        assert_eq!(reply.assessment.floor, CapabilityFloor::Frontier);
+        no_proof.previous_envelope = Some("unknown_future_envelope".into());
+        assert_eq!(
+            stages(no_proof).unwrap().assessment.floor,
+            CapabilityFloor::Frontier
+        );
+    }
+
+    #[test]
+    fn module_and_builtin_agree_on_named_independent_documentation() {
+        let mut request = bounded_request();
+        request.prompt = "Fix the spelling typo in README.md".into();
+        request.seed = (&crate::routing_assessment::assess(&request.prompt)).into();
+        let result = stages(request).unwrap();
+        assert_eq!(result.assessment.floor, CapabilityFloor::Routine);
+        assert!(
+            !result
+                .assessment
+                .triage
+                .evidence
+                .contains(&"surrounding_assignment:protected".into())
+        );
+    }
+
+    /// Reuse completed real assessments. This never starts Codex or inference.
+    #[test]
+    #[ignore = "requires a private captured real-work case file; zero inference"]
+    fn captured_real_work_replay() {
+        let path =
+            std::env::var_os("VK_ROUTING_REPLAY_FILE").expect("private replay file required");
+        let replay: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        let availability: crate::routing::Availability =
+            serde_json::from_value(replay["availability"].clone()).unwrap();
+        let models: Vec<ModelPolicy> = serde_json::from_value(replay["models"].clone()).unwrap();
+        for case in replay["cases"].as_array().unwrap() {
+            let mut request = probe_request();
+            request.prompt = case["prompt"].as_str().unwrap().into();
+            request.completed_reply = case["completed_reply"].as_str().map(str::to_owned);
+            request.previous_envelope = case["previous_envelope"].as_str().map(str::to_owned);
+            request.seed = (&crate::routing_assessment::assess(&request.prompt)).into();
+            request.semantic = case.get("semantic").filter(|c| !c.is_null()).cloned();
+            let reply = stages(request).unwrap();
+            assert_eq!(
+                reply.assessment.envelope,
+                case["expected_envelope"].as_str().unwrap(),
+                "{}",
+                case["execution"]
+            );
+            let a = reply.assessment.into_assessment().unwrap();
+            let mut policy = RoutingPolicy {
+                mode: crate::routing::RoutingMode::Shadow,
+                floor: CapabilityFloor::Assessed,
+                denied_models: vec![],
+                allow_escalation: false,
+            };
+            let shadow = crate::routing::choose_assessed(
+                &policy,
+                a.floor,
+                a.envelope,
+                &models,
+                &availability,
+                availability.observed_at,
+            )
+            .unwrap();
+            policy.mode = crate::routing::RoutingMode::Auto;
+            let qualified = crate::routing::choose_assessed(
+                &policy,
+                a.floor,
+                a.envelope,
+                &models,
+                &availability,
+                availability.observed_at,
+            )
+            .unwrap();
+            assert_eq!(shadow.0, case["expected_shadow_model"].as_str().unwrap());
+            if a.envelope == "bounded" {
+                assert_eq!(shadow, ("gpt-6-sol".into(), "low".into()));
+                assert_eq!(qualified, ("gpt-6-luna".into(), "medium".into()));
+            }
+            println!(
+                "{} -> {}; Recommend={:?}; qualified={:?}",
+                case["execution"], a.envelope, shadow, qualified
+            );
+        }
     }
 
     #[test]

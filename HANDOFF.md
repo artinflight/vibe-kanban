@@ -1,3 +1,13 @@
+# October 7 Combined Release Preparation
+
+This isolated integration branch combines reviewed PR147 at9b3f82538 and PR148
+atcb0b441a2. CU remains pinned to95e7aea47. Source integration is not release
+acceptance or deployment: the required connector unread-reconciliation patch
+is still pending reviewed handoff. Keep Recommend, scheduling ON and credits OFF.
+Use the explicit published PR149 operational pin312ac0b20 for new preparation.
+No archive deletion approval has arrived; no production state is changed.
+Both development histories below remain evidence, not current rollout authority.
+
 # PR147 bounded stop-response reliability
 
 The complete graceful attempt has a 2-second deadline, including mutex, RPC,
@@ -45,6 +55,124 @@ CU/private-capacity-HTTP combined rehearsal and legacy-CU/durable rollback
 acceptance remain explicit release requirements in VK_SCHEDULED_FIRST_RUN.md.
 No backend release package or production restart was attempted.
 
+# October 7: correct the incomplete no-restart boundary
+
+Current branch `fix/autoswitch-current-step-risk` retains the earlier source and
+PR148. The prior delivery failed the requested no-restart classification scope:
+fixed backend prompt/history rules vetoed updated worker policy. Internal protocol
+2 now separates immutable repository/native/lifecycle facts from replaceable
+prompt classification and inferred history. All normal classification, semantic
+eligibility and manual-history inference use one pinned module. See
+[VK_AUTOSWITCH_RELOAD.md](VK_AUTOSWITCH_RELOAD.md).
+
+Development only: Recommend, actual model/effort, credit settings, active module,
+service and staging/main remain unchanged. No owner coordination or deployment.
+One VK::Staging adoption of matching backend/validator/worker protocol2 is required
+to remove the old veto; subsequent policy fixes use prepare/publish without
+backend restart. The old `current-step-665d836db-20261007` artifact is superseded,
+not deleted. October30 (20x→10x) remains the usefulness/readiness deadline.
+Current checks/package receipts: `/mnt/vk-storage/vk-autoswitch-module-boundary-20261007`.
+Implementation `09dcd2cb2d873139904d32821bbc0924cdeabfac` is pushed; the
+final delivery also adds the omitted-input safety check and this evidence.
+Final executor unit suite: 156 passed, seven opt-in tests not invoked. All-target
+executor Clippy, formatting/governance and byte-identical CU contract/fixture pass.
+The sandboxed reload proof (`reload-final-proof.log`) kept PID3305974 unchanged:
+negative deployment wording and history policy updated through real worker
+publication, actual model selection changed, all 15 captured real assessments
+passed (three corrected to Sol6/low, twelve unchanged), manual/Recommend behavior,
+child floors/escalation, rollback and dirty state survived. Six rejected-update
+cases include old protocol and an unsafe all-cheap worker. Native inference: zero.
+The subsequently added full-input budget guard passed its dedicated regression
+in the final 156-test suite; the same-process test is not a live production trial.
+Observed helper stages were 18/7ms, not a production latency guarantee.
+An initial expanded-suite run hit its obsolete whole-suite ten-second assertion;
+the test now verifies prompt termination of the deliberately stalled helper
+instead. Final behavior/timeout assertions pass. No failed receipt was removed.
+
+Fresh package preparation, private publication/check/render pass for protocol2
+`policy-boundary-v2-20261007` under the task root's `package`; worker SHA256
+`039a9ebb5e625a9bff871f2560a27a39efa36a62d4378ca0c38e512ad5901629`, manifest
+`3edec4e9c4e5b202c4718dcc85977063fd0603bb67a79cd5b94afac69390f7f1`.
+It is a stripped development-profile helper, not an installed production server.
+Normal candidate packaging may rebuild optimized artifacts from the same source.
+The old validator was tested only as a copied private artifact and rejects the
+new preparation clearly; no live validator/pointer was replaced. Rendered config
+was not installed. `DELIVERY.json` binds final source and paths after commit.
+
+Full check/lint/workspace-test commands were attempted; local frontend checks pass
+with the larger Node heap, but desktop/workspace Rust is blocked by missing GLib/
+GObject development metadata. All ten CI checks passed for implementation09dcd2cb2, including full backend tests,
+schema and desktop checks. The final input-budget guard/documentation commit
+requires its own fresh CI; read final head status from GitHub rather than using
+this earlier result as exact-head acceptance.
+Live Green remains PID3027197, started October5 15:33:08UTC, old protocol1 module
+`reference-lookup-bb5fe5f40-20261005`, Codex0.159.2; exact read-only identity is in
+`LIVE_IDENTITY_UNCHANGED.json`. Recommend/model/credit/runtime settings are intact.
+No staging/main integration, deployment, restart or other-agent interaction.
+
+Remaining readiness: release CI and owner adoption of the matched boundary once,
+then real Recommend evidence, protected cases, classifier overhead and total
+accepted-task quality/usage before October30. Ordinary policy corrections after
+that adoption use module prepare/publish, not another backend restart. Auto needs
+separate authorization. [PR148](https://github.com/artinflight/vibe-kanban/pull/148)
+includes unchanged PR146 prerequisites; do not adopt both as separate releases.
+Safe source remains `/mnt/vk-storage/vk-model-autoswitch-20260930/source`; the
+recreated managed checkout was not used or overwritten. Older entries below are
+historical.
+
+# October 7: AutoSwitch current-step risk correction
+
+Branch `fix/autoswitch-current-step-risk` preserves `fix/autoswitch-reference-steps`
+at `bb5fe5f40852d48dfa0049c1fd797ee829ff1265`. See
+[VK_AUTOSWITCH_CURRENT_STEP_RISK.md](VK_AUTOSWITCH_CURRENT_STEP_RISK.md).
+Scope: release inferred session protection for positively classified, resolved
+bounded follow-ups; retain the surrounding assignment for generic resumes;
+recognize explicit deployment/restart prohibitions without erasing positive
+protected operations. The stable module validator now requires native bounded
+scope evidence, and agrees with built-in independent-request handling.
+
+Recommend remains required; no Auto, credit/model configuration, deployment,
+restart, live module publication or staging-owner interaction is authorized here.
+This changes backend safety guards, so it requires backend-matched adoption by
+VK::Staging; publishing only the worker to the old backend would fail closed.
+The October 30 readiness deadline (20x to 10x allowance) remains authoritative.
+Validation: 153 executor unit tests passed (seven opt-in tests not invoked),
+15 completed real assessments replayed without inference, sandboxed module reload
+and all-target executor Clippy passed, formatting/governance and exact CU wire
+compatibility passed. Three prior Astra recommendations become Sol6/low; their
+Auto-qualified option is Luna6/medium. The other twelve are unchanged. No actual
+model changes or accepted-task savings are claimed. Frontend type checks passed
+with the larger Node heap; full desktop/workspace checks require CI because the
+host lacks GLib development metadata. Receipts:
+`/mnt/vk-storage/vk-autoswitch-current-step-risk-20261007`.
+Delivery: implementation `665d836dba44dcd1af9244992e2656745d15641e` is committed
+and pushed. [PR148](https://github.com/artinflight/vibe-kanban/pull/148)
+targets staging and includes unchanged PR146 prerequisites; integration CI is
+pending. The matching prepared module `current-step-665d836db-20261007` and
+validator are in the task's `package` directory; `DELIVERY.json` records hashes.
+They are not published live. Staging/main are unchanged. Adopt the backend,
+validator, worker/instructions and existing native adapter together. A worker-only
+hot update cannot implement this stable safety-guard correction.
+Older entries below are historical.
+
+# October 5: AutoSwitch reference-step and classifier startup correction
+
+Current branch `fix/autoswitch-reference-steps` begins at staging `8b562265d`.
+The no-restart module is live on October5 Green PID3027197/port5511, source
+`a661a8156`. See VK_AUTOSWITCH_REFERENCE_STEPS.md. Scope is a hot module fix
+for known-link presentation plus a classifier-only config metadata adapter for
+the existing native launcher. Native config exceeded the current reader limit;
+ordinary agent frames and authoritative restrictions/settings/usage remain intact.
+Live publication and old-core sandbox verification passed without restart;
+backend PID3027197 is unchanged. Release `reference-steps-aac5bd457-20261005`.
+The known-link replay admits Luna6/medium (Recommend: experimental Sol6/low).
+One formerly failed native classifier replay now completes on Luna5.6/low;
+4,711 input/259 output tokens and9,823ms, no retry. Ambiguous work stays Astra.
+56 routing regressions and three adapter tests passed; no net savings claim yet. Publication/turn receipts
+are retained outside Git under `/mnt/vk-storage/vk-autoswitch-reference-steps-20261005`.
+No restart, cutover, Auto enablement or staging-owner coordination. Recommend stays
+required; complete useful routing deadline remains October30 (allowance20x →10x).
+Older entries below are historical.
 
 # October 5: AutoSwitch reloadable module
 

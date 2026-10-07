@@ -1,3 +1,11 @@
+## October 7 Integration Is Not Deployment
+
+The production instance remains the October5 release. PR1479b3f82538 and
+PR148cb0b441a2 are combined only in an isolated preparation branch; neither
+staging nor main is moved. The required connector patch is not yet included.
+PR147 has compatible latest-v2 rollback requirements; the old live executable
+must not be used to read new durable holds. Recommend remains required.
+
 ## October 6: Scheduled first-run development boundary
 
 VK scheduled initialization is being implemented on a separate development
@@ -6,6 +14,19 @@ must remain off until compatible CU and combined private-API/native acceptance
 are verified by the staging owner. Recommend and the existing scheduling
 restrictions remain authoritative. Version-2 controller receipts require a
 compatible rollback reader. See VK_SCHEDULED_FIRST_RUN.md for exact requirements.
+## October 7: AutoSwitch reload boundary invariant
+
+Prompt classification and inferred follow-up qualification belong to the reviewed,
+versioned module. The backend's fallback prompt guess cannot veto a newer policy.
+VK-read repository and input-completeness facts, reported native/current risks, explicit manual/child
+floors, exclusions, failure escalation and execution lifecycle remain core guards.
+Protection follows relevant current work, not a permanent chat label; completed
+bounded steps preserve their surrounding assignment for generic continuation.
+Internal protocol 2 deliberately rejects incompatible old modules/validators.
+One owner backend adoption is required to remove the old duplicate classifier;
+subsequent ordinary policy changes must work without backend restarts. See
+VK_AUTOSWITCH_RELOAD.md. Recommend remains required; no live adoption or Auto
+activation is performed by development. VK::Staging owns adoption/cutover.
 
 ## October 1: AutoSwitch scope release preparation
 

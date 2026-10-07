@@ -5,7 +5,7 @@ fn main() {
     let result = (|| -> Result<(), String> {
         let args: Vec<_> = std::env::args().skip(1).collect();
         if args == ["--defaults"] {
-            let value = serde_json::json!({"models":serde_json::from_str::<serde_json::Value>(include_str!("../routing_models.json")).map_err(|_| "Invalid defaults")?,
+            let value = serde_json::json!({"protocol":executors::routing_module::PROTOCOL,"models":serde_json::from_str::<serde_json::Value>(include_str!("../routing_models.json")).map_err(|_| "Invalid defaults")?,
                 "instructions":executors::routing_semantic::DEFAULT_INSTRUCTIONS});
             println!("{value}");
             return Ok(());

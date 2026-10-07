@@ -589,7 +589,12 @@ def main():
     audit = commands.add_parser("audit-chain", help="Read and verify the chain without extracting payloads")
     audit.add_argument("--result", required=True, type=Path)
     audit.add_argument("--desktop-only", action="store_true")
+    for command in (restore, audit):
+        command.add_argument('--desktop-hostname')
+        command.add_argument('--desktop-host-key-alias')
     args = parser.parse_args()
+    from vk_archive_store import configure_transport
+    configure_transport(args.desktop_hostname, args.desktop_host_key_alias)
     os.umask(0o077)
     if args.action in ("capture", "resume-delivery"):
         transport = DesktopTransport(args.root / "transport", hostname=args.desktop_hostname,

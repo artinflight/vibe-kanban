@@ -12,6 +12,9 @@ overnight VK9b3f82538/CU95e7aea47 release is pending separate approval.
 - Archive reads stream through SSH and zstd without retaining another compressed
   copy on SSD. Consumers accept scratch output only after the complete stream
   checksum succeeds. Local override remains explicit; Desktop-only forbids it.
+- The existing direct-LAN route can be selected with `--desktop-hostname` and
+  its matching `--desktop-host-key-alias`. Both are required together, and strict
+  host-key verification remains enabled. This changes no network configuration.
 - New capture verification hashes archived SQLite snapshots without creating a
   second `verified-payload` database tree. Original snapshot inputs remain.
 - Legacy references can resolve through retained descriptors or a hash-verified
@@ -38,6 +41,10 @@ never treats them as independent database snapshots. Only its exact new private
 SQLite test files may be removed after all assertions and connections close.
 Original archives, metadata, directories and incident evidence are untouched.
 This audit does not claim a complete materialized filesystem restore.
+Completed audit receipts can be resumed only after another full local and Desktop
+hash, unchanged original/descriptor identity, and verified member-inventory hash.
+Partial or failed work is not reused as acceptance. The default-route audit was
+interrupted only to use the previously established direct route; originals stayed.
 
 There are 27 protected originals, 69,178,728,448 allocated bytes (64.428 GiB).
 Six head descriptors name overlapping chains. October5 remote deltas are partly

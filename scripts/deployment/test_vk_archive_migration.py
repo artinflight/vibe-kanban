@@ -6,7 +6,7 @@ import subprocess
 from unittest.mock import patch
 
 import test_vk_desktop_backups as fixtures
-from vk_archive_migration import audit_archive, validate_heads
+from vk_archive_migration import audit_archive, validate_heads, reuse_audit
 
 
 class MigrationAudit(unittest.TestCase):
@@ -84,3 +84,19 @@ class MigrationAudit(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'space floor'):
                 audit_archive(row, root)
         self.assertTrue(Path(row['local']).exists())
+
+    def test_reuse_rechecks_desktop_and_rejects_changed_archive_or_inventory(self):
+        first = self.backup(); row = self.row(first)
+        root = self.root / 'audit'; root.mkdir()
+        result = audit_archive(row, root)
+        prior = root / first['archive'].removesuffix('.tar.zst')
+        resumed = self.root / 'resumed'; resumed.mkdir()
+        self.assertTrue(reuse_audit(row, prior, resumed)['passed'])
+        remote = Path(row['remote'])
+        remote.write_bytes(b'corrupt')
+        with self.assertRaisesRegex(ValueError, 'Desktop backup unavailable'):
+            reuse_audit(row, prior, self.root / 'bad')
+        with (prior / 'members.jsonl.gz').open('ab') as stream:
+            stream.write(b'changed')
+        with self.assertRaisesRegex(ValueError, 'no longer matches'):
+            reuse_audit(row, prior, self.root / 'bad')

@@ -9,10 +9,11 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 import sqlite3
 import time
 
-from vk_archive_store import Archive, reference
+from vk_archive_store import Archive, reference, configure_transport
 from vk_prep_common import digest, save, storage
 
 FLOOR = 2 * 1024**3
@@ -183,18 +184,48 @@ def validate_heads(heads, results):
     return chains
 
 
+def reuse_audit(row, prior, root):
+    result = json.loads((prior / 'result.json').read_text())
+    _, archive = checked_reference(row)
+    if (result.get('passed') is not True or result.get('full_remote_stream_hash_verified') is not True
+            or result['sha256'] != row['sha256'] or result['remote'] != row['remote']
+            or signature(row['local']) != result['local_identity'] or digest(row['local']) != row['sha256']
+            or digest(row['receipt']) != result['descriptor_sha256']
+            or digest(prior / 'members.jsonl.gz') != result['member_inventory_sha256']):
+        raise ValueError('Prior completed audit no longer matches retained archive')
+    archive.verify()
+    result = dict(result, reused_from=str(prior), renewed_at=time.time(),
+                  prior_receipt_sha256=digest(prior / 'result.json'))
+    target = root / prior.name; target.mkdir(mode=0o700)
+    shutil.copy2(prior / 'members.jsonl.gz', target / 'members.jsonl.gz')
+    save(target / 'result.json', result)
+    save(target / 'reuse.json', {'from': str(prior), 'full_fresh_remote_hash': True,
+                                'no_original_archive_removed': True})
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--inventory', type=Path, required=True)
     parser.add_argument('--root', type=Path, required=True)
+    parser.add_argument('--resume-from', type=Path)
+    parser.add_argument('--desktop-hostname')
+    parser.add_argument('--desktop-host-key-alias')
     args = parser.parse_args()
+    configure_transport(args.desktop_hostname, args.desktop_host_key_alias)
     os.umask(0o077)
     root = storage(args.root)
     root.mkdir(mode=0o700, parents=True, exist_ok=False)
     inventory = json.loads(args.inventory.read_text())
     results = {}
     for row in sorted(inventory['archive_files'], key=lambda r: r['bytes']):
-        result = audit_archive(row, root)
+        prior = args.resume_from / row['local'].split('/')[-1].removesuffix('.tar.zst') if args.resume_from else None
+        if prior and (prior / 'result.json').is_file() and (prior / 'private-copy-retirement.json').is_file():
+            # Revalidate the complete retained Desktop bytes; identical bytes keep
+            # the earlier full-stream parsing and SQLite assertions valid.
+            result = reuse_audit(row, prior, root)
+        else:
+            result = audit_archive(row, root)
         results[row['local']] = result
         save(root / 'progress.json', {'verified_archives': len(results), 'expected_archives': len(inventory['archive_files']),
              'verified_compressed_bytes': sum(r['bytes'] for r in results.values()), 'last_remote': result['remote'],

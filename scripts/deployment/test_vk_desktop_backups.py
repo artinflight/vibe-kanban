@@ -128,6 +128,17 @@ class DesktopBackups(unittest.TestCase):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 Archive(reference(first) | changes)
 
+    def test_direct_transport_requires_bound_identity_and_preserves_host_verification(self):
+        import vk_archive_store as store
+        for host, alias in [('10.0.0.109', None), (None, 'known-host'), ('bad;command', 'known')]:
+            with self.assertRaises(ValueError):
+                store.configure_transport(host, alias)
+        with patch.object(store, 'SSH', list(store.DEFAULT_SSH)):
+            store.configure_transport('10.0.0.109', '100.70.23.123')
+            self.assertIn('StrictHostKeyChecking=yes', store.SSH)
+            self.assertIn('HostKeyAlias=100.70.23.123', store.SSH)
+            self.assertEqual(store.SSH[-3:], ['desktop', 'python', '-'])
+
     def test_scope_change_and_journal_loss_still_block(self):
         first = self.backup();self.remove_own_archive(first)
         self.journal.instance = 'replaced'

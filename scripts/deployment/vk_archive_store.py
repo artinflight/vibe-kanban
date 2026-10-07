@@ -13,8 +13,21 @@ SSH = ["ssh", "-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15",
        "-o", "StrictHostKeyChecking=yes", "-o", "ServerAliveInterval=15",
        "-o", "ServerAliveCountMax=3", "-o", "ControlMaster=no",
        "-o", "ControlPath=none", "desktop", "python", "-"]
+DEFAULT_SSH = tuple(SSH)
 
 LOCATORS = {}
+
+
+def configure_transport(hostname=None, host_key_alias=None):
+    """Select an existing route while preserving the verified Desktop identity."""
+    global SSH
+    if bool(hostname) != bool(host_key_alias):
+        raise ValueError('A direct Desktop route requires its existing host-key alias')
+    if any(value and not re.fullmatch(r'[A-Za-z0-9.:_-]+', value)
+           for value in (hostname, host_key_alias)):
+        raise ValueError('Unsafe SSH identity option')
+    if hostname:
+        SSH = list(DEFAULT_SSH[:-3]) + ['-o', 'Hostname=' + hostname, '-o', 'HostKeyAlias=' + host_key_alias] + list(DEFAULT_SSH[-3:])
 
 
 def install_locators(results):

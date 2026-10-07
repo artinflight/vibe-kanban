@@ -59,3 +59,11 @@ aws-lc-rs = "=1.16.0"
 debug = 1
 split-debuginfo = "packed"
 strip = true
+
+# Reproducible, stripped HTTP artifacts for isolated capacity acceptance.
+[profile.acceptance]
+inherits = "release"
+opt-level = 1
+debug = 0
+split-debuginfo = "off"
+incremental = false

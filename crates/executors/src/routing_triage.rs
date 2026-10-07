@@ -62,7 +62,7 @@ fn protected_context(text: &str) -> bool {
     PROTECTED.is_match(text)
 }
 
-fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
+fn inspect(root: &Path, surface: &str, tooltip: bool, budget: Duration) -> RepoEvidence {
     let mut result = RepoEvidence::default();
     let Ok(root) = root.canonicalize() else {
         result.incomplete = true;
@@ -103,10 +103,7 @@ fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
                     && !e.file_type().is_symlink()
             })
         {
-            if result.entries >= 768
-                || start.elapsed() > Duration::from_millis(40)
-                || result.files >= 8
-            {
+            if result.entries >= 768 || start.elapsed() >= budget || result.files >= 8 {
                 result.incomplete = true;
                 return result;
             }
@@ -175,7 +172,7 @@ fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
                     if !parent.join("package.json").is_file() {
                         continue;
                     }
-                    if result.files >= 8 || start.elapsed() > Duration::from_millis(40) {
+                    if result.files >= 8 || start.elapsed() >= budget {
                         result.incomplete = true;
                         return result;
                     }
@@ -218,12 +215,64 @@ fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
     result
 }
 
-/// Infer an outcome + object + surface, then corroborate inexpensive implementation evidence.
-/// Unknown or compound outcomes remain unknown instead of requiring engineering labels.
-pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
+/// Facts read by VK, separately from replaceable prompt interpretation. A named
+/// component can be protected even when the request includes harmless cautions.
+pub fn repository_context(prompt: &str, root: Option<&Path>) -> TaskTriage {
+    let mut result = unknown();
+    // A bounded classifier must not silently miss requirements beyond its input.
+    // This is an observed budget fact, independent of any prompt-language rule.
+    if prompt.chars().nth(6144).is_some() {
+        result
+            .risk
+            .push("classification_input_exceeds_bound".into());
+        result
+            .evidence
+            .push("request_not_fully_visible_to_module".into());
+    }
+    let Some(root) = root else {
+        return result;
+    };
+    static SURFACE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\b([a-z][a-z0-9-]{2,24}) (page|screen|dialog|panel|form|menu)\b").unwrap()
+    });
     let text = prompt.to_lowercase();
-    let has = |terms: &[&str]| terms.iter().any(|term| text.contains(term));
-    let mut result = TaskTriage {
+    let mut surfaces = SURFACE.captures_iter(&text);
+    let Some(surface) = surfaces.next() else {
+        return result;
+    };
+    if surfaces.next().is_some() {
+        return result;
+    }
+    let repo = inspect(root, &surface[1], true, Duration::from_millis(40));
+    result.inspected_entries = repo.entries;
+    result.inspected_files = repo.files;
+    if repo.protected {
+        result.risk.push("protected_component_context".into());
+        result
+            .evidence
+            .push("matched_component_references_protected_subsystem".into());
+    }
+    if repo.surface {
+        result.evidence.push("existing_ui_surface".into());
+    }
+    if repo.pattern {
+        result.pattern = "existing_ui_pattern".into();
+    }
+    if repo.validation {
+        result.validation = "package_check_available_not_run".into();
+    }
+    if repo.incomplete {
+        result
+            .evidence
+            .push("inspection_incomplete_or_budget_exhausted".into());
+    }
+    result.needs_repo_inspection =
+        !(repo.surface && repo.pattern && repo.validation && !repo.incomplete);
+    result
+}
+
+fn unknown() -> TaskTriage {
+    TaskTriage {
         version: 1,
         intent: "unknown".into(),
         scope: "unknown".into(),
@@ -237,7 +286,15 @@ pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
         evidence: vec![],
         inspected_entries: 0,
         inspected_files: 0,
-    };
+    }
+}
+
+/// Infer an outcome + object + surface, then corroborate inexpensive implementation evidence.
+/// Unknown or compound outcomes remain unknown instead of requiring engineering labels.
+pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
+    let text = prompt.to_lowercase();
+    let has = |terms: &[&str]| terms.iter().any(|term| text.contains(term));
+    let mut result = unknown();
     // Plain-language consequences override apparently small visual changes.
     if has(&[
         "sign in",
@@ -380,7 +437,7 @@ pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
     let Some(root) = root else {
         return result;
     };
-    let repo = inspect(root, &surfaces[0].0, tooltip);
+    let repo = inspect(root, &surfaces[0].0, tooltip, Duration::from_millis(40));
     result.inspected_entries = repo.entries;
     result.inspected_files = repo.files;
     if repo.protected {
@@ -457,6 +514,41 @@ mod tests {
     }
 
     #[test]
+    fn immutable_repository_context_survives_scope_cautions_and_changes_to_prompt_rules() {
+        let repo = Repo::new();
+        let prompt = "Add a tooltip to the settings page. No production deployment.";
+        let context = super::repository_context(prompt, Some(&repo.0));
+        assert!(context.risk.is_empty());
+        assert!(!context.needs_repo_inspection);
+        assert!(context.inspected_files > 0 && context.inspected_files <= 8);
+        assert_eq!(context.intent, "unknown"); // facts, not a second classifier
+        std::fs::write(repo.0.join("src/pages/Settings.tsx"),
+            "import {checkPermissions} from './permissions'; export const Settings = () => <Tooltip/>;").unwrap();
+        let context = super::repository_context(prompt, Some(&repo.0));
+        assert!(context.risk.contains(&"protected_component_context".into()));
+        let mut assessment = crate::routing_assessment::assess(prompt);
+        crate::routing_assessment::apply_repository_context(&mut assessment, &context);
+        assert_eq!(assessment.floor, CapabilityFloor::Frontier);
+    }
+
+    #[test]
+    fn omitted_prompt_tail_cannot_hide_risk_from_bounded_module() {
+        let prompt = format!(
+            "Fix spelling typos in README.md. {} Change authentication permissions.",
+            " ".repeat(6144)
+        );
+        let context = super::repository_context(&prompt, None);
+        assert!(
+            context
+                .risk
+                .contains(&"classification_input_exceeds_bound".into())
+        );
+        let mut assessment = crate::routing_assessment::assess("Fix spelling typos in README.md");
+        crate::routing_assessment::apply_repository_context(&mut assessment, &context);
+        assert_eq!(assessment.floor, CapabilityFloor::Frontier);
+    }
+
+    #[test]
     fn unknown_context_or_unrelated_components_cannot_justify_downward_routing() {
         let prompt = "Add a tooltip to the settings page and make sure it works";
         let missing = assess_with_context(prompt, None);
@@ -504,8 +596,32 @@ mod tests {
                 "{prompt}"
             );
         }
-        std::fs::write(repo.0.join("src/pages/Settings.tsx"), "import {checkPermissions} from './permissions'; export const Settings = () => <Tooltip/>;").unwrap();
+        let protected = "import {checkPermissions} from './permissions'; export const Settings = () => <Tooltip/>;";
+        assert!(super::protected_context(protected));
+        std::fs::write(repo.0.join("src/pages/Settings.tsx"), protected).unwrap();
+        // Assert semantic inspection independently of the production deadline.
+        // Nextest runs this in a cold process; CI scheduling can consume the
+        // 40ms budget before the component is visited. That must remain a safe
+        // unknown-context fallback, not an assertion that discovery occurred.
+        let inspected = super::inspect(&repo.0, "settings", true, std::time::Duration::MAX);
+        assert!(inspected.protected);
         let result = assess_with_context("Add a tooltip to the settings page", Some(&repo.0));
+        if !result
+            .triage
+            .risk
+            .contains(&"protected_component_context".into())
+        {
+            assert_eq!(result.floor, CapabilityFloor::Workhorse);
+            assert!(result.triage.needs_repo_inspection);
+            assert_eq!(result.triage.uncertainty, "high");
+            assert!(
+                result
+                    .triage
+                    .evidence
+                    .contains(&"inspection_incomplete_or_budget_exhausted".into())
+            );
+            return;
+        }
         assert_eq!(result.floor, CapabilityFloor::Frontier);
         assert!(
             result
@@ -513,6 +629,16 @@ mod tests {
                 .risk
                 .contains(&"protected_component_context".into())
         );
+    }
+
+    #[test]
+    fn exhausted_inspection_budget_preserves_unknown_context() {
+        let repo = Repo::new();
+        let inspected = super::inspect(&repo.0, "settings", true, std::time::Duration::ZERO);
+        assert!(inspected.incomplete);
+        assert!(!inspected.surface);
+        assert!(!inspected.protected);
+        assert_eq!(inspected.entries, 0);
     }
 
     #[cfg(unix)]

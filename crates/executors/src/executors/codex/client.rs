@@ -99,6 +99,7 @@ pub struct AppServerClient {
     goal_pausing: AtomicBool,
     completion_reconciliation_sent: AtomicBool,
     capacity_stopped: AtomicBool,
+    scheduled_capacity: OnceLock<crate::capacity::PreparedCapacity>,
     execution_id: OnceLock<Uuid>,
 }
 
@@ -113,6 +114,151 @@ impl Drop for AppServerClient {
 }
 
 impl AppServerClient {
+    async fn hold_pending_initialization(&self, reason: &str) -> Result<(), ExecutorError> {
+        if self
+            .scheduled_capacity
+            .get()
+            .is_none_or(|c| c.first_run.is_none())
+        {
+            return Ok(());
+        }
+        let Some(execution) = self.execution_id.get() else {
+            return Ok(());
+        };
+        let Some(controller) = crate::capacity::controller::configured()? else {
+            return Ok(());
+        };
+        let mut c = controller.lock().await;
+        let session = c
+            .state
+            .goals
+            .values()
+            .find(|g| {
+                g.initialization_state == crate::capacity::first_run::InitializationState::Pending
+                    && g.initialization_receipt
+                        .as_ref()
+                        .is_some_and(|r| r.execution_id == Some(*execution))
+            })
+            .map(|g| g.session_id);
+        if let Some(session) = session {
+            c.revoke_session(session, reason)?;
+            self.pause_goal(reason.into(), true);
+        }
+        Ok(())
+    }
+    /// Final supervised boundary, after native permission verification and
+    /// bootstrap loading, immediately before activating the existing objective.
+    pub async fn activate_capacity_goal(
+        &self,
+        capacity: &crate::capacity::PreparedCapacity,
+        thread: &str,
+    ) -> Result<(), ExecutorError> {
+        let c = crate::capacity::controller::configured()?
+            .ok_or_else(|| io::Error::other("Missing scheduled controller"))?;
+        let c = c.lock().await;
+        c.ensure_owner()?;
+        let goal = c
+            .state
+            .goals
+            .values()
+            .find(|g| {
+                g.grant.as_ref().is_some_and(|grant| {
+                    grant.id.to_string() == capacity.lease.id
+                        && !grant.stopping
+                        && grant.execution_id.map(|id| id.to_string()).as_deref()
+                            == Some(&capacity.lease.execution_id)
+                })
+            })
+            .ok_or_else(|| io::Error::other("Activation authority changed"))?;
+        let lease = capacity_guard::read_lease(&capacity.file)?;
+        lease
+            .validate(crate::capacity::wall_ms())
+            .map_err(io::Error::other)?;
+        if lease.revoked
+            || lease.id != capacity.lease.id
+            || lease.allocation_id != capacity.lease.allocation_id
+            || lease.execution_id != capacity.lease.execution_id
+            || lease.stop_at_ms != capacity.lease.stop_at_ms
+            || goal.pending_identity().as_ref() != capacity.first_run.as_ref()
+            || goal.thread_id != thread
+            || c.state.foreground_until_ms > crate::capacity::wall_ms()
+        {
+            return Err(ExecutorError::Io(io::Error::other(
+                "Native activation permission was revoked or changed",
+            )));
+        }
+        goal.revalidate(self.execution_id.get().copied(), true)
+            .await?;
+        let snapshot = self
+            .goal_request("thread/goal/get", serde_json::json!({"threadId":thread}))
+            .await?;
+        let native: NativeGoal =
+            serde_json::from_value(snapshot["goal"].clone()).map_err(io::Error::other)?;
+        let native = crate::capacity::first_run::resolve_wire(native).await?;
+        if native.thread_id != goal.thread_id
+            || native.objective != goal.objective
+            || native.created_at != goal.created_at
+            || (!goal.goal_id.is_empty() && native.goal_id != goal.goal_id)
+        {
+            return Err(ExecutorError::Io(io::Error::other(
+                "Native identity changed at activation",
+            )));
+        }
+        self.goal_request(
+            "thread/goal/set",
+            serde_json::json!({"threadId":thread,"status":"active"}),
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn attest_initialization_checkpoint(
+        &self,
+        native: &NativeGoal,
+        progress: &Progress,
+        turn: &str,
+        valid: bool,
+    ) -> Result<(), ExecutorError> {
+        if self
+            .scheduled_capacity
+            .get()
+            .is_none_or(|c| c.first_run.is_none())
+        {
+            return Ok(());
+        }
+        let execution = *self
+            .execution_id
+            .get()
+            .ok_or_else(|| io::Error::other("First run missing execution identity"))?;
+        let controller = crate::capacity::controller::configured()?
+            .ok_or_else(|| io::Error::other("Missing first-run controller"))?;
+        let mut c = controller.lock().await;
+        // Empty read calls are permitted, but cannot attest initialization.
+        let result = if !valid {
+            Err(io::Error::other("Invalid first native checkpoint"))
+        } else if progress.requirements.is_empty() && progress.pause_reason.is_none() {
+            return Ok(());
+        } else {
+            c.initialization_checkpoint(execution, native, progress, turn)
+        };
+        if let Err(error) = result {
+            let session = c
+                .state
+                .goals
+                .values()
+                .find(|g| {
+                    g.initialization_receipt
+                        .as_ref()
+                        .is_some_and(|r| r.execution_id == Some(execution))
+                })
+                .map(|g| g.session_id);
+            if let Some(session) = session {
+                c.revoke_session(session, &error.to_string())?;
+            }
+            self.pause_goal(error.to_string(), true);
+        }
+        Ok(())
+    }
     /// Public control-plane pause for the owning execution, never prompt steering.
     /// The caller must separately verify process termination; RPC success is not
     /// evidence that model work or descendants have stopped.
@@ -121,8 +267,12 @@ impl AppServerClient {
         reason: String,
     ) -> Result<(), ExecutorError> {
         let client = active_codex_clients()
-            .lock()
-            .expect("active client registry")
+            .try_lock()
+            .map_err(|_| {
+                ExecutorError::Io(io::Error::other(
+                    "Codex client registry busy; stop remains unconfirmed",
+                ))
+            })?
             .get(&execution_id)
             .and_then(Weak::upgrade)
             .ok_or_else(|| {
@@ -130,15 +280,28 @@ impl AppServerClient {
                     "No owning Codex client; reconcile execution state",
                 ))
             })?;
-        client.suspend_capacity(reason).await;
+        client.suspend_capacity(reason).await
+    }
+
+    async fn suspend_capacity(&self, reason: String) -> Result<(), ExecutorError> {
+        if self.capacity_stopped.swap(true, Ordering::SeqCst) {
+            return Ok(());
+        }
+        self.goal_pausing.store(true, Ordering::SeqCst);
+        // Bound the entire attempt: mutex acquisition, RPCs, log I/O and the
+        // exit signal. Cancellation leaves the stop/pausing latches set; no
+        // delayed pause or initialization may be replayed by this execution.
+        tokio::time::timeout(Duration::from_secs(2), self.graceful_capacity_stop(reason))
+            .await
+            .map_err(|_| {
+                ExecutorError::Io(io::Error::other(
+                    "Graceful capacity stop timed out; native goal pause unconfirmed",
+                ))
+            })?;
         Ok(())
     }
 
-    async fn suspend_capacity(&self, reason: String) {
-        if self.capacity_stopped.swap(true, Ordering::SeqCst) {
-            return;
-        }
-        self.goal_pausing.store(true, Ordering::SeqCst);
+    async fn graceful_capacity_stop(&self, reason: String) {
         let thread_id = self.thread_id.lock().await.clone();
         if let Some(thread_id) = thread_id {
             // Bound each call independently. The OS guard remains armed even
@@ -170,7 +333,9 @@ impl AppServerClient {
         }
         let _ = super::slash_commands::log_event_raw(
             self.log_writer(),
-            format!("Scheduled goal paused: {reason}"),
+            format!(
+                "Scheduled goal stop requested: {reason}; reconcile native status before resuming"
+            ),
         )
         .await;
         if let Some(signal) = self.exit_signal.get() {
@@ -183,6 +348,7 @@ impl AppServerClient {
     }
 
     pub fn watch_capacity(self: &Arc<Self>, capacity: crate::capacity::PreparedCapacity) {
+        let _ = self.scheduled_capacity.set(capacity.clone());
         let weak = Arc::downgrade(self);
         tokio::spawn(async move {
             let start = std::time::Instant::now();
@@ -194,7 +360,7 @@ impl AppServerClient {
                 Ok(fence) => fence,
                 Err(reason) => {
                     if let Some(client) = weak.upgrade() {
-                        client.suspend_capacity(reason.into()).await;
+                        let _ = client.suspend_capacity(reason.into()).await;
                     }
                     return;
                 }
@@ -224,8 +390,12 @@ impl AppServerClient {
                         }
                     }
                 };
+                let reason = reason.or_else(|| {
+                    (capacity.first_run.is_some() && !crate::capacity::first_run::enabled())
+                        .then_some("Scheduled initialization capability withdrawn")
+                });
                 if let Some(reason) = reason {
-                    client.suspend_capacity(reason.into()).await;
+                    let _ = client.suspend_capacity(reason.into()).await;
                     return;
                 }
             }
@@ -270,6 +440,7 @@ impl AppServerClient {
             goal_pausing: AtomicBool::new(false),
             completion_reconciliation_sent: AtomicBool::new(false),
             capacity_stopped: AtomicBool::new(false),
+            scheduled_capacity: OnceLock::new(),
             execution_id: OnceLock::new(),
         });
         let _ = client.self_ref.set(Arc::downgrade(&client));
@@ -388,6 +559,19 @@ impl AppServerClient {
         }
         let goal: NativeGoal =
             serde_json::from_value(value).map_err(|e| ExecutorError::Io(io::Error::other(e)))?;
+        let goal = if self.scheduled_capacity.get().is_some() {
+            crate::capacity::first_run::resolve_wire(goal).await?
+        } else {
+            goal
+        };
+        if let Some(capacity) = self.scheduled_capacity.get()
+            && let Some(identity) = &capacity.first_run
+            && *identity != crate::capacity::first_run::FirstRun::from_native(&goal)
+        {
+            return Err(ExecutorError::Io(io::Error::other(
+                "Scheduled native goal identity changed",
+            )));
+        }
         if self.thread_id.lock().await.as_deref() != Some(goal.thread_id.as_str()) {
             return Ok(()); // Descendant agents never own the root goal.
         }
@@ -411,7 +595,23 @@ impl AppServerClient {
         } else {
             self.completion_reconciliation_sent
                 .store(false, Ordering::SeqCst);
-            let progress = goals::load(&goal).await?;
+            let progress = if let Some(capacity) = self.scheduled_capacity.get() {
+                match crate::capacity::first_run::read_progress(&goal)? {
+                    Some(progress) => progress,
+                    None if capacity.first_run.is_some() => Progress {
+                        objective: goal.objective.clone(),
+                        created_at: goal.created_at,
+                        ..Default::default()
+                    },
+                    None => {
+                        return Err(ExecutorError::Io(io::Error::other(
+                            "Checkpointed scheduled goal lost its progress",
+                        )));
+                    }
+                }
+            } else {
+                goals::load(&goal).await?
+            };
             *guard = Some((goal, progress));
         }
         Ok(())
@@ -600,6 +800,46 @@ impl AppServerClient {
         let Some((goal, progress)) = guard.as_mut() else {
             return Ok(false);
         };
+        if self
+            .scheduled_capacity
+            .get()
+            .is_some_and(|c| c.first_run.is_some())
+        {
+            if self.plan_mode {
+                self.hold_pending_initialization("Plan mode requires user review before first native initialization can be promoted").await?;
+                return Ok(true);
+            }
+            progress.finish_turn(turn_id);
+            goals::save(&goal.thread_id, progress).await?;
+            if let Some(execution) = self.execution_id.get()
+                && let Some(c) = crate::capacity::controller::configured()?
+            {
+                let mut c = c.lock().await;
+                if let Err(error) = c.promote_initialization(
+                    *execution,
+                    goal,
+                    progress,
+                    turn_id,
+                    crate::capacity::wall_ms(),
+                ) {
+                    let session = c
+                        .state
+                        .goals
+                        .values()
+                        .find(|g| {
+                            g.initialization_receipt
+                                .as_ref()
+                                .is_some_and(|r| r.execution_id == Some(*execution))
+                        })
+                        .map(|g| g.session_id);
+                    if let Some(session) = session {
+                        c.revoke_session(session, &error.to_string())?;
+                    }
+                    self.pause_goal(error.to_string(), true);
+                    return Ok(true);
+                }
+            }
+        }
         if goal.status != "active" {
             if goal.status == "complete" {
                 self.log_writer
@@ -1159,6 +1399,7 @@ impl AppServerClient {
                                     self.pause_goal(reason, false);
                                 }
                             }
+                            self.attest_initialization_checkpoint(goal, progress, &params.turn_id, result.is_ok()).await?;
                             result
                         }
                         _ => Err("No active or completed native goal to checkpoint. Do not create a goal without user authorization.".into()),
@@ -1690,6 +1931,21 @@ impl JsonRpcCallbacks for AppServerClient {
         notification: JSONRPCNotification,
     ) -> Result<bool, ExecutorError> {
         let method = notification.method.as_str();
+        // A provider error/retry is ambiguous first-run work. Revoke before
+        // the native engine can turn a retry into another initialization.
+        if method == "error"
+            && notification
+                .params
+                .as_ref()
+                .and_then(|p| p.get("threadId"))
+                .and_then(Value::as_str)
+                == self.thread_id.lock().await.as_deref()
+        {
+            self.hold_pending_initialization(
+                "First native provider turn failed or may retry; inspect before any further work",
+            )
+            .await?;
+        }
         if let Some(control) = self.delegation.get() {
             match control
                 .observe(
@@ -1731,6 +1987,8 @@ impl JsonRpcCallbacks for AppServerClient {
             && params.get("threadId").and_then(Value::as_str)
                 == self.thread_id.lock().await.as_deref()
         {
+            self.hold_pending_initialization("Native goal removed during first run")
+                .await?;
             *self.goal.lock().await = None;
         }
         // Existing threads cannot retrofit dynamic tools in Codex 0.153.4.
@@ -1752,6 +2010,13 @@ impl JsonRpcCallbacks for AppServerClient {
                 match progress.checkpoint(args) {
                     Ok(_) => {
                         goals::save(&goal.thread_id, progress).await?;
+                        self.attest_initialization_checkpoint(
+                            goal,
+                            progress,
+                            params.get("turnId").and_then(Value::as_str).unwrap_or(""),
+                            true,
+                        )
+                        .await?;
                         if goal.status == "active"
                             && let Some(reason) = progress.pause_reason.clone()
                         {
@@ -1759,6 +2024,13 @@ impl JsonRpcCallbacks for AppServerClient {
                         }
                     }
                     Err(error) => {
+                        self.attest_initialization_checkpoint(
+                            goal,
+                            progress,
+                            params.get("turnId").and_then(Value::as_str).unwrap_or(""),
+                            false,
+                        )
+                        .await?;
                         if goal.status == "active" {
                             self.pause_goal(format!("Invalid goal checkpoint: {error}"), false);
                         } else {
@@ -1836,11 +2108,15 @@ impl JsonRpcCallbacks for AppServerClient {
                     return Ok(false);
                 }
                 if completed.turn.status == TurnStatus::Failed {
+                    self.hold_pending_initialization("First native turn failed")
+                        .await?;
                     return Err(ExecutorError::Io(io::Error::other(
                         "Codex native turn failed",
                     )));
                 }
                 if completed.turn.status == TurnStatus::Interrupted {
+                    self.hold_pending_initialization("First native turn interrupted")
+                        .await?;
                     tracing::debug!("codex turn interrupted; flushing feedback queue");
                     if self.flush_pending_feedback().await {
                         keep_alive = true;
@@ -2042,6 +2318,7 @@ mod goal_integration_tests {
         *client.current_turn_id.lock().await = Some("finishing".into());
         *client.goal.lock().await = Some((
             NativeGoal {
+                goal_id: String::new(),
                 thread_id: "root".into(),
                 objective: "Deliver feature".into(),
                 status: "complete".into(),
@@ -2123,6 +2400,7 @@ for line in sys.stdin:
             .insert("delivery".into(), "Verify deployment".into());
         *client.goal.lock().await = Some((
             NativeGoal {
+                goal_id: String::new(),
                 thread_id: "root".into(),
                 objective: "Deliver feature".into(),
                 status: "complete".into(),
@@ -2184,6 +2462,820 @@ for line in sys.stdin:
     }
 
     #[tokio::test]
+    async fn capacity_graceful_attempt_bounds_mutex_log_and_exit_signal() {
+        for stall in ["thread", "log", "exit"] {
+            let client = AppServerClient::new(
+                LogWriter::new(tokio::io::sink()),
+                None,
+                false,
+                false,
+                RepoContext::default(),
+                false,
+                String::new(),
+                CancellationToken::new(),
+            );
+            let (tx, mut rx) = tokio::sync::oneshot::channel();
+            let signal = ExitSignalSender::new(tx);
+            client.set_exit_signal(signal.clone());
+            let thread = if stall == "thread" {
+                Some(client.thread_id.lock().await)
+            } else {
+                None
+            };
+            let log = if stall == "log" {
+                Some(client.log_writer.writer.lock().await)
+            } else {
+                None
+            };
+            let exit = if stall == "exit" {
+                Some(signal.hold_for_stop_test().await)
+            } else {
+                None
+            };
+            let started = std::time::Instant::now();
+            assert!(
+                tokio::time::timeout(
+                    Duration::from_millis(2300),
+                    client.suspend_capacity("Synthetic stalled attempt".into())
+                )
+                .await
+                .unwrap()
+                .is_err()
+            );
+            assert!(started.elapsed() < Duration::from_millis(2300));
+            assert!(client.capacity_stopped.load(Ordering::SeqCst));
+            assert!(client.goal_pausing.load(Ordering::SeqCst));
+            drop(thread);
+            drop(log);
+            drop(exit);
+            sleep(Duration::from_millis(20)).await;
+            assert!(
+                matches!(
+                    rx.try_recv(),
+                    Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+                ),
+                "Timed out graceful attempt cannot send a late success"
+            );
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires the reviewed scheduled-first-run-validation.py offline boundary"]
+    async fn scheduled_first_run_runtime() {
+        let workers =
+            if std::env::var("VK_SCHEDULED_FIRST_RUN_VARIANT").as_deref() == Ok("stalled-two") {
+                2
+            } else {
+                1
+            };
+        let ready = Arc::new(tokio::sync::Barrier::new(workers));
+        let finished = Arc::new(tokio::sync::Barrier::new(workers));
+        let seed = Arc::new(tokio::sync::Mutex::new(()));
+        futures::future::join_all((0..workers).map(|index| {
+            scheduled_first_run_worker(index, ready.clone(), finished.clone(), seed.clone())
+        }))
+        .await;
+    }
+
+    async fn scheduled_first_run_worker(
+        index: usize,
+        ready: Arc<tokio::sync::Barrier>,
+        finished: Arc<tokio::sync::Barrier>,
+        seed: Arc<tokio::sync::Mutex<()>>,
+    ) {
+        use sqlx::{Connection, sqlite::SqliteConnectOptions};
+
+        use crate::{
+            capacity::{
+                controller::ManagedGoal,
+                first_run::{self, InitializationState},
+            },
+            env::ExecutionEnv,
+            executors::{ExecutorExitResult, StandardCodingAgentExecutor, codex::Codex},
+        };
+        assert_eq!(
+            std::env::var("VK_SCHEDULED_FIRST_RUN_OFFLINE").as_deref(),
+            Ok("1")
+        );
+        let home = std::path::PathBuf::from(std::env::var("CODEX_HOME").unwrap());
+        assert!(
+            home.to_string_lossy()
+                .contains("vk-continuation-first-run-")
+        );
+        let work = home.join(format!("work-{index}"));
+        tokio::fs::create_dir_all(&work).await.unwrap();
+        // Native paused goal plus one real, ordinary offline seed turn. The
+        // provider's seed reply has no checkpoint, and the goal never runs here.
+        // The reviewed driver supplies the local approved provider path. This
+        // permits a source-verified CI-built test binary without assuming the
+        // builder's absolute source path exists on the acceptance host.
+        // Serialize fixture seed/bootstrap migrations in this shared native
+        // home. Actual guarded first-run workers below still run concurrently.
+        let seed_guard = seed.lock().await;
+        let approved = std::env::var("VK_CODEX_BASE_COMMAND").unwrap();
+        let launcher = shlex::split(&approved).unwrap();
+        assert_eq!(launcher.first().map(String::as_str), Some("python3"));
+        let mut command = Command::new(&launcher[0]);
+        command.args(&launcher[1..]);
+        use workspace_utils::command_ext::GroupSpawnNoWindowExt;
+        let mut child = command
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::fs::File::create(home.join(format!("seed-stderr-{index}.log"))).unwrap())
+            .kill_on_drop(true)
+            .group_spawn_no_window()
+            .unwrap();
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let signal = ExitSignalSender::new(tx);
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(
+                tokio::fs::File::create(home.join(format!("seed-protocol-{index}.jsonl")))
+                    .await
+                    .unwrap(),
+            ),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        client.set_exit_signal(signal.clone());
+        let peer = JsonRpcPeer::spawn(
+            child.inner().stdin.take().unwrap(),
+            child.inner().stdout.take().unwrap(),
+            client.clone(),
+            signal,
+            cancel.clone(),
+        );
+        client.connect(peer);
+        client.initialize().await.unwrap();
+        let params = ThreadStartParams {
+            model: Some("fixture".into()),
+            model_provider: Some("fixture".into()),
+            cwd: Some(work.to_string_lossy().into_owned()),
+            approval_policy: Some(codex_app_server_protocol::AskForApproval::Never),
+            sandbox: Some(codex_app_server_protocol::SandboxMode::DangerFullAccess),
+            developer_instructions: Some(goals::INSTRUCTIONS.into()),
+            dynamic_tools: Some(vec![goals::tool_spec()]),
+            ..Default::default()
+        };
+        let thread = client.thread_start(params).await.unwrap().thread.id;
+        client.register_session(&thread).await.unwrap();
+        client.goal_request("thread/goal/set", serde_json::json!({"threadId":thread,
+            "objective":"Verify synthetic overnight first native turn and preserve its identity", "status":"paused"})).await.unwrap();
+        let started = client
+            .turn_start_with_mode(
+                thread.clone(),
+                vec![UserInput::Text {
+                    text: "Record the existing synthetic seed anchor.".into(),
+                    text_elements: vec![],
+                }],
+                None,
+            )
+            .await
+            .unwrap();
+        assert!(matches!(
+            tokio::time::timeout(Duration::from_secs(15), rx)
+                .await
+                .unwrap()
+                .unwrap(),
+            ExecutorExitResult::Success
+        ));
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+        drop(client);
+        drop(seed_guard);
+        let native = first_run::native(&thread).await.unwrap();
+        assert_eq!(native.status, "paused");
+        let path = goals::progress_path(&thread).unwrap();
+        assert!(!path.exists());
+        let session = Uuid::new_v4();
+        let workspace = Uuid::new_v4();
+        let seed_execution = Uuid::new_v4();
+        let seed_turn = Uuid::new_v4();
+        let database = home.join(format!("fixture-vk-{index}.sqlite"));
+        let mut db = sqlx::SqliteConnection::connect_with(
+            &SqliteConnectOptions::new()
+                .filename(&database)
+                .create_if_missing(true),
+        )
+        .await
+        .unwrap();
+        for ddl in [
+            "CREATE TABLE workspaces(id BLOB PRIMARY KEY,container_ref TEXT,archived INTEGER,worktree_deleted INTEGER)",
+            "CREATE TABLE sessions(id BLOB PRIMARY KEY,workspace_id BLOB,executor TEXT,agent_working_dir TEXT)",
+            "CREATE TABLE execution_processes(id BLOB PRIMARY KEY,session_id BLOB,run_reason TEXT,dropped INTEGER,status TEXT,exit_code INTEGER,created_at INTEGER)",
+            "CREATE TABLE coding_agent_turns(id BLOB PRIMARY KEY,execution_process_id BLOB,agent_session_id TEXT,agent_message_id TEXT,summary TEXT)",
+        ] {
+            sqlx::query(ddl).execute(&mut db).await.unwrap();
+        }
+        sqlx::query("INSERT INTO workspaces VALUES(?,?,0,0)")
+            .bind(workspace)
+            .bind(work.to_string_lossy().as_ref())
+            .execute(&mut db)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO sessions VALUES(?,?,'codex',NULL)")
+            .bind(session)
+            .bind(workspace)
+            .execute(&mut db)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO execution_processes VALUES(?,?,'codingagent',0,'completed',0,1)")
+            .bind(seed_execution)
+            .bind(session)
+            .execute(&mut db)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO coding_agent_turns VALUES(?,?,?,?,'Existing synthetic paused goal seed anchor.')").bind(seed_turn).bind(seed_execution).bind(&thread).bind(&started.turn.id).execute(&mut db).await.unwrap();
+        let binding = first_run::binding(&database, session, &thread, None)
+            .await
+            .unwrap();
+        let controller = crate::capacity::controller::configured().unwrap().unwrap();
+        let selected = ManagedGoal {
+            goal_id: native.goal_id.clone(),
+            initialization_state: InitializationState::Pending,
+            binding: Some(binding),
+            initialization_receipt: None,
+            session_id: session,
+            thread_id: thread.clone(),
+            objective: native.objective.clone(),
+            created_at: native.created_at,
+            eligible: true,
+            reason: String::new(),
+            grant: None,
+        };
+        selected.revalidate(None, false).await.unwrap();
+        controller.lock().await.enroll(selected).unwrap();
+        assert!(!path.exists());
+        assert_eq!(first_run::native(&thread).await.unwrap().status, "paused");
+        // A late changed objective/anchor is rejected before the provider starts.
+        sqlx::query("UPDATE coding_agent_turns SET agent_message_id='changed'")
+            .execute(&mut db)
+            .await
+            .unwrap();
+        assert!(
+            controller.lock().await.state.goals[&session]
+                .revalidate(None, false)
+                .await
+                .is_err()
+        );
+        sqlx::query("UPDATE coding_agent_turns SET agent_message_id=?")
+            .bind(&started.turn.id)
+            .execute(&mut db)
+            .await
+            .unwrap();
+        let variant = std::env::var("VK_SCHEDULED_FIRST_RUN_VARIANT").unwrap();
+        let stalled = variant.starts_with("stalled-");
+        let codex: Codex = serde_json::from_value(
+            serde_json::json!({"model":"fixture","model_provider":"fixture",
+            "sandbox":"danger-full-access","ask_for_approval":"never","plan":variant == "plan",
+            "base_command_override":std::env::var("VK_CODEX_BASE_COMMAND").unwrap()}),
+        )
+        .unwrap();
+        let runs = if variant == "success" {
+            vec![true, false]
+        } else {
+            vec![true]
+        };
+        for first in runs {
+            let execution = Uuid::new_v4();
+            let now = crate::capacity::wall_ms();
+            let (request, prepared) = {
+                let mut c = controller.lock().await;
+                // Concurrent grants share the actual scheduled window cutoff;
+                // admission deliberately rejects differing hard deadlines.
+                let stop_at = c
+                    .state
+                    .goals
+                    .values()
+                    .find_map(|g| g.grant.as_ref().map(|grant| grant.stop_at_ms))
+                    .unwrap_or(now + 12000);
+                let request = c
+                    .issue_with_first_run(
+                        session,
+                        Uuid::new_v4(),
+                        "synthetic-included-night".into(),
+                        now + if variant == "stalled-expiry" {
+                            7000
+                        } else {
+                            9000
+                        },
+                        stop_at,
+                        now,
+                        first.then(|| first_run::FirstRun::from_native(&native)),
+                        None,
+                    )
+                    .unwrap();
+                sqlx::query(
+                    "INSERT INTO execution_processes VALUES(?,?,'codingagent',0,'running',NULL,2)",
+                )
+                .bind(execution)
+                .bind(session)
+                .execute(&mut db)
+                .await
+                .unwrap();
+                c.state.goals[&session]
+                    .revalidate(Some(execution), false)
+                    .await
+                    .unwrap();
+                c.bind(&request, &thread, execution, crate::capacity::wall_ms())
+                    .unwrap();
+                let prepared = request.prepare(&execution.to_string()).unwrap();
+                (request, prepared)
+            };
+            if variant == "race" {
+                let mut native_db = sqlx::SqliteConnection::connect_with(
+                    &SqliteConnectOptions::new().filename(home.join("goals_1.sqlite")),
+                )
+                .await
+                .unwrap();
+                sqlx::query("UPDATE thread_goals SET objective=? WHERE thread_id=?")
+                    .bind(format!("{} (raced)", native.objective))
+                    .bind(&thread)
+                    .execute(&mut native_db)
+                    .await
+                    .unwrap();
+            }
+            let mut env =
+                ExecutionEnv::new(RepoContext::new(work.clone(), vec![]), false, String::new());
+            env.insert("VK_EXECUTION_PROCESS_ID", execution.to_string());
+            env.insert("CODEX_HOME", home.to_string_lossy().into_owned());
+            env.insert("VK_SESSION_ID", session.to_string());
+            env.insert("VK_WORKSPACE_ID", workspace.to_string());
+            env.insert(
+                "VK_GOAL_TEST_SCENARIO",
+                if variant == "success" || variant == "race" || variant == "plan" {
+                    "capacity-first-run"
+                } else if stalled {
+                    "capacity-first-run-stalled"
+                } else if variant == "empty" {
+                    "capacity-first-run-empty"
+                } else if variant == "input" {
+                    "capacity-first-run-input"
+                } else {
+                    "capacity-first-run-failure"
+                },
+            );
+            env.insert(
+                "VK_STALLED_TIMELINE",
+                format!("stalled-provider-timeline-{index}.jsonl"),
+            );
+            env.capacity = Some(prepared);
+            let mut spawned = codex
+                .spawn_follow_up(&work, "/goal resume", &thread, None, &env)
+                .await
+                .unwrap();
+            let stdout = spawned.child.inner().stdout.take().unwrap();
+            let log = home.join(format!("first-run-{execution}.jsonl"));
+            let drain = tokio::spawn(async move {
+                let mut stdout = stdout;
+                let mut out = tokio::fs::File::create(log).await.unwrap();
+                tokio::io::copy(&mut stdout, &mut out).await.unwrap();
+            });
+            if stalled {
+                let timeline = home.join(format!("stalled-provider-timeline-{index}.jsonl"));
+                tokio::time::timeout(Duration::from_secs(4), async {
+                    while !timeline.exists() {
+                        sleep(Duration::from_millis(10)).await;
+                    }
+                })
+                .await
+                .unwrap();
+                let client = active_codex_clients()
+                    .lock()
+                    .unwrap()
+                    .get(&execution)
+                    .and_then(Weak::upgrade)
+                    .unwrap();
+                // Stall the actual first graceful-stop mutex await. The
+                // controller runtime still runs; its OS worker is independent.
+                let held_thread = client.thread_id.lock().await;
+                let lease =
+                    capacity_guard::read_lease(std::path::Path::new(&request.lease_file)).unwrap();
+                let held_at_ms = crate::capacity::wall_ms();
+                let observed_exit = tokio::spawn(async move {
+                    let unit = crate::capacity::unit_name(execution);
+                    let shutdown = tokio::time::timeout(Duration::from_secs(12), async {
+                        loop {
+                            let output = Command::new("systemctl")
+                                .args([
+                                    "--user",
+                                    "show",
+                                    &unit,
+                                    "--property=LoadState",
+                                    "--property=ActiveState",
+                                    "--property=ControlGroup",
+                                ])
+                                .kill_on_drop(true)
+                                .output()
+                                .await
+                                .unwrap();
+                            let text = String::from_utf8(output.stdout).unwrap();
+                            let fields: std::collections::HashMap<_, _> = text
+                                .lines()
+                                .filter_map(|line| line.split_once('='))
+                                .collect();
+                            if fields.get("LoadState") == Some(&"not-found") {
+                                break text;
+                            }
+                            assert!(output.status.success());
+                            if matches!(fields.get("ActiveState"), Some(&"inactive" | &"failed")) {
+                                let group = fields.get("ControlGroup").unwrap();
+                                assert!(
+                                    group.is_empty()
+                                        || (group.starts_with('/') && !group.contains(".."))
+                                );
+                                if group.is_empty() {
+                                    break text;
+                                }
+                                match tokio::fs::read_to_string(format!(
+                                    "/sys/fs/cgroup{group}/cgroup.events"
+                                ))
+                                .await
+                                {
+                                    Ok(events)
+                                        if events.lines().any(|line| line == "populated 0") =>
+                                    {
+                                        break text;
+                                    }
+                                    Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                                        break text;
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            sleep(Duration::from_millis(10)).await;
+                        }
+                    })
+                    .await
+                    .unwrap();
+                    (crate::capacity::wall_ms(), shutdown)
+                });
+                ready.wait().await;
+                let response_started = std::time::Instant::now();
+                let revocation = if variant != "stalled-expiry" {
+                    if index == 0 {
+                        let before = crate::capacity::wall_ms();
+                        controller
+                            .lock()
+                            .await
+                            .revoke_all("Synthetic stalled graceful stop", None)
+                            .unwrap();
+                        let after = crate::capacity::wall_ms();
+                        assert!(
+                            capacity_guard::read_lease(std::path::Path::new(&request.lease_file))
+                                .unwrap()
+                                .revoked
+                        );
+                        std::fs::write(
+                            home.join("stop-revocation.json"),
+                            serde_json::to_vec(&(before, after)).unwrap(),
+                        )
+                        .unwrap();
+                        let grants: Vec<_> = controller
+                            .lock()
+                            .await
+                            .state
+                            .goals
+                            .values()
+                            .filter_map(|g| g.grant.clone().map(|grant| (g.session_id, grant)))
+                            .collect();
+                        let state = crate::capacity::controller::stop_revoked_grants(
+                            controller,
+                            grants,
+                            "Synthetic stalled graceful stop".into(),
+                        )
+                        .await
+                        .unwrap();
+                        assert!(state.goals.values().all(|g| g.grant.is_none()));
+                        let elapsed = response_started.elapsed().as_millis() as u64;
+                        assert!(
+                            elapsed < 8000,
+                            "Stop/reconciliation must fit CU's 10s request budget"
+                        );
+                        std::fs::write(home.join("stop-response.json"), serde_json::to_vec(&serde_json::json!({"workers": if variant == "stalled-two" { 2 } else { 1 }, "responseElapsedMs": elapsed, "verified": true})).unwrap()).unwrap();
+                    }
+                    finished.wait().await;
+                    Some(
+                        serde_json::from_slice::<(u64, u64)>(
+                            &std::fs::read(home.join("stop-revocation.json")).unwrap(),
+                        )
+                        .unwrap(),
+                    )
+                } else {
+                    None
+                };
+                let graceful = if revocation.is_none() {
+                    Some(tokio::spawn(async move {
+                        let result = AppServerClient::suspend_capacity_execution(
+                            execution,
+                            "Synthetic stalled graceful stop".into(),
+                        )
+                        .await;
+                        (crate::capacity::wall_ms(), result)
+                    }))
+                } else {
+                    None
+                };
+                // The expiry case uses no explicit OS stop or cancellation.
+                // Revocation cases use the same bounded helper as HTTP stop.
+                tokio::time::timeout(Duration::from_secs(10), spawned.child.wait())
+                    .await
+                    .unwrap()
+                    .unwrap();
+                let proxy_exit_ms = crate::capacity::wall_ms();
+                let (worker_exit_ms, shutdown) = observed_exit.await.unwrap();
+                // Expiry still proves independent guard containment without
+                // explicit OS stop. The graceful future must now terminate even
+                // while its thread mutex remains held.
+                let graceful_completed_ms = if let Some(graceful) = graceful {
+                    let (completed, result) =
+                        tokio::time::timeout(Duration::from_millis(2100), graceful)
+                            .await
+                            .unwrap()
+                            .unwrap();
+                    result.unwrap_err();
+                    assert!(completed <= held_at_ms + 2300);
+                    Some(completed)
+                } else {
+                    None
+                };
+                let events_before = std::fs::read(&timeline).unwrap();
+                sleep(Duration::from_millis(300)).await;
+                assert_eq!(
+                    std::fs::read(&timeline).unwrap(),
+                    events_before,
+                    "Provider activity must stop with its worker"
+                );
+                let events: Vec<serde_json::Value> = std::str::from_utf8(&events_before)
+                    .unwrap()
+                    .lines()
+                    .map(|line| serde_json::from_str(line).unwrap())
+                    .collect();
+                let requests: Vec<_> = events
+                    .iter()
+                    .filter(|event| event["event"] == "providerRequest")
+                    .collect();
+                assert_eq!(requests.len(), 1, "No additional provider request or retry");
+                let last_request_ms = requests[0]["wallMs"].as_u64().unwrap();
+                let last_activity_ms = events
+                    .iter()
+                    .filter(|event| event["event"] == "providerActive")
+                    .map(|event| event["wallMs"].as_u64().unwrap())
+                    .max()
+                    .unwrap();
+                let termination_ms = events
+                    .iter()
+                    .find(|event| event["event"] == "providerTerminating")
+                    .unwrap()["wallMs"]
+                    .as_u64()
+                    .unwrap();
+                let boundary_ms = revocation.map_or(lease.expires_at_ms, |(_, after)| after);
+                // 100ms guard poll + 250ms group kill + 1s cgroup stop;
+                // retain 150ms observation tolerance, never extend hard stop.
+                // Response may include the full 2s graceful budget after the
+                // independently revoked worker already exited. Use the provider
+                // termination timestamp for containment, and cgroup verification
+                // as observed independently by the stop helper.
+                assert!(termination_ms <= boundary_ms + 1500);
+                assert!(worker_exit_ms <= boundary_ms + 1500);
+                assert!(worker_exit_ms < lease.stop_at_ms);
+                assert!(last_request_ms < boundary_ms);
+                assert!(last_activity_ms <= boundary_ms + 1500);
+                assert!(termination_ms <= worker_exit_ms);
+                if revocation.is_none() {
+                    assert!(
+                        termination_ms >= lease.expires_at_ms,
+                        "Expiry case must reach the independent lease fence"
+                    );
+                }
+                let reconciled_at_ms = crate::capacity::wall_ms();
+                let mut c = controller.lock().await;
+                c.revoke_session(
+                    session,
+                    "Verified independent worker exit; retain first-run hold",
+                )
+                .unwrap();
+                let held = &c.state.goals[&session];
+                assert_eq!(held.initialization_state, InitializationState::Held);
+                assert!(!held.eligible);
+                assert_eq!(held.identity(), first_run::FirstRun::from_native(&native));
+                assert!(
+                    held.initialization_receipt
+                        .as_ref()
+                        .unwrap()
+                        .checkpoint_turn_id
+                        .is_none()
+                );
+                let retained_receipt = held.initialization_receipt.clone();
+                if revocation.is_none() {
+                    let mut unknown = c.state.goals[&session].grant.clone().unwrap();
+                    unknown.execution_id = Some(Uuid::new_v4());
+                    drop(c);
+                    // The private broker denies unregistered unit inspection.
+                    // No exit verification means no reconciliation, even when
+                    // the native row is active and a worker previously exited.
+                    let unconfirmed = crate::capacity::controller::stop_revoked_grants(
+                        controller,
+                        vec![(session, unknown)],
+                        "Synthetic unverifiable exit".into(),
+                    )
+                    .await
+                    .unwrap();
+                    let held = &unconfirmed.goals[&session];
+                    assert!(held.grant.as_ref().unwrap().stopping);
+                    assert_eq!(held.initialization_state, InitializationState::Held);
+                    assert!(!held.eligible);
+                    assert_eq!(
+                        serde_json::to_value(&held.initialization_receipt).unwrap(),
+                        serde_json::to_value(&retained_receipt).unwrap()
+                    );
+                    c = controller.lock().await;
+
+                    c.stopped(
+                        session,
+                        Uuid::parse_str(&request.id).unwrap(),
+                        "Independent guarded exit verified".into(),
+                    )
+                    .unwrap();
+                }
+                assert!(c.state.goals[&session].grant.is_none());
+                assert_eq!(
+                    serde_json::to_value(&c.state.goals[&session].initialization_receipt).unwrap(),
+                    serde_json::to_value(&retained_receipt).unwrap()
+                );
+                assert!(
+                    c.issue_with_first_run(
+                        session,
+                        Uuid::new_v4(),
+                        "synthetic-included-night".into(),
+                        now + 20000,
+                        now + 30000,
+                        crate::capacity::wall_ms(),
+                        Some(first_run::FirstRun::from_native(&native)),
+                        None
+                    )
+                    .is_err()
+                );
+                drop(c);
+                let preserved_native = first_run::native(&thread).await.unwrap();
+                assert_eq!(
+                    preserved_native.status, "active",
+                    "A blocked pause RPC must not fabricate persisted paused state"
+                );
+                assert_eq!(
+                    first_run::FirstRun::from_native(&preserved_native),
+                    first_run::FirstRun::from_native(&native)
+                );
+                std::fs::write(home.join(format!("stalled-stop-measurements-{index}.json")), serde_json::to_vec_pretty(&serde_json::json!({
+                    "variant": variant, "executionId": execution, "grantId": request.id,
+                    "lastLeaseExpiryMs": lease.expires_at_ms, "hardStopMs": lease.stop_at_ms,
+                    "gracefulLockHeldMs": held_at_ms, "gracefulAttemptCompletedMs": graceful_completed_ms,
+                    "revocationBeforeMs": revocation.map(|(before, _)| before),
+                    "revocationConfirmedMs": revocation.map(|(_, after)| after),
+                    "lastProviderRequestMs": last_request_ms, "providerRequestCount": requests.len(),
+                    "lastProviderActivityMs": last_activity_ms, "providerTerminatingMs": termination_ms,
+                    "proxyExitObservedMs": proxy_exit_ms, "workerExitObservedMs": worker_exit_ms,
+                    "workerState": shutdown, "gracefulAttemptBounded": true,
+                    "containmentObservationAllowanceMs": 1500, "reconciledAtMs": reconciled_at_ms,
+                    "firstRunHeld": true, "identityAndReceiptRetained": true, "nativeStatus": preserved_native.status,
+                    "explicitOsStopRequested": revocation.is_some(),
+                })).unwrap()).unwrap();
+                // Test-owned stalled task only. Do not turn delayed native RPC
+                // into a success receipt or discard the retained goal/hold.
+                drop(held_thread);
+                if let Some(cancel) = spawned.cancel {
+                    cancel.cancel();
+                }
+                drop(client); // Release the test-owned log writer before EOF.
+                tokio::time::timeout(Duration::from_secs(4), drain)
+                    .await
+                    .unwrap()
+                    .unwrap();
+                continue;
+            }
+            let outcome =
+                tokio::time::timeout(Duration::from_secs(14), spawned.exit_signal.take().unwrap())
+                    .await
+                    .unwrap()
+                    .unwrap();
+            if variant == "success" {
+                assert!(matches!(outcome, ExecutorExitResult::Success));
+            }
+            tokio::time::timeout(Duration::from_secs(5), spawned.child.wait())
+                .await
+                .unwrap()
+                .unwrap();
+            if let Some(cancel) = spawned.cancel {
+                cancel.cancel();
+            }
+            drain.await.unwrap();
+            if variant != "success" {
+                let c = controller.lock().await;
+                assert_eq!(
+                    c.state.goals[&session].initialization_state,
+                    InitializationState::Held
+                );
+                assert!(!c.state.goals[&session].eligible);
+                let root_checkpoint = c.state.goals[&session]
+                    .initialization_receipt
+                    .as_ref()
+                    .unwrap()
+                    .checkpoint_turn_id
+                    .is_some();
+                // Plan admission stops before model work, as do the other holds.
+                assert!(!root_checkpoint);
+                drop(c);
+                if variant == "failure" {
+                    assert_eq!(
+                        std::fs::read_to_string(home.join("first-run-provider-count")).unwrap(),
+                        "1"
+                    );
+                }
+                let preserved = first_run::native(&thread).await.unwrap();
+                if variant == "race" {
+                    assert!(preserved.objective.ends_with(" (raced)"));
+                    assert_eq!(preserved.goal_id, native.goal_id);
+                    assert!(!path.exists());
+                    assert!(!home.join("capacity-tools.json").exists());
+                } else {
+                    assert_eq!(
+                        first_run::FirstRun::from_native(&preserved),
+                        first_run::FirstRun::from_native(&native)
+                    );
+                }
+                controller
+                    .lock()
+                    .await
+                    .stopped(
+                        session,
+                        Uuid::parse_str(&request.id).unwrap(),
+                        "Verified held first-run process exit".into(),
+                    )
+                    .unwrap();
+                assert!(
+                    controller
+                        .lock()
+                        .await
+                        .issue(
+                            session,
+                            Uuid::new_v4(),
+                            "synthetic-included-night".into(),
+                            now + 20000,
+                            now + 30000,
+                            now
+                        )
+                        .is_err()
+                );
+                continue;
+            }
+            let c = controller.lock().await;
+            assert_eq!(
+                c.state.goals[&session].initialization_state,
+                InitializationState::Checkpointed
+            );
+            assert!(
+                c.state.goals[&session]
+                    .initialization_receipt
+                    .as_ref()
+                    .unwrap()
+                    .checkpoint_turn_id
+                    .is_some()
+            );
+            drop(c);
+            let progress = first_run::read_progress(&native).unwrap().unwrap();
+            first_run::valid_checklist(&progress).unwrap();
+            assert!(progress.turns >= 1);
+            assert!(progress.pause_reason.is_none());
+            let after = first_run::native(&thread).await.unwrap();
+            assert_eq!(after.status, "paused");
+            assert_eq!(
+                first_run::FirstRun::from_native(&after),
+                first_run::FirstRun::from_native(&native)
+            );
+            sqlx::query("UPDATE execution_processes SET status='completed',exit_code=0 WHERE id=?")
+                .bind(execution)
+                .execute(&mut db)
+                .await
+                .unwrap();
+            controller
+                .lock()
+                .await
+                .stopped(
+                    session,
+                    Uuid::parse_str(&request.id).unwrap(),
+                    "Verified isolated process exit".into(),
+                )
+                .unwrap();
+        }
+    }
+
+    #[tokio::test]
     #[ignore = "requires isolated CODEX_HOME; offline unless VK_GOAL_TEST_SCENARIO=real explicitly opts into model usage"]
     async fn native_goal_runtime() {
         let home = std::env::var("CODEX_HOME").expect("isolated CODEX_HOME");
@@ -2212,6 +3304,8 @@ for line in sys.stdin:
             assert_eq!(scenario, "capacity-expiry");
             let now = crate::capacity::wall_ms();
             crate::capacity::CapacityExecution {
+                first_run: None,
+                controller_revision: 0,
                 issuer_epoch: crate::capacity::issuer_epoch().into(),
                 id: Uuid::new_v4().to_string(),
                 allocation_id: "old-week:day".into(),
@@ -2392,6 +3486,7 @@ for line in sys.stdin:
                 std::fs::write(&file, serde_json::to_vec(&lease).unwrap()).unwrap();
                 std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o600)).unwrap();
                 client.watch_capacity(crate::capacity::PreparedCapacity {
+                    first_run: None,
                     file,
                     guard: std::path::PathBuf::new(),
                     lease,

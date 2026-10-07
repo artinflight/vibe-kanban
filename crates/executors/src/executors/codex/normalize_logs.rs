@@ -1546,6 +1546,76 @@ fn normalize_codex_stderr_logs(
     })
 }
 
+// Deployed Codex emits these notifications, but the pinned protocol crate
+// predates them. Validate only these exact additions; all other native events
+// still use the typed SDK parser. They carry no assistant text or entry index.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ReviewGoalCleared {
+    thread_id: String,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ReviewSleepItem {
+    #[serde(rename = "type")]
+    kind: String,
+    id: String,
+    #[serde(rename = "durationMs")]
+    _duration_ms: u64,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ReviewSleepNotification {
+    thread_id: String,
+    turn_id: String,
+    item: ReviewSleepItem,
+    started_at_ms: Option<u64>,
+    completed_at_ms: Option<u64>,
+}
+
+/// Review-only validation before invoking the UI normalizer. A malformed native
+/// event must not disappear through the UI's best-effort recovery parser.
+pub fn validate_review_line(line: &str) -> std::io::Result<()> {
+    let invalid = || std::io::Error::other("Invalid native event in review log");
+    let value: Value = serde_json::from_str(line).map_err(|_| invalid())?;
+    if !value.is_object() {
+        return Err(invalid());
+    }
+    if let Some(method) = value["method"].as_str() {
+        if method == "thread/goal/cleared" {
+            let event: ReviewGoalCleared =
+                serde_json::from_value(value["params"].clone()).map_err(|_| invalid())?;
+            if event.thread_id.trim().is_empty() {
+                return Err(invalid());
+            }
+        } else if matches!(method, "item/started" | "item/completed")
+            && value["params"]["item"]["type"] == "sleep"
+        {
+            let event: ReviewSleepNotification =
+                serde_json::from_value(value["params"].clone()).map_err(|_| invalid())?;
+            if event.thread_id.trim().is_empty()
+                || event.turn_id.trim().is_empty()
+                || event.item.id.trim().is_empty()
+                || event.item.kind != "sleep"
+                || (method == "item/started" && event.started_at_ms.is_none())
+                || (method == "item/completed" && event.completed_at_ms.is_none())
+            {
+                return Err(invalid());
+            }
+        } else if method.starts_with("codex/event") {
+            serde_json::from_value::<CodexNotificationParams>(value["params"].clone())
+                .map_err(|_| invalid())?;
+        } else if method.starts_with("item/")
+            || method.starts_with("turn/")
+            || method.starts_with("thread/")
+            || method == "error"
+        {
+            super::jsonrpc::parse_server_notification(line).map_err(|_| invalid())?;
+        }
+    }
+    Ok(())
+}
+
 pub fn normalize_logs(
     msg_store: Arc<MsgStore>,
     worktree_path: &Path,
@@ -2917,6 +2987,63 @@ mod tests {
     use crate::logs::{
         ActionType, NormalizedEntryType, utils::patch::extract_normalized_entry_from_patch,
     };
+
+    #[test]
+    fn review_accepts_historical_goal_clear_and_sleep_lifecycle() {
+        for line in include_str!("fixtures/review-goal-sleep.jsonl").lines() {
+            validate_review_line(line).unwrap();
+        }
+    }
+
+    #[test]
+    fn review_rejects_damaged_goal_and_sleep_events() {
+        for line in include_str!("fixtures/review-goal-sleep.jsonl").lines() {
+            let original: Value = serde_json::from_str(line).unwrap();
+            let mut damaged = original.clone();
+            damaged["params"]
+                .as_object_mut()
+                .unwrap()
+                .remove("threadId");
+            assert!(validate_review_line(&damaged.to_string()).is_err());
+            damaged = original.clone();
+            damaged["params"]["threadId"] = json!("");
+            assert!(validate_review_line(&damaged.to_string()).is_err());
+            assert!(validate_review_line(&line[..line.len() - 1]).is_err());
+            if original["params"]["item"]["type"] == "sleep" {
+                for pointer in [
+                    "/params/turnId",
+                    "/params/item/id",
+                    "/params/item/durationMs",
+                ] {
+                    damaged = original.clone();
+                    *damaged.pointer_mut(pointer).unwrap() = Value::Null;
+                    assert!(validate_review_line(&damaged.to_string()).is_err());
+                }
+                for duration in [json!(-1), json!(1.5), json!("20000")] {
+                    damaged = original.clone();
+                    damaged["params"]["item"]["durationMs"] = duration;
+                    assert!(validate_review_line(&damaged.to_string()).is_err());
+                }
+                damaged = original.clone();
+                let key = if damaged["method"] == "item/started" {
+                    "startedAtMs"
+                } else {
+                    "completedAtMs"
+                };
+                damaged["params"].as_object_mut().unwrap().remove(key);
+                assert!(validate_review_line(&damaged.to_string()).is_err());
+                damaged = original.clone();
+                damaged["params"]["item"]["type"] = json!("unknownNativeItem");
+                assert!(validate_review_line(&damaged.to_string()).is_err());
+            }
+        }
+        assert!(
+            validate_review_line(
+                r#"{"method":"thread/goal/unknown","params":{"threadId":"fixture"}}"#
+            )
+            .is_err()
+        );
+    }
 
     fn latest_normalized_entries(msg_store: &MsgStore) -> Vec<NormalizedEntry> {
         let mut entries = BTreeMap::new();

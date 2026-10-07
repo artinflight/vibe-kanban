@@ -1,3 +1,52 @@
+## October7 historical-log and CI compatibility repair — isolated
+
+The isolated review candidate now explicitly validates deployed goal-cleared and
+sleep lifecycle notifications missing from its pinned SDK, with sanitized real
+historical-format and damaged-variant coverage. CI fixtures require debug assets
+in their compiled checkout, optional exact-root binding, and SSD storage on MCP;
+the host-installed connector test runs separately and explicitly. Narrow error
+return types resolve the two new Clippy failures without lint suppression.
+Strict file/hash/writer-closure, receipt/hold/lifecycle guarantees remain intact.
+See VK_CONNECTOR_COMPATIBILITY_20261007.md for exact acceptance and limits.
+Staging/production, live receipts and badges are untouched; root owns integration.
+
+## October7 connector review repair — isolated, undeployed
+
+The separate fix/e3e1-review-log-integrity candidate repairs deletion references,
+loss-aware raw capture and strict durable report verification. It preserves user
+holds/manual intent; no live badges or Vibe services changed. See
+VK_CONNECTOR_REPAIR_20261007.md for compiled acceptance and caller/deployment gaps.
+
+## October 7 Integration Is Not Deployment
+
+The production instance remains the October5 release. PR1479b3f82538 and
+PR148cb0b441a2 are combined only in an isolated preparation branch; neither
+staging nor main is moved. The required connector patch is not yet included.
+PR147 has compatible latest-v2 rollback requirements; the old live executable
+must not be used to read new durable holds. Recommend remains required.
+
+## October 6: Scheduled first-run development boundary
+
+VK scheduled initialization is being implemented on a separate development
+branch at staging `8b562265d`. It is not deployed. The default-off service gate
+must remain off until compatible CU and combined private-API/native acceptance
+are verified by the staging owner. Recommend and the existing scheduling
+restrictions remain authoritative. Version-2 controller receipts require a
+compatible rollback reader. See VK_SCHEDULED_FIRST_RUN.md for exact requirements.
+## October 7: AutoSwitch reload boundary invariant
+
+Prompt classification and inferred follow-up qualification belong to the reviewed,
+versioned module. The backend's fallback prompt guess cannot veto a newer policy.
+VK-read repository and input-completeness facts, reported native/current risks, explicit manual/child
+floors, exclusions, failure escalation and execution lifecycle remain core guards.
+Protection follows relevant current work, not a permanent chat label; completed
+bounded steps preserve their surrounding assignment for generic continuation.
+Internal protocol 2 deliberately rejects incompatible old modules/validators.
+One owner backend adoption is required to remove the old duplicate classifier;
+subsequent ordinary policy changes must work without backend restarts. See
+VK_AUTOSWITCH_RELOAD.md. Recommend remains required; no live adoption or Auto
+activation is performed by development. VK::Staging owns adoption/cutover.
+
 ## October 1: AutoSwitch scope release preparation
 
 PR134/135 merged the downward-routing scope correction into staging/main. It is

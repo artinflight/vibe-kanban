@@ -218,12 +218,64 @@ fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
     result
 }
 
-/// Infer an outcome + object + surface, then corroborate inexpensive implementation evidence.
-/// Unknown or compound outcomes remain unknown instead of requiring engineering labels.
-pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
+/// Facts read by VK, separately from replaceable prompt interpretation. A named
+/// component can be protected even when the request includes harmless cautions.
+pub fn repository_context(prompt: &str, root: Option<&Path>) -> TaskTriage {
+    let mut result = unknown();
+    // A bounded classifier must not silently miss requirements beyond its input.
+    // This is an observed budget fact, independent of any prompt-language rule.
+    if prompt.chars().nth(6144).is_some() {
+        result
+            .risk
+            .push("classification_input_exceeds_bound".into());
+        result
+            .evidence
+            .push("request_not_fully_visible_to_module".into());
+    }
+    let Some(root) = root else {
+        return result;
+    };
+    static SURFACE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\b([a-z][a-z0-9-]{2,24}) (page|screen|dialog|panel|form|menu)\b").unwrap()
+    });
     let text = prompt.to_lowercase();
-    let has = |terms: &[&str]| terms.iter().any(|term| text.contains(term));
-    let mut result = TaskTriage {
+    let mut surfaces = SURFACE.captures_iter(&text);
+    let Some(surface) = surfaces.next() else {
+        return result;
+    };
+    if surfaces.next().is_some() {
+        return result;
+    }
+    let repo = inspect(root, &surface[1], true);
+    result.inspected_entries = repo.entries;
+    result.inspected_files = repo.files;
+    if repo.protected {
+        result.risk.push("protected_component_context".into());
+        result
+            .evidence
+            .push("matched_component_references_protected_subsystem".into());
+    }
+    if repo.surface {
+        result.evidence.push("existing_ui_surface".into());
+    }
+    if repo.pattern {
+        result.pattern = "existing_ui_pattern".into();
+    }
+    if repo.validation {
+        result.validation = "package_check_available_not_run".into();
+    }
+    if repo.incomplete {
+        result
+            .evidence
+            .push("inspection_incomplete_or_budget_exhausted".into());
+    }
+    result.needs_repo_inspection =
+        !(repo.surface && repo.pattern && repo.validation && !repo.incomplete);
+    result
+}
+
+fn unknown() -> TaskTriage {
+    TaskTriage {
         version: 1,
         intent: "unknown".into(),
         scope: "unknown".into(),
@@ -237,7 +289,15 @@ pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
         evidence: vec![],
         inspected_entries: 0,
         inspected_files: 0,
-    };
+    }
+}
+
+/// Infer an outcome + object + surface, then corroborate inexpensive implementation evidence.
+/// Unknown or compound outcomes remain unknown instead of requiring engineering labels.
+pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
+    let text = prompt.to_lowercase();
+    let has = |terms: &[&str]| terms.iter().any(|term| text.contains(term));
+    let mut result = unknown();
     // Plain-language consequences override apparently small visual changes.
     if has(&[
         "sign in",
@@ -454,6 +514,41 @@ mod tests {
             assert!(!result.triage.needs_repo_inspection);
             assert!(result.triage.inspected_files <= 8);
         }
+    }
+
+    #[test]
+    fn immutable_repository_context_survives_scope_cautions_and_changes_to_prompt_rules() {
+        let repo = Repo::new();
+        let prompt = "Add a tooltip to the settings page. No production deployment.";
+        let context = super::repository_context(prompt, Some(&repo.0));
+        assert!(context.risk.is_empty());
+        assert!(!context.needs_repo_inspection);
+        assert!(context.inspected_files > 0 && context.inspected_files <= 8);
+        assert_eq!(context.intent, "unknown"); // facts, not a second classifier
+        std::fs::write(repo.0.join("src/pages/Settings.tsx"),
+            "import {checkPermissions} from './permissions'; export const Settings = () => <Tooltip/>;").unwrap();
+        let context = super::repository_context(prompt, Some(&repo.0));
+        assert!(context.risk.contains(&"protected_component_context".into()));
+        let mut assessment = crate::routing_assessment::assess(prompt);
+        crate::routing_assessment::apply_repository_context(&mut assessment, &context);
+        assert_eq!(assessment.floor, CapabilityFloor::Frontier);
+    }
+
+    #[test]
+    fn omitted_prompt_tail_cannot_hide_risk_from_bounded_module() {
+        let prompt = format!(
+            "Fix spelling typos in README.md. {} Change authentication permissions.",
+            " ".repeat(6144)
+        );
+        let context = super::repository_context(&prompt, None);
+        assert!(
+            context
+                .risk
+                .contains(&"classification_input_exceeds_bound".into())
+        );
+        let mut assessment = crate::routing_assessment::assess("Fix spelling typos in README.md");
+        crate::routing_assessment::apply_repository_context(&mut assessment, &context);
+        assert_eq!(assessment.floor, CapabilityFloor::Frontier);
     }
 
     #[test]

@@ -1,3 +1,17 @@
+## October 7: AutoSwitch reload boundary invariant
+
+Prompt classification and inferred follow-up qualification belong to the reviewed,
+versioned module. The backend's fallback prompt guess cannot veto a newer policy.
+VK-read repository and input-completeness facts, reported native/current risks, explicit manual/child
+floors, exclusions, failure escalation and execution lifecycle remain core guards.
+Protection follows relevant current work, not a permanent chat label; completed
+bounded steps preserve their surrounding assignment for generic continuation.
+Internal protocol 2 deliberately rejects incompatible old modules/validators.
+One owner backend adoption is required to remove the old duplicate classifier;
+subsequent ordinary policy changes must work without backend restarts. See
+VK_AUTOSWITCH_RELOAD.md. Recommend remains required; no live adoption or Auto
+activation is performed by development. VK::Staging owns adoption/cutover.
+
 ## October 1: AutoSwitch scope release preparation
 
 PR134/135 merged the downward-routing scope correction into staging/main. It is

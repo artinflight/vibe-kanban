@@ -1,5 +1,14 @@
 # October 7 Desktop-backed Recovery Integration
 
+Later independent-review finding: read VK_RESTORE_HARDLINK_REVIEW_20261007.md.
+The current reader fails two private atomic-replacement hardlink cases while
+reporting success. A process-local detach-before-write prototype passes all four
+cases, but no source fix is adopted. Authenticated inventories have ZERO hardlink
+entries across all27archives, so this specific mechanism is absent there; no user
+data loss is established. Keep generic recovery readiness and archive retirement
+held pending correction/capacity/approval. The earlier176-test pass omitted this
+case. Exact guarded restore roots and fresh capacity gaps are in the review.
+
 Read `VK_DESKTOP_BACKED_RECOVERY.md` and the current receipts under
 `/mnt/vk-storage/vk-desktop-backup-20261007/`. New capture/restore tools use exact
 Desktop locators, including legacy descriptor bindings. New package installation

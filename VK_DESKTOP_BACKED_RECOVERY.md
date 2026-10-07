@@ -1,5 +1,11 @@
 # Desktop-backed backup integration
 
+Independent-review follow-up: `VK_RESTORE_HARDLINK_REVIEW_20261007.md` documents
+two failing private restore cases in the current reader and a tested, unadopted
+minimal prototype. The27 real archives have no hardlink members, so the specific
+case is absent there. Earlier tests do not establish generic restore correctness.
+Do not clear readiness or retirement from those earlier passes alone.
+
 This operational branch extends PR142 pin `528282d00` without deploying its
 application tree. Production stays on the accepted October5 deployment. The
 overnight VK9b3f82538/CU95e7aea47 release is pending separate approval.

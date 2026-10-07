@@ -1,5 +1,96 @@
 # October 6 Staging-Owned Temporary Cleanup
 
+## October 7 Scoped Cleanup Completed
+
+The operator's fresh instruction supersedes the broad visibility hold below for
+these exact October5 disposable copies, not for arbitrary cleanup. All1966
+allowlisted files were removed: **4,434,825,216 allocated bytes (4.13GiB)**.
+Immediately before/after the removal sequence, available SSD bytes were
+251,891,712 / 4,685,647,872. Concurrent writes explain the small difference
+between free-space gain and allocation removed. Mounted `/dev/sdb1` remains ext4.
+
+The original `plan.json` and `cleanup.py` are unchanged. The plan is explicitly
+classified as a cleanup inventory, not a service/backup dependency. Separate
+`scoped_cleanup_20261007.py` and `october7/` receipts under the original receipt
+root record the narrower assessment, dry runs, six passing exact-file tests,
+per-group process/dependency checks and every unlink. The manifest is consumed;
+do not replay either cleanup script against it.
+
+Each file's inode/device/mode/mtime/size/hash and single-link status matched the
+fixed inventory. All archive-member/duplicate hashes passed before removal, and
+all four retained original archives passed full hashes again afterward. Both
+private rehearsal services are absent. No accessible application, service or
+current package dependency referenced a proposed copy. The inventory's own
+reference is retained as evidence, not mistaken for a runtime dependency.
+The empty systemd `inaccessible/reg` node is a mount mask, not configuration.
+
+No protected process fields were read and no privilege escalation was attempted.
+Kernel/platform daemons, login PAM and the key agent have no identified role in
+these unencrypted, completed private-test copies; this is scoped provenance
+reasoning, not universal descriptor visibility. Opaque SFTP workers were treated
+as potentially relevant: cleanup waited for their exit and required a clear
+transfer window before each group. No transfer or service was interrupted.
+
+### Retained Recovery Copies
+
+All original archives remain at their existing local paths, with descriptors and
+parent references unchanged. Full Desktop SHA256 checks passed for:
+
+- Software `maintenance-software-20261005T152949Z.tar.zst` at
+  `B:/vk-backups/vk-green-cutover-20261005/` (SHA256 `9a4c2fe1...`).
+- Rehearsal checkpoint `checkpoint--06974570ead1459398e7a1d9039cc7fa.tar.zst`
+  and successful delta `delta--eb05467dae284fc296dafae562fd12b4.tar.zst` at
+  `B:/vk-backups/vk-autoswitch-scope-release-20261001/scale-rehearsal/`
+  (SHA256 `4b9620fb...` and `3105a1da...`).
+- Failed private rehearsal `delta--16a548f9d222439bbd2628660b163e9b.tar.zst`,
+  newly copied to
+  `B:/vk-backups/vk-staging-owned-cleanup-20261007/preserved-failed-rehearsal/`
+  (SHA256 `a20e64da...`). This is preservation of a test artifact, not publication
+  of the failed boundary as a valid production backup.
+
+`october7/desktop.json` records full hashes, lengths and exact destinations.
+`october7/RECOVERY.md` explains retrieval and isolated reproduction. No Desktop
+UI was used. All directories, excluded hardlinked launchers, original archives,
+chain descriptors, incident records, source/workspaces and current/fallback
+release inputs remain. No27-archive retirement or shared Rust cleanup occurred.
+
+### Validation And Remaining Capacity
+
+Live3027197, paused fallback1369037, CU414400 and dot3109784 retain their process
+and freezer states. Protected roots retain identity/ownership/mode; route,
+release/readiness/recovery and final9b3f82538 candidate/review-packet hashes match
+the fresh baseline. A live59-byte attachment upload/retrieval passed and was
+retained; the frozen fallback was not thawed for a smoke test. Scoped logs show
+no new FileError, missing-path, upload-failure or HTTP500 matches. No restart,
+new deployment, scheduling/credit change or old-data restoration occurred.
+
+`pnpm run format` ran Rust formatting, then failed because frontend `prettier`
+is not installed. It left no source changes; no dependency installation was
+attempted on the nearly full SSD. Six cleanup guard tests and Python syntax
+checks passed. These are cleanup checks, not another feature-acceptance suite.
+
+About4.36GiB is now free, still insufficient for the unchanged full rehearsal.
+`october7/capacity-review.json` uses all67 database paths, about2.534GB at this
+check. Runtime plus one snapshot already needs5.069GB. Source inspection finds
+eight database-copy sets plus archives/downloads, approximately22.09GB before
+other files and fresh production backup. This is an estimate, not a measured
+new peak. Earlier six-database/seven-copy calculations are explicitly superseded.
+
+The smallest change that leaves recovery logic intact is separate mounted Linux
+scratch capacity for rehearsal: budget roughly25GiB, then enforce a fresh
+full-scope capacity check including production backup. Desktop B has about303GB
+free for archives, but its Windows filesystem is not an already validated Linux
+rehearsal volume. Alternatively, a separately reviewed scratch-retention change
+could release redundant verified test copies between phases; it must preserve
+the full workload and all existing assertions and prove its peak before use.
+No such change or volume setup was performed. Larger local chain archives remain
+blocked on their real local-path restore dependencies, not merely process access.
+
+## Historical October 6 Assessment
+
+The sections below record the earlier held state, superseded only by the scoped
+October7 completion above. Preserve their original evidence and limitations.
+
 ## Scope And Outcome
 
 Seamus authorized removal of verified disposable outputs owned by VK::Staging

@@ -1,5 +1,27 @@
 # HANDOFF.md
 
+## October 7 Owned Temporary Copies Removed; Production Unchanged
+
+Read VK_OWNED_TEMP_CLEANUP_20261006.md's October7 entry. The fresh scoped user
+instruction authorized provenance-based cleanup without accessing protected
+process information. All1966 exact files are removed, reclaiming4,434,825,216
+allocated bytes; about4.36GiB remains available. Every original archive remains
+local and is Desktop-hash verified; the failed private rehearsal archive was
+also copied to Desktop before unlinking its reproducible payload. The immutable
+inventory is cleanup evidence, not a runtime dependency. Each group's reference
+check passed in a clear SFTP window; no transfers/services were interrupted.
+Six guard tests, post-deletion archive hashes, live attachment round-trip,
+protected file/root identities and unchanged service/freezer states pass.
+Receipt root: /mnt/vk-storage/vk-staging-owned-cleanup-20261006/october7.
+The consumed cleanup manifest must not be replayed. `pnpm run format` stopped
+at missing frontend prettier after Rust formatting; no source edits resulted.
+The new overnight release remains pending, not deployed. Current full rehearsal
+still does not fit:67 DBs,5.069GB bare minimum for runtime plus one snapshot,
+approximately22.09GB unchanged scratch subtotal before other backup needs.
+Do not retire locally required chain parents or silently use six incremental
+DBs as full-workload coverage. Separate scratch capacity or a reviewed/measured
+scratch-retention improvement is needed; no further cutover is authorized here.
+
 ## October 6 Final9b3f82538 Acceptance; Production Unchanged
 
 Read VK_FIRST_RUN_FINAL_ACCEPTANCE_20261006.md first. Final VK9b3f82538/CU95e7aea47

@@ -1,3 +1,16 @@
+## October 4: Accepted Deployment And Operational Follow-up
+
+The updated version is live and accepted: main `e53ae4a7e`, staging `86d1c083a`,
+application version 0.1.42, Codex 0.159.2. See VK_UPDATED_LIVE_20261004.md for
+actual identities, preserved data and historical warnings. No second restart
+or old-database restore is part of acceptance or this follow-up.
+
+Branch `fix/vk-backup-move-preflight` strengthens moved-folder backup evidence
+and packages the finalization prevention into the next preparation. Read
+VK_BACKUP_MOVE_FOLLOWUP.md. Its operational source must be reviewed/merged or
+explicitly pinned from this published branch; it is not yet in staging. Older
+dated inventories below are historical, not current runtime authority.
+
 ## October 1: AutoSwitch scope release preparation
 
 PR134/135 merged the downward-routing scope correction into staging/main. It is

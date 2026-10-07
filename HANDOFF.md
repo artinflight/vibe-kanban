@@ -1,3 +1,69 @@
+# October 7 Desktop-backed Recovery Integration
+
+Latest authority: Desktop B is the sole retained archive provider. The narrow
+hardlink fix is implemented, with192passing operational tests. Current source
+defaults all archive/chain/restore reads and parent checks to Desktop-only.
+`vk_staged_recovery.py` enables bounded all-database plus selected-file acceptance
+without pretending to materialize the entire historical filesystem. Fresh27-copy
+B checks and bounded real-chain acceptance are under
+/mnt/vk-storage/vk-desktop-provider-20261007. Their completion receipts, not this
+in-progress note, govern provider acceptance. No original archive deletion yet;
+return an exact redundant-local-copy action manifest for specific approval.
+Full overnight backup/rehearsal remains distinct; do not reinstate duplicate SSD
+retention merely because a full simultaneous restore will not fit. Notes below
+about the unadopted prototype describe the prior investigation, not current code.
+
+Later independent-review finding: read VK_RESTORE_HARDLINK_REVIEW_20261007.md.
+The current reader fails two private atomic-replacement hardlink cases while
+reporting success. A process-local detach-before-write prototype passes all four
+cases, but no source fix is adopted. Authenticated inventories have ZERO hardlink
+entries across all27archives, so this specific mechanism is absent there; no user
+data loss is established. Keep generic recovery readiness and archive retirement
+held pending correction/capacity/approval. The earlier176-test pass omitted this
+case. Exact guarded restore roots and fresh capacity gaps are in the review.
+
+Read `VK_DESKTOP_BACKED_RECOVERY.md` and the current receipts under
+`/mnt/vk-storage/vk-desktop-backup-20261007/`. New capture/restore tools use exact
+Desktop locators, including legacy descriptor bindings. New package installation
+also removes the controller's local-only parent check. Original sealed packages
+remain unchanged. The 27 original archives are protected, not deletion-approved.
+Keep implementation, real-chain acceptance, adoption and retirement distinct.
+All27 streams and six chains now pass the fresh real audit. The actual rehearsal
+consumer uses Desktop-only streams; optional per-archive retirement keeps final
+restored files and all database assertions, with a2GiB floor. Capacity remains
+the next gate: historical full restore needs78.985GiB; all27 conditional local
+retirements would leave82.423GiB. Fresh full capture's conservative bound is
+91.214GiB before floor/reserve, not the old17GiB changed-scope estimate. Original
+archives remain protected. See the detailed recovery document for exact receipts.
+The pending overnight candidate is not deployed. Old historical notes follow.
+
+# October 4 After-cutover Operational Follow-up
+
+October5 addition: all declared recopy roots must exist and be currently watched
+even when a fresh journal reports no errors. Historical move pairing that cannot
+be proved requires a new full checkpoint with the old journal/archives retained,
+not a fabricated mapping or cross-journal delta. New integration regressions cover
+missing, unwatched and linked roots plus full checkpoint recovery with historical
+evidence preserved. This tooling branch is pinned into the new preparation;
+production activation remains owned by the maintenance controller and live checks.
+
+Cutover acceptance is complete; do not replay the handover. Read
+VK_UPDATED_LIVE_20261004.md and VK_BACKUP_MOVE_FOLLOWUP.md. This branch is
+`fix/vk-backup-move-preflight` from staging `86d1c083a`, focused on backup and
+package checks, not application deployment. 135 deployment regressions pass,
+including the actual cross-parent move/archive/restore and package gates.
+Production remains running and the old process frozen for latest-data cutback.
+
+Next preparation must use the published operational fix through `vk_prepare.py
+package-tools` before sealing; its receipt is checked by preparation, readiness
+and controller preflight. Review/merge the draft follow-up into staging; account
+for overlapping PR133 without importing its stale full application tree. Read
+`post-package/next-preparation-tools.json` under the October 4 package for the
+exact published pin and isolated actual-template proof. The stale early
+completion snapshot is historical; use accepted status and the separate
+completion reconciliation. The old 30-second timing claim is not verified.
+Older notes below are historical.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.
@@ -780,6 +846,33 @@ outstanding grants remain. Preserve SSD evidence.
 No production VK service, database, frontend pointer or account allowance changed.
 
 # HANDOFF.md
+
+## October7 Runtime Lifecycle Backup Fix
+
+Read VK_RUNTIME_BACKUP_LIFECYCLE_20261007.md. Exact timestamped shell snapshots
+and thread writer locks are regenerable runtime files deleted on release, not
+conversation data. The adapter recognizes individual scoped/owned filenames
+only; online deletion journal proof and absence remain mandatory. No directory
+exclusion or frozen-boundary exemption.198 deployment tests pass, including
+real capture/delta/restore and11 focused tests. Commit/pin into a NEW package;
+do not rewrite sealed predecessors or call the prior failed capture accepted.
+
+## October 7 Runtime Socket Compatibility
+
+Fresh combined-release capture encountered Codex's daemon-updater.sock. The
+runtime warning adapter now accepts only that exact endpoint under the two
+known Codex homes, only while it is an owned Unix socket inside protected scope
+with no symlink traversal. Missing, regular, linked, foreign-owned or unknown
+paths and unrelated tar warnings still fail closed. No source root is excluded.
+All194 deployment tests and ops checks pass; seven focused recovery tests pass.
+The first focused invocation lacked TMPDIR and made no fixtures; the corrected
+invocation uses /mnt/vk-storage/vk-socket-checks. Required pnpm format was attempted
+but this sparse operational checkout lacks crates/capacity-guard/Cargo.toml.
+Install this verified successor into a NEW package; retain the sealed312ac0b20
+package unchanged. A completed unpublished online archive may use the existing
+strict recover/resume path after all journal, manifest and hash checks pass.
+This is not deployment readiness, archive deletion or permission to ignore IPC
+warnings generally. B remains the sole retained archive provider.
 
 ## September 14: Durable controller and CU bridge progress
 

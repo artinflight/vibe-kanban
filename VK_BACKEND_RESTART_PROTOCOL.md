@@ -1,5 +1,30 @@
 # Backend Restart Protocol
 
+## Package Moved-path And Finalization Checks
+
+Follow [VK_BACKUP_MOVE_FOLLOWUP.md](VK_BACKUP_MOVE_FOLLOWUP.md) before the next
+preparation. Install the published operational source with `vk_prepare.py
+package-tools` into a fresh, unsealed package; preparation, readiness and final
+preflight must verify its source/hash receipt. Do not rely on an unapplied patch
+or a tool branch not included in the preparation. Until merged, explicitly pin
+the published fix branch; older staging tooling alone is insufficient.
+
+Cross-parent moves need exact protected source/destination evidence and bounded
+subtree hashing/recopy at both boundaries. Preserve source tombstones; unrelated
+removal events, missing unprotected data, roots/watches, overflow and ambiguous
+paths fail closed. Keep authenticated parent backup chains and existing recovery
+exceptions. Store move coverage in its bound sidecar without silently changing
+the backup plan or forcing a redundant full checkpoint.
+
+The October 4 finalization fault came from an absent service drop-in parent.
+Test fresh nested-directory creation, create it during inert installation, check
+it before interruption and make finalization idempotent. Recovery must first
+recognize an already healthy/preserved routed owner after original-thread
+continuation, rather than breaking the route/CU and then attempting cutback.
+No old database may be restored. Keep the consumed package sealed and use a new
+package with the checked-in correction. Accepted does not mean a 30-second
+handover was achieved: record actual timings and outstanding timing targets.
+
 ## Preserve Review Markers And Live Repairs
 
 Workspace attention flags are independent of issue/task statuses. Check both;

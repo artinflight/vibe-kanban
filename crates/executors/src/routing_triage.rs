@@ -243,7 +243,7 @@ pub fn repository_context(prompt: &str, root: Option<&Path>) -> TaskTriage {
     if surfaces.next().is_some() {
         return result;
     }
-    let repo = inspect(root, &surface[1], true);
+    let repo = inspect(root, &surface[1], true, Duration::from_millis(40));
     result.inspected_entries = repo.entries;
     result.inspected_files = repo.files;
     if repo.protected {

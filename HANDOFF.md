@@ -847,6 +847,16 @@ No production VK service, database, frontend pointer or account allowance change
 
 # HANDOFF.md
 
+## October7 Runtime Lifecycle Backup Fix
+
+Read VK_RUNTIME_BACKUP_LIFECYCLE_20261007.md. Exact timestamped shell snapshots
+and thread writer locks are regenerable runtime files deleted on release, not
+conversation data. The adapter recognizes individual scoped/owned filenames
+only; online deletion journal proof and absence remain mandatory. No directory
+exclusion or frozen-boundary exemption.198 deployment tests pass, including
+real capture/delta/restore and11 focused tests. Commit/pin into a NEW package;
+do not rewrite sealed predecessors or call the prior failed capture accepted.
+
 ## October 7 Runtime Socket Compatibility
 
 Fresh combined-release capture encountered Codex's daemon-updater.sock. The

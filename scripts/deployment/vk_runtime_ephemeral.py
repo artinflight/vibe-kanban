@@ -6,6 +6,34 @@ import stat
 
 HOMES = ('/home/mcp/.codex', '/home/mcp/.local/share/vibe-kanban-green-codex-home')
 MEMBERS = {'', '.lock', 'apply_patch', 'applypatch', 'codex-execve-wrapper', 'codex-linux-sandbox'}
+THREAD = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+
+def released_runtime_file(path, plan):
+    """Classify exact runtime names, not whole directories or session data.
+
+    Codex regenerates shell snapshots and deletes them on drop. Writer lock
+    files hold OS locks, not history, and are created on acquire/deleted on drop.
+    The caller still requires an observed deletion and absence in online mode.
+    """
+    for home in HOMES:
+        home = Path(home)
+        patterns = {'shell_snapshots': THREAD + r'\.[0-9]{1,20}\.sh',
+                    'thread-writer-locks': THREAD + r'\.lock'}
+        for directory, pattern in patterns.items():
+            root = home / directory
+            if path.parent != root or not re.fullmatch(pattern, path.name):
+                continue
+            if (any(p.is_symlink() for p in path.parents) or not root.is_dir()
+                    or root.stat().st_uid != os.getuid()
+                    or str(path) != str(path.absolute()) or '..' in path.parts):
+                raise ValueError('Unsafe runtime-file parent: ' + str(path))
+            required = [*plan['sources'], *plan.get('critical_sqlite', []),
+                        *plan.get('sqlite_snapshots', [])]
+            if str(path) in required:
+                raise ValueError('Explicitly required runtime file disappeared: ' + str(path))
+            return any(home.is_relative_to(Path(source).resolve()) for source in plan['sources'])
+    return False
 
 
 def runtime_socket_warning(line, plan):
@@ -32,6 +60,8 @@ def warning_plan(log, plan):
         if not match:
             continue
         path = Path('/' + match.group(1).lstrip('/'))
+        if released_runtime_file(path, plan):
+            roots.append(str(path))
         for home in HOMES:
             root = Path(home) / 'tmp/arg0'
             if not path.is_relative_to(root):

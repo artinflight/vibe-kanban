@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 import socket
+import subprocess
 from types import SimpleNamespace
 from unittest.mock import patch
 import unittest
@@ -115,3 +116,97 @@ class CheckpointRecoveryTests(unittest.TestCase):
                 ephemeral.runtime_socket_warning(log, self.plan)
             with self.assertRaises(ValueError):
                 ephemeral.runtime_socket_warning(log.replace('daemon-updater.sock', 'user.sock'), self.plan)
+
+    def runtime_case(self, directory, name):
+        path = self.source / directory / name
+        path.parent.mkdir(exist_ok=True)
+        log = 'tar: ' + str(path).lstrip('/') + ': Warning: Cannot stat: No such file or directory'
+        return path, log, {'changed': [str(path)], 'events': {str(path): 0x200}}
+
+    def test_released_runtime_names_require_observed_online_deletion(self):
+        thread = '01a1181d-8887-7962-bb8c-597d70cbfaf4'
+        with patch.object(ephemeral, 'HOMES', (str(self.source),)):
+            for directory, name in [('shell_snapshots', thread + '.1791408487176536081.sh'),
+                                    ('thread-writer-locks', thread + '.lock')]:
+                path, log, watched = self.runtime_case(directory, name)
+                plan = ephemeral.warning_plan(log, self.plan)
+                self.assertIn(str(path), plan['online_ephemeral_roots'])
+                self.assertNotIn(str(path.parent), plan['online_ephemeral_roots'])
+                self.assertEqual(backup.validate_archive_warnings(log, watched, plan, True), [str(path)])
+                for observation, online in [(watched, False), ({'changed': [], 'events': {}}, True),
+                                           ({'changed': [str(path)], 'events': {str(path): 0x2}}, True)]:
+                    with self.assertRaises(ValueError):
+                        backup.validate_archive_warnings(log, observation, plan, online)
+                path.write_text('present data must not be waived')
+                with self.assertRaises(ValueError):
+                    backup.validate_archive_warnings(log, watched, plan, True)
+                path.unlink()
+                path.symlink_to(self.note)
+                with self.assertRaises(ValueError):
+                    backup.validate_archive_warnings(log, watched, plan, True)
+                path.unlink()
+
+    def test_runtime_classifier_never_waives_other_names_or_required_state(self):
+        thread = '01a1181d-8887-7962-bb8c-597d70cbfaf4'
+        with patch.object(ephemeral, 'HOMES', (str(self.source),)):
+            for directory, name in [('sessions', thread + '.lock'), ('shell_snapshots', 'user-work.sh'),
+                                    ('shell_snapshots', thread + '.sh'),
+                                    ('shell_snapshots', thread + '.12.sh/notes.txt'),
+                                    ('thread-writer-locks', '.coordination.lock'),
+                                    ('thread-writer-locks', 'notes.lock')]:
+                path = self.source / directory / name
+                log = 'tar: ' + str(path).lstrip('/') + ': Warning: Cannot stat: No such file or directory'
+                plan = ephemeral.warning_plan(log, self.plan)
+                with self.assertRaises(ValueError):
+                    backup.validate_archive_warnings(log, {'changed': [str(path)], 'events': {str(path): 0x200}}, plan, True)
+            path, log, _ = self.runtime_case('shell_snapshots', thread + '.123.sh')
+            with self.assertRaises(ValueError):
+                ephemeral.warning_plan(log, {**self.plan, 'sources': [*self.plan['sources'], str(path)]})
+            self.assertFalse(ephemeral.released_runtime_file(path, {'sources': []}))
+            with patch.object(os, 'getuid', return_value=os.getuid() + 1):
+                with self.assertRaises(ValueError):
+                    ephemeral.warning_plan(log, self.plan)
+
+    def test_runtime_classifier_rejects_symlink_parent(self):
+        with patch.object(ephemeral, 'HOMES', (str(self.source),)):
+            root = self.source / 'thread-writer-locks'
+            root.symlink_to(self.root, target_is_directory=True)
+            raw = root / '01a1181d-8887-7962-bb8c-597d70cbfaf4.lock'
+            with self.assertRaises(ValueError):
+                ephemeral.warning_plan('tar: ' + str(raw).lstrip('/') + ': Warning: Cannot stat: No such file or directory', self.plan)
+
+    def test_real_capture_runtime_release_restores_history_and_catches_up_deletion(self):
+        thread = '01a1181d-8887-7962-bb8c-597d70cbfaf4'
+        shell, _, _ = self.runtime_case('shell_snapshots', thread + '.123.sh')
+        lock, _, _ = self.runtime_case('thread-writer-locks', thread + '.lock')
+        shell.write_text('# Snapshot file\nexport FIXTURE=preserved\n')
+        lock.touch()
+        self.journal.report()
+        first = self.backup()
+        first_restore = self.restored(first, 'before-release')
+        self.assertEqual((first_restore / shell.relative_to(self.source)).read_text(), shell.read_text())
+        shell.write_text('# Snapshot file\nexport FIXTURE=recaptured\n')
+        original_run = subprocess.run
+        deleted = []
+        def release_before_tar(command, *args, **kwargs):
+            if command[0] == 'tar' and not deleted:
+                shell.unlink()
+                lock.unlink()
+                deleted.extend([str(shell), str(lock)])
+            return original_run(command, *args, **kwargs)
+        adapter = SimpleNamespace(validate_archive_warnings=backup.validate_archive_warnings)
+        ephemeral.install(adapter)
+        with patch.object(ephemeral, 'HOMES', (str(self.source),)), \
+                patch.object(backup, 'validate_archive_warnings', adapter.validate_archive_warnings), \
+                patch.object(subprocess, 'run', side_effect=release_before_tar):
+            second = self.backup(first)
+        self.assertTrue(second['passed'])
+        self.assertIn(str(shell), second['online_archive_warnings_recaptured_by_next_delta'])
+        # The journal sequence stays at the capture start, so the next delta
+        # removes released files from the restored view, not from live sources.
+        third = self.backup(second)
+        restored = self.restored(third, 'after-release')
+        self.assertFalse((restored / shell.relative_to(self.source)).exists())
+        self.assertFalse((restored / lock.relative_to(self.source)).exists())
+        self.assertEqual((restored / self.history.name).read_bytes(), self.history.read_bytes())
+        self.assertEqual((restored / self.note.name).read_bytes(), self.note.read_bytes())

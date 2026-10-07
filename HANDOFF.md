@@ -1,5 +1,21 @@
 # HANDOFF.md
 
+## October 7 Approved Archive Retirement Complete
+
+Read VK_ARCHIVE_RETIREMENT_20261007.md. The user's specific20:18:33UTC approval
+was applied to exactly27 listed SSD archive copies after fresh local/B hashes,
+six-chain and70-file recovery-package verification. All27 were removed:
+64.427711GiB reclaimed,76.172085GiB free immediately afterward. B copies,
+directories, metadata and27 approved location/checksum notes are retained.
+Actual B-only archive reading, post-removal chains, protected roots and unchanged
+production/CU/frozen-fallback state pass. No restart or cutover occurred.
+Current full-backup sizing includes69 databases (the new connector receipt ledger),
+all14 protected roots and all45 original journal errors. Capture/rehearsal peak
+still requires measurement. Failed connector integration remains blocked at
+eacafb3a1 while its owner repairs it; no competing combined-source writes.
+Earlier "deletion approval unanswered" entries below are historical, not a
+remaining decision. Never replay the consumed27-file unlink or delete more files.
+
 ## October 7 Connector Integration Review: Release Blocked
 
 The final connector backend candidate13a3458eb is now applied to isolated

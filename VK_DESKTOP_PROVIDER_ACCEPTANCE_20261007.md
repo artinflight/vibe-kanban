@@ -1,5 +1,15 @@
 # Desktop B Sole Archive Provider: October 7 Acceptance
 
+## Approved Retirement Completed
+
+The later specific user approval is fulfilled: exactly27 listed local archive
+copies are removed after fresh hashes/chains/package checks, reclaiming64.427711GiB.
+Read VK_ARCHIVE_RETIREMENT_20261007.md for exact approval, receipts,76.172085GiB
+post-operation free space and successful real B-only reader validation. All B
+copies, directories and local recovery metadata remain. The pending-approval and
+zero-reclaim figures below are the preserved earlier acceptance boundary, not
+current state. This cleanup is not a production deployment or rehearsal pass.
+
 ## Outcome And Boundaries
 
 Implemented, tested and packaged; retirement awaits specific approval. Desktop B

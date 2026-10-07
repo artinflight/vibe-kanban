@@ -1,5 +1,15 @@
 # Combined Overnight And AutoSwitch Release Preparation
 
+## Specific Archive Retirement Completed
+
+Read VK_ARCHIVE_RETIREMENT_20261007.md. Exactly27 approved local copies are
+retired after fresh B/chain/package verification;64.427711GiB reclaimed and
+76.172085GiB immediately free. No other deletion, restart or deployment occurred.
+The new full-scope scan includes69 databases, including the connector receipt
+ledger. Archive approval is no longer outstanding. The earlier projection and
+pending-decision statements below are historical; full backup/rehearsal peak
+and the blocked connector's corrected acceptance remain deployment gates.
+
 ## Connector Handoff Received: Integration Blocked
 
 Final backend candidate13a3458eb is applied in the isolated combined source.

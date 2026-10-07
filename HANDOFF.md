@@ -14,6 +14,13 @@ No release cutover or full handover success is claimed. Source argument/cleanup
 hardening, independent recovery review, actual v2-safe controller adoption, fresh
 backup/rehearsal and final safety checks remain. Do not repeat consumed scripts.
 Evidence: /mnt/vk-storage/vk-combined-release-20261007/incident-2316.
+The35,382,789-byte incident packet is hash-verified on Desktop
+B:/vk-backups/vk-incident-20261007T2316/incident-20261007T2316-evidence.tar.zst
+(bf757ac1e257c7b9ca5edacba7491177b300c1db9677f0e94018dae9e8d88aa7).
+Owner acceptance/recovery commit5bea9abcd is pushed. Narrow draft operational
+review PR152, branch ops/review-verification-incident-20261007 at2d73b121a,
+contains the incident/recovery source and runbook guard without the owner's
+unrelated historical branch changes. Neither PR152 nor candidate PR150 is merged.
 Earlier blocker/readiness entries below are chronology, not current approval.
 
 ## October 7 Runtime Backup Blocker Resolved; Release Still Blocked

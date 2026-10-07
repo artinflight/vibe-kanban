@@ -1,3 +1,13 @@
+# October 7 Desktop-backed Recovery Integration
+
+Read `VK_DESKTOP_BACKED_RECOVERY.md` and the current receipts under
+`/mnt/vk-storage/vk-desktop-backup-20261007/`. New capture/restore tools use exact
+Desktop locators, including legacy descriptor bindings. New package installation
+also removes the controller's local-only parent check. Original sealed packages
+remain unchanged. The 27 original archives are protected, not deletion-approved.
+Keep implementation, real-chain acceptance, adoption and retirement distinct.
+The pending overnight candidate is not deployed. Old historical notes follow.
+
 # October 4 After-cutover Operational Follow-up
 
 October5 addition: all declared recopy roots must exist and be currently watched

@@ -1,3 +1,11 @@
+# October 7 Desktop-backed Recovery
+
+Branch `fix/vk-desktop-backed-recovery` extends the explicit PR142 operational
+pin `528282d00`. Read `VK_DESKTOP_BACKED_RECOVERY.md`. Scope is backup archive
+location resolution, bounded verification and new-package adoption. No production
+restart, routing change, archive retirement or application deployment is authorized.
+The historical stream descriptions below do not describe this branch's scope.
+
 # October 4 Operational Backup Follow-up
 
 Branch `fix/vk-backup-move-preflight` from staging `86d1c083a` strengthens exact

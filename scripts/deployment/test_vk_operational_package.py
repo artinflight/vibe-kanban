@@ -12,6 +12,7 @@ from vk_operational_package import OLD_INTERLOCK, CURRENT_INTERLOCK
 
 CONTROLLER = '''
 def preflight(executing=False):
+    assert digest(Path(baseline['folder'])/baseline['archive']) == baseline['receipt']['sha256']
     if executing:
         external.extend(additional)
         current['external']=external
@@ -105,6 +106,17 @@ class PackageTests(unittest.TestCase):
         self.assertIn("assert 'Ran '",(self.package/'build_readiness.py').read_text())
         self.assertIn(CURRENT_INTERLOCK,(self.package/'build_readiness.py').read_text())
         self.assertNotIn(OLD_INTERLOCK,(self.package/'build_readiness.py').read_text())
+        code = (self.package/'cutover_controller.py').read_text()
+        self.assertIn('Archive(reference(baseline), desktop_only=True).verify()', code)
+        self.assertNotIn("digest(Path(baseline['folder'])/baseline['archive'])", code)
+
+    def test_missing_desktop_resolver_prevents_package_verification(self):
+        self.install()
+        proof = json.loads((self.package/'operational-tools.json').read_text())
+        del proof['sha256']['deployment-tools/vk_archive_store.py']
+        (self.package/'operational-tools.json').write_text(json.dumps(proof))
+        with self.assertRaisesRegex(ValueError, 'Required preparation tool missing'):
+            verify(self.package)
 
     def test_missing_nested_boot_directory_is_created_without_a_restart(self):
         self.install()

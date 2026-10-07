@@ -17,6 +17,7 @@ import uuid
 from vk_change_journal import request, scope
 from vk_prep_common import digest, file_identity, identity, measured, save, storage
 from vk_desktop_transport import DesktopTransport
+from vk_archive_store import Archive, chain, reference
 
 
 def generation(path):
@@ -105,9 +106,8 @@ def verified_parent(parent, plan, watched):
     if ("exclusion_targets" in parent
             and parent["exclusion_targets"] != list(map(str, Exclusions(plan).roots))):
         raise ValueError("Parent exclusion targets changed; take a new online checkpoint")
-    receipt = parent["receipt"]
-    if receipt.get("desktop_verified") is not True or digest(Path(parent["folder"]) / parent["archive"]) != receipt["sha256"]:
-        raise ValueError("Parent backup is unavailable or unverified")
+    # A verified Desktop receipt is authoritative; no parent archive download.
+    Archive(reference(parent)).verify()
     if watched["sequence"] < parent["journal_sequence"]:
         raise ValueError("Journal sequence moved backwards")
 
@@ -261,8 +261,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
         file_list = folder / "paths.nul"
         file_list.write_bytes(b"".join(path.lstrip("/").encode() + b"\0" for path in files
                                      if Path(path).is_symlink() or str(Path(path).resolve()) not in omitted))
-        parent_ref = None if parent is None else {"folder": parent["folder"], "archive": parent["archive"],
-                                                  "sha256": parent["receipt"]["sha256"]}
+        parent_ref = None if parent is None else reference(parent)
         manifest = {"schema": 1, "at": time.time(), "scope_sha256": identity(scope(plan)), "plan_sha256": identity(plan),
                     "exclusion_targets": list(map(str, exclusions.roots)),
                     "journal_instance": before["instance"], "journal_sequence": before["sequence"],
@@ -290,15 +289,9 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                 raise ValueError("Journal changed during archive")
             warnings = validate_archive_warnings((folder / "tar.log").read_text(), watched, plan, verify_fence is None)
         with measured(timings, "archive_restore_verify"):
-            if verify_fence is not None:
-                verify_snapshot_archive(archive, snapshots, payload / "manifest.json")
-            else:
-                restored = folder / "verified-payload"
-                restored.mkdir()
-                subprocess.run(["tar", "--zstd", "-xf", str(archive), "-C", str(restored), "payload"], check=True)
-                for row in snapshots.values():
-                    if digest(restored / "payload" / row["path"]) != row["sha256"]:
-                        raise ValueError("Restored SQLite snapshot checksum mismatch")
+            # Verify every snapshot from the archive without keeping a second
+            # extracted database tree on the SSD.
+            verify_snapshot_archive(archive, snapshots, payload / "manifest.json")
         if verify_fence is None:
             save(folder / "pending-delivery.json", {**manifest, "folder": str(folder), "archive": archive.name,
                 "archive_sha256": digest(archive), "database_proofs": proofs, "databases": sorted(databases),
@@ -378,9 +371,6 @@ def recover_online_checkpoint(plan, root, folder, journal):
         raise ValueError('Recovery requires exactly one complete archive')
     archive = archives[0]
     verify_snapshot_archive(archive, manifest['sqlite_snapshots'], manifest_path)
-    restored = folder / 'verified-payload'
-    restored.mkdir()
-    subprocess.run(['tar', '--zstd', '-xf', str(archive), '-C', str(restored), 'payload'], check=True)
     exclusions.validate()
     pending = {**manifest, 'folder': str(folder), 'archive': archive.name,
                'archive_sha256': digest(archive), 'database_proofs': {},
@@ -409,16 +399,19 @@ def resume_delivery(plan, root, folder, journal, mirror, publish, parent=None):
         raise ValueError("Resume journal instance changed")
     if parent:
         verified_parent(parent, plan, watched)
-    expected = None if parent is None else {"folder": parent["folder"], "archive": parent["archive"],
-                                           "sha256": parent["receipt"]["sha256"]}
-    if pending["parent"] != expected:
+    expected = None if parent is None else reference(parent)
+    # Legacy pending deliveries have only the original three parent fields.
+    actual = pending["parent"]
+    if ((actual is None) != (expected is None)
+            or (actual is not None and any(expected.get(k) != v for k, v in actual.items()))
+            or (actual is not None and not all(k in actual for k in ("folder", "archive", "sha256")))):
         raise ValueError("Resume parent changed")
     if Path(pending["archive"]).name != pending["archive"]:
         raise ValueError("Invalid backup archive name")
     archive = folder / pending["archive"]
     if digest(archive) != pending["archive_sha256"]:
         raise ValueError("Pending archive checksum mismatch")
-    restored = folder / "verified-payload/payload"
+    restored = folder / "payload"
     manifest = json.loads((restored / "manifest.json").read_text())
     for key in manifest:
         if manifest[key] != pending[key]:
@@ -426,6 +419,7 @@ def resume_delivery(plan, root, folder, journal, mirror, publish, parent=None):
     for row in pending["sqlite_snapshots"].values():
         if digest(restored / row["path"]) != row["sha256"]:
             raise ValueError("Pending restored SQLite checksum mismatch")
+    verify_snapshot_archive(archive, pending["sqlite_snapshots"], restored / "manifest.json")
     validate_archive_warnings((folder / "tar.log").read_text(), watched, plan, True)
     started = time.monotonic()
     receipt = mirror(archive)
@@ -456,7 +450,7 @@ def resume_delivery(plan, root, folder, journal, mirror, publish, parent=None):
     return result
 
 
-def restore_chain(result, destination, archive_directory=None):
+def restore_chain(result, destination, archive_directory=None, *, desktop_only=False):
     destination = storage(destination)
     backup_root = Path(result["folder"]).parent.parent.resolve()
     if not destination.is_relative_to(backup_root):
@@ -464,76 +458,46 @@ def restore_chain(result, destination, archive_directory=None):
     if destination.exists():
         raise ValueError("Restore verification requires a new empty isolated destination")
     destination.mkdir(parents=True, mode=0o700)
-    archives, seen = [], set()
-    current = {"folder": result["folder"], "archive": result["archive"], "sha256": result["receipt"]["sha256"]}
-    while current:
-        if Path(current["archive"]).name != current["archive"]:
-            raise ValueError("Invalid backup archive name")
-        archive = (Path(archive_directory) if archive_directory else Path(current["folder"])) / current["archive"]
-        if str(archive) in seen:
-            raise ValueError("Backup parent cycle")
-        seen.add(str(archive))
-        if digest(archive) != current["sha256"]:
-            raise ValueError("Backup chain checksum mismatch")
-        archives.append(archive)
-        with subprocess.Popen(["zstd", "-dc", str(archive)], stdout=subprocess.PIPE) as decompressor:
-            with tarfile.open(fileobj=decompressor.stdout, mode="r|") as tar:
-                found = None
-                for member in tar:
-                    if member.name == "payload/manifest.json":
-                        found = json.load(tar.extractfile(member))
-                        break
-                if found is None:
-                    raise ValueError("Missing backup manifest")
-            # The archive's full SHA256 is already checked. Stop the header lookup
-            # once found; recovery below still reads and validates the whole stream.
-            decompressor.stdout.close()
-            if decompressor.poll() is None:
-                decompressor.terminate()
-            decompressor.wait()
-        current = found["parent"]
+    archives = chain(result, archive_directory, desktop_only=desktop_only)
     links, directory_modes = {}, {}
     for archive in reversed(archives):
         manifest, sqlite_payloads = None, {}
-        with subprocess.Popen(["zstd", "-dc", str(archive)], stdout=subprocess.PIPE) as decompressor:
-            with tarfile.open(fileobj=decompressor.stdout, mode="r|") as tar:
-                for member in tar:
-                    name = PurePosixPath(member.name)
-                    if name.is_absolute() or ".." in name.parts:
-                        raise ValueError("Unsafe archive member")
-                    if member.name == "payload/manifest.json":
-                        manifest = json.load(tar.extractfile(member))
-                        continue
-                    if member.name.startswith("payload/"):
-                        if member.isfile():
-                            target = destination / "snapshots" / archive.stem / name
-                            target.parent.mkdir(parents=True, exist_ok=True)
-                            with target.open("wb") as stream:
-                                shutil.copyfileobj(tar.extractfile(member), stream)
-                            target.chmod(member.mode)
-                            sqlite_payloads[str(name.relative_to("payload"))] = target
-                        continue
-                    target = destination / "files" / name
-                    if member.isdir():
-                        target.mkdir(parents=True, exist_ok=True)
-                        directory_modes[str(target)] = member.mode
-                    elif member.isfile():
+        with archive.contents() as tar:
+            for member in tar:
+                name = PurePosixPath(member.name)
+                if name.is_absolute() or ".." in name.parts:
+                    raise ValueError("Unsafe archive member")
+                if member.name == "payload/manifest.json":
+                    manifest = json.load(tar.extractfile(member))
+                    continue
+                if member.name.startswith("payload/"):
+                    if member.isfile():
+                        target = destination / "snapshots" / archive.stem / name
                         target.parent.mkdir(parents=True, exist_ok=True)
                         with target.open("wb") as stream:
                             shutil.copyfileobj(tar.extractfile(member), stream)
                         target.chmod(member.mode)
-                        links.pop(str(name), None)
-                    elif member.issym() or member.islnk():
-                        # Retain link metadata without creating a route back to production.
-                        if target.is_file():
-                            target.unlink()
-                        elif target.is_dir():
-                            shutil.rmtree(target)
-                        links[str(name)] = {"target": member.linkname, "hardlink": member.islnk()}
-                    else:
-                        raise ValueError("Unsupported special backup member")
-            if decompressor.wait():
-                raise ValueError("Backup decompression failed")
+                        sqlite_payloads[str(name.relative_to("payload"))] = target
+                    continue
+                target = destination / "files" / name
+                if member.isdir():
+                    target.mkdir(parents=True, exist_ok=True)
+                    directory_modes[str(target)] = member.mode
+                elif member.isfile():
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    with target.open("wb") as stream:
+                        shutil.copyfileobj(tar.extractfile(member), stream)
+                    target.chmod(member.mode)
+                    links.pop(str(name), None)
+                elif member.issym() or member.islnk():
+                    # Retain link metadata without creating a route back to production.
+                    if target.is_file():
+                        target.unlink()
+                    elif target.is_dir():
+                        shutil.rmtree(target)
+                    links[str(name)] = {"target": member.linkname, "hardlink": member.islnk()}
+                else:
+                    raise ValueError("Unsupported special backup member")
         if manifest is None:
             raise ValueError("Missing backup manifest")
         for raw in manifest["absent_paths"]:
@@ -621,6 +585,10 @@ def main():
     restore.add_argument("--result", required=True, type=Path)
     restore.add_argument("--destination", required=True, type=Path)
     restore.add_argument("--archive-directory", type=Path, help="Directory of archive copies fetched from Desktop")
+    restore.add_argument("--desktop-only", action="store_true", help="Fail rather than use any local archive")
+    audit = commands.add_parser("audit-chain", help="Read and verify the chain without extracting payloads")
+    audit.add_argument("--result", required=True, type=Path)
+    audit.add_argument("--desktop-only", action="store_true")
     args = parser.parse_args()
     os.umask(0o077)
     if args.action in ("capture", "resume-delivery"):
@@ -637,8 +605,13 @@ def main():
         plan = json.loads(args.plan.read_text())
         result = capture(plan, args.root, reader,
                          mirror, parent, mirror)
+    elif args.action == "audit-chain":
+        archives = chain(json.loads(args.result.read_text()), desktop_only=args.desktop_only)
+        result = {"passed": True, "archives": len(archives),
+                  "sources": [a.key for a in archives], "payloads_extracted": False}
     else:
-        result = restore_chain(json.loads(args.result.read_text()), args.destination, args.archive_directory)
+        result = restore_chain(json.loads(args.result.read_text()), args.destination,
+                               args.archive_directory, desktop_only=args.desktop_only)
     print(json.dumps(result, indent=2))
 
 

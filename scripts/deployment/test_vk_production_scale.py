@@ -79,6 +79,8 @@ class ProductionBackupTests(unittest.TestCase):
             "-C", "/", "--no-recursion", "--null", "-T", str(folder / "paths.nul"),
             "--recursion", "-C", str(folder), "payload"], check=True)
         first["receipt"] = self.mirror(archive)
+        # Repacking changes the digest; the retained locator must describe this fixture.
+        (folder / (first['archive'] + '.result.json')).write_text(json.dumps(first))
         self.assertEqual((self.restored(first) / self.note.name).read_text(), self.note.read_text())
 
     def failed_delivery(self, parent):

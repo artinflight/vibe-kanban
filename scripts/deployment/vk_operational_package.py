@@ -14,7 +14,9 @@ MODULE_PATCH = REPO / 'VK_MODULE_RECOVERY_PACKAGE_20261005.patch'
 FORBIDDEN = ('readiness.json', 'software-package-receipt.json', 'cutover-attempt.json',
              'cutover-approval.json', 'cutover-request.json')
 REQUIRED = ('journal_compat.py', 'subtree_recopy.py', 'vk_rolling_backup.py',
-            'vk_prepare.py', 'vk_operational_package.py')
+            'vk_prepare.py', 'vk_operational_package.py', 'vk_archive_store.py')
+LOCAL_PARENT_CHECK = "assert digest(Path(baseline['folder'])/baseline['archive']) == baseline['receipt']['sha256']"
+DESKTOP_PARENT_CHECK = "from vk_archive_store import Archive, reference\n    Archive(reference(baseline), desktop_only=True).verify()"
 OLD_INTERLOCK = "assert 'vk-blue-reprepare-20261004/production_guard.py' in c.control.prop(c.CONFIG['incumbent'],'ExecStartPre')"
 CURRENT_INTERLOCK = "assert str(root/'production_guard.py')+' '+c.CONFIG['incumbent_color'] in c.control.prop(c.CONFIG['incumbent'],'ExecStartPre')"
 
@@ -104,6 +106,9 @@ def install(root, coverage, *, require_clean=True):
                'from vk_runtime_ephemeral import install as _install_ephemeral\n'
                '_install_ephemeral(_backup)\n')
     controller = (root/'cutover_controller.py').read_text()
+    if controller.count(LOCAL_PARENT_CHECK) != 1:
+        raise ValueError('Unknown local-parent preflight template; do not silently retain local dependency')
+    controller = controller.replace(LOCAL_PARENT_CHECK, DESKTOP_PARENT_CHECK, 1)
     assert controller.count('def preflight(executing=False):') == 1
     controller = controller.replace('def preflight(executing=False):',
         'def preflight(executing=False):\n    from vk_operational_package import verify\n    verify(ROOT)',1)

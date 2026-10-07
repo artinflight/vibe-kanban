@@ -1,5 +1,21 @@
 # HANDOFF.md
 
+## October 7 Desktop Recovery Integration; Production Unchanged
+
+Read VK_DESKTOP_ARCHIVE_MIGRATION_20261007.md and the corrected full-checkpoint
+section in VK_LOW_PEAK_PREPARATION_20261007.md. Draft PR149 operational pin
+6bd0b39e5 includes PR142, Desktop-only legacy-chain resolution and guarded phased
+private-snapshot retirement.176 tests, all27 real archive streams/six head graphs,
+actual-template installation and the final packaged Desktop restore pass. The
+new package is full-hash verified on B:; use next-preparation-tools-final.json,
+not an old installer or a consumed/sealed controller. No27 original archives
+were removed and no full production-sized filesystem restore was performed.
+Current SSD free is about18GiB, not the old4.36GiB figure below. Historical full
+restore needs about79GiB; all27 conditional retirements yield about82.4GiB.
+Fresh complete capture still has an unproven compression/capacity gate. Do not
+claim rollout readiness or delete parents from these sizing estimates. Overnight
+candidate/fallback, original journals and historical recovery gaps remain intact.
+
 ## October 7 Owned Temporary Copies Removed; Production Unchanged
 
 Read VK_OWNED_TEMP_CLEANUP_20261006.md's October7 entry. The fresh scoped user

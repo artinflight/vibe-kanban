@@ -1,5 +1,12 @@
 # STREAM.md
 
+October7 current scope: Desktop-backed archive integration and SSD-only preparation,
+not a production switch. See VK_DESKTOP_ARCHIVE_MIGRATION_20261007.md. PR149
+6bd0b39e5 and its Desktop-verified recovery package are tested; all27 original
+archives remain protected. Full-checkpoint sizing corrects the earlier changed-
+subtree estimate. Full restore/rehearsal, capacity clearance, exact archive-retirement
+approval and separate rollout approval remain; no live setting or service changed.
+
 October6 final-source outcome: see VK_FIRST_RUN_FINAL_ACCEPTANCE_20261006.md.
 VK9b3f82538/CU95e7aea47 isolated acceptance and inert real-frontend payload pass.
 Production unchanged. Explicit rollout approval, safe SSD headroom (about345MB

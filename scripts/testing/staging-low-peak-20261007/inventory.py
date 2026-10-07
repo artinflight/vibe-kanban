@@ -58,6 +58,8 @@ def classify_move(error, events, coverage, placement):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--full-checkpoint', action='store_true',
+                        help='Size all protected and supplemental sources, not only changed trees')
     args = parser.parse_args()
     sys.path.insert(0, str(TOOLS))
     from vk_prep_common import save, storage, digest
@@ -70,6 +72,10 @@ def main():
     started = time.time()
     parent = json.loads((OLD / 'online-backup-result.json').read_text())
     plan = json.loads((OLD / 'backup-plan.json').read_text())
+    supplemental_sources = []
+    if args.full_checkpoint:
+        supplemental_sources = json.loads((OLD / 'supplemental-backup.json').read_text())['sources']
+        plan['sources'] = sorted(set(plan['sources'] + supplemental_sources))
     coverage = json.loads((OLD / 'move-coverage.json').read_text())
     placement_file = RECOVERY / 'attempt2/placement-final.json'
     placement = json.loads(placement_file.read_text())['roots']
@@ -87,7 +93,8 @@ def main():
     # Retain every prior recovery root and every moved destination. Collapse
     # overlapping directories so a nested changed tree is traversed only once.
     inventory_roots = minimal_roots([p for p in paths if Path(p).is_dir()] +
-        coverage['recopy_roots'] + [r['destination'] for r in moves if r.get('exists')])
+        coverage['recopy_roots'] + [r['destination'] for r in moves if r.get('exists')] +
+        (plan['sources'] if args.full_checkpoint else []))
     paths.update(scan(inventory_roots, plan, exclusions))
     paths = {p for p in paths if not exclusions(p)}
     databases = set(parent['databases']) | set(plan['sqlite_snapshots']) | set(plan['critical_sqlite'])
@@ -134,6 +141,8 @@ def main():
     save(output / 'file-inventory.json', {'regular': entries, 'nonregular': nonregular, 'absent': missing})
     after = request(OLD / 'journal.sock', full['sequence'])
     summary = {'started': started, 'finished': time.time(), 'operational_pin': PIN,
+        'inventory_scope': 'full checkpoint' if args.full_checkpoint else 'changed and recovery subtrees',
+        'supplemental_sources': supplemental_sources,
         'production_modified': False, 'backup_ready': False,
         'journal_errors': len(full['errors']), 'moves_outside_old_declared_roots':
         sum(not r.get('declared_covers') for r in moves),
@@ -142,6 +151,7 @@ def main():
         'non_database_file_bytes': file_bytes, 'database_snapshot_upper_bytes': db_bytes,
         'archive_uncompressed_bound_bytes': archive_bound,
         'fresh_capture_upper_bytes': 2 * db_bytes + archive_bound,
+        'stream_verified_capture_upper_bytes': db_bytes + archive_bound,
         'free_bytes': free, 'free_floor_bytes': 2 * 1024**3,
         'errors': errors, 'regular_count': len(entries), 'absent_path_count': len(missing),
         'sized_subtree_roots': list(map(str, inventory_roots)),

@@ -5,6 +5,28 @@ scheduling ON, credits OFF and Recommend routing remain unchanged. No full
 rehearsal, new production backup, source promotion or cutover was performed.
 The approved final candidate remains VK9b3f82538/CU95e7aea47, not deployed.
 
+## Corrected full-checkpoint scope and Desktop integration
+
+The measurements below were for changed/recopy subtrees, not the complete new
+checkpoint required by unresolved journal history. The new `--full-checkpoint`
+inventory includes all plan sources plus the recorded supplemental roots.
+`full-checkpoint-size/summary.json` reports288350 regular files,68databases,
+82599304943 non-database bytes and2604078296 database/WAL bytes. No read errors;
+90paths changed during the live scan, so this is not a final fenced snapshot.
+All44journal errors and14protected roots remain represented. The stream-verified
+no-compression capture upper estimate is97940190668bytes (91.214GiB), before
+the2GiB floor/growth reserve. Do not reuse the older17.001GiB estimate as full size.
+
+Desktop integration now lives in draft PR149 pin6bd0b39e5, not the prototype
+retirement API alone. The actual backup/rehearsal reader streams archives and can
+retire verified private SQLite duplicates after each completed archive while
+retaining all final database copies/assertions.176operational regressions and a
+real packaged Desktop fixture restore pass. Real27archive/six-chain audits pass;
+full materialized production-sized restore and combined rehearsal remain unrun.
+Read VK_DESKTOP_ARCHIVE_MIGRATION_20261007.md for adoption and exact receipts.
+The later evidence supersedes the "not adopted" statement in the historical
+next-action section below, not the missing full-workload measurement or approval.
+
 ## Evidence and measurements
 
 Current receipts: `/mnt/vk-storage/vk-low-peak-20261007/`.

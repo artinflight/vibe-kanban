@@ -1,5 +1,18 @@
 # VK Agent Deployment Runbook
 
+## Desktop-Backed Recovery Tools For Next Preparation
+
+Read VK_DESKTOP_ARCHIVE_MIGRATION_20261007.md. Draft PR149 operational pin
+6bd0b39e546ba1f2337cac5dbf27f3b14446fe91 includes PR142 plus authenticated
+Desktop-only legacy-chain resolution. The new64-file recovery package and
+actual-template installer are verified; install that pin into a NEW unsealed
+handover package before readiness and verify its receipt. Never modify a sealed
+or consumed package to claim adoption. Existing local archive copies are still
+protected; Desktop verification is not deletion approval. Full current backup,
+measured rehearsal/capacity and explicit overnight rollout approval remain gates.
+The compatible pending-release v2 reader uses the latest data; never restore an
+older backup over production. Older PR142-only pins below describe past packages.
+
 ## Attention Acceptance Before Completion
 
 Before any operation that can change review state or its display, take a current

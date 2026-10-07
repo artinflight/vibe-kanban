@@ -847,6 +847,23 @@ No production VK service, database, frontend pointer or account allowance change
 
 # HANDOFF.md
 
+## October 7 Runtime Socket Compatibility
+
+Fresh combined-release capture encountered Codex's daemon-updater.sock. The
+runtime warning adapter now accepts only that exact endpoint under the two
+known Codex homes, only while it is an owned Unix socket inside protected scope
+with no symlink traversal. Missing, regular, linked, foreign-owned or unknown
+paths and unrelated tar warnings still fail closed. No source root is excluded.
+All194 deployment tests and ops checks pass; seven focused recovery tests pass.
+The first focused invocation lacked TMPDIR and made no fixtures; the corrected
+invocation uses /mnt/vk-storage/vk-socket-checks. Required pnpm format was attempted
+but this sparse operational checkout lacks crates/capacity-guard/Cargo.toml.
+Install this verified successor into a NEW package; retain the sealed312ac0b20
+package unchanged. A completed unpublished online archive may use the existing
+strict recover/resume path after all journal, manifest and hash checks pass.
+This is not deployment readiness, archive deletion or permission to ignore IPC
+warnings generally. B remains the sole retained archive provider.
+
 ## September 14: Durable controller and CU bridge progress
 
 The private scheduling API and durable controller are now integrated in source:

@@ -1,5 +1,8 @@
 import json
+import os
 from pathlib import Path
+import socket
+from types import SimpleNamespace
 from unittest.mock import patch
 import unittest
 
@@ -77,3 +80,38 @@ class CheckpointRecoveryTests(unittest.TestCase):
         watched['required_subtree_recopy'] = ['/new/root']
         with self.assertRaisesRegex(ValueError, 'workload'):
             verify_workload(self.root, adapter, baseline, watched)
+
+    def test_present_known_runtime_socket_is_distinct_from_file_payload(self):
+        path = self.source / 'app-server-daemon/daemon-updater.sock'
+        path.parent.mkdir()
+        with socket.socket(socket.AF_UNIX) as endpoint, patch.object(ephemeral, 'HOMES', (str(self.source),)):
+            endpoint.bind(str(path))
+            log = 'tar: ' + str(path).lstrip('/') + ': socket ignored'
+            self.assertEqual(ephemeral.runtime_socket_warning(log, self.plan), str(path))
+            adapter = SimpleNamespace(validate_archive_warnings=backup.validate_archive_warnings)
+            ephemeral.install(adapter)
+            self.assertEqual(adapter.validate_archive_warnings(log, {'changed': [], 'events': {}}, self.plan, True), [str(path)])
+            with self.assertRaises(ValueError):
+                adapter.validate_archive_warnings(log + '\ntar: private.txt: Cannot stat: No such file or directory', {'changed': []}, self.plan, True)
+            with self.assertRaises(ValueError):
+                ephemeral.runtime_socket_warning(log, {'sources': []})
+            with patch.object(os, 'getuid', return_value=os.getuid() + 1):
+                with self.assertRaisesRegex(ValueError, 'owned socket'):
+                    ephemeral.runtime_socket_warning(log, self.plan)
+
+    def test_socket_warning_rejects_regular_missing_linked_and_unknown_paths(self):
+        path = self.source / 'app-server-daemon/daemon-updater.sock'
+        path.parent.mkdir()
+        log = 'tar: ' + str(path).lstrip('/') + ': socket ignored'
+        with patch.object(ephemeral, 'HOMES', (str(self.source),)):
+            with self.assertRaises(OSError):
+                ephemeral.runtime_socket_warning(log, self.plan)
+            path.write_text('irreplaceable fixture data')
+            with self.assertRaisesRegex(ValueError, 'owned socket'):
+                ephemeral.runtime_socket_warning(log, self.plan)
+            path.unlink()
+            path.symlink_to(self.note)
+            with self.assertRaises(ValueError):
+                ephemeral.runtime_socket_warning(log, self.plan)
+            with self.assertRaises(ValueError):
+                ephemeral.runtime_socket_warning(log.replace('daemon-updater.sock', 'user.sock'), self.plan)

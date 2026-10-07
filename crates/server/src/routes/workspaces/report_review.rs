@@ -59,7 +59,7 @@ pub struct Source {
     evidence: String,
 }
 impl Source {
-    fn validate(&self) -> Result<(), ApiError> {
+    fn validate(&self) -> Result<(), &'static str> {
         if !["root", "dot"].contains(&self.actor.as_str())
             || !["voice", "chat"].contains(&self.channel.as_str())
             || self.event_id.trim().is_empty()
@@ -67,9 +67,7 @@ impl Source {
             || self.evidence.trim().is_empty()
             || self.evidence.len() > 8000
         {
-            return Err(ApiError::BadRequest(
-                "Actual redacted voice/chat delivery evidence required".into(),
-            ));
+            return Err("Actual redacted voice/chat delivery evidence required");
         }
         Ok(())
     }
@@ -147,7 +145,9 @@ pub async fn receipt<B: ReviewBackend>(
     State(d): State<B>,
     Json(p): Json<Receipt>,
 ) -> Result<Json<ApiResponse<Value>>, ApiError> {
-    p.source.validate()?;
+    p.source
+        .validate()
+        .map_err(|e| ApiError::BadRequest(e.into()))?;
     if p.workspace_id != w.id
         || p.hash_version != "utf8-sha256-v1"
         || !hex64(&p.reply_sha256)
@@ -280,7 +280,9 @@ pub async fn hold<B: ReviewBackend>(
     State(d): State<B>,
     Json(p): Json<Hold>,
 ) -> Result<Json<ApiResponse<Value>>, ApiError> {
-    p.source.validate()?;
+    p.source
+        .validate()
+        .map_err(|e| ApiError::BadRequest(e.into()))?;
     if p.event_id.is_empty() || p.event_id.len() > 1000 || p.expected_intent_version < 0 {
         return Err(ApiError::BadRequest("Invalid hold event".into()));
     }

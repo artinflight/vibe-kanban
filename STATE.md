@@ -1,3 +1,15 @@
+## October7 historical-log and CI compatibility repair — isolated
+
+The isolated review candidate now explicitly validates deployed goal-cleared and
+sleep lifecycle notifications missing from its pinned SDK, with sanitized real
+historical-format and damaged-variant coverage. CI fixtures require debug assets
+in their compiled checkout, optional exact-root binding, and SSD storage on MCP;
+the host-installed connector test runs separately and explicitly. Narrow error
+return types resolve the two new Clippy failures without lint suppression.
+Strict file/hash/writer-closure, receipt/hold/lifecycle guarantees remain intact.
+See VK_CONNECTOR_COMPATIBILITY_20261007.md for exact acceptance and limits.
+Staging/production, live receipts and badges are untouched; root owns integration.
+
 ## October7 connector review repair — isolated, undeployed
 
 The separate fix/e3e1-review-log-integrity candidate repairs deletion references,

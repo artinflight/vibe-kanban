@@ -328,7 +328,7 @@ pub(crate) async fn final_reply_fingerprint(
         )
         .await
         .map_err(|e| ApiError::Conflict(format!("Strict durable replay rejected: {e}")))?;
-        fingerprint_review_messages(messages)
+        fingerprint_review_messages(messages).map_err(|e| *e)
     };
     tokio::time::timeout(Duration::from_secs(10), replay)
         .await
@@ -336,7 +336,9 @@ pub(crate) async fn final_reply_fingerprint(
 }
 
 /// Same bounded reducer used by production and isolated HTTP verification.
-pub fn fingerprint_review_messages(messages: Vec<LogMsg>) -> Result<(usize, String), ApiError> {
+pub fn fingerprint_review_messages(
+    messages: Vec<LogMsg>,
+) -> Result<(usize, String), Box<ApiError>> {
     use sha2::{Digest, Sha256};
     let mut entries = BTreeMap::new();
     let mut bytes = 0usize;
@@ -344,7 +346,7 @@ pub fn fingerprint_review_messages(messages: Vec<LogMsg>) -> Result<(usize, Stri
     let mut finished = false;
     for msg in messages {
         if finished {
-            return Err(ApiError::Conflict("Data after replay completion".into()));
+            return Err(ApiError::Conflict("Data after replay completion".into()).into());
         }
         match msg {
             LogMsg::JsonPatch(patch) => {
@@ -353,9 +355,9 @@ pub fn fingerprint_review_messages(messages: Vec<LogMsg>) -> Result<(usize, Stri
                     .len();
                 patches += patch.0.len();
                 if bytes > 8 * 1024 * 1024 || patches > 100_000 {
-                    return Err(ApiError::Conflict(
-                        "Durable replay exceeds safe bound".into(),
-                    ));
+                    return Err(
+                        ApiError::Conflict("Durable replay exceeds safe bound".into()).into(),
+                    );
                 }
                 for op in patch.0 {
                     apply_entry(&mut entries, op).map_err(|m| ApiError::BadRequest(m.into()))?;
@@ -363,14 +365,12 @@ pub fn fingerprint_review_messages(messages: Vec<LogMsg>) -> Result<(usize, Stri
             }
             LogMsg::Finished => finished = true,
             _ => {
-                return Err(ApiError::Conflict(
-                    "Unexpected review replay message".into(),
-                ));
+                return Err(ApiError::Conflict("Unexpected review replay message".into()).into());
             }
         }
     }
     if !finished {
-        return Err(ApiError::Conflict("Replay did not finish".into()));
+        return Err(ApiError::Conflict("Replay did not finish".into()).into());
     }
     for (index, entry) in entries.iter().rev() {
         if entry["type"] == "NORMALIZED_ENTRY"
@@ -382,5 +382,5 @@ pub fn fingerprint_review_messages(messages: Vec<LogMsg>) -> Result<(usize, Stri
             return Ok((*index, format!("{:x}", Sha256::digest(text.as_bytes()))));
         }
     }
-    Err(ApiError::Conflict("No final assistant reply".into()))
+    Err(ApiError::Conflict("No final assistant reply".into()).into())
 }

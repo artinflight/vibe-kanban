@@ -31,6 +31,23 @@ pub enum VibeKanbanError {
 
 #[tokio::main]
 async fn main() -> Result<(), VibeKanbanError> {
+    // Artifact identification must not construct a deployment, open its ledger
+    // or run startup cleanup. Staging verifies this against the CI/source
+    // receipt before any isolated HTTP acceptance or separately authorized use.
+    if std::env::args().nth(1).as_deref() == Some("--capacity-build-info") {
+        println!(
+            "{}",
+            serde_json::json!({
+                "sourceCommit": option_env!("VK_BUILD_SOURCE_COMMIT"),
+                "capacityLedgerVersions": [1, 2],
+                "capacityWireVersion": 1,
+                "initializationCompiled": !cfg!(feature = "scheduled-goal-initialization-disabled"),
+                "scheduledGoalInitialization": if executors::capacity::first_run::enabled() { 1 } else { 0 },
+                "frontend": "external release required; acceptance build embeds placeholder only"
+            })
+        );
+        return Ok(());
+    }
     // Install rustls crypto provider before any TLS operations
     rustls::crypto::aws_lc_rs::default_provider()
         .install_default()

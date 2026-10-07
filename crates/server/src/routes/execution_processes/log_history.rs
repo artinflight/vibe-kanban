@@ -298,3 +298,89 @@ mod tests {
         assert!(page(&BTreeMap::new(), None, 40).entries.is_empty());
     }
 }
+
+// Append to execution_processes/log_history.rs; uses its existing replay reducer.
+pub(crate) async fn final_reply_fingerprint(
+    deployment: &DeploymentImpl,
+    process: &ExecutionProcess,
+) -> Result<(usize, String), ApiError> {
+    if process.status != ExecutionProcessStatus::Completed
+        || deployment
+            .container()
+            .get_msg_store_by_id(&process.id)
+            .await
+            .is_some()
+    {
+        return Err(ApiError::Conflict(
+            "Report logs are still resident/draining".into(),
+        ));
+    }
+    let replay = async {
+        let (workspace, _) = process
+            .parent_workspace_and_session(&deployment.db().pool)
+            .await?
+            .ok_or_else(|| ApiError::Conflict("Workspace missing".into()))?;
+        let dir = deployment.container().workspace_to_current_dir(&workspace);
+        let messages = services::services::report_review::replay_review_log(
+            &deployment.db().pool,
+            process,
+            &dir,
+        )
+        .await
+        .map_err(|e| ApiError::Conflict(format!("Strict durable replay rejected: {e}")))?;
+        fingerprint_review_messages(messages).map_err(|e| *e)
+    };
+    tokio::time::timeout(Duration::from_secs(10), replay)
+        .await
+        .map_err(|_| ApiError::Conflict("Durable replay timed out".into()))?
+}
+
+/// Same bounded reducer used by production and isolated HTTP verification.
+pub fn fingerprint_review_messages(
+    messages: Vec<LogMsg>,
+) -> Result<(usize, String), Box<ApiError>> {
+    use sha2::{Digest, Sha256};
+    let mut entries = BTreeMap::new();
+    let mut bytes = 0usize;
+    let mut patches = 0usize;
+    let mut finished = false;
+    for msg in messages {
+        if finished {
+            return Err(ApiError::Conflict("Data after replay completion".into()).into());
+        }
+        match msg {
+            LogMsg::JsonPatch(patch) => {
+                bytes += serde_json::to_vec(&patch)
+                    .map_err(|_| ApiError::BadRequest("Replay encoding".into()))?
+                    .len();
+                patches += patch.0.len();
+                if bytes > 8 * 1024 * 1024 || patches > 100_000 {
+                    return Err(
+                        ApiError::Conflict("Durable replay exceeds safe bound".into()).into(),
+                    );
+                }
+                for op in patch.0 {
+                    apply_entry(&mut entries, op).map_err(|m| ApiError::BadRequest(m.into()))?;
+                }
+            }
+            LogMsg::Finished => finished = true,
+            _ => {
+                return Err(ApiError::Conflict("Unexpected review replay message".into()).into());
+            }
+        }
+    }
+    if !finished {
+        return Err(ApiError::Conflict("Replay did not finish".into()).into());
+    }
+    for (index, entry) in entries.iter().rev() {
+        if entry["type"] == "NORMALIZED_ENTRY"
+            && entry["content"]["entry_type"]["type"] == "assistant_message"
+        {
+            let text = entry["content"]["content"]
+                .as_str()
+                .ok_or_else(|| ApiError::Conflict("Ambiguous reply text".into()))?;
+            return Ok((*index, format!("{:x}", Sha256::digest(text.as_bytes()))));
+        }
+    }
+    Err(ApiError::Conflict("No final assistant reply".into()).into())
+}

@@ -9,6 +9,7 @@ import http.server
 import json
 import os
 import shlex
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -20,6 +21,15 @@ turn = 0
 recovery_stage = 0
 
 
+def stalled_event(event, **fields):
+    path = Path(os.environ['CODEX_HOME'], os.environ.get('VK_STALLED_TIMELINE', 'stalled-provider-timeline.jsonl'))
+    with path.open('a') as log:
+        log.write(json.dumps(dict(event=event, wallMs=time.time_ns() // 1_000_000,
+                                 monotonicNs=time.monotonic_ns(), **fields)) + '\n')
+        log.flush()
+        os.fsync(log.fileno())
+
+
 class Provider(http.server.BaseHTTPRequestHandler):
     def log_message(self, *_):
         pass
@@ -28,6 +38,22 @@ class Provider(http.server.BaseHTTPRequestHandler):
         global turn, recovery_stage
         request_body = self.rfile.read(int(self.headers.get('Content-Length', 0))).decode()
         turn += 1
+        if scenario == 'capacity-first-run-stalled':
+            stalled_event('providerRequest', request=turn)
+            # Keep a genuine offline native request outstanding. This process
+            # belongs to the guarded worker, not the controller/test process.
+            while True:
+                stalled_event('providerActive', request=turn)
+                time.sleep(.1)
+        if scenario == 'capacity-first-run-failure':
+            Path(os.environ['CODEX_HOME'], 'first-run-provider-count').write_text(str(turn))
+            data = json.dumps({'error': {'message': 'Synthetic ambiguous first request', 'type': 'server_error'}}).encode()
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
         if os.environ.get('VK_GOAL_TEST_CAPTURE') == '1':
             body = json.loads(request_body)
             with Path(os.environ['CODEX_HOME'], 'capacity-model-requests.jsonl').open('a') as log:
@@ -46,7 +72,10 @@ class Provider(http.server.BaseHTTPRequestHandler):
         if scenario == 'stop':
             time.sleep(0.05)
         requirements = {str(n): f'Verify parity requirement {n}' for n in range(8)}
-        if scenario == 'capacity-containment' and turn == 1:
+        if scenario in ('scheduled-seed', 'capacity-first-run-empty'):
+            item = dict(type='message', id=f'msg{turn}', role='assistant',
+                        content=[dict(type='output_text', text='Existing synthetic paused goal seed anchor.')], phase='final_answer')
+        elif scenario == 'capacity-containment' and turn == 1:
             probe = '''import json, os, socket, subprocess, time
 from pathlib import Path
 results = {"workspace_write": True}
@@ -134,7 +163,7 @@ print(json.dumps(results))'''
             checkpoint = dict(requirements=requirements if turn == 1 else {},
                               completed={str(stage): f'Integration validation {stage}'},
                               disposition='continue', reason='')
-            if scenario == 'needs_input':
+            if scenario in ('needs_input', 'capacity-first-run-input'):
                 checkpoint.update(disposition='needs_input', reason='Choose API compatibility policy')
             text = f'Stage {stage} validated.\n<vk_goal_checkpoint>{json.dumps(checkpoint)}</vk_goal_checkpoint>'
             item = dict(type='message', id=f'msg{turn}', role='assistant',
@@ -161,6 +190,11 @@ print(json.dumps(results))'''
 if __name__ == '__main__':
     if not os.environ.get('CODEX_HOME') or 'vk-continuation' not in os.environ['CODEX_HOME']:
         raise SystemExit('Use a disposable CODEX_HOME under the vk-continuation task directory')
+    if scenario == 'capacity-first-run-stalled':
+        def terminating(signum, _frame):
+            stalled_event('providerTerminating', signal=signum)
+            os._exit(128 + signum)
+        signal.signal(signal.SIGTERM, terminating)
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Provider)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     overrides = {

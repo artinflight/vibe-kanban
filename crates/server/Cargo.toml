@@ -76,4 +76,5 @@ tempfile = "3"
 
 [features]
 default = []
+scheduled-goal-initialization-disabled = ["executors/scheduled-goal-initialization-disabled"]
 qa-mode = ["services/qa-mode", "executors/qa-mode"]

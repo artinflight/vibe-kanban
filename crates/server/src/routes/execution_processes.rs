@@ -1,6 +1,6 @@
 #![allow(clippy::items_after_test_module)]
 
-mod log_history;
+pub(crate) mod log_history;
 
 use std::pin::Pin;
 

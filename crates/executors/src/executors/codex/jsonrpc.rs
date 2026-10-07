@@ -50,6 +50,13 @@ impl ExitSignalSender {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) async fn hold_for_stop_test(
+        &self,
+    ) -> tokio::sync::OwnedMutexGuard<Option<oneshot::Sender<ExecutorExitResult>>> {
+        self.inner.clone().lock_owned().await
+    }
+
     pub async fn send_exit_signal(&self, result: ExecutorExitResult) {
         if let Some(sender) = self.inner.lock().await.take() {
             let _ = sender.send(result);

@@ -1,5 +1,10 @@
 # October 7 Combined Release Preparation
 
+Connector candidate13a3458eb is now received and applied for review, not accepted
+for deployment. Read VK_CONNECTOR_INTEGRATION_REVIEW_20261007.md. The combined
+Rust compile found and corrected the inspect deadline call mismatch. New
+deletion/closure regressions block readiness; no staging/main/live change.
+
 Integrate only reviewed PR1479b3f82538 and PR148cb0b441a2, with compatible
 CU95e7aea47. Await the reviewed connector backend handoff before final build,
 combined acceptance or promotion. Conditional cutover authority requires proven

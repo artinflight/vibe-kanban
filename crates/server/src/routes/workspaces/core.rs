@@ -211,7 +211,7 @@ pub async fn mark_seen(
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
     let pool = &deployment.db().pool;
-    CodingAgentTurn::mark_seen_by_workspace_id(pool, workspace.id).await?;
+    super::report_review::manual_intent(&deployment, workspace.id, true).await?;
     invalidate_workspace_summary_cache();
     Ok(ResponseJson(ApiResponse::success(())))
 }
@@ -222,7 +222,7 @@ pub async fn mark_unread(
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
     let pool = &deployment.db().pool;
-    CodingAgentTurn::mark_latest_unseen_by_workspace_id(pool, workspace.id).await?;
+    super::report_review::manual_intent(&deployment, workspace.id, false).await?;
     invalidate_workspace_summary_cache();
     Ok(ResponseJson(ApiResponse::success(())))
 }

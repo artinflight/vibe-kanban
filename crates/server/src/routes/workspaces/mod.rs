@@ -9,6 +9,7 @@ pub mod git;
 pub mod integration;
 pub mod links;
 pub mod pr;
+pub mod report_review;
 pub mod repos;
 pub mod streams;
 pub mod workspace_summary;
@@ -33,6 +34,9 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
                 .delete(core::delete_workspace),
         )
         .route("/messages/first", get(core::get_first_user_message))
+        .route("/review-state", get(report_review::state))
+        .route("/review-receipts", post(report_review::receipt))
+        .route("/review-hold", axum::routing::put(report_review::hold))
         .route("/seen", axum::routing::put(core::mark_seen))
         .route("/unread", axum::routing::put(core::mark_unread))
         .nest("/git", git::router())

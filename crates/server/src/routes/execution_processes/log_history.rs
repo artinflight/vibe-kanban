@@ -298,3 +298,74 @@ mod tests {
         assert!(page(&BTreeMap::new(), None, 40).entries.is_empty());
     }
 }
+
+// Append to execution_processes/log_history.rs; uses its existing replay reducer.
+pub(crate) async fn final_reply_fingerprint(
+    deployment: &DeploymentImpl,
+    process: &ExecutionProcess,
+) -> Result<(usize, String), ApiError> {
+    use sha2::{Digest, Sha256};
+    if process.status != ExecutionProcessStatus::Completed
+        || deployment
+            .container()
+            .get_msg_store_by_id(&process.id)
+            .await
+            .is_some()
+    {
+        return Err(ApiError::Conflict(
+            "Report logs are still resident/draining".into(),
+        ));
+    }
+    let replay = async {
+        let mut entries = BTreeMap::new();
+        let mut bytes = 0usize;
+        let mut patches = 0usize;
+        let mut finished = false;
+        let mut stream = deployment
+            .container()
+            .stream_normalized_logs(&process.id)
+            .await
+            .ok_or_else(|| ApiError::Conflict("Durable log replay missing".into()))?;
+        while let Some(msg) = stream.next().await {
+            match msg? {
+                LogMsg::JsonPatch(patch) => {
+                    bytes += serde_json::to_vec(&patch)
+                        .map_err(|_| ApiError::BadRequest("Replay encoding".into()))?
+                        .len();
+                    patches += patch.0.len();
+                    if bytes > 8 * 1024 * 1024 || patches > 100_000 {
+                        return Err(ApiError::Conflict(
+                            "Durable replay exceeds safe bound".into(),
+                        ));
+                    }
+                    for op in patch.0 {
+                        apply_entry(&mut entries, op)
+                            .map_err(|m| ApiError::BadRequest(m.into()))?;
+                    }
+                }
+                LogMsg::Finished => {
+                    finished = true;
+                    break;
+                }
+                _ => {}
+            }
+        }
+        if !finished {
+            return Err(ApiError::Conflict("Replay did not finish".into()));
+        }
+        for (index, entry) in entries.iter().rev() {
+            if entry["type"] == "NORMALIZED_ENTRY"
+                && entry["content"]["entry_type"]["type"] == "assistant_message"
+            {
+                let text = entry["content"]["content"]
+                    .as_str()
+                    .ok_or_else(|| ApiError::Conflict("Ambiguous reply text".into()))?;
+                return Ok((*index, format!("{:x}", Sha256::digest(text.as_bytes()))));
+            }
+        }
+        Err(ApiError::Conflict("No final assistant reply".into()))
+    };
+    tokio::time::timeout(Duration::from_secs(10), replay)
+        .await
+        .map_err(|_| ApiError::Conflict("Durable replay timed out".into()))?
+}

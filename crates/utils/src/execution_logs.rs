@@ -49,6 +49,11 @@ impl ExecutionLogWriter {
         &self.path
     }
 
+    pub async fn finish_for_review(&mut self) -> std::io::Result<()> {
+        self.file.flush().await?;
+        self.file.sync_all().await
+    }
+
     pub async fn append_jsonl_line(&mut self, jsonl_line: &str) -> std::io::Result<()> {
         self.file.write_all(jsonl_line.as_bytes()).await
     }

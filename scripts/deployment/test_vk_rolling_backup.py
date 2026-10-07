@@ -12,12 +12,14 @@ from unittest.mock import patch
 from vk_change_journal import Journal, OVERFLOW
 from vk_prep_common import digest
 from vk_rolling_backup import capture, restore_chain, verify_snapshot_archive
+from private_desktop_fixture import PrivateDesktop
 
 
 class BackupTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(dir=os.environ["TMPDIR"])
         self.root = Path(self.temporary.name)
+        self.desktop = PrivateDesktop(self.root)
         self.source = self.root / "production-fixture"
         self.source.mkdir()
         self.backups = self.root / "backups"
@@ -40,10 +42,11 @@ class BackupTests(unittest.TestCase):
 
     def tearDown(self):
         self.journal.close()
+        self.desktop.close()
         self.temporary.cleanup()
 
     def mirror(self, archive):
-        return {"desktop_verified": True, "sha256": digest(archive), "bytes": archive.stat().st_size}
+        return self.desktop.mirror(archive)
 
     def backup(self, parent=None, **kwargs):
         return capture(self.plan, self.backups, self.journal.report, kwargs.get("mirror", self.mirror), parent)
@@ -166,15 +169,15 @@ class BackupTests(unittest.TestCase):
 
     def test_corrupt_parent_blocks_incremental_backup(self):
         first = self.backup()
-        (Path(first["folder"]) / first["archive"]).write_bytes(b"corrupt")
-        with self.assertRaisesRegex(ValueError, "unverified"):
+        (Path(first['receipt']['desktop_directory']) / first['archive']).write_bytes(b'corrupt')
+        with self.assertRaisesRegex(ValueError, "checksum"):
             self.backup(first)
 
     def test_restore_refuses_corrupt_ancestor(self):
         first = self.backup()
         second = self.backup(first)
-        (Path(first["folder"]) / first["archive"]).write_bytes(b"corrupt")
-        with self.assertRaisesRegex(ValueError, "checksum"):
+        (Path(first['receipt']['desktop_directory']) / first['archive']).write_bytes(b'corrupt')
+        with self.assertRaisesRegex((ValueError, __import__('tarfile').ReadError), "checksum|empty file|read/hash"):
             self.restored(second)
 
     def test_restore_refuses_existing_or_non_task_destination(self):

@@ -141,6 +141,33 @@ class DesktopBackups(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Desktop backup unavailable'):
             self.backup(first)
 
+    def test_cli_restore_defaults_to_desktop_and_rejects_local_override(self):
+        from vk_rolling_backup import main
+        first = self.backup()
+        args = ['vk_rolling_backup.py', 'verify-restore', '--result',
+                str(Path(first['folder']) / 'result.json'), '--destination', str(self.backups / 'cli-local'),
+                '--archive-directory', first['folder']]
+        with patch.object(sys, 'argv', args):
+            with self.assertRaisesRegex(ValueError, 'Desktop-only mode conflicts'):
+                main()
+
+    def test_parent_without_desktop_locator_fails_even_when_local_exists(self):
+        first = self.backup()
+        first['receipt'].pop('desktop_directory')
+        for name in ('result.json', first['archive'] + '.result.json'):
+            (Path(first['folder']) / name).write_text(json.dumps(first))
+        with self.assertRaisesRegex(ValueError, 'No verified Desktop locator'):
+            self.backup(first)
+
+    def test_cli_audit_defaults_to_desktop(self):
+        from vk_rolling_backup import main
+        first = self.backup()
+        args = ['vk_rolling_backup.py', 'audit-chain', '--result', str(Path(first['folder']) / 'result.json')]
+        with patch.object(sys, 'argv', args), patch('vk_rolling_backup.chain', return_value=[]) as audited, \
+                patch('builtins.print'):
+            main()
+        self.assertTrue(audited.call_args.kwargs['desktop_only'])
+
     def test_rehearsal_consumer_downloads_only_metadata_and_streams_remote_payload(self):
         from rehearse_vk_backup_boundary import desktop_restore
         first = self.backup()

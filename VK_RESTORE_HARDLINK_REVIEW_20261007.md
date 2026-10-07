@@ -1,5 +1,17 @@
 # Restore Hardlink Review: Confirmed Private Failure, No Evidence Of Production Loss
 
+## Subsequent authorized correction
+
+The operator subsequently authorized the narrow correction as part of B-only
+provider integration. `detach_restore_alias` now detaches an overwritten shared
+private inode before regular-file or SQLite writes; snapshots also replace stale
+link metadata. Eight ordinary regressions pass and the full operational suite
+passes192tests. Historical probe failures below remain accurate for6bd0b39e5.
+See VK_DESKTOP_BACKED_RECOVERY.md for the sole-retained-provider policy. The
+storage figures below describe full simultaneous materialization/capture, not a
+requirement to keep redundant local archives indefinitely. No deletion approval
+or production cutover follows from this correction alone.
+
 This is a focused investigation requested before archive retirement/readiness.
 Production, source reader, sealed packages and all original archives are unchanged.
 The separate overnight release remains pending. No archive retirement is approved.

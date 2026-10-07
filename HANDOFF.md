@@ -1,5 +1,18 @@
 # October 7 Desktop-backed Recovery Integration
 
+Latest authority: Desktop B is the sole retained archive provider. The narrow
+hardlink fix is implemented, with192passing operational tests. Current source
+defaults all archive/chain/restore reads and parent checks to Desktop-only.
+`vk_staged_recovery.py` enables bounded all-database plus selected-file acceptance
+without pretending to materialize the entire historical filesystem. Fresh27-copy
+B checks and bounded real-chain acceptance are under
+/mnt/vk-storage/vk-desktop-provider-20261007. Their completion receipts, not this
+in-progress note, govern provider acceptance. No original archive deletion yet;
+return an exact redundant-local-copy action manifest for specific approval.
+Full overnight backup/rehearsal remains distinct; do not reinstate duplicate SSD
+retention merely because a full simultaneous restore will not fit. Notes below
+about the unadopted prototype describe the prior investigation, not current code.
+
 Later independent-review finding: read VK_RESTORE_HARDLINK_REVIEW_20261007.md.
 The current reader fails two private atomic-replacement hardlink cases while
 reporting success. A process-local detach-before-write prototype passes all four

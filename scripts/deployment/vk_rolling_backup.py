@@ -108,7 +108,7 @@ def verified_parent(parent, plan, watched):
             and parent["exclusion_targets"] != list(map(str, Exclusions(plan).roots))):
         raise ValueError("Parent exclusion targets changed; take a new online checkpoint")
     # A verified Desktop receipt is authoritative; no parent archive download.
-    Archive(reference(parent)).verify()
+    Archive(reference(parent), desktop_only=True).verify()
     if watched["sequence"] < parent["journal_sequence"]:
         raise ValueError("Journal sequence moved backwards")
 
@@ -463,7 +463,15 @@ def restore_copy(source, target, destination):
         target.write(block)
 
 
-def restore_chain(result, destination, archive_directory=None, *, desktop_only=False,
+def detach_restore_alias(target):
+    """Do not overwrite an untouched name through a prior archive's hardlink."""
+    if target.is_symlink():
+        raise ValueError('Refusing a symlink restore destination')
+    if target.is_file() and target.stat().st_nlink > 1:
+        target.unlink()
+
+
+def restore_chain(result, destination, archive_directory=None, *, desktop_only=True,
                   retire_verified_snapshots=False):
     destination = storage(destination)
     backup_root = Path(result["folder"]).parent.parent.resolve()
@@ -500,6 +508,7 @@ def restore_chain(result, destination, archive_directory=None, *, desktop_only=F
                     directory_modes[str(target)] = member.mode
                 elif member.isfile():
                     target.parent.mkdir(parents=True, exist_ok=True)
+                    detach_restore_alias(target)
                     with target.open("wb") as stream:
                         restore_copy(tar.extractfile(member), stream, destination)
                     target.chmod(member.mode)
@@ -535,7 +544,9 @@ def restore_chain(result, destination, archive_directory=None, *, desktop_only=F
             target = destination / "files" / name
             target.parent.mkdir(parents=True, exist_ok=True)
             restore_room(destination, payload.stat().st_size)
+            detach_restore_alias(target)
             shutil.copy2(payload, target)
+            links.pop(str(name), None)
             with closing(sqlite3.connect(target.as_uri() + "?mode=ro", uri=True)) as connection:
                 if connection.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                     raise ValueError("Restored database integrity mismatch")
@@ -621,12 +632,13 @@ def main():
     restore.add_argument("--result", required=True, type=Path)
     restore.add_argument("--destination", required=True, type=Path)
     restore.add_argument("--archive-directory", type=Path, help="Directory of archive copies fetched from Desktop")
-    restore.add_argument("--desktop-only", action="store_true", help="Fail rather than use any local archive")
+    restore.add_argument("--desktop-only", action="store_true", default=True,
+                         help="Required provider: Desktop; local archive override is rejected")
     restore.add_argument('--retire-verified-snapshots', action='store_true',
                          help='Retire only private duplicate snapshots after each archive passes all checks')
     audit = commands.add_parser("audit-chain", help="Read and verify the chain without extracting payloads")
     audit.add_argument("--result", required=True, type=Path)
-    audit.add_argument("--desktop-only", action="store_true")
+    audit.add_argument("--desktop-only", action="store_true", default=True)
     for command in (restore, audit):
         command.add_argument('--desktop-hostname')
         command.add_argument('--desktop-host-key-alias')
@@ -639,6 +651,8 @@ def main():
                                      host_key_alias=args.desktop_host_key_alias)
         mirror = lambda archive: transport.mirror(archive, args.desktop_directory)
         parent = json.loads(args.parent.read_text()) if args.parent else None
+        if parent is not None:
+            Archive(reference(parent), desktop_only=True)
         reader = configured_reader(args.plan, args.socket, parent)
         if args.action == "resume-delivery":
             result = resume_delivery(json.loads(args.plan.read_text()), args.root, args.folder,

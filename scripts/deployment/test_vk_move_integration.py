@@ -12,12 +12,14 @@ from subtree_recopy import RecopyJournal
 from vk_change_journal import Journal
 from vk_prep_common import digest
 from vk_rolling_backup import capture, configured_reader, restore_chain
+from private_desktop_fixture import PrivateDesktop
 
 
 class MoveIntegration(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(dir=os.environ['TMPDIR'])
         self.root = Path(self.tmp.name)
+        self.desktop = PrivateDesktop(self.root)
         self.source = self.root/'protected'
         self.old = self.source/'old'/'hyroxready-app'
         self.new = self.source/'new'/'hyroxready-app'
@@ -39,10 +41,11 @@ class MoveIntegration(unittest.TestCase):
 
     def tearDown(self):
         self.journal.close()
+        self.desktop.close()
         self.tmp.cleanup()
 
     def mirror(self, path):
-        return {'desktop_verified':True,'name':path.name,'sha256':digest(path)}
+        return self.desktop.mirror(path)
 
     def watches(self, *args):
         result=set()

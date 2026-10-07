@@ -1,10 +1,34 @@
 # Desktop-backed backup integration
 
-Independent-review follow-up: `VK_RESTORE_HARDLINK_REVIEW_20261007.md` documents
-two failing private restore cases in the current reader and a tested, unadopted
-minimal prototype. The27 real archives have no hardlink members, so the specific
-case is absent there. Earlier tests do not establish generic restore correctness.
-Do not clear readiness or retirement from those earlier passes alone.
+## Authoritative retained-provider policy
+
+Desktop B is the sole retained archive provider. Local compressed archives are
+temporary capture staging or redundant retirement candidates, not permanent
+recovery requirements. Capture/resume parent checks, archive/chain/restore API
+defaults and command-line recovery require exact verified Desktop locators;
+unavailable/corrupt Desktop fails closed without implicit local fallback. The
+explicit low-level local override exists for offline fixtures/diagnostics only,
+not a production retention policy. Preserve small local metadata/breadcrumbs and
+the independently hashed portable recovery package on B.
+
+The hardlink defect described in `VK_RESTORE_HARDLINK_REVIEW_20261007.md` is now
+fixed for regular-file and SQLite replacement. Eight normal regressions cover
+atomic replacement of either name, unchanged/relinked names, modes, SQLite and
+failure guards. All192 operational tests pass. The27 real archives have no
+hardlink members; no actual user-data loss was demonstrated. Earlier historical
+failure receipts remain unchanged rather than being relabelled successful.
+
+Retained archive-source acceptance is separate from a full simultaneous restore
+or the overnight deployment rehearsal. Authenticated complete B streams and
+all parent graphs, complete per-archive SQLite checks, the corrected-reader
+regressions, and bounded B-only actual-reader recovery can establish provider
+compatibility without materializing every non-DB file at once on SSD.
+`vk_staged_recovery.py` restores every database and selected non-DB files through
+the actual reader, checks the real streamed manifest against its authenticated
+cache, verifies full stream checksums, and checks restored hashes/modes. It never
+claims unselected files were materialized. Fresh full-sized backup/rehearsal
+capacity remains its own rollout gate, not a standing requirement for duplicate
+retained SSD archives. Exact redundant-copy deletion still needs action approval.
 
 This operational branch extends PR142 pin `528282d00` without deploying its
 application tree. Production stays on the accepted October5 deployment. The

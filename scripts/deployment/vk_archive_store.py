@@ -78,7 +78,7 @@ with open(PATH,'rb') as f:
 
 
 class Archive:
-    def __init__(self, ref, archive_directory=None, *, desktop_only=False):
+    def __init__(self, ref, archive_directory=None, *, desktop_only=True):
         ref = dict(ref)
         name = ref["archive"]
         if (not re.fullmatch(r"[A-Za-z0-9_-][A-Za-z0-9_.-]*\.tar\.zst", name)
@@ -187,7 +187,7 @@ class Archive:
         return found
 
 
-def chain(result, archive_directory=None, *, desktop_only=False):
+def chain(result, archive_directory=None, *, desktop_only=True):
     current = reference(result)
     archives, seen = [], set()
     while current:

@@ -1,5 +1,28 @@
 # HANDOFF.md
 
+## October 7 Runtime Backup Blocker Resolved; Release Still Blocked
+
+Read VK_RUNTIME_BACKUP_RECOVERY_20261007.md. PR149 tool49cf82d60 is pushed;
+198 regressions pass. The two disappearing files are runtime-generated shell
+snapshots and released writer locks, not thread history. Exact online observed
+deletions are handled narrowly; present files remain included and required state,
+unexplained losses and frozen-capture deletions still fail closed.
+
+New full02136af9b9c24c08bccba0868864e597 and delta430d3a842f5d4216862a1703e33232b8
+are fully hash-verified on B:/vk-backups/vk-runtime-backup-20261007. Actual B-only
+restore passed all69 databases and32 selected real files plus complete archive
+inventories/all14 protected roots. Full/delta/restore took1578.084/93.548/408.650s;
+restore minimum free12.85GiB exceeded the8GiB floor. Exact receipts and verified
+tool/evidence bundles remain on B. Prior failed archive and historical journal
+exceptions are retained, not promoted or erased. No production changes occurred.
+
+This is not complete release rehearsal or cutover readiness: root has returned
+historical goal/sleep replay and CI failures to the connector owner. Do not deploy
+2bc909d63. Await independently verified repair, then run full release-specific
+handover/latest-v2 rollback and fresh fenced capture/actual idle checks. Bind the
+new verified tools into a new package; never alter a consumed sealed package.
+Earlier backup-failure and free-space figures below are superseded chronology.
+
 ## October 7 Corrected Repair Verified: New Concrete Blockers
 
 Current combined source is pushed2bc909d6375e13d0dd47f370eec0100fae3b2075,

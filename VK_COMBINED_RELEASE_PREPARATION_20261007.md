@@ -7,9 +7,13 @@ published in draft PR150. Read VK_CONNECTOR_REAL_LOG_REVIEW_20261007.md and
 VK_COMBINED_BACKUP_BLOCKERS_20261007.md for the current evidence and remaining
 sequence.31 independent Rust tests and compile pass,94 connector tests pass,
 but4/4 real historical logs reject legitimate goal/sleep events and two new
-Clippy errors fail CI. The fresh69-DB full capture failed warning validation;
-no accepted new backup or full rehearsal is claimed. New backup tool6db1a43e1
-is published, packaged and verified on B. Production remains unchanged.
+Clippy errors fail CI. The initial69-DB capture failed warning validation and
+remains failed. Its independent blocker is now resolved: read
+VK_RUNTIME_BACKUP_RECOVERY_20261007.md. Tool49cf82d60 is pushed with198 regressions,
+and a separate fresh full plus delta are verified on B. B-only recovery passes
+all69 databases,32 selected files and complete archive inventories/protected roots.
+This is not the complete release-specific handover/latest-v2 rollback rehearsal;
+that and corrected combined acceptance remain required. Production is unchanged.
 The27-file retirement was already completed; no deletion approval is pending.
 All older sections below are retained chronology, not current execution steps.
 

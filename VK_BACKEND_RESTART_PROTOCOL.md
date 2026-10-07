@@ -4,12 +4,23 @@
 
 Desktop B is the sole retained VK archive provider. SSD holds temporary capture
 and isolated test working data, not mandatory permanent duplicate archive chains.
-Use published PR149 operational pin312ac0b20 (or a subsequently verified descendant)
+Use published PR149 operational pin49cf82d60 (or a subsequently verified descendant)
 through the next-package installer. It includes PR142, strict Desktop defaults,
 exact legacy locator resolution and the regular/SQLite hardlink restore correction.
 The portable recovery package and current receipts are under
 /mnt/vk-storage/vk-desktop-provider-20261007; its independently verified B copy
 is the retained tool/descriptor entrypoint. Existing sealed packages stay unchanged.
+
+The successor includes narrow runtime lifecycle handling. Existing shell snapshots
+and writer locks remain in scope. Only exact known runtime filenames with a
+journal-observed deletion and verified absence may be classified as released
+during online preparation; no whole-directory exclusion is permitted. Missing
+rollouts, unknown files, required paths, symlinks, unexplained events and deletion
+during a fenced capture still block. A deleted writer-lock file is not proof that
+all agents are idle. Preserve independent writer/queue checks and the final fence.
+Read PR149's VK_RUNTIME_BACKUP_LIFECYCLE_20261007.md for source/runtime evidence
+and the real capture/delta/restore regression.198 operational regressions pass.
+An old failed archive remains failed; resolving a warning is not restore proof.
 
 Provider acceptance can use full B checksums/chain validation, per-archive database
 verification and bounded actual-reader recovery; it need not keep SSD duplicates

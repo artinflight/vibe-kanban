@@ -3,9 +3,11 @@
 ## Desktop-Backed Recovery Tools For Next Preparation
 
 Current sole-provider authority supersedes the older tool pin below: use PR149
-312ac0b20 or a verified descendant. Read VK_BACKEND_RESTART_PROTOCOL.md's
+49cf82d60 or a verified descendant. Read VK_BACKEND_RESTART_PROTOCOL.md's
 Desktop B policy and /mnt/vk-storage/vk-desktop-provider-20261007 receipts.
-The hardlink defect is corrected and192regressions pass. Do not retain duplicate
+The hardlink defect and runtime-release warning handling are corrected and198
+regressions pass. The newer package must be explicitly verified/bound; do not
+change older sealed packages. Do not retain duplicate
 SSD archive chains as a standing requirement or use full simultaneous filesystem
 extraction as the only provider acceptance method. Exact deletion approval and
 separate production rollout approval remain required.

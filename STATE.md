@@ -1,3 +1,10 @@
+## October7 connector review repair — isolated, undeployed
+
+The separate fix/e3e1-review-log-integrity candidate repairs deletion references,
+loss-aware raw capture and strict durable report verification. It preserves user
+holds/manual intent; no live badges or Vibe services changed. See
+VK_CONNECTOR_REPAIR_20261007.md for compiled acceptance and caller/deployment gaps.
+
 ## October 7 Integration Is Not Deployment
 
 The production instance remains the October5 release. PR1479b3f82538 and

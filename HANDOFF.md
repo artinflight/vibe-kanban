@@ -1,3 +1,11 @@
+## October7 conditional review candidate repair
+
+Pickup: /mnt/vk-storage/vk-connector-repair-20261007/source, branch
+fix/e3e1-review-log-integrity. Repairs the exact Staging findings; keeps normal UI
+recovery separate from review integrity and preserves deletion/audit lifecycle.
+Use VK_CONNECTOR_REPAIR_20261007.md and the bound repair patch/test receipts.
+No Staging edit, service restart, credential change or live badge clear occurred.
+
 # October 7 Combined Release Preparation
 
 This isolated integration branch combines reviewed PR147 at9b3f82538 and PR148

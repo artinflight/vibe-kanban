@@ -1546,6 +1546,29 @@ fn normalize_codex_stderr_logs(
     })
 }
 
+/// Review-only validation before invoking the UI normalizer. A malformed native
+/// event must not disappear through the UI's best-effort recovery parser.
+pub fn validate_review_line(line: &str) -> std::io::Result<()> {
+    let invalid = || std::io::Error::other("Invalid native event in review log");
+    let value: Value = serde_json::from_str(line).map_err(|_| invalid())?;
+    if !value.is_object() {
+        return Err(invalid());
+    }
+    if let Some(method) = value["method"].as_str() {
+        if method.starts_with("codex/event") {
+            serde_json::from_value::<CodexNotificationParams>(value["params"].clone())
+                .map_err(|_| invalid())?;
+        } else if method.starts_with("item/")
+            || method.starts_with("turn/")
+            || method.starts_with("thread/")
+            || method == "error"
+        {
+            super::jsonrpc::parse_server_notification(line).map_err(|_| invalid())?;
+        }
+    }
+    Ok(())
+}
+
 pub fn normalize_logs(
     msg_store: Arc<MsgStore>,
     worktree_path: &Path,

@@ -5,7 +5,6 @@ use axum::{
     response::Json as ResponseJson,
 };
 use db::models::{
-    coding_agent_turn::CodingAgentTurn,
     execution_process::{ExecutionProcess, ExecutionProcessStatus},
     workspace::{Workspace, WorkspaceError},
 };
@@ -210,7 +209,6 @@ pub async fn mark_seen(
     Extension(workspace): Extension<Workspace>,
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
-    let pool = &deployment.db().pool;
     super::report_review::manual_intent(&deployment, workspace.id, true).await?;
     invalidate_workspace_summary_cache();
     Ok(ResponseJson(ApiResponse::success(())))
@@ -221,7 +219,6 @@ pub async fn mark_unread(
     Extension(workspace): Extension<Workspace>,
     State(deployment): State<DeploymentImpl>,
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
-    let pool = &deployment.db().pool;
     super::report_review::manual_intent(&deployment, workspace.id, false).await?;
     invalidate_workspace_summary_cache();
     Ok(ResponseJson(ApiResponse::success(())))

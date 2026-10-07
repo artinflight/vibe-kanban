@@ -290,7 +290,17 @@ pub fn spawn_stream_raw_logs_to_storage(
             let mut review_log_valid = true;
             let mut stream = store.history_plus_stream_strict();
 
-            while let Some(Ok(msg)) = stream.next().await {
+            while let Some(next) = stream.next().await {
+                let msg = match next {
+                    Ok(msg) => msg,
+                    Err(error) => {
+                        tracing::warn!(
+                            "Incomplete raw capture; no review closure proof: {}",
+                            error
+                        );
+                        break;
+                    }
+                };
                 match &msg {
                     LogMsg::Stdout(stdout) => {
                         if let Err(e) = update_subagent_jobs_from_stdout(
@@ -396,9 +406,21 @@ pub fn spawn_stream_raw_logs_to_storage(
                     }
                     LogMsg::Finished => {
                         if review_log_valid && log_writer.finish_for_review().await.is_ok() {
-                            if let Err(error) = sqlx::query("INSERT INTO workspace_review_log_finalized(execution_id,finalized_at) VALUES (?,?) ON CONFLICT(execution_id) DO NOTHING")
-                                .bind(execution_id).bind(chrono::Utc::now()).execute(&db.pool).await {
-                                tracing::warn!("Could not publish closed-log review proof: {}", error);
+                            // No producer writes this file after Finished. Bind closure
+                            // to the actual bytes, not status or a synthetic UI EOF.
+                            if let Ok((bytes, _)) =
+                                utils::execution_logs::read_execution_log_strict(
+                                    log_writer.path(),
+                                    super::report_review::MAX_RAW_BYTES,
+                                )
+                                .await
+                            {
+                                use sha2::{Digest, Sha256};
+                                let digest = format!("{:x}", Sha256::digest(&bytes));
+                                if let Err(error) = sqlx::query("INSERT INTO workspace_review_log_finalized(execution_id,finalized_at,raw_bytes,raw_sha256) VALUES (?,?,?,?) ON CONFLICT(execution_id) DO NOTHING")
+                                    .bind(execution_id).bind(chrono::Utc::now()).bind(bytes.len() as i64).bind(digest).execute(&db.pool).await {
+                                    tracing::warn!("Could not publish closed-log review proof: {}", error);
+                                }
                             }
                         }
                         break;

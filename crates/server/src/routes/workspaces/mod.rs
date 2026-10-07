@@ -34,9 +34,15 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
                 .delete(core::delete_workspace),
         )
         .route("/messages/first", get(core::get_first_user_message))
-        .route("/review-state", get(report_review::state))
-        .route("/review-receipts", post(report_review::receipt))
-        .route("/review-hold", axum::routing::put(report_review::hold))
+        .route("/review-state", get(report_review::state::<DeploymentImpl>))
+        .route(
+            "/review-receipts",
+            post(report_review::receipt::<DeploymentImpl>),
+        )
+        .route(
+            "/review-hold",
+            axum::routing::put(report_review::hold::<DeploymentImpl>),
+        )
         .route("/seen", axum::routing::put(core::mark_seen))
         .route("/unread", axum::routing::put(core::mark_unread))
         .nest("/git", git::router())

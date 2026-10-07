@@ -9,12 +9,31 @@ use deployment::Deployment;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use sqlx::{Row, Sqlite, Transaction};
+use sqlx::{Row, Sqlite, SqlitePool, Transaction};
 use utils::response::ApiResponse;
 use uuid::Uuid;
 
 use super::workspace_summary::invalidate_workspace_summary_cache;
 use crate::{DeploymentImpl, error::ApiError};
+
+/// Narrow dependency boundary for isolated HTTP acceptance. Production still
+/// supplies its existing deployment; no application constructor/test agent runs.
+pub trait ReviewBackend: Clone + Send + Sync + 'static {
+    fn pool(&self) -> &SqlitePool;
+    fn fingerprint(
+        &self,
+        process: &ExecutionProcess,
+    ) -> impl std::future::Future<Output = Result<(usize, String), ApiError>> + Send;
+}
+impl ReviewBackend for DeploymentImpl {
+    fn pool(&self) -> &SqlitePool {
+        &self.db().pool
+    }
+    async fn fingerprint(&self, process: &ExecutionProcess) -> Result<(usize, String), ApiError> {
+        crate::routes::execution_processes::log_history::final_reply_fingerprint(self, process)
+            .await
+    }
+}
 
 const PROTOCOL: &str = "workspace-review-v1";
 pub const ENSURE_INTENT: &str = "INSERT INTO workspace_review_intent(workspace_id,held,version) VALUES (?,0,0) ON CONFLICT(workspace_id) DO NOTHING";
@@ -106,13 +125,13 @@ async fn lock(tx: &mut Transaction<'_, Sqlite>, wid: Uuid) -> Result<(), ApiErro
     Ok(())
 }
 
-pub async fn state(
+pub async fn state<B: ReviewBackend>(
     Extension(w): Extension<Workspace>,
-    State(d): State<DeploymentImpl>,
+    State(d): State<B>,
 ) -> Result<Json<ApiResponse<Value>>, ApiError> {
     let row = sqlx::query(GET_INTENT)
         .bind(w.id)
-        .fetch_optional(&d.db().pool)
+        .fetch_optional(d.pool())
         .await?;
     let (held, version) = row
         .map(|r| (r.get::<bool, _>("held"), r.get::<i64, _>("version")))
@@ -123,9 +142,9 @@ pub async fn state(
     )))
 }
 
-pub async fn receipt(
+pub async fn receipt<B: ReviewBackend>(
     Extension(w): Extension<Workspace>,
-    State(d): State<DeploymentImpl>,
+    State(d): State<B>,
     Json(p): Json<Receipt>,
 ) -> Result<Json<ApiResponse<Value>>, ApiError> {
     p.source.validate()?;
@@ -138,12 +157,12 @@ pub async fn receipt(
     {
         return Err(ApiError::BadRequest("Invalid exact report receipt".into()));
     }
-    let process = ExecutionProcess::find_by_id(&d.db().pool, p.execution_id)
+    let process = ExecutionProcess::find_by_id(d.pool(), p.execution_id)
         .await?
         .ok_or_else(|| conflict("Execution missing"))?;
     let finalized: i64 = sqlx::query_scalar(LOG_FINALIZED)
         .bind(p.execution_id)
-        .fetch_one(&d.db().pool)
+        .fetch_one(d.pool())
         .await?;
     if finalized != 1 {
         return Err(conflict(
@@ -159,12 +178,17 @@ pub async fn receipt(
     {
         return Err(conflict("Execution ownership/revision/status changed"));
     }
+    let turn_before: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar(
+        "SELECT updated_at FROM coding_agent_turns WHERE execution_process_id=?",
+    )
+    .bind(p.execution_id)
+    .fetch_optional(d.pool())
+    .await?;
+    let turn_before = turn_before.ok_or_else(|| conflict("Coding turn missing"))?;
     // This helper explicitly rejects a resident/draining store and consumes only
     // the finite durable replay. A summary (potentially 4KiB truncated) is NEVER
     // used as full-message evidence. Replay normalization version is explicit.
-    let (index, hash) =
-        crate::routes::execution_processes::log_history::final_reply_fingerprint(&d, &process)
-            .await?;
+    let (index, hash) = d.fingerprint(&process).await?;
     if index != p.message_index || hash != p.reply_sha256 {
         return Err(conflict("Exact final reply changed"));
     }
@@ -176,7 +200,7 @@ pub async fn receipt(
         "{}:{}:{}:{}",
         w.id, p.source.actor, p.source.channel, p.source.event_id
     );
-    let mut tx = d.db().pool.begin().await?;
+    let mut tx = d.pool().begin().await?;
     lock(&mut tx, w.id).await?;
     if let Some(r)=sqlx::query("SELECT payload_hash,proof FROM workspace_review_receipts WHERE receipt_id=? OR event_key=?")
         .bind(&p.receipt_id).bind(&event_key).fetch_optional(&mut *tx).await? {
@@ -228,6 +252,9 @@ pub async fn receipt(
             .await?
             .ok_or_else(|| conflict("Coding turn missing"))?;
     let turn_revision: chrono::DateTime<chrono::Utc> = turn.try_get("updated_at")?;
+    if turn_revision != turn_before {
+        return Err(conflict("Coding reply changed during replay"));
+    }
     let now = chrono::Utc::now();
     // This marks ONLY this reviewed execution's existing coding-agent turn.
     // Other older unseen turns and every future turn are deliberately untouched.
@@ -248,9 +275,9 @@ pub async fn receipt(
     Ok(Json(ApiResponse::success(proof)))
 }
 
-pub async fn hold(
+pub async fn hold<B: ReviewBackend>(
     Extension(w): Extension<Workspace>,
-    State(d): State<DeploymentImpl>,
+    State(d): State<B>,
     Json(p): Json<Hold>,
 ) -> Result<Json<ApiResponse<Value>>, ApiError> {
     p.source.validate()?;
@@ -259,7 +286,7 @@ pub async fn hold(
     }
     let body = serde_json::to_string(&p.source)
         .map_err(|_| ApiError::BadRequest("Hold encoding".into()))?;
-    let mut tx = d.db().pool.begin().await?;
+    let mut tx = d.pool().begin().await?;
     lock(&mut tx, w.id).await?;
     if let Some(r) = sqlx::query(
         "SELECT held,source FROM workspace_review_hold_events WHERE workspace_id=? AND event_id=?",
@@ -295,9 +322,9 @@ pub async fn hold(
     state(Extension(w), State(d)).await
 }
 
-pub async fn manual_intent(d: &DeploymentImpl, wid: Uuid, read: bool) -> Result<(), ApiError> {
+pub async fn manual_intent<B: ReviewBackend>(d: &B, wid: Uuid, read: bool) -> Result<(), ApiError> {
     // Existing human UI seen/unread routes must join the SAME writer transaction.
-    let mut tx = d.db().pool.begin().await?;
+    let mut tx = d.pool().begin().await?;
     lock(&mut tx, wid).await?;
     sqlx::query("UPDATE workspace_review_intent SET held=?,version=version+1 WHERE workspace_id=?")
         .bind(!read)
@@ -313,3 +340,7 @@ pub async fn manual_intent(d: &DeploymentImpl, wid: Uuid, read: bool) -> Result<
     invalidate_workspace_summary_cache();
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "report_review_tests.rs"]
+mod tests;

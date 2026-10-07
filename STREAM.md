@@ -1,3 +1,10 @@
+## October7 connector candidate repair
+
+Isolated branch fix/e3e1-review-log-integrity starts from combined eacafb3a1.
+Staging combined source is untouched. The repaired candidate needs release-owner
+integration/acceptance; no production restart or automatic delivery claim.
+See VK_CONNECTOR_REPAIR_20261007.md.
+
 # October 7 Combined Release Preparation
 
 Connector candidate13a3458eb is now received and applied for review, not accepted

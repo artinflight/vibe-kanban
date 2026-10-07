@@ -92,3 +92,18 @@ Useful routing must be running before October 30, when included allowance falls
 from 20x to 10x. Remaining readiness is passing integration CI, owner adoption,
 real Recommend evidence and accepted-task quality/net-usage evidence; no new large
 benchmark campaign or paid synthetic workload is required.
+
+## Delivery snapshot
+
+Implementation commit: `665d836dba44dcd1af9244992e2656745d15641e`, pushed on
+`fix/autoswitch-current-step-risk`. Draft [PR148](https://github.com/artinflight/vibe-kanban/pull/148)
+targets staging, with CI pending at preparation. It includes the unchanged PR146
+prerequisites; the previous branch/PR remains preserved, not a second release.
+
+Prepared immutable module: `current-step-665d836db-20261007`, under the SSD task
+root's `package/releases`. Worker SHA256:
+`422255a125f60b8bf25a41bc5d41fb410bc218a0f0f3711a34d966b94628ca6d`.
+Manifest SHA256: `ae6639094fff399bcd36c6271acf176f3e111a59a3c98de89d6de0b9c41d3d79`.
+Preparation and sandbox validation passed; the package has its new backend-matched
+validator and unchanged model registry, but is not published live. VK version
+remains 0.1.42. `DELIVERY.json` contains full artifact paths and hashes.

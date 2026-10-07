@@ -23,6 +23,14 @@ model changes or accepted-task savings are claimed. Frontend type checks passed
 with the larger Node heap; full desktop/workspace checks require CI because the
 host lacks GLib development metadata. Receipts:
 `/mnt/vk-storage/vk-autoswitch-current-step-risk-20261007`.
+Delivery: implementation `665d836dba44dcd1af9244992e2656745d15641e` is committed
+and pushed. Draft [PR148](https://github.com/artinflight/vibe-kanban/pull/148)
+targets staging and includes unchanged PR146 prerequisites; integration CI is
+pending. The matching prepared module `current-step-665d836db-20261007` and
+validator are in the task's `package` directory; `DELIVERY.json` records hashes.
+They are not published live. Staging/main are unchanged. Adopt the backend,
+validator, worker/instructions and existing native adapter together. A worker-only
+hot update cannot implement this stable safety-guard correction.
 Older entries below are historical.
 
 # October 5: AutoSwitch reference-step and classifier startup correction

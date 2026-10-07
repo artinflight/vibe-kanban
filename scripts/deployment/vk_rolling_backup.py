@@ -2,6 +2,7 @@
 """Verified online checkpoint/deltas. Never freezes services or restores production."""
 
 import argparse
+from contextlib import closing
 import hashlib
 import json
 import os
@@ -450,7 +451,20 @@ def resume_delivery(plan, root, folder, journal, mirror, publish, parent=None):
     return result
 
 
-def restore_chain(result, destination, archive_directory=None, *, desktop_only=False):
+def restore_room(destination, additional=0):
+    fs = os.statvfs(destination)
+    if fs.f_bavail * fs.f_frsize - additional < 2 * 1024**3:
+        raise ValueError('Restore would breach the two-GiB free-space floor')
+
+
+def restore_copy(source, target, destination):
+    while block := source.read(1024**2):
+        restore_room(destination, len(block))
+        target.write(block)
+
+
+def restore_chain(result, destination, archive_directory=None, *, desktop_only=False,
+                  retire_verified_snapshots=False):
     destination = storage(destination)
     backup_root = Path(result["folder"]).parent.parent.resolve()
     if not destination.is_relative_to(backup_root):
@@ -458,8 +472,9 @@ def restore_chain(result, destination, archive_directory=None, *, desktop_only=F
     if destination.exists():
         raise ValueError("Restore verification requires a new empty isolated destination")
     destination.mkdir(parents=True, mode=0o700)
+    restore_room(destination)
     archives = chain(result, archive_directory, desktop_only=desktop_only)
-    links, directory_modes = {}, {}
+    links, directory_modes, retired = {}, {}, []
     for archive in reversed(archives):
         manifest, sqlite_payloads = None, {}
         with archive.contents() as tar:
@@ -475,7 +490,7 @@ def restore_chain(result, destination, archive_directory=None, *, desktop_only=F
                         target = destination / "snapshots" / archive.stem / name
                         target.parent.mkdir(parents=True, exist_ok=True)
                         with target.open("wb") as stream:
-                            shutil.copyfileobj(tar.extractfile(member), stream)
+                            restore_copy(tar.extractfile(member), stream, destination)
                         target.chmod(member.mode)
                         sqlite_payloads[str(name.relative_to("payload"))] = target
                     continue
@@ -486,7 +501,7 @@ def restore_chain(result, destination, archive_directory=None, *, desktop_only=F
                 elif member.isfile():
                     target.parent.mkdir(parents=True, exist_ok=True)
                     with target.open("wb") as stream:
-                        shutil.copyfileobj(tar.extractfile(member), stream)
+                        restore_copy(tar.extractfile(member), stream, destination)
                     target.chmod(member.mode)
                     links.pop(str(name), None)
                 elif member.issym() or member.islnk():
@@ -519,10 +534,30 @@ def restore_chain(result, destination, archive_directory=None, *, desktop_only=F
                 raise ValueError("Unsafe database path")
             target = destination / "files" / name
             target.parent.mkdir(parents=True, exist_ok=True)
+            restore_room(destination, payload.stat().st_size)
             shutil.copy2(payload, target)
-            with sqlite3.connect(target.as_uri() + "?mode=ro", uri=True) as connection:
+            with closing(sqlite3.connect(target.as_uri() + "?mode=ro", uri=True)) as connection:
                 if connection.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                     raise ValueError("Restored database integrity mismatch")
+        if retire_verified_snapshots:
+            # Full compressed-stream verification and every database assertion
+            # above have completed. Only these newly created private duplicates
+            # are disposable; restored files, metadata and originals remain.
+            copies = {}
+            for row in manifest['sqlite_snapshots'].values():
+                payload = sqlite_payloads[row['path']]
+                if (payload.is_symlink() or payload.stat().st_nlink != 1
+                        or not payload.resolve().is_relative_to(destination / 'snapshots' / archive.stem)
+                        or digest(payload) != row['sha256']):
+                    raise ValueError('Verified private restore snapshot changed')
+                copies[str(payload)] = {'sha256': row['sha256'], 'bytes': payload.stat().st_size}
+            proof = {'archive': archive.key, 'archive_sha256': archive.sha256, 'files': copies,
+                     'full_stream_verified': True, 'database_integrity_passed': True,
+                     'connections_closed': True, 'original_archive_removed': False}
+            save(destination / 'verified-snapshot-retirement' / (archive.stem + '.json'), proof)
+            for raw in copies:
+                Path(raw).unlink()
+            retired.extend(copies)
         pending = {name: row for name, row in links.items() if row["hardlink"]}
         while pending:
             progress = False
@@ -549,6 +584,7 @@ def restore_chain(result, destination, archive_directory=None, *, desktop_only=F
             Path(raw).chmod(mode)
     save(destination / "link-metadata.json", links)
     return {"passed": True, "archives": len(archives), "destination": str(destination),
+            "private_snapshot_copies_retired": retired,
             "production_restored": False, "absolute_symlinks_materialized": False}
 
 
@@ -586,6 +622,8 @@ def main():
     restore.add_argument("--destination", required=True, type=Path)
     restore.add_argument("--archive-directory", type=Path, help="Directory of archive copies fetched from Desktop")
     restore.add_argument("--desktop-only", action="store_true", help="Fail rather than use any local archive")
+    restore.add_argument('--retire-verified-snapshots', action='store_true',
+                         help='Retire only private duplicate snapshots after each archive passes all checks')
     audit = commands.add_parser("audit-chain", help="Read and verify the chain without extracting payloads")
     audit.add_argument("--result", required=True, type=Path)
     audit.add_argument("--desktop-only", action="store_true")
@@ -616,7 +654,8 @@ def main():
                   "sources": [a.key for a in archives], "payloads_extracted": False}
     else:
         result = restore_chain(json.loads(args.result.read_text()), args.destination,
-                               args.archive_directory, desktop_only=args.desktop_only)
+                               args.archive_directory, desktop_only=args.desktop_only,
+                               retire_verified_snapshots=args.retire_verified_snapshots)
     print(json.dumps(result, indent=2))
 
 

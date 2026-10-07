@@ -90,12 +90,89 @@ class DesktopBackups(unittest.TestCase):
             self.assertEqual(db.execute('SELECT value FROM data').fetchone()[0], 'latest')
         self.assertEqual((self.source / 'dirty.txt').read_text(), 'latest dirty fixture')
 
+    def test_low_peak_restore_retires_verified_duplicates_not_archives_or_final_databases(self):
+        first = self.backup()
+        with sqlite3.connect(self.database) as db:
+            db.execute("UPDATE data SET value='latest'")
+        second = self.backup(first)
+        dest = self.backups / 'low-peak-restore'
+        result = restore_chain(second, dest, desktop_only=True, retire_verified_snapshots=True)
+        self.assertEqual(len(result['private_snapshot_copies_retired']), 2)
+        self.assertFalse(list((dest / 'snapshots').rglob('*.sqlite')))
+        self.assertEqual(len(list((dest / 'verified-snapshot-retirement').glob('*.json'))), 2)
+        for archive in [first, second]:
+            self.assertTrue((Path(archive['folder']) / archive['archive']).exists())
+        restored = dest / 'files' / str(self.database).lstrip('/')
+        with sqlite3.connect(restored) as db:
+            self.assertEqual(db.execute('SELECT value FROM data').fetchall(), [('latest',)])
+        self.assertTrue(self.database.exists())
+
+    def test_low_peak_failure_does_not_retire_unverified_copies(self):
+        first = self.backup()
+        dest = self.backups / 'bad-low-peak'
+        original_digest = __import__('vk_rolling_backup').digest
+        def wrong(path):
+            return '0' * 64 if Path(path).is_relative_to(dest) else original_digest(path)
+        with patch('vk_rolling_backup.digest', side_effect=wrong):
+            with self.assertRaisesRegex(ValueError, 'database hash mismatch'):
+                restore_chain(first, dest, desktop_only=True, retire_verified_snapshots=True)
+        self.assertEqual(len(list((dest / 'snapshots').rglob('*.sqlite'))), 1)
+        self.assertFalse((dest / 'verified-snapshot-retirement').exists())
+
+    def test_default_restore_keeps_private_snapshots(self):
+        first = self.backup(); dest = self.backups / 'normal-restore'
+        result = restore_chain(first, dest, desktop_only=True)
+        self.assertEqual(result['private_snapshot_copies_retired'], [])
+        self.assertEqual(len(list((dest / 'snapshots').rglob('*.sqlite'))), 1)
+
+    def test_restore_free_space_floor_fails_before_stream_or_retirement(self):
+        first = self.backup(); dest = self.backups / 'low-space'
+        from types import SimpleNamespace
+        with patch('vk_rolling_backup.os.statvfs', return_value=SimpleNamespace(f_bavail=1, f_frsize=4096)):
+            with self.assertRaisesRegex(ValueError, 'free-space floor'):
+                restore_chain(first, dest, desktop_only=True, retire_verified_snapshots=True)
+        self.assertFalse(list(dest.iterdir()))
+        self.assertTrue((Path(first['folder']) / first['archive']).exists())
+
     def test_missing_desktop_does_not_fall_back_to_local(self):
         first = self.backup()
         (Path(self.directory) / first['archive']).unlink()
         self.assertTrue((Path(first['folder']) / first['archive']).exists())
         with self.assertRaisesRegex(ValueError, 'Desktop backup unavailable'):
             self.backup(first)
+
+    def test_rehearsal_consumer_downloads_only_metadata_and_streams_remote_payload(self):
+        from rehearse_vk_backup_boundary import desktop_restore
+        first = self.backup()
+        self.remove_own_archive(first)
+        root = self.root / 'rehearsal'; root.mkdir()
+        real_run = __import__('subprocess').run
+        copies = []
+        def run(command, **kwargs):
+            if command[0] != 'scp':
+                return real_run(command, **kwargs)
+            copies.append(command[-2])
+            shutil.copyfile(Path(command[-2].removeprefix('desktop:')),
+                            Path(command[-1]) / first['metadata_receipt']['name'])
+        with patch('rehearse_vk_backup_boundary.subprocess.run', side_effect=run):
+            descriptor, restored = desktop_restore(first, root, self.backups / 'driver-restore', low_peak=True)
+        self.assertEqual(len(copies), 1)
+        self.assertTrue(copies[0].endswith(first['metadata_receipt']['name']))
+        self.assertEqual(restored['archives'], 1)
+        self.assertEqual(len(restored['private_snapshot_copies_retired']), 1)
+        self.assertEqual(descriptor['archive'], first['archive'])
+
+    def test_rehearsal_consumer_rejects_changed_metadata_before_restore(self):
+        from rehearse_vk_backup_boundary import desktop_restore
+        first = self.backup()
+        root = self.root / 'bad-rehearsal'; root.mkdir()
+        def bad_copy(command, **kwargs):
+            (Path(command[-1]) / first['metadata_receipt']['name']).write_text('{}')
+        with patch('rehearse_vk_backup_boundary.subprocess.run', side_effect=bad_copy), \
+                patch('rehearse_vk_backup_boundary.restore_chain') as restore:
+            with self.assertRaisesRegex(ValueError, 'metadata download changed'):
+                desktop_restore(first, root, root / 'restore', low_peak=True)
+        restore.assert_not_called()
 
     def test_corrupt_desktop_blocks_capture_even_with_good_local(self):
         first = self.backup()

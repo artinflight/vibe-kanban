@@ -25,6 +25,13 @@ overnight VK9b3f82538/CU95e7aea47 release is pending separate approval.
 - `vk_recovery_package.py` creates a new tool/descriptor/head bundle. Its bound
   entrypoint verifies all files before capture, resume, audit or isolated restore.
   It never runs a service, switches routing or authorizes archive retirement.
+- The actual rehearsal driver now downloads only checksum-verified metadata,
+  then streams Desktop archives. `--low-peak-restore` retires exact private
+  SQLite snapshot duplicates after each archive's full stream and every database
+  hash/integrity assertion pass. Final restored databases, non-database files,
+  manifests and original archives remain. Default restore retains duplicates.
+  Restore writes enforce a 2 GiB free-space floor; failed assertions retain their
+  unverified private copies. This is not permission to clean arbitrary fixtures.
 
 ## Evidence and adoption
 
@@ -45,6 +52,13 @@ Completed audit receipts can be resumed only after another full local and Deskto
 hash, unchanged original/descriptor identity, and verified member-inventory hash.
 Partial or failed work is not reused as acceptance. The default-route audit was
 interrupted only to use the previously established direct route; originals stayed.
+
+`real-chain-audit-3/chain-audit.json` now passes all 27 original archives and all
+six head graphs. Full local/Desktop checksums cover 69,178,571,021 compressed
+bytes; every archived SQLite snapshot was materialized and hash/integrity checked.
+Non-database members were streamed, not installed as a full filesystem. Earlier
+completed receipts were reused only with fresh full hashes and bound inventory.
+Do not repeat the full stream audit merely to reword this evidence.
 
 There are 27 protected originals, 69,178,728,448 allocated bytes (64.428 GiB).
 Six head descriptors name overlapping chains. October5 remote deltas are partly
@@ -71,10 +85,29 @@ using an old installer does not adopt this change.
 
 ## Remaining gates and recovery limits
 
-The complete fresh-backup/full-rehearsal peak is not established by small tests.
-Use real chain member sizes, the current full backup inventory, a 2 GiB free
-floor and live-growth allowance. Full restore must not be started without enough
-scratch. Historical directory moves without source evidence require the supported
+`real-chain-space-plan.json` models ordered overwrites, deletions, database
+replacement and conservative entry/hardlink allowances. Largest historical
+restore estimates are 100,742,590,464 bytes normally and 84,809,768,960 bytes
+(78.985 GiB) with phased private-snapshot retirement. These are sizing evidence,
+not measured full restores. At that receipt, 19,321,933,824 bytes were free.
+Retiring only 21 ancestors would leave 66,630,266,880 bytes, insufficient.
+Retiring all 27 would leave 88,500,662,272 bytes: only 0.437 GiB beyond the
+largest low-peak estimate plus the 2 GiB floor and 1 GiB growth reserve.
+Fresh use/dependency/free-space checks and exact approval remain mandatory.
+
+The complete current checkpoint is substantially larger than the earlier
+changed-subtree estimate. `/mnt/vk-storage/vk-low-peak-20261007/full-checkpoint-size/`
+sizes 288,350 regular files, 68 databases (including all previous 67),
+82,599,304,943 non-database bytes and 2,604,078,296 database/WAL bytes.
+The no-compression capture upper estimate is 97,940,190,668 bytes (91.214 GiB),
+before the free floor/growth reserve or a simultaneous rehearsal. Even after all
+27 conditional retirements, that leaves an 11.791 GiB conservative capture gap.
+Compression may reduce it, but no measured compressed full checkpoint exists;
+90 paths changed during the live scan, so this is not a fenced exact bound.
+The old 17.001 GiB estimate was changed/recopy scope, not the complete checkpoint.
+Do not start the full workload or claim combined peak acceptance from this data.
+
+Historical directory moves without source evidence require the supported
 new full checkpoint transition, retaining the old journal and all recovery limits;
 never manufacture source events or silently omit protected roots.
 

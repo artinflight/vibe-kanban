@@ -6,6 +6,13 @@ Desktop locators, including legacy descriptor bindings. New package installation
 also removes the controller's local-only parent check. Original sealed packages
 remain unchanged. The 27 original archives are protected, not deletion-approved.
 Keep implementation, real-chain acceptance, adoption and retirement distinct.
+All27 streams and six chains now pass the fresh real audit. The actual rehearsal
+consumer uses Desktop-only streams; optional per-archive retirement keeps final
+restored files and all database assertions, with a2GiB floor. Capacity remains
+the next gate: historical full restore needs78.985GiB; all27 conditional local
+retirements would leave82.423GiB. Fresh full capture's conservative bound is
+91.214GiB before floor/reserve, not the old17GiB changed-scope estimate. Original
+archives remain protected. See the detailed recovery document for exact receipts.
 The pending overnight candidate is not deployed. Old historical notes follow.
 
 # October 4 After-cutover Operational Follow-up

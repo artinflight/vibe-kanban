@@ -6,7 +6,11 @@ const PROJECT_ROOT: &str = env!("CARGO_MANIFEST_DIR");
 /// Resolve the asset path without creating or changing it.
 pub fn asset_dir_path() -> std::path::PathBuf {
     if cfg!(debug_assertions) {
-        std::path::PathBuf::from(PROJECT_ROOT).join("../../dev_assets")
+        std::path::Path::new(PROJECT_ROOT)
+            .parent()
+            .and_then(std::path::Path::parent)
+            .expect("utils crate must have a repository parent")
+            .join("dev_assets")
     } else {
         prod_asset_dir_path()
     }

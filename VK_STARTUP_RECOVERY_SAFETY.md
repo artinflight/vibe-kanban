@@ -220,3 +220,11 @@ reads actual asset-path selection via read-only build inspection inside the same
 masked namespace, verifies that it lies under a masked fixture root, and binds
 only private files there. No host execution or environment-only isolation fallback
 is introduced. This also supports debug/release or cached crate path differences.
+
+The next positive-case failure identified an additional path-resolution issue:
+the debug asset path still contained `crates/utils/../../dev_assets`, whose
+intermediate directories were absent in the masked source namespace. The pure
+resolver now computes its repository parent directly. The negative cases now
+assert their specific rejection reasons, so unrelated missing-path errors cannot
+count as valid identity rejection. Prior failures and partial receipts remain
+evidence, not passing normal-startup acceptance.

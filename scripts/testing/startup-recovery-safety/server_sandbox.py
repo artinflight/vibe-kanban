@@ -53,6 +53,9 @@ try:
         stdout,stderr=child.communicate(timeout=5)
         expected=sys.argv[2]=='inspect'
         assert (child.returncode==0)==expected, (args,child.returncode,stderr.decode())
+        if not expected:
+            reason=sys.argv[3]
+            assert reason in stderr.decode(), ('wrong rejection reason',reason,stderr.decode())
         assert snapshot()==before, 'inspection/rejected startup changed private state'
         if expected and '--build-info' in args:
             assert json.loads(stdout)['automaticWorkspaceDeletion'] is False
@@ -132,7 +135,18 @@ def run_case(binary, embedded_assets, label, arguments, outcome):
                    '--setenv', 'DISABLE_ATTACHMENT_CLEANUP', '1']
         if label != 'missing-receipt':
             command += ['--setenv', 'VK_RUNTIME_IDENTITY_FILE', '/run/fixture/identity']
-        command += ['--chdir', '/run/fixture', '/usr/bin/python3', '-c', RUNNER, json.dumps(arguments), outcome]
+        reasons = {
+            'unknown-invocation': 'unsupported server invocation',
+            'missing-receipt': 'VK_RUNTIME_IDENTITY_FILE is required',
+            'empty-receipt': 'invalid runtime identity receipt',
+            'wrong-database': 'selected database/workspace identity does not match',
+            'wrong-root': 'selected database/workspace identity does not match',
+            'mismatched-object': 'selected database/workspace identity does not match',
+            'empty-database': 'selected database/workspace identity does not match',
+            'missing-dataset': 'dataset identity is not established',
+            'wrong-dataset': 'database dataset identity does not match',
+        }
+        command += ['--chdir', '/run/fixture', '/usr/bin/python3', '-c', RUNNER, json.dumps(arguments), outcome, reasons.get(label, '')]
         result = subprocess.run(command, capture_output=True, text=True, timeout=25)
         if result.returncode:
             raise AssertionError(f'{label}: {result.stdout}\n{result.stderr}')

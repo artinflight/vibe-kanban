@@ -1531,3 +1531,28 @@ exact original-history remote witnesses, persistent pending/blocked states and a
 isolated fail-closed controller check. VK Dev T48 is linked to the current feature
 workspace. Tests and limits are in HANDOFF.md / VK_TURN_GIT_PRESERVATION.md. No
 Staging/runtime/controller activation, restart, deployment or routing change.
+
+## 2026-10-08 — PR223 preservation P1 review correction
+
+Reproduced the unsafe `3cb3632897` scanner/retry baseline in isolated fixtures.
+Corrected scans read original raw blobs/commit messages with the approved real
+Gitleaks binary under the publication environment, bypassing refs/replace,
+attributes/drivers and grafts. Schema 2 retains original obligations across retries
+and failed admission, records generated originals before branch CAS, freshly
+rescans receipts, and invalidates any full-record change during a batch check.
+Raw worktree blob IDs/modes must match the original preserved tree; clean status
+alone cannot certify protection. Legacy receipts remain unsupported blockers.
+
+73 distinct isolated tests (72 full-suite cases plus positive real-scanner
+publication/check acceptance) and four focused Rust tests passed. Approved real
+scanner cases were exercised without skips; focused Clippy, format and ops checks
+passed. Frontend types/local-web/UI lint passed. Broad check/lint/workspace tests
+stop at missing host GLib/GObject/GIO libraries; trailing remote/I18n checks and
+full executor/UI acceptance remain open. Review logs and final remote SHA receipt:
+`/mnt/vk-storage/turn-git-preservation-review-20261008/`.
+
+Same isolated `feat/turn-git-preservation` branch, VK Dev T48 and draft PR223.
+No live activation or Staging operations. Recommend-only remains required.
+Seamus owns schema-2 controller/package integration, explicit reconciliation of
+old original-history evidence, copied-data acceptance and separately authorized
+Staging/live adoption. This correction does not authorize rollout.

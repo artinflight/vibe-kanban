@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('turn_git', Path(__file__).with_name('turn_git.py'))
 m = importlib.util.module_from_spec(spec)
@@ -58,6 +59,8 @@ class PreservationTests(unittest.TestCase):
         self.scanner = self.root / 'scanner'
         self.scanner.write_text('''#!/usr/bin/env python3
 import subprocess,sys
+if sys.argv[1] == 'stdin':
+    sys.exit(1 if b'FIXTURE_SECRET' in sys.stdin.buffer.read() else 0)
 r=subprocess.run(['git','-C',sys.argv[2],'log','-p',*next(a.split('=',1)[1] for a in sys.argv if a.startswith('--log-opts=')).split()],capture_output=True)
 if b'FIXTURE_SECRET' in r.stdout:
     print('FIXTURE_SECRET must never escape subprocess output')
@@ -190,7 +193,7 @@ else: sys.exit(1)
 
     def test_secret_in_eligible_source_never_pushed_and_output_redacted(self):
         self.changed(value='FIXTURE_SECRET')
-        result = self.assertBlocked('scanner git failed')
+        result = self.assertBlocked('scanner stdin failed')
         self.assertNotIn('FIXTURE_SECRET', json.dumps(result))
         self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), self.base)
 
@@ -338,7 +341,7 @@ else: sys.exit(1)
         self.changed(value='safe current bytes')
         git(self.repo, 'add', 'src/main.txt')
         git(self.repo, 'commit', '-qm', 'remove secret')
-        self.assertBlocked('scanner git failed')
+        self.assertBlocked('scanner stdin failed')
         self.assertEqual(git(self.remote, 'rev-parse', 'refs/heads/feat/fixture'), self.base)
 
     def test_existing_pr_is_reused_and_ambiguous_create_is_reconciled(self):
@@ -405,7 +408,7 @@ else: sys.exit(1)
         self.changed(value='FIXTURE_SECRET')
         git(self.repo, 'add', 'src/main.txt')
         git(self.repo, 'commit', '-qm', 'withheld original commit')
-        self.assertBlocked('scanner git failed')
+        self.assertBlocked('scanner stdin failed')
         # Model a source-only replacement in this disposable fixture; never a live operation.
         git(self.repo, 'update-ref', 'refs/heads/feat/fixture', self.base)
         git(self.repo, 'read-tree', self.base)
@@ -481,6 +484,406 @@ else: sys.exit(1)
             self.assertEqual(result.returncode, 2)
             self.assertEqual(json.loads(result.stdout)['state'], 'blocked')
 
+    def use_real_scanner(self):
+        scanner = os.environ.get('VK_TEST_GITLEAKS')
+        if not scanner:
+            self.skipTest('set VK_TEST_GITLEAKS to the approved real binary')
+        self.config.update(scanner=scanner,
+                           scanner_sha256=hashlib.sha256(Path(scanner).read_bytes()).hexdigest())
+        self.request['turn'] = 'real-review'
+        self.engine.begin(self.request)
+
+    def synthetic_secret(self):
+        return 'FIXTURE_SECRET github_token = "ghp_' + 'x7H4q2N9p5Z8s3V6r1L0a4B7c9D2e5F8g0J3' + '"\n'
+
+    def commit_secret(self):
+        self.changed(value=self.synthetic_secret())
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', 'withheld synthetic original')
+        return git(self.repo, 'rev-parse', 'HEAD')
+
+    def fixture_return_to_base(self):
+        # Only this owned disposable repository. No reset/rewrites of development work.
+        git(self.repo, 'update-ref', 'refs/heads/feat/fixture', self.base)
+        git(self.repo, 'read-tree', self.base)
+        self.changed(value='base\n')
+
+    def assert_not_published(self):
+        self.assertEqual(git(self.remote, 'rev-parse', 'refs/heads/feat/fixture'), self.base)
+        self.assertFalse(self.prfile.exists())
+        with self.assertRaises(m.Blocked):
+            self.engine.check(self.request)
+
+    def replacement_attack(self):
+        original = self.commit_secret()
+        git(self.repo, 'replace', original, self.base)
+        self.assertBlocked('failed')
+        self.assert_not_published()
+
+    def test_replacement_objects_do_not_hide_original_blobs(self):
+        self.replacement_attack()
+
+    def test_real_scanner_replacement_objects_do_not_hide_original_blobs(self):
+        self.use_real_scanner()
+        self.replacement_attack()
+
+    def attribute_attack(self, attribute):
+        (self.repo / '.git/info/attributes').write_text('src/main.txt ' + attribute + '\n')
+        git(self.repo, 'config', 'diff.fixture.command', '/bin/true')
+        git(self.repo, 'config', 'diff.fixture.textconv', '/bin/true')
+        self.changed(value=self.synthetic_secret())
+        self.assertBlocked('failed')
+        self.assert_not_published()
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), self.base)
+
+    def test_diff_attributes_do_not_hide_automatic_commit_blobs(self):
+        self.attribute_attack('-diff')
+
+    def test_real_scanner_diff_attributes_do_not_hide_automatic_commit_blobs(self):
+        self.use_real_scanner()
+        self.attribute_attack('-diff')
+
+    def test_real_scanner_custom_diff_driver_cannot_hide_blobs(self):
+        self.use_real_scanner()
+        self.attribute_attack('diff=fixture')
+
+    def retry_original_attack(self):
+        original = self.commit_secret()
+        self.assertBlocked('failed')
+        self.fixture_return_to_base()
+        self.assertBlocked('merge-base failed')
+        self.assert_not_published()
+        self.assertIn(original, json.dumps(m.read_json(self.engine.state_path(self.request))))
+
+    def test_same_turn_retry_retains_original_head(self):
+        self.retry_original_attack()
+
+    def test_real_scanner_same_turn_retry_retains_original_head(self):
+        self.use_real_scanner()
+        self.retry_original_attack()
+
+    def test_failed_admission_retains_original_before_snapshot_failure(self):
+        original = self.commit_secret()
+        git(self.repo, 'update-index', '--assume-unchanged', 'src/main.txt')
+        self.request['turn'] = 'failed-admission'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'blocked')
+        git(self.repo, 'update-index', '--no-assume-unchanged', 'src/main.txt')
+        self.fixture_return_to_base()
+        self.request['turn'] = 'after-failed-admission'
+        self.engine.begin(self.request)
+        self.assertBlocked('merge-base failed')
+        self.assert_not_published()
+        self.assertIn(original, json.dumps(m.read_json(self.engine.state_path(self.request))))
+
+    def test_failed_empty_admission_cannot_erase_prior_originals(self):
+        self.commit_secret()
+        self.assertBlocked('failed')
+        original_inventory = self.request['repositories']
+        self.request['turn'] = 'failed-empty'
+        self.request['repositories'] = []
+        self.assertEqual(self.engine.begin(self.request)['state'], 'blocked')
+        self.fixture_return_to_base()
+        self.request['turn'] = 'after-empty'
+        self.request['repositories'] = original_inventory
+        self.engine.begin(self.request)
+        self.assertBlocked('merge-base failed')
+        self.assert_not_published()
+
+    def test_legacy_receipt_is_rejected_by_check_and_end(self):
+        self.assertEqual(self.end()['state'], 'verified')
+        path = self.engine.state_path(self.request)
+        record = m.read_json(path)
+        record['version'] = 1
+        m.atomic_json(path, record)
+        for action in [self.engine.check, self.engine.end]:
+            with self.assertRaisesRegex(m.Blocked, 'unsupported'):
+                action(self.request)
+
+    def test_real_scanner_environment_and_allow_comments_cannot_weaken_scan(self):
+        self.use_real_scanner()
+        self.changed(value=self.synthetic_secret().rstrip() + ' # gitleaks:allow\n')
+        with patch.dict(os.environ, {
+            'GITLEAKS_CONFIG': str(self.root / 'missing-config'),
+            'GITLEAKS_CONFIG_TOML': '[allowlist]\nregexes = [".*"]\n',
+            'GIT_CONFIG_COUNT': '1', 'GIT_CONFIG_KEY_0': 'diff.external',
+            'GIT_CONFIG_VALUE_0': '/bin/true', 'GIT_DIR': str(self.remote),
+            'GIT_WORK_TREE': str(self.root), 'GIT_NO_REPLACE_OBJECTS': '0',
+        }):
+            self.assertBlocked('gitleaks stdin failed')
+        self.assert_not_published()
+
+    def test_real_scanner_deleted_intermediate_secret_cannot_be_hidden(self):
+        self.use_real_scanner()
+        self.commit_secret()
+        self.changed(value='safe current source\n')
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', 'remove intermediate synthetic secret')
+        self.assertBlocked('gitleaks stdin failed')
+        self.assert_not_published()
+
+    def test_real_scanner_raw_blob_covers_secret_in_unchanged_lines(self):
+        self.use_real_scanner()
+        # A fixture base with a secret demonstrates that scanning only added diff
+        # lines is insufficient when publishing a modified original blob.
+        self.changed(value=self.synthetic_secret() + 'old line\n')
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', 'fixture secret base')
+        base = git(self.repo, 'rev-parse', 'HEAD')
+        policy = self.config['repositories']['repo']
+        policy.update(base_commit=base, automation_commit=base,
+                      workflow_digest=m.workflows(self.repo, base),
+                      automation_workflow_digest=m.workflows(self.repo, base))
+        git(self.repo, 'push', '-q', 'origin', 'HEAD:staging')
+        self.request['turn'] = 'changed-unchanged-line'
+        self.engine.begin(self.request)
+        self.changed(value=self.synthetic_secret() + 'new line\n')
+        self.assertBlocked('gitleaks stdin failed')
+        self.assert_not_published()
+
+    def test_real_scanner_binary_attributes_do_not_admit_binary_source(self):
+        self.use_real_scanner()
+        (self.repo / '.git/info/attributes').write_text('src/main.txt -diff\n')
+        self.changed(value=self.synthetic_secret() + '\0')
+        self.assertBlocked('binary source')
+        self.assert_not_published()
+
+    def test_real_scanner_binary_intermediate_history_blocks(self):
+        self.use_real_scanner()
+        self.changed(value='binary\0fixture')
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', 'binary original')
+        self.changed(value='safe current source\n')
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', 'text replacement')
+        self.assertBlocked('binary outgoing')
+        self.assert_not_published()
+
+    def test_real_scanner_fresh_check_rescans_receipt_original_objects(self):
+        self.use_real_scanner()
+        # Produce a deliberately false scanner receipt, then restore the approved
+        # real scanner before check. This models a suspect receipt, not a bypass.
+        original_scan = self.engine.scan
+        self.engine.scan = lambda *args: None
+        self.commit_secret()
+        self.assertEqual(self.end()['state'], 'verified')
+        self.engine.scan = original_scan
+        head = git(self.repo, 'rev-parse', 'HEAD')
+        git(self.repo, 'replace', head, self.base)
+        (self.repo / '.git/info/attributes').write_text('src/main.txt -diff\n')
+        with self.assertRaisesRegex(m.Blocked, 'gitleaks stdin failed'):
+            self.engine.check(self.request)
+        self.assertBlocked('gitleaks stdin failed')
+
+    def test_receipt_without_original_ledger_is_unsupported(self):
+        self.assertEqual(self.end()['state'], 'verified')
+        path = self.engine.state_path(self.request)
+        record = m.read_json(path)
+        del record['obligations']
+        m.atomic_json(path, record)
+        with self.assertRaisesRegex(m.Blocked, 'missing original'):
+            self.engine.check(self.request)
+
+    def test_auto_commit_original_is_durable_before_branch_update(self):
+        self.changed()
+        original = m.git
+        def stop_before_exposing_head(repo, *args, **kwargs):
+            if args[0] == 'update-ref':
+                record = m.read_json(self.engine.state_path(self.request))
+                self.assertIn(args[2], record['obligations']['repo']['commits'])
+                raise m.Blocked('fixture branch update interrupted')
+            return original(repo, *args, **kwargs)
+        with patch.object(m, 'git', stop_before_exposing_head):
+            self.assertBlocked('branch update interrupted')
+        # The generated original is still required even if CAS never exposed it.
+        self.fixture_return_to_base()
+        self.assertBlocked('merge-base failed')
+        self.assert_not_published()
+
+    def test_multi_repository_end_failure_keeps_all_observed_originals(self):
+        second = PreservationTests()
+        second.setUp()
+        self.addCleanup(second.doCleanups)
+        self.config['repositories']['second'] = second.config['repositories']['repo']
+        self.request['turn'] = 'multi-originals'
+        self.request['repositories'].append(dict(id='second', path=str(second.repo)))
+        self.engine.begin(self.request)
+        self.commit_secret()
+        second_head = second.commit_secret()
+        self.assertBlocked('scanner stdin failed')
+        record = m.read_json(self.engine.state_path(self.request))
+        self.assertIn(second_head, record['obligations']['second']['commits'])
+        self.fixture_return_to_base()
+        second.fixture_return_to_base()
+        self.assertBlocked('merge-base failed')
+
+    def test_failed_multi_repository_admission_keeps_later_original(self):
+        second = PreservationTests()
+        second.setUp()
+        self.addCleanup(second.doCleanups)
+        self.config['repositories']['second'] = second.config['repositories']['repo']
+        second_head = second.commit_secret()
+        git(self.repo, 'update-index', '--assume-unchanged', 'src/main.txt')
+        self.request['turn'] = 'multi-failed-admission'
+        self.request['repositories'].append(dict(id='second', path=str(second.repo)))
+        self.assertEqual(self.engine.begin(self.request)['state'], 'blocked')
+        record = m.read_json(self.engine.state_path(self.request))
+        self.assertIn(second_head, record['obligations']['second']['commits'])
+        git(self.repo, 'update-index', '--no-assume-unchanged', 'src/main.txt')
+        second.fixture_return_to_base()
+        self.request['turn'] = 'multi-after-failure'
+        self.engine.begin(self.request)
+        self.assertBlocked('merge-base failed')
+
+    def test_unverifiable_original_observation_cannot_be_cleared_by_retry(self):
+        original = m.git
+        def missing_head(repo, *args, **kwargs):
+            if args[:3] == ('rev-parse', '--verify', 'HEAD^{commit}'):
+                raise m.Blocked('fixture original head unavailable')
+            return original(repo, *args, **kwargs)
+        with patch.object(m, 'git', missing_head):
+            self.assertBlocked('unverifiable')
+        with self.assertRaisesRegex(m.Blocked, 'unverifiable'):
+            self.end()
+        self.request['turn'] = 'after-unverifiable'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'blocked')
+
+    def test_original_obligations_survive_repeated_blocked_retries(self):
+        first = self.commit_secret()
+        self.assertBlocked('scanner stdin failed')
+        self.fixture_return_to_base()
+        self.changed(value='another original\n')
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', 'divergent second original')
+        second = git(self.repo, 'rev-parse', 'HEAD')
+        self.assertBlocked('merge-base failed')
+        self.fixture_return_to_base()
+        self.assertBlocked('merge-base failed')
+        record = m.read_json(self.engine.state_path(self.request))
+        self.assertIn(first, record['obligations']['repo']['commits'])
+        self.assertIn(second, record['obligations']['repo']['commits'])
+        self.assert_not_published()
+
+    def test_later_admission_cannot_omit_an_original_repository(self):
+        second = PreservationTests()
+        second.setUp()
+        self.addCleanup(second.doCleanups)
+        self.config['repositories']['second'] = second.config['repositories']['repo']
+        self.request['turn'] = 'complete-inventory'
+        self.request['repositories'].append(dict(id='second', path=str(second.repo)))
+        self.engine.begin(self.request)
+        second.commit_secret()
+        self.assertBlocked('scanner stdin failed')
+        self.request['turn'] = 'omitted-original'
+        self.request['repositories'].pop()
+        result = self.engine.begin(self.request)
+        self.assertEqual(result['state'], 'blocked')
+        self.assertIn('original repository inventory omitted', result['reason'])
+        with self.assertRaises(m.Blocked):
+            self.engine.check(self.request)
+
+    def test_real_scanner_scans_original_commit_messages(self):
+        self.use_real_scanner()
+        self.changed()
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', self.synthetic_secret())
+        self.assertBlocked('gitleaks stdin failed')
+        self.assert_not_published()
+
+    def test_real_scanner_rejects_large_single_line_and_non_utf8_objects(self):
+        self.use_real_scanner()
+        self.changed(value='safe ' * 20000 + self.synthetic_secret())
+        self.assertBlocked('gitleaks stdin failed')
+        self.assert_not_published()
+        (self.repo / 'src/main.txt').write_bytes(b'non-utf8 \xff')
+        self.assertBlocked('non-text source')
+        self.assert_not_published()
+
+    def test_scanner_binary_hash_change_invalidates_fresh_receipt(self):
+        self.assertEqual(self.end()['state'], 'verified')
+        self.scanner.write_text('#!/bin/sh\nexit 0\n')
+        with self.assertRaisesRegex(m.Blocked, 'scanner missing or changed'):
+            self.engine.check(self.request)
+
+    def graft_attack(self):
+        self.commit_secret()
+        self.changed(value='safe latest bytes\n')
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', 'hide intermediate secret with legacy graft')
+        head = git(self.repo, 'rev-parse', 'HEAD')
+        (self.repo / '.git/info/grafts').write_text(head + ' ' + self.base + '\n')
+        self.assertBlocked('failed')
+        self.assert_not_published()
+
+    def test_legacy_grafts_cannot_hide_intermediate_originals(self):
+        self.graft_attack()
+
+    def test_real_scanner_legacy_grafts_cannot_hide_intermediate_originals(self):
+        self.use_real_scanner()
+        self.graft_attack()
+
+    def test_batch_check_invalidates_any_receipt_or_history_mutation(self):
+        self.assertEqual(self.end()['state'], 'verified')
+        path = self.engine.state_path(self.request)
+        original_record = m.read_json(path)
+        original_check = self.engine.check
+        for field, value in [('version', 1), ('obligations', {}),
+                             ('config', 'changed'), ('reason', 'new evidence')]:
+            with self.subTest(field=field):
+                m.atomic_json(path, original_record)
+                calls = []
+                def check(request):
+                    result = original_check(request)
+                    calls.append(True)
+                    if len(calls) == 2:
+                        changed = m.read_json(path)
+                        changed[field] = value
+                        m.atomic_json(path, changed)
+                    return result
+                with patch.object(self.engine, 'check', check):
+                    with self.assertRaisesRegex(m.Blocked, 'changed during batch check'):
+                        self.engine.check_all(dict(writers_fenced=True,
+                                                   turns=[self.request, self.request]))
+        m.atomic_json(path, original_record)
+
+    def test_changed_receipt_without_pr_cannot_verify(self):
+        self.changed()
+        self.assertEqual(self.end()['state'], 'verified')
+        path = self.engine.state_path(self.request)
+        record = m.read_json(path)
+        del record['repositories'][0]['receipt']['pr']
+        m.atomic_json(path, record)
+        with self.assertRaisesRegex(m.Blocked, 'no covering PR'):
+            self.engine.check(self.request)
+
+    def test_clean_filter_cannot_claim_unpublished_worktree_bytes(self):
+        (self.repo / '.git/info/attributes').write_text('src/main.txt filter=fixture\n')
+        git(self.repo, 'config', 'filter.fixture.clean', "cat >/dev/null; printf 'base\\n'")
+        self.changed(value=self.synthetic_secret())
+        git(self.repo, 'add', 'src/main.txt')
+        self.assertEqual(git(self.repo, 'status', '--porcelain'), '')
+        self.assertBlocked('working bytes or modes differ')
+        self.assert_not_published()
+
+    def test_disabled_filemode_cannot_claim_unpublished_executable_change(self):
+        git(self.repo, 'config', 'core.filemode', 'false')
+        (self.repo / 'src/main.txt').chmod(0o755)
+        self.assertEqual(git(self.repo, 'status', '--porcelain'), '')
+        self.assertBlocked('working bytes or modes differ')
+        self.assert_not_published()
+
+    def test_real_scanner_clean_work_publishes_and_fresh_check_verifies(self):
+        self.use_real_scanner()
+        self.changed(value='safe original source with real scanner\n')
+        self.changed('src/new file.txt', 'safe untracked source\n')
+        result = self.end()
+        self.assertEqual(result['state'], 'verified', result)
+        self.assertEqual(self.engine.check(self.request)['state'], 'verified')
+        self.assertEqual(self.engine.check_all(dict(writers_fenced=True,
+                                                   turns=[self.request]))['state'], 'verified')
+        self.assertEqual(git(self.remote, 'rev-parse', 'refs/heads/feat/fixture'),
+                         git(self.repo, 'rev-parse', 'HEAD'))
+        self.assertTrue(self.prfile.exists())
+
     def test_scanner_configuration_in_repo_cannot_weaken_real_scan(self):
         scanner = os.environ.get('VK_TEST_GITLEAKS')
         if not scanner:
@@ -494,7 +897,7 @@ else: sys.exit(1)
         self.request['turn'] = 'real-scanner2'
         self.engine.begin(self.request)
         self.changed(value='github_token = "ghp_' + 'x7H4q2N9p5Z8s3V6r1L0a4B7c9D2e5F8g0J3' + '"\n')
-        self.assertBlocked('gitleaks git failed')
+        self.assertBlocked('gitleaks stdin failed')
 
 
 if __name__ == '__main__':

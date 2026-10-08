@@ -16,7 +16,7 @@ import subprocess
 import tempfile
 import time
 
-VERSION = 1
+VERSION = 2
 DENIED = re.compile(
     r"(^|/)(\.env(?:\..*)?|\.git|\.ssh|credentials?|secrets?|runtime|"
     r"dev_assets|attachments?|uploads?|customer[s_-]?|client[s_-]?|"
@@ -49,13 +49,17 @@ def run(args, cwd=None, env=None, data=None):
     return result.stdout
 
 
+def sanitized_env():
+    # Git subprocesses and the scanner must see the same original objects.
+    clean = {k: v for k, v in os.environ.items()
+             if not k.startswith(('GIT_', 'GITLEAKS_'))}
+    clean.update(GIT_TERMINAL_PROMPT='0', GIT_NO_REPLACE_OBJECTS='1', GIT_GRAFT_FILE='/dev/null',
+                 GIT_LITERAL_PATHSPECS='1')
+    return clean
+
+
 def git(repo, *args, env=None, data=None):
-    # Disable hooks, replacement objects, external diff, interactive prompts.
-    clean = dict(os.environ)
-    for key in list(clean):
-        if key.startswith('GIT_'):
-            del clean[key]
-    clean.update(GIT_TERMINAL_PROMPT='0', GIT_NO_REPLACE_OBJECTS='1')
+    clean = sanitized_env()
     if env:
         clean.update(env)
     try:
@@ -91,15 +95,17 @@ def read_json(path):
         raise Blocked('missing or malformed preservation state') from None
 
 
-def file_state(path):
+def file_state(path, algorithm):
     try:
         info = path.lstat()
     except FileNotFoundError:
         return None
     require(stat.S_ISREG(info.st_mode), 'symlink, submodule or special file requires review')
     require(info.st_size <= 5 * 1024 * 1024, 'large file requires separate review')
-    return [hashlib.sha256(path.read_bytes()).hexdigest(),
-            '100755' if info.st_mode & 0o111 else '100644']
+    content = path.read_bytes()
+    blob = hashlib.new(algorithm, b'blob ' + str(len(content)).encode() + b'\0' + content).hexdigest()
+    return [hashlib.sha256(content).hexdigest(),
+            '100755' if info.st_mode & 0o111 else '100644', blob]
 
 
 def snapshot(repo):
@@ -114,7 +120,9 @@ def snapshot(repo):
     tracked = git(repo, 'ls-files', '--cached', '-z') + git(repo, 'ls-tree', '-r', '--name-only', '-z', 'HEAD')
     untracked = git(repo, 'ls-files', '--others', '--exclude-standard', '-z')
     paths = sorted(set(os.fsdecode(p) for p in (tracked + untracked).split(b'\0') if p))
-    files = {p: file_state(repo / p) for p in paths}
+    algorithm = line(repo, 'rev-parse', '--show-object-format')
+    require(algorithm in ['sha1', 'sha256'], 'unsupported repository object format')
+    files = {p: file_state(repo / p, algorithm) for p in paths}
     ignored = {}
     for raw in git(repo, 'ls-files', '--others', '--ignored', '--exclude-standard', '-z').split(b'\0'):
         if raw:
@@ -128,6 +136,21 @@ def snapshot(repo):
                 status=git(repo, 'status', '--porcelain=v1', '-z', '--no-renames',
                            '--untracked-files=all').hex(),
                 index=hashlib.sha256(index.read_bytes()).hexdigest() if index.exists() else None)
+
+
+def require_tree_bytes(repo, snap):
+    # Clean porcelain is insufficient: clean filters, CRLF conversion and disabled
+    # filemode can hide worktree bytes/modes that differ from the original tree.
+    tree = {}
+    for raw in git(repo, 'ls-tree', '-r', '-z', snap['head']).split(b'\0'):
+        if raw:
+            meta, path = raw.split(b'\t', 1)
+            mode, kind, oid = meta.decode().split()
+            require(kind == 'blob' and mode in ['100644', '100755'],
+                    'non-source tree requires review')
+            tree[os.fsdecode(path)] = [mode, oid]
+    actual = {p: value[1:] for p, value in snap['files'].items() if value is not None}
+    require(actual == tree, 'working bytes or modes differ from preserved original tree')
 
 
 def eligible(paths, policy):
@@ -184,6 +207,41 @@ class Engine:
         require(not self.root.is_relative_to(repo), 'receipt storage must be outside source')
         return repo, policy
 
+    def observe(self, record, item, head=None):
+        repo = Path(item['path']).resolve()
+        obligations = record['obligations']
+        obligation = obligations.setdefault(item['id'], dict(path=str(repo), commits=[]))
+        require(obligation['path'] == str(repo), 'original repository identity changed')
+        # Persist HEAD before policy/snapshot admission: a later failure cannot forget it.
+        try:
+            if head is None:
+                head = line(repo, 'rev-parse', '--verify', 'HEAD^{commit}')
+        except Blocked:
+            obligation['unverifiable'] = True
+            raise
+        obligation['commits'] = sorted(set([*obligation['commits'], head,
+                                            *item.get('required_commits', [])]))
+        return obligation['commits']
+
+    def require_obligations(self, record):
+        require(record.get('version') == VERSION, 'unsupported preservation contract')
+        obligations = record.get('obligations')
+        require(isinstance(obligations, dict) and bool(obligations),
+                'missing original preservation obligations')
+        entries = {e['id']: e for e in record['repositories']}
+        require(set(entries) == set(obligations), 'affected original repository inventory omitted')
+        for ident, obligation in obligations.items():
+            entry = entries[ident]
+            require(all(isinstance(c, str) and re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', c)
+                        for c in obligation['commits']), 'required original commit must be a full ID')
+            require(not obligation.get('unverifiable'), 'original history observation was unverifiable')
+            require(obligation['path'] == entry['path'] and obligation['commits'] and
+                    set(obligation['commits']) == set(entry.get('original_commits', [])) and
+                    entry['before']['head'] in obligation['commits'] and
+                    set(entry.get('required_commits', [])).issubset(obligation['commits']) and
+                    (not entry.get('receipt') or entry['receipt']['commit'] in obligation['commits']),
+                    'original preservation obligations are missing or inconsistent')
+
     def begin(self, request):
         path = self.state_path(request)
         require(not path.exists(), 'turn already registered; do not overwrite prior evidence')
@@ -191,34 +249,44 @@ class Engine:
         if (path.parent / 'latest.json').exists():
             latest = read_json(path.parent / 'latest.json')
             previous = read_json(path.parent / (latest['turn'] + '.json'))
-            require(previous.get('version') == VERSION, 'earlier turn has unsupported provenance')
+            require(previous.get('version') == VERSION and isinstance(previous.get('obligations'), dict),
+                    'earlier turn has unsupported provenance; originals need explicit reconciliation')
         record = dict(version=VERSION, workspace=request['workspace'], turn=request['turn'],
                       state='pending', reason='turn has not reached verified preservation',
-                      config=digest(self.config), repositories=[])
-        # Durable pending marker exists even if later baseline capture fails or host exits.
+                      config=digest(self.config), repositories=[],
+                      obligations=previous['obligations'] if previous else {})
         atomic_json(path.parent / 'latest.json', dict(turn=request['turn']))
         atomic_json(path, record)
         try:
             require(bool(request['repositories']), 'empty affected repository inventory')
             require(len({i['id'] for i in request['repositories']}) == len(request['repositories']),
                     'duplicate repository inventory')
+            # Observe every affected original before admitting any repository. Continue
+            # capture after an error so a failed multi-repository admission loses no heads.
+            errors = []
+            for item in request['repositories']:
+                try:
+                    self.observe(record, item)
+                except Blocked as error:
+                    errors.append(str(error))
+                finally:
+                    atomic_json(path, record)
+            require(not errors, errors[0] if errors else '')
             for item in request['repositories']:
                 repo, _ = self.policy(item)
                 with repo_lock(repo):
-                    prior = next((e for e in previous['repositories'] if e['id'] == item['id']), None) if previous else None
-                    inherited = []
-                    if prior:
-                        inherited = sorted(set([*prior.get('inherited_commits', []),
-                                                *prior.get('required_commits', []), prior['before']['head'],
-                                                *([prior['observed_head']] if prior.get('observed_head') else []),
-                                                *([prior['receipt']['commit']] if prior.get('receipt') else [])]))
-                    record['repositories'].append(dict(id=item['id'], path=str(repo), inherited_commits=inherited,
-                                                       before=snapshot(repo),
+                    before = snapshot(repo)
+                    originals = self.observe(record, item)
+                    require(before['head'] in originals, 'head changed during admission')
+                    record['repositories'].append(dict(id=item['id'], path=str(repo),
+                                                       original_commits=list(originals), before=before,
                                                        required_commits=item.get('required_commits', []),
                                                        required_files=item.get('required_files', [])))
                     atomic_json(path, record)
-        except Blocked as error:
-            record.update(state='blocked', reason=str(error))
+            self.require_obligations(record)
+        except (Blocked, OSError, KeyError, ValueError) as error:
+            record.update(state='blocked', reason=str(error) if isinstance(error, Blocked)
+                          else 'preservation IO or contract failure')
             atomic_json(path, record)
         return record
 
@@ -271,23 +339,56 @@ class Engine:
                 'PR does not cover the verified branch commit and base')
         return pr
 
+    def outgoing_objects(self, repo, policy, head):
+        base = policy['base_commit']
+        git(repo, 'merge-base', '--is-ancestor', base, head)
+        seen = set()
+        for commit in line(repo, 'rev-list', base + '..' + head).splitlines():
+            # Raw original commit messages are published too; scan them without log formatting.
+            yield git(repo, 'cat-file', 'commit', commit)
+            paths = [os.fsdecode(p) for p in git(repo, 'diff-tree', '--root', '-m',
+                     '--no-commit-id', '--name-only', '-r', '-z', commit).split(b'\0') if p]
+            eligible(paths, policy)
+            if not paths:
+                continue
+            for raw in git(repo, 'ls-tree', '-r', '-z', commit, '--', *paths).split(b'\0'):
+                if not raw:
+                    continue
+                meta, _ = raw.split(b'\t', 1)
+                mode, kind, oid = meta.decode().split()
+                require(mode in ['100644', '100755'] and kind == 'blob',
+                        'outgoing symlink or submodule history requires review')
+                require(int(line(repo, 'cat-file', '-s', oid)) <= 5 * 1024 * 1024,
+                        'large outgoing blob requires review')
+                if oid in seen:
+                    continue
+                seen.add(oid)
+                content = git(repo, 'cat-file', 'blob', oid)
+                require(b'\0' not in content, 'binary outgoing history requires review')
+                try:
+                    content.decode('utf-8')
+                except UnicodeDecodeError:
+                    raise Blocked('non-text outgoing history requires review') from None
+                yield content
+
     def scan(self, repo, policy, head):
         scanner = Path(self.config['scanner'])
         require(scanner.is_absolute() and
                 hashlib.sha256(scanner.read_bytes()).hexdigest() == self.config['scanner_sha256'],
                 'approved secret scanner missing or changed')
-        # Explicit defaults: neither repository nor environment can weaken scanning.
+        # No rendered diffs, filenames, local attributes/drivers, replacement refs or
+        # repository scanner config participate. stdin scans complete original blobs,
+        # including intermediate revisions and bytes inherited from an unchanged base.
         with tempfile.NamedTemporaryFile(dir=self.root, suffix='.toml') as config:
             config.write(b'[extend]\nuseDefault = true\n')
             config.flush()
-            env = {k: v for k, v in os.environ.items() if not k.startswith('GITLEAKS_')}
-            run([str(scanner), 'git', str(repo), '--config', config.name,
-                 '--no-banner', '--redact', '--ignore-gitleaks-allow',
-                 '--gitleaks-ignore-path', '/dev/null',
-                 '--log-opts=' + policy['base_commit'] + '..' + head + ' --full-history -m --no-ext-diff --no-textconv'],
-                cwd=self.root, env=env)
+            for content in self.outgoing_objects(repo, policy, head):
+                run([str(scanner), 'stdin', '--config', config.name,
+                     '--no-banner', '--redact', '--ignore-gitleaks-allow',
+                     '--gitleaks-ignore-path', '/dev/null'],
+                    cwd=self.root, env=sanitized_env(), data=content)
 
-    def commit(self, repo, policy, snap, turn):
+    def commit(self, repo, policy, snap, turn, remember):
         index = Path(line(repo, 'rev-parse', '--path-format=absolute', '--git-path', 'index'))
         lock = index.with_name(index.name + '.lock')
         try:
@@ -320,6 +421,8 @@ class Engine:
                            data=f'Preserve agent turn {turn}\n'.encode()).decode().strip()
                 self.scan(repo, policy, head)
                 require(snapshot(repo) == snap, 'concurrent writer changed snapshot during commit')
+                # Write-ahead original obligation precedes exposing the new branch head.
+                remember(head)
                 output.write(Path(env['GIT_INDEX_FILE']).read_bytes())
                 output.flush()
                 os.fsync(output.fileno())
@@ -330,7 +433,7 @@ class Engine:
             if lock.exists():
                 lock.unlink()
 
-    def preserve_repo(self, entry, policy, request):
+    def preserve_repo(self, entry, policy, request, remember):
         repo = Path(entry['path'])
         before = entry['before']
         snap = snapshot(repo)
@@ -349,34 +452,11 @@ class Engine:
         base = policy['base_commit']
         git(repo, 'merge-base', '--is-ancestor', base, snap['head'])
         git(repo, 'merge-base', '--is-ancestor', before['head'], snap['head'])
-        for required in [*entry.get('required_commits', []), *entry.get('inherited_commits', [])]:
+        for required in entry['original_commits']:
             require(re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', required),
                     'required original commit must be a full ID')
             git(repo, 'merge-base', '--is-ancestor', required, snap['head'])
         require(re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', base), 'reviewed base must be a full commit ID')
-        # Every intermediate outgoing revision is checked, including later-deleted private files.
-        commits = line(repo, 'rev-list', base + '..' + snap['head']).splitlines()
-        for commit in commits:
-            changed_paths = [os.fsdecode(p) for p in git(repo, 'diff-tree', '--root', '-m',
-                             '--no-commit-id', '--name-only', '-r', '-z', commit).split(b'\0') if p]
-            eligible(changed_paths, policy)
-            if not changed_paths:
-                continue
-            for raw in git(repo, 'ls-tree', '-r', '-z', commit, '--', *changed_paths).split(b'\0'):
-                if not raw:
-                    continue
-                meta, _ = raw.split(b'\t', 1)
-                mode, kind, oid = meta.decode().split()
-                require(mode in ['100644', '100755'] and kind == 'blob',
-                        'outgoing symlink or submodule history requires review')
-                require(int(line(repo, 'cat-file', '-s', oid)) <= 5 * 1024 * 1024,
-                        'large outgoing blob requires review')
-                content = git(repo, 'cat-file', 'blob', oid)
-                require(b'\0' not in content, 'binary outgoing history requires review')
-                try:
-                    content.decode('utf-8')
-                except UnicodeDecodeError:
-                    raise Blocked('non-text outgoing history requires review') from None
         status_paths = [os.fsdecode(p[3:]) for p in bytes.fromhex(snap['status']).split(b'\0') if p]
         eligible(status_paths, policy)
         # The configured review is an operator assessment of Actions and external automation.
@@ -399,12 +479,14 @@ class Engine:
                 'automation source digest differs from review')
         changed = bool(snap['status']) or snap['head'] != before['head']
         if snap['status']:
-            head = self.commit(repo, policy, snap, request['turn'])
+            head = self.commit(repo, policy, snap, request['turn'], remember)
         else:
             head = snap['head']
             self.scan(repo, policy, head)
         stable = snapshot(repo)
         require(not stable['status'], 'worktree or index remains dirty after commit')
+        require(stable['head'] == head, 'original head changed during preservation')
+        require_tree_bytes(repo, stable)
         prs = self.prs(policy, stable['branch'])
         require(len(prs) <= 1, 'ambiguous existing pull requests')
         if prs:
@@ -444,6 +526,7 @@ class Engine:
     def end(self, request):
         path = self.state_path(request)
         record = read_json(path)
+        self.require_obligations(record)
         require(bool(request['repositories']) and bool(record['repositories']),
                 'empty affected repository inventory')
         require(read_json(path.parent / 'latest.json')['turn'] == request['turn'],
@@ -456,17 +539,31 @@ class Engine:
         atomic_json(path, record)
         try:
             require(request.get('writers_fenced') is True, 'writers are not fenced')
+            errors = []
+            for entry in record['repositories']:
+                try:
+                    entry['original_commits'] = list(self.observe(record, entry))
+                except (Blocked, OSError, KeyError, ValueError) as error:
+                    errors.append(str(error) if isinstance(error, Blocked)
+                                  else 'original history observation was unverifiable')
+                finally:
+                    atomic_json(path, record)
+            require(not errors, errors[0] if errors else '')
             for entry in record['repositories']:
                 repo, policy = self.policy(entry)
                 with repo_lock(repo):
-                    entry['observed_head'] = snapshot(repo)['head']
-                    atomic_json(path, record)
+                    def remember(head):
+                        entry['original_commits'] = list(self.observe(record, entry, head))
+                        atomic_json(path, record)
+
                     # Verify prior success first on retry; no duplicate commits or PR creation.
                     if entry.get('receipt'):
                         self.check_repo(entry, policy)
                     else:
-                        entry['receipt'] = self.preserve_repo(entry, policy, request)
+                        entry['receipt'] = self.preserve_repo(entry, policy, request, remember)
+                    entry['original_commits'] = list(self.observe(record, entry))
                     atomic_json(path, record)
+            self.require_obligations(record)
             for entry in record['repositories']:
                 require(snapshot(Path(entry['path'])) == entry['receipt']['after'],
                         'earlier repository changed while another repository was preserved')
@@ -477,21 +574,32 @@ class Engine:
         except (Blocked, OSError, KeyError, ValueError) as error:
             record.update(state='blocked', reason=str(error) if isinstance(error, Blocked)
                           else 'preservation IO or contract failure')
+        if record['state'] == 'blocked':
+            for entry in record['repositories']:
+                try:
+                    entry['original_commits'] = list(self.observe(record, entry))
+                except (Blocked, OSError, KeyError, ValueError):
+                    record.update(state='blocked', reason='original history observation was unverifiable')
         atomic_json(path, record)
         return record
 
     def check_repo(self, entry, policy):
         repo = Path(entry['path'])
         receipt = entry['receipt']
+        require(isinstance(receipt.get('changed'), bool) and
+                (not receipt['changed'] or 'pr' in receipt),
+                'changed preservation receipt has no covering PR')
         eligible(entry.get('required_files', []), policy)
         require(all(p in receipt['after']['files'] and receipt['after']['files'][p] is not None
                     for p in entry.get('required_files', [])),
                 'required affected file is missing, ignored or unverifiable')
         require(snapshot(repo) == receipt['after'], 'workspace changed after earlier receipt')
+        require_tree_bytes(repo, receipt['after'])
         require(receipt.get('proof') == 'exact-history-fresh-fetch',
                 'source-only checkpoint is not an exact-history preservation receipt')
-        for required in [entry['before']['head'], *entry.get('required_commits', []), *entry.get('inherited_commits', [])]:
+        for required in entry['original_commits']:
             git(repo, 'merge-base', '--is-ancestor', required, receipt['commit'])
+        self.scan(repo, policy, receipt['commit'])
         self.remote(repo, policy)
         remote = policy['url']
         self.witness(repo, remote, receipt['ref'].removeprefix('refs/heads/'), receipt['commit'])
@@ -510,6 +618,7 @@ class Engine:
         require(record['version'] == VERSION and record['workspace'] == request['workspace'] and
                 record['turn'] == request['turn'] and record['state'] == 'verified',
                 'turn preservation is pending, blocked or unsupported')
+        self.require_obligations(record)
         require(record['config'] == digest(self.config), 'policy differs from preservation receipt')
         require([(e['id'], e['path'], e.get('required_commits', []), e.get('required_files', [])) for e in record['repositories']] ==
                 [(i['id'], str(Path(i['path']).resolve()), i.get('required_commits', []), i.get('required_files', [])) for i in request['repositories']],
@@ -530,7 +639,8 @@ class Engine:
                 'preservation state changed during verification')
         return dict(version=VERSION, state='verified', workspace=request['workspace'],
                     turn=request['turn'], scope='eligible-repository-work-only',
-                    checked_at=time.time(), repositories=record['repositories'])
+                    checked_at=time.time(), receipt_digest=digest(record),
+                    repositories=record['repositories'])
 
 
     def block(self, request):
@@ -552,7 +662,7 @@ class Engine:
         for result in results:
             current = read_json(self.state_path(result))
             require(read_json(self.state_path(result).parent / 'latest.json')['turn'] == result['turn'] and
-                    current['state'] == 'verified' and current['repositories'] == result['repositories'],
+                    current['state'] == 'verified' and digest(current) == result['receipt_digest'],
                     f"workspace {result['workspace']} preservation changed during batch check")
             for entry in result['repositories']:
                 require(snapshot(Path(entry['path'])) == entry['receipt']['after'],

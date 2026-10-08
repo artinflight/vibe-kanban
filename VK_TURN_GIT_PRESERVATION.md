@@ -37,9 +37,11 @@ including untracked source and deletions, then updates the real index. The
 working files are not rewritten. No hooks, force pushes, merges, resets,
 auto-merges, permission/visibility changes or empty commits are used.
 
-Outgoing intermediate commit paths/blobs are reviewed against the policy and
-scanned, including deleted secrets and merge revisions. Existing agent-created
-commits retain their original ancestry. A normal explicit-ref push targets the
+Outgoing intermediate commit paths/blobs are reviewed against the policy. Raw
+`cat-file` blob bytes and original commit messages are scanned through Gitleaks
+`stdin`, including deleted secrets, unchanged lines in changed blobs and merge
+revisions. Scanning does not consume rendered Git diffs or filename-based skips.
+Existing agent-created commits retain their original ancestry. A normal explicit-ref push targets the
 approved existing destination, with tag following, mirror pushes and recursive
 submodule publication disabled. The helper reuses one open PR with the correct
 repository/head/base, or creates and independently confirms a new draft. A
@@ -50,9 +52,14 @@ commits on a read-only turn remain blocked rather than producing artifacts.
 Coverage requires live `ls-remote` equality, a fresh fetch into an independent
 object store, matching commit/tree IDs and a complete Git object graph. The PR
 head must independently match. A matching remote-tracking ref, a local push exit
-code, or an old receipt alone is insufficient. Subsequent turns inherit observed
-original commit obligations; replacing a withheld original history with a source
-checkpoint cannot silently clear those obligations.
+code, or an old receipt alone is insufficient. Schema 2 retains an append-only
+per-repository original-commit ledger. All affected heads are durably observed
+before policy/snapshot admission and before preservation starts; generated
+commits are recorded before branch compare-and-swap. Retries union observations
+and later turns inherit the ledger even after empty, partial or failed admissions.
+An omitted original repository or an unverifiable head observation stays blocked.
+Replacing a withheld original history with a source checkpoint cannot clear those
+obligations. Every original must be an ancestor of the exact remote witness.
 
 Pending and blocked states carry the workspace, turn, repository paths and
 reason. Completion emits visible system/error entries and appends preservation
@@ -77,9 +84,15 @@ exports and binary artifacts even if mistakenly allowlisted. Symlinks, gitlinks,
 special files, non-text outgoing blobs, large files, sparse/hidden index flags,
 shallow histories and unresolved conflicts require separate review. Transforming
 Git filters can leave a snapshot dirty; that fails closed rather than claiming
-coverage. The approved Gitleaks binary is hashed and runs with explicit default
-rules, repository ignore files/comments disabled, and external diff/textconv
-execution disabled. Scanner/subprocess output is never copied into errors.
+coverage. Clean status alone is insufficient: raw working blob IDs and executable
+modes must match the preserved tree, so clean filters, CRLF conversion or disabled
+filemode tracking cannot certify unpreserved bytes/modes. The approved Gitleaks binary is hashed and runs with explicit default
+rules and repository ignore files/comments disabled. Git and scanner subprocesses
+share one environment that strips inherited `GIT_*` and `GITLEAKS_*`, disables
+replacement objects and legacy grafts, and enforces literal pathspecs. Raw-object
+scanning bypasses attributes, binary diff classification, diff drivers and
+textconv. Binary/non-UTF-8 blobs still block; they are never scanner exclusions.
+Scanner/subprocess output is never copied into errors.
 Receipts contain hashes/metadata, never source contents, and are mode 0600.
 
 Ignored files are never staged or uploaded. A changed ignored-file inventory
@@ -177,15 +190,24 @@ workspace, obtained from authoritative VK execution/repository state:
 Optional requirements belong to the admitted inventory. Adding or omitting them
 later does not reuse a mismatched receipt. Required originals must exist and be
 ancestors of the freshly fetched witness; a missing original cannot be replaced
-with a source checkpoint. The helper automatically retains observed original
-commit obligations from earlier turns in that workspace.
+with a source checkpoint. The helper retains all observed original commit
+obligations across retries and earlier turns in that workspace, including failed
+admissions. An unavailable original observation cannot be erased by a retry.
 
-Exit 0 **and** JSON `{ "version": 1, "state": "verified", ... }` are required.
+Exit 0 **and** JSON `{ "version": 2, "state": "verified", ... }` are required.
 Exit 2 / `blocked`, any other nonzero exit, timeout, malformed/unsupported output,
-empty inventory, missing receipt, pending/failed receipt, identity mismatch,
+empty inventory, missing receipt/obligation ledger, pending/failed receipt,
+identity mismatch,
 newer turn, missing original, changed source/index/ignored inventory, remote
 mismatch, unavailable remote/fresh objects, or a closed/mismatched PR blocks.
 `check` handles one workspace with the same fields and `writers_fenced: true`.
+Schema-1 receipts are unsupported in both `end` and `check`; they cannot be
+automatically upgraded into exact-original proof because earlier observations
+may already have been lost. The rollout owner must reconcile original history
+explicitly before adopting a new protected receipt namespace. Fresh checks
+rescan outgoing original objects with the approved binary. The batch check
+compares the complete durable receipt digest after checking all turns; any
+version, policy or original-ledger mutation invalidates the result.
 `check` and `check-all` never repair, commit, push or create PRs. Temporary fetched
 objects/locks are their only Git/storage effects. Their verified scope is
 `eligible-repository-work-only`, never excluded-file or backup coverage.
@@ -215,7 +237,7 @@ Operations issue16 / draft PR198, final receipt
 39 repositories. Its 2,899-original accounting distinguished 2,473 exact histories,
 262 source-only checkpoints, 145 missing originals and 19 private-history
 exclusions. Those are historical evidence categories, not inputs accepted as new
-schema-1 exact-history receipts. No retrospective source checkpoint proves all
+schema-2 exact-history receipts. No retrospective source checkpoint proves all
 intermediate original versions or excluded bytes. This feature does not sweep,
 repair or certify that historical inventory. Required missing originals and
 excluded private histories remain explicit blockers when included in affected work.
@@ -229,14 +251,19 @@ absence of automation.
 
 Fixtures use real disposable local repositories and bare remotes, with deterministic
 GitHub adapters; they make no GitHub publication or live VK/runtime calls. The real
-Gitleaks acceptance uses a constructed synthetic token and an intentionally invalid
-repository config to prove that repository config cannot weaken default scanning.
+Gitleaks acceptance uses a constructed synthetic token. Regressions exercise
+replacement refs, local binary attributes/custom diff drivers, legacy grafts,
+repository/environment configuration and allow comments, removed intermediate
+secrets, unchanged secret lines in changed blobs, commit messages, long text
+lines, binary/non-UTF-8 rejection and fresh-check rescanning. A positive real-
+scanner test preserves clean tracked/untracked work and freshly verifies it. Disposable fixture
+rewrites reproduce lost-history retries; no real work is reset or rewritten.
 
 ```bash
-VK_PRESERVATION_TEST_ROOT=/mnt/vk-storage/turn-git-preservation-20261008 \
+VK_PRESERVATION_TEST_ROOT=/mnt/vk-storage/turn-git-preservation-review-20261008 \
 VK_TEST_GITLEAKS=/path/to/approved/gitleaks \
   python3 scripts/preservation/test_turn_git.py
-TMPDIR=/mnt/vk-storage/turn-git-preservation-20261008 \
+TMPDIR=/mnt/vk-storage/turn-git-preservation-review-20261008 \
 CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target CARGO_INCREMENTAL=0 \
   cargo test -p local-deployment turn_preservation --offline
 ```

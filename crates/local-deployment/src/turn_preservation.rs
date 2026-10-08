@@ -12,12 +12,12 @@ pub fn enabled() -> bool {
 }
 
 pub fn blocked(workspace: &str, turn: &str, reason: &str) -> Value {
-    json!({"version": 1, "state": "blocked", "workspace": workspace,
+    json!({"version": 2, "state": "blocked", "workspace": workspace,
         "turn": turn, "reason": reason})
 }
 
 pub fn verified(report: &Value) -> bool {
-    report.get("version").and_then(Value::as_u64) == Some(1)
+    report.get("version").and_then(Value::as_u64) == Some(2)
         && report.get("state").and_then(Value::as_str) == Some("verified")
 }
 
@@ -141,7 +141,7 @@ async fn invoke_with_config(action: &str, request: Value, config: &Path) -> Valu
         Ok(output) if output.stdout.len() <= 4 * 1024 * 1024 => {
             match serde_json::from_slice::<Value>(&output.stdout) {
                 Ok(report)
-                    if report["version"] == 1
+                    if report["version"] == 2
                         && report["workspace"] == request["workspace"]
                         && report["turn"] == request["turn"]
                         && (!verified(&report) || output.status.success()) =>
@@ -164,13 +164,13 @@ mod tests {
         for report in [
             json!({}),
             json!({"state": "verified"}),
-            json!({"version": 2, "state": "verified"}),
-            json!({"version": 1, "state": "pending"}),
+            json!({"version": 1, "state": "verified"}),
+            json!({"version": 2, "state": "pending"}),
             blocked("workspace", "turn", "push failed"),
         ] {
             assert!(!verified(&report));
         }
-        assert!(verified(&json!({"version": 1, "state": "verified"})));
+        assert!(verified(&json!({"version": 2, "state": "verified"})));
     }
 
     #[test]

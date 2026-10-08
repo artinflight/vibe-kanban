@@ -1,3 +1,44 @@
+# October 8: PR223 P1 preservation review corrections
+
+Review baseline `3cb3632897a5081224fd45d39b3cf7d772937709` was unsafe: replacement
+refs and binary diff attributes hid secrets from scanning, and retries overwrote
+original-head obligations. Nine targeted regressions reproduced these and related
+failed-admission/legacy-receipt gaps before the fixes, with the approved real
+Gitleaks executable exercised on replacement refs, attributes and same-turn retry.
+
+The correction scans raw original blobs and commit messages using Gitleaks stdin
+under the publication Git environment, bypasses local attributes/drivers and
+legacy grafts, and preserves an append-only original-commit ledger across retries
+and failed admissions. Generated commits have write-ahead obligations. Fresh
+checks rescan original bytes and reject schema-1 or incomplete receipts. Missing
+or unverifiable originals remain blockers and cannot become acceptable exclusions.
+
+Validation on the corrected source: the complete 72-case fixture suite plus one
+additional positive real-scanner publication/check test passed (73 distinct tests,
+15 configured with approved Gitleaks 8.30.1; none skipped). Four focused Rust tests,
+all-target focused Clippy, repository formatting, ops governance and branch policy
+passed. Fresh fork/staging ancestry was checked without operating its workspace.
+Frontend type checks and local-web/UI lint passed; full check/lint/workspace tests
+were attempted and stop at missing host GLib/GObject/GIO development libraries.
+Trailing remote-manifest/I18n checks and copied-data full executor/UI acceptance
+remain unverified. Logs are in the review evidence directory named below.
+Approved scanner SHA256:
+`88f91962aa2f93ac6ab281d553b9e125f5197bbbce38f9f2437f7299c32e5509`.
+
+Tracking and delivery remain VK Dev T48 and [draft PR223](https://github.com/artinflight/vibe-kanban/pull/223)
+on `feat/turn-git-preservation`. Review evidence is in
+`/mnt/vk-storage/turn-git-preservation-review-20261008/`; the final external
+`publication-receipt.json` records the exact development remote SHA after push.
+
+No live activation, Staging workspace/runtime operation, restart, recovery,
+cleanup, merge, force push, permission or network change was performed.
+Recommend-only remains required. Seamus owns controller/package integration and
+separately authorized Staging adoption. The controller consumer must require
+schema 2 and a fresh check under its complete inventory and held writer fence.
+Old receipts need explicit original-history reconciliation; do not auto-migrate
+or delete them to clear the gate. Copied-data executor/UI/stop timing acceptance
+and full CI remain rollout requirements.
+
 # October 8: Automatic turn Git preservation — development only
 
 Branch `feat/turn-git-preservation` starts at fork/staging

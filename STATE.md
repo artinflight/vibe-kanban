@@ -1,3 +1,12 @@
+## October 8: Preservation P1 review corrections in development
+
+Draft PR223 now develops raw-original-object secret scanning and immutable
+original commit obligations under schema 2. The reviewed schema-1 baseline is
+unsafe and must not be activated. See HANDOFF.md and
+VK_TURN_GIT_PRESERVATION.md for correction evidence and compatibility gates.
+This is source development only; enforcement remains inactive. Recommend-only
+and Seamus's separate Staging/rollout ownership remain unchanged.
+
 ## October 8: Turn preservation development boundary
 
 Automatic end-of-turn Git preservation and an independent fail-closed check are

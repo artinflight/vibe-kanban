@@ -1,3 +1,94 @@
+# October 8: PR223 P1 preservation review corrections
+
+Review baseline `3cb3632897a5081224fd45d39b3cf7d772937709` was unsafe: replacement
+refs and binary diff attributes hid secrets from scanning, and retries overwrote
+original-head obligations. Nine targeted regressions reproduced these and related
+failed-admission/legacy-receipt gaps before the fixes, with the approved real
+Gitleaks executable exercised on replacement refs, attributes and same-turn retry.
+
+The correction scans raw original blobs and commit messages using Gitleaks stdin
+under the publication Git environment, bypasses local attributes/drivers and
+legacy grafts, and preserves an append-only original-commit ledger across retries
+and failed admissions. Generated commits have write-ahead obligations. Fresh
+checks rescan original bytes and reject schema-1 or incomplete receipts. Missing
+or unverifiable originals remain blockers and cannot become acceptable exclusions.
+
+Validation on the corrected source: the complete 72-case fixture suite plus one
+additional positive real-scanner publication/check test passed (73 distinct tests,
+15 configured with approved Gitleaks 8.30.1; none skipped). Four focused Rust tests,
+all-target focused Clippy, repository formatting, ops governance and branch policy
+passed. Fresh fork/staging ancestry was checked without operating its workspace.
+Frontend type checks and local-web/UI lint passed; full check/lint/workspace tests
+were attempted and stop at missing host GLib/GObject/GIO development libraries.
+Trailing remote-manifest/I18n checks and copied-data full executor/UI acceptance
+remain unverified. Logs are in the review evidence directory named below.
+Approved scanner SHA256:
+`88f91962aa2f93ac6ab281d553b9e125f5197bbbce38f9f2437f7299c32e5509`.
+
+Tracking and delivery remain VK Dev T48 and [draft PR223](https://github.com/artinflight/vibe-kanban/pull/223)
+on `feat/turn-git-preservation`. Review evidence is in
+`/mnt/vk-storage/turn-git-preservation-review-20261008/`; the final external
+`publication-receipt.json` records the exact development remote SHA after push.
+
+No live activation, Staging workspace/runtime operation, restart, recovery,
+cleanup, merge, force push, permission or network change was performed.
+Recommend-only remains required. Seamus owns controller/package integration and
+separately authorized Staging adoption. The controller consumer must require
+schema 2 and a fresh check under its complete inventory and held writer fence.
+Old receipts need explicit original-history reconciliation; do not auto-migrate
+or delete them to clear the gate. Copied-data executor/UI/stop timing acceptance
+and full CI remain rollout requirements.
+
+# October 8: Automatic turn Git preservation — development only
+
+Branch `feat/turn-git-preservation` starts at fork/staging
+`8b562265d25a3f8ee6d4fa602144e71caddfbc85`. Read
+[VK_TURN_GIT_PRESERVATION.md](VK_TURN_GIT_PRESERVATION.md) for the complete
+publication/privacy policy, exact-history receipt and fail-closed controller
+contract. VK Dev T48 / `783c983a-416e-43f5-9754-8c2f619e9918` is linked to workspace
+`c31ac191-d4cf-4ab9-b3e8-9c1a7d7c3b73`. The fork disables GitHub issues.
+
+This is opt-in source development. No config is installed and production
+enforcement is not active. Seamus owns Staging integration, installation,
+controller wiring, restart/cutover and copied-data/live acceptance. The separately
+stopped Staging conversation/workspace/runtime was not operated. Recommend-only
+routing remains required. No merges, auto-merge, cleanup, incident recovery,
+visibility/permission changes or force pushes were performed.
+
+Development delivery: [draft PR223](https://github.com/artinflight/vibe-kanban/pull/223)
+into staging. Initial implementation commit `021b12a9160c8c988dde862758ad43c7da337bdf`.
+Final remote coverage is independently checked after the documentation/link commit;
+see the private `publication-receipt.json` in the evidence directory. This is
+source delivery, not activation or production acceptance. The workspace's stored
+branch label remains `vk/c31a-vk-git-sync-enfo`; the actual isolated development
+Git branch and PR head are `feat/turn-git-preservation`. Do not promote the stored
+legacy label or the separately stopped Staging workspace.
+
+Local validation: all 40 isolated Git fixture tests passed, including real
+Gitleaks acceptance and push/PR uncertainty, exclusion, original-history,
+concurrent-writer and stale/newer-turn coverage. Four focused Rust tests passed,
+including the embedded helper and owned process-group fixtures. Focused
+all-target Clippy, formatting and ops governance passed. Local Git ancestry
+confirms the branch contains freshly fetched fork/staging; branch policy passes.
+
+Frontend type checks passed with Node's heap raised to 8 GiB after the initial
+default-heap failure. Local-web/UI lint passed. Full `pnpm run check`,
+`pnpm run lint` and `cargo test --workspace` were attempted; host GTK/GLib/GObject/GIO
+libraries are missing, so broad desktop/backend validation and trailing
+remote-manifest/I18n stages remain incomplete. Generic CI must provide that
+coverage. No native provider inference, copied-data full executor/UI acceptance
+or production acceptance was performed. Shared Cargo target/incremental policy
+was retained; fixtures, dependencies and logs used mounted SSD storage.
+
+Evidence: `/mnt/vk-storage/turn-git-preservation-20261008/` (fixture-tests.log,
+cargo-tests.log, focused-clippy.log, format.log, ops-check.log, check.log,
+lint.log and workspace-tests.log). Seamus's rollout outcomes are in the contract
+handoff: matching protected backend/policy/scanner/state packaging; complete
+controller inventory and real held writer fence; copied-data visible pending,
+blocked, successful and stop/cleanup timing acceptance; separately authorized
+Staging integration/live adoption. No Staging message was sent or conversation
+resumed. Desktop prompt guidance was read through established SSH access.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

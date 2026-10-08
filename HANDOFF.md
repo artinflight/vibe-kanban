@@ -1,3 +1,13 @@
+## Current: passing isolated repair; independent review pending
+
+Draft [PR153](https://github.com/artinflight/vibe-kanban/pull/153), sourcea81d46e92,
+passes all10 CI checks:405 Cargo tests passed,7 skipped, plus14 audit regressions
+and the16-case real server isolation test. Its rejection reasons, intrinsic
+identity guard, read-only inspection and normal identified startup are verified.
+Read VK_STARTUP_RECOVERY_SAFETY.md for the startup/bootstrap/retention contract,
+recovery limitations, unchanged production and independent review gate.
+No deployment, restart, cutover or production token enrollment is authorized.
+
 ## October 8 isolated prevention and recovery audit
 
 Draft PR153: https://github.com/artinflight/vibe-kanban/pull/153.

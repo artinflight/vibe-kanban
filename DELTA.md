@@ -1528,3 +1528,8 @@ acceptance/ownership dependencies; CU credit budgeting is a separate issue.
 Strict invocations, explicit identity gate and non-destructive automatic lifecycle;
 content/metadata audit retains journal gaps and post-backup uncertainty. No deploy.
 See VK_STARTUP_RECOVERY_SAFETY.md; independent review/real isolated CI pending.
+
+2026-10-08: PR153 sourcea81d46e92 passes10 checks,405 Cargo tests/7 skipped,
+16 real-binary isolation cases and14 audit regressions. Intrinsic dataset tokens
+close in-place replacement ambiguity; pure debug paths work without source mounts.
+Independent review pending. No production mutation or recovery zero-loss claim.

@@ -1,3 +1,20 @@
+# Passing source and remaining review gate
+
+Source `a81d46e92` passes all10 checks in
+[CI37761511753](https://github.com/artinflight/vibe-kanban/actions/runs/37761511753).
+Hosted Cargo tests executed405 tests:405 passed,7 skipped. The real-binary
+integration enforces16 isolated invocation/identity/startup cases, including
+specific rejection reasons, unchanged external sentinels and correctly identified
+`/api/info` serving. The six Rust identity tests and14 Python audit regressions
+also pass. Schema, frontend, Tauri, all-target Clippy and governance checks pass.
+
+[Draft PR153](https://github.com/artinflight/vibe-kanban/pull/153) remains unmerged
+pending **independent review**, including the explicit startup/bootstrap and
+retention compatibility changes. No reviewer agent was authorized or started.
+This is a passing source repair, not a certified zero-loss recovery or release
+readiness. No production receipt/token, service change, route switch or cutover
+was performed. The original maintenance worktree remains clean.
+
 # October 8 startup and recovery-verification repair
 
 ## Scope and authority
@@ -147,21 +164,20 @@ Local validation:
 - `cargo check -p server --locked` passed.
 - `cargo clippy -p server --all-targets --locked -- -D warnings` passed after the
   removed cleanup task's unused state/return binding was corrected.
-- Five std-only Rust invocation/identity tests passed against the actual safety
+- Six std-only Rust invocation/identity tests passed against the actual safety
   module, with private sentinels.
-- Thirteen Python recovery/assembly regressions passed.
+- Fourteen Python recovery/assembly regressions passed.
 - The namespace harness passed all 14 cases using a small std-only probe built
   from the safety module. This validates containment and the harness, not real VK
-  startup. The real-binary integration test is wired into hosted Cargo tests.
+  startup. The final real-binary integration test passes16 cases in hosted Cargo tests (sourcea81d46e92).
 - `pnpm run format` passed with temporary SSD-installed Prettier3.6.1 (the locked
   version); no frontend files changed. Ops governance and diff checks passed.
 
 `pnpm run check` and `pnpm run lint` were attempted and stopped at absent frontend
 TypeScript/ESLint dependencies. The cold focused WorkspaceManager test build hit
-bounded time/space limits before completion. Its test is compiled/checked by the
-all-target Clippy check but not claimed as executed. Full workspace tests and
-real VK binary startup/HTTP acceptance have not run locally. Hosted CI and
-independent review remain required; a draft review is not incident closure.
+bounded time/space limits before completion. Its preservation test now passes in hosted Cargo; it was not executed locally. Full workspace tests and
+real VK binary startup/HTTP acceptance have not run locally. Hosted CI passed at sourcea81d46e92;
+independent review remains required; a draft review is not incident closure.
 
 All build output was task-local on the mounted SSD. Only this task's newly
 generated Cargo cache was retired after checking for active compiler/service
@@ -192,8 +208,7 @@ and probes the namespace boundary before running Cargo. This follows Ubuntu's
 [purpose-built profile guidance](https://discourse.ubuntu.com/t/understanding-apparmor-user-namespace-restriction/58007)
 and its [packaged profile inventory](https://packages.ubuntu.com/noble-updates/all/apparmor-profiles/filelist).
 Only the ephemeral GitHub runner is configured; the MCP host's policies and all
-server isolation mounts/namespaces are unchanged. The corrected hosted run and
-independent review remain required.
+server isolation mounts/namespaces are unchanged. The corrected hosted run now passes; independent review remains required.
 
 The source84d1d2a evidence packet is fully hash-verified on Desktop at
 `B:/vk-backups/vk-startup-recovery-safety-20261008/startup-recovery-safety-evidence.tar.gz`,
@@ -211,7 +226,7 @@ dataset token. The preflight reads only that token through a read-only connectio
 with creation disabled; missing, empty, duplicate or mismatched token evidence
 fails before migration or writer construction. Regressions include a token
 removed/changed in place without changing the database inode. The real-binary
-harness now has16 cases; its final hosted acceptance remains required.
+harness now has16 cases; its final hosted acceptance passes at sourcea81d46e92.
 
 The profile correction let the real binary reject all unsupported and ambiguous
 startup cases. Its positive case then failed on an absent path: the harness had

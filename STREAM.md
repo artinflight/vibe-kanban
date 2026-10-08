@@ -1,3 +1,10 @@
+## Current repair acceptance
+
+PR153 sourcea81d46e92 passes all10 checks and405 Cargo tests (7 skipped),
+including16 real-server cases under private namespaces. The repair is unmerged;
+independent review remains required. Production and the maintenance worktree are
+unchanged. See VK_STARTUP_RECOVERY_SAFETY.md. No deployment authority is implied.
+
 ## October 8 startup/recovery safety repair
 
 Branch fix/startup-recovery-safety-20261008 starts from fork/staging8b562265d.

@@ -4,7 +4,8 @@ The October 7 shared-worktree incident still blocks release preparation. A fresh
 read-only audit supports regular-file baseline comparisons but retains journal
 coverage loss and post-backup uncertainty. See VK_STARTUP_RECOVERY_SAFETY.md.
 The repair branch is separate from maintenance and PR150; production is unchanged.
-Independent review and actual isolated server/CI acceptance remain required.
+Isolated server acceptance and all10 CI checks pass at sourcea81d46e92.
+Independent review remains required.
 
 ## October 1: AutoSwitch scope release preparation
 

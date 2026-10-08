@@ -1,3 +1,10 @@
+Current integration update: read
+[VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md](VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md)
+for actual PR229 archive bindings, preservation-aware mode0555 refresh, new
+regressions and consumed OP audit. The record below describes the original
+be704f9c scope discovery and controller baseline; its private discovery remains
+retained and no proposed scope reduction has been approved.
+
 # Candidate as restore rehearsal: isolated application tooling
 
 This branch implements filesystem/controller primitives for restoring the new

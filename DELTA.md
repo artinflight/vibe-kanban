@@ -1561,3 +1561,18 @@ is preserved and its rollback archive is SHA256-verified on Desktop B:.
 VK_MOBILE_RELEASE_20261008.md records evidence and unverified regression cases.
 The test harness now also intercepts /v1 writes and matches exact visible project
 titles when an accessible needs-review indicator extends the button name.
+
+## 2026-10-08: Offline candidate/direct-B contract integration
+
+Extended isolated be704f9c with exact PR229754129c5f tools (focused47d4293fe+754),
+all eight reviewed pins unchanged.32controller+10actualcapture/archive contracts
+and a reviewed kernel probe passed; same-root fenced catch-up/latest-data fallback
+retain displaced test/state. Mode0555 uses a writable ancestor intact or blocks;
+fixture/forged/stale/EOF proof cannot authorize activation. Read completed OP
+capacity/scope handoff, no repeated audit. New tool-only package binding is
+separate from unrun combined backend/package and full Linux restore acceptance.
+Executor3000MiB cap is insufficient for three default1GiB snapshot images.
+Desktop/B, workflow auth, real candidate/RAM/metadata/scanner/consent gates remain.
+All448names/145history/transcript/journal/metadata exceptions and old artifacts
+remain. Production, fallback, permissions, routes and cleanup untouched.
+See VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md.

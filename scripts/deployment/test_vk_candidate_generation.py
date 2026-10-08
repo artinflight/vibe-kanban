@@ -434,7 +434,7 @@ class CandidateTests(unittest.TestCase):
         self.assertEqual(inventory(self.layout.tree), inventory(self.incumbent))
         self.assertTrue(list(self.layout.evidence.glob("*-test-and-prior-state/home/state/note")))
 
-    def test_read_only_directory_restore_succeeds_and_refresh_blocks_before_mutation(self):
+    def test_read_only_child_preserved_inside_writable_ancestor_without_permission_change(self):
         os.chmod(self.incumbent / 'home/state', 0o555)
         self.provider.capture('initial')
         self.accepted_rehearsal()
@@ -443,12 +443,25 @@ class CandidateTests(unittest.TestCase):
         os.chmod(self.incumbent / 'home/state', 0o555)
         self.provider.capture('final')
         self.supervisor.capture = 'final'
-        before = inventory(self.layout.tree)
-        with self.assertRaisesRegex(Blocked, 'read-only directory'):
+        old_inode = (self.layout.tree / 'home/state').stat().st_ino
+        self.controller.catch_up('final')
+        self.assertEqual(inventory(self.layout.tree), inventory(self.incumbent))
+        retained = list(self.layout.evidence.glob('*-test-and-prior-state/home/state'))[0]
+        self.assertEqual(retained.stat().st_mode & 0o777, 0o555)
+        self.assertEqual(retained.stat().st_ino, old_inode)
+
+    def test_read_only_top_directory_still_blocks_without_chmod_or_new_root(self):
+        os.chmod(self.incumbent / 'home', 0o555)
+        self.provider.capture('initial')
+        self.accepted_rehearsal()
+        (self.incumbent / 'home/state/note').write_bytes(b'new write in writable child')
+        self.provider.capture('final')
+        self.supervisor.capture = 'final'
+        before, binding = inventory(self.layout.tree), self.layout.binding()
+        with self.assertRaisesRegex(Blocked, 'no writable ancestor'):
             self.controller.catch_up('final')
         self.assertEqual(inventory(self.layout.tree), before)
-        self.assertEqual(self.controller.phase, 'tested')
-        self.assertEqual(list(self.layout.evidence.glob('*-test-and-prior-state')), [])
+        self.assertEqual(self.layout.binding(), binding)
 
     def test_crash_restart_with_retained_journal_cannot_forge_new_owner(self):
         self.restored()

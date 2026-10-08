@@ -140,7 +140,8 @@ def validate_manifest(rows):
         require(isinstance(row.get("mtime_ns"), int) and row["mtime_ns"] >= 0, "mtime proof missing")
         require(isinstance(row.get("xattrs"), dict), "extended metadata proof missing")
         for key, value in row["xattrs"].items():
-            require(key.startswith("user."), "non-user extended metadata needs reviewed restore adapter")
+            require(key.startswith("user.") or key in ("system.posix_acl_access", "system.posix_acl_default"),
+                    "non-user extended metadata needs reviewed restore adapter")
             try:
                 base64.b64decode(value, validate=True)
             except (ValueError, TypeError) as error:
@@ -471,19 +472,22 @@ class CandidateController:
                 # New private directories stay writable until descendants are
                 # restored; final metadata applies the recorded mode last.
                 target.mkdir(mode=0o700)
-            elif row["kind"] == "file":
-                require(not target.exists() and not target.is_symlink(), "restore would overwrite an unquarantined path")
-                h, count = hashlib.sha256(), 0
-                with self.provider.open(verified["capture_id"], name) as source, target.open("xb") as out:
-                    for block in iter(lambda: source.read(1024 * 1024), b""):
-                        self.room(len(block))
-                        count += len(block)
-                        require(count <= row["bytes"], "restore member longer than authenticated manifest")
-                        h.update(block)
-                        out.write(block)
-                    out.flush()
-                    os.fsync(out.fileno())
-                require(count == row["bytes"] and h.hexdigest() == row["sha256"], "restored bytes mismatch")
+        files = {p for p in changed if rows.get(p, {}).get("kind") == "file"}
+        if callable(getattr(self.provider, "file_members", None)):
+            seen = set()
+            # One complete verified archive pass per selected chain member, not
+            # one full B transfer per restored file. Hash errors at EOF still
+            # fail this private materialization before links/acceptance.
+            with self.provider.file_members(verified["capture_id"], files) as members:
+                for name, source in members:
+                    require(name in files and name not in seen, "unexpected/duplicate restore member")
+                    self._write_member(name, rows[name], source)
+                    seen.add(name)
+            require(seen == files, "stream omitted required restore members")
+        else:
+            for name in sorted(files):
+                with self.provider.open(verified["capture_id"], name) as source:
+                    self._write_member(name, rows[name], source)
         # Links are last; their parents cannot redirect any preceding write.
         for name in sorted(changed):
             row = rows.get(name)
@@ -503,6 +507,21 @@ class CandidateController:
                 os.utime(target, ns=(row["mtime_ns"], row["mtime_ns"]), follow_symlinks=False)
         sync_tree_directories(self.layout.tree)
         sync_directory(self.layout.tree.parent)
+
+    def _write_member(self, name, row, source):
+        target = self.layout.tree / name
+        require(not target.exists() and not target.is_symlink(), "restore would overwrite an unquarantined path")
+        h, count = hashlib.sha256(), 0
+        with target.open("xb") as out:
+            for block in iter(lambda: source.read(1024 * 1024), b""):
+                self.room(len(block))
+                count += len(block)
+                require(count <= row["bytes"], "restore member longer than authenticated manifest")
+                h.update(block)
+                out.write(block)
+            out.flush()
+            os.fsync(out.fileno())
+        require(count == row["bytes"] and h.hexdigest() == row["sha256"], "restored bytes mismatch")
 
     def restore(self, capture):
         require(self.phase == "new" and not self.layout.tree.exists(), "initial restore needs a new empty generation")
@@ -549,20 +568,6 @@ class CandidateController:
                    and expected.get(p, {}).get("kind") == "directory"
                    and {k: v for k, v in current[p].items() if k != "mtime_ns"}
                    == {k: v for k, v in expected[p].items() if k != "mtime_ns"})}
-        # Cross-parent directory rename can require write permission on the
-        # moved directory itself. Never change existing permissions to evade it.
-        for name in list(changed):
-            for parent in [relative(name), *relative(name).parents]:
-                p = str(parent)
-                row = current.get(p, {})
-                require(row.get("kind") != "directory" or row["mode"] & 0o300 == 0o300,
-                        "changed read-only directory requires explicit reviewed preservation strategy; no permission bypass")
-        # Move a changed directory/type as one retained subtree; restore its whole dependency closure.
-        containers = {p for p in changed if current.get(p, {}).get("kind") == "directory"}
-        tops = sorted((p for p in containers if not any(p.startswith(q + "/") for q in containers if q != p)),
-                      key=lambda p: (len(relative(p).parts), p))
-        for top in tops:
-            changed.update(p for p in current.keys() | expected.keys() if p.startswith(top + "/"))
         # Never leave an unchanged alias linked to quarantined historical bytes.
         groups = []
         for rows in (current, expected):
@@ -571,9 +576,33 @@ class CandidateController:
                 if row["kind"] in ("file", "hardlink"):
                     linked.setdefault(row.get("target", p), set()).add(p)
             groups.extend(linked.values())
+        # Close directory moves and cross-subtree hardlinks together. A mode0555
+        # child retains its inode, permissions and '..' inside a writable ancestor
+        # moved as one unit. No denied child rename or chmod is attempted.
         previous = None
         while previous != changed:
             previous = set(changed)
+            for name in list(changed):
+                for parent in [relative(name), *relative(name).parents]:
+                    p = str(parent)
+                    row = current.get(p, {})
+                    if row.get("kind") != "directory":
+                        continue
+                    writable = row["mode"] & 0o300 == 0o300 and os.access(
+                        self.layout.tree / p, os.W_OK | os.X_OK, effective_ids=True)
+                    if writable:
+                        continue
+                    ancestor = next((str(q) for q in parent.parents if str(q) != "."
+                        and current.get(str(q), {}).get("kind") == "directory"
+                        and current[str(q)]["mode"] & 0o300 == 0o300
+                        and os.access(self.layout.tree / str(q), os.W_OK | os.X_OK, effective_ids=True)), None)
+                    require(ancestor is not None,
+                            "changed read-only directory has no writable ancestor below candidate root; approval/strategy required")
+                    changed.add(ancestor)
+            containers = {p for p in changed if current.get(p, {}).get("kind") == "directory"}
+            tops = sorted(p for p in containers if not any(p.startswith(q + "/") for q in containers if q != p))
+            for top in tops:
+                changed.update(p for p in current.keys() | expected.keys() if p.startswith(top + "/"))
             for group in groups:
                 if changed & group:
                     changed.update(group)

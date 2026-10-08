@@ -1,3 +1,17 @@
+# October 8: Scoped offline integration handoff
+
+Read [VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md](VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md).
+32 controller and 10 actual PR229 contract regressions plus the kernel probe pass.
+Upstream eight pins and all 40 deployment Python files match exact corrected
+PR229 head754129c5f. Preserve existing combined release: apply only focused
+47d4293fe+754129c5f and candidate-specific changes, never this whole baseline.
+Operational activation remains blocked. Desktop/B and workflow approval are
+pending; confirmed candidate/capture memory and storage, full required metadata,
+fresh combined package/scanner/controller binding and live consent are unrun.
+The executor's 3000 MiB cap does not fit three default 1 GiB snapshot copies.
+Cleanup remains unavailable; all historical recovery exceptions remain explicit.
+New artifacts are isolated on mounted SSD, with safe B/publication handoff pending.
+
 # October 8: Candidate-as-rehearsal tooling handoff
 
 Read [VK_CANDIDATE_GENERATION_20261008.md](VK_CANDIDATE_GENERATION_20261008.md).

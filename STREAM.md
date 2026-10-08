@@ -1,3 +1,12 @@
+# October 8: Offline direct-B candidate integration (current isolated branch)
+
+Branch `fix/candidate-direct-b-integration-20261008` extends be704f9c with exact
+PR229 tools and fail-closed candidate archive/supervisor/package contracts.
+Read [VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md](VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md).
+The prepared combined release and B overlay are preserved. This standalone
+baseline checkout is not a new prerequisite merge or a deployable application.
+Older entries below describe earlier branch scopes and releases.
+
 # October 8: Candidate generation application tooling (isolated branch)
 
 Branch `fix/candidate-generation-20261008` starts at staging `5a887abf8`.

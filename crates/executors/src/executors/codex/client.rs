@@ -76,6 +76,8 @@ pub struct AppServerClient {
     rpc: OnceLock<JsonRpcPeer>,
     delegation: OnceLock<Arc<super::delegation::Delegation>>,
     delegation_requests: Mutex<HashSet<RequestId>>,
+    elicitation_seen: Mutex<HashSet<RequestId>>,
+    elicitations: Mutex<HashMap<RequestId, CancellationToken>>,
     log_writer: LogWriter,
     approvals: Option<Arc<dyn ExecutorApprovalService>>,
     thread_id: Mutex<Option<String>>,
@@ -247,6 +249,8 @@ impl AppServerClient {
             rpc: OnceLock::new(),
             delegation: OnceLock::new(),
             delegation_requests: Mutex::new(HashSet::new()),
+            elicitation_seen: Mutex::new(HashSet::new()),
+            elicitations: Mutex::new(HashMap::new()),
             log_writer,
             approvals,
             auto_approve,
@@ -1198,8 +1202,10 @@ impl AppServerClient {
                 send_server_response(peer, request_id, response).await?;
                 Ok(())
             }
+            ServerRequest::McpServerElicitationRequest { request_id, params } => {
+                self.start_elicitation(peer, request_id, params).await
+            }
             ServerRequest::ChatgptAuthTokensRefresh { .. }
-            | ServerRequest::McpServerElicitationRequest { .. }
             | ServerRequest::PermissionsRequestApproval { .. } => {
                 tracing::warn!("received unhandled v2 server request: {:?}", request);
                 let response = JSONRPCResponse {
@@ -1220,6 +1226,173 @@ impl AppServerClient {
                 .into())
             }
         }
+    }
+
+    async fn elicitation_diagnostic(&self, id: &RequestId, origin: &str) {
+        tracing::info!(request_id = ?id, origin, "MCP approval bridge result");
+        let _ = self
+            .log_writer
+            .log_raw(
+                &serde_json::json!({
+                    "McpApprovalDiagnostic": {"request_id": id, "origin": origin}
+                })
+                .to_string(),
+            )
+            .await;
+    }
+
+    async fn elicitation_context_valid(
+        &self,
+        params: &codex_app_server_protocol::McpServerElicitationRequestParams,
+    ) -> bool {
+        self.thread_id.lock().await.as_deref() == Some(params.thread_id.as_str())
+            && self
+                .current_turn_id
+                .lock()
+                .await
+                .as_ref()
+                .is_some_and(|turn| {
+                    params
+                        .turn_id
+                        .as_ref()
+                        .is_none_or(|requested| requested == turn)
+                })
+    }
+
+    async fn start_elicitation(
+        &self,
+        peer: &JsonRpcPeer,
+        id: RequestId,
+        mut params: codex_app_server_protocol::McpServerElicitationRequestParams,
+    ) -> Result<(), ExecutorError> {
+        use codex_app_server_protocol::McpServerElicitationAction::Cancel;
+
+        use super::elicitation;
+        // IDs are scoped to this client/connection. Replayed IDs cannot create
+        // another approval, reuse consent, or send a second conflicting response.
+        if !self.elicitation_seen.lock().await.insert(id.clone()) {
+            if let Some(cancel) = self.elicitations.lock().await.get(&id) {
+                cancel.cancel();
+            }
+            self.elicitation_diagnostic(&id, "duplicate_request").await;
+            return Ok(());
+        }
+        let consent_summary = elicitation::consent_summary(&params);
+        let origin = if self.cancel.is_cancelled() || peer.disconnected().is_cancelled() {
+            Some("process_stopped_or_disconnected")
+        } else if !self.elicitation_context_valid(&params).await {
+            Some("stale_context")
+        } else if elicitation::supported_message(&params).is_none() {
+            Some("unsupported_request")
+        } else if consent_summary.is_none() {
+            Some("insufficient_consent_context")
+        } else {
+            None
+        };
+        if let Some(origin) = origin {
+            self.elicitation_diagnostic(&id, origin).await;
+            return send_server_response(peer, id, elicitation::response(Cancel)).await;
+        }
+        // A nullable provider turn is best-effort correlation, not permission
+        // to carry consent into a later turn.
+        if params.turn_id.is_none() {
+            params.turn_id = self.current_turn_id.lock().await.clone();
+        }
+        let client = self
+            .self_ref
+            .get()
+            .and_then(Weak::upgrade)
+            .expect("live client");
+        let peer = peer.clone();
+        let cancelled = self.cancel.child_token();
+        self.elicitations
+            .lock()
+            .await
+            .insert(id.clone(), cancelled.clone());
+        // Keep reading lifecycle/stop messages and concurrent requests while
+        // the operator decides. This is independent of command auto_approve.
+        tokio::spawn(async move {
+            let disconnected = peer.disconnected();
+            let watcher_cancel = cancelled.clone();
+            let watcher = tokio::spawn(async move {
+                disconnected.cancelled().await;
+                watcher_cancel.cancel();
+            });
+            let call_id = format!("vk-mcp-{}", Uuid::new_v4());
+            let result = async {
+                if cancelled.is_cancelled() {
+                    return Err(ExecutorApprovalError::Cancelled);
+                }
+                let service = client
+                    .approvals
+                    .as_ref()
+                    .ok_or(ExecutorApprovalError::ServiceUnavailable)?;
+                let approval_id = service
+                    .create_mcp_tool_approval(
+                        consent_summary.as_deref().expect("validated context"),
+                    )
+                    .await?;
+                if client
+                    .log_writer
+                    .log_raw(
+                        &Approval::McpApprovalRequested {
+                            call_id: call_id.clone(),
+                            approval_id: approval_id.clone(),
+                            message: consent_summary.expect("validated context"),
+                            server_name: params.server_name.clone(),
+                        }
+                        .raw(),
+                    )
+                    .await
+                    .is_err()
+                {
+                    cancelled.cancel();
+                }
+                // The normal bridge cancels/removes pending UI state when this
+                // token fires, including disconnect, resolved request and stop.
+                service
+                    .wait_tool_approval(&approval_id, cancelled.clone())
+                    .await
+            }
+            .await;
+            watcher.abort();
+            let (mut action, mut origin) = elicitation::outcome(result);
+            if peer.disconnected().is_cancelled() {
+                action = Cancel;
+                origin = "disconnected";
+            } else if client.cancel.is_cancelled() {
+                action = Cancel;
+                origin = "process_stopped";
+            } else if cancelled.is_cancelled() {
+                action = Cancel;
+                origin = "request_cancelled";
+            } else if !client.elicitation_context_valid(&params).await {
+                action = Cancel;
+                origin = "stale_context";
+            }
+            client.elicitations.lock().await.remove(&id);
+            let _ = client
+                .log_writer
+                .log_raw(
+                    &Approval::McpApprovalResolved {
+                        call_id,
+                        action,
+                        origin: origin.to_owned(),
+                    }
+                    .raw(),
+                )
+                .await;
+            client.elicitation_diagnostic(&id, origin).await;
+            if send_server_response(&peer, id.clone(), elicitation::response(action))
+                .await
+                .is_err()
+            {
+                client
+                    .elicitation_diagnostic(&id, "response_disconnected")
+                    .await;
+            }
+        });
+        Ok(())
     }
 
     async fn request_tool_approval(
@@ -1639,6 +1812,40 @@ impl JsonRpcCallbacks for AppServerClient {
         raw: &str,
         request: JSONRPCRequest,
     ) -> Result<(), ExecutorError> {
+        // Elicitation metadata may contain credentials, form values or tool prompts.
+        // Only validated, redacted invocation context is retained for consent.
+        if request.method == "mcpServer/elicitation/request" {
+            return match ServerRequest::try_from(request.clone()) {
+                Ok(ServerRequest::McpServerElicitationRequest { request_id, params }) => {
+                    self.start_elicitation(peer, request_id, params).await
+                }
+                _ => {
+                    if !self
+                        .elicitation_seen
+                        .lock()
+                        .await
+                        .insert(request.id.clone())
+                    {
+                        if let Some(cancel) = self.elicitations.lock().await.get(&request.id) {
+                            cancel.cancel();
+                        }
+                        self.elicitation_diagnostic(&request.id, "duplicate_request")
+                            .await;
+                        return Ok(());
+                    }
+                    self.elicitation_diagnostic(&request.id, "malformed_or_unsupported")
+                        .await;
+                    send_server_response(
+                        peer,
+                        request.id,
+                        super::elicitation::response(
+                            codex_app_server_protocol::McpServerElicitationAction::Cancel,
+                        ),
+                    )
+                    .await
+                }
+            };
+        }
         self.log_writer.log_raw(raw).await?;
         match ServerRequest::try_from(request.clone()) {
             Ok(server_request) => self.handle_server_request(peer, server_request).await,
@@ -1689,6 +1896,28 @@ impl JsonRpcCallbacks for AppServerClient {
         raw: &str,
         notification: JSONRPCNotification,
     ) -> Result<bool, ExecutorError> {
+        if matches!(
+            notification.method.as_str(),
+            "turn/started" | "turn/completed"
+        ) && notification
+            .params
+            .as_ref()
+            .and_then(|p| p.get("threadId"))
+            .and_then(Value::as_str)
+            == self.thread_id.lock().await.as_deref()
+        {
+            for cancel in self.elicitations.lock().await.values() {
+                cancel.cancel();
+            }
+        }
+        if notification.method == "serverRequest/resolved"
+            && let Some(params) = &notification.params
+            && let Some(id) = params.get("requestId")
+            && let Ok(id) = serde_json::from_value::<RequestId>(id.clone())
+            && let Some(cancel) = self.elicitations.lock().await.get(&id)
+        {
+            cancel.cancel();
+        }
         let method = notification.method.as_str();
         if let Some(control) = self.delegation.get() {
             match control

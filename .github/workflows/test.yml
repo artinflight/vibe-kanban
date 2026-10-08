@@ -269,6 +269,11 @@ jobs:
             "node scripts/check-unused-i18n-keys.mjs" \
             "./scripts/check-legacy-frontend-paths.sh"
 
+      - name: Test offline MCP approval UI contract
+        env:
+          VK_TEST_OUTPUT: ${{ runner.temp }}/vk-mcp-approval-tests
+        run: node scripts/testing/run-mcp-approval-ui-tests.mjs
+
   backend-schema-checks:
     needs: [branch-policy, branch-freshness, changes]
     if: always() && needs.branch-policy.result == 'success' && needs.branch-freshness.result == 'success' && (needs.changes.outputs.backend == 'true' || needs.changes.result == 'skipped')

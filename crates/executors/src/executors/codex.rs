@@ -1,5 +1,6 @@
 pub mod client;
 pub mod delegation;
+pub mod elicitation;
 pub mod goals;
 pub mod jsonrpc;
 pub mod normalize_logs;

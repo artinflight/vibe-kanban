@@ -1523,3 +1523,24 @@ Recommend is required; no deployment/restart/cutover or Auto activation. Deadlin
 for full useful router readiness is before October 30, 2026 (20x becomes 10x).
 See VK_AUTOSWITCH_RELOAD.md for mandatory next-candidate packaging and remaining
 acceptance/ownership dependencies; CU credit budgeting is a separate issue.
+
+## 2026-10-08 — MCP approval bridge development
+
+Added isolated typed MCP consent bridge and offline UI/service/protocol regressions.
+See VK_MCP_APPROVAL_BRIDGE.md and HANDOFF.md. No activation or permission changes.
+
+## 2026-10-08 — PR225 P1 consent correction
+
+Bound MCP composer controls to individual requests/executions; gated reconnect
+consent on fresh snapshots/Ready. Added complete bounded redacted invocation
+context and fail-closed diagnostics. Mounted composer/card and real patch-hook
+fixtures replace the initial hook-only UI evidence. Configured Codex 0.159.2
+schema verified offline. See HANDOFF.md; source remains isolated and undeployed.
+
+## 2026-10-08 — PR225 nested redaction-only context P2
+
+Independent re-review closed both P1 findings at da07a5c3b. Added a recursive
+post-sanitization meaningful-value gate for the remaining P2, with compiled
+nested-object/array negative cases using matching display metadata, a positive
+mixed-target case, and offline typed-cancel/no-dispatch service coverage.
+See HANDOFF.md and PR225's P2 receipt. Isolated and undeployed; no broader redesign.

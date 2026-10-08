@@ -1,3 +1,119 @@
+# October 8: nested redaction-only context (PR225 P2)
+
+Independent re-review at `da07a5c3b9cc9331798bd51c238d998b7d3c51a1` closed
+both P1 findings; comment6063071315 identified a remaining nested-context P2.
+This turn changes only the post-sanitization meaningful-value gate and regression
+coverage. Container names, display labels, nulls, blank strings and redaction
+markers cannot supply usable invocation values. Objects and arrays are traversed
+recursively; surviving nonsecret target details and scalar values remain usable.
+Rejected context follows the existing typed Cancel/insufficient_consent_context
+path before any approval exists. Consent decisions and binding are unchanged.
+
+The compiled Rust regression at the reviewed implementation reproduced both
+nested-object and nested-array failures (matching upstream display metadata);
+the positive mixed-target case passed. The patch adds the surviving-value check
+and service-fixture cancellation/no-dispatch assertions. At publication, all
+three focused compiled Rust regressions and all-target executor/services Clippy
+passed; the executor/services suites were running. Final Rust, exact remote SHA
+and CI receipts are recorded in PR225's P2 correction comment. See VK_MCP_APPROVAL_BRIDGE.md for the validation command. The existing
+host-wide GLib/GIO dependency limitation and unsupported form/auth flows remain.
+
+Same linked VK::MCP Approval Bridge issue and draft PR225 into staging. No live
+activation, permissions/routing change, manager retry, deployment, merge, recovery
+or runtime operation. Live connector/operator validation is a separate boundary.
+Older entries below describe earlier source and validation.
+
+# October 8: P1 consent review correction (PR225)
+
+The independent review of source `80d06cecf3bd6552b85b0a058ba87e7d695e1eca`
+reported two P1 consent issues in PR225 comment6062090857. `fc6186d1c` was
+handoff-only. This corrective source turn keeps the same draft and linked
+VK::MCP Approval Bridge issue. Older validation below applies to the initial
+source, not to this correction.
+
+MCP consent now has request-specific composer cards with their own approval and
+execution IDs. These requests are excluded from implicit generic composer
+selection. A fresh approval snapshot plus Ready gates controls after reconnect;
+missing/delayed consent content cannot be approved. Snapshot context is atomic
+and does not wait for timeline logs. Cards are scoped to the displayed session.
+
+The bridge derives a bounded redacted plain-text action summary from invocation
+metadata (tool, connector, targets, parameters and verified display labels).
+Generic fallback/monitor messages are not used as action context. Insufficient,
+unsafe or oversized context returns typed Cancel with truthful attribution.
+Explicit declines, cancellation, timeout, one-shot acceptance and existing
+execution checks remain unchanged. See VK_MCP_APPROVAL_BRIDGE.md for bounds and
+runtime-schema verification through the configured Codex 0.159.2 launcher.
+
+Mounted composer/card integration passed with actual approval selector and
+WebSocket patch hook, mock transport only: A/B concurrency, reversed snapshots,
+reconnect before Ready, delayed context, cancellation, expiry and literal text.
+The synthetic backend fixtures consume the explicit mounted UI response payloads.
+Formatting, ops governance and frontend type/lint checks passed. Full local
+`pnpm run check`, `pnpm run lint`, and `cargo test --workspace` stop at the host's
+missing GLib/GIO/GObject development libraries; no packages were installed.
+The configured-launcher schema verification passed. Corrective Rust tests and
+Clippy are running at publication; final results and exact remote head/CI are
+recorded in PR225's correction receipt. Check that receipt and current head's
+CI before readiness; the initial green source checks below are not this fix's
+acceptance evidence. Current draft:
+https://github.com/artinflight/vibe-kanban/pull/225 (base staging).
+
+No live activation, approvals, manager retries, permission/routing change,
+deployment, restart, recovery, cleanup, merge or Staging runtime operation.
+Recommend remains unchanged. Independent re-review and separately authorized
+activation remain release boundaries, not work authorized by this correction.
+
+# October 8: MCP approval bridge development
+
+Branch `vk/870d-vk-mcp-approval`; linked issue VK::MCP Approval Bridge
+`08659a8a-7908-4f92-b1e5-eee0e4e1c38c`. See VK_MCP_APPROVAL_BRIDGE.md for
+scope, outcomes and isolated validation commands. The final read-only diagnostic
+report confirmed malformed null elicitation responses, not human rejection.
+No private raw logs/customer identities were copied into this public source.
+
+Source handles empty-form MCP tool consent through the actual approval lifecycle,
+with one-call grants, fail-closed typed cancellation and distinct origin messages.
+Concurrent/replayed IDs, lifecycle/EOF/stop and execution identity are covered.
+Real UI-hook payloads feed the offline service fixture; notifications/network and
+model usage are absent. Publication targets a draft PR into staging only.
+
+Draft PR: https://github.com/artinflight/vibe-kanban/pull/225 (base staging).
+Source commit `80d06cecf3bd6552b85b0a058ba87e7d695e1eca` was pushed and matched
+both `git ls-remote` and the GitHub PR head. The linked issue was reread and
+workspace `task_id` verified; no issue status/archive operation was performed.
+The workspace's repository target metadata was corrected from main to staging;
+existing draft PR225 was attached through the normal API and its issue-board
+projection reread. No agent execution or runtime operation was triggered.
+
+Validation passed: all 152 non-opt-in executor tests (six existing skips), all
+18 service tests, final five MCP service regressions using the real UI-hook
+output, four typed-protocol tests, consent-card normalization, offline UI test,
+executor/services all-target Clippy, full formatting and ops governance.
+All frontend type checks passed with NODE_OPTIONS=--max-old-space-size=8192.
+Full `pnpm run check`, `pnpm run lint` and `cargo test --workspace` reached the
+host's missing GLib/GIO development libraries and cannot pass locally. The
+first type-check attempt exhausted Node's default heap; the CI heap retry passed
+the frontend checks. No host packages or runtime settings were changed.
+
+Isolated evidence (uncommitted, SSD): `/mnt/vk-storage/vk-mcp-approval-tests`
+and `/mnt/vk-storage/vk-mcp-approval-*.log`. Public source contains synthetic
+fixtures only, not private diagnostics. Actions were inspected locally and on
+GitHub before publication. Observed source pipeline: check-only Test run
+https://github.com/artinflight/vibe-kanban/actions/runs/37791310866.
+The source run completed successfully: branch policy/freshness, governance,
+frontend (including the new offline UI contract test), generated types/SQLx,
+backend Clippy, backend tests and Tauri checks all passed. The unchanged remote
+paths use the workflow's no-deploy-key skip; no remote deployment validation is
+claimed. This final receipt changes HANDOFF.md only; source remains identical
+to the green CI commit. Its push triggers a fresh PR check run, which must be
+checked before merge. Green source CI is not live release approval.
+
+Live activation: NOT performed. Review/CI and a separately authorized release
+remain necessary before live connector/operator acceptance. Do not resume the
+manager or operate Staging's stopped conversation/runtime from this stream.
+Recommend-only routing and plugin permissions remain unchanged.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

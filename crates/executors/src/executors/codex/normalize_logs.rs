@@ -153,7 +153,11 @@ impl ToNormalizedEntry for DynamicToolState {
                 },
                 status: self.status.clone(),
             },
-            content: self.tool.clone(),
+            content: if self.tool == super::elicitation::TOOL {
+                self.arguments["message"].as_str().unwrap_or("").to_owned()
+            } else {
+                self.tool.clone()
+            },
             metadata: serde_json::to_value(ToolCallMetadata {
                 tool_call_id: self.call_id.clone(),
             })
@@ -1654,6 +1658,63 @@ pub fn normalize_logs(
 
             if let Ok(approval) = serde_json::from_str::<Approval>(&line) {
                 match &approval {
+                    Approval::McpApprovalRequested {
+                        call_id,
+                        approval_id,
+                        server_name,
+                        message,
+                    } => {
+                        let tool = DynamicToolState {
+                            index: None,
+                            tool: super::elicitation::TOOL.into(),
+                            arguments: serde_json::json!({"server": server_name, "message": message, "consent": "Approve this call only"}),
+                            result: None,
+                            status: ToolStatus::PendingApproval {
+                                approval_id: approval_id.clone(),
+                            },
+                            call_id: call_id.clone(),
+                        };
+                        let index = add_normalized_entry(
+                            &msg_store,
+                            &entry_index,
+                            tool.to_normalized_entry(),
+                        );
+                        state.dynamic_tools.insert(
+                            call_id.clone(),
+                            DynamicToolState {
+                                index: Some(index),
+                                ..tool
+                            },
+                        );
+                    }
+                    Approval::McpApprovalResolved {
+                        call_id,
+                        action,
+                        origin,
+                    } => {
+                        let status = match action {
+                            codex_app_server_protocol::McpServerElicitationAction::Accept => {
+                                ToolStatus::Success
+                            }
+                            codex_app_server_protocol::McpServerElicitationAction::Decline => {
+                                ToolStatus::Denied { reason: None }
+                            }
+                            codex_app_server_protocol::McpServerElicitationAction::Cancel => {
+                                ToolStatus::Failed
+                            }
+                        };
+                        state.update_tool_status(call_id, status, true, &msg_store);
+                        add_normalized_entry(
+                            &msg_store,
+                            &entry_index,
+                            NormalizedEntry {
+                                timestamp: None,
+                                entry_type: NormalizedEntryType::SystemMessage,
+                                content: format!("MCP approval: {origin}"),
+                                metadata: None,
+                            },
+                        );
+                    }
                     Approval::ApprovalRequested {
                         call_id,
                         approval_id,
@@ -1689,6 +1750,25 @@ pub fn normalize_logs(
                         }
                     }
                 }
+                continue;
+            }
+
+            if let Ok(event) = serde_json::from_str::<Value>(&line)
+                && let Some(diagnostic) = event.get("McpApprovalDiagnostic")
+            {
+                add_normalized_entry(
+                    &msg_store,
+                    &entry_index,
+                    NormalizedEntry {
+                        timestamp: None,
+                        entry_type: NormalizedEntryType::SystemMessage,
+                        content: format!(
+                            "MCP approval bridge: {}",
+                            diagnostic["origin"].as_str().unwrap_or("unknown")
+                        ),
+                        metadata: Some(diagnostic.clone()),
+                    },
+                );
                 continue;
             }
 
@@ -2779,6 +2859,17 @@ impl ToNormalizedEntry for Error {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Approval {
+    McpApprovalRequested {
+        call_id: String,
+        approval_id: String,
+        server_name: String,
+        message: String,
+    },
+    McpApprovalResolved {
+        call_id: String,
+        action: codex_app_server_protocol::McpServerElicitationAction,
+        origin: String,
+    },
     ApprovalRequested {
         call_id: String,
         tool_name: String,
@@ -2838,6 +2929,9 @@ impl Approval {
                 other => other.to_string(),
             },
             Self::QuestionResponse { .. } => "Question".to_string(),
+            Self::McpApprovalRequested { .. } | Self::McpApprovalResolved { .. } => {
+                "MCP approval".into()
+            }
         }
     }
 }
@@ -2876,7 +2970,9 @@ impl ToNormalizedEntryOpt for Approval {
                     QuestionStatus::TimedOut => None,
                 };
             }
-            Self::ApprovalRequested { .. } => return None,
+            Self::ApprovalRequested { .. }
+            | Self::McpApprovalRequested { .. }
+            | Self::McpApprovalResolved { .. } => return None,
         };
         let tool_name = self.display_tool_name();
 
@@ -2942,6 +3038,56 @@ mod tests {
         }
 
         latest_normalized_entries(&msg_store)
+    }
+
+    #[tokio::test]
+    async fn mcp_approval_card_preserves_consent_context_and_truthful_resolution() {
+        let requested = Approval::McpApprovalRequested {
+            call_id: "synthetic-elicitation".into(),
+            approval_id: "approval-ui".into(),
+            server_name: "codex_apps".into(),
+            message: "Tool: run_session_prompt for synthetic Reporting\nApprove this call only"
+                .into(),
+        }
+        .raw();
+        let entries = normalize_lines(std::slice::from_ref(&requested)).await;
+        let pending = tool_use(&entries, super::super::elicitation::TOOL);
+        assert!(
+            pending
+                .content
+                .contains("run_session_prompt for synthetic Reporting")
+        );
+        assert!(pending.content.contains("Approve this call only"));
+        assert!(matches!(&pending.entry_type, NormalizedEntryType::ToolUse {
+            status: ToolStatus::PendingApproval { approval_id }, ..
+        } if approval_id == "approval-ui"));
+        let entries = normalize_lines(&[
+            requested,
+            Approval::McpApprovalResolved {
+                call_id: "synthetic-elicitation".into(),
+                action: codex_app_server_protocol::McpServerElicitationAction::Cancel,
+                origin: "disconnected".into(),
+            }
+            .raw(),
+        ])
+        .await;
+        assert!(matches!(
+            tool_use(&entries, super::super::elicitation::TOOL).entry_type,
+            NormalizedEntryType::ToolUse {
+                status: ToolStatus::Failed,
+                ..
+            }
+        ));
+        assert!(
+            entries
+                .iter()
+                .any(|entry| entry.content == "MCP approval: disconnected")
+        );
+        assert!(
+            !entries
+                .iter()
+                .any(|entry| matches!(entry.entry_type, NormalizedEntryType::UserFeedback { .. }))
+        );
     }
 
     #[tokio::test]

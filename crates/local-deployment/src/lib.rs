@@ -47,6 +47,7 @@ mod command;
 pub mod container;
 mod copy;
 pub mod pty;
+mod turn_preservation;
 
 const EVENT_HISTORY_BYTES: usize = 1024 * 1024;
 const EVENT_CHANNEL_CAPACITY: usize = 1024;

@@ -223,6 +223,15 @@ jobs:
               - 'docs/audits/**'
               - 'docs/operations/**'
 
+  turn-git-preservation-contract:
+    runs-on: *runner_label
+    steps:
+      - uses: actions/checkout@v6
+      - name: Test preservation against isolated Git fixtures
+        env:
+          VK_PRESERVATION_TEST_ROOT: ${{ runner.temp }}
+        run: python3 scripts/preservation/test_turn_git.py
+
   ops-governance:
     runs-on: *runner_label
     steps:

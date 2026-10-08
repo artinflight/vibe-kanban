@@ -15,6 +15,8 @@
     "ops:branch-policy": "node scripts/check-branch-policy.mjs",
     "ops:branch-freshness": "node scripts/check-branch-freshness.mjs",
     "ops:live-runtime-guardrails": "bash scripts/check-live-vk-runtime-guardrails.sh",
+    "ops:preservation:test": "python3 scripts/preservation/test_turn_git.py",
+    "ops:preservation": "python3 scripts/preservation/turn_git.py",
     "ops:check": "node scripts/check-ops-playbook.mjs",
     "check": "pnpm run local-web:legacy-path-guard && pnpm run local-web:check && pnpm run remote-web:check && pnpm run web-core:check && pnpm run ui:check && pnpm run backend:check",
     "dev": "export FRONTEND_PORT=$(node scripts/setup-dev-environment.js frontend) && export BACKEND_PORT=$(node scripts/setup-dev-environment.js backend) && export PREVIEW_PROXY_PORT=$(node scripts/setup-dev-environment.js preview_proxy) && export VK_ALLOWED_ORIGINS=\"http://localhost:${FRONTEND_PORT}\" && export VITE_VK_SHARED_API_BASE=${VK_SHARED_API_BASE:-} && concurrently \"pnpm run backend:dev:watch\" \"pnpm run local-web:dev\"",

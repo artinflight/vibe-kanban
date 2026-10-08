@@ -1523,3 +1523,11 @@ Recommend is required; no deployment/restart/cutover or Auto activation. Deadlin
 for full useful router readiness is before October 30, 2026 (20x becomes 10x).
 See VK_AUTOSWITCH_RELOAD.md for mandatory next-candidate packaging and remaining
 acceptance/ownership dependencies; CU credit budgeting is a separate issue.
+
+## 2026-10-08 — Turn Git preservation development
+
+Added opt-in completion preservation with reviewed file/privacy/automation policy,
+exact original-history remote witnesses, persistent pending/blocked states and an
+isolated fail-closed controller check. VK Dev T48 is linked to the current feature
+workspace. Tests and limits are in HANDOFF.md / VK_TURN_GIT_PRESERVATION.md. No
+Staging/runtime/controller activation, restart, deployment or routing change.

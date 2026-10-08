@@ -1,3 +1,11 @@
+## October 8: Turn preservation development boundary
+
+Automatic end-of-turn Git preservation and an independent fail-closed check are
+under development on `feat/turn-git-preservation`; see VK_TURN_GIT_PRESERVATION.md.
+This is branch-local implementation evidence only. No service settings or live
+controller were changed, and production enforcement is not active. Seamus owns
+the separate Staging/rollout boundary; Recommend-only remains required.
+
 ## October 1: AutoSwitch scope release preparation
 
 PR134/135 merged the downward-routing scope correction into staging/main. It is

@@ -1,3 +1,44 @@
+# October 8: Automatic turn Git preservation — development only
+
+Branch `feat/turn-git-preservation` starts at fork/staging
+`8b562265d25a3f8ee6d4fa602144e71caddfbc85`. Read
+[VK_TURN_GIT_PRESERVATION.md](VK_TURN_GIT_PRESERVATION.md) for the complete
+publication/privacy policy, exact-history receipt and fail-closed controller
+contract. VK Dev T48 / `783c983a-416e-43f5-9754-8c2f619e9918` is linked to workspace
+`c31ac191-d4cf-4ab9-b3e8-9c1a7d7c3b73`. The fork disables GitHub issues.
+
+This is opt-in source development. No config is installed and production
+enforcement is not active. Seamus owns Staging integration, installation,
+controller wiring, restart/cutover and copied-data/live acceptance. The separately
+stopped Staging conversation/workspace/runtime was not operated. Recommend-only
+routing remains required. No merges, auto-merge, cleanup, incident recovery,
+visibility/permission changes or force pushes were performed.
+
+Local validation: all 40 isolated Git fixture tests passed, including real
+Gitleaks acceptance and push/PR uncertainty, exclusion, original-history,
+concurrent-writer and stale/newer-turn coverage. Four focused Rust tests passed,
+including the embedded helper and owned process-group fixtures. Focused
+all-target Clippy, formatting and ops governance passed. Local Git ancestry
+confirms the branch contains freshly fetched fork/staging; branch policy passes.
+
+Frontend type checks passed with Node's heap raised to 8 GiB after the initial
+default-heap failure. Local-web/UI lint passed. Full `pnpm run check`,
+`pnpm run lint` and `cargo test --workspace` were attempted; host GTK/GLib/GObject/GIO
+libraries are missing, so broad desktop/backend validation and trailing
+remote-manifest/I18n stages remain incomplete. Generic CI must provide that
+coverage. No native provider inference, copied-data full executor/UI acceptance
+or production acceptance was performed. Shared Cargo target/incremental policy
+was retained; fixtures, dependencies and logs used mounted SSD storage.
+
+Evidence: `/mnt/vk-storage/turn-git-preservation-20261008/` (fixture-tests.log,
+cargo-tests.log, focused-clippy.log, format.log, ops-check.log, check.log,
+lint.log and workspace-tests.log). Seamus's rollout outcomes are in the contract
+handoff: matching protected backend/policy/scanner/state packaging; complete
+controller inventory and real held writer fence; copied-data visible pending,
+blocked, successful and stop/cleanup timing acceptance; separately authorized
+Staging integration/live adoption. No Staging message was sent or conversation
+resumed. Desktop prompt guidance was read through established SSH access.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

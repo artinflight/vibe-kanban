@@ -1,3 +1,18 @@
+## October 8: Direct-to-B backup fix prepared, not deployed
+
+PR229's first CI failed an inherited wall-clock-sensitive routing test. Read
+[VK_PR229_TRIAGE_CI.md](VK_PR229_TRIAGE_CI.md) for reproduction and the test-only
+clock correction. Protected routing and the production deadline are unchanged;
+only exact corrected-head terminal CI can establish CI acceptance.
+
+Read [VK_DIRECT_DESKTOP_STREAM.md](VK_DIRECT_DESKTOP_STREAM.md) for the isolated
+streaming fix, PR149 dependency, measured local footprint, exact receipts and
+integration limits. New captures stream complete archives directly to Desktop B,
+retain only bounded local metadata and preserve prior good backups on failure.
+This branch is not installed in Staging or production. Full restore capacity,
+existing human QA and restart approval remain separate requirements. No old
+archives were deleted and Staging's worktree/agent were not touched.
+
 ## October 8: Phone frontend deployed
 
 The operator-approved phone redesign/style pass is live at `https://vibe.local`
@@ -38,6 +53,19 @@ workspace. Its source, evidence and limits are documented in VK_MOBILE_UX.md.
 This is not a deployed UI or a production service/routing change. Mobile UI
 validation must preserve Recommend-only routing and configured model/effort;
 physical keyboard and non-Chromium acceptance remain separate QA coverage.
+
+## October 4: Accepted Deployment And Operational Follow-up
+
+The updated version is live and accepted: main `e53ae4a7e`, staging `86d1c083a`,
+application version 0.1.42, Codex 0.159.2. See VK_UPDATED_LIVE_20261004.md for
+actual identities, preserved data and historical warnings. No second restart
+or old-database restore is part of acceptance or this follow-up.
+
+Branch `fix/vk-backup-move-preflight` strengthens moved-folder backup evidence
+and packages the finalization prevention into the next preparation. Read
+VK_BACKUP_MOVE_FOLLOWUP.md. Its operational source must be reviewed/merged or
+explicitly pinned from this published branch; it is not yet in staging. Older
+dated inventories below are historical, not current runtime authority.
 
 ## October 1: AutoSwitch scope release preparation
 

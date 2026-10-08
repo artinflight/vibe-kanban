@@ -61,6 +61,7 @@ For this fork's local-development and promotion workflow, use the repo docs alon
 
 - [`AGENTS.md`](AGENTS.md) for stable agent and validation rules
 - [`REPO_IDENTITY.md`](REPO_IDENTITY.md) for this fork's role and release path
+- [`VK_DIRECT_DESKTOP_STREAM.md`](VK_DIRECT_DESKTOP_STREAM.md) for direct-to-B backup capture, evidence and integration limits
 - [`STATE.md`](STATE.md) for repo-wide current truth
 - [`STREAM.md`](STREAM.md) for the active branch scope
 - [`HANDOFF.md`](HANDOFF.md) for next-agent pickup context

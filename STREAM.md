@@ -1,3 +1,17 @@
+# October 8: Direct-to-Desktop archive streaming
+
+PR229 follow-up corrects inherited triage fixture timing, not routing policy.
+See [VK_PR229_TRIAGE_CI.md](VK_PR229_TRIAGE_CI.md). Preserve the direct-to-B fix
+and do not claim readiness while corrected-head CI is red or incomplete.
+
+Read [VK_DIRECT_DESKTOP_STREAM.md](VK_DIRECT_DESKTOP_STREAM.md) for the isolated
+streaming fix, PR149 dependency, measured local footprint, exact receipts and
+integration limits. New captures stream complete archives directly to Desktop B,
+retain only bounded local metadata and preserve prior good backups on failure.
+This branch is not installed in Staging or production. Full restore capacity,
+existing human QA and restart approval remain separate requirements. No old
+archives were deleted and Staging's worktree/agent were not touched.
+
 # October 8: Phone frontend deployed
 
 The operator-approved phone redesign/style pass is live at `https://vibe.local`
@@ -48,6 +62,24 @@ The follow-up style pass reduces search/chip visual bulk while preserving 48px
 input/control targets. Search icons, lighter surfaces, aligned 24px headings,
 softer card borders and tighter row spacing refine the new phone layouts.
 Style evidence is in `/mnt/vk-storage/vk-mobile-style-20261008`.
+
+# October 7 Desktop-backed Recovery
+
+Branch `fix/vk-desktop-backed-recovery` extends the explicit PR142 operational
+pin `528282d00`. Read `VK_DESKTOP_BACKED_RECOVERY.md`. Scope is backup archive
+location resolution, bounded verification and new-package adoption. No production
+restart, routing change, archive retirement or application deployment is authorized.
+The historical stream descriptions below do not describe this branch's scope.
+
+# October 4 Operational Backup Follow-up
+
+Branch `fix/vk-backup-move-preflight` from staging `86d1c083a` strengthens exact
+cross-parent move evidence, fail-closed backup coverage and next-package tool
+integration. Keep the accepted production deployment running. No restart,
+routing change, database restore, application change or unrelated agent work
+is authorized. Read VK_BACKUP_MOVE_FOLLOWUP.md. The old maintenance branch is
+preserved; PR133 overlaps prerequisites and must not replace current staging.
+The earlier scope notes below are retained as history.
 
 # October 5: AutoSwitch reloadable module
 

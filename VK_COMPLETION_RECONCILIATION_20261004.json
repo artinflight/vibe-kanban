@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "scope": "Evidence reconciliation only; no replay, restart, database restoration or goal reopening",
+  "artifact_root": "/mnt/vk-storage/vk-blue-reprepare-20261004",
+  "accepted_deployment": true,
+  "deployment_remaining_gaps": [],
+  "historical_preparation_snapshot": {
+    "path": "preparation-completion.json",
+    "sha256": "1bbb08e95dd541756738dc048a6f01eb8c05a4350f8082a8ba71017d9c6918bd",
+    "superseded_for_current_status": true,
+    "preserved_unchanged": true
+  },
+  "completed": {
+    "backup_fix": "New unconsumed October 4 package incorporated the corrected backup tools; optimized-tool-tests.log records 77 passing regressions including closed SQLite/committed WAL. Final frozen backup c37409afa0154405a5d3a04bf4c7b68b was verified on Desktop with SHA bfe4edd6efcfa0e6cd2f833b87d55912dd30f966fb6931eb9abc978c7fc45d6e. Cross-parent move coverage is now further strengthened and tested in the separate operational follow-up; it is not claimed to have run in the consumed package.",
+    "green_candidate": "Exact-artifact isolated candidate functional-result.json passes same-thread continuation, Steer versus Stop, native goals and attachment round-trip. Acceptance verifies 12 saved messages, seven models, four reasoning levels and desktop/mobile-sized browser behavior; runtime is 0.159.2 with the shared private VK/CU telemetry feed. Candidate color is incidental to this original requirement.",
+    "handover_proof": "scale-resume-rehearsal result passes failed-backup same-process return, latest-data handover, writes/settings-preserving same-process cutback and repeated recovery using real binaries/private data. Production acceptance continues original native thread 01a03e74-2c1a-72f0-9e00-8e4293fe910d, preserves 2282 historical missing references with zero new missing references, and records no live rollback or old database restoration. Measured final capture was 43.675 seconds under the revised 150-second capture budget, not 30 seconds.",
+    "ready_record": "Final readiness SHA e34c2af97a64eef4143c99a6bb14bb87ae78cf7ec2f9a4dabc5733f9bf80db50 was Desktop-backed with software archive b2bb6b190ebc731ab44685769f24c2f74c337cb38f70c073c269d2f2a57ecded and 2491 restored files. Current exact-identity model/runtime checks, final drain and frozen backup passed. Accepted docs are committed/pushed as 3b8e35b49347364e200aef869e4bd188f4b5429c; post-package acceptance archive is Desktop-verified. The finalization fault and repair are retained, not erased.",
+    "release": "Accepted main e53ae4a7e5c8c05642f7bf3b9e3921bc8ebcd434 and staging 86d1c083a1b4bf8590c9d71d91d6c82de1bd1aeb have identical application tree 6963ed5d5dc174e1f40a84e71e8975cd82c716cc. Live backend SHA fb70e951621b4ca85de09c8cd0fbf7ab2ef863d47810e2daef4122f9770f6b6c and frontend SHA 9bfb651e955be2a4b95cb0b1632f0a30a355c09aa7649bdb5faceebe10cd721f match the validated release. Follow-up changes only operational tools and docs."
+  },
+  "evidence_sha256": {
+    "cutover-20261004T194755Z/status.json": "407e5d740588157642604a63fbc29e92fc2094f2c37d458b95bc7af0a2d5af4e",
+    "cutover-20261004T194755Z/live-acceptance.json": "252b03875de3dca1ffe0eb1fe13c6cbd77fe0f842edd10584c583aa338d2cbda",
+    "cutover-20261004T194755Z/boundary.json": "3a46d30029f90570b8479db69a57d9af1a1d35169a14f3d81ddce5505dd81963",
+    "readiness.json": "e34c2af97a64eef4143c99a6bb14bb87ae78cf7ec2f9a4dabc5733f9bf80db50",
+    "software-package-receipt.json": "96ff62092ef2ae906de8f702d7e5b3ef118819a98503e966af9bd8b30e08590c",
+    "scale-resume-rehearsal/handover-6d256a056b8c48dfa5ce30366802389a/result.json": "2caf8194a87917fb4d412e07a6812b08ef662a9431f23dfeccb00a0e163cd38d",
+    "optimized-tool-tests.log": "7c5ff79e5e15e31c21e206997310c2b6e3748b447c1248d171bc01a022c7905b",
+    "functional-result.json": "64465ac2566c8d5a46fe69523c42708bb545e16db10abf13608972f3ca9e2c84",
+    "release-identity.json": "f1fd7e6eb4560ff935984bb21f60d43259470adfca71ce4be9518178d4789808",
+    "latest-runtime-requirements.json": "02dff9f866c5185c4a2c5655b6b2351c25e4b34c2c695901502b589a0b8ce3c9",
+    "post-package/live-acceptance-desktop.json": "40ded589675361ad1f44b369138f61a11120656c4e891f05c21ab9ec2229c8f0"
+  },
+  "remaining_historical_objective_gap": "Literal 30-second interruption is unverified: capture 43.675 seconds; public interruption approximately 146 seconds including repaired finalization fault. Do not reopen/redefine the old goal or describe accepted deployment as failed; report the timing gap plainly.",
+  "next_preparation_requirement": "Use published operational follow-up tools through package-tools before sealing; review/merge into staging remains required for default staging adoption. New readiness/drain/backup and separately authorized cutover are still necessary."
+}

@@ -32,10 +32,6 @@ import {
   PRIORITY_ORDER,
 } from '../model/hooks/useKanbanFilters';
 import {
-  bulkUpdateIssues,
-  type BulkUpdateIssueItem,
-} from '@/shared/lib/remoteApi';
-import {
   CaretLeftIcon,
   DotsThreeIcon,
   PlusIcon,
@@ -71,7 +67,7 @@ import { IssueListView } from '@vibe/ui/components/IssueListView';
 import { CommandBarDialog } from '@/shared/dialogs/command-bar/CommandBarDialog';
 import { KanbanFiltersDialog } from '@/shared/dialogs/kanban/KanbanFiltersDialog';
 import { SearchableTagDropdownContainer } from '@/shared/components/SearchableTagDropdownContainer';
-import type { IssuePriority } from 'shared/remote-types';
+import type { IssuePriority, UpdateIssueRequest } from 'shared/remote-types';
 import { useIssueMultiSelect } from '@/shared/hooks/useIssueMultiSelect';
 import { useIssueSelectionStore } from '@/shared/stores/useIssueSelectionStore';
 import { BulkActionBarContainer } from './BulkActionBarContainer';
@@ -113,6 +109,34 @@ const areKanbanFiltersEqual = (
   );
 };
 
+type WorkspaceReviewState = {
+  hasPendingApproval?: boolean | null;
+  hasUnseenActivity?: boolean | null;
+  isRunning?: boolean | null;
+  latestProcessStatus?: string | null;
+};
+
+function workspaceNeedsActionableReview(
+  workspace: WorkspaceReviewState
+): boolean {
+  if (
+    workspace.latestProcessStatus === 'failed' ||
+    workspace.latestProcessStatus === 'killed'
+  ) {
+    return false;
+  }
+
+  if (workspace.hasPendingApproval === true) {
+    return true;
+  }
+
+  return (
+    workspace.hasUnseenActivity === true &&
+    workspace.isRunning !== true &&
+    workspace.latestProcessStatus !== 'running'
+  );
+}
+
 function LoadingState() {
   const { t } = useTranslation('common');
   return (
@@ -121,7 +145,6 @@ function LoadingState() {
     </div>
   );
 }
-
 
 function useDismissableLayer(
   isOpen: boolean,
@@ -297,7 +320,11 @@ function LocalProjectSettingsDialog({
     if (!key) {
       return;
     }
-    if (draftStatuses.some((status) => normalizeLocalStatusKey(status.name) === key)) {
+    if (
+      draftStatuses.some(
+        (status) => normalizeLocalStatusKey(status.name) === key
+      )
+    ) {
       setError('That column already exists.');
       return;
     }
@@ -366,10 +393,7 @@ function LocalProjectSettingsDialog({
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-[10000] bg-black/50"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 z-[10000] bg-black/50" onClick={onClose} />
       <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
         <div
           className="w-full max-w-3xl overflow-hidden rounded-sm border border-border bg-panel shadow-lg"
@@ -377,7 +401,9 @@ function LocalProjectSettingsDialog({
         >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div>
-              <h3 className="text-lg font-medium text-high">Project settings</h3>
+              <h3 className="text-lg font-medium text-high">
+                Project settings
+              </h3>
               <p className="text-sm text-low">{projectName}</p>
             </div>
             <button
@@ -391,7 +417,9 @@ function LocalProjectSettingsDialog({
           </div>
           <div className="space-y-4 px-4 py-4">
             <div className="rounded-sm border border-border bg-secondary/40 px-3 py-2 text-sm text-low">
-              Local-only boards keep their columns in local project scratch now. Add, move, and remove empty columns here. Removing a column with issues is blocked.
+              Local-only boards keep their columns in local project scratch now.
+              Add, move, and remove empty columns here. Removing a column with
+              issues is blocked.
             </div>
             <div className="flex items-center justify-between gap-4 rounded-sm border border-border bg-panel px-3 py-2">
               <div>
@@ -457,8 +485,12 @@ function LocalProjectSettingsDialog({
                           style={{ backgroundColor: `hsl(${status.color})` }}
                         />
                         <div className="min-w-0">
-                          <div className="truncate text-sm text-high">{status.name}</div>
-                          <div className="text-xs text-low">{status.count} issues</div>
+                          <div className="truncate text-sm text-high">
+                            {status.name}
+                          </div>
+                          <div className="text-xs text-low">
+                            {status.count} issues
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -483,7 +515,11 @@ function LocalProjectSettingsDialog({
                           onClick={() => removeStatus(status.id)}
                           disabled={!canRemove}
                           className="rounded-sm border border-border px-2 py-1 text-xs text-high transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
-                          title={canRemove ? 'Remove column' : 'Move issues out of this column before removing it'}
+                          title={
+                            canRemove
+                              ? 'Remove column'
+                              : 'Move issues out of this column before removing it'
+                          }
                         >
                           Remove
                         </button>
@@ -520,29 +556,66 @@ function LocalProjectSettingsDialog({
 type CollapsedKanbanColumnProps = {
   statusName: string;
   statusColor: string;
+  issueCount: number;
+  hasNeedsReview?: boolean;
+  isMobile?: boolean;
   onExpand: () => void;
 };
 
 function CollapsedKanbanColumn({
   statusName,
   statusColor,
+  issueCount,
+  hasNeedsReview = false,
+  isMobile = false,
   onExpand,
 }: CollapsedKanbanColumnProps) {
   const { t } = useTranslation('common');
+  const expandLabel = hasNeedsReview
+    ? t('kanban.expandColumnWithNeedsReview', {
+        defaultValue: 'Expand {{statusName}} column, needs review inside',
+        statusName,
+      })
+    : t('kanban.expandColumn', {
+        defaultValue: 'Expand {{statusName}} column',
+        statusName,
+      });
+  const countLabel = t('kanban.columnIssueCount', {
+    count: issueCount,
+    defaultValue: '{{count}} issues',
+  });
 
   return (
     <button
       type="button"
       onClick={onExpand}
-      className="group relative flex min-h-40 flex-1 overflow-hidden bg-secondary transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-1 focus:ring-brand"
-      aria-label={t('kanban.expandColumn', {
-        defaultValue: 'Expand {{statusName}} column',
-        statusName,
-      })}
+      className={cn(
+        'group relative flex overflow-hidden bg-secondary transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-1 focus:ring-brand',
+        isMobile ? 'min-h-12 flex-none' : 'min-h-40 flex-1'
+      )}
+      aria-label={expandLabel}
       title={statusName}
     >
-      <div className="sticky top-0 z-20 flex h-40 w-full shrink-0 items-start justify-center border-b bg-secondary/95 px-2 pt-4 backdrop-blur-sm">
-        <div className="[writing-mode:vertical-rl] flex items-center gap-2 whitespace-nowrap pt-2 text-center">
+      {hasNeedsReview && (
+        <span
+          aria-hidden="true"
+          className="absolute right-1.5 top-1.5 z-30 h-2.5 w-2.5 rounded-full border border-secondary bg-brand shadow-sm"
+        />
+      )}
+      <div
+        className={cn(
+          'sticky top-0 z-20 flex w-full shrink-0 border-b bg-secondary/95 backdrop-blur-sm',
+          isMobile
+            ? 'h-12 items-center justify-start px-base'
+            : 'h-40 items-start justify-center px-2 pt-4'
+        )}
+      >
+        <div
+          className={cn(
+            'flex min-w-0 items-center gap-2 whitespace-nowrap text-center',
+            isMobile ? 'min-w-0' : '[writing-mode:vertical-rl] pt-2'
+          )}
+        >
           <span className="text-sm font-medium leading-none text-normal">
             &gt;
           </span>
@@ -554,6 +627,17 @@ function CollapsedKanbanColumn({
             {statusName}
           </span>
         </div>
+        <span
+          className={cn(
+            'ml-auto shrink-0 rounded-sm border border-border bg-background px-1.5 py-0.5 text-xs font-medium leading-none text-low tabular-nums',
+            !isMobile &&
+              'absolute bottom-2 left-1/2 ml-0 -translate-x-1/2 px-1 py-1'
+          )}
+          aria-label={countLabel}
+          title={countLabel}
+        >
+          {issueCount}
+        </span>
       </div>
     </button>
   );
@@ -584,6 +668,7 @@ export function KanbanContainer() {
     getWorkspacesForIssue,
     getRelationshipsForIssue,
     issuesById,
+    updateIssues,
     insertIssueTag,
     removeIssueTag,
     insertTag,
@@ -1114,7 +1199,9 @@ export function KanbanContainer() {
             prs: prsByWorkspaceId.get(workspace.id) ?? [],
             owner: membersWithProfilesById.get(workspace.owner_user_id) ?? null,
             updatedAt: workspace.updated_at,
-            isOwnedByCurrentUser: workspace.owner_user_id === userId,
+            isOwnedByCurrentUser:
+              workspace.owner_user_id === userId ||
+              (workspace.owner_user_id === '' && !!localWorkspace),
             isRunning: localWorkspace?.isRunning,
             hasPendingApproval: localWorkspace?.hasPendingApproval,
             hasRunningDevServer: localWorkspace?.hasRunningDevServer,
@@ -1139,6 +1226,38 @@ export function KanbanContainer() {
     membersWithProfilesById,
     userId,
   ]);
+
+  const needsReviewByStatusId = useMemo(() => {
+    const map = new Map<string, boolean>();
+
+    for (const [statusId, issueIds] of Object.entries(items)) {
+      const statusHasNeedsReview = issueIds.some((issueId) =>
+        getWorkspacesForIssue(issueId).some((workspace) => {
+          if (
+            workspace.archived ||
+            !workspace.local_workspace_id ||
+            !localWorkspacesById.has(workspace.local_workspace_id)
+          ) {
+            return false;
+          }
+
+          const localWorkspace = localWorkspacesById.get(
+            workspace.local_workspace_id
+          );
+
+          return localWorkspace
+            ? workspaceNeedsActionableReview(localWorkspace)
+            : false;
+        })
+      );
+
+      if (statusHasNeedsReview) {
+        map.set(statusId, true);
+      }
+    }
+
+    return map;
+  }, [items, getWorkspacesForIssue, localWorkspacesById]);
 
   // Calculate sort_order based on column index and issue position
   // Formula: 1000 * [COLUMN_INDEX] + [ISSUE_INDEX] (both 1-based)
@@ -1178,31 +1297,37 @@ export function KanbanContainer() {
       const destId = destination.droppableId;
       const isCrossColumn = sourceId !== destId;
 
-      // Update local state and capture new items for bulk update
-      let newItems: Record<string, string[]> = {};
-      setItems((prev) => {
-        const sourceItems = [...(prev[sourceId] ?? [])];
-        const [moved] = sourceItems.splice(source.index, 1);
+      const previousItems = items;
+      const sourceItems = [...(previousItems[sourceId] ?? [])];
+      const [moved] = sourceItems.splice(source.index, 1);
+      if (!moved) {
+        return;
+      }
 
-        if (!isCrossColumn) {
-          // Within-column reorder
-          sourceItems.splice(destination.index, 0, moved);
-          newItems = { ...prev, [sourceId]: sourceItems };
-        } else {
-          // Cross-column move
-          const destItems = [...(prev[destId] ?? [])];
-          destItems.splice(destination.index, 0, moved);
-          newItems = {
-            ...prev,
+      const newItems: Record<string, string[]> = isCrossColumn
+        ? {
+            ...previousItems,
             [sourceId]: sourceItems,
-            [destId]: destItems,
+            [destId]: [
+              ...(previousItems[destId] ?? []).slice(0, destination.index),
+              moved,
+              ...(previousItems[destId] ?? []).slice(destination.index),
+            ],
+          }
+        : {
+            ...previousItems,
+            [sourceId]: [
+              ...sourceItems.slice(0, destination.index),
+              moved,
+              ...sourceItems.slice(destination.index),
+            ],
           };
-        }
-        return newItems;
-      });
 
       // Build bulk updates for all issues in affected columns
-      const updates: BulkUpdateIssueItem[] = [];
+      const updates: Array<{
+        id: string;
+        changes: Partial<UpdateIssueRequest>;
+      }> = [];
 
       // Always update destination column
       const destIssueIds = newItems[destId] ?? [];
@@ -1229,20 +1354,28 @@ export function KanbanContainer() {
         });
       }
 
-      // Perform bulk update
       isSyncingRef.current = true;
-      bulkUpdateIssues(updates)
-        .catch((err) => {
-          console.error('Failed to bulk update sort order:', err);
-        })
-        .finally(() => {
-          // Delay clearing flag to let Electric sync complete
-          setTimeout(() => {
-            isSyncingRef.current = false;
-          }, 500);
-        });
+      setItems(newItems);
+
+      try {
+        updateIssues(updates)
+          .persisted.catch((err) => {
+            console.error('Failed to bulk update sort order:', err);
+            setItems(previousItems);
+          })
+          .finally(() => {
+            // Delay clearing flag to let Electric sync complete
+            setTimeout(() => {
+              isSyncingRef.current = false;
+            }, 500);
+          });
+      } catch (err) {
+        console.error('Failed to bulk update sort order:', err);
+        setItems(previousItems);
+        isSyncingRef.current = false;
+      }
     },
-    [kanbanFilters.sortField, calculateSortOrder]
+    [kanbanFilters.sortField, calculateSortOrder, items, updateIssues]
   );
 
   // Multi-select support
@@ -1516,12 +1649,15 @@ export function KanbanContainer() {
               {visibleStatuses.map((status) => {
                 const issueIds = items[status.id] ?? [];
                 const isCollapsed = collapsedStatusIdSet.has(status.id);
+                const hasColumnNeedsReview =
+                  needsReviewByStatusId.get(status.id) === true;
 
                 return (
                   <KanbanBoard
                     key={status.id}
                     className={cn(
-                      isCollapsed && !isMobile && '!min-w-16 !max-w-16'
+                      isCollapsed &&
+                        (isMobile ? '!min-h-12' : '!min-w-16 !max-w-16')
                     )}
                   >
                     {isCollapsed ? (
@@ -1529,6 +1665,9 @@ export function KanbanContainer() {
                         <CollapsedKanbanColumn
                           statusName={status.name}
                           statusColor={status.color}
+                          issueCount={issueIds.length}
+                          hasNeedsReview={hasColumnNeedsReview}
+                          isMobile={isMobile}
                           onExpand={() => toggleCollapsedStatus(status.id)}
                         />
                       </KanbanCards>

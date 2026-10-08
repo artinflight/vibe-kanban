@@ -245,12 +245,31 @@ fn status_sort_order(name: &str) -> i64 {
     match normalize_status_key(name).as_str() {
         "todo" => 0,
         "inprogress" => 1,
-        "inreview" => 2,
-        "instaging" => 3,
-        "done" | "completed" => 4,
+        "onhold" => 2,
+        "longrunning" => 3,
+        "inreview" => 4,
         "cancelled" | "canceled" => 5,
+        "tomerge" => 6,
+        "instaging" => 7,
+        "hotfixpath" => 8,
+        "done" | "completed" => 9,
         _ => 100,
     }
+}
+
+fn default_project_status_names() -> &'static [&'static str] {
+    &[
+        "To do",
+        "In progress",
+        "On Hold",
+        "Long Running",
+        "In review",
+        "Cancelled",
+        "To merge",
+        "In Staging",
+        "Hotfix Path",
+        "Done",
+    ]
 }
 
 fn status_hidden(name: &str) -> bool {
@@ -344,13 +363,13 @@ fn compat_statuses(
     };
 
     if configured_statuses.is_empty() {
-        for name in ["To do", "In progress", "In review", "Done", "Cancelled"] {
+        for name in default_project_status_names() {
             push_status(
                 &mut ordered_statuses,
                 &mut seen_keys,
                 ProjectStatusConfigData {
                     id: status_id_from_name(name),
-                    name: name.to_string(),
+                    name: (*name).to_string(),
                     color: status_color(name).to_string(),
                     hidden: status_hidden(name),
                     sort_order: status_sort_order(name),
@@ -1472,4 +1491,58 @@ pub fn router() -> Router<DeploymentImpl> {
             "/issues/{issue_id}",
             patch(update_issue).delete(delete_issue),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use uuid::Uuid;
+
+    use super::{compat_statuses, default_project_status_names};
+
+    #[test]
+    fn local_default_statuses_include_operator_columns() {
+        assert_eq!(
+            default_project_status_names(),
+            &[
+                "To do",
+                "In progress",
+                "On Hold",
+                "Long Running",
+                "In review",
+                "Cancelled",
+                "To merge",
+                "In Staging",
+                "Hotfix Path",
+                "Done",
+            ]
+        );
+    }
+
+    #[test]
+    fn empty_local_status_config_uses_operator_default_columns() {
+        let statuses = compat_statuses(Uuid::new_v4(), &[], &[]);
+        let names = statuses
+            .iter()
+            .map(|status| status.name.as_str())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            names,
+            vec![
+                "To do",
+                "In progress",
+                "On Hold",
+                "Long Running",
+                "In review",
+                "Cancelled",
+                "To merge",
+                "In Staging",
+                "Hotfix Path",
+                "Done",
+            ]
+        );
+        assert_eq!(statuses[5].id, "cancelled");
+        assert!(statuses[5].hidden);
+        assert_eq!(statuses[8].id, "status_hotfixpath");
+    }
 }

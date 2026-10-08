@@ -81,10 +81,29 @@ pub(crate) fn fork_params_from(thread_id: String, params: ThreadStartParams) -> 
     }
 }
 
+pub(crate) fn resume_params_from(
+    thread_id: String,
+    params: ThreadStartParams,
+) -> ThreadResumeParams {
+    ThreadResumeParams {
+        thread_id,
+        model: params.model,
+        model_provider: params.model_provider,
+        cwd: params.cwd,
+        approval_policy: params.approval_policy,
+        sandbox: params.sandbox,
+        config: params.config,
+        base_instructions: params.base_instructions,
+        developer_instructions: params.developer_instructions,
+        service_tier: params.service_tier,
+        ..Default::default()
+    }
+}
+
 use async_trait::async_trait;
 use codex_app_server_protocol::{
     AskForApproval as V2AskForApproval, ReviewTarget, SandboxMode as V2SandboxMode,
-    ThreadForkParams, ThreadStartParams, UserInput,
+    ThreadForkParams, ThreadResumeParams, ThreadStartParams, UserInput,
 };
 use codex_protocol::config_types::ServiceTier;
 use derivative::Derivative;
@@ -363,6 +382,12 @@ impl StandardCodingAgentExecutor for Codex {
             model_selector: ModelSelectorConfig {
                 models: vec![
                     ModelInfo {
+                        id: "gpt-5.5".to_string(),
+                        name: "GPT-5.5".to_string(),
+                        provider_id: None,
+                        reasoning_options: xhigh_reasoning_options.clone(),
+                    },
+                    ModelInfo {
                         id: "gpt-5.4".to_string(),
                         name: "GPT-5.4".to_string(),
                         provider_id: None,
@@ -627,9 +652,9 @@ impl Codex {
             }
             Some(session_id) => {
                 let response = client
-                    .thread_fork(fork_params_from(session_id, thread_start_params))
+                    .thread_resume(resume_params_from(session_id, thread_start_params))
                     .await?;
-                tracing::debug!("forked thread, new thread_id={}", response.thread.id);
+                tracing::debug!("resumed thread_id={}", response.thread.id);
                 (response.thread.id, response.model)
             }
         };

@@ -67,6 +67,24 @@ use crate::{command, copy};
 const WORKSPACE_TOUCH_DEBOUNCE: Duration = Duration::from_mins(2);
 const LIVE_EXECUTION_HISTORY_BYTES: usize = 8 * 1024 * 1024;
 const LIVE_EXECUTION_CHANNEL_CAPACITY: usize = 4096;
+const WORKSPACE_AGENT_IMAGE_SHARING_INSTRUCTIONS: &str = r#"# Vibe Kanban Workspace
+
+## Sharing Images In Chat
+
+When you create an image that the user should see in chat, save the file under `.vibe-attachments/` in this workspace and reference it with normal Markdown image syntax:
+
+`![short description](.vibe-attachments/example.png)`
+
+Create `.vibe-attachments/` if needed. Use a relative `.vibe-attachments/...` path, not an absolute filesystem path.
+
+## Usage-Safe Continuity
+
+For long-running work, keep `.vibe/current-state.md` current. Before ending a turn, record the current status, changed files, validation, blockers, and next action there.
+
+When resuming, read `.vibe/current-state.md` first and inspect only the files needed for the current objective. Do not reload old chat logs, large handoff ledgers, evidence folders, screenshots, or attachments unless the current request explicitly requires them.
+
+Continue within one managed objective until it is complete or blocked by a concrete missing input. Avoid repeated status-only turns and duplicate summaries.
+"#;
 
 #[derive(Clone)]
 pub struct LocalContainerService {
@@ -89,6 +107,20 @@ pub struct LocalContainerService {
     queued_message_service: QueuedMessageService,
     notification_service: NotificationService,
     remote_client: Option<RemoteClient>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum QueuedFollowUpOutcome {
+    NoQueuedMessage,
+    Started,
+    Discarded,
+    FailedToStart,
+}
+
+impl QueuedFollowUpOutcome {
+    fn should_finalize(self) -> bool {
+        !matches!(self, Self::Started)
+    }
 }
 
 impl LocalContainerService {
@@ -634,8 +666,27 @@ impl LocalContainerService {
                             ctx.workspace.id
                         );
 
-                        // Manually finalize task since we're bypassing normal execution flow
-                        container.finalize_task(&ctx).await;
+                        // We bypass the configured cleanup action here, so consume any queued
+                        // follow-up before finalizing the completed agent turn.
+                        let queued_follow_up_outcome =
+                            container.consume_queued_follow_up(&ctx).await;
+                        if queued_follow_up_outcome.should_finalize() {
+                            container.finalize_task(&ctx).await;
+                        }
+                        if queued_follow_up_outcome.should_finalize()
+                            && let Err(e) =
+                                CodingAgentTurn::mark_completed_unseen_by_execution_process_id(
+                                    &db.pool,
+                                    ctx.execution_process.id,
+                                )
+                                .await
+                        {
+                            tracing::warn!(
+                                "Failed to mark coding agent turn unseen for execution {}: {}",
+                                ctx.execution_process.id,
+                                e
+                            );
+                        }
                         already_finalized = true;
                     }
                 }
@@ -647,59 +698,8 @@ impl LocalContainerService {
                         .ok()
                         .and_then(|action| action.next_action())
                         .is_some();
-                    let mut started_queued_follow_up = false;
-
-                    // Only execute queued messages if the execution succeeded
-                    // If it failed or was killed, just clear the queue and finalize
-                    let should_execute_queued = !matches!(
-                        ctx.execution_process.status,
-                        ExecutionProcessStatus::Failed | ExecutionProcessStatus::Killed
-                    );
-
-                    if let Some(queued_msg) =
-                        container.queued_message_service.take_queued(ctx.session.id)
-                    {
-                        if should_execute_queued {
-                            tracing::info!(
-                                "Found queued message for session {}, starting follow-up execution",
-                                ctx.session.id
-                            );
-
-                            // Delete the scratch since we're consuming the queued message
-                            if let Err(e) = Scratch::delete(
-                                &db.pool,
-                                ctx.session.id,
-                                &ScratchType::DraftFollowUp,
-                            )
-                            .await
-                            {
-                                tracing::warn!(
-                                    "Failed to delete scratch after consuming queued message: {}",
-                                    e
-                                );
-                            }
-
-                            // Execute the queued follow-up
-                            if let Err(e) = container
-                                .start_queued_follow_up(&ctx, &queued_msg.data)
-                                .await
-                            {
-                                tracing::error!("Failed to start queued follow-up: {}", e);
-                                // Fall back to finalization if follow-up fails
-                                container.finalize_task(&ctx).await;
-                            } else {
-                                started_queued_follow_up = true;
-                            }
-                        } else {
-                            // Execution failed or was killed - discard the queued message and finalize
-                            tracing::info!(
-                                "Discarding queued message for session {} due to execution status {:?}",
-                                ctx.session.id,
-                                ctx.execution_process.status
-                            );
-                            container.finalize_task(&ctx).await;
-                        }
-                    } else {
+                    let queued_follow_up_outcome = container.consume_queued_follow_up(&ctx).await;
+                    if queued_follow_up_outcome.should_finalize() {
                         container.finalize_task(&ctx).await;
                     }
 
@@ -707,14 +707,15 @@ impl LocalContainerService {
                         ctx.execution_process.run_reason,
                         ExecutionProcessRunReason::CodingAgent
                     ) && !has_chained_follow_up
-                        && !started_queued_follow_up;
+                        && !matches!(queued_follow_up_outcome, QueuedFollowUpOutcome::Started);
 
                     if should_mark_turn_unseen
-                        && let Err(e) = CodingAgentTurn::mark_unseen_by_execution_process_id(
-                            &db.pool,
-                            ctx.execution_process.id,
-                        )
-                        .await
+                        && let Err(e) =
+                            CodingAgentTurn::mark_completed_unseen_by_execution_process_id(
+                                &db.pool,
+                                ctx.execution_process.id,
+                            )
+                            .await
                     {
                         tracing::warn!(
                             "Failed to mark coding agent turn unseen for execution {}: {}",
@@ -738,32 +739,15 @@ impl LocalContainerService {
                     .await
                     .unwrap_or(true);
 
-                    if !has_running_agent
-                        && let Some(queued_msg) =
-                            container.queued_message_service.take_queued(ctx.session.id)
-                    {
-                        tracing::info!(
-                            "Parallel setup script finished with queued message for session {}, starting follow-up",
-                            ctx.session.id
-                        );
-
-                        if let Err(e) =
-                            Scratch::delete(&db.pool, ctx.session.id, &ScratchType::DraftFollowUp)
-                                .await
-                        {
-                            tracing::warn!(
-                                "Failed to delete scratch after consuming queued message: {}",
-                                e
-                            );
-                        }
-
-                        if let Err(e) = container
-                            .start_queued_follow_up(&ctx, &queued_msg.data)
-                            .await
-                        {
+                    if !has_running_agent {
+                        let queued_follow_up_outcome =
+                            container.consume_queued_follow_up(&ctx).await;
+                        if matches!(
+                            queued_follow_up_outcome,
+                            QueuedFollowUpOutcome::FailedToStart
+                        ) {
                             tracing::error!(
-                                "Failed to start queued follow-up from setup script completion: {}",
-                                e
+                                "Failed to start queued follow-up from setup script completion"
                             );
                         }
                     }
@@ -1094,9 +1078,9 @@ impl LocalContainerService {
         Ok(())
     }
 
-    /// Create workspace-level CLAUDE.md and AGENTS.md files that import from each repo.
-    /// Uses the @import syntax to reference each repo's config files.
-    /// Skips creating files if they already exist or if no repos have the source file.
+    /// Create workspace-level CLAUDE.md and AGENTS.md files with VK workspace instructions
+    /// and repo-local imports. Existing generated import-only files are upgraded in place;
+    /// custom files are left untouched.
     async fn create_workspace_config_files(
         workspace_dir: &Path,
         repos: &[Repo],
@@ -1106,14 +1090,6 @@ impl LocalContainerService {
         for config_file in CONFIG_FILES {
             let workspace_config_path = workspace_dir.join(config_file);
 
-            if workspace_config_path.exists() {
-                tracing::trace!(
-                    "Workspace config file {} already exists, skipping",
-                    config_file
-                );
-                continue;
-            }
-
             let mut import_lines = Vec::new();
             for repo in repos {
                 let repo_config_path = workspace_dir.join(&repo.name).join(config_file);
@@ -1122,15 +1098,57 @@ impl LocalContainerService {
                 }
             }
 
-            if import_lines.is_empty() {
-                tracing::trace!(
-                    "No repos have {}, skipping workspace config creation",
+            let content = Self::build_workspace_config_content(&import_lines);
+
+            if workspace_config_path.exists() {
+                let existing = match tokio::fs::read_to_string(&workspace_config_path).await {
+                    Ok(existing) => existing,
+                    Err(e) => {
+                        tracing::warn!(
+                            "Failed to read existing workspace config file {}: {}",
+                            config_file,
+                            e
+                        );
+                        continue;
+                    }
+                };
+
+                if existing.contains("## Sharing Images In Chat")
+                    && existing.contains("## Usage-Safe Continuity")
+                {
+                    tracing::trace!(
+                        "Workspace config file {} already has VK instructions",
+                        config_file
+                    );
+                    continue;
+                }
+
+                if !Self::is_generated_workspace_config(&existing, config_file)
+                    && !Self::is_generated_vk_workspace_config(&existing, config_file)
+                {
+                    tracing::trace!(
+                        "Workspace config file {} appears custom, skipping",
+                        config_file
+                    );
+                    continue;
+                }
+
+                if let Err(e) = tokio::fs::write(&workspace_config_path, &content).await {
+                    tracing::warn!(
+                        "Failed to update workspace config file {}: {}",
+                        config_file,
+                        e
+                    );
+                    continue;
+                }
+
+                tracing::info!(
+                    "Updated generated workspace {} with VK instructions",
                     config_file
                 );
                 continue;
             }
 
-            let content = import_lines.join("\n") + "\n";
             if let Err(e) = tokio::fs::write(&workspace_config_path, &content).await {
                 tracing::warn!(
                     "Failed to create workspace config file {}: {}",
@@ -1148,6 +1166,83 @@ impl LocalContainerService {
         }
 
         Ok(())
+    }
+
+    fn build_workspace_config_content(import_lines: &[String]) -> String {
+        let mut content = WORKSPACE_AGENT_IMAGE_SHARING_INSTRUCTIONS.to_string();
+        if !import_lines.is_empty() {
+            content.push_str("\n## Repository Instructions\n\n");
+            content.push_str(&import_lines.join("\n"));
+            content.push('\n');
+        }
+        content
+    }
+
+    fn is_generated_workspace_config(content: &str, config_file: &str) -> bool {
+        let mut has_import = false;
+
+        for line in content
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+        {
+            if !line.starts_with('@') || !line.ends_with(config_file) {
+                return false;
+            }
+            has_import = true;
+        }
+
+        has_import || content.trim().is_empty()
+    }
+
+    fn is_generated_vk_workspace_config(content: &str, config_file: &str) -> bool {
+        content.starts_with("# Vibe Kanban Workspace")
+            && content.contains("## Sharing Images In Chat")
+            && content
+                .lines()
+                .map(str::trim)
+                .filter(|line| line.starts_with('@'))
+                .all(|line| line.ends_with(config_file))
+    }
+
+    /// Consume a queued follow-up and start it when the completed process allows it.
+    async fn consume_queued_follow_up(&self, ctx: &ExecutionContext) -> QueuedFollowUpOutcome {
+        let Some(queued_msg) = self.queued_message_service.take_queued(ctx.session.id) else {
+            return QueuedFollowUpOutcome::NoQueuedMessage;
+        };
+
+        if matches!(
+            ctx.execution_process.status,
+            ExecutionProcessStatus::Failed | ExecutionProcessStatus::Killed
+        ) {
+            tracing::info!(
+                "Discarding queued message for session {} due to execution status {:?}",
+                ctx.session.id,
+                ctx.execution_process.status
+            );
+            return QueuedFollowUpOutcome::Discarded;
+        }
+
+        tracing::info!(
+            "Found queued message for session {}, starting follow-up execution",
+            ctx.session.id
+        );
+
+        if let Err(e) =
+            Scratch::delete(&self.db.pool, ctx.session.id, &ScratchType::DraftFollowUp).await
+        {
+            tracing::warn!(
+                "Failed to delete scratch after consuming queued message: {}",
+                e
+            );
+        }
+
+        if let Err(e) = self.start_queued_follow_up(ctx, &queued_msg.data).await {
+            tracing::error!("Failed to start queued follow-up: {}", e);
+            return QueuedFollowUpOutcome::FailedToStart;
+        }
+
+        QueuedFollowUpOutcome::Started
     }
 
     /// Start a follow-up execution from a queued message
@@ -1756,5 +1851,63 @@ fn success_exit_status() -> std::process::ExitStatus {
     {
         use std::os::windows::process::ExitStatusExt;
         ExitStatusExt::from_raw(0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::LocalContainerService;
+
+    #[test]
+    fn workspace_config_content_includes_image_sharing_and_imports() {
+        let imports = vec![
+            "@repo-a/AGENTS.md".to_string(),
+            "@repo-b/AGENTS.md".to_string(),
+        ];
+
+        let content = LocalContainerService::build_workspace_config_content(&imports);
+
+        assert!(content.contains("## Sharing Images In Chat"));
+        assert!(content.contains(".vibe-attachments/example.png"));
+        assert!(content.contains("## Usage-Safe Continuity"));
+        assert!(content.contains(".vibe/current-state.md"));
+        assert!(content.contains("## Repository Instructions"));
+        assert!(content.contains("@repo-a/AGENTS.md"));
+        assert!(content.contains("@repo-b/AGENTS.md"));
+    }
+
+    #[test]
+    fn detects_generated_workspace_config_without_treating_custom_files_as_generated() {
+        assert!(LocalContainerService::is_generated_workspace_config(
+            "@repo-a/AGENTS.md\n@repo-b/AGENTS.md\n",
+            "AGENTS.md"
+        ));
+        assert!(LocalContainerService::is_generated_workspace_config(
+            "",
+            "AGENTS.md"
+        ));
+        assert!(!LocalContainerService::is_generated_workspace_config(
+            "# Custom instructions\n@repo-a/AGENTS.md\n",
+            "AGENTS.md"
+        ));
+        assert!(!LocalContainerService::is_generated_workspace_config(
+            "@repo-a/CLAUDE.md\n",
+            "AGENTS.md"
+        ));
+    }
+
+    #[test]
+    fn detects_generated_vk_workspace_config_for_instruction_upgrades() {
+        let content = "# Vibe Kanban Workspace\n\n## Sharing Images In Chat\n\nx\n\n## Repository Instructions\n\n@repo-a/AGENTS.md\n";
+        assert!(LocalContainerService::is_generated_vk_workspace_config(
+            content,
+            "AGENTS.md"
+        ));
+
+        let custom = "# Vibe Kanban Workspace\n\n## Sharing Images In Chat\n\n@repo-a/CLAUDE.md\n";
+        assert!(!LocalContainerService::is_generated_vk_workspace_config(
+            custom,
+            "AGENTS.md"
+        ));
     }
 }

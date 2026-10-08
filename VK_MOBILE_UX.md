@@ -1,87 +1,90 @@
-# Phone interaction pass
+# Phone UI and interaction design
 
-Branch: `vk/eb7d-vk-native-feelin`. Frontend only; not deployed.
-Draft review: [PR #224](https://github.com/artinflight/vibe-kanban/pull/224) into
-`staging`. Source implementation commit: `098fa753f`.
+Branch: `vk/eb7d-vk-native-feelin`. Review: [draft PR #224](https://github.com/artinflight/vibe-kanban/pull/224) into `staging`.
+Frontend only; no merge or deployment. The revised design replaces the initial
+size-focused pass after operator feedback.
 
-## Experience
+## Screen design
 
-The phone shell uses a compact app header and labeled bottom destinations.
-Workspaces, Chat and Changes stay directly reachable; Logs, Preview, Git,
-settings and contextual actions live in a modal More sheet. Project navigation
-is a scrollable bottom sheet with names, colors and attention indicators.
-Sheets use the existing Radix dialog system for focus trapping, Escape,
-background isolation and focus restoration. Browser/Android Back dismisses a
-sheet before leaving its screen. Selecting an item consumes the sheet history
-entry before navigating, avoiding an extra empty Back step.
+Phones get distinct screens at the existing 767px breakpoint. Vibe’s orange
+accent, typeface and light/dark themes remain the foundation.
 
-Mobile controls have 48 CSS px minimum touch targets; bottom destinations are
-64px tall. Workspace names and task workspace content wrap instead of relying
-on desktop truncation. Phone cards use larger padding and rounded surfaces,
-retaining Vibe's typefaces, orange accent, project/workspace colors and themes.
-The card keeps review and overflow actions; priority and assignee editing remain
-available in full-screen task details. The labeled native task-status selector
-provides a way to move a task without dragging. Desktop dragging remains enabled.
+- **Tasks:** a single task feed replaces stacked desktop Kanban columns. The
+  project stays in the app header; a Tasks heading, persistent search and Filters
+  provide the screen hierarchy. Status chips show counts and selected state.
+  Each task has one title, compact ID/status metadata, an overflow action and a
+  direct conversation link when a local workspace exists. The floating New task
+  action remains near the thumb. Team/Personal, lifecycle and advanced filters
+  remain reachable in Filters. No hover or drag is required.
+- **Task detail:** the full-screen view leads with the editable title, then
+  status/priority/assignee and the description. Tags and pull requests use a
+  labeled disclosure rather than an empty toolbar. Linked workspaces, comments,
+  relationships and sub-issues retain their existing sections and actions.
+- **Workspaces:** a list replaces desktop accordion panels. Activity chips filter
+  All, Attention, Running and Ready; rows show name, actual activity, available
+  change/agent/preview/PR information and explicit selected state. Counts and category filtering use the complete filtered collection
+  before list pagination. A single useful empty state replaces empty accordion sections. Search, New, Archive,
+  host settings and list sort/filter options stay reachable.
+- **Conversation:** the compact composer keeps the prompt, Options, Attach and
+  Send in the primary layout. Model/permissions, session/turn controls, changes
+  and additional tools remain mounted inside Options. This preserves their
+  selected values while removing persistent toolbar rows. Normal collapsed
+  composer height is about 115px at 390px. User prompts have a subtle tinted
+  surface; agent text remains a calm reading area. Copy/edit and attachment-chip
+  actions remain available without hover.
+- **Navigation:** labeled bottom destinations use a selected icon pill rather
+  than a large selected tile and underline. Projects and More use focus-trapped
+  sheets. The workspace-list header does not repeat the last selected workspace.
 
-Task details keep the board mounted with its dimensions intact, preserving its
-actual scroll containers, filters and collapsed columns on return. Workspace
-panes likewise retain their existing mounted state across tab changes. Route
-changes select Chat for a workspace and the workspace list for the list route.
-The header uses the workspace name on phones; desktop retains its branch label.
-A project-array mirroring effect that looped during streamed chat updates is
-replaced with temporary optimistic ordering only while a drag is persisted.
+Primary targets are approximately 48 CSS px; targets are scoped to controls
+rather than blanket sizing for metadata. Desktop keeps its existing panels,
+Kanban dragging, toolbars, compact composer and controls.
 
-The composer separates model controls from its attachment/actions row and keeps
-Send at the lower right. Its editor scrolls internally for long drafts. The shell
-tracks VisualViewport height and offset, hides bottom navigation and the compact
-composer stats row when an editable field and keyboard-sized viewport reduction
-coincide, and reserves safe-area insets. Sheet/dialog sizing follows the same
-visible viewport. Pinch zoom remains browser-owned. Workspace creation scrolls
-and waits for an intentional editor tap before focusing on phones.
+## Interaction and safety
 
-Message copy/edit actions appear below their content on phones without hover.
-Inline attachment-chip remove/download actions use normal flow so their enlarged
-targets remain separate and wrap inside narrow editors.
+Task detail keeps the feed mounted with its dimensions intact, retaining actual
+scroll and status/filter state on Back. Workspace panes retain drafts and search
+across tab changes. Sheet history is consumed before destination navigation;
+Back dismisses a sheet and restores its invoking control’s focus.
 
-All layout changes use the existing 767px phone breakpoint. Model-selector
-changes are accessible labels only: routing, selected model/effort, defaults,
-execution and backend behavior are unchanged.
+The shell follows VisualViewport height/offset and safe-area insets. A
+keyboard-sized reduction while editing hides bottom navigation; the editor
+scrolls internally, and Send remains above the visible viewport edge. Dialogs
+and sheets follow the same viewport. Pinch zoom remains browser-owned. Phone
+workspace creation waits for an intentional editor tap before focusing.
 
-## Validation and evidence
+A streamed-project array mirroring loop found during the original investigation
+was removed; temporary optimistic ordering is retained only during persistence.
+No routing policy, configured execution model/effort, defaults or backend behavior
+changes. Recommend-only model routing remains intact.
 
-Evidence directory: `/mnt/vk-storage/vk-mobile-native-20261008` on the mounted SSD.
-The existing-production route was read to identify backend `5511`: historical
-preview default `4511` is frozen. Only this worktree's frontend preview was
-started; no backend, production service, routing, task/workspace data or frontend release
-was changed. No public Funnel route was installed.
+## Validation
 
-The checked-in `scripts/testing/mobile-ux-browser.mjs` runs against the branch
-frontend. It intercepts every application write, fulfills draft/UI writes locally,
-and never submits a prompt or creates a task/workspace. GET/HEAD and the read-only
-workspace-summary POST may reach the nominated backend. Subscription sockets
-are bridged read-only with the backend's Origin; browser frames are never
-forwarded. This lets the test read actual projects, workspaces and conversation
-messages without changing production settings or attention flags.
-Attachment layout tests use an in-memory file and a locally fulfilled upload
-response: no attachment bytes are forwarded to the backend.
+Evidence is on the mounted secondary SSD:
+`/mnt/vk-storage/vk-mobile-redesign-20261008`.
+Original baseline and rejected first-pass screenshots remain separately under
+`/mnt/vk-storage/vk-mobile-native-20261008` for comparison.
 
-Baseline screenshots: `before-board-390.png`, `before-chat-390.png`. These capture
-the prior controls/layout; the baseline chat was still loading its message stream.
-After screenshots cover board, projects, task details, conversation, composer with
-simulated keyboard, workspace list and creation; results JSON and logs accompany
-the screenshots. The baseline measured 20–29px primary controls and icon-only
-phone workspace tabs.
+The checked-in `scripts/testing/mobile-ux-browser.mjs` exercises the branch
+frontend against the existing backend identified by the current production route
+(`5511`; the historical preview-guide `4511` is frozen). Only this worktree’s
+lightweight frontend is started. All application mutations are intercepted and
+fulfilled locally, including drafts and attachment uploads. GET/HEAD and the
+read-only workspace summaries POST may reach the backend. WebSocket subscriptions
+are read-only bridged with the nominated backend Origin; client frames are never
+forwarded. No prompt is submitted and no task/workspace is created or modified.
 
-Initial acceptance passed at 360, 390, 412 and 1440px. Phone assertions cover
-project and workspace switching, sheet focus trapping/Back, task detail/Back,
-restored board scroll, task creation screen reachability, reading actual agent
-messages, multi-line composition, retained draft/model/effort across tabs,
-workspace filter preservation, every workspace tool, Send above a simulated
-keyboard, pinch-zoom handling and horizontal overflow. Desktop retains its
-compact controls and panel navigation. Additional desktop navigation and dark
-phone/creation checks are recorded in the final receipt below.
+Acceptance covers 360/390/412px phones, 390px dark and 1440px desktop. It checks
+project/task/workspace switching, sheet Back/focus trapping/restoration, selected
+status and actual feed scroll on Back, creation reachability, real agent-message
+reading/copy, multiline drafts across tabs/tools, model/effort retention, Options
+and list controls, the actual Attach picker with a fulfilled file response,
+separate remove/download targets, search retention, no horizontal overflow,
+simulated keyboard geometry and pinch zoom. Screenshots include the new task
+feed/detail, project sheet, conversation/options/keyboard, workspace list and
+creation.
 
-Reproduce using the installed browser tools (paths may differ on another host):
+Reproduce with installed browser tools:
 
 ```bash
 VK_TEST_OUTPUT=/mnt/vk-storage/<task>/acceptance \
@@ -94,66 +97,41 @@ TMPDIR=/mnt/vk-storage/<task> \
 node scripts/testing/mobile-ux-browser.mjs
 ```
 
-`VK_TEST_VIEWPORTS` optionally supplies JSON cases such as
-`[{"width":390,"colorScheme":"dark"}]`. The default includes three narrow widths,
-a desktop width and a dark phone case. The test currently expects an English
-local VK dataset, selecting VK Dev and TF::Build when present.
+The test expects an English local dataset, preferring VK Dev and TF::Build when
+present. `VK_TEST_VIEWPORTS` can override the default cases with JSON.
 
-### Final validation receipt (2026-10-08)
+### Check results
 
-| Check                                                                      | Result                                                                                           |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Browser acceptance, 360/390/412px light, 1440px desktop and 390px dark     | Passed; `final-acceptance/results.json`; includes message actions and mocked attachment controls |
-| Expanded desktop navigation and phone creation                             | Passed in final acceptance                                                                       |
-| Configured model/effort retained and no prompt submission                  | Passed in every browser case; application writes intercepted                                     |
-| `pnpm run format`, UI format and script/design-note Prettier               | Passed                                                                                           |
-| `pnpm run ops:check`, legacy frontend path guard                           | Passed                                                                                           |
-| Local-web, remote-web, web-core and UI TypeScript checks                   | Passed through the frontend stages of `pnpm run check`                                           |
-| Local-web/UI lint and unused-i18n-key check                                | Passed                                                                                           |
-| Full `pnpm run check`, `pnpm run lint`, `cargo test --workspace --offline` | Blocked at Rust GTK dependencies (`gio-2.0`/`glib-2.0` pkg-config files missing)                 |
+- Browser acceptance: see `acceptance/results.json` and `acceptance.log` for the
+  revised layouts. The pagination/count refinement also has a focused
+  `activity-acceptance/results.json` receipt at 390px and 1440px. Earlier `final/results.json` is a separate successful
+  five-viewport run before expanded picker/status/list-options assertions.
+- Repository format plus UI/script formatting, ops governance, self-development
+  guard and legacy path guard: passed.
+- Local/remote/web-core/UI TypeScript and local-web/UI lint: passed; the final
+  category collection change receives an additional web-core/UI check and lint.
+- Full check/lint and Rust workspace tests: host GTK dependencies
+  (`glib-2.0`, `gobject-2.0`, `gio-2.0` >= 2.70) block Rust compilation. Cargo uses
+  the dedicated shared SSD target with incremental compilation disabled.
+- Prior first-pass frontend CI/build success is historical and does not validate
+  this revised design; the updated PR’s CI is the source for new build evidence.
 
-A separate 390px run with `focus-acceptance/results.json` also passed after the
-explicit opener-focus restoration change, asserting that Back returns focus to
-the exact invoking navigation button.
+## Review artifacts and limits
 
-Production builds for both local-web and remote-web, frontend type/lint/format,
-i18n and legacy checks passed in the
-[frontend CI job](https://github.com/artinflight/vibe-kanban/actions/runs/37781846014/job/113326731958)
-for source commit `098fa753f`. The duplicate local bundle build was stopped after
-that result became available: it reached chunk rendering, but host memory/I/O
-pressure made it unusually slow. No local bundle-build success is claimed.
+Screenshots contain existing project/conversation data and stay outside Git.
+Selected images are attached through Vibe’s normal attachment API and retrieved
+byte-for-byte before sharing. Current native attachment IDs:
 
-The branch's temporary frontend preview and its tailnet route were stopped after
-review artifacts were captured. Screenshots are retained on the SSD, outside Git, since
-they include existing project and conversation content. No preview assets are
-published to the production frontend.
+- Task feed: `e23c1cd9-4c9c-4a1b-a6ef-2b471d9784a2`.
+- Conversation: `90c493b9-a8a0-4c13-bbf8-4f6eda6ce9be`.
+- Workspace list: `9973ba9b-25b6-458c-935b-51ab1528a252`.
+- Original baseline task board: `dc35a844-da5e-40b8-936a-3d40a386cd37`.
 
-### Accessible review artifacts
+No public preview route or production frontend
+assets are published. Stop the branch preview after capture.
 
-After the operator reported that host-local file links would not open, the two
-existing board screenshots were uploaded through Vibe's normal attachment API.
-Both were retrieved as PNGs and verified byte-for-byte against the source files.
-Only these review artifacts were written; no prompt, task/workspace change,
-deployment or production service update occurred.
-
-- Before attachment: `dc35a844-da5e-40b8-936a-3d40a386cd37` (37,337 bytes).
-- After attachment: `7a951534-41c5-4b0a-8d2b-44f5339c344f` (27,631 bytes).
-- Review notes: [open on GitHub](https://github.com/artinflight/vibe-kanban/blob/vk/eb7d-vk-native-feelin/VK_MOBILE_UX.md).
-
-The before/after images are embedded as native attachments in the follow-up
-conversation. Upload/retrieval receipts remain in the evidence directory.
-
-## Limits and release boundary
-
-Chromium with Android user-agent/touch emulation exercises real application
-behavior. Software-keyboard geometry is explicitly simulated, not proof of a
-physical Samsung keyboard, installed PWA, cutout, or browser chrome transition.
-Only Chromium is installed; Safari/WebKit and Firefox device QA remain unexercised.
-Live sends, edits, creation, attachments and mutations are deliberately not run.
-Remote-host/cloud authentication behavior was not exercised.
-
-Full Rust check, Clippy and workspace test commands cannot complete on this host:
-`pkg-config` cannot find `glib-2.0`/`gio-2.0` required by Tauri. Use CI with the
-repository's desktop dependencies for that baseline. No Rust source or generated
-shared type changed. A merge or production publication is a separate release
-operation; this task authorizes neither.
+Chromium uses an Android user agent, touch and narrow viewports. Keyboard geometry
+is explicitly simulated. Physical Samsung keyboard/browser chrome, installed PWA
+and Safari/Firefox behavior remain unverified; their real-device QA is still
+needed before release. Send/creation submissions and running-agent approval/stop
+mutations are intentionally not exercised against production.

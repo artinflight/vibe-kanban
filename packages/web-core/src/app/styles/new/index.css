@@ -483,108 +483,102 @@ html {
   }
 }
 
-/* Phone interaction layer. Keep desktop tokens and component layouts intact. */
+/* Phone screens use a focused list hierarchy and progressive disclosure.
+   Touch targets are scoped to controls; metadata stays compact. */
 @media (max-width: 767px) {
   .mobile-app-shell {
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-left: env(safe-area-inset-left, 0px);
-    padding-right: env(safe-area-inset-right, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+      env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   }
-
   button,
-  [role='button'],
-  [role='menuitem'],
-  [role='option'] {
-    min-height: 48px;
-    min-width: 48px;
+  [role='button'] {
     touch-action: manipulation;
   }
-
   button:focus-visible,
   [role='button']:focus-visible {
     outline: 2px solid hsl(var(--brand));
     outline-offset: -2px;
   }
-
   button:active:not(:disabled),
   [role='button']:active {
-    background-color: hsl(var(--brand) / 0.16);
-  }
-
-  button[aria-current='page'],
-  button[aria-pressed='true'] {
-    color: hsl(var(--text-high));
     background-color: hsl(var(--brand) / 0.12);
   }
-
   input:not([type='checkbox']):not([type='radio']):not([type='file']),
   textarea,
   [contenteditable='true'] {
     font-size: 16px;
     line-height: 1.5;
   }
-
-  input:not([type='checkbox']):not([type='radio']):not([type='file']) {
-    min-height: 48px;
-  }
-
   .mobile-app-header {
     padding: 4px 12px;
+    background: hsl(var(--bg-primary));
+    border-bottom: none;
   }
-
+  .mobile-app-header button,
+  .mobile-sheet button,
+  [role='menuitem'],
+  [role='option'],
+  .phone-prompt-options button,
+  .phone-prompt-options label:has(input[type='file']),
+  .phone-list-options button {
+    min-width: 48px;
+    min-height: 48px;
+  }
   .mobile-app-header button {
-    flex-shrink: 0;
     border-radius: 24px;
+    flex-shrink: 0;
   }
-
   .mobile-bottom-navigation {
     display: flex;
     justify-content: space-around;
+    background: hsl(var(--bg-primary));
     border-top: 1px solid hsl(var(--border));
-    background: hsl(var(--bg-secondary));
     padding: 4px 8px;
   }
-
   .mobile-bottom-navigation button {
     display: flex;
     flex: 1;
     min-width: 0;
-    min-height: 64px;
+    min-height: 60px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    border-radius: 16px;
+    gap: 2px;
     font-size: 12px;
     font-weight: 500;
     color: hsl(var(--text-normal));
+    background: transparent;
   }
-
+  .mobile-nav-symbol {
+    display: flex;
+    width: 56px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+  }
   .mobile-bottom-navigation svg {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
   }
-
+  .mobile-bottom-navigation button[aria-current='page'] .mobile-nav-symbol {
+    background: hsl(var(--brand) / 0.14);
+    color: hsl(var(--brand));
+  }
   .mobile-bottom-navigation button[aria-current='page'] {
     color: hsl(var(--text-high));
-    box-shadow: inset 0 -3px hsl(var(--brand));
+    font-weight: 600;
   }
-
   .mobile-app-shell[data-keyboard-open='true'] #mobile-navigation {
     display: none;
   }
-
   .mobile-sheet {
-    max-height: min(85dvh, 720px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-
   .mobile-tool-sheet {
     display: grid;
     gap: 8px;
   }
-
   .mobile-tool-sheet > button {
     display: flex;
     align-items: center;
@@ -593,201 +587,21 @@ html {
     border-radius: 12px;
     text-align: left;
   }
-
-  .mobile-workspace-card {
-    margin: 0 12px;
-    border: 1px solid hsl(var(--border));
-    border-radius: 16px;
-    background: hsl(var(--bg-primary));
-  }
-
-  .mobile-workspace-card > button {
-    padding: 12px 16px;
-    min-height: 80px;
-    gap: 8px;
-    padding-right: 56px;
-  }
-
-  .mobile-workspace-card > button > div:first-child {
-    white-space: normal;
-    overflow-wrap: anywhere;
-    font-weight: 500;
-    mask-image: none !important;
-    -webkit-mask-image: none !important;
-  }
-
-  .mobile-task-card {
-    margin: 8px 0;
-    padding: 12px;
-    border-radius: 16px;
-    box-shadow: 0 2px 4px hsl(var(--text-high) / 0.04);
-  }
-
-  .mobile-task-detail > div:first-child {
-    padding: 4px 16px;
-  }
-
-  .mobile-task-detail > div:nth-child(2) {
-    padding: 8px;
-    overscroll-behavior: contain;
-  }
-
-  .mobile-composer {
-    width: 100%;
-    border-radius: 16px 16px 0 0;
-    flex-shrink: 0;
-  }
-
-  .mobile-composer-header {
-    padding: 4px 12px;
-    gap: 4px;
-  }
-
-  .mobile-composer-controls {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .mobile-composer-controls > div:last-child {
-    margin-left: auto;
-  }
-
-  .mobile-composer [contenteditable='true'] {
-    min-height: 64px;
-    max-height: min(24dvh, 160px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-
-  .mobile-app-shell[data-keyboard-open='true'] .mobile-composer-header {
-    display: none;
-  }
-
-  .mobile-app-shell[data-keyboard-open='true']
-    .mobile-composer
-    [contenteditable='true'] {
-    min-height: 48px;
-    max-height: 96px;
-  }
-
   [role='dialog'] {
     max-width: calc(100vw - 16px);
-    max-height: calc(100dvh - 24px);
-    overflow-y: auto;
-  }
-
-  .mobile-sheet[role='dialog'] {
-    max-width: 100%;
-    max-height: min(85dvh, 720px);
-  }
-  .mobile-app-shell button,
-  .mobile-sheet button,
-  .mobile-composer label:has(input[type='file']),
-  select {
-    min-width: 48px;
-    min-height: 48px;
-  }
-
-  .mobile-composer label:has(input[type='file']) {
-    border-radius: 12px;
-  }
-
-  .mobile-task-metadata {
-    flex-wrap: wrap;
-  }
-
-  .mobile-task-content > div:nth-child(2) [role='button'] {
-    border-radius: 12px;
-    padding: 12px;
-  }
-
-  .mobile-task-content > div:nth-child(2) [role='button'] span.text-sm {
-    font-size: 16px;
-    line-height: 1.5;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-  .mobile-composer-controls > div:first-child {
-    display: contents;
-  }
-
-  .mobile-model-selector {
-    display: flex;
-    flex-wrap: wrap;
-    flex-basis: 100%;
-    gap: 4px;
-  }
-
-  .mobile-model-selector:empty {
-    display: none;
-  }
-
-  .mobile-composer-actions {
-    display: flex;
-    flex: 1;
-    gap: 4px;
-  }
-
-  .mobile-composer button {
-    border-radius: 12px;
-  }
-
-  .mobile-app-shell main .wysiwyg {
-    line-height: 1.65;
-  }
-
-  /* Message actions remain discoverable on touch, including copy/edit. */
-  .mobile-app-shell main .wysiwyg .group .opacity-0 {
-    opacity: 1;
-  }
-
-  .mobile-message {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .mobile-message-actions {
-    position: static;
-    order: 1;
-    height: auto;
-    margin-top: 4px;
-  }
-
-  .mobile-message-actions > div {
-    opacity: 1;
-  }
-
-  /* Inline attachment chips share the same editor markup for images/files.
-     Put actions in flow so enlarged touch targets cannot cover one another. */
-  .wysiwyg span.group[role='button'] {
-    max-width: 100%;
-    flex-wrap: wrap;
-    padding-right: 6px;
-  }
-
-  .wysiwyg span.group[role='button'] > button.absolute {
-    position: static;
-    opacity: 1;
-    flex-shrink: 0;
-  }
-
-  .wysiwyg span.group[role='button'] > button.absolute svg {
-    width: 16px;
-    height: 16px;
-  }
-  .mobile-app-shell .mobile-bottom-navigation button {
-    min-height: 64px;
-  }
-
-  [role='dialog'] {
     top: calc(
       var(--mobile-viewport-top, 0px) + var(--mobile-viewport-height, 100dvh) /
         2
     );
     max-height: calc(var(--mobile-viewport-height, 100dvh) - 24px);
+    overflow-y: auto;
   }
-
+  [role='dialog'] button,
+  [role='dialog'] select {
+    min-height: 48px;
+  }
   .mobile-sheet[role='dialog'] {
+    max-width: 100%;
     top: calc(
       var(--mobile-viewport-top, 0px) + var(--mobile-viewport-height, 100dvh)
     );
@@ -795,17 +609,529 @@ html {
     transform: translateY(-100%);
     max-height: min(calc(var(--mobile-viewport-height, 100dvh) * 0.85), 720px);
   }
+
+  .phone-task-heading {
+    padding: 8px 16px 0;
+    flex-shrink: 0;
+  }
+  .phone-task-heading h2 {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+  .phone-task-heading > div:first-child {
+    justify-content: space-between;
+  }
+  .phone-task-heading > div:first-child button {
+    width: 48px;
+    height: 48px;
+  }
+  .phone-task-heading > div:nth-child(2),
+  .phone-task-search {
+    width: 100%;
+  }
+  .phone-task-search {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .phone-task-search input,
+  .phone-workspace-search input {
+    min-height: 48px;
+  }
+  .phone-task-search > button {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 12px;
+    font-size: 14px;
+  }
+  .phone-task-feed {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  .phone-filter-chips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    flex-shrink: 0;
+    scrollbar-width: none;
+  }
+  .phone-filter-chips button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 48px;
+    padding: 0 14px;
+    white-space: nowrap;
+    border-radius: 24px;
+    border: 1px solid hsl(var(--border));
+    font-size: 14px;
+    color: hsl(var(--text-normal));
+  }
+  .phone-filter-chips button[aria-pressed='true'] {
+    color: hsl(var(--brand));
+    background: hsl(var(--brand) / 0.12);
+    border-color: hsl(var(--brand) / 0.4);
+    font-weight: 600;
+  }
+  .phone-filter-chips button > span {
+    font-size: 12px;
+    opacity: 0.75;
+  }
+  .phone-filter-chips i,
+  .phone-task-status i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .phone-status-tabs {
+    padding: 8px 16px 12px;
+  }
+  .phone-task-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 16px 88px;
+    overscroll-behavior: contain;
+  }
+  .phone-task-row {
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--bg-primary));
+    border-radius: 16px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .phone-task-main {
+    display: flex;
+    align-items: flex-start;
+  }
+  .phone-task-open {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+    padding: 14px 0 14px 16px;
+  }
+  .phone-task-meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 12px;
+    color: hsl(var(--text-low));
+  }
+  .phone-task-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .phone-task-title {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  .phone-row-more {
+    min-width: 48px;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 24px;
+    flex-shrink: 0;
+  }
+  .phone-task-review {
+    color: hsl(var(--brand));
+    font-size: 12px;
+  }
+  .phone-task-workspace {
+    display: flex;
+    width: 100%;
+    min-height: 48px;
+    gap: 8px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 16px;
+    border-top: 1px solid hsl(var(--border));
+    font-size: 13px;
+    color: hsl(var(--text-low));
+  }
+  .phone-task-workspace > span:first-child {
+    color: hsl(var(--brand));
+    font-weight: 500;
+  }
+  .phone-task-fab {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 20px;
+    border-radius: 18px;
+    background: hsl(var(--brand));
+    color: hsl(var(--text-on-brand));
+    box-shadow: 0 4px 12px hsl(var(--text-high) / 0.16);
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .phone-view-options {
+    display: grid;
+    gap: 12px;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .phone-view-options p {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .phone-workspaces {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: hsl(var(--bg-primary));
+  }
+  .phone-page-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    gap: 12px;
+  }
+  .phone-page-heading h1 {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+  .phone-page-heading p {
+    font-size: 13px;
+    color: hsl(var(--text-low));
+    margin-top: 4px;
+  }
+  .phone-new-workspace {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 48px;
+    padding: 0 14px;
+    border-radius: 24px;
+    color: hsl(var(--brand));
+    background: hsl(var(--brand) / 0.12);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .phone-workspace-search {
+    padding: 0 16px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .phone-workspace-search > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .phone-workspace-search > button {
+    flex-shrink: 0;
+    min-height: 48px;
+    font-size: 13px;
+    color: hsl(var(--text-low));
+    padding: 0 8px;
+  }
+  .phone-list-options {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 0 16px 8px;
+  }
+  .phone-host {
+    min-height: 48px;
+    text-align: left;
+    padding: 0 20px;
+  }
+  .phone-workspace-tabs {
+    padding: 0 16px 16px;
+  }
+  .phone-workspace-scroll {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .phone-workspace-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin: 0 16px;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .phone-workspace-open {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    padding: 16px 0;
+    text-align: left;
+  }
+  .phone-workspace-symbol {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    background: hsl(var(--bg-secondary));
+    color: hsl(var(--text-low));
+  }
+  .phone-workspace-row[data-selected='true'] .phone-workspace-symbol,
+  .phone-attention {
+    background: hsl(var(--brand) / 0.12);
+    color: hsl(var(--brand));
+  }
+  .phone-running {
+    color: hsl(var(--brand));
+  }
+  .phone-workspace-text {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+  .phone-workspace-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  .phone-workspace-caption {
+    font-size: 12px;
+    line-height: 1.5;
+    color: hsl(var(--text-low));
+  }
+  .phone-workspace-open[aria-current='page'] {
+    color: hsl(var(--text-high));
+  }
+  .phone-archive {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 0 24px;
+    color: hsl(var(--text-low));
+    font-size: 14px;
+    border-top: 1px solid hsl(var(--border));
+  }
+  .phone-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 48px 24px;
+    color: hsl(var(--text-low));
+  }
+  .phone-empty-state h3 {
+    font-size: 18px;
+    font-weight: 500;
+    color: hsl(var(--text-high));
+  }
+  .phone-empty-state p {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .phone-empty-state button {
+    min-height: 48px;
+    color: hsl(var(--brand));
+  }
+
+  .mobile-task-detail {
+    background: hsl(var(--bg-primary));
+  }
+  .mobile-task-detail .phone-issue-scroll {
+    padding: 0 16px 24px;
+  }
+  .phone-issue-title textarea {
+    font-size: 24px;
+    line-height: 1.25;
+    font-weight: 600;
+    padding: 8px 0 16px;
+  }
+  .phone-issue-tags-toggle {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    color: hsl(var(--text-low));
+    font-size: 13px;
+    padding: 0 12px;
+  }
+  .mobile-task-detail > div:first-child {
+    padding: 4px 16px;
+  }
+  .mobile-task-detail > div:nth-child(2) {
+    padding: 0 16px 24px;
+    overscroll-behavior: contain;
+  }
   .mobile-task-detail select {
     min-height: 48px;
     font-size: 16px;
   }
-}
-
-@media (max-width: 767px) {
-  span[role='button'] {
-    display: inline-flex;
+  .mobile-task-detail button {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  .mobile-composer {
+    width: 100%;
+    border-radius: 18px 18px 0 0;
+    background: hsl(var(--bg-primary));
+    flex-shrink: 0;
+  }
+  .mobile-composer > div:last-child {
+    gap: 4px;
+    padding: 12px 12px 6px;
+  }
+  .mobile-composer [contenteditable='true'] {
+    min-height: 44px;
+    max-height: min(22dvh, 128px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .phone-prompt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
+  .phone-prompt-actions > button {
+    display: flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
+    min-width: 48px;
+    min-height: 48px;
+    border-radius: 24px;
+    color: hsl(var(--text-low));
+    font-size: 13px;
+    padding: 0 10px;
+  }
+  .phone-prompt-actions > button[aria-expanded='true'] {
+    color: hsl(var(--brand));
+    background: hsl(var(--brand) / 0.12);
+  }
+  .phone-prompt-send {
+    display: flex;
+    flex-wrap: wrap;
+    max-width: 100%;
+    gap: 4px;
+    margin-left: auto;
+  }
+  .phone-prompt-send button {
+    min-height: 48px;
+    min-width: 48px;
+    border-radius: 24px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .phone-prompt-options:not([hidden]) {
+    display: grid;
+    gap: 8px;
+    max-height: min(38dvh, 320px);
+    overflow-y: auto;
+    border-top: 1px solid hsl(var(--border));
+    padding: 12px 4px 4px;
+  }
+  .phone-prompt-options[hidden] {
+    display: none;
+  }
+  .phone-option-label {
+    color: hsl(var(--text-low));
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .phone-prompt-options .mobile-model-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .phone-prompt-context {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .phone-prompt-options button {
+    border-radius: 12px;
+  }
+  .mobile-app-shell main .wysiwyg {
+    line-height: 1.55;
+  }
+  .phone-entry-user {
+    background: hsl(var(--brand) / 0.06);
+    border-radius: 16px;
+    width: 95%;
+    margin-left: auto;
+    overflow: hidden;
+  }
+  .phone-entry-user > div {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .phone-entry-user button {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  .mobile-message {
+    display: flex;
+    flex-direction: column;
+  }
+  .mobile-message-actions {
+    position: static;
+    order: 1;
+    height: auto;
+    align-self: flex-end;
+  }
+  .mobile-message-actions > div,
+  .mobile-app-shell main .wysiwyg .group .opacity-0 {
+    opacity: 1;
+  }
+  .mobile-message-actions button {
+    min-width: 48px;
+    min-height: 48px;
+  }
+  .wysiwyg span.group[role='button'] {
+    max-width: 100%;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    padding-right: 6px;
+  }
+  .wysiwyg span.group[role='button'] > button.absolute {
+    position: static;
+    opacity: 1;
+    flex-shrink: 0;
+    min-width: 48px;
+    min-height: 48px;
+  }
+  .wysiwyg span.group[role='button'] > button.absolute svg {
+    width: 16px;
+    height: 16px;
   }
 }
 

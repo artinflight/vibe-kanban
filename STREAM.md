@@ -1,14 +1,15 @@
-# October 8: Native-feeling phone interaction pass
+# October 8: Phone screen redesign
 
-Branch `vk/eb7d-vk-native-feelin` implements focused mobile project/task/workspace
-navigation and agent conversation/composition changes. Scope is frontend only:
-48px controls, labeled bottom navigation, accessible history-aware sheets,
-full-screen task details with board state retention, readable cards and a
-VisualViewport/safe-area-aware composer. Desktop panels and configured execution
-model/effort remain intact. No merge, deployment or production operation is
-permitted in this stream. Read VK_MOBILE_UX.md for acceptance and remaining limits.
-Review is [draft PR #224](https://github.com/artinflight/vibe-kanban/pull/224)
-against `staging`; source commit `098fa753f` is pushed.
+Branch `vk/eb7d-vk-native-feelin` replaces the initial size-focused mobile pass
+with dedicated task-feed, workspace-list and compact conversation layouts.
+Status/activity chips, clear titles, a thumb-level New task action and progressive
+disclosure replace stacked panels, nested cards and persistent composer toolbars.
+Retain history-aware sheets, feed/draft/search state, safe areas and visible
+viewport behavior. Desktop and configured execution model/effort stay intact;
+model routing stays Recommend-only. No merge or deployment is authorized.
+Read VK_MOBILE_UX.md for the current design and validation.
+Review: [draft PR #224](https://github.com/artinflight/vibe-kanban/pull/224) into
+`staging`. Historical entries below do not define this stream.
 
 # October 5: AutoSwitch reloadable module
 

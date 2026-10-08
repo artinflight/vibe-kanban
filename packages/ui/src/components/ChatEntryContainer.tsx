@@ -90,6 +90,7 @@ export function ChatEntryContainer({
     <div
       className={cn(
         'rounded-sm w-full',
+        `phone-entry-${variant}`,
         config.border && 'border',
         config.border,
         config.bg,

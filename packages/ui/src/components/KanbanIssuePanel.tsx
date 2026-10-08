@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LocalAttachmentMetadata } from './WorkspaceContext';
+import { usePhoneLayout } from '../lib/usePhoneLayout';
 import { cn } from '../lib/cn';
 import {
   XIcon,
@@ -196,6 +197,8 @@ export function KanbanIssuePanel({
   renderCommentsSection,
 }: KanbanIssuePanelProps) {
   const { t } = useTranslation('common');
+  const phone = usePhoneLayout();
+  const [tagsOpen, setTagsOpen] = useState(false);
   const isCreateMode = mode === 'create';
   const breadcrumbTextClass =
     'min-w-0 text-sm text-normal truncate rounded-sm px-1 py-0.5 hover:bg-panel hover:text-high transition-colors';
@@ -252,6 +255,40 @@ export function KanbanIssuePanel({
     }
   };
 
+  const titleField = (
+    <>
+      {/* Title Input */}
+      <div className="phone-issue-title w-full mt-base">
+        <AutoResizeTextarea
+          ref={titleInputRef}
+          value={formData.title}
+          onChange={(value) => onFormChange('title', value)}
+          onKeyDown={handleTitleKeyDown}
+          placeholder="Issue Title..."
+          autoFocus={isCreateMode && !phone}
+          aria-label="Issue title"
+          disabled={isSubmitting}
+          className={cn(
+            'px-base text-lg font-medium text-high',
+            'placeholder:text-high/50',
+            isSubmitting && 'opacity-50 pointer-events-none'
+          )}
+        />
+
+        <div
+          className={cn(
+            'pointer-events-none absolute inset-0 px-base',
+            'text-high/50 font-medium text-lg',
+            'hidden',
+            "[[data-empty='true']_+_&]:block" // show placeholder when previous sibling data-empty=true
+          )}
+        >
+          {t('kanban.issueTitlePlaceholder')}
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div
       className="mobile-task-detail flex flex-col h-full overflow-hidden outline-none"
@@ -296,7 +333,8 @@ export function KanbanIssuePanel({
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="phone-issue-scroll flex-1 overflow-y-auto">
+        {phone && titleField}
         {/* Property Row */}
         <div className="px-base py-base border-b">
           <IssuePropertyRow
@@ -319,8 +357,19 @@ export function KanbanIssuePanel({
           />
         </div>
 
-        {/* Tags Row */}
-        <div className="px-base py-base border-b">
+        {/* Tags and pull requests stay reachable without an empty toolbar. */}
+        {phone && (
+          <button
+            type="button"
+            className="phone-issue-tags-toggle"
+            aria-expanded={tagsOpen}
+            onClick={() => setTagsOpen(!tagsOpen)}
+          >
+            Tags & pull requests
+            {formData.tagIds.length > 0 ? ` (${formData.tagIds.length})` : ''}
+          </button>
+        )}
+        <div hidden={phone && !tagsOpen} className="px-base py-base border-b">
           <IssueTagsRow
             selectedTagIds={formData.tagIds}
             availableTags={tags}
@@ -335,35 +384,7 @@ export function KanbanIssuePanel({
 
         {/* Title and Description */}
         <div className="rounded-sm">
-          {/* Title Input */}
-          <div className="w-full mt-base">
-            <AutoResizeTextarea
-              ref={titleInputRef}
-              value={formData.title}
-              onChange={(value) => onFormChange('title', value)}
-              onKeyDown={handleTitleKeyDown}
-              placeholder="Issue Title..."
-              autoFocus={isCreateMode}
-              aria-label="Issue title"
-              disabled={isSubmitting}
-              className={cn(
-                'px-base text-lg font-medium text-high',
-                'placeholder:text-high/50',
-                isSubmitting && 'opacity-50 pointer-events-none'
-              )}
-            />
-
-            <div
-              className={cn(
-                'pointer-events-none absolute inset-0 px-base',
-                'text-high/50 font-medium text-lg',
-                'hidden',
-                "[[data-empty='true']_+_&]:block" // show placeholder when previous sibling data-empty=true
-              )}
-            >
-              {t('kanban.issueTitlePlaceholder')}
-            </div>
-          </div>
+          {!phone && titleField}
 
           {/* Description WYSIWYG Editor with image dropzone */}
           <div

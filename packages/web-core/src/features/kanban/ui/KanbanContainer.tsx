@@ -709,6 +709,7 @@ function CollapsedKanbanColumn({
  */
 export function KanbanContainer() {
   const isMobile = useIsMobile();
+  const [phoneStatus, setPhoneStatus] = useState<string | null>(null);
   const workspaceColors = useUiPreferencesStore((s) => s.workspaceColors);
   const setWorkspaceColor = useUiPreferencesStore((s) => s.setWorkspaceColor);
   const { t } = useTranslation('common');
@@ -1617,6 +1618,10 @@ export function KanbanContainer() {
     [insertTag, projectId]
   );
 
+  useEffect(() => {
+    setPhoneStatus(null);
+  }, [projectId, kanbanViewMode, listViewStatusFilter]);
+
   const isLoading = projectLoading || orgLoading;
 
   if (isLoading) {
@@ -1628,12 +1633,12 @@ export function KanbanContainer() {
       <div
         className={cn(
           'px-double pt-double space-y-base',
-          isMobile && 'px-base pt-base'
+          isMobile && 'phone-task-heading'
         )}
       >
         <div className="flex items-center gap-half">
           <h2 className={cn('text-2xl font-medium', isMobile && 'text-lg')}>
-            {projectName}
+            {isMobile ? 'Tasks' : projectName}
           </h2>
 
           <div className="relative">
@@ -1687,13 +1692,15 @@ export function KanbanContainer() {
             isMobile ? 'flex-col' : 'flex-wrap'
           )}
         >
-          <ViewNavTabs
-            activeView={kanbanViewMode}
-            onViewChange={setKanbanViewMode}
-            hiddenStatuses={hiddenStatuses}
-            selectedStatusId={listViewStatusFilter}
-            onStatusSelect={setListViewStatusFilter}
-          />
+          {!isMobile && (
+            <ViewNavTabs
+              activeView={kanbanViewMode}
+              onViewChange={setKanbanViewMode}
+              hiddenStatuses={hiddenStatuses}
+              selectedStatusId={listViewStatusFilter}
+              onStatusSelect={setListViewStatusFilter}
+            />
+          )}
           <KanbanFilterBar
             isFiltersDialogOpen={isFiltersDialogOpen}
             onFiltersDialogOpenChange={setIsFiltersDialogOpen}
@@ -1720,13 +1727,199 @@ export function KanbanContainer() {
             onClearFilters={clearKanbanFilters}
             onCreateIssue={handleAddTask}
             shouldAnimateCreateButton={shouldAnimateCreateButton}
-            renderFiltersDialog={(props) => <KanbanFiltersDialog {...props} />}
+            renderFiltersDialog={(props) => (
+              <KanbanFiltersDialog
+                {...props}
+                viewControls={
+                  isMobile ? (
+                    <div className="phone-view-options">
+                      <p>Task visibility</p>
+                      <ViewNavTabs
+                        activeView={kanbanViewMode}
+                        onViewChange={setKanbanViewMode}
+                        hiddenStatuses={hiddenStatuses}
+                        selectedStatusId={listViewStatusFilter}
+                        onStatusSelect={setListViewStatusFilter}
+                      />
+                      <p>Assigned tasks</p>
+                      <div className="phone-filter-chips">
+                        <button
+                          type="button"
+                          aria-pressed={
+                            activeViewId === KANBAN_PROJECT_VIEW_IDS.TEAM
+                          }
+                          onClick={() =>
+                            handleKanbanProjectViewChange(
+                              KANBAN_PROJECT_VIEW_IDS.TEAM
+                            )
+                          }
+                        >
+                          Team
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={
+                            activeViewId === KANBAN_PROJECT_VIEW_IDS.PERSONAL
+                          }
+                          onClick={() =>
+                            handleKanbanProjectViewChange(
+                              KANBAN_PROJECT_VIEW_IDS.PERSONAL
+                            )
+                          }
+                        >
+                          Personal
+                        </button>
+                        {hasActiveFilters && (
+                          <button type="button" onClick={clearKanbanFilters}>
+                            Clear filters
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ) : undefined
+                }
+              />
+            )}
             isMobile={isMobile}
           />
         </div>
       </div>
 
-      {kanbanViewMode === 'kanban' ? (
+      {isMobile ? (
+        <div className="phone-task-feed">
+          <div
+            className="phone-filter-chips phone-status-tabs"
+            aria-label="Filter tasks by status"
+          >
+            <button
+              type="button"
+              aria-pressed={!phoneStatus}
+              onClick={() => setPhoneStatus(null)}
+            >
+              All
+            </button>
+            {(kanbanViewMode === 'kanban' ? visibleStatuses : sortedStatuses)
+              .filter(
+                (status) =>
+                  !listViewStatusFilter || status.id === listViewStatusFilter
+              )
+              .map((status) => (
+                <button
+                  key={status.id}
+                  type="button"
+                  aria-pressed={phoneStatus === status.id}
+                  onClick={() => setPhoneStatus(status.id)}
+                >
+                  <i style={{ background: `hsl(${status.color})` }} />
+                  {status.name}
+                  <span>{(items[status.id] ?? []).length}</span>
+                </button>
+              ))}
+          </div>
+          <div className="phone-task-scroll">
+            {(kanbanViewMode === 'kanban' ? visibleStatuses : sortedStatuses)
+              .filter(
+                (status) =>
+                  (!phoneStatus || status.id === phoneStatus) &&
+                  (!listViewStatusFilter || status.id === listViewStatusFilter)
+              )
+              .flatMap((status) =>
+                (items[status.id] ?? []).map((id) => {
+                  const issue = issueMap[id];
+                  if (!issue) return null;
+                  const workspaces = workspacesByIssueId.get(id) ?? [];
+                  const workspace = workspaces.find(
+                    (ws) => ws.localWorkspaceId
+                  );
+                  return (
+                    <article
+                      key={id}
+                      className="mobile-task-card phone-task-row"
+                    >
+                      <div className="phone-task-main">
+                        <button
+                          type="button"
+                          className="mobile-task-metadata phone-task-open"
+                          onClick={(event) => handleCardClick(id, event)}
+                        >
+                          <span className="phone-task-meta">
+                            <span>{issue.simple_id}</span>
+                            <span className="phone-task-status">
+                              <i
+                                style={{ background: `hsl(${status.color})` }}
+                              />
+                              {status.name}
+                            </span>
+                          </span>
+                          <span className="phone-task-title">
+                            {issue.title}
+                          </span>
+                          {issueHasFlag(
+                            issue.extension_metadata,
+                            NEEDS_REVIEW_ISSUE_FLAG
+                          ) && (
+                            <span className="phone-task-review">
+                              Needs review
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          className="phone-row-more"
+                          aria-label={`Actions for ${issue.simple_id}`}
+                          onClick={() => handleCardMoreActionsClick(id)}
+                        >
+                          <DotsThreeIcon size={22} weight="bold" />
+                        </button>
+                      </div>
+                      {showWorkspaces && workspace && (
+                        <button
+                          type="button"
+                          className="phone-task-workspace"
+                          onClick={() =>
+                            openIssueWorkspace(id, workspace.localWorkspaceId!)
+                          }
+                        >
+                          <span>Open conversation</span>
+                          <span>
+                            {workspaces.length > 1
+                              ? `${workspaces.length} workspaces`
+                              : 'Workspace'}{' '}
+                            →
+                          </span>
+                        </button>
+                      )}
+                    </article>
+                  );
+                })
+              )}
+            {!(
+              kanbanViewMode === 'kanban' ? visibleStatuses : sortedStatuses
+            ).some(
+              (status) =>
+                (!phoneStatus || status.id === phoneStatus) &&
+                (!listViewStatusFilter || status.id === listViewStatusFilter) &&
+                (items[status.id]?.length ?? 0) > 0
+            ) && (
+              <div className="phone-empty-state">
+                <h3>No matching tasks</h3>
+                <p>Try another status or clear your filters.</p>
+                <button type="button" onClick={clearKanbanFilters}>
+                  Clear filters
+                </button>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            className="phone-task-fab"
+            aria-label={t('kanban.newIssue', 'New issue')}
+            onClick={() => handleAddTask(phoneStatus ?? undefined)}
+          >
+            <PlusIcon size={24} /> New task
+          </button>
+        </div>
+      ) : kanbanViewMode === 'kanban' ? (
         visibleStatuses.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <p className="text-low">{t('kanban.noVisibleStatuses')}</p>

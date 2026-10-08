@@ -10,6 +10,7 @@ import {
   StackIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import { usePhoneLayout } from '../lib/usePhoneLayout';
 import { cn } from '../lib/cn';
 import { RunningDots } from './RunningDots';
 
@@ -77,6 +78,7 @@ export function WorkspaceSummary({
   onOpenWorkspaceActions,
 }: WorkspaceSummaryProps) {
   const { t } = useTranslation('common');
+  const phone = usePhoneLayout();
   const hasChanges = filesChanged !== undefined && filesChanged > 0;
   const isFailed =
     latestProcessStatus === 'failed' || latestProcessStatus === 'killed';
@@ -88,6 +90,80 @@ export function WorkspaceSummary({
     if (!workspaceId || !onOpenWorkspaceActions) return;
     onOpenWorkspaceActions(workspaceId);
   };
+
+  if (phone) {
+    const attention =
+      hasPendingApproval ||
+      (hasUnseenActivity && !isRunning && !hasSubagentActivity);
+    const state = isDraft
+      ? 'Draft'
+      : hasPendingApproval
+        ? 'Approval needed'
+        : isRunning || hasSubagentActivity
+          ? 'Running'
+          : isFailed
+            ? 'Failed'
+            : hasUnseenActivity
+              ? 'New activity'
+              : 'Ready';
+    return (
+      <article
+        className={cn('mobile-workspace-card phone-workspace-row', className)}
+        data-selected={isActive}
+      >
+        <button
+          type="button"
+          className="phone-workspace-open"
+          aria-current={isActive ? 'page' : undefined}
+          onClick={onClick}
+        >
+          <span
+            className={cn(
+              'phone-workspace-symbol',
+              attention && 'phone-attention',
+              isRunning && 'phone-running'
+            )}
+          >
+            {attention ? (
+              <HandIcon size={22} />
+            ) : isRunning || hasSubagentActivity ? (
+              <PlayIcon size={22} weight="fill" />
+            ) : isFailed ? (
+              <TriangleIcon size={22} />
+            ) : (
+              <StackIcon size={22} />
+            )}
+          </span>
+          <span className="phone-workspace-text">
+            <span className="phone-workspace-name">
+              {isPinned && <PushPinIcon size={14} weight="fill" />}
+              {name}
+            </span>
+            <span className="phone-workspace-caption">
+              {state}
+              {latestProcessCompletedAt && !isRunning && (
+                <> · {formatRelativeElapsed(latestProcessCompletedAt)}</>
+              )}
+              {hasChanges && <> · {filesChanged} files</>}
+              {hasSubagentActivity && <> · {subagentCount} agents</>}
+              {hasRunningDevServer && <> · Preview running</>}
+              {prStatus && prStatus !== 'unknown' && <> · PR {prStatus}</>}
+            </span>
+          </span>
+        </button>
+        {workspaceId && onOpenWorkspaceActions && (
+          <button
+            type="button"
+            className="phone-row-more"
+            aria-label={`Actions for ${name}`}
+            onClick={handleOpenCommandBar}
+          >
+            <DotsThreeIcon size={22} weight="bold" />
+          </button>
+        )}
+      </article>
+    );
+  }
 
   return (
     <div

@@ -1,8 +1,13 @@
-import { type ReactNode } from 'react';
-import { ImageIcon } from '@phosphor-icons/react';
+import { useId, useState, type ReactNode } from 'react';
+import {
+  ImageIcon,
+  PaperclipIcon,
+  SlidersHorizontalIcon,
+} from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/cn';
 import { Toolbar } from './Toolbar';
+import { usePhoneLayout } from '../lib/usePhoneLayout';
 
 export enum VisualVariant {
   NORMAL = 'NORMAL',
@@ -50,6 +55,7 @@ interface ChatBoxBaseProps {
 
   // Dropzone props for drag-and-drop image uploads
   dropzone?: DropzoneProps;
+  isAttachmentDisabled?: boolean;
 }
 
 /**
@@ -68,8 +74,12 @@ export function ChatBoxBase({
   visualVariant,
   isRunning,
   dropzone,
+  isAttachmentDisabled = false,
 }: ChatBoxBaseProps) {
   const { t } = useTranslation(['common', 'tasks']);
+  const phone = usePhoneLayout();
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const optionsId = useId();
 
   const isDragActive = dropzone?.isDragActive ?? false;
 
@@ -113,7 +123,7 @@ export function ChatBoxBase({
       {banner}
 
       {/* Header - Stats and selector */}
-      {visualVariant === VisualVariant.NORMAL && (
+      {!phone && visualVariant === VisualVariant.NORMAL && (
         <div className="mobile-composer-header flex items-center gap-base border-b px-base py-base">
           <div className="flex flex-1 items-center gap-base text-sm min-w-0 overflow-hidden">
             {headerLeft}
@@ -127,15 +137,69 @@ export function ChatBoxBase({
         {editor}
 
         {/* Footer - Controls */}
-        <div className="mobile-composer-controls flex items-end justify-between gap-base">
-          <Toolbar className="flex-1 min-w-0 flex-wrap !gap-half">
-            <div className="mobile-model-selector contents">
-              {modelSelector}
+        {phone ? (
+          <>
+            <div className="phone-prompt-actions">
+              <button
+                type="button"
+                aria-expanded={optionsOpen}
+                aria-controls={optionsId}
+                onClick={() => setOptionsOpen(!optionsOpen)}
+              >
+                <SlidersHorizontalIcon size={20} /> Options
+              </button>
+              <button
+                type="button"
+                aria-label="Attach file"
+                disabled={isAttachmentDisabled}
+                onClick={(event) =>
+                  event.currentTarget
+                    .closest('.mobile-composer')
+                    ?.querySelector<HTMLInputElement>(
+                      '.phone-prompt-tools input[type="file"]'
+                    )
+                    ?.click()
+                }
+              >
+                <PaperclipIcon size={20} />
+              </button>
+              <div className="phone-prompt-send">{footerRight}</div>
             </div>
-            <div className="mobile-composer-actions contents">{footerLeft}</div>
-          </Toolbar>
-          <div className="flex shrink-0 gap-base">{footerRight}</div>
-        </div>
+            <section
+              id={optionsId}
+              hidden={!optionsOpen}
+              className="phone-prompt-options"
+              aria-label="Prompt options"
+            >
+              <div className="phone-option-label">Model & permissions</div>
+              <Toolbar className="mobile-model-selector flex-wrap">
+                {modelSelector}
+              </Toolbar>
+              {visualVariant === VisualVariant.NORMAL && (
+                <>
+                  <div className="phone-option-label">Session</div>
+                  <Toolbar className="flex-wrap">{headerRight}</Toolbar>
+                  <div className="phone-prompt-context">{headerLeft}</div>
+                </>
+              )}
+              <Toolbar className="phone-prompt-tools flex-wrap">
+                {footerLeft}
+              </Toolbar>
+            </section>
+          </>
+        ) : (
+          <div className="mobile-composer-controls flex items-end justify-between gap-base">
+            <Toolbar className="flex-1 min-w-0 flex-wrap !gap-half">
+              <div className="mobile-model-selector contents">
+                {modelSelector}
+              </div>
+              <div className="mobile-composer-actions contents">
+                {footerLeft}
+              </div>
+            </Toolbar>
+            <div className="flex shrink-0 gap-base">{footerRight}</div>
+          </div>
+        )}
       </div>
     </div>
   );

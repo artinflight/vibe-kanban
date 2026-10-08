@@ -7,6 +7,8 @@ full-screen task details with board state retention, readable cards and a
 VisualViewport/safe-area-aware composer. Desktop panels and configured execution
 model/effort remain intact. No merge, deployment or production operation is
 permitted in this stream. Read VK_MOBILE_UX.md for acceptance and remaining limits.
+Review is [draft PR #224](https://github.com/artinflight/vibe-kanban/pull/224)
+against `staging`; source commit `098fa753f` is pushed.
 
 # October 5: AutoSwitch reloadable module
 

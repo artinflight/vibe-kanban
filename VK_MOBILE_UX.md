@@ -1,6 +1,8 @@
 # Phone interaction pass
 
 Branch: `vk/eb7d-vk-native-feelin`. Frontend only; not deployed.
+Draft review: [PR #224](https://github.com/artinflight/vibe-kanban/pull/224) into
+`staging`. Source implementation commit: `098fa753f`.
 
 ## Experience
 
@@ -113,6 +115,13 @@ local VK dataset, selecting VK Dev and TF::Build when present.
 A separate 390px run with `focus-acceptance/results.json` also passed after the
 explicit opener-focus restoration change, asserting that Back returns focus to
 the exact invoking navigation button.
+
+Production builds for both local-web and remote-web, frontend type/lint/format,
+i18n and legacy checks passed in the
+[frontend CI job](https://github.com/artinflight/vibe-kanban/actions/runs/37781846014/job/113326731958)
+for source commit `098fa753f`. The duplicate local bundle build was stopped after
+that result became available: it reached chunk rendering, but host memory/I/O
+pressure made it unusually slow. No local bundle-build success is claimed.
 
 The branch's temporary frontend preview and its tailnet route were stopped after
 review artifacts were captured. Screenshots are retained on the SSD, outside Git, since

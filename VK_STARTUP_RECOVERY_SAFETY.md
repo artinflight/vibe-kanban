@@ -31,9 +31,9 @@ handler; integration into PR150 must retain that candidate's actual capacity
 metadata behind the same strict whole-invocation gate. Never use a null source
 commit as proof of artifact provenance.
 
-Ordinary startup requires `VK_RUNTIME_IDENTITY_FILE`. The five-line Unix receipt
+Ordinary startup requires `VK_RUNTIME_IDENTITY_FILE`. The six-line Unix receipt
 pins both the canonical selected database path/device/inode and the configured
-workspace root path/device/inode. Its format is:
+workspace root path/device/inode. It also binds an intrinsic dataset ID checked through a read-only SQLite connection before any migration or writer opens. Its format is:
 
 ```text
 vk-runtime-identity-v1
@@ -41,29 +41,35 @@ database=/absolute/canonical/path/db.v2.sqlite
 database_id=device:inode
 workspace_root=/absolute/canonical/workspaces
 workspace_root_id=device:inode
+dataset_id=32-lowercase-hex-digits
 ```
 
 The receipt is explicit, reviewed deployment input. Startup never discovers,
 creates or repairs it. The selected database and root must already exist, the
-receipt must be a small regular file, and the database must have a SQLite header.
+receipt must be a small regular file, and the database must have a SQLite header plus exactly one matching intrinsic dataset token.
 Missing/empty receipts, relative runtime paths, empty/non-SQLite databases,
-path substitutions and changed filesystem identities fail closed. Configuration
+path substitutions, changed filesystem identities, missing/empty identity tables, and in-place replacement with another dataset token fail closed. Configuration
 migration must preserve the selected workspace root. Validation also occurs at
 the reusable server initializer and directly at LocalDeployment construction,
 before log migration or configuration writes. Asset-path resolution now has a
 side-effect-free function.
 
-`scripts/vk_runtime_identity.py` reads explicitly supplied paths and emits this
-receipt to stdout. It is not proof that the caller selected the authoritative
+`scripts/vk_runtime_identity.py` reads explicitly supplied paths and their
+existing dataset token, then emits this receipt to stdout. It is not proof that the caller selected the authoritative
 dataset, a recovery audit, or permission to enroll production. A later reviewed
 controller must obtain provenance first and bind a new receipt to its actual
 runtime paths. Database replacement/restoration requires a newly reviewed
-receipt; routine SQLite writes preserve its inode. No receipt for production was
+receipt; routine SQLite writes preserve its inode and intrinsic dataset token. No receipt for production was
 created during this task.
 
 This is a deliberate startup compatibility change: implicit first-run database
 creation and old-database copying cannot pass the gate. Development/private
-instances need a seeded private SQLite database and namespace. Identity v1 uses
+instances need a seeded private SQLite database and namespace. Their explicit
+bootstrap must provision a `vk_runtime_identity` table with a singleton row:
+`singleton INTEGER PRIMARY KEY CHECK (singleton = 1)` and
+`dataset_id TEXT NOT NULL UNIQUE`, with one new random UUID expressed as32 hex
+digits for that distinct dataset. Bootstrap is a separate reviewed action;
+startup and the receipt producer never provision it. Identity v1 uses
 Unix filesystem identity; other platforms fail closed and require a separately
 reviewed identity implementation before adopting this repair.
 
@@ -196,3 +202,13 @@ The source84d1d2a evidence packet is fully hash-verified on Desktop at
 It retains the source patch, current audit, owner comparison, local validation
 logs and the exact generated-cache retirement inventory. Later evidence must use
 a distinct bundle, preserving this first packet and the failed CI result.
+
+## Intrinsic dataset identity correction
+
+Review against the hard requirements found that filesystem identity alone cannot
+detect a database rewritten in place. The receipt now also requires an intrinsic
+dataset token. The preflight reads only that token through a read-only connection
+with creation disabled; missing, empty, duplicate or mismatched token evidence
+fails before migration or writer construction. Regressions include a token
+removed/changed in place without changing the database inode. The real-binary
+harness now has16 cases; its final hosted acceptance remains required.

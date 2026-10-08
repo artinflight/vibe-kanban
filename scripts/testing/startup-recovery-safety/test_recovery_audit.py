@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import stat
 import tempfile
+import sqlite3
 import unittest
 
 REPO = Path(__file__).resolve().parents[3]
@@ -112,13 +113,33 @@ class RecoveryAuditTests(unittest.TestCase):
         self.assertFalse(result['uncovered_names'][0]['current_exists'])
         self.assertFalse(result['new_file_preservation_verified'])
 
+    def test_identity_producer_requires_intrinsic_dataset_evidence(self):
+        identity_spec = importlib.util.spec_from_file_location('identity_producer', REPO / 'scripts/vk_runtime_identity.py')
+        producer = importlib.util.module_from_spec(identity_spec)
+        identity_spec.loader.exec_module(producer)
+        db = self.root / 'dataset.sqlite'
+        with sqlite3.connect(db) as connection:
+            connection.execute('CREATE TABLE fixture (id INTEGER)')
+        with self.assertRaises(sqlite3.OperationalError): producer.receipt(db, self.root)
+        with sqlite3.connect(db) as connection:
+            connection.execute('CREATE TABLE vk_runtime_identity (singleton INTEGER PRIMARY KEY, dataset_id TEXT NOT NULL)')
+            connection.execute('INSERT INTO vk_runtime_identity VALUES (1, ?)', ['0123456789abcdef0123456789abcdef'])
+        before = db.read_bytes()
+        self.assertIn('dataset_id=0123456789abcdef0123456789abcdef', producer.receipt(db, self.root))
+        self.assertEqual(db.read_bytes(), before)
+
     def test_runtime_gates_precede_stateful_startup_and_no_automatic_deletion(self):
         main = (REPO / 'crates/server/src/main.rs').read_text()
         self.assertLess(main.index('parse_server_invocation(std::env::args_os()'), main.index('sentry_utils::init_once'))
-        self.assertLess(main.index('validate_startup_identity()?'), main.index('if !asset_dir().exists()'))
+        self.assertLess(main.index('validate_startup_identity().await?'), main.index('if !asset_dir().exists()'))
         deployment = (REPO / 'crates/local-deployment/src/lib.rs').read_text()
         constructor = deployment.split('async fn new(shutdown: CancellationToken)')[1]
-        self.assertLess(constructor.index('validate_startup_identity()?'), constructor.index('migrate_execution_logs_to_files'))
+        self.assertLess(constructor.index('validate_startup_identity().await?'), constructor.index('migrate_execution_logs_to_files'))
+        preflight = deployment.split('pub async fn validate_startup_identity')[1].split('const EVENT_HISTORY_BYTES')[0]
+        self.assertIn('.read_only(true)', preflight)
+        self.assertIn('.create_if_missing(false)', preflight)
+        self.assertIn('SELECT dataset_id FROM vk_runtime_identity', preflight)
+        self.assertNotIn('CREATE TABLE', preflight)
         container = (REPO / 'crates/local-deployment/src/container.rs').read_text()
         self.assertNotIn('spawn_workspace_cleanup', container)
         self.assertNotIn('cleanup_expired_workspaces', container)

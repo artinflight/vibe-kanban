@@ -48,9 +48,9 @@ pub mod container;
 mod copy;
 pub mod pty;
 
-/// Validate operator-pinned paths before any migration, config write or DB open.
+/// Validate operator-pinned identity before any migration, config write or writable DB open.
 /// This also protects callers that construct a deployment without the server CLI.
-pub fn validate_startup_identity() -> Result<(), std::io::Error> {
+pub async fn validate_startup_identity() -> Result<(), std::io::Error> {
     let assets = utils::assets::asset_dir_path();
     let config_path = assets.join("config.json");
     let workspace_root = match std::fs::read(&config_path) {
@@ -95,11 +95,36 @@ pub fn validate_startup_identity() -> Result<(), std::io::Error> {
                 "VK_RUNTIME_IDENTITY_FILE is required; runtime identity is not established",
             )
         })?;
-    utils::runtime_safety::validate_runtime_identity(
+    let identity = utils::runtime_safety::validate_runtime_identity(
         std::path::Path::new(&pin),
         &assets.join("db.v2.sqlite"),
         &workspace_root,
+    )?;
+    // Filesystem pins alone cannot detect an in-place replacement/truncation.
+    // Read the intrinsic dataset token through a read-only connection before any
+    // migration/configuration write. Never provision missing identity at startup.
+    use sqlx::Connection;
+    let options = sqlx::sqlite::SqliteConnectOptions::new()
+        .filename(&identity.database)
+        .read_only(true)
+        .create_if_missing(false);
+    let mut connection = sqlx::SqliteConnection::connect_with(&options)
+        .await
+        .map_err(|e| std::io::Error::other(format!("cannot read dataset identity: {e}")))?;
+    let ids = sqlx::query_scalar::<_, String>(
+        "SELECT dataset_id FROM vk_runtime_identity WHERE singleton = 1",
     )
+    .fetch_all(&mut connection)
+    .await
+    .map_err(|e| std::io::Error::other(format!("dataset identity is not established: {e}")))?;
+    connection.close().await.map_err(std::io::Error::other)?;
+    if ids.as_slice() != [identity.dataset_id] {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            "database dataset identity does not match the pinned runtime",
+        ));
+    }
+    Ok(())
 }
 
 const EVENT_HISTORY_BYTES: usize = 1024 * 1024;
@@ -174,7 +199,7 @@ struct PendingHandoff {
 #[async_trait]
 impl Deployment for LocalDeployment {
     async fn new(shutdown: CancellationToken) -> Result<Self, DeploymentError> {
-        validate_startup_identity()?;
+        validate_startup_identity().await?;
         // Run one-time process logs migration from DB to filesystem
         services::services::execution_process::migrate_execution_logs_to_files()
             .await

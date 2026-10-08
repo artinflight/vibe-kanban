@@ -9,6 +9,7 @@ import shutil
 import sqlite3
 import subprocess
 import tempfile
+import uuid
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -63,10 +64,10 @@ print('passed',json.dumps(args),sys.argv[2])
 '''
 
 
-def pin(database, root, actual_database, actual_root):
+def pin(database, root, actual_database, actual_root, dataset_id):
     db = actual_database.stat(); workspace = actual_root.stat()
     return (f'vk-runtime-identity-v1\ndatabase={database}\ndatabase_id={db.st_dev}:{db.st_ino}\n'
-            f'workspace_root={root}\nworkspace_root_id={workspace.st_dev}:{workspace.st_ino}\n')
+            f'workspace_root={root}\nworkspace_root_id={workspace.st_dev}:{workspace.st_ino}\ndataset_id={dataset_id}\n')
 
 
 def run_case(binary, label, arguments, outcome):
@@ -83,16 +84,25 @@ def run_case(binary, label, arguments, outcome):
         config['workspace_dir'] = '/run/fixture/workspaces'
         (fixture / 'assets/config.json').write_text(json.dumps(config))
         database = fixture / 'assets/db.v2.sqlite'
+        dataset_id = uuid.uuid4().hex
         with sqlite3.connect(database) as connection:
             connection.execute('CREATE TABLE private_fixture_seed (id INTEGER)')
+            connection.execute('CREATE TABLE vk_runtime_identity (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), dataset_id TEXT NOT NULL UNIQUE)')
+            connection.execute('INSERT INTO vk_runtime_identity VALUES (1, ?)', [dataset_id])
         embedded_assets = str(REPO / 'dev_assets')
         expected_db = embedded_assets + '/db.v2.sqlite'
-        receipt = pin(expected_db, '/run/fixture/workspaces', database, fixture / 'workspaces')
+        receipt = pin(expected_db, '/run/fixture/workspaces', database, fixture / 'workspaces', dataset_id)
         if label == 'empty-receipt': receipt = ''
         if label == 'wrong-database': receipt = receipt.replace(expected_db, '/run/fixture/legacy/db.v2.sqlite')
         if label == 'wrong-root': receipt = receipt.replace('workspace_root=/run/fixture/workspaces', 'workspace_root=/run/fixture/other')
         if label == 'mismatched-object': receipt = receipt.replace('database_id=', 'database_id=999:')
         if label == 'empty-database': database.write_bytes(b'')
+        if label == 'missing-dataset':
+            with sqlite3.connect(database) as connection:
+                connection.execute('DROP TABLE vk_runtime_identity')
+        if label == 'wrong-dataset':
+            with sqlite3.connect(database) as connection:
+                connection.execute('UPDATE vk_runtime_identity SET dataset_id = ?', [uuid.uuid4().hex])
         (fixture / 'identity').write_text(receipt)
         command = [shutil.which('bwrap'), '--unshare-all', '--new-session', '--die-with-parent',
                    '--ro-bind', '/', '/', '--tmpfs', '/home', '--tmpfs', '/mnt', '--tmpfs', '/run',
@@ -122,7 +132,7 @@ def main():
         run_case(binary, 'unknown-invocation', arguments, 'reject')
     for arguments in (['--help'], ['--version'], ['--build-info']):
         run_case(binary, 'missing-receipt', arguments, 'inspect')
-    for label in ('missing-receipt', 'empty-receipt', 'wrong-database', 'wrong-root', 'mismatched-object', 'empty-database'):
+    for label in ('missing-receipt', 'empty-receipt', 'wrong-database', 'wrong-root', 'mismatched-object', 'empty-database', 'missing-dataset', 'wrong-dataset'):
         run_case(binary, label, [], 'reject')
     run_case(binary, 'correct-identity', [], 'serve')
 

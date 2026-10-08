@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Emit a Unix runtime identity receipt from explicitly selected, reviewed paths.
 
-This tool reads metadata and the SQLite header only. It never creates a database,
-creates a workspace, modifies the selected paths, or enrolls a running service.
+This tool reads metadata, the SQLite header and the intrinsic dataset token.
+It never creates a database/workspace, writes dataset contents or enrolls a service.
 The caller must establish which dataset/root is authoritative before using it.
 """
 import argparse
 import os
 from pathlib import Path
 import stat
+import sqlite3
 
 
 def receipt(database, workspace_root):
@@ -22,8 +23,13 @@ def receipt(database, workspace_root):
             raise ValueError('not a SQLite database')
     if any('\n' in str(path) or '\r' in str(path) for path in (database, workspace_root)):
         raise ValueError('identity paths cannot contain line breaks')
+    with sqlite3.connect(database.as_uri() + '?mode=ro') as connection:
+        ids = connection.execute('SELECT dataset_id FROM vk_runtime_identity WHERE singleton = 1').fetchall()
+    if len(ids) != 1 or not isinstance(ids[0][0], str) or len(ids[0][0]) != 32 or any(c not in '0123456789abcdef' for c in ids[0][0]):
+        raise ValueError('dataset identity is missing or invalid; enrollment is a separate reviewed action')
+    dataset_id = ids[0][0]
     return (f'vk-runtime-identity-v1\ndatabase={database}\ndatabase_id={db.st_dev}:{db.st_ino}\n'
-            f'workspace_root={workspace_root}\nworkspace_root_id={root.st_dev}:{root.st_ino}\n')
+            f'workspace_root={workspace_root}\nworkspace_root_id={root.st_dev}:{root.st_ino}\ndataset_id={dataset_id}\n')
 
 
 def main():

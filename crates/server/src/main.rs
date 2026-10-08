@@ -31,7 +31,7 @@ pub enum VibeKanbanError {
 
 #[tokio::main]
 async fn main() -> Result<(), VibeKanbanError> {
-    // This gate must precede TLS, telemetry, path creation and deployment/DB opening.
+    // This gate must precede TLS, telemetry, path creation and deployment/writable DB opening.
     use utils::runtime_safety::{ServerInvocation, parse_server_invocation};
     match parse_server_invocation(std::env::args_os().skip(1))? {
         ServerInvocation::Help => {
@@ -56,7 +56,7 @@ async fn main() -> Result<(), VibeKanbanError> {
             );
             return Ok(());
         }
-        ServerInvocation::Serve => local_deployment::validate_startup_identity()?,
+        ServerInvocation::Serve => local_deployment::validate_startup_identity().await?,
     }
 
     // Install rustls crypto provider before any TLS operations

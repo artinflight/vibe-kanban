@@ -2,12 +2,15 @@
 //! An identity receipt is explicit deployment input, never discovered or enrolled
 //! by startup. Unix device/inode pins survive SQLite writes, but deliberately
 //! reject database replacement, recovery placement and a different namespace.
-use std::{
-    ffi::OsString,
-    fs,
-    io::{self, Read},
-    path::Path,
-};
+use std::{ffi::OsString, io, path::Path};
+#[cfg(unix)]
+use std::{fs, io::Read};
+
+#[derive(Debug)]
+pub struct RuntimeIdentity {
+    pub database: std::path::PathBuf,
+    pub dataset_id: String,
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ServerInvocation {
@@ -48,7 +51,7 @@ pub fn validate_runtime_identity(
     receipt: &Path,
     database: &Path,
     workspace_root: &Path,
-) -> io::Result<()> {
+) -> io::Result<RuntimeIdentity> {
     let pin_metadata = fs::symlink_metadata(receipt)?;
     if !pin_metadata.is_file() || pin_metadata.len() > 16384 {
         return Err(denied(
@@ -57,7 +60,7 @@ pub fn validate_runtime_identity(
     }
     let text = fs::read_to_string(receipt)?;
     let lines: Vec<_> = text.lines().collect();
-    if lines.len() != 5 || lines[0] != "vk-runtime-identity-v1" {
+    if lines.len() != 6 || lines[0] != "vk-runtime-identity-v1" {
         return Err(denied("invalid runtime identity receipt"));
     }
     let value = |index: usize, key: &str| -> io::Result<&str> {
@@ -70,6 +73,10 @@ pub fn validate_runtime_identity(
     let expected_database_id = value(2, "database_id=")?;
     let expected_root = value(3, "workspace_root=")?;
     let expected_root_id = value(4, "workspace_root_id=")?;
+    let dataset_id = value(5, "dataset_id=")?;
+    if dataset_id.len() != 32 || !dataset_id.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err(denied("missing or invalid dataset identity"));
+    }
     if !database.is_absolute() || !workspace_root.is_absolute() {
         return Err(denied(
             "selected database and workspace root must be absolute",
@@ -97,7 +104,10 @@ pub fn validate_runtime_identity(
     if &header != b"SQLite format 3\0" {
         return Err(denied("selected database is empty or is not SQLite"));
     }
-    Ok(())
+    Ok(RuntimeIdentity {
+        database,
+        dataset_id: dataset_id.to_owned(),
+    })
 }
 
 // No fallback to weaker path-only authority on platforms lacking Unix identity.
@@ -106,7 +116,7 @@ pub fn validate_runtime_identity(
     _receipt: &Path,
     _database: &Path,
     _workspace_root: &Path,
-) -> io::Result<()> {
+) -> io::Result<RuntimeIdentity> {
     Err(denied(
         "runtime identity v1 requires Unix filesystem identity",
     ))
@@ -147,7 +157,7 @@ mod tests {
         fn pin(&self) {
             let db = self.path.join("db.sqlite");
             let root = self.path.join("workspaces");
-            fs::write(self.path.join("identity"), format!("vk-runtime-identity-v1\ndatabase={}\ndatabase_id={}\nworkspace_root={}\nworkspace_root_id={}\n", db.display(), object_id(&fs::metadata(&db).unwrap()), root.display(), object_id(&fs::metadata(&root).unwrap()))).unwrap();
+            fs::write(self.path.join("identity"), format!("vk-runtime-identity-v1\ndatabase={}\ndatabase_id={}\nworkspace_root={}\nworkspace_root_id={}\ndataset_id=0123456789abcdef0123456789abcdef\n", db.display(), object_id(&fs::metadata(&db).unwrap()), root.display(), object_id(&fs::metadata(&root).unwrap()))).unwrap();
         }
         fn validate(&self) -> io::Result<()> {
             validate_runtime_identity(
@@ -155,6 +165,7 @@ mod tests {
                 &self.path.join("db.sqlite"),
                 &self.path.join("workspaces"),
             )
+            .map(|_| ())
         }
         fn sentinel(&self) {
             assert_eq!(
@@ -247,6 +258,18 @@ mod tests {
         assert!(f.validate().is_err());
         f.sentinel();
     }
+    #[test]
+    fn missing_and_invalid_dataset_pin_fails_closed() {
+        let f = Fixture::new();
+        let valid = fs::read_to_string(f.path.join("identity")).unwrap();
+        for bad in ["", "dataset_id=\n", "dataset_id=wrong\n"] {
+            let text = valid.lines().take(5).collect::<Vec<_>>().join("\n") + "\n" + bad;
+            fs::write(f.path.join("identity"), text).unwrap();
+            assert!(f.validate().is_err());
+            f.sentinel();
+        }
+    }
+
     #[test]
     fn wrong_root_and_link_receipt_fail_closed() {
         let f = Fixture::new();

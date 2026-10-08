@@ -9,7 +9,7 @@ packet location/hash and current review boundary in VK_STARTUP_RECOVERY_SAFETY.m
 Read VK_STARTUP_RECOVERY_SAFETY.md. This repair was developed in a new worktree
 from fork staging; the original Staging maintenance workspace remains clean.
 Argument inspection/rejection precedes initialization; runtime startup requires
-an explicit database/root identity receipt; automatic shared-workspace deletion
+an explicit database/root receipt and matching intrinsic dataset token; automatic shared-workspace deletion
 is removed. The fresh recovery audit keeps 47 content differences, three missing
 mode records, 14,382 names without authenticated metadata and both journal gaps
 explicit. No zero-loss, deployment or release-readiness claim is made.

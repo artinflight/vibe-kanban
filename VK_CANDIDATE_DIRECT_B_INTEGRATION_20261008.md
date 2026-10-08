@@ -84,8 +84,13 @@ latest-data fallback, a released kernel lease, corrupt archive, forged descripto
 stale acceptance, EOF failure and default launch prohibition. A real reviewed
 kernel namespace probe also passed: original absolute workspace links resolve
 inside candidate roots, host writes are denied and host manager access is hidden.
-No real VK/CU/native process, scanner, consent acceptance or whole-state restore
-was exercised. Retained test failures were test-expectation errors or correctly
+Three package-binding regressions also passed, including actual packaged pin
+loading and mutation rejection. The 32+10 contract cases passed again from the
+fresh tool package: 51 files, five candidate modules and eight reviewed source
+pins are bound. This is 45 unique regressions, not 87 distinct cases. No real
+VK/CU/native process, scanner, consent acceptance or whole-state restore was
+exercised. See the redacted
+[offline receipt](scripts/deployment/receipts/candidate-direct-b-offline-20261008.json). Retained test failures were test-expectation errors or correctly
 rejected stale evidence; they were corrected without relaxing acceptance checks.
 
 All deployment Python files compiled without generated caches. Direct

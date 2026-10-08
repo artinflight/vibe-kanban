@@ -1,7 +1,8 @@
 # October 8: Scoped offline integration handoff
 
 Read [VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md](VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md).
-32 controller and 10 actual PR229 contract regressions plus the kernel probe pass.
+45 unique regressions and the kernel probe pass; 32+10 also passed from the
+fresh hash-bound tool package (operational acceptance explicitly false).
 Upstream eight pins and all 40 deployment Python files match exact corrected
 PR229 head754129c5f. Preserve existing combined release: apply only focused
 47d4293fe+754129c5f and candidate-specific changes, never this whole baseline.

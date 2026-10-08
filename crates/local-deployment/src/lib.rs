@@ -100,31 +100,7 @@ pub async fn validate_startup_identity() -> Result<(), std::io::Error> {
         &assets.join("db.v2.sqlite"),
         &workspace_root,
     )?;
-    // Filesystem pins alone cannot detect an in-place replacement/truncation.
-    // Read the intrinsic dataset token through a read-only connection before any
-    // migration/configuration write. Never provision missing identity at startup.
-    use sqlx::Connection;
-    let options = sqlx::sqlite::SqliteConnectOptions::new()
-        .filename(&identity.database)
-        .read_only(true)
-        .create_if_missing(false);
-    let mut connection = sqlx::SqliteConnection::connect_with(&options)
-        .await
-        .map_err(|e| std::io::Error::other(format!("cannot read dataset identity: {e}")))?;
-    let ids = sqlx::query_scalar::<_, String>(
-        "SELECT dataset_id FROM vk_runtime_identity WHERE singleton = 1",
-    )
-    .fetch_all(&mut connection)
-    .await
-    .map_err(|e| std::io::Error::other(format!("dataset identity is not established: {e}")))?;
-    connection.close().await.map_err(std::io::Error::other)?;
-    if ids.as_slice() != [identity.dataset_id] {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::PermissionDenied,
-            "database dataset identity does not match the pinned runtime",
-        ));
-    }
-    Ok(())
+    DBService::verify_dataset_identity(&identity.database, &identity.dataset_id).await
 }
 
 const EVENT_HISTORY_BYTES: usize = 1024 * 1024;

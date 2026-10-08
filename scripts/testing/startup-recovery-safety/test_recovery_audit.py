@@ -135,7 +135,9 @@ class RecoveryAuditTests(unittest.TestCase):
         deployment = (REPO / 'crates/local-deployment/src/lib.rs').read_text()
         constructor = deployment.split('async fn new(shutdown: CancellationToken)')[1]
         self.assertLess(constructor.index('validate_startup_identity().await?'), constructor.index('migrate_execution_logs_to_files'))
-        preflight = deployment.split('pub async fn validate_startup_identity')[1].split('const EVENT_HISTORY_BYTES')[0]
+        self.assertIn('DBService::verify_dataset_identity', deployment)
+        database_source = (REPO / 'crates/db/src/lib.rs').read_text()
+        preflight = database_source.split('pub async fn verify_dataset_identity')[1].split('pub async fn')[0]
         self.assertIn('.read_only(true)', preflight)
         self.assertIn('.create_if_missing(false)', preflight)
         self.assertIn('SELECT dataset_id FROM vk_runtime_identity', preflight)

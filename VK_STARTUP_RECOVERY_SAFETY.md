@@ -1,5 +1,18 @@
 # Passing source and remaining review gate
 
+## Subsequent targeted investigation
+
+The historical receipts below are preserved. The operator-authorized follow-up
+recovered 132 exact original commit objects in isolation, verified 129 graphs
+in their declared scope, recovered all 14,382 captured archive-header records
+and authenticated three copied source modes and the initial journal.
+26 original-history rows meet identity plus remote-witness criteria; 119 remain
+unresolved for remote coverage, including 13 unfound original objects. All 448
+names remain unknown; same-name candidate bytes do not establish original identity.
+Read [the current findings](VK_TARGETED_RECOVERY_FINDINGS_20261008.md) for exhaustive
+accounting, actual sources searched, safe artifacts and exact blockers.
+The independent verdict remains bounded and recovery-complete acceptance withheld.
+
 Source `a81d46e92` passes all10 checks in
 [CI37761511753](https://github.com/artinflight/vibe-kanban/actions/runs/37761511753).
 Hosted Cargo tests executed405 tests:405 passed,7 skipped. The real-binary

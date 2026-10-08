@@ -45,7 +45,13 @@ not presented as a new three-file manifest. No private transcript, raw recovered
 file contents or secret is published. Prior parent verdict/routing receipts are
 historical observations and are superseded for review status by this record.
 
-## Smallest next investigation — plan only, not executed
+## Published investigation plan — subsequently executed
+
+The latest operator instruction subsequently authorized investigation and recovery
+into isolated storage. The plan below is retained as the historical scope; actual
+searches, recovered material, proof limits and blockers are recorded in
+[the targeted findings](VK_TARGETED_RECOVERY_FINDINGS_20261008.md). These new
+parent findings do not extend the completed independent reviewer verdict.
 
 Use the unresolved CSV and pinned 145-row Operations ledger as fixed target
 lists. Do not repeat the 710-row audit, successful patch replay, file hashes or
@@ -88,7 +94,7 @@ validation of its affected rows.
    covering the actual gaps and original bytes. A new clean journal, current
    permission or successful test cannot prove missing historical state.
 
-## What remains unknown if no alternate witness exists
+## Historical unknowns at independent-review receipt
 
 The 448 names' prior contents, per-name supersession/deletion times, intermediate
 versions and authorized disposability remain unknown. For the 145 history rows,
@@ -109,4 +115,7 @@ No such decision is required to finish this tracking update or proposed plan.
 
 Operational recovery, release preparation, live-file repair, workspace recreation,
 cleanup and restart/cutover remain separate authorizations. Cleanup stays unavailable
-until Seamus's human QA passes. This turn updates isolated tracking records only.
+until Seamus's human QA passes. The review-receipt turn updated isolated tracking
+only; the subsequent authorized
+investigation recovered material only to isolated storage. No operational action
+is authorized by either record.

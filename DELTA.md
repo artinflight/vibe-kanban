@@ -1566,3 +1566,19 @@ redacted REVIEW.txt, unresolved-448.csv and source manifest; hashes verified,
 historical. No duplicate reviewer or routing change. Targeted read-only source
 plan in VK_INDEPENDENT_RECOVERY_REVIEW_20261008.md; no investigation/restore/live
 repair/recreation/deletion/restart/cutover performed. No code or test changes.
+
+## 2026-10-08 targeted isolated recovery executed
+
+Executed the published retained-source investigation under the later isolated
+recovery authorization. Recovered 132 exact original commit objects; verified 129
+reachable graphs in declared scope, including the authenticated original VK
+shallow boundary. 26 rows meet original identity plus remote witness; 119 still
+lack a verified witness and 13 original objects remain unfound. All 448 names
+remain unknown, with 59 candidate copies covering 13 basenames. Recovered 14,382
+original metadata headers, authenticated the three source mode bits and initial
+journal, and found the same malformed line in eight archived transcripts.
+Native Desktop Git fetch failed wincredman/disabled prompts; no bypass. Two VK
+bundle imports failed prerequisites; preserved unchanged. Parent verification
+only, completed independent review unchanged. See VK_TARGETED_RECOVERY_FINDINGS_20261008.md.
+Production/shared files, original evidence and stable runtime untouched; no
+workspace recreation/restart/cutover/merge/cleanup/permission changes.

@@ -1,5 +1,18 @@
 # October 8 recovery evidence correction — sign-off withheld
 
+## Subsequent targeted investigation
+
+The historical receipts below are preserved. The operator-authorized follow-up
+recovered 132 exact original commit objects in isolation, verified 129 graphs
+in their declared scope, recovered all 14,382 captured archive-header records
+and authenticated three copied source modes and the initial journal.
+26 original-history rows meet identity plus remote-witness criteria; 119 remain
+unresolved for remote coverage, including 13 unfound original objects. All 448
+names remain unknown; same-name candidate bytes do not establish original identity.
+Read [the current findings](VK_TARGETED_RECOVERY_FINDINGS_20261008.md) for exhaustive
+accounting, actual sources searched, safe artifacts and exact blockers.
+The independent verdict remains bounded and recovery-complete acceptance withheld.
+
 The earlier statement that all 710 candidates were accounted for is withdrawn.
 The recovery evidence does **not** support restart, cutover, another restore or
 cleanup. This correction is developed only in the isolated PR153 source checkout.

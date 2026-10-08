@@ -1,3 +1,23 @@
+## October 8 targeted recovery investigation — partial recovery verified
+
+Read VK_TARGETED_RECOVERY_FINDINGS_20261008.md and its exhaustive evidence.
+132/145 exact original commit objects are preserved only in new isolated Desktop B
+object databases; 129 graphs are hash-verified within their declared scope.
+VK uses its authenticated original shallow-history boundary. Only 26 rows meet
+original identity plus remote-witness criteria; 119 remain unresolved for coverage.
+All 448 names remain unknown; 59 same-name candidate copies cover 13 names and
+are not proof of original bytes or retirement. 14,382 captured metadata headers
+and three source mode bits were recovered; later states/ownership remain unknown.
+The initial journal is now Desktop-authenticated; its lifecycle limitations remain.
+Eight archived transcripts retain the same malformed line; no intact suffix found.
+Native Desktop Git fetch is blocked by wincredman/disabled credential prompts;
+no route/credential bypass. Two VK bundle imports failed prerequisites and remain
+explicit. Shared/live trees, workspaces, runtime and original backups are untouched.
+New findings are parent-verified, not a duplicate or extension of the Astra review.
+Recovery-complete/zero-loss acceptance remains withheld. Request additional
+original-object/lifecycle evidence or a decision on enumerated residual unknowns.
+No restart/cutover/merge/cleanup/permission change; cleanup still needs human QA.
+
 ## October 8 recovery evidence correction — sign-off withheld
 
 Read VK_POST_BACKUP_RECONCILIATION_20261008.md. The earlier blanket claim that
@@ -6,18 +26,22 @@ the two retained Desktop packets, individually bind 14 accepted patches and the
 rejected patch, match 11 replayed files and compare all 15 recovery files.
 The checker now fails overall on the preserved transcript parse error.
 Only 228 of 676 absent Hyrox names have baseline/08:53 evidence; the other 448
-have no baseline content and cannot be certified as later-retired. All 145
-original-history rows remain unresolved. The separately authorized Astra High
+have no baseline content and cannot be certified as later-retired. The subsequent
+investigation recovered 132 exact originals in isolation;
+13 remain unfound and 119 rows still lack verified remote witnesses. See
+VK_TARGETED_RECOVERY_FINDINGS_20261008.md for the current exhaustive accounting.
+The separately authorized Astra High
 review completed at 13:59:52 UTC and independently substantiates the corrected
 bounded findings; recovery-complete/universal-zero-loss sign-off is withheld.
 See VK_INDEPENDENT_RECOVERY_REVIEW_20261008.md for the copied redacted report,
-448-row list, source manifest and targeted read-only next-investigation plan.
+448-row list, source manifest and historical investigation plan, now executed.
 Earlier blocked delegation receipts are historical; no duplicate review or
 routing change is needed.
 PR223's remote commit and 11 checks are verified; the c31a workspace's absence
 around 12:40 is operator-reported and its cause unknown. No workspace recreation
 or incident-loss inference is authorized. Production/shared work remain untouched.
-No restart, cutover, restore or cleanup. Cleanup requires Seamus human QA.
+The operator subsequently authorized isolated recovery from retained sources.
+No live placement, restart, cutover or cleanup. Cleanup requires Seamus human QA.
 
 ## Earlier repair acceptance (source review and later evidence review now recorded)
 

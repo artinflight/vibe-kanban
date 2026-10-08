@@ -5,6 +5,6 @@
   },
   {
     "execution_process_id": "00000000-0000-4000-8000-000000000001",
-    "status": { "status": "denied", "reason": "synthetic explicit decline" }
+    "status": { "status": "denied", "reason": "User denied this request." }
   }
 ]

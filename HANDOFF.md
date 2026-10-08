@@ -1,3 +1,44 @@
+# October 8: P1 consent review correction (PR225)
+
+The independent review of source `80d06cecf3bd6552b85b0a058ba87e7d695e1eca`
+reported two P1 consent issues in PR225 comment6062090857. `fc6186d1c` was
+handoff-only. This corrective source turn keeps the same draft and linked
+VK::MCP Approval Bridge issue. Older validation below applies to the initial
+source, not to this correction.
+
+MCP consent now has request-specific composer cards with their own approval and
+execution IDs. These requests are excluded from implicit generic composer
+selection. A fresh approval snapshot plus Ready gates controls after reconnect;
+missing/delayed consent content cannot be approved. Snapshot context is atomic
+and does not wait for timeline logs. Cards are scoped to the displayed session.
+
+The bridge derives a bounded redacted plain-text action summary from invocation
+metadata (tool, connector, targets, parameters and verified display labels).
+Generic fallback/monitor messages are not used as action context. Insufficient,
+unsafe or oversized context returns typed Cancel with truthful attribution.
+Explicit declines, cancellation, timeout, one-shot acceptance and existing
+execution checks remain unchanged. See VK_MCP_APPROVAL_BRIDGE.md for bounds and
+runtime-schema verification through the configured Codex 0.159.2 launcher.
+
+Mounted composer/card integration passed with actual approval selector and
+WebSocket patch hook, mock transport only: A/B concurrency, reversed snapshots,
+reconnect before Ready, delayed context, cancellation, expiry and literal text.
+The synthetic backend fixtures consume the explicit mounted UI response payloads.
+Formatting, ops governance and frontend type/lint checks passed. Full local
+`pnpm run check`, `pnpm run lint`, and `cargo test --workspace` stop at the host's
+missing GLib/GIO/GObject development libraries; no packages were installed.
+The configured-launcher schema verification passed. Corrective Rust tests and
+Clippy are running at publication; final results and exact remote head/CI are
+recorded in PR225's correction receipt. Check that receipt and current head's
+CI before readiness; the initial green source checks below are not this fix's
+acceptance evidence. Current draft:
+https://github.com/artinflight/vibe-kanban/pull/225 (base staging).
+
+No live activation, approvals, manager retries, permission/routing change,
+deployment, restart, recovery, cleanup, merge or Staging runtime operation.
+Recommend remains unchanged. Independent re-review and separately authorized
+activation remain release boundaries, not work authorized by this correction.
+
 # October 8: MCP approval bridge development
 
 Branch `vk/870d-vk-mcp-approval`; linked issue VK::MCP Approval Bridge

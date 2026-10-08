@@ -24,6 +24,7 @@ struct PendingApproval {
     execution_process_id: Uuid,
     tool_name: String,
     is_question: bool,
+    mcp_consent: Option<String>,
     created_at: DateTime<Utc>,
     timeout_at: DateTime<Utc>,
     response_tx: oneshot::Sender<ApprovalOutcome>,
@@ -44,6 +45,8 @@ pub struct ApprovalInfo {
     pub tool_name: String,
     pub execution_process_id: Uuid,
     pub is_question: bool,
+    /// Bounded, redacted invocation context for request-specific MCP consent.
+    pub mcp_consent: Option<String>,
     pub created_at: DateTime<Utc>,
     pub timeout_at: DateTime<Utc>,
 }
@@ -90,6 +93,15 @@ impl Approvals {
         request: ApprovalRequest,
         is_question: bool,
     ) -> Result<(ApprovalRequest, ApprovalWaiter), ApprovalError> {
+        self.create_with_consent(request, is_question, None).await
+    }
+
+    pub(crate) async fn create_with_consent(
+        &self,
+        request: ApprovalRequest,
+        is_question: bool,
+        mcp_consent: Option<String>,
+    ) -> Result<(ApprovalRequest, ApprovalWaiter), ApprovalError> {
         let (tx, rx) = oneshot::channel();
         let default_timeout = ApprovalOutcome::TimedOut;
         let waiter: ApprovalWaiter = rx
@@ -103,6 +115,7 @@ impl Approvals {
             tool_name: request.tool_name.clone(),
             execution_process_id: request.execution_process_id,
             is_question,
+            mcp_consent: mcp_consent.clone(),
             created_at: request.created_at,
             timeout_at: request.timeout_at,
         };
@@ -111,6 +124,7 @@ impl Approvals {
             execution_process_id: request.execution_process_id,
             tool_name: request.tool_name.clone(),
             is_question,
+            mcp_consent,
             created_at: request.created_at,
             timeout_at: request.timeout_at,
             response_tx: tx,
@@ -285,6 +299,7 @@ impl Approvals {
                     tool_name: p.tool_name.clone(),
                     execution_process_id: p.execution_process_id,
                     is_question: p.is_question,
+                    mcp_consent: p.mcp_consent.clone(),
                     created_at: p.created_at,
                     timeout_at: p.timeout_at,
                 }

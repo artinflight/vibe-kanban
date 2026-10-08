@@ -1277,12 +1277,15 @@ impl AppServerClient {
             self.elicitation_diagnostic(&id, "duplicate_request").await;
             return Ok(());
         }
+        let consent_summary = elicitation::consent_summary(&params);
         let origin = if self.cancel.is_cancelled() || peer.disconnected().is_cancelled() {
             Some("process_stopped_or_disconnected")
         } else if !self.elicitation_context_valid(&params).await {
             Some("stale_context")
         } else if elicitation::supported_message(&params).is_none() {
             Some("unsupported_request")
+        } else if consent_summary.is_none() {
+            Some("insufficient_consent_context")
         } else {
             None
         };
@@ -1324,14 +1327,18 @@ impl AppServerClient {
                     .approvals
                     .as_ref()
                     .ok_or(ExecutorApprovalError::ServiceUnavailable)?;
-                let approval_id = service.create_mcp_tool_approval().await?;
+                let approval_id = service
+                    .create_mcp_tool_approval(
+                        consent_summary.as_deref().expect("validated context"),
+                    )
+                    .await?;
                 if client
                     .log_writer
                     .log_raw(
                         &Approval::McpApprovalRequested {
                             call_id: call_id.clone(),
                             approval_id: approval_id.clone(),
-                            message: elicitation::supported_message(&params).unwrap().to_owned(),
+                            message: consent_summary.expect("validated context"),
                             server_name: params.server_name.clone(),
                         }
                         .raw(),
@@ -1806,7 +1813,7 @@ impl JsonRpcCallbacks for AppServerClient {
         request: JSONRPCRequest,
     ) -> Result<(), ExecutorError> {
         // Elicitation metadata may contain credentials, form values or tool prompts.
-        // Only the supported consent message is needed in the review UI.
+        // Only validated, redacted invocation context is retained for consent.
         if request.method == "mcpServer/elicitation/request" {
             return match ServerRequest::try_from(request.clone()) {
                 Ok(ServerRequest::McpServerElicitationRequest { request_id, params }) => {

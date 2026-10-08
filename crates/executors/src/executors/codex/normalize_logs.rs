@@ -154,11 +154,7 @@ impl ToNormalizedEntry for DynamicToolState {
                 status: self.status.clone(),
             },
             content: if self.tool == super::elicitation::TOOL {
-                format!(
-                    "MCP server: {}\n\n{}\n\nApprove this call only.",
-                    self.arguments["server"].as_str().unwrap_or("unknown"),
-                    self.arguments["message"].as_str().unwrap_or("")
-                )
+                self.arguments["message"].as_str().unwrap_or("").to_owned()
             } else {
                 self.tool.clone()
             },
@@ -3050,7 +3046,8 @@ mod tests {
             call_id: "synthetic-elicitation".into(),
             approval_id: "approval-ui".into(),
             server_name: "codex_apps".into(),
-            message: "Allow run_session_prompt for synthetic Reporting?".into(),
+            message: "Tool: run_session_prompt for synthetic Reporting\nApprove this call only"
+                .into(),
         }
         .raw();
         let entries = normalize_lines(std::slice::from_ref(&requested)).await;

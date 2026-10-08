@@ -36,9 +36,12 @@ struct Fixture {
 fn request(id: i64) -> Value {
     json!({"id":id,"method":"mcpServer/elicitation/request","params":{
         "threadId":"fixture-thread","turnId":"fixture-turn","serverName":"codex_apps",
-        "mode":"form","message":"Allow run_session_prompt for the synthetic Reporting session?",
+        "mode":"form","message":"Allow this app to run tool \"run_session_prompt\"?",
         "requestedSchema":{"type":"object","properties":{}},
         "_meta":{"codex_approval_kind":"mcp_tool_call","tool_title":"run_session_prompt",
+            "source":"connector","connector_id":"fixture-vk","connector_name":"Synthetic Vibe Kanban",
+            "tool_params":{"session_id":format!("synthetic-target-{id}"),"prompt":"Resume synthetic Reporting only", "api_key":"do-not-log"},
+            "tool_params_display":[{"name":"session_id","display_name":"Reporting session target","value":format!("synthetic-target-{id}")}],
             "persist":["session","always"],"private_fixture_sentinel":"do-not-log"}
     }})
 }
@@ -185,6 +188,10 @@ async fn mcp_reporting_resume_ui_consent_round_trip() {
     let pending = fixture.pending(1).await;
     assert_eq!(pending[0].execution_process_id, fixture.execution);
     assert!(!pending[0].is_question);
+    let context = pending[0].mcp_consent.as_deref().unwrap();
+    assert!(context.contains("synthetic-target-0"));
+    assert!(context.contains("Reporting session target"));
+    assert!(!context.contains("do-not-log"));
     fixture.no_response().await; // durationMs zero cannot become a dispatch without consent
     let id = &pending[0].approval_id;
     // A different execution cannot resolve this request.
@@ -244,6 +251,38 @@ async fn mcp_reporting_resume_ui_consent_round_trip() {
     let declined = fixture.result().await;
     assert_eq!(declined["result"]["action"], "decline");
     assert_eq!(declined["fixtureDispatch"], false);
+    fixture.stop().await;
+}
+
+#[tokio::test]
+async fn mcp_generic_monitor_context_and_inadequate_metadata_fail_closed() {
+    let mut fixture = Fixture::new().await;
+    let mut monitor = request(22);
+    monitor["params"]["message"] =
+        json!("Tool call needs your approval. Reason: This action requires confirmation");
+    fixture.send(monitor).await;
+    let pending = fixture.pending(1).await;
+    let context = pending[0].mcp_consent.as_deref().unwrap();
+    assert!(context.contains("synthetic-target-22"));
+    assert!(context.contains("run_session_prompt"));
+    assert!(context.contains("Resume synthetic Reporting only"));
+    fixture
+        .respond(&pending[0].approval_id, json!({"status":"denied"}))
+        .await;
+    assert_eq!(fixture.result().await["result"]["action"], "decline");
+    for (id, key) in [(23, "tool_params"), (24, "connector_id")] {
+        let mut incomplete = request(id);
+        incomplete["params"]["_meta"]
+            .as_object_mut()
+            .unwrap()
+            .remove(key);
+        fixture.send(incomplete).await;
+        assert_eq!(fixture.result().await["result"]["action"], "cancel");
+        fixture.pending(0).await;
+    }
+    let logs = fixture.logs.lock().await.join("\n");
+    assert!(logs.contains("insufficient_consent_context"));
+    assert!(!logs.contains("do-not-log"));
     fixture.stop().await;
 }
 

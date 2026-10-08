@@ -30,7 +30,10 @@ impl ExecutorApprovalError {
 pub trait ExecutorApprovalService: Send + Sync {
     /// MCP consent must be provided by an interactive backend, even in auto mode.
     /// Noninteractive/no-op services fail closed by default.
-    async fn create_mcp_tool_approval(&self) -> Result<String, ExecutorApprovalError> {
+    async fn create_mcp_tool_approval(
+        &self,
+        _consent_summary: &str,
+    ) -> Result<String, ExecutorApprovalError> {
         Err(ExecutorApprovalError::ServiceUnavailable)
     }
 

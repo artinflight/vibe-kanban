@@ -4,6 +4,11 @@ The null-response elicitation defect has an isolated fix on
 `vk/870d-vk-mcp-approval`; see VK_MCP_APPROVAL_BRIDGE.md. This is source work,
 not a live activation claim. MCP consent must remain interactive and scoped to
 one request; bridge failures must not be attributed to human rejection.
+PR225's two P1 consent findings now have isolated corrective source: request-bound
+composer controls and complete bounded invocation context. Missing context cancels
+safely. Reconnect requires a fresh snapshot/Ready. The configured installed CLI
+schema is checked offline through its 0.159.2 launch wrapper. See HANDOFF.md for
+current validation and remaining release boundaries.
 Recommend routing and existing plugin permissions remain unchanged.
 
 ## October 1: AutoSwitch scope release preparation

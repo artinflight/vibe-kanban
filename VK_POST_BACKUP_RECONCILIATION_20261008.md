@@ -107,3 +107,13 @@ fresh audit, later-activity comparison and source-hash-bound removal evidence.
 Twenty-seven focused Python regressions pass. Independent PR review and the
 separate release-readiness gates remain required; this reconciliation grants no
 production authority.
+
+The source `deaa2e1dcd51d40a103de97d0c9e94db507d152b` evidence packet was delivered
+without replacing an existing archive and independently full-hash-verified on
+Desktop B:
+`B:/vk-backups/vk-startup-recovery-safety-20261008/post-backup-reconciliation-deaa2e1dc.tar.gz`.
+It is 4,200,310 bytes, SHA256
+`67d831c8c6289b6c1a80fb47fb2a4d2767cc34c99b0d50d1f870dfbcf64599f5`.
+It includes the earlier 08:53 audit needed to distinguish later changes, all new
+reconciliation receipts and the exact source patch. The original incident packet
+and previous prevention evidence packets remain retained separately.

@@ -62,6 +62,7 @@ pub struct JsonRpcPeer {
     stdin: Arc<Mutex<ChildStdin>>,
     pending: Arc<Mutex<HashMap<RequestId, oneshot::Sender<PendingResponse>>>>,
     id_counter: Arc<AtomicI64>,
+    disconnected: CancellationToken,
 }
 
 impl JsonRpcPeer {
@@ -76,6 +77,7 @@ impl JsonRpcPeer {
             stdin: Arc::new(Mutex::new(stdin)),
             pending: Arc::new(Mutex::new(HashMap::new())),
             id_counter: Arc::new(AtomicI64::new(1)),
+            disconnected: CancellationToken::new(),
         };
 
         let reader_peer = peer.clone();
@@ -201,11 +203,16 @@ impl JsonRpcPeer {
     }
 
     pub async fn shutdown(&self) -> Result<(), ExecutorError> {
+        self.disconnected.cancel();
         let mut pending = self.pending.lock().await;
         for (_, sender) in pending.drain() {
             let _ = sender.send(PendingResponse::Shutdown);
         }
         Ok(())
+    }
+
+    pub fn disconnected(&self) -> CancellationToken {
+        self.disconnected.clone()
     }
 
     pub async fn send<T>(&self, message: &T) -> Result<(), ExecutorError>

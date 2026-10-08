@@ -129,6 +129,11 @@ impl ExecutorApprovalBridge {
 
 #[async_trait]
 impl ExecutorApprovalService for ExecutorApprovalBridge {
+    async fn create_mcp_tool_approval(&self) -> Result<String, ExecutorApprovalError> {
+        self.create_internal("MCP tool (approve once)", false, None)
+            .await
+    }
+
     async fn create_tool_approval(&self, tool_name: &str) -> Result<String, ExecutorApprovalError> {
         self.create_internal(tool_name, false, None).await
     }

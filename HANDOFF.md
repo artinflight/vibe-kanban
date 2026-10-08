@@ -1,3 +1,23 @@
+# October 8: MCP approval bridge development
+
+Branch `vk/870d-vk-mcp-approval`; linked issue VK::MCP Approval Bridge
+`08659a8a-7908-4f92-b1e5-eee0e4e1c38c`. See VK_MCP_APPROVAL_BRIDGE.md for
+scope, outcomes and isolated validation commands. The final read-only diagnostic
+report confirmed malformed null elicitation responses, not human rejection.
+No private raw logs/customer identities were copied into this public source.
+
+Source handles empty-form MCP tool consent through the actual approval lifecycle,
+with one-call grants, fail-closed typed cancellation and distinct origin messages.
+Concurrent/replayed IDs, lifecycle/EOF/stop and execution identity are covered.
+Real UI-hook payloads feed the offline service fixture; notifications/network and
+model usage are absent. Publication targets a draft PR into staging only.
+
+Validation and remote/CI receipts are being collected before final handoff.
+Live activation: NOT performed. Review/CI and a separately authorized release
+remain necessary before live connector/operator acceptance. Do not resume the
+manager or operate Staging's stopped conversation/runtime from this stream.
+Recommend-only routing and plugin permissions remain unchanged.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

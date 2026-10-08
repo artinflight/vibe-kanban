@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod elicitation_tests;
 pub mod executor_approvals;
 
 use std::{collections::HashSet, sync::Arc, time::Duration as StdDuration};
@@ -145,11 +147,12 @@ impl Approvals {
         id: &str,
         req: ApprovalResponse,
     ) -> Result<(ApprovalOutcome, ToolContext), ApprovalError> {
-        if let Some((_, p)) = self.pending.remove(id) {
-            if let Err(e) = Self::validate_approval_response(&req.status, p.is_question) {
-                self.pending.insert(id.to_string(), p);
-                return Err(e);
+        if let dashmap::mapref::entry::Entry::Occupied(entry) = self.pending.entry(id.to_owned()) {
+            if req.execution_process_id != entry.get().execution_process_id {
+                return Err(ApprovalError::InvalidStatus);
             }
+            Self::validate_approval_response(&req.status, entry.get().is_question)?;
+            let p = entry.remove();
 
             let outcome = req.status.clone();
             self.completed.insert(id.to_string(), outcome.clone());

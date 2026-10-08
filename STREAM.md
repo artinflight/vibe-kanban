@@ -1,3 +1,12 @@
+# October 8: MCP approval bridge
+
+Scope: route supported empty-form Codex MCP tool elicitations into Vibe approval,
+return typed results, preserve explicit consent and truthful origin diagnostics.
+Linked issue/workspace: VK::MCP Approval Bridge. Development tests and draft PR
+only; no deployment, restart, recovery, permission changes, production resumes
+or Staging-agent operations. See VK_MCP_APPROVAL_BRIDGE.md and current HANDOFF.md.
+Older entries below are historical and belong to other streams.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

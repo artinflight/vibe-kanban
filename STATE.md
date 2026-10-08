@@ -1,3 +1,11 @@
+## October 8: Codex MCP approval bridge development
+
+The null-response elicitation defect has an isolated fix on
+`vk/870d-vk-mcp-approval`; see VK_MCP_APPROVAL_BRIDGE.md. This is source work,
+not a live activation claim. MCP consent must remain interactive and scoped to
+one request; bridge failures must not be attributed to human rejection.
+Recommend routing and existing plugin permissions remain unchanged.
+
 ## October 1: AutoSwitch scope release preparation
 
 PR134/135 merged the downward-routing scope correction into staging/main. It is

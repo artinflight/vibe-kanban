@@ -1523,3 +1523,8 @@ Recommend is required; no deployment/restart/cutover or Auto activation. Deadlin
 for full useful router readiness is before October 30, 2026 (20x becomes 10x).
 See VK_AUTOSWITCH_RELOAD.md for mandatory next-candidate packaging and remaining
 acceptance/ownership dependencies; CU credit budgeting is a separate issue.
+
+## 2026-10-08 — MCP approval bridge development
+
+Added isolated typed MCP consent bridge and offline UI/service/protocol regressions.
+See VK_MCP_APPROVAL_BRIDGE.md and HANDOFF.md. No activation or permission changes.

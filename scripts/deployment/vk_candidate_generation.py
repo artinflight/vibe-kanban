@@ -468,7 +468,9 @@ class CandidateController:
             if row is None:
                 continue
             if row["kind"] == "directory":
-                target.mkdir(mode=row["mode"])
+                # New private directories stay writable until descendants are
+                # restored; final metadata applies the recorded mode last.
+                target.mkdir(mode=0o700)
             elif row["kind"] == "file":
                 require(not target.exists() and not target.is_symlink(), "restore would overwrite an unquarantined path")
                 h, count = hashlib.sha256(), 0
@@ -547,6 +549,14 @@ class CandidateController:
                    and expected.get(p, {}).get("kind") == "directory"
                    and {k: v for k, v in current[p].items() if k != "mtime_ns"}
                    == {k: v for k, v in expected[p].items() if k != "mtime_ns"})}
+        # Cross-parent directory rename can require write permission on the
+        # moved directory itself. Never change existing permissions to evade it.
+        for name in list(changed):
+            for parent in [relative(name), *relative(name).parents]:
+                p = str(parent)
+                row = current.get(p, {})
+                require(row.get("kind") != "directory" or row["mode"] & 0o300 == 0o300,
+                        "changed read-only directory requires explicit reviewed preservation strategy; no permission bypass")
         # Move a changed directory/type as one retained subtree; restore its whole dependency closure.
         containers = {p for p in changed if current.get(p, {}).get("kind") == "directory"}
         tops = sorted((p for p in containers if not any(p.startswith(q + "/") for q in containers if q != p)),

@@ -128,10 +128,11 @@ implemented by the fixture adapters and cannot be replaced by caller-supplied
 
 ## Validation and artifacts
 
-30 retained real-filesystem regressions passed, including under `python -O`.
+31 retained real-filesystem regressions passed, including under `python -O`.
 They cover full files/SQLite/mode/link/xattr/timestamp restoration, initial and
 final writer barriers, stale/mismatched/skipped receipts, corrupted bytes/DB,
-lost fencing, missing/insufficient capacity policy, failed-refresh quarantine,
+lost fencing, read-only directory restoration and blocked refresh, missing/insufficient
+capacity policy, failed-refresh quarantine,
 test-edit reconciliation, newer incumbent
 writes, latest-data fallback/sidecar normalization, protected fallback pinning,
 identity rebinding, scope accounting and credential redaction. All test source
@@ -157,7 +158,7 @@ Private artifact root: `/mnt/vk-storage/vk-safe-release-20261008/`.
 | `scope-discovery-application-tooling-v3.json` | `16e8bb4953fcc733fab2a18c5e17a900e1e67afb480e747696567c75ebcd22e0` |
 | `operational-candidate-scope-proposal-v2.json` | `652351b0f39c295a5d229c85bdd63d27b3651f5d2fe19f31f4c0793ad254e022` |
 
-Validation logs: `candidate-controller-validation-final-v2.txt`,
+Validation logs: `candidate-controller-validation-final-v4.txt`,
 `candidate-kernel-validation.txt`; cross-prefix receipt under
 `candidate-cross-prefix-kernel-bbv54p6f/result.json`. Source is this branch's
 local commit, with a redacted patch/hash handoff outside Git. No private receipts,
@@ -178,6 +179,15 @@ raw transcript, configuration values, credentials or recovery payload enter Git.
    the measured fenced catch-up/activation/latest-data-fallback path. External MCP
    writers need their own bound fence and candidate data paths. No operational
    owner hook is wired by this patch.
+
+An added private fixture encountered an actual `PermissionError` when moving a
+mode0555 directory across parents into quarantine. That fixture and failed log
+(`candidate-controller-validation-final-v3.txt`) remain retained; permissions
+were not changed and that denied move was not retried. The controller now rejects
+this case before any refresh mutation. If actual metadata includes a changed
+non-writable directory, catch-up requires an explicitly approved private-directory
+transition or another reviewed preservation strategy. No such permission bypass
+is implemented here; no claim is made that production has this condition.
 
 The independent historical review remains bounded and withholds recovery-complete
 and universal-zero-loss sign-off. The 448 names, original-history ledger (including

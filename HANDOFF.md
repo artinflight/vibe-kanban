@@ -2,7 +2,7 @@
 
 Read [VK_CANDIDATE_GENERATION_20261008.md](VK_CANDIDATE_GENERATION_20261008.md).
 Independent filesystem/controller changes and configured dependency accounting
-are ready for root's isolated integration/review. 30 regressions and a real
+are ready for root's isolated integration/review. 31 regressions and a real
 cross-prefix kernel probe passed. Cleanup remains technically unavailable.
 There are no production adapters/launches or new historical-loss acceptance.
 Root coordinates PR229, capacity/full B provider, workflow authorization,

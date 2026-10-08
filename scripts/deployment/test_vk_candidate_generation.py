@@ -434,6 +434,22 @@ class CandidateTests(unittest.TestCase):
         self.assertEqual(inventory(self.layout.tree), inventory(self.incumbent))
         self.assertTrue(list(self.layout.evidence.glob("*-test-and-prior-state/home/state/note")))
 
+    def test_read_only_directory_restore_succeeds_and_refresh_blocks_before_mutation(self):
+        os.chmod(self.incumbent / 'home/state', 0o555)
+        self.provider.capture('initial')
+        self.accepted_rehearsal()
+        os.chmod(self.incumbent / 'home/state', 0o755)  # Private fixture producer only.
+        (self.incumbent / 'home/state/new-file').write_bytes(b'new authoritative file')
+        os.chmod(self.incumbent / 'home/state', 0o555)
+        self.provider.capture('final')
+        self.supervisor.capture = 'final'
+        before = inventory(self.layout.tree)
+        with self.assertRaisesRegex(Blocked, 'read-only directory'):
+            self.controller.catch_up('final')
+        self.assertEqual(inventory(self.layout.tree), before)
+        self.assertEqual(self.controller.phase, 'tested')
+        self.assertEqual(list(self.layout.evidence.glob('*-test-and-prior-state')), [])
+
     def test_crash_restart_with_retained_journal_cannot_forge_new_owner(self):
         self.restored()
         with self.assertRaisesRegex(Blocked, "journal needs explicit recovery"):

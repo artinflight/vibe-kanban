@@ -567,13 +567,17 @@ export type QueueStatus = { "status": "empty" } | { "status": "queued", message:
 
 export type ConflictOp = "rebase" | "merge" | "cherry_pick" | "revert";
 
-export type ExecutorAction = { typ: ExecutorActionType, next_action: ExecutorAction | null, };
+export type ExecutorAction = { routing_decision?: RoutingDecision | null, typ: ExecutorActionType, next_action: ExecutorAction | null, };
 
 export type McpConfig = { servers: { [key in string]?: JsonValue }, servers_path: Array<string>, template: JsonValue, preconfigured: JsonValue, is_toml_config: boolean, };
 
 export type ExecutorActionType = { "type": "CodingAgentInitialRequest" } & CodingAgentInitialRequest | { "type": "CodingAgentFollowUpRequest" } & CodingAgentFollowUpRequest | { "type": "ScriptRequest" } & ScriptRequest | { "type": "ReviewRequest" } & ReviewRequest;
 
 export type ExecutorConfig = {
+/**
+ * Explicit opt-in; absent policy preserves manual selection.
+ */
+routing?: RoutingPolicy | null,
 /**
  * The executor type (e.g., CLAUDE_CODE, AMP)
  */
@@ -598,6 +602,36 @@ reasoning_id?: string | null,
  * Permission policy override
  */
 permission_policy?: PermissionPolicy | null, };
+
+export type RoutingMode = "manual" | "shadow" | "auto";
+
+export type CapabilityFloor = "assessed" | "routine" | "workhorse" | "frontier";
+
+export type RoutingPolicy = { mode: RoutingMode, floor: CapabilityFloor, denied_models: Array<string>,
+/**
+ * Consent to escalate on a failed execution at the next explicit follow-up.
+ */
+allow_escalation: boolean, };
+
+export type RoutingDecision = { version: number, id: string, mode: RoutingMode, floor: CapabilityFloor, reason: string,
+/**
+ * Persist qualification context independently of human-readable reasons.
+ */
+assessed_envelope?: string | null, triage?: TaskTriage | null,
+/**
+ * Bounded classifier usage and result; absent when deterministic triage suffices.
+ */
+semantic?: SemanticTrace | null, requested_model: string | null, selected_model: string | null, selected_effort: string | null, service_tier: string, previous_model: string | null, previous_execution_id: string | null, escalated: boolean, catalog_observed_at: number | null, account_fingerprint: string | null, };
+
+export type TaskTriage = { version: number, intent: string, scope: string, pattern: string, ambiguity: string, horizon: string, validation: string, risk: Array<string>,
+/**
+ * Evidence strength, not a model's self-reported probability of success.
+ */
+uncertainty: string, needs_repo_inspection: boolean, evidence: Array<string>, inspected_entries: number, inspected_files: number, };
+
+export type SemanticClass = { envelope: string, scope: string, novelty: string, ambiguity: string, horizon: string, validation: string, risks: Array<string>, uncertainty: string, inspection_needed: boolean, reason: string, };
+
+export type SemanticTrace = { id: string, status: string, model: string, effort: string, service_tier: string, elapsed_ms: number, native_thread_id: string | null, native_turn_id: string | null, input_tokens: number | null, cached_input_tokens: number | null, output_tokens: number | null, reasoning_tokens: number | null, classification: SemanticClass | null, detail: string, };
 
 export type ScriptContext = "SetupScript" | "CleanupScript" | "ArchiveScript" | "DevServer" | "ToolInstallScript";
 
@@ -823,6 +857,10 @@ export type AgentInfo = { id: string, label: string, description?: string | null
 export enum PermissionPolicy { AUTO = "AUTO", SUPERVISED = "SUPERVISED", PLAN = "PLAN" }
 
 export type ModelSelectorConfig = {
+/**
+ * Backend capability handshake; absent on servers without routing support.
+ */
+supports_routing?: boolean | null,
 /**
  * Available providers
  */

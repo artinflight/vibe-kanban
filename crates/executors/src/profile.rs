@@ -123,6 +123,9 @@ impl std::fmt::Display for ExecutorProfileId {
 /// scratch persistence, and frontend state whenever an executor is used.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
 pub struct ExecutorConfig {
+    /// Explicit opt-in; absent policy preserves manual selection.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub routing: Option<Box<crate::routing::RoutingPolicy>>,
     /// The executor type (e.g., CLAUDE_CODE, AMP)
     #[serde(alias = "profile", deserialize_with = "de_base_coding_agent_kebab")]
     pub executor: BaseCodingAgent,
@@ -147,6 +150,7 @@ impl ExecutorConfig {
     /// Create from just an executor (default variant, no overrides)
     pub fn new(executor: BaseCodingAgent) -> Self {
         Self {
+            routing: None,
             executor,
             variant: None,
             model_id: None,
@@ -176,6 +180,7 @@ impl ExecutorConfig {
 impl From<ExecutorProfileId> for ExecutorConfig {
     fn from(id: ExecutorProfileId) -> Self {
         Self {
+            routing: None,
             executor: id.executor,
             variant: id.variant,
             model_id: None,

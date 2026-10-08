@@ -34,13 +34,19 @@ pub enum ExecutorActionType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct ExecutorAction {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub routing_decision: Option<Box<crate::routing::RoutingDecision>>,
     pub typ: ExecutorActionType,
     pub next_action: Option<Box<ExecutorAction>>,
 }
 
 impl ExecutorAction {
     pub fn new(typ: ExecutorActionType, next_action: Option<Box<ExecutorAction>>) -> Self {
-        Self { typ, next_action }
+        Self {
+            typ,
+            next_action,
+            routing_decision: None,
+        }
     }
     pub fn append_action(mut self, action: ExecutorAction) -> Self {
         if let Some(next) = self.next_action {
@@ -90,6 +96,13 @@ impl Executable for ExecutorAction {
         approvals: Arc<dyn ExecutorApprovalService>,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
-        self.typ.spawn(current_dir, approvals, env).await
+        let mut env = env.clone();
+        if let Some(policy) = crate::routing::config(self).and_then(|c| c.routing.as_ref()) {
+            env.insert("VK_ROUTING_POLICY", serde_json::to_string(policy)?);
+        }
+        if let Some(decision) = &self.routing_decision {
+            env.insert("VK_ROUTING_DECISION", serde_json::to_string(decision)?);
+        }
+        self.typ.spawn(current_dir, approvals, &env).await
     }
 }

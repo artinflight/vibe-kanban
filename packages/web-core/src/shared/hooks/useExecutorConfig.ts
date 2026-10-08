@@ -21,6 +21,7 @@ const OVERRIDE_FIELDS = [
   'agent_id',
   'reasoning_id',
   'permission_policy',
+  'routing',
 ] as const;
 
 const DEFAULT_CODEX_OVERRIDES: Partial<ExecutorConfig> = {
@@ -161,6 +162,13 @@ function useEffectiveOverrides(
     };
 
     for (const field of OVERRIDE_FIELDS) {
+      if (field === 'routing') {
+        // Routing consent is per chat; never inherit it from unrelated last-used settings.
+        resolved.routing =
+          userSelections.routing ??
+          (scratchMatches ? scratchConfig?.routing : undefined);
+        continue;
+      }
       const modelMustMatch = field === 'reasoning_id';
       const scratchModelMatches =
         !modelMustMatch || scratchConfig?.model_id === resolved.model_id;
@@ -377,6 +385,18 @@ export function useExecutorConfig({
     (partial: Partial<ExecutorConfig>) => {
       setUserSelections((prev) => {
         const next = { ...prev, ...partial };
+        if (
+          ('model_id' in partial || 'reasoning_id' in partial) &&
+          !('routing' in partial)
+        ) {
+          next.routing = {
+            floor: 'assessed',
+            denied_models: [],
+            allow_escalation: false,
+            ...(prev.routing ?? executorConfig?.routing),
+            mode: 'manual',
+          };
+        }
         if ('model_id' in partial && !('reasoning_id' in partial)) {
           delete next.reasoning_id;
         }
@@ -395,7 +415,13 @@ export function useExecutorConfig({
         return next;
       });
     },
-    [executor.effective, persistenceKey, variant.resolved, persist]
+    [
+      executor.effective,
+      executorConfig?.routing,
+      persistenceKey,
+      variant.resolved,
+      persist,
+    ]
   );
 
   return {

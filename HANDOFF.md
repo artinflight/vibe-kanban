@@ -1,5 +1,14 @@
 # HANDOFF.md
 
+## October 8 Fresh-Session Continuity
+
+The original Staging Codex thread is policy-blocked and must not be resumed for
+the incident repair. Use `VK_STAGING_CONTINUITY_PACKET_20261008.md` for the
+fact-checked mission, evidence, authority boundaries, current live snapshot and
+success criteria. Use `VK_STAGING_FRESH_SESSION_PROMPT_20261008.md` as the new
+session prompt. These replace raw interrupted-turn replay; they do not authorize
+deployment, restart or cutover.
+
 ## October 7 Verification Incident: Deployment Blocked
 
 Read VK_RECOVERY_INCIDENT_20261007.md first. Combined5ec572245/CU95e7aea47

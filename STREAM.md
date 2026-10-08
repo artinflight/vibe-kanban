@@ -1,3 +1,20 @@
+# October 8: Workspace-first navigation and task attention follow-up
+
+The current frontend stream makes Workspaces the opening screen, removes the
+standalone chat destination from mobile navigation until a workspace is selected,
+starts untouched phone project feeds at To do, and highlights entire actionable
+Kanban/workspace cards using unread/review or approval state. Explicit status
+choices survive navigation during the browser session. Desktop Kanban columns
+remain available. Work is isolated on `vk/eb7d-vk-native-feelin`; its base tree
+matches fork/staging `5a887abf8`.
+
+This follow-up has not been deployed. Production remains the October 8 phone
+release described below; no backend restart, production writes, model/effort
+changes or routing activation are part of this feature work. Five viewport/theme
+cases and deterministic attention states have been validated. See VK_MOBILE_UX.md for evidence and the host GTK/GLib baseline
+limitation. Screenshots and logs are on the mounted secondary SSD at
+`/mnt/vk-storage/vk-workspaces-home-20261008`.
+
 # October 8: Phone frontend deployed
 
 The operator-approved phone redesign/style pass is live at `https://vibe.local`

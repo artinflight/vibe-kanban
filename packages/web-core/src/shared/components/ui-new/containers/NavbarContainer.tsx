@@ -9,6 +9,7 @@ import { useUserOrganizations } from '@/shared/hooks/useUserOrganizations';
 import { useOrganizationStore } from '@/shared/stores/useOrganizationStore';
 import {
   Navbar,
+  MOBILE_TABS,
   type NavbarSectionItem,
   type NavbarBreadcrumbItem,
   type MobileTabId,
@@ -205,9 +206,9 @@ export function NavbarContainer({
         : orgName
       : mobileMode
         ? mobileActiveTab === 'workspaces'
-          ? 'Vibe Kanban'
+          ? 'Workspaces'
           : selectedWorkspace?.name
-        : selectedWorkspace?.branch;
+        : (selectedWorkspace?.branch ?? 'Workspaces');
 
   // Breadcrumbs: Project / Issue / Workspace (only on workspace pages with linked project)
   const linkedProjectId = linkedRemoteWorkspace?.project_id ?? null;
@@ -363,6 +364,11 @@ export function NavbarContainer({
       onNavigateBack={handleNavigateBack}
       onNavigateToBoard={handleNavigateToBoard}
       onOpenDrawer={onOpenDrawer}
+      mobileTabs={
+        selectedWorkspace || isCreateMode
+          ? MOBILE_TABS
+          : MOBILE_TABS.filter((tab) => tab.id === 'workspaces')
+      }
       mobileActiveTab={mobileActiveTab as MobileTabId}
       mobileShowBack={!isOnProjectPage && mobileActiveTab !== 'workspaces'}
       onMobileTabChange={(tab) => {

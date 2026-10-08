@@ -77,6 +77,7 @@ class FixtureSupervisor:
                   "binary_module_scanner_bound", "capacity_controller_ready",
                   "runtime_database_workspace_identity_bound",
                   "whole_state_capacity_restore_verified",
+                  "full_required_linux_metadata_verified",
                   "recommend_and_usage_controls_preserved", "consent_accepted",
                   "current_report_receipts_preserved", "cleanup_unavailable", "fallback_latest_data_compatible")
         receipt = {"root_binding": binding, "source": source, "scope": scope, "stage": stage,

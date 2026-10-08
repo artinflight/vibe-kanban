@@ -82,6 +82,12 @@ implemented by the fixture adapters and cannot be replaced by caller-supplied
   ownership mappings, privileged modes, special files, external hardlinks,
   unresolved/cyclic links, missing xattr/mtime proof and non-user xattrs requiring
   a reviewed adapter. Snapshot sidecars must be normalized by the provider.
+  The built-in equality proof covers mode, uid/gid, mtime, links and user xattrs;
+  it does not certify atime, ctime, birthtime or filesystem inode flags. The
+  supervisor must explicitly account for all required Linux metadata in its
+  bound acceptance receipt and refuse full-state acceptance when any requirement
+  is unsupported. Restored inode allocation/ctime differ from the original by
+  construction. This is an explicit proof limit, not an omitted preservation claim.
 - A source/scope/capture-bound measured capacity policy must be pinned before
   restore or catch-up. The sealed supervisor supplies OP's actual reserve/peak
   evidence; this module checks available bytes and working reserve while streaming.
@@ -151,7 +157,7 @@ Private artifact root: `/mnt/vk-storage/vk-safe-release-20261008/`.
 | `scope-discovery-application-tooling-v3.json` | `16e8bb4953fcc733fab2a18c5e17a900e1e67afb480e747696567c75ebcd22e0` |
 | `operational-candidate-scope-proposal-v2.json` | `652351b0f39c295a5d229c85bdd63d27b3651f5d2fe19f31f4c0793ad254e022` |
 
-Validation logs: `candidate-controller-validation-final.txt`,
+Validation logs: `candidate-controller-validation-final-v2.txt`,
 `candidate-kernel-validation.txt`; cross-prefix receipt under
 `candidate-cross-prefix-kernel-bbv54p6f/result.json`. Source is this branch's
 local commit, with a redacted patch/hash handoff outside Git. No private receipts,

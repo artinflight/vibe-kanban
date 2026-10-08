@@ -48,6 +48,61 @@ pub mod container;
 mod copy;
 pub mod pty;
 
+/// Validate operator-pinned identity before any migration, config write or writable DB open.
+/// This also protects callers that construct a deployment without the server CLI.
+pub async fn validate_startup_identity() -> Result<(), std::io::Error> {
+    let assets = utils::assets::asset_dir_path();
+    let config_path = assets.join("config.json");
+    let workspace_root = match std::fs::read(&config_path) {
+        Ok(bytes) => {
+            let config: serde_json::Value = serde_json::from_slice(&bytes)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+            let raw = String::from_utf8(bytes)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+            let effective = Config::from(raw);
+            let requested = config.get("workspace_dir").and_then(|p| p.as_str());
+            if requested != effective.workspace_dir.as_deref() {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "configuration migration changed workspace identity",
+                ));
+            }
+            match config.get("workspace_dir") {
+                None | Some(serde_json::Value::Null) => {
+                    WorktreeManager::get_default_worktree_base_dir()
+                }
+                Some(serde_json::Value::String(path)) if !path.trim().is_empty() => {
+                    utils::path::expand_tilde(path)
+                }
+                _ => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "invalid workspace_dir",
+                    ));
+                }
+            }
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            WorktreeManager::get_default_worktree_base_dir()
+        }
+        Err(e) => return Err(e),
+    };
+    let pin = std::env::var_os("VK_RUNTIME_IDENTITY_FILE")
+        .filter(|p| !p.is_empty())
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "VK_RUNTIME_IDENTITY_FILE is required; runtime identity is not established",
+            )
+        })?;
+    let identity = utils::runtime_safety::validate_runtime_identity(
+        std::path::Path::new(&pin),
+        &assets.join("db.v2.sqlite"),
+        &workspace_root,
+    )?;
+    DBService::verify_dataset_identity(&identity.database, &identity.dataset_id).await
+}
+
 const EVENT_HISTORY_BYTES: usize = 1024 * 1024;
 const EVENT_CHANNEL_CAPACITY: usize = 1024;
 
@@ -120,6 +175,7 @@ struct PendingHandoff {
 #[async_trait]
 impl Deployment for LocalDeployment {
     async fn new(shutdown: CancellationToken) -> Result<Self, DeploymentError> {
+        validate_startup_identity().await?;
         // Run one-time process logs migration from DB to filesystem
         services::services::execution_process::migrate_execution_logs_to_files()
             .await
@@ -258,7 +314,6 @@ impl Deployment for LocalDeployment {
         let workspace_manager = WorkspaceManager::new(db.clone());
         let container = LocalContainerService::new(
             db.clone(),
-            workspace_manager.clone(),
             msg_stores.clone(),
             config.clone(),
             git.clone(),

@@ -1,3 +1,11 @@
+## October 8 startup safety adoption gate
+
+Read VK_STARTUP_RECOVERY_SAFETY.md before consuming this repair. Startup requires
+an explicitly reviewed Unix database/root identity receipt; automatic workspace
+deletion is disabled. Do not generate a receipt from guessed/default paths or
+bypass the isolated executable boundary. Real isolated acceptance and independent
+review are still required; this branch authorizes no deployment or restart.
+
 # VK Agent Deployment Runbook
 
 ## AutoSwitch next-candidate requirement

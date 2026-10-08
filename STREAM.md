@@ -1,3 +1,41 @@
+## October 8 recovery evidence correction — sign-off withheld
+
+Read VK_POST_BACKUP_RECONCILIATION_20261008.md. The earlier blanket claim that
+all 710 candidates were accounted for is withdrawn. Parent checks authenticate
+the two retained Desktop packets, individually bind 14 accepted patches and the
+rejected patch, match 11 replayed files and compare all 15 recovery files.
+The checker now fails overall on the preserved transcript parse error.
+Only 228 of 676 absent Hyrox names have baseline/08:53 evidence; the other 448
+have no baseline content and cannot be certified as later-retired. All 145
+original-history rows remain unresolved. The separately authorized Astra High
+review completed at 13:59:52 UTC and independently substantiates the corrected
+bounded findings; recovery-complete/universal-zero-loss sign-off is withheld.
+See VK_INDEPENDENT_RECOVERY_REVIEW_20261008.md for the copied redacted report,
+448-row list, source manifest and targeted read-only next-investigation plan.
+Earlier blocked delegation receipts are historical; no duplicate review or
+routing change is needed.
+PR223's remote commit and 11 checks are verified; the c31a workspace's absence
+around 12:40 is operator-reported and its cause unknown. No workspace recreation
+or incident-loss inference is authorized. Production/shared work remain untouched.
+No restart, cutover, restore or cleanup. Cleanup requires Seamus human QA.
+
+## Current repair acceptance
+
+PR153 sourcea81d46e92 passes all10 checks and405 Cargo tests (7 skipped),
+including16 real-server cases under private namespaces. The repair is unmerged;
+independent review supports the bounded findings, with recovery-complete
+acceptance withheld. Production and the maintenance worktree are
+unchanged. See VK_STARTUP_RECOVERY_SAFETY.md. No deployment authority is implied.
+
+## October 8 startup/recovery safety repair
+
+Branch fix/startup-recovery-safety-20261008 starts from fork/staging8b562265d.
+Scope: strict invocation rejection, pre-start runtime identity pins, preservation
+of ambiguous worktrees, read-only recovery verification and isolated regressions.
+See VK_STARTUP_RECOVERY_SAFETY.md for contracts, evidence and validation gaps.
+No changes to maintenance, PR149/150/152, production, routes or services are in scope.
+This branch remains a draft until independent review and real isolated acceptance.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

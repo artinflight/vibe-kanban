@@ -14,6 +14,15 @@ stopped Staging conversation/workspace/runtime was not operated. Recommend-only
 routing remains required. No merges, auto-merge, cleanup, incident recovery,
 visibility/permission changes or force pushes were performed.
 
+Development delivery: [draft PR223](https://github.com/artinflight/vibe-kanban/pull/223)
+into staging. Initial implementation commit `021b12a9160c8c988dde862758ad43c7da337bdf`.
+Final remote coverage is independently checked after the documentation/link commit;
+see the private `publication-receipt.json` in the evidence directory. This is
+source delivery, not activation or production acceptance. The workspace's stored
+branch label remains `vk/c31a-vk-git-sync-enfo`; the actual isolated development
+Git branch and PR head are `feat/turn-git-preservation`. Do not promote the stored
+legacy label or the separately stopped Staging workspace.
+
 Local validation: all 40 isolated Git fixture tests passed, including real
 Gitleaks acceptance and push/PR uncertainty, exclusion, original-history,
 concurrent-writer and stale/newer-turn coverage. Four focused Rust tests passed,

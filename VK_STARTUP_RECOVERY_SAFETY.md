@@ -131,12 +131,17 @@ names lacking authenticated metadata remain explicitly uncovered.
 ## October 8 evidence
 
 The later [post-backup reconciliation](VK_POST_BACKUP_RECONCILIATION_20261008.md)
-accounts for all retained mutation candidates and independently verifies all 11
-files from 14 accepted owner patch calls. All 15 original owner reconstruction
-files match current committed contents. No identified incident edit needs
-another restore. Unobserved writes and metadata/coverage limitations still
-prevent a universal zero-loss claim. The following earlier audit is dated 08:53;
-the reconciliation records fresh changes caused by later shared-work activity.
+withdraws the earlier blanket accounting claim: 448 of 710 candidates lack
+baseline content evidence and cannot be classified as later-retired. Parent
+checks individually bind 14 accepted patch/result pairs and the rejected pair,
+match all 11 replayed files and compare all 15 recovery files. Overall replay
+fails because transcript line 415 remains unparsable. Separate independent
+row-level review is blocked by AutoSwitch qualification policy and has not run.
+All 145 original-history rows remain separately unresolved. Unobserved writes
+and metadata/coverage limitations prevent a universal zero-loss claim. The
+following earlier audit is dated 08:53; it does not certify the 448 absent names.
+No restart, cutover, cleanup or another restore is authorized. Cleanup requires
+Seamus human QA; readiness preparation is a separate step after sign-off.
 
 Evidence root: `/mnt/vk-storage/vk-startup-recovery-safety-20261008`.
 The fresh read-only regular-file audit checked 116,402 entries: 116,352 matched

@@ -22,7 +22,8 @@
       "sha256": "83ed3b27eec15813964e2aa12047f78130f876cdbcb3a564e85881a82638819d"
     }
   },
-  "new_commit_hosted_ci": "pending",
+  "new_commit_hosted_ci": "passed at implementation commit 984f5ee79d575df0066c6a3afc2ee49fe02e4d0e",
   "historical_a23_ci": "passed; private-dependency paths skipped",
-  "independent_sign_off": false
+  "independent_sign_off": false,
+  "hosted_ci_receipt": "hosted-ci-984f5ee79.json"
 }

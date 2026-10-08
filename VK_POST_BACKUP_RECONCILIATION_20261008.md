@@ -131,3 +131,16 @@ Private authentication/reproduction inputs and the parent audit program are unde
 No raw private transcript or secret is included in committed evidence. The Python
 regression suite passes 35 tests, including adversarial patch/result attribution
 and a CLI failure despite matching files when transcript parsing fails.
+
+The checker/evidence correction at `984f5ee79d575df0066c6a3afc2ee49fe02e4d0e`
+passes all 10 [hosted CI checks](https://github.com/artinflight/vibe-kanban/actions/runs/37785140694):
+35 Python regressions and 405 Cargo tests passed; seven Cargo tests and the
+private-dependency paths remain skipped. See the [CI receipt](scripts/testing/startup-recovery-safety/evidence/20261008-review/hosted-ci-984f5ee79.json).
+A documentation/receipt follow-up also corrects the ancillary safety note's old
+blanket claim; checker, test and application code remain byte-for-byte unchanged.
+
+The new distinct redacted correction bundle is retained at
+`B:/vk-backups/vk-startup-recovery-safety-20261008/recovery-evidence-correction-984f5ee79.tar.gz`,
+264,709 bytes, SHA256 `e597551a2344077d2df292e5201121ee725a9e7ae3ac9ac5c043d64ac20fa2f0`.
+Desktop's full-file hash/length match the local copy; all 21 bundle entries match
+its manifest. Existing packets were preserved. See the [Desktop receipt](scripts/testing/startup-recovery-safety/evidence/20261008-review/correction-bundle-desktop-receipt.json).

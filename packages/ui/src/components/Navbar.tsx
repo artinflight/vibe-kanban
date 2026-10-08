@@ -262,14 +262,18 @@ export function Navbar({
         {isOnProjectPage ? (
           <>
             <button type="button" aria-current="page" onClick={onOpenDrawer}>
-              <KanbanIcon weight="fill" />
+              <span className="mobile-nav-symbol">
+                <KanbanIcon weight="fill" />
+              </span>
               <span>Projects</span>
             </button>
             <button
               type="button"
               onClick={() => onMobileTabChange?.('workspaces')}
             >
-              <LayoutIcon />
+              <span className="mobile-nav-symbol">
+                <LayoutIcon />
+              </span>
               <span>Workspaces</span>
             </button>
           </>
@@ -284,7 +288,9 @@ export function Navbar({
                 aria-current={active ? 'page' : undefined}
                 onClick={() => onMobileTabChange?.(tab.id)}
               >
-                <TabIcon weight={active ? 'fill' : 'regular'} />
+                <span className="mobile-nav-symbol">
+                  <TabIcon weight={active ? 'fill' : 'regular'} />
+                </span>
                 <span>{tab.label}</span>
               </button>
             );
@@ -299,7 +305,9 @@ export function Navbar({
           }
           onClick={onOpenMobileMore}
         >
-          <DotsThreeIcon weight="bold" />
+          <span className="mobile-nav-symbol">
+            <DotsThreeIcon weight="bold" />
+          </span>
           <span>More</span>
         </button>
       </nav>

@@ -1,24 +1,19 @@
-# October 8: Phone UX source ready for review
+# October 8: Revised phone UI for review
 
-Worktree branch `vk/eb7d-vk-native-feelin` contains the mobile interaction pass.
-Read VK_MOBILE_UX.md and `scripts/testing/mobile-ux-browser.mjs`. The safety guard
-passed. Read-only browser acceptance passed at 360/390/412/1440px,
-including real message reading, drafts across tabs, project/workspace switching,
-sheet Back/focus, board scroll and simulated keyboard Send. Screenshots/logs are
-under `/mnt/vk-storage/vk-mobile-native-20261008`. Expanded desktop navigation and
-390px dark/creation also passed. Frontend types/lint, format and ops checks passed;
-full Rust validation is blocked by missing GTK pkg-config files. The temporary
-branch preview and its route were stopped; see the design note for receipts.
-No task/workspace data, runtime settings, frontend release, merge or service changed.
-Source commit `098fa753f` is pushed. Draft review:
-[PR #224](https://github.com/artinflight/vibe-kanban/pull/224) into `staging`.
-Frontend CI, including local/remote production builds, passed on that source
-commit. The redundant local build was stopped under host I/O pressure.
+Branch `vk/eb7d-vk-native-feelin` contains a phone screen redesign after the
+operator rejected the initial enlarged desktop layouts. Read VK_MOBILE_UX.md and
+`scripts/testing/mobile-ux-browser.mjs`. Dedicated task feed, workspace activity
+list, title-first task detail and compact composer replace repeated desktop
+chrome. Existing state/Back/sheet/viewport fixes remain. Review stays in
+[draft PR #224](https://github.com/artinflight/vibe-kanban/pull/224) into staging.
+Revised artifacts are under `/mnt/vk-storage/vk-mobile-redesign-20261008`;
+the original baseline/first pass stays separate. Application writes are mocked;
+review screenshots alone may be uploaded via the normal attachment API.
+Configured model/effort and Recommend-only routing are unchanged. No production
+service/assets/settings/task/workspace changes, merge or deploy are authorized.
 Physical Android keyboard/browser chrome and Safari/Firefox remain QA limits;
-the test intentionally intercepts live mutations and never sends a prompt.
-After the operator could not open host-local screenshot links, the before/after
-board images were attached through Vibe's normal file API and their retrieved
-PNG bytes verified. IDs and browser-accessible notes are in VK_MOBILE_UX.md.
+Rust checks require missing host GTK pkg-config dependencies. Refer to current
+validation receipts instead of first-pass CI evidence.
 
 # October 5: AutoSwitch reloadable module
 

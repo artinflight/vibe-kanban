@@ -711,6 +711,7 @@ export function SessionChatBox<TExecutor extends string = string>({
 
   return (
     <ChatBoxBase
+      isAttachmentDisabled={areContentInsertActionsDisabled}
       editor={renderEditor({
         focusKey,
         placeholder,

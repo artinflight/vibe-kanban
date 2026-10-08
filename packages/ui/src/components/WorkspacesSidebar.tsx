@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   PlusIcon,
   ArrowLeftIcon,
@@ -8,6 +8,7 @@ import {
   SpinnerIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import { usePhoneLayout } from '../lib/usePhoneLayout';
 import { cn } from '../lib/cn';
 import { InputField } from './InputField';
 import { WorkspaceSummary } from './WorkspaceSummary';
@@ -51,6 +52,8 @@ const DEFAULT_PERSIST_KEYS: WorkspacesSidebarPersistKeys = {
 
 export interface WorkspacesSidebarProps {
   workspaces: WorkspacesSidebarWorkspace[];
+  /** Complete filtered collection for phone activity counts before pagination. */
+  activityWorkspaces?: WorkspacesSidebarWorkspace[];
   totalWorkspacesCount: number;
   archivedWorkspaces?: WorkspacesSidebarWorkspace[];
   isLoading?: boolean;
@@ -172,6 +175,7 @@ function WorkspaceList({
 
 export function WorkspacesSidebar({
   workspaces,
+  activityWorkspaces,
   totalWorkspacesCount,
   archivedWorkspaces = [],
   isLoading = false,
@@ -196,6 +200,9 @@ export function WorkspacesSidebar({
   onOpenRemoteHostSettings,
 }: WorkspacesSidebarProps) {
   const { t } = useTranslation(['tasks', 'common']);
+  const phone = usePhoneLayout();
+  const [phoneCategory, setPhoneCategory] = useState('all');
+  const [listOptionsOpen, setListOptionsOpen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const handleOpenWorkspaceActions = useCallback(
     (workspaceId: string) => {
@@ -221,6 +228,9 @@ export function WorkspacesSidebar({
   // Categorize workspaces for accordion layout
   const { raisedHandWorkspaces, idleWorkspaces, runningWorkspaces } =
     useMemo(() => {
+      const collection = phone
+        ? (activityWorkspaces ?? workspaces)
+        : workspaces;
       // Running workspaces should stay in the "Running" section even if unseen.
       const hasSubagentActivity = (ws: WorkspacesSidebarWorkspace) =>
         (ws.activeSubagentCount ?? 0) + (ws.unresolvedSubagentCount ?? 0) > 0;
@@ -229,17 +239,17 @@ export function WorkspacesSidebar({
         (ws.hasUnseenActivity && !ws.isRunning && !hasSubagentActivity(ws));
 
       return {
-        raisedHandWorkspaces: workspaces.filter((ws) => needsAttention(ws)),
-        idleWorkspaces: workspaces.filter(
+        raisedHandWorkspaces: collection.filter((ws) => needsAttention(ws)),
+        idleWorkspaces: collection.filter(
           (ws) =>
             !ws.isRunning && !hasSubagentActivity(ws) && !needsAttention(ws)
         ),
-        runningWorkspaces: workspaces.filter(
+        runningWorkspaces: collection.filter(
           (ws) =>
             (ws.isRunning || hasSubagentActivity(ws)) && !needsAttention(ws)
         ),
       };
-    }, [workspaces]);
+    }, [workspaces, activityWorkspaces, phone]);
 
   const headerActions: SectionAction[] = [
     {
@@ -254,6 +264,153 @@ export function WorkspacesSidebar({
       onClick: () => onAddWorkspace?.(),
     },
   ];
+
+  if (phone) {
+    const rows = showArchive
+      ? archivedWorkspaces
+      : phoneCategory === 'attention'
+        ? raisedHandWorkspaces.slice(0, workspaces.length)
+        : phoneCategory === 'running'
+          ? runningWorkspaces.slice(0, workspaces.length)
+          : phoneCategory === 'ready'
+            ? idleWorkspaces.slice(0, workspaces.length)
+            : workspaces;
+    return (
+      <div className="phone-workspaces">
+        <div className="phone-page-heading">
+          <div>
+            <h1>{showArchive ? 'Archive' : t('common:workspaces.title')}</h1>
+            <p>{totalWorkspacesCount} active workspaces</p>
+          </div>
+          <button
+            type="button"
+            className="phone-new-workspace"
+            aria-label={t('common:workspaces.newWorkspace')}
+            onClick={onAddWorkspace}
+          >
+            <PlusIcon size={20} /> New
+          </button>
+        </div>
+        <div className="phone-workspace-search">
+          <InputField
+            variant="search"
+            value={searchQuery}
+            onChange={onSearchChange}
+            placeholder={t('common:workspaces.searchPlaceholder')}
+          />
+          <button
+            type="button"
+            aria-label="List options"
+            aria-expanded={listOptionsOpen}
+            onClick={() => setListOptionsOpen(!listOptionsOpen)}
+          >
+            Options
+          </button>
+        </div>
+        {listOptionsOpen && (
+          <div className="phone-list-options">{searchControls}</div>
+        )}
+        {activeRemoteHost && (
+          <button
+            type="button"
+            className="phone-host"
+            onClick={onOpenRemoteHostSettings}
+          >
+            {activeRemoteHost.name} · {activeRemoteHost.status}
+          </button>
+        )}
+        {!showArchive && (
+          <div
+            className="phone-filter-chips phone-workspace-tabs"
+            aria-label="Workspace activity"
+          >
+            {[
+              ['all', 'All', (activityWorkspaces ?? workspaces).length],
+              ['attention', 'Attention', raisedHandWorkspaces.length],
+              ['running', 'Running', runningWorkspaces.length],
+              ['ready', 'Ready', idleWorkspaces.length],
+            ].map(([id, label, count]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={phoneCategory === id}
+                onClick={() => setPhoneCategory(String(id))}
+              >
+                {label}
+                <span>{count}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="phone-workspace-scroll"
+        >
+          {isLoading ? (
+            <SpinnerIcon className="animate-spin m-4" size={24} />
+          ) : (
+            <>
+              {isCreateMode && draftTitle && (
+                <WorkspaceSummary
+                  name={draftTitle}
+                  isDraft
+                  isActive
+                  onClick={onSelectCreate}
+                />
+              )}
+              <WorkspaceList
+                workspaces={rows}
+                selectedWorkspaceId={selectedWorkspaceId}
+                onSelectWorkspace={onSelectWorkspace}
+                onOpenWorkspaceActions={handleOpenWorkspaceActions}
+              />
+              {!rows.length && (
+                <div className="phone-empty-state">
+                  <StackIcon size={32} />
+                  <h3>
+                    {searchQuery
+                      ? 'No matching workspaces'
+                      : showArchive
+                        ? 'Your archive is empty'
+                        : phoneCategory === 'attention'
+                          ? 'You’re all caught up'
+                          : phoneCategory === 'running'
+                            ? 'No agents running'
+                            : 'No workspaces here yet'}
+                  </h3>
+                  <p>
+                    {searchQuery
+                      ? 'Try a different name or clear your search.'
+                      : 'Conversations and agent activity appear here.'}
+                  </p>
+                  {searchQuery && (
+                    <button type="button" onClick={() => onSearchChange('')}>
+                      Clear search
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {onShowArchiveChange && (
+          <button
+            type="button"
+            className="phone-archive"
+            onClick={() => onShowArchiveChange(!showArchive)}
+          >
+            {showArchive ? (
+              <ArrowLeftIcon size={20} />
+            ) : (
+              <ArchiveIcon size={20} />
+            )}
+            {showArchive ? 'Back to workspaces' : 'Archived workspaces'}
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full bg-secondary flex flex-col">

@@ -1,3 +1,14 @@
+## October 8 post-backup named-content verification completed
+
+Read VK_POST_BACKUP_RECONCILIATION_20261008.md. Independent in-memory replay of
+14 successful patches verifies all 11 later owner files; all 15 original owner
+restoration files match current committed contents. The 710 observed mutation
+candidates and earlier 47 content differences are accounted for. No identified
+incident edit requires another restore. Current shared-work changes are reported
+separately using the earlier passing audit; no survivor or shared file was written.
+Unobserved writes and missing metadata/coverage evidence remain uncertified.
+PR153 remains draft; independent review and later release gates still apply.
+
 ## October 8 incident prevention remains isolated and undeployed
 
 The October 7 shared-worktree incident still blocks release preparation. A fresh

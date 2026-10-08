@@ -1533,3 +1533,13 @@ See VK_STARTUP_RECOVERY_SAFETY.md; independent review/real isolated CI pending.
 16 real-binary isolation cases and14 audit regressions. Intrinsic dataset tokens
 close in-place replacement ambiguity; pure debug paths work without source mounts.
 Independent review pending. No production mutation or recovery zero-loss claim.
+
+## 2026-10-08 post-backup content reconciliation
+
+Independently replayed retained owner patches without executing historical code;
+all 11 final contents match. All 15 prior reconstruction files match current Git
+contents. Accounted for 710 mutation candidates and 47 original content differences;
+later shared-work changes remain separately reported. Added exact-context replay
+and evidence-result regressions; 27 focused Python checks pass. No shared writes,
+placement replay, production operation, new loss claim or erased journal gap.
+See VK_POST_BACKUP_RECONCILIATION_20261008.md for receipts and scope.

@@ -130,6 +130,14 @@ names lacking authenticated metadata remain explicitly uncovered.
 
 ## October 8 evidence
 
+The later [post-backup reconciliation](VK_POST_BACKUP_RECONCILIATION_20261008.md)
+accounts for all retained mutation candidates and independently verifies all 11
+files from 14 accepted owner patch calls. All 15 original owner reconstruction
+files match current committed contents. No identified incident edit needs
+another restore. Unobserved writes and metadata/coverage limitations still
+prevent a universal zero-loss claim. The following earlier audit is dated 08:53;
+the reconciliation records fresh changes caused by later shared-work activity.
+
 Evidence root: `/mnt/vk-storage/vk-startup-recovery-safety-20261008`.
 The fresh read-only regular-file audit checked 116,402 entries: 116,352 matched
 content and mode, 47 differed in content, 3 lacked mode evidence, and none were

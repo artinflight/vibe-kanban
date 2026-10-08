@@ -12,9 +12,10 @@
 2. `STATE.md`
 3. `STREAM.md`
 4. `HANDOFF.md`
-5. Relevant package or crate guide for the area being changed
-6. Code and validation paths for the task
-7. `DELTA.md` only for compact continuity history
+5. `VK_WORKFLOW.md`, `VK_AGENT_DEPLOYMENT_RUNBOOK.md`, and `VK_SELF_DEVELOPMENT_WORKFLOW.md` for Vibe Kanban repo work, self-development, deploys, restarts, frontend asset swaps, and regression prevention
+6. Relevant package or crate guide for the area being changed
+7. Code and validation paths for the task
+8. `DELTA.md` only for compact continuity history
 
 ### Crate-specific guides
 
@@ -56,6 +57,13 @@
 - Keep a canonical local checkout of `staging` current with `origin/staging` once the branch is created.
 - If a direct production hotfix is ever needed, branch from the latest `origin/main`, keep scope minimal, and backfill the fix to `staging` afterward.
 
+## VK Self-Development Safety Boundary
+
+- Normal VK Dev agents may implement features, fixes, tests, docs, and previews from their generated workspace.
+- Normal VK Dev agents must not restart `vibe-kanban.service`, switch `frontend-dist/current`, overwrite `/home/mcp/.local/bin/vibe-kanban-serve*`, edit the live VK SQLite DB, or prune live VK sessions/Codex state.
+- Deploys, restarts, frontend asset swaps, live DB edits, and live state cleanup require a separate operator-approved release/deploy task that follows `VK_AGENT_DEPLOYMENT_RUNBOOK.md`.
+- User prompts do not need to repeat this boundary. Treat it as always active for VK development work.
+
 ## Documentation Roles
 
 - `README.md`: repo overview, setup, and links to operational docs.
@@ -65,6 +73,9 @@
 - `STREAM.md`: current branch scope and boundaries.
 - `HANDOFF.md`: short pickup note for the next agent.
 - `DELTA.md`: append-only continuity ledger.
+- `VK_WORKFLOW.md`: stable local runtime/deployment model.
+- `VK_AGENT_DEPLOYMENT_RUNBOOK.md`: operational checklist for agents working on or deploying VK from inside VK.
+- `VK_SELF_DEVELOPMENT_WORKFLOW.md`: plan for making VK development inside VK clean, previewable, and separated from live deploy/restart operations.
 
 ## Managing Shared Types Between Rust and TypeScript
 
@@ -77,6 +88,7 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Install: `pnpm i`
 - Run dev (web app + backend with ports auto-assigned): `pnpm run dev`
 - Run QA dev mode: `pnpm run dev:qa`
+- Lightweight frontend preview against the existing live backend: `pnpm run preview:light`; stop it with `pnpm run preview:light:stop`
 - Backend (watch): `pnpm run backend:dev:watch`
 - Web app (dev): `pnpm run local-web:dev`
 - Type checks: `pnpm run check`
@@ -93,6 +105,7 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 
 - Before finishing any task, run `pnpm run format`.
 - Before using a branch in a local Vibe Kanban instance, run the narrowest relevant checks and document what was not exercised.
+- For routine Vibe Kanban UI smoke tests, prefer the lightweight preview workflow in `docs/self-hosting/lightweight-agent-preview.mdx` over `pnpm run dev`; only run full backend watch mode when backend behaviour must be exercised.
 - Before opening or updating a PR into `staging`, the default validation baseline is `pnpm run ops:check`, `pnpm run check`, `pnpm run lint`, and `cargo test --workspace`, plus any repo-specific generation checks affected by the change.
 - Before promoting `staging` into `main`, require a fresh `staging` branch, passing CI, and explicit human QA for meaningful user-facing changes.
 - If work touches remote deployment paths, include `pnpm run remote:generate-types:check` and `pnpm run remote:prepare-db:check`.
@@ -132,6 +145,7 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 ## Forbidden Behaviors
 
 - Do not treat branch-local notes as repo-wide truth.
+- Do not turn an ordinary feature/fix prompt into a live VK deploy, restart, frontend symlink swap, live DB edit, or live state cleanup task.
 - Do not release unvalidated changes into the local instance just because CI would probably pass.
 - Do not leave continuity state only in chat.
 - Do not edit generated shared type files manually.

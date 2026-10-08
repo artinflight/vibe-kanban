@@ -1,17 +1,26 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { sessionsApi } from '@/shared/lib/api';
+import { ApiError, sessionsApi } from '@/shared/lib/api';
 import { useHostId } from '@/shared/providers/HostIdProvider';
 import { workspaceSessionKeys } from '@/shared/hooks/workspaceSessionKeys';
 import type {
   Session,
   CreateFollowUpAttempt,
   ExecutorConfig,
+  QueueStatus,
 } from 'shared/types';
 
 interface CreateSessionParams {
   workspaceId: string;
   prompt: string;
   executorConfig: ExecutorConfig;
+}
+
+function isQueuedSendError(error: unknown): error is ApiError<QueueStatus> {
+  return (
+    error instanceof ApiError &&
+    !!error.error_data &&
+    error.error_data.status === 'queued'
+  );
 }
 
 /**
@@ -39,7 +48,13 @@ export function useCreateSession() {
         force_when_dirty: null,
         perform_git_reset: null,
       };
-      await sessionsApi.followUp(session.id, body);
+      try {
+        await sessionsApi.followUp(session.id, body);
+      } catch (error) {
+        if (!isQueuedSendError(error)) {
+          throw error;
+        }
+      }
 
       return session;
     },

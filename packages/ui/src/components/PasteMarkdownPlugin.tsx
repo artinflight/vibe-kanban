@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   PASTE_COMMAND,
-  COMMAND_PRIORITY_LOW,
+  COMMAND_PRIORITY_HIGH,
   $getSelection,
   $isRangeSelection,
   $createParagraphNode,
@@ -18,12 +18,15 @@ type Props = {
   transformers: Transformer[];
 };
 
+const LINE_BREAK_PATTERN = /\r\n?|\n/;
+
 /**
  * Plugin that handles paste with markdown conversion.
  *
  * Behavior:
  * - CMD+V with HTML: Let default Lexical handling work
- * - CMD+V with plain text: Convert markdown to formatted nodes, insert at cursor
+ * - CMD+V with single-line plain text: Convert markdown to formatted nodes, insert at cursor
+ * - CMD+V with multi-line plain text: Insert raw text to preserve prompt content
  * - CMD+SHIFT+V: Insert plain text as-is (raw paste)
  */
 export function PasteMarkdownPlugin({ transformers }: Props) {
@@ -133,16 +136,29 @@ export function PasteMarkdownPlugin({ transformers }: Props) {
           return true;
         }
 
-        // If HTML exists, let default Lexical handling work.
-        if (htmlText) return false;
-
         if (!plainText) return false;
+
+        // Multi-line chat prompts must preserve every pasted line even when
+        // the clipboard also carries an HTML representation. Rich clipboard
+        // payloads from mobile browsers and document apps commonly include
+        // both text/plain and text/html; letting Lexical's HTML paste path
+        // handle those can drop content after the first line.
+        const shouldInsertMultilineRaw = LINE_BREAK_PATTERN.test(plainText);
+
+        // If HTML exists for non-multiline text, let default Lexical handling
+        // work so single-line rich text keeps the existing behavior.
+        if (htmlText && !shouldInsertMultilineRaw) return false;
 
         event.preventDefault();
 
         editor.update(() => {
           const selection = $getSelection();
           if (!$isRangeSelection(selection)) return;
+
+          if (shouldInsertMultilineRaw) {
+            selection.insertRawText(plainText);
+            return;
+          }
 
           // CMD+V: Convert markdown and insert at cursor
           // Save selection before any operations that might corrupt it
@@ -174,7 +190,7 @@ export function PasteMarkdownPlugin({ transformers }: Props) {
         shiftHeldRef.current = false;
         return true;
       },
-      COMMAND_PRIORITY_LOW
+      COMMAND_PRIORITY_HIGH
     );
 
     return () => {

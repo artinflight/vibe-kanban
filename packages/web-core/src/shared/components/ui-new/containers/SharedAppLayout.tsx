@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { DropResult } from '@hello-pangea/dnd';
 import { Outlet, useNavigate, useParams } from '@tanstack/react-router';
 import { siDiscord, siGithub } from 'simple-icons';
@@ -8,7 +8,8 @@ import {
   PlusIcon,
   LayoutIcon,
   KanbanIcon,
-  DownloadSimpleIcon,
+  ArchiveIcon,
+  PencilSimpleIcon,
 } from '@phosphor-icons/react';
 import { SyncErrorProvider } from '@/shared/providers/SyncErrorProvider';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
@@ -21,12 +22,26 @@ import {
   AppBar,
   type AppBarHostStatus,
   type AppBarProject,
+  type AppBarProjectUpdate,
+  PASTEL_PROJECT_COLORS,
 } from '@vibe/ui/components/AppBar';
 import { MobileDrawer } from '@vibe/ui/components/MobileDrawer';
+import { InlineColorPicker } from '@vibe/ui/components/ColorPicker';
+import { Input } from '@vibe/ui/components/Input';
+import { Button } from '@vibe/ui/components/Button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@vibe/ui/components/KeyboardDialog';
 import { AppBarUserPopoverContainer } from './AppBarUserPopoverContainer';
 import { useUserOrganizations } from '@/shared/hooks/useUserOrganizations';
 import { useOrganizationStore } from '@/shared/stores/useOrganizationStore';
 import { useAuth } from '@/shared/hooks/auth/useAuth';
+import { useUserContext } from '@/shared/hooks/useUserContext';
 import { useDiscordOnlineCount } from '@/shared/hooks/useDiscordOnlineCount';
 import { useGitHubStars } from '@/shared/hooks/useGitHubStars';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
@@ -45,26 +60,61 @@ import {
 import { OAuthDialog } from '@/shared/dialogs/global/OAuthDialog';
 import { SettingsDialog } from '@/shared/dialogs/settings/SettingsDialog';
 import { CommandBarDialog } from '@/shared/dialogs/command-bar/CommandBarDialog';
+import { ArchivedProjectsDialog } from '@/shared/dialogs/kanban/ArchivedProjectsDialog';
 import { useCommandBarShortcut } from '@/shared/hooks/useCommandBarShortcut';
 import { useWorkspaceSidebarPreviewController } from '@/shared/hooks/useWorkspaceSidebarPreviewController';
 import { useShape } from '@/shared/integrations/electric/hooks';
 import { sortProjectsByOrder } from '@/shared/lib/projectOrder';
-import {
-  PROJECT_MUTATION,
-  PROJECTS_SHAPE,
-} from 'shared/remote-types';
+import { PROJECT_MUTATION, PROJECTS_SHAPE } from 'shared/remote-types';
 import { AppBarNotificationBellContainer } from '@/pages/workspaces/AppBarNotificationBellContainer';
 import { WorkspacesSidebarContainer } from '@/pages/workspaces/WorkspacesSidebarContainer';
 import { WorkspacesSidebarReopenTag } from '@vibe/ui/components/WorkspacesSidebar';
 import { useRemoteCloudHostsAppBarModel } from '@/shared/hooks/useRemoteCloudHosts';
-import { projectsApi } from '@/shared/lib/api';
+import { projectsApi, workspacesApi } from '@/shared/lib/api';
 
 function getLocalProjectColor(projectId: string): string {
   let hash = 0;
   for (const char of projectId) {
-    hash = (hash * 31 + char.charCodeAt(0)) % 360;
+    hash = (hash * 31 + char.charCodeAt(0)) % PASTEL_PROJECT_COLORS.length;
   }
-  return `${hash} 70% 45%`;
+  return PASTEL_PROJECT_COLORS[hash];
+}
+
+function getProjectInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+function getProjectAbbreviation(project: AppBarProject): string {
+  const abbreviation = project.abbreviation?.trim();
+  if (abbreviation) return abbreviation.slice(0, 3).toUpperCase();
+  return getProjectInitials(project.name);
+}
+
+function workspaceNeedsReview(workspace: {
+  has_pending_approval?: boolean;
+  has_unseen_turns?: boolean;
+  latest_process_status?: string | null;
+}): boolean {
+  if (
+    workspace.latest_process_status === 'failed' ||
+    workspace.latest_process_status === 'killed'
+  ) {
+    return false;
+  }
+
+  if (workspace.has_pending_approval) {
+    return true;
+  }
+
+  return (
+    workspace.has_unseen_turns === true &&
+    workspace.latest_process_status !== 'running'
+  );
 }
 
 export function SharedAppLayout() {
@@ -75,13 +125,28 @@ export function SharedAppLayout() {
   const isLeftSidebarVisible = useUiPreferencesStore(
     (s) => s.isLeftSidebarVisible
   );
+  const showLeftColumnLinks = false;
   const { isSignedIn } = useAuth();
+  const { workspaces: userWorkspaces } = useUserContext();
   const { appVersion, loginStatus } = useUserSystem();
   const updateVersion = useAppUpdateStore((s) => s.updateVersion);
   const restartForUpdate = useAppUpdateStore((s) => s.restart);
   const { data: onlineCount } = useDiscordOnlineCount();
   const { data: starCount } = useGitHubStars();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [mobileEditingProject, setMobileEditingProject] =
+    useState<AppBarProject | null>(null);
+  const [mobileProjectDraft, setMobileProjectDraft] =
+    useState<AppBarProjectUpdate>({
+      name: '',
+      abbreviation: '',
+      color: PASTEL_PROJECT_COLORS[0],
+    });
+  const [mobileProjectEditError, setMobileProjectEditError] = useState<
+    string | null
+  >(null);
+  const [isSavingMobileProjectEdit, setIsSavingMobileProjectEdit] =
+    useState(false);
   const [isAppBarHovered, setIsAppBarHovered] = useState(false);
   const { hosts: remoteCloudHosts } = useRemoteCloudHostsAppBarModel();
   const { hostId: routeHostId } = useParams({ strict: false });
@@ -89,7 +154,6 @@ export function SharedAppLayout() {
     loginStatus?.status === 'loggedin' && !loginStatus.profile;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
   // Register CMD+K shortcut globally for all routes under SharedAppLayout
   useCommandBarShortcut(() => CommandBarDialog.show());
 
@@ -134,15 +198,13 @@ export function SharedAppLayout() {
     }
   }, [organizations, selectedOrgId, setSelectedOrgId]);
 
-  const {
-    data: localProjects = [],
-    isLoading: isLocalProjectsLoading,
-  } = useQuery({
-    queryKey: ['local-projects'],
-    queryFn: () => projectsApi.list(),
-    enabled: isLocalAuthBypassed,
-    staleTime: 60_000,
-  });
+  const { data: localProjects = [], isLoading: isLocalProjectsLoading } =
+    useQuery({
+      queryKey: ['local-projects'],
+      queryFn: () => projectsApi.list(),
+      enabled: isLocalAuthBypassed,
+      staleTime: 60_000,
+    });
   const projectParams = useMemo(
     () => ({ organization_id: selectedOrgId || '' }),
     [selectedOrgId]
@@ -150,6 +212,7 @@ export function SharedAppLayout() {
   const {
     data: orgProjects = [],
     isLoading,
+    update: updateProject,
     updateMany: updateManyProjects,
   } = useShape(PROJECTS_SHAPE, projectParams, {
     enabled: !isLocalAuthBypassed && isSignedIn && !!selectedOrgId,
@@ -159,28 +222,138 @@ export function SharedAppLayout() {
     () => sortProjectsByOrder(orgProjects),
     [orgProjects]
   );
-  const localAppBarProjects = useMemo<AppBarProject[]>(
-    () =>
-      localProjects.map((project) => ({
-        id: project.id,
-        name: project.name,
-        color: getLocalProjectColor(project.id),
-        archived: project.archived,
-      })),
-    [localProjects]
+  const localProjectOrder = useUiPreferencesStore((s) => s.localProjectOrder);
+  const localProjectCustomizations = useUiPreferencesStore(
+    (s) => s.localProjectCustomizations
   );
-  const allAppBarProjects = isLocalAuthBypassed
-    ? localAppBarProjects
-    : sortedProjects;
-  const isProjectsLoading = isLocalAuthBypassed
-    ? isLocalProjectsLoading
-    : isLoading;
+  const localAppBarProjects = useMemo<AppBarProject[]>(() => {
+    const orderIndex = new Map(
+      localProjectOrder.map((projectId, index) => [projectId, index])
+    );
+
+    return localProjects
+      .map((project) => {
+        const customization = localProjectCustomizations[project.id];
+        return {
+          id: project.id,
+          name: project.name,
+          color: customization?.color ?? getLocalProjectColor(project.id),
+          abbreviation: customization?.abbreviation,
+          archived: project.archived,
+        };
+      })
+      .sort((a, b) => {
+        const aIndex = orderIndex.get(a.id);
+        const bIndex = orderIndex.get(b.id);
+
+        if (aIndex !== undefined && bIndex !== undefined) {
+          return aIndex - bIndex;
+        }
+        if (aIndex !== undefined) {
+          return -1;
+        }
+        if (bIndex !== undefined) {
+          return 1;
+        }
+        return 0;
+      });
+  }, [localProjectCustomizations, localProjectOrder, localProjects]);
+  const {
+    data: activeWorkspaceSummaries = [],
+    isLoading: isActiveWorkspaceSummariesLoading,
+  } = useQuery({
+    queryKey: ['workspace-summaries', 'active'],
+    queryFn: () => workspacesApi.listSummaries(false),
+    staleTime: 1000,
+    refetchInterval: 15000,
+  });
+  const localProjectWorkspaceQueries = useQueries({
+    queries: localProjects.map((project) => ({
+      queryKey: ['project-workspaces', project.id],
+      queryFn: () => projectsApi.listWorkspaces(project.id),
+      enabled: isLocalAuthBypassed,
+      staleTime: 1000,
+      refetchInterval: 15000,
+    })),
+  });
+  const needsReviewWorkspaceIds = useMemo(
+    () =>
+      new Set(
+        activeWorkspaceSummaries
+          .filter((summary) => workspaceNeedsReview(summary))
+          .map((summary) => summary.workspace_id)
+      ),
+    [activeWorkspaceSummaries]
+  );
+  const needsReviewProjectIds = useMemo(() => {
+    const projectIds = new Set<string>();
+
+    if (isLocalAuthBypassed) {
+      for (const query of localProjectWorkspaceQueries) {
+        for (const workspace of query.data ?? []) {
+          if (
+            workspace.local_workspace_id &&
+            needsReviewWorkspaceIds.has(workspace.local_workspace_id)
+          ) {
+            projectIds.add(workspace.project_id);
+          }
+        }
+      }
+
+      return projectIds;
+    }
+
+    for (const workspace of userWorkspaces) {
+      if (
+        workspace.local_workspace_id &&
+        needsReviewWorkspaceIds.has(workspace.local_workspace_id)
+      ) {
+        projectIds.add(workspace.project_id);
+      }
+    }
+
+    return projectIds;
+  }, [
+    isLocalAuthBypassed,
+    localProjectWorkspaceQueries,
+    needsReviewWorkspaceIds,
+    userWorkspaces,
+  ]);
+  const allAppBarProjects = useMemo(
+    () =>
+      (isLocalAuthBypassed ? localAppBarProjects : sortedProjects).map(
+        (project) => ({
+          ...project,
+          abbreviation: localProjectCustomizations[project.id]?.abbreviation,
+          color: localProjectCustomizations[project.id]?.color ?? project.color,
+          hasNeedsReview: needsReviewProjectIds.has(project.id),
+        })
+      ),
+    [
+      isLocalAuthBypassed,
+      localAppBarProjects,
+      localProjectCustomizations,
+      needsReviewProjectIds,
+      sortedProjects,
+    ]
+  );
   const archivedProjects = useMemo(
-    () => allAppBarProjects.filter((project) => 'archived' in project && project.archived),
+    () =>
+      allAppBarProjects.filter(
+        (project) => 'archived' in project && project.archived
+      ),
     [allAppBarProjects]
   );
+  const isProjectsLoading = isLocalAuthBypassed
+    ? isLocalProjectsLoading ||
+      isActiveWorkspaceSummariesLoading ||
+      localProjectWorkspaceQueries.some((query) => query.isLoading)
+    : isLoading || isActiveWorkspaceSummariesLoading;
   const appBarProjects = useMemo(
-    () => allAppBarProjects.filter((project) => !('archived' in project) || !project.archived),
+    () =>
+      allAppBarProjects.filter(
+        (project) => !('archived' in project) || !project.archived
+      ),
     [allAppBarProjects]
   );
   const [orderedProjects, setOrderedProjects] =
@@ -264,6 +437,12 @@ export function SharedAppLayout() {
   const setSelectedProjectId = useUiPreferencesStore(
     (s) => s.setSelectedProjectId
   );
+  const setLocalProjectOrder = useUiPreferencesStore(
+    (s) => s.setLocalProjectOrder
+  );
+  const setLocalProjectCustomization = useUiPreferencesStore(
+    (s) => s.setLocalProjectCustomization
+  );
   useEffect(() => {
     if (activeProjectId) {
       setSelectedProjectId(activeProjectId);
@@ -286,9 +465,96 @@ export function SharedAppLayout() {
     [appNavigation, setSelectedProjectId]
   );
 
+  const handleProjectUpdate = useCallback(
+    async (projectId: string, updates: AppBarProjectUpdate) => {
+      const abbreviation = updates.abbreviation.trim().slice(0, 3);
+      const color = updates.color;
+
+      if (isLocalAuthBypassed) {
+        await projectsApi.update(projectId, { name: updates.name });
+        setLocalProjectCustomization(projectId, { abbreviation, color });
+        await queryClient.invalidateQueries({ queryKey: ['local-projects'] });
+        await queryClient.invalidateQueries({
+          queryKey: ['local-project', projectId],
+        });
+        return;
+      }
+
+      const result = updateProject(projectId, {
+        name: updates.name,
+        color,
+      });
+      await result.persisted;
+      setLocalProjectCustomization(projectId, { abbreviation, color });
+    },
+    [
+      isLocalAuthBypassed,
+      queryClient,
+      setLocalProjectCustomization,
+      updateProject,
+    ]
+  );
+
+  const openMobileProjectEditor = useCallback((project: AppBarProject) => {
+    setMobileEditingProject(project);
+    setMobileProjectDraft({
+      name: project.name,
+      abbreviation: getProjectAbbreviation(project),
+      color: project.color || PASTEL_PROJECT_COLORS[0],
+    });
+    setMobileProjectEditError(null);
+    setIsDrawerOpen(false);
+  }, []);
+
+  const closeMobileProjectEditor = useCallback(() => {
+    if (isSavingMobileProjectEdit) return;
+    setMobileEditingProject(null);
+    setMobileProjectEditError(null);
+  }, [isSavingMobileProjectEdit]);
+
+  const handleSaveMobileProjectEdit = useCallback(async () => {
+    if (!mobileEditingProject) {
+      closeMobileProjectEditor();
+      return;
+    }
+
+    const nextName = mobileProjectDraft.name.trim();
+    const nextAbbreviation = mobileProjectDraft.abbreviation.trim().slice(0, 3);
+    if (!nextName) {
+      setMobileProjectEditError('Project name is required.');
+      return;
+    }
+    if (!nextAbbreviation) {
+      setMobileProjectEditError('Abbreviation is required.');
+      return;
+    }
+
+    setIsSavingMobileProjectEdit(true);
+    setMobileProjectEditError(null);
+    try {
+      await handleProjectUpdate(mobileEditingProject.id, {
+        name: nextName,
+        abbreviation: nextAbbreviation,
+        color: mobileProjectDraft.color,
+      });
+      setMobileEditingProject(null);
+    } catch (error) {
+      setMobileProjectEditError(
+        error instanceof Error ? error.message : 'Failed to update project.'
+      );
+    } finally {
+      setIsSavingMobileProjectEdit(false);
+    }
+  }, [
+    closeMobileProjectEditor,
+    handleProjectUpdate,
+    mobileEditingProject,
+    mobileProjectDraft,
+  ]);
+
   const handleProjectsDragEnd = useCallback(
     async ({ source, destination }: DropResult) => {
-      if (isLocalAuthBypassed || isSavingProjectOrder) {
+      if (isSavingProjectOrder) {
         return;
       }
       if (!destination || source.index === destination.index) {
@@ -308,12 +574,16 @@ export function SharedAppLayout() {
       setIsSavingProjectOrder(true);
 
       try {
-        await updateManyProjects(
-          reordered.map((project, index) => ({
-            id: project.id,
-            changes: { sort_order: index },
-          }))
-        ).persisted;
+        if (isLocalAuthBypassed) {
+          setLocalProjectOrder(reordered.map((project) => project.id));
+        } else {
+          await updateManyProjects(
+            reordered.map((project, index) => ({
+              id: project.id,
+              changes: { sort_order: index },
+            }))
+          ).persisted;
+        }
       } catch (error) {
         console.error('Failed to reorder projects:', error);
         setOrderedProjects(previousOrder);
@@ -321,7 +591,13 @@ export function SharedAppLayout() {
         setIsSavingProjectOrder(false);
       }
     },
-    [isLocalAuthBypassed, isSavingProjectOrder, orderedProjects, updateManyProjects]
+    [
+      isLocalAuthBypassed,
+      isSavingProjectOrder,
+      orderedProjects,
+      setLocalProjectOrder,
+      updateManyProjects,
+    ]
   );
 
   const handleCreateProject = useCallback(async () => {
@@ -353,11 +629,20 @@ export function SharedAppLayout() {
 
       await projectsApi.update(projectId, { archived: false });
       await queryClient.invalidateQueries({ queryKey: ['local-projects'] });
-      await queryClient.invalidateQueries({ queryKey: ['local-project', projectId] });
+      await queryClient.invalidateQueries({
+        queryKey: ['local-project', projectId],
+      });
       appNavigation.goToProject(projectId);
     },
     [appNavigation, isLocalAuthBypassed, queryClient]
   );
+
+  const handleOpenArchivedProjects = useCallback(() => {
+    void ArchivedProjectsDialog.show({
+      projects: archivedProjects,
+      onResumeProject: handleRestoreArchivedProject,
+    });
+  }, [archivedProjects, handleRestoreArchivedProject]);
 
   const handleSignIn = useCallback(async () => {
     try {
@@ -418,17 +703,22 @@ export function SharedAppLayout() {
             {/* Desktop AppBar sidebar. */}
             <AppBar
               projects={orderedProjects}
-              archivedProjects={archivedProjects}
               hosts={remoteCloudHosts}
               activeHostId={activeHostId}
               onCreateProject={handleCreateProject}
+              onOpenArchivedProjects={handleOpenArchivedProjects}
+              hasArchivedProjects={archivedProjects.length > 0}
               onExportClick={handleExportClick}
               onWorkspacesClick={handleWorkspacesClick}
+              showRemoteSection={showLeftColumnLinks}
+              showExportButton={showLeftColumnLinks}
+              showProfileButton={showLeftColumnLinks}
+              showSocialLinks={showLeftColumnLinks}
               onHostClick={handleHostClick}
               onPairHostClick={handlePairHostClick}
               onProjectClick={handleProjectClick}
-              onArchivedProjectClick={handleRestoreArchivedProject}
               onProjectsDragEnd={handleProjectsDragEnd}
+              onProjectUpdate={handleProjectUpdate}
               isSavingProjectOrder={isSavingProjectOrder}
               isWorkspacesActive={isWorkspacesActive}
               isExportActive={isExportActive}
@@ -541,81 +831,63 @@ export function SharedAppLayout() {
             {/* Divider */}
             <div className="border-t border-border mx-4" />
 
-            {/* Export link */}
-            {isSignedIn && (
-              <div className="px-4 py-3">
-                <p className="mb-2 text-xs font-medium text-low">Export</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleExportClick();
-                    setIsDrawerOpen(false);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm text-normal hover:bg-secondary cursor-pointer"
-                >
-                  <DownloadSimpleIcon className="h-4 w-4" />
-                  Export data
-                </button>
-              </div>
-            )}
-
-            {/* Divider */}
-            {isSignedIn && <div className="border-t border-border mx-4" />}
-
             {/* Project list */}
             <div className="flex-1 overflow-y-auto p-2">
               {isSignedIn ? (
                 <div className="space-y-3">
                   <div className="space-y-1">
                     {orderedProjects.map((project) => (
-                      <button
-                        type="button"
+                      <div
                         key={project.id}
-                        onClick={() => {
-                          handleProjectClick(project.id);
-                          setIsDrawerOpen(false);
-                        }}
                         className={cn(
-                          'flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm text-left cursor-pointer',
+                          'flex items-center gap-2 w-full rounded-md text-sm',
                           'transition-colors',
                           project.id === activeProjectId
                             ? 'bg-brand/10 text-high'
                             : 'text-normal hover:bg-secondary'
                         )}
                       >
-                        <span
-                          className="h-2.5 w-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: `hsl(${project.color})` }}
-                        />
-                        <span className="truncate">{project.name}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {isLocalAuthBypassed && archivedProjects.length > 0 && (
-                    <div className="space-y-1">
-                      <p className="px-3 text-xs font-medium uppercase tracking-wide text-low">
-                        Archived
-                      </p>
-                      {archivedProjects.map((project) => (
                         <button
                           type="button"
-                          key={project.id}
                           onClick={() => {
-                            void handleRestoreArchivedProject(project.id);
+                            handleProjectClick(project.id);
                             setIsDrawerOpen(false);
                           }}
-                          className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-low transition-colors hover:bg-secondary hover:text-normal cursor-pointer"
+                          className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left"
                         >
                           <span
-                            className="h-2.5 w-2.5 rounded-full shrink-0 opacity-60"
-                            style={{ backgroundColor: `hsl(${project.color})` }}
+                            className="h-2.5 w-2.5 rounded-full shrink-0"
+                            style={{
+                              backgroundColor: `hsl(${project.color})`,
+                            }}
                           />
-                          <span className="truncate">{project.name}</span>
+                          <span className="min-w-0 flex-1 truncate">
+                            {project.name}
+                          </span>
+                          {project.hasNeedsReview && (
+                            <span
+                              className="h-2.5 w-2.5 shrink-0 rounded-full border border-secondary bg-brand"
+                              aria-label={`${project.name} needs review`}
+                              title="Needs review"
+                            />
+                          )}
                         </button>
-                      ))}
-                    </div>
-                  )}
+                        {!project.archived && (
+                          <button
+                            type="button"
+                            onClick={() => openMobileProjectEditor(project)}
+                            className="mr-2 shrink-0 rounded-sm p-2 text-low hover:bg-secondary hover:text-normal"
+                            aria-label={`Edit ${project.name}`}
+                          >
+                            <PencilSimpleIcon
+                              className="h-4 w-4"
+                              weight="bold"
+                            />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="px-4 py-6 text-center">
@@ -647,7 +919,21 @@ export function SharedAppLayout() {
 
             {/* Create Project button */}
             {isSignedIn && (
-              <div className="p-3 border-t border-border">
+              <div className="space-y-1 p-3 border-t border-border">
+                {archivedProjects.length > 0 && (
+                  <button
+                    type="button"
+                    data-testid="mobile-archived-projects"
+                    onClick={() => {
+                      handleOpenArchivedProjects();
+                      setIsDrawerOpen(false);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-low hover:text-normal hover:bg-secondary cursor-pointer"
+                  >
+                    <ArchiveIcon className="h-4 w-4" />
+                    Archived projects
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -663,6 +949,101 @@ export function SharedAppLayout() {
             )}
           </div>
         </MobileDrawer>
+
+        <Dialog
+          open={!!mobileEditingProject}
+          onOpenChange={closeMobileProjectEditor}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit project</DialogTitle>
+              <DialogDescription>
+                Rename the project, set its sidebar abbreviation, and choose a
+                pastel button color.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-base">
+              <div className="space-y-half">
+                <label
+                  htmlFor="mobile-project-name"
+                  className="text-sm text-normal"
+                >
+                  Name
+                </label>
+                <Input
+                  id="mobile-project-name"
+                  value={mobileProjectDraft.name}
+                  disabled={isSavingMobileProjectEdit}
+                  maxLength={100}
+                  onChange={(event) =>
+                    setMobileProjectDraft((draft) => ({
+                      ...draft,
+                      name: event.target.value,
+                    }))
+                  }
+                  onCommandEnter={() => void handleSaveMobileProjectEdit()}
+                />
+              </div>
+
+              <div className="space-y-half">
+                <label
+                  htmlFor="mobile-project-abbreviation"
+                  className="text-sm text-normal"
+                >
+                  Abbreviation
+                </label>
+                <Input
+                  id="mobile-project-abbreviation"
+                  value={mobileProjectDraft.abbreviation}
+                  disabled={isSavingMobileProjectEdit}
+                  maxLength={3}
+                  onChange={(event) =>
+                    setMobileProjectDraft((draft) => ({
+                      ...draft,
+                      abbreviation: event.target.value.toUpperCase(),
+                    }))
+                  }
+                  onCommandEnter={() => void handleSaveMobileProjectEdit()}
+                />
+              </div>
+
+              <div className="space-y-half">
+                <p className="text-sm text-normal">Color</p>
+                <InlineColorPicker
+                  value={mobileProjectDraft.color}
+                  onChange={(color) =>
+                    setMobileProjectDraft((draft) => ({ ...draft, color }))
+                  }
+                  colors={PASTEL_PROJECT_COLORS}
+                  disabled={isSavingMobileProjectEdit}
+                />
+              </div>
+
+              {mobileProjectEditError && (
+                <p className="text-sm text-error">{mobileProjectEditError}</p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={closeMobileProjectEditor}
+                disabled={isSavingMobileProjectEdit}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handleSaveMobileProjectEdit()}
+                disabled={isSavingMobileProjectEdit}
+              >
+                {isSavingMobileProjectEdit ? 'Saving...' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </SyncErrorProvider>
   );

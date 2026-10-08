@@ -1,3 +1,36 @@
+# October 8: Phone frontend deployed
+
+The operator-approved phone redesign/style pass is live at `https://vibe.local`
+following rebase merges of PR224 into staging and PR226 into main. Production
+frontend source is main `22f09e245`; its entire tree matches clean build source
+`bdf6346d3`. Read VK_MOBILE_RELEASE_20261008.md for hashes, backup, activation,
+regression coverage and remaining limits. Earlier preparation/no-deploy entries
+below are historical.
+
+At 17:41 UTC, an atomic directory/symlink exchange activated
+`/mnt/vk-storage/vk-mobile-release-20261008/release/frontend` at the actual runtime
+frontend path. The general `frontend-dist/current` pointer also resolves there.
+The prior directory and hashed assets remain available. Backend service
+`vibe-kanban-green-production-20261005.service`, PID 3027197, binary, database,
+route 5511/5512 and execution/routing configuration were preserved. No restart
+or inference request was made; Recommend-only and configured model/effort remain
+unchanged. Future backend packages must retain this new frontend source/assets.
+
+Candidate and live Chromium acceptance passed at 360/390/412/1440px and 390px dark,
+including project/task/workspace navigation, state/Back, conversation reading,
+composing, local attachment simulation and keyboard viewport geometry. HTTPS
+asset hashes, 12 saved messages, 16 active/27 archived project order, configuration
+and backend identity matched. Full implementation/promotion CI, production build,
+format/governance checks passed. Physical Android keyboard/browser chrome,
+Safari/Firefox and production write/drag/queue/review mutations remain unverified.
+
+Rollback archive SHA256 is verified locally and on Desktop at
+`desktop:B:/vk-backups/vk-phone-frontend-20261008/frontend-before.tar.gz`. This
+artifact-only rollback preserves current application data; no full mutable-state
+backup/restore or backend continuity rehearsal was performed. Evidence and
+rollback commands are under `/mnt/vk-storage/vk-mobile-release-20261008`.
+
+
 # October 8: Phone screen redesign
 
 Branch `vk/eb7d-vk-native-feelin` replaces the initial size-focused mobile pass

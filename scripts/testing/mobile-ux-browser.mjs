@@ -45,7 +45,8 @@ try {
     });
     const writes = [];
     const scratch = new Map();
-    await context.route('**/api/**', async (route) => {
+    // Both local API routes and project fallback routes must remain read-only.
+    await context.route(/\/(?:api|v1)\//, async (route) => {
       const request = route.request();
       const path = new URL(request.url()).pathname;
       if (
@@ -224,8 +225,12 @@ try {
       await nav.getByRole('button', { name: 'Projects', exact: true }).click();
       const sheet = page.getByRole('dialog', { name: 'Projects', exact: true });
       await sheet.waitFor();
+      // A project can append an accessible needs-review indicator to its name.
+      // Match its exact visible title while preserving that announced state.
       await touchTarget(
-        sheet.getByRole('button', { name: project.name, exact: true })
+        sheet
+          .getByRole('button')
+          .filter({ has: page.getByText(project.name, { exact: true }) })
       );
       assert(
         await sheet.evaluate((el) => el.contains(document.activeElement)),
@@ -256,7 +261,8 @@ try {
       await nav.getByRole('button', { name: 'Projects', exact: true }).click();
       const another = projects.find((p) => !p.archived && p.id !== project.id);
       await sheet
-        .getByRole('button', { name: another.name, exact: true })
+        .getByRole('button')
+        .filter({ has: page.getByText(another.name, { exact: true }) })
         .click();
       await page.waitForURL(`**/projects/${another.id}`);
       await page.goBack();

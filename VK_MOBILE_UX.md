@@ -1,8 +1,13 @@
 # Phone UI and interaction design
 
-Branch: `vk/eb7d-vk-native-feelin`. Review: [draft PR #224](https://github.com/artinflight/vibe-kanban/pull/224) into `staging`.
-Frontend only; no merge or deployment. The revised design replaces the initial
-size-focused pass after operator feedback.
+## Released October 8
+
+PR224 and promotion PR226 are rebase-merged. The reviewed frontend is live without
+a backend restart; see VK_MOBILE_RELEASE_20261008.md for validation and rollback.
+Earlier development-only boundaries describe the original implementation phase.
+
+Branch: `vk/eb7d-vk-native-feelin`. [PR #224](https://github.com/artinflight/vibe-kanban/pull/224) and [promotion PR #226](https://github.com/artinflight/vibe-kanban/pull/226) are merged.
+The revised design replaces the initial size-focused pass after operator feedback.
 
 ## Screen design
 
@@ -164,11 +169,12 @@ attachments retained for comparison:
 - Workspace list: `9973ba9b-25b6-458c-935b-51ab1528a252`.
 - Original baseline task board: `dc35a844-da5e-40b8-936a-3d40a386cd37`.
 
-No public preview route or production frontend
-assets are published. Stop the branch preview after capture.
+The operator subsequently authorized deployment. The frontend is now live at
+`https://vibe.local`; see VK_MOBILE_RELEASE_20261008.md for the release receipt.
+No temporary public preview route remains.
 
 Chromium uses an Android user agent, touch and narrow viewports. Keyboard geometry
 is explicitly simulated. Physical Samsung keyboard/browser chrome, installed PWA
 and Safari/Firefox behavior remain unverified; their real-device QA is still
-needed before release. Send/creation submissions and running-agent approval/stop
+remaining acceptance coverage. Send/creation submissions and running-agent approval/stop
 mutations are intentionally not exercised against production.

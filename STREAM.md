@@ -11,6 +11,11 @@ Read VK_MOBILE_UX.md for the current design and validation.
 Review: [draft PR #224](https://github.com/artinflight/vibe-kanban/pull/224) into
 `staging`. Historical entries below do not define this stream.
 
+The follow-up style pass reduces search/chip visual bulk while preserving 48px
+input/control targets. Search icons, lighter surfaces, aligned 24px headings,
+softer card borders and tighter row spacing refine the new phone layouts.
+Style evidence is in `/mnt/vk-storage/vk-mobile-style-20261008`.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

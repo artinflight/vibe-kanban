@@ -165,7 +165,41 @@ try {
     ).waitFor({ timeout: 60000 });
     await noHorizontalOverflow();
     await screenshot('after-board');
+    let searchHeight;
     if (mobile) {
+      const taskSearch = page.getByRole('textbox', {
+        name: 'Search tasks',
+        exact: true,
+      });
+      await touchTarget(taskSearch);
+      searchHeight = await taskSearch
+        .locator('..')
+        .evaluate((el) => el.getBoundingClientRect().height);
+      assert(
+        searchHeight <= 50,
+        `Phone search must stay compact: ${searchHeight}`
+      );
+      const query = (
+        await page.locator('.phone-task-title').first().innerText()
+      ).slice(0, 12);
+      await taskSearch.fill(query);
+      const clearSearch = page.getByRole('button', {
+        name: 'Clear search',
+        exact: true,
+      });
+      await touchTarget(clearSearch);
+      const inputBox = await taskSearch.boundingBox();
+      const clearBox = await clearSearch.boundingBox();
+      assert(
+        inputBox.x + inputBox.width <= clearBox.x,
+        'Search clear control has a separate target'
+      );
+      await clearSearch.click();
+      assert.equal(
+        await taskSearch.inputValue(),
+        '',
+        'Task search clears without leaving the screen'
+      );
       assert.equal(
         await page.locator('.phone-task-feed').count(),
         1,
@@ -506,7 +540,21 @@ try {
         workspace.name,
         'Workspace filter preserved'
       );
-      await search.fill('');
+      await touchTarget(search);
+      const workspaceSearchHeight = await search
+        .locator('..')
+        .evaluate((el) => el.getBoundingClientRect().height);
+      assert(
+        workspaceSearchHeight <= 50,
+        `Workspace search must stay compact: ${workspaceSearchHeight}`
+      );
+      const clearWorkspaceSearch = page.getByRole('button', {
+        name: 'Clear search',
+        exact: true,
+      });
+      await touchTarget(clearWorkspaceSearch);
+      await clearWorkspaceSearch.click();
+      assert.equal(await search.inputValue(), '');
       const activityTabs = page.locator('.phone-workspace-tabs');
       const runningChip = activityTabs.getByRole('button', {
         name: /^Running/,
@@ -588,6 +636,7 @@ try {
       colorScheme,
       passed: true,
       modelPreserved: true,
+      ...(mobile && { searchHeight }),
       writesIntercepted: writes.length,
       promptSubmitted: false,
     });

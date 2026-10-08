@@ -43,14 +43,13 @@ export function usePinConversationToBottomOnChatBoxResize({
         chatBoxContainer.getBoundingClientRect().height;
 
       if (Math.abs(nextHeight - previousHeight) < 0.5) return;
-      const heightDelta = nextHeight - previousHeight;
       previousHeight = nextHeight;
 
       if (!isAtBottomRef.current) return;
 
       requestAnimationFrame(() => {
         if (!isAtBottomRef.current) return;
-        conversationListRef.current?.adjustScrollBy(heightDelta);
+        conversationListRef.current?.scrollToBottom('auto');
       });
     });
 

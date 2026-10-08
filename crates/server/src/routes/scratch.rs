@@ -10,7 +10,7 @@ use axum::{
     routing::get,
 };
 use chrono::Utc;
-use db::models::scratch::{CreateScratch, Scratch, ScratchType, UpdateScratch};
+use db::models::scratch::{CreateScratch, Scratch, ScratchPayload, ScratchType, UpdateScratch};
 use deployment::Deployment;
 use futures_util::{StreamExt, TryStreamExt};
 use serde::Deserialize;
@@ -59,7 +59,20 @@ async fn enqueue_ui_preferences_flush(
         return;
     };
 
-    match Scratch::update(&deployment.db().pool, id, &scratch_type, &pending.payload).await {
+    let payload = match Scratch::find_by_id(&deployment.db().pool, id, &scratch_type).await {
+        Ok(existing) => merge_ui_preferences_payload(existing.as_ref(), &pending.payload),
+        Err(err) => {
+            tracing::warn!(
+                scratch_id = %id,
+                scratch_type = %scratch_type,
+                ?err,
+                "Failed to load existing UI preferences before flush; using queued payload"
+            );
+            pending.payload
+        }
+    };
+
+    match Scratch::update(&deployment.db().pool, id, &scratch_type, &payload).await {
         Ok(scratch) => {
             deployment
                 .events()
@@ -74,6 +87,33 @@ async fn enqueue_ui_preferences_flush(
                 "Failed to flush queued UI preferences scratch update"
             );
         }
+    }
+}
+
+fn merge_ui_preferences_payload(
+    existing: Option<&Scratch>,
+    incoming: &UpdateScratch,
+) -> UpdateScratch {
+    let Some(Scratch {
+        payload: ScratchPayload::UiPreferences(existing_data),
+        ..
+    }) = existing
+    else {
+        return incoming.clone();
+    };
+
+    let ScratchPayload::UiPreferences(incoming_data) = &incoming.payload else {
+        return incoming.clone();
+    };
+
+    let mut data = incoming_data.clone();
+
+    if !existing_data.saved_chat_messages.is_empty() && data.saved_chat_messages.is_empty() {
+        data.saved_chat_messages = existing_data.saved_chat_messages.clone();
+    }
+
+    UpdateScratch {
+        payload: ScratchPayload::UiPreferences(data),
     }
 }
 
@@ -144,6 +184,7 @@ pub async fn update_scratch(
 
     if matches!(scratch_type, ScratchType::UiPreferences) {
         let existing = Scratch::find_by_id(&deployment.db().pool, id, &scratch_type).await?;
+        let payload = merge_ui_preferences_payload(existing.as_ref(), &payload);
         let now = Utc::now();
         let scratch = Scratch {
             id,

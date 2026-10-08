@@ -1334,7 +1334,7 @@ impl ContainerService for LocalContainerService {
         PathBuf::from(workspace.container_ref.clone().unwrap_or_default())
     }
 
-    async fn try_inject_follow_up(
+    async fn try_steer_active_turn(
         &self,
         session: &Session,
         data: &DraftFollowUpData,
@@ -1355,7 +1355,7 @@ impl ContainerService for LocalContainerService {
             return Ok(false);
         }
 
-        executors::executors::codex::client::AppServerClient::inject_follow_up_for_execution(
+        executors::executors::codex::client::AppServerClient::steer_execution(
             process.id,
             data.message.clone(),
         )

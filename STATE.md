@@ -6,6 +6,27 @@
 
 ## Confirmed Current State
 
+- 2026-08-28 restart incident lessons are documented in:
+  - `VK_AGENT_DEPLOYMENT_RUNBOOK.md`
+  - `docs/self-hosting/local-backup-recovery.mdx`
+  - `docs/self-hosting/codex-home-isolation.mdx`
+- Current live VK instance is green, not retired blue:
+  - service: `vibe-kanban-green.service`
+  - ports: `4511` backend, `4512` preview proxy
+  - DB: `/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite`
+  - Codex home: `/home/mcp/.local/share/vibe-kanban-green-codex-home`
+- Retired blue `4311` state is not protected by a green backup unless the
+  backup explicitly includes `/home/mcp/.local/share/vibe-kanban`. Old blue
+  state may still be recoverable from Desktop archives and must be imported
+  selectively, not blindly restored over green.
+- Current green frontend is pinned to:
+  `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260826Tstaging-main-fc312a073`
+  with assets `index-BiiblWjF.js` and `index-DnGjt7Sn.css`.
+- That frontend release has a live `index.html` saved-message shim and
+  `/vk-saved-chat-messages.json` sidecar because the running backend strips
+  `saved_chat_messages` from `UI_PREFERENCES` API/WebSocket serialization.
+  Future frontend builds must include the source fix before replacing this
+  live release.
 - 2026-06-30 multiline paste priority fix is prepared for staging:
   - `packages/ui/src/components/PasteMarkdownPlugin.tsx` preserves multiline
     `text/plain` before the `text/html` opt-out
@@ -147,6 +168,31 @@
 - UI changes that hide archived local projects must still provide a clear restore path or they will look like missing data.
 - Replacing VK `CODEX_HOME` with a fresh directory and copying only `auth.json` will break old workspace thread fork/resume with `no rollout found for thread id ...`.
 - VK Codex isolation requires both auth and Codex session/rollout state if you want existing workspace threads to continue cleanly after the switch.
+- A same-day backup of the current live `CODEX_HOME` is not enough if
+  `state_5.sqlite` still contains thread rows pointing at a retired Codex home.
+  Before backend restarts, audit active and recently updated Codex threads for
+  missing `rollout_path` files and restore any recoverable stale paths from
+  Desktop session archives.
+- Starting a fresh Codex thread after a missing rollout error is not recovery.
+  It is a fallback with context loss and must not be described as a fix unless
+  the operator explicitly accepts that tradeoff.
+- The active-agent restart gate is mandatory: list all running executions and
+  their Codex rollout status, then get explicit acceptance for interrupting
+  those exact runs before touching the service.
+- Board "In Staging" is not proof of deployment readiness. A future restart
+  package must compare each intended workspace branch and last summary against
+  the candidate branch, and must report `Committed / Not pushed` work as not
+  included.
+- Do not validate saved messages from SQLite alone. Verify SQLite, REST scratch,
+  WebSocket scratch, and desktop/mobile UI.
+- Do not replace the active frontend release directory with a built dist from a
+  worktree. That caused a left-nav regression during the 2026-08 restart
+  incident. Use a new release directory and pointer switch, or a backed-up
+  one-file hotfix.
+- Broken symlinks inside workspace launcher directories can block
+  `git worktree add` with `Invalid repository ... already exists`. Inspect and
+  preserve the obstruction before moving it; do not delete potentially dirty
+  worktrees.
 - Passing raw HTTP stress tests is not enough. The earlier false positive came from not reproducing:
   - mounted workspace UI behavior
   - repeated workspace/task polling

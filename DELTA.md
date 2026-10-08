@@ -1547,3 +1547,17 @@ targets. Added phone search icons and clear labels, aligned headings, softened
 card borders and tightened row/action proportions. Extended the existing browser
 acceptance with search sizing/clear-control checks; see VK_MOBILE_UX.md and the
 style SSD evidence directory. Desktop/model/routing and production are unchanged.
+
+## 2026-10-08 — Phone frontend release
+
+The operator reviewed the redesigned/style-refined phone UI and authorized deploy,
+push/PR and rebase merge. PR224 merged into staging; PR226 promoted main 22f09e245.
+A clean build with an identical complete source tree was activated at 17:41 UTC
+through an atomic directory/symlink exchange at the fixed frontend runtime path.
+Backend PID 3027197/binary/configuration and current application data were preserved.
+Candidate/live phone, desktop and dark-mode browser acceptance, HTTPS hashes,
+project counts/order and saved-message visibility passed. The previous frontend
+is preserved and its rollback archive is SHA256-verified on Desktop B:.
+VK_MOBILE_RELEASE_20261008.md records evidence and unverified regression cases.
+The test harness now also intercepts /v1 writes and matches exact visible project
+titles when an accessible needs-review indicator extends the button name.

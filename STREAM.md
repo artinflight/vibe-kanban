@@ -49,6 +49,24 @@ input/control targets. Search icons, lighter surfaces, aligned 24px headings,
 softer card borders and tighter row spacing refine the new phone layouts.
 Style evidence is in `/mnt/vk-storage/vk-mobile-style-20261008`.
 
+# October 7 Desktop-backed Recovery
+
+Branch `fix/vk-desktop-backed-recovery` extends the explicit PR142 operational
+pin `528282d00`. Read `VK_DESKTOP_BACKED_RECOVERY.md`. Scope is backup archive
+location resolution, bounded verification and new-package adoption. No production
+restart, routing change, archive retirement or application deployment is authorized.
+The historical stream descriptions below do not describe this branch's scope.
+
+# October 4 Operational Backup Follow-up
+
+Branch `fix/vk-backup-move-preflight` from staging `86d1c083a` strengthens exact
+cross-parent move evidence, fail-closed backup coverage and next-package tool
+integration. Keep the accepted production deployment running. No restart,
+routing change, database restore, application change or unrelated agent work
+is authorized. Read VK_BACKUP_MOVE_FOLLOWUP.md. The old maintenance branch is
+preserved; PR133 overlaps prerequisites and must not replace current staging.
+The earlier scope notes below are retained as history.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

@@ -37,6 +37,7 @@ class Journal:
         self.roots = {str(Path(path).resolve()) for path in self.plan["sources"]}
         self.excluded = {str(Path(path).resolve()) for path in self.plan["excluded_rebuildable_directories"]}
         self.watches, self.changed, self.events, self.errors = {}, {}, {}, []
+        self.deleted_watches = set()
         self.seq, self.ready = 0, False
         self.lock = threading.RLock()
 
@@ -61,6 +62,17 @@ class Journal:
             directory = self.watches.get(wd)
             if directory is None:
                 self.errors.append({"unknown_watch": wd, "mask": mask})
+                return
+            if mask & 0x400:
+                parent_covered = str(Path(directory).parent) in self.watches.values()
+                if directory not in self.roots and parent_covered:
+                    self.deleted_watches.add(wd)
+                else:
+                    self.errors.append({"protected_root_deleted": directory})
+            if mask & IGNORED and wd in self.deleted_watches:
+                self.deleted_watches.remove(wd)
+                self.watches.pop(wd, None)
+                # DELETE_SELF recorded the tombstone; the parent covers recreation.
                 return
             path = str(Path(directory) / name) if name else directory
             if self.excluded_path(path):

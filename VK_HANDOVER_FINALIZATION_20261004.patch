@@ -1,0 +1,81 @@
+diff --git a/cutover_controller.py b/cutover_controller.py
+index f171259..8d9820b 100644
+--- a/cutover_controller.py
++++ b/cutover_controller.py
+@@ -190,6 +190,7 @@ def preflight(executing=False):
+         external.extend(additional)
+         current['external']=external
+         assert control.prop(CONFIG['candidate'],'LoadState') == 'loaded'
++        assert Path(CONFIG['candidate_active_override']).parent.is_dir(), 'Install candidate boot override directory before handover'
+         assert str(ROOT/'production_guard.py')+' '+CONFIG['incumbent_color'] in control.prop(CONFIG['incumbent'],'ExecStartPre'), 'Install prepared reciprocal interlocks after approval'
+         assert str(ROOT/'production_guard.py')+' '+CONFIG['candidate_color'] in control.prop(CONFIG['candidate'],'ExecStartPre')
+         assert str(ROOT/'release/server') in control.prop(CONFIG['candidate'],'ExecStart')
+@@ -347,6 +348,7 @@ def execute():
+             control.recovery(CONFIG,standby,configure_companion);raise
+         # Future boots acquire normally; standby is only for this live handover.
+         boot=Path(CONFIG['candidate_active_override'])
++        boot.parent.mkdir(parents=True,exist_ok=True)
+         boot.write_text('[Service]\nEnvironment=VK_CAPACITY_START_PAUSED=0\n')
+         subprocess.run(['systemctl','--user','daemon-reload'],check=True)
+         control.ctl('disable',CONFIG['incumbent']);control.ctl('enable',CONFIG['candidate'])
+@@ -376,6 +378,20 @@ def emergency():
+     CONFIG['receipt_directory']=str(folder)
+     before=json.loads((folder/'before.json').read_text())
+     standby=json.loads((folder/'standby.json').read_text())
++    preservation=folder/'preservation-check.json'
++    if (preservation.exists() and json.loads(preservation.read_text())['passed']
++            and routed_owner()==CONFIG['candidate_port']
++            and control.prop(CONFIG['incumbent'],'MainPID')==standby['pid']
++            and control.prop(CONFIG['incumbent'],'FreezerState')=='frozen'):
++        thaw_external()
++        control.save(folder/'emergency.json',{'healthy_candidate_retained':True,
++            'no_duplicate_recovery':True,'same_latest_data':True,'database_restored':False})
++        if not (folder/'continuation-submitted.json').exists():
++            historical.api=lambda path,data=None:control.api(CONFIG['candidate_port'],path,data)
++            continuity.ROOT=ROOT
++            continuity.continue_original(folder,before['maintenance'],
++                'Updated owner is healthy. Complete finalization and acceptance; do not repeat handover')
++        return
+     if (json.loads(Path(CONFIG['route']).read_text())['mode']==CONFIG['incumbent_color']
+             and control.prop(CONFIG['incumbent'],'MainPID')!='0'
+             and control.prop(CONFIG['incumbent'],'FreezerState')=='running'
+diff --git a/test_controller.py b/test_controller.py
+index 39a79c6..5a8be09 100644
+--- a/test_controller.py
++++ b/test_controller.py
+@@ -77,6 +77,23 @@ class ControllerTests(unittest.TestCase):
+     def test_original_maintenance_thread_is_preserved(self):
+         self.assertEqual(c.continuity.SESSION,'75bc68d4-aa55-4914-a695-f20c46a13e4c')
+         self.assertEqual(c.continuity.NATIVE,'01a03e74-2c1a-72f0-9e00-8e4293fe910d')
++    def test_success_creates_missing_nested_boot_override_parent(self):
++        self.config['candidate_active_override']=str(self.root/'missing.service.d'/'zz-active-owner.conf')
++        c.execute()
++        self.assertIn('VK_CAPACITY_START_PAUSED=0',Path(self.config['candidate_active_override']).read_text())
++        self.assertNotIn('recover-latest',self.calls)
++        self.assertEqual(self.calls.count('continue-original'),1)
++    def test_healthy_accepted_candidate_does_not_enter_emergency_recovery(self):
++        c.execute()
++        folder=Path(json.loads((self.root/c.ATTEMPT).read_text())['folder'])
++        (folder/'before.json').write_text(json.dumps(self.before))
++        (folder/'standby.json').write_text(json.dumps({'pid':'777'}))
++        def prop(unit,key):
++            if key=='MainPID':return '777'
++            return 'frozen' if unit==self.config['incumbent'] else 'running'
++        with patch.object(c.control,'prop',prop):c.emergency()
++        self.assertNotIn('recover-latest',self.calls)
++        self.assertTrue(json.loads((folder/'emergency.json').read_text())['healthy_candidate_retained'])
+     def test_changed_staging_blocks_same_main_cutover(self):
+         refs=self.config['source_commit']+'\trefs/heads/main\n'+'0'*40+'\trefs/heads/staging\n'
+         with patch.object(c.subprocess,'check_output',return_value=refs):
+diff --git a/install_prepared.py b/install_prepared.py
+index cb5011c..ad6fed9 100644
+--- a/install_prepared.py
++++ b/install_prepared.py
+@@ -55,6 +55,7 @@ def install(dry_run=True, preparation=False):
+     (backup/'manifest.json').write_text(json.dumps({str(p):i if data is not None else None
+         for i,(p,data) in enumerate(previous.items())},indent=2))
+     try:
++        Path(config['candidate_active_override']).parent.mkdir(parents=True,exist_ok=True)
+         for path,data in planned.items():
+             path.parent.mkdir(parents=True,exist_ok=True)
+             temporary=path.with_suffix(path.suffix+'.new')

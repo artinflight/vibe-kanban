@@ -1,3 +1,16 @@
+## October 8 isolated prevention and recovery audit
+
+Read VK_STARTUP_RECOVERY_SAFETY.md. This repair was developed in a new worktree
+from fork staging; the original Staging maintenance workspace remains clean.
+Argument inspection/rejection precedes initialization; runtime startup requires
+an explicit database/root identity receipt; automatic shared-workspace deletion
+is removed. The fresh recovery audit keeps 47 content differences, three missing
+mode records, 14,382 names without authenticated metadata and both journal gaps
+explicit. No zero-loss, deployment or release-readiness claim is made.
+Real-binary sandbox tests are wired into CI; full local test execution was limited
+by dependencies/capacity. Independent review and hosted acceptance remain next.
+Do not create a production receipt, replay recovery placement, or switch services.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

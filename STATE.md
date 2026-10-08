@@ -1,3 +1,11 @@
+## October 8 incident prevention remains isolated and undeployed
+
+The October 7 shared-worktree incident still blocks release preparation. A fresh
+read-only audit supports regular-file baseline comparisons but retains journal
+coverage loss and post-backup uncertainty. See VK_STARTUP_RECOVERY_SAFETY.md.
+The repair branch is separate from maintenance and PR150; production is unchanged.
+Independent review and actual isolated server/CI acceptance remain required.
+
 ## October 1: AutoSwitch scope release preparation
 
 PR134/135 merged the downward-routing scope correction into staging/main. It is

@@ -132,6 +132,7 @@ pub async fn start_with_bind(
 pub async fn initialize_deployment(
     shutdown: CancellationToken,
 ) -> Result<DeploymentImpl, DeploymentError> {
+    local_deployment::validate_startup_identity()?;
     // Create asset directory if it doesn't exist
     if !asset_dir().exists() {
         std::fs::create_dir_all(asset_dir()).map_err(|e| {

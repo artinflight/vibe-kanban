@@ -1,0 +1,15 @@
+{
+  "config_version": "v8",
+  "theme": "SYSTEM",
+  "executor_profile": {"executor": "CLAUDE_CODE"},
+  "disclaimer_acknowledged": true,
+  "onboarding_acknowledged": true,
+  "notifications": {"sound_enabled": false, "push_enabled": false, "sound_file": "ABSTRACT_SOUND1"},
+  "editor": {"editor_type": "VS_CODE", "custom_command": null},
+  "github": {"pat": null, "oauth_token": null, "username": null, "primary_email": null, "default_pr_base": null},
+  "analytics_enabled": false,
+  "workspace_dir": "/run/fixture/workspaces",
+  "last_app_version": null,
+  "show_release_notes": false,
+  "relay_enabled": false
+}

@@ -1,3 +1,12 @@
+## October 8 startup/recovery safety repair
+
+Branch fix/startup-recovery-safety-20261008 starts from fork/staging8b562265d.
+Scope: strict invocation rejection, pre-start runtime identity pins, preservation
+of ambiguous worktrees, read-only recovery verification and isolated regressions.
+See VK_STARTUP_RECOVERY_SAFETY.md for contracts, evidence and validation gaps.
+No changes to maintenance, PR149/150/152, production, routes or services are in scope.
+This branch remains a draft until independent review and real isolated acceptance.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

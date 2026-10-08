@@ -24,7 +24,6 @@ use db::{
         workspace_repo::WorkspaceRepo,
     },
 };
-use deployment::DeploymentError;
 use executors::{
     actions::{
         Executable, ExecutorAction, ExecutorActionType,
@@ -105,7 +104,6 @@ Create `.vibe-attachments/` if needed. Use a relative `.vibe-attachments/...` pa
 #[derive(Clone)]
 pub struct LocalContainerService {
     db: DBService,
-    workspace_manager: WorkspaceManager,
     child_store: Arc<RwLock<HashMap<Uuid, Arc<RwLock<AsyncGroupChild>>>>>,
     transient_unit_store: Arc<RwLock<HashMap<Uuid, String>>>,
     cancellation_tokens: Arc<RwLock<HashMap<Uuid, CancellationToken>>>,
@@ -143,7 +141,6 @@ impl LocalContainerService {
     #[allow(clippy::too_many_arguments)]
     pub async fn new(
         db: DBService,
-        workspace_manager: WorkspaceManager,
         msg_stores: Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>>,
         config: Arc<RwLock<Config>>,
         git: GitService,
@@ -161,9 +158,10 @@ impl LocalContainerService {
         let workspace_touch_times = Arc::new(RwLock::new(HashMap::new()));
         let notification_service = NotificationService::new(config.clone());
 
-        let container = LocalContainerService {
+        // No startup/periodic filesystem deletion. A database row (or its absence)
+        // does not establish ownership of a shared workspace after recovery.
+        LocalContainerService {
             db,
-            workspace_manager,
             child_store,
             transient_unit_store,
             cancellation_tokens,
@@ -179,11 +177,7 @@ impl LocalContainerService {
             queued_message_service,
             notification_service,
             remote_client,
-        };
-
-        container.spawn_workspace_cleanup();
-
-        container
+        }
     }
 
     fn map_workspace_manager_error(err: WorkspaceError) -> ContainerError {
@@ -338,122 +332,6 @@ impl LocalContainerService {
 
         Workspace::mark_worktree_deleted(&self.db.pool, workspace.id).await?;
         Ok(())
-    }
-
-    async fn cleanup_expired_workspaces(&self) -> Result<(), DeploymentError> {
-        if std::env::var("DISABLE_WORKTREE_CLEANUP").is_ok() {
-            tracing::info!(
-                "Expired workspace cleanup is disabled via DISABLE_WORKTREE_CLEANUP environment variable"
-            );
-            return Ok(());
-        }
-
-        let expired_workspaces = Workspace::find_expired_for_cleanup(&self.db.pool).await?;
-        if expired_workspaces.is_empty() {
-            tracing::debug!("No expired workspaces found");
-            return Ok(());
-        }
-        tracing::info!(
-            "Found {} expired workspaces to clean up",
-            expired_workspaces.len()
-        );
-        for workspace in &expired_workspaces {
-            if workspace.pinned {
-                tracing::info!(
-                    "Preserving expired workspace {} because it is pinned",
-                    workspace.id
-                );
-                continue;
-            }
-            if self.workspace_has_external_processes(workspace).await {
-                tracing::info!(
-                    "Deferring expired workspace cleanup for {} because a host process is using its path",
-                    workspace.id
-                );
-                continue;
-            }
-            match self.is_container_clean(workspace).await {
-                Ok(true) => {}
-                Ok(false) => {
-                    tracing::warn!(
-                        "Preserving expired workspace {} because it contains uncommitted or untracked files",
-                        workspace.id
-                    );
-                    continue;
-                }
-                Err(error) => {
-                    tracing::error!(
-                        "Unable to verify whether expired workspace {} is clean; preserving it: {}",
-                        workspace.id,
-                        error
-                    );
-                    continue;
-                }
-            }
-            if let Err(error) = self.cleanup_workspace(workspace).await {
-                tracing::error!(
-                    "Failed to clean up expired workspace {}; it remains eligible for retry: {}",
-                    workspace.id,
-                    error
-                );
-            }
-        }
-        Ok(())
-    }
-
-    async fn reconcile_requested_workspace_cleanups(&self) {
-        if !self.status_worktree_cleanup_enabled() {
-            tracing::info!("Status-triggered worktree cleanup is disabled for this VK instance");
-            return;
-        }
-
-        let workspace_ids = match Workspace::find_worktree_cleanup_requests(&self.db.pool).await {
-            Ok(workspace_ids) => workspace_ids,
-            Err(error) => {
-                tracing::error!("Failed to list requested workspace cleanups: {}", error);
-                return;
-            }
-        };
-
-        for workspace_id in workspace_ids {
-            if let Err(error) = self
-                .retry_archived_workspace_cleanup_after_execution(
-                    workspace_id,
-                    &ExecutionProcessRunReason::CleanupScript,
-                )
-                .await
-            {
-                tracing::error!(
-                    "Failed to reconcile requested cleanup for workspace {}: {}",
-                    workspace_id,
-                    error
-                );
-            }
-        }
-    }
-
-    fn spawn_workspace_cleanup(&self) {
-        let container = self.clone();
-        tokio::spawn(async move {
-            container
-                .workspace_manager
-                .cleanup_orphan_workspaces()
-                .await;
-
-            let mut cleanup_interval =
-                tokio::time::interval(tokio::time::Duration::from_secs(1800)); // 30 minutes
-            loop {
-                cleanup_interval.tick().await;
-                tracing::info!("Starting periodic workspace cleanup...");
-                container.reconcile_requested_workspace_cleanups().await;
-                container
-                    .cleanup_expired_workspaces()
-                    .await
-                    .unwrap_or_else(|e| {
-                        tracing::error!("Failed to clean up expired workspaces: {}", e)
-                    });
-            }
-        });
     }
 
     /// Record the current HEAD commit for each repository as the "after" state.
@@ -1600,7 +1478,9 @@ impl ContainerService for LocalContainerService {
     }
 
     fn status_worktree_cleanup_enabled(&self) -> bool {
-        std::env::var("DISABLE_STATUS_WORKTREE_CLEANUP").is_err()
+        // Status changes and restart reconciliation cannot authorize shared-path
+        // deletion. Explicit workspace deletion remains a separate user action.
+        false
     }
 
     async fn store_db_stream_handle(&self, id: Uuid, handle: JoinHandle<()>) {

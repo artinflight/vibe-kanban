@@ -131,6 +131,8 @@ jobs:
               - 'Cargo.lock'
               - 'shared/**'
               - 'scripts/prepare-db.js'
+              - 'scripts/verify_recovered_tree.py'
+              - 'scripts/testing/startup-recovery-safety/**'
               - 'pnpm-lock.yaml'
               - 'package.json'
               - 'rustfmt.toml'
@@ -401,6 +403,12 @@ jobs:
           tool: cargo-nextest
           git: https://github.com/nextest-rs/nextest
           rev: 6e4a9d6f2c4964f30ff54a8cd5466f8869267daa # cargo-nextest-0.9.132
+
+      - name: Install isolated server test boundary
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+
+      - name: Run read-only recovery audit regressions
+        run: python3 -B -m unittest discover -s scripts/testing/startup-recovery-safety -v
 
       - name: Run Cargo tests
         run: cargo nextest run --workspace --exclude vibe-kanban-tauri

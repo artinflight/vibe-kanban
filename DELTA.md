@@ -1523,3 +1523,8 @@ Recommend is required; no deployment/restart/cutover or Auto activation. Deadlin
 for full useful router readiness is before October 30, 2026 (20x becomes 10x).
 See VK_AUTOSWITCH_RELOAD.md for mandatory next-candidate packaging and remaining
 acceptance/ownership dependencies; CU credit budgeting is a separate issue.
+
+2026-10-08: Isolated startup/recovery safety branch from staging8b562265d.
+Strict invocations, explicit identity gate and non-destructive automatic lifecycle;
+content/metadata audit retains journal gaps and post-backup uncertainty. No deploy.
+See VK_STARTUP_RECOVERY_SAFETY.md; independent review/real isolated CI pending.

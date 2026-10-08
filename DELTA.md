@@ -1539,3 +1539,11 @@ title-first details and compact prompt composition with secondary controls in
 Options. Retained history/focus/state/viewport behavior and desktop layouts.
 See VK_MOBILE_UX.md for revised evidence and GTK/device QA limits. PR #224 stays
 a draft into staging; no merge, deployment or model-routing change.
+
+## 2026-10-08 — Phone style refinement
+
+Reduced search and chip visible surfaces while preserving 48px interactive
+targets. Added phone search icons and clear labels, aligned headings, softened
+card borders and tightened row/action proportions. Extended the existing browser
+acceptance with search sizing/clear-control checks; see VK_MOBILE_UX.md and the
+style SSD evidence directory. Desktop/model/routing and production are unchanged.

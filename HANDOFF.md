@@ -15,6 +15,14 @@ Physical Android keyboard/browser chrome and Safari/Firefox remain QA limits;
 Rust checks require missing host GTK pkg-config dependencies. Refer to current
 validation receipts instead of first-pass CI evidence.
 
+The style follow-up keeps the redesigned flows and refines phone search, chips,
+headings, cards and workspace rows. Search is 48px interactive/40px visible;
+chips are 48px interactive/36px visible. Icons and named clear controls are added
+only to phone searches. Follow-up screenshots/checks are under
+`/mnt/vk-storage/vk-mobile-style-20261008`; the browser harness also checks compact
+search height, separate clear targets and clear/search behavior. Desktop remains
+unchanged. The preceding redesign's full CI passed at source `121cdccb0`.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

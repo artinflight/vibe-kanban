@@ -1,6 +1,11 @@
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FunnelIcon, PlusIcon, XIcon } from '@phosphor-icons/react';
+import {
+  FunnelIcon,
+  MagnifyingGlassIcon,
+  PlusIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { cn } from '../lib/cn';
 import type { PriorityLevel } from './PriorityIcon';
 import { InputField } from './InputField';
@@ -148,9 +153,12 @@ export function KanbanFilterBar<
             onChange={onSearchQueryChange}
             placeholder={t('kanban.searchPlaceholder', 'Search issues...')}
             variant="search"
+            leadingIcon={MagnifyingGlassIcon}
+            ariaLabel="Search tasks"
             actionIcon={filters.searchQuery ? XIcon : undefined}
+            actionLabel="Clear search"
             onAction={handleClearSearch}
-            className="min-w-0 flex-1"
+            className="phone-search-field min-w-0 flex-1"
           />
           <button
             type="button"

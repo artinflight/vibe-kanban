@@ -1,119 +1,133 @@
-# October 8 post-backup content reconciliation
+# October 8 recovery evidence correction — sign-off withheld
 
-## Result and scope
+The earlier statement that all 710 candidates were accounted for is withdrawn.
+The recovery evidence does **not** support restart, cutover, another restore or
+cleanup. This correction is developed only in the isolated PR153 source checkout.
+Production, shared working files and the stopped original conversation are untouched.
 
-The named October 7 post-backup recovery candidates are now accounted for. No
-identified incident edit requires another restore. This conclusion covers the
-retained journal's mutation candidates and the recorded owner edits. It does not
-certify preservation of unrecorded writes during lost journal coverage.
+Seamus's supplied independent source review at
+`a23a2d2cd2c8ce9d0a064f3b662ce706e3f69c8a` verified argument checks,
+database/root identity protection, removal of automatic cleanup and passing CI.
+That review could not authenticate the private local/Desktop row evidence.
+The checks below are new **parent-agent checks**, not a separate independent
+review. AutoSwitch blocked the requested reviewer before creating a child thread:
+`Shadow recommendation exceeds inherited child qualification`. Its recommended
+qualification was `gpt-6-astra/high`; the operator-controlled policy disables
+escalation. A qualified separate reviewer or separate review session is required.
 
-The earlier check found zero missing *new names*, excluding names already in the
-initial journal. It did not compare newer versions of existing files, reconcile
-Git index semantics, or distinguish later deliberate removals. That incomplete
-verification was why post-backup loss remained broadly unresolved.
+## Authenticated retained packets
 
-All investigation and new tooling ran in the isolated PR153 worktree. Recorded
-commands were inspected as evidence and never executed. No placement script,
-server, production restore, restart, deployment or route switch was run.
+Read-only downloads from Desktop B match both published hashes. Streaming checks
+also matched all contained manifest entries and local inputs. Recorded commands
+and consumed restoration programs were never executed.
 
-## Content evidence
+| Retained packet | Bytes | SHA256 | Manifest entries checked |
+| --- | ---: | --- | ---: |
+| `B:/vk-backups/vk-incident-20261007T2316/incident-20261007T2316-evidence.tar.zst` | 35,382,789 | `bf757ac1e257c7b9ca5edacba7491177b300c1db9677f0e94018dae9e8d88aa7` | 41 |
+| `B:/vk-backups/vk-startup-recovery-safety-20261008/post-backup-reconciliation-deaa2e1dc.tar.gz` | 4,200,310 | `67d831c8c6289b6c1a80fb47fb2a4d2767cc34c99b0d50d1f870dfbcf64599f5` | 21 |
 
-The accepted catch-up manifest is dated October 7 22:33:40.837 UTC. The retained
-incident transcript is authenticated against the original incident manifest:
-135,028,264 bytes, SHA256
-`9b052c937413d638623d785dad70dca575d408eb4afbb90b626811d48475fe56`.
+The reconciliation packet also authenticates its separate 08:53 audit member,
+SHA256 `3b87711216971a96a2b9ecb71d28493481b564a667526d7a2723db0d07e99908`.
+Packet authentication proves the retained bytes, not the truth of every earlier
+conclusion. The original packets are preserved unchanged; this report supersedes
+incorrect conclusions in their `resolution.json` and earlier branch notes.
+See [archive authentication](scripts/testing/startup-recovery-safety/evidence/20261008-review/archive-authentication.json).
 
-An independent in-memory replay started from pushed owner commit
-`422fe5ba0a406f03dd3a658d25e2f632f66d49ab`. It applied all 14 successful textual
-patch calls between 22:47 and 23:16 and rejected the failed call at transcript
-line 37343. All 11 resulting file contents match the current owner files exactly.
-This includes the three new scripts absent from the accepted backup inventory.
-No recorded command or incident restoration program was executed during replay.
+## Corrected 710-row accounting
 
-The retained 23:12 Git-status observation lists nine changed/new files. The last
-successful patch additionally changes the two scratch-retirement files. These
-11 names agree with the independently replayed set. Earlier 22:36/22:46 document
-edits are contained in pushed commit 422fe5ba0, an ancestor of the current owner
-head. All 15 original owner restoration files match current committed contents;
-14 also match the original restoration hashes. HANDOFF.md's remaining difference
-is the later continuity commit f36e6f10d. The owner remains clean at that head.
+Every retained candidate's name and event mask was checked against the
+packet-authenticated incident journal. Public rows use SHA256 of the full path,
+so a reviewer with the private archive can match every row without publishing
+private transcript content. No candidate is omitted because its name predates
+the catch-up backup.
 
-The retained incident journal has 710 non-directory mutation candidates under
-the physical workspace root, including older names previously omitted:
-
-| Candidates | Evidence and disposition |
+| Candidates | Supported disposition |
 | --- | --- |
-| 19 currently present | SHA256 matches the authenticated accepted baseline receipt. |
-| 15 currently present | Newer owner content is committed and/or independently replayed; preserve it. |
-| 676 absent in the retired Hyrox task tree | That tree still passed the October 8 08:53 baseline audit. Its separate owner later removed the superseded draft through `merge:safe --supersede-pr 1960` after release/backport. Preserve the removal; retained recovery contains its 1,817 baseline regular files. |
+| 19 present | Current content matches the authenticated baseline receipt. |
+| 15 present | Current newer owner content matches the maintenance Git commit. |
+| 228 absent Hyrox names | Authenticated regular-file baseline rows passed the retained 08:53 audit. Their retained private baseline copies still match. The separate owner's retained merge log and release checkpoint match the packet's source hashes and corroborate later task retirement. Separate reviewer sign-off remains pending. |
+| 448 absent Hyrox names | **No baseline content or 08:53 audit row exists.** The retained initial journal records deletion for all 447 generated `dist` names and `firebase-debug.log`. This local journal's SHA is recorded, but it is not authenticated by these two Desktop packets. These names cannot be classified as later-retired baseline files; their content and precise lifecycle remain unverified. |
 
-All 86 recorded incident Git registrations were inspected without index refresh
-or writes. The earlier 47 content differences resolve into 15 current committed
-files, 31 Git administrative files and one registration pointer. Twelve of those
-administrative files are indexes: nine have identical staged entries to the
-backup despite different bytes; three reflect newer committed trees. All current
-indexes inspected have no staged changes. Two other modified seed databases
-match the accepted SQLite snapshot hashes; the receipt still lacks their mode
-evidence. No index or surviving working file was reset.
+See [all 710 redacted dispositions](scripts/testing/startup-recovery-safety/evidence/20261008-review/mutation-dispositions-redacted.json)
+and [retirement claim limits](scripts/testing/startup-recovery-safety/evidence/20261008-review/retirement-evidence.json).
+A whole worktree's later removal does not prove the lifecycle of names already
+absent from its accepted baseline. The earlier blanket classification of all
+676 absent names as later-retired was unsupported.
 
-## Current activity is not October 7 loss
+## Fail-closed historical patch attribution
 
-A fresh complete receipt audit checked 116,402 regular-file entries and found
-114,467 content/mode matches, 1,836 missing names, 96 content differences, three
-missing mode records and zero read errors. The October 8 08:53 audit previously
-verified every one of the 1,836 now-missing files and all 49 additional content
-differences. These 1,885 changes therefore postdate verified incident recovery;
-they are not evidence of an unrecovered October 7 file.
+The old checker matched patch literals anywhere in JavaScript and applied one
+aggregate success observation to all of them. It also allowed an overall pass
+while retaining parse errors. This is a proof weakness; it does not establish
+that any historical patch was misclassified.
 
-Most missing files are the deliberately retired Hyrox task. Eight other names
-are obsolete Git registrations: the current timelapse/typeflow worktrees resolve
-to their newer valid registrations. Two are Python bytecode cache files; their
-source and original cache contents remain retained. New working-file differences
-include ongoing reporting/media work and regenerated bytecode. The live audit
-reports them rather than treating this moving shared tree as a frozen baseline.
+The corrected checker recognizes only a complete sequential program of printed,
+awaited tool calls. Exactly one patch must be first. It requires a unique call
+identity, a subsequent matching result, exact result-slot cardinality and an
+ordered patch receipt followed by structured command results. Comments, branches,
+unexecuted literals, multiple patches, expressions, duplicate identities and
+ambiguous errors fail closed. A later command's returned nonzero exit status can
+coexist with a proved patch success. Any transcript parse failure prevents an
+overall pass, including a failure outside the requested timestamp window.
 
-The original journal retains both overflow errors and `ready: false`. The earlier
-45-error journal and outside-root move history remain preserved. The old
-regular-file receipt also lacks complete directory/link metadata. None of these
-limitations was erased or converted into a passing universal recovery claim.
-There is no identified missing incident edit in this reconciliation. An assertion
-that **every possible post-backup write survived** remains unsupported because
-the journal cannot supply unobserved names or previous file bytes.
+Against the authenticated 135,028,264-byte transcript (SHA256
+`9b052c937413d638623d785dad70dca575d408eb4afbb90b626811d48475fe56`),
+14 accepted patch/result pairs bind individually; the single failed verification
+at line 37343 binds as rejected. In-memory replay from commit
+`422fe5ba0a406f03dd3a658d25e2f632f66d49ab` matches all 11 resulting files.
+**Overall verification returns exit 1 and `recorded_edits_verified: false`**:
+line 415 cannot be parsed, SHA256
+`17c828479a4803c0126d478ef14638189bc3f4a7f53fe86cf98d80153bd50ffd`.
+The malformed bytes remain retained; no exception silently removes them.
+See [14 accepted bindings, rejected binding and 11 file hashes](scripts/testing/startup-recovery-safety/evidence/20261008-review/strict-owner-replay.json).
 
-## Reproduction and retained evidence
+All 15 original recovery files match the current clean maintenance commit
+`f36e6f10df9b5e66951c4e47c6dedbdf4f54944a`. Fourteen also match the original
+reconstruction hashes. HANDOFF's original version matches ancestor commit
+`422fe5ba0`; subsequent continuity commits explain the current difference.
+See [15 recovery-file comparisons](scripts/testing/startup-recovery-safety/evidence/20261008-review/recovery-files.json).
+These are named content facts, not certification of unobserved edits or history.
 
-Run the read-only owner check from this isolated source checkout:
+## Separate original-history accounting and workspace absence
 
-```sh
-python3 -B scripts/testing/startup-recovery-safety/reconcile_recorded_edits.py \
-  --transcript /mnt/vk-storage/vk-combined-release-20261007/incident-2316/original-thread.jsonl \
-  --sha256 9b052c937413d638623d785dad70dca575d408eb4afbb90b626811d48475fe56 \
-  --owner /mnt/vk-storage/worktrees/4e18-vk-staging-check/_vibe_kanban_repo \
-  --source-prefix /home/mcp/code/worktrees/4e18-vk-staging-check/_vibe_kanban_repo \
-  --base-commit 422fe5ba0a406f03dd3a658d25e2f632f66d49ab \
-  --after 2026-10-07T22:47:00Z --before 2026-10-07T23:16:00Z
-```
+The [pinned 145-row ledger](https://github.com/artinflight/Operations/blob/53f645a95973aaf30f1f4e2cceb6425c3c748621/logs/2026-10-08-github-preservation-missing-commits.csv)
+authenticates as Git blob `92a689f064986f5b8bdf06a0a31d4167759e22b7` and
+SHA256 `54dce876aabf4c725fb3a57997a35beacff4d6a87f081980b344274af84d23ae`.
+Its counts remain 86 vibe-kanban, 24 opNVLP, 21 hyroxready-app, 11 programming
+and 3 caspian-app. Read-only object probes and cross-reference against the pinned
+original-commit and association manifests found no original object or original
+remote witness for these rows. **All 145 remain unresolved.** Eligible source
+checkpoints or reconstructed content do not clear original-history gaps.
+See [every history row and probe outcome](scripts/testing/startup-recovery-safety/evidence/20261008-review/original-history-cross-reference.json).
 
-The check rejects unauthenticated transcripts, unpaired/ambiguous patch results,
-unsafe names, ambiguous preimages and live content differences. Replay is in
-memory; current files use the existing no-follow, nonblocking, change-detecting
-hasher. Its claim is explicitly limited to accepted recorded textual patches.
+The operator reports that Git Sync Enforcement's development workspace
+`/home/mcp/code/worktrees/c31a-vk-git-sync-enfo/_vibe_kanban_repo` became unavailable
+around 12:40 UTC after its fixes were pushed. This review observes its absence;
+its cause is unknown. No incident-loss inference or workspace recreation follows.
+[PR223](https://github.com/artinflight/vibe-kanban/pull/223) remains open at remote
+commit `cc203a035d24253814ac75c69b5874e2e390afcd`; all 11 reported checks pass.
+See [read-only PR223 receipt](scripts/testing/startup-recovery-safety/evidence/20261008-review/pr223.json).
 
-Evidence is under
-`/mnt/vk-storage/vk-startup-recovery-safety-20261008/post-backup`. It contains the
-independent replay, pre-incident status observations, all 86 registration checks,
-47-difference reconciliation, 710-candidate inventory/content comparisons,
-fresh audit, later-activity comparison and source-hash-bound removal evidence.
-Twenty-seven focused Python regressions pass. Independent PR review and the
-separate release-readiness gates remain required; this reconciliation grants no
-production authority.
+## Remaining blockers and next authority boundary
 
-The source `deaa2e1dcd51d40a103de97d0c9e94db507d152b` evidence packet was delivered
-without replacing an existing archive and independently full-hash-verified on
-Desktop B:
-`B:/vk-backups/vk-startup-recovery-safety-20261008/post-backup-reconciliation-deaa2e1dc.tar.gz`.
-It is 4,200,310 bytes, SHA256
-`67d831c8c6289b6c1a80fb47fb2a4d2767cc34c99b0d50d1f870dfbcf64599f5`.
-It includes the earlier 08:53 audit needed to distinguish later changes, all new
-reconciliation receipts and the exact source patch. The original incident packet
-and previous prevention evidence packets remain retained separately.
+Independent row-level sign-off is unavailable until reviewer routing is resolved.
+The malformed transcript line and 448 content/lifecycle gaps remain explicit.
+The incident journal's overflows and `ready: false`, the earlier 45-error journal,
+and outside-root move history leave unobserved writes uncertified. The inventory
+still has 14,382 names without authenticated type/link/directory/mode metadata,
+and three SQLite rows lack mode evidence. Original history has the separate 145
+unresolved rows. Previously skipped private-dependency checks remain unexercised.
+No universal zero-loss or recovery-complete claim is made.
+
+Only after independent sign-off should fresh-backup, protected fallback, writer
+fencing and controller acceptance be prepared as a separate next step. Cleanup
+must remain unavailable until Seamus's human QA passes. This review authorizes
+no cleanup, restore, deployment, restart, cutover or stopped-session resumption.
+See the [explicit withheld verdict](scripts/testing/startup-recovery-safety/evidence/20261008-review/verdict.json)
+and [safe evidence manifest](scripts/testing/startup-recovery-safety/evidence/20261008-review/manifest.json).
+
+Private authentication/reproduction inputs and the parent audit program are under
+`/mnt/vk-storage/vk-startup-recovery-safety-20261008/independent-review`.
+No raw private transcript or secret is included in committed evidence. The Python
+regression suite passes 35 tests, including adversarial patch/result attribution
+and a CLI failure despite matching files when transcript parsing fails.

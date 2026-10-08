@@ -1,0 +1,28 @@
+{
+  "python_regressions": 35,
+  "python_passed": true,
+  "format_passed": true,
+  "ops_check_passed": true,
+  "strict_replay_expected_exit": 1,
+  "strict_replay_overall_pass": false,
+  "source_checker_sha256": "8f55cd5104b1885b42017ec030515298d08528ffc3b87fc8fbe102f4f423cf24",
+  "private_parent_audit_program_sha256": "71ff820f934c7717f3b1041c11afdbfe55e8738192169feb7f07086f2de73a7f",
+  "private_parent_audit_program_location": "/mnt/vk-storage/vk-startup-recovery-safety-20261008/independent-review/audit_retained_evidence.py",
+  "logs": {
+    "python-regressions.log": {
+      "bytes": 5411,
+      "sha256": "89dec6d09882acae517ff8740be8f695e2884620793b3e7f228590f96d5261b8"
+    },
+    "format.log": {
+      "bytes": 35914,
+      "sha256": "8a9da0e1d6b7878b79f401842aff7baf5cb0157919bd65bfc4acc4eefd87c2ab"
+    },
+    "ops-check.log": {
+      "bytes": 157,
+      "sha256": "83ed3b27eec15813964e2aa12047f78130f876cdbcb3a564e85881a82638819d"
+    }
+  },
+  "new_commit_hosted_ci": "pending",
+  "historical_a23_ci": "passed; private-dependency paths skipped",
+  "independent_sign_off": false
+}

@@ -1,13 +1,18 @@
-## October 8 post-backup named-content verification completed
+## October 8 recovery evidence correction — sign-off withheld
 
-Read VK_POST_BACKUP_RECONCILIATION_20261008.md. Independent in-memory replay of
-14 successful patches verifies all 11 later owner files; all 15 original owner
-restoration files match current committed contents. The 710 observed mutation
-candidates and earlier 47 content differences are accounted for. No identified
-incident edit requires another restore. Current shared-work changes are reported
-separately using the earlier passing audit; no survivor or shared file was written.
-Unobserved writes and missing metadata/coverage evidence remain uncertified.
-PR153 remains draft; independent review and later release gates still apply.
+Read VK_POST_BACKUP_RECONCILIATION_20261008.md. The earlier blanket claim that
+all 710 candidates were accounted for is withdrawn. Parent checks authenticate
+the two retained Desktop packets, individually bind 14 accepted patches and the
+rejected patch, match 11 replayed files and compare all 15 recovery files.
+The checker now fails overall on the preserved transcript parse error.
+Only 228 of 676 absent Hyrox names have baseline/08:53 evidence; the other 448
+have no baseline content and cannot be certified as later-retired. All 145
+original-history rows remain unresolved. Required separate review is blocked by
+AutoSwitch qualification policy; parent checks are not independent sign-off.
+PR223's remote commit and 11 checks are verified; the c31a workspace's absence
+around 12:40 is operator-reported and its cause unknown. No workspace recreation
+or incident-loss inference is authorized. Production/shared work remain untouched.
+No restart, cutover, restore or cleanup. Cleanup requires Seamus human QA.
 
 ## Current repair acceptance
 

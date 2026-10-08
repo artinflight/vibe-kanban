@@ -1543,3 +1543,16 @@ later shared-work changes remain separately reported. Added exact-context replay
 and evidence-result regressions; 27 focused Python checks pass. No shared writes,
 placement replay, production operation, new loss claim or erased journal gap.
 See VK_POST_BACKUP_RECONCILIATION_20261008.md for receipts and scope.
+
+2026-10-08 bounded recovery-evidence correction: supersedes the earlier blanket
+710-accounted/all-676-retired claim. 34 present content comparisons; 228 baseline
+Hyrox names verified at 08:53 with retained copies; 448 lack baseline contents.
+Strict full-program per-result patch binding proves 14 accepted/1 rejected pairs
+and 11 named file matches but overall fails on retained transcript line 415.
+All 15 recovery files match current maintenance commit; 145 original-history
+rows remain unresolved. Desktop packet hashes/internal manifests checked.
+Separate independent reviewer blocked by AutoSwitch qualification policy; no
+independent sign-off claimed. PR223 remote head/11 CI checks verified; c31a
+absence around 12:40 operator-reported, cause unknown. No production/shared
+writes, restore, workspace recreation, cleanup, restart or cutover. Cleanup
+requires Seamus human QA. See VK_POST_BACKUP_RECONCILIATION_20261008.md.

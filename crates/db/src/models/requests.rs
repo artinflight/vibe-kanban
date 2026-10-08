@@ -45,6 +45,20 @@ pub struct CreateAndStartWorkspaceResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize, TS)]
+pub struct BranchChatWorkspaceRequest {
+    pub name: Option<String>,
+    pub prompt: String,
+    pub linked_issue: Option<LinkedIssueInfo>,
+    pub executor_config: ExecutorConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+pub struct BranchChatWorkspaceResponse {
+    pub workspace: Workspace,
+    pub execution_process: ExecutionProcess,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
 pub struct UpdateWorkspace {
     pub archived: Option<bool>,
     pub pinned: Option<bool>,

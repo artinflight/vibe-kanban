@@ -3,9 +3,12 @@ import { create } from 'zustand';
 import type { IssuePriority } from 'shared/remote-types';
 
 export interface ProjectIssueCreateOptions {
+  title?: string;
+  description?: string | null;
   statusId?: string;
   priority?: IssuePriority;
   assigneeIds?: string[];
+  createDraftWorkspace?: boolean;
   parentIssueId?: string;
 }
 
@@ -72,12 +75,14 @@ function toInitialComposerDraft(
   options?: ProjectIssueCreateOptions | null
 ): KanbanIssueComposerDraft {
   return normalizeComposerDraft({
+    title: options?.title,
+    description: options?.description,
     statusId: options?.statusId,
     priority: options?.priority,
     assigneeIds: options?.assigneeIds,
     parentIssueId: options?.parentIssueId,
     tagIds: [],
-    createDraftWorkspace: false,
+    createDraftWorkspace: options?.createDraftWorkspace ?? false,
   });
 }
 

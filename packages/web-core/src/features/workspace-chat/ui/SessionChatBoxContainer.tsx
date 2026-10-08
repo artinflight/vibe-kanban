@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useParams } from '@tanstack/react-router';
 import { useDropzone } from 'react-dropzone';
 import {
   type AskUserQuestionItem,
@@ -37,11 +38,16 @@ import { ResolveConflictsDialog } from '@/shared/dialogs/tasks/ResolveConflictsD
 import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 import { buildAgentPrompt } from '@/shared/lib/promptMessage';
 import { formatDateShortWithTime } from '@/shared/lib/date';
-import { toPrettyCase } from '@/shared/lib/string';
+import {
+  splitMessageToTitleDescription,
+  toPrettyCase,
+} from '@/shared/lib/string';
+import { dispatchWorkspaceLinkRefresh } from '@/shared/lib/workspaceLinkRefresh';
 import {
   SessionChatBox,
   type ExecutionStatus,
   type SessionChatBoxEditorRenderProps,
+  type SessionToolbarActionItem,
 } from '@vibe/ui/components/SessionChatBox';
 import { ModelSelectorContainer } from '@/shared/components/ModelSelectorContainer';
 import {
@@ -62,9 +68,14 @@ import { useActionVisibilityContext } from '@/shared/hooks/useActionVisibilityCo
 import { PrCommentsDialog } from '@/shared/dialogs/tasks/PrCommentsDialog';
 import type { NormalizedComment } from '@vibe/ui/components/pr-comment-node';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
-import { sessionsApi } from '@/shared/lib/api';
+import {
+  buildKanbanIssueComposerKey,
+  openKanbanIssueComposer,
+} from '@/shared/stores/useKanbanIssueComposerStore';
+import { sessionsApi, workspacesApi } from '@/shared/lib/api';
 import { RenameSessionDialog } from '@vibe/ui/components/RenameSessionDialog';
 import type { TurnNavigationItem } from '@vibe/ui/components/TurnNavigationPopup';
+import { GitBranchIcon } from '@phosphor-icons/react';
 
 /** Compute execution status from boolean flags */
 function computeExecutionStatus(params: {
@@ -172,6 +183,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
   const sessionId = session?.id;
   const queryClient = useQueryClient();
   const hostId = useHostId();
+  const { projectId, issueId } = useParams({ strict: false });
 
   const handleRenameSession = useCallback(
     (targetSessionId: string, currentName: string) => {
@@ -188,6 +200,52 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     [queryClient, hostId, workspaceId]
   );
   const appNavigation = useAppNavigation();
+
+  const branchWorkspaceMutation = useMutation({
+    mutationFn: async ({
+      sessionId,
+      data,
+    }: {
+      sessionId: string;
+      data: Parameters<typeof sessionsApi.branchWorkspace>[1];
+    }) => {
+      const response = await sessionsApi.branchWorkspace(sessionId, data);
+      if (projectId && issueId && !response.workspace.task_id) {
+        await workspacesApi.linkToIssue(
+          response.workspace.id,
+          projectId,
+          issueId
+        );
+        dispatchWorkspaceLinkRefresh({ projectId });
+      }
+      return response;
+    },
+    onSuccess: async ({ workspace }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: workspaceSummaryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['taskWorkspaces'] }),
+        queryClient.invalidateQueries({
+          queryKey: ['taskWorkspacesWithSessions'],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: workspaceSessionKeys.byWorkspace(workspace.id, hostId),
+        }),
+      ]);
+      if (projectId) {
+        dispatchWorkspaceLinkRefresh({ projectId });
+      }
+
+      if (projectId && issueId) {
+        appNavigation.goToProjectIssueWorkspace(
+          projectId,
+          issueId,
+          workspace.id
+        );
+      } else {
+        appNavigation.goToWorkspace(workspace.id);
+      }
+    },
+  });
 
   const { executeAction } = useActions();
   const actionCtx = useActionVisibilityContext();
@@ -585,6 +643,85 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     reviewContext,
   ]);
 
+  const handleBranchWorkspace = useCallback(async () => {
+    if (!sessionId || !executorConfig || !localMessage.trim()) return;
+
+    const { prompt } = buildAgentPrompt(localMessage, [reviewMarkdown]);
+    const { title } = splitMessageToTitleDescription(localMessage);
+    const linkedIssue =
+      projectId && issueId
+        ? {
+            remote_project_id: projectId,
+            issue_id: issueId,
+          }
+        : null;
+
+    try {
+      await branchWorkspaceMutation.mutateAsync({
+        sessionId,
+        data: {
+          name: title,
+          prompt,
+          linked_issue: linkedIssue,
+          executor_config: executorConfig,
+        },
+      });
+    } catch {
+      return;
+    }
+
+    cancelDebouncedSave();
+    setLocalMessage('');
+    clearUploadedAttachments();
+    await clearDraft();
+    reviewContext?.clearComments();
+  }, [
+    sessionId,
+    executorConfig,
+    localMessage,
+    reviewMarkdown,
+    projectId,
+    issueId,
+    branchWorkspaceMutation,
+    cancelDebouncedSave,
+    setLocalMessage,
+    clearUploadedAttachments,
+    clearDraft,
+    reviewContext,
+  ]);
+
+  const handleBranchIssue = useCallback(async () => {
+    if (!projectId || !issueId || !localMessage.trim()) return;
+
+    const { prompt } = buildAgentPrompt(localMessage, [reviewMarkdown]);
+    const { title, description } = splitMessageToTitleDescription(localMessage);
+    openKanbanIssueComposer(buildKanbanIssueComposerKey(hostId, projectId), {
+      title,
+      description: reviewMarkdown ? prompt : description,
+      parentIssueId: issueId,
+      createDraftWorkspace: false,
+    });
+    appNavigation.goToProjectIssue(projectId, issueId);
+
+    cancelDebouncedSave();
+    setLocalMessage('');
+    clearUploadedAttachments();
+    await clearDraft();
+    reviewContext?.clearComments();
+  }, [
+    projectId,
+    issueId,
+    localMessage,
+    reviewMarkdown,
+    hostId,
+    appNavigation,
+    cancelDebouncedSave,
+    setLocalMessage,
+    clearUploadedAttachments,
+    clearDraft,
+    reviewContext,
+  ]);
+
   // Editor change handler
   const handleEditorChange = useCallback(
     (value: string) => {
@@ -595,6 +732,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         setLocalMessage(value);
       }
       if (sendError) clearError();
+      if (branchWorkspaceMutation.error) branchWorkspaceMutation.reset();
     },
     [
       isQueued,
@@ -603,6 +741,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
       executorConfig,
       sendError,
       clearError,
+      branchWorkspaceMutation,
       setLocalMessage,
     ]
   );
@@ -663,6 +802,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     isStopping ||
     !!feedbackContext?.isSubmitting ||
     editRetryMutation.isPending ||
+    branchWorkspaceMutation.isPending ||
     isApproving ||
     isDenying ||
     isAnswering;
@@ -774,9 +914,9 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     [actionCtx]
   );
 
-  const toolbarActionItems = useMemo(
-    () =>
-      toolbarActionsList.flatMap((action) => {
+  const toolbarActionItems = useMemo(() => {
+    const actionItems: SessionToolbarActionItem[] = toolbarActionsList.flatMap(
+      (action) => {
         if (isSpecialIcon(action.icon)) {
           return [];
         }
@@ -793,9 +933,58 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
             onClick: () => handleToolbarAction(action),
           },
         ];
-      }),
-    [toolbarActionsList, actionCtx, handleToolbarAction]
-  );
+      }
+    );
+
+    if (!isNewSessionMode && sessionId) {
+      actionItems.push({
+        id: 'branch-chat',
+        icon: GitBranchIcon,
+        label: 'Branch chat',
+        tooltip: localMessage.trim()
+          ? 'Branch this chat into an issue or workspace'
+          : 'Type a branch instruction first',
+        disabled: !localMessage.trim() || branchWorkspaceMutation.isPending,
+        items: [
+          {
+            id: 'branch-workspace',
+            label:
+              projectId && issueId ? 'New workspace in issue' : 'New workspace',
+            tooltip: executorConfig
+              ? 'Start a new workspace from this chat context'
+              : 'Choose an agent first',
+            onClick: () => void handleBranchWorkspace(),
+            disabled: !executorConfig || branchWorkspaceMutation.isPending,
+          },
+          {
+            id: 'branch-issue',
+            label: 'New issue in current issue',
+            tooltip:
+              projectId && issueId
+                ? 'Create a sub-issue from this chat context'
+                : 'Open an issue before creating a sub-issue',
+            onClick: () => void handleBranchIssue(),
+            disabled: !projectId || !issueId,
+          },
+        ],
+      });
+    }
+
+    return actionItems;
+  }, [
+    toolbarActionsList,
+    actionCtx,
+    handleToolbarAction,
+    isNewSessionMode,
+    sessionId,
+    localMessage,
+    executorConfig,
+    projectId,
+    issueId,
+    branchWorkspaceMutation.isPending,
+    handleBranchWorkspace,
+    handleBranchIssue,
+  ]);
 
   // Handle approve action
   const handleApprove = useCallback(async () => {
@@ -953,6 +1142,10 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
       presetOptions={presetOptions}
     />
   ) : undefined;
+  const branchWorkspaceError =
+    branchWorkspaceMutation.error instanceof Error
+      ? branchWorkspaceMutation.error.message
+      : null;
 
   // In placeholder mode, render a disabled version to maintain visual structure
   if (mode === 'placeholder') {
@@ -1063,7 +1256,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         conflictedFilesCount,
         onResolveConflicts: handleResolveConflicts,
       }}
-      error={sendError}
+      error={sendError ?? branchWorkspaceError}
       agent={effectiveExecutor}
       todos={todos}
       inProgressTodo={inProgressTodo}

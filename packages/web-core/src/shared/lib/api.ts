@@ -90,6 +90,8 @@ import {
   CreateFromPrError,
   CreateAndStartWorkspaceRequest,
   CreateAndStartWorkspaceResponse,
+  BranchChatWorkspaceRequest,
+  BranchChatWorkspaceResponse,
   RelayPairedClient,
   ListRelayPairedClientsResponse,
   RemoveRelayPairedClientResponse,
@@ -399,6 +401,20 @@ export const sessionsApi = {
       body: JSON.stringify(data),
     });
     return handleApiResponse<Session>(response);
+  },
+
+  branchWorkspace: async (
+    sessionId: string,
+    data: BranchChatWorkspaceRequest
+  ): Promise<BranchChatWorkspaceResponse> => {
+    const response = await makeRequest(
+      `/api/sessions/${sessionId}/branch-workspace`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+    return handleApiResponse<BranchChatWorkspaceResponse>(response);
   },
 };
 

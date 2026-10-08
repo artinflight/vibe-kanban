@@ -18,11 +18,34 @@ import uuid
 from vk_change_journal import Journal
 from vk_prep_common import digest, save, storage
 from vk_rolling_backup import capture, mirror_desktop, restore_chain
+from vk_archive_store import configure_transport
+from vk_desktop_transport import DesktopTransport
 
 
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def desktop_restore(result, root, destination, *, hostname=None, host_key_alias=None,
+                    low_peak=False):
+    """Retrieve authenticated metadata; compressed payloads stay on Desktop."""
+    downloaded = root / 'desktop-metadata'
+    downloaded.mkdir()
+    receipt = result['metadata_receipt']
+    name = receipt['name']
+    require(Path(name).name == name and name not in ('', '.', '..'), 'Unsafe metadata name')
+    transport = DesktopTransport(root / 'metadata-transport', hostname=hostname,
+                                 host_key_alias=host_key_alias)
+    subprocess.run(['scp', *transport.options,
+                    'desktop:' + receipt['desktop_directory'] + '/' + name,
+                    str(downloaded)], check=True, timeout=120)
+    require(digest(downloaded / name) == receipt['sha256'],
+            'Desktop recovery metadata download changed')
+    descriptor = json.loads((downloaded / name).read_text())
+    restored = restore_chain(descriptor, destination, desktop_only=True,
+                             retire_verified_snapshots=low_peak)
+    return descriptor, restored
 
 
 def ports():
@@ -80,7 +103,11 @@ def main():
     parser.add_argument("--handover-directory", required=True, type=Path)
     parser.add_argument("--release", required=True, type=Path)
     parser.add_argument("--desktop-directory", required=True)
+    parser.add_argument('--desktop-hostname')
+    parser.add_argument('--desktop-host-key-alias')
+    parser.add_argument('--low-peak-restore', action='store_true')
     args = parser.parse_args()
+    configure_transport(args.desktop_hostname, args.desktop_host_key_alias)
     os.umask(0o077)
     root = storage(args.root) / ("handover-" + uuid.uuid4().hex)
     root.mkdir(parents=True)
@@ -189,7 +216,7 @@ def main():
 
         def rejected_boundary():
             return capture(plan, root / "backups", journal.report,
-                           lambda archive: {"desktop_verified": False, "sha256": digest(archive)},
+                           lambda archive: {"desktop_verified": False},
                            parent, mirror, verify_fence=fence)
 
         try:
@@ -231,17 +258,12 @@ def main():
         result["cases"].append("Same-process cutback preserves writes and model/settings changes made after handover")
         handover.recovery(configuration, before, lambda role: None)
         result["cases"].append("Repeated recovery preserves the released candidate and current owner")
-        downloaded = root / "desktop-archives"
-        downloaded.mkdir()
-        for name, checksum in [(row["archive"], row["receipt"]["sha256"]) for row in (parent, boundary_result)] + [
-                (boundary_result["metadata_receipt"]["name"], boundary_result["metadata_receipt"]["sha256"])]:
-            subprocess.run(["scp", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15",
-                            "desktop:" + args.desktop_directory + "/" + name, str(downloaded)], check=True, timeout=120)
-            require(digest(downloaded / name) == checksum, "Desktop recovery download changed")
-        descriptor = json.loads((downloaded / boundary_result["metadata_receipt"]["name"]).read_text())
+        descriptor, restored = desktop_restore(
+            boundary_result, root, root / 'backups/isolated-restoration',
+            hostname=args.desktop_hostname, host_key_alias=args.desktop_host_key_alias,
+            low_peak=args.low_peak_restore)
         require(descriptor["handover_acceptance_pending"] and not descriptor["frozen_boundary_verified"],
                 "Desktop restore metadata must not claim handover acceptance")
-        restored = restore_chain(descriptor, root / "backups/isolated-restoration", downloaded)
         restored_runtime = Path(restored["destination"]) / "files" / str(runtime).lstrip("/")
         for original in (history, dirty, attachment):
             require(digest(original) == digest(restored_runtime / original.relative_to(runtime)), "Restored fixture mismatch")

@@ -20,7 +20,7 @@ class BackupTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(dir=os.environ["TMPDIR"])
         self.root = Path(self.temporary.name)
         self.desktop = PrivateDesktop(self.root)
-        self.source = self.root / "production-fixture"
+        self.source = self.root / "src"
         self.source.mkdir()
         self.backups = self.root / "backups"
         self.database = self.source / "state.sqlite"
@@ -155,7 +155,7 @@ class BackupTests(unittest.TestCase):
         before = (self.backups / "latest-result.json").read_bytes()
         self.note.write_text("new work")
         with self.assertRaisesRegex(ValueError, "unverified"):
-            self.backup(first, mirror=lambda archive: {"desktop_verified": False, "sha256": digest(archive)})
+            self.backup(first, mirror=lambda archive: {"desktop_verified": False})
         self.assertEqual((self.backups / "latest-result.json").read_bytes(), before)
 
     def test_failed_metadata_delivery_does_not_publish_latest(self):
@@ -298,8 +298,7 @@ class BackupTests(unittest.TestCase):
         def connect(path, *args, **kwargs):
             opened.append(str(path))
             self.assertNotIn(str(self.database), str(path))
-            self.assertIn("/payload/sqlite/", str(path))
-            self.assertTrue(str(path).endswith("?immutable=1"))
+            self.assertEqual(str(path), ":memory:")
             return real_connect(path, *args, **kwargs)
 
         with patch("vk_rolling_backup.sqlite3.connect", side_effect=connect):
@@ -317,7 +316,8 @@ class BackupTests(unittest.TestCase):
         changed[str(self.database)]["sha256"] = "0" * 64
         folder = Path(first["folder"])
         with self.assertRaisesRegex(ValueError, "checksum mismatch"):
-            verify_snapshot_archive(folder / first["archive"], changed, folder / "payload/manifest.json")
+            from vk_direct_capture import verify_remote_snapshots
+            verify_remote_snapshots(first, changed, json.loads((folder / "manifest.json").read_text()))
 
     def test_stream_verification_rejects_missing_snapshot(self):
         first = self.backup()
@@ -325,7 +325,8 @@ class BackupTests(unittest.TestCase):
         changed["missing"] = {"path": "sqlite/missing.sqlite", "sha256": "0" * 64}
         folder = Path(first["folder"])
         with self.assertRaisesRegex(ValueError, "Incomplete"):
-            verify_snapshot_archive(folder / first["archive"], changed, folder / "payload/manifest.json")
+            from vk_direct_capture import verify_remote_snapshots
+            verify_remote_snapshots(first, changed, json.loads((folder / "manifest.json").read_text()))
 
     def test_corrupt_private_snapshot_is_rejected_before_delivery(self):
         first = self.backup()
@@ -335,13 +336,19 @@ class BackupTests(unittest.TestCase):
         db.close()
         delivered = []
 
-        def corrupt(_source, target):
-            Path(target).write_bytes(b"not a SQLite database")
+        read = Path.read_bytes
+        def corrupt(path):
+            return b"not a SQLite database" if path == self.database else read(path)
 
-        with patch("vk_rolling_backup.shutil.copyfile", side_effect=corrupt):
+        def deliver(archive):
+            receipt = self.mirror(archive)
+            delivered.append(receipt)
+            return receipt
+
+        with patch.object(Path, "read_bytes", corrupt):
             with self.assertRaises(sqlite3.DatabaseError):
                 capture(self.plan, self.backups, self.journal.report,
-                        lambda path: delivered.append(path), first, self.mirror,
+                        deliver, first, self.mirror,
                         verify_fence=lambda: {"verified": True})
         self.assertEqual(delivered, [])
         self.assertEqual(json.loads((self.backups / "latest-result.json").read_text())["archive"], first["archive"])

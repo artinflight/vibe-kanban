@@ -1561,3 +1561,16 @@ is preserved and its rollback archive is SHA256-verified on Desktop B:.
 VK_MOBILE_RELEASE_20261008.md records evidence and unverified regression cases.
 The test harness now also intercepts /v1 writes and matches exact visible project
 titles when an accessible needs-review indicator extends the button name.
+
+## 2026-10-08 — Direct-to-Desktop archive streaming
+
+Implemented direct B: streaming in a separate sparse worktree, based on current
+staging plus the published PR149 operational prerequisites. New capture creates
+no Linux archive/snapshot payload; SQLite snapshots are bounded in RAM. Exact
+scope, journal, fence, integrity, recovery and approval checks remain. The small
+live B test passed remote readback and interrupted-publication recovery with
+zero observed local payload bytes and 60 KiB peak metadata-file allocation.
+215 private operational regression tests passed; broader application validation
+is unavailable in the sparse checkout. Read VK_DIRECT_DESKTOP_STREAM.md and its
+source-bound receipts. No production deployment, restart, old archive cleanup,
+full production restore, or Staging worktree/agent interaction occurred.

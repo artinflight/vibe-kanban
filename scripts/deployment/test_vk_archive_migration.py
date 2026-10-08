@@ -13,7 +13,9 @@ class MigrationAudit(unittest.TestCase):
     setUp = fixtures.DesktopBackups.setUp
     tearDown = fixtures.DesktopBackups.tearDown
     mirror = fixtures.DesktopBackups.mirror
-    backup = fixtures.DesktopBackups.backup
+    def backup(self):
+        from legacy_capture_fixture import legacy_capture
+        return legacy_capture(self.plan, self.backups, self.journal.report, self.mirror, publish=self.mirror)
 
     def row(self, result):
         return {'local': str(Path(result['folder']) / result['archive']),

@@ -72,7 +72,8 @@ class ProductionBackupTests(unittest.TestCase):
             validate_archive_warnings("tar: Permission denied", {"changed": []}, self.plan, True)
 
     def test_legacy_manifest_last_archive_still_restores(self):
-        first = self.backup()
+        from legacy_capture_fixture import legacy_capture
+        first = legacy_capture(self.plan, self.backups, self.journal.report, self.mirror, publish=self.mirror)
         folder = Path(first["folder"])
         archive = folder / first["archive"]
         subprocess.run(["tar", "--use-compress-program=zstd -T2 -3", "-cf", str(archive),
@@ -84,8 +85,9 @@ class ProductionBackupTests(unittest.TestCase):
         self.assertEqual((self.restored(first) / self.note.name).read_text(), self.note.read_text())
 
     def failed_delivery(self, parent):
+        from legacy_capture_fixture import legacy_capture
         with self.assertRaisesRegex(RuntimeError, "transport"):
-            capture(self.plan, self.backups, self.journal.report,
+            legacy_capture(self.plan, self.backups, self.journal.report,
                     lambda archive: (_ for _ in ()).throw(RuntimeError("transport")), parent, self.mirror)
         return next(self.backups.glob("delta-/*/pending-delivery.json")).parent
 

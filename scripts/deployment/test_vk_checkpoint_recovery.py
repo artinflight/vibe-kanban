@@ -21,9 +21,10 @@ class CheckpointRecoveryTests(unittest.TestCase):
     restored = fixture.BackupTests.restored
 
     def abandoned(self):
+        from legacy_capture_fixture import legacy_capture
         with patch.object(backup, 'validate_archive_warnings', side_effect=ValueError('pre-publication rejection')):
             with self.assertRaisesRegex(ValueError, 'pre-publication'):
-                self.backup()
+                legacy_capture(self.plan, self.backups, self.journal.report, self.mirror, publish=self.mirror)
         return next(self.backups.glob('checkpoint-/*'))
 
     def test_verified_unpublished_archive_recovers_without_recopy_and_next_delta_recaptures_db(self):
@@ -186,7 +187,7 @@ class CheckpointRecoveryTests(unittest.TestCase):
         first_restore = self.restored(first, 'before-release')
         self.assertEqual((first_restore / shell.relative_to(self.source)).read_text(), shell.read_text())
         shell.write_text('# Snapshot file\nexport FIXTURE=recaptured\n')
-        original_run = subprocess.run
+        original_run = subprocess.Popen
         deleted = []
         def release_before_tar(command, *args, **kwargs):
             if command[0] == 'tar' and not deleted:
@@ -198,7 +199,7 @@ class CheckpointRecoveryTests(unittest.TestCase):
         ephemeral.install(adapter)
         with patch.object(ephemeral, 'HOMES', (str(self.source),)), \
                 patch.object(backup, 'validate_archive_warnings', adapter.validate_archive_warnings), \
-                patch.object(subprocess, 'run', side_effect=release_before_tar):
+                patch.object(subprocess, 'Popen', side_effect=release_before_tar):
             second = self.backup(first)
         self.assertTrue(second['passed'])
         self.assertIn(str(shell), second['online_archive_warnings_recaptured_by_next_delta'])

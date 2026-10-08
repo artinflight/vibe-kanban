@@ -216,7 +216,7 @@ def main():
 
         def rejected_boundary():
             return capture(plan, root / "backups", journal.report,
-                           lambda archive: {"desktop_verified": False, "sha256": digest(archive)},
+                           lambda archive: {"desktop_verified": False},
                            parent, mirror, verify_fence=fence)
 
         try:

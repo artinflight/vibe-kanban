@@ -1,3 +1,13 @@
+# October 8: Root-coordinated direct-to-B backup adoption
+
+Read [VK_DIRECT_DESKTOP_STREAM.md](VK_DIRECT_DESKTOP_STREAM.md) for the isolated
+streaming fix, PR149 dependency, measured local footprint, exact receipts and
+integration limits. New captures stream complete archives directly to Desktop B,
+retain only bounded local metadata and preserve prior good backups on failure.
+This branch is not installed in Staging or production. Full restore capacity,
+existing human QA and restart approval remain separate requirements. No old
+archives were deleted and Staging's worktree/agent were not touched.
+
 # October 8: Phone frontend deployed
 
 The operator-approved phone redesign/style pass is live at `https://vibe.local`

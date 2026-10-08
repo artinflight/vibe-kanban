@@ -36,6 +36,9 @@ class DesktopTransport:
                 time.sleep(1)
 
     def mirror(self, archive, destination):
+        from vk_archive_stream import StreamingArchive, receiver_command
+        if isinstance(archive, StreamingArchive):
+            return archive.deliver(destination, receiver_command(self.options))
         if (not re.fullmatch(r"B:/vk-backups/[A-Za-z0-9_./-]+", destination)
                 or ".." in PurePosixPath(destination).parts):
             raise ValueError("Use a Desktop B:/vk-backups task directory")

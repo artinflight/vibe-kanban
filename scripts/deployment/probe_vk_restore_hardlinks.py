@@ -32,6 +32,9 @@ def exercise(root, replacement, prototype=False):
     os.chdir(root)
 
     def mirror(path):
+        from vk_archive_stream import StreamingArchive, RECEIVER
+        if isinstance(path, StreamingArchive):
+            return path.deliver(directory, [sys.executable, '-c', RECEIVER])
         remote = Path(directory) / path.name
         remote.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, remote)
@@ -85,7 +88,7 @@ def exercise(root, replacement, prototype=False):
                       'checkpoint_members': members(first), 'delta_members': members(second),
                       'private_source_unchanged_by_restore': True,
                       'network_used': False, 'production_touched': False,
-                      'archives_retained': [str(Path(r['folder']) / r['archive']) for r in (first, second)]}
+                      'archives_retained': [directory + '/' + r['archive'] for r in (first, second)]}
             save(root / 'result.json', result)
             return result
     finally:

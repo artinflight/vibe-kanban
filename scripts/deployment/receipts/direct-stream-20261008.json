@@ -1,0 +1,127 @@
+{
+  "at": "2026-10-08T20:10:00Z",
+  "repository": "artinflight/vibe-kanban",
+  "branch": "fix/vk-direct-desktop-stream-20261008",
+  "base": "5a887abf8bbedfbfb01ce7f8898fed07102fa1e3",
+  "prerequisite": "49cf82d603b765b4ceaf5a8b4462f046e6181c0f",
+  "source_sha256": {
+    "scripts/deployment/vk_archive_stream.py": "9d1af55f26fb7dadd4e734e6d3d9bd5da9734f3229b568a3197c1f5b61e1ca16",
+    "scripts/deployment/vk_direct_capture.py": "55ef5328fee7d93a05e3796d3c1d374866d08f4eefcf67abf28ceb8dc68ec5f5",
+    "scripts/deployment/vk_rolling_backup.py": "6996f360ceba9667aeded20849150c41feeba18c0f0c0d6153b2b996d8f87918",
+    "scripts/deployment/vk_desktop_transport.py": "fac7325b0de5a7cd8c07ddb542ad733a7f7f3e77a2d9c15456e6d63a0d24ff87",
+    "scripts/deployment/vk_operational_package.py": "20b5f02342ac5b44881103a87126a1fea1325576d88440949dbc8fc3b738d3d9",
+    "scripts/deployment/vk_recovery_package.py": "de52d4b96476f0cea982ad007efba8565f56e75dbb81a249415b22d7c05cd886",
+    "scripts/deployment/test_vk_archive_stream.py": "6e6561f79ac2f0df458cfad5c5f3d6bf014a61791dd1959bd0ff9d57ece79aca",
+    "scripts/deployment/smoke_desktop.py": "6735851a0ab09bdbbebb3e0b7bc3c1bd028f32f4340de0f7d23f81692f926906"
+  },
+  "unit_tests": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 TMPDIR=/mnt/vk-storage/vk-direct-b-stream-20261008/tests python3 -m unittest discover -s scripts/deployment -p 'test_vk_*.py' -q",
+    "exit_code": 0,
+    "output": "fatal: Not a valid commit name 0000000000000000000000000000000000000000\n----------------------------------------------------------------------\nRan 215 tests in 36.551s\n\nOK\n",
+    "expected_diagnostic": "The invalid zero commit is a negative ancestry test, not a failed suite.",
+    "capacity_simulation": "Private <=8 MiB restore fixtures only, >=32 MiB actual free; real production 2 GiB floor separately tested and unchanged."
+  },
+  "ops_check": {
+    "command": "pnpm run ops:check",
+    "exit_code": 0
+  },
+  "application_checks": {
+    "format": {
+      "command": "pnpm run format",
+      "exit_code": 1
+    },
+    "check": {
+      "command": "pnpm run check",
+      "exit_code": 101
+    },
+    "lint": {
+      "command": "pnpm run lint",
+      "exit_code": 101
+    },
+    "reason": "Sparse checkout omits packages and required crates/capacity-guard/Cargo.toml; no dependency install or build performed. These are NOT passes."
+  },
+  "not_run": [
+    "cargo test --workspace",
+    "unrestricted VK fixtures/cleanup hooks",
+    "full production restore",
+    "deployment/restart",
+    "workflow dispatch"
+  ],
+  "ci": "Not claimed; inspect the draft PR checks for exact commit. No workflow changed or created.",
+  "live_command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/deployment/smoke_desktop.py --root /mnt/vk-storage/vk-direct-b-stream-20261008/live-test --run-desktop-smoke --archive-only",
+  "live_exit_code": 0,
+  "live": {
+    "accepted_captures": [
+      {
+        "archive": "checkpoint--c6f0e280085247f8a4c3f40283b0e2a6.tar.zst",
+        "bytes": 2098828,
+        "desktop_directory": "B:/vk-backups/vk-direct-stream-20261008/desktop-smoke-9zpituq3",
+        "folder": "/mnt/vk-storage/vk-direct-b-stream-20261008/live-test/desktop-smoke-9zpituq3/backups/checkpoint-/c6f0e280085247f8a4c3f40283b0e2a6",
+        "sha256": "0190d21d46bc5eca9ceea7d8769de2f2371e4ffb55fa284b2cdc58a284f93732"
+      },
+      {
+        "archive": "delta--25dbbce55fa14cb8854eaf0666c89901.tar.zst",
+        "bytes": 1094,
+        "desktop_directory": "B:/vk-backups/vk-direct-stream-20261008/desktop-smoke-9zpituq3",
+        "folder": "/mnt/vk-storage/vk-direct-b-stream-20261008/live-test/desktop-smoke-9zpituq3/backups/delta-/25dbbce55fa14cb8854eaf0666c89901",
+        "sha256": "b8c5523950529572746ca1d2677e3f46c9092532f7f34a0dc6519f0bc399eb4a"
+      }
+    ],
+    "all_uploaded_archive_receipts": [
+      {
+        "bytes": 1094,
+        "desktop_directory": "B:/vk-backups/vk-direct-stream-20261008/desktop-smoke-9zpituq3",
+        "desktop_verified": true,
+        "direct_stream": true,
+        "name": "delta--25dbbce55fa14cb8854eaf0666c89901.tar.zst",
+        "sha256": "b8c5523950529572746ca1d2677e3f46c9092532f7f34a0dc6519f0bc399eb4a"
+      },
+      {
+        "bytes": 1113,
+        "desktop_directory": "B:/vk-backups/vk-direct-stream-20261008/desktop-smoke-9zpituq3",
+        "desktop_verified": true,
+        "direct_stream": true,
+        "name": "delta--289d94e37ed1481b83960cfc4f8dc4b2.tar.zst",
+        "sha256": "70032e926de6fd6b20c37f10188f33a35588d9d74d66f9a9acfd8043554d4900"
+      },
+      {
+        "bytes": 2098828,
+        "desktop_directory": "B:/vk-backups/vk-direct-stream-20261008/desktop-smoke-9zpituq3",
+        "desktop_verified": true,
+        "direct_stream": true,
+        "name": "checkpoint--c6f0e280085247f8a4c3f40283b0e2a6.tar.zst",
+        "sha256": "0190d21d46bc5eca9ceea7d8769de2f2371e4ffb55fa284b2cdc58a284f93732"
+      }
+    ],
+    "archive_only": true,
+    "at": "2026-10-08T20:05:03.308278+00:00",
+    "cleanup_performed": false,
+    "desktop_directory": "B:/vk-backups/vk-direct-stream-20261008/desktop-smoke-9zpituq3",
+    "disk_samples": {
+      "observed_local_archive_bytes": 0,
+      "observed_local_snapshot_bytes": 0,
+      "peak_local_backup_allocated_bytes": 61440,
+      "peak_local_backup_logical_bytes": 24241,
+      "samples": 292
+    },
+    "full_restore_verified": false,
+    "interrupted_publish_fresh_capture_passed": true,
+    "local_fixture_source_bytes": 2105377,
+    "passed": true,
+    "production_data_touched": false,
+    "python_peak_rss_bytes": 335757312,
+    "remote_parent_capture_passed": true,
+    "restore": null,
+    "retained_remote_archive_bytes": 2101035,
+    "root": "/mnt/vk-storage/vk-direct-b-stream-20261008/live-test/desktop-smoke-9zpituq3",
+    "sampling_interval_seconds": 0.025
+  },
+  "final_backup_directory_allocated_bytes_including_directories": 86016,
+  "failed_prior_live_harness": {
+    "root": "/mnt/vk-storage/vk-direct-b-stream-20261008/live-test/desktop-smoke-6gciqy0k",
+    "reason": "Transfers succeeded; harness compared SQLite SHM bookkeeping as stable file bytes. Corrected to logical DB integrity/content and exact non-DB bytes, then reran.",
+    "retained": true
+  },
+  "cleanup": "No old backups, partial evidence, production data or live test fixtures deleted. Successful receiver removes only its own verified partial hardlink name.",
+  "integration": "Root coordinates reviewed source onto PR149-equivalent combined release; Staging owns fresh package/reseal/restore/readiness/QA. No Staging worktree/agent interaction."
+}

@@ -64,7 +64,8 @@ def verify(root):
     root = storage(root)
     receipt = json.loads((root / 'recovery-package.json').read_text())
     required = ['vk_archive_store.py', 'vk_rolling_backup.py', 'vk_recovery_package.py',
-                'vk_prepare.py', 'vk_operational_package.py']
+                'vk_prepare.py', 'vk_operational_package.py', 'vk_direct_capture.py',
+                'vk_archive_stream.py', 'vk_desktop_transport.py']
     for name in required:
         if 'tools/' + name not in receipt['sha256']:
             raise ValueError('Missing required recovery tool: ' + name)

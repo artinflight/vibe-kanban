@@ -28,6 +28,14 @@ class DesktopBackups(unittest.TestCase):
         # Execute the exact remote read/hash program locally against a private B:.
         self.ssh = patch('vk_archive_store.SSH', [sys.executable, '-'])
         self.ssh.start()
+        from private_desktop_fixture import private_restore_room
+        from vk_rolling_backup import restore_room
+        self.production_restore_room = restore_room
+        self.capacity = private_restore_room(self.root)
+        self.capacity.start()
+        self.migration_capacity = patch('vk_archive_migration.reserve', side_effect=lambda root, additional=0:
+            __import__('vk_rolling_backup').restore_room(root, additional) or shutil.disk_usage(root).free)
+        self.migration_capacity.start()
         self.locators = patch.dict('vk_archive_store.LOCATORS', {}, clear=True)
         self.locators.start()
         self.source = self.root / 'source'
@@ -48,12 +56,17 @@ class DesktopBackups(unittest.TestCase):
 
     def tearDown(self):
         self.journal.close()
+        self.migration_capacity.stop()
+        self.capacity.stop()
         self.ssh.stop()
         self.locators.stop()
         os.chdir(self.cwd)
         self.tmp.cleanup()  # Only this exact tempfile-owned test root.
 
     def mirror(self, path):
+        from vk_archive_stream import StreamingArchive, RECEIVER
+        if isinstance(path, StreamingArchive):
+            return path.deliver(self.directory, [sys.executable, '-c', RECEIVER])
         remote = Path(self.directory) / path.name
         remote.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, remote)
@@ -68,7 +81,7 @@ class DesktopBackups(unittest.TestCase):
     def remove_own_archive(self, result):
         path = Path(result['folder']) / result['archive']
         self.assertTrue(path.is_relative_to(self.root))
-        path.unlink()
+        self.assertFalse(path.exists(), 'Direct capture must never create a local archive')
 
     def test_remote_only_parent_and_cross_directory_delta_restore(self):
         first = self.backup()
@@ -101,7 +114,8 @@ class DesktopBackups(unittest.TestCase):
         self.assertFalse(list((dest / 'snapshots').rglob('*.sqlite')))
         self.assertEqual(len(list((dest / 'verified-snapshot-retirement').glob('*.json'))), 2)
         for archive in [first, second]:
-            self.assertTrue((Path(archive['folder']) / archive['archive']).exists())
+            self.assertFalse((Path(archive['folder']) / archive['archive']).exists())
+            self.assertTrue((Path(self.directory) / archive['archive']).exists())
         restored = dest / 'files' / str(self.database).lstrip('/')
         with sqlite3.connect(restored) as db:
             self.assertEqual(db.execute('SELECT value FROM data').fetchall(), [('latest',)])
@@ -128,16 +142,17 @@ class DesktopBackups(unittest.TestCase):
     def test_restore_free_space_floor_fails_before_stream_or_retirement(self):
         first = self.backup(); dest = self.backups / 'low-space'
         from types import SimpleNamespace
-        with patch('vk_rolling_backup.os.statvfs', return_value=SimpleNamespace(f_bavail=1, f_frsize=4096)):
+        with patch('vk_rolling_backup.restore_room', self.production_restore_room), \
+                patch('vk_rolling_backup.os.statvfs', return_value=SimpleNamespace(f_bavail=1, f_frsize=4096)):
             with self.assertRaisesRegex(ValueError, 'free-space floor'):
                 restore_chain(first, dest, desktop_only=True, retire_verified_snapshots=True)
         self.assertFalse(list(dest.iterdir()))
-        self.assertTrue((Path(first['folder']) / first['archive']).exists())
+        self.assertFalse((Path(first['folder']) / first['archive']).exists())
 
     def test_missing_desktop_does_not_fall_back_to_local(self):
         first = self.backup()
         (Path(self.directory) / first['archive']).unlink()
-        self.assertTrue((Path(first['folder']) / first['archive']).exists())
+        self.assertFalse((Path(first['folder']) / first['archive']).exists())
         with self.assertRaisesRegex(ValueError, 'Desktop backup unavailable'):
             self.backup(first)
 
@@ -249,15 +264,17 @@ class DesktopBackups(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'journal instance'):
             self.backup(first)
 
-    def test_failed_publish_can_resume_without_verification_copy(self):
+    def test_failed_stream_publish_requires_fresh_capture_without_local_copy(self):
         def fail(path):
             raise RuntimeError('injected delivery failure')
         with self.assertRaisesRegex(RuntimeError, 'injected'):
             self.backup(publish=fail)
         folder = next((self.backups / 'checkpoint-').iterdir())
         self.assertFalse((folder / 'verified-payload').exists())
-        result = resume_delivery(self.plan, self.backups, folder, self.journal.report,
-                                 self.mirror, self.mirror)
+        with self.assertRaisesRegex(ValueError, 'fresh capture'):
+            resume_delivery(self.plan, self.backups, folder, self.journal.report, self.mirror, self.mirror)
+        result = self.backup()
+        self.assertNotEqual(result['folder'], str(folder))
         self.remove_own_archive(result)
         self.assertEqual(len(chain(result, desktop_only=True)), 1)
 
@@ -284,11 +301,11 @@ class DesktopBackups(unittest.TestCase):
         remote.write_bytes(remote.read_bytes()[:8])
         with self.assertRaises((ValueError, tarfile.ReadError)):
             Archive(reference(first), desktop_only=True).manifest()
-        self.assertTrue((Path(first['folder']) / first['archive']).exists())
+        self.assertFalse((Path(first['folder']) / first['archive']).exists())
 
     def test_cycle_and_scope_mismatch_are_rejected(self):
         first = self.backup()
-        manifest = json.loads((Path(first['folder']) / 'payload/manifest.json').read_text())
+        manifest = json.loads((Path(first['folder']) / 'manifest.json').read_text())
         cyclic = manifest | {'parent': reference(first)}
         with patch.object(Archive, 'manifest', return_value=cyclic):
             with self.assertRaisesRegex(ValueError, 'cycle'):

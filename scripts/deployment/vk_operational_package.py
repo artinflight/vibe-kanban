@@ -14,7 +14,8 @@ MODULE_PATCH = REPO / 'VK_MODULE_RECOVERY_PACKAGE_20261005.patch'
 FORBIDDEN = ('readiness.json', 'software-package-receipt.json', 'cutover-attempt.json',
              'cutover-approval.json', 'cutover-request.json')
 REQUIRED = ('journal_compat.py', 'subtree_recopy.py', 'vk_rolling_backup.py',
-            'vk_prepare.py', 'vk_operational_package.py', 'vk_archive_store.py')
+            'vk_prepare.py', 'vk_operational_package.py', 'vk_archive_store.py',
+            'vk_direct_capture.py', 'vk_archive_stream.py', 'vk_desktop_transport.py')
 LOCAL_PARENT_CHECK = "assert digest(Path(baseline['folder'])/baseline['archive']) == baseline['receipt']['sha256']"
 DESKTOP_PARENT_CHECK = "from vk_archive_store import Archive, reference\n    Archive(reference(baseline), desktop_only=True).verify()"
 OLD_INTERLOCK = "assert 'vk-blue-reprepare-20261004/production_guard.py' in c.control.prop(c.CONFIG['incumbent'],'ExecStartPre')"

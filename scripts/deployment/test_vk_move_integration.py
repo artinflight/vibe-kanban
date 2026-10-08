@@ -109,7 +109,8 @@ class MoveIntegration(unittest.TestCase):
                 self.assertEqual((recovered/'dirty-work').read_text(),'uncommitted agent work')
                 self.assertEqual((recovered/'rollout.jsonl').read_text(),'original thread history\n')
                 self.assertEqual(old.report()['errors'],historical['errors'])
-                self.assertTrue(Path(previous['folder'],previous['archive']).is_file())
+                self.assertFalse(Path(previous['folder'],previous['archive']).exists())
+                self.assertTrue((Path(previous['receipt']['desktop_directory'])/previous['archive']).is_file())
             finally:
                 fresh.close()
                 self.journal=old

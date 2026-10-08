@@ -1,3 +1,13 @@
+# October 8: Candidate generation application tooling (isolated branch)
+
+Branch `fix/candidate-generation-20261008` starts at staging `5a887abf8`.
+See [VK_CANDIDATE_GENERATION_20261008.md](VK_CANDIDATE_GENERATION_20261008.md)
+for implemented controller/path bindings, dependency accounting, retained tests
+and exact adapter/integration/space/authentication limitations. Production,
+fallback and historical recovery exceptions are preserved. This standalone patch
+does not edit OP's PR229 or replace the existing B-backed 149-file overlay.
+Historical stream entries below do not define this branch's intent.
+
 # October 8: Phone frontend deployed
 
 The operator-approved phone redesign/style pass is live at `https://vibe.local`

@@ -1,3 +1,15 @@
+# October 8: Candidate-as-rehearsal tooling handoff
+
+Read [VK_CANDIDATE_GENERATION_20261008.md](VK_CANDIDATE_GENERATION_20261008.md).
+Independent filesystem/controller changes and configured dependency accounting
+are ready for root's isolated integration/review. 30 regressions and a real
+cross-prefix kernel probe passed. Cleanup remains technically unavailable.
+There are no production adapters/launches or new historical-loss acceptance.
+Root coordinates PR229, capacity/full B provider, workflow authorization,
+dataset preparation and actual packaged/runtime acceptance. Private receipts
+stay outside Git; new source patch is local pending safe publication/B handoff.
+The current phone frontend and earlier release/recovery artifacts remain intact.
+
 # October 8: Phone frontend deployed
 
 The operator-approved phone redesign/style pass is live at `https://vibe.local`

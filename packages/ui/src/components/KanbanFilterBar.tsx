@@ -1,12 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ArrowLeftIcon,
-  FunnelIcon,
-  MagnifyingGlassIcon,
-  PlusIcon,
-  XIcon,
-} from '@phosphor-icons/react';
+import { FunnelIcon, PlusIcon, XIcon } from '@phosphor-icons/react';
 import { cn } from '../lib/cn';
 import type { PriorityLevel } from './PriorityIcon';
 import { InputField } from './InputField';
@@ -140,7 +134,6 @@ export function KanbanFilterBar<
   renderFiltersDialog,
 }: KanbanFilterBarProps<TTag, TUser, TSortField>) {
   const { t } = useTranslation('common');
-  const [mobileSearchExpanded, setMobileSearchExpanded] = useState(false);
 
   const handleClearSearch = () => {
     onSearchQueryChange('');
@@ -148,26 +141,26 @@ export function KanbanFilterBar<
 
   return (
     <>
-      {isMobile && mobileSearchExpanded ? (
-        <div className="flex items-center gap-half">
-          <button
-            type="button"
-            onClick={() => {
-              onSearchQueryChange('');
-              setMobileSearchExpanded(false);
-            }}
-            className="p-half rounded-sm text-low hover:text-normal hover:bg-secondary transition-colors shrink-0"
-            aria-label={t('kanban.closeSearch', 'Close search')}
-          >
-            <ArrowLeftIcon className="size-icon-sm" weight="bold" />
-          </button>
+      {isMobile ? (
+        <div className="phone-task-search">
           <InputField
             value={filters.searchQuery}
             onChange={onSearchQueryChange}
             placeholder={t('kanban.searchPlaceholder', 'Search issues...')}
             variant="search"
+            actionIcon={filters.searchQuery ? XIcon : undefined}
+            onAction={handleClearSearch}
             className="min-w-0 flex-1"
           />
+          <button
+            type="button"
+            aria-label={t('kanban.filters', 'Open filters')}
+            aria-pressed={hasActiveFilters}
+            onClick={() => onFiltersDialogOpenChange(true)}
+          >
+            <FunnelIcon size={20} />
+            <span>Filters</span>
+          </button>
         </div>
       ) : (
         <div
@@ -191,31 +184,15 @@ export function KanbanFilterBar<
             </ButtonGroupItem>
           </ButtonGroup>
 
-          {isMobile ? (
-            <button
-              type="button"
-              onClick={() => setMobileSearchExpanded(true)}
-              className={cn(
-                'p-half rounded-sm transition-colors',
-                filters.searchQuery
-                  ? 'text-brand hover:text-brand'
-                  : 'text-low hover:text-normal hover:bg-secondary'
-              )}
-              aria-label={t('kanban.searchPlaceholder', 'Search issues...')}
-            >
-              <MagnifyingGlassIcon className="size-icon-sm" weight="bold" />
-            </button>
-          ) : (
-            <InputField
-              value={filters.searchQuery}
-              onChange={onSearchQueryChange}
-              placeholder={t('kanban.searchPlaceholder', 'Search issues...')}
-              variant="search"
-              actionIcon={filters.searchQuery ? XIcon : undefined}
-              onAction={handleClearSearch}
-              className="min-w-[160px] w-[220px] max-w-full"
-            />
-          )}
+          <InputField
+            value={filters.searchQuery}
+            onChange={onSearchQueryChange}
+            placeholder={t('kanban.searchPlaceholder', 'Search issues...')}
+            variant="search"
+            actionIcon={filters.searchQuery ? XIcon : undefined}
+            onAction={handleClearSearch}
+            className="min-w-[160px] w-[220px] max-w-full"
+          />
 
           <button
             type="button"

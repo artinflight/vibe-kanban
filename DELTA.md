@@ -1530,3 +1530,12 @@ acceptance/ownership dependencies; CU credit budgeting is a separate issue.
   targets, task/board state retention, readable cards and keyboard-aware composer.
 - Initial 360/390/412/1440px browser flows passed with all application writes
   intercepted. Evidence/limits: VK_MOBILE_UX.md; no production change.
+
+## 2026-10-08 — Phone UI design revision
+
+Replaced the enlarged desktop mobile pass with dedicated task/feed and workspace
+list hierarchy, activity/status chips, a thumb-reachable New task action,
+title-first details and compact prompt composition with secondary controls in
+Options. Retained history/focus/state/viewport behavior and desktop layouts.
+See VK_MOBILE_UX.md for revised evidence and GTK/device QA limits. PR #224 stays
+a draft into staging; no merge, deployment or model-routing change.

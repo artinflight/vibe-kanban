@@ -137,6 +137,7 @@ export function CreateChatBox<TExecutor extends string = string>({
 
   return (
     <ChatBoxBase
+      isAttachmentDisabled={isDisabled}
       editor={renderEditor({
         value: editor.value,
         onChange: editor.onChange,

@@ -735,6 +735,7 @@ export function WorkspacesSidebarContainer({
   return (
     <WorkspacesSidebar
       workspaces={paginatedActiveWorkspaces}
+      activityWorkspaces={sortedActiveWorkspaces}
       totalWorkspacesCount={activeWorkspaces.length}
       archivedWorkspaces={paginatedArchivedWorkspaces}
       isLoading={isWorkspacesListLoading}

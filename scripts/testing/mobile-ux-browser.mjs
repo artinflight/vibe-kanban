@@ -158,12 +158,30 @@ try {
 
     console.log(`START ${width}px board`);
     await goto(`/projects/${project.id}`);
-    await page
-      .getByText('To do', { exact: true })
-      .first()
-      .waitFor({ timeout: 60000 });
+    await (
+      mobile
+        ? page.locator('.phone-task-row').first()
+        : page.getByText('To do', { exact: true }).first()
+    ).waitFor({ timeout: 60000 });
     await noHorizontalOverflow();
     await screenshot('after-board');
+    if (mobile) {
+      assert.equal(
+        await page.locator('.phone-task-feed').count(),
+        1,
+        'Phone has a dedicated task feed'
+      );
+      assert.equal(
+        await page.locator('.phone-task-feed [draggable="true"]').count(),
+        0,
+        'Tasks need no drag gesture'
+      );
+      const rows = page.locator('.phone-task-row');
+      assert((await rows.count()) > 2, 'Useful task feed populated');
+      await page.getByRole('button', { name: /filters/i, exact: true }).click();
+      await page.getByText('Task visibility', { exact: true }).waitFor();
+      await page.keyboard.press('Escape');
+    }
     if (mobile) {
       const nav = page.getByRole('navigation', { name: 'Primary navigation' });
       await touchTarget(
@@ -211,6 +229,16 @@ try {
       await page.waitForURL(`**/projects/${project.id}`);
       await sheet.waitFor({ state: 'hidden' });
 
+      const statusChip = page
+        .locator('.phone-status-tabs button')
+        .filter({ hasText: 'To do' });
+      await touchTarget(statusChip);
+      await statusChip.click();
+      assert.equal(
+        await statusChip.getAttribute('aria-pressed'),
+        'true',
+        'Selected status is explicit'
+      );
       const task = page.locator('.mobile-task-card').nth(1);
       await task.waitFor();
       // Identify the board's scroll container rather than window.scrollY.
@@ -225,6 +253,12 @@ try {
       });
       await task.locator('.mobile-task-metadata').click();
       await page.getByLabel('Task status', { exact: true }).waitFor();
+      await page
+        .getByRole('button', { name: 'Tags & pull requests', exact: true })
+        .click();
+      await page
+        .getByRole('button', { name: 'Tags & pull requests', exact: true })
+        .click();
       await touchTarget(page.getByLabel('Task status', { exact: true }));
       await noHorizontalOverflow();
       await screenshot('after-task');
@@ -238,6 +272,11 @@ try {
           .evaluate((el) => el.scrollTop),
         boardScroll,
         'Task Back restores board scroll'
+      );
+      assert.equal(
+        await statusChip.getAttribute('aria-pressed'),
+        'true',
+        'Task Back preserves the selected feed status'
       );
       // Creation remains a reachable screen; submitting it is never exercised.
       await page
@@ -300,9 +339,21 @@ try {
         'Message actions visible without hover'
       );
     }
+    if (mobile) {
+      const composerBox = await page.locator('.mobile-composer').boundingBox();
+      assert(
+        composerBox.height < 180,
+        `Collapsed composer must leave room for conversation: ${composerBox.height}`
+      );
+      await page.getByRole('button', { name: 'Options', exact: true }).click();
+      await page.getByText('Model & permissions', { exact: true }).waitFor();
+      await screenshot('after-prompt-options');
+    }
     const modelBefore = await page
       .locator('.mobile-model-selector')
       .innerText();
+    if (mobile)
+      await page.getByRole('button', { name: 'Options', exact: true }).click();
     // Work in an isolated, intercepted scratch buffer, never a real prompt.
     await editor.fill('Mobile UX validation draft\nSecond line — do not send.');
     await page.waitForTimeout(700);
@@ -313,11 +364,13 @@ try {
       await nav.getByRole('button', { name: 'Changes', exact: true }).click();
       await nav.getByRole('button', { name: 'Chat', exact: true }).click();
       assert.match(await editor.innerText(), /Mobile UX validation draft/);
+      await page.getByRole('button', { name: 'Options', exact: true }).click();
       assert.equal(
         await page.locator('.mobile-model-selector').innerText(),
         modelBefore,
         'Model/effort unchanged'
       );
+      await page.getByRole('button', { name: 'Options', exact: true }).click();
       await nav.getByRole('button', { name: 'More', exact: true }).click();
       const tools = page.getByRole('dialog', {
         name: 'Workspace tools',
@@ -390,14 +443,19 @@ try {
       await nav.waitFor();
       // Exercise the actual file chip using a locally fulfilled upload response.
       // The browser sends no attachment bytes to the backend.
-      await page
-        .locator('.mobile-composer input[type="file"]')
-        .first()
-        .setInputFiles({
-          name: 'phone-test.txt',
-          mimeType: 'text/plain',
-          buffer: Buffer.from('Mobile test file'),
-        });
+      const attach = page.getByRole('button', {
+        name: 'Attach file',
+        exact: true,
+      });
+      await touchTarget(attach);
+      const chooserReady = page.waitForEvent('filechooser');
+      await attach.click();
+      const chooser = await chooserReady;
+      await chooser.setFiles({
+        name: 'phone-test.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('Mobile test file'),
+      });
       const chip = editor
         .locator('span.group[role="button"]')
         .filter({ hasText: 'phone-test.txt' });
@@ -429,13 +487,13 @@ try {
       await search.waitFor();
       await search.fill(workspace.name);
       await page
-        .locator('.mobile-workspace-card > button')
+        .locator('.mobile-workspace-card > button:first-of-type')
         .filter({ hasText: workspace.name })
         .first()
         .waitFor();
-      await screenshot('after-workspaces');
+      await screenshot('after-workspaces-filtered');
       await page
-        .locator('.mobile-workspace-card > button')
+        .locator('.mobile-workspace-card > button:first-of-type')
         .filter({ hasText: workspace.name })
         .first()
         .click();
@@ -449,8 +507,30 @@ try {
         'Workspace filter preserved'
       );
       await search.fill('');
+      const activityTabs = page.locator('.phone-workspace-tabs');
+      const runningChip = activityTabs.getByRole('button', {
+        name: /^Running/,
+      });
+      await runningChip.click();
+      assert.equal(await runningChip.getAttribute('aria-pressed'), 'true');
+      for (const caption of await page
+        .locator('.phone-workspace-caption')
+        .allTextContents())
+        assert.match(caption, /Running/, 'Activity filter shows matching rows');
+      await activityTabs.getByRole('button', { name: /^All/ }).click();
+      await screenshot('after-workspaces');
+      await page
+        .getByRole('button', { name: 'List options', exact: true })
+        .click();
+      assert(
+        await page.locator('.phone-list-options').isVisible(),
+        'Workspace sort/filter controls reachable'
+      );
+      await page
+        .getByRole('button', { name: 'List options', exact: true })
+        .click();
       const secondWorkspace = page
-        .locator('.mobile-workspace-card > button')
+        .locator('.mobile-workspace-card > button:first-of-type')
         .filter({ hasNotText: workspace.name })
         .first();
       await secondWorkspace.click();
@@ -474,7 +554,7 @@ try {
         .boundingBox();
       assert(sendBox.height < 48, 'Desktop retains compact controls');
       const nextWorkspace = page
-        .locator('.mobile-workspace-card > button')
+        .locator('.mobile-workspace-card > button:first-of-type')
         .filter({ hasNotText: workspace.name })
         .first();
       await nextWorkspace.click();

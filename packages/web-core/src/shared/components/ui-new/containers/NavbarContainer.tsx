@@ -204,7 +204,9 @@ export function NavbarContainer({
         ? (mobileProjectTitle ?? orgName)
         : orgName
       : mobileMode
-        ? selectedWorkspace?.name
+        ? mobileActiveTab === 'workspaces'
+          ? 'Vibe Kanban'
+          : selectedWorkspace?.name
         : selectedWorkspace?.branch;
 
   // Breadcrumbs: Project / Issue / Workspace (only on workspace pages with linked project)

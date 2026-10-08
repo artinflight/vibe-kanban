@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   SortAscendingIcon,
@@ -45,6 +45,7 @@ const SORT_OPTIONS: PropertyDropdownOption<KanbanSortField>[] = [
 ];
 
 interface KanbanFiltersDialogProps {
+  viewControls?: ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
@@ -68,6 +69,7 @@ interface KanbanFiltersDialogProps {
 }
 
 export function KanbanFiltersDialog({
+  viewControls,
   open,
   onOpenChange,
   projectId,
@@ -217,6 +219,7 @@ export function KanbanFiltersDialog({
         </div>
 
         <div className="max-h-[72vh] overflow-y-auto px-double py-double">
+          {viewControls}
           <div className="flex flex-wrap items-center gap-base">
             <PriorityFilterDropdown
               values={filters.priorities}

@@ -819,6 +819,7 @@ impl Codex {
     ) -> Result<SpawnedChild, ExecutorError> {
         let params = self.build_thread_start_params(current_dir);
         let resume_session = resume_session.map(|s| s.to_string());
+        let supervisor_message = env.supervisor_message;
 
         self.spawn_app_server(
             current_dir,
@@ -827,7 +828,14 @@ impl Codex {
             move |client, _| async move {
                 match action {
                     CodexSessionAction::Chat { prompt } => {
-                        Self::launch_codex_agent(params, resume_session, prompt, client).await
+                        Self::launch_codex_agent(
+                            params,
+                            resume_session,
+                            prompt,
+                            client,
+                            supervisor_message,
+                        )
+                        .await
                     }
                     CodexSessionAction::Review { target } => {
                         review::launch_codex_review(params, resume_session, target, client).await
@@ -843,6 +851,7 @@ impl Codex {
         resume_session: Option<String>,
         combined_prompt: String,
         client: Arc<AppServerClient>,
+        supervisor_message: bool,
     ) -> Result<(), ExecutorError> {
         let account = client.get_account().await?;
         if account.requires_openai_auth && account.account.is_none() {
@@ -857,6 +866,24 @@ impl Codex {
                 (response.thread.id, response.model)
             }
             Some(session_id) => {
+                // Native goal state is read on the same configured app-server,
+                // before thread/resume can restart autonomous work. A supervisor
+                // message never authorizes a goal activation or reset.
+                if supervisor_message {
+                    match client.supervisor_goal_admission(&session_id).await? {
+                        client::GoalMessageAdmission::Allowed => {}
+                        client::GoalMessageAdmission::Paused => {
+                            return Err(ExecutorError::Io(std::io::Error::other(
+                                "native_goal_paused",
+                            )));
+                        }
+                        client::GoalMessageAdmission::Unavailable => {
+                            return Err(ExecutorError::Io(std::io::Error::other(
+                                "native_goal_state_unavailable",
+                            )));
+                        }
+                    }
+                }
                 let response = client
                     .thread_resume(resume_params_from(session_id, thread_start_params))
                     .await?;
@@ -1135,3 +1162,6 @@ impl Codex {
         })
     }
 }
+
+#[cfg(test)]
+mod supervisor_tests;

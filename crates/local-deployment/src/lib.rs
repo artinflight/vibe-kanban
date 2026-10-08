@@ -21,6 +21,7 @@ use services::services::{
     auth::AuthContext,
     config::{Config, load_config_from_file, save_config_to_file},
     container::ContainerService,
+    conversation::runtime::SupervisorRuntime,
     events::EventService,
     file::FileService,
     file_search::FileSearchCache,
@@ -94,6 +95,7 @@ pub struct LocalDeployment {
     file_search_cache: Arc<FileSearchCache>,
     approvals: Approvals,
     queued_message_service: QueuedMessageService,
+    supervisor: SupervisorRuntime,
     remote_client: Result<RemoteClient, RemoteClientNotConfigured>,
     auth_context: AuthContext,
     oauth_handoffs: Arc<RwLock<HashMap<Uuid, PendingHandoff>>>,
@@ -194,7 +196,7 @@ impl Deployment for LocalDeployment {
         }
 
         let approvals = Approvals::new();
-        let queued_message_service = QueuedMessageService::new();
+        let queued_message_service = QueuedMessageService::new(db.pool.clone());
 
         let oauth_credentials = Arc::new(OAuthCredentials::new(credentials_path()));
         if let Err(e) = oauth_credentials.load().await {
@@ -266,6 +268,7 @@ impl Deployment for LocalDeployment {
             analytics_ctx,
             approvals.clone(),
             queued_message_service.clone(),
+            events_msg_store.clone(),
             remote_client.clone().ok(),
         )
         .await;
@@ -301,6 +304,18 @@ impl Deployment for LocalDeployment {
             PrMonitorService::spawn(db, analytics, container, rc, pr_sync_notify.clone()).await;
         }
 
+        let supervisor = SupervisorRuntime::from_environment(
+            db.pool.clone(),
+            shutdown.child_token(),
+            services::services::conversation::dispatch_gate::DispatchGate::local(
+                db.pool.clone(),
+                approvals.clone(),
+            ),
+            Arc::new(
+                services::services::conversation::dispatch::ContainerTransport(container.clone()),
+            ),
+        )
+        .await;
         let deployment = Self {
             config,
             user_id,
@@ -316,6 +331,7 @@ impl Deployment for LocalDeployment {
             file_search_cache,
             approvals,
             queued_message_service,
+            supervisor,
             remote_client,
             auth_context,
             oauth_handoffs,
@@ -382,6 +398,10 @@ impl Deployment for LocalDeployment {
 
     fn approvals(&self) -> &Approvals {
         &self.approvals
+    }
+
+    fn supervisor(&self) -> &SupervisorRuntime {
+        &self.supervisor
     }
 
     fn queued_message_service(&self) -> &QueuedMessageService {

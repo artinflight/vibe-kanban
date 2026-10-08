@@ -78,6 +78,8 @@ impl RepoContext {
 #[derive(Debug, Clone)]
 pub struct ExecutionEnv {
     pub capacity: Option<crate::capacity::PreparedCapacity>,
+    /// Trusted delivery provenance, not an environment/profile override.
+    pub supervisor_message: bool,
     pub vars: HashMap<String, String>,
     pub repo_context: RepoContext,
     pub commit_reminder: bool,
@@ -92,6 +94,7 @@ impl ExecutionEnv {
     ) -> Self {
         Self {
             capacity: None,
+            supervisor_message: false,
             vars: HashMap::new(),
             repo_context,
             commit_reminder,

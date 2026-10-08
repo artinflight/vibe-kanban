@@ -1,3 +1,4 @@
+import { SupervisorLauncher } from './SupervisorLauncher';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
@@ -337,7 +338,12 @@ export function NavbarContainer({
       rightItems={rightItems}
       syncErrors={syncErrors}
       mobileMode={mobileMode}
-      mobileUserSlot={userPopoverSlot}
+      mobileUserSlot={
+        <>
+          <SupervisorLauncher />
+          {userPopoverSlot}
+        </>
+      }
       isOnProjectPage={isOnProjectPage}
       isOnProjectSubRoute={isOnProjectSubRoute}
       onOpenCommandBar={handleOpenCommandBar}

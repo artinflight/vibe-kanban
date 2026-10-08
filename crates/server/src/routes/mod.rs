@@ -2,6 +2,7 @@ use axum::{
     Router,
     routing::{IntoMakeService, get},
 };
+use deployment::Deployment;
 use tower_http::{compression::CompressionLayer, validate_request::ValidateRequestHeaderLayer};
 
 use crate::{DeploymentImpl, middleware};
@@ -10,6 +11,7 @@ pub mod approvals;
 pub mod capacity;
 pub mod config;
 pub mod containers;
+pub mod conversations;
 pub mod durable_ui_preferences;
 pub mod filesystem;
 // pub mod github;
@@ -55,6 +57,10 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(approvals::router())
         .merge(scratch::router(&deployment))
         .merge(saved_chat_messages::router())
+        .merge(conversations::router(
+            deployment.db().pool.clone(),
+            deployment.supervisor().clone(),
+        ))
         .merge(durable_ui_preferences::router())
         .merge(search::router(&deployment))
         .merge(preview::api_router())

@@ -12,6 +12,7 @@ use command_group::AsyncGroupChild;
 use db::{
     DBService,
     models::{
+        agent_delivery::{AgentDelivery, DeliveryClaim},
         coding_agent_turn::CodingAgentTurn,
         execution_process::{
             ExecutionContext, ExecutionProcess, ExecutionProcessRunReason, ExecutionProcessStatus,
@@ -44,10 +45,12 @@ use services::services::{
     approvals::{Approvals, executor_approvals::ExecutorApprovalBridge},
     config::{Config, DEFAULT_COMMIT_REMINDER_PROMPT},
     container::{ContainerError, ContainerRef, ContainerService},
+    conversation::dispatch_gate::DispatchGate,
     diff_stream::{self, DiffStreamHandle},
+    events::{execution_process_patch, workspace_patch},
     file::FileService,
     notification::NotificationService,
-    queued_message::QueuedMessageService,
+    queued_message::{ClaimedQueuedMessage, QueuedMessageService},
     remote_client::RemoteClient,
     remote_sync,
 };
@@ -121,6 +124,7 @@ pub struct LocalContainerService {
     analytics: Option<AnalyticsContext>,
     approvals: Approvals,
     queued_message_service: QueuedMessageService,
+    event_store: Arc<MsgStore>,
     notification_service: NotificationService,
     remote_client: Option<RemoteClient>,
 }
@@ -151,6 +155,7 @@ impl LocalContainerService {
         analytics: Option<AnalyticsContext>,
         approvals: Approvals,
         queued_message_service: QueuedMessageService,
+        event_store: Arc<MsgStore>,
         remote_client: Option<RemoteClient>,
     ) -> Self {
         let child_store = Arc::new(RwLock::new(HashMap::new()));
@@ -177,6 +182,7 @@ impl LocalContainerService {
             analytics,
             approvals,
             queued_message_service,
+            event_store,
             notification_service,
             remote_client,
         };
@@ -1301,142 +1307,169 @@ impl LocalContainerService {
         has_import || content.trim().is_empty()
     }
 
-    /// Consume a queued follow-up and start it when the completed process allows it.
+    /// Claim before launch and retain an outcome even if the predecessor failed.
     async fn consume_queued_follow_up(&self, ctx: &ExecutionContext) -> QueuedFollowUpOutcome {
-        let Some(queued_msg) = self.queued_message_service.take_queued(ctx.session.id) else {
-            return QueuedFollowUpOutcome::NoQueuedMessage;
+        let batch = match self
+            .queued_message_service
+            .take_queued(ctx.session.id)
+            .await
+        {
+            Ok(Some(batch)) => batch,
+            Ok(None) => return QueuedFollowUpOutcome::NoQueuedMessage,
+            Err(error) => {
+                tracing::error!(?error, "Could not claim queued follow-up");
+                return QueuedFollowUpOutcome::FailedToStart;
+            }
         };
-
         if matches!(
             ctx.execution_process.status,
             ExecutionProcessStatus::Failed | ExecutionProcessStatus::Killed
         ) {
-            tracing::info!(
-                "Discarding queued message for session {} due to execution status {:?}",
-                ctx.session.id,
-                ctx.execution_process.status
-            );
+            if let Err(error) = AgentDelivery::fail_claim(
+                &self.db.pool,
+                &batch.claim,
+                "predecessor_failed_or_interrupted",
+            )
+            .await
+            {
+                tracing::error!(?error, "Could not record failed queued follow-up");
+            }
             return QueuedFollowUpOutcome::Discarded;
         }
-
-        tracing::info!(
-            "Found queued message for session {}, starting follow-up execution",
-            ctx.session.id
-        );
-
-        if let Err(e) =
-            Scratch::delete(&self.db.pool, ctx.session.id, &ScratchType::DraftFollowUp).await
-        {
-            tracing::warn!(
-                "Failed to delete scratch after consuming queued message: {}",
-                e
-            );
-        }
-
-        let queued_data = queued_msg.into_follow_up_data();
-        if let Err(e) = self
-            .start_queued_follow_up_for_session(&ctx.workspace, &ctx.session, &queued_data)
-            .await
-        {
-            tracing::error!("Failed to start queued follow-up: {}", e);
-            return QueuedFollowUpOutcome::FailedToStart;
-        }
-
-        QueuedFollowUpOutcome::Started
+        self.consume_delivery_batch(batch).await
     }
 
-    /// Start the oldest message that is waiting for global executor capacity.
     async fn consume_capacity_queued_follow_up(&self) -> QueuedFollowUpOutcome {
-        let Some(queued_msg) = self.queued_message_service.take_oldest_capacity_queued() else {
-            return QueuedFollowUpOutcome::NoQueuedMessage;
-        };
-
-        let session = match Session::find_by_id(&self.db.pool, queued_msg.session_id).await {
-            Ok(Some(session)) => session,
-            Ok(None) => {
-                tracing::warn!(
-                    "Discarding capacity-queued message for missing session {}",
-                    queued_msg.session_id
-                );
-                return QueuedFollowUpOutcome::Discarded;
-            }
-            Err(error) => {
-                tracing::warn!(
-                    session_id = %queued_msg.session_id,
-                    ?error,
-                    "Failed to load capacity-queued session; requeueing"
-                );
-                self.queued_message_service
-                    .queue_for_capacity(queued_msg.session_id, queued_msg.data);
-                return QueuedFollowUpOutcome::FailedToStart;
-            }
-        };
-
-        let workspace = match Workspace::find_by_id(&self.db.pool, session.workspace_id).await {
-            Ok(Some(workspace)) => workspace,
-            Ok(None) => {
-                tracing::warn!(
-                    "Discarding capacity-queued message for missing workspace {}",
-                    session.workspace_id
-                );
-                return QueuedFollowUpOutcome::Discarded;
-            }
-            Err(error) => {
-                tracing::warn!(
-                    session_id = %session.id,
-                    workspace_id = %session.workspace_id,
-                    ?error,
-                    "Failed to load capacity-queued workspace; requeueing"
-                );
-                self.queued_message_service
-                    .queue_for_capacity(session.id, queued_msg.data);
-                return QueuedFollowUpOutcome::FailedToStart;
-            }
-        };
-
-        if ExecutionProcess::has_running_queue_consumer_for_session(&self.db.pool, session.id)
-            .await
-            .unwrap_or(true)
-        {
-            self.queued_message_service
-                .queue_for_capacity(session.id, queued_msg.data);
-            return QueuedFollowUpOutcome::NoQueuedMessage;
-        }
-
-        if let Err(error) = Scratch::delete(
-            &self.db.pool,
-            queued_msg.session_id,
-            &ScratchType::DraftFollowUp,
-        )
-        .await
-        {
-            tracing::warn!(
-                "Failed to delete scratch after consuming capacity-queued message: {}",
-                error
-            );
-        }
-
-        let queued_data = queued_msg.clone().into_follow_up_data();
         match self
-            .start_queued_follow_up_for_session(&workspace, &session, &queued_data)
+            .queued_message_service
+            .take_oldest_capacity_queued()
             .await
         {
-            Ok(_) => QueuedFollowUpOutcome::Started,
-            Err(error) if error.is_execution_limit_reached() => {
-                self.queued_message_service
-                    .queue_for_capacity(session.id, queued_msg.data);
-                QueuedFollowUpOutcome::NoQueuedMessage
-            }
+            Ok(Some(batch)) => self.consume_delivery_batch(batch).await,
+            Ok(None) => QueuedFollowUpOutcome::NoQueuedMessage,
             Err(error) => {
-                tracing::error!(
-                    session_id = %session.id,
-                    workspace_id = %workspace.id,
-                    ?error,
-                    "Failed to start capacity-queued follow-up"
-                );
+                tracing::error!(?error, "Could not claim capacity queue");
                 QueuedFollowUpOutcome::FailedToStart
             }
         }
+    }
+
+    async fn consume_delivery_batch(&self, batch: ClaimedQueuedMessage) -> QueuedFollowUpOutcome {
+        let result = self.start_delivery_batch(&batch).await;
+        match result {
+            Ok(Some(_process)) => {
+                if let Err(error) = Scratch::delete(
+                    &self.db.pool,
+                    batch.claim.session_id,
+                    &ScratchType::DraftFollowUp,
+                )
+                .await
+                {
+                    tracing::warn!(?error, "Failed to clear draft after queued admission");
+                }
+                QueuedFollowUpOutcome::Started
+            }
+            Ok(None) => QueuedFollowUpOutcome::NoQueuedMessage,
+            Err(error) => {
+                let result = if matches!(
+                    error,
+                    ContainerError::ExecutionProcess(
+                        db::models::execution_process::ExecutionProcessError::AdmissionConflict
+                    )
+                ) {
+                    AgentDelivery::release(
+                        &self.db.pool,
+                        &batch.claim,
+                        batch.message.wait_for_capacity,
+                    )
+                    .await
+                } else if error.is_execution_limit_reached() {
+                    AgentDelivery::release(&self.db.pool, &batch.claim, true).await
+                } else {
+                    let reason = if matches!(
+                        error,
+                        ContainerError::ExecutionProcess(
+                            db::models::execution_process::ExecutionProcessError::DeliveryRejected
+                        )
+                    ) {
+                        "supervisor_target_changed"
+                    } else {
+                        "queued_admission_failed"
+                    };
+                    AgentDelivery::fail_claim(&self.db.pool, &batch.claim, reason).await
+                };
+                if let Err(persist_error) = result {
+                    tracing::error!(?persist_error, "Failed to persist queue outcome");
+                }
+                tracing::warn!(?error, session_id = %batch.claim.session_id, "Queued admission did not succeed");
+                QueuedFollowUpOutcome::FailedToStart
+            }
+        }
+    }
+
+    async fn publish_process_admission(&self, process: &ExecutionProcess) {
+        self.event_store
+            .push_patch(execution_process_patch::add(process));
+        match Session::find_by_id(&self.db.pool, process.session_id).await {
+            Ok(Some(session)) => {
+                if let Ok(Some(workspace)) =
+                    Workspace::find_by_id_with_status(&self.db.pool, session.workspace_id).await
+                {
+                    self.event_store
+                        .push_patch(workspace_patch::replace(&workspace));
+                }
+            }
+            Err(error) => {
+                tracing::warn!(?error, "Could not refresh workspace status after admission")
+            }
+            Ok(None) => {}
+        }
+    }
+
+    async fn start_delivery_batch(
+        &self,
+        batch: &ClaimedQueuedMessage,
+    ) -> Result<Option<ExecutionProcess>, ContainerError> {
+        AgentDelivery::validate_supervisor_claim(&self.db.pool, &batch.claim).await?;
+        let gate = DispatchGate::local(self.db.pool.clone(), self.approvals.clone());
+        for delivery in &batch.claim.deliveries {
+            if let Err(block) = gate.delivery(delivery).await {
+                AgentDelivery::fail_claim(&self.db.pool, &batch.claim, &block.to_string()).await?;
+                return Ok(None);
+            }
+        }
+        let session = Session::find_by_id(&self.db.pool, batch.claim.session_id)
+            .await?
+            .ok_or_else(|| ContainerError::Other(anyhow!("Queued session no longer exists")))?;
+        let workspace = Workspace::find_by_id(&self.db.pool, session.workspace_id)
+            .await?
+            .ok_or_else(|| ContainerError::Other(anyhow!("Queued workspace no longer exists")))?;
+        if workspace.archived
+            || workspace.worktree_deleted
+            || batch
+                .claim
+                .deliveries
+                .iter()
+                .any(|d| d.workspace_id != workspace.id)
+        {
+            return Err(ContainerError::Other(anyhow!(
+                "Queued workspace is archived, deleted or changed"
+            )));
+        }
+        if ExecutionProcess::has_running_non_dev_server_processes_for_workspace(
+            &self.db.pool,
+            workspace.id,
+        )
+        .await?
+        {
+            AgentDelivery::release(&self.db.pool, &batch.claim, batch.message.wait_for_capacity)
+                .await?;
+            return Ok(None);
+        }
+        let data = batch.message.clone().into_follow_up_data();
+        self.start_queued_follow_up_for_session(&workspace, &session, &data, &batch.claim)
+            .await
+            .map(Some)
     }
 
     /// Start a follow-up execution from queued data for an arbitrary session.
@@ -1445,6 +1478,7 @@ impl LocalContainerService {
         workspace: &Workspace,
         session: &Session,
         queued_data: &DraftFollowUpData,
+        claim: &DeliveryClaim,
     ) -> Result<ExecutionProcess, ContainerError> {
         let executor_profile_id = queued_data.executor_config.profile_id();
 
@@ -1484,10 +1518,19 @@ impl LocalContainerService {
             .filter(|dir| !dir.is_empty())
             .cloned();
 
+        let interrupted = CodingAgentTurn::find_interrupted_context_since_latest_success(
+            &self.db.pool,
+            session.id,
+        )
+        .await?;
+        let prompt = CodingAgentTurn::prompt_with_interrupted_context(
+            queued_data.message.clone(),
+            &interrupted,
+        );
         let action_type = if let Some(info) = latest_session_info {
             ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
                 capacity: None,
-                prompt: queued_data.message.clone(),
+                prompt: prompt.clone(),
                 session_id: info.session_id,
                 reset_to_message_id: None,
                 executor_config: queued_data.executor_config.clone(),
@@ -1495,7 +1538,7 @@ impl LocalContainerService {
             })
         } else {
             ExecutorActionType::CodingAgentInitialRequest(CodingAgentInitialRequest {
-                prompt: queued_data.message.clone(),
+                prompt: prompt.clone(),
                 executor_config: queued_data.executor_config.clone(),
                 working_dir,
             })
@@ -1503,11 +1546,12 @@ impl LocalContainerService {
 
         let action = ExecutorAction::new(action_type, cleanup_action.map(Box::new));
 
-        self.start_execution(
+        self.start_execution_with_delivery(
             workspace,
             session,
             &action,
             &ExecutionProcessRunReason::CodingAgent,
+            Some(claim),
         )
         .await
     }
@@ -1528,6 +1572,47 @@ fn failure_exit_status() -> std::process::ExitStatus {
 
 #[async_trait]
 impl ContainerService for LocalContainerService {
+    async fn publish_execution_admitted(&self, process: &ExecutionProcess) {
+        self.publish_process_admission(process).await;
+    }
+    async fn reconcile_queued_deliveries(&self) -> Result<(), ContainerError> {
+        AgentDelivery::reconcile(&self.db.pool).await?;
+        let scope =
+            db::models::conversation::ConversationScope::local_operator(&self.db.pool).await?;
+        db::models::conversation::ConversationStore::new(self.db.pool.clone(), scope)
+            .reconcile_delivery_actions()
+            .await
+            .map_err(|error| ContainerError::Other(anyhow!(error)))?;
+        let monitor_ids: Vec<_> = self
+            .exit_monitor_handles
+            .read()
+            .await
+            .iter()
+            .filter(|(_, handle)| !handle.is_finished())
+            .map(|(id, _)| *id)
+            .collect();
+        let mut finalizing_workspaces = std::collections::HashSet::new();
+        for id in monitor_ids {
+            if let Some(process) = ExecutionProcess::find_by_id(&self.db.pool, id).await?
+                && let Some(session) =
+                    Session::find_by_id(&self.db.pool, process.session_id).await?
+            {
+                finalizing_workspaces.insert(session.workspace_id);
+            }
+        }
+        for session_id in AgentDelivery::recoverable_sessions(&self.db.pool).await? {
+            if let Some(session) = Session::find_by_id(&self.db.pool, session_id).await?
+                && finalizing_workspaces.contains(&session.workspace_id)
+            {
+                continue;
+            }
+            if let Some(batch) = self.queued_message_service.take_queued(session_id).await? {
+                self.consume_delivery_batch(batch).await;
+            }
+        }
+        Ok(())
+    }
+
     fn msg_stores(&self) -> &Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>> {
         &self.msg_stores
     }
@@ -1633,6 +1718,38 @@ impl ContainerService for LocalContainerService {
             return Ok(false);
         };
 
+        self.try_steer_process(session, data, process.id).await
+    }
+
+    async fn try_steer_process(
+        &self,
+        session: &Session,
+        data: &DraftFollowUpData,
+        process_id: Uuid,
+    ) -> Result<bool, ContainerError> {
+        let Some(process) = ExecutionProcess::find_by_id(&self.db.pool, process_id).await? else {
+            return Ok(false);
+        };
+        if process.session_id != session.id
+            || process.dropped
+            || process.status != ExecutionProcessStatus::Running
+            || process.run_reason != ExecutionProcessRunReason::CodingAgent
+        {
+            return Ok(false);
+        }
+        let Some(current_session) = Session::find_by_id(&self.db.pool, session.id).await? else {
+            return Ok(false);
+        };
+        if current_session.workspace_id != session.workspace_id {
+            return Ok(false);
+        }
+        let Some(workspace) = Workspace::find_by_id(&self.db.pool, session.workspace_id).await?
+        else {
+            return Ok(false);
+        };
+        if workspace.archived || workspace.worktree_deleted {
+            return Ok(false);
+        }
         let action = process.executor_action()?;
         if action.base_executor() != Some(BaseCodingAgent::Codex)
             || data.executor_config.executor != BaseCodingAgent::Codex
@@ -1826,6 +1943,19 @@ impl ContainerService for LocalContainerService {
         env.insert("VK_SESSION_ID", execution_process.session_id.to_string());
         env.insert("VK_EXECUTION_PROCESS_ID", execution_process.id.to_string());
         env.insert("VK_WORKSPACE_BRANCH", &workspace.branch);
+
+        // Recover trusted provenance from the durable ledger, never prompt text
+        // or profile environment. Recheck mutable gates immediately before spawn.
+        let supervisor_deliveries =
+            AgentDelivery::supervisor_for_process(&self.db.pool, execution_process.id).await?;
+        let gate = DispatchGate::local(self.db.pool.clone(), self.approvals.clone());
+        for delivery in &supervisor_deliveries {
+            AgentDelivery::validate_supervisor_delivery(&self.db.pool, delivery).await?;
+            gate.delivery(delivery)
+                .await
+                .map_err(|error| ContainerError::Other(anyhow!(error)))?;
+        }
+        env.supervisor_message = !supervisor_deliveries.is_empty();
 
         // Create the child and stream, add to execution tracker with timeout
         let mut spawned = tokio::time::timeout(

@@ -4,6 +4,50 @@
 
 // If you are an AI, and you absolutely have to edit this file, please confirm with the user first.
 
+export type Conversation = { id: string, authority_id: string, principal_id: string, next_seq: number, revision: number, created_at: string, archived_at: string | null, };
+
+export type ConversationInputOrigin = "typed" | "voice";
+
+export type AcceptConversationMessage = { client_message_id: string, body: string, origin: ConversationInputOrigin, reply_to_id: string | null, };
+
+export type ConversationMessage = { id: string, conversation_id: string, created_seq: number, role: string, origin: string, body: string, revision: number, status: string, reply_to_id: string | null, client_message_id: string | null, created_at: string, };
+
+export type MemoryScope = { "kind": "global" } | { "kind": "project", "id": string } | { "kind": "repository", "id": string } | { "kind": "workspace", "id": string } | { "kind": "conversation", "id": string } | { "kind": "session", "id": string };
+
+export type EvidenceSource = { "kind": "agent_report", session_id: string, process_id: string, } | { "kind": "repository", repo_id: string, } | { "kind": "attention_snapshot" };
+
+export type ConversationAction = { id: string, conversation_id: string, request_id: string, run_id: string | null, origin_message_id: string, intent_kind: string, payload: unknown, payload_digest: string, route_evidence: unknown, authorisation_source: string | null, state: string, revision: number, created_at: string, };
+
+export type ActionConfirmation = { id: string, conversation_id: string, action_id: string, principal_id: string, payload_digest: string, action_revision: number, expires_at: number, state: string, answered_message_id: string | null, created_at: string, };
+
+export type MessageTarget = { workspace_id: string, session_id: string, workspace_name: string, session_name: string | null, branch: string, executor_config: ExecutorConfig, version: string, };
+
+export type AgentMessage = { message: string, targets: Array<MessageTarget>, };
+
+export type SupervisorActionDetail = { action: ConversationAction, message: AgentMessage | null, blocked: string | null, deliveries: unknown[], };
+
+export type AnswerSupervisorConfirmation = { payload_digest: string, action_revision: number, accept: boolean, };
+
+export type ConversationEvidence = { id: string, conversation_id: string, source: EvidenceSource, source_revision: string, content_hash: string, availability: string, raw_report: string | null, captured_at: string, };
+
+export type ConversationMemory = { id: string, conversation_id: string, scope_kind: string, scope_id: string, claim_key: string, body: string, entity_refs: MemoryScope[], state: string, revision: number, supersedes_id: string | null, source_message_id: string, author_kind: string, valid_until: string | null, created_at: string, };
+
+export type MessageEvidenceRef = { evidence_id: string, relationship: string, source: EvidenceSource, availability: string, };
+
+export type SupervisorCapabilities = { enabled: boolean, accepting_messages: boolean, agent_actions: boolean, voice: boolean, authority: string, };
+
+export type SupervisorSnapshot = { conversation: Conversation, last_seq: number, capabilities: SupervisorCapabilities, };
+
+export type SupervisorMessageReceipt = { message: ConversationMessage, run_id: string, };
+
+export type SupervisorRunStatus = { id: string, input_message_id: string, status: string, error: string | null, generation: number, };
+
+export type SupervisorEvent = { conversation_id: string, seq: number, event_id: string, type: string, schema_version: number, entity_id: string, revision: number, occurred_at: string, payload: unknown, };
+
+export type DeleteSupervisorHistory = { expected_revision: number, };
+
+export type ForgetSupervisorMemory = { expected_revision: number, };
+
 export type Repo = { id: string, path: string, name: string, display_name: string, setup_script: string | null, cleanup_script: string | null, archive_script: string | null, copy_files: string | null, parallel_setup_script: boolean, dev_server_script: string | null, default_target_branch: string | null, default_working_dir: string | null, created_at: Date, updated_at: Date, };
 
 export type Project = { id: string, name: string, archived: boolean, default_agent_working_dir: string | null, remote_project_id: string | null, created_at: Date, updated_at: Date, };

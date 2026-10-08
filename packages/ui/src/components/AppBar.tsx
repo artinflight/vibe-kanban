@@ -121,6 +121,7 @@ interface AppBarProps {
   onHoverStart?: () => void;
   onHoverEnd?: () => void;
   notificationBell?: ReactNode;
+  supervisorLauncher?: ReactNode;
   userPopover?: ReactNode;
   starCount?: number | null;
   onlineCount?: number | null;
@@ -294,6 +295,7 @@ export function AppBar({
   onHoverStart,
   onHoverEnd,
   notificationBell,
+  supervisorLauncher,
   userPopover,
   starCount,
   onlineCount,
@@ -711,6 +713,7 @@ export function AppBar({
 
         {/* Bottom section: Notifications + User popover + GitHub + Discord */}
         <div className="mt-auto pt-base flex flex-col items-center gap-4">
+          {supervisorLauncher}
           {notificationBell}
           {showProfileButton ? userPopover : null}
           {showSocialLinks ? (

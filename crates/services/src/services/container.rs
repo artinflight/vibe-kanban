@@ -11,7 +11,8 @@ use async_trait::async_trait;
 use db::{
     DBService,
     models::{
-        coding_agent_turn::{CodingAgentTurn, CreateCodingAgentTurn},
+        agent_delivery::{AgentDelivery, DeliveryClaim},
+        coding_agent_turn::CodingAgentTurn,
         execution_process::{
             CreateExecutionProcess, ExecutionContext, ExecutionProcess, ExecutionProcessError,
             ExecutionProcessRunReason, ExecutionProcessStatus,
@@ -166,6 +167,10 @@ pub trait ContainerService {
 
     async fn touch(&self, workspace: &Workspace) -> Result<(), ContainerError>;
 
+    /// Transactions can commit after SQLite hooks ran. Publish only committed
+    /// process/turn state, before spawning, for both direct and queued launches.
+    async fn publish_execution_admitted(&self, process: &ExecutionProcess);
+
     async fn workspace_has_external_processes(&self, _workspace: &Workspace) -> bool {
         false
     }
@@ -180,6 +185,17 @@ pub trait ContainerService {
         &self,
         _session: &Session,
         _data: &DraftFollowUpData,
+    ) -> Result<bool, ContainerError> {
+        Ok(false)
+    }
+
+    /// Exact-process transport used after a durable steering attempt is stored.
+    /// Implementations must never resolve a replacement process here.
+    async fn try_steer_process(
+        &self,
+        _session: &Session,
+        _data: &DraftFollowUpData,
+        _process_id: Uuid,
     ) -> Result<bool, ContainerError> {
         Ok(false)
     }
@@ -422,6 +438,12 @@ pub trait ContainerService {
         self.notification_service()
             .notify_turn_completion_ntfy(&title, &message)
             .await;
+    }
+
+    /// Repair durable receipts and resume safely unadmitted queue work. Called
+    /// after orphan-process reconciliation and periodically during operation.
+    async fn reconcile_queued_deliveries(&self) -> Result<(), ContainerError> {
+        Ok(())
     }
 
     /// Cleanup executions marked as running in the db, call at startup
@@ -1504,6 +1526,18 @@ pub trait ContainerService {
         executor_action: &ExecutorAction,
         run_reason: &ExecutionProcessRunReason,
     ) -> Result<ExecutionProcess, ContainerError> {
+        self.start_execution_with_delivery(workspace, session, executor_action, run_reason, None)
+            .await
+    }
+
+    async fn start_execution_with_delivery(
+        &self,
+        workspace: &Workspace,
+        session: &Session,
+        executor_action: &ExecutorAction,
+        run_reason: &ExecutionProcessRunReason,
+        delivery: Option<&DeliveryClaim>,
+    ) -> Result<ExecutionProcess, ContainerError> {
         if matches!(run_reason, ExecutionProcessRunReason::CodingAgent)
             && let Some(error) = codex_execution_limit_error_for_action(executor_action)
         {
@@ -1543,48 +1577,37 @@ pub trait ContainerService {
             run_reason: run_reason.clone(),
         };
 
-        let execution_process = ExecutionProcess::create(
-            &self.db().pool,
-            &create_execution_process,
-            Uuid::new_v4(),
-            &repo_states,
-        )
-        .await?;
-        if *run_reason != ExecutionProcessRunReason::ArchiveScript {
-            Workspace::set_archived(&self.db().pool, workspace.id, false).await?;
-        }
-
-        if let Some(prompt) = match executor_action.typ() {
-            ExecutorActionType::CodingAgentInitialRequest(coding_agent_request) => {
-                Some(coding_agent_request.prompt.clone())
-            }
-            ExecutorActionType::CodingAgentFollowUpRequest(follow_up_request) => {
-                Some(follow_up_request.prompt.clone())
-            }
-            ExecutorActionType::ReviewRequest(review_request) => {
-                Some(review_request.prompt.clone())
-            }
-            ExecutorActionType::ScriptRequest(_) => None,
-        } {
-            let create_coding_agent_turn = CreateCodingAgentTurn {
-                execution_process_id: execution_process.id,
-                prompt: Some(prompt),
-            };
-
-            let coding_agent_turn_id = Uuid::new_v4();
-
-            CodingAgentTurn::create(
+        let execution_process = if let Some(claim) = delivery {
+            AgentDelivery::admit(
                 &self.db().pool,
-                &create_coding_agent_turn,
-                coding_agent_turn_id,
+                claim,
+                &create_execution_process,
+                Uuid::new_v4(),
+                &repo_states,
             )
-            .await?;
-        }
+            .await?
+        } else {
+            ExecutionProcess::create(
+                &self.db().pool,
+                &create_execution_process,
+                Uuid::new_v4(),
+                &repo_states,
+            )
+            .await?
+        };
+        self.publish_execution_admitted(&execution_process).await;
 
         if let Err(start_error) = self
             .start_execution_inner(workspace, &execution_process, executor_action)
             .await
         {
+            if delivery.is_some() && start_error.is_execution_limit_reached() {
+                // Classify a known pre-launch capacity denial atomically with
+                // process completion. The recovery scan must never see an
+                // ordinary failed delivery in between these writes.
+                AgentDelivery::capacity_denied(&self.db().pool, execution_process.id).await?;
+                return Err(start_error);
+            }
             // Mark process as failed
             if let Err(update_error) = ExecutionProcess::update_completion(
                 &self.db().pool,

@@ -1,3 +1,571 @@
+## September 30: current pickup — close validation, then demonstrate usable text
+
+Read [VK_CHAT_EXECUTION.md](VK_CHAT_EXECUTION.md). This entry supersedes the dated
+history below. The full product is unfinished; do not infer completion or a live
+native goal from auto-save commits or older continuation messages. Confirm current
+runtime ownership/authorization rather than recreating a missing goal.
+
+**Source:** branch `vk/d498-vk-chat-orchestr`, implementation saved through
+`d862c52ee` (02:08 UTC). `afdbf2cac` saved conversational forgetting/rescoping;
+`d862c52ee` added exact older-memory lookup, integration-test work and docs. The
+user subsequently requested an audit and safe-resume documentation, not another
+feature-development run. Current prompt version is `supervisor-v5`.
+
+**Latest evidence:** `vk-chat-memory-controls.log` under
+`/mnt/vk-storage/capacity-build-tmp/` has 36 DB tests passed and 53 service tests
+passed, one failed. The earlier `vk-chat-memory-{regression,api}.log` results
+(53 DB + 76 services + 8 API) apply to the earlier preference slice, not HEAD.
+The final new server integration test has not been compiled/validated. No test
+process is asserted to be live here; recover actual job identity before restarting.
+
+**First next actions on authorized implementation resume:**
+
+1. Check actual mounted SSD headroom and live jobs. The latest documentation check
+   found about 103 GB free, superseding earlier 91 MB/158 MB observations. No cleanup
+   occurred in this task. Current session restrictions also differ from earlier
+   scheduled runs; probe capability instead of repeating an obsolete blocker.
+2. Repair the failed older-memory fixture in
+   `crates/services/src/services/conversation/tests/memory.rs`: its date-only
+   `created_at='2000-01-01'` is incompatible with the inspected datetime decoder.
+   This is a likely cause, not a claim that a corrected rerun already passes.
+3. Repair the unvalidated mixed-action/forget test in
+   `crates/server/src/routes/conversations/tests/actions.rs`: `with_actions` expects
+   an Arc rather than `Some(actions)`; acknowledged steering uses state `started`
+   plus an acknowledgement timestamp, not a state named `acknowledged`.
+4. Run the focused memory/worker suites and conversation API integration suite;
+   retain per-attempt logs with source identity, command and exit status. Run
+   required format/ops checks. Record precisely what was demonstrated. Do not
+   expand into optional memory edge cases once this slice is sufficiently closed.
+5. Demonstrate the global text UI -> relevant workspace lookup -> source-linked
+   response -> authorized existing-agent instruction -> delivery/result/evidence
+   path. Keep raw direct chat unchanged. Resolve real model access and any isolated
+   backend authorization needed by the existing runbook early; fixtures are not
+   live acceptance. Preserve full remaining voice/Android/car/release requirements.
+
+**Reporting:** state user-visible capability, observed evidence, remaining gaps and
+next outcome. No unsupported completion percentage. A time allocation must serve
+an observable result and fit actual authorization; it is not an invented native
+budget. Recover healthy jobs, preserve failed attempts, and reserve pickup time.
+
+**Report for the managing orchestration agent:**
+`/mnt/vk-storage/reports/vk-chat-orchestration/2026-09-30-resumable-goal-audit.md`.
+It separates confirmed findings, interpretations, current blockers and proposed
+manager safeguards. Those safeguards have not been installed by this docs task.
+
+## Historical pickup notes
+
+## September 30: conversational supervisor preferences
+
+Attention work was saved by VK as `838533c46` when the scheduled permission ended.
+Current work moves to `memory_summaries`: a new supervisor memory proposal tool,
+separate tool-free intent assessment, exact-revision creation/correction, scoped
+pending-claim retrieval and current-turn preference refresh. Code lives in
+`services/conversation/memory.rs`, the model/adapter/worker, and the existing
+`db/models/conversation/records.rs`. Prompt version is `supervisor-v4`.
+
+The current user's message supplies provenance; the proposing model cannot supply
+approval/author/source fields. Only assessed explicit instructions become active;
+inferences remain proposed, ambiguity/temporary facts are not saved. Store writes
+check the run lease and source inside the writer transaction. Same-turn identical
+tools recover a receipt without re-assessment. The first regression caught an
+unwanted change to ordinary store CAS behavior: retry recovery is now limited to
+the run-aware method, preserving strict conflicts for pre-existing direct edits.
+`search_memory` now accepts an exact session and returns proposed memories
+separately from active preferences. Raw workspace history is unchanged.
+
+Validation: all **53 database tests and 76 service tests pass** in
+`vk-chat-memory-regression.log`, including five new memory integration tests and
+one adapter-wire test. All **eight conversation API tests pass** in
+`vk-chat-memory-api.log` (137 Rust tests across these suites). Full format, ops and
+diff checks pass. Logs live under
+`/mnt/vk-storage/capacity-build-tmp`. Existing generated public Rust/TS shapes are
+unchanged by this slice; model tool/request types are internal. No frontend code
+changed. Deterministic policy fixtures do not validate real semantic judgments.
+
+Next: conversational forgetting/rescoping, reviewed-source
+watermarks and completion/report ingestion. Real model/speech evaluation,
+executor/browser/provider/device acceptance, native voice/Android and release
+checks remain. There are no external calls, deployments or runtime settings
+changes in this slice. Full goal/checklist completion remains unclaimed.
+
+## September 30: supervisor attention and policy integration
+
+This entry supersedes the earlier implementation snapshots below. The policy,
+confirmation API/global UI and real deployment action transport were already
+implemented in commit `3b48fcc53`. Do not rebuild that work because an older note
+says `agent_actions` is false. The capability follows the configured consumer and
+action service; no production model settings or runtime were enabled here.
+
+New `services/conversation/attention.rs` implements `list_attention`: bounded
+active local session scanning, pending executor responses, failed/interrupted work,
+unread successful completion, capacity waiting, uncertain deliveries and active
+native-goal pause/availability. It uses deployment-supplied runtime projections,
+with bounded concurrent reads. Quiet pages still advance their cursor. Expired,
+revised, cancelled or foreign-owner confirmations are excluded. Unread or paused
+work is not automatically a user question. A goal finishing during observation is
+reported as changed. Inactive native goals, prose/report-level blockers and remote
+hosts are explicitly outside this tool's current coverage.
+
+Each observation is retained as citable `AttentionSnapshot` evidence with its time
+range and limits. The global UI distinguishes this from an original agent report.
+Current-state queries re-read VK; historical snapshots remain available for
+review/export/deletion. No workspace response/history/seen flag is modified, and
+there is no new direct-chat model or memory path. The model has seven read tools
+plus optional proposal/status tools; prompt version is `supervisor-v3`.
+
+Validation: recovered policy baseline passed **53 DB + 64 service tests** in
+`vk-chat-policy-regression.log`. The final supervisor suite passes **43 tests**,
+including six attention tests, in `vk-chat-attention-services.log`. All **eight
+conversation API tests** and **two ordinary queue-route tests** pass in
+`vk-chat-attention-{api,queue-api}.log`; they include confirmation receipt recovery
+after worker shutdown and direct Codex no-queue-fallback. `cargo run --offline
+--bin generate_types` regenerated `shared/types.ts` successfully. Both
+web-core/local-web typechecks, focused ESLint using the local-web configuration,
+full `pnpm run format`, ops checks and `git diff --check` pass. Logs use the
+`vk-chat-attention-` prefix under `/mnt/vk-storage/capacity-build-tmp`.
+JavaScript dependencies were restored offline from the named SSD pnpm store.
+
+This is deterministic integration evidence, not live model/executor/browser/voice/
+device acceptance or the full workspace/PR baseline. No deployment, provider call
+or runtime settings change occurred. The source and continuity edits in this
+continuation remain uncommitted/unpushed. The build SSD had 6.8 GiB free after type
+generation; recheck before larger Android/release builds, and follow the storage
+policy rather than deleting caches or moving outputs onto the system disk.
+
+**Next:** implement scoped conversational memory updates and source-review
+watermarks/result ingestion using the existing store. Preserve the distinction
+between user-confirmed knowledge and current state. Complete report classification
+and subscriptions, richer project context, actual model/speech evaluation, UI
+browser acceptance, native voice transport/Android Telecom and release/restore
+validation. The full goal remains open; only persistence is checkpoint-complete.
+
+## September 26: supervisor delivery runtime and native-goal boundary
+
+The authorised-action dispatcher now lives in
+`services/conversation/{dispatch,dispatch_gate}.rs`. It uses the existing durable
+queue and shared `steering::send_attempt`; no new execution queue/worker exists.
+Only first admission owns steering attempts. Replays return receipts regardless
+of later target/runtime changes. Preflight checks all recipients, then checks each
+owned attempt again; partial results remain visible. Known denial fails that
+recipient, while an uncertain RPC/receipt never becomes queued work.
+
+Supervisor rows are isolated from ordinary collapsed direct-message batches.
+Canonical target/configuration/action authorization is revalidated before workspace
+preparation, inside atomic process admission, and before external delivery. A
+legacy NULL executor identity is normalized to its already-selected executor, so
+VK filling that column does not invalidate an otherwise unchanged target. The
+existing queue recovery scan now reconciles changed aggregate action states and
+publishes durable action events; unchanged unknown actions do not starve newer
+results. Outcome report/evidence ingestion is still needed.
+
+Runtime gates inspect workspace-wide pending approvals, capacity ownership and
+workspace/session lifecycle. Active Codex goals are queried on their exact owner.
+For inactive threads, native `thread/goal/get` runs in the existing configured
+executor before any `thread/resume`. It does not launch a separate probe or trust
+progress-file absence. Paused/unknown/malformed/unreadable goals block supervisor
+follow-up. Active goals also respect matching VK progress pause reasons. Typed
+server-owned provenance cannot be overridden by profile environment variables;
+supervisor messages cannot invoke native slash controls. Direct workspace paths
+retain their raw response/history/control behavior and skip these supervisor gates.
+
+Current database/service regression passes **53 DB and 58 service tests** in
+`/mnt/vk-storage/capacity-build-tmp/vk-chat-dispatch-regression.log`. Three scripted
+app-server tests pass in `vk-chat-goal-gate-tests.log`: denied goal states issue no
+resume/turn request, slash controls are rejected, and direct messages keep their
+former path. They do not use a live account or native thread. The service suite
+includes twelve new dispatch/gate tests covering mixed queue/steer recipients,
+changed runtime/targets, partial outcomes, no resend, and aggregate event recovery.
+Five new DB action tests cover isolated batching/configuration, stale/cancelled
+authorization, rollback and legacy executor identity. Full formatting and ops
+checks pass. Server compilation caught a direct SQL query in local-deployment,
+which has no SQLx dependency; the query now lives in the DB model. All seven
+conversation API tests and both normal queue-route tests now pass, compiling the
+server/local-deployment integration. Logs are `vk-chat-dispatch-api-tests.log` and
+`vk-chat-dispatch-queue-api-tests.log` in the same SSD directory. Total: 123 Rust
+tests for this slice; `git diff --check` also passes. Full workspace/PR baseline,
+live executor/model and browser/device acceptance were not run.
+
+**Next:** connect trusted semantic assessment and typed action proposals to the
+configured supervisor worker; add confirmation API/UI and outcome evidence
+retrieval. `agent_actions` remains false and model tools remain read-only until
+that integration is complete. Real executor/approval/capacity acceptance is still
+required. Full project/attention context, memory mutation, model settings/live
+speech evaluation, provider transport, signed Android client/physical car tests
+and release/restore checks remain. No live configuration, executor/model call,
+provider setup or deployment occurred. Source changes remain uncommitted.
+
+## September 26: configured supervisor worker and visible reply status
+
+The global supervisor now has an OpenAI Responses adapter and a deployment-owned
+consumer in `crates/services/src/services/conversation/{openai,runtime}.rs`.
+`LocalDeployment` constructs the runtime with a shutdown child token; API readiness
+follows that consumer. See the configured-worker section of VK_CHAT_CONTRACTS.md
+for explicit model/provider/key-file settings, bounds and data processing. No
+runtime settings or provider accounts were changed. The adapter exposes only the
+six existing read tools; `agent_actions` and `voice` remain false. Ordinary raw
+workspace chat has no dependency on this model.
+
+The adapter uses structured final replies and native typed function calls, with
+stateless requests. Provider reasoning/function/commentary items remain transient
+within one turn and never enter logs, manifests, history or exports. VK records
+verified evidence links, safe model configuration and known usage. An incidental
+provider commentary item is not published as a reply. Unknown/mutating functions,
+parallel calls, invalid schemas and incomplete responses fail before a tool runs.
+
+Startup consumes durable pending turns; two consumers cannot duplicate a reply.
+Graceful shutdown cancels transport and records failure; abrupt drop aborts the
+task and lease recovery records interruption. Rejected credentials stop new
+acceptance while retaining queued work for repair. Failed/interrupted turns do
+not silently retry. `accept_if_available` checks existing identity before worker
+availability, so a lost receipt can be recovered after shutdown without a new
+model call; changed content remains conflict.
+
+`GET /conversations/{id}/runs` returns a bounded, scoped public status page. It
+excludes leases and internal model context. The global UI loads statuses alongside
+history, merges replay by generation, displays waiting/failure/interruption beside
+the original input, refreshes capabilities while open, and permits a pending
+receipt retry while new messages are unavailable. It reuses the existing secure
+message-ID helper for LAN origins. Raw workspace rendering/history are unchanged.
+
+Validation so far: 48 DB and 46 service tests pass in
+`/mnt/vk-storage/capacity-build-tmp/vk-chat-model-regression.log`, including five
+adapter tests and four file-backed runtime tests. Both web-core/local-web typechecks
+and focused production-file lint pass. Seven replay-state tests pass with
+`node --experimental-strip-types --test --test-isolation=none`; using the default
+subprocess runner only reported the enclosing file on this host. Generated Rust/TS
+contracts and `generate-types:check`, full formatting and ops governance succeeded. All seven conversation
+API tests and both queue-route tests pass (103 Rust tests total). The real Axum
+consumer test proves API acceptance through persisted reply/replay, status paging,
+private-field exclusion and receipt recovery after shutdown. Logs are
+`vk-chat-model-api.log` and `vk-chat-model-queue-api.log` in the same SSD directory.
+Browser/device and live provider behavior are not certified by these deterministic
+fixtures.
+
+**Next:** implement trusted semantic assessment, confirmation API/UI and actual
+supervisor dispatch using the prior action/steering/admission primitives. Recheck
+native-goal pause/capacity/approval state and queued target/configuration before
+execution; finish result ingestion/reconciliation. Model settings, complete
+project/attention context and memory mutation remain. Run real-model speech tests
+once funded model/account/key-file information is supplied; do not borrow executor
+credentials. Voice/native provider compatibility, signed Android client, physical
+phone/car acceptance and release/restore checks remain full-goal requirements.
+No deployment, external model/executor call, voice service or phone/car test ran.
+
+Dispatch integration seams: pending approvals are available through
+`Approvals::get_pending_execution_process_ids`. Capacity state lives in
+`crates/executors/src/capacity/controller.rs`; `before_launch` already blocks manual
+continuation of enrolled/granted sessions. Native progress uses the latest coding
+thread and `goals::progress_path`, as demonstrated by the existing capacity route.
+A progress file is not proof of current native goal status; live reconciliation
+still needs an executor-owned projection.
+
+## September 26: action confirmations and shared process admission
+
+Migration `20260926000005_supervisor_action_confirmations.sql` and
+`db::models::conversation::actions` now persist exact-message policy decisions,
+principal-bound five-minute confirmation grants, target/configuration snapshots,
+all-recipient delivery admission and aggregate recipient outcomes. Ordinary
+explicit messages need no extra confirmation; consequential/unclear instructions
+and broad inferred sets require review. Unauthorized instructions and dedicated
+native-goal/tool-approval controls are rejected by the storage policy. The semantic
+assessment is a trusted service input, not yet supplied by a real model. Do not
+expose assessment fields as client/model tool arguments.
+
+Targets are re-read canonically before approval, confirmation and transfer to the
+ledger; copying an old version while changing a model or workspace fails. A
+completed supervisor explanation can leave a pending confirmation, but failed,
+cancelled or expired runs fence undispatched actions. Confirmations bind digest,
+revision, owner and expiry; replays cannot broaden payloads or emit duplicate
+requests. Export/deletion include grants. Only the first admission returns owned
+steering attempts; replay returns existing receipts without another RPC attempt.
+
+Direct and queued process creation now share `ExecutionProcess::insert_admitted`.
+Process, repository snapshots, raw coding prompt and unarchive transition commit
+in one transaction before spawning. Writer locking prevents duplicate coding
+launches across sessions in a workspace. Direct parallel setup/dev-server behavior
+and explicit unarchive are preserved; sequential setup reserves its next coding
+turn. Queued work remains stricter about finishing all non-dev processes. A losing
+queued admission releases its claim without losing the message. The container
+publishes process/workspace patches after commit for both paths. Raw workspace
+rendering, history and response content have no supervisor dependency.
+
+Current validation: all **48 DB and 37 service tests pass** in
+`/mnt/vk-storage/capacity-build-tmp/vk-chat-action-admission-regression.log`.
+This includes twelve new confirmation/action tests and five file-backed admission
+tests using multiple SQLite connections, real migrations, injected repository/
+prompt write failures, rollback, replay and unchanged raw reports. The initial
+full run exposed incomplete old test fixtures (foundation-only schema and missing
+repository display name); fixtures now use the current migration chain and valid
+repository rows. The populated legacy-history migration test remains in the suite.
+All six conversation API and both queue-route tests also pass (logs
+`vk-chat-action-api-tests.log` and `vk-chat-action-server-tests.log`), compiling the
+server/local-deployment integration. Full formatting and ops governance pass.
+SQLx metadata generation also passed and removed only the superseded standalone
+process-insert query cache. `pnpm run prepare-db:check` passed as well
+(`vk-chat-action-prepare-db-check.log`), and the preparation database was removed.
+`git diff --check` passes. No live WebSocket/executor acceptance is implied by
+these in-process tests.
+
+**Next implementation:** connect the service-owned semantic assessment, confirmation
+API/UI and delivery execution using the existing exact-process steering primitive.
+Add runtime native-goal pause/activation and executor-approval checks before
+admission and delivery; revalidate queued supervisor targets/configuration again
+at consumption. Current transfer checks do not cover changes while waiting in a
+queue. Complete result ingestion/action reconciliation and actual executor
+acceptance. Keep production send readiness false and worker tools read-only until
+these capabilities are wired. Hosted model adapter/startup, scoped memory use and
+attention projection, real-model speech evaluation, voice/provider, native Android
+and device/car acceptance remain open. No deployment/provider/runtime changes or
+live model/executor calls were made.
+
+## September 26: durable direct steering integrated
+
+Migration `20260926000004_durable_steering_receipts.sql` adds delivery mode and a
+retained steering acknowledgement to the shared ledger. The existing session queue
+route now uses `services::steering::steer`: record the exact execution before the
+RPC, then persist its outcome. Concurrent/repeated request IDs never issue another
+RPC. Timeout, RPC error, lost receipt write or expired in-flight attempt becomes
+`unknown_delivery`; recovery never converts it into queued work. A conclusive late
+acknowledgement may resolve that same attempt. Process completion does not erase
+the acknowledgement, so a retry still reports the original acceptance.
+
+The local executor adapter now accepts an exact process ID and rechecks its
+session, workspace lifecycle, running state and executor before steering. The
+workspace send hook supplies a per-submission UUID, retained by transport retries,
+using Web Crypto compatible with existing non-HTTPS local origins. Raw prompts,
+workspace history, completion output and controls are unchanged; this primitive
+has no supervisor memory/model dependency. Known unavailable Codex steering still
+returns conflict without queue fallback. Non-Codex queue behavior is preserved.
+
+Eight new real-database steering tests pass (`vk-chat-steering-tests.log`), covering
+acknowledgement replay after completion, concurrent retry, process replacement,
+known rejection, uncertain RPC errors, crash recovery, injected receipt-write
+failure, changed-content identity rejection and unavailable targets. Current
+web-core typecheck and focused changed-file lint pass. Full formatting passed.
+The server and local-deployment code compile, and both queue-route regressions
+pass. The updated full DB/service run passes all 31 database and 37 service tests;
+all six conversation API tests pass after the new migration. Terminal logs are
+`vk-chat-steering-server-tests.log`, `vk-chat-steering-regression.log` and
+`vk-chat-steering-api-tests.log` under `/mnt/vk-storage/capacity-build-tmp/`.
+Ops governance and `git diff --check` also pass. These tests use deterministic
+executor callbacks; they do not certify the real Codex RPC boundary.
+
+The previous worker regression completed with 31 database and 29 service tests
+passing (`vk-chat-worker-regression.log`), including renewal contention on a
+single-connection pool. The earlier worker handoff's pending regression note is
+superseded by this result. No real executor RPC, model/provider, deployment or
+phone/car acceptance has run. Dispatch remains open: connect authorised supervisor
+and voice origins/action receipts to this primitive, implement action policy and
+confirmations, close direct/process admission races, and prove actual executor,
+capacity/native-goal and approval boundaries. The hosted adapter/startup consumer
+and remaining native goal requirements are also still open.
+
+## September 26: leased supervisor worker and local read tools
+
+`crates/services/src/services/conversation/` now contains the provider-neutral
+model contract, a durable run worker and bounded local context tools. The worker
+claims one pending turn, renews its lease alongside DB work, bounds tool calls and
+context, records source/version and model/usage manifests, drops in-flight model
+requests on shutdown/cancellation/timeout, and persists safe terminal failure
+codes. It never automatically retries a failed run. Final replies and source
+links commit together. Queued inputs see earlier replies without inheriting later
+user instructions. Run-scoped evidence writes also check the active generation.
+
+Read tools cover literal name lookup, workspace/session/process state, paged
+coding-agent history, exact retained report pages, existing evidence and scoped
+preferences. Report content remains untrusted tool data; unknown tools and extra
+arguments fail schema validation. Current model capabilities are read-only.
+Ordinary workspace history/output is preserved. These services are exercised
+through deterministic test models; no hosted adapter or deployment startup
+consumer is connected, so production send acceptance remains unavailable.
+
+The initial ten worker integration tests passed (`vk-chat-worker-tests.log`),
+covering concurrent workers, cancellation/transport drop, timeout/shutdown,
+terminal provider failure, citation rejection, raw report preservation, Unicode
+report paging, failed atomic source linkage, current-state revisions, memory scope
+and future-turn isolation. A subsequent regression run includes lease/DB contention
+coverage; its final result is recorded below when complete. No live model output,
+voice, Android/car or real executor dispatch acceptance is implied.
+
+Next: hosted model adapter plus shared startup/capability readiness and real-model
+spoken-text evaluation when a funded provider is supplied. Extend the local entity
+projection with explicit synthetic/remote project links and live approvals/native
+goals before claiming complete routing or attention reporting. Current project
+IDs come from task/project rows; repository display names are searchable for
+workspace-first work, but synthetic project IDs are not yet projected. Action
+policy/dispatch and model-driven memory changes remain separate open work. Keep
+provider secrets out of model identity, manifests, events and logs.
+
+## September 26: global supervisor UI prepared
+
+The local application now mounts a persistent supervisor provider above host-scoped
+navigation, with desktop/mobile launchers and a Radix panel. All requests explicitly
+target local authority. Saved history/replay, idempotent retry, activity/source
+drill-down, scoped preference forgetting, export and deletion are implemented.
+Message evidence metadata has its own scoped API; exact retained reports load on
+request. Ordinary workspace chat remains unchanged. Production message acceptance
+still reports model unavailable until worker integration.
+
+Validation: six real Axum API tests and five replay reducer tests pass; regenerated
+shared types, web-core/local-web typechecks and focused feature/component lint pass.
+Full formatting passed before two small UI state/accessibility fixes; rerun it with
+next edits. Logs: `/mnt/vk-storage/capacity-build-tmp/vk-chat-ui-*.log`.
+The browser fixture bundles successfully, but Chromium fails a sandbox syscall
+(`shutdown: Operation not permitted`), before assertions. Browser accessibility,
+visual/navigation and live multi-client/worker acceptance remain unverified; do not
+repeat the blocked launch without an environment change or bypass the restriction.
+The native `supervisor_ui` requirement remains open.
+
+Next: implement the supervisor worker, bounded context retrieval and model/policy
+boundary against fake-model integration tests, then the configured hosted adapter.
+Funded API provider selection remains pending; independent work can proceed. No
+provider calls, real agent actions, production changes or implementation push.
+
+## September 26: durable delivery, supervisor records and API continuation
+
+Current implementation extends the foundation below. See
+`crates/db/src/models/conversation/records.rs` and migrations `20260926000001`
+through `20260926000003`: durable agent delivery, installation identity and
+supervisor action/evidence/memory records. `crates/server/src/routes/conversations.rs`
+adds opt-in local-operator history/replay, records, export/deletion and forgetting.
+`VK_SUPERVISOR_ENABLED=1` enables reads; production sends deliberately report model
+unavailable until the configured worker exists. Relay clients remain denied until
+principal ownership mapping; capabilities do not imply authentication. All responses
+are no-store. Original workspace chat keeps its existing raw history and controls.
+
+Memory supersession uses exact revision comparison; inferred claims remain proposed,
+linked scopes must all be present for retrieval, and forgetting redacts memory events,
+invalidates context and fences active model generations. Full history deletion
+removes supervisor content and retains sequence tombstones. It rejects active or
+uncertain delivery outcomes and never deletes raw workspace evidence at its source.
+Evidence retention preserves original bytes and rejects changed same-revision input.
+Action proposals are immutable/idempotent and require a live originating run.
+Authorisation/confirmation and actual supervisor dispatch remain future integration.
+
+Session queue callers now await a SQL-backed queue. Queue batch admission inserts
+process correlation atomically before spawn. Periodic recovery (after startup orphan
+cleanup) skips active finalisers, retains uncertainty after admission and retries only
+unadmitted claims. Capacity-denial reset and newer queued corrections are one
+transaction. No runtime/model process has been started to test these changes.
+Pending dispatch acceptance includes direct-admission races, steering receipts,
+crash boundaries against a real executor and goal/approval integration.
+
+UI investigation: `packages/local-web/src/app/entry/App.tsx` is above the
+`AppRouteProviders key={hostId}` remount in routes/_app.tsx. Keep supervisor state
+there; use explicit local authority in localApiTransport rather than implicit
+current-host routing. SharedAppLayout/AppBar support a small dedicated launcher
+slot; a context consumer can stay absent in remote-web until ownership is mapped.
+The existing Radix Dialog primitives provide focus/escape behavior. No UI code
+was added in this slice; preserve raw workspace rendering and use generated DTOs.
+
+Validation so far: all 31 database tests pass (`vk-chat-record-tests.log`), including
+nine records tests and the eight original conversation tests. All five API tests pass, including authenticated-scope rejection, export,
+revision-checked deletion/forgetting and no-store headers. Shared TypeScript types
+were regenerated through the Rust generator, and `cargo check -p server --offline`
+passes. All seven refreshed durable-queue tests pass, including atomic capacity-denial
+reconciliation that preserves newer messages. Logs live under `/mnt/vk-storage/capacity-build-tmp/`.
+Use `CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target CARGO_INCREMENTAL=0 SQLX_OFFLINE=true`
+with offline Cargo. No live DB/runtime/provider changes or implementation push.
+An offline frontend dependency install succeeded from a copied local pnpm store
+on the mounted SSD; full `pnpm run format` now passes. The copy is at
+`/mnt/vk-storage/capacity-build-tmp/vk-chat-pnpm-store` (source store unchanged).
+The early speech corpus/checker in `scripts/chat/` has twelve synthetic source
+cases and five passing harness tests. It has no real-model acceptance result.
+Funded API provider selection was asked asynchronously; unrelated work can continue.
+
+Scheduled goal pauses have automatically committed earlier slices; inspect Git for
+current commit boundaries. The persistence requirement now has matching storage/API evidence. The full
+goal remains active, with model/UI/voice/Android
+and integration acceptance still outstanding. Continue those milestones once the
+current API/generation checks pass rather than repeatedly polishing storage.
+
+## September 26: implementation authorised; supervisor storage foundation
+
+The user activated the full native goal “get this built.” Implementation is now
+in scope; the earlier documentation-only boundary has expired. The approved
+Android/car MMI, plain-English speech and raw-workspace boundaries remain binding.
+The fixed native checklist covers persistence, dispatch, UI, routing/policy,
+memory/summaries, speech evaluation, voice, Android and integration/release.
+Historical foundation checkpoint below; the newer entry above records subsequent progress.
+
+Implemented `crates/db/migrations/20260926000000_supervisor_conversation_foundation.sql`,
+`crates/db/src/models/conversation.rs` and its test module. These provide scoped
+supervisor conversation identity, atomic message/pending-run/event acceptance,
+retry conflict detection, history paging, durable replay, serial worker leases,
+renewal, cancellation and stale-completion fencing. Existing workspace/session
+history and send paths remain unchanged. The store is not exposed by an API or
+connected to a model/agent worker yet. Scope must later come from trusted auth,
+not client/model-selected principal IDs. Additional action/evidence/memory and
+voice tables remain to implement.
+
+Validation: `CARGO_TARGET_DIR=/mnt/vk-storage/cargo-target CARGO_INCREMENTAL=0
+SQLX_OFFLINE=true cargo test -p db --lib --offline` passed all 22 tests. After adding
+concurrent competing-worker coverage, the focused `models::conversation::tests`
+run passed all eight tests. Coverage includes populated migration preserving exact
+raw agent reports, rerun of migrations, 12 concurrent retries, ten distinct
+concurrent messages, two worker claimants, restart/replay, injected event-write
+rollback, cross-scope rejection and expiry/cancel fencing. Logs are in
+`/mnt/vk-storage/capacity-build-tmp/vk-chat-db-tests.log` and
+`vk-chat-db-final-tests.log`. `pnpm run ops:check`, Rust formatting and
+`git diff --check` passed. `pnpm run format` stopped at missing `prettier` after
+Rust formatting; frontend tests, live models/providers and Android/car were not
+exercised. No production/runtime/external account changes occurred.
+
+Next: continue milestone 1 with durable existing-session delivery, action/evidence
+storage and reconciliation, trusted installation scope and API/replay integration.
+Keep Codex unavailable-steering conflict and existing executor choices/approvals.
+Do not create a parallel direct chat. Prepare spoken-text evaluation fixtures early;
+real model/provider/physical-car acceptance still gates their corresponding work.
+The current slice is uncommitted/unpushed and the implementation goal remains active.
+
+## September 26: Android calls, car MMI and spoken-language acceptance
+
+All five VK_CHAT design documents now specify Android-first mobile voice through
+Core-Telecom, screen-off operation and real phone/car MMI call-control acceptance.
+The native provider transport must be proven early; Retell remains conditional on
+that gate. Desktop web retains text/history and browser voice is secondary.
+Supervisor speech is natural plain English, with technical material available
+visually. An early real-model text-output evaluation gate precedes voice
+integration. Raw workspace history/behaviour stays unchanged; optional direct
+playback selects prose without a summarising model. The handoff includes both
+requirements. No implementation, provider setup or runtime changes were made.
+
+Validation: `pnpm run ops:check`, design links/anchors and `git diff --check`
+passed. `pnpm run format` completed Rust formatting then failed because `prettier`
+is unavailable; no feature source changed. Device/car behaviour and model output
+are documented acceptance gates, not tested functionality. This revision is
+uncommitted and unpushed; future implementation begins on explicit instruction.
+
+## September 25: clarified supervisor/workspace boundary
+
+All five VK_CHAT design documents now reserve new conversation history, memory,
+routing and conversational summaries for the global supervisor. Existing workspace
+text chat retains raw coding-agent output, validation, controls and history.
+Workspace voice transcribes into the existing session message path; optional
+playback uses the raw response without another reasoning model. Voice metadata
+stays separate. Shared delivery/voice primitives remain reusable. No implementation
+or runtime changes were made for this focused revision.
+
+## September 15: Chat orchestration design and implementation handoff
+
+The design is in [VK_CHAT_ARCHITECTURE.md](VK_CHAT_ARCHITECTURE.md),
+[contracts](VK_CHAT_CONTRACTS.md), [voice](VK_CHAT_VOICE.md) and
+[implementation sequence](VK_CHAT_IMPLEMENTATION.md). Baseline source:
+`2fd585ac30bfa75975f6319585e4a66bb684fdcf`.
+
+The architecture task created documents, with no feature or runtime changes.
+Development starts on the user's later [implementation instruction](VK_CHAT_HANDOFF.md).
+The design extends existing direct sessions and execution controls, adds independent
+conversation/memory storage and durable delivery, and keeps voice behind an adapter.
+Provider credentials/retention and an auditioned Irish voice are live-integration
+decisions; they do not block starting the text foundation.
+
+Validation: Ops Playbook and all relative design-document link targets passed;
+`git diff --check` passed. `pnpm run format` completed Rust formatting, then
+stopped because `prettier` is not installed in this worktree. No source files
+changed. Application tests, live model/provider calls and runtime validation
+were not performed. No commit, push or PR was created for this task.
+
 ## September 15: capacity deployment configuration in VK staging
 
 The post-PR114 missing-configuration fix is now versioned in VK: see

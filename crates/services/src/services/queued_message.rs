@@ -1,9 +1,10 @@
-use std::sync::Arc;
-
 use chrono::{DateTime, Utc};
-use dashmap::DashMap;
-use db::models::scratch::DraftFollowUpData;
+use db::models::{
+    agent_delivery::{AgentDelivery, DeliveryClaim},
+    scratch::DraftFollowUpData,
+};
 use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -74,149 +75,108 @@ pub enum QueueStatus {
     Queued { message: QueuedMessage },
 }
 
-/// In-memory service for managing queued follow-up messages.
-/// One queued message per session.
+/// The legacy queue DTO is a projection of the shared durable delivery ledger.
+/// Claims keep their rows until process admission; there is no second consumer.
 #[derive(Clone)]
 pub struct QueuedMessageService {
-    queue: Arc<DashMap<Uuid, QueuedMessage>>,
+    pool: SqlitePool,
+}
+
+#[derive(Debug, Clone)]
+pub struct ClaimedQueuedMessage {
+    pub message: QueuedMessage,
+    pub claim: DeliveryClaim,
 }
 
 impl QueuedMessageService {
-    pub fn new() -> Self {
-        Self {
-            queue: Arc::new(DashMap::new()),
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn queue_message(
+        &self,
+        session_id: Uuid,
+        data: DraftFollowUpData,
+    ) -> Result<QueuedMessage, sqlx::Error> {
+        self.queue_with_key(session_id, data, false, Uuid::new_v4())
+            .await
+    }
+
+    pub async fn queue_for_capacity(
+        &self,
+        session_id: Uuid,
+        data: DraftFollowUpData,
+    ) -> Result<QueuedMessage, sqlx::Error> {
+        self.queue_with_key(session_id, data, true, Uuid::new_v4())
+            .await
+    }
+
+    pub async fn queue_with_key(
+        &self,
+        session_id: Uuid,
+        data: DraftFollowUpData,
+        capacity: bool,
+        key: Uuid,
+    ) -> Result<QueuedMessage, sqlx::Error> {
+        let accepted = AgentDelivery::enqueue(&self.pool, session_id, data, capacity, key).await?;
+        Self::project(&accepted).ok_or(sqlx::Error::RowNotFound)
+    }
+
+    pub async fn cancel_queued(&self, session_id: Uuid) -> Result<(), sqlx::Error> {
+        AgentDelivery::cancel(&self.pool, session_id).await?;
+        Ok(())
+    }
+
+    pub async fn get_queued(&self, session_id: Uuid) -> Result<Option<QueuedMessage>, sqlx::Error> {
+        Ok(Self::project(
+            &AgentDelivery::queued(&self.pool, session_id).await?,
+        ))
+    }
+
+    pub async fn take_queued(
+        &self,
+        session_id: Uuid,
+    ) -> Result<Option<ClaimedQueuedMessage>, sqlx::Error> {
+        Ok(AgentDelivery::claim(&self.pool, session_id)
+            .await?
+            .map(|claim| ClaimedQueuedMessage {
+                message: Self::project(&claim.deliveries).expect("nonempty delivery claim"),
+                claim,
+            }))
+    }
+
+    pub async fn take_oldest_capacity_queued(
+        &self,
+    ) -> Result<Option<ClaimedQueuedMessage>, sqlx::Error> {
+        match AgentDelivery::oldest_capacity_session(&self.pool).await? {
+            Some(session_id) => self.take_queued(session_id).await,
+            None => Ok(None),
         }
     }
 
-    /// Queue a message for a session. Appends to any existing queued messages.
-    pub fn queue_message(&self, session_id: Uuid, data: DraftFollowUpData) -> QueuedMessage {
-        if let Some(mut existing) = self.queue.get_mut(&session_id) {
-            existing.data = data.clone();
-            existing.messages.push(data);
-            return existing.clone();
-        }
-
-        let queued = QueuedMessage {
-            session_id,
-            data: data.clone(),
-            messages: vec![data],
-            queued_at: Utc::now(),
-            wait_for_capacity: false,
-        };
-        self.queue.insert(session_id, queued.clone());
-        queued
+    pub async fn has_queued(&self, session_id: Uuid) -> Result<bool, sqlx::Error> {
+        Ok(self.get_queued(session_id).await?.is_some())
     }
 
-    /// Queue a message that should start when global executor capacity opens.
-    pub fn queue_for_capacity(&self, session_id: Uuid, data: DraftFollowUpData) -> QueuedMessage {
-        let queued = QueuedMessage {
-            session_id,
-            data: data.clone(),
-            messages: vec![data],
-            queued_at: Utc::now(),
-            wait_for_capacity: true,
-        };
-        self.queue.insert(session_id, queued.clone());
-        queued
-    }
-
-    /// Cancel/remove a queued message for a session
-    pub fn cancel_queued(&self, session_id: Uuid) -> Option<QueuedMessage> {
-        self.queue.remove(&session_id).map(|(_, v)| v)
-    }
-
-    /// Get the queued message for a session (if any)
-    pub fn get_queued(&self, session_id: Uuid) -> Option<QueuedMessage> {
-        self.queue.get(&session_id).map(|r| r.clone())
-    }
-
-    /// Take (remove and return) the queued message for a session.
-    /// Used by finalization flow to consume the queued message.
-    pub fn take_queued(&self, session_id: Uuid) -> Option<QueuedMessage> {
-        self.queue.remove(&session_id).map(|(_, v)| v)
-    }
-
-    /// Take the oldest message waiting for global executor capacity.
-    pub fn take_oldest_capacity_queued(&self) -> Option<QueuedMessage> {
-        let session_id = self
-            .queue
-            .iter()
-            .filter(|entry| entry.value().wait_for_capacity)
-            .min_by_key(|entry| entry.value().queued_at)
-            .map(|entry| *entry.key())?;
-
-        self.take_queued(session_id)
-    }
-
-    /// Check if a session has a queued message
-    pub fn has_queued(&self, session_id: Uuid) -> bool {
-        self.queue.contains_key(&session_id)
-    }
-
-    /// Get queue status for frontend display
-    pub fn get_status(&self, session_id: Uuid) -> QueueStatus {
-        match self.get_queued(session_id) {
-            Some(msg) => QueueStatus::Queued { message: msg },
+    pub async fn get_status(&self, session_id: Uuid) -> Result<QueueStatus, sqlx::Error> {
+        Ok(match self.get_queued(session_id).await? {
+            Some(message) => QueueStatus::Queued { message },
             None => QueueStatus::Empty,
-        }
+        })
     }
-}
 
-impl Default for QueuedMessageService {
-    fn default() -> Self {
-        Self::new()
+    fn project(deliveries: &[AgentDelivery]) -> Option<QueuedMessage> {
+        let first = deliveries.first()?;
+        let last = deliveries.last()?;
+        Some(QueuedMessage {
+            session_id: first.session_id,
+            data: last.data.0.clone(),
+            messages: deliveries.iter().map(|d| d.data.0.clone()).collect(),
+            queued_at: first.queued_at,
+            wait_for_capacity: first.wait_for_capacity,
+        })
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use chrono::Duration;
-    use executors::{executors::BaseCodingAgent, profile::ExecutorConfig};
-
-    use super::*;
-
-    fn draft(message: &str) -> DraftFollowUpData {
-        DraftFollowUpData {
-            message: message.to_string(),
-            executor_config: ExecutorConfig::new(BaseCodingAgent::Codex),
-        }
-    }
-
-    #[test]
-    fn takes_oldest_capacity_queue_without_consuming_normal_queue() {
-        let service = QueuedMessageService::new();
-        let normal_session_id = Uuid::new_v4();
-        let newer_capacity_session_id = Uuid::new_v4();
-        let older_capacity_session_id = Uuid::new_v4();
-
-        service.queue_message(normal_session_id, draft("normal"));
-        service.queue_for_capacity(newer_capacity_session_id, draft("newer"));
-        service.queue_for_capacity(older_capacity_session_id, draft("older"));
-
-        {
-            let mut newer = service
-                .queue
-                .get_mut(&newer_capacity_session_id)
-                .expect("newer capacity message exists");
-            newer.queued_at = Utc::now();
-        }
-        {
-            let mut older = service
-                .queue
-                .get_mut(&older_capacity_session_id)
-                .expect("older capacity message exists");
-            older.queued_at = Utc::now() - Duration::minutes(1);
-        }
-
-        let taken = service
-            .take_oldest_capacity_queued()
-            .expect("capacity message exists");
-
-        assert_eq!(taken.session_id, older_capacity_session_id);
-        assert_eq!(taken.data.message, "older");
-        assert!(taken.wait_for_capacity);
-        assert!(service.get_queued(normal_session_id).is_some());
-        assert!(service.get_queued(newer_capacity_session_id).is_some());
-        assert!(service.get_queued(older_capacity_session_id).is_none());
-    }
-}
+mod tests;

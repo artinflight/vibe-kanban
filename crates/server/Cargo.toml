@@ -72,7 +72,9 @@ tokio-tungstenite = { version = "0.26", features = ["rustls-tls-native-roots"] }
 dotenv = "0.15"
 
 [dev-dependencies]
+async-trait = { workspace = true }
 tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
 
 [features]
 default = []

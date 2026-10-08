@@ -170,3 +170,29 @@ weakening argument validation. Later controller/v2 rollback compatibility,
 B-backed capture/restoration, full handover rehearsal, frontend/module/runtime
 binding and actual inactivity remain separate requirements. They authorize no
 production switch in this assignment.
+
+## Draft review and first hosted run
+
+Draft [PR153](https://github.com/artinflight/vibe-kanban/pull/153) contains this
+repair. Its first hosted run at84d1d2a passed governance, freshness/policy,
+frontend, schema, Clippy and Tauri checks. Cargo executed404 tests:403 passed,
+7 skipped, one real-binary isolation test failed before launching the executable.
+The fresh WorkspaceManager preservation test and all five identity tests passed.
+The runner denied bubblewrap's loopback setup (`RTM_NEWADDR`); the test correctly
+failed rather than falling back to host execution.
+
+CI setup now installs and loads Ubuntu's packaged `bwrap-userns-restrict` profile
+and probes the namespace boundary before running Cargo. This follows Ubuntu's
+[purpose-built profile guidance](https://discourse.ubuntu.com/t/understanding-apparmor-user-namespace-restriction/58007)
+and its [packaged profile inventory](https://packages.ubuntu.com/noble-updates/all/apparmor-profiles/filelist).
+Only the ephemeral GitHub runner is configured; the MCP host's policies and all
+server isolation mounts/namespaces are unchanged. The corrected hosted run and
+independent review remain required.
+
+The source84d1d2a evidence packet is fully hash-verified on Desktop at
+`B:/vk-backups/vk-startup-recovery-safety-20261008/startup-recovery-safety-evidence.tar.gz`,
+128,289bytes, SHA256
+`903b83edd3c1169515374b75f3e73eca2987cd02dc7dcf50e6afd07504a6b4f5`.
+It retains the source patch, current audit, owner comparison, local validation
+logs and the exact generated-cache retirement inventory. Later evidence must use
+a distinct bundle, preserving this first packet and the failed CI result.

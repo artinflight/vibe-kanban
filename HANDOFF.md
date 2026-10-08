@@ -1,5 +1,11 @@
 ## October 8 isolated prevention and recovery audit
 
+Draft PR153: https://github.com/artinflight/vibe-kanban/pull/153.
+First hosted run:403/404 Cargo tests passed; namespace initialization failed
+before the real binary ran. The CI profile repair retains full isolation and
+requires a corrected run. Source84d1d2a evidence is Desktop-hash-verified; see the
+packet location/hash and current review boundary in VK_STARTUP_RECOVERY_SAFETY.md.
+
 Read VK_STARTUP_RECOVERY_SAFETY.md. This repair was developed in a new worktree
 from fork staging; the original Staging maintenance workspace remains clean.
 Argument inspection/rejection precedes initialization; runtime startup requires

@@ -9,13 +9,16 @@ under `/mnt/vk-storage/vk-mobile-native-20261008`. Expanded desktop navigation a
 390px dark/creation also passed. Frontend types/lint, format and ops checks passed;
 full Rust validation is blocked by missing GTK pkg-config files. The temporary
 branch preview and its route were stopped; see the design note for receipts.
-No live data, runtime settings, frontend release, merge or service changed.
+No task/workspace data, runtime settings, frontend release, merge or service changed.
 Source commit `098fa753f` is pushed. Draft review:
 [PR #224](https://github.com/artinflight/vibe-kanban/pull/224) into `staging`.
 Frontend CI, including local/remote production builds, passed on that source
 commit. The redundant local build was stopped under host I/O pressure.
 Physical Android keyboard/browser chrome and Safari/Firefox remain QA limits;
 the test intentionally intercepts live mutations and never sends a prompt.
+After the operator could not open host-local screenshot links, the before/after
+board images were attached through Vibe's normal file API and their retrieved
+PNG bytes verified. IDs and browser-accessible notes are in VK_MOBILE_UX.md.
 
 # October 5: AutoSwitch reloadable module
 

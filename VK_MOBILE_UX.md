@@ -52,7 +52,7 @@ execution and backend behavior are unchanged.
 Evidence directory: `/mnt/vk-storage/vk-mobile-native-20261008` on the mounted SSD.
 The existing-production route was read to identify backend `5511`: historical
 preview default `4511` is frozen. Only this worktree's frontend preview was
-started; no backend, production service, routing, database or frontend release
+started; no backend, production service, routing, task/workspace data or frontend release
 was changed. No public Funnel route was installed.
 
 The checked-in `scripts/testing/mobile-ux-browser.mjs` runs against the branch
@@ -127,6 +127,21 @@ The branch's temporary frontend preview and its tailnet route were stopped after
 review artifacts were captured. Screenshots are retained on the SSD, outside Git, since
 they include existing project and conversation content. No preview assets are
 published to the production frontend.
+
+### Accessible review artifacts
+
+After the operator reported that host-local file links would not open, the two
+existing board screenshots were uploaded through Vibe's normal attachment API.
+Both were retrieved as PNGs and verified byte-for-byte against the source files.
+Only these review artifacts were written; no prompt, task/workspace change,
+deployment or production service update occurred.
+
+- Before attachment: `dc35a844-da5e-40b8-936a-3d40a386cd37` (37,337 bytes).
+- After attachment: `7a951534-41c5-4b0a-8d2b-44f5339c344f` (27,631 bytes).
+- Review notes: [open on GitHub](https://github.com/artinflight/vibe-kanban/blob/vk/eb7d-vk-native-feelin/VK_MOBILE_UX.md).
+
+The before/after images are embedded as native attachments in the follow-up
+conversation. Upload/retrieval receipts remain in the evidence directory.
 
 ## Limits and release boundary
 

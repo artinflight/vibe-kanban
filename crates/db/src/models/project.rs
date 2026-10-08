@@ -92,4 +92,33 @@ impl Project {
         .fetch_one(pool)
         .await
     }
+
+    pub async fn update_details(
+        pool: &SqlitePool,
+        id: Uuid,
+        name: Option<&str>,
+        archived: Option<bool>,
+    ) -> Result<Self, sqlx::Error> {
+        let current = Self::find_by_id(pool, id).await?;
+
+        sqlx::query_as::<_, Project>(
+            r#"UPDATE projects
+               SET name = $2,
+                   archived = $3,
+                   updated_at = datetime('now', 'subsec')
+               WHERE id = $1
+               RETURNING id,
+                         name,
+                         archived,
+                         default_agent_working_dir,
+                         remote_project_id,
+                         created_at,
+                         updated_at"#,
+        )
+        .bind(id)
+        .bind(name.unwrap_or(&current.name))
+        .bind(archived.unwrap_or(current.archived))
+        .fetch_one(pool)
+        .await
+    }
 }

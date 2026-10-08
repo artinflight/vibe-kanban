@@ -16,6 +16,10 @@ pub struct QueuedMessage {
     pub data: DraftFollowUpData,
     /// Timestamp when the message was queued
     pub queued_at: DateTime<Utc>,
+    /// True when this message is waiting for global executor capacity rather than
+    /// a currently running turn in the same session to finish.
+    #[serde(default)]
+    pub wait_for_capacity: bool,
 }
 
 /// Status of the queue for a session (for frontend display)
@@ -48,6 +52,19 @@ impl QueuedMessageService {
             session_id,
             data,
             queued_at: Utc::now(),
+            wait_for_capacity: false,
+        };
+        self.queue.insert(session_id, queued.clone());
+        queued
+    }
+
+    /// Queue a message that should start when global executor capacity opens.
+    pub fn queue_for_capacity(&self, session_id: Uuid, data: DraftFollowUpData) -> QueuedMessage {
+        let queued = QueuedMessage {
+            session_id,
+            data,
+            queued_at: Utc::now(),
+            wait_for_capacity: true,
         };
         self.queue.insert(session_id, queued.clone());
         queued
@@ -69,6 +86,18 @@ impl QueuedMessageService {
         self.queue.remove(&session_id).map(|(_, v)| v)
     }
 
+    /// Take the oldest message waiting for global executor capacity.
+    pub fn take_oldest_capacity_queued(&self) -> Option<QueuedMessage> {
+        let session_id = self
+            .queue
+            .iter()
+            .filter(|entry| entry.value().wait_for_capacity)
+            .min_by_key(|entry| entry.value().queued_at)
+            .map(|entry| *entry.key())?;
+
+        self.take_queued(session_id)
+    }
+
     /// Check if a session has a queued message
     pub fn has_queued(&self, session_id: Uuid) -> bool {
         self.queue.contains_key(&session_id)
@@ -86,5 +115,58 @@ impl QueuedMessageService {
 impl Default for QueuedMessageService {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::Duration;
+    use executors::{executors::BaseCodingAgent, profile::ExecutorConfig};
+
+    use super::*;
+
+    fn draft(message: &str) -> DraftFollowUpData {
+        DraftFollowUpData {
+            message: message.to_string(),
+            executor_config: ExecutorConfig::new(BaseCodingAgent::Codex),
+        }
+    }
+
+    #[test]
+    fn takes_oldest_capacity_queue_without_consuming_normal_queue() {
+        let service = QueuedMessageService::new();
+        let normal_session_id = Uuid::new_v4();
+        let newer_capacity_session_id = Uuid::new_v4();
+        let older_capacity_session_id = Uuid::new_v4();
+
+        service.queue_message(normal_session_id, draft("normal"));
+        service.queue_for_capacity(newer_capacity_session_id, draft("newer"));
+        service.queue_for_capacity(older_capacity_session_id, draft("older"));
+
+        {
+            let mut newer = service
+                .queue
+                .get_mut(&newer_capacity_session_id)
+                .expect("newer capacity message exists");
+            newer.queued_at = Utc::now();
+        }
+        {
+            let mut older = service
+                .queue
+                .get_mut(&older_capacity_session_id)
+                .expect("older capacity message exists");
+            older.queued_at = Utc::now() - Duration::minutes(1);
+        }
+
+        let taken = service
+            .take_oldest_capacity_queued()
+            .expect("capacity message exists");
+
+        assert_eq!(taken.session_id, older_capacity_session_id);
+        assert_eq!(taken.data.message, "older");
+        assert!(taken.wait_for_capacity);
+        assert!(service.get_queued(normal_session_id).is_some());
+        assert!(service.get_queued(newer_capacity_session_id).is_some());
+        assert!(service.get_queued(older_capacity_session_id).is_none());
     }
 }

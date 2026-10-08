@@ -57,6 +57,7 @@ export function useWorkspaceShortcuts() {
   useHotkeys('w>r', () => execute(Actions.RenameWorkspace), OPTIONS);
   useHotkeys('w>p', () => execute(Actions.PinWorkspace), OPTIONS);
   useHotkeys('w>a', () => execute(Actions.ArchiveWorkspace), OPTIONS);
+  useHotkeys('w>u', () => execute(Actions.MarkWorkspaceUnread), OPTIONS);
   useHotkeys('w>x', () => execute(Actions.DeleteWorkspace), OPTIONS);
 
   useHotkeys('v>c', () => execute(Actions.ToggleChangesMode), OPTIONS);

@@ -11,6 +11,7 @@ use axum::{
 use db::models::{
     execution_process::{ExecutionProcess, ExecutionProcessStatus},
     execution_process_repo_state::ExecutionProcessRepoState,
+    subagent_job::SubagentJob,
 };
 use deployment::Deployment;
 use futures_util::{StreamExt, TryStreamExt};
@@ -412,6 +413,16 @@ async fn get_execution_process_repo_states(
     Ok(ResponseJson(ApiResponse::success(repo_states)))
 }
 
+async fn list_subagent_jobs_by_session(
+    State(deployment): State<DeploymentImpl>,
+    Query(query): Query<SessionExecutionProcessQuery>,
+) -> Result<ResponseJson<ApiResponse<Vec<SubagentJob>>>, ApiError> {
+    let jobs =
+        SubagentJob::find_by_session_id_with_codex_threads(&deployment.db().pool, query.session_id)
+            .await?;
+    Ok(ResponseJson(ApiResponse::success(jobs)))
+}
+
 pub(super) fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let workspace_id_router = Router::new()
         .route("/", get(get_execution_process_by_id))
@@ -425,6 +436,7 @@ pub(super) fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
         ));
 
     let workspaces_router = Router::new()
+        .route("/subagents/session", get(list_subagent_jobs_by_session))
         .route(
             "/stream/session/ws",
             get(stream_execution_processes_by_session_ws),

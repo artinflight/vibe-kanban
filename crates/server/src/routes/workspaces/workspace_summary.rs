@@ -10,6 +10,7 @@ use db::models::{
     execution_process::{ExecutionProcess, ExecutionProcessStatus},
     merge::MergeStatus,
     pull_request::PullRequest,
+    subagent_job::SubagentJob,
     workspace::Workspace,
 };
 use deployment::Deployment;
@@ -49,6 +50,10 @@ pub struct WorkspaceSummary {
     pub has_running_dev_server: bool,
     /// Does this workspace have unseen coding agent turns?
     pub has_unseen_turns: bool,
+    /// Number of actively running sub-agents for the latest session.
+    pub active_subagent_count: usize,
+    /// Number of spawned sub-agents whose status has not been resolved yet.
+    pub unresolved_subagent_count: usize,
     /// PR status for this workspace (if any PR exists)
     pub pr_status: Option<MergeStatus>,
     /// PR number for this workspace (if any PR exists)
@@ -80,6 +85,12 @@ static WORKSPACE_SUMMARY_CACHE: LazyLock<Mutex<HashMap<bool, CachedWorkspaceSumm
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 const WORKSPACE_SUMMARY_CACHE_TTL: Duration = Duration::from_secs(2);
+
+pub fn invalidate_workspace_summary_cache() {
+    if let Ok(mut cache) = WORKSPACE_SUMMARY_CACHE.lock() {
+        cache.clear();
+    }
+}
 
 /// Fetch summary information for workspaces filtered by archived status.
 /// This endpoint returns data that cannot be efficiently included in the streaming endpoint.
@@ -136,7 +147,16 @@ pub async fn get_workspace_summaries(
     // 6. Get PR status for each workspace
     let pr_statuses = PullRequest::get_latest_for_workspaces(pool, archived).await?;
 
-    // 7. Assemble response.
+    // 7. Get live sub-agent counts for the latest sessions.
+    let latest_session_ids: Vec<_> = latest_processes
+        .values()
+        .map(|info| info.session_id)
+        .collect();
+    let subagent_counts =
+        SubagentJob::active_counts_by_session_ids_with_codex_threads(pool, &latest_session_ids)
+            .await?;
+
+    // 8. Assemble response.
     //
     // Intentionally skip live diff-stat computation here. The workspace sidebar polls
     // this endpoint for both active and archived workspaces, and recomputing git diffs
@@ -150,6 +170,10 @@ pub async fn get_workspace_summaries(
             let has_pending = latest
                 .map(|p| pending_approval_eps.contains(&p.execution_process_id))
                 .unwrap_or(false);
+            let subagents = latest
+                .and_then(|p| subagent_counts.get(&p.session_id))
+                .cloned()
+                .unwrap_or_default();
 
             WorkspaceSummary {
                 workspace_id: id,
@@ -162,6 +186,8 @@ pub async fn get_workspace_summaries(
                 latest_process_status: latest.map(|p| p.status.clone()),
                 has_running_dev_server: dev_server_workspaces.contains(&id),
                 has_unseen_turns: unseen_workspaces.contains(&id),
+                active_subagent_count: subagents.running,
+                unresolved_subagent_count: subagents.unresolved,
                 pr_status: pr_statuses.get(&id).map(|pr| pr.pr_status.clone()),
                 pr_number: pr_statuses.get(&id).map(|pr| pr.pr_number),
                 pr_url: pr_statuses.get(&id).map(|pr| pr.pr_url.clone()),

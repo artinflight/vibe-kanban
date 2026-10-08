@@ -57,9 +57,9 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   // TODO: Support multiple repos - currently only fetches comments from the primary repo.
   const primaryRepoId = repos[0]?.id;
 
-  const currentWorkspaceSummary = activeWorkspaces.find(
-    (w) => w.id === workspaceId
-  );
+  const currentWorkspaceSummary =
+    activeWorkspaces.find((w) => w.id === workspaceId) ??
+    archivedWorkspaces.find((w) => w.id === workspaceId);
   const hasPrAttached = !!currentWorkspaceSummary?.prStatus;
 
   const {
@@ -166,18 +166,24 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   // the sidebar already gets its own loading state via isWorkspacesListLoading.
   const isLoading = isLoadingWorkspace;
 
-  useEffect(() => {
+  const markCurrentWorkspaceSeen = useCallback(() => {
     if (!workspaceId || isCreateMode) return;
 
     workspacesApi
       .markSeen(workspaceId)
       .then(() => {
-        queryClient.invalidateQueries({ queryKey: workspaceSummaryKeys.all });
+        void queryClient.invalidateQueries({
+          queryKey: workspaceSummaryKeys.all,
+        });
       })
       .catch((error) => {
         console.warn('Failed to mark workspace as seen:', error);
       });
   }, [workspaceId, isCreateMode, queryClient]);
+
+  useEffect(() => {
+    markCurrentWorkspaceSeen();
+  }, [markCurrentWorkspaceSeen]);
 
   const selectWorkspace = useCallback(
     (id: string) => {

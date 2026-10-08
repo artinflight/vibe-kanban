@@ -8,12 +8,20 @@ use anyhow::{Context, Result};
 use db::{
     DBService,
     models::{
-        coding_agent_turn::CodingAgentTurn, execution_process::ExecutionProcess,
+        coding_agent_turn::CodingAgentTurn,
+        execution_process::ExecutionProcess,
         execution_process_logs::ExecutionProcessLogs,
+        subagent_job::{SubagentJob, SubagentJobStatus},
     },
+};
+use executors::logs::{
+    ActionType, NormalizedEntryType, ToolResult, ToolStatus,
+    utils::patch::extract_normalized_entry_from_patch,
 };
 use futures::{StreamExt, TryStreamExt, future, stream::BoxStream};
 use indicatif::{ProgressBar, ProgressStyle};
+use json_patch::Patch;
+use serde_json::Value;
 use sqlx::SqlitePool;
 use tokio::{io::AsyncWriteExt, sync::RwLock, task::JoinHandle};
 use utils::{
@@ -283,7 +291,47 @@ pub fn spawn_stream_raw_logs_to_storage(
 
             while let Some(Ok(msg)) = stream.next().await {
                 match &msg {
-                    LogMsg::Stdout(_) | LogMsg::Stderr(_) => match serde_json::to_string(&msg) {
+                    LogMsg::Stdout(stdout) => {
+                        if let Err(e) = update_subagent_jobs_from_stdout(
+                            &db.pool,
+                            session_id,
+                            execution_id,
+                            stdout,
+                        )
+                        .await
+                        {
+                            tracing::warn!(
+                                "Failed to update sub-agent jobs from stdout for execution {}: {}",
+                                execution_id,
+                                e
+                            );
+                        }
+
+                        match serde_json::to_string(&msg) {
+                            Ok(jsonl_line) => {
+                                let mut jsonl_line_with_newline = jsonl_line;
+                                jsonl_line_with_newline.push('\n');
+
+                                if let Err(e) =
+                                    log_writer.append_jsonl_line(&jsonl_line_with_newline).await
+                                {
+                                    tracing::error!(
+                                        "Failed to append log line for execution {}: {}",
+                                        execution_id,
+                                        e
+                                    );
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!(
+                                    "Failed to serialize log message for execution {}: {}",
+                                    execution_id,
+                                    e
+                                );
+                            }
+                        }
+                    }
+                    LogMsg::Stderr(_) => match serde_json::to_string(&msg) {
                         Ok(jsonl_line) => {
                             let mut jsonl_line_with_newline = jsonl_line;
                             jsonl_line_with_newline.push('\n');
@@ -341,11 +389,258 @@ pub fn spawn_stream_raw_logs_to_storage(
                     LogMsg::Finished => {
                         break;
                     }
-                    LogMsg::JsonPatch(_) | LogMsg::Ready => continue,
+                    LogMsg::JsonPatch(patch) => {
+                        if let Err(e) = update_subagent_jobs_from_patch(
+                            &db.pool,
+                            session_id,
+                            execution_id,
+                            patch,
+                        )
+                        .await
+                        {
+                            tracing::warn!(
+                                "Failed to update sub-agent jobs for execution {}: {}",
+                                execution_id,
+                                e
+                            );
+                        }
+                    }
+                    LogMsg::Ready => continue,
                 }
             }
         }
     })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum RawSubagentEvent {
+    Spawned { agent_id: String },
+}
+
+async fn update_subagent_jobs_from_stdout(
+    pool: &SqlitePool,
+    session_id: Uuid,
+    execution_id: Uuid,
+    stdout: &str,
+) -> Result<(), sqlx::Error> {
+    for event in raw_subagent_events_from_stdout(stdout) {
+        match event {
+            RawSubagentEvent::Spawned { agent_id } => {
+                SubagentJob::update_status(
+                    pool,
+                    session_id,
+                    execution_id,
+                    &agent_id,
+                    SubagentJobStatus::Running,
+                )
+                .await?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn raw_subagent_events_from_stdout(stdout: &str) -> Vec<RawSubagentEvent> {
+    stdout
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+        .flat_map(raw_subagent_events_from_codex_event)
+        .collect()
+}
+
+fn raw_subagent_events_from_codex_event(event: Value) -> Vec<RawSubagentEvent> {
+    let method = event.get("method").and_then(Value::as_str);
+    let params = event.get("params").and_then(Value::as_object);
+
+    match method {
+        Some("item/completed") => raw_spawn_events_from_completed_item(params),
+        _ => Vec::new(),
+    }
+}
+
+fn raw_spawn_events_from_completed_item(
+    params: Option<&serde_json::Map<String, Value>>,
+) -> Vec<RawSubagentEvent> {
+    let Some(item) = params
+        .and_then(|params| params.get("item"))
+        .and_then(Value::as_object)
+    else {
+        return Vec::new();
+    };
+
+    let is_completed_spawn = item.get("type").and_then(Value::as_str)
+        == Some("collabAgentToolCall")
+        && item.get("tool").and_then(Value::as_str) == Some("spawnAgent")
+        && item.get("status").and_then(Value::as_str) == Some("completed");
+
+    if !is_completed_spawn {
+        return Vec::new();
+    }
+
+    item.get("receiverThreadIds")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .filter(|agent_id| !agent_id.trim().is_empty())
+        .map(|agent_id| RawSubagentEvent::Spawned {
+            agent_id: agent_id.to_owned(),
+        })
+        .collect()
+}
+
+async fn update_subagent_jobs_from_patch(
+    pool: &SqlitePool,
+    session_id: Uuid,
+    execution_id: Uuid,
+    patch: &Patch,
+) -> Result<(), sqlx::Error> {
+    let Some((_index, entry)) = extract_normalized_entry_from_patch(patch) else {
+        return Ok(());
+    };
+
+    let NormalizedEntryType::ToolUse {
+        tool_name,
+        action_type,
+        status,
+    } = entry.entry_type
+    else {
+        return Ok(());
+    };
+
+    let ActionType::Tool {
+        arguments, result, ..
+    } = action_type
+    else {
+        return Ok(());
+    };
+
+    if is_spawn_agent_tool(&tool_name) {
+        let result_payload = result_payload(result.as_ref());
+        let agent_id = result_payload
+            .as_ref()
+            .and_then(|value| value.get("agent_id"))
+            .and_then(Value::as_str);
+        let nickname = result_payload
+            .as_ref()
+            .and_then(|value| value.get("nickname"))
+            .and_then(Value::as_str);
+
+        if let Some(agent_id) = agent_id {
+            if matches!(status, ToolStatus::Failed) {
+                SubagentJob::update_status(
+                    pool,
+                    session_id,
+                    execution_id,
+                    agent_id,
+                    SubagentJobStatus::Failed,
+                )
+                .await?;
+            } else {
+                SubagentJob::upsert_spawned(pool, session_id, execution_id, agent_id, nickname)
+                    .await?;
+            }
+        }
+    } else if is_wait_agent_tool(&tool_name) {
+        let targets = wait_agent_targets(arguments.as_ref());
+
+        if matches!(status, ToolStatus::Created) {
+            for agent_id in targets {
+                SubagentJob::update_status(
+                    pool,
+                    session_id,
+                    execution_id,
+                    &agent_id,
+                    SubagentJobStatus::Running,
+                )
+                .await?;
+            }
+            return Ok(());
+        }
+
+        let result_payload = result_payload(result.as_ref());
+        let timed_out = result_payload
+            .as_ref()
+            .and_then(|value| value.get("timed_out"))
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+
+        if let Some(status_map) = result_payload
+            .as_ref()
+            .and_then(|value| value.get("status"))
+            .and_then(Value::as_object)
+        {
+            for (agent_id, agent_status) in status_map {
+                let status = if agent_status == "not_found" {
+                    SubagentJobStatus::NotFound
+                } else if agent_status
+                    .as_object()
+                    .map(|object| object.contains_key("completed"))
+                    .unwrap_or(false)
+                {
+                    SubagentJobStatus::Completed
+                } else if timed_out {
+                    SubagentJobStatus::Running
+                } else {
+                    SubagentJobStatus::Unresolved
+                };
+                SubagentJob::update_status(pool, session_id, execution_id, agent_id, status)
+                    .await?;
+            }
+        } else if timed_out {
+            for agent_id in targets {
+                SubagentJob::update_status(
+                    pool,
+                    session_id,
+                    execution_id,
+                    &agent_id,
+                    SubagentJobStatus::Running,
+                )
+                .await?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn is_spawn_agent_tool(tool_name: &str) -> bool {
+    tool_name == "spawn_agent" || tool_name.ends_with(".spawn_agent")
+}
+
+fn is_wait_agent_tool(tool_name: &str) -> bool {
+    tool_name == "wait_agent" || tool_name.ends_with(".wait_agent")
+}
+
+fn result_payload(result: Option<&ToolResult>) -> Option<Value> {
+    let value = result?.value.clone();
+    match value {
+        Value::String(text) => serde_json::from_str(&text).ok(),
+        value => Some(value),
+    }
+}
+
+fn wait_agent_targets(arguments: Option<&Value>) -> Vec<String> {
+    let Some(arguments) = arguments else {
+        return Vec::new();
+    };
+
+    if let Some(targets) = arguments.get("targets").and_then(Value::as_array) {
+        return targets
+            .iter()
+            .filter_map(Value::as_str)
+            .filter(|target| !target.trim().is_empty())
+            .map(ToOwned::to_owned)
+            .collect();
+    }
+
+    arguments
+        .get("target")
+        .and_then(Value::as_str)
+        .filter(|target| !target.trim().is_empty())
+        .map(|target| vec![target.to_owned()])
+        .unwrap_or_default()
 }
 
 async fn read_execution_logs_for_execution(
@@ -495,4 +790,29 @@ fn new_spinner(message: &'static str) -> ProgressBar {
     pb.set_message(message);
     pb.enable_steady_tick(std::time::Duration::from_millis(100));
     pb
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RawSubagentEvent, raw_subagent_events_from_stdout};
+
+    #[test]
+    fn raw_codex_spawn_agent_events_preserve_child_thread_ids() {
+        let stdout = r#"{"method":"item/completed","params":{"item":{"type":"collabAgentToolCall","id":"call_123","tool":"spawnAgent","status":"completed","senderThreadId":"parent-thread","receiverThreadIds":["019e0d97-27ff-7c43-b252-28979c51d3e9"],"prompt":"work"}}}"#;
+
+        assert_eq!(
+            raw_subagent_events_from_stdout(stdout),
+            vec![RawSubagentEvent::Spawned {
+                agent_id: "019e0d97-27ff-7c43-b252-28979c51d3e9".to_string(),
+            }]
+        );
+    }
+
+    #[test]
+    fn raw_codex_spawn_agent_parser_ignores_parent_status_events() {
+        let stdout = r#"{"method":"thread/status/changed","params":{"threadId":"parent-thread","status":{"type":"active","activeFlags":[]}}}
+{"method":"item/completed","params":{"item":{"type":"collabAgentToolCall","id":"call_123","tool":"spawnAgent","status":"inProgress","senderThreadId":"parent-thread","receiverThreadIds":[]}}}"#;
+
+        assert!(raw_subagent_events_from_stdout(stdout).is_empty());
+    }
 }

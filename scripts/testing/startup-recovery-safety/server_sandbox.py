@@ -70,7 +70,26 @@ def pin(database, root, actual_database, actual_root, dataset_id):
             f'workspace_root={root}\nworkspace_root_id={workspace.st_dev}:{workspace.st_ino}\ndataset_id={dataset_id}\n')
 
 
-def run_case(binary, label, arguments, outcome):
+def selected_asset_directory(binary):
+    # Discover actual build path selection only inside the same masked boundary.
+    # Cached/debug/release crate paths are never guessed or executed on the host.
+    with tempfile.TemporaryDirectory(prefix='server-path-', dir=os.environ.get('VK_SAFETY_TEST_ROOT')) as raw:
+        command = [shutil.which('bwrap'), '--unshare-all', '--new-session', '--die-with-parent',
+                   '--ro-bind', '/', '/', '--tmpfs', '/home', '--tmpfs', '/mnt', '--tmpfs', '/run',
+                   '--proc', '/proc', '--dev', '/dev', '--bind', raw, '/run/fixture',
+                   '--ro-bind', str(binary), '/run/test-server', '--clearenv',
+                   '--setenv', 'HOME', '/run/fixture/home', '--setenv', 'PATH', '/usr/bin:/bin',
+                   '/run/test-server', '--build-info']
+        result = subprocess.run(command, capture_output=True, text=True, timeout=10)
+        if result.returncode:
+            raise AssertionError('isolated path inspection failed: ' + result.stderr)
+        assets = os.path.normpath(json.loads(result.stdout)['assetDirectory'])
+        if not any(assets.startswith(prefix) for prefix in ('/home/', '/mnt/', '/run/fixture/')):
+            raise ValueError('asset path is outside the masked fixture namespaces')
+        return assets
+
+
+def run_case(binary, embedded_assets, label, arguments, outcome):
     with tempfile.TemporaryDirectory(prefix='server-safety-', dir=os.environ.get('VK_SAFETY_TEST_ROOT')) as raw:
         fixture = Path(raw)
         for name in ('assets', 'home', 'workspaces/untracked/repo', 'external'):
@@ -89,7 +108,6 @@ def run_case(binary, label, arguments, outcome):
             connection.execute('CREATE TABLE private_fixture_seed (id INTEGER)')
             connection.execute('CREATE TABLE vk_runtime_identity (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), dataset_id TEXT NOT NULL UNIQUE)')
             connection.execute('INSERT INTO vk_runtime_identity VALUES (1, ?)', [dataset_id])
-        embedded_assets = str(REPO / 'dev_assets')
         expected_db = embedded_assets + '/db.v2.sqlite'
         receipt = pin(expected_db, '/run/fixture/workspaces', database, fixture / 'workspaces', dataset_id)
         if label == 'empty-receipt': receipt = ''
@@ -128,13 +146,14 @@ def main():
     if not shutil.which('bwrap'):
         parser.error('bubblewrap is required; no host-execution fallback')
     binary = args.binary.resolve(strict=True)
+    assets = selected_asset_directory(binary)
     for arguments in (['--vk-build-info'], ['--help', '--vk-build-info'], ['--build-info', 'extra'], ['--']):
-        run_case(binary, 'unknown-invocation', arguments, 'reject')
+        run_case(binary, assets, 'unknown-invocation', arguments, 'reject')
     for arguments in (['--help'], ['--version'], ['--build-info']):
-        run_case(binary, 'missing-receipt', arguments, 'inspect')
+        run_case(binary, assets, 'missing-receipt', arguments, 'inspect')
     for label in ('missing-receipt', 'empty-receipt', 'wrong-database', 'wrong-root', 'mismatched-object', 'empty-database', 'missing-dataset', 'wrong-dataset'):
-        run_case(binary, label, [], 'reject')
-    run_case(binary, 'correct-identity', [], 'serve')
+        run_case(binary, assets, label, [], 'reject')
+    run_case(binary, assets, 'correct-identity', [], 'serve')
 
 
 if __name__ == '__main__':

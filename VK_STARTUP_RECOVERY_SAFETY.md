@@ -212,3 +212,11 @@ with creation disabled; missing, empty, duplicate or mismatched token evidence
 fails before migration or writer construction. Regressions include a token
 removed/changed in place without changing the database inode. The real-binary
 harness now has16 cases; its final hosted acceptance remains required.
+
+The profile correction let the real binary reject all unsupported and ambiguous
+startup cases. Its positive case then failed on an absent path: the harness had
+guessed the embedded asset directory from its own checkout. The harness now
+reads actual asset-path selection via read-only build inspection inside the same
+masked namespace, verifies that it lies under a masked fixture root, and binds
+only private files there. No host execution or environment-only isolation fallback
+is introduced. This also supports debug/release or cached crate path differences.

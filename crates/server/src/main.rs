@@ -51,6 +51,7 @@ async fn main() -> Result<(), VibeKanbanError> {
                     "version": utils::version::APP_VERSION,
                     "sourceCommit": option_env!("VK_BUILD_SOURCE_COMMIT"),
                     "runtimeIdentityVersion": 1,
+                    "assetDirectory": utils::assets::asset_dir_path(),
                     "automaticWorkspaceDeletion": false
                 })
             );

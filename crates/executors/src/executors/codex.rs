@@ -81,6 +81,25 @@ pub(crate) fn fork_params_from(thread_id: String, params: ThreadStartParams) -> 
     }
 }
 
+pub(crate) fn resume_params_from(
+    thread_id: String,
+    params: ThreadStartParams,
+) -> ThreadResumeParams {
+    ThreadResumeParams {
+        thread_id,
+        model: params.model,
+        model_provider: params.model_provider,
+        cwd: params.cwd,
+        approval_policy: params.approval_policy,
+        sandbox: params.sandbox,
+        config: params.config,
+        base_instructions: params.base_instructions,
+        developer_instructions: params.developer_instructions,
+        service_tier: params.service_tier,
+        ..Default::default()
+    }
+}
+
 pub(crate) fn is_unforkable_rollout_error(err: &ExecutorError) -> bool {
     let message = err.to_string();
     message.contains("no rollout found for thread id")
@@ -91,7 +110,7 @@ pub(crate) fn is_unforkable_rollout_error(err: &ExecutorError) -> bool {
 use async_trait::async_trait;
 use codex_app_server_protocol::{
     AskForApproval as V2AskForApproval, ReviewTarget, SandboxMode as V2SandboxMode,
-    ThreadForkParams, ThreadStartParams, UserInput,
+    ThreadForkParams, ThreadResumeParams, ThreadStartParams, UserInput,
 };
 use codex_protocol::config_types::ServiceTier;
 use derivative::Derivative;
@@ -646,7 +665,7 @@ impl Codex {
             }
             Some(session_id) => {
                 let response = client
-                    .thread_fork(fork_params_from(
+                    .thread_resume(resume_params_from(
                         session_id.clone(),
                         thread_start_params.clone(),
                     ))
@@ -654,7 +673,7 @@ impl Codex {
 
                 match response {
                     Ok(response) => {
-                        tracing::debug!("forked thread, new thread_id={}", response.thread.id);
+                        tracing::debug!("resumed thread_id={}", response.thread.id);
                         (response.thread.id, response.model)
                     }
                     Err(err) if is_unforkable_rollout_error(&err) => {

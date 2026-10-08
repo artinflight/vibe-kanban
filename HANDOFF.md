@@ -1,3 +1,16 @@
+# October 8: Phone UX source ready for review
+
+Worktree branch `vk/eb7d-vk-native-feelin` contains the mobile interaction pass.
+Read VK_MOBILE_UX.md and `scripts/testing/mobile-ux-browser.mjs`. The safety guard
+passed. Read-only browser acceptance passed at 360/390/412/1440px,
+including real message reading, drafts across tabs, project/workspace switching,
+sheet Back/focus, board scroll and simulated keyboard Send. Screenshots/logs are
+under `/mnt/vk-storage/vk-mobile-native-20261008`. Expanded desktop navigation and
+390px dark/creation also passed. Frontend types/lint, format and ops checks passed;
+full Rust validation is blocked by missing GTK pkg-config files. The temporary
+branch preview and its route were stopped; see the design note for receipts.
+No live data, runtime settings, frontend release, merge or service changed.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

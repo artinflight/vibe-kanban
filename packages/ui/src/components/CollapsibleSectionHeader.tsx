@@ -24,6 +24,7 @@ function getInitialExpanded(
 
 export type SectionAction = {
   icon: Icon;
+  label?: string;
   onClick: () => void;
   isActive?: boolean;
 };
@@ -100,6 +101,8 @@ export function CollapsibleSectionHeader({
             <span
               key={index}
               role="button"
+              aria-label={action.label}
+              aria-pressed={action.isActive}
               tabIndex={0}
               onClick={(e) => handleActionClick(e, action.onClick)}
               onKeyDown={(e) => handleActionKeyDown(e, action.onClick)}
@@ -131,6 +134,7 @@ export function CollapsibleSectionHeader({
         {collapsible ? (
           <button
             type="button"
+            aria-expanded={expanded}
             onClick={() => setExpanded((prev) => !prev)}
             className={cn(
               'flex items-center justify-between w-full px-base py-half cursor-pointer'

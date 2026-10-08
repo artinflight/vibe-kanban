@@ -1,3 +1,13 @@
+# October 8: Native-feeling phone interaction pass
+
+Branch `vk/eb7d-vk-native-feelin` implements focused mobile project/task/workspace
+navigation and agent conversation/composition changes. Scope is frontend only:
+48px controls, labeled bottom navigation, accessible history-aware sheets,
+full-screen task details with board state retention, readable cards and a
+VisualViewport/safe-area-aware composer. Desktop panels and configured execution
+model/effort remain intact. No merge, deployment or production operation is
+permitted in this stream. Read VK_MOBILE_UX.md for acceptance and remaining limits.
+
 # October 5: AutoSwitch reloadable module
 
 Development branch `feat/autoswitch-reload-module` starts at staging `6af55a461`.

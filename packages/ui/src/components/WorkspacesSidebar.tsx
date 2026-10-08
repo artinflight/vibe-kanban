@@ -244,11 +244,13 @@ export function WorkspacesSidebar({
   const headerActions: SectionAction[] = [
     {
       icon: StackIcon,
+      label: 'Switch workspace grouping',
       onClick: () => onToggleLayoutMode?.(),
       isActive: layoutMode === 'accordion',
     },
     {
       icon: PlusIcon,
+      label: t('common:workspaces.newWorkspace'),
       onClick: () => onAddWorkspace?.(),
     },
   ];

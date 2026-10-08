@@ -9,6 +9,19 @@ use workspace_utils::approvals::ApprovalStatus;
 use crate::approvals::ExecutorApprovalError;
 
 pub const TOOL: &str = "codex.mcp_approval";
+const REDACTED_SECRET: &str = "[secret redacted]";
+
+fn has_meaningful_value(value: &serde_json::Value) -> bool {
+    match value {
+        serde_json::Value::Object(values) => values.values().any(has_meaningful_value),
+        serde_json::Value::Array(values) => values.iter().any(has_meaningful_value),
+        serde_json::Value::String(text) => {
+            !text.trim().is_empty() && text.trim() != REDACTED_SECRET
+        }
+        serde_json::Value::Number(_) | serde_json::Value::Bool(_) => true,
+        serde_json::Value::Null => false,
+    }
+}
 
 fn unsafe_text(text: &str) -> bool {
     // Invisible direction overrides can change the apparent target/action.
@@ -101,7 +114,7 @@ pub fn consent_summary(params: &McpServerElicitationRequestParams) -> Option<Str
                     output.insert(
                         key.clone(),
                         if sensitive(key) {
-                            serde_json::json!("[secret redacted]")
+                            serde_json::json!(REDACTED_SECRET)
                         } else {
                             sanitize(value, depth + 1, nodes)?
                         },
@@ -153,6 +166,11 @@ pub fn consent_summary(params: &McpServerElicitationRequestParams) -> Option<Str
         })
     }
     let safe = sanitize(&serde_json::Value::Object(arguments.clone()), 0, &mut 0)?;
+    // Container names and display labels cannot make redaction-only leaves
+    // meaningful. Check the surviving invocation values at every depth.
+    if !has_meaningful_value(&safe) {
+        return None;
+    }
     let mut summary = format!(
         "Tool: {tool}\nConnector: {connector}\nMCP server: {}\nParameters (including target):\n{}",
         params.server_name,

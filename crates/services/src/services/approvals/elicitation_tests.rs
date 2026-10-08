@@ -280,9 +280,29 @@ async fn mcp_generic_monitor_context_and_inadequate_metadata_fail_closed() {
         assert_eq!(fixture.result().await["result"]["action"], "cancel");
         fixture.pending(0).await;
     }
+    for (id, payload) in [
+        (25, json!({"access_token":"synthetic-nested-object"})),
+        (26, json!([[{"access_token":"synthetic-nested-array"}]])),
+    ] {
+        let mut redacted_only = request(id);
+        redacted_only["params"]["_meta"]["tool_params"] = json!({"payload":payload});
+        redacted_only["params"]["_meta"]["tool_params_display"] = json!([
+            {"name":"payload","display_name":"Payload","value":payload}
+        ]);
+        fixture.send(redacted_only).await;
+        let result = fixture.result().await;
+        assert_eq!(
+            result["result"],
+            json!({"action":"cancel","content":null,"_meta":null})
+        );
+        assert_eq!(result["fixtureDispatch"], false);
+        fixture.pending(0).await;
+    }
     let logs = fixture.logs.lock().await.join("\n");
     assert!(logs.contains("insufficient_consent_context"));
     assert!(!logs.contains("do-not-log"));
+    assert!(!logs.contains("synthetic-nested-object"));
+    assert!(!logs.contains("synthetic-nested-array"));
     fixture.stop().await;
 }
 

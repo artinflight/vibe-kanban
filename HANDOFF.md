@@ -1,3 +1,28 @@
+# October 8: nested redaction-only context (PR225 P2)
+
+Independent re-review at `da07a5c3b9cc9331798bd51c238d998b7d3c51a1` closed
+both P1 findings; comment6063071315 identified a remaining nested-context P2.
+This turn changes only the post-sanitization meaningful-value gate and regression
+coverage. Container names, display labels, nulls, blank strings and redaction
+markers cannot supply usable invocation values. Objects and arrays are traversed
+recursively; surviving nonsecret target details and scalar values remain usable.
+Rejected context follows the existing typed Cancel/insufficient_consent_context
+path before any approval exists. Consent decisions and binding are unchanged.
+
+The compiled Rust regression at the reviewed implementation reproduced both
+nested-object and nested-array failures (matching upstream display metadata);
+the positive mixed-target case passed. The patch adds the surviving-value check
+and service-fixture cancellation/no-dispatch assertions. At publication, all
+three focused compiled Rust regressions and all-target executor/services Clippy
+passed; the executor/services suites were running. Final Rust, exact remote SHA
+and CI receipts are recorded in PR225's P2 correction comment. See VK_MCP_APPROVAL_BRIDGE.md for the validation command. The existing
+host-wide GLib/GIO dependency limitation and unsupported form/auth flows remain.
+
+Same linked VK::MCP Approval Bridge issue and draft PR225 into staging. No live
+activation, permissions/routing change, manager retry, deployment, merge, recovery
+or runtime operation. Live connector/operator validation is a separate boundary.
+Older entries below describe earlier source and validation.
+
 # October 8: P1 consent review correction (PR225)
 
 The independent review of source `80d06cecf3bd6552b85b0a058ba87e7d695e1eca`

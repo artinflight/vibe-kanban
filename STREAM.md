@@ -5,9 +5,10 @@ return typed results, preserve explicit consent and truthful origin diagnostics.
 Linked issue/workspace: VK::MCP Approval Bridge. Development tests and draft PR
 only; no deployment, restart, recovery, permission changes, production resumes
 or Staging-agent operations. See VK_MCP_APPROVAL_BRIDGE.md and current HANDOFF.md.
-Current correction addresses PR225 comment6062090857: per-request consent cards,
-complete redacted action metadata, mounted composer/lifecycle regressions and
-installed launch-schema verification. Same draft, no merge or live activation.
+Current correction is limited to PR225 comment6063071315: reject nested
+redaction-only invocation context after sanitization and add compiled Rust
+regressions. Independent re-review closed the original P1 findings at `da07a5c3b`.
+Same draft, no broader redesign, merge or live activation.
 Older entries below are historical and belong to other streams.
 
 # October 5: AutoSwitch reloadable module

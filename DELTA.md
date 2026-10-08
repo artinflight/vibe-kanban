@@ -1536,3 +1536,11 @@ consent on fresh snapshots/Ready. Added complete bounded redacted invocation
 context and fail-closed diagnostics. Mounted composer/card and real patch-hook
 fixtures replace the initial hook-only UI evidence. Configured Codex 0.159.2
 schema verified offline. See HANDOFF.md; source remains isolated and undeployed.
+
+## 2026-10-08 — PR225 nested redaction-only context P2
+
+Independent re-review closed both P1 findings at da07a5c3b. Added a recursive
+post-sanitization meaningful-value gate for the remaining P2, with compiled
+nested-object/array negative cases using matching display metadata, a positive
+mixed-target case, and offline typed-cancel/no-dispatch service coverage.
+See HANDOFF.md and PR225's P2 receipt. Isolated and undeployed; no broader redesign.

@@ -60,7 +60,10 @@ The generic fallback question and monitor reason are not consent context.
 `tool_params_display` labels produce a bounded plain-text summary. Every
 non-secret invocation parameter, including target and instructions, is visible;
 secret-bearing fields are redacted; fully redacted arguments cannot produce a
-consent card. Token budgets/counts remain visible. Display metadata cannot replace or disagree
+consent card. This is checked recursively after sanitization: container names,
+display labels, nulls, empty/blank values and redaction markers do not count as
+usable invocation context. A surviving nonsecret value in a nested object or
+array remains usable. Token budgets/counts remain visible. Display metadata cannot replace or disagree
 with invocation values. Missing identities/arguments, inconsistent display
 values, embedded credential patterns, oversized content or unsupported structure
 fail closed with Cancel and `insufficient_consent_context`, before creating an
@@ -91,6 +94,7 @@ export VK_TEST_OUTPUT=/mnt/vk-storage/vk-mcp-approval-tests
 node scripts/testing/run-mcp-approval-ui-tests.mjs
 VK_MCP_UI_RESPONSES="$VK_TEST_OUTPUT/mcp-ui-responses.json" cargo test -p services --lib
 cargo test -p executors --lib
+cargo test -p executors --test mcp_consent_context
 cargo clippy -p executors -p services --all-targets -- -D warnings
 pnpm run format
 pnpm run ops:check

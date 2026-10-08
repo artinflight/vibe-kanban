@@ -443,6 +443,7 @@ export function ModelSelectorContainer({
       <DropdownMenu>
         <DropdownMenuTriggerButton
           size="sm"
+          aria-label={t('modelSelector.preset')}
           icon={SlidersHorizontalIcon}
           label={
             resolvedPreset?.toLowerCase() !== 'default'
@@ -593,6 +594,7 @@ export function ModelSelectorContainer({
                     })
                   : modelLabel
               }
+              aria-label={`${t('modelSelector.model')}: ${modelLabel}`}
               disabled={loadingModels}
             />
           }
@@ -619,6 +621,7 @@ export function ModelSelectorContainer({
         <DropdownMenu>
           <DropdownMenuTriggerButton
             size="sm"
+            aria-label={t('modelSelector.permissions')}
             icon={permissionIcon}
             showCaret={false}
           />

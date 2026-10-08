@@ -73,6 +73,7 @@ export function IssuePropertyRow({
             className="pointer-events-none absolute left-base"
           />
           <select
+            aria-label="Task status"
             value={statusId}
             onChange={(event) => onStatusChange(event.currentTarget.value)}
             disabled={disabled}

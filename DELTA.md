@@ -1523,3 +1523,10 @@ Recommend is required; no deployment/restart/cutover or Auto activation. Deadlin
 for full useful router readiness is before October 30, 2026 (20x becomes 10x).
 See VK_AUTOSWITCH_RELOAD.md for mandatory next-candidate packaging and remaining
 acceptance/ownership dependencies; CU credit budgeting is a separate issue.
+
+2026-10-08 phone frontend interaction pass:
+
+- Prepared labeled bottom navigation, accessible Back-aware sheets, larger touch
+  targets, task/board state retention, readable cards and keyboard-aware composer.
+- Initial 360/390/412/1440px browser flows passed with all application writes
+  intercepted. Evidence/limits: VK_MOBILE_UX.md; no production change.

@@ -667,8 +667,8 @@ const WYSIWYGEditor = forwardRef<WYSIWYGEditorRef, WysiwygProps>(
     // Wrap with action buttons in read-only mode
     if (disabled && !hideActions) {
       return (
-        <div className="relative group">
-          <div className="sticky top-0 right-2 z-10 pointer-events-none h-0">
+        <div className="mobile-message relative group">
+          <div className="mobile-message-actions sticky top-0 right-2 z-10 pointer-events-none h-0">
             <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
               {/* Copy button */}
               <Button

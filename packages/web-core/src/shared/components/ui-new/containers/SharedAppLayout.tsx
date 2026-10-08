@@ -4,7 +4,6 @@ import type { DropResult } from '@hello-pangea/dnd';
 import { Outlet, useNavigate, useParams } from '@tanstack/react-router';
 import { siDiscord, siGithub } from 'simple-icons';
 import {
-  XIcon,
   PlusIcon,
   LayoutIcon,
   KanbanIcon,
@@ -12,6 +11,8 @@ import {
 } from '@phosphor-icons/react';
 import { SyncErrorProvider } from '@/shared/providers/SyncErrorProvider';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
+import { useMobileViewport } from '@/shared/hooks/useMobileViewport';
+import { useMobileSheet } from '@/shared/hooks/useMobileSheet';
 import { useUiPreferencesStore } from '@/shared/stores/useUiPreferencesStore';
 import { cn } from '@/shared/lib/utils';
 import { isTauriMac } from '@/shared/lib/platform';
@@ -94,6 +95,10 @@ export function SharedAppLayout() {
   const appNavigation = useAppNavigation();
   const currentDestination = useCurrentAppDestination();
   const isMobile = useIsMobile();
+  const mobileShellRef = useRef<HTMLDivElement>(null);
+  const [mobileNavigationSlot, setMobileNavigationSlot] =
+    useState<HTMLDivElement | null>(null);
+  useMobileViewport(mobileShellRef, isMobile);
   const mobileFontScale = useUiPreferencesStore((s) => s.mobileFontScale);
   const isLeftSidebarVisible = useUiPreferencesStore(
     (s) => s.isLeftSidebarVisible
@@ -106,7 +111,7 @@ export function SharedAppLayout() {
   const restartForUpdate = useAppUpdateStore((s) => s.restart);
   const { data: onlineCount } = useDiscordOnlineCount();
   const { data: starCount } = useGitHubStars();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const projectSheet = useMobileSheet('projects');
   const [isAppBarHovered, setIsAppBarHovered] = useState(false);
   const { hosts: remoteCloudHosts } = useRemoteCloudHostsAppBarModel();
   const { hostId: routeHostId } = useParams({ strict: false });
@@ -319,16 +324,13 @@ export function SharedAppLayout() {
       ),
     [allAppBarProjects]
   );
-  const [orderedProjects, setOrderedProjects] =
-    useState<AppBarProject[]>(appBarProjects);
+  // Only keep a separate order while a drag is being persisted. Mirroring
+  // useQueries-derived arrays through an effect can loop during chat updates.
+  const [optimisticProjects, setOptimisticProjects] = useState<
+    AppBarProject[] | null
+  >(null);
+  const orderedProjects = optimisticProjects ?? appBarProjects;
   const [isSavingProjectOrder, setIsSavingProjectOrder] = useState(false);
-
-  useEffect(() => {
-    if (isSavingProjectOrder) {
-      return;
-    }
-    setOrderedProjects(appBarProjects);
-  }, [appBarProjects, isSavingProjectOrder]);
 
   // Navigate to the first ordered project when org changes
   useEffect(() => {
@@ -473,10 +475,11 @@ export function SharedAppLayout() {
       }
 
       reordered.splice(destination.index, 0, moved);
-      setOrderedProjects(reordered);
+      setOptimisticProjects(reordered);
 
       if (isLocalAuthBypassed) {
         setLocalProjectOrder(reordered.map((project) => project.id));
+        setOptimisticProjects(null);
         return;
       }
 
@@ -495,9 +498,10 @@ export function SharedAppLayout() {
         }
       } catch (error) {
         console.error('Failed to reorder projects:', error);
-        setOrderedProjects(previousOrder);
+        setOptimisticProjects(previousOrder);
       } finally {
         setIsSavingProjectOrder(false);
+        setOptimisticProjects(null);
       }
     },
     [
@@ -589,10 +593,11 @@ export function SharedAppLayout() {
   return (
     <SyncErrorProvider>
       <div
+        ref={mobileShellRef}
         className={cn(
           'bg-primary',
           isMobile
-            ? 'flex fixed inset-0 pb-[env(safe-area-inset-bottom)]'
+            ? 'mobile-app-shell flex fixed inset-x-0 top-0 h-dvh'
             : 'grid grid-cols-[auto_1fr] grid-rows-[auto_1fr] h-screen'
         )}
       >
@@ -607,7 +612,7 @@ export function SharedAppLayout() {
             {/* Desktop navbar. */}
             <NavbarContainer
               onOrgSelect={setSelectedOrgId}
-              onOpenDrawer={() => setIsDrawerOpen(true)}
+              onOpenDrawer={projectSheet.show}
             />
             {/* Desktop AppBar sidebar. */}
             <AppBar
@@ -694,42 +699,40 @@ export function SharedAppLayout() {
           <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
             <NavbarContainer
               mobileMode={isMobile}
+              mobileNavigationSlot={mobileNavigationSlot}
+              mobileProjectTitle={
+                orderedProjects.find((p) => p.id === routeProjectId)?.name
+              }
               onOrgSelect={setSelectedOrgId}
-              onOpenDrawer={() => setIsDrawerOpen(true)}
+              onOpenDrawer={projectSheet.show}
             />
             <div className="flex-1 min-h-0 overflow-hidden">
               <Outlet />
             </div>
+            <div
+              id="mobile-navigation"
+              ref={setMobileNavigationSlot}
+              className="shrink-0"
+            />
           </div>
         )}
 
         {/* Mobile project navigation drawer */}
         <MobileDrawer
-          open={isDrawerOpen && isMobile}
-          onClose={() => setIsDrawerOpen(false)}
+          open={projectSheet.isOpen && isMobile}
+          onClose={projectSheet.close}
         >
-          <div className="flex flex-col h-full">
-            {/* Header: org name + close button */}
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <span className="text-sm font-medium text-high truncate">
-                {organizations.find((o) => o.id === selectedOrgId)?.name ??
-                  'Organization'}
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsDrawerOpen(false)}
-                className="p-1 rounded-sm text-low hover:text-normal cursor-pointer"
-              >
-                <XIcon className="h-4 w-4" weight="bold" />
-              </button>
-            </div>
-
+          <div className="flex flex-col min-h-0">
             {/* Workspaces link */}
             <button
               type="button"
               onClick={() => {
-                void navigate({ to: '/workspaces' });
-                setIsDrawerOpen(false);
+                projectSheet.run(() => {
+                  useUiPreferencesStore
+                    .getState()
+                    .setMobileActiveTab('workspaces');
+                  void navigate({ to: '/workspaces' });
+                });
               }}
               className="flex items-center gap-2 px-4 py-3 text-sm text-normal hover:bg-secondary cursor-pointer"
             >
@@ -742,7 +745,7 @@ export function SharedAppLayout() {
 
             {/* Project list */}
             <div className="flex-1 overflow-y-auto p-2">
-              {isSignedIn ? (
+              {isSignedIn || isLocalAuthBypassed ? (
                 <div className="space-y-3">
                   <div className="space-y-1">
                     {orderedProjects.map((project) => (
@@ -750,11 +753,15 @@ export function SharedAppLayout() {
                         type="button"
                         key={project.id}
                         onClick={() => {
-                          handleProjectClick(project.id);
-                          setIsDrawerOpen(false);
+                          projectSheet.run(() =>
+                            handleProjectClick(project.id)
+                          );
                         }}
+                        aria-current={
+                          project.id === routeProjectId ? 'page' : undefined
+                        }
                         className={cn(
-                          'flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm text-left cursor-pointer',
+                          'flex items-center gap-3 w-full min-h-12 px-3 py-3 rounded-xl text-base text-left cursor-pointer',
                           'transition-colors',
                           project.id === activeProjectId
                             ? 'bg-brand/10 text-high'
@@ -795,8 +802,9 @@ export function SharedAppLayout() {
                     <button
                       type="button"
                       onClick={() => {
-                        handleSignIn();
-                        setIsDrawerOpen(false);
+                        projectSheet.run(() => {
+                          void handleSignIn();
+                        });
                       }}
                       className="w-full px-3 py-2 rounded-md text-sm font-medium bg-brand text-on-brand hover:bg-brand-hover cursor-pointer"
                     >
@@ -808,15 +816,14 @@ export function SharedAppLayout() {
             </div>
 
             {/* Create Project button */}
-            {isSignedIn && (
+            {(isSignedIn || isLocalAuthBypassed) && (
               <div className="space-y-1 p-3 border-t border-border">
                 {archivedProjects.length > 0 && (
                   <button
                     type="button"
                     data-testid="mobile-archived-projects"
                     onClick={() => {
-                      handleOpenArchivedProjects();
-                      setIsDrawerOpen(false);
+                      projectSheet.run(handleOpenArchivedProjects);
                     }}
                     className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-low hover:text-normal hover:bg-secondary cursor-pointer"
                   >
@@ -827,8 +834,9 @@ export function SharedAppLayout() {
                 <button
                   type="button"
                   onClick={() => {
-                    handleCreateProject();
-                    setIsDrawerOpen(false);
+                    projectSheet.run(() => {
+                      void handleCreateProject();
+                    });
                   }}
                   className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-low hover:text-normal hover:bg-secondary cursor-pointer"
                 >

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
 import { useCreateMode } from '@/features/create-mode/model/useCreateMode';
 import { AgentIcon } from '@/shared/components/AgentIcon';
+import { useIsMobile } from '@/shared/hooks/useIsMobile';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import WYSIWYGEditor from '@/shared/components/WYSIWYGEditor';
 import { useCreateWorkspace } from '@/shared/hooks/useCreateWorkspace';
@@ -44,6 +45,7 @@ export function CreateChatBoxContainer({
   onWorkspaceCreated,
   forcedLinkedIssue = null,
 }: CreateChatBoxContainerProps) {
+  const isMobile = useIsMobile();
   const { t } = useTranslation('common');
   const { profiles, config } = useUserSystem();
   const {
@@ -329,7 +331,7 @@ export function CreateChatBoxContainer({
   }
 
   return (
-    <div className="relative flex flex-1 flex-col bg-primary h-full">
+    <div className="mobile-create-workspace relative flex flex-1 flex-col bg-primary h-full">
       <div className="flex flex-1 items-center justify-center px-base">
         <div className="flex w-chat max-w-full flex-col gap-base">
           {showRepoPickerStep && (
@@ -376,7 +378,7 @@ export function CreateChatBoxContainer({
                       repoIds={repoIds}
                       repoId={repoId}
                       executor={executor}
-                      autoFocus
+                      autoFocus={!isMobile}
                       onPasteFiles={onPasteFiles}
                       localAttachments={localAttachments}
                       sendShortcut={config?.send_message_shortcut}

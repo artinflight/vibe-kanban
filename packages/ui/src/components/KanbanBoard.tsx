@@ -26,7 +26,7 @@ import {
   type Ref,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DotsSixVerticalIcon, PlusIcon } from '@phosphor-icons/react';
+import { PlusIcon } from '@phosphor-icons/react';
 import { Button } from './Button';
 
 export type { DropResult } from '@hello-pangea/dnd';
@@ -94,7 +94,11 @@ export const KanbanCard = ({
   isMobile,
 }: KanbanCardProps) => {
   return (
-    <Draggable draggableId={id} index={index} isDragDisabled={dragDisabled}>
+    <Draggable
+      draggableId={id}
+      index={index}
+      isDragDisabled={dragDisabled || isMobile}
+    >
       {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => {
         // Combine DnD ref and forwarded ref
         const setRefs = (node: HTMLDivElement | null) => {
@@ -110,7 +114,7 @@ export const KanbanCard = ({
         return (
           <Card
             className={cn(
-              'p-base outline-none flex-col border -mt-[1px] -mx-[1px] bg-primary',
+              'mobile-task-card p-base outline-none flex-col border -mt-[1px] -mx-[1px] bg-primary',
               snapshot.isDragging && 'cursor-grabbing shadow-lg',
               isSelected
                 ? 'ring-2 ring-accent ring-inset bg-accent/5'
@@ -139,27 +143,7 @@ export const KanbanCard = ({
             }
             onKeyDown={onKeyDown}
           >
-            {isMobile ? (
-              <div className="flex gap-half">
-                <div
-                  {...provided.dragHandleProps}
-                  className="flex items-start pt-half cursor-grab shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <DotsSixVerticalIcon
-                    className="size-icon-xs text-low"
-                    weight="bold"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  {children ?? (
-                    <p className="m-0 font-medium text-sm">{name}</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              (children ?? <p className="m-0 font-medium text-sm">{name}</p>)
-            )}
+            {children ?? <p className="m-0 font-medium text-sm">{name}</p>}
           </Card>
         );
       }}

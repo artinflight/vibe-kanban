@@ -254,7 +254,7 @@ export function KanbanIssuePanel({
 
   return (
     <div
-      className="flex flex-col h-full overflow-hidden outline-none"
+      className="mobile-task-detail flex flex-col h-full overflow-hidden outline-none"
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >

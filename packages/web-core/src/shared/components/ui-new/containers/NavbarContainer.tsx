@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMobileSheet } from '@/shared/hooks/useMobileSheet';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
 import { useUserContext } from '@/shared/hooks/useUserContext';
 import { useActions } from '@/shared/hooks/useActions';
@@ -115,13 +116,18 @@ function toNavbarSectionItems(
 
 export function NavbarContainer({
   mobileMode = false,
+  mobileNavigationSlot,
+  mobileProjectTitle,
   onOrgSelect,
   onOpenDrawer,
 }: {
   mobileMode?: boolean;
+  mobileNavigationSlot?: HTMLElement | null;
+  mobileProjectTitle?: string;
   onOrgSelect?: (orgId: string) => void;
   onOpenDrawer?: () => void;
 }) {
+  const moreSheet = useMobileSheet('workspace-tools');
   const { t } = useTranslation('common');
   const { executeAction } = useActions();
   const { workspace: selectedWorkspace, isCreateMode } = useWorkspaceContext();
@@ -194,8 +200,12 @@ export function NavbarContainer({
   const navbarTitle = isCreateMode
     ? 'Create Workspace'
     : isOnProjectPage
-      ? orgName
-      : selectedWorkspace?.branch;
+      ? mobileMode
+        ? (mobileProjectTitle ?? orgName)
+        : orgName
+      : mobileMode
+        ? selectedWorkspace?.name
+        : selectedWorkspace?.branch;
 
   // Breadcrumbs: Project / Issue / Workspace (only on workspace pages with linked project)
   const linkedProjectId = linkedRemoteWorkspace?.project_id ?? null;
@@ -289,9 +299,10 @@ export function NavbarContainer({
       appNavigation.goToProject(projectId);
     } else {
       // Non-project page: go to workspaces
+      setMobileActiveTab('workspaces');
       appNavigation.goToWorkspaces();
     }
-  }, [isOnProjectPage, projectId, appNavigation]);
+  }, [setMobileActiveTab, isOnProjectPage, projectId, appNavigation]);
 
   const handleNavigateToBoard = useMemo(() => {
     if (!isOnProjectPage || !projectId) return null;
@@ -331,12 +342,17 @@ export function NavbarContainer({
 
   return (
     <Navbar
-      workspaceTitle={navbarTitle}
+      workspaceTitle={navbarTitle ?? undefined}
       breadcrumbs={breadcrumbs}
       leftItems={leftItems}
       rightItems={rightItems}
       syncErrors={syncErrors}
       mobileMode={mobileMode}
+      mobileMoreOpen={moreSheet.isOpen}
+      onOpenMobileMore={moreSheet.show}
+      onCloseMobileMore={moreSheet.close}
+      onMobileMoreAction={moreSheet.run}
+      mobileNavigationSlot={mobileNavigationSlot}
       mobileUserSlot={userPopoverSlot}
       isOnProjectPage={isOnProjectPage}
       isOnProjectSubRoute={isOnProjectSubRoute}
@@ -346,7 +362,11 @@ export function NavbarContainer({
       onNavigateToBoard={handleNavigateToBoard}
       onOpenDrawer={onOpenDrawer}
       mobileActiveTab={mobileActiveTab as MobileTabId}
-      onMobileTabChange={(tab) => setMobileActiveTab(tab)}
+      mobileShowBack={!isOnProjectPage && mobileActiveTab !== 'workspaces'}
+      onMobileTabChange={(tab) => {
+        setMobileActiveTab(tab);
+        if (isOnProjectPage) appNavigation.goToWorkspaces();
+      }}
       leftSlot={
         !breadcrumbs &&
         !isWaitingForBreadcrumbData &&

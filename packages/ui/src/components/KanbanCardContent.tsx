@@ -208,6 +208,7 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
     <button
       type="button"
       onClick={(e) => e.stopPropagation()}
+      aria-label={tags.map((tag) => tag.name).join(', ') || 'Add tag'}
       className="flex max-w-28 shrink-0 items-center gap-half rounded-sm cursor-pointer hover:bg-secondary transition-colors"
       title={tags.map((tag) => tag.name).join(', ') || 'Add tag'}
     >
@@ -225,9 +226,14 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
     : tagsDisplay;
 
   return (
-    <div className={cn('flex flex-col gap-half min-w-0', className)}>
+    <div
+      className={cn(
+        'mobile-task-content flex flex-col gap-half min-w-0',
+        className
+      )}
+    >
       {/* Row 1: Task ID + compact issue controls */}
-      <div className="flex items-center justify-between gap-half">
+      <div className="mobile-task-metadata flex items-center justify-between gap-half">
         <div className="flex items-center gap-half min-w-0">
           {isSubIssue && (
             <span className="text-sm text-low">
@@ -240,29 +246,31 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
           {isLoading && <RunningDots />}
         </div>
         <div className="flex min-w-0 items-center justify-end gap-half">
-          {(tags.length > 0 || tagEditProps) && (
+          {(tags.length > 0 || (!isMobile && tagEditProps)) && (
             <div className="flex shrink-0 items-center gap-half">
               {tagControl}
             </div>
           )}
-          {onPriorityClick ? (
-            <button
-              type="button"
-              onClick={onPriorityClick}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="flex shrink-0 cursor-pointer items-center rounded-sm transition-colors hover:bg-secondary"
-            >
+          {!isMobile &&
+            (onPriorityClick ? (
+              <button
+                type="button"
+                aria-label={priority ? `Priority: ${priority}` : 'Set priority'}
+                onClick={onPriorityClick}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="flex shrink-0 cursor-pointer items-center rounded-sm transition-colors hover:bg-secondary"
+              >
+                <PriorityIcon priority={priority} />
+                {!priority && (
+                  <CircleDashedIcon
+                    className="size-icon-xs text-low"
+                    weight="bold"
+                  />
+                )}
+              </button>
+            ) : (
               <PriorityIcon priority={priority} />
-              {!priority && (
-                <CircleDashedIcon
-                  className="size-icon-xs text-low"
-                  weight="bold"
-                />
-              )}
-            </button>
-          ) : (
-            <PriorityIcon priority={priority} />
-          )}
+            ))}
           {onNeedsReviewFlagToggle && (
             <button
               type="button"
@@ -288,18 +296,20 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
               />
             </button>
           )}
-          {onAssigneeClick ? (
-            <button
-              type="button"
-              onClick={onAssigneeClick}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="shrink-0 cursor-pointer rounded-sm transition-colors hover:bg-secondary"
-            >
+          {!isMobile &&
+            (onAssigneeClick ? (
+              <button
+                type="button"
+                aria-label="Assign task"
+                onClick={onAssigneeClick}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="shrink-0 cursor-pointer rounded-sm transition-colors hover:bg-secondary"
+              >
+                <KanbanAssignee assignees={assignees} />
+              </button>
+            ) : (
               <KanbanAssignee assignees={assignees} />
-            </button>
-          ) : (
-            <KanbanAssignee assignees={assignees} />
-          )}
+            ))}
           {onMoreActionsClick && (
             <button
               type="button"

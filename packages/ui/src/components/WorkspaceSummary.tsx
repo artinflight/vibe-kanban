@@ -92,7 +92,7 @@ export function WorkspaceSummary({
   return (
     <div
       className={cn(
-        'group relative rounded-sm transition-all duration-100 overflow-hidden',
+        'mobile-workspace-card group relative rounded-sm transition-all duration-100 overflow-hidden',
         isActive ? 'bg-tertiary' : '',
         className
       )}
@@ -105,6 +105,7 @@ export function WorkspaceSummary({
         )}
       />
       <button
+        aria-current={isActive ? 'page' : undefined}
         onClick={onClick}
         className={cn(
           'flex w-full cursor-pointer flex-col text-left px-base py-half transition-all duration-150',

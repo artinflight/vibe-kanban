@@ -77,7 +77,7 @@ export function ChatBoxBase({
     <div
       {...(dropzone?.getRootProps() ?? {})}
       className={cn(
-        'relative flex w-chat max-w-full flex-col rounded-sm border border-border bg-secondary',
+        'mobile-composer relative flex w-chat max-w-full flex-col rounded-sm border border-border bg-secondary',
         (visualVariant === VisualVariant.FEEDBACK ||
           visualVariant === VisualVariant.EDIT ||
           visualVariant === VisualVariant.PLAN) &&
@@ -114,7 +114,7 @@ export function ChatBoxBase({
 
       {/* Header - Stats and selector */}
       {visualVariant === VisualVariant.NORMAL && (
-        <div className="flex items-center gap-base border-b px-base py-base">
+        <div className="mobile-composer-header flex items-center gap-base border-b px-base py-base">
           <div className="flex flex-1 items-center gap-base text-sm min-w-0 overflow-hidden">
             {headerLeft}
           </div>
@@ -127,10 +127,12 @@ export function ChatBoxBase({
         {editor}
 
         {/* Footer - Controls */}
-        <div className="flex items-end justify-between gap-base">
+        <div className="mobile-composer-controls flex items-end justify-between gap-base">
           <Toolbar className="flex-1 min-w-0 flex-wrap !gap-half">
-            {modelSelector}
-            {footerLeft}
+            <div className="mobile-model-selector contents">
+              {modelSelector}
+            </div>
+            <div className="mobile-composer-actions contents">{footerLeft}</div>
           </Toolbar>
           <div className="flex shrink-0 gap-base">{footerRight}</div>
         </div>

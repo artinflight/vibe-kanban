@@ -1,4 +1,6 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { MobileDrawer } from './MobileDrawer';
 import type { Icon } from '@phosphor-icons/react';
 import {
   Layout as LayoutIcon,
@@ -11,7 +13,7 @@ import {
   Gear as GearIcon,
   Kanban as KanbanIcon,
   CaretLeft as CaretLeftIcon,
-  ArrowClockwise as ArrowClockwiseIcon,
+  DotsThree as DotsThreeIcon,
   SidebarSimple as SidebarSimpleIcon,
 } from '@phosphor-icons/react';
 import { cn } from '../lib/cn';
@@ -101,9 +103,9 @@ export type MobileTabId =
   | 'git';
 
 export const MOBILE_TABS: { id: MobileTabId; icon: Icon; label: string }[] = [
-  { id: 'workspaces', icon: LayoutIcon, label: 'Wksps' },
+  { id: 'workspaces', icon: LayoutIcon, label: 'Workspaces' },
   { id: 'chat', icon: ChatsTeardropIcon, label: 'Chat' },
-  { id: 'changes', icon: GitDiffIcon, label: 'Diff' },
+  { id: 'changes', icon: GitDiffIcon, label: 'Changes' },
   { id: 'logs', icon: TerminalIcon, label: 'Logs' },
   { id: 'preview', icon: DesktopIcon, label: 'Preview' },
   { id: 'git', icon: GitForkIcon, label: 'Git' },
@@ -166,6 +168,11 @@ export interface NavbarProps {
   className?: string;
   // Mobile props
   mobileMode?: boolean;
+  mobileMoreOpen?: boolean;
+  onOpenMobileMore?: () => void;
+  onCloseMobileMore?: () => void;
+  onMobileMoreAction?: (action: () => void) => void;
+  mobileNavigationSlot?: HTMLElement | null;
   mobileUserSlot?: ReactNode;
   isOnProjectPage?: boolean;
   onOpenCommandBar?: () => void;
@@ -191,6 +198,11 @@ export function Navbar({
   syncErrors,
   className,
   mobileMode = false,
+  mobileMoreOpen: moreOpen = false,
+  onOpenMobileMore,
+  onCloseMobileMore,
+  onMobileMoreAction,
+  mobileNavigationSlot,
   mobileUserSlot,
   isOnProjectPage = false,
   onOpenCommandBar,
@@ -206,6 +218,8 @@ export function Navbar({
   showMobileTabs,
   mobileShowBack,
 }: NavbarProps) {
+  const runMoreAction =
+    onMobileMoreAction ?? ((action: () => void) => action());
   const renderItem = (item: NavbarSectionItem, key: string) => {
     // Render divider
     if (isDivider(item)) {
@@ -229,188 +243,186 @@ export function Navbar({
     );
   };
 
-  // ---- Mobile layout ----
+  // The shell supplies a bottom slot so navigation participates in the flex
+  // layout instead of covering the composer or scrolled task content.
   if (mobileMode) {
-    return (
-      <nav
-        className={cn(
-          'flex flex-col bg-secondary border-b shrink-0',
-          className
+    const tabs = mobileTabs ?? MOBILE_TABS;
+    const navigationSlot = mobileNavigationSlot;
+    const primaryTabs = tabs.filter((tab) =>
+      ['workspaces', 'chat', 'changes'].includes(tab.id)
+    );
+    const secondaryTabs = tabs.filter(
+      (tab) => !['workspaces', 'chat', 'changes'].includes(tab.id)
+    );
+    const isSecondaryActive = secondaryTabs.some(
+      (tab) => tab.id === mobileActiveTab
+    );
+    const navigation = (
+      <nav className="mobile-bottom-navigation" aria-label="Primary navigation">
+        {isOnProjectPage ? (
+          <>
+            <button type="button" aria-current="page" onClick={onOpenDrawer}>
+              <KanbanIcon weight="fill" />
+              <span>Projects</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onMobileTabChange?.('workspaces')}
+            >
+              <LayoutIcon />
+              <span>Workspaces</span>
+            </button>
+          </>
+        ) : (
+          primaryTabs.map((tab) => {
+            const TabIcon = tab.icon;
+            const active = mobileActiveTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                aria-current={active ? 'page' : undefined}
+                onClick={() => onMobileTabChange?.(tab.id)}
+              >
+                <TabIcon weight={active ? 'fill' : 'regular'} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })
         )}
-      >
-        {/* Row 1: Tab bar (workspace pages) or minimal header (project pages) */}
-        <div className="flex items-center justify-between px-base py-half">
-          {isOnProjectPage ? (
-            <div className="flex items-center gap-base">
-              {isOnProjectSubRoute
-                ? onNavigateBack && (
-                    <button
-                      type="button"
-                      className="flex items-center justify-center text-low hover:text-normal"
-                      onClick={onNavigateBack}
-                      aria-label="Back"
-                    >
-                      <CaretLeftIcon className="size-icon-base" />
-                    </button>
-                  )
-                : onOpenDrawer && (
-                    <button
-                      type="button"
-                      className="flex items-center justify-center text-low hover:text-normal"
-                      onClick={onOpenDrawer}
-                      aria-label="Open menu"
-                    >
-                      <SidebarSimpleIcon className="size-icon-base" />
-                    </button>
-                  )}
-              <p className="text-base text-normal font-medium truncate cursor-default select-none">
-                {workspaceTitle}
-              </p>
-            </div>
-          ) : (
-            <div className="flex items-center gap-0.5 overflow-x-auto">
-              {mobileShowBack && onNavigateBack ? (
-                <>
-                  <button
-                    type="button"
-                    className="flex items-center justify-center px-1.5 py-1 text-low hover:text-normal"
-                    onClick={onNavigateBack}
-                    aria-label="Back"
-                  >
-                    <CaretLeftIcon className="size-icon-sm" />
-                  </button>
-                  <div className="h-4 w-px bg-border mx-0.5 shrink-0" />
-                </>
-              ) : (
-                onOpenDrawer && (
-                  <>
-                    <button
-                      type="button"
-                      className="flex items-center justify-center px-1.5 py-1 text-low hover:text-normal"
-                      onClick={onOpenDrawer}
-                      aria-label="Projects"
-                    >
-                      <KanbanIcon className="size-icon-sm" />
-                    </button>
-                    <div className="h-4 w-px bg-border mx-0.5 shrink-0" />
-                  </>
-                )
-              )}
-              {showMobileTabs !== false &&
-                (mobileTabs ?? MOBILE_TABS).map((tab) => {
-                  const TabIcon = tab.icon;
-                  const isActive = mobileActiveTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      className={cn(
-                        'flex items-center gap-1 px-1.5 py-1 text-xs whitespace-nowrap transition-colors',
-                        isActive
-                          ? 'text-normal border-b-2 border-brand'
-                          : 'text-low hover:text-normal'
-                      )}
-                      onClick={() => onMobileTabChange?.(tab.id)}
-                    >
-                      <TabIcon
-                        className="size-icon-sm"
-                        weight={isActive ? 'fill' : 'regular'}
-                      />
-                      <span className="hidden min-[480px]:inline">
-                        {tab.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              {onNavigateToBoard && (
+        <button
+          type="button"
+          aria-expanded={moreOpen}
+          aria-haspopup="dialog"
+          aria-current={
+            isSecondaryActive && !isOnProjectPage ? 'page' : undefined
+          }
+          onClick={onOpenMobileMore}
+        >
+          <DotsThreeIcon weight="bold" />
+          <span>More</span>
+        </button>
+      </nav>
+    );
+    return (
+      <>
+        <header
+          className={cn(
+            'mobile-app-header bg-secondary border-b shrink-0',
+            className
+          )}
+        >
+          <div className="flex items-center min-w-0 gap-half">
+            {(isOnProjectSubRoute || mobileShowBack) && onNavigateBack ? (
+              <button type="button" onClick={onNavigateBack} aria-label="Back">
+                <CaretLeftIcon className="size-icon-lg" />
+              </button>
+            ) : (
+              onOpenDrawer && (
                 <button
                   type="button"
-                  className="flex items-center gap-1 px-1.5 py-1 text-xs text-low hover:text-normal whitespace-nowrap"
-                  onClick={onNavigateToBoard}
+                  onClick={onOpenDrawer}
+                  aria-label="Projects"
                 >
-                  <KanbanIcon className="size-icon-sm" />
-                  <span className="hidden min-[480px]:inline">Board</span>
+                  <SidebarSimpleIcon className="size-icon-lg" />
                 </button>
+              )
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-lg text-high font-medium truncate">
+                {workspaceTitle || (isOnProjectPage ? 'Project' : 'Workspaces')}
+              </p>
+              {!isOnProjectPage && breadcrumbs && breadcrumbs.length > 0 && (
+                <NavbarBreadcrumbs
+                  breadcrumbs={breadcrumbs}
+                  textClassName="text-sm"
+                />
               )}
+              {leftSlot}
             </div>
-          )}
-
-          {/* Right side: sync indicator + action buttons + user slot */}
-          <div className="flex items-center gap-1 shrink-0">
             <SyncErrorIndicator errors={syncErrors} />
+          </div>
+        </header>
+        {showMobileTabs !== false &&
+          (navigationSlot
+            ? createPortal(navigation, navigationSlot)
+            : navigation)}
+        <MobileDrawer
+          open={moreOpen}
+          onClose={() => onCloseMobileMore?.()}
+          title="Workspace tools"
+        >
+          <div className="mobile-tool-sheet p-4">
             {isOnProjectPage &&
               rightItems
                 .filter((item): item is NavbarActionItem => !isDivider(item))
-                .map((item) => (
-                  <NavbarIconButton
-                    key={item.id}
-                    icon={item.icon}
-                    isActive={item.isActive}
-                    onClick={item.onClick}
-                    aria-label={item.tooltip}
-                    tooltip={item.tooltip}
-                    disabled={!!item.disabled}
-                    className={
-                      item.disabled ? 'opacity-40 cursor-not-allowed' : ''
+                .map((item) => {
+                  const ItemIcon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      disabled={item.disabled}
+                      onClick={() => runMoreAction(() => item.onClick?.())}
+                    >
+                      <ItemIcon className="size-icon-lg" />
+                      <span>{item.tooltip ?? item.id}</span>
+                    </button>
+                  );
+                })}
+            {!isOnProjectPage &&
+              secondaryTabs.map((tab) => {
+                const TabIcon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    aria-pressed={mobileActiveTab === tab.id}
+                    onClick={() =>
+                      runMoreAction(() => onMobileTabChange?.(tab.id))
                     }
-                  />
-                ))}
-            {onReload && (
+                  >
+                    <TabIcon className="size-icon-lg" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            {onNavigateToBoard && (
               <button
                 type="button"
-                className="flex items-center justify-center text-low hover:text-normal"
-                onClick={onReload}
-                aria-label="Reload"
+                onClick={() => runMoreAction(onNavigateToBoard)}
               >
-                <ArrowClockwiseIcon className="size-icon-sm" />
-              </button>
-            )}
-            {!isOnProjectPage && onOpenSettings && (
-              <button
-                type="button"
-                className="flex items-center justify-center text-low hover:text-normal"
-                onClick={onOpenSettings}
-                aria-label="Settings"
-              >
-                <GearIcon className="size-icon-sm" />
+                <KanbanIcon className="size-icon-lg" />
+                <span>Project board</span>
               </button>
             )}
             {!isOnProjectPage && onOpenCommandBar && (
               <button
                 type="button"
-                className="flex items-center justify-center text-low hover:text-normal"
-                onClick={onOpenCommandBar}
-                aria-label="Command bar"
+                onClick={() => runMoreAction(onOpenCommandBar)}
               >
-                <ListIcon className="size-icon-sm" />
+                <ListIcon className="size-icon-lg" />
+                <span>Actions</span>
               </button>
             )}
-            {mobileUserSlot && (
-              <div className="h-4 w-px bg-border mx-0.5 shrink-0" />
+            {!isOnProjectPage && onOpenSettings && (
+              <button
+                type="button"
+                onClick={() => runMoreAction(onOpenSettings)}
+              >
+                <GearIcon className="size-icon-lg" />
+                <span>Settings</span>
+              </button>
+            )}
+            {onReload && (
+              <button type="button" onClick={onReload}>
+                <span>Reload</span>
+              </button>
             )}
             {mobileUserSlot}
           </div>
-        </div>
-
-        {/* Row 2: Info bar with leftSlot + breadcrumbs/title (workspace pages only) */}
-        {!isOnProjectPage && (workspaceTitle || breadcrumbs) && (
-          <div className="flex items-center justify-between px-base py-half border-t border-border">
-            <div className="flex items-center gap-base flex-1 min-w-0">
-              {leftSlot}
-              {breadcrumbs && breadcrumbs.length > 0 ? (
-                <NavbarBreadcrumbs
-                  breadcrumbs={breadcrumbs}
-                  textClassName="text-sm"
-                />
-              ) : (
-                <p className="text-sm text-low truncate cursor-default select-none">
-                  {workspaceTitle}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-      </nav>
+        </MobileDrawer>
+      </>
     );
   }
 

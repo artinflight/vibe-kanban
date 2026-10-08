@@ -1,3 +1,11 @@
+## October 8: Phone frontend work prepared
+
+A frontend-only phone interaction pass is prepared for review in an isolated
+workspace. Its source, evidence and limits are documented in VK_MOBILE_UX.md.
+This is not a deployed UI or a production service/routing change. Mobile UI
+validation must preserve Recommend-only routing and configured model/effort;
+physical keyboard and non-Chromium acceptance remain separate QA coverage.
+
 ## October 1: AutoSwitch scope release preparation
 
 PR134/135 merged the downward-routing scope correction into staging/main. It is

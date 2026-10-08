@@ -13,7 +13,10 @@ interface InputFieldProps {
   placeholder?: string;
   className?: string;
   variant?: 'editable' | 'search';
+  leadingIcon?: Icon;
+  ariaLabel?: string;
   actionIcon?: Icon;
+  actionLabel?: string;
   onAction?: () => void;
   disabled?: boolean;
   onFocusChange?: (focused: boolean) => void;
@@ -25,7 +28,10 @@ export function InputField({
   placeholder,
   className,
   variant = 'editable',
+  leadingIcon: LeadingIcon,
+  ariaLabel,
   actionIcon: ActionIcon,
+  actionLabel,
   onAction,
   disabled,
   onFocusChange,
@@ -106,6 +112,12 @@ export function InputField({
         className
       )}
     >
+      {LeadingIcon && (
+        <LeadingIcon
+          aria-hidden
+          className="input-leading-icon shrink-0 text-low"
+        />
+      )}
       {showInput ? (
         <input
           ref={inputRef}
@@ -126,6 +138,7 @@ export function InputField({
             onFocusChange?.(false);
           }}
           placeholder={placeholder}
+          aria-label={ariaLabel}
           disabled={disabled}
           className="flex-1 text-sm text-high bg-transparent placeholder:text-low placeholder:opacity-80 focus:outline-none min-w-0"
         />
@@ -175,6 +188,7 @@ export function InputField({
         <button
           type="button"
           onClick={onAction}
+          aria-label={actionLabel}
           disabled={disabled}
           className="size-icon-sm text-low shrink-0 cursor-pointer hover:text-normal flex items-center justify-center"
         >

@@ -615,9 +615,9 @@ html {
     flex-shrink: 0;
   }
   .phone-task-heading h2 {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 600;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.35px;
   }
   .phone-task-heading > div:first-child {
     justify-content: space-between;
@@ -635,19 +635,61 @@ html {
     gap: 8px;
     align-items: center;
   }
-  .phone-task-search input,
-  .phone-workspace-search input {
+  /* The 40px surface sits inside a 48px input target. Shared desktop
+     padding must not add to the input's minimum height on phones. */
+  .phone-search-field {
+    position: relative;
+    height: 48px;
+    padding: 0 12px;
+    gap: 8px;
+    border: 0;
+    background: transparent;
+    border-radius: 12px;
+  }
+  .phone-search-field::before {
+    content: '';
+    position: absolute;
+    inset: 4px 0;
+    border-radius: 12px;
+    background: hsl(var(--bg-secondary) / 0.7);
+    border: 1px solid hsl(var(--border) / 0.55);
+    pointer-events: none;
+    transition: border-color 120ms;
+  }
+  .phone-search-field:focus-within::before {
+    border-color: hsl(var(--brand) / 0.65);
+  }
+  .phone-search-field > * {
+    position: relative;
+  }
+  .phone-search-field input {
     min-height: 48px;
   }
+  .phone-search-field .input-leading-icon {
+    width: 18px;
+    height: 18px;
+  }
+  .phone-search-field > button {
+    min-width: 48px;
+    min-height: 48px;
+    margin-right: -10px;
+    border-radius: 12px;
+  }
+  .phone-search-field > button svg {
+    width: 18px;
+    height: 18px;
+  }
+
   .phone-task-search > button {
     min-height: 48px;
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 0 12px;
-    border: 1px solid hsl(var(--border));
+    border: 0;
     border-radius: 12px;
     font-size: 14px;
+    color: hsl(var(--text-normal));
   }
   .phone-task-feed {
     position: relative;
@@ -658,29 +700,42 @@ html {
   }
   .phone-filter-chips {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     overflow-x: auto;
     flex-shrink: 0;
     scrollbar-width: none;
   }
   .phone-filter-chips button {
+    position: relative;
+    isolation: isolate;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     min-height: 48px;
-    padding: 0 14px;
+    padding: 0 12px;
     white-space: nowrap;
-    border-radius: 24px;
-    border: 1px solid hsl(var(--border));
-    font-size: 14px;
+    border-radius: 12px;
+    font-size: 13px;
     color: hsl(var(--text-normal));
+  }
+  .phone-filter-chips button::before {
+    content: '';
+    position: absolute;
+    inset: 6px 0;
+    z-index: -1;
+    border-radius: 10px;
+    background: hsl(var(--bg-secondary) / 0.5);
+    border: 1px solid transparent;
+    pointer-events: none;
   }
   .phone-filter-chips button[aria-pressed='true'] {
     color: hsl(var(--brand));
-    background: hsl(var(--brand) / 0.12);
-    border-color: hsl(var(--brand) / 0.4);
     font-weight: 600;
+  }
+  .phone-filter-chips button[aria-pressed='true']::before {
+    background: hsl(var(--brand) / 0.1);
+    border-color: hsl(var(--brand) / 0.18);
   }
   .phone-filter-chips button > span {
     font-size: 12px;
@@ -694,7 +749,7 @@ html {
     flex-shrink: 0;
   }
   .phone-status-tabs {
-    padding: 8px 16px 12px;
+    padding: 2px 16px 8px;
   }
   .phone-task-scroll {
     flex: 1;
@@ -704,10 +759,10 @@ html {
     overscroll-behavior: contain;
   }
   .phone-task-row {
-    border: 1px solid hsl(var(--border));
+    border: 1px solid hsl(var(--border) / 0.7);
     background: hsl(var(--bg-primary));
-    border-radius: 16px;
-    margin-bottom: 10px;
+    border-radius: 12px;
+    margin-bottom: 8px;
     overflow: hidden;
   }
   .phone-task-main {
@@ -719,9 +774,9 @@ html {
     flex: 1;
     min-width: 0;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     text-align: left;
-    padding: 14px 0 14px 16px;
+    padding: 12px 0 12px 14px;
   }
   .phone-task-meta {
     display: flex;
@@ -762,7 +817,7 @@ html {
     justify-content: space-between;
     align-items: center;
     padding: 0 16px;
-    border-top: 1px solid hsl(var(--border));
+    border-top: 1px solid hsl(var(--border) / 0.55);
     font-size: 13px;
     color: hsl(var(--text-low));
   }
@@ -778,12 +833,12 @@ html {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 0 20px;
-    border-radius: 18px;
+    padding: 0 16px;
+    border-radius: 16px;
     background: hsl(var(--brand));
     color: hsl(var(--text-on-brand));
-    box-shadow: 0 4px 12px hsl(var(--text-high) / 0.16);
-    font-size: 15px;
+    box-shadow: 0 3px 10px hsl(var(--text-high) / 0.12);
+    font-size: 14px;
     font-weight: 600;
   }
   .phone-view-options {
@@ -809,13 +864,13 @@ html {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 20px;
+    padding: 8px 16px 12px;
     gap: 12px;
   }
   .phone-page-heading h1 {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 600;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.35px;
   }
   .phone-page-heading p {
     font-size: 13px;
@@ -823,19 +878,29 @@ html {
     margin-top: 4px;
   }
   .phone-new-workspace {
+    position: relative;
+    isolation: isolate;
     display: flex;
     align-items: center;
     gap: 6px;
     min-height: 48px;
     padding: 0 14px;
-    border-radius: 24px;
+    border-radius: 12px;
     color: hsl(var(--brand));
-    background: hsl(var(--brand) / 0.12);
     font-size: 14px;
     font-weight: 600;
   }
+  .phone-new-workspace::before {
+    content: '';
+    position: absolute;
+    inset: 4px 0;
+    z-index: -1;
+    border-radius: 12px;
+    background: hsl(var(--brand) / 0.1);
+    pointer-events: none;
+  }
   .phone-workspace-search {
-    padding: 0 16px 12px;
+    padding: 0 16px 4px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -863,7 +928,7 @@ html {
     padding: 0 20px;
   }
   .phone-workspace-tabs {
-    padding: 0 16px 16px;
+    padding: 0 16px 8px;
   }
   .phone-workspace-scroll {
     min-height: 0;
@@ -876,7 +941,7 @@ html {
     display: flex;
     align-items: center;
     margin: 0 16px;
-    border-bottom: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border) / 0.55);
   }
   .phone-workspace-open {
     display: flex;
@@ -884,17 +949,17 @@ html {
     gap: 12px;
     flex: 1;
     min-width: 0;
-    padding: 16px 0;
+    padding: 12px 0;
     text-align: left;
   }
   .phone-workspace-symbol {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     flex-shrink: 0;
-    border-radius: 14px;
+    border-radius: 12px;
     background: hsl(var(--bg-secondary));
     color: hsl(var(--text-low));
   }

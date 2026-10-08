@@ -6,6 +6,8 @@ import {
   ArchiveIcon,
   StackIcon,
   SpinnerIcon,
+  MagnifyingGlassIcon,
+  XIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { usePhoneLayout } from '../lib/usePhoneLayout';
@@ -293,9 +295,15 @@ export function WorkspacesSidebar({
         </div>
         <div className="phone-workspace-search">
           <InputField
+            className="phone-search-field"
             variant="search"
+            leadingIcon={MagnifyingGlassIcon}
+            ariaLabel="Search workspaces"
             value={searchQuery}
             onChange={onSearchChange}
+            actionIcon={searchQuery ? XIcon : undefined}
+            actionLabel="Clear search"
+            onAction={() => onSearchChange('')}
             placeholder={t('common:workspaces.searchPlaceholder')}
           />
           <button

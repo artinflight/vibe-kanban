@@ -40,6 +40,37 @@ Primary targets are approximately 48 CSS px; targets are scoped to controls
 rather than blanket sizing for metadata. Desktop keeps its existing panels,
 Kanban dragging, toolbars, compact composer and controls.
 
+## Style refinement (October 8)
+
+The follow-up style pass keeps the screen structure while reducing visual bulk:
+
+- Search uses a 40px visible surface inside a 48px interactive field. Removing
+  shared padding prevents the input minimum height from growing the entire bar.
+  Search icons and named clear controls improve recognition and accessibility;
+  the input stays 16px and clear targets remain separate from editable text.
+- Status/activity chips have 36px visible fills with 48px targets, lighter
+  unselected surfaces and a distinct selected tint/outline. Controls retain
+  focus and press feedback.
+- Headings use 24px type and align with the 16px screen gutter. Card borders,
+  radii and gaps are softer; workspace row padding and icon tiles are tighter.
+  Task titles retain their 16px reading size.
+- New workspace has a lighter 40px surface inside its 48px button. The floating
+  task action keeps its 56px target with a narrower shape and softer shadow.
+
+Style evidence: `/mnt/vk-storage/vk-mobile-style-20261008`. Before images copy the
+previous redesigned source's saved screenshots; new captures use the same browser
+harness with search sizing, clear-target separation and clear/search behavior
+checks added. The harness continues exercising navigation, drafts, attachments,
+keyboard geometry and desktop controls. See `acceptance/results.json` and logs.
+Required formatting/governance, frontend type/lint stages and unused-i18n checking
+passed. All five browser cases passed; search height measured 48px in each phone
+case. Local full Rust checks remain blocked by the missing GTK libraries. The test
+command was interrupted after that failure instead of waiting for unrelated
+dependency jobs to finish.
+All CI checks passed for preceding redesigned source `121cdccb0`; new CI applies
+to the style revision after push. Physical Android and non-Chromium QA limits
+remain unchanged. No model, routing or production runtime changes.
+
 ## Interaction and safety
 
 Task detail keeps the feed mounted with its dimensions intact, retaining actual
@@ -120,7 +151,13 @@ present. `VK_TEST_VIEWPORTS` can override the default cases with JSON.
 
 Screenshots contain existing project/conversation data and stay outside Git.
 Selected images are attached through Vibe’s normal attachment API and retrieved
-byte-for-byte before sharing. Current native attachment IDs:
+byte-for-byte before sharing. Current style refinement attachments:
+
+- Task feed: `bb99d444-d0ca-4420-9c5f-217375d6c36f`.
+- Workspace list: `986e6666-f08e-49b4-8f57-73b759a89523`.
+
+The style images are retrieved PNGs verified byte-for-byte. Redesign review
+attachments retained for comparison:
 
 - Task feed: `e23c1cd9-4c9c-4a1b-a6ef-2b471d9784a2`.
 - Conversation: `90c493b9-a8a0-4c13-bbf8-4f6eda6ce9be`.

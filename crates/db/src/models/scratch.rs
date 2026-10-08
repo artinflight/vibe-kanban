@@ -141,6 +141,9 @@ pub struct UiPreferencesData {
     /// Last selected project ID
     #[serde(default)]
     pub selected_project_id: Option<String>,
+    /// Manual order for local projects in the left app bar
+    #[serde(default)]
+    pub local_project_order: Vec<String>,
     /// Default setting for creating a draft workspace from new issues
     #[serde(default)]
     pub create_draft_workspace_by_default: Option<bool>,
@@ -200,6 +203,7 @@ pub struct ProjectStatusConfigData {
     pub color: String,
     #[serde(default)]
     pub hidden: bool,
+    #[ts(type = "number")]
     pub sort_order: i64,
 }
 

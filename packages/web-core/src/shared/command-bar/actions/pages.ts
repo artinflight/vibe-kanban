@@ -60,6 +60,7 @@ export const Pages: Record<StaticPageId, CommandBarPage> = {
         label: 'Workspace',
         items: [
           { type: 'action', action: Actions.StartReview },
+          { type: 'action', action: Actions.MarkWorkspaceUnread },
           { type: 'action', action: Actions.RenameWorkspace },
           { type: 'action', action: Actions.DuplicateWorkspace },
           { type: 'action', action: Actions.SpinOffWorkspace },

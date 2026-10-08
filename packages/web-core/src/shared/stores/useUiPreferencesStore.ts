@@ -357,6 +357,7 @@ type State = {
   // Last selected organization and project (persisted via scratch store)
   selectedOrgId: string | null;
   selectedProjectId: string | null;
+  localProjectOrder: string[];
   createDraftWorkspaceByDefault: boolean;
 
   // UI preferences actions
@@ -451,6 +452,7 @@ type State = {
   setSelectedOrgId: (orgId: string | null) => void;
   clearSelectedOrgId: () => void;
   setSelectedProjectId: (projectId: string | null) => void;
+  setLocalProjectOrder: (projectIds: string[]) => void;
   setCreateDraftWorkspaceByDefault: (value: boolean) => void;
 };
 
@@ -494,6 +496,7 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
   // Last selected organization and project
   selectedOrgId: null,
   selectedProjectId: null,
+  localProjectOrder: [],
   createDraftWorkspaceByDefault: DEFAULT_CREATE_DRAFT_WORKSPACE_BY_DEFAULT,
 
   // UI preferences actions
@@ -886,6 +889,7 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
   setSelectedOrgId: (orgId) => set({ selectedOrgId: orgId }),
   clearSelectedOrgId: () => set({ selectedOrgId: null }),
   setSelectedProjectId: (projectId) => set({ selectedProjectId: projectId }),
+  setLocalProjectOrder: (projectIds) => set({ localProjectOrder: projectIds }),
   setCreateDraftWorkspaceByDefault: (value) =>
     set({ createDraftWorkspaceByDefault: value }),
 }));

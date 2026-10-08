@@ -30,6 +30,8 @@ export interface WorkspacesSidebarWorkspace {
   hasPendingApproval?: boolean;
   hasRunningDevServer?: boolean;
   hasUnseenActivity?: boolean;
+  activeSubagentCount?: number;
+  unresolvedSubagentCount?: number;
   latestProcessCompletedAt?: string;
   latestProcessStatus?: 'running' | 'completed' | 'failed' | 'killed';
   prStatus?: 'open' | 'merged' | 'closed' | 'unknown';
@@ -155,6 +157,8 @@ function WorkspaceList({
           hasPendingApproval={workspace.hasPendingApproval}
           hasRunningDevServer={workspace.hasRunningDevServer}
           hasUnseenActivity={workspace.hasUnseenActivity}
+          activeSubagentCount={workspace.activeSubagentCount}
+          unresolvedSubagentCount={workspace.unresolvedSubagentCount}
           latestProcessCompletedAt={workspace.latestProcessCompletedAt}
           latestProcessStatus={workspace.latestProcessStatus}
           prStatus={workspace.prStatus}
@@ -218,16 +222,20 @@ export function WorkspacesSidebar({
   const { raisedHandWorkspaces, idleWorkspaces, runningWorkspaces } =
     useMemo(() => {
       // Running workspaces should stay in the "Running" section even if unseen.
+      const hasSubagentActivity = (ws: WorkspacesSidebarWorkspace) =>
+        (ws.activeSubagentCount ?? 0) + (ws.unresolvedSubagentCount ?? 0) > 0;
       const needsAttention = (ws: WorkspacesSidebarWorkspace) =>
-        ws.hasPendingApproval || (ws.hasUnseenActivity && !ws.isRunning);
+        ws.hasPendingApproval ||
+        (ws.hasUnseenActivity && !ws.isRunning && !hasSubagentActivity(ws));
 
       return {
         raisedHandWorkspaces: workspaces.filter((ws) => needsAttention(ws)),
         idleWorkspaces: workspaces.filter(
-          (ws) => !ws.isRunning && !needsAttention(ws)
+          (ws) =>
+            !ws.isRunning && !hasSubagentActivity(ws) && !needsAttention(ws)
         ),
         runningWorkspaces: workspaces.filter(
-          (ws) => ws.isRunning && !needsAttention(ws)
+          (ws) => (ws.isRunning || hasSubagentActivity(ws)) && !needsAttention(ws)
         ),
       };
     }, [workspaces]);

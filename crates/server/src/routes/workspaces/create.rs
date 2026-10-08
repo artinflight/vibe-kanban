@@ -5,7 +5,7 @@ use db::models::{
     project::Project,
     requests::{
         CreateAndStartWorkspaceRequest, CreateAndStartWorkspaceResponse, CreateWorkspaceApiRequest,
-        LinkedIssueInfo,
+        LinkedIssueInfo, WorkspaceRepoInput,
     },
     task::Task,
     workspace::{CreateWorkspace, Workspace},
@@ -111,6 +111,69 @@ async fn ensure_local_linked_issue_task_id(
     }
 
     Ok(None)
+}
+
+async fn infer_local_linked_issue_task_id_from_repos(
+    deployment: &DeploymentImpl,
+    repos: &[WorkspaceRepoInput],
+    workspace_name: Option<&str>,
+) -> Result<Option<Uuid>, ApiError> {
+    let Some(workspace_name) = workspace_name
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+    else {
+        return Ok(None);
+    };
+
+    let mut project_ids = Vec::new();
+    for repo in repos {
+        let linked_project_ids = sqlx::query_scalar::<_, Uuid>(
+            r#"SELECT project_id
+               FROM project_repos
+               WHERE repo_id = ?"#,
+        )
+        .bind(repo.repo_id)
+        .fetch_all(&deployment.db().pool)
+        .await?;
+
+        for project_id in linked_project_ids {
+            if !project_ids.contains(&project_id) {
+                project_ids.push(project_id);
+            }
+        }
+    }
+
+    let mut matching_task_ids = Vec::new();
+    for project_id in project_ids {
+        let project = match Project::find_by_id(&deployment.db().pool, project_id).await {
+            Ok(project) => project,
+            Err(SqlxError::RowNotFound) => continue,
+            Err(e) => return Err(e.into()),
+        };
+
+        if project.remote_project_id.is_some() {
+            continue;
+        }
+
+        for task in Task::find_by_project(&deployment.db().pool, project_id).await? {
+            if task.title.trim() == workspace_name && !matching_task_ids.contains(&task.id) {
+                matching_task_ids.push(task.id);
+            }
+        }
+    }
+
+    match matching_task_ids.as_slice() {
+        [task_id] => Ok(Some(*task_id)),
+        [] => Ok(None),
+        _ => {
+            tracing::warn!(
+                "Could not infer local issue link for workspace {:?}: {} matching tasks",
+                workspace_name,
+                matching_task_ids.len()
+            );
+            Ok(None)
+        }
+    }
 }
 
 pub async fn create_workspace(
@@ -287,6 +350,7 @@ pub async fn create_and_start_workspace(
         prompt,
         attachment_ids,
     } = payload;
+    let workspace_name_for_link = name.clone();
 
     let mut workspace_prompt = normalize_prompt(&prompt).ok_or_else(|| {
         ApiError::BadRequest(
@@ -328,6 +392,26 @@ pub async fn create_and_start_workspace(
             .add_repository(repo, deployment.git())
             .await
             .map_err(ApiError::from)?;
+    }
+
+    if managed_workspace.workspace.task_id.is_none()
+        && let Some(task_id) = infer_local_linked_issue_task_id_from_repos(
+            &deployment,
+            &repos,
+            workspace_name_for_link.as_deref(),
+        )
+        .await?
+    {
+        Workspace::update_task_id(
+            &deployment.db().pool,
+            managed_workspace.workspace.id,
+            Some(task_id),
+        )
+        .await?;
+        managed_workspace = deployment
+            .workspace_manager()
+            .load_managed_workspace(managed_workspace.workspace.clone())
+            .await?;
     }
 
     if let Some(ids) = &attachment_ids {

@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { ExecutorConfig } from 'shared/types';
-import { sessionsApi } from '@/shared/lib/api';
+import type { ExecutorConfig, QueueStatus } from 'shared/types';
+import { ApiError, sessionsApi } from '@/shared/lib/api';
 import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 import { useCreateSession } from './useCreateSession';
+import { QUEUE_STATUS_KEY } from './useSessionQueueInteraction';
 
 interface UseSessionSendOptions {
   /** Session ID for existing sessions */
@@ -27,6 +28,14 @@ interface UseSessionSendResult {
   error: string | null;
   /** Clear the error */
   clearError: () => void;
+}
+
+function isQueuedSendError(error: unknown): error is ApiError<QueueStatus> {
+  return (
+    error instanceof ApiError &&
+    !!error.error_data &&
+    error.error_data.status === 'queued'
+  );
 }
 
 /**
@@ -100,6 +109,16 @@ export function useSessionSend({
           });
           return true;
         } catch (e: unknown) {
+          if (isQueuedSendError(e)) {
+            await queryClient.invalidateQueries({
+              queryKey: [QUEUE_STATUS_KEY, sessionId],
+            });
+            void queryClient.invalidateQueries({
+              queryKey: workspaceSummaryKeys.all,
+            });
+            return true;
+          }
+
           const err = e as { message?: string };
           setError(`Failed to send: ${err.message ?? 'Unknown error'}`);
           return false;

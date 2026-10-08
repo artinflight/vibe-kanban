@@ -7,7 +7,7 @@ use std::{
 
 static WORKSPACE_DIR_OVERRIDE: OnceLock<PathBuf> = OnceLock::new();
 
-use git::{GitService, GitServiceError};
+use git::{GitCli, GitService, GitServiceError};
 use thiserror::Error;
 use tracing::{debug, info, trace};
 use utils::{path::normalize_macos_private_alias, shell::resolve_executable_path};
@@ -112,7 +112,70 @@ impl WorktreeManager {
 
         // If worktree doesn't exist or isn't properly set up, recreate it
         info!("Worktree needs recreation at path: {}", path_str);
+        if Self::move_existing_branch_worktree(repo_path, branch_name, worktree_path).await? {
+            return Ok(());
+        }
+
         Self::recreate_worktree_internal(repo_path, branch_name, worktree_path).await
+    }
+
+    async fn move_existing_branch_worktree(
+        repo_path: &Path,
+        branch_name: &str,
+        worktree_path: &Path,
+    ) -> Result<bool, WorktreeError> {
+        let repo_path_owned = repo_path.to_path_buf();
+        let branch_name_owned = branch_name.to_string();
+        let desired_path = worktree_path.to_path_buf();
+
+        let existing_path =
+            tokio::task::spawn_blocking(move || -> Result<Option<PathBuf>, WorktreeError> {
+                let worktrees = GitCli::new()
+                    .list_worktrees(&repo_path_owned)
+                    .map_err(|e| {
+                        WorktreeError::GitService(GitServiceError::InvalidRepository(format!(
+                            "git worktree list failed: {e}"
+                        )))
+                    })?;
+
+                Ok(worktrees.into_iter().find_map(|worktree| {
+                    if worktree.branch.as_deref() == Some(branch_name_owned.as_str()) {
+                        Some(PathBuf::from(worktree.path))
+                    } else {
+                        None
+                    }
+                }))
+            })
+            .await
+            .map_err(|e| WorktreeError::TaskJoin(format!("{e}")))??;
+
+        let Some(existing_path) = existing_path else {
+            return Ok(false);
+        };
+
+        let existing_path = normalize_macos_private_alias(&existing_path);
+        let desired_path = normalize_macos_private_alias(&desired_path);
+        if existing_path == desired_path {
+            return Ok(false);
+        }
+
+        info!(
+            "Branch {} is already checked out at {}; moving existing worktree to {}",
+            branch_name,
+            existing_path.display(),
+            desired_path.display()
+        );
+
+        if let Some(parent) = desired_path.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+
+        if desired_path.exists() {
+            Self::simple_worktree_cleanup(&desired_path).await?;
+        }
+
+        Self::move_worktree(repo_path, &existing_path, &desired_path).await?;
+        Ok(true)
     }
 
     /// Internal worktree recreation function (always recreates)
@@ -576,4 +639,41 @@ async fn create_worktree_when_repo_path_is_a_worktree() {
     )
     .await
     .unwrap();
+}
+
+#[tokio::test]
+async fn ensure_worktree_moves_existing_checkout_for_branch() {
+    use tempfile::TempDir;
+    let td = TempDir::new().unwrap();
+
+    let repo_path = td.path().join("repo");
+    let git_service = GitService::new();
+    git_service
+        .initialize_repo_with_main_branch(&repo_path)
+        .unwrap();
+
+    let old_worktree_path = td.path().join("old-worktree");
+    WorktreeManager::create_worktree(
+        &repo_path,
+        "existing-branch",
+        &old_worktree_path,
+        "main",
+        true,
+    )
+    .await
+    .unwrap();
+    assert!(old_worktree_path.join(".git").is_file());
+
+    let desired_workspace_dir = td.path().join("workspace");
+    tokio::fs::create_dir_all(&desired_workspace_dir)
+        .await
+        .unwrap();
+    let desired_worktree_path = desired_workspace_dir.join("repo");
+
+    WorktreeManager::ensure_worktree_exists(&repo_path, "existing-branch", &desired_worktree_path)
+        .await
+        .unwrap();
+
+    assert!(!old_worktree_path.exists());
+    assert!(desired_worktree_path.join(".git").is_file());
 }

@@ -660,6 +660,17 @@ export function KanbanIssuePanelContainer({
       if (kanbanCreateMode) {
         // For statusId, open the status selection dialog with callback
         if (field === 'statusId') {
+          const statusId = value as string;
+          if (statusId && statusId !== createFormData?.statusId) {
+            updateIssueComposerDraft({ statusId });
+            dispatchFormState({
+              type: 'patchCreateFormData',
+              patch: { statusId },
+              fallback: createFormFallback,
+            });
+            return;
+          }
+
           const { ProjectSelectionDialog } = await import(
             '@/shared/dialogs/command-bar/selections/ProjectSelectionDialog'
           );
@@ -757,7 +768,13 @@ export function KanbanIssuePanelContainer({
           debouncedSaveDescription(value as string | null);
         }
       } else if (field === 'statusId') {
-        // Status changes go through the command bar status selection
+        const statusId = value as string;
+        if (statusId && statusId !== selectedIssue?.status_id) {
+          updateIssue(selectedKanbanIssueId, { status_id: statusId });
+          return;
+        }
+
+        // Fallback path for keyboard/command interactions without a direct value.
         openStatusSelection(projectId, [selectedKanbanIssueId]);
       } else if (field === 'priority') {
         // Priority changes go through the command bar priority selection

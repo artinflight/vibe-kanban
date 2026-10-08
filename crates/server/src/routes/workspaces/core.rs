@@ -16,6 +16,7 @@ use sqlx::Error as SqlxError;
 use utils::response::ApiResponse;
 use workspace_manager::WorkspaceManager;
 
+use super::workspace_summary::invalidate_workspace_summary_cache;
 use crate::{DeploymentImpl, error::ApiError};
 
 #[derive(Debug, Deserialize)]
@@ -189,5 +190,17 @@ pub async fn mark_seen(
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
     let pool = &deployment.db().pool;
     CodingAgentTurn::mark_seen_by_workspace_id(pool, workspace.id).await?;
+    invalidate_workspace_summary_cache();
+    Ok(ResponseJson(ApiResponse::success(())))
+}
+
+#[axum::debug_handler]
+pub async fn mark_unread(
+    Extension(workspace): Extension<Workspace>,
+    State(deployment): State<DeploymentImpl>,
+) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
+    let pool = &deployment.db().pool;
+    CodingAgentTurn::mark_latest_unseen_by_workspace_id(pool, workspace.id).await?;
+    invalidate_workspace_summary_cache();
     Ok(ResponseJson(ApiResponse::success(())))
 }

@@ -12,7 +12,37 @@ Concurrent/replayed IDs, lifecycle/EOF/stop and execution identity are covered.
 Real UI-hook payloads feed the offline service fixture; notifications/network and
 model usage are absent. Publication targets a draft PR into staging only.
 
-Validation and remote/CI receipts are being collected before final handoff.
+Draft PR: https://github.com/artinflight/vibe-kanban/pull/225 (base staging).
+Source commit `80d06cecf3bd6552b85b0a058ba87e7d695e1eca` was pushed and matched
+both `git ls-remote` and the GitHub PR head. The linked issue was reread and
+workspace `task_id` verified; no issue status/archive operation was performed.
+The workspace's repository target metadata was corrected from main to staging;
+existing draft PR225 was attached through the normal API and its issue-board
+projection reread. No agent execution or runtime operation was triggered.
+
+Validation passed: all 152 non-opt-in executor tests (six existing skips), all
+18 service tests, final five MCP service regressions using the real UI-hook
+output, four typed-protocol tests, consent-card normalization, offline UI test,
+executor/services all-target Clippy, full formatting and ops governance.
+All frontend type checks passed with NODE_OPTIONS=--max-old-space-size=8192.
+Full `pnpm run check`, `pnpm run lint` and `cargo test --workspace` reached the
+host's missing GLib/GIO development libraries and cannot pass locally. The
+first type-check attempt exhausted Node's default heap; the CI heap retry passed
+the frontend checks. No host packages or runtime settings were changed.
+
+Isolated evidence (uncommitted, SSD): `/mnt/vk-storage/vk-mcp-approval-tests`
+and `/mnt/vk-storage/vk-mcp-approval-*.log`. Public source contains synthetic
+fixtures only, not private diagnostics. Actions were inspected locally and on
+GitHub before publication. Observed source pipeline: check-only Test run
+https://github.com/artinflight/vibe-kanban/actions/runs/37791310866.
+The source run completed successfully: branch policy/freshness, governance,
+frontend (including the new offline UI contract test), generated types/SQLx,
+backend Clippy, backend tests and Tauri checks all passed. The unchanged remote
+paths use the workflow's no-deploy-key skip; no remote deployment validation is
+claimed. This final receipt changes HANDOFF.md only; source remains identical
+to the green CI commit. Its push triggers a fresh PR check run, which must be
+checked before merge. Green source CI is not live release approval.
+
 Live activation: NOT performed. Review/CI and a separately authorized release
 remain necessary before live connector/operator acceptance. Do not resume the
 manager or operate Staging's stopped conversation/runtime from this stream.

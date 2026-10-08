@@ -1,5 +1,10 @@
 # October 8: Root-coordinated direct-to-B backup adoption
 
+The initial PR229 head hit an inherited 40 ms inspection-budget test flake.
+[VK_PR229_TRIAGE_CI.md](VK_PR229_TRIAGE_CI.md) records exact reproduction and
+test-only deterministic-clock coverage. Integrate the corrected reviewed head,
+not just the original direct-to-B commit, after its own CI reaches terminal.
+
 Read [VK_DIRECT_DESKTOP_STREAM.md](VK_DIRECT_DESKTOP_STREAM.md) for the isolated
 streaming fix, PR149 dependency, measured local footprint, exact receipts and
 integration limits. New captures stream complete archives directly to Desktop B,

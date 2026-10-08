@@ -1,5 +1,9 @@
 # October 8: Direct-to-Desktop archive streaming
 
+PR229 follow-up corrects inherited triage fixture timing, not routing policy.
+See [VK_PR229_TRIAGE_CI.md](VK_PR229_TRIAGE_CI.md). Preserve the direct-to-B fix
+and do not claim readiness while corrected-head CI is red or incomplete.
+
 Read [VK_DIRECT_DESKTOP_STREAM.md](VK_DIRECT_DESKTOP_STREAM.md) for the isolated
 streaming fix, PR149 dependency, measured local footprint, exact receipts and
 integration limits. New captures stream complete archives directly to Desktop B,

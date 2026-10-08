@@ -1574,3 +1574,12 @@ zero observed local payload bytes and 60 KiB peak metadata-file allocation.
 is unavailable in the sparse checkout. Read VK_DIRECT_DESKTOP_STREAM.md and its
 source-bound receipts. No production deployment, restart, old archive cleanup,
 full production restore, or Staging worktree/agent interaction occurred.
+
+## 2026-10-08 — PR229 inherited timing-test correction
+
+Reproduced the exact protected-triage assertion failure by delaying only the
+private test's directory reads past the existing 40 ms inspection budget. Source
+is inherited unchanged from staging/PR149. A scoped test-only clock preserves
+all Frontier assertions and production behavior; explicit deadline exhaustion
+and clock isolation tests are added. Exact-head CI remains required. See
+VK_PR229_TRIAGE_CI.md. Direct-to-B source and deployment/QA gates are unchanged.

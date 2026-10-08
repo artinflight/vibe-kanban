@@ -135,8 +135,10 @@ withdraws the earlier blanket accounting claim: 448 of 710 candidates lack
 baseline content evidence and cannot be classified as later-retired. Parent
 checks individually bind 14 accepted patch/result pairs and the rejected pair,
 match all 11 replayed files and compare all 15 recovery files. Overall replay
-fails because transcript line 415 remains unparsable. Separate independent
-row-level review is blocked by AutoSwitch qualification policy and has not run.
+fails because transcript line 415 remains unparsable. The separate Astra High
+row-level review completed at 13:59:52 UTC and substantiates the bounded findings;
+recovery-complete and universal-zero-loss sign-off remain withheld. See
+[the review tracking record](VK_INDEPENDENT_RECOVERY_REVIEW_20261008.md).
 All 145 original-history rows remain separately unresolved. Unobserved writes
 and metadata/coverage limitations prevent a universal zero-loss claim. The
 following earlier audit is dated 08:53; it does not certify the 448 absent names.

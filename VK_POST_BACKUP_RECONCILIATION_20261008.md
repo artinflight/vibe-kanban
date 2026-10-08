@@ -9,11 +9,15 @@ Seamus's supplied independent source review at
 `a23a2d2cd2c8ce9d0a064f3b662ce706e3f69c8a` verified argument checks,
 database/root identity protection, removal of automatic cleanup and passing CI.
 That review could not authenticate the private local/Desktop row evidence.
-The checks below are new **parent-agent checks**, not a separate independent
-review. AutoSwitch blocked the requested reviewer before creating a child thread:
-`Shadow recommendation exceeds inherited child qualification`. Its recommended
-qualification was `gpt-6-astra/high`; the operator-controlled policy disables
-escalation. A qualified separate reviewer or separate review session is required.
+The checks below were initially parent-agent checks. A separately authorized
+Astra High independent review has now completed at 13:59:52 UTC. It independently
+authenticated all three Desktop packets and reproduced the 710 dispositions,
+14 accepted patches plus rejection, 11 replayed files and 15 recovery files.
+Its actual verdict supports the corrected bounded findings and withholds
+recovery-complete/universal-zero-loss sign-off. See the [review record, safe
+artifacts and targeted next plan](VK_INDEPENDENT_RECOVERY_REVIEW_20261008.md).
+The earlier AutoSwitch-blocked attempt is historical; no duplicate reviewer or
+routing change was made. Immutable earlier parent receipts are not rewritten.
 
 ## Authenticated retained packets
 
@@ -45,7 +49,7 @@ the catch-up backup.
 | --- | --- |
 | 19 present | Current content matches the authenticated baseline receipt. |
 | 15 present | Current newer owner content matches the maintenance Git commit. |
-| 228 absent Hyrox names | Authenticated regular-file baseline rows passed the retained 08:53 audit. Their retained private baseline copies still match. The separate owner's retained merge log and release checkpoint match the packet's source hashes and corroborate later task retirement. Separate reviewer sign-off remains pending. |
+| 228 absent Hyrox names | Authenticated regular-file baseline rows passed the retained 08:53 audit. Their retained private baseline copies still match. The separate owner's retained merge log and release checkpoint match the packet's source hashes and corroborate later task retirement. The completed independent review corroborates this bounded disposition; exact per-file times and intermediate versions remain unproved. |
 | 448 absent Hyrox names | **No baseline content or 08:53 audit row exists.** The retained initial journal records deletion for all 447 generated `dist` names and `firebase-debug.log`. This local journal's SHA is recorded, but it is not authenticated by these two Desktop packets. These names cannot be classified as later-retired baseline files; their content and precise lifecycle remain unverified. |
 
 See [all 710 redacted dispositions](scripts/testing/startup-recovery-safety/evidence/20261008-review/mutation-dispositions-redacted.json)
@@ -110,7 +114,9 @@ See [read-only PR223 receipt](scripts/testing/startup-recovery-safety/evidence/2
 
 ## Remaining blockers and next authority boundary
 
-Independent row-level sign-off is unavailable until reviewer routing is resolved.
+Independent row-level review is complete and substantiates the bounded findings.
+Recovery-complete and universal-zero-loss sign-off remain withheld for the
+evidence gaps below; reviewer routing is no longer a blocker.
 The malformed transcript line and 448 content/lifecycle gaps remain explicit.
 The incident journal's overflows and `ready: false`, the earlier 45-error journal,
 and outside-root move history leave unobserved writes uncertified. The inventory
@@ -123,8 +129,10 @@ Only after independent sign-off should fresh-backup, protected fallback, writer
 fencing and controller acceptance be prepared as a separate next step. Cleanup
 must remain unavailable until Seamus's human QA passes. This review authorizes
 no cleanup, restore, deployment, restart, cutover or stopped-session resumption.
-See the [explicit withheld verdict](scripts/testing/startup-recovery-safety/evidence/20261008-review/verdict.json)
-and [safe evidence manifest](scripts/testing/startup-recovery-safety/evidence/20261008-review/manifest.json).
+The completed independent verdict is recorded [here](VK_INDEPENDENT_RECOVERY_REVIEW_20261008.md).
+The earlier [parent withheld verdict](scripts/testing/startup-recovery-safety/evidence/20261008-review/verdict.json)
+and [safe evidence manifest](scripts/testing/startup-recovery-safety/evidence/20261008-review/manifest.json)
+remain historical receipts; their old routing-block status is superseded.
 
 Private authentication/reproduction inputs and the parent audit program are under
 `/mnt/vk-storage/vk-startup-recovery-safety-20261008/independent-review`.

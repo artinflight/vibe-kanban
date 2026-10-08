@@ -7,14 +7,19 @@ rejected patch, match 11 replayed files and compare all 15 recovery files.
 The checker now fails overall on the preserved transcript parse error.
 Only 228 of 676 absent Hyrox names have baseline/08:53 evidence; the other 448
 have no baseline content and cannot be certified as later-retired. All 145
-original-history rows remain unresolved. Required separate review is blocked by
-AutoSwitch qualification policy; parent checks are not independent sign-off.
+original-history rows remain unresolved. The separately authorized Astra High
+review completed at 13:59:52 UTC and independently substantiates the corrected
+bounded findings; recovery-complete/universal-zero-loss sign-off is withheld.
+See VK_INDEPENDENT_RECOVERY_REVIEW_20261008.md for the copied redacted report,
+448-row list, source manifest and targeted read-only next-investigation plan.
+Earlier blocked delegation receipts are historical; no duplicate review or
+routing change is needed.
 PR223's remote commit and 11 checks are verified; the c31a workspace's absence
 around 12:40 is operator-reported and its cause unknown. No workspace recreation
 or incident-loss inference is authorized. Production/shared work remain untouched.
 No restart, cutover, restore or cleanup. Cleanup requires Seamus human QA.
 
-## Current: passing isolated repair; independent review pending
+## Earlier repair acceptance (source review and later evidence review now recorded)
 
 Draft [PR153](https://github.com/artinflight/vibe-kanban/pull/153), sourcea81d46e92,
 passes all10 CI checks:405 Cargo tests passed,7 skipped, plus14 audit regressions

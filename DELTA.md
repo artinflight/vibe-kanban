@@ -1561,3 +1561,16 @@ is preserved and its rollback archive is SHA256-verified on Desktop B:.
 VK_MOBILE_RELEASE_20261008.md records evidence and unverified regression cases.
 The test harness now also intercepts /v1 writes and matches exact visible project
 titles when an accessible needs-review indicator extends the button name.
+
+
+## 2026-10-08: Workspace-first mobile follow-up
+
+Implemented Workspaces as the root landing/list, contextual workspace Chat
+navigation, To do defaults with per-project session state on phones, and entire
+Kanban/workspace card attention tint/stripe/labels. Desktop board structure is
+preserved. Read-only browser tests cover five viewports/themes and deterministic
+review/approval/read/interrupted/clearing state. Frontend checks, format and
+ops governance pass; full Rust baseline attempts fail on absent host GTK/GLib
+pkg-config libraries. See VK_MOBILE_UX.md and the SSD evidence directory there.
+This feature follow-up is not deployed; Green PID3027197, production frontend
+and configured model/effort/Recommend-only routing remain unchanged.

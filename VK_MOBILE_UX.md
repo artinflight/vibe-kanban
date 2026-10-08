@@ -1,3 +1,62 @@
+# October 8 follow-up: Workspaces first and visible task attention
+
+This follow-up is a frontend-only feature preview, not a production release.
+The already-deployed phone redesign remains live; no backend restart is needed
+for these source changes. Execution model, effort and Recommend-only routing
+are unchanged.
+
+- After onboarding, `/` replaces the route with `/workspaces` for local accounts.
+  The workspace landing now renders the searchable activity list rather than
+  redirecting to the empty workspace-creation composer. Mobile Chat, Changes and
+  workspace tools appear after selecting or explicitly creating a workspace;
+  project and workspace creation remain reachable.
+- Untouched phone project feeds select To do (or the first available status for
+  customized projects without a To do status). All remains an explicit choice.
+  Per-project choices survive task detail, workspace and project navigation in
+  the current browser session; a fresh page load defaults to To do. Desktop
+  Kanban columns retain their layout.
+- Entire issue cards and linked workspace cards get an orange tint, border and
+  edge stripe when a completed workspace is unread, an approval is pending, or
+  the issue carries its explicit Needs review flag. Labels use the readable
+  theme foreground. Interrupted/failed executions do not become review items.
+  Archived workspaces are excluded and normal attention polling clears the
+  highlight. Background layers preserve custom workspace colors and selection
+  rings; opening chat retains the existing attention-clearing workflow.
+- Desktop workspace search now has the same accessible label as phone search.
+
+Validation evidence is under mounted SSD
+`/mnt/vk-storage/vk-workspaces-home-20261008`. Before screenshots capture the
+live standalone composer and All-selected project feed. After screenshots cover
+workspace landing, To do, navigation, conversations/composer and attention in
+light/dark mode. The checked-in read-only browser harness blocks API and project
+fallback writes, permits the summaries read, and simulates review/approval/read/
+interrupted/cleared states in responses without changing production turn flags.
+No prompts are executed. Physical Android keyboard, Safari/Firefox and real
+production mutations are outside this validation; keyboard geometry uses the
+existing VisualViewport simulation.
+
+The normal browser pass succeeded at 360/390/412/1440px and 390px dark, including
+project/task/workspace switching, Back and status retention, reading messages,
+composing without submitting, attachments and simulated keyboard geometry.
+A separate deterministic attention pass covers review, approval, interrupted,
+read and clearing states at 390/1440px plus 390px dark.
+
+Review screenshots were uploaded to this Vibe conversation artifact store and
+the retrieved bytes matched their SHA256 hashes:
+
+- attention: `attachment://a65b76b9-c5ec-4721-9c10-3c008cd16341`
+- landing: `attachment://f1cbcf8c-3442-41be-b2d2-4bdcb729ab33`
+
+The attention screenshot uses browser-only simulated review/approval states.
+These two review uploads are separate from the read-only behavior tests.
+
+Repository format, ops governance, all four frontend TypeScript checks, local/UI
+lint, changed shared frontend lint and browser script syntax checks passed.
+`pnpm run check`, `pnpm run lint` and `cargo test --workspace` were attempted;
+their Rust stages fail because this host lacks glib/gobject/gio pkg-config
+libraries. No Rust/backend source or generated types changed. CI must provide
+that remaining baseline coverage; physical browser/keyboard QA is unverified.
+
 # Phone UI and interaction design
 
 ## Released October 8

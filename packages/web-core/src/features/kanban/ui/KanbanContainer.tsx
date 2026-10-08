@@ -54,6 +54,7 @@ import {
   KanbanHeader,
   type DropResult,
 } from '@vibe/ui/components/KanbanBoard';
+import { getWorkspaceAttentionLabel } from '@vibe/ui/lib/workspaceAttention';
 import { KanbanCardContent } from '@vibe/ui/components/KanbanCardContent';
 import {
   IssueWorkspaceCard,
@@ -113,13 +114,6 @@ const areKanbanFiltersEqual = (
   );
 };
 
-type WorkspaceReviewState = {
-  hasPendingApproval?: boolean | null;
-  hasUnseenActivity?: boolean | null;
-  isRunning?: boolean | null;
-  latestProcessStatus?: string | null;
-};
-
 const ISSUE_FLAGS_METADATA_KEY = 'vk_flags';
 const NEEDS_REVIEW_ISSUE_FLAG = 'needs_review';
 
@@ -171,27 +165,6 @@ function setIssueFlag(
   }
 
   return nextMetadata;
-}
-
-function workspaceNeedsActionableReview(
-  workspace: WorkspaceReviewState
-): boolean {
-  if (
-    workspace.latestProcessStatus === 'failed' ||
-    workspace.latestProcessStatus === 'killed'
-  ) {
-    return false;
-  }
-
-  if (workspace.hasPendingApproval === true) {
-    return true;
-  }
-
-  return (
-    workspace.hasUnseenActivity === true &&
-    workspace.isRunning !== true &&
-    workspace.latestProcessStatus !== 'running'
-  );
 }
 
 function LoadingState() {
@@ -709,7 +682,12 @@ function CollapsedKanbanColumn({
  */
 export function KanbanContainer() {
   const isMobile = useIsMobile();
-  const [phoneStatus, setPhoneStatus] = useState<string | null>(null);
+  const phoneStatusByProject = useUiPreferencesStore(
+    (s) => s.phoneStatusByProject
+  );
+  const setPhoneProjectStatus = useUiPreferencesStore(
+    (s) => s.setPhoneProjectStatus
+  );
   const workspaceColors = useUiPreferencesStore((s) => s.workspaceColors);
   const setWorkspaceColor = useUiPreferencesStore((s) => s.setWorkspaceColor);
   const { t } = useTranslation('common');
@@ -1315,7 +1293,7 @@ export function KanbanContainer() {
           );
 
           return localWorkspace
-            ? workspaceNeedsActionableReview(localWorkspace)
+            ? !!getWorkspaceAttentionLabel(localWorkspace)
             : false;
         })
       );
@@ -1618,9 +1596,49 @@ export function KanbanContainer() {
     [insertTag, projectId]
   );
 
-  useEffect(() => {
-    setPhoneStatus(null);
-  }, [projectId, kanbanViewMode, listViewStatusFilter]);
+  // Untouched projects open at To do. Explicit selections survive navigating
+  // between tasks, workspaces and projects during this browser session.
+  const phoneStatuses = (
+    kanbanViewMode === 'kanban' ? visibleStatuses : sortedStatuses
+  ).filter(
+    (status) => !listViewStatusFilter || status.id === listViewStatusFilter
+  );
+  const defaultPhoneStatus =
+    phoneStatuses.find((status) => /^to[\s_-]*do$/i.test(status.name.trim()))
+      ?.id ??
+    phoneStatuses[0]?.id ??
+    null;
+  const selectedPhoneStatus = phoneStatusByProject[projectId];
+  const phoneStatus =
+    selectedPhoneStatus === null
+      ? null
+      : phoneStatuses.some((status) => status.id === selectedPhoneStatus)
+        ? selectedPhoneStatus
+        : defaultPhoneStatus;
+  const setPhoneStatus = (statusId: string | null) => {
+    setPhoneProjectStatus(projectId, statusId);
+  };
+
+  const getIssueAttentionLabel = (issueId: string) => {
+    const labels = getWorkspacesForIssue(issueId)
+      .filter(
+        (workspace) => !workspace.archived && workspace.local_workspace_id
+      )
+      .map((workspace) => {
+        const local = localWorkspacesById.get(workspace.local_workspace_id!);
+        return local ? getWorkspaceAttentionLabel(local) : undefined;
+      });
+    if (labels.includes('Needs approval')) return 'Needs approval';
+    if (
+      labels.includes('Needs review') ||
+      issueHasFlag(
+        issueMap[issueId]?.extension_metadata,
+        NEEDS_REVIEW_ISSUE_FLAG
+      )
+    )
+      return 'Needs review';
+    return undefined;
+  };
 
   const isLoading = projectLoading || orgLoading;
 
@@ -1831,10 +1849,14 @@ export function KanbanContainer() {
                   const workspace = workspaces.find(
                     (ws) => ws.localWorkspaceId
                   );
+                  const attentionLabel = getIssueAttentionLabel(id);
                   return (
                     <article
                       key={id}
-                      className="mobile-task-card phone-task-row"
+                      className={cn(
+                        'mobile-task-card phone-task-row',
+                        attentionLabel && 'kanban-attention-card'
+                      )}
                     >
                       <div className="phone-task-main">
                         <button
@@ -1854,12 +1876,9 @@ export function KanbanContainer() {
                           <span className="phone-task-title">
                             {issue.title}
                           </span>
-                          {issueHasFlag(
-                            issue.extension_metadata,
-                            NEEDS_REVIEW_ISSUE_FLAG
-                          ) && (
+                          {attentionLabel && (
                             <span className="phone-task-review">
-                              Needs review
+                              {attentionLabel}
                             </span>
                           )}
                         </button>
@@ -2027,13 +2046,19 @@ export function KanbanContainer() {
                             const issueCardPullRequests =
                               getPullRequestsForIssue(issue.id);
 
+                            const attentionLabel = getIssueAttentionLabel(
+                              issue.id
+                            );
                             return (
                               <KanbanCard
                                 key={issue.id}
                                 id={issue.id}
                                 name={issue.title}
                                 index={index}
-                                className="group"
+                                className={cn(
+                                  'group',
+                                  attentionLabel && 'kanban-attention-card'
+                                )}
                                 onClick={(e) => handleCardClick(issue.id, e)}
                                 isOpen={selectedKanbanIssueId === issue.id}
                                 isMobile={isMobile}
@@ -2043,6 +2068,7 @@ export function KanbanContainer() {
                                 <KanbanCardContent
                                   displayId={issue.simple_id}
                                   title={issue.title}
+                                  attentionLabel={attentionLabel}
                                   primaryContent={
                                     issueWorkspaces.length > 0 ? (
                                       <div className="flex flex-col gap-half">

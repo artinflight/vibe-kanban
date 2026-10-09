@@ -1,0 +1,39 @@
+{
+  "backend_source": "c3c48e6324f778ccd03a5761c2314b440e9ceac3",
+  "byte_count": 98449195,
+  "bytes": 28066372,
+  "candidate_path_binding": false,
+  "cutback_path_binding": false,
+  "desktop_directory": "B:/vk-backups/vk-safe-release-20261009/combined-frontend-5ce84ee2",
+  "desktop_verified": true,
+  "direct_stream": true,
+  "entry_hashes": {
+    "assets/index-CS-cRFJl.js": {
+      "bytes": 5597251,
+      "sha256": "d58ddd0288832d3081bcb520bfc66d90709d52440e51be8394639c05c57db647"
+    },
+    "assets/index-Y5IFow0P.css": {
+      "bytes": 130833,
+      "sha256": "661669197ccc2d660f56e8e811d80807c827db7b2419f0828e3c642212986576"
+    },
+    "index.html": {
+      "bytes": 2611,
+      "sha256": "905c20c656e3eb4d9a514f5df199bcee5c6b23db4f016ff666ee32a39e3966ca"
+    },
+    "site.webmanifest": {
+      "bytes": 546,
+      "sha256": "bcbe5b3874283fe0a472185d65218f491fb03d65451ea123477cd84a241ea232"
+    }
+  },
+  "files": 923,
+  "frontend_source": "66e00728c3efb10e806976e89dd8b4a122037e18",
+  "live_acceptance": false,
+  "local_archive_bytes": 0,
+  "name": "combined-frontend-5ce84ee2.tar.zst",
+  "operational_acceptance": false,
+  "raw_private_evidence_published": false,
+  "retained_prior_runtime_assets": 158,
+  "runtime_collisions": 0,
+  "sha256": "1cf30db81af3d96abdbfa6ee09f39484d7adb2ad09b5eed74ad40889d64c352a",
+  "source_commit": "5ce84ee21be814b1519cfb2715b50f3432c3e8ba"
+}

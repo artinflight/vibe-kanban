@@ -288,3 +288,53 @@ capacity requirement; see [the exact one-file exception request](VK_CATCHUP_CAPA
 No further retirement is authorized or performed. The original incident archive
 and metadata have been bitwise preserved on B without converting the failed
 capture into accepted recovery evidence. All historical exceptions remain open.
+
+## October 9, 13:10 UTC correction and current receipts
+
+The preceding no-authorization statement is superseded by the recorded 12:38
+owner approval for the single pinned incident archive, and only that archive.
+The independent operator consumer receipt is still absent. Approval is not
+clearance; no additional retirement, permission change or live effect occurred.
+
+The full initial materialization stopped at its final inventory comparison.
+Read-only diagnosis found exactly 537,645 expected and actual names, with no
+non-link metadata differences. The 225 differing rows belong to 67 hardlink
+groups; every expected alias has the correct actual inode relationship. The
+checker chose the first depth-first traversal name, whereas the authenticated
+archive uses the lexically smallest full path. These orders differ, for example,
+between `z/file` and `z-/file`. Canonicalizing full-path order corrects the
+representation without changing bytes, ownership, modes, timestamps or links.
+The exact restore failure and private diagnostic remain retained. No partial
+restore is accepted, no journal is manufactured, and content/DB re-verification
+is still required before this same candidate can be rehearsed.
+
+The new regression restores this adversarial hardlink layout and verifies both
+the exact manifest and real inode relationship. Initially 122 of 124 candidate
+tests passed; two package tests correctly refused uncommitted source. They must
+run again from clean committed source. `pnpm run format` was attempted and cannot
+run in this sparse tooling checkout without a package manifest. No dependencies
+or toolchains were installed to mask that limitation.
+
+Final combined frontend source is PR230 head
+`5ce84ee21be814b1519cfb2715b50f3432c3e8ba`, incorporating the authorized
+66e00728 frontend and retaining the newer combined consent repairs. Its freshly
+built package contains 923 files / 98,449,195 bytes, including 158 preserved
+prior runtime assets with zero conflicting runtime hashes. The prior diagnostic
+maps remain preserved at their original roots and in full B backups.
+The package is independently hash-verified at
+`B:/vk-backups/vk-safe-release-20261009/combined-frontend-5ce84ee2/combined-frontend-5ce84ee2.tar.zst`:
+28,066,372 bytes, SHA-256
+`1cf30db81af3d96abdbfa6ee09f39484d7adb2ad09b5eed74ad40889d64c352a`.
+No local archive payload was staged. The older 7810706e package remains retained
+and superseded. Backend/guard/routing artifacts remain pinned to c3c48e63.
+See [the redacted package receipt](scripts/deployment/receipts/combined-frontend-5ce84ee2-safe.json).
+
+Fresh Test run 37932897941 is in progress; its frontend checks have passed.
+Separate artifact run 37932898022 failed on the hosted runner's
+`bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted` prerequisite.
+No bypass or manufactured CI status occurred. Secure local Chromium startup
+also exited with SIGTRAP before UI acceptance; its cause remains unknown.
+Candidate/cutback frontend binding, mobile DOM and live consent acceptance,
+final held writer fencing/catch-up, measured fallback headroom and promotion
+remain unrun. PR230 and PR231 are draft and unmerged. Historical recovery
+exceptions remain unchanged; these source/package receipts are not deployment.

@@ -99,6 +99,22 @@ class FixtureSupervisor:
 
 
 class CandidateTests(unittest.TestCase):
+    def test_hardlink_primary_uses_full_path_order_not_directory_traversal(self):
+        for name in ('z', 'z-'):
+            (self.incumbent / name).mkdir()
+        first_visited = self.incumbent / 'z/file'
+        first_visited.write_bytes(b'preserved linked content')
+        os.link(first_visited, self.incumbent / 'z-/file')
+        rows = inventory(self.incumbent)
+        self.assertEqual(rows['z-/file']['kind'], 'file')
+        self.assertEqual(rows['z/file']['kind'], 'hardlink')
+        self.assertEqual(rows['z/file']['target'], 'z-/file')
+        self.provider.capture('initial')
+        self.restored()
+        a, b = (self.layout.tree / n for n in ('z/file', 'z-/file'))
+        self.assertEqual(a.stat().st_ino, b.stat().st_ino)
+        self.assertEqual(inventory(self.layout.tree), rows)
+
     def suffix_binary(self):
         header = bytearray(64)
         header[:7] = b'\x7fELF\x02\x01\x01'

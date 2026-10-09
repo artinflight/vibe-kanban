@@ -128,6 +128,11 @@ def inventory(root):
     visit(root)
     for aliases in inodes.values():
         require(all(count == len(aliases) for _, count in aliases), "hardlink escapes candidate inventory")
+        # Directory-first traversal is not lexical ordering of complete paths:
+        # e.g. z/file is visited before z-/file, while z-/file sorts first.
+        # Match the authenticated archive's canonical primary without changing
+        # the actual inode relationships or any file metadata.
+        aliases.sort(key=lambda alias: alias[0])
         first = aliases[0][0]
         for name, _ in aliases[1:]:
             rows[name]["kind"] = "hardlink"

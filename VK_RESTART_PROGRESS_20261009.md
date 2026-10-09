@@ -878,3 +878,76 @@ scope. Future single-archive retirement still requires its own fresh consumer,
 identity/dependency and held-boundary checks; it does not expand the old allowlist.
 All remaining application/rehearsal/consent/current-receipt/catch-up/latest-data
 fallback/live acceptance requirements remain unfulfilled, not waived.
+
+
+## 16:19 consumer-boundary sequencing repair (no retirement/cutover)
+
+Owner approvals remain valid: exact one-file retirement, Sentinel_3c972054e9688191900e38417fd55e00
+at12:38:25UTC, and brief service interruption, Sentinel_dd64f5923b088191aeef2ff5dc5b82fd
+at14:40:34UTC. These are conditional on the existing safety gates; no new privilege
+installation, broader cleanup or recovery acceptance is authorized.
+
+The new15:35:17UTC operator receipt was authenticated against the unchanged helper,
+preservation manifest, exact inode and Seamus's15:35:23UTC completion. It records
+root inspection with no matches or denied inspections. Its SHA256 is
+443032f47a9abaed509d12beba4daa736e2f75aebf5e99d0a5fc60022709d894.
+It proves that dated inspection, not consumers after it. The real one-file retry
+started but stopped BEFORE unlink on a safety check; this was not a further
+approval rejection. It left the archive and every protected copy unchanged.
+
+That retry incorrectly performed expensive native/B hashes and SSH operations
+AFTER accepting the root receipt. Protected SSH/SFTP PIDs1632206/1632291/1632292
+were born15:42:48UTC; the15:35 receipt cannot cover them. We do not infer their
+creator or archive use from those observations. Kernel workers also appeared;
+comm names alone are not proof of consumer absence. The failed attempt and safe
+held-state record remain in vk-runtime-backup-20261009; none was overwritten.
+The superseded1545 snapshot request is withdrawn until preparation ordering is
+correct. Repeated manual snapshots followed by SSH orchestration are not a fix.
+
+A one-file unprivileged prepare-first continuation is retained in
+scripts/deployment/receipts/retire-approved-single-incident-archive-prepare-first-20261009.py.
+It completes exact native/B/archive-metadata hashes and all SSH children before
+waiting for NEW independently authenticated manual clearance. It closes the
+archive FD before the unchanged root helper: the helper has no holder exemption.
+It preserves the live candidate owner, freezes local dependency identities and
+blocks later Python-managed fork/exec/process/TCP/unrelated Unix channels.
+After clearance it performs only bounded in-process receipt, process-reference,
+visible-path/inode, dependency, owner and exclusive-lease checks, then the exact
+approved one-file continuation. Newly uninspectable processes and process
+birth/reuse during the final local inspection block continuation. It requires
+Staging to authenticate the actual operator action; a file merely claiming
+euid:0 or an arbitrary confirmation string is not independently sufficient.
+Completion logging uses the existing nonfatal notifier after durable results.
+
+Three isolated regressions exercised real preparation children and rejected
+post-clearance subprocess, fork/shell, TCP and unrelated Unix-channel attempts.
+They do not fabricate operational root visibility or deletion acceptance.
+The first prepared resident2084790 reached the wait after successful native/B
+hashes at16:19. It was stopped ONLY before clearance/unlink to add final local
+process-inventory/visible-parent checks and nonfatal completion logging. No
+operator was asked to run a scan for that preliminary resident. The corrected
+resident must reach readiness before the final manual helper is requested.
+
+This is managed-owner protection plus approved consumer clearance, not an atomic
+global open fence. An already-existing unrelated process can open a file after a
+read-only scan. We do not claim otherwise or invent an unattainable prerequisite.
+No approved gate is waived; no root scanner, sudoers rule or persistent privilege
+was installed. Existing manual operator authentication remains the supported
+privileged inspection route; denied MCP-user access is not bypassed.
+
+Findings were delivered by active-turn steering to the EXISTING source-only
+checker session6330face-7cfb-43d8-89ff-2906f64ef64a/execution2f8ab9fa-4eaa-40a3-8f74-471c71f1d789.
+No new execution was started and none of its files were edited. It is correcting
+the redundant post-scan verify_gates callback and removing the invented global
+consumer-fence requirement, with real process-event regressions. Its new
+privileged ABI remains source-only and uninstalled; no deployment dependency is
+created from that proposal.
+
+At16:11:57 the actual archive still had dev2065/inode7340415/23441521918bytes and
+all pinned owner/mode/link/mtime/ctime values. Preparation owner500933/start757986989
+still held its kernel lease in restored phase, activation/cleanup unavailable.
+Full initial restore, original journals, B evidence, incumbent and fallback remain
+protected. No further restore, candidate start, writer stop, merge, route switch
+or cutover occurred. The actual application rehearsal, final fenced B catch-up,
+consent/frontend/controller acceptance and latest-data fallback remain open.
+The448/145/transcript415/journal/mode/link exceptions are unchanged.

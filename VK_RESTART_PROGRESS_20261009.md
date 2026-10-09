@@ -1258,3 +1258,45 @@ after this execution closes. Phone/human QA and historical448/145/transcript415/
 journal/mode/link exceptions remain open. No permanent-helper adoption or
 archive removal is necessary for this route. See current-state-cutover-handoff
 safe receipt for immutable source/artifact and exact pending operation bindings.
+
+## 20:31 completed current-state release; 20:51 deferred safeguards relay
+
+Actual actor completed20:31:20UTC. Monotonic handoff9.937453607seconds includes
+ownership release, final92,372,992byte primary DB B snapshot/readback, explicit
+identity enrollment, server startup/acquisition, route/frontend publication,
+HTTPS/API/HTML/JS/CSS/manifest checks and boot binding. Post-turn independent
+read-only verification confirmed API0.1.42, backend2aa884b3 and actual5ce84/66
+frontend hashes. New5561service and CU run; original3027197 stays frozen.
+No archive retired; no older snapshot restored; cleanup disabled and QA pending.
+
+Journal records actor start20:30:17 and finish20:31:20: about63seconds INCLUDING
+about53seconds awaiting actual Staging execution completion. Approximate receipt
+intervals from prepared state: ownership1.576sec, Bprimary readback6.470sec,
+identity6.490sec, HTTPS health8.333sec, boot/final9.952sec. These phase estimates
+use filesystem timestamps; only9.937453607total is monotonic instrumented timing.
+The20:15changed instruction to completion was about16min20sec including source
+preparation/repair. This is not proof an entire routine restart met ten minutes;
+whole preparation was not fully instrumented. Report preparation separately.
+
+At20:51:08UTC supported live steering returnedHTTP200/success/status:empty to
+existing OP6330face session/e0863cef execution, without new execution, routing or
+implementation duplication. Target has no scheduled grant; published Codex queue
+route returns empty after active steering rather than spawning a follow-up.
+Relay sets TEN MINUTES for whole routine restart+cutover; scripted host nightlies
+without routine LLM calls; nightly preparation of time-independent verification/
+build readiness; minimal actual live freshness/consistency/health checks. ONE
+normal retained Bnightly with atomic verified promotion before old replacement,
+bounded overlap/failed partials, and no incrementals referencing removed baseline.
+Actual schedule/test receipts are required before claiming enabled. Incident
+evidence/fallback are excluded from nightly retention. No manual owner commands,
+new privileges/security changes or production cleanup are authorized here.
+
+Current data reuse removed stale-restore risk and6.33GB temporary duplication.
+All original current roots remained authoritative; retained historical Bbackup
+and isolated recovery tree are separate. The fresh primary DB image is not a
+new whole-state backup. Original incumbent cannot parse v2capacity state; only
+the already packaged compatible cutback can use latest data after writes.
+Do not revert to stale data or erase first-run holds. All historical448/145/
+transcript415/journal/mode/link exceptions remain. See post-cutover refinement
+receipt for relay and measured timing provenance. Source owner retains all
+implementation ownership; Staging contribution is actual evidence and lessons.

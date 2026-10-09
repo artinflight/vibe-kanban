@@ -819,3 +819,35 @@ reconstruction of interrupted operations or operational acceptance. Actual
 PID500933 remains unchanged; no ownership transfer has been performed.
 The59 controller tests passed; package tests correctly refused the uncommitted
 working source, so the complete suite is rerun from the immutable checkpoint.
+
+## 15:02 actual-root read-only namespace acceptance
+
+All142 focused candidate tests pass from immutable source868999dd, remotely
+verified on PR231. The sparse tooling checkout has no package.json, so
+pnpm run format cannot run there; no backend/frontend source rebuild was done.
+
+The actual MCP candidate's virtual database/workspace/Codex-home/controller/token
+selectors were inspected inside a read-only filesystem/PID/network namespace.
+All five resolve to the independently restored candidate inodes; the absolute
+/home/mcp/code/worktrees alias resolves inside its own /mnt/vk-storage/worktrees.
+Host manager sockets and incumbent TCP are hidden. Both pinned candidate/fallback
+binary hashes and the final5ce84ee2 frontend HTML are visible read-only.
+See scripts/deployment/receipts/actual-candidate-readonly-namespace-20261009.json
+and its retained reproducible helper. This is actual-root mapping proof only,
+not a launched application, writable-worker boundary, live consent or cutover.
+The first probe correctly failed because /opt was read-only and the new target
+did not exist. Using existing private /run tmpfs corrected the mount declaration;
+no host permission, security setting or denied identity/route was changed.
+
+At15:01:48UTC, native archive and B copy both hash e994567e..., with exact native
+inode/size/owner/mode/link/mtime/ctime and archived atime unchanged. The retained
+B metadata bundle hashes c783bbc9.... The one archive is outside all77capture
+roots. The readback receipt is scripts/deployment/receipts/
+excluded-incident-archive-fresh-readback-20261009.json. No file was deleted.
+
+The read-only operator check requested at14:50 writes a NEW private receipt
+excluded-incident-archive-operator-consumer-clearance-1450.private.json, retaining
+the authenticated13:35 receipt. It remains pending as of this observation.
+A stale successful consumer observation cannot prove current protected-process
+absence at retirement. No sudo retry or alternate privileged route is attempted.
+The current native reserve and operational acceptance gates remain held.

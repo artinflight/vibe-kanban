@@ -1,0 +1,24 @@
+{
+  "B_archive": {
+    "bytes": 23441521918,
+    "remote": "B:/vk-backups/vk-safe-release-20261009/excluded-incident-archive-preservation/checkpoint--db5bb16b095241319a79e02e5fc8cdf6.tar.zst",
+    "sha256": "e994567edaacc75d8aa9a3497b8384a8dbacec462854a3f7f8c5760e1a9a0ce4"
+  },
+  "B_metadata": {
+    "bytes": 4298474,
+    "remote": "B:/vk-backups/vk-safe-release-20261009/excluded-incident-archive-preservation/excluded-incident-archive-metadata-preservation.tar.gz",
+    "sha256": "c783bbc9d54093be2e03efd6e5623909cd1603e53321bae317b7c74dc74b3987"
+  },
+  "capture_roots": 77,
+  "deletion_performed": false,
+  "native": {
+    "allocated_bytes": 23441530880,
+    "atime_unchanged": true,
+    "bytes": 23441521918,
+    "identity_unchanged": true,
+    "sha256": "e994567edaacc75d8aa9a3497b8384a8dbacec462854a3f7f8c5760e1a9a0ce4"
+  },
+  "outside_all_capture_roots": true,
+  "production_changed": false,
+  "utc": "2026-10-09T15:01:48Z"
+}

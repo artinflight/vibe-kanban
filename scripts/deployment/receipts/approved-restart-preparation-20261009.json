@@ -243,6 +243,37 @@
       "intentional_retirement_proven": false,
       "current_functionality_loss_proven": false,
       "remaining_unknown": "Recorded targets unavailable; lifecycle and any indirect saved-profile/session dependency unproven. Exact literals retained; current configured/runtime closure still requires acceptance."
-    }
+    },
+    "actual_full_B_provider": {
+      "all_original_roots": 77,
+      "archived_atime_bound": true,
+      "candidate_restored": false,
+      "full_restore_verified": false,
+      "manifest_sha256": "c7c9ec848acb017c059e4ea18e14394f708ed3076d66ff8c42c9efdad7d59503",
+      "members": 537645,
+      "metadata_encoded_bytes": 184457754,
+      "native_available_bytes": 105821310976,
+      "operational_dependency_closure_verified": false,
+      "passed": true,
+      "payload_bytes": 93864377002,
+      "phase": "full-B-provider-verified",
+      "production_changed": false,
+      "recorded_missing_links": 589,
+      "regular_file_block_rounding_lower_bound": 1291818326,
+      "required_databases": 76,
+      "scope_reduced": false,
+      "seconds": 1238.982,
+      "tool_source": "01af7c36f1ba969fa4457278b8fd0978fe76c2b1",
+      "utc": "2026-10-09T10:19:07.728091+00:00"
+    },
+    "candidate_bootstrap_live_source_inspection": {
+      "primary_application_DB_has_runtime_identity_table": false,
+      "valid_shape_singleton_count": 0,
+      "dataset_value_not_published": true,
+      "main_file_inode_unchanged": true,
+      "main_file_mtime_unchanged_during_read": true,
+      "inspection_only_no_enrollment": true
+    },
+    "controller_bootstrap_contract": "isolated required-DB only; no overwrite; after final catch-up promotion held until fresh same-root B generation verifies"
   }
 }

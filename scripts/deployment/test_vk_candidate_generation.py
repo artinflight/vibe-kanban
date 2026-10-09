@@ -473,6 +473,54 @@ class CandidateTests(unittest.TestCase):
         self.assertIs(validate_manifest(rows), rows)
         self.assertEqual(recorded_link_exceptions(rows), {})
 
+    def test_explicit_candidate_bootstrap_requires_new_B_capture_after_catchup(self):
+        before = inventory(self.incumbent)
+        self.restored()
+        token = "0123456789abcdef" * 2  # Isolated fixture, not a production identity.
+        self.controller.bootstrap_identity('/home/state/state.sqlite', '/home/worktrees', token)
+        self.assertEqual(inventory(self.incumbent), before)
+        self.controller.accept_rehearsal()
+        self.provider.capture('final')
+        self.supervisor.capture = 'final'
+        self.controller.catch_up('final')
+        with self.assertRaisesRegex(Blocked, 'one-time enrollment'):
+            namespace_runtime_identity(self.layout, '/home/state/state.sqlite', '/home/worktrees')
+        self.controller.bootstrap_identity('/home/state/state.sqlite', '/home/worktrees', token)
+        with self.assertRaisesRegex(Blocked, 'catch-up required'):
+            self.controller.promote()
+        self.provider.capture('bootstrap', root=self.layout.tree, origin=self.layout.binding())
+        self.supervisor.capture = 'bootstrap'
+        self.controller.accept_bootstrap_capture('bootstrap')
+        self.controller.promote()
+        self.assertEqual(self.controller.phase, 'active')
+        self.assertEqual(inventory(self.incumbent), before)
+        with sqlite3.connect(self.layout.tree / 'home/state/state.sqlite') as db:
+            self.assertEqual(db.execute('SELECT value FROM retained').fetchall(), [('before',)])
+            self.assertEqual(db.execute('SELECT dataset_id FROM vk_runtime_identity').fetchall(), [(token,)])
+
+    def test_bootstrap_cannot_overwrite_identity_or_enroll_an_unverified_DB(self):
+        self.restored()
+        with self.assertRaisesRegex(Blocked, 'invalid explicit'):
+            self.controller.bootstrap_identity('/home/state/state.sqlite', '/home/worktrees', 'not-a-token')
+        with self.assertRaisesRegex(Blocked, 'outside authenticated required'):
+            self.controller.bootstrap_identity('/home/state/note', '/home/worktrees', 'a' * 32)
+        self.controller.bootstrap_identity('/home/state/state.sqlite', '/home/worktrees', 'a' * 32)
+        with self.assertRaises(Blocked):
+            self.controller.bootstrap_identity('/home/state/state.sqlite', '/home/worktrees', 'b' * 32)
+        self.assertEqual(self.controller.phase, 'restored')
+
+    def test_bootstrap_closes_WAL_owner_and_preserves_existing_rows(self):
+        db = sqlite3.connect(self.database)
+        db.execute('PRAGMA journal_mode=WAL')
+        db.close()
+        self.provider.capture('initial')
+        self.restored()
+        self.controller.bootstrap_identity('/home/state/state.sqlite', '/home/worktrees', 'a' * 32)
+        path = self.layout.tree / 'home/state/state.sqlite'
+        self.assertFalse(any(os.path.lexists(str(path) + s) for s in ('-wal', '-shm', '-journal')))
+        with sqlite3.connect(path.as_uri() + '?mode=ro&immutable=1', uri=True) as checked:
+            self.assertEqual(checked.execute('SELECT value FROM retained').fetchall(), [('before',)])
+
     def test_external_hardlink_to_incumbent_blocks_inventory(self):
         self.restored()
         os.link(self.incumbent / "home/state/note", self.layout.tree / "external")

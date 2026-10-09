@@ -459,3 +459,44 @@ test binaries; its starlark archive has17members/70,140,838bytes versus the
 interrupted archive's metadata-only member. All prior failed outputs stay retained.
 Final complete artifact manifest/scanner/module/combined runtime acceptance is
 still pending. The full B provider verification also remains running.
+
+## Actual full provider proof and explicit candidate bootstrap
+
+Actual packaged provider01af7c36 has now passed both complete B-stream reads and
+all per-file/snapshot/header checks:537,645entries including27generated strict
+ancestors,76required snapshots,manifestc7c9ec848acb017c059e4ea18e14394f708ed3076d66ff8c42c9efdad7d59503.
+Authenticated metadata encodes184,457,754bytes within256MiB; archived timestamps
+are bound. All captured members haveUID/GID1000 and no extended-attribute header
+was present. This is archive proof, not restored metadata acceptance.
+
+Actual virtual resolution found589missing-link exceptions across ALL4,501links.
+The prior575count considered direct out-of-inventory targets only;14additional
+indirect chains are now explicit. No host fallthrough or retirement inference.
+Full scope remains77roots. Payload93,864,377,002bytes plus regular-file block
+rounding lower bound1,291,818,326bytes and8GiBreserve leaves2,075,181,056bytes
+before directories/package/catch-up, against105,821,310,976available at proof.
+Actual allocation/refresh reserve remains required; estimates do not authorize
+cutover or further cleanup.
+
+A read-only live-schema check found no vk_runtime_identity table; DBinode/mtime
+were unchanged by the inspection. New source requires explicit candidate-only
+bootstrap. The controller now implements a stopped, authenticated required-DB
+seed with an atomic transaction, existing-token overwrite prohibition and
+incumbent protection. Rehearsal enrollment is a test edit; final catch-up
+quarantines it. Post-catch-up enrollment holds promotion until a NEW authenticated
+B capture matches this exact stopped candidate generation and root binding.
+The old bootstrap cannot be reused to accept a stale capture. Original source
+enrollment remains false, and startup never creates or repairs tokens.
+
+Tests exercise original-row preservation, unchanged incumbent, catch-up removal
+of rehearsal identity, stale/missing B-capture hold, same-root promotion after
+fixture backup, invalid identity/unverified database rejection, and closing WAL
+ownership without leaving bookkeeping. These are fixtures, not a live bootstrap
+or release acceptance. Actual candidate tree remains unmaterialized.
+
+Controller bootstrap validation:38 isolated controller/scope regressions pass.
+Four additional real-archive verified-index reuse tests pass. To avoid repeating
+the completed20minute full-header/content audit, a new bounded checkpoint-index
+provider requires hash-pinned B preservation and source binding, fresh B index/
+archive verification, complete replay hash and unchanged full metadata/DB checks.
+This authorizes no operational acceptance. Actual restore is the next step.

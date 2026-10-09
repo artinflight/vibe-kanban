@@ -4,7 +4,7 @@ The sealed owning controller supplies its pinned backup reader and supervisor.
 This module never captures production, connects to Desktop, runs a binary,
 deletes files, or resumes the historical conversation. Tests retain their files.
 """
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 from dataclasses import dataclass
 import hashlib
 import base64
@@ -643,6 +643,86 @@ class CandidateController:
         self.test_receipt = receipt
         self.checkpoint("rehearsal", receipt)
         self.phase = "tested"
+
+    def bootstrap_identity(self, database_virtual, workspace_virtual, dataset_id):
+        """Explicit candidate-only schema seed; never enroll the incumbent.
+
+        Rehearsal enrollment is a test edit and final catch-up quarantines it.
+        Enrollment after final catch-up blocks promotion until an authenticated
+        fresh B capture contains this exact, stopped candidate generation.
+        """
+        require(self.phase in ("restored", "refreshed"), "identity bootstrap lacks a stopped prepared generation")
+        prior_phase = self.phase
+        self.supervisor.verify_stopped(self.layout.binding())
+        if prior_phase == "refreshed":
+            self.supervisor.verify_fence(self.boundary)
+        require(isinstance(dataset_id, str) and len(dataset_id) == 32
+                and all(c in "0123456789abcdef" for c in dataset_id), "invalid explicit dataset identity")
+        bindings = binding_environment(self.layout, {"database": database_virtual, "workspaces": workspace_virtual},
+                                       preserved_capture=self.boundary)
+        name = bindings["selectors"]["database"]["resolved_virtual"].lstrip("/")
+        require(name in self.sqlite_paths and self.rows[name]["kind"] == "file",
+                "bootstrap database is outside authenticated required snapshots")
+        path = Path(bindings["selectors"]["database"]["backing"])
+        require(path.stat().st_nlink == 1, "bootstrap database has external/other aliases")
+        with open_regular(self.layout.tree, name) as stream:
+            require(hashlib.file_digest(stream, "sha256").hexdigest() == self.rows[name]["sha256"],
+                    "bootstrap database changed since authenticated restore")
+        with closing(sqlite3.connect(path.as_uri() + "?mode=ro&immutable=1", uri=True)) as db:
+            require(not db.execute("SELECT 1 FROM sqlite_master WHERE name='vk_runtime_identity'").fetchall(),
+                    "existing dataset identity must be retained, not replaced")
+        require(not any(os.path.lexists(str(path) + s) for s in ("-wal", "-shm", "-journal")),
+                "bootstrap database has live bookkeeping files")
+        before = path.stat()
+        self.checkpoint("identity-bootstrap-intent", {"root_binding": self.layout.binding(),
+            "source": self.source, "capture_id": self.boundary["capture_id"],
+            "prior_manifest_sha256": digest(self.rows), "database": name,
+            "dataset_id_sha256": hashlib.sha256(dataset_id.encode()).hexdigest(),
+            "original_source_enrolled": False})
+        self.phase = "bootstrapping-identity"
+        # Only this missing table is created. There is no startup auto-enrollment
+        # or token overwrite path, and all original application tables survive.
+        with closing(sqlite3.connect(path)) as db:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("CREATE TABLE vk_runtime_identity (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), "
+                       "dataset_id TEXT NOT NULL UNIQUE)")
+            db.execute("INSERT INTO vk_runtime_identity(singleton,dataset_id) VALUES(1,?)", (dataset_id,))
+            db.commit()
+        after = path.stat()
+        require((before.st_dev, before.st_ino, before.st_uid, before.st_gid, before.st_mode)
+                == (after.st_dev, after.st_ino, after.st_uid, after.st_gid, after.st_mode),
+                "bootstrap changed database identity/ownership/mode")
+        require(not any(os.path.lexists(str(path) + s) for s in ("-wal", "-shm", "-journal")),
+                "bootstrap left unnormalized SQLite bookkeeping")
+        self.supervisor.verify_stopped(self.layout.binding())
+        if prior_phase == "refreshed":
+            self.supervisor.verify_fence(self.boundary)
+        identity = namespace_runtime_identity(self.layout, database_virtual, workspace_virtual,
+                                               preserved_capture=self.boundary)
+        self.bootstrap_rows = inventory(self.layout.tree)
+        self.checkpoint("identity-bootstrap", {"root_binding": self.layout.binding(),
+            "prior_capture_id": self.boundary["capture_id"], "database": name,
+            "new_manifest_sha256": digest(self.bootstrap_rows), "runtime_identity_sha256": identity["sha256"],
+            "original_source_enrolled": False, "fresh_B_capture_required_before_promotion": True})
+        self.phase = "restored" if prior_phase == "restored" else "needs-bootstrap-backup"
+        return identity
+
+    def accept_bootstrap_capture(self, capture):
+        require(self.phase == "needs-bootstrap-backup", "bootstrap backup lacks a pending tracked transformation")
+        self.supervisor.verify_stopped(self.layout.binding())
+        verified = self.authenticated(capture, frozen=True)
+        require(capture != self.boundary["capture_id"]
+                and verified["origin_root_binding"] == self.layout.binding(),
+                "bootstrap backup is stale or from different roots")
+        require(verified["entries"] == self.bootstrap_rows, "bootstrap capture differs from tracked candidate state")
+        proof = verify_tree(self.layout, verified["entries"], self.sqlite_paths,
+                            recorded_link_exceptions=capture_link_exceptions(verified))
+        proof.update(self.restore_atimes(verified))
+        self.rows, self.boundary = verified["entries"], verified
+        self.checkpoint("identity-bootstrap-backed-up", {**proof, "capture_id": capture,
+                        "source": self.source, "scope": self.scope})
+        self.phase = "refreshed"
+        return proof
 
     def catch_up(self, capture):
         require(self.phase == "tested", "final refresh requires accepted rehearsal")

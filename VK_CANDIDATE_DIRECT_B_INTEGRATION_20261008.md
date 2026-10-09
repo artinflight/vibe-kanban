@@ -180,3 +180,32 @@ The exception inventory counts toward the bounded metadata budget. Existing
 archive/header/content authentication, hardlink metadata, archived-atime policy,
 ownership/xattr restrictions, mode0555 quarantine, writer fencing and cleanup
 prohibition remain enforced. No PR229 reviewed source file was edited.
+
+## Explicit identity bootstrap after current-data reconciliation
+
+New startup refuses a missing dataset token. Explicit CandidateController
+bootstrap_identity requires a stopped restored/refreshed generation and an
+authenticated standalone required DB, resolving paths only in candidate roots.
+It creates the missing identity table atomically, never overwrites an existing
+identity or enrolls original live state, and preserves DBinode/owner/mode.
+Rehearsal identity is quarantined during fresh final catch-up. Final enrollment
+changes phase to needs-bootstrap-backup; promotion remains blocked until
+accept_bootstrap_capture authenticates a NEW frozen B generation with origin
+bound to the SAME candidate and exact tracked post-bootstrap inventory.
+This is an explicit transformation/accounting step, not startup auto-repair,
+historical recovery acceptance or authorization to alter production data.
+
+## Reuse of a verified full checkpoint index
+
+VerifiedCheckpointProvider accepts only a hash-pinned, B-preserved full
+checkpoint index and its exact verifier package/source. Its manifest must match
+the recorded verifier result; operational reuse keeps the unchanged absolute
+namespace and descriptor scope/generation. It freshly verifies the B index and
+complete archive hashes, then replay drains the whole archive while per-file
+content checks and full metadata/SQLite validation remain mandatory. This saves
+a redundant full header/content-index reconstruction before the same-candidate
+restore, not the restore or its acceptance. Deltas, changed captures, custom
+operational readers, tampered indexes and unpreserved indexes fail closed.
+Four real-archive fixture regressions passed, including canonical hardlink and
+SQLite mapping, changed archive/early-consumption rejection and preservation
+requirements. Operational cache use/whole restore is not yet exercised.

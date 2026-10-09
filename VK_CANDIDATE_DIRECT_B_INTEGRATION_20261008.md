@@ -355,3 +355,29 @@ successful content verification. Partial/changed data, live writers, bad B
 bindings and existing journals fail closed. Four focused new regressions pass;
 this method has not yet been used on the real candidate. Existing completed-
 journal recovery remains separately restricted and unchanged.
+
+October 9 continued validation: all 128 candidate regressions passed from clean
+committed source 80754950; ops governance passed and the exact remote branch SHA
+matched. Both unchanged pinned MCP candidate and compatible fallback servers
+served 163 final frontend paths with matching hashes inside private filesystem,
+PID, network and manager boundaries. Coverage includes root and /workspaces HTML,
+entry JS/CSS, versioned manifest and all 158 retained runtime assets. Empty
+private fixtures were used; this is runtime/frontend compatibility, not launch
+or path binding of the actual restored candidate. See the
+[redacted two-runtime receipt](scripts/deployment/receipts/final-frontend-both-runtime-20261009.json).
+The original secure-browser SIGTRAP remains unexplained. A minimal empty-profile
+probe of the same browser in a private network/filesystem boundary initialized
+without that signal, but timed out before DOM proof; no sandbox was disabled and
+no browser acceptance is claimed. No additional archive retirement occurred.
+
+At 13:23 UTC the retained actual MCP candidate completed corrected full
+verification: all 537,645 manifest rows match, and all 76 database integrity checks
+passed. Runtime was 858 seconds with a 4 GiB unit memory peak. No content was
+restored again or overwritten, and no prior failed journal was manufactured.
+See the [redacted actual-tree receipt](scripts/deployment/receipts/actual-initial-materialization-reverified-20261009.json).
+This verifies included content, modes, ownership, mtimes, ACL/xattrs and actual
+symlink/hardlink relationships against the authenticated baseline index.
+Archived-atime restoration and fresh B authentication remain necessary before
+controller adoption. The 589 original link exceptions and unavailable historical
+inode/ctime/birthtime metadata remain explicit. This is not operational rehearsal,
+current fenced data, recovery-complete acceptance or permission for promotion.

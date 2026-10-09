@@ -1,0 +1,26 @@
+{
+  "actual_candidate_path_binding": false,
+  "live_routed_acceptance": false,
+  "operational_acceptance": false,
+  "private_filesystem_pid_network_manager_boundary": true,
+  "production_changed": false,
+  "runtimes": [
+    {
+      "actual_candidate_root_used": false,
+      "binary_sha256": "2aa884b359d21373e38c49a6e1589a10e5f69f7c384d2be44515fc0fab41b70f",
+      "empty_private_fixture": true,
+      "frontend_source": "5ce84ee21be814b1519cfb2715b50f3432c3e8ba",
+      "role": "candidate",
+      "served_paths_verified": 163
+    },
+    {
+      "actual_candidate_root_used": false,
+      "binary_sha256": "c6ebdd425e097f886cca8ae7781ddecb8b96cd96fde4e8c0f70362a5612faa91",
+      "empty_private_fixture": true,
+      "frontend_source": "5ce84ee21be814b1519cfb2715b50f3432c3e8ba",
+      "role": "rollback",
+      "served_paths_verified": 163
+    }
+  ],
+  "sandbox_disabled": false
+}

@@ -1,0 +1,22 @@
+{
+  "archived_atime_restored": false,
+  "candidate_launched": false,
+  "controller_journal_adopted": false,
+  "elapsed_seconds": 858.314,
+  "files_and_metadata_match": true,
+  "fresh_B_reauthentication_required_before_adoption": true,
+  "historical_recovery_accepted": false,
+  "included_source_roots": 77,
+  "manifest_rows": 537645,
+  "manifest_sha256": "c7c9ec848acb017c059e4ea18e14394f708ed3076d66ff8c42c9efdad7d59503",
+  "no_restore": true,
+  "operational_acceptance": false,
+  "original_inode_ctime_birthtime_known": false,
+  "phase": "full-content-db-linux-metadata-reverified",
+  "production_changed": false,
+  "recorded_missing_link_exceptions": 589,
+  "root_binding": "cf07ddd1f356cd64ea9da1da5f053ff8ffa03ead9a53b6ae45091c45ac258a24",
+  "source": "c15da3ffb4b42af42a9c2e9b7ff8f1ba1ddda61a",
+  "sqlite_integrity_checks": 76,
+  "started_utc": "2026-10-09T13:09:18.279128+00:00"
+}

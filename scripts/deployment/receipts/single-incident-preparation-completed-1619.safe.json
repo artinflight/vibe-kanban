@@ -1,0 +1,25 @@
+{
+  "B_archive": {
+    "bytes": 23441521918,
+    "remote": "B:/vk-backups/vk-safe-release-20261009/excluded-incident-archive-preservation/checkpoint--db5bb16b095241319a79e02e5fc8cdf6.tar.zst",
+    "sha256": "e994567edaacc75d8aa9a3497b8384a8dbacec462854a3f7f8c5760e1a9a0ce4"
+  },
+  "B_metadata": {
+    "bytes": 4298474,
+    "remote": "B:/vk-backups/vk-safe-release-20261009/excluded-incident-archive-preservation/excluded-incident-archive-metadata-preservation.tar.gz",
+    "sha256": "c783bbc9d54093be2e03efd6e5623909cd1603e53321bae317b7c74dc74b3987"
+  },
+  "SSH_children_exited": true,
+  "archive_fd_closed_for_helper": true,
+  "deletion_performed": false,
+  "evidence_type": "parent-attested successful resident preparation; not new independent root clearance",
+  "native_and_B_hashes_verified": true,
+  "native_bytes": 23441521918,
+  "native_sha256": "e994567edaacc75d8aa9a3497b8384a8dbacec462854a3f7f8c5760e1a9a0ce4",
+  "observed_utc": "2026-10-09T16:19:05Z",
+  "preparation_not_discarded": true,
+  "production_changed": false,
+  "resident_pid": 2084790,
+  "schema": 1,
+  "tool_output_chunk": "8d1e52"
+}

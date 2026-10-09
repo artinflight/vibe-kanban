@@ -951,3 +951,63 @@ protected. No further restore, candidate start, writer stop, merge, route switch
 or cutover occurred. The actual application rehearsal, final fenced B catch-up,
 consent/frontend/controller acceptance and latest-data fallback remain open.
 The448/145/transcript415/journal/mode/link exceptions are unchanged.
+
+
+## Follow-up: thread coverage and late-expiry correction
+
+The16:21 independent review found process-leader-only coverage and an age check
+before proof-file fsync. Neither is treated as a valid operational success.
+The final one-off root reader now enumerates every observed /proc/PID/task/TID,
+checks exe/cwd/root/fd/maps, records PID/TID starts and reports newly uninspected
+tasks after traversal. No observed task is exempted by process name. The resident
+uses that same inspector unprivileged and requires each protected denied task's
+exact identity to appear in the independently authenticated root witness.
+Neither scan claims a global future-open barrier. The original helper and all
+old receipts remain untouched; old leader-only receipts cannot satisfy schema2.
+
+This is a temporary correction to the exact manual read-only inspection already
+required for the one approved archive, not installation/adoption of PR234's ABI.
+It has no arguments, no subprocess/service/security operations, reads only the
+fixed preservation manifest/target metadata and /proc, and cannot remove data.
+Source: scripts/deployment/receipts/excluded-incident-archive-consumer-check-threads-readonly.py.
+SHA256 e176f8397319fb34306c6892178c5dfae9d37b127cba7bbdb1c31ffea22ae47a.
+The actual protected-process run remains unperformed pending operator authentication.
+
+The continuation checks receipt age again AFTER proof-file fsync, immediately
+before unlink. A regression delays a real fixture-file fsync across expiry and
+verifies the fixture archive remains. Additional fixtures detect an archive FD
+owned only by a nonleader task and explicitly report a new task during traversal.
+All six focused regressions pass; they do not certify protected host visibility.
+Ops governance passed. pnpm run format was attempted but cannot run because the
+isolated sparse tooling checkout has no package.json. No unrelated build ran.
+
+The successful16:19 native/B hashing is retained in
+scripts/deployment/receipts/single-incident-preparation-completed-1619.safe.json.
+It is explicitly parent-attested from resident2084790/tool-output8d1e52, not a
+new independent root receipt or a claim of newly rehashed B bytes. The corrected
+resident reuses those exact verified hashes only while the exact original native
+inode/size/owner/mode/link/mtime/ctime and pinned local dependencies still match.
+This avoids repeating valid bulk work; no backup or payload was created.
+
+Corrected resident2255906 (tool session93793) has reached the sealed wait with
+its archive FD closed; all B/network/process-spawning preparation is complete.
+It waits for a NEW schema2 operator receipt at excluded-incident-archive-operator-
+consumer-clearance-after-preparation.private.json and actual authenticated
+operator completion/digest from the existing Staging execution. Do not feed it
+an invented confirmation or an old receipt. No further SSH/hash or general gate
+callback may run after final clearance. If it exits, persisted readiness is not
+live ownership and must not be used to authorize retirement.
+
+Exact next operator command, only after parent confirms this resident remains
+ready and all orchestration is prepared, in the EXISTING MCP terminal:
+
+```bash
+(umask 077; set -o noclobber; sudo /usr/bin/python3 -I -S -B /mnt/vk-storage/vk-runtime-backup-20261009/excluded-incident-archive-consumer-check-threads-readonly.py > /mnt/vk-storage/vk-runtime-backup-20261009/excluded-incident-archive-operator-consumer-clearance-after-preparation.private.json)
+```
+
+This creates no installation or persistent grant; operator authentication is
+necessary because MCP-user access cannot inspect protected thread descriptors.
+No existing evidence file may be overwritten. After actual operator completion,
+Staging authenticates the new receipt and sends only its digest/completion ID to
+the same resident. Its bounded in-process checks remain fail-closed. All later
+application/rehearsal/catch-up/promotion/fallback gates are still separately required.

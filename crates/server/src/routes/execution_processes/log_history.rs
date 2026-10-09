@@ -104,7 +104,10 @@ pub(super) async fn get_log_history(
     // Fail visibly for a durable Codex prefix, including historical captures
     // stopped on broadcast lag. Completion/exit zero is not capture completeness.
     if process.status == ExecutionProcessStatus::Completed
-        && process.executor_action()?.base_executor()
+        && process
+            .executor_action()
+            .map_err(|_| ApiError::BadRequest("Execution configuration unavailable".into()))?
+            .base_executor()
             == Some(executors::executors::BaseCodingAgent::Codex)
         && deployment
             .container()
@@ -197,7 +200,8 @@ pub(crate) async fn capture_error_for_process(
     let path = services::services::execution_process::execution_log_file_path_for_execution(
         pool, process.id,
     )
-    .await?;
+    .await
+    .map_err(|_| ApiError::BadRequest("Execution capture location unavailable".into()))?;
     if let Some(path) = path
         && utils::execution_logs::validate_native_capture(
             &path,

@@ -764,3 +764,47 @@ into the SAME MCP roots, measure allocation/RAM/metadata/catch-up reserve and
 accept real application/scanner/controller/consent/fallback gates. Fresh final
 fenced catch-up still precedes promotion. No restart/cutover/live repair occurred.
 No scope reduction or recovery-complete/universal-zero-loss sign-off invented.
+
+## October 9, 14:40 approval and recovered preparation owner
+
+Seamus explicitly approved the brief service interruption/switchover at
+2026-10-09T14:40:34.401901Z, direct reply Sentinel_dd64f5923b088191aeef2ff5dc5b82fd
+to Sentinel_145c5d8131e881919b612786bda470c3. The relay is restricted to existing
+execution d9f07b0f-b92d-4b17-a60a-f1cfdf0782bb. This resolves the parent
+service-impact hold; no renewed interruption approval is required. Final writer
+fencing, acceptance, protected latest-data fallback and exact cleanup checks
+remain prerequisites. General post-cutover cleanup remains unavailable before
+Seamus human QA.
+
+The completion-output/lifecycle repair is published at 097e1bfac31e1fd31c3469096cc8d0c050b6077d,
+with 137 focused tests passing. The same restored MCP candidate was recovered
+under non-activating owner PID500933/start757986989 and unit
+vk-preparation-owner-097e1bfa.service. Fresh authenticated peer/lease probes
+verified source/root/process identity and survival of a disconnected status
+client. The original completed materialization journal remains byte-identical;
+0002-initial-owner-recovered.json was appended. No repeated restore occurred.
+All76 SQLite checks, the full537645-row baseline and archived atimes pass.
+The safe probe receipt is scripts/deployment/receipts/recovered-preparation-owner-20261009.json.
+Its live result is a dated observation, not a durable liveness promise: persisted
+progress always records controller_retained_alive:false and requires a new probe.
+Operational activation is unavailable in this preparation owner.
+
+The existing Homelab CA from Desktop's public root stores authenticates routed
+HTTPS with hostname/chain validation using only a request-scoped in-memory root.
+No TLS bypass, global trust or security setting was changed. Routed assets remain
+the old October8 frontend; corrected source5ce84ee2 is not yet live.
+
+The authenticated13:35 independent root consumer receipt passed for the approved
+single incident archive. No archive was removed. A fresh instance of the same
+read-only operator check was requested for the current retirement boundary,
+preserving the original receipt. The manual step is required because MCP-user
+access cannot inspect all protected process descriptors/maps, and denied sudo
+authentication is not bypassed. Future preflight can use a one-shot hash-pinned
+read-only operator receipt; broad or persistent privileges are not proposed.
+
+Remaining critical path: exact approved archive retirement and measured space;
+strict initial-only controller handoff to the actual application adapter; same-root
+application rehearsal including Linux metadata, module/scanner/controller, consent,
+frontend and usage controls; fresh final held-writer catch-up; same-root promotion
+and latest-data fallback. None of these is certified by source/fixture success.
+Historical448/145/transcript415/journal/mode/link exceptions remain unchanged.

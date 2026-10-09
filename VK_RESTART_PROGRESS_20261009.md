@@ -641,3 +641,8 @@ claimed. Current CI receipt records both outcomes, not a blended green result.
 ## Read-only exact operator decisions
 
 See VK_RESTART_OPERATOR_DECISIONS_20261009.md and receipts/operator-decisions-readonly-20261009.json for measured current reference-backed scope, exact conditional local duplicate/generated reclaim paths, the already-realized64.43GiB retirement, proposed120GiB MCP native mount and narrowly scoped existing B guest builder ownership decision. No exact operational minimum or peak is invented; no scope, permissions, service, backup or cleanup changed. Source/artifact/metadata/fencing/live acceptance gates remain.
+
+
+## Native/cache capacity follow-up
+
+Read-only shared cache assessment supersedes the premature new-device proposal. No120GiB unallocated native device exists; application/symbol outputs, all dependency/fingerprint provenance and21missing-source outputs retained;71.63GiB generated-file proposal plus27.73GiB conditional candidates could yield approximately99.58GiB on existing ext4. Exact identities/QA/privileged-use clearance/writer boundary remain required. No retirement or mount/access/source-scope change. See the appended operator decisions and native-cache-capacity-readonly receipt; private frozen manifest remains unpublished.

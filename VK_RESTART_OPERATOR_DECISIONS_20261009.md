@@ -1,4 +1,13 @@
-# Restart: two exact operator decisions (read-only findings, 2026-10-09)
+# Restart: exact operator decisions (read-only findings, 2026-10-09)
+
+Current capacity recommendation after shared-cache inspection: assess the bounded
+no-purchase retirement option on the existing MCP secondary ext4 first. The
+final source/provenance-conservative manifest could reclaim71.63GiB; with the
+previous27.73GiB candidates, approximately99.58GiB native room is possible.
+This remains held on QA/owner release, exact approval, protected-consumer clearance
+and a held compiler-write boundary. No120GiB spare device exists. The earlier
+new-device proposal below is retained as history and superseded by the appended
+shared Cargo/native capacity findings; no immediate hardware purchase is justified.
 
 No production, permissions, routing, scope, backup or cleanup changed. PR230/231
 remain draft/unmerged. The incumbent remains running. All original B evidence
@@ -137,3 +146,107 @@ then safely drain sessions and hold writers. Fresh B boundary/catch-up must pres
 newer writes and reconcile test edits. Test latest-data fallback and promote only
 after all deployment checks pass. PR230/231 remain unmerged until then. Human QA
 keeps cleanup unavailable; no historical zero-loss/recovery-complete sign-off invented.
+
+
+## Shared Cargo/native capacity question closed read-only
+
+The previous120GiB new-device proposal was premature. No such device is currently
+available: only root/boot/secondary ext4 filesystems are native. Sysfs partition
+ranges leave gross2,449,408bytes on sda and1,049,088bytes on sdb, including tables/
+alignment. Root LV already spans its sda3 PV apart from at most3,145,728bytes of
+metadata/free difference. Raw root-owned block devices were not opened and no
+privileged access was attempted. A120GiB volume would require a new attachment;
+there is no immediately provisionable existing unallocated volume. Filesystem
+reserved blocks are not ordinary available capacity or an approved reclaim path.
+
+Shared /mnt/vk-storage/cargo-target is80,056,377,344allocated bytes (74.56GiB).
+Its debug/release subtrees contain54,233regular files; other entries are compiler/
+SQLx/node cache metadata and empty namespace guard directories. No symlinks,
+special files, external hardlinked inodes or nonstandard DB/archive/credential/
+attachment payload names were found. File classification and lack of unusual
+names do not establish every historical derived artifact's exact reconstructibility.
+The current scoped build was independently compiled by retained hosted CI without
+this MCP cache. Standard compiler intermediates are reconstructible from retained
+source/lockfile/toolchain/dependencies; unavailable past/private source must not
+be silently pronounced recovered. Retain unclassified provenance rather than
+claiming bit-identical reconstruction of every old compiled object.
+
+No accessible process exe/cwd/open fd/mapping references the cache or its inode
+aliases, and no Cargo/Rust compiler was observed. Protected /proc inspections
+remain unreadable:179exe/cwd/fd-directory,44maps. No privilege/identity/route
+bypass; universal inactive-use clearance remains an operator read-only check.
+Six VK services configure this path as an allowed future build-write root, and
+vk_prepare.py still describes it as compiler output. These are future writers/
+build consumers, not evidence production executes from the cache. All six actual
+service executables are independent paths outside it. Current server, capacity
+guard and routing module match SHA256 of the cache release copies and use distinct
+inodes; incumbent/fallback copies stay protected. Cache debug/audit/symbol outputs
+may be unique historical derived evidence, so do not retire those on assumption.
+
+Provenance review checked6,879dependency rules;23reference422unavailable absolute
+source paths. Their21direct output inodes are preserved rather than claiming
+that missing source is reconstructed or retired. This is source availability,
+not proof of exact historical source identity.
+
+The final conservative cache proposal preserves all top-level debug/release
+files and hardlink aliases, every dependency .d file, all .fingerprint provenance,
+and every output/alias with an unavailable source. That retains35,060names and
+3,108,261,888allocated bytes (2.90GiB), plus all directory structure, .cargo-lock
+and empty .git/.codex/.agents namespace guards. The frozen private proposal
+lists19,173other regular compiler descendants under
+/mnt/vk-storage/cargo-target/{debug,release}/{deps,build,.fingerprint,examples}
+with path/device/inode/size/mtime/ctime/nlink/mode. Unique regular-file blocks
+conditionally reclaim76,904,693,760bytes /71.63GiB. Directory blocks and retained
+output aliases receive no reclaim credit. No retirement implementation added.
+Manifest at /mnt/vk-storage/vk-runtime-backup-20261009/cargo-generated-retirement-proposal-v2.private.json,
+SHA256aee94e175b2d0f407b364e7af8fdeaff03c5bd0b3d086df60d3b6528041df2df;
+this is a proposal, explicitly NOT safe-to-delete-now or a QA/permission receipt.
+
+With the existing exact checkpoint/delta+compat candidates29,777,874,944bytes
+(27.73GiB) and currently available245964800bytes, conditional native room is
+106928533504bytes /99.58GiB on the EXISTING secondary
+ext4. Full unchanged preserved payload+8GiBfloor needs102,454,311,594bytes /95.42GiB,
+leaving4.17GiB beyond that floor for directory/block overhead,
+package bytes, retained test edits/final catch-up and host growth. The B-mapped
+unreduced operational proposal+floor leaves7.95GiB. This is enough for the measured
+payload+floor arithmetic, NOT final restore/quarantine peak certification. A
+smaller approval omitting the0.30GiB delta yields about99.28GiB; whether that is
+sufficient still depends on measured peak. Root's39.6GiB alone does not fit the
+67.14GiB reference-backed continuity floor and is not an approved bulk destination.
+
+Other targeted generated inventories: capacity-build-tmp1,079,771,136bytes;
+vk-preparation-cache236,290,048; pnpm-store1,018,314,752; npm-cache961,044,480.
+They are NOT additionally cleared or included in the capacity credit. Project
+build-local/android/carconsole directories are other teams' source/runtime work,
+not automatically caches. Unique failed-capture evidence21.83GiB remains excluded
+until any separately approved B-preservation/offload and later retirement.
+
+**Recommended conditional no-purchase option:** obtain existing human-QA/owner
+release, operator read-only clearance for privileged cache consumers, and a held
+cache-write boundary; approve ONLY the frozen generated-file manifest plus the
+exact checkpoint/delta/compat targets already listed above. Refresh their
+identities, local/Barchive hashes/provider and consumer bindings; preserve source,
+unknown provenance and all35,060protected cache output/provenance names and aliases. If any row changes,
+use clearance fails or QA is withheld, HOLD rather than expand/bypass the list.
+Do not delete root directories, change access settings or enable automatic cleanup.
+Retirement risks cold-build latency and concurrent new builds, addressed by owner
+clearance, preserved outputs/source and held writer fencing. Preserving selected
+unknown generated material on B may be needed before retirement, but no new whole
+backup or preservation transfer of cache payload was performed in this review.
+
+After approved bounded retirement, the SAME eventual MCP candidate can be ordinary
+independent directories at /mnt/vk-storage/vk-cutover-candidate-20261009 on the
+existing ext4; no new device, mount, formatting or ownership change is inherently
+required. It must still pass actual included-file/DB/metadata/peak and current-data
+catch-up/fallback acceptance. No historical scope reduction is assumed. If the
+held QA/retirement gates cannot release these files, there is currently no approved
+native capacity route; that is an authorization shortfall, not proof hardware must
+be purchased. If measured peaks exceed the resulting space, report the exact
+measured deficit before any further reclamation or device request. PR230/231 stay
+unmerged; the separate B builder ownership request is still unanswered.
+
+The cache was omitted from actionable reclaim because it is shared, configured
+for future builds and not previously cleared for use/provenance/QA. That exclusion
+was appropriate for deletion authority, but did not justify recommending new
+hardware before the read-only assessment. This update supersedes the unconditional
+new-device recommendation. No user/runtime data, source scope or approvals changed.

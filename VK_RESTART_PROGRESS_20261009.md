@@ -1069,3 +1069,28 @@ is to invoke the exact reviewed installer main entrypoint through the same
 operator-controlled administrator handoff; no new permission or broader payload
 is needed. Root coordinates that correction. Both real automatic profile
 acceptances must then pass before integration or the approved one-file retirement.
+
+## 18:19 explicitly authorized noninteractive corrected installation retry
+
+The owner authorized exactly one noninteractive retry of the same approved
+installer/plan. Its bytes/hash and zero-argument main function were verified,
+and an isolated harmless fixture verified explicit namespace["main"]() calls
+the entrypoint without formatting-dependent double underscores. The actual
+sudo -n attempt exited1: "sudo: a password is required". Installation did
+not start; no privileged change, alternate route, archive deletion or service
+operation occurred. The empty installation-explicit-main-1819.safe.json stdout
+file is retained and MUST NOT be treated as success evidence or overwritten.
+
+Root immediately received the copy-safe corrected hash-pinned administrator
+invocation. The unavoidable next action is authentication in the existing MCP
+terminal; no new privileges or payload change is requested. Both real installed
+acceptances, archive retirement, application rehearsal, final writer-fenced B
+catch-up, live acceptance and cutover remain unperformed. The19:17UTC deadline
+is recorded, but no unsupported completion estimate or skipped gate is claimed.
+
+The immutable PR234a875ccfe acceptance/adapter import closure (5modules) is
+compiled in memory and hash-bound under inspection-adapter-source-a875ccfe.
+This reduces setup after installation; it is not installed acceptance or
+operational adoption and does not modify OP source. Prior completed bulk
+hashing, backup/restore evidence, incumbent/fallback and historical exceptions
+remain preserved. See receipts/two-profile-explicit-main-auth-blocker-20261009.json.

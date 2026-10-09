@@ -1,0 +1,19 @@
+{
+  "alternate_privilege_route_used": false,
+  "approved_plan": "29af1c33e029bc1fe9ef9467fd51a03eb586105d",
+  "archive_removed": false,
+  "automatic_acceptance_packet": "/mnt/vk-storage/vk-runtime-backup-20261009/inspection-adapter-source-a875ccfe/source-import-closure.safe.json",
+  "completion_estimate_verified": false,
+  "deadline_utc": "2026-10-09T19:17:00Z",
+  "explicit_main_source_and_fixture_verified": true,
+  "installation_started": false,
+  "installer_bytes": 124669,
+  "installer_sha256": "6d7db4427a7fed2e056ca28ca71057b99a7cc6cb719c74b99a25b7b778c6a6e3",
+  "noninteractive_install_attempts": 1,
+  "observed_utc": "2026-10-09T18:21:21.512760+00:00",
+  "privileged_changes": false,
+  "restart_or_cutover_performed": false,
+  "root_handoff": "same approved pinned payload and plan, explicit namespace main call, existing administrator terminal; no new grant",
+  "sudo_exit_code": 1,
+  "sudo_stderr": "sudo: a password is required"
+}

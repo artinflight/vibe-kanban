@@ -14,7 +14,7 @@ consent. Fixed structured fail-closed validation detail is returned, persisted
 and normalized without argument values or fabricated owner decisions.
 
 Files: codex/{elicitation,client,normalize_logs}.rs; mcp_consent_context.rs;
-services/approvals/elicitation_tests.rs; McpConsentCards.tsx;
+services/approvals/{elicitation_tests,executor_approvals}.rs; McpConsentCards.tsx;
 mcp-approval-ui.test.tsx; .github/workflows/test.yml; VK_MCP_APPROVAL_BRIDGE.md;
 STREAM.md; HANDOFF.md; this handoff. Historical continuity retained.
 

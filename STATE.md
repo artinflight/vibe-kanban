@@ -11,8 +11,10 @@ the final check inside the held operation; postscan only bounded local checks an
 exact continuation are allowed. Full attempted protected visibility/churn failure
 is required, but existing processes can still open a file afterward; no global
 atomic fence is claimed or added. Backup/target/interruption/rollback approvals
-and fallback survival until human QA remain authoritative. Installed privileged
-acceptance and separate Staging owner adoption remain unvalidated.
+and fallback survival until human QA remain authoritative. Both clocks are rechecked after task-witness traversal. Bounded rollback disables
+new adapter admission and removes only its exact grant, preserving all artifacts,
+evidence and fallback. Installed privileged acceptance and separate Staging
+owner adoption remain unvalidated.
 
 ## October 8: Workspace-first frontend follow-up in preparation
 

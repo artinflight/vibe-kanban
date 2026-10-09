@@ -311,8 +311,8 @@ snapshots. Direct-B incremental backup and reserved capacity could avoid routine
 cleanup entirely; that separate project is neither implemented nor a dependency
 added here.
 
-[Source bundle/validation receipt](scripts/deployment/receipts/reusable-retirement-source-validation-20261009.json)
-records exact artifacts and remaining validation limits. The older receipt is
-historical first-design evidence, not evidence for this revision.
+[Source bundle/validation receipt](scripts/deployment/receipts/reusable-retirement-review-validation-20261009.json)
+records exact artifacts and remaining validation limits. Earlier receipts are
+historical evidence for their respective source checkpoints, not this revision.
 Protocol references: [sudo primary manual](https://www.sudo.ws/docs/man/1.9.14/sudoers.man.pdf),
 [Linux kernel seccomp documentation](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html).

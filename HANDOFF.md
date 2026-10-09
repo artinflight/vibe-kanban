@@ -31,7 +31,7 @@ defaults adapter adoption off; administrator withdraws only the exact sudoers
 include after disarming/draining pending operations, retaining all evidence and
 fallback. Delayed-inventory/adoption-disabled/revoked-grant tests pass.
 
-All142 candidate regressions previously passed at64cb7f72c with the clean-source gate intact.
+All142 candidate regressions pass at49a47cc78 with the clean-source gate intact.
 Ops, diff checks and unprivileged sudoers syntax pass. Format/check/lint attempts
 stop at absent Prettier/TypeScript/ESLint; Rust formatting and legacy guard pass.
 Validation receipt records final checks and exact artifact hashes. No unrelated

@@ -1,0 +1,44 @@
+{
+  "additional_quarantine_copy_bytes": 0,
+  "deferral_route_accepted": false,
+  "deficit_with_existing_reserve_bytes": 6692917248,
+  "full_B_backups_use_SSD_payload_bytes": 0,
+  "historical_archive_untouched": true,
+  "known_changed_allocation_lower_bound": 6334836736,
+  "known_changed_payload_bytes": 6332137638,
+  "largest_required_changed_database": {
+    "baseline_content_sha_differs": true,
+    "fresh_index_bytes": 4734447616,
+    "path": "/home/mcp/.local/share/vibe-kanban-green-codex-home/logs_2.sqlite"
+  },
+  "native_available_bytes": 8231854080,
+  "not_included": [
+    "writes since11:17online capture",
+    "rehearsal DB/WAL/migration edits",
+    "directories/journals",
+    "latest-data fallback refreshed files"
+  ],
+  "quarantine_uses_rename_not_copy": true,
+  "remaining_new_content_allocation_bytes": 6293708800,
+  "remaining_without_reserve_bytes": 1897017344,
+  "reserve_bytes": 8589934592,
+  "reserve_waived": false,
+  "same_content_regular_allocation_bytes": 41127936,
+  "scope_reduced": false,
+  "smallest_current_route": "Reviewed bounded helper repair and both installed acceptances, then existing approved exact archive retirement; alternative requires separately measured native headroom or explicitly approved/reviewed B quarantine relocation.",
+  "source_index_sha256": {
+    "baseline": "30aaab1574cc0b7900f10c1d501b876c957f6be481674618cd5e0371948c0056",
+    "online": "3bfdc5d503aa3be39f8bbb354c9ffe98e2da07fcf7704677f9842133b2681431"
+  },
+  "superseded_old_file_bytes": 6115248322,
+  "unfinished_local_checkpoint": {
+    "compiled_only": true,
+    "executed": false,
+    "path": "scripts/deployment/vk_approved_archive_retirement.py",
+    "published": false,
+    "regression_tests_run": false,
+    "reviewed": false,
+    "sha256": "2c1842a47205d9601618a6fd449c64c82f917142fd31407f035c8394984aeb3c"
+  },
+  "utc": "2026-10-09T18:49:47.205994+00:00"
+}

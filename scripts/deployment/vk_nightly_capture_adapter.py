@@ -194,6 +194,14 @@ class RegisteredWorkspace:
                 if producer.is_alive():raise ValueError('producer still active; no completion attestation')
 
 
+def validate_socket_exclusions(paths):
+    for raw in paths:
+        try:info=Path(raw).lstat()
+        except FileNotFoundError:continue
+        if not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid():
+            raise ValueError('proposed socket omission changed type/owner; preserve and review scope')
+
+
 def allowed_sqlite(plan,raw):
     # New DBs inside already approved roots are routine scope members. The
     # observed DB list sizes the proposal; it must not become a recurring grant.
@@ -256,6 +264,7 @@ def mcp_lease(path):
 
 
 def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
+    validate_socket_exclusions(config.get('socket_exclusions',[]))
     staging=storage(config['staging']);staging.mkdir(parents=True,exist_ok=True)
     with mcp_lease(staging/'producer.lock'):
         resident=Resident({**config,'enroll_fresh':enroll_fresh,'recover_only':recover_only,'mcp_producer_lease_held':True})
@@ -289,6 +298,7 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
             capture_id=resident.binding['candidate']
             provider.register(capture_id,result,identity(plan),identity(scope(plan)),config['source_prefix'],origin_root_binding='nightly-current-source-inventory')
             proof=provider.verify(capture_id)
+            validate_socket_exclusions(config.get('socket_exclusions',[]))
             # Carry only the verified index; B replay maps authenticated tar
             # headers itself, avoiding another host-scale path/location vector.
             descriptor={**result,'nightly_source_prefix':config['source_prefix']}

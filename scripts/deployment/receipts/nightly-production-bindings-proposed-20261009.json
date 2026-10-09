@@ -53,8 +53,8 @@
     "vk_b_disk_snapshot.py": "ba1fd175cc72f6008e77f46096e4ec30201b4943e6d9895a7907af466a69cebf",
     "vk_desktop_transport.py": "fac7325b0de5a7cd8c07ddb542ad733a7f7f3e77a2d9c15456e6d63a0d24ff87",
     "vk_archive_store.py": "95b59fb7d484ca379f58e5b543a763af6691d23c9b9381158b6a0c5bc772b40f",
-    "vk_nightly_job.py": "7e3a24274676242750c75590f5d595857957020183c37433713805d29d02df33",
-    "vk_nightly_capture_adapter.py": "817e6170492aabdc272ac041b55fe40d5ea042ffe2564923dfc778f618fee100",
+    "vk_nightly_job.py": "574bc5a48d4b58e6b5e47a9edf2f42103419f18f9bb7717207d2f40f563c26a3",
+    "vk_nightly_capture_adapter.py": "a793a20509bfd944a4173023f693cb46e72249c0b8456611268b90b9542c5bde",
     "vk_nightly_b_job.py": "d6aa2cd659f024bba494bc30e37a016e677791d729905a4087fdd7d06efa2b09"
   },
   "scheduler_proposal": {

@@ -15,7 +15,7 @@ import sys
 import time
 
 from vk_change_journal import scope
-from vk_nightly_capture_adapter import run_capture
+from vk_nightly_capture_adapter import run_capture, validate_socket_exclusions
 from vk_prep_common import identity, storage
 from vk_rolling_backup import Exclusions, scan
 
@@ -56,14 +56,6 @@ def inventory(plan):
             'allocated_file_bytes':allocated,'databases':databases,'maximum_DB_bytes':max(databases.values(),default=0),
             'elapsed_seconds':time.monotonic()-started,'read_only':True,'content_hashed':False,
             'consistency':'online metadata census, not an application-coherent backup','vanished_during_scan':vanished}
-
-
-def validate_socket_exclusions(paths):
-    for raw in paths:
-        try:info=Path(raw).lstat()
-        except FileNotFoundError:continue  # Exact approved transient endpoint.
-        if not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid():
-            raise ValueError('proposed socket omission changed type/owner; preserve and review scope')
 
 
 def validate(config,plan):

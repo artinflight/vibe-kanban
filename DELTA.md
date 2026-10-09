@@ -1582,3 +1582,17 @@ rebase merge; merge-commit permission was requested. Clean build and five workfl
 plus three attention cases passed. Desktop rollback archive SHA256 verified.
 Candidate assets are packaged; October 8 production pointers and backend remain
 unchanged. See VK_WORKSPACES_RELEASE_20261009.md and SSD release evidence.
+
+## 2026-10-09 — Mobile launch reproduction and isolated follow-up
+
+Actual HTTPS bytes at 11:30/11:56 still match October 8 main22f09e245/JMqAOzZ4.
+Cold/repeated launches reproduce Create Workspace. PR228's isolated root fix
+works; a retained create URL after the mobile Workspaces tab is independently
+reproduced and repaired in this PR233 follow-up. Root PWA start URL and versioned
+manifest request added. Three versions each pass 18 launch observations at
+390/412px; follow-up desktop workflow and frontend validation pass. Rust remains
+held behind VKStaging's shared build. S25+ ADB endpoint unavailable; installed
+phone entry behavior unverified. No merge/deploy/protection/service/model change.
+Frozen candidate activation is held; owner must adopt/rebuild latest source and
+complete required approval, then verify actual served version and phone launch.
+See VK_MOBILE_LAUNCH_20261009.md for exact hashes, evidence and limits.

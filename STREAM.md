@@ -1,3 +1,21 @@
+## October 9: Mobile launch reproduced; release coordination held
+
+At 11:56 UTC, HTTPS still serves October 8 source `22f09e245`, entry
+`index-JMqAOzZ4.js`; Create Workspace is reproduced on cold and repeated launch.
+PR228's isolated `9b53418fc` bundle opens Workspaces correctly but retains a
+create-URL reload edge. This PR233 follow-up routes the mobile Workspaces tab to
+`/workspaces` and declares/versions the root PWA start URL. Read
+VK_MOBILE_LAUNCH_20261009.md for exact hashes, session/cache evidence and limits.
+390/412px launch and 1440px workflow checks pass; frontend checks pass. Rust
+validation is held behind VKStaging's active shared build; new-head CI is required.
+
+No merge/deploy/restart or protection change was made. The operator prohibits an
+alternate PR232 merge and deployment while approval is pending. VKStaging owns
+release coordination and must adopt/rebuild the latest PR233 source alongside
+PR228. The earlier frozen candidate lacks this follow-up; its activation helper
+is explicitly held. Earlier requests for merge-method permission are superseded
+by this operator instruction. No new permission request is pending from this task.
+
 ## October 9: Workspace-first release prepared; production promotion pending
 
 PR228 rebase-merged into staging. PR232 has passing full CI but GitHub refused its

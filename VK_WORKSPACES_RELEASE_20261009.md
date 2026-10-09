@@ -1,3 +1,10 @@
+> October 9, 11:56 UTC update: this is historical preparation evidence. Production
+> still serves October 8. The prepared bundle lacks the newly verified tab-route
+> and PWA launch follow-up; read VK_MOBILE_LAUNCH_20261009.md. Its activation helper
+> is held for VKStaging coordination. The operator prohibits alternate PR232 merge
+> or deployment while approval is pending; earlier merge-method requests below are
+> superseded. Do not activate this candidate as the complete latest fix.
+
 # Workspace-first frontend release preparation — October 9, 2026
 
 The operator requested deployment, push and rebase merge of the Workspaces opening

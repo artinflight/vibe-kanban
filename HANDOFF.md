@@ -1,3 +1,12 @@
+## Exact-source P2 follow-up — not deployed
+
+Both review findings against334a2a2 are confirmed and repaired in this candidate:
+synchronous capture ownership before spawn/map cleanup; active-drain API status
+with one-second UI retries until authoritative closure. Orphaned/damaged captures
+remain terminally unavailable. Read VK_REPLY_CAPTURE_20261009.md and the final
+handoff/hosted receipt before treating revised code as validated. No wider PR
+baseline merge, local build, live activation, badge or approval-setting change.
+
 ## October 9 isolated reply-capture repair — not deployed
 
 Read VK_REPLY_CAPTURE_20261009.md. This scoped candidate fixes loss of durable

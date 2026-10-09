@@ -38,6 +38,7 @@ type Scope = {
   initialIds: Set<string> | null;
   initialLoaded: boolean;
   loading: boolean;
+  pending: Map<string, ReturnType<typeof setTimeout>>;
 };
 
 function createScope(): Scope {
@@ -51,8 +52,13 @@ function createScope(): Scope {
     initialIds: null,
     initialLoaded: false,
     loading: false,
+    pending: new Map(),
   };
 }
+
+// Retry only explicitly draining captures; terminal errors retain manual retry.
+const CAPTURE_RETRY_MS = 1000;
+class CapturePending extends Error {}
 
 const isRunning = (process: ExecutionProcess) =>
   process.status === ExecutionProcessStatus.running;
@@ -83,6 +89,8 @@ export const useConversationHistory = ({
         ),
     [rawProcesses]
   );
+  const canReadRef = useRef(isConnected && !isLoading);
+  canReadRef.current = isConnected && !isLoading;
   const processesRef = useRef(processes);
   processesRef.current = processes;
   const callbackRef = useRef(onTimelineUpdated);
@@ -144,11 +152,17 @@ export const useConversationHistory = ({
     return () => {
       scope.abort.abort();
       for (const stream of scope.streams.values()) stream.close();
+      for (const timer of scope.pending.values()) clearTimeout(timer);
+      scope.pending.clear();
     };
   }, [scopeKey, emit]);
 
   const fetchPage = useCallback(
-    async (scope: Scope, process: ExecutionProcess, limit: number) => {
+    async (
+      scope: Scope,
+      process: ExecutionProcess,
+      limit: number
+    ): Promise<number> => {
       const cursor = scope.cursors.get(process.id);
       const query = new URLSearchParams({ limit: String(limit) });
       if (cursor != null) query.set('before', String(cursor));
@@ -174,11 +188,62 @@ export const useConversationHistory = ({
       if (!result.success || !Array.isArray(result.data?.entries))
         throw new Error('Invalid history page');
       if (result.data.capture_error) {
+        const timer = scope.pending.get(process.id);
+        if (timer !== undefined) clearTimeout(timer);
+        scope.pending.delete(process.id);
         setHistoryErrorDetail(
           'Capture completeness could not be verified. Earlier messages are not a current status report.'
         );
         throw new Error(result.data.capture_error);
       }
+      if (result.data.capture_pending) {
+        scope.initialLoaded = true;
+        setIsLoadingHistory(true);
+        // One timer per execution. Re-read the authoritative finite API after
+        // one second; never infer closure from Completed or websocket EOF.
+        if (!scope.pending.has(process.id)) {
+          const retry = () => {
+            scope.pending.delete(process.id);
+            if (scope.abort.signal.aborted) return;
+            const current = processesRef.current.find(
+              (p) => p.id === process.id
+            );
+            if (!current || isRunning(current)) {
+              setIsLoadingHistory(scope.pending.size > 0);
+              return;
+            }
+            if (!canReadRef.current) {
+              scope.pending.set(
+                process.id,
+                setTimeout(retry, CAPTURE_RETRY_MS)
+              );
+              return;
+            }
+            void fetchPage(scope, current, limit)
+              .then(() => {
+                if (scope.abort.signal.aborted) return;
+                setIsLoadingHistory(scope.pending.size > 0);
+                setHistoryError(false);
+                setHistoryErrorDetail(null);
+                emit(scope, 'running');
+              })
+              .catch((error) => {
+                if (
+                  scope.abort.signal.aborted ||
+                  error instanceof CapturePending
+                )
+                  return;
+                setIsLoadingHistory(scope.pending.size > 0);
+                setHistoryError(true);
+              });
+          };
+          scope.pending.set(process.id, setTimeout(retry, CAPTURE_RETRY_MS));
+        }
+        throw new CapturePending('Capture is still draining');
+      }
+      const timer = scope.pending.get(process.id);
+      if (timer !== undefined) clearTimeout(timer);
+      scope.pending.delete(process.id);
       scope.displayed[process.id] = {
         executionProcess: process,
         entries: mergeHistoryPage(
@@ -190,7 +255,7 @@ export const useConversationHistory = ({
       scope.cursors.set(process.id, result.data.next_before);
       return result.data.entries.length;
     },
-    []
+    [emit]
   );
 
   const loadBatch = useCallback(
@@ -215,15 +280,17 @@ export const useConversationHistory = ({
         emit(scope, initial ? 'initial' : 'historic');
       } catch (error) {
         if (!scope.abort.signal.aborted) {
-          console.warn('Unable to load conversation history', error);
-          setHistoryError(true);
+          if (!(error instanceof CapturePending)) {
+            console.warn('Unable to load conversation history', error);
+            setHistoryError(true);
+          }
           // Keep successfully loaded pages visible and let the user retry.
           emit(scope, initial ? 'initial' : 'historic');
         }
       } finally {
         scope.loading = false;
         if (!scope.abort.signal.aborted) {
-          setIsLoadingHistory(false);
+          setIsLoadingHistory(scope.pending.size > 0);
           setRevision((value) => value + 1);
         }
       }
@@ -304,10 +371,16 @@ export const useConversationHistory = ({
         void fetchPage(scope, process, MIN_INITIAL_ENTRIES)
           .then(() => {
             if (scope.abort.signal.aborted) return;
+            setHistoryError(false);
+            setHistoryErrorDetail(null);
+            setIsLoadingHistory(scope.pending.size > 0);
             emit(scope, 'running');
           })
           .catch((error) => {
-            if (!scope.abort.signal.aborted) {
+            if (
+              !scope.abort.signal.aborted &&
+              !(error instanceof CapturePending)
+            ) {
               console.warn('Unable to refresh completed conversation', error);
               setHistoryError(true);
             }
@@ -315,7 +388,12 @@ export const useConversationHistory = ({
       }
     }
     if (changed) emit(scope, 'historic');
-    if (!scope.initialLoaded && !scope.loading && !historyError) {
+    if (
+      !scope.initialLoaded &&
+      !scope.loading &&
+      !historyError &&
+      scope.pending.size === 0
+    ) {
       if (processes.length === 0) {
         if (!scope.emptyEmitted) {
           scope.emptyEmitted = true;

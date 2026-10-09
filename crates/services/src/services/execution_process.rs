@@ -1,7 +1,7 @@
 use std::{
-    collections::HashMap,
+    collections::HashSet,
     io::{IsTerminal, Write},
-    sync::Arc,
+    sync::{Arc, Mutex, OnceLock},
 };
 
 use anyhow::{Context, Result};
@@ -23,7 +23,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use json_patch::Patch;
 use serde_json::Value;
 use sqlx::SqlitePool;
-use tokio::{io::AsyncWriteExt, sync::RwLock, task::JoinHandle};
+use tokio::{io::AsyncWriteExt, task::JoinHandle};
 use utils::{
     assets::prod_asset_dir_path,
     execution_logs::{
@@ -306,23 +306,59 @@ fn merge_capture_streams(
     .boxed()
 }
 
+// Presentation liveness only, never a closure/review proof. Claim before spawn
+// and keep ownership until the task exits, even after MsgStore map removal.
+fn active_captures() -> &'static Mutex<HashSet<Uuid>> {
+    static ACTIVE: OnceLock<Mutex<HashSet<Uuid>>> = OnceLock::new();
+    ACTIVE.get_or_init(|| Mutex::new(HashSet::new()))
+}
+pub fn capture_in_progress(execution_id: Uuid) -> bool {
+    active_captures().lock().unwrap().contains(&execution_id)
+}
+struct CaptureOwner(Uuid);
+impl Drop for CaptureOwner {
+    fn drop(&mut self) {
+        active_captures().lock().unwrap().remove(&self.0);
+    }
+}
+
 pub fn spawn_stream_raw_logs_to_storage(
-    msg_stores: Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>>,
+    store: Arc<MsgStore>,
     db: DBService,
     execution_id: Uuid,
     session_id: Uuid,
 ) -> JoinHandle<()> {
-    tokio::spawn(async move {
-        let store = {
-            let map = msg_stores.read().await;
-            map.get(&execution_id).cloned()
-        };
-
-        let durable = store.as_ref().and_then(|s| s.take_durable_capture());
-        if store.as_ref().is_some_and(|s| s.has_durable_capture()) && durable.is_none() {
+    if !active_captures().lock().unwrap().insert(execution_id) {
+        return tokio::spawn(async move {
+            tracing::error!("Raw capture already owned for execution {}", execution_id);
+        });
+    }
+    let owner = CaptureOwner(execution_id);
+    // Ownership and metadata subscription are synchronous: the exit monitor
+    // cannot win by removing the map entry before this task's first poll.
+    let durable = store.take_durable_capture();
+    if store.has_durable_capture() && durable.is_none() {
+        drop(owner);
+        return tokio::spawn(async move {
             tracing::error!("Raw capture already claimed for execution {}", execution_id);
-            return;
-        }
+        });
+    }
+    let mut stream: BoxStream<'static, std::io::Result<LogMsg>> = if let Some(raw) = durable {
+        let metadata = store
+            .history_plus_stream()
+            .filter_map(|msg| async move {
+                match msg {
+                    Ok(LogMsg::Stdout(_) | LogMsg::Stderr(_) | LogMsg::Ready) => None,
+                    other => Some(other),
+                }
+            })
+            .boxed();
+        merge_capture_streams(raw.boxed(), metadata)
+    } else {
+        store.history_plus_stream_strict()
+    };
+    tokio::spawn(async move {
+        let _capture_owner = owner;
         let mut log_writer =
             match ExecutionLogWriter::new_for_execution(session_id, execution_id).await {
                 Ok(w) => w,
@@ -336,27 +372,8 @@ pub fn spawn_stream_raw_logs_to_storage(
                 }
             };
 
-        if let Some(store) = store {
+        {
             let mut review_log_valid = true;
-            let mut stream: BoxStream<'static, std::io::Result<LogMsg>> = if let Some(raw) = durable
-            {
-                // Raw bytes have one lossless writer. Normalized metadata remains
-                // a separate UI stream and never substitutes for capture evidence.
-                let metadata = store
-                    .history_plus_stream()
-                    .filter_map(|msg| async move {
-                        match msg {
-                            Ok(LogMsg::Stdout(_) | LogMsg::Stderr(_) | LogMsg::Ready) => None,
-                            other => Some(other),
-                        }
-                    })
-                    .boxed();
-                merge_capture_streams(raw.boxed(), metadata)
-            } else {
-                // Historical/disposable stores retain the strict, loss-aware path.
-                store.history_plus_stream_strict()
-            };
-
             while let Some(next) = stream.next().await {
                 let msg = match next {
                     Ok(msg) => msg,

@@ -1,3 +1,34 @@
+## Exact-source review follow-up — candidate, validation pending
+
+WHAT: Repair both P2 findings against334a2a2. WHY: a healthy drain must not leave
+a sticky warning, and a short exit/Stop must not win writer ownership before its
+first poll. CONTEXT: same isolated branch, c3-relative patch, no live changes.
+SUCCESS: compiled ownership/map-removal and running/completed/pending/closed
+regressions plus healthy UI recovery and terminal failure boundaries.
+
+The caller passes the existing MsgStore Arc. Receiver ownership and metadata
+subscription are established synchronously before tokio::spawn; an RAII owner
+tracks active capture through task completion, failure or cancellation, independent
+of the container map. This is presentation liveness, never review closure proof.
+The history API returns capture_pending only for a live owner. A persisted pending
+sidecar without a live owner is still terminal capture_error, including restart.
+
+The UI has one retry timer per explicitly pending completed execution, at1000ms.
+It re-reads authoritative finite history, never infers closure from process status
+or websocket EOF. HTTP reads pause while disconnected/loading. Timers stop on
+closed/error response, process removal/running, workspace change or unmount.
+Healthy closure loads the current report without manual retry. Terminal damaged
+captures keep warnings and do not automatically retry. Connector reads propagate
+pending separately from incomplete; they do not poll or emit delivery evidence.
+
+New hosted regressions cover map removal before writer first poll, cancelling an
+unpolled writer without a stranded producer, actual HTTP running/completed/pending/
+closed, owner interruption, automatic UI closure, initial pending, terminal failure
+and scope-change cancellation. Connector100 Python tests pass. Exact revised Rust/
+UI hosted acceptance remains pending until its new commit receipt is attached.
+All prior raw/native/CI evidence remains preserved. No local Cargo builds,
+deployment/restart, approval changes, wider PR merge or badge changes.
+
 # e3e1 — Lossless reply capture and visible incomplete status
 
 WHAT: Repair the October 9 post-cutover completed-but-empty Staging reports.

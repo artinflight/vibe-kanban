@@ -1140,12 +1140,12 @@ impl LocalContainerService {
         store.clone().spawn_forwarder(merged);
 
         let mut map = self.msg_stores().write().await;
-        map.insert(id, store);
+        map.insert(id, store.clone());
         drop(map);
         // Claim/register the single writer before the exit monitor can remove
         // the store, including a very short child or Stop during startup.
         let capture = services::services::execution_process::spawn_stream_raw_logs_to_storage(
-            self.msg_stores().clone(),
+            store,
             self.db().clone(),
             id,
             session_id,

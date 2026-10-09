@@ -138,9 +138,8 @@ async fn writer_fixture_arc(store: Arc<MsgStore>) -> (SqlitePool, Uuid, Uuid) {
         .execute(&pool)
         .await
         .unwrap();
-    let stores = Arc::new(RwLock::new(HashMap::from([(execution, store)])));
     let writer = services::services::execution_process::spawn_stream_raw_logs_to_storage(
-        stores,
+        store,
         db::DBService { pool: pool.clone() },
         execution,
         session,
@@ -315,4 +314,118 @@ async fn failed_raw_source_cannot_close_or_publish_review_proof() {
             .await
             .is_err()
     );
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn map_removal_before_writer_first_poll_preserves_claim_and_drains() {
+    review_storage_root::assert_fixture_root();
+    let pool = fixture().await;
+    let execution = Uuid::new_v4();
+    let session = Uuid::new_v4();
+    sqlx::query("INSERT INTO execution_processes VALUES(?,X'02')")
+        .bind(execution)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let store = Arc::new(MsgStore::with_durable_capture(1024, 2, 1));
+    let stores = Arc::new(RwLock::new(HashMap::from([(execution, store.clone())])));
+    let chunks = [
+        "{\"id\":1,\"result\":{}}\n",
+        "{\"id\":2,\"result\":{}}\n",
+        "{\"id\":3,\"result\":{}}\n",
+    ];
+    let producer = store.clone().spawn_forwarder(futures_util::stream::iter(
+        chunks.map(|s| Ok::<_, std::io::Error>(LogMsg::Stdout(s.into()))),
+    ));
+    let writer = services::services::execution_process::spawn_stream_raw_logs_to_storage(
+        store.clone(),
+        db::DBService { pool: pool.clone() },
+        execution,
+        session,
+    );
+    // No await/yield after spawn: on this single-thread runtime the writer has
+    // never been polled. Cleanup removes the real map entry first.
+    assert!(
+        store.take_durable_capture().is_none(),
+        "Receiver must already be claimed"
+    );
+    assert!(services::services::execution_process::capture_in_progress(
+        execution
+    ));
+    stores
+        .try_write()
+        .unwrap()
+        .remove(&execution)
+        .unwrap()
+        .push_finished();
+    drop(stores);
+    tokio::time::timeout(Duration::from_secs(5), async {
+        producer.await.unwrap();
+        writer.await.unwrap();
+    })
+    .await
+    .unwrap();
+    assert!(!services::services::execution_process::capture_in_progress(
+        execution
+    ));
+    let path = utils::execution_logs::process_log_file_path(session, execution);
+    let (_, records) = utils::execution_logs::read_execution_log_strict(&path, 4096)
+        .await
+        .unwrap();
+    let actual: String = records
+        .into_iter()
+        .filter_map(|m| {
+            if let LogMsg::Stdout(s) = m {
+                Some(s)
+            } else {
+                None
+            }
+        })
+        .collect();
+    assert_eq!(actual, chunks.concat());
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM workspace_review_log_finalized WHERE execution_id=?",
+    )
+    .bind(execution)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(count, 1);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn cancelling_unpolled_writer_releases_owner_and_unblocks_producer() {
+    review_storage_root::assert_fixture_root();
+    let pool = fixture().await;
+    let execution = Uuid::new_v4();
+    let store = Arc::new(MsgStore::with_durable_capture(1024, 2, 1));
+    let producer = store.clone().spawn_forwarder(futures_util::stream::iter(
+        (0..3).map(|_| Ok::<_, std::io::Error>(LogMsg::Stdout("fixture".into()))),
+    ));
+    let writer = services::services::execution_process::spawn_stream_raw_logs_to_storage(
+        store,
+        db::DBService { pool: pool.clone() },
+        execution,
+        Uuid::new_v4(),
+    );
+    assert!(services::services::execution_process::capture_in_progress(
+        execution
+    ));
+    writer.abort();
+    assert!(writer.await.unwrap_err().is_cancelled());
+    assert!(!services::services::execution_process::capture_in_progress(
+        execution
+    ));
+    tokio::time::timeout(Duration::from_secs(2), producer)
+        .await
+        .unwrap()
+        .unwrap();
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM workspace_review_log_finalized WHERE execution_id=?",
+    )
+    .bind(execution)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(count, 0);
 }

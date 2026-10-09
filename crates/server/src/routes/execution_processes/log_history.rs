@@ -35,10 +35,11 @@ pub(super) struct HistoryEntry {
 }
 
 #[derive(Serialize)]
-pub(super) struct HistoryPage {
+pub(crate) struct HistoryPage {
     entries: Vec<HistoryEntry>,
     next_before: Option<usize>,
     capture_error: Option<&'static str>,
+    capture_pending: bool,
 }
 
 type Entries = BTreeMap<usize, Value>;
@@ -109,13 +110,10 @@ pub(super) async fn get_log_history(
             .map_err(|_| ApiError::BadRequest("Execution configuration unavailable".into()))?
             .base_executor()
             == Some(executors::executors::BaseCodingAgent::Codex)
-        && let Some(reason) = capture_error_for_process(&deployment.db().pool, &process).await?
+        && let Some(pending_page) =
+            capture_page_for_process(&deployment.db().pool, &process).await?
     {
-        return Ok(Json(ApiResponse::success(HistoryPage {
-            entries: vec![],
-            next_before: None,
-            capture_error: Some(reason),
-        })));
+        return Ok(Json(ApiResponse::success(pending_page)));
     }
     let limit = query.limit.unwrap_or(40).clamp(1, 200);
     let key = (process.id, process.updated_at.to_rfc3339());
@@ -185,6 +183,31 @@ pub(super) async fn get_log_history(
         query.before,
         limit,
     ))))
+}
+
+// Live writer ownership is authoritative for draining. A persisted pending
+// sidecar without a live owner (including after restart) remains terminally
+// unavailable; neither state is a successful closure/review proof.
+pub(crate) async fn capture_page_for_process(
+    pool: &sqlx::SqlitePool,
+    process: &ExecutionProcess,
+) -> Result<Option<HistoryPage>, ApiError> {
+    if services::services::execution_process::capture_in_progress(process.id) {
+        return Ok(Some(HistoryPage {
+            entries: vec![],
+            next_before: None,
+            capture_error: None,
+            capture_pending: true,
+        }));
+    }
+    Ok(capture_error_for_process(pool, process)
+        .await?
+        .map(|reason| HistoryPage {
+            entries: vec![],
+            next_before: None,
+            capture_error: Some(reason),
+            capture_pending: false,
+        }))
 }
 
 pub(crate) async fn capture_error_for_process(
@@ -267,6 +290,7 @@ fn page(entries: &Entries, before: Option<usize>, limit: usize) -> HistoryPage {
             .collect(),
         next_before,
         capture_error: None,
+        capture_pending: false,
     }
 }
 

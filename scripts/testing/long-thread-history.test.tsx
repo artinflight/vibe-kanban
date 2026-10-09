@@ -441,3 +441,136 @@ test("a late unavailable response cannot contaminate another workspace", async (
     await h.close();
   }
 });
+
+const pendingResponse = () =>
+  new Response(
+    JSON.stringify({
+      success: true,
+      data: {
+        entries: [],
+        next_before: null,
+        capture_pending: true,
+        capture_error: null,
+      },
+    }),
+    { headers: { "content-type": "application/json" } },
+  );
+const failedCaptureResponse = () =>
+  new Response(
+    JSON.stringify({
+      success: true,
+      data: {
+        entries: [],
+        next_before: null,
+        capture_pending: false,
+        capture_error: "Incomplete capture",
+      },
+    }),
+    { headers: { "content-type": "application/json" } },
+  );
+
+async function tickCapture(t) {
+  await act(async () => {
+    t.mock.timers.tick(1000);
+    await settle();
+  });
+}
+
+test("running then completed then pending then closed recovers without manual retry", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = harness(
+    [process("a", "running")],
+    ({ before, limit }, call) =>
+      call < 3 ? pendingResponse() : pageResponse(10, before, limit),
+    true,
+  );
+  try {
+    await h.mount();
+    assert.equal(h.calls.length, 0);
+    await h.update([process("a")]);
+    assert.equal(h.calls.length, 1);
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.isLoadingHistory, true);
+    await tickCapture(t);
+    assert.equal(h.calls.length, 2);
+    assert.equal(h.result.historyError, false);
+    await tickCapture(t);
+    assert.equal(h.calls.length, 3);
+    assert.equal(h.entries.length, 10);
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.historyErrorDetail, null);
+    assert.equal(h.result.isLoadingHistory, false);
+    await tickCapture(t);
+    assert.equal(h.calls.length, 3, "Closed capture stops polling");
+  } finally {
+    await h.close();
+    t.mock.timers.reset();
+  }
+});
+
+test("initial pending capture retries at one-second boundaries without a request loop", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = harness([process("a")], ({ before, limit }, call) =>
+    call === 1 ? pendingResponse() : pageResponse(10, before, limit),
+  );
+  try {
+    await h.mount();
+    assert.equal(h.calls.length, 1);
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.isLoadingHistory, true);
+    await tickCapture(t);
+    assert.equal(h.calls.length, 2);
+    assert.equal(h.entries.length, 10);
+    assert.equal(h.result.isLoadingHistory, false);
+    assert.equal(h.result.historyError, false);
+  } finally {
+    await h.close();
+    t.mock.timers.reset();
+  }
+});
+
+test("pending to terminal capture failure warns and stops automatic retries", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = harness([process("a")], (_, call) =>
+    call === 1 ? pendingResponse() : failedCaptureResponse(),
+  );
+  try {
+    await h.mount();
+    await tickCapture(t);
+    assert.equal(h.calls.length, 2);
+    assert.equal(h.result.historyError, true);
+    assert.equal(h.result.isLoadingHistory, false);
+    assert.match(h.result.historyErrorDetail, /completeness/);
+    await tickCapture(t);
+    assert.equal(h.calls.length, 2);
+  } finally {
+    await h.close();
+    t.mock.timers.reset();
+  }
+});
+
+test("pending capture timer is cancelled when switching workspace", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = harness([process("a")], ({ id, before, limit }) =>
+    id === "a" ? pendingResponse() : pageResponse(10, before, limit),
+  );
+  try {
+    await h.mount();
+    await h.update([process("b")], "different-workspace");
+    assert.deepEqual(
+      h.calls.map((x) => x.id),
+      ["a", "b"],
+    );
+    await tickCapture(t);
+    assert.deepEqual(
+      h.calls.map((x) => x.id),
+      ["a", "b"],
+    );
+    assert.equal(h.entries.length, 10);
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.isLoadingHistory, false);
+  } finally {
+    await h.close();
+    t.mock.timers.reset();
+  }
+});

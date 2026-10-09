@@ -526,3 +526,91 @@ cutover. Historical448/145/transcript415/journal/mode/link exceptions remain
 explicit and are not automatically operational data-loss acceptance. Stable
 incumbent/fallback and all B evidence remain protected. No permission change,
 credential/access expansion, new auth flow, production restart/cutover or cleanup.
+
+
+## Verified publication, combined CI and actual candidate blocker (05:31 UTC)
+
+Stored MCP artinflight workflow grant is verified; no new auth flow or repeat
+approval is needed. Existing SSH desktop and physical B path checked successfully
+again. Incumbent Green service remains active/running PID3027197 and /api/info
+responds successfully. These facts do not authorize any pending ownership change.
+
+PR230 combined source at7708037a passed exact Test37886243350:472 backend tests
+passed,10 skipped; real scanner73 contracts passed, plus frontend desktop/phone
+consent lifecycle fixtures, formatting/type/lint checks, schema/clippy/Tauri and
+ops/branch checks. Remote private dependency validation is still skipped because
+its deploy key is absent; its green job is not evidence those checks ran.
+Artifact37886243480 compiled candidate/rollback binaries but failed its mandatory
+routing-module verification. Diagnostic commit04c998c8 preserved every check and
+made the failure observable early: artifact37888782559 reports exactly
+"Routing module prerequisite missing: bwrap". Current PR230 headc3c48e6324f778ccd03a5761c2314b440e9ceac3,
+treed8bb5fb0678e7e7ce0951bc2dc8aa95a61ecf99a installs only the required bubblewrap
+dependency on the isolated hosted builder; no host security policy is changed.
+Both source revisions retain exactly149changed paths against the pinned staging
+baseline; original overlay/packs/receipts are retained. Fresh exact-head
+Test37888935110 and artifacts37888935082 are pending/running, not accepted yet.
+
+Exact read-only namespace preflight succeeds on MCP with existing bwrap. Bounded
+regressions prove a missing dependency blocks before process spawn and a namespace
+denial fails closed. A repeat execution of the local publication scanner at
+/mnt/vk-storage/vk-runtime-backup-20261009/gitleaks-publication was denied: mode0605,
+owned mcp, owner execute absent. No chmod/chown, alternate executor or credential
+route was attempted. Existing successful original publication scan and exact
+real-scanner CI evidence remain; current-source CI is separately required.
+
+Source metadata review confirms DB archive headers originate from gettarinfo(raw)
+and source xattrs, with exact source_metadata_before atime/mtime for direct B
+snapshots when supplied. The temporary B snapshot inode is not substituted for
+source owner/mode metadata. This is source review, not full restored Linux
+metadata acceptance or proof of all historical original atimes/ctime/inodes.
+
+Production architecture remains MCP. The accepted design is ONE independent MCP
+candidate generation restored, tested, caught up and later promoted with those
+same roots; compatible fallback must use latest candidate data. The existing
+120GiB B-backed ext4 environment is located on Desktop and is NOT the eventual
+MCP cutover instance or permission to migrate production. No second full restore
+or new environment provisioning is started. Pending UID/GID1000 change for only
+new Desktop guest source/test-output is unanswered and held.
+
+Targeted retained-catalog accounting, without a repeat OP storage audit, gives
+active Green agent home10081079316bytes and current XDG30567395733bytes regular
+payload; these entire included roots still contain unclassified historical
+subtrees. Adding the accepted4734447616byte current Green logger snapshot gives
+45382922665bytes before other DBs, attachments, native tools and restore/catch-up
+reserve. This is a lower bound for THESE CURRENTLY INCLUDED roots, not a proven
+minimal operational subset. Full unreduced preservation payload is93864377002bytes
+(87.42GiB). Historical material remains authenticated on B; no intra-root scope
+reduction has been authorized/applied or silently claimed safe.
+
+Current MCP secondary ext4 free275693568bytes, system free42568028160bytes.
+No MCP candidate volume is allocated/restored. System bulk staging is prohibited,
+and the full included active-root lower bound alone exceeds its free bytes.
+The smallest external prerequisite is MCP-accessible native Linux candidate
+storage with capacity for the approved operational dependency closure plus a
+measured restore/catch-up/quarantine/package reserve. Operator must provide or
+approve that storage attachment/allocation; neither Desktop SSH file access nor
+its ext4 image alone supplies MCP native production storage. Do not delete
+protected data, remotely loop-mount through SSHFS, change permissions/security,
+or silently reclassify current data to evade this requirement.
+
+After that prerequisite and fresh package binding: restore the SAME MCP candidate,
+validate every included file/DB and full Linux metadata, bind actual namespace/
+application/supervisor/scanner/controller prerequisites, validate live consent
+and current delivered-report receipts, drain active sessions safely, hold all
+writers, produce a fresh B boundary/catch-up preserving test edits and newer live
+writes, rehearse latest-data fallback and promote only if actual acceptance passes.
+No production stop/fence/restart/cutover/merge/cleanup has occurred. Cleanup remains
+technically unavailable pending human QA and a separately reviewed implementation.
+Historical448/145/transcript415/journal/mode/link exceptions remain explicit.
+
+
+Artifact37888935082 finished failed on exactc3c48e63. Dependency installation
+passed, then mandatory namespace preflight reported exactly:
+`bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`.
+No artifacts uploaded. No runner security-policy change, namespace bypass,
+privileged rerun or alternate builder route was attempted. The existing MCP
+namespace preflight passes, but local build/candidate capacity remains missing.
+Independent prerequisites are now specific: a permitted isolated builder with
+required namespace support (or operator-approved build capacity on the existing
+MCP sandbox), plus MCP-native same-candidate restore/catch-up storage. No repeated
+GitHub authentication is required. Pending ownership request remains unanswered.

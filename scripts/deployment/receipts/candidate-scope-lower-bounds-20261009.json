@@ -1,0 +1,36 @@
+{
+  "SQLite_payload_snapshot_sizes_not_in_prefix_counts": true,
+  "archive_sha256": "735e211552c315f9f9be78eda9f28d175f2406847032f5df6a5d2307d8362ef5",
+  "candidate_materialized": false,
+  "catalog_subset_counts": {
+    "active_XDG": {
+      "regular_file_bytes": 30567395733,
+      "regular_files": 31887
+    },
+    "active_agent_home": {
+      "regular_file_bytes": 10081079316,
+      "regular_files": 7353
+    },
+    "attachments_and_legacy_images": {
+      "regular_file_bytes": 325288405,
+      "regular_files": 386
+    },
+    "legacy_agent_home": {
+      "regular_file_bytes": 5281964228,
+      "regular_files": 16164
+    },
+    "project_roots": {
+      "regular_file_bytes": 5290392915,
+      "regular_files": 93560
+    },
+    "secondary_worktrees": {
+      "regular_file_bytes": 7046626716,
+      "regular_files": 243761
+    }
+  },
+  "hardlink_alias_allocation_not_duplicated": true,
+  "measured_candidate_peak": false,
+  "operational_scope_reduced": false,
+  "production_modified": false,
+  "source": "retained authenticated catalog; no live directory sizing or repeated storage audit"
+}

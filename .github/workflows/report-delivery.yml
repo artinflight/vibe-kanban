@@ -1,0 +1,32 @@
+name: Report delivery caller
+
+on:
+  pull_request:
+    branches: [staging, main]
+    paths:
+      - scripts/report_delivery/**
+      - .github/workflows/report-delivery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  caller:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Test delivery boundary without an installed connector
+        run: python3 -m unittest discover -s scripts/report_delivery -p test_caller.py -v
+      - name: Verify packaged patch hash and file boundary
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, subprocess
+          root = pathlib.Path('scripts/report_delivery/connector-patch')
+          binding = json.loads((root / 'binding.json').read_text())
+          patch = root / 'prepared-intent.patch'
+          assert hashlib.sha256(patch.read_bytes()).hexdigest() == binding['patch_sha256']
+          files = [line.split('\t')[2] for line in subprocess.check_output(
+              ['git', 'apply', '--numstat', str(patch)], text=True).splitlines()]
+          assert files == binding['files'] == ['report_reconciliation.py']
+          PY

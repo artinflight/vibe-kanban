@@ -1,3 +1,23 @@
+# October 9: Unread report integration pickup
+
+Read VK_UNREAD_REPORT_INTEGRATION.md and scripts/report_delivery/evidence/validation.json.
+Source caller, durable confirmed-event retry and pre-presentation intent pinning
+are implemented. A one-file `report_reconciliation.py` patch is packaged in this
+Vibe stream at the owner's direction; connector has no remote. Its source is
+`/mnt/vk-storage/vk-unread-integration-20261009/connector`, commit f892cf3.
+It applies to PR236 connector195e3b782; 100 maintenance +26 caller/integration
+tests pass on a disposable combined copy. Maintenance acknowledged no file
+boundary overlap; its adapter/status/capture/backend/UI work is untouched.
+
+Real installed read-only discovery is20 tools, this session's catalog14. Live
+backendc3c48e63 supports both v1 guards; current frontend5ce84ee2 is preserved.
+No production unread write, receipt seed, code install, metadata refresh or
+service change occurred. Finish through separately authorized connector adoption,
+client metadata refresh, genuine channel confirmation binding and the real-evidence
+acceptance checklist. Do not reinterpret synthetic delivery as a live receipt.
+Aggregate frontend format/check/lint are blocked by missing tools; Rust formatting,
+ops and diff checks pass. No local Cargo build/tests under the capacity constraint.
+
 # October 8: Workspace-first navigation and task attention follow-up
 
 The current frontend stream makes Workspaces the opening screen, removes the

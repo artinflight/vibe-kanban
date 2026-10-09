@@ -1,3 +1,15 @@
+# October 9: Unread report delivery integration
+
+Current branch `vk/4113-vk-unread-tool-i` starts at fork/staging `e8c450fb5`.
+Scope is the Root/dot confirmed-delivery caller, a hash-bound one-file connector
+patch and acceptance evidence. Reuse live review-state v1/exact-turn receipts;
+assignment/visibility and PR236 capture reliability are separate ownership.
+Read VK_UNREAD_REPORT_INTEGRATION.md. Connector owner acknowledged no overlap.
+Source-only: no installation, metadata refresh, live receipt/clear, restart,
+security/config/model/effort change or combined-release rollback is authorized.
+126 synthetic tests pass on the combined connector candidate; actual channel
+callback/client catalog/adoption/live-delivery acceptance remain open.
+
 # October 8: Workspace-first navigation and task attention follow-up
 
 The current frontend stream makes Workspaces the opening screen, removes the

@@ -1,0 +1,36 @@
+{
+  "server_tools": [
+    "create_session",
+    "get_agent_replies",
+    "get_execution",
+    "get_issue",
+    "get_latest_agent_reply",
+    "get_repo",
+    "get_workspace_reconciliation_status",
+    "list_issues",
+    "list_projects",
+    "list_repos",
+    "list_session_executions",
+    "list_sessions",
+    "list_workspace_unread_summaries",
+    "list_workspaces",
+    "mark_workspace_read",
+    "reconcile_workspace_reports",
+    "record_workspace_report_delivery",
+    "run_session_prompt",
+    "set_workspace_review_hold",
+    "start_workspace"
+  ],
+  "server_tool_count": 20,
+  "review_state": {
+    "protocol": "workspace-review-v1",
+    "atomic_exact_reply": true,
+    "manual_intent_guard": true,
+    "held": false,
+    "intent_version": 1
+  },
+  "unread_summary_read_succeeded": true,
+  "guarded_delivery_supported": false,
+  "delivery_callback_observed": false,
+  "marks_sent": 0
+}

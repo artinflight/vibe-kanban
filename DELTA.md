@@ -1574,3 +1574,12 @@ ops governance pass; full Rust baseline attempts fail on absent host GTK/GLib
 pkg-config libraries. See VK_MOBILE_UX.md and the SSD evidence directory there.
 This feature follow-up is not deployed; Green PID3027197, production frontend
 and configured model/effort/Recommend-only routing remain unchanged.
+
+2026-10-09 — Unread report integration candidate: implemented Root/dot caller,
+confirmed-event outbox and a hash-bound report_reconciliation.py patch pinning
+pre-presentation backend/local intent. Owner-approved patch packaging in Vibe;
+PR236 owner acknowledged no file overlap. Combined disposable connector100 and
+caller26 tests pass. Live read-only discovery20/cache14 and both v1 guards verified;
+backendc3c48e63/frontend5ce84ee2 unchanged. No production clear, seed, deployment,
+metadata refresh or security/config change. Adoption/channel callback and genuine
+delivered-report acceptance remain open. See VK_UNREAD_REPORT_INTEGRATION.md.

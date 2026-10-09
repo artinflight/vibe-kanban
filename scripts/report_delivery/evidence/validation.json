@@ -1,0 +1,50 @@
+{
+  "validated_at_utc": "2026-10-09",
+  "connector_source_commit": "195e3b782eaef226049b003d8ca2a205094016aa",
+  "candidate_connector_commit": "f892cf3",
+  "source_is_disposable_copy": true,
+  "connector_tests": {
+    "passed": 100,
+    "skipped": 0
+  },
+  "caller_tests": {
+    "passed": 26,
+    "skipped": 0,
+    "independent": 15,
+    "actual_dispatcher_integration": 11
+  },
+  "log_path": "/mnt/vk-storage/vk-unread-integration-20261009/patch-acceptance.log",
+  "log_sha256": "7acc605bab37aa05845e77074362b750db977ffbf074149cf705598d2ca0148a",
+  "backend_under_test": "existing synthetic FakeAtomic fixture; no Rust rebuild or production mark",
+  "pr236_file_overlap": [],
+  "owner_acknowledgement": {
+    "workspace_id": "e3e1a013-43e6-4d91-91fd-7032c7881249",
+    "execution_id": "64b2cb28-7cc2-4942-a1e5-b6da77b12e65",
+    "scope": "Owner acknowledged no file overlap with report_reconciliation.py; no edits requested"
+  },
+  "live_backend_service": "vibe-kanban-current-state-production-20261009.service",
+  "live_backend_pid": 1254186,
+  "live_backend_executable": "/mnt/vk-storage/vk-cutover-artifacts-20261009/c3c48e63/candidate/server",
+  "live_frontend_source": "5ce84ee21be814b1519cfb2715b50f3432c3e8ba",
+  "session_callable_vibe_tool_count": 14,
+  "installed_discovery_vibe_tool_count": 20,
+  "catalog_refreshed": false,
+  "actual_delivery_callback_observed": false,
+  "production_mark_requests": 0,
+  "production_deployment": false,
+  "checks": {
+    "ops": "passed",
+    "git_diff_check": "passed",
+    "rust_format": "passed",
+    "pnpm_format": "blocked: prettier missing after Rust format passed",
+    "pnpm_check": "blocked: tsc missing after legacy-path guard passed",
+    "pnpm_lint": "blocked: eslint missing",
+    "cargo_tests": "not run: user no-heavy-build instruction and low SSD"
+  },
+  "pending_acceptance": [
+    "authorized connector adoption",
+    "client metadata refresh and real tool availability",
+    "channel-owner confirmed-delivery callback binding",
+    "real delivered-report receipt/proof/unread readback"
+  ]
+}

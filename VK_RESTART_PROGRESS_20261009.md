@@ -1210,3 +1210,51 @@ and both read-only acceptances; no further manual command is requested. Candidat
 application rehearsal, final fenced catch-up, latest-data fallback/live acceptance
 and cutover remain unperformed. Historical recovery exceptions remain explicit.
 See receipts/no-manual-command-route-20261009.json.
+
+## 20:15 changed owner instruction: established current-state handoff
+
+Owner withdrew additional procedural safety-cutover gates and ordered immediate
+release, preserving access boundaries and recent work. The shortest supported
+route is the established user-systemd reciprocal ownership handoff using the
+original authoritative data paths. This removes the6.33GB restored-tree catch-up
+allocation entirely; no reserve waiver, stale restore, archive retirement, root
+installation or scope reduction is needed. The previously restored candidate
+tree and preparation owner remain preserved, unused by this current-state route.
+
+Actual SSH/B access succeeds. All84existing primary-DB migration SHA384 checksums
+match the pinned c3release; integrity is ok. A92,372,992byte consistent online
+primary-DB snapshot was independently hash/size verified on B at20:21:52UTC;
+SHAe75a6a239915d0af69c03b582ae999c5e416eb87933d66b52e8f59849e1fb64a.
+Its isolated derivative passed the one additive migration and integrity check.
+This is explicitly a primary DB preimage, not another whole-state checkpoint.
+Existing whole-state B backup remains retained; current SDK/workspace/attachment
+data remains at its existing authoritative locations and is not overwritten.
+
+The first brief maintenance attempt hit HTTP409 at ownership release; source
+requires no running executions. The sole running row is this Staging preparation
+itself. The original route and companion were recovered before candidate start
+or original DB enrollment. No execution status was forged and no root denial
+was retried. A bounded user-service release actor now waits for the REAL existing
+execution to complete, rejects any new active user execution, then performs the
+already authorized handoff. No operator command or new agent execution is needed.
+
+The prepared backend is the original pinned2aa884b3 artifact, the frontend is
+actual5ce84/66 plus current repairs (905c20c6HTML), not the old candidate frontend.
+A compatible c6ebdd42cutback unit uses latest shared authoritative data because
+old incumbent cannot parse the upgraded v2capacity ledger. The old incumbent
+process/artifact/unit stays retained; do not thaw it against v2state. Actor takes
+a final frozen primary DB B snapshot, explicitly enrolls the selected intrinsic
+runtime identity, starts in capacity standby, acquires the exact released state,
+checks preserved selections/used grants/saved messages, then routes and checks
+actual HTTPS/API/HTML/JS/CSS/manifest plus running binary hash. Existing public
+MyHomelabCA hash15c53cb6was retrieved through established SSH for request-scoped
+TLS verification only; no global trust or security settings changed. Automatic
+cleanup remains disabled. Old boot activation switches only after live checks.
+
+Cutover is NOT claimed complete in this handoff. Actor state/result files under
+direct-current-state-release-20261009 are the authority for actual completion
+or failure. Root should read cutover.safe.json AND live-acceptance.safe.json
+after this execution closes. Phone/human QA and historical448/145/transcript415/
+journal/mode/link exceptions remain open. No permanent-helper adoption or
+archive removal is necessary for this route. See current-state-cutover-handoff
+safe receipt for immutable source/artifact and exact pending operation bindings.

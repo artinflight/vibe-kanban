@@ -3,7 +3,7 @@
 A source-only integration candidate reuses the deployed review-state v1 backend
 and connector receipts, with pre-presentation intent pins and durable confirmed-event
 retry. It is separate from assignment/visibility and PR236 capture work; see
-VK_UNREAD_REPORT_INTEGRATION.md for exact boundaries, 126 synthetic passing tests,
+VK_UNREAD_REPORT_INTEGRATION.md for exact boundaries, 137 synthetic passing tests,
 read-only capability evidence and remaining adoption/client-delivery acceptance.
 The runtime, client catalog, production markers and combined release are unchanged.
 

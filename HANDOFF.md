@@ -3,14 +3,21 @@
 Read VK_UNREAD_REPORT_INTEGRATION.md and scripts/report_delivery/evidence/validation.json.
 Review is in [draft PR238](https://github.com/artinflight/vibe-kanban/pull/238) into
 staging. Source `dd57fc5ef` is pushed; dedicated caller/hash/scope CI passed at
-run38001200254. Full repository CI remained in progress at that receipt.
+run38001200254 (initial15-case suite). Current review evidence is hash-bound in
+validation.json; full repository CI is a separate gate.
 Source caller, durable confirmed-event retry and pre-presentation intent pinning
 are implemented. A one-file `report_reconciliation.py` patch is packaged in this
 Vibe stream at the owner's direction; connector has no remote. Its source is
-`/mnt/vk-storage/vk-unread-integration-20261009/connector`, commit f892cf3.
-It applies to PR236 connector195e3b782; 100 maintenance +26 caller/integration
+`/mnt/vk-storage/vk-unread-integration-20261009/connector`, code commit 6b092371.
+It applies to PR236 connector195e3b782; 100 maintenance +37 caller/integration
 tests pass on a disposable combined copy. Maintenance acknowledged no file
 boundary overlap; its adapter/status/capture/backend/UI work is untouched.
+PR238 retry review verifies immutable nonzero backend/local pins on pending/lost
+commit responses and hold/release cycles. Automatic caller guards reject legacy
+unpinned receipts; applied caches now expose only historical unread observations.
+The exact missing binding is the presentation runtime's confirmed chat-delivery
+or completed-playback event, retaining prepared token -> Caller.confirm. None of
+this session's14 tools provides that callback; the CLI is not a channel hookup.
 
 Real installed read-only discovery is20 tools, this session's catalog14. Live
 backendc3c48e63 supports both v1 guards; current frontend5ce84ee2 is preserved.

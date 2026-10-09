@@ -37,6 +37,27 @@ def digest(value):
     return hashlib.sha256(canonical(value).encode("utf-8")).hexdigest()
 
 
+def require_prepared_guards(request):
+    if any(type(request.get(k)) is not int or not 0 <= request[k] <= 9223372036854775807
+           for k in GUARD_KEYS):
+        raise ValueError("Automatic delivery requires both prepared intent versions")
+
+
+def cached_result(saved):
+    # A receipt remains applied; its old flag observation is not current state.
+    value = dict(saved, duplicate=True, result_origin="outbox_cache", readback_fresh=False)
+    if isinstance(saved.get("proof"), dict):
+        proof = dict(saved["proof"])
+        if "authoritative_readback" in proof:
+            value["historical_readback"] = {
+                "has_unseen_turns": proof.pop("authoritative_readback"),
+                "observed_at": proof.pop("authoritative_readback_observed_at", None),
+                "fresh": False,
+            }
+        value["proof"] = proof
+    return value
+
+
 class Caller:
     def __init__(self, path, tools):
         self.path = Path(path)
@@ -123,10 +144,11 @@ class Caller:
             row = db.execute("SELECT request,result FROM events WHERE token=?", (token,)).fetchone()
             if not row:
                 raise ValueError("No confirmed event; preparation is not delivery")
+            request = json.loads(row["request"])
+            require_prepared_guards(request)
             saved = json.loads(row["result"]) if row["result"] else None
             if saved and saved.get("status") == "applied":
-                return dict(saved, duplicate=True)
-            request = json.loads(row["request"])
+                return cached_result(saved)
         value = self.tools.call("record_workspace_report_delivery", request)
         if not isinstance(value, dict) or not value.get("recorded"):
             raise ValueError("Delivery receipt result unavailable; reconcile identical event only")
@@ -134,7 +156,7 @@ class Caller:
             # A slower uncertain duplicate cannot downgrade a successful result.
             current = db.execute("SELECT result FROM events WHERE token=?", (token,)).fetchone()[0]
             if current and json.loads(current).get("status") == "applied":
-                return dict(json.loads(current), duplicate=True)
+                return cached_result(json.loads(current))
             db.execute("UPDATE events SET result=? WHERE token=?", (canonical(value), token))
         return value
 
@@ -152,6 +174,8 @@ class LocalTools:
         if name not in {"prepare_workspace_report_delivery", "record_workspace_report_delivery",
                         "list_workspace_unread_summaries"}:
             raise ValueError("Unsupported delivery integration tool")
+        if name == "record_workspace_report_delivery":
+            require_prepared_guards(args)
         response = self.adapter.Adapter(None).handle({
             "jsonrpc": "2.0", "id": "root-delivery", "method": "tools/call",
             "params": {"name": name, "arguments": args}})

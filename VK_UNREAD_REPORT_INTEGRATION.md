@@ -90,6 +90,40 @@ outbox results do not send another mark after restart. One real channel event ca
 cover individually prepared reports from different workspaces; it never selects
 or clears additional workspaces. No polling, startup sweep or bulk seed exists.
 
+### PR238 retry review
+
+Full local `report_reconciliation.py` inspection confirms `consume` never updates
+`backend_intent_version`, `hold_version` or the receipt payload. Its UPDATE writes
+only status/detail/timestamp/proof. Nonzero pins remain7/2 across pending retries,
+new caller/store instances and a lost response after backend commit. Mirrored or
+offline hold/release and backend-only UI intent changes stop another POST rather
+than adopting new versions. Legacy NULL intent remains NULL; the request's epoch
+zero fallback never writes a newer epoch into the ledger.
+
+Focused regressions now cover those stored rows and exact retried HTTP payloads,
+including response/readback loss after commit and concurrent duplicate callers.
+The original consumer was already preserving pins; no version-adoption repair was
+needed. Its comments and regression evidence now make that invariant explicit.
+
+The cached observation defect was confirmed and fixed: an applied outbox cache
+returns `readback_fresh:false`, `result_origin:outbox_cache` and a separately named
+`historical_readback`. It removes `authoritative_readback` and its timestamp from
+the returned cached proof. Connector ledger status is also explicitly historical;
+an applied connector duplicate has no fresh proof/readback. Only an independent
+successful summaries request sets `readback_fresh:true` and an observation time.
+A lost summaries response cannot return a backend's cached flag as current state.
+
+Automatic-path audit: the only receipt send in this proposal is `Caller.retry`,
+reached from a persisted `Caller.confirm` event and prepared context. Retry itself
+validates both pins before using any injected tool client; `LocalTools.call` also
+rejects an unpinned record before dispatch. CLI prepare/confirm/retry uses the same
+class. A remote client binding must use that class, not a new direct record call.
+There is no installed automatic caller or background worker. The connector's
+optional unpinned compatibility path remains for legacy explicit callers; this
+proposal does not claim universal server rejection of every external unpinned
+caller. The old maintenance direct-Adapter receipt recipe must not be reused as an
+automatic runtime callback.
+
 `mark_workspace_read` stays available for an explicit request to clear one
 workspace. Automatic code cannot call it. Explicit clear requests retain their
 existing user semantics; no new confirmation gate or blanket clearing is added.
@@ -99,8 +133,8 @@ or normal UI manual-intent routes. Release alone never replays old evidence.
 ## Validation
 
 The patch was applied to a disposable copy of PR236 connector head `195e3b782`,
-then all100 existing maintenance tests and26 new caller/integration tests passed.
-The11 integration tests use the real Adapter dispatcher, connector ledger and
+then all100 existing maintenance tests and37 new caller/integration tests passed.
+The20 integration tests use the real Adapter dispatcher, connector ledger and
 existing synthetic atomic backend fixture. They do not exercise a production mark
 or recompile Rust. Tests cover manual-unread/release before delayed recording,
 offline connector hold/release, intent races at atomic POST, newer/running activity,
@@ -117,12 +151,14 @@ python3 scripts/report_delivery/check_connector_patch.py \
 The checker verifies the patch and source hashes, tests a disposable mounted-SSD
 copy and leaves source/runtime unchanged. It does not install or deploy anything.
 [Validation receipt](scripts/report_delivery/evidence/validation.json) binds the
-tested source and results. The dedicated Python CI job tests the15 independent
+tested source and results. The dedicated Python CI job tests the17 independent
 caller cases and packaged patch boundary. Connector integration needs the owner's
 source inputs; CI does not pretend to have them.
-The dedicated caller/hash/scope CI passed at source `dd57fc5ef`:
+The initial15-case caller/hash/scope CI passed at source `dd57fc5ef`:
 [run38001200254](https://github.com/artinflight/vibe-kanban/actions/runs/38001200254).
 Normal full repository CI was still running when that receipt was recorded.
+The revised independent caller suite has17 cases; its current CI receipt is
+reported separately from that initial validation.
 
 `pnpm run ops:check`, `git diff --check`, and Rust formatting passed. Required
 `pnpm run format` stopped at missing Prettier after Rust formatting; `pnpm run check`
@@ -136,7 +172,7 @@ No generated types, application/frontend/backend sources or schema changed.
 1. **Connector maintenance owner:** review the one-file patch and its binding.
    Check it against the owner's current source with `check_connector_patch.py`.
    Integrate that patch with PR236's separately owned adapter/status delta; run
-   the combined100+26 tests. Reconcile any differing receipt-source hash instead
+   the combined100+37 tests. Reconcile any differing receipt-source hash instead
    of forcing the patch. No separate connector remote is required.
 2. **Authorized connector adoption:** only `report_reconciliation.py` changes in
    this patch. Use the maintenance owner's existing file-limited installation,
@@ -165,6 +201,27 @@ No generated types, application/frontend/backend sources or schema changed.
    `/home/mcp/code/vibe-dot-connector` installation. For a remote dot client, bind
    the same `Caller` interface to the existing authenticated scoped-tool client;
    do not copy host credentials or expose a generic HTTP endpoint.
+
+### Exact remaining channel edge under available tools
+
+[Current channel/tool evidence](scripts/report_delivery/evidence/channel-binding.json)
+records14 actual callable Vibe tools and the remaining binding contract. Installed
+initialize advertises only MCP tools, without a user-delivery/playback event source.
+None of `get_agent_replies`, `get_latest_agent_reply`, execution metadata, an MCP
+call result or this assistant's commentary/final output returns a confirmed
+user-message delivery ID or a completed-playback callback.
+
+The missing owner is **Root/dot's user-channel presentation runtime**. Before
+presentation it must associate the prepared token with the exact report and the
+channel presentation. Its actual chat-delivery or completed-report-playback handler
+must supply that same token, stable channel event ID and redacted report-specific
+reference to `Caller.confirm`. An actual explicit handled acknowledgement can
+supply the `user_handled` outcome. Cancellation/partial playback has no confirm
+call. Model output emission, audio synthesis completion and Vibe worker completion
+are not substitute events. The CLI is a local attestation adapter, not this host
+callback. No available tool installs or observes the missing channel handler;
+end-to-end channel integration remains unimplemented. Metadata refresh remains a
+separate supported setup step and does not produce delivery evidence.
 
 Read-only readiness command, usable now:
 

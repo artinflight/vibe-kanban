@@ -37,7 +37,9 @@ class FakeTools:
         if self.fail:
             raise TimeoutError("Uncertain synthetic result")
         return {"recorded": True, "status": "applied", "receipt_id": "fixture",
-                "proof": {"authoritative_readback": False}}
+                "readback_fresh": True,
+                "proof": {"authoritative_readback": False,
+                          "authoritative_readback_observed_at": "2026-10-09T22:00:00+00:00"}}
 
 
 class Tests(unittest.TestCase):
@@ -121,6 +123,12 @@ class Tests(unittest.TestCase):
         self.caller.confirm(token, EVENT)
         again = Caller(self.path, self.tools).confirm(token, EVENT)
         self.assertTrue(again["duplicate"])
+        self.assertFalse(again["readback_fresh"])
+        self.assertEqual(again["result_origin"], "outbox_cache")
+        self.assertNotIn("authoritative_readback", again["proof"])
+        self.assertNotIn("authoritative_readback_observed_at", again["proof"])
+        self.assertEqual(again["historical_readback"], {
+            "has_unseen_turns": False, "observed_at": "2026-10-09T22:00:00+00:00", "fresh": False})
         self.assertEqual(len(self.tools.calls), 2)
 
     def test_uncertain_delivery_persists_identical_request_before_call(self):
@@ -163,6 +171,30 @@ class Tests(unittest.TestCase):
         tools = LocalTools.__new__(LocalTools)
         with self.assertRaises(ValueError):
             tools.call("mark_workspace_read", {"workspace_id": IDENTITY["workspace_id"]})
+
+    def test_automatic_transport_rejects_legacy_record_before_dispatch(self):
+        tools = LocalTools.__new__(LocalTools)
+        for guards in ({}, {"expected_intent_version": 3},
+                       {"expected_intent_version": True, "expected_hold_version": 4}):
+            with self.subTest(guards=guards), self.assertRaises(ValueError):
+                tools.call("record_workspace_report_delivery", dict(IDENTITY, **guards))
+
+    def test_retry_rejects_legacy_outbox_request_before_any_tool_call(self):
+        # Seed an old malformed automatic request: even an injected tool client
+        # must never receive an unpinned receipt through Caller.retry.
+        token = self.prepared()
+        self.tools.fail = True
+        with self.assertRaises(TimeoutError):
+            self.caller.confirm(token, EVENT)
+        with self.caller.database() as db:
+            request = json.loads(db.execute("SELECT request FROM events WHERE token=?", (token,)).fetchone()[0])
+            for key in GUARD_KEYS:
+                del request[key]
+            db.execute("UPDATE events SET request=? WHERE token=?", (json.dumps(request), token))
+        previous_calls = len(self.tools.calls)
+        with self.assertRaises(ValueError):
+            self.caller.retry(token)
+        self.assertEqual(len(self.tools.calls), previous_calls)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,67 @@
 diff --git a/report_reconciliation.py b/report_reconciliation.py
-index 8a6d9c6..239fee9 100644
+index 8a6d9c6..b329393 100644
 --- a/report_reconciliation.py
 +++ b/report_reconciliation.py
-@@ -261,27 +261,40 @@ def consume(api, store, receipt_id):
+@@ -133,7 +133,8 @@ class Store:
+                         "SELECT receipt_id,status,detail,hold_version,created_at,updated_at,payload,proof "
+                         "FROM receipts WHERE workspace_id=? ORDER BY created_at LIMIT 100", (wid,))],
+                     "automatic_marking": "requires_verified_atomic_backend",
+-                    "polling_interval_seconds": None}
++                    "polling_interval_seconds": None,
++                    "proof_origin": "receipt_ledger", "readback_fresh": False}
+ 
+ 
+ def verify_reply(api, payload):
+@@ -213,9 +214,10 @@ def consume(api, store, receipt_id):
+         row = dict(db.execute("SELECT * FROM receipts WHERE receipt_id=?", (receipt_id,)).fetchone())
+         hold = store.hold(db, row["workspace_id"])
+     payload = json.loads(row["payload"])
+-    status, detail, proof = "pending", "", None
++    status, detail, proof, readback_fresh = "pending", "", None, False
+     if row["status"] == "applied":
+-        return {"receipt_id": receipt_id, "status": "applied", "duplicate": True}
++        return {"receipt_id": receipt_id, "status": "applied", "duplicate": True,
++                "readback_fresh": False}
+     if hold["held"]:
+         status, detail = "held", "Explicit manual review hold"
+     elif hold["version"] != row["hold_version"]:
+@@ -236,7 +238,7 @@ def consume(api, store, receipt_id):
+                 if latest_hold["held"] or latest_hold["version"] != row["hold_version"]:
+                     raise ValueError("Local hold/intent changed before atomic request")
+                 request = dict(payload, receipt_id=receipt_id, intent_version=expected_intent)
+-                proof = backend(api, row["workspace_id"], "review-receipts", "POST", request)
++                proof = dict(backend(api, row["workspace_id"], "review-receipts", "POST", request))
+                 if (proof.get("protocol") != PROTOCOL or proof.get("receipt_id") != receipt_id
+                         or proof.get("execution_id") != payload["execution_id"]
+                         or proof.get("message_index") != payload["message_index"]
+@@ -244,44 +246,66 @@ def consume(api, store, receipt_id):
+                         or proof.get("status") not in ("applied", "already_applied")):
+                     raise ValueError("Atomic acknowledgement proof mismatch")
+                 status, detail = "applied", "Backend acknowledged only the exact reviewed turn"
++                # Backend acknowledgement is historical/idempotent proof. Only
++                # this separate summary request can establish a current flag.
++                proof.pop("authoritative_readback", None)
++                proof.pop("authoritative_readback_observed_at", None)
+                 rows = workspace_unread.request(api).get("summaries", [])
+                 flags = [r.get("has_unseen_turns") for r in rows if r.get("workspace_id") == row["workspace_id"]]
+                 proof["authoritative_readback"] = flags[0] if len(flags) == 1 and type(flags[0]) is bool else "unknown"
++                proof["authoritative_readback_observed_at"] = now()
++                readback_fresh = True
+         except urllib.error.HTTPError as error:
+             status = "blocked_backend" if error.code in (400, 404, 405) else "backend_conflict"
+             detail = "Atomic backend route HTTP " + str(error.code) + "; no legacy /seen fallback"
+         except (OSError, ValueError, KeyError):
+             status, detail = "blocked_backend", "Atomic backend unavailable/uncertain; deduplicated retry only"
+     with store.locked() as db:
++        # Intent pins and immutable payload are NEVER updated on retry, including
++        # a lost response after backend commit. NULL legacy intent stays NULL;
++        # the epoch-zero fallback above is only a request value, not adoption.
+         db.execute("UPDATE receipts SET status=?,detail=?,updated_at=?,proof=? WHERE receipt_id=? "
+                    "AND (status <> 'applied' OR ? = 'applied')",
+                    (status, detail, now(), canonical(proof) if proof is not None else None, receipt_id, status))
+     return {"receipt_id": receipt_id, "workspace_id": row["workspace_id"], "status": status,
+-            "detail": detail, "proof": proof}
++            "detail": detail, "proof": proof, "readback_fresh": readback_fresh}
  
  
  def record(api, args, store=None):
@@ -50,7 +109,7 @@ index 8a6d9c6..239fee9 100644
                   "pending", "Actual root/dot delivered/handled signal", now(), now(), epoch, None))
              # Durable receipt precedes the network operation. A crash can only
              # leave a pending receipt; backend receipt_id makes retry idempotent.
-@@ -290,6 +303,23 @@ def record(api, args, store=None):
+@@ -290,6 +314,23 @@ def record(api, args, store=None):
      return dict(result, recorded=True, duplicate=bool(old))
  
  
@@ -74,7 +133,7 @@ index 8a6d9c6..239fee9 100644
  def set_hold(api, args, store=None):
      if set(args) != {"workspace_id", "held", "source"} or type(args["held"]) is not bool:
          raise ValueError("One workspace, boolean held and explicit user-intent source required")
-@@ -384,5 +414,17 @@ TOOLS = [
+@@ -384,5 +425,17 @@ TOOLS = [
      tool("reconcile_workspace_reports", "Resume this workspace's already recorded, actually delivered reports after backend recovery. At most 64 receipts; idempotent conditional exact-reply backend only. No legacy mark-all fallback and no inferred delivery.", {"workspace_id": ID}),
  ]
  

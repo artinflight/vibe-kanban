@@ -7,7 +7,7 @@ assignment/visibility and PR236 capture reliability are separate ownership.
 Read VK_UNREAD_REPORT_INTEGRATION.md. Connector owner acknowledged no overlap.
 Source-only: no installation, metadata refresh, live receipt/clear, restart,
 security/config/model/effort change or combined-release rollback is authorized.
-126 synthetic tests pass on the combined connector candidate; actual channel
+137 synthetic tests pass on the combined connector candidate; actual channel
 callback/client catalog/adoption/live-delivery acceptance remain open.
 Review is in [draft PR238](https://github.com/artinflight/vibe-kanban/pull/238).
 

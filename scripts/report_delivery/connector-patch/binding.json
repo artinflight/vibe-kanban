@@ -1,9 +1,9 @@
 {
   "base_connector_commit": "e2e8e149f1f19d3e05f7436fdffc64086032afac",
-  "candidate_connector_commit": "f892cf32ad14870932f6ae12f5365acf7989d6d9",
-  "patch_sha256": "2535c6a796e6fe478a027f2bb0b772e7744a07f482f3564dfd8a5285b6d47e43",
+  "candidate_connector_commit": "6b09237137a73561ded002821e3832d4460daac5",
+  "patch_sha256": "49f777e670611c78edca46c4be3ec55052911e7c0cc695e470463ce7570c072c",
   "base_file_sha256": "b39299db6fc6b74add70346c9222ba7e6eb1a545178b7f9626c5f3b5fe407e0f",
-  "candidate_file_sha256": "0b7f21525a6bcbcf919ebb4b9699361fa29099f9daf3049e4f248e644999b928",
+  "candidate_file_sha256": "10afe49e6782de50e3a2dc8ea9b41ae2ba2606ceab076d6bc3972ddd1c1c07f3",
   "files": [
     "report_reconciliation.py"
   ],

@@ -1583,3 +1583,14 @@ caller26 tests pass. Live read-only discovery20/cache14 and both v1 guards verif
 backendc3c48e63/frontend5ce84ee2 unchanged. No production clear, seed, deployment,
 metadata refresh or security/config change. Adoption/channel callback and genuine
 delivered-report acceptance remain open. See VK_UNREAD_REPORT_INTEGRATION.md.
+
+2026-10-09 — PR238 targeted retry review: full consumer inspection confirms no
+backend/local intent-version adoption. Added nonzero7/2 pin/payload regressions
+for pending/restart, lost backend commit response, mirrored/offline/UI hold-release,
+legacy NULL and lost summary response. Fixed cached applied proofs to expose only
+historical readback, including concurrent duplicate return; guarded every proposed
+automatic receipt caller against unpinned requests. Combined PR236 base100 plus
+caller37 tests pass. Connector patch remains report_reconciliation.py only at
+6b092371; no PR236 files, production adoption or markers changed. Available14 tools
+expose no presentation delivery/playback callback: prepared token + actual channel
+event -> Caller.confirm remains the exact binding gap. Metadata refresh separate.

@@ -109,11 +109,6 @@ pub(super) async fn get_log_history(
             .map_err(|_| ApiError::BadRequest("Execution configuration unavailable".into()))?
             .base_executor()
             == Some(executors::executors::BaseCodingAgent::Codex)
-        && deployment
-            .container()
-            .get_msg_store_by_id(&process.id)
-            .await
-            .is_none()
     {
         if let Some(reason) = capture_error_for_process(&deployment.db().pool, &process).await? {
             return Ok(Json(ApiResponse::success(HistoryPage {
@@ -202,14 +197,17 @@ pub(crate) async fn capture_error_for_process(
     )
     .await
     .map_err(|_| ApiError::BadRequest("Execution capture location unavailable".into()))?;
-    if let Some(path) = path
-        && utils::execution_logs::validate_native_capture(
+    let available = if let Some(path) = path {
+        utils::execution_logs::validate_native_capture(
             &path,
             services::services::report_review::MAX_RAW_BYTES,
         )
         .await
-        .is_err()
-    {
+        .is_ok()
+    } else {
+        false
+    };
+    if !available {
         return Ok(Some(
             "Incomplete, damaged, or unverified execution capture; reply unavailable. Native transcript evidence must be preserved; no historical fallback or review acknowledgement.",
         ));

@@ -371,3 +371,68 @@ test("incomplete capture is visible and does not load older status as current", 
     await h.close();
   }
 });
+
+test("unavailable capture clears only after a new authoritative retry succeeds", async () => {
+  const h = harness([process("new")], ({ before, limit }, call) =>
+    call === 1
+      ? new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              entries: [],
+              next_before: null,
+              capture_error: "Capture pending",
+            },
+          }),
+          { headers: { "content-type": "application/json" } },
+        )
+      : pageResponse(10, before, limit),
+  );
+  try {
+    await h.mount();
+    assert.equal(h.result.historyError, true);
+    assert.match(h.result.historyErrorDetail, /completeness/);
+    await h.load();
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.historyErrorDetail, null);
+    assert.equal(h.entries.length, 10);
+  } finally {
+    await h.close();
+  }
+});
+
+test("a late unavailable response cannot contaminate another workspace", async () => {
+  let resolveOld;
+  const h = harness([process("old")], ({ id, before, limit }) =>
+    id === "old"
+      ? new Promise((resolve) => {
+          resolveOld = resolve;
+        })
+      : pageResponse(10, before, limit),
+  );
+  try {
+    await h.mount();
+    await h.update([process("new")], "another-workspace");
+    await act(async () => {
+      resolveOld(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              entries: [],
+              next_before: null,
+              capture_error: "Old capture pending",
+            },
+          }),
+          { headers: { "content-type": "application/json" } },
+        ),
+      );
+      await settle();
+    });
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.historyErrorDetail, null);
+    assert.equal(h.entries.length, 10);
+  } finally {
+    await h.close();
+  }
+});

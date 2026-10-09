@@ -166,6 +166,11 @@ export const useConversationHistory = ({
       }
       const result: { success: boolean; data: HistoryPage } =
         await response.json();
+      if (
+        scope.abort.signal.aborted ||
+        !processesRef.current.some((p) => p.id === process.id)
+      )
+        return 0;
       if (!result.success || !Array.isArray(result.data?.entries))
         throw new Error('Invalid history page');
       if (result.data.capture_error) {
@@ -174,11 +179,6 @@ export const useConversationHistory = ({
         );
         throw new Error(result.data.capture_error);
       }
-      if (
-        scope.abort.signal.aborted ||
-        !processesRef.current.some((p) => p.id === process.id)
-      )
-        return 0;
       scope.displayed[process.id] = {
         executionProcess: process,
         entries: mergeHistoryPage(

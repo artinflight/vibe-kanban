@@ -1,0 +1,13 @@
+{
+  "bytes": 237497,
+  "desktop_directory": "B:/vk-backups/vk-safe-release-20261009/preparation-5783d3eb",
+  "desktop_verified": true,
+  "direct_stream": true,
+  "files": 75,
+  "local_archive_bytes": 0,
+  "name": "candidate-preparation-5783d3eb.tar.zst",
+  "operational_acceptance": false,
+  "production_changed": false,
+  "sha256": "525562afd01772ac10d29a7e3665a6a82ae07bab02f3e123ae95cae2c9aff031",
+  "source_commit": "5783d3ebcfd2364397962b86fb26e3ac8e37f85a"
+}

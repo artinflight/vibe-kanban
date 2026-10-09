@@ -381,3 +381,40 @@ Archived-atime restoration and fresh B authentication remain necessary before
 controller adoption. The 589 original link exceptions and unavailable historical
 inode/ctime/birthtime metadata remain explicit. This is not operational rehearsal,
 current fenced data, recovery-complete acceptance or permission for promotion.
+
+At 13:27 UTC a new held, non-activating owner began fresh B authentication and
+full initial-materialization verification including archived-atime restoration.
+It uses immutable tool source 5783d3eb, the same actual tree inode 10354932 and
+original held lease. Unit `vk-materialization-adoption-5783d3eb.service` is in
+`vk-release-preparation.slice`, outside app.slice. Its status/ownership adapter
+cannot launch a candidate, fence production, switch routes or clean up. Its
+ongoing state is private at
+`/mnt/vk-storage/vk-runtime-backup-20261009/actual-MCP-initial-materialization-adoption-progress.json`;
+no successful adoption or atime result is claimed yet.
+
+Actual unique native allocation is 95,405,559,808 bytes / 522,757 inodes.
+Available space at that measurement was 8,664,621,056 bytes: only 74,686,464 bytes
+above the protected 8,589,934,592-byte reserve. Catch-up remains blocked; this is
+measured allocation, not an estimate of post-retirement capacity. The operator
+consumer receipt is still absent at 13:28 UTC, and the approved one-file archive
+has not been retired. The helper hash still matches its published pin.
+
+The immutable source package, verification/diagnostic receipts, final frontend
+manifest, allocation and consumer helper are independently read-back verified
+on B in `preparation-5783d3eb/candidate-preparation-5783d3eb.tar.zst`: 75 files,
+237,497 bytes, SHA-256
+`525562afd01772ac10d29a7e3665a6a82ae07bab02f3e123ae95cae2c9aff031`.
+No local archive payload was staged. See the
+[redacted B receipt](scripts/deployment/receipts/candidate-preparation-5783d3eb-B-20261009.json)
+and [measured allocation](scripts/deployment/receipts/actual-initial-candidate-allocation-20261009.json).
+
+Git parity receipts: application/frontend PR230 head 5ce84ee2 is published and
+exact Test 37932897941 passed; tooling PR231 heads 80754950 and receipt checkpoint
+5783d3eb are pushed and independently matched to the remote SHA. The original
+registered f36e6f10 publication is the owner's dated read receipt, not a new
+identity/recovery claim here. Unfinished isolated checkpoints are the held actual
+candidate verification/adoption, final frontend runtime-path/live acceptance,
+consumer clearance, final writer-fenced catch-up and latest-data fallback. No
+mutable candidate payload, browser profile, cache or private transcript is being
+published to GitHub. Original c15/807/578 packages, failed attempt and superseded
+frontend outputs remain preserved. No restart/cutover/merge has occurred.

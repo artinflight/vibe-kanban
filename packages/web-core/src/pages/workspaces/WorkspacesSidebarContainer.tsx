@@ -742,40 +742,46 @@ export function WorkspacesSidebarContainer({
     running: PERSIST_KEYS.workspacesSidebarRunning,
   };
 
+  const assignmentControls = localAssignmentView ? (
+    <div className="flex flex-col gap-half">
+      <ButtonGroup>
+        {(['mine', 'all'] as const).map((filter) => (
+          <button
+            type="button"
+            aria-pressed={assignmentFilter === filter}
+            className={cn(
+              'px-base py-half text-sm transition-colors',
+              isMobile && 'min-h-12 min-w-16',
+              assignmentFilter === filter
+                ? 'bg-secondary text-normal'
+                : 'text-low hover:text-normal'
+            )}
+            key={filter}
+            onClick={() => {
+              setAssignmentFilter(filter);
+              try {
+                localStorage.setItem('vk-workspace-assignment-filter', filter);
+              } catch {
+                /* Keep the current choice in memory. */
+              }
+            }}
+          >
+            {filter === 'mine'
+              ? t('kanban.workspaceSidebar.assignmentMine')
+              : t('kanban.workspaceSidebar.assignmentAll')}
+          </button>
+        ))}
+      </ButtonGroup>
+      {(assignmentQuery.isError || participants.isError) && (
+        <span role="status" className="text-xs text-low">
+          {t('kanban.workspaceSidebar.assignmentsUnavailable')}
+        </span>
+      )}
+    </div>
+  ) : null;
+
   const searchControls = (
     <>
-      {localAssignmentView && (
-        <div className="flex flex-col gap-half">
-          <ButtonGroup>
-            {(['mine', 'all'] as const).map((filter) => (
-              <ButtonGroupItem
-                key={filter}
-                active={assignmentFilter === filter}
-                onClick={() => {
-                  setAssignmentFilter(filter);
-                  try {
-                    localStorage.setItem(
-                      'vk-workspace-assignment-filter',
-                      filter
-                    );
-                  } catch {
-                    /* Keep the current choice in memory. */
-                  }
-                }}
-              >
-                {filter === 'mine'
-                  ? t('kanban.workspaceSidebar.assignmentMine')
-                  : t('kanban.workspaceSidebar.assignmentAll')}
-              </ButtonGroupItem>
-            ))}
-          </ButtonGroup>
-          {(assignmentQuery.isError || participants.isError) && (
-            <span role="status" className="text-xs text-low">
-              {t('kanban.workspaceSidebar.assignmentsUnavailable')}
-            </span>
-          )}
-        </div>
-      )}
       <div className="shrink-0">
         <div className="flex items-stretch">
           <IconButton
@@ -868,6 +874,7 @@ export function WorkspacesSidebarContainer({
       onLoadMore={handleLoadMore}
       hasMoreWorkspaces={hasMoreWorkspaces && !isSearching}
       searchControls={searchControls}
+      assignmentControls={assignmentControls}
       onOpenWorkspaceActions={handleOpenWorkspaceActions}
       persistKeys={sidebarPersistKeys}
       activeRemoteHost={activeRemoteHost}

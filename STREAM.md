@@ -6,7 +6,8 @@ Mine/All workspace filtering before pagination/grouping/counts. Historical
 unassigned/unlinked work remains visible. Unread and authentication/permissions
 are separate and untouched. Scope, validation and combined-release adoption plan:
 [VK_LOCAL_ASSIGNMENTS.md](VK_LOCAL_ASSIGNMENTS.md).
-Deliver a focused draft PR and verify hosted tests. No production deployment,
+Review: [draft PR #237](https://github.com/artinflight/vibe-kanban/pull/237).
+Final-head hosted tests are required before integration. No production deployment,
 service restart, bulk assignment, merge or permission changes in this task.
 Older stream entries below describe other work and do not authorize activation.
 

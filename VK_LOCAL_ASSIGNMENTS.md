@@ -34,7 +34,8 @@ Local endpoints under `/v1`:
 The existing picker supports Seamus, dot, both and neither for local issues,
 including create-mode drafts. Local Personal/Me resolves to Seamus without
 changing the authentication provider. The sidebar defaults to Mine and offers
-All, with the choice retained in browser localStorage. Mine excludes explicitly
+All in always-visible assignment controls on desktop and phone, with the choice
+retained in browser localStorage. Phone controls retain 48px touch targets. Mine excludes explicitly
 assigned work that does not include Seamus. Shared and Seamus-only work remain
 visible. Unassigned, unlinked, synthetic and unknown historical rows remain
 visible. Remote/cloud-host sidebar behavior is retained. Assignment filtering
@@ -59,8 +60,16 @@ stable identities, dot-only/shared/Seamus-only/unassigned/unlinked inheritance,
 retry uniqueness, deletion, invalid foreign keys and unread preservation.
 The full historical migration chain plus the additive migration passes in-memory
 SQLite replay with unchanged existing-table counts and no seeded assignments.
-Formatting and ops governance pass. Fresh frontend checks and hosted CI receipts
-will be recorded here before handoff. No Cargo build is run on the MCP host:
+Formatting, ops governance, web-core TypeScript, local-web/UI lint and targeted
+ESLint with zero warnings pass. A rendered React container acceptance confirms
+Mine/All switching, active/archive/group counts, persisted reload choice, unread
+preservation and unchanged remote visibility. The reproducible fixture and logs
+are in the task artifact directory. The source regressions run in hosted CI on
+[draft PR #237](https://github.com/artinflight/vibe-kanban/pull/237); its final head
+checks are required before integration. CI executes the nine Node regressions,
+the database and real HTTP tests, workspace Cargo tests excluding Tauri, Clippy,
+frontend builds and type/schema checks. The remote job may skip private checks
+when its deploy key is absent; do not infer private coverage from that status. No Cargo build is run on the MCP host:
 mounted SSD has roughly 2.4 GiB available. Existing matching-lockfile frontend
 dependencies are reused via private links; bulk artifacts/logs are under
 `/mnt/vk-storage/vk-user-assignment-20261009`.

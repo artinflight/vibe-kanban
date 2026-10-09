@@ -84,6 +84,7 @@ export interface WorkspacesSidebarProps {
   hasMoreWorkspaces?: boolean;
   /** Controls rendered beside the search input */
   searchControls?: ReactNode;
+  assignmentControls?: ReactNode;
   /** Callback for opening workspace actions */
   onOpenWorkspaceActions?: (workspaceId: string) => void;
   /** Persist keys for collapsible sections */
@@ -196,6 +197,7 @@ export function WorkspacesSidebar({
   onLoadMore,
   hasMoreWorkspaces = false,
   searchControls,
+  assignmentControls,
   onOpenWorkspaceActions,
   persistKeys = DEFAULT_PERSIST_KEYS,
   activeRemoteHost = null,
@@ -327,6 +329,9 @@ export function WorkspacesSidebar({
             {activeRemoteHost.name} · {activeRemoteHost.status}
           </button>
         )}
+        {assignmentControls && (
+          <div className="px-base pb-half">{assignmentControls}</div>
+        )}
         {!showArchive && (
           <div
             className="phone-filter-chips phone-workspace-tabs"
@@ -430,6 +435,9 @@ export function WorkspacesSidebar({
           actions={headerActions}
           className="border-b"
         />
+        {assignmentControls && (
+          <div className="px-base">{assignmentControls}</div>
+        )}
         {!isLoading && (
           <div className="px-base flex items-stretch gap-half">
             <div className="flex-1 min-w-0">

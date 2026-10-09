@@ -6,8 +6,11 @@ workspace Mine/All filtering. Mine defaults to Seamus; unassigned/unlinked histo
 stays visible. Counts/pagination use the filtered rows; unread flags stay intact.
 No live writes/deploy/restart/permission changes. Preserve combined backend
 `c3c48e63` and frontend `5ce84ee2` in eventual adoption; do not replace live from
-this staging-based source. Hosted tests and draft PR metadata will be recorded
-before final handoff. MCP Cargo builds are deliberately excluded for SSD capacity.
+this staging-based source. Review: [draft PR #237](https://github.com/artinflight/vibe-kanban/pull/237).
+Final-head hosted checks remain the integration gate. Local format/governance,
+TypeScript, lint, migration replay, nine Node regressions and rendered-container
+acceptance passed. Application source applies to the combined baseline; its
+current CI workflow requires inserting the new Node test step, not replacement. MCP Cargo builds are deliberately excluded for SSD capacity.
 
 # October 8: Workspace-first navigation and task attention follow-up
 

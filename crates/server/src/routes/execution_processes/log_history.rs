@@ -109,14 +109,13 @@ pub(super) async fn get_log_history(
             .map_err(|_| ApiError::BadRequest("Execution configuration unavailable".into()))?
             .base_executor()
             == Some(executors::executors::BaseCodingAgent::Codex)
+        && let Some(reason) = capture_error_for_process(&deployment.db().pool, &process).await?
     {
-        if let Some(reason) = capture_error_for_process(&deployment.db().pool, &process).await? {
-            return Ok(Json(ApiResponse::success(HistoryPage {
-                entries: vec![],
-                next_before: None,
-                capture_error: Some(reason),
-            })));
-        }
+        return Ok(Json(ApiResponse::success(HistoryPage {
+            entries: vec![],
+            next_before: None,
+            capture_error: Some(reason),
+        })));
     }
     let limit = query.limit.unwrap_or(40).clamp(1, 200);
     let key = (process.id, process.updated_at.to_rfc3339());

@@ -371,7 +371,7 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
         )
         .unwrap();
         assert_eq!(recommendation.0, "gpt-6-sol");
-        assert_eq!(recommendation.1.as_deref(), Some("low"));
+        assert_eq!(recommendation.1, "low");
         let mut continuation = inventory_class.clone();
         continuation["scope_relation"] = "continuation".into();
         assert_eq!(

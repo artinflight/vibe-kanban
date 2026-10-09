@@ -423,3 +423,39 @@ Validation:35 candidate controller/scope regressions and11 actual PAX/direct-B
 contract regressions passed after the correction. These are isolated fixtures,
 not whole-state restore or application acceptance. Package binding is checked
 after committing the operational source, as required by its fail-closed builder.
+
+## Fresh journal boundary and post-removal preservation
+
+All85 candidate regressions pass at01af7c36, including package tamper/refusal
+and actual packaged review-loader checks. Remote PR231/branch SHA matches
+01af7c36f1ba969fa4457278b8fd0978fe76c2b1; PR230 remains exactc3c48e63 and
+unmerged. The actual new provider package binds61files,6candidate modules and
+all8 reviewed PR229 files; fixture_only=false, operational_acceptance=false.
+
+The post-removal evidence bundle is independently read back on B:
+B:/vk-backups/vk-safe-release-20261009/approved-retirement/post-removal-1019/approved-retirement-post-removal-evidence-20261009-1019.tar.gz
+(2,686,733bytes,SHA256df97decf36ee772691e39fa66f1d2ee79529552587650f725e595accf15a25f0).
+It preserves action/exclusion/directory proofs, B-only archive checks and current
+provider source. Original archives/receipts and pre-removal B bundle remain.
+
+Current original journal.sock returned ConnectionRefusedError/Errno111. No
+continuous final-delta coverage can be inferred from the old ready receipt. A
+NEW read-only journal uses the unchanged full plan and a new socket, with
+55,846watches,zero errors and ready=true,instance5282e0992fa84bcb92845feb3f7edd8a.
+Its start does not bridge the earlier gap. A fresh online full checkpoint is
+running directly to B to establish a new verified parent for final catch-up,
+under MemoryHigh2500MiB/MemoryMax3000MiB. No production fencing/start/switch.
+This repeat is necessary after the observed journal failure; it is not a second
+restore/rehearsal environment or a historical-recovery acceptance.
+
+The14 unavailable recorded links reference2distinct unavailable targets:12
+patch/execution wrapper selectors and2preview-worktree aliases. No direct match
+to the currently configured native/MCP launcher paths was found. Lifecycle and
+any indirect saved-profile/session dependency remain unknown; neither retirement
+nor current functional loss is proved. Full runtime closure remains mandatory.
+
+Fresh builderv7 has produced a first candidate server and is compiling executor
+test binaries; its starlark archive has17members/70,140,838bytes versus the
+interrupted archive's metadata-only member. All prior failed outputs stay retained.
+Final complete artifact manifest/scanner/module/combined runtime acceptance is
+still pending. The full B provider verification also remains running.

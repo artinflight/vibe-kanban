@@ -215,6 +215,34 @@
     "all_original_snapshot_DBs_required": 76,
     "actual_MCP_restore_complete": false,
     "cutover_complete": false,
-    "general_cleanup_unavailable": true
+    "general_cleanup_unavailable": true,
+    "candidate_regression_tests": 85,
+    "post_removal_B_evidence": {
+      "bytes": 2686733,
+      "desktop_directory": "B:/vk-backups/vk-safe-release-20261009/approved-retirement/post-removal-1019",
+      "desktop_verified": true,
+      "name": "approved-retirement-post-removal-evidence-20261009-1019.tar.gz",
+      "sha256": "df97decf36ee772691e39fa66f1d2ee79529552587650f725e595accf15a25f0",
+      "transient_command_retries": 0
+    },
+    "original_journal": "ConnectionRefusedError: [Errno 111] Connection refused; original gap retained",
+    "new_read_only_journal": {
+      "instance": "5282e0992fa84bcb92845feb3f7edd8a",
+      "watches": 55846,
+      "errors": 0,
+      "ready": true,
+      "prior_gap_cleared": false
+    },
+    "fresh_online_checkpoint": "running; unchanged full scope; B only; new verified parent needed",
+    "unavailable_recorded_link_accounting": {
+      "unavailable_recorded_links": 14,
+      "distinct_currently_unavailable_targets": 2,
+      "patch_or_execve_wrapper_selectors": 12,
+      "preview_worktree_aliases": 2,
+      "explicit_current_runtime_selector_matches": 0,
+      "intentional_retirement_proven": false,
+      "current_functionality_loss_proven": false,
+      "remaining_unknown": "Recorded targets unavailable; lifecycle and any indirect saved-profile/session dependency unproven. Exact literals retained; current configured/runtime closure still requires acceptance."
+    }
   }
 }

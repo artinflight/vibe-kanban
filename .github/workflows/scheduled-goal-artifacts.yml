@@ -49,6 +49,10 @@ jobs:
         run: |
           pnpm run format
           git diff --exit-code
+      - name: Install required module sandbox dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends bubblewrap
       - name: Build source-fenced HTTP, rollback and test artifacts
         env:
           VK_ARTIFACT_DIR: ${{ runner.temp }}/vk-scheduled-goal-artifacts

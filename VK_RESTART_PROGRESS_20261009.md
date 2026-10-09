@@ -614,3 +614,16 @@ Independent prerequisites are now specific: a permitted isolated builder with
 required namespace support (or operator-approved build capacity on the existing
 MCP sandbox), plus MCP-native same-candidate restore/catch-up storage. No repeated
 GitHub authentication is required. Pending ownership request remains unanswered.
+
+
+Additive B preservation independently hash-read back at
+B:/vk-backups/vk-safe-release-20261009/published-source-1285ddc3:
+combined-app-c3c48e63.incremental.pack17187bytes SHAa4d123836cbcf334b0b8e6d08c584ce1e4740d6fdde37c6545a1550e02dc783d;
+candidate-tools-1285ddc3.incremental.pack43938bytes SHAb4ac9498a7e70687d957a94c9401e34d0fcfb0697665b813636110d514bccc36;
+candidate-tools-e3-to-1285.patch150181bytes SHA5a4684b8baf2b33f902bf4375da860a3ef42da4891774b4e8185f9449921b023.
+Original input packs, f571/a22 delta packs, original149overlay and all earlier
+receipts are required and retained. Safe current tracking, grant and bounded
+scope/failure receipts are included; eight files matched physical B SHA/size.
+Source commits1285ddc3191a10b27d90f1478565b9c8b861e93b and
+c3c48e6324f778ccd03a5761c2314b440e9ceac3 remotely verified. Receipt-only later
+tracking commits do not claim a newer operational source or candidate acceptance.

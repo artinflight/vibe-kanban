@@ -10,7 +10,7 @@ import subprocess
 
 from vk_candidate_direct_b import source_pins
 from vk_nightly_generation import MAX_INDEX
-from vk_nightly_job import checksum
+from vk_nightly_job import checksum, validate_socket_exclusions
 from vk_prep_common import identity, storage
 
 
@@ -18,12 +18,24 @@ def build(inventory_path,output):
     base=Path(__file__).parent;output=storage(output);output.mkdir(exist_ok=False)
     inventory=json.loads(Path(inventory_path).read_text())
     plan_path=Path('/mnt/vk-storage/vk-runtime-backup-20261009/backup-plan.json')
-    plan=json.loads(plan_path.read_text())
+    plan=json.loads(plan_path.read_text());historical_sha256=checksum(plan_path)
     if inventory['plan_identity']!=identity(plan):raise ValueError('inventory/plan binding changed')
     for raw,row in inventory['roots'].items():
         info=Path(raw).lstat()
         if [info.st_dev,info.st_ino]!=[row['device'],row['inode']]:raise ValueError('root changed since census')
         row['resolved_target']=str(Path(raw).resolve())
+    # Scope-only proposal: never edit the historical Staging plan or endpoint.
+    # GNU tar cannot restore this process-owned socket. Existing Exclusions
+    # accepts exact paths; the runtime type/owner guard prevents data omission
+    # if an ordinary file/symlink is substituted at this reviewed name.
+    sockets=['/home/mcp/.codex/app-server-daemon/daemon-updater.sock']
+    validate_socket_exclusions(sockets)
+    plan={**plan,'excluded_rebuildable_directories':[*plan.get('excluded_rebuildable_directories',[]),*sockets],
+          'nightly_exact_socket_omission_proposal':sockets}
+    plan_path=output/'nightly-source-plan.proposed.private.json'
+    plan_path.write_text(json.dumps(plan,indent=2,sort_keys=True)+'\n');os.chmod(plan_path,0o600)
+    from vk_change_journal import scope
+    from vk_rolling_backup import Exclusions
     modules=set();queue=['vk_nightly_job','vk_nightly_b_job','vk_nightly_lifecycle','vk_nightly_generation']
     while queue:
         module=queue.pop();file=base/(module+'.py')
@@ -39,10 +51,11 @@ def build(inventory_path,output):
     pins={name:checksum(output/name) for name in sorted(names)}
     GiB=1024**3;capture=20*GiB;initial=96*GiB;changed=8*GiB;floor=2*GiB
     config={'adoption_authorized':False,'retention_adopted':False,'schedule_enabled':False,
-      'plan_path':str(plan_path),'plan_file_sha256':checksum(plan_path),'plan_identity':inventory['plan_identity'],
-      'source_scope_sha256':inventory['source_scope_sha256'],
-      'scope_sha256':identity({'producer':'vk-normal-nightly-v1','source_plan':inventory['plan_identity'],'source_scope':inventory['source_scope_sha256']}),
-      'source_prefix':'/','source_roots':inventory['roots'],'exclusion_targets':inventory['exclusion_targets'],
+      'plan_path':str(plan_path),'plan_file_sha256':checksum(plan_path),'plan_identity':identity(plan),
+      'source_scope_sha256':identity(scope(plan)),
+      'historical_plan_sha256':historical_sha256,'socket_exclusions':sockets,
+      'scope_sha256':identity({'producer':'vk-normal-nightly-v1','source_plan':identity(plan),'source_scope':identity(scope(plan))}),
+      'source_prefix':'/','source_roots':inventory['roots'],'exclusion_targets':[str(p) for p in Exclusions(plan).roots],
       'inventoried_databases':sorted(inventory['databases']),'volume_device':2360624474,
       'wsl_root':'/mnt/b/vk-backups/vk-normal-nightly-v1','staging':'/mnt/vk-storage/vk-normal-nightly-control-v1',
       'sshfs_binary':'/mnt/vk-storage/vk-runtime-backup-20261009/sshfs-tool/usr/bin/sshfs','fusermount_binary':'/usr/bin/fusermount',
@@ -76,7 +89,8 @@ def build(inventory_path,output):
       'source_sha256':pins,'disabled_config_sha256':checksum(path),'proposed_adoption_config_sha256':checksum(proposed),
       'cron_proposed_sha256':checksum(output/'cron.proposed'),'cron_syntax_validated':True,'schedule_installed':False,
       'production_backup_touched':False,'new_privileges':False,'files_sha256':{str(p.relative_to(output)):checksum(p) for p in output.rglob('*') if p.is_file()},
-      'adoption_action':'Review exact source/config; explicitly authorize fresh normal scope enrollment/retention and test-run. Only after full-plan recovery/capacity/runtime acceptance, add only proposed cron row preserving existing disabled entries. No owner commands needed.'}
+      'exact_scope_amendment':sockets,'historical_plan_changed':False,
+      'adoption_action':'Review exact source/config and exact guarded socket omission; explicitly authorize fresh normal scope enrollment/retention and test-run. Only after full-plan recovery/capacity/runtime acceptance, add only proposed cron row preserving existing disabled entries. No owner commands needed.'}
     receipt=output/'package.safe.json';receipt.write_text(json.dumps(report,indent=2)+'\n')
     return {'output':str(output),'package_receipt_sha256':checksum(receipt),**{k:report[k] for k in ('disabled_config_sha256','proposed_adoption_config_sha256','cron_proposed_sha256')}}
 

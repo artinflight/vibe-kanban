@@ -325,3 +325,12 @@ performed. Rollback removes ONLY the new cron entry and stops its own job if
 needed, preserving every backup, receipt and incident/fallback artifact. Initial
 whole-plan fit, actual throughput and boot/remount identity acceptance remain
 explicit adoption prerequisites. No owner command is requested.
+
+Current-scope special-file probe found exactly one unsupported object: owned
+Unix socket /home/mcp/.codex/app-server-daemon/daemon-updater.sock. The package
+prepares a separate proposed nightly plan omitting only that transient endpoint;
+the historical Staging plan remains untouched. A runtime type/owner guard rejects
+regular-file/symlink substitution instead of dropping possible data. This exact
+scope omission belongs in the final review/approval. Other future SQLite files
+inside already approved canonical roots are automatically captured within the
+same bounds; the observed 79-DB list is sizing evidence, not a recurring grant.

@@ -194,6 +194,17 @@ class RegisteredWorkspace:
                 if producer.is_alive():raise ValueError('producer still active; no completion attestation')
 
 
+def allowed_sqlite(plan,raw):
+    # New DBs inside already approved roots are routine scope members. The
+    # observed DB list sizes the proposal; it must not become a recurring grant.
+    from vk_rolling_backup import Exclusions
+    source=Path(raw)
+    if not source.is_absolute() or source.resolve()!=source or Exclusions(plan)(source) or not any(
+            source==Path(root).resolve() or source.is_relative_to(Path(root).resolve()) for root in plan['sources']):
+        raise ValueError('SQLite source outside approved canonical backup roots')
+    return {str(source)}
+
+
 def disk_snapshot(source,workspace,allowed_sources,*,maximum_bytes,timeout_seconds):
     """Online SQLite backup API, bounded pages/cache, PRIVATE destination on B.
 
@@ -269,7 +280,7 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
                 for raw in plan['sources']:journal.tree(raw)
                 journal.ready=True
                 result=capture(plan,mount,journal.report,workspace.mirror,parent=None,publish=workspace.mirror,
-                    max_snapshot_bytes=1,disk_snapshot=lambda raw:disk_snapshot(raw,workspace,set(config['inventoried_databases']),
+                    max_snapshot_bytes=1,disk_snapshot=lambda raw:disk_snapshot(raw,workspace,allowed_sqlite(plan,raw),
                         maximum_bytes=config['snapshot_limit_bytes'],timeout_seconds=config['snapshot_timeout_seconds']),
                     disk_inventory_root=mount,workspace=workspace)
             finally:journal.close()

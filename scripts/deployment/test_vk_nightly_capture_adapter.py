@@ -8,12 +8,13 @@ import sqlite3
 import tempfile
 import subprocess
 import sys
+import socket
 import unittest
 from unittest.mock import patch
 
-from vk_nightly_capture_adapter import RegisteredWorkspace, disk_snapshot, mcp_lease
+from vk_nightly_capture_adapter import RegisteredWorkspace, disk_snapshot, mcp_lease, allowed_sqlite
 from vk_nightly_b_job import LocalVerifiedProvider, receive
-from vk_nightly_job import inventory
+from vk_nightly_job import inventory, validate_socket_exclusions
 
 
 class FakeResident:
@@ -96,6 +97,17 @@ class AdapterTests(unittest.TestCase):
         with patch('vk_nightly_capture_adapter.subprocess.check_output',return_value=b'{"filesystems":[{"target":"/other","fstype":"ext4","source":"/dev/sdb1"}]}'):
             with self.assertRaisesRegex(ValueError,'pinned fresh'):
                 RegisteredWorkspace(self.destination,self.resident)
+    def test_future_database_inside_approved_root_needs_no_inventory_amendment(self):
+        future=self.root/'future.sqlite';future.touch()
+        self.assertEqual(allowed_sqlite({'sources':[str(self.root)]},str(future)),{str(future)})
+        with self.assertRaisesRegex(ValueError,'outside approved'):
+            allowed_sqlite({'sources':[str(self.destination)]},str(future))
+        with self.assertRaisesRegex(ValueError,'outside approved'):
+            allowed_sqlite({'sources':[str(self.root)],'excluded_rebuildable_directories':[str(future)]},str(future))
+        alias=self.root/'alias.sqlite';alias.symlink_to(future)
+        with self.assertRaisesRegex(ValueError,'outside approved'):
+            allowed_sqlite({'sources':[str(self.root)]},str(alias))
+
     def test_mcp_kernel_lease_rejects_concurrent_producer(self):
         with mcp_lease(self.root/'lease'):
             with self.assertRaises(BlockingIOError):
@@ -110,6 +122,21 @@ class AdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'pinned live scope'):
             LocalVerifiedProvider(self.destination,{'result':result,'proof':proof,'capture_id':'one'},
                                   {'scope_sha256':'correct','plan_identity':'plan','source_scope_sha256':'source','source_prefix':'/'})
+    def test_exact_socket_omission_accepts_only_owned_endpoint_or_absence(self):
+        path=self.root/'owned.sock'
+        validate_socket_exclusions([str(path)])
+        with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as listener:
+            listener.bind(str(path));validate_socket_exclusions([str(path)])
+        path=self.root/'data';path.write_bytes(b'preserve')
+        with self.assertRaisesRegex(ValueError,'changed type/owner'):validate_socket_exclusions([str(path)])
+        self.assertEqual(path.read_bytes(),b'preserve')
+
+    def test_socket_omission_rejects_symlink_substitution(self):
+        data=self.root/'data';data.write_bytes(b'preserve')
+        alias=self.root/'replacement.sock';alias.symlink_to(data)
+        with self.assertRaisesRegex(ValueError,'changed type/owner'):validate_socket_exclusions([str(alias)])
+        self.assertEqual(data.read_bytes(),b'preserve')
+
     def test_existing_timeout_stops_owned_job_with_finite_grace(self):
         result=subprocess.run(['/usr/bin/timeout','--signal=TERM','--kill-after=1s','0.1s',sys.executable,
                                '-c','import time;time.sleep(5)'],capture_output=True,timeout=3)

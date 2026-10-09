@@ -58,9 +58,18 @@ def inventory(plan):
             'consistency':'online metadata census, not an application-coherent backup','vanished_during_scan':vanished}
 
 
+def validate_socket_exclusions(paths):
+    for raw in paths:
+        try:info=Path(raw).lstat()
+        except FileNotFoundError:continue  # Exact approved transient endpoint.
+        if not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid():
+            raise ValueError('proposed socket omission changed type/owner; preserve and review scope')
+
+
 def validate(config,plan):
     if checksum(config['plan_path'])!=config['plan_file_sha256'] or identity(plan)!=config['plan_identity']:
         raise ValueError('current plan differs from reviewed binding')
+    validate_socket_exclusions(config.get('socket_exclusions',[]))
     if identity(scope(plan))!=config['source_scope_sha256']:raise ValueError('source scope changed')
     if set(config['source_roots'])!=set(plan['sources']):raise ValueError('source root inventory incomplete')
     required={'vk_nightly_job.py','vk_nightly_capture_adapter.py','vk_nightly_b_job.py','vk_nightly_generation.py','vk_nightly_lifecycle.py','vk_b_disk_capture.py'}

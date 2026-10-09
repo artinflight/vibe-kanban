@@ -53,8 +53,8 @@
     "vk_b_disk_snapshot.py": "ba1fd175cc72f6008e77f46096e4ec30201b4943e6d9895a7907af466a69cebf",
     "vk_desktop_transport.py": "fac7325b0de5a7cd8c07ddb542ad733a7f7f3e77a2d9c15456e6d63a0d24ff87",
     "vk_archive_store.py": "95b59fb7d484ca379f58e5b543a763af6691d23c9b9381158b6a0c5bc772b40f",
-    "vk_nightly_job.py": "ccec0bef2931a7a462ce60ee8caff95511eada2059fe9162164839a7fce934a4",
-    "vk_nightly_capture_adapter.py": "4b7c6fed77de7c679f0ff9cb9ab65f8142021578b1ea27e539828cd10ff81405",
+    "vk_nightly_job.py": "7e3a24274676242750c75590f5d595857957020183c37433713805d29d02df33",
+    "vk_nightly_capture_adapter.py": "817e6170492aabdc272ac041b55fe40d5ea042ffe2564923dfc778f618fee100",
     "vk_nightly_b_job.py": "d6aa2cd659f024bba494bc30e37a016e677791d729905a4087fdd7d06efa2b09"
   },
   "scheduler_proposal": {
@@ -100,5 +100,11 @@
     "Cold OS/WSL remount changing enrolled device/inode identities remains fail-closed; no silent re-enrollment or boot-readiness claim."
   ],
   "efficiency_boundary": "Generation storage is incremental with unchanged B hardlinks. Captures are parentless full transfers each run; no network-delta claim. Journal-backed or content-delta transfer remains a separate bounded efficiency improvement.",
-  "fixed_adapter_status": "source implemented; real-B synthetic lifecycle and production pre-adoption artifacts validated separately; no production adoption"
+  "fixed_adapter_status": "source implemented; real-B synthetic lifecycle and production pre-adoption artifacts validated separately; no production adoption",
+  "exact_scope_amendment_proposal": {
+    "path": "/home/mcp/.codex/app-server-daemon/daemon-updater.sock",
+    "policy": "omit ONLY an owned Unix socket or absent transient endpoint; regular files/symlinks reject adoption/job",
+    "historical_plan_mutated": false,
+    "approval_pending": true
+  }
 }

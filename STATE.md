@@ -1,3 +1,14 @@
+## October 8 authorized safe restart — preparing, not ready
+
+Read VK_SAFE_RESTART_PREPARATION_20261008.md. Latest operator authority permits
+safe restart/cutover after fresh gates; historical recovery acceptance is not
+implied. Combined source includes the four exact PR pins atop the already-live
+phone baseline. SSD capacity/restore rehearsal, identity/controller binding,
+writer drain, Git policy/prerequisites and live consent acceptance remain gates.
+No production restart, route switch, writer interruption, cleanup or security
+setting change has occurred. Recommend and usage controls stay unchanged.
+Recovery exceptions and completed independent-review verdict remain explicit.
+
 ## October 8: Phone frontend deployed
 
 The operator-approved phone redesign/style pass is live at `https://vibe.local`
@@ -38,6 +49,119 @@ workspace. Its source, evidence and limits are documented in VK_MOBILE_UX.md.
 This is not a deployed UI or a production service/routing change. Mobile UI
 validation must preserve Recommend-only routing and configured model/effort;
 physical keyboard and non-Chromium acceptance remain separate QA coverage.
+
+## October7 historical-log and CI compatibility repair — isolated
+
+The isolated review candidate now explicitly validates deployed goal-cleared and
+sleep lifecycle notifications missing from its pinned SDK, with sanitized real
+historical-format and damaged-variant coverage. CI fixtures require debug assets
+in their compiled checkout, optional exact-root binding, and SSD storage on MCP;
+the host-installed connector test runs separately and explicitly. Narrow error
+return types resolve the two new Clippy failures without lint suppression.
+Strict file/hash/writer-closure, receipt/hold/lifecycle guarantees remain intact.
+See VK_CONNECTOR_COMPATIBILITY_20261007.md for exact acceptance and limits.
+Staging/production, live receipts and badges are untouched; root owns integration.
+
+## October7 connector review repair — isolated, undeployed
+
+The separate fix/e3e1-review-log-integrity candidate repairs deletion references,
+loss-aware raw capture and strict durable report verification. It preserves user
+holds/manual intent; no live badges or Vibe services changed. See
+VK_CONNECTOR_REPAIR_20261007.md for compiled acceptance and caller/deployment gaps.
+
+## October 7 Integration Is Not Deployment
+
+The production instance remains the October5 release. PR1479b3f82538 and
+PR148cb0b441a2 are combined only in an isolated preparation branch; neither
+staging nor main is moved. The required connector patch is not yet included.
+PR147 has compatible latest-v2 rollback requirements; the old live executable
+must not be used to read new durable holds. Recommend remains required.
+
+## October 6: Scheduled first-run development boundary
+
+VK scheduled initialization is being implemented on a separate development
+branch at staging `8b562265d`. It is not deployed. The default-off service gate
+must remain off until compatible CU and combined private-API/native acceptance
+are verified by the staging owner. Recommend and the existing scheduling
+restrictions remain authoritative. Version-2 controller receipts require a
+compatible rollback reader. See VK_SCHEDULED_FIRST_RUN.md for exact requirements.
+## October 7: AutoSwitch reload boundary invariant
+
+Prompt classification and inferred follow-up qualification belong to the reviewed,
+versioned module. The backend's fallback prompt guess cannot veto a newer policy.
+VK-read repository and input-completeness facts, reported native/current risks, explicit manual/child
+floors, exclusions, failure escalation and execution lifecycle remain core guards.
+Protection follows relevant current work, not a permanent chat label; completed
+bounded steps preserve their surrounding assignment for generic continuation.
+Internal protocol 2 deliberately rejects incompatible old modules/validators.
+One owner backend adoption is required to remove the old duplicate classifier;
+subsequent ordinary policy changes must work without backend restarts. See
+VK_AUTOSWITCH_RELOAD.md. Recommend remains required; no live adoption or Auto
+activation is performed by development. VK::Staging owns adoption/cutover.
+
+## October 8 recovery evidence correction — sign-off withheld
+
+Read VK_POST_BACKUP_RECONCILIATION_20261008.md. The earlier blanket claim that
+all 710 candidates were accounted for is withdrawn. Parent checks authenticate
+the two retained Desktop packets, individually bind 14 accepted patches and the
+rejected patch, match 11 replayed files and compare all 15 recovery files.
+The checker now fails overall on the preserved transcript parse error.
+Only 228 of 676 absent Hyrox names have baseline/08:53 evidence; the other 448
+have no baseline content and cannot be certified as later-retired. All 145
+original-history rows remain unresolved. The separately authorized Astra High
+review completed at 13:59:52 UTC and independently substantiates the corrected
+bounded findings; recovery-complete/universal-zero-loss sign-off is withheld.
+See VK_INDEPENDENT_RECOVERY_REVIEW_20261008.md for the copied redacted report,
+448-row list, source manifest and targeted read-only next-investigation plan.
+Earlier blocked delegation receipts are historical; no duplicate review or
+routing change is needed.
+PR223's remote commit and 11 checks are verified; the c31a workspace's absence
+around 12:40 is operator-reported and its cause unknown. No workspace recreation
+or incident-loss inference is authorized. Production/shared work remain untouched.
+No restart, cutover, restore or cleanup. Cleanup requires Seamus human QA.
+
+## October 8 incident prevention remains isolated and undeployed
+
+The October 7 shared-worktree incident still blocks release preparation. A fresh
+read-only audit supports regular-file baseline comparisons but retains journal
+coverage loss and post-backup uncertainty. See VK_STARTUP_RECOVERY_SAFETY.md.
+The repair branch is separate from maintenance and PR150; production is unchanged.
+Isolated server acceptance and all10 CI checks pass at sourcea81d46e92.
+Independent review now supports the bounded findings; recovery-complete sign-off
+remains withheld.
+
+## October 8: Preservation P1 review corrections in development
+
+Draft PR223 now develops raw-original-object secret scanning and immutable
+original commit obligations under schema 2. The reviewed schema-1 baseline is
+unsafe and must not be activated. See HANDOFF.md and
+VK_TURN_GIT_PRESERVATION.md for correction evidence and compatibility gates.
+This is source development only; enforcement remains inactive. Recommend-only
+and Seamus's separate Staging/rollout ownership remain unchanged.
+
+## October 8: Turn preservation development boundary
+
+Automatic end-of-turn Git preservation and an independent fail-closed check are
+under development on `feat/turn-git-preservation`; see VK_TURN_GIT_PRESERVATION.md.
+This is branch-local implementation evidence only. No service settings or live
+controller were changed, and production enforcement is not active. Seamus owns
+the separate Staging/rollout boundary; Recommend-only remains required.
+
+## October 8: Codex MCP approval bridge development
+
+The null-response elicitation defect has an isolated fix on
+`vk/870d-vk-mcp-approval`; see VK_MCP_APPROVAL_BRIDGE.md. This is source work,
+not a live activation claim. MCP consent must remain interactive and scoped to
+one request; bridge failures must not be attributed to human rejection.
+PR225's two P1 consent findings now have isolated corrective source: request-bound
+composer controls and complete bounded invocation context. Missing context cancels
+safely. Reconnect requires a fresh snapshot/Ready. The configured installed CLI
+schema is checked offline through its 0.159.2 launch wrapper. See HANDOFF.md for
+current validation and remaining release boundaries.
+Independent re-review at `da07a5c3b` closed both P1 findings. The remaining
+P2 correction checks meaningful invocation values recursively after redaction,
+including nested objects and arrays. See HANDOFF.md for compiled Rust evidence.
+Recommend routing and existing plugin permissions remain unchanged.
 
 ## October 1: AutoSwitch scope release preparation
 

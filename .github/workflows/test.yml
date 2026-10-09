@@ -131,6 +131,8 @@ jobs:
               - 'Cargo.lock'
               - 'shared/**'
               - 'scripts/prepare-db.js'
+              - 'scripts/verify_recovered_tree.py'
+              - 'scripts/testing/startup-recovery-safety/**'
               - 'pnpm-lock.yaml'
               - 'package.json'
               - 'rustfmt.toml'
@@ -223,6 +225,20 @@ jobs:
               - 'docs/audits/**'
               - 'docs/operations/**'
 
+  turn-git-preservation-contract:
+    runs-on: *runner_label
+    steps:
+      - uses: actions/checkout@v6
+      - name: Prepare pinned real scanner
+        env:
+          VK_SCANNER_OUTPUT: ${{ runner.temp }}/vk-release-scanner
+        run: python3 scripts/testing/prepare-release-scanner.py
+      - name: Test preservation against isolated Git fixtures
+        env:
+          VK_PRESERVATION_TEST_ROOT: ${{ runner.temp }}
+          VK_TEST_GITLEAKS: ${{ runner.temp }}/vk-release-scanner/gitleaks
+        run: python3 scripts/preservation/test_turn_git.py
+
   ops-governance:
     runs-on: *runner_label
     steps:
@@ -268,6 +284,11 @@ jobs:
             "GITHUB_BASE_REF=${{ github.base_ref || 'main' }} ./scripts/check-i18n.sh" \
             "node scripts/check-unused-i18n-keys.mjs" \
             "./scripts/check-legacy-frontend-paths.sh"
+
+      - name: Test offline MCP approval UI contract
+        env:
+          VK_TEST_OUTPUT: ${{ runner.temp }}/vk-mcp-approval-tests
+        run: node scripts/testing/run-mcp-approval-ui-tests.mjs
 
   backend-schema-checks:
     needs: [branch-policy, branch-freshness, changes]
@@ -401,6 +422,18 @@ jobs:
           tool: cargo-nextest
           git: https://github.com/nextest-rs/nextest
           rev: 6e4a9d6f2c4964f30ff54a8cd5466f8869267daa # cargo-nextest-0.9.132
+
+      - name: Install isolated server test boundary
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap apparmor-profiles
+          # Ubuntu restricts namespace capabilities for unprofiled executables.
+          # Load the packaged bwrap profile only on this ephemeral CI runner.
+          sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+          bwrap --unshare-all --ro-bind / / --proc /proc --dev /dev -- true
+
+      - name: Run read-only recovery audit regressions
+        run: python3 -B -m unittest discover -s scripts/testing/startup-recovery-safety -v
 
       - name: Run Cargo tests
         run: cargo nextest run --workspace --exclude vibe-kanban-tauri

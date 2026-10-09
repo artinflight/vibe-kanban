@@ -1,0 +1,61 @@
+name: Scheduled goal acceptance artifacts
+
+on:
+  pull_request:
+    branches: [staging, main]
+    paths:
+      - 'crates/executors/src/capacity/**'
+      - 'crates/executors/src/executors/codex/**'
+      - 'crates/executors/src/routing_triage.rs'
+      - 'crates/server/src/routes/capacity.rs'
+      - 'crates/server/src/main.rs'
+      - 'crates/server/build.rs'
+      - 'crates/server/Cargo.toml'
+      - 'crates/executors/Cargo.toml'
+      - 'Cargo.toml'
+      - 'scripts/build-scheduled-goal-artifacts.py'
+      - '.github/workflows/scheduled-goal-artifacts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-goal-artifacts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CARGO_INCREMENTAL: '0'
+      CARGO_TARGET_DIR: ${{ github.workspace }}/../vk-scheduled-goal-target
+      VK_EXPECTED_SOURCE: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.VK_EXPECTED_SOURCE }}
+          persist-credentials: false
+      - uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: nightly-2025-12-04
+          cache-key: scheduled-goal-artifacts-${{ runner.os }}-${{ runner.arch }}
+      - name: Setup frontend toolchain
+        uses: ./.github/actions/setup-node
+      - name: Install source-locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify required formatting
+        run: |
+          pnpm run format
+          git diff --exit-code
+      - name: Build source-fenced HTTP, rollback and test artifacts
+        env:
+          VK_ARTIFACT_DIR: ${{ runner.temp }}/vk-scheduled-goal-artifacts
+        run: python3 -B scripts/build-scheduled-goal-artifacts.py
+      - uses: actions/upload-artifact@v6
+        with:
+          name: scheduled-goal-${{ env.VK_EXPECTED_SOURCE }}
+          path: ${{ runner.temp }}/vk-scheduled-goal-artifacts
+          retention-days: 14
+          if-no-files-found: error

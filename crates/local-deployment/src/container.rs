@@ -24,7 +24,6 @@ use db::{
         workspace_repo::WorkspaceRepo,
     },
 };
-use deployment::DeploymentError;
 use executors::{
     actions::{
         Executable, ExecutorAction, ExecutorActionType,
@@ -34,7 +33,13 @@ use executors::{
     approvals::{ExecutorApprovalService, NoopExecutorApprovalService},
     env::{ExecutionEnv, RepoContext},
     executors::{BaseCodingAgent, CancellationToken, ExecutorExitResult, ExecutorExitSignal},
-    logs::{NormalizedEntryType, utils::patch::extract_normalized_entry_from_patch},
+    logs::{
+        NormalizedEntry, NormalizedEntryError, NormalizedEntryType,
+        utils::{
+            EntryIndexProvider,
+            patch::{ConversationPatch, extract_normalized_entry_from_patch},
+        },
+    },
 };
 use futures::{FutureExt, StreamExt, TryStreamExt, stream::select};
 use git::GitService;
@@ -105,7 +110,6 @@ Create `.vibe-attachments/` if needed. Use a relative `.vibe-attachments/...` pa
 #[derive(Clone)]
 pub struct LocalContainerService {
     db: DBService,
-    workspace_manager: WorkspaceManager,
     child_store: Arc<RwLock<HashMap<Uuid, Arc<RwLock<AsyncGroupChild>>>>>,
     transient_unit_store: Arc<RwLock<HashMap<Uuid, String>>>,
     cancellation_tokens: Arc<RwLock<HashMap<Uuid, CancellationToken>>>,
@@ -143,7 +147,6 @@ impl LocalContainerService {
     #[allow(clippy::too_many_arguments)]
     pub async fn new(
         db: DBService,
-        workspace_manager: WorkspaceManager,
         msg_stores: Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>>,
         config: Arc<RwLock<Config>>,
         git: GitService,
@@ -161,9 +164,10 @@ impl LocalContainerService {
         let workspace_touch_times = Arc::new(RwLock::new(HashMap::new()));
         let notification_service = NotificationService::new(config.clone());
 
-        let container = LocalContainerService {
+        // No startup/periodic filesystem deletion. A database row (or its absence)
+        // does not establish ownership of a shared workspace after recovery.
+        LocalContainerService {
             db,
-            workspace_manager,
             child_store,
             transient_unit_store,
             cancellation_tokens,
@@ -179,11 +183,7 @@ impl LocalContainerService {
             queued_message_service,
             notification_service,
             remote_client,
-        };
-
-        container.spawn_workspace_cleanup();
-
-        container
+        }
     }
 
     fn map_workspace_manager_error(err: WorkspaceError) -> ContainerError {
@@ -338,122 +338,6 @@ impl LocalContainerService {
 
         Workspace::mark_worktree_deleted(&self.db.pool, workspace.id).await?;
         Ok(())
-    }
-
-    async fn cleanup_expired_workspaces(&self) -> Result<(), DeploymentError> {
-        if std::env::var("DISABLE_WORKTREE_CLEANUP").is_ok() {
-            tracing::info!(
-                "Expired workspace cleanup is disabled via DISABLE_WORKTREE_CLEANUP environment variable"
-            );
-            return Ok(());
-        }
-
-        let expired_workspaces = Workspace::find_expired_for_cleanup(&self.db.pool).await?;
-        if expired_workspaces.is_empty() {
-            tracing::debug!("No expired workspaces found");
-            return Ok(());
-        }
-        tracing::info!(
-            "Found {} expired workspaces to clean up",
-            expired_workspaces.len()
-        );
-        for workspace in &expired_workspaces {
-            if workspace.pinned {
-                tracing::info!(
-                    "Preserving expired workspace {} because it is pinned",
-                    workspace.id
-                );
-                continue;
-            }
-            if self.workspace_has_external_processes(workspace).await {
-                tracing::info!(
-                    "Deferring expired workspace cleanup for {} because a host process is using its path",
-                    workspace.id
-                );
-                continue;
-            }
-            match self.is_container_clean(workspace).await {
-                Ok(true) => {}
-                Ok(false) => {
-                    tracing::warn!(
-                        "Preserving expired workspace {} because it contains uncommitted or untracked files",
-                        workspace.id
-                    );
-                    continue;
-                }
-                Err(error) => {
-                    tracing::error!(
-                        "Unable to verify whether expired workspace {} is clean; preserving it: {}",
-                        workspace.id,
-                        error
-                    );
-                    continue;
-                }
-            }
-            if let Err(error) = self.cleanup_workspace(workspace).await {
-                tracing::error!(
-                    "Failed to clean up expired workspace {}; it remains eligible for retry: {}",
-                    workspace.id,
-                    error
-                );
-            }
-        }
-        Ok(())
-    }
-
-    async fn reconcile_requested_workspace_cleanups(&self) {
-        if !self.status_worktree_cleanup_enabled() {
-            tracing::info!("Status-triggered worktree cleanup is disabled for this VK instance");
-            return;
-        }
-
-        let workspace_ids = match Workspace::find_worktree_cleanup_requests(&self.db.pool).await {
-            Ok(workspace_ids) => workspace_ids,
-            Err(error) => {
-                tracing::error!("Failed to list requested workspace cleanups: {}", error);
-                return;
-            }
-        };
-
-        for workspace_id in workspace_ids {
-            if let Err(error) = self
-                .retry_archived_workspace_cleanup_after_execution(
-                    workspace_id,
-                    &ExecutionProcessRunReason::CleanupScript,
-                )
-                .await
-            {
-                tracing::error!(
-                    "Failed to reconcile requested cleanup for workspace {}: {}",
-                    workspace_id,
-                    error
-                );
-            }
-        }
-    }
-
-    fn spawn_workspace_cleanup(&self) {
-        let container = self.clone();
-        tokio::spawn(async move {
-            container
-                .workspace_manager
-                .cleanup_orphan_workspaces()
-                .await;
-
-            let mut cleanup_interval =
-                tokio::time::interval(tokio::time::Duration::from_secs(1800)); // 30 minutes
-            loop {
-                cleanup_interval.tick().await;
-                tracing::info!("Starting periodic workspace cleanup...");
-                container.reconcile_requested_workspace_cleanups().await;
-                container
-                    .cleanup_expired_workspaces()
-                    .await
-                    .unwrap_or_else(|e| {
-                        tracing::error!("Failed to clean up expired workspaces: {}", e)
-                    });
-            }
-        });
     }
 
     /// Record the current HEAD commit for each repository as the "after" state.
@@ -612,12 +496,153 @@ impl LocalContainerService {
         any_committed
     }
 
+    fn preservation_request(
+        workspace: &Workspace,
+        process: &ExecutionProcess,
+        repos: &[Repo],
+        writers_fenced: bool,
+    ) -> serde_json::Value {
+        let root = PathBuf::from(workspace.container_ref.as_deref().unwrap_or(""));
+        json!({
+            "workspace": workspace.id.to_string(), "turn": process.id.to_string(),
+            "outcome": process.status, "writers_fenced": writers_fenced,
+            "repositories": repos.iter().map(|repo| json!({
+                "id": repo.id.to_string(), "path": root.join(&repo.name)
+            })).collect::<Vec<_>>()
+        })
+    }
+
+    async fn preservation_writers_fenced(&self, ctx: &ExecutionContext) -> bool {
+        // Check all known executions sharing these repositories, including setup/dev scripts.
+        // Unknown host writers are detected by the helper's repeated snapshot checks.
+        // A cutover controller must independently hold its complete writer fence.
+        let Ok(running) = ExecutionProcess::find_running(&self.db.pool).await else {
+            return false;
+        };
+        for process in running {
+            if process.id == ctx.execution_process.id {
+                continue;
+            }
+            let Ok(other) = ExecutionProcess::load_context(&self.db.pool, process.id).await else {
+                return false;
+            };
+            if other
+                .repos
+                .iter()
+                .any(|other| ctx.repos.iter().any(|repo| repo.id == other.id))
+            {
+                return false;
+            }
+        }
+        true
+    }
+
+    async fn preserve_finished_turn(
+        &self,
+        ctx: &ExecutionContext,
+        group_id: Option<u32>,
+    ) -> serde_json::Value {
+        let mut fenced = self.preservation_writers_fenced(ctx).await;
+        // Fence residual process-group writers before reading source bytes.
+        if let Some(child) = self
+            .child_store
+            .read()
+            .await
+            .get(&ctx.execution_process.id)
+            .cloned()
+            && command::kill_process_group(&mut *child.write().await)
+                .await
+                .is_err()
+        {
+            fenced = false;
+        }
+        fenced &= group_id.is_some_and(crate::turn_preservation::group_quiescent);
+        self.emit_preservation_message(ctx.execution_process.id, &json!({
+            "state": "pending", "workspace": ctx.workspace.id.to_string(),
+            "turn": ctx.execution_process.id.to_string(), "reason": "remote preservation is in progress",
+        })).await;
+        let request =
+            Self::preservation_request(&ctx.workspace, &ctx.execution_process, &ctx.repos, fenced);
+        let report = crate::turn_preservation::invoke("end", request.clone()).await;
+        let message = crate::turn_preservation::message(&report);
+        // Preserve the executor outcome separately. A successful agent may still have blocked Git preservation.
+        let turn = match CodingAgentTurn::find_by_execution_process_id(
+            &self.db.pool,
+            ctx.execution_process.id,
+        )
+        .await
+        {
+            Ok(Some(turn)) => Ok(Some(turn)),
+            Ok(None) => {
+                CodingAgentTurn::find_latest_by_session_id(&self.db.pool, ctx.session.id).await
+            }
+            Err(error) => Err(error),
+        };
+        let report = if let Ok(Some(turn)) = turn {
+            let summary = format!("{}\n\n{}", turn.summary.as_deref().unwrap_or(""), message);
+            if CodingAgentTurn::update_summary(&self.db.pool, turn.execution_process_id, &summary)
+                .await
+                .is_err()
+            {
+                crate::turn_preservation::blocked(
+                    &ctx.workspace.id.to_string(),
+                    &ctx.execution_process.id.to_string(),
+                    "could not persist preservation status in turn summary",
+                )
+            } else {
+                let _ = CodingAgentTurn::mark_completed_unseen_by_execution_process_id(
+                    &self.db.pool,
+                    turn.execution_process_id,
+                )
+                .await;
+                report
+            }
+        } else {
+            crate::turn_preservation::blocked(
+                &ctx.workspace.id.to_string(),
+                &ctx.execution_process.id.to_string(),
+                "missing or unreadable coding turn summary",
+            )
+        };
+        if !crate::turn_preservation::verified(&report) {
+            let mut blocked_request = request;
+            blocked_request["reason"] = report["reason"].clone();
+            let _ = crate::turn_preservation::invoke("block", blocked_request).await;
+        }
+        self.emit_preservation_message(ctx.execution_process.id, &report)
+            .await;
+        report
+    }
+
+    async fn emit_preservation_message(&self, execution: Uuid, report: &serde_json::Value) {
+        if let Some(store) = self.msg_stores.read().await.get(&execution) {
+            let entry_type =
+                if report["state"] == "pending" || crate::turn_preservation::verified(report) {
+                    NormalizedEntryType::SystemMessage
+                } else {
+                    NormalizedEntryType::ErrorMessage {
+                        error_type: NormalizedEntryError::Other,
+                    }
+                };
+            store.push_patch(ConversationPatch::add_normalized_entry(
+                EntryIndexProvider::start_from(store).next(),
+                NormalizedEntry {
+                    timestamp: None,
+                    entry_type,
+                    content: crate::turn_preservation::message(report),
+                    metadata: None,
+                },
+            ));
+        }
+    }
+
     /// Spawn a background task that polls the child process for completion and
     /// cleans up the execution entry when it exits.
     fn spawn_exit_monitor(
         &self,
         exec_id: &Uuid,
         exit_signal: Option<ExecutorExitSignal>,
+        group_id: Option<u32>,
     ) -> JoinHandle<()> {
         let exec_id = *exec_id;
         let child_store = self.child_store.clone();
@@ -664,7 +689,8 @@ impl LocalContainerService {
                     status_result = match exit_result {
                         Ok(ExecutorExitResult::Success) => Ok(success_exit_status()),
                         Ok(ExecutorExitResult::Failure) => Ok(failure_exit_status()),
-                        Err(_) => Ok(success_exit_status()), // Channel closed, assume success
+                        Err(_) if crate::turn_preservation::enabled() => Ok(failure_exit_status()),
+                        Err(_) => Ok(success_exit_status()), // Legacy behavior when preservation is disabled
                     };
                 }
                 // Process exit
@@ -703,7 +729,30 @@ impl LocalContainerService {
                 if let Err(e) = container.update_executor_session_summary(&exec_id).await {
                     tracing::warn!("Failed to update executor session summary: {}", e);
                 }
-                container.notify_agent_turn_completion(&ctx).await;
+                let preservation = if crate::turn_preservation::enabled()
+                    && matches!(
+                        ctx.execution_process.run_reason,
+                        ExecutionProcessRunReason::CodingAgent
+                            | ExecutionProcessRunReason::CleanupScript
+                    ) {
+                    Some(container.preserve_finished_turn(&ctx, group_id).await)
+                } else {
+                    None
+                };
+                let preservation_blocked = preservation
+                    .as_ref()
+                    .is_some_and(|report| !crate::turn_preservation::verified(report));
+                if preservation_blocked {
+                    tracing::warn!(workspace = %ctx.workspace.id,
+                        "Turn remains blocked on Git preservation; chained actions and cleanup withheld");
+                    let _ = CodingAgentTurn::mark_completed_unseen_by_execution_process_id(
+                        &db.pool,
+                        ctx.execution_process.id,
+                    )
+                    .await;
+                } else {
+                    container.notify_agent_turn_completion(&ctx).await;
+                }
 
                 let success = matches!(
                     ctx.execution_process.status,
@@ -720,15 +769,18 @@ impl LocalContainerService {
 
                 let mut already_finalized = false;
 
-                if success || cleanup_done {
+                if !preservation_blocked && (success || cleanup_done) {
                     // Commit changes (if any) and get feedback about whether changes were made
-                    let changes_committed = match container.try_commit_changes(&ctx).await {
-                        Ok(committed) => committed,
-                        Err(e) => {
-                            tracing::error!("Failed to commit changes after execution: {}", e);
-                            // Treat commit failures as if changes were made to be safe
-                            true
-                        }
+                    let changes_committed = match preservation.as_ref() {
+                        Some(report) => crate::turn_preservation::changed(report),
+                        None => match container.try_commit_changes(&ctx).await {
+                            Ok(committed) => committed,
+                            Err(e) => {
+                                tracing::error!("Failed to commit changes after execution: {}", e);
+                                // Treat commit failures as if changes were made to be safe
+                                true
+                            }
+                        },
                     };
 
                     let should_start_next = if matches!(
@@ -781,7 +833,7 @@ impl LocalContainerService {
                     }
                 }
 
-                if !already_finalized && container.should_finalize(&ctx) {
+                if !preservation_blocked && !already_finalized && container.should_finalize(&ctx) {
                     let has_chained_follow_up = ctx
                         .execution_process
                         .executor_action()
@@ -843,15 +895,17 @@ impl LocalContainerService {
                     }
                 }
 
-                if !matches!(
-                    ctx.execution_process.run_reason,
-                    ExecutionProcessRunReason::DevServer
-                ) && let Err(e) = container
-                    .retry_archived_workspace_cleanup_after_execution(
-                        ctx.workspace.id,
-                        &ctx.execution_process.run_reason,
+                if !preservation_blocked
+                    && !matches!(
+                        ctx.execution_process.run_reason,
+                        ExecutionProcessRunReason::DevServer
                     )
-                    .await
+                    && let Err(e) = container
+                        .retry_archived_workspace_cleanup_after_execution(
+                            ctx.workspace.id,
+                            &ctx.execution_process.run_reason,
+                        )
+                        .await
                 {
                     tracing::error!(
                         "Failed to resume archived workspace cleanup after {:?} execution for workspace {}: {}",
@@ -877,7 +931,9 @@ impl LocalContainerService {
                     })));
                 }
 
-                let _ = container.consume_capacity_queued_follow_up().await;
+                if !preservation_blocked {
+                    let _ = container.consume_capacity_queued_follow_up().await;
+                }
 
                 // Sync workspace to remote after CodingAgent execution
                 if matches!(
@@ -1600,7 +1656,9 @@ impl ContainerService for LocalContainerService {
     }
 
     fn status_worktree_cleanup_enabled(&self) -> bool {
-        std::env::var("DISABLE_STATUS_WORKTREE_CLEANUP").is_err()
+        // Status changes and restart reconciliation cannot authorize shared-path
+        // deletion. Explicit workspace deletion remains a separate user action.
+        false
     }
 
     async fn store_db_stream_handle(&self, id: Uuid, handle: JoinHandle<()>) {
@@ -1804,7 +1862,32 @@ impl ContainerService for LocalContainerService {
                 _ => Arc::new(NoopExecutorApprovalService {}),
             };
 
+        if matches!(
+            execution_process.run_reason,
+            ExecutionProcessRunReason::CleanupScript
+        ) {
+            return Err(ContainerError::Other(anyhow!(
+                "Cleanup scripts are unavailable pending recovery QA."
+            )));
+        }
         let repos = WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id).await?;
+        if crate::turn_preservation::enabled()
+            && matches!(
+                execution_process.run_reason,
+                ExecutionProcessRunReason::CodingAgent | ExecutionProcessRunReason::CleanupScript
+            )
+        {
+            let report = crate::turn_preservation::invoke(
+                "begin",
+                Self::preservation_request(workspace, execution_process, &repos, false),
+            )
+            .await;
+            if report["state"] != "pending" {
+                return Err(ContainerError::Other(anyhow!(
+                    crate::turn_preservation::message(&report)
+                )));
+            }
+        }
         let repo_names: Vec<String> = repos.iter().map(|r| r.name.clone()).collect();
         let repo_context = RepoContext::new(current_dir.clone(), repo_names);
 
@@ -1847,6 +1930,7 @@ impl ContainerService for LocalContainerService {
                 .await;
         }
 
+        let group_id = spawned.child.id();
         self.add_child_to_store(execution_process.id, spawned.child)
             .await;
 
@@ -1857,7 +1941,7 @@ impl ContainerService for LocalContainerService {
         }
 
         // Spawn unified exit monitor: watches OS exit and optional executor signal
-        let hn = self.spawn_exit_monitor(&execution_process.id, spawned.exit_signal);
+        let hn = self.spawn_exit_monitor(&execution_process.id, spawned.exit_signal, group_id);
         self.add_exit_monitor_handle(execution_process.id, hn).await;
 
         Ok(())

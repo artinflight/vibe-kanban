@@ -1,3 +1,4 @@
+import { McpConsentCards } from './McpConsentCards';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
@@ -260,7 +261,8 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     useWorkspaceExecution(workspaceId);
 
   // Approvals state
-  const { getPendingForProcess } = useApprovals();
+  const { getPendingForProcess, pendingApprovals, isConnected } =
+    useApprovals();
 
   // Get pending approval from running processes
   const pendingApproval = useMemo(() => {
@@ -1190,6 +1192,19 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
               isTimedOut: feedbackContext.isTimedOut,
             }
           : undefined
+      }
+      consentCards={
+        <McpConsentCards
+          approvals={pendingApprovals}
+          executionProcessIds={processes
+            .filter(
+              (p) =>
+                p.status === ExecutionProcessStatus.running &&
+                p.session_id === sessionId
+            )
+            .map((p) => p.id)}
+          isConnected={isConnected}
+        />
       }
       approvalMode={
         pendingApproval && !pendingApproval.questions

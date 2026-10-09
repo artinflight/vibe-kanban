@@ -8,6 +8,7 @@ use capacity_guard::Lease;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 pub mod controller;
+pub mod first_run;
 pub mod policy;
 
 /// A persisted launch request is valid only in the VK process which issued it.
@@ -21,6 +22,14 @@ pub fn issuer_epoch() -> &'static str {
 /// route constructs this; ordinary follow-ups never carry background authority.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
 pub struct CapacityExecution {
+    // Private worker authority, constructed by the authenticated capacity route.
+    // It is never supplied by public frontend executor actions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(skip)]
+    pub first_run: Option<first_run::FirstRun>,
+    #[serde(default)]
+    #[ts(skip)]
+    pub controller_revision: u64,
     pub issuer_epoch: String,
     pub id: String,
     pub allocation_id: String,
@@ -32,6 +41,7 @@ pub struct CapacityExecution {
 
 #[derive(Debug, Clone)]
 pub struct PreparedCapacity {
+    pub first_run: Option<first_run::FirstRun>,
     pub file: PathBuf,
     pub guard: PathBuf,
     pub lease: Lease,
@@ -96,7 +106,12 @@ impl CapacityExecution {
                 .ok_or_else(|| io::Error::other("Missing capacity directory"))?,
         )?
         .sync_all()?;
-        Ok(PreparedCapacity { file, guard, lease })
+        Ok(PreparedCapacity {
+            first_run: self.first_run.clone(),
+            file,
+            guard,
+            lease,
+        })
     }
 }
 
@@ -107,6 +122,8 @@ mod tests {
     #[test]
     fn persisted_request_from_previous_vk_process_cannot_launch() {
         let request = CapacityExecution {
+            first_run: None,
+            controller_revision: 0,
             issuer_epoch: uuid::Uuid::new_v4().to_string(),
             id: uuid::Uuid::new_v4().to_string(),
             allocation_id: "old-week:day".into(),

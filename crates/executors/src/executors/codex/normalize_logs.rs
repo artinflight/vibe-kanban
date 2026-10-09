@@ -153,7 +153,11 @@ impl ToNormalizedEntry for DynamicToolState {
                 },
                 status: self.status.clone(),
             },
-            content: self.tool.clone(),
+            content: if self.tool == super::elicitation::TOOL {
+                self.arguments["message"].as_str().unwrap_or("").to_owned()
+            } else {
+                self.tool.clone()
+            },
             metadata: serde_json::to_value(ToolCallMetadata {
                 tool_call_id: self.call_id.clone(),
             })
@@ -1546,6 +1550,76 @@ fn normalize_codex_stderr_logs(
     })
 }
 
+// Deployed Codex emits these notifications, but the pinned protocol crate
+// predates them. Validate only these exact additions; all other native events
+// still use the typed SDK parser. They carry no assistant text or entry index.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ReviewGoalCleared {
+    thread_id: String,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ReviewSleepItem {
+    #[serde(rename = "type")]
+    kind: String,
+    id: String,
+    #[serde(rename = "durationMs")]
+    _duration_ms: u64,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ReviewSleepNotification {
+    thread_id: String,
+    turn_id: String,
+    item: ReviewSleepItem,
+    started_at_ms: Option<u64>,
+    completed_at_ms: Option<u64>,
+}
+
+/// Review-only validation before invoking the UI normalizer. A malformed native
+/// event must not disappear through the UI's best-effort recovery parser.
+pub fn validate_review_line(line: &str) -> std::io::Result<()> {
+    let invalid = || std::io::Error::other("Invalid native event in review log");
+    let value: Value = serde_json::from_str(line).map_err(|_| invalid())?;
+    if !value.is_object() {
+        return Err(invalid());
+    }
+    if let Some(method) = value["method"].as_str() {
+        if method == "thread/goal/cleared" {
+            let event: ReviewGoalCleared =
+                serde_json::from_value(value["params"].clone()).map_err(|_| invalid())?;
+            if event.thread_id.trim().is_empty() {
+                return Err(invalid());
+            }
+        } else if matches!(method, "item/started" | "item/completed")
+            && value["params"]["item"]["type"] == "sleep"
+        {
+            let event: ReviewSleepNotification =
+                serde_json::from_value(value["params"].clone()).map_err(|_| invalid())?;
+            if event.thread_id.trim().is_empty()
+                || event.turn_id.trim().is_empty()
+                || event.item.id.trim().is_empty()
+                || event.item.kind != "sleep"
+                || (method == "item/started" && event.started_at_ms.is_none())
+                || (method == "item/completed" && event.completed_at_ms.is_none())
+            {
+                return Err(invalid());
+            }
+        } else if method.starts_with("codex/event") {
+            serde_json::from_value::<CodexNotificationParams>(value["params"].clone())
+                .map_err(|_| invalid())?;
+        } else if method.starts_with("item/")
+            || method.starts_with("turn/")
+            || method.starts_with("thread/")
+            || method == "error"
+        {
+            super::jsonrpc::parse_server_notification(line).map_err(|_| invalid())?;
+        }
+    }
+    Ok(())
+}
+
 pub fn normalize_logs(
     msg_store: Arc<MsgStore>,
     worktree_path: &Path,
@@ -1654,6 +1728,63 @@ pub fn normalize_logs(
 
             if let Ok(approval) = serde_json::from_str::<Approval>(&line) {
                 match &approval {
+                    Approval::McpApprovalRequested {
+                        call_id,
+                        approval_id,
+                        server_name,
+                        message,
+                    } => {
+                        let tool = DynamicToolState {
+                            index: None,
+                            tool: super::elicitation::TOOL.into(),
+                            arguments: serde_json::json!({"server": server_name, "message": message, "consent": "Approve this call only"}),
+                            result: None,
+                            status: ToolStatus::PendingApproval {
+                                approval_id: approval_id.clone(),
+                            },
+                            call_id: call_id.clone(),
+                        };
+                        let index = add_normalized_entry(
+                            &msg_store,
+                            &entry_index,
+                            tool.to_normalized_entry(),
+                        );
+                        state.dynamic_tools.insert(
+                            call_id.clone(),
+                            DynamicToolState {
+                                index: Some(index),
+                                ..tool
+                            },
+                        );
+                    }
+                    Approval::McpApprovalResolved {
+                        call_id,
+                        action,
+                        origin,
+                    } => {
+                        let status = match action {
+                            codex_app_server_protocol::McpServerElicitationAction::Accept => {
+                                ToolStatus::Success
+                            }
+                            codex_app_server_protocol::McpServerElicitationAction::Decline => {
+                                ToolStatus::Denied { reason: None }
+                            }
+                            codex_app_server_protocol::McpServerElicitationAction::Cancel => {
+                                ToolStatus::Failed
+                            }
+                        };
+                        state.update_tool_status(call_id, status, true, &msg_store);
+                        add_normalized_entry(
+                            &msg_store,
+                            &entry_index,
+                            NormalizedEntry {
+                                timestamp: None,
+                                entry_type: NormalizedEntryType::SystemMessage,
+                                content: format!("MCP approval: {origin}"),
+                                metadata: None,
+                            },
+                        );
+                    }
                     Approval::ApprovalRequested {
                         call_id,
                         approval_id,
@@ -1689,6 +1820,25 @@ pub fn normalize_logs(
                         }
                     }
                 }
+                continue;
+            }
+
+            if let Ok(event) = serde_json::from_str::<Value>(&line)
+                && let Some(diagnostic) = event.get("McpApprovalDiagnostic")
+            {
+                add_normalized_entry(
+                    &msg_store,
+                    &entry_index,
+                    NormalizedEntry {
+                        timestamp: None,
+                        entry_type: NormalizedEntryType::SystemMessage,
+                        content: format!(
+                            "MCP approval bridge: {}",
+                            diagnostic["origin"].as_str().unwrap_or("unknown")
+                        ),
+                        metadata: Some(diagnostic.clone()),
+                    },
+                );
                 continue;
             }
 
@@ -2779,6 +2929,17 @@ impl ToNormalizedEntry for Error {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Approval {
+    McpApprovalRequested {
+        call_id: String,
+        approval_id: String,
+        server_name: String,
+        message: String,
+    },
+    McpApprovalResolved {
+        call_id: String,
+        action: codex_app_server_protocol::McpServerElicitationAction,
+        origin: String,
+    },
     ApprovalRequested {
         call_id: String,
         tool_name: String,
@@ -2838,6 +2999,9 @@ impl Approval {
                 other => other.to_string(),
             },
             Self::QuestionResponse { .. } => "Question".to_string(),
+            Self::McpApprovalRequested { .. } | Self::McpApprovalResolved { .. } => {
+                "MCP approval".into()
+            }
         }
     }
 }
@@ -2876,7 +3040,9 @@ impl ToNormalizedEntryOpt for Approval {
                     QuestionStatus::TimedOut => None,
                 };
             }
-            Self::ApprovalRequested { .. } => return None,
+            Self::ApprovalRequested { .. }
+            | Self::McpApprovalRequested { .. }
+            | Self::McpApprovalResolved { .. } => return None,
         };
         let tool_name = self.display_tool_name();
 
@@ -2918,6 +3084,63 @@ mod tests {
         ActionType, NormalizedEntryType, utils::patch::extract_normalized_entry_from_patch,
     };
 
+    #[test]
+    fn review_accepts_historical_goal_clear_and_sleep_lifecycle() {
+        for line in include_str!("fixtures/review-goal-sleep.jsonl").lines() {
+            validate_review_line(line).unwrap();
+        }
+    }
+
+    #[test]
+    fn review_rejects_damaged_goal_and_sleep_events() {
+        for line in include_str!("fixtures/review-goal-sleep.jsonl").lines() {
+            let original: Value = serde_json::from_str(line).unwrap();
+            let mut damaged = original.clone();
+            damaged["params"]
+                .as_object_mut()
+                .unwrap()
+                .remove("threadId");
+            assert!(validate_review_line(&damaged.to_string()).is_err());
+            damaged = original.clone();
+            damaged["params"]["threadId"] = json!("");
+            assert!(validate_review_line(&damaged.to_string()).is_err());
+            assert!(validate_review_line(&line[..line.len() - 1]).is_err());
+            if original["params"]["item"]["type"] == "sleep" {
+                for pointer in [
+                    "/params/turnId",
+                    "/params/item/id",
+                    "/params/item/durationMs",
+                ] {
+                    damaged = original.clone();
+                    *damaged.pointer_mut(pointer).unwrap() = Value::Null;
+                    assert!(validate_review_line(&damaged.to_string()).is_err());
+                }
+                for duration in [json!(-1), json!(1.5), json!("20000")] {
+                    damaged = original.clone();
+                    damaged["params"]["item"]["durationMs"] = duration;
+                    assert!(validate_review_line(&damaged.to_string()).is_err());
+                }
+                damaged = original.clone();
+                let key = if damaged["method"] == "item/started" {
+                    "startedAtMs"
+                } else {
+                    "completedAtMs"
+                };
+                damaged["params"].as_object_mut().unwrap().remove(key);
+                assert!(validate_review_line(&damaged.to_string()).is_err());
+                damaged = original.clone();
+                damaged["params"]["item"]["type"] = json!("unknownNativeItem");
+                assert!(validate_review_line(&damaged.to_string()).is_err());
+            }
+        }
+        assert!(
+            validate_review_line(
+                r#"{"method":"thread/goal/unknown","params":{"threadId":"fixture"}}"#
+            )
+            .is_err()
+        );
+    }
+
     fn latest_normalized_entries(msg_store: &MsgStore) -> Vec<NormalizedEntry> {
         let mut entries = BTreeMap::new();
         for msg in msg_store.get_history() {
@@ -2942,6 +3165,56 @@ mod tests {
         }
 
         latest_normalized_entries(&msg_store)
+    }
+
+    #[tokio::test]
+    async fn mcp_approval_card_preserves_consent_context_and_truthful_resolution() {
+        let requested = Approval::McpApprovalRequested {
+            call_id: "synthetic-elicitation".into(),
+            approval_id: "approval-ui".into(),
+            server_name: "codex_apps".into(),
+            message: "Tool: run_session_prompt for synthetic Reporting\nApprove this call only"
+                .into(),
+        }
+        .raw();
+        let entries = normalize_lines(std::slice::from_ref(&requested)).await;
+        let pending = tool_use(&entries, super::super::elicitation::TOOL);
+        assert!(
+            pending
+                .content
+                .contains("run_session_prompt for synthetic Reporting")
+        );
+        assert!(pending.content.contains("Approve this call only"));
+        assert!(matches!(&pending.entry_type, NormalizedEntryType::ToolUse {
+            status: ToolStatus::PendingApproval { approval_id }, ..
+        } if approval_id == "approval-ui"));
+        let entries = normalize_lines(&[
+            requested,
+            Approval::McpApprovalResolved {
+                call_id: "synthetic-elicitation".into(),
+                action: codex_app_server_protocol::McpServerElicitationAction::Cancel,
+                origin: "disconnected".into(),
+            }
+            .raw(),
+        ])
+        .await;
+        assert!(matches!(
+            tool_use(&entries, super::super::elicitation::TOOL).entry_type,
+            NormalizedEntryType::ToolUse {
+                status: ToolStatus::Failed,
+                ..
+            }
+        ));
+        assert!(
+            entries
+                .iter()
+                .any(|entry| entry.content == "MCP approval: disconnected")
+        );
+        assert!(
+            !entries
+                .iter()
+                .any(|entry| matches!(entry.entry_type, NormalizedEntryType::UserFeedback { .. }))
+        );
     }
 
     #[tokio::test]

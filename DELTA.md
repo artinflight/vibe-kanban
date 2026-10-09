@@ -1564,3 +1564,27 @@ Fresh private protocol2 package/validator and receipts are under
 helper is not a deployed server. Old package665d836db is superseded, not deleted.
 Live PID3027197/module protocol1 remain unchanged. VK::Staging owns adoption;
 October30 readiness and separate Auto permission remain requirements.
+
+## 2026-10-09 — AutoSwitch actual post-cutover adoption checked
+
+Owner-cutover backend c3c48e63/PID1254186/port5561 and frontend5ce84ee2 verified
+against executable and served hashes. Protocol2 safe-c3c48e6324f7 passes the
+pinned live validator; real decisions identify its exact manifest. PR148's core
+source matches the deployed package even though the PR remains open. The old
+backend-adoption blocker is resolved. Deployed routing checks: 67 passed/two
+optional skipped; desktop/phone UI checks pass with all writes intercepted, no
+jobs submitted. CU contract/fixture remain byte-identical. Recommend and all
+credit/model policies unchanged; no deployment, live publication or restart.
+20:31:17–21:01:51 UTC: ten real turns recommend Astra/high; native bindings show
+ten actual Sol6.1/high executions. One successful small classifier call; nine
+fast-path decisions. Cutover/control-system sample establishes adoption, not
+savings. Review operational-context bias on ordinary real follow-ups before Auto.
+Evidence: /mnt/vk-storage/vk-autoswitch-adoption-20261009.
+Fresh isolated reload test passes in unchanged PID1785450, with 15 archived
+native assessments and code/settings/selection/manual/child/risk/state/rollback
+checks. No paid calls. One standalone validation attempt returned nonzero while
+compiling; direct validation and final live check pass, initial error detail not
+retained by wrapper. Formatting/ops checks pass. No live publication performed.
+Final observation through21:08:56 UTC: 13 Recommend/Astra-high decisions, all
+13 native bindings Sol6.1/high; eight completed/five running, one classifier
+success/twelve fast-path decisions. Earlier ten-turn snapshot is retained.

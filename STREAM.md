@@ -1,4 +1,15 @@
-# October 7: correct the incomplete no-restart boundary
+# October 9: verify actual AutoSwitch adoption
+
+The owner's cutover adopted the corrected protocol2 backend/module. Live identity,
+source matching, Recommend telemetry and desktop/phone UI checks are recorded in
+[VK_AUTOSWITCH_ADOPTION_20261009.md](VK_AUTOSWITCH_ADOPTION_20261009.md).
+This development pass preserves Recommend and all credit/routing settings. No
+restart or live publication. Ordinary module updates retain the no-restart path;
+Staging owns live publication. Useful everyday recommendations and net accepted-task
+savings remain to be established before October30. Historical entries below are
+evidence of their dates, not current deployment status.
+
+## October 7: correct the incomplete no-restart boundary
 
 Current branch `fix/autoswitch-current-step-risk` retains the earlier source and
 PR148. The prior delivery failed the requested no-restart classification scope:

@@ -1,4 +1,25 @@
-# October 7: correct the incomplete no-restart boundary
+# October 9: owner cutover adopted the corrected module boundary
+
+The actual live backend is `c3c48e63`, PID1254186/port5561; the served frontend
+is `5ce84ee2`. Protocol2 `safe-c3c48e6324f7` passes live validation and genuine
+Recommend decisions record its exact hash. PR148's relevant core source matches
+the deployed package, although the PR is still open. The old adoption blocker in
+the October7 entry below is resolved. See
+[VK_AUTOSWITCH_ADOPTION_20261009.md](VK_AUTOSWITCH_ADOPTION_20261009.md).
+Focused deployed routing tests: 67 pass, two optional tests skipped. Live desktop
+and phone UI checks pass with all browser writes intercepted and zero jobs.
+Fresh isolated same-process update proof passes, PID1785450, including 15 archived
+assessments, cheaper selection, manual/child/hard-risk guards, rollback and dirty
+state. This is zero-inference local proof, not live savings. One standalone
+verification attempt failed during compilation; direct/final live checks passed;
+the missing initial validator detail is retained as a limitation in the report.
+Recommend/credit/model policy unchanged; no restart, publication or deployment
+performed by development. Private receipts: `/mnt/vk-storage/vk-autoswitch-adoption-20261009`.
+Next: verify useful cheaper recommendations on ordinary work and inspect remaining
+operational-context bias. October30/20x-to-10x deadline and separate Auto approval
+remain. VK::Staging retains live publication/deployment responsibility.
+
+## October 7: correct the incomplete no-restart boundary
 
 Current branch `fix/autoswitch-current-step-risk` retains the earlier source and
 PR148. The prior delivery failed the requested no-restart classification scope:

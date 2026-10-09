@@ -79,15 +79,19 @@ IDs and classifier usage remain authoritative. CU `vk.routing.v1` and its shared
 fixture are unchanged; internal module protocol 2 is separate from that wire
 contract. No public API/type/schema migration is introduced.
 
-## Required owner adoption and later updates
+## Owner adoption and later updates
 
-The current October 5 live backend contains the old vetoes. Publishing a new
-worker alone cannot remove those checks. **One backend-owner adoption of protocol
-2, its matching validator and initial worker is required.** Do not pass this
-package through the old protocol-1 validator or present it as live. The older
+**October 9 adoption is verified:** the running `c3c48e63` backend uses the
+matching protocol-2 validator and `safe-c3c48e6324f7` module. Genuine Recommend
+decisions record that release hash. See
+[VK_AUTOSWITCH_ADOPTION_20261009.md](VK_AUTOSWITCH_ADOPTION_20261009.md).
+The one-time backend adoption below is now complete. Publishing a worker alone
+could not remove the old October 5 backend vetoes; the owner's cutover did.
+Do not use an old protocol-1 validator with this package. The older
 `current-step-665d836db-20261007` package is superseded, preserved for evidence.
-Development does not install service settings, restart VK, cut over, enable Auto
-or contact a staging/deployment agent. VK::Staging owns that adoption.
+Development does not install service settings, restart VK, cut over or enable
+Auto. VK::Staging owns live publication/deployment; coordinate authorized updates
+with that existing owner rather than starting another deployment stream.
 
 Prepare a separate root outside worktrees on mounted SSD, with the worker and
 validator built from the same source as the candidate server:
@@ -134,11 +138,18 @@ Current evidence is under
 `/mnt/vk-storage/vk-autoswitch-module-boundary-20261007`; HANDOFF records the
 completed checks, exact source/package and delivery status. Version is 0.1.42.
 
+October9 actual adoption and fresh same-process update proof are recorded in
+VK_AUTOSWITCH_ADOPTION_20261009.md and
+`/mnt/vk-storage/vk-autoswitch-adoption-20261009`. The fresh private process
+PID1785450 adopts code/settings, changes selection and retains protection/state;
+the live backend PID1254186 remains unchanged. No live release was published by
+development during that assessment.
+
 ## October 30 readiness
 
 Useful AutoSwitch must be running before **October 30, 2026**, when the included
-allowance falls from **20x to 10x**. Remaining dependencies are passing release CI,
-owner adoption once, genuine Recommend decisions proving cheaper resolved work
+allowance falls from **20x to 10x**. Owner backend adoption is verified October 9.
+Remaining dependencies are genuine Recommend decisions proving cheaper resolved work
 without lost risk protection, and accepted-task quality/net-usage evidence.
 Subsequent policy corrections should use this proven reload path. Recommend stays
 required until separate Auto authorization. No broad benchmark or paid synthetic

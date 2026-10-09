@@ -1,3 +1,14 @@
+## October 9: AutoSwitch corrected boundary adopted
+
+The owner cutover's running `c3c48e63` backend and `5ce84ee2` frontend are verified
+against actual executable/served asset hashes. Internal protocol2 module
+`safe-c3c48e6324f7` passes the pinned validator and is identified in real Recommend
+decisions. The one-time owner-adoption dependency is resolved. Ordinary compatible
+classification updates use validated module publication without a backend restart;
+native lifecycle/hard-safety/protocol changes retain normal deployment boundaries.
+Recommend remains required, with no Auto or credit activation. See
+VK_AUTOSWITCH_ADOPTION_20261009.md. Historical live identities below are superseded.
+
 ## October 7: AutoSwitch reload boundary invariant
 
 Prompt classification and inferred follow-up qualification belong to the reviewed,

@@ -1574,3 +1574,11 @@ ops governance pass; full Rust baseline attempts fail on absent host GTK/GLib
 pkg-config libraries. See VK_MOBILE_UX.md and the SSD evidence directory there.
 This feature follow-up is not deployed; Green PID3027197, production frontend
 and configured model/effort/Recommend-only routing remain unchanged.
+
+## 2026-10-09 — Workspace-first release preparation
+
+PR228 rebase-merged into staging; PR232 full CI passed. GitHub refused the production
+rebase merge; merge-commit permission was requested. Clean build and five workflow
+plus three attention cases passed. Desktop rollback archive SHA256 verified.
+Candidate assets are packaged; October 8 production pointers and backend remain
+unchanged. See VK_WORKSPACES_RELEASE_20261009.md and SSD release evidence.

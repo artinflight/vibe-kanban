@@ -1,3 +1,13 @@
+## October 9: Workspace-first release prepared; production promotion pending
+
+PR228 rebase-merged into staging. PR232 has passing full CI but GitHub refused its
+rebase merge; permission for a merge commit is pending. Clean build, five workflow
+and three attention browser cases, saved messages and Desktop-mirrored rollback
+archive passed. The immutable candidate is ready; live assets/backend/configuration
+remain the October 8 release. Read VK_WORKSPACES_RELEASE_20261009.md for source,
+backup, evidence, limits and the guarded activation path. Protected staging was not
+rewritten. This records preparation, not deployment.
+
 ## October 8: Workspace-first frontend follow-up in preparation
 
 Workspace landing, To do defaults on phones, and whole-card attention styling

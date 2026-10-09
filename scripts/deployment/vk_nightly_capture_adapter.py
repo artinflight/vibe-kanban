@@ -286,6 +286,13 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
             # All SQLite readers, tar/zstd children and verification channels have
             # finished. Unmount the input before the B resident can publish/retire.
             subprocess.run([config['fusermount_binary'],'-u',str(mount)],check=True,timeout=30);mounted=False
+            # Reap the foreground mount/SFTP transport before attesting producer
+            # completion, rather than waiting until after B publication.
+            try:mount_process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                mount_process.kill();mount_process.wait()
+                raise ValueError('mount transport failed to finish; no completion attestation')
+            mount_process=None
             complete=resident.call('finish',producer_closed=True,proof_name='nightly-proof.json',proof_sha256=sealed['sha256'])
             if complete.get('event')!='complete':raise ValueError('B lifecycle completion missing')
             return complete

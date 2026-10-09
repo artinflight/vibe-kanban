@@ -1173,3 +1173,40 @@ hash; it is compiled only, unreviewed, untested, unexecuted, unpublished and not
 adopted. Do not use it as readiness evidence. Completed immutable checkpoints
 remain published; private witnesses, receipts and mutable caches stay private.
 See receipts/archive-deferral-capacity-20261009.json.
+
+## 20:06 owner refuses further manual commands: bounded route investigation
+
+No new operator command, sudo retry, alternative identity/privilege route or root
+code change was attempted. The104378byte d32d40574 updater still matches
+fe3950e65e014e896a23a9cdc4782c6f9416f4bdb2f7484448dbd7dc40b993e1;
+the installed reusable payload still matches the original6e898eeb hash, so
+capacity correction is NOT installed. Read-only process/session metadata found
+no retained root interactive/Python executor; root SSH daemons are not execution
+authority and all6login sessions are UID1000. The installed digest grants permit
+metadata-only inspectors, not an installer/root writer. No user session was
+commandeered. This is bounded local evidence, not proof that every remote admin
+executor is absent. Root independently owns the supported Desktop executor check.
+
+Native free is about8.23GB against the already authenticated6.3348GB initial
+catch-up plus unchanged8GiB headroom: about6.695GB short before later writes.
+Fresh bounded du measurements cover four previously identified generated-looking
+caches plus six current release/test/evidence trees. All ten total only5.0305GB,
+INCLUDING protected pinned packages, source and evidence; even an impermissible
+retirement of all of them leaves at least1.664GB short. The four caches alone
+total3.2954GB and have no new consumer/source-retirement clearance. Test fixtures
+and aborted frontend outputs are smaller still. No transfer or retirement was
+performed because these do not establish a sufficient safe route. Retaining
+native copies frees zero blocks; a cross-filesystem move includes source-name
+retirement and cannot be described as a deletion-free capacity gain. No scope
+reduction, reserve waiver, full audit/backup/restore or competing build ran.
+
+Fresh local SO_PEERCRED/start/source/root/lease probe verifies the existing owner
+500933 remains controller_phase:restored with activation and cleanup unavailable.
+Incumbent3027197 and protected fallback1369037 units remain active/running.
+The approved archive remains preserved. No validated no-install route emerged
+from these bounded sources. A genuinely authorized existing admin executor, if
+root establishes one, is the shortest remaining dependency for the exact updater
+and both read-only acceptances; no further manual command is requested. Candidate
+application rehearsal, final fenced catch-up, latest-data fallback/live acceptance
+and cutover remain unperformed. Historical recovery exceptions remain explicit.
+See receipts/no-manual-command-route-20261009.json.

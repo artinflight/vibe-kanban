@@ -1625,3 +1625,11 @@ SSD scope uses no-symlink, pinned filesystem/new root-owned inode checks without
 changing its writable parent. Administrator authentication remains unverified
 after failed Desktop command-runner readiness; parent/root assesses one harmless
 retry. JSON plan only, no installer packaged/executed. Code/grants/scopes unchanged.
+
+## 2026-10-09 — Package exact reviewed two-profile bootstrap
+
+Prepared embedded version-pinned administrator installer, atomic validated grant
+publication, failure/provenance withdrawal and inspection-only acceptance harness.
+Reviewed29af1c33 scope/plan and capabilities unchanged. 20 unprivileged fixtures
+and54 checker tests pass. No root invocation, installation, adoption or live change.
+Both Desktop runner attempts failed; secure administrator authentication unverified.

@@ -1,3 +1,14 @@
+## October 9: Exact reviewed scope packaged for one admin invocation
+
+Read VK_INSPECTION_INSTALLER.md for the self-contained pinned source-only installer
+and prepared dry-run, read-only acceptance and grant-only rollback commands.
+The reviewed29af1c33 plan, inspector code/policies, binaries and grants remain
+unchanged. No privileged invocation/install/security/live-owner action occurred;
+adoption stays untouched. 20 unprivileged installer/harness fixtures and all54
+checker tests pass. Root OS/visibility and installed acceptance are never-run
+boundaries. Both Desktop runner attempts failed; authentication remains unverified.
+Owner approval is pending. Older JSON-only/no-package notes are historical.
+
 ## October 9: Two-profile source-only inspection bundle
 
 PR234 now adds a separate exact historical archive profile and unprivileged

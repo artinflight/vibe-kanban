@@ -167,8 +167,9 @@ cannot meet that demand and must not be described as doing so.
 The [version-pinned installation plan](scripts/deployment/security/inspection-two-profile-install-plan.json)
 is the authoritative bundle. It records source and binary hashes, exact object
 permissions, both policy scopes, the sole allowed enrollment change, installation
-order, read-only installed acceptance and rollback. It is a plan, not an installer
-executed here. The original namespace checker, policy template and launcher remain
+order, read-only installed acceptance and rollback. The reviewed JSON plan stays
+unchanged. A separate [pinned installer package](VK_INSPECTION_INSTALLER.md) now
+implements those steps; it has never been run as root. The original namespace checker, policy template and launcher remain
 byte-for-byte unchanged. The historical handler loads that audited scanner from
 one fixed root-owned installed path; no caller-controlled code import exists.
 
@@ -218,8 +219,10 @@ channel or retained root terminal. Existing root daemons and unreadable sudoers
 files are not authorization. A supported secure administrator authentication
 route remains pending verification. Desktop readiness currently has no usable
 UI/terminal, and command-runner setup failed. Parent/root is assessing one harmless
-retry; this task has no verified outcome and makes no authentication attempt.
-The artifact is a JSON plan: no executable installer was packaged or executed.
+retry; both supported runner attempts have now failed, and no administrator
+authentication route is verified. This task makes no authentication attempt.
+The reviewed plan remains JSON; its separate source-only installer package has
+not been executed as root.
 This task asks for no terminal commands.
 No sudo denial was retried or alternative escalation used.
 

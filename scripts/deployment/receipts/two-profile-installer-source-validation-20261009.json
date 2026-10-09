@@ -1,0 +1,59 @@
+{
+  "administrator_authentication": "Unverified; both supported Desktop runner attempts failed. No credential handling, sudo retry or LXD bypass.",
+  "adoption_configuration_edited": false,
+  "approval": "Owner response to exact scope pending; no installation authorization inferred.",
+  "artifact": {
+    "bytes": 124669,
+    "embedded_sources": "Local immutable reviewed Git source, verified digests; no root downloads/repo imports/compilation",
+    "path": "/mnt/vk-storage/vk-retirement-preflight-tests/install-two-profile-29af1c33-r1.py",
+    "root_executed": false,
+    "sha256": "6d7db4427a7fed2e056ca28ca71057b99a7cc6cb719c74b99a25b7b778c6a6e3"
+  },
+  "at": "2026-10-09T17:46:35.340015+00:00",
+  "baseline_limits": {
+    "cargo_workspace_tests": "Not run; unrelated rebuilding excluded.",
+    "check": "Attempted; legacy guard passed, then TypeScript missing.",
+    "format": "Attempted; Rust formatting passed, then Prettier missing.",
+    "installed_root_acceptance": "Never run; scope approval and administrator authentication pending.",
+    "lint": "Attempted; ESLint missing."
+  },
+  "diff_check_passed": true,
+  "dry_run": "Same hash-checked bootstrap --dry-run; no writes. Install already preflights automatically.",
+  "fallback": "Survives until human QA; no global exclusion claim, existing controller gates retained.",
+  "focused_tests": {
+    "commands": [
+      "python3 -B -S -m unittest discover -s scripts/deployment -p 'test_vk_inspection_installer.py'",
+      "python3 -B -S -m unittest discover -s scripts/deployment -p 'test_vk_retirement_preflight.py'",
+      "python3 -B -S -m unittest discover -s scripts/deployment -p 'test_vk_historical_archive_preflight.py'"
+    ],
+    "existing_checkers": 54,
+    "modeled": "Root UID represented by fixture UID; OS/UUID/namespace/stdlib, historic live metadata in install tests and privileged scan are mocked. Exact metadata-only path function separately exercised on synthetic files.",
+    "native": "Disposable actual no-follow/O_EXCL operations, fresh inode enrollment, real unprivileged prospective-policy visudo parse, collision/failure preservation and grant-only rollback; private acceptance lease authentication.",
+    "new_installer_and_harness": 20,
+    "passed": true
+  },
+  "installed": false,
+  "new_backup": false,
+  "one_time_admin_invocation_after_approval": "/usr/bin/python3 -I -S -B -c 'import os,stat,hashlib; fd=os.open(\"/mnt/vk-storage/vk-retirement-preflight-tests/install-two-profile-29af1c33-r1.py\",os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK); info=os.fstat(fd); assert stat.S_ISREG(info.st_mode) and info.st_size==124669; data=os.read(fd,2097153); os.close(fd); assert len(data)==124669 and hashlib.sha256(data).hexdigest()==\"6d7db4427a7fed2e056ca28ca71057b99a7cc6cb719c74b99a25b7b778c6a6e3\"; exec(compile(data,\"reviewed-inspection-installer\",\"exec\"),{\"__name__\":\"__main__\"})' --install --approved-plan 29af1c33e029bc1fe9ef9467fd51a03eb586105d",
+  "ops_check_passed": true,
+  "owner_changed": false,
+  "package_byte_for_byte_reproduced": true,
+  "partial_failure": "Only newly created exact inode/digest grant withdrawn; code/policies/anchor/data/evidence retained. Durable validated provenance precedes publication; SIGKILL/power loss requires explicit rollback/review.",
+  "privileges_changed": false,
+  "retirement_cutover_service_changes": false,
+  "reviewed_plan_head": "29af1c33e029bc1fe9ef9467fd51a03eb586105d",
+  "reviewed_plan_sha256": "a17d7f29b4b47c25811e8bf3d992f09ecd5084812d666dc761fbf4afff8a5357",
+  "rollback": "Same hash-checked bootstrap --rollback --approved-plan 29af1c33e029bc1fe9ef9467fd51a03eb586105d --drained; ONLY exact provenance-matching include withdrawn; all data/evidence preserved.",
+  "root_acceptance_executed": false,
+  "schema": 1,
+  "scope": "source-only bootstrap packaging of EXACT reviewed two-profile29af1c33 installation",
+  "scope_code_policies_binaries_grants_changed": false,
+  "source_sha256": {
+    "VK_INSPECTION_INSTALLER.md": "c374f289cbd1d47cf1b1bbdaab5e77ca2cedb5a27a14f173757a2926bea8dace",
+    "scripts/deployment/security/build_inspection_installer.py": "4915d6fc411d3d0e87ba6393396f4f7de7546930b2f6bed919f85b904cc9cc9e",
+    "scripts/deployment/security/vk_inspection_installer.py": "303103593cca96d008933f3fb0892c152623b8abbcb0b96418ee8d13e511b7cf",
+    "scripts/deployment/test_vk_inspection_installer.py": "7716b970e716c4449734e21d66341ecf132c76a9268d26badcf841625dbab4b6",
+    "scripts/deployment/vk_inspection_acceptance.py": "b09c0829d745a3de97dffa97d0bc082b8945e217ce57d46cea8171bcb3da73a4"
+  },
+  "unprivileged_package_install_invocation": "Returned1 administrator authentication required BEFORE any mutation; no sudo involved."
+}

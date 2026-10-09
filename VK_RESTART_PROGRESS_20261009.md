@@ -147,3 +147,44 @@ UID1000 scanner invocation not rerun by a privileged/alternate route.
 Incumbent refreshed read-only: service active/running,PID3027197; API/info returned
 HTTP200/success true/version0.1.42. This is incumbent health, not candidate readiness
 or completed restart. No original production/shared paths were overwritten.
+
+## Final-boundary preparation without operational effects
+
+A separate explicit fenced_snapshot helper now streams bit-exact stopped SQLite
+files to the exact B mount without source SQLite opens/WAL bookkeeping or a RAM
+image. It requires positive stopped-writer/held-lease fields, no source sidecars,
+unchanged source generation/metadata and independently verified private immutable
+B integrity/hash readback. The capture extension admits that explicit factory
+for all private DBs, avoiding the old multiple-image RAM path; missing checkpoint
+or mismatched fence/readback blocks. Nine snapshot and five capture regressions
+pass under -O (14new cases total), including exact final source bytes, retained
+held kernel fixture lease and rejected remaining WAL/unverified writers.
+These are owned fixtures: no real stop/checkpoint/fence or frozen B capture ran.
+The actual production supervisor remains unbound/default-blocked; no fixture
+receipt can authorize activation. This future source is not retroactively adopted
+by current session63638, which uses the previously preserved842999b2 code.
+
+Startup review also found the inherited legacy attachment migration contains
+removal calls and the expected marker was not found at the checked green data
+location. Its actual source/asset mapping and compiled startup cleanup prohibition
+must be verified/corrected before production activation; do not fabricate a marker
+or waive human-QA cleanup gating. Current incumbent remains protected/running.
+
+## Existing workflow helper correction
+
+Session63638 failed closed after writing a25001197568byte B partial: the updater
+socket warning was not accepted by the low-level driver invocation. The generated
+path inventory67733483bytes is fully on B, demonstrating the B-inventory correction.
+Seven retained warnings were inspected: one exact Codex daemon-updater.sock and
+six generated tmp/arg0/codex-arg0sng2DK members deleted during capture.
+
+This was an invocation omission: unchanged reviewed vk_runtime_ephemeral.install
+already supplies narrow socket/generated-wrapper lifecycle handling. Its exact
+source hash is b61bd00ab4ebf7be5841c973a17fe113e3884325e3ececfeef5b25fee27d889f.
+Applying it read-only to the retained warning log plus capture-start journal
+sequence accepts all seven warnings; coverage errors remain empty. No blanket
+socket or temp-directory exclusion is needed. The existing socket's live listener
+is UID1000 codex PID3211750 from installed daemon release0.162.0. Its IPC content
+is not persistent file content; existing workflow retains warning accounting.
+No old partial is accepted/resumed, and no data or endpoint is deleted here.
+Future full invocation must install that existing helper before capture.

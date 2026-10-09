@@ -1,20 +1,22 @@
 {
-  "fenced_large_snapshot_supported": false,
+  "fenced_adapter_validation": "private fixture only; real held writer stop/lease/physical-B final acceptance unrun",
+  "fenced_large_snapshot_supported": true,
   "isolated_source_ownership_approval_pending": true,
+  "live_controller_activation_bound": false,
   "metadata_fixture_only": true,
   "production_deployed": false,
-  "source_parent": "e3de640de12a5ad17e6e100b6149b57cceb58120",
+  "source_parent": "842999b2506c575fc3d4806bca86d84a13fad2c7",
   "source_sha256": {
-    "scripts/deployment/test_vk_b_disk_capture.py": "c93f62aa23ee29cb2f7410ad66a0b471329cf0c865e22b966aff6f2664fa471a",
-    "scripts/deployment/test_vk_b_disk_snapshot.py": "9daecf1d17f5655c61e2f63db0dcef78c5bddff2912027ede6db003f2d9afcbd",
-    "scripts/deployment/vk_b_disk_capture.py": "1b54b3d01b4d2ca1034ab8ec066a532888119b5b9d338f32badd36ac3c931e4c",
-    "scripts/deployment/vk_b_disk_snapshot.py": "3b508a8f8449bfa43b94946c2288da29845f7297aca5d5a3446bfbf06423fb1c"
+    "scripts/deployment/test_vk_b_disk_capture.py": "59ed6c4fb3f19b1837e417728f10ecfd23d077ed28c3df2e5f3948c97f6ef082",
+    "scripts/deployment/test_vk_b_disk_snapshot.py": "2dba02e743b78c39c2832c1a8d84d771d681a07a4351a29aaab5669ace2f2269",
+    "scripts/deployment/vk_b_disk_capture.py": "3bab39fb2c9a3259b6672dd48c99ce3b3dc535ffbde17ee899c4f200ee3c7d07",
+    "scripts/deployment/vk_b_disk_snapshot.py": "ba1fd175cc72f6008e77f46096e4ec30201b4943e6d9895a7907af466a69cebf"
   },
   "tests": {
-    "archive_and_B_inventory": 4,
+    "archive_B_inventory_and_fenced_factory": 5,
     "optimization": "Python -O",
     "passed": true,
-    "snapshot": 6
+    "snapshot": 9
   },
   "whole_state_accepted": false,
   "workflow_approval_pending": true

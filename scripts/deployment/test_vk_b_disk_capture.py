@@ -76,12 +76,42 @@ class DiskCaptureTests(ContractTests):
         self.assertEqual(proof['local_payload_bytes'], 0)
         self.assertFalse(list((self.root / 'disk-extension').rglob('paths.nul')))
 
+    def test_fenced_driver_streams_exact_private_DB_and_retains_held_proof(self):
+        first, journal = self.capture('online-parent')
+        plan = {'sources': [str(self.inc)], 'sqlite_snapshots': [str(self.db)],
+                'excluded_rebuildable_directories': []}
+        journal = self.journals[-1]
+        # Force a new image in the final generation; modifying only owned fixture.
+        with sqlite3.connect(self.db) as db:
+            db.execute("INSERT INTO retained VALUES('final-fixture')")
+        self.stop_proof(None)
+        fence = dict(self.supervisor.held_fence(self.lease.fileno(), 'final'),
+                     all_writers_stopped_verified=True)
+        target = self.store / 'sqlite-consistent-fenced-fixture.sqlite'
+        target.write_bytes(self.db.read_bytes())
+        with target.open('rb') as f:
+            checksum = hashlib.file_digest(f, 'sha256').hexdigest()
+        row = dict(source=str(self.db), snapshot=target.name, mount_root=str(self.store),
+                   sha256=checksum, bytes=target.stat().st_size, writer_fenced=True,
+                   consistent_held_fence_raw_image=True, writer_fence=fence,
+                   physical_b_verified=True, integrity='ok', local_snapshot_payload_bytes=0)
+        with patch.object(vk_b_disk_capture, 'Archive', self.factory), patch.object(vk_rolling_backup, 'Archive', self.factory), patch('vk_b_disk_snapshot.checked_mount', return_value=self.store):
+            result = vk_b_disk_capture.capture(plan, self.root / 'fenced-disk-extension',
+                    journal.report, self.mirror, parent=first, publish=self.mirror,
+                    max_snapshot_bytes=1, verify_fence=lambda: fence,
+                    fenced_disk_snapshot=lambda raw: row)
+        self.assertTrue(result['frozen_boundary_verified'])
+        self.assertEqual(result['writer_fence'], fence)
+        self.assertEqual(result['largest_serialized_snapshot_bytes'], 0)
+        self.assertEqual(result['sqlite_snapshots'][str(self.db)]['sha256'], checksum)
+
 
 if __name__ == '__main__':
     suite = unittest.TestSuite(DiskCaptureTests(name) for name in (
         'test_extension_streams_verified_disk_image',
         'test_extension_rejects_unverified_disk_snapshot',
         'test_extension_rejects_corrupt_disk_snapshot',
-        'test_path_inventory_is_bound_in_disk_store_without_local_list'))
+        'test_path_inventory_is_bound_in_disk_store_without_local_list',
+        'test_fenced_driver_streams_exact_private_DB_and_retains_held_proof'))
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     raise SystemExit(not result.wasSuccessful())

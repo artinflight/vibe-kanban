@@ -1587,3 +1587,7 @@ See VK_RESTART_SAFEGUARDS_20261009.md for tests and concrete remaining blockers.
 2026-10-09: PR235 timestamp review: remove implicit test wrapper, supply explicit
 FIX READY arguments and retain production mandatory-keyword rejection. Old test
 receipt explicitly historical; exact-head rerun is separate. Source-only.
+
+2026-10-09: PR235 oneshot fix: replace ignored RuntimeMaxSec with
+TimeoutStartSec=7200; bound shutdown with TimeoutStopSec=30. Render regression
+and opt-in disposable user-service timeout/SIGKILL validation. No adoption.

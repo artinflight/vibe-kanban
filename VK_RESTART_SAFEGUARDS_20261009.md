@@ -78,7 +78,9 @@ retention. Incident archives, original recovery evidence and protected fallback
 live outside this NEW normal-nightly store and are never enrolled or deleted.
 
 `render_schedule` produces a 02:00 UTC user-service/timer template: a bounded Python
-oneshot, NoNewPrivileges, no LLM/agent invocation. It writes/enables nothing.
+oneshot with `TimeoutStartSec=7200` (two hours) and `TimeoutStopSec=30` (finite
+shutdown grace), NoNewPrivileges, no LLM/agent invocation. `RuntimeMaxSec` is
+intentionally absent because it does not bound oneshot execution. It writes/enables nothing.
 Staging must bind its reviewed current direct-B capture/readback composition,
 enroll a fresh nightly-only B directory, verify hardlinks/atomic rename/directory
 fsync on the actual supported backing route, and obtain specific schedule and
@@ -143,3 +145,14 @@ zero used for simulated clocks. A new negative regression verifies the mandatory
 production keyword raises TypeError when omitted. Runtime source is unchanged.
 The historical23-test receipt covers849a00024 only; use the fresh exact-head SSD
 review receipt for the corrected source, never apply the old count to a new head.
+
+### PR235 oneshot timeout review correction
+
+Rendered-settings regressions pin the startup deadline and shutdown grace. The
+opt-in `test_vk_nightly_service_timeout` uses only a unique transient user service
+with one-second deadlines and a SIGTERM-ignoring sleeper: it verifies Result=timeout,
+SIGKILL after the grace, finite elapsed time, and then stops/resets that fixture.
+This validates user-manager timeout behavior, not a real B nightly capture or
+schedule adoption. No persistent unit/timer, production service, or data changes.
+Run with `VK_TEST_USER_SERVICE_TIMEOUT=1` and the focused Python suite; exact-head
+command/output is saved in the adjacent mounted-SSD validation receipt.

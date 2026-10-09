@@ -357,7 +357,7 @@ def render_schedule(job_script, configuration):
             raise ValueError('fixed absolute reviewed job/configuration paths required')
     service = ('[Unit]\nDescription=Verified normal VK nightly on B\n'
                '[Service]\nType=oneshot\nNoNewPrivileges=yes\nUMask=0077\n'
-               'RuntimeMaxSec=7200\nExecStart=/usr/bin/python3 -B ' + str(job_script)
+               'TimeoutStartSec=7200\nTimeoutStopSec=30\nExecStart=/usr/bin/python3 -B ' + str(job_script)
                + ' --config ' + str(configuration) + '\n')
     timer = ('[Unit]\nDescription=Normal VK nightly schedule\n[Timer]\n'
              'OnCalendar=*-*-* 02:00:00 UTC\nRandomizedDelaySec=60\nPersistent=true\n'

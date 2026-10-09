@@ -1,3 +1,13 @@
+## October 9: PR235 oneshot deadline correction
+
+Rendered nightly service now uses TimeoutStartSec=7200 and TimeoutStopSec=30;
+RuntimeMaxSec does not bound oneshot execution. Regression checks pin these
+settings. An opt-in disposable user-manager test shortens both deadlines to one
+second, verifies timeout/SIGKILL, and stops/resets only its unique transient unit.
+No nightly job/timer is installed or enabled. Real B bindings and lifecycle
+acceptance remain required. Exact-head validation is recorded separately under
+/mnt/vk-storage/vk-restart-safeguards-20261009/oneshot-validation-<HEAD>.safe.json.
+
 ## October 9: Review correction — explicit FIX READY test timestamps
 
 PR235 review found timestamp call sites obscured by a test-local wrapper. The

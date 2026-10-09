@@ -469,10 +469,58 @@ class CandidateController:
                     'operational archived-atime inventory binding mismatch')
         require(set(self.sqlite_paths) <= rows.keys(), "required database omitted")
         require(all(rows[p]["kind"] == "file" for p in self.sqlite_paths), "database must be a standalone snapshot")
-        require(not any(p.endswith(("-wal", "-shm")) for p in rows), "SQLite sidecars require snapshot normalization")
+        self.verify_suffix_files(capture, rows)
         if frozen:
             self.supervisor.verify_fence(verified)
         return verified
+
+    def verify_suffix_files(self, capture, rows):
+        """Distinguish an authenticated ELF executable from SQLite bookkeeping.
+
+        Names alone cannot identify sidecars. Preserve suffix-named binaries only
+        after hashing their complete archived bytes and checking their ELF header.
+        A base in the archive/required DB inventory, links, data files and ambiguous
+        bytes remain blocked. No caller-supplied exemption or live file is trusted.
+        """
+        selected = {p for p in rows if p.endswith(("-wal", "-shm"))}
+        for name in selected:
+            row = rows[name]
+            require(name[:-4] not in rows and name[:-4] not in self.sqlite_paths
+                    and row['kind'] == 'file' and row['mode'] & 0o111,
+                    'SQLite sidecars require snapshot normalization')
+
+        def check(name, stream):
+            row = rows[name]
+            header = stream.read(64)
+            # Native ELF64 little-endian executable/shared-object header. SQLite
+            # WAL/SHM contents cannot satisfy this distinct format signature.
+            require(len(header) == 64 and header[:7] == b'\x7fELF\x02\x01\x01'
+                    and int.from_bytes(header[16:18], 'little') in (2, 3)
+                    and header[18:24] == b'\x3e\x00\x01\x00\x00\x00'
+                    and int.from_bytes(header[52:54], 'little') == 64,
+                    'SQLite sidecars require snapshot normalization; suffix file is not ELF')
+            h, count = hashlib.sha256(header), len(header)
+            for block in iter(lambda: stream.read(1024 * 1024), b''):
+                count += len(block)
+                require(count <= row['bytes'], 'suffix file exceeds authenticated size')
+                h.update(block)
+            require(count == row['bytes'] and h.hexdigest() == row['sha256'],
+                    'suffix file differs from authenticated archive')
+
+        if not selected:
+            return
+        if callable(getattr(self.provider, 'file_members', None)):
+            seen = set()
+            with self.provider.file_members(capture, selected) as members:
+                for name, stream in members:
+                    require(name in selected and name not in seen, 'unexpected/duplicate suffix file')
+                    check(name, stream)
+                    seen.add(name)
+            require(seen == selected, 'archive omitted suffix file')
+        else:
+            for name in sorted(selected):
+                with self.provider.open(capture, name) as stream:
+                    check(name, stream)
 
     def accepted(self, receipt, proof, stage, capture):
         require(receipt.get("root_binding") == proof["root_binding"]

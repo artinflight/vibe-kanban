@@ -99,6 +99,51 @@ class FixtureSupervisor:
 
 
 class CandidateTests(unittest.TestCase):
+    def suffix_binary(self):
+        header = bytearray(64)
+        header[:7] = b'\x7fELF\x02\x01\x01'
+        header[16:24] = b'\x03\x00\x3e\x00\x01\x00\x00\x00'
+        header[52:54] = (64).to_bytes(2, 'little')
+        p = self.incumbent / 'home/state/server-wal'
+        p.write_bytes(header + b'fixture executable contents')
+        p.chmod(0o755)
+        return p
+
+    def test_suffix_named_elf_is_authenticated_and_preserved(self):
+        p = self.suffix_binary()
+        self.provider.capture('initial')
+        self.restored()
+        self.assertEqual((self.layout.tree / 'home/state/server-wal').read_bytes(), p.read_bytes())
+
+    def test_suffix_named_elf_with_database_base_still_blocks(self):
+        self.suffix_binary()
+        (self.incumbent / 'home/state/server').write_bytes(self.database.read_bytes())
+        self.provider.capture('initial')
+        with self.assertRaisesRegex(Blocked, 'sidecars'):
+            self.restored()
+        self.assertFalse(self.layout.tree.exists())
+
+    def test_orphan_wal_and_text_are_not_exempted_by_executable_mode(self):
+        p = self.suffix_binary()
+        for content in (b'\x37\x7f\x06\x82' + bytes(100), b'ordinary file, format unknown'):
+            p.write_bytes(content)
+            self.provider.capture('initial')
+            with self.assertRaisesRegex(Blocked, 'not ELF'):
+                self.restored()
+            self.assertFalse(self.layout.tree.exists())
+
+    def test_suffix_named_elf_tampering_and_link_fail_closed(self):
+        p = self.suffix_binary()
+        self.provider.capture('initial')
+        self.provider.captures['initial'][1]['home/state/server-wal'] += b'changed'
+        with self.assertRaisesRegex(Blocked, 'authenticated size'):
+            self.restored()
+        os.link(p, self.incumbent / 'home/state/server-shm')
+        self.provider.capture('initial')
+        with self.assertRaisesRegex(Blocked, 'sidecars'):
+            self.restored()
+        self.assertFalse(self.layout.tree.exists())
+
     def setUp(self):
         self.root = Path(tempfile.mkdtemp(prefix=self._testMethodName + "-", dir=RETAINED))
         self.incumbent = self.root / "incumbent"

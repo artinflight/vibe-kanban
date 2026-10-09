@@ -209,3 +209,25 @@ operational readers, tampered indexes and unpreserved indexes fail closed.
 Four real-archive fixture regressions passed, including canonical hardlink and
 SQLite mapping, changed archive/early-consumption rejection and preservation
 requirements. Operational cache use/whole restore is not yet exercised.
+
+October 9 actual restore correction: the first MCP restore held before creating
+the data tree because its blanket `-wal`/`-shm` name check matched a retained
+ELF executable. The controller now requires complete authenticated archive
+bytes, a native ELF header, executable regular-file metadata and no matching
+base/required database before preserving such a name. SQLite/orphan/ambiguous
+sidecars, links and changed content still block. Four regressions cover these
+boundaries; actual retry and runtime acceptance remain pending.
+
+The approved UID1000 B builder completed the exact c3c48e63 source/ d8bb5fb0
+tree in its namespace. All 779 packaged files (325,645,508 bytes) matched hashes;
+manifest SHA256 5e42276d17a512fdb712af65e7624d8ae4ced698255df114214e162caa2a51b4.
+Candidate SHA256 2aa884b359d21373e38c49a6e1589a10e5f69f7c384d2be44515fc0fab41b70f;
+compatible fallback c6ebdd425e097f886cca8ae7781ddecb8b96cd96fde4e8c0f70362a5612faa91.
+All 73 actual scanner contracts passed without skips. This proves packaging,
+not deployment or live consent/controller acceptance.
+
+The new read-only journal supported a successful fresh online checkpoint
+63e06af56d7146dca8b2241651c90126 on B, with zero SSD archive/snapshot payload.
+Capture measured about 2.4 GiB peak RAM in its 3 GiB limit. The earlier journal
+gap and online changes remain explicit; a final held writer-fenced capture
+and candidate catch-up are still mandatory.

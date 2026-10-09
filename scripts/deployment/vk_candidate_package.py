@@ -15,7 +15,7 @@ from vk_candidate_direct_b import PR229, source_pins
 from vk_candidate_generation import require
 from vk_prep_common import digest, save
 
-MODULES = ('vk_candidate_generation.py', 'vk_candidate_direct_b.py',
+MODULES = ('vk_candidate_generation.py', 'vk_candidate_direct_b.py', 'vk_candidate_scaffold.py',
            'vk_candidate_scope.py', 'vk_candidate_scope_plan.py', 'vk_candidate_package.py')
 REVIEW = 'receipts/direct-stream-20261008.json'
 

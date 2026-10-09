@@ -17,6 +17,7 @@ from pathlib import Path, PurePosixPath
 
 from vk_archive_store import Archive, reference
 from vk_candidate_generation import Blocked, digest, require, relative, validate_manifest, inventory
+from vk_candidate_scaffold import authenticate_plan, add_context
 
 PR229 = "754129c5fff55da2f5598d8c7beb4d4325587ead"
 MAX_INDEX_BYTES = 64 * 1024**2
@@ -61,7 +62,7 @@ class DirectBProvider:
         self.records, self.indexes = {}, {}
 
     def register(self, capture_id, result, source_plan, source_scope, source_prefix,
-                 *, origin_root_binding, source_commit=PR229):
+                 *, origin_root_binding, source_commit=PR229, namespace_plan=None):
         require(capture_id not in self.records, "capture registration is immutable")
         require(source_commit == PR229, "direct-B source head mismatch")
         require(result.get("passed") is True and result.get("direct_stream") is True
@@ -80,8 +81,11 @@ class DirectBProvider:
                 "raw backup plan/scope binding mismatch")
         prefix = Path(source_prefix)
         require(prefix.is_absolute() and str(prefix) == str(prefix.resolve()), "source namespace prefix is aliased")
+        if namespace_plan is not None:
+            namespace_plan = authenticate_plan(namespace_plan, source_plan, source_scope)
         self.records[capture_id] = {"result": copy.deepcopy(result), "plan": source_plan, "scope": source_scope,
-                                   "prefix": str(prefix), "origin": origin_root_binding}
+                                   "prefix": str(prefix), "origin": origin_root_binding,
+                                   "namespace_plan": namespace_plan}
 
     def mapped(self, raw, record):
         path = PurePosixPath('/' + raw.lstrip('/'))
@@ -162,6 +166,9 @@ class DirectBProvider:
             for piece in json.JSONEncoder().iterencode(entries):
                 encoded_bytes += len(piece.encode())
                 require(encoded_bytes <= self.metadata_budget_bytes, "candidate index exceeds explicit metadata budget")
+        context = None
+        if record['namespace_plan'] is not None:
+            context = add_context(entries, record['namespace_plan'], record['prefix'])
         # Canonicalize authenticated hardlink groups for exact candidate inventory.
         groups = {}
         for name, row in entries.items():
@@ -197,6 +204,7 @@ class DirectBProvider:
                  'fixture_only': self.fixture_only, 'source_commit': PR229,
                  'metadata_budget_bytes': self.metadata_budget_bytes,
                  'metadata_encoded_bytes': final_encoded_bytes,
+                 'namespace_scaffold': context,
                  'metadata_limits': 'PAX retained; built-in comparison covers current UID/GID, mode, mtime, POSIX ACL/user xattrs and links. Atime is not restored; original inode/ctime/birthtime are unsupported. Foreign ownership/other xattrs block; full operational metadata acceptance remains required'}
         self.indexes[capture_id] = {'proof': proof, 'archives': archives, 'locations': locations, 'headers': headers}
         return copy.deepcopy(proof)

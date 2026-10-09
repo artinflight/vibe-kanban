@@ -23,11 +23,13 @@ class PackageTests(unittest.TestCase):
 
     def test_new_package_and_actual_packaged_review_loader(self):
         result = build(self.package, self.inventory, fixture_only=True)
-        self.assertEqual(result['candidate_modules_verified'], 5)
+        self.assertEqual(result['candidate_modules_verified'], 6)
         self.assertEqual(result['reviewed_source_files_verified'], 8)
         self.assertFalse(result['combined_backend_binary_bound'])
         self.assertFalse(result['operational_acceptance'])
-        code = 'from vk_candidate_direct_b import source_pins; print(len(source_pins()))'
+        code = ('from vk_candidate_direct_b import source_pins; '
+                'from vk_candidate_scaffold import authenticate_plan, add_context; '
+                'print(len(source_pins()))')
         output = subprocess.check_output([sys.executable, '-B', '-O', '-c', code],
                                          cwd=self.package / 'tools', text=True)
         self.assertEqual(output.strip(), '8')

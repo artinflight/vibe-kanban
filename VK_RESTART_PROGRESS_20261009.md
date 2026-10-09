@@ -636,3 +636,8 @@ schema, clippy, Tauri, governance/freshness all passed. Private remote checks
 remain skipped for missing deploy key. Artifact37888935082 remains failed on
 required namespace support; no fresh deployable package or live acceptance is
 claimed. Current CI receipt records both outcomes, not a blended green result.
+
+
+## Read-only exact operator decisions
+
+See VK_RESTART_OPERATOR_DECISIONS_20261009.md and receipts/operator-decisions-readonly-20261009.json for measured current reference-backed scope, exact conditional local duplicate/generated reclaim paths, the already-realized64.43GiB retirement, proposed120GiB MCP native mount and narrowly scoped existing B guest builder ownership decision. No exact operational minimum or peak is invented; no scope, permissions, service, backup or cleanup changed. Source/artifact/metadata/fencing/live acceptance gates remain.

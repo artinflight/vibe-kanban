@@ -475,3 +475,47 @@ jobs:
           cargo fmt --all --manifest-path crates/tauri-app/Cargo.toml -- --check
           cargo clippy --all-targets --manifest-path crates/tauri-app/Cargo.toml -- -D warnings
           cargo check -p vibe-kanban-tauri
+
+  reply-capture-acceptance:
+    # Opt-in source acceptance while the combined baseline awaits integration.
+    # Existing PR branch-policy/freshness gates are unchanged and still required.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: *runner_label
+    permissions:
+      contents: read
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_BUILD_JOBS: "2"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Rust and Node
+        uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: clippy,rustfmt
+          setup-node: "true"
+          cache-key: reply-capture-acceptance-${{ runner.os }}
+      - name: Prepare checkout-local disposable fixture storage
+        run: mkdir -p dev_assets
+      - name: Compile lossless queue, UTF-8 and fail-closed regressions
+        run: cargo test --locked -p utils --lib
+      - name: Real writer, burst, restart and strict review acceptance
+        run: cargo test --locked -p server --test report_review_integration -- --test-threads=1
+      - name: Real isolated HTTP, native replay and receipt race acceptance
+        run: cargo test --locked -p server --lib report_review -- --test-threads=1
+      - name: Compile relevant surfaces with warnings denied
+        run: cargo clippy --locked -p utils -p services -p local-deployment -p server --all-targets -- -D warnings
+      - name: UI history unavailable and recovery acceptance
+        env:
+          VK_TEST_OUTPUT: ${{ runner.temp }}/vk-history-tests
+          TEST_RENDERER_PATH: ${{ runner.temp }}/vk-history-tools/node_modules/react-test-renderer
+        run: |
+          pnpm install --frozen-lockfile
+          npm install --prefix "$RUNNER_TEMP/vk-history-tools" --no-package-lock --ignore-scripts react-test-renderer@18.3.1
+          node scripts/testing/run-long-thread-history-tests.mjs
+      - name: Formatting and scoped governance
+        run: |
+          cargo fmt --all -- --check
+          pnpm run ops:check

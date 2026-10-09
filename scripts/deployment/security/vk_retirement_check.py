@@ -328,10 +328,11 @@ def scan_consumers(targets, *, owner_pid=None, guards=frozenset(), proc=Path('/p
                     matches += (info.st_dev, info.st_ino) in targets
                 except FileNotFoundError:
                     require(kernel or before[1] == 'Z')
-            for name in os.listdir(base / 'fd'):
+            fd_base = str(base / 'fd')
+            for name in os.listdir(fd_base):
                 require(name.isdigit())
                 try:
-                    info = (base / 'fd' / name).stat()
+                    info = os.stat(fd_base + '/' + name)
                     key = (info.st_dev, info.st_ino)
                     if int(pid) == owner_pid and key in guards:
                         guard_fds_seen.add(key)  # only verified exact owner's FD guard
@@ -344,6 +345,10 @@ def scan_consumers(targets, *, owner_pid=None, guards=frozenset(), proc=Path('/p
                     require(len(line) <= 65536 and clock() - started <= MAX_SCAN_SECONDS)
                     fields = line.split(None, 5)
                     require(len(fields) >= 5)
+                    # Exact anonymous 0:0/inode0 row cannot match nonzero targets.
+                    # Still traverse EVERY task/map; malformed devices still parse.
+                    if fields[3] == '00:00' and fields[4] == '0' and (0, 0) not in targets:
+                        continue
                     major, minor = (int(value, 16) for value in fields[3].split(':'))
                     matches += (os.makedev(major, minor), int(fields[4])) in targets
             require(process_stat(base)[0] == before[0])

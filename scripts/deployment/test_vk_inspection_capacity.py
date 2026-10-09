@@ -11,6 +11,7 @@ from unittest.mock import Mock, patch
 import vk_retirement_preflight as client
 import vk_historical_archive_preflight as archive
 from test_vk_retirement_preflight import Fixtures, root
+import test_vk_retirement_preflight as existing
 
 
 class CapacityTests(Fixtures):
@@ -72,6 +73,19 @@ class CapacityTests(Fixtures):
             with self.assertRaises(ValueError): client.validate_receipt(receipt,self.request,self.installation)
         receipt['issued_ns']-=6_000_000_000
         with self.assertRaises(ValueError): client.validate_receipt(receipt,self.request,self.installation)
+
+    def test_anonymous_fast_path_retains_zero_target_and_later_file_consumer(self):
+        scanner=existing.ScanTests()
+        proc,task=scanner.make_proc(maps='0-1 rw-p 0 00:00 0\n')
+        self.assertEqual(root.scan_consumers({(99,999)},proc=proc)['tasks'],1)
+        with self.assertRaises(ValueError): root.scan_consumers({(0,0)},proc=proc)
+        target=proc/'target';target.write_bytes(b'full coverage')
+        info=target.stat()
+        with (task/'maps').open('a') as stream:
+            stream.write(f'1-2 r--p 0 {os.major(info.st_dev):x}:{os.minor(info.st_dev):x} {info.st_ino} protected\n')
+        with self.assertRaises(ValueError): root.scan_consumers({(info.st_dev,info.st_ino)},proc=proc)
+        (task/'maps').write_text('0-1 rw-p 0 malformed 0\n')
+        with self.assertRaises(ValueError): root.scan_consumers({(99,999)},proc=proc)
 
     def test_historical_root_entry_uses_shared_bounded_encoder(self):
         source=(Path(__file__).parent/'security/vk_historical_archive_check.py').read_text()

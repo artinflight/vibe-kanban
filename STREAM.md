@@ -1,3 +1,25 @@
+# Current stream: e3e1 consent-context compatibility
+
+## WHAT
+Fix legitimate long connector prompts rejected before an MCP consent card.
+Separate `fix/e3e1-consent-context` candidate based on deployed `c3c48e63`;
+no capture PR236 edits or dependency.
+
+## WHY / CONTEXT
+Installed connector supports 60,000 Unicode characters. Bridge limited strings
+to 4 KiB and duplicated full display values into an 8 KiB review budget.
+Current Staging lacks the deployed bridge. This is an isolated source candidate;
+its c3-relative patch is the review/integration boundary, not the wider baseline.
+
+## SUCCESS
+Complete bounded plain-text approval context, explicit one-shot consent,
+truthful structured validation diagnostics, hosted UTF-8/size/UI/native-peer
+regressions and strict affected-crate checks. No local Cargo builds, live calls,
+retries, configuration changes or deployment. Native generic Cancel wording
+remains an explicit upstream limitation, not a claimed fix.
+
+---
+
 ## October 8 authorized safe restart — preparing, not ready
 
 Read VK_SAFE_RESTART_PREPARATION_20261008.md. Latest operator authority permits

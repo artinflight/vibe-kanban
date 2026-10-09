@@ -7,7 +7,7 @@ on:
       - main
     paths-ignore:
       - .github/workflows/**
-      - '!.github/workflows/test.yml'
+      - "!.github/workflows/test.yml"
   push:
     branches:
       - staging
@@ -305,8 +305,8 @@ jobs:
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           cache-key: backend-schema-checks-${{ runner.os }}-${{ runner.arch }}-${{ env.RUNNER_LABEL }}
-          setup-node: 'true'
-          setup-sqlx-cli: 'true'
+          setup-node: "true"
+          setup-sqlx-cli: "true"
 
       - name: Check generated types
         run: npm run generate-types:check
@@ -341,8 +341,8 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
           cache-key: backend-remote-checks-${{ runner.os }}-${{ runner.arch }}-${{ env.RUNNER_LABEL }}
-          setup-node: 'true'
-          setup-sqlx-cli: 'true'
+          setup-node: "true"
+          setup-sqlx-cli: "true"
 
       - name: Setup SSH Agent for private dependencies
         if: ${{ env.VK_PRIVATE_DEPLOY_KEY != '' }}
@@ -467,3 +467,53 @@ jobs:
           cargo fmt --all --manifest-path crates/tauri-app/Cargo.toml -- --check
           cargo clippy --all-targets --manifest-path crates/tauri-app/Cargo.toml -- -D warnings
           cargo check -p vibe-kanban-tauri
+
+  mcp-consent-context-acceptance:
+    # Isolated source acceptance against the deployed bridge base. This does
+    # not waive the existing PR integration/freshness or release gates.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: *runner_label
+    permissions:
+      contents: read
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_BUILD_JOBS: "2"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Rust and Node
+        uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: clippy,rustfmt
+          setup-node: "true"
+          cache-key: mcp-consent-context-acceptance-${{ runner.os }}
+      - name: Prepare disposable fixture storage
+        run: mkdir -p dev_assets
+      - name: Mounted complete consent card on phone and desktop
+        env:
+          VK_TEST_OUTPUT: ${{ runner.temp }}/vk-consent-context-tests
+        run: |
+          pnpm install --frozen-lockfile
+          node scripts/testing/run-mcp-approval-ui-tests.mjs
+          pnpm run web-core:check
+          pnpm run local-web:check
+          pnpm run remote-web:check
+      - name: Compiled argument limits, UTF-8 and sanitization acceptance
+        run: |
+          cargo test --locked -p executors --test mcp_consent_context
+          cargo test --locked -p executors --lib elicitation::tests
+          cargo test --locked -p executors --lib mcp_approval_card
+      - name: Real approval bridge and offline native peer acceptance
+        env:
+          VK_MCP_UI_RESPONSES: ${{ runner.temp }}/vk-consent-context-tests/mcp-ui-responses.json
+        run: cargo test --locked -p services --lib elicitation_tests -- --test-threads=1
+      - name: Compile affected surfaces with warnings denied
+        run: cargo clippy --locked -p executors -p services --all-targets -- -D warnings
+      - name: Formatting and governance
+        run: |
+          cargo fmt --all -- --check
+          pnpm exec prettier --check packages/web-core/src/features/workspace-chat/ui/McpConsentCards.tsx .github/workflows/test.yml
+          pnpm exec prettier --check --single-quote --trailing-comma es5 scripts/testing/mcp-approval-ui.test.tsx
+          pnpm run ops:check

@@ -165,6 +165,25 @@ impl Fixture {
         );
     }
 
+    async fn logged(&self, origin: &str) {
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if self
+                    .logs
+                    .lock()
+                    .await
+                    .iter()
+                    .any(|line| line.contains(origin))
+                {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .unwrap();
+    }
+
     async fn stop(mut self) {
         self.cancel.cancel();
         self.child.kill().await.unwrap();
@@ -277,7 +296,12 @@ async fn mcp_generic_monitor_context_and_inadequate_metadata_fail_closed() {
             .unwrap()
             .remove(key);
         fixture.send(incomplete).await;
-        assert_eq!(fixture.result().await["result"]["action"], "cancel");
+        let result = fixture.result().await;
+        assert_eq!(result["result"]["action"], "cancel");
+        assert_eq!(
+            result["result"]["content"]["error"]["details"]["reason"],
+            "missing_context"
+        );
         fixture.pending(0).await;
     }
     for (id, payload) in [
@@ -291,15 +315,17 @@ async fn mcp_generic_monitor_context_and_inadequate_metadata_fail_closed() {
         ]);
         fixture.send(redacted_only).await;
         let result = fixture.result().await;
+        assert_eq!(result["result"]["action"], "cancel");
         assert_eq!(
-            result["result"],
-            json!({"action":"cancel","content":null,"_meta":null})
+            result["result"]["content"]["error"]["details"]["reason"],
+            "redacted_only"
         );
+        assert_eq!(result["result"]["content"]["review_requested"], false);
         assert_eq!(result["fixtureDispatch"], false);
         fixture.pending(0).await;
     }
     let logs = fixture.logs.lock().await.join("\n");
-    assert!(logs.contains("insufficient_consent_context"));
+    assert!(logs.contains("consent_validation_failed"));
     assert!(!logs.contains("do-not-log"));
     assert!(!logs.contains("synthetic-nested-object"));
     assert!(!logs.contains("synthetic-nested-array"));
@@ -447,4 +473,56 @@ async fn mcp_deadline_and_peer_eof_do_not_become_human_declines() {
     );
     fixture.cancel.cancel();
     fixture.child.wait().await.unwrap();
+}
+
+#[tokio::test]
+async fn mcp_long_dispatch_requires_explicit_review_and_distinguishes_validation_decline_timeout() {
+    let mut fixture = Fixture::new().await;
+    let prompt = format!(
+        "{}\nNo Figma until per-view owner signoff.\nEND-OF-PROMPT",
+        "🧭".repeat(12_000)
+    );
+    for (id, status, action, origin) in [
+        (70, "approved", "accept", "human_approved"),
+        (71, "denied", "decline", "human_declined"),
+        (72, "timed_out", "cancel", "timeout"),
+    ] {
+        let mut value = request(id);
+        value["params"]["_meta"]["tool_params"]["prompt"] = json!(prompt);
+        value["params"]["_meta"]["tool_params_display"].as_array_mut().unwrap().push(json!({"name":"prompt", "display_name":"Full dispatch instructions", "value":prompt}));
+        fixture.send(value).await;
+        let pending = fixture.pending(1).await;
+        let context = pending[0].mcp_consent.as_deref().unwrap();
+        assert!(context.contains(&prompt));
+        assert_eq!(context.matches(&prompt).count(), 1);
+        fixture.no_response().await;
+        fixture
+            .respond(&pending[0].approval_id, json!({"status":status}))
+            .await;
+        let result = fixture.result().await;
+        assert_eq!(result["result"]["action"], action);
+        assert_eq!(result["fixtureDispatch"], action == "accept");
+        fixture.logged(origin).await;
+    }
+    let mut value = request(73);
+    value["params"]["_meta"]["tool_params"]["prompt"] = json!("x".repeat(60_001));
+    fixture.send(value).await;
+    let result = fixture.result().await;
+    assert_eq!(result["fixtureDispatch"], false);
+    assert_eq!(
+        result["result"]["content"]["error"]["details"]["reason"],
+        "string_characters"
+    );
+    assert_eq!(
+        result["result"]["content"]["error"]["details"]["observed"],
+        60_001
+    );
+    assert_eq!(result["result"]["content"]["review_requested"], false);
+    fixture.pending(0).await;
+    let logs = fixture.logs.lock().await.join("\n");
+    assert!(logs.contains("consent_validation_failed"));
+    assert!(logs.contains("string_characters"));
+    assert!(!logs.contains(&"x".repeat(60_001)));
+    assert!(!logs.contains("do-not-log"));
+    fixture.stop().await;
 }

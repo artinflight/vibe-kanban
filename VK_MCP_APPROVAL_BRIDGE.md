@@ -66,20 +66,51 @@ usable invocation context. A surviving nonsecret value in a nested object or
 array remains usable. Token budgets/counts remain visible. Display metadata cannot replace or disagree
 with invocation values. Missing identities/arguments, inconsistent display
 values, embedded credential patterns, oversized content or unsupported structure
-fail closed with Cancel and `insufficient_consent_context`, before creating an
-approval. Bounds are 8 KiB total, 4 KiB per string, depth 8 and 128 visited nodes, with
-64 KiB maximum input arguments. Invisible direction overrides are rejected.
-No consequential value is silently truncated. The card and timeline render
-this summary as literal text, never Markdown/HTML/links.
+fail closed before creating an approval. The consent-context source candidate
+(2026-10-09, separate from capture PR236) aligns string review limits with the
+installed Vibe connector's `start_workspace` / `run_session_prompt`: 60,000
+Unicode scalar values, at most 240,000 UTF-8 bytes per string. Other hard bounds
+are 512 KiB compact JSON arguments, 640 KiB verified display metadata, 1 MiB
+rendered review text, depth 8, 128 visited nonsecret nodes, 128 display entries
+and 256 UTF-8 bytes per identity/key/label. These remain fail-closed admission
+limits, never truncation limits. Credential redaction, recursive redacted-only
+rejection, display/invocation equality and direction/control-character rejection
+are retained. This changes review capacity, not tool authorization or routing.
+
+Each nonsecret top-level argument is presented once under its exact JSON key,
+with any verified display labels attached. String values retain literal line
+breaks, Unicode and their byte length; other values retain complete pretty JSON.
+Repeated labels are deduplicated without discarding invocation content. A full
+prompt is not repeated for its display entry. Phone/desktop composer cards show
+all text in an expanded, keyboard-focusable scroll region with word wrapping;
+there is no clipping, ellipsis, Markdown/HTML/link interpretation or hidden
+consequential content. Scrolling does not grant consent. Only the existing
+request-bound explicit approve or decline controls can respond.
 
 Only the redacted action context is persisted for operator review; raw metadata,
 provider messages, unrelated metadata, credential values and denial reasons
 are not copied into bridge logs. Arbitrary free text is not a formally complete
 secret detector: callers must not place credentials in action instructions.
-Diagnostics contain request IDs and fixed origin labels.
-Upstream Codex may still label a Cancel as `user cancelled MCP tool call`; Vibe's
-persisted diagnostic records the actual bridge origin without claiming a human
-decision. A genuine human Decline retains the upstream rejection behavior.
+Diagnostics contain request IDs and fixed origin labels. Validation now returns
+a typed fail-closed Cancel with structured `content.error.code =
+"mcp_consent_validation"`, `content.error.details` (fixed reason/message and
+numeric observed/limit where applicable), `review_requested:false` and
+`dispatch_allowed:false`. It never contains argument values, denial reasons,
+credentials or persistent/session grants. The same detail is persisted as
+`McpApprovalDiagnostic` with origin `consent_validation_failed` and normalized as
+an explicit validation-failure system message. Explicit decline remains
+`human_declined`; actual deadline expiry remains `timeout`.
+
+**Native wording limitation:** the installed Codex response schema accepts this
+structured content, but native `parse_mcp_tool_approval_elicitation_response`
+ignores it for Cancel and `ReviewDecision::Abort` hardcodes `user cancelled MCP
+tool call`. A JSON-RPC error is worse: the app-server converts it into Decline.
+This VK candidate truthfully distinguishes validation in its response and UI,
+but does not claim to replace that upstream model-visible tool-result wording.
+Removing it end to end needs a separately reviewed native Codex change that
+honors bounded validation details while still blocking dispatch. No native
+binary/dependency or permissions are changed here. A genuine human Decline
+retains its existing rejection behavior.
 
 ## Isolated validation
 

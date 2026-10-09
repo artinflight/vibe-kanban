@@ -206,9 +206,31 @@ for (const phoneLayout of [false, true]) {
     await snapshot([]);
     await act(async () => staleButton.click());
     assert.equal(calls.length, 4, 'cancelled cards cannot submit');
+    const completeLongPrompt =
+      'Full Visily-only task\n' +
+      '🧭'.repeat(59_900) +
+      '\n<script>unsafe()</script>\nNo Figma until per-view signoff.\nEND-OF-PROMPT';
+    await snapshot([info('LONG', completeLongPrompt)]);
+    const region = card('LONG').querySelector('[role="region"]')!;
+    assert.equal(
+      region.getAttribute('aria-label'),
+      'Complete tool action and parameters'
+    );
+    assert.equal(region.getAttribute('tabindex'), '0');
+    assert.match(region.className, /overflow-auto/);
+    assert.equal(region.querySelector('pre')!.textContent, completeLongPrompt);
+    assert.equal(region.querySelector('script'), null);
+    assert.equal(region.querySelector('a'), null);
+    assert.equal(calls.length, 4, 'full long rendering never grants consent');
+    await click('LONG');
+    assert.equal(
+      calls.at(-1)!.id,
+      'LONG',
+      'long content keeps exact request binding'
+    );
     await snapshot([{ ...info('G'), timeout_at: '2000-01-01T00:00:00Z' }]);
     await click('G');
-    assert.equal(calls.length, 4, 'expired consent cannot submit');
+    assert.equal(calls.length, 5, 'expired consent cannot submit');
     await snapshot([
       { ...info('H'), execution_process_id: 'different-execution' },
     ]);

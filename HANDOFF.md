@@ -1,3 +1,13 @@
+# Consent-context compatibility handoff
+
+Branch `fix/e3e1-consent-context`; isolated deployed base `c3c48e63`.
+See `VK_MCP_APPROVAL_BRIDGE.md` for current candidate behavior/limits and native
+wording dependency. See `handoffs/e3e1-consent-context.md` for exact validation,
+commit, focused patch and hosted run. Capture PR236 is untouched. No deployment,
+local Cargo build, security/reviewer config change, or cancelled action retry.
+
+---
+
 ## October 8 authorized safe restart — preparing, not ready
 
 Read VK_SAFE_RESTART_PREPARATION_20261008.md. Latest operator authority permits

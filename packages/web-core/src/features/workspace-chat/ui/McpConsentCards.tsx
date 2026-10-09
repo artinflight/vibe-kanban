@@ -106,9 +106,16 @@ function McpConsentCard({
         status={{ status: 'pending_approval' }}
         renderMarkdown={({ content }) => (
           // Never interpret connector-supplied text as Markdown/HTML/links.
-          <pre className="whitespace-pre-wrap break-words text-sm">
-            {content}
-          </pre>
+          <div
+            role="region"
+            aria-label="Complete tool action and parameters"
+            tabIndex={0}
+            className="max-h-[60vh] min-w-0 overflow-auto"
+          >
+            <pre className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm">
+              {content}
+            </pre>
+          </div>
         )}
       />
       <div className="flex gap-base pt-base">

@@ -1482,6 +1482,26 @@ impl AppServerClient {
             .await;
     }
 
+    async fn elicitation_validation_failure(
+        &self,
+        peer: &JsonRpcPeer,
+        id: RequestId,
+        error: super::elicitation::ConsentValidationError,
+    ) -> Result<(), ExecutorError> {
+        // Fixed reason/messages and numeric limits only, never invocation values.
+        tracing::info!(request_id = ?id, reason = error.reason, "MCP consent validation failed; no review requested");
+        self.log_writer
+            .log_raw(
+                &serde_json::json!({
+                    "McpApprovalDiagnostic": {"request_id":id, "origin":"consent_validation_failed",
+                        "validation":error, "review_requested":false, "dispatch_allowed":false}
+                })
+                .to_string(),
+            )
+            .await?;
+        send_server_response(peer, id, super::elicitation::validation_response(&error)).await
+    }
+
     async fn elicitation_context_valid(
         &self,
         params: &codex_app_server_protocol::McpServerElicitationRequestParams,
@@ -1518,15 +1538,10 @@ impl AppServerClient {
             self.elicitation_diagnostic(&id, "duplicate_request").await;
             return Ok(());
         }
-        let consent_summary = elicitation::consent_summary(&params);
         let origin = if self.cancel.is_cancelled() || peer.disconnected().is_cancelled() {
             Some("process_stopped_or_disconnected")
         } else if !self.elicitation_context_valid(&params).await {
             Some("stale_context")
-        } else if elicitation::supported_message(&params).is_none() {
-            Some("unsupported_request")
-        } else if consent_summary.is_none() {
-            Some("insufficient_consent_context")
         } else {
             None
         };
@@ -1534,6 +1549,12 @@ impl AppServerClient {
             self.elicitation_diagnostic(&id, origin).await;
             return send_server_response(peer, id, elicitation::response(Cancel)).await;
         }
+        let consent_summary = match elicitation::validate_consent(&params) {
+            Ok(summary) => summary,
+            Err(error) => {
+                return self.elicitation_validation_failure(peer, id, error).await;
+            }
+        };
         // A nullable provider turn is best-effort correlation, not permission
         // to carry consent into a later turn.
         if params.turn_id.is_none() {
@@ -1568,18 +1589,14 @@ impl AppServerClient {
                     .approvals
                     .as_ref()
                     .ok_or(ExecutorApprovalError::ServiceUnavailable)?;
-                let approval_id = service
-                    .create_mcp_tool_approval(
-                        consent_summary.as_deref().expect("validated context"),
-                    )
-                    .await?;
+                let approval_id = service.create_mcp_tool_approval(&consent_summary).await?;
                 if client
                     .log_writer
                     .log_raw(
                         &Approval::McpApprovalRequested {
                             call_id: call_id.clone(),
                             approval_id: approval_id.clone(),
-                            message: consent_summary.expect("validated context"),
+                            message: consent_summary,
                             server_name: params.server_name.clone(),
                         }
                         .raw(),
@@ -2074,16 +2091,12 @@ impl JsonRpcCallbacks for AppServerClient {
                             .await;
                         return Ok(());
                     }
-                    self.elicitation_diagnostic(&request.id, "malformed_or_unsupported")
-                        .await;
-                    send_server_response(
-                        peer,
-                        request.id,
-                        super::elicitation::response(
-                            codex_app_server_protocol::McpServerElicitationAction::Cancel,
-                        ),
-                    )
-                    .await
+                    self.elicitation_validation_failure(peer, request.id, super::elicitation::ConsentValidationError {
+                        reason: "malformed_or_unsupported",
+                        message: "This approval request is malformed or unsupported. No approval was requested or granted.",
+                        observed: None,
+                        limit: None,
+                    }).await
                 }
             };
         }

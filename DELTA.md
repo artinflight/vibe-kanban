@@ -1608,3 +1608,9 @@ No production/scheduler/evidence changes. Transfer remains full, storage increme
 resumes after objects/ rmdir; recovery fsyncs current publication before old
 unlink. Exact child-exit, actual fsync/unlink ordering, fsync-failure and unknown/
 substituted-directory regressions added. Source-only; adoption remains disabled.
+
+2026-10-09: Fixed unprivileged MCP/WSL B nightly adapter, registered bounded disk
+snapshot/transfer, compact authenticated live completion, actual-B lifecycle
+recovery fixtures and disabled runnable user job. Current scope census96.14GB/
+79DBs; production throughput/adoption pending. Existing UTC cron route avoids
+changing NoNewPrivileges; no production or privileged mutation.

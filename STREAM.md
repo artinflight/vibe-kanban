@@ -1,3 +1,15 @@
+## October 9: Fixed B-disk nightly composition — source only
+
+The runnable user job binds registered B inputs, serial bounded SQLite disk
+snapshots, full verified parentless capture, live producer completion and B-local
+NightlyJob publication/recovery. Real-B isolated fixtures cover normal replacement,
+protected old/current separation and reviewed interruption windows. Current
+read-only scope measures 96.14GB logical/79 SQLite DBs, largest4.734GB. Full real
+plan throughput/first adoption remain untested and disabled. Existing UTC user
+cron is supported; NoNewPrivileges systemd mount probe fails closed and that
+control remains unchanged. See VK_RESTART_SAFEGUARDS_20261009.md. No production
+backup, schedule, service, privileged code/settings or fallback mutation.
+
 ## October 9: Bounded nightly lifecycle — source only
 
 NightlyJob now records one attempt, rebases each capture with parent=None,

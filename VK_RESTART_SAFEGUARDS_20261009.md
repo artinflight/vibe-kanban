@@ -258,3 +258,70 @@ actual timer verification. Production limits stay unset and adoption disabled
 until measured. Rollback disables only the new timer/job, preserving all backup
 and evidence. Old incident/fallback roots are outside this fresh scope; human QA
 and previous no-cleanup policy remain. No owner command is requested.
+
+### Fixed B-disk capture and user job — adoption still disabled
+
+`vk_nightly_job.py` composes the existing B-disk capture and the reviewed
+NightlyJob in an existing UID1000 WSL process. The resident creates and records
+each input before the MCP writer can open it. A fresh, exact B input directory
+is exposed through the existing unprivileged SSHFS route; SQLite backup API
+images, path lists, warning logs, archive, descriptor and proof all stay on B.
+SQLite uses small caches and serial disk images, not serialize()/RAM payloads.
+Only a completed private image is read immutable for integrity validation; live
+sources use ordinary read transactions. Aggregate byte reservations apply before
+writes. Snapshot/time bounds fail closed and retain unaccepted registered inputs.
+
+The original DirectBProvider fully verifies the independent parentless capture
+on MCP. A compact, bounded proof passes through the authenticated live nonce
+channel. B-local archive replay uses authenticated headers, avoiding a duplicate
+host-scale location vector. SQLite connections, tar/compressor/readback children
+and the foreground mount finish before exact bound completion. The resident
+performs independent native Windows full object and private SQLite readback
+before publication and recorded retention. MCP and B kernel leases serialize
+cooperating producers; this is not a root boundary or a global process fence.
+No privileges or source scope are expanded by this composition.
+
+Actual-B synthetic acceptance covers two changed DB generations, unchanged
+content/hardlinks, deletions and independent recovery from current alone. Real
+process exits cover before/after publication, old-object retention, candidate
+objects rmdir and pointer rename before store fsync. Recorded recovery is checked
+from a new process; another capture then succeeds. The harness also interrupts
+the MCP producer and tests scripted known-partial reconciliation without an
+operator. Test artifacts remain in fresh `vk-nightly-lifecycle-*` B scopes;
+existing backup, incident, incumbent and fallback evidence is untouched.
+These are small fixture/actual-filesystem results, not full-host throughput or
+power-loss/WSL-remount acceptance. An OS remount changing enrolled device/inode
+bindings still blocks rather than silently rebinding existing backup data.
+
+Read-only current census: 77 roots, 548,540 paths, 487,126 regular files,
+96,144,285,466 logical bytes, 79 detected SQLite files totaling 7,451,316,224
+bytes; largest SQLite 4,734,447,616 bytes. Census took 164.47 seconds; 14 paths
+vanished during this online scan. It is sizing evidence, not a coherent backup.
+The runnable proposed bindings preserve the source plan/root/exclusion identities
+and pin scripts/binaries. Proposed limits: 6GiB per snapshot, 20GiB aggregate
+transient capture, 96GiB initial changed objects, 8GiB routine changed objects,
+256MiB metadata and a preserved 2GiB B floor. Initial/routine reservations are
+126,969,970,688 / 32,480,690,176 bytes. Snapshot deadline 1800s, native readback
+3600s and entire scheduled job 7200s with a 30s final kill grace. These are finite
+proposed bounds informed by census; compressed size and complete production
+runtime have not been measured with this new composition.
+
+The existing UTC user cron daemon is active; its old VK entry remains disabled.
+The proposed new entry is prepared as an artifact only and uses a pinned user
+job/config, `/usr/bin/timeout`, and local `/usr/bin/logger`; no LLM calls. Syntax
+can be checked with existing `crontab -n` without installing anything. The former
+systemd template remains unchanged: its NoNewPrivileges=yes blocks the existing
+FUSE helper, verified by a disposable failed mount probe. No security control was
+relaxed to make that template work. The ordinary cron route uses the already
+available user FUSE capability, not sudo or a new privilege grant.
+
+Remaining exact adoption action: independent review of the final source/config
+hashes, authorize enrollment and normal retention ONLY in fresh
+`B:/vk-backups/vk-normal-nightly-v1`, run one complete real-plan backup and verify
+its recovery/capacity/runtime receipt, then add ONLY the new bounded cron entry
+while preserving all existing entries. Enablement is conditional on that test
+passing; currently no enrollment/production capture/schedule is authorized or
+performed. Rollback removes ONLY the new cron entry and stops its own job if
+needed, preserving every backup, receipt and incident/fallback artifact. Initial
+whole-plan fit, actual throughput and boot/remount identity acceptance remain
+explicit adoption prerequisites. No owner command is requested.

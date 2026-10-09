@@ -142,4 +142,18 @@ print(json.dumps({'passed':True,'independent_recovery':True,'current_generations
     return 0 if report['passed'] else 1
 
 
-if __name__=='__main__':raise SystemExit(main())
+if __name__=='__main__':
+    from vk_nightly_capture_adapter import Resident
+    popen=subprocess.Popen;call=Resident.call;mounts=[];finished=[]
+    def tracked_process(command,*args,**kwargs):
+        process=popen(command,*args,**kwargs)
+        if Path(command[0]).name=='sshfs':mounts.append(process)
+        return process
+    def checked_finish(resident,action,**kwargs):
+        if action=='finish':
+            if not mounts or mounts[-1].returncode is None:
+                raise AssertionError('actual mount transport not reaped before completion')
+            finished.append(mounts[-1].pid)
+        return call(resident,action,**kwargs)
+    with patch('subprocess.Popen',tracked_process),patch.object(Resident,'call',checked_finish):
+        raise SystemExit(main())

@@ -1,0 +1,3 @@
+# PROPOSAL ONLY. Install after reviewed helper/policy hashes and visudo validation.
+# Exact interpreter digest, flags and root-owned script; no wildcards or path args.
+mcp ALL=(root) NOPASSWD: NOSETENV: NOEXEC: sha256:e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f /usr/bin/python3.12 -I -B /usr/local/libexec/vk-retirement-check.py

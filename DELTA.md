@@ -1576,3 +1576,11 @@ October 9 integration: current staging e8c450fb is incorporated as the normal
 PR base. Its original continuity documents remain preserved at that immutable
 commit; this stream retains newer bounded candidate/recovery tracking. No live
 service, route, credential or access change is performed by this merge.
+
+## October 9: Automatic protected consumer preflight source
+
+Prepared a fixed root checker, source-only PR231 boundary adapter and tested
+failure modes from c57dceaa in an isolated branch. Exact one-time security grant
+proposal is in VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md; no live privileges, retirement,
+restart, cutover, unrelated build or new backup. Urgent root receipt remains a
+separate unresolved owner gate; fallback remains until human QA.

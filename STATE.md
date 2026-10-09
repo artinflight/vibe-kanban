@@ -1,3 +1,15 @@
+## October 9: Source-only protected consumer automation
+
+The automatic restart/retirement preflight is prepared in an isolated dependent
+branch; see VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md. It is not installed, granted or
+operationally accepted. Root ownership and exact immutable command/path pins are
+required before privilege automation; a receipt must bind live owner/kernel
+lease/manifest/target and an ephemeral held-boundary nonce, issued after expensive
+preparation. Human interruption/retirement approvals, B backup/exclusion checks,
+rollback and fallback retention until human QA remain authoritative. Existing
+production/Staging state is unchanged; no safe existing privilege route was
+established for the urgent fresh receipt.
+
 ## October 8: Workspace-first frontend follow-up in preparation
 
 Workspace landing, To do defaults on phones, and whole-card attention styling

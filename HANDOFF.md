@@ -1,3 +1,27 @@
+# October 9: Source-only automatic retirement clearance
+
+Read [VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md](VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md).
+The fixed root checker hashes the exact approved archive before a full process/
+thread consumer scan, authenticates the live owner/kernel lease and ephemeral
+boundary nonce, and issues bounded safe stdout. The unprivileged adapter finishes
+preparation first and consumes one direct fresh receipt while ownership is held.
+23 focused tests pass, including real peer/PID/kernel-lease checks and rejection
+of stale/replayed/substituted receipts, symlinks, denied inspection and consumers.
+
+No installed privilege route exists in this change; the current 097e1bfa driver
+has not adopted the adapter and cannot provide its nonce status. The current
+urgent restart remains blocked on fresh root clearance. No sudo denial retry or
+live installation/service/data/security change occurred. Parent should review
+one bundled root-owned checker/policy plus exact sudoers proposal, then separately
+prove installed root visibility and owner adoption before routine use. Preserve
+fallback through human QA and all existing backup/rollback/interruption gates.
+
+Ops passed. Format/check/lint attempts stopped at missing Prettier/TypeScript/
+ESLint. No unrelated Cargo rebuild was run. Three dependency package tests need
+committed clean source; repeat before final publication. Branch derives only from
+specified PR231 checkpoint, with staging untouched. Fixtures are retained under
+mounted `/mnt/vk-storage/vk-retirement-preflight-tests`.
+
 Current October9 restart gate update: Desktop SSH/B works; whole-state online
 backup accepted (77roots/76DBs), archive SHA735e2115. Read
 VK_RESTART_PROGRESS_20261009.md before older entries. Exact offline application

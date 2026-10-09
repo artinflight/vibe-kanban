@@ -1,3 +1,19 @@
+# October 9: Automatic held-boundary retirement preflight
+
+Branch `fix/automatic-retirement-preflight` is isolated at PR231 checkpoint
+`c57dceaac5b214fe94dfdce512827ab7b0520b75`. Read
+[VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md](VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md).
+Scope: source-only fixed root consumer checker, held-owner adapter, failure-mode
+fixtures and an exact bundled one-time installation/grant proposal. No live
+privileged installation/security change, deletion, service interruption, cutover,
+application rebuild or new backup is authorized. Current staging and sealed
+PR229/231 packages remain untouched. The fallback survives until human QA.
+
+The urgent owner still needs fresh privileged clearance; no already-authorized
+route was established or denied sudo retried. Parent approval must precede the
+proposed installation and separately verified owner adoption. A draft dependent
+PR is appropriate until PR231 integration and installed read-only acceptance.
+
 Current October9 restart gate update: Desktop SSH/B works; whole-state online
 backup accepted (77roots/76DBs), archive SHA735e2115. Read
 VK_RESTART_PROGRESS_20261009.md before older entries. Exact offline application

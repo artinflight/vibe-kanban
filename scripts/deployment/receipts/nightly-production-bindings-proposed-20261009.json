@@ -41,7 +41,7 @@
   },
   "source_sha256": {
     "vk_nightly_generation.py": "29dda3ffb9ae8e2aaf03f8558c837ecd2cf55eec8debbfb6750c37e333906b4b",
-    "vk_nightly_lifecycle.py": "b6cf1ad6b27bfd21fd97a795d6a32006b17b807d00e87845a388cb0fe7fc548d",
+    "vk_nightly_lifecycle.py": "af5443d5b8380c7761382de0f1c09e30b6aa4bebc3ca289ad9bdce4146d5e836",
     "vk_direct_capture.py": "55ef5328fee7d93a05e3796d3c1d374866d08f4eefcf67abf28ceb8dc68ec5f5",
     "vk_b_disk_capture.py": "3bab39fb2c9a3259b6672dd48c99ce3b3dc535ffbde17ee899c4f200ee3c7d07",
     "vk_b_disk_snapshot.py": "ba1fd175cc72f6008e77f46096e4ec30201b4943e6d9895a7907af466a69cebf",

@@ -1603,3 +1603,8 @@ records exact cleanup ownership, resumes known partials/old retirement and adds
 scripted nonce/quiescence retry. New isolated process-crash/recovery tests; real
 production bindings disabled, 4.734GB DB needs existing B-disk snapshot handler.
 No production/scheduler/evidence changes. Transfer remains full, storage incremental.
+
+2026-10-09: PR235 review fixes only: identity-bound empty candidate recovery
+resumes after objects/ rmdir; recovery fsyncs current publication before old
+unlink. Exact child-exit, actual fsync/unlink ordering, fsync-failure and unknown/
+substituted-directory regressions added. Source-only; adoption remains disabled.

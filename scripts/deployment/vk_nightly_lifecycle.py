@@ -352,6 +352,9 @@ class NightlyJob:
         if published:
             if hashlib.sha256(encoded(current)).hexdigest() != value.get('candidate_manifest_sha256'):
                 raise ValueError('published candidate differs from recorded job')
+            # A crash may have followed current.json rename but preceded its
+            # store-directory fsync. Make publication durable before retention.
+            sync_directory(self.store.root)
             if value['previous']:
                 self._remove_recorded(self.store.root / value['previous']['generation'], value['previous'])
         else:
@@ -359,27 +362,35 @@ class NightlyJob:
                 raise ValueError('current moved outside job; preserve artifacts')
             folder = self.store.root / value['candidate']
             if os.path.lexists(folder):
-                if not value['candidate_directories'] or directory_pin(folder) != value['candidate_directories'][0] \
-                        or directory_pin(folder / 'objects') != value['candidate_directories'][1]:
+                directories = value['candidate_directories']
+                if not directories or directory_pin(folder) != directories[0]:
                     raise ValueError('incomplete candidate ownership not established; preserve')
                 objects = folder / 'objects'
-                expected = set(value['expected_objects'])
-                partial = value['partial']
-                if partial: expected.add(partial['name'])
-                if {p.name for p in folder.iterdir()} - {'objects','manifest.json'} \
-                        or {p.name for p in objects.iterdir()} - expected:
-                    raise ValueError('unexpected incomplete candidate evidence; preserve')
-                snapshot = {'folder': directory_pin(folder), 'objects': directory_pin(objects), 'files': {}}
-                for path in [*objects.iterdir(), *([folder/'manifest.json'] if (folder/'manifest.json').exists() else [])]:
-                    with regular(path) as stream:
-                        info = os.fstat(stream.fileno());checksum = digest_stream(stream)
-                    if path.parent == objects:
-                        if partial and path.name == partial['name']:
-                            if pin(info) != partial['identity']: raise ValueError('partial substituted')
-                        elif checksum != path.name: raise ValueError('unrecorded/mutated complete object')
-                    elif checksum != value.get('candidate_manifest_sha256'):
-                        raise ValueError('candidate manifest changed')
-                    snapshot['files'][str(path.relative_to(folder))] = {'identity': pin(info), 'sha256': checksum}
+                snapshot = {'folder': directories[0], 'objects': directories[1], 'files': {}}
+                if not os.path.lexists(objects):
+                    # Resume only the recorded, empty directory left by an
+                    # interruption after objects/ removal and before rmdir.
+                    if list(folder.iterdir()):
+                        raise ValueError('missing candidate objects with remaining evidence; preserve')
+                else:
+                    if directory_pin(objects) != directories[1]:
+                        raise ValueError('incomplete candidate ownership not established; preserve')
+                    expected = set(value['expected_objects'])
+                    partial = value['partial']
+                    if partial: expected.add(partial['name'])
+                    if {p.name for p in folder.iterdir()} - {'objects','manifest.json'} \
+                            or {p.name for p in objects.iterdir()} - expected:
+                        raise ValueError('unexpected incomplete candidate evidence; preserve')
+                    for path in [*objects.iterdir(), *([folder/'manifest.json'] if (folder/'manifest.json').exists() else [])]:
+                        with regular(path) as stream:
+                            info = os.fstat(stream.fileno());checksum = digest_stream(stream)
+                        if path.parent == objects:
+                            if partial and path.name == partial['name']:
+                                if pin(info) != partial['identity']: raise ValueError('partial substituted')
+                            elif checksum != path.name: raise ValueError('unrecorded/mutated complete object')
+                        elif checksum != value.get('candidate_manifest_sha256'):
+                            raise ValueError('candidate manifest changed')
+                        snapshot['files'][str(path.relative_to(folder))] = {'identity': pin(info), 'sha256': checksum}
                 self._remove_recorded(folder, snapshot)
         pointer = value['pointer']
         if pointer:

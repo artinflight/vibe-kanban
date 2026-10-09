@@ -1,3 +1,14 @@
+## October 9: Two bounded nightly recovery corrections — source only
+
+An interrupted candidate cleanup now finishes only a recorded identity-matching
+empty generation after objects/ removal. Missing objects with other evidence or
+a substituted generation still blocks recovery. Published-candidate recovery
+fsyncs the store before any old-generation unlink, preserving old data if fsync
+fails. Isolated child-process regressions cover both exact interruption windows;
+no production backup, schedule, installation or privilege changes. See the
+nightly-recovery-validation-<HEAD>.safe.json receipt under
+/mnt/vk-storage/vk-restart-safeguards-20261009. Adoption prerequisites unchanged.
+
 ## October 9: Bounded nightly lifecycle — source only
 
 NightlyJob now records one attempt, rebases each capture with parent=None,

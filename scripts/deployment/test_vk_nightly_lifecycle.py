@@ -110,6 +110,34 @@ class NightlyLifecycle(fixtures.ContractTests):
                         if Path(dst)==self.nightly/'current.json':os._exit(81)
                         return replace(src,dst,**kwargs)
                     with patch('os.replace',hook):self.run_nightly()
+                elif stage=='candidate_objects_removed':
+                    replace=os.replace
+                    def before(src,dst,**kwargs):
+                        if Path(dst)==self.nightly/'current.json':raise OSError('injected prepublication failure')
+                        return replace(src,dst,**kwargs)
+                    with patch('os.replace',before):
+                        failure=self.run_nightly()
+                    if failure['passed']:os._exit(90)
+                    rmdir=Path.rmdir
+                    candidate=self.nightly/self.job.read()['candidate']
+                    def removed(path):
+                        rmdir(path)
+                        if path==candidate/'objects':os._exit(84)
+                    with patch.object(Path,'rmdir',removed):
+                        self.job.reconcile(retention_adopted=True,inputs_quiescent=True)
+                elif stage=='rename_before_fsync':
+                    replace=os.replace;fsync=os.fsync;renamed=False
+                    store_identity=lifecycle.directory_pin(self.nightly)
+                    def renamed_pointer(src,dst,**kwargs):
+                        nonlocal renamed
+                        result=replace(src,dst,**kwargs)
+                        if Path(dst)==self.nightly/'current.json':renamed=True
+                        return result
+                    def before_store_sync(fd):
+                        if renamed and lifecycle.pin(os.fstat(fd))==store_identity:os._exit(85)
+                        return fsync(fd)
+                    with patch('os.replace',renamed_pointer),patch('os.fsync',before_store_sync):
+                        self.run_nightly()
                 elif stage=='after':
                     with patch.object(self.job,'_reconcile_held',lambda:os._exit(82)):self.run_nightly()
                 else:
@@ -129,10 +157,42 @@ class NightlyLifecycle(fixtures.ContractTests):
                 time.sleep(.05)
         finally:
             if not pid:os.kill(child,signal.SIGKILL);os.waitpid(child,0)
-        self.assertEqual(os.waitstatus_to_exitcode(status),{'before':81,'after':82,'retention':83}[stage])
+        self.assertEqual(os.waitstatus_to_exitcode(status),{'before':81,'after':82,'retention':83,'candidate_objects_removed':84,'rename_before_fsync':85}[stage])
+        if stage=='candidate_objects_removed':
+            candidate=self.nightly/self.job.read()['candidate']
+            self.assertEqual(list(candidate.iterdir()),[])
+            self.assertEqual(lifecycle.directory_pin(candidate),self.job.read()['candidate_directories'][0])
         blocked=self.run_nightly();self.assertEqual(blocked['status'],'reconciliation_required')
-        self.assertTrue(self.job.reconcile(retention_adopted=True,inputs_quiescent=True)['passed'])
-        expected=[('before',)] if stage=='before' else [('before',),('second',)]
+        if stage=='rename_before_fsync':
+            previous=self.job.read()['previous']
+            old=self.nightly/previous['generation']
+            old_parents={tuple(previous['folder']),tuple(previous['objects'])}
+            store_identity=lifecycle.directory_pin(self.nightly)
+            fsync=os.fsync;unlink=os.unlink;events=[]
+            def record_sync(fd):
+                result=fsync(fd)
+                if lifecycle.pin(os.fstat(fd))==store_identity:events.append('store_fsync')
+                return result
+            def record_unlink(path,*,dir_fd=None):
+                if dir_fd is not None and tuple(lifecycle.pin(os.fstat(dir_fd))) in old_parents:
+                    events.append('old_unlink')
+                    self.assertIn('store_fsync',events,'old unlink preceded durable publication')
+                return unlink(path,dir_fd=dir_fd)
+            # A failed publication fsync must preserve the old generation.
+            with patch('os.unlink',record_unlink), patch(
+                    'vk_nightly_lifecycle.sync_directory',side_effect=OSError('injected store fsync failure')):
+                with self.assertRaisesRegex(OSError,'store fsync failure'):
+                    self.job.reconcile(retention_adopted=True,inputs_quiescent=True)
+            self.assertEqual(events,[])
+            self.assertTrue(all((old/raw).exists() for raw in previous['files']))
+            self.assertTrue((self.jobs/'attempt.json').exists())
+            with patch('os.fsync',record_sync),patch('os.unlink',record_unlink):
+                self.assertTrue(self.job.reconcile(retention_adopted=True,inputs_quiescent=True)['passed'])
+            self.assertIn('old_unlink',events)
+            self.assertLess(events.index('store_fsync'),events.index('old_unlink'))
+        else:
+            self.assertTrue(self.job.reconcile(retention_adopted=True,inputs_quiescent=True)['passed'])
+        expected=[('before',)] if stage in ('before','candidate_objects_removed') else [('before',),('second',)]
         self.assertEqual(self.latest_rows(),expected)
         self.assertEqual(len(self.store_job.inventory()),1)
         self.assertFalse((self.jobs/'attempt.json').exists())
@@ -142,6 +202,35 @@ class NightlyLifecycle(fixtures.ContractTests):
     def test_process_death_before_publication_reconciles_then_retries(self):self.crash('before')
     def test_process_death_after_publication_retires_recorded_previous(self):self.crash('after')
     def test_process_death_during_retention_resumes_missing_exact_objects(self):self.crash('retention')
+
+    def test_candidate_cleanup_death_after_objects_rmdir_resumes_empty_recorded_folder(self):
+        self.crash('candidate_objects_removed')
+
+    def test_rename_before_fsync_recovery_durably_publishes_before_old_unlink(self):
+        self.crash('rename_before_fsync')
+
+    def test_missing_candidate_objects_rejects_nonempty_or_substituted_folder(self):
+        self.assertTrue(self.run_nightly()['passed'])
+        observe=self.job.observe
+        def interrupted(event,value):
+            observe(event,value)
+            if event=='directories':raise OSError('injected empty candidate preparation failure')
+        with patch.object(self.job,'observe',interrupted):
+            self.assertFalse(self.run_nightly()['passed'])
+        candidate=self.nightly/self.job.read()['candidate']
+        (candidate/'objects').rmdir()
+        unexpected=candidate/'unexpected-evidence';unexpected.write_bytes(b'preserve')
+        with self.assertRaisesRegex(ValueError,'remaining evidence'):
+            self.job.reconcile(retention_adopted=True,inputs_quiescent=True)
+        self.assertEqual(unexpected.read_bytes(),b'preserve')
+        # Keep the recorded inode and its evidence; a new empty directory at
+        # the same candidate name must never qualify for resumable cleanup.
+        preserved=self.root/'preserved-recorded-candidate'
+        candidate.rename(preserved);candidate.mkdir()
+        with self.assertRaisesRegex(ValueError,'ownership not established'):
+            self.job.reconcile(retention_adopted=True,inputs_quiescent=True)
+        self.assertTrue(candidate.is_dir());self.assertTrue((preserved/'unexpected-evidence').exists())
+        self.assertEqual(self.latest_rows(),[('before',)])
 
     def test_failed_partial_capture_reconciliation_and_gates(self):
         self.assertTrue(self.run_nightly()['passed'])

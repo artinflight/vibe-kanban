@@ -231,3 +231,28 @@ The new read-only journal supported a successful fresh online checkpoint
 Capture measured about 2.4 GiB peak RAM in its 3 GiB limit. The earlier journal
 gap and online changes remain explicit; a final held writer-fenced capture
 and candidate catch-up are still mandatory.
+
+MCP packaged acceptance, October 9 11:46 UTC: artifact transfer independently
+verified all 779 files and the exact source/tree manifest. The actual candidate
+server passed 18 private namespace startup/inspection/identity rejection cases,
+including successful health and preservation of all workspace/image sentinels.
+Its packaged executor passed 178 tests with eight opt-in cases ignored; the
+separate offline-provider first-run success and two-worker stalled-stop cases
+each passed through the actual guard/restricted supervisor. No paid inference,
+production restart or live consent acceptance occurred. The exact packaged
+scanner reported 8.30.1 inside the MCP boundary. All generated fixtures remain
+retained.
+
+The suffix correction has now passed authentication of the actual B executable,
+and the same actual MCP tree began materialization at 11:45:37 UTC. No restored
+content was excluded. Allocation, all-file/DB/metadata verification and final
+catch-up acceptance remain pending; initial restoration is not a cutover.
+
+Fresh staging is e8c450fb (main remains 22f09e24), with a workspace-first UI
+change beyond the original combined release scope. The combined application
+remains exactly c3c48e63; neither that unrelated UI change nor a merge is swept
+into the built artifacts. PR231 currently reports a staging conflict and no
+hosted checks; its 118 local candidate regressions passed from clean committed
+source. PR230 Test CI remains green; its hosted artifact job still records the
+namespace failure, separately from the successful approved isolated B build.
+No CI status is forged or protection bypassed.

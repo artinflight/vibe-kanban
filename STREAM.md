@@ -1,3 +1,11 @@
+Current October9 restart gate update: Desktop SSH/B works; whole-state online
+backup accepted (77roots/76DBs), archive SHA735e2115. Read
+VK_RESTART_PROGRESS_20261009.md before older entries. Exact offline application
+commit f8fd5032 is bound on B; tools1a3d3064 are locally committed/B-preserved.
+Workflow grant and new candidate source/test UID1000 ownership approvals remain
+pending. Full restoration/metadata/application and real controller/final writer
+fence acceptance are unrun. No deployment/restart/cutover/cleanup has occurred.
+
 # October 9: Authorized safe restart preparation
 
 Read [VK_RESTART_PROGRESS_20261009.md](VK_RESTART_PROGRESS_20261009.md).

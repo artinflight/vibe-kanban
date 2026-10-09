@@ -1,9 +1,11 @@
 {
   "fenced_adapter_validation": "private fixture only; real held writer stop/lease/physical-B final acceptance unrun",
   "fenced_large_snapshot_supported": true,
+  "full_candidate_metadata_accepted": false,
   "isolated_source_ownership_approval_pending": true,
   "live_controller_activation_bound": false,
   "metadata_fixture_only": true,
+  "offline_application_source": "f8fd50327331d43f672966a53da90a5f2b13b685",
   "production_deployed": false,
   "source_parent": "dc8470f90e94dc59ebce4300af62fd9d5dd33e50",
   "source_sha256": {
@@ -24,6 +26,9 @@
     "passed": true,
     "snapshot": 9
   },
-  "whole_state_accepted": false,
+  "whole_state_accepted": true,
+  "whole_state_archive_sha256": "735e211552c315f9f9be78eda9f28d175f2406847032f5df6a5d2307d8362ef5",
+  "whole_state_discovered_databases": 76,
+  "whole_state_frozen_boundary_verified": false,
   "workflow_approval_pending": true
 }

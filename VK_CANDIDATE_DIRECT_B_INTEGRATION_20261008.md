@@ -143,9 +143,10 @@ without silently expanding this executor or usage controls.
 
 ## Exact remaining gates and handoff
 
-1. Operator restores the existing Desktop/B connection and completes the already
-   pending workflow authorization through the approved account flow. No denied
-   tree write, alternate route/credentials, OAuth or permission change was retried.
+1. Desktop/B SSH has been verified working independently of Dot. See
+   VK_RESTART_PROGRESS_20261009.md for the accepted fresh whole-state B backup,
+   current source bindings and exact remaining approvals. Workflow authorization
+   remains pending; no denied write, credential/route change or OAuth was retried.
 2. Root binds the existing reviewed combined release to a fresh package and the
    actual native launcher, scanner, routing module, capacity guard/controller and
    supervision boundary. Confirm candidate allocation/RAM fit and account for

@@ -229,3 +229,62 @@ and resulting file hashes are bound before the private candidate source changes.
 This does not change the incumbent, original backups, or cleanup authorization.
 Later cleanup requires human QA and a separately reviewed release; no runtime
 override is introduced.
+
+## Fresh whole-state backup accepted (online baseline)
+
+Session79354 completed successfully. All77roots remain included;71explicit
+SQLite selectors plus discovery produced76databases,537739inventory entries.
+B archive checkpoint--b6977449efc74320bf5fbbe432ae06ef.tar.zst is25006383044bytes,
+SHA256735e211552c315f9f9be78eda9f28d175f2406847032f5df6a5d2307d8362ef5.
+Physical B readback, complete archived manifest and all snapshot hashes passed.
+Recovery descriptor SHA256514c96fe5da800b620427ca25da39e8120a2eb7729eef2afba118e70f6645152
+is published and independently verified beside it at
+B:/vk-backups/vk-safe-release-20261009/whole-state-workflow-complete.
+
+Preparation2204.99seconds; measured Python peak1468526592bytes. Local archive
+and snapshot payload zero; local capture metadata28978bytes. Two narrowly
+accepted online runtime warnings remain in private evidence. Frozen boundary
+is false: final held-writer catch-up is still mandatory, and live writes were
+not stopped for this baseline. Journal instance/coverage remained healthy.
+
+The read-only Desktop catalog inspection now authenticates this accepted
+descriptor/archive and hashes every included regular member, counts numeric
+ownership/PAX timestamp/xattr coverage and measures actual restore bytes/index
+size. It will retain a private B catalog and publish only a redacted summary.
+Full candidate restoration and full Linux metadata/application acceptance remain
+unrun. No old partial, historical loss exception or recovery sign-off is changed.
+
+## Exact offline application source binding
+
+Candidate149-file overlay plus bounded PR229 triage integration and compiled
+startup cleanup prohibition is committed locally on B as
+f8fd50327331d43f672966a53da90a5f2b13b685, tree
+e1a17ed26470e221a7ee0a995b4f1b7d10a49dc8, branch
+candidate/safe-restart-20261009. No unrelated path was staged. This is a local
+source binding, not a tested release or GitHub publication. The original
+149-file overlay remains unchanged.
+
+B incremental source pack1586305bytes, SHA256
+3e416e633a677d00f8cd0ccc765bf552f3b667934bdab8cdf7bc05173dcc8ec6,
+is preserved beside attachment-startup-gate receipts. It requires the retained
+initial98b20577 pack and original shallow/ref boundary. No workspace was
+recreated to recover a missing original object.
+
+Both specific approval questions remain pending: workflow grant for publication
+and ownership of only newly generated candidate source/test-output toUID/GID1000.
+Source remains root0700. Denied tests were not retried as root or by another
+route. Actual controller/supervisor activation and compatible latest-data fallback
+remain unbound/default-blocked; fixtures cannot replace these acceptance gates.
+No fencing/restart/cutover/merge/cleanup or original live metadata change occurred.
+
+## Full-file catalog bound correction
+
+The first independent Desktop catalog stopped at its explicit256MiB private
+metadata-file limit. Its partial catalog and exact script are retained on B; it
+is not full-file or metadata acceptance. The already accepted whole-state backup
+remains verified and unchanged. New inspection uses64MiB disk chunks, a finite
+1GiB total output limit and8GiB B reserve. It authenticates the exact published
+descriptor514c96fe and archive735e2115 before inspection and again at completion,
+and retains full member/snapshot coverage requirements. No candidate index or
+RAM limit is raised and no member is omitted. Session78183 is running this
+read-only corrective inspection; no restore or operational effect was started.

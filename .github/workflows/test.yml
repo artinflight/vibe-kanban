@@ -290,7 +290,7 @@ jobs:
           VK_TEST_OUTPUT: ${{ runner.temp }}/vk-history-tests
           TEST_RENDERER_PATH: ${{ runner.temp }}/vk-history-tools/node_modules/react-test-renderer
         run: |
-          npm install --prefix "$RUNNER_TEMP/vk-history-tools" --no-package-lock --ignore-scripts react-test-renderer@19.1.0
+          npm install --prefix "$RUNNER_TEMP/vk-history-tools" --no-package-lock --ignore-scripts react-test-renderer@18.3.1
           node scripts/testing/run-long-thread-history-tests.mjs
 
       - name: Test offline MCP approval UI contract

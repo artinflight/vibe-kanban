@@ -1011,3 +1011,61 @@ No existing evidence file may be overwritten. After actual operator completion,
 Staging authenticates the new receipt and sends only its digest/completion ID to
 the same resident. Its bounded in-process checks remain fail-closed. All later
 application/rehearsal/catch-up/promotion/fallback gates are still separately required.
+
+
+## 17:51 administrator handoff verified; installation entrypoint not invoked
+
+Seamus's17:51:33 completion, Sentinel_7584cfaa11d481919cda44916f8856a7,
+authorizes no assumption of successful installation. The exact124669-byte
+installer matches SHA6d7db4427a7fed2e056ca28ca71057b99a7cc6cb719c74b99a25b7b778c6a6e3;
+its embedded29af1c33 plan and all8source/2binary payload pins verify.
+
+Read-only MCP sudo journal evidence authenticates the advertised path/hash/plan/
+flags at17:51:23.867218UTC, with root session opened17:51:23.869090 and closed
+17:51:23.937097. No password, credential, full bootstrap argv or private transcript
+was printed or published. Sudo wraps arguments containing spaces in quotes; that
+logger framing was decoded before parsing the bootstrap, not mistaken for an
+operator quoting error. The actual logged exec globals are {"name":"main"},
+where the documented bootstrap requires {"__name__":"__main__"}. A harmless
+isolated reproduction confirms the former does not invoke the main guard and
+the latter does. The installer entrypoint was never invoked. We do not infer
+whether rendering/copying changed the text or blame the operator.
+
+Both fixed launchers, both libexec payloads, both policies, the sudoers include
+and managed anchor are ENOENT. The SSD UUID remains the approved26e4cac1-f2cf-
+485b-b1bc-d1be197a747e. No root installer is running. This is not a denied sudo
+or an absence of operator authentication: root authentication succeeded, but
+installation effects are absent. No SDK sudo retry or alternative privilege
+route was attempted. Neither installed profile's real acceptance has run.
+
+Root owns the corrected already-approved administrator handoff. No new scope,
+grant or installation approval is required; the identical payload/plan remains
+valid. Staging has not asked for another manual consumer snapshot or root command.
+Current blocker: the authorized installer must actually call its main entrypoint
+through the existing operator-controlled administrator route, followed by exact
+installed metadata and both automatic read-only acceptance checks. Do not silently
+reinterpret the17:51 completion as installation/acceptance.
+
+For later integration, four immutable unprivileged adapter/acceptance/owner
+modules from publishedPR234 a875ccfe2d7ac094a93422cacd2a24d9a0f7803e are compiled
+and hash-bound in inspection-adapter-source-a875ccfe under vk-runtime-backup-20261009.
+This is source preparation only, not operational adoption. OP's worktree/index
+is untouched. Its finishing execution had completed before active-turn steering
+was attempted; the endpoint returned409, and no new execution was queued.
+
+Obsolete manual resident2255906 has already exited; no action or cause is inferred.
+Its successful16:19 native/B preparation and all prior evidence remain retained.
+Fresh peer/kernel-lease probing verifies preparation500933/start757986989 still
+restored, activation/cleanup unavailable. Archive dev2065/inode7340415/23441521918
+and pinned metadata remain unchanged. No archive deletion, service stop, writer
+fence, restore, routing switch or cutover occurred. Remaining operational gates
+and historical448/145/transcript415/journal/mode/link exceptions remain explicit.
+See scripts/deployment/receipts/two-profile-installation-not-established-20261009.json.
+
+The former manual snapshot command and waiting-resident instructions above
+are superseded. Do not rerun that command or resume that exited resident.
+At18:15:39UTC all8installation targets remain absent. The smallest correction
+is to invoke the exact reviewed installer main entrypoint through the same
+operator-controlled administrator handoff; no new permission or broader payload
+is needed. Root coordinates that correction. Both real automatic profile
+acceptances must then pass before integration or the approved one-file retirement.

@@ -1,6 +1,9 @@
 use std::{
     collections::VecDeque,
-    sync::{Arc, Mutex, RwLock},
+    sync::{
+        Arc, Mutex, RwLock,
+        atomic::{AtomicBool, Ordering},
+    },
 };
 
 use futures::{StreamExt, future};
@@ -34,6 +37,7 @@ struct Inner {
 pub struct MsgStore {
     inner: RwLock<Inner>,
     sender: broadcast::Sender<LogMsg>,
+    finished: AtomicBool,
     durable_sender: Option<mpsc::Sender<std::io::Result<LogMsg>>>,
     durable_receiver: Mutex<Option<mpsc::Receiver<std::io::Result<LogMsg>>>>,
 }
@@ -59,6 +63,7 @@ impl MsgStore {
                 history_evicted: false,
             }),
             sender,
+            finished: AtomicBool::new(false),
             durable_sender: None,
             durable_receiver: Mutex::new(None),
         }
@@ -87,7 +92,12 @@ impl MsgStore {
             .map(ReceiverStream::new)
     }
 
+    pub fn is_finished(&self) -> bool {
+        self.finished.load(Ordering::Acquire)
+    }
+
     pub fn push(&self, msg: LogMsg) {
+        let finished = matches!(msg, LogMsg::Finished);
         let bytes = msg.approx_bytes();
 
         let mut inner = self.inner.write().unwrap();
@@ -101,6 +111,11 @@ impl MsgStore {
         }
         inner.history.push_back(StoredMsg { msg, bytes });
         inner.total_bytes = inner.total_bytes.saturating_add(bytes);
+        if finished {
+            // The lifecycle marker survives UI broadcast/history eviction.
+            // Raw EOF is checked independently by the durable capture writer.
+            self.finished.store(true, Ordering::Release);
+        }
         // Capture and subscription share this lock with publication. A reader
         // sees each message in its snapshot OR its live receiver, never neither.
         let _ = self.sender.send(inner.history.back().unwrap().msg.clone());

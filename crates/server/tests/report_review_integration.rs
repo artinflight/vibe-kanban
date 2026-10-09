@@ -359,6 +359,11 @@ async fn map_removal_before_writer_first_poll_preserves_claim_and_drains() {
         .unwrap()
         .push_finished();
     drop(stores);
+    // Deliberately evict Finished from the two-slot UI broadcast before either
+    // writer or producer can be polled. Raw EOF plus the real lifecycle marker
+    // must still close; these UI-only values must not enter durable raw capture.
+    store.push_stdout("UI-only after Finished 1");
+    store.push_stdout("UI-only after Finished 2");
     tokio::time::timeout(Duration::from_secs(5), async {
         producer.await.unwrap();
         writer.await.unwrap();

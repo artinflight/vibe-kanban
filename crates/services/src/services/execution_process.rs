@@ -18,7 +18,7 @@ use executors::logs::{
     ActionType, NormalizedEntryType, ToolResult, ToolStatus,
     utils::patch::extract_normalized_entry_from_patch,
 };
-use futures::{StreamExt, TryStreamExt, future, stream::BoxStream};
+use futures::{FutureExt, StreamExt, TryStreamExt, future, stream::BoxStream};
 use indicatif::{ProgressBar, ProgressStyle};
 use json_patch::Patch;
 use serde_json::Value;
@@ -266,13 +266,30 @@ pub async fn append_log_message(session_id: Uuid, execution_id: Uuid, msg: &LogM
 fn merge_capture_streams(
     raw: BoxStream<'static, std::io::Result<LogMsg>>,
     metadata: BoxStream<'static, std::io::Result<LogMsg>>,
+    store: Arc<MsgStore>,
 ) -> BoxStream<'static, std::io::Result<LogMsg>> {
     futures::stream::unfold(
-        (raw, metadata, false, false),
-        |(mut raw, mut metadata, mut raw_done, mut meta_done)| async move {
+        (raw, metadata, false, false, store),
+        |(mut raw, mut metadata, mut raw_done, mut meta_done, store)| async move {
             loop {
                 if raw_done && meta_done {
                     return None;
+                }
+                if raw_done && !meta_done && store.is_finished() {
+                    // Drain already queued metadata. A real lifecycle Finished
+                    // may have been evicted from the lossy UI subscriber; the
+                    // monotonic marker cannot be lost. It never replaces raw EOF.
+                    match metadata.next().now_or_never() {
+                        Some(Some(Ok(LogMsg::Finished))) | Some(None) | None => {
+                            return Some((
+                                Ok(LogMsg::Finished),
+                                (raw, metadata, true, true, store),
+                            ));
+                        }
+                        Some(Some(message)) => {
+                            return Some((message, (raw, metadata, raw_done, meta_done, store)));
+                        }
+                    }
                 }
                 let (is_raw, next) = tokio::select! {
                     msg = raw.next(), if !raw_done => (true, msg),
@@ -286,7 +303,10 @@ fn merge_capture_streams(
                             meta_done = true;
                         }
                         if raw_done && meta_done {
-                            return Some((Ok(LogMsg::Finished), (raw, metadata, true, true)));
+                            return Some((
+                                Ok(LogMsg::Finished),
+                                (raw, metadata, true, true, store),
+                            ));
                         }
                     }
                     None => {
@@ -295,10 +315,10 @@ fn merge_capture_streams(
                             Err(std::io::Error::other(
                                 "Raw capture or metadata closed without Finished",
                             )),
-                            (raw, metadata, true, true),
+                            (raw, metadata, true, true, store),
                         ));
                     }
-                    Some(msg) => return Some((msg, (raw, metadata, raw_done, meta_done))),
+                    Some(msg) => return Some((msg, (raw, metadata, raw_done, meta_done, store))),
                 }
             }
         },
@@ -353,7 +373,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                 }
             })
             .boxed();
-        merge_capture_streams(raw.boxed(), metadata)
+        merge_capture_streams(raw.boxed(), metadata, store.clone())
     } else {
         store.history_plus_stream_strict()
     };

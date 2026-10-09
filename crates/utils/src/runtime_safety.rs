@@ -197,6 +197,7 @@ mod tests {
             (vec!["--help"], ServerInvocation::Help),
             (vec!["--version"], ServerInvocation::Version),
             (vec!["--build-info"], ServerInvocation::BuildInfo),
+            (vec!["--capacity-build-info"], ServerInvocation::BuildInfo),
         ] {
             assert_eq!(
                 parse_server_invocation(args.into_iter().map(OsString::from)).unwrap(),
@@ -205,7 +206,9 @@ mod tests {
         }
         for args in [
             vec!["--vk-build-info"],
-            vec!["--capacity-build-info"],
+            vec!["--capacity-build-info", "--build-info"],
+            vec!["--capacity-build-info", "--capacity-build-info"],
+            vec!["--capacity-build-info", "serve"],
             vec!["--build-info", "--vk-build-info"],
             vec!["--help", "x"],
             vec!["--"],

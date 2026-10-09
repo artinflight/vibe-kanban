@@ -41,7 +41,6 @@ artifact-only rollback preserves current application data; no full mutable-state
 backup/restore or backend continuity rehearsal was performed. Evidence and
 rollback commands are under `/mnt/vk-storage/vk-mobile-release-20261008`.
 
-
 # October 8: Phone screen redesign
 
 Branch `vk/eb7d-vk-native-feelin` replaces the initial size-focused mobile pass
@@ -498,6 +497,7 @@ The host lacks Tauri GTK development packages and has under 1 GiB free SSD space
 full workspace/desktop checks therefore rely on the repository CI runners rather
 than risking the live host. Local checks cover the changed executor, services and
 frontend sources, formatting/governance, and byte-identical CU wire compatibility.
+
 # Workspace Attention Preservation
 
 Branch `fix/workspace-attention-preservation` starts at staging `b0f4c10a9`.
@@ -746,6 +746,7 @@ Restore GPT-6 reasoning choices and hide GPT versions below5.6 in the Codex
 selector. Updated onto staging fa7523c17, this frontend-only compatibility correction
 does not rewrite existing chat selections, drafts, defaults or native settings.
 No backend restart. See `VK_MODEL_SELECTOR_FIX.md` for evidence and deployment.
+
 ## Integrated Staging Context: VK::Weird Message
 
 Scope: reconcile native goal completion evidence within the current turn and
@@ -771,3 +772,17 @@ turn/stagnation counters, recovery plans and substantive input holds. Explicit
 manual resumes retain their current fresh-attempt behavior. No scheduling,
 quota, containment or selected-agent admission limits are relaxed. This is the
 manager-side fix; the active Chat Orchestration implementation is separate.
+
+## October 9 combined frontend preparation
+
+Seamus explicitly authorized the final workspace-first frontend. Product source
+7810706ea5255a0894457c96aa158adbb947b9a1 combines final66e00728's twelve frontend
+changes with c3c48e63's six newer consent/chat repairs. The c3c48e63 backend, guard
+and routing artifacts remain pinned; no backend/schema/dependency rebuild is
+required by this inclusion. Current staging e8c450fb is incorporated for normal
+PR freshness. Its older continuity notes remain accessible at that immutable
+commit; these files retain the newer combined safety/recovery tracking.
+
+The same actual MCP candidate is still restoring. Final catch-up capacity, whole
+restore verification, actual application/consent acceptance and scoped promotion
+remain held. No production restart, cutover, merge or general cleanup occurred.

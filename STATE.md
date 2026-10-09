@@ -41,7 +41,6 @@ artifact-only rollback preserves current application data; no full mutable-state
 backup/restore or backend continuity rehearsal was performed. Evidence and
 rollback commands are under `/mnt/vk-storage/vk-mobile-release-20261008`.
 
-
 ## October 8: Phone frontend work prepared
 
 A frontend-only phone interaction pass is prepared for review in an isolated
@@ -85,6 +84,7 @@ must remain off until compatible CU and combined private-API/native acceptance
 are verified by the staging owner. Recommend and the existing scheduling
 restrictions remain authoritative. Version-2 controller receipts require a
 compatible rollback reader. See VK_SCHEDULED_FIRST_RUN.md for exact requirements.
+
 ## October 7: AutoSwitch reload boundary invariant
 
 Prompt classification and inferred follow-up qualification belong to the reviewed,
@@ -1111,11 +1111,12 @@ validation boundaries; this note makes no deployment claim.
 10. If a future agent touches project/workspace linking or project-list visibility, verify through the live API and the UI before merging.
 11. Harden `scripts/vk_lean_backup.py` so disappearing Codex rollout/session files do not abort an otherwise usable backup.
 12. Stand up an isolated test instance from current prod state before continuing root-cause work on the remaining memory / DB-lock path.
-14. Continue validating lab-only backend fixes in this order:
-   - DB mode / pool / monitor control
-   - scratch write amplification
-   - then longer soak runs with repeated `_vibe_kanban_repo` workspace starts
-Lab findings, 2026-04-19:
+13. Continue validating lab-only backend fixes in this order:
+
+- DB mode / pool / monitor control
+- scratch write amplification
+- then longer soak runs with repeated `_vibe_kanban_repo` workspace starts
+  Lab findings, 2026-04-19:
 
 - The DB-side fixes being tested in the lab are materially helping:
   - SQLite `WAL`
@@ -1302,9 +1303,9 @@ Production staging deploy, 2026-04-23:
   - workspace id `0b00ce25-fb2b-4742-b310-4bf6aaa1e7e7`
   - linked task id `69a9dbf6-2cb9-48f2-8d9f-d160fe7a5107`
 - Additional repaired workspace link:
-   - `FR:: Garmin Sync Down`
-   - workspace id `25e19656-bc9f-4315-9712-a1d5468bdc00`
-   - linked task id `7d046622-1dd5-4025-bf04-fe2bfebd10a3`
+  - `FR:: Garmin Sync Down`
+  - workspace id `25e19656-bc9f-4315-9712-a1d5468bdc00`
+  - linked task id `7d046622-1dd5-4025-bf04-fe2bfebd10a3`
 - Current attachment/upload and workspace-create stabilization, `2026-04-21`:
   - symptom:
     - live VK felt extremely slow
@@ -1663,6 +1664,7 @@ Codex follow-up state, 2026-04-20:
   - `missing_in_isolated_but_found_shared = 0`
   - `missing_both = 0`
 - Do not restart VK just for this repair; no restart is needed when only copying Codex rollout files and active agents may be running.
+
 # September 11 V2 Recovery Supersedes Earlier Readiness
 
 The approved23:14 cutover returned to guarded Green before final capture or Blue
@@ -1679,7 +1681,6 @@ requests, completed checklists, `budgetLimited`, `blocked` and unknown statuses
 remain rejected with distinct reasons. Keep quota authorization and independent
 execution deadlines unchanged. Regression uses the captured response shape.
 
-
 ## Capacity workflow invariants — September 21
 
 Selected idle goals allow ordinary continuation. Manual messages to a managed
@@ -1695,3 +1696,9 @@ September 30 branch fix: capacity-managed native goal resumes preserve recovery
 history and accumulated turns; manual resume behavior is unchanged. See HANDOFF
 for validation/delivery status. This does not change the Chat Orchestration
 workspace implementation or remove the independent capacity stop protections.
+
+October 9 release-preparation accounting: current staging e8c450fb's workspace
+frontend changes are included in the isolated combined source, together with
+Seamus's explicitly requested final66 fixes. This is prepared source, not proof
+of deployment. The incumbent/fallback remain protected, and historical recovery
+exceptions are not accepted as data loss or cleared by this integration.

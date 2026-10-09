@@ -8,7 +8,6 @@ See [VK_CAPACITY_CONCURRENCY.md](VK_CAPACITY_CONCURRENCY.md) for API semantics,
 real two-native-goal acceptance and deployment requirements. Companion CU changes
 are required; old clients keep one slot. Production deployment remains operator-owned.
 
-
 ## 2026-08-20T00:00:00Z | vk/13c6-vk-multi-line-pa | multiline paste line-ending hardening
 
 - Intent: fix the remaining multiline paste failure in VK prompt fields after
@@ -237,6 +236,7 @@ are required; old clients keep one slot. Production deployment remains operator-
   - backup retention validation was not rerun during the sync cleanup step
   - full test validation was not rerun after the final cleanup behavior adjustments
   - pinned workspaces still keep the existing auto-archive exception
+
 # 2026-04-19 Workspace Polling Hotfix
 
 - A second frontend churn path was identified after the earlier kanban/sidebar fix.
@@ -1125,7 +1125,6 @@ are required; old clients keep one slot. Production deployment remains operator-
 
 2026-09-11: User authorized PR #103 integration into staging for the staging management agent to deploy at the next restart. Fresh fetch and rebase found the branch current with staging; recovery revision CI is green. Deployment handoff explicitly rejects the superseded binary and preserves goal backup requirements.
 
-
 ## 2026-09-12 — Long-thread pagination prepared
 
 - `vk/ab54-vk-long-threads`: latest-40 completed log pages, 50-entry upward
@@ -1133,7 +1132,6 @@ are required; old clients keep one slot. Production deployment remains operator-
 - Bounded revision-keyed finite-replay cache; existing running streams preserved.
 - See `VK_LONG_THREADS.md` and latest handoff for tests and limitations. No live
   runtime change; matching-backend browser validation and latency measurement remain.
-
 
 ## 2026-09-13 — Long-thread staging integration requested
 
@@ -1231,7 +1229,6 @@ Read-only service inventory confirms live Blue 4711/4712 and retained Green
 requires the explicit approval in VK_BACKEND_RESTART_PROTOCOL.md after a concrete
 candidate and rehearsal; preparation is not cutover authorization.
 
-
 ## Scheduled build directories — September 14
 
 `VK_CAPACITY_BUILD_ROOTS` is an optional JSON array of at most eight existing
@@ -1256,7 +1253,6 @@ The full seven-row native suite passes at
 `/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-y5tknu8y/results.json`.
 All 64 executor unit tests passed after adding build-root admission coverage.
 Formatting and ops governance passed. The feature remains undeployed.
-
 
 ## Approved launcher/provider binding — September 14
 
@@ -1380,7 +1376,6 @@ protected consequences/context retain Frontier. No classifier model call, regist
 or CU wire changes. Twenty-two routing tests, services check, focused Clippy,
 generated types, web-core checking, format/ops and five offline recommendation
 cases pass. V1 deployment untouched; live V2 Shadow acceptance remains pending.
-
 
 ## 2026-10-01 — bounded semantic fallback for uncertain V2 requests
 
@@ -1580,7 +1575,6 @@ verified on Desktop B: before exact local removal; all evidence and shared data
 retained. Combined runtime acceptance and final CI are mandatory. No production
 operation or paid inference.
 
-
 2026-10-06 PR147 stalled graceful stop: added cfg(test) native revocation/expiry regression with actual client mutex held, outstanding private offline request and independent worker/cgroup observations. Local provider TERM/worker exit were +46/+480 ms after revocation and +7/+567 ms after last expiry; one request in each, graceful future still blocked, first-run holds/identity/receipts retained. No production enforcement change; non-test client source is unchanged from 86f62b2. Current immutable CI/build/runtime receipts and staging lcp7ys3k comparison are in /mnt/vk-storage/vk-scheduled-first-run-20261006/stalled-stop-handoff.md. Recommend/default-off/CU-first and no production/Android/paid/live-service boundaries retained.
 
 ## 2026-10-06 — PR147 stop-response reliability
@@ -1605,7 +1599,6 @@ become Sol6/low recommendations (qualified Auto option Luna6/medium); twelve
 unchanged. No observed savings claimed. Recommend/live deployment unchanged;
 backend guard adoption belongs to VK::Staging before October30 readiness.
 See VK_AUTOSWITCH_CURRENT_STEP_RISK.md and SSD validation receipts.
-
 
 ## 2026-10-07: repair incomplete AutoSwitch no-restart boundary
 
@@ -1759,3 +1752,9 @@ Historical exceptions remain explicit. SSD ENOSPC and proven8GiB floor block
 host backup/rehearsal/cutover; no deletion or bypass. Local incomplete source is
 Desktop-hash-preserved. Hosted combined checks/artifacts are being prepared;
 no production effect or readiness claim. See VK_SAFE_RESTART_PREPARATION_20261008.md.
+
+- 2026-10-09: Incorporated current staging e8c450fb in the scoped combined release
+  after owner-authorized final66 frontend inclusion. Preserved all twelve final
+  frontend changes and six newer consent/chat repairs; no pinned backend, guard,
+  module, schema or dependency input changed. Retained newer combined continuity
+  documents; staging originals remain preserved by its immutable commit.

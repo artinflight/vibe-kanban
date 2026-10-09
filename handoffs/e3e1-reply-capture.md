@@ -1,3 +1,54 @@
+# Execution-scoped capture warning review — 2026-10-09, NOT DEPLOYED
+
+WHAT: Fix the additional review finding against3af7fbda: older execution B's
+successful completion or pending retry cleared newer A's terminal warning.
+WHY: success for B is not evidence that A's capture became complete. CONTEXT:
+same isolated c3-relative candidate; owner reviewer confirmation is still pending.
+SUCCESS: both interleavings retain A's warning until an authoritative A success,
+with existing queue/writer/HTTP/pending/scope safety tests preserved.
+
+codeSha: 6e27580a4f38975f40326ba773e7f82a27384be6 (excludes handoffs/runs).
+Branch: fix/e3e1-lossless-reply-capture. Draft PR236 remains into staging.
+Base: c3c48e6324f778ccd03a5761c2314b440e9ceac3. Review/apply only this delta;
+do not independently merge the wider PR236 combined baseline.
+
+Finding3 — CONFIRMED / FIXED: errors are stored per execution within the existing
+scope. Successful authoritative pages remove only their own error. Batch start,
+another completion and another pending timer cannot clear unresolved warnings.
+Execution removal retires that error even when no page was displayed; scope
+change still aborts requests, cancels timers and discards its error map. Pending
+retry stays1000ms and terminal failures still require explicit authoritative retry.
+No public hook/API redesign; no changes to writer, backend or connector source.
+
+Exact hosted validation SUCCESS:
+https://github.com/artinflight/vibe-kanban/actions/runs/38001439918
+Head: 6e27580a4f38975f40326ba773e7f82a27384be6.
+18 UI tests, including both requested A-error/B-success interleavings, same-A
+recovery and unavailable-execution removal. All41 Rust tests, strict affected-crate
+Clippy, web-core/local-web/remote-web type checks, formatting/governance and
+preservation contract pass. One installed-MCP-only Rust test is ignored. Ordinary
+PR/full-workspace/platform gates are skipped, not certified passing.
+
+Files changed in this follow-up: useConversationHistory.ts,
+scripts/testing/long-thread-history.test.tsx, HANDOFF.md,
+VK_REPLY_CAPTURE_20261009.md and this handoff. Commands: scoped Prettier,
+git diff --check, feature commit/push, gh workflow run/view. No local Cargo or
+tests/builds. All prior native/CI evidence and shared dependencies are preserved.
+
+Evidence: /mnt/vk-storage/vk-reply-capture-20261009/evidence/
+backend-warning-binding.json records final candidate, tested head, file/patch
+hashes and the handoff-only post-validation delta. run-38001439918.json/.log are
+the exact hosted receipt. warning-review-3cae9537-to-6e27580a.patch is the small
+review correction; the full bound patch remains relative to c3c48e63.
+
+Root/Dev/Staging pickup: integrate only the bound c3 delta and exercise normal
+promotion gates. Scoped repair has no remaining source blocker. No deployment,
+restart, badge clear, routing or approval-setting change occurred. Damaged historic
+captures remain incomplete/current report unavailable/task completion unknown;
+no transcript backfill is fabricated. Connector candidate2e4532cf is unchanged.
+
+--- Earlier validation entries (superseded by the exact receipt above) ---
+
 # Exact-source P2 review disposition — 2026-10-09, NOT DEPLOYED
 
 WHAT: Repair the two independently reviewed P2 findings against334a2a2.

@@ -76,7 +76,7 @@ service and staging/main remain unchanged. No owner coordination or deployment.
 One VK::Staging adoption of matching backend/validator/worker protocol2 is required
 to remove the old veto; subsequent policy fixes use prepare/publish without
 backend restart. The old `current-step-665d836db-20261007` artifact is superseded,
-not deleted. October 30 (20x→10x) remains the usefulness/readiness deadline.
+not deleted. October30 (20x→10x) remains the usefulness/readiness deadline.
 Current checks/package receipts: `/mnt/vk-storage/vk-autoswitch-module-boundary-20261007`.
 Implementation `09dcd2cb2d873139904d32821bbc0924cdeabfac` is pushed; the
 final delivery also adds the omitted-input safety check and this evidence.
@@ -177,7 +177,7 @@ One formerly failed native classifier replay now completes on Luna5.6/low;
 56 routing regressions and three adapter tests passed; no net savings claim yet. Publication/turn receipts
 are retained outside Git under `/mnt/vk-storage/vk-autoswitch-reference-steps-20261005`.
 No restart, cutover, Auto enablement or staging-owner coordination. Recommend stays
-required; complete useful routing deadline remains October 30 (allowance20x →10x).
+required; complete useful routing deadline remains October30 (allowance20x →10x).
 Older entries below are historical.
 
 # October 5: AutoSwitch reloadable module

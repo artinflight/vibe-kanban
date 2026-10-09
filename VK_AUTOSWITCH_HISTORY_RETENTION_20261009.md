@@ -93,3 +93,8 @@ occurred. Live PID1254186 and manifest
 `7370c9fb24aae06f4e3bcb8cd21c349229e2fcdc0f4f0242d597ca0618313bc4`
 remained unchanged. VK version stays 0.1.42. Candidate preparation is complete;
 later owner publication and normal Recommend observation are outside this task.
+
+The same archive is delivered to the operator's established Desktop folder:
+`B:\Personal\Seamus\Desktop\TEMP\260930-VKAutoSwitch report\inventory-history-be3478171-20261009.zip`.
+Remote SHA256/size match; no different file was overwritten. The private
+`DESKTOP_DELIVERY.json` records verification. No live publication is implied.

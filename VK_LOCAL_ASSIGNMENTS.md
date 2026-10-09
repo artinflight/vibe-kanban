@@ -82,7 +82,7 @@ Mine/All switching, active/archive/group counts, persisted reload choice, unread
 preservation and unchanged remote visibility. The reproducible fixture and logs
 are in the task artifact directory. The source regressions run in hosted CI on
 [draft PR #237](https://github.com/artinflight/vibe-kanban/pull/237); its final head
-checks are required before integration. CI executes the nine Node regressions,
+checks are required before integration. CI executes all sixteen Node regressions,
 the database and real HTTP tests, workspace Cargo tests excluding Tauri, Clippy,
 frontend builds and type/schema checks. The remote job may skip private checks
 when its deploy key is absent; do not infer private coverage from that status. No Cargo build is run on the MCP host:
@@ -105,7 +105,7 @@ from normal staging. The application source patch applies cleanly to frontend `5
 includes backend `c3c48e63`). Its CI frontend job differs: integrate the new Node
 assignment-test step into the current combined workflow rather than replacing
 that workflow; preserve its newer approval/runtime checks. Receipt:
-`/mnt/vk-storage/vk-user-assignment-20261009/combined-release-compatibility.json`.
+`/mnt/vk-storage/vk-user-assignment-20261009/create-retry/combined-patch-check/receipt.json`.
 This proves patch applicability, not a compiled/rehearsed release.
 
 In particular the `20261007190000_workspace_report_receipts`

@@ -12,7 +12,7 @@ for partial failure/retry on the same issue, including panel remounts. Retry ski
 confirmed assignments; saved fields stay locked. Sixteen Node regressions and
 actual-panel partial-failure/retry acceptance pass locally. Final-head hosted
 checks remain the integration gate. Local format/governance,
-TypeScript, lint, migration replay, nine Node regressions and rendered-container
+TypeScript, lint, migration replay and rendered-container
 acceptance passed. Application source applies to the combined baseline; its
 current CI workflow requires inserting the new Node test step, not replacement. MCP Cargo builds are deliberately excluded for SSD capacity.
 

@@ -197,6 +197,58 @@ class CandidateTests(unittest.TestCase):
             prior_source_sha256=prior_source, fallback_artifact_sha256="c" * 64,
             capacity_policy_sha256="d" * 64)
 
+    def materialized_without_journal(self):
+        verified = self.controller.authenticated('initial')
+        self.controller.capacity(verified, 'initial-restore', 0)
+        self.layout.tree.mkdir(parents=True)
+        self.controller.materialize(verified, set(verified['entries']))
+
+    def test_full_materialization_reverified_without_restoring_or_accepting(self):
+        self.materialized_without_journal()
+        inode = (self.layout.tree / 'home/state/note').stat().st_ino
+        proof = self.controller.verify_initial_materialization('initial')
+        self.assertEqual(self.controller.phase, 'restored')
+        self.assertEqual(inventory(self.layout.tree), self.original)
+        self.assertEqual((self.layout.tree / 'home/state/note').stat().st_ino, inode)
+        journal = json.loads((self.layout.evidence / '0001-initial-materialization-verified.json').read_text())
+        self.assertEqual(proof['root_binding'], self.layout.binding())
+        self.assertFalse(journal['restored_again'])
+        self.assertFalse(journal['prior_attempt_reconstructed'])
+        self.assertFalse(journal['activation_authorized'])
+        with self.assertRaisesRegex(Blocked, 'final fenced'):
+            self.controller.promote()
+
+    def test_materialization_verification_rejects_partial_or_changed_bytes(self):
+        self.layout.tree.mkdir(parents=True)
+        with self.assertRaisesRegex(Blocked, 'inventory differs'):
+            self.controller.verify_initial_materialization('initial')
+        self.assertFalse(self.layout.evidence.exists())
+        # Fill only this originally empty fixture using its authenticated bytes.
+        verified = self.controller.authenticated('initial')
+        self.controller.materialize(verified, set(verified['entries']))
+        (self.layout.tree / 'home/state/note').write_bytes(b'changed')
+        with self.assertRaisesRegex(Blocked, 'inventory differs'):
+            self.controller.verify_initial_materialization('initial')
+        self.assertFalse(self.layout.evidence.exists())
+
+    def test_materialization_verification_rejects_live_writer_and_prior_journal(self):
+        self.materialized_without_journal()
+        self.supervisor.stopped = False
+        with self.assertRaisesRegex(Blocked, 'writer still active'):
+            self.controller.verify_initial_materialization('initial')
+        self.supervisor.stopped = True
+        self.layout.evidence.mkdir()
+        (self.layout.evidence / '0001-interrupted.json').write_text('{}')
+        with self.assertRaisesRegex(Blocked, 'retained journal'):
+            self.controller.verify_initial_materialization('initial')
+
+    def test_materialization_verification_rejects_bad_b_binding(self):
+        self.materialized_without_journal()
+        self.provider.captures['initial'][0]['manifest_sha256'] = 'e' * 64
+        with self.assertRaisesRegex(Blocked, 'manifest binding'):
+            self.controller.verify_initial_materialization('initial')
+        self.assertFalse(self.layout.evidence.exists())
+
     def test_recover_initial_restore_reverifies_same_tree_without_acceptance(self):
         self.restored()
         before = (self.layout.evidence / '0001-restored.json').read_bytes()

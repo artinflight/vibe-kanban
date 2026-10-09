@@ -732,6 +732,37 @@ class CandidateController:
         self.phase = "restored"
         return proof
 
+    def verify_initial_materialization(self, capture):
+        """Adopt only a fully matching, stopped private tree without restoring it.
+
+        A failed initial verifier can leave all bytes materialized without a
+        completed journal. Do not reconstruct that attempt or trust its result.
+        Authenticate B anew and verify every current file, database and metadata
+        relationship under held ownership. Partial/corrupt data remain held;
+        no file is repaired, overwritten, removed or chmodded here. This new
+        verification journal confers no rehearsal or operational acceptance.
+        """
+        require(self.phase == 'new' and self.layout.tree.is_dir(),
+                'initial materialization requires a new verifier and retained tree')
+        require(not self.layout.evidence.exists() or not any(self.layout.evidence.iterdir()),
+                'retained journal requires explicit completed-operation recovery')
+        binding = self.layout.binding()
+        self.supervisor.verify_stopped(binding)
+        verified = self.authenticated(capture)
+        self.capacity(verified, 'initial-materialization-verification', 0)
+        proof = verify_tree(self.layout, verified['entries'], self.sqlite_paths,
+                            recorded_link_exceptions=capture_link_exceptions(verified))
+        require(self.layout.binding() == binding, 'materialized root changed during verification')
+        proof.update(self.restore_atimes(verified))
+        self.supervisor.verify_stopped(binding)
+        self.rows, self.boundary = verified['entries'], verified
+        self.checkpoint('initial-materialization-verified', {**proof,
+            'capture_id': capture, 'source': self.source, 'scope': self.scope,
+            'prior_attempt_reconstructed': False, 'restored_again': False,
+            'rehearsal_accepted': False, 'activation_authorized': False})
+        self.phase = 'restored'
+        return proof
+
     def accept_rehearsal(self):
         require(self.phase == "restored", "candidate is not restored")
         self.supervisor.verify_stopped(self.layout.binding())

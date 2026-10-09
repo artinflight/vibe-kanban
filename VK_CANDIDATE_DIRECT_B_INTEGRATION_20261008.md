@@ -338,3 +338,20 @@ Candidate/cutback frontend binding, mobile DOM and live consent acceptance,
 final held writer fencing/catch-up, measured fallback headroom and promotion
 remain unrun. PR230 and PR231 are draft and unmerged. Historical recovery
 exceptions remain unchanged; these source/package receipts are not deployment.
+
+The canonical ordering correction passed all 124 candidate tests from committed
+source c15da3ff, which is pushed and independently matched to the remote branch.
+Its non-fixture tool package verifies 63 files, six candidate modules and all
+eight original PR229 pins. Full read-only verification of the retained actual
+tree is running with that package; no controller journal has been written.
+Exact PR230 Test 37932897941 subsequently completed successfully at 5ce84ee2.
+
+A separate explicit initial-materialization verifier now supports only an empty
+journal and held stopped ownership. It reauthenticates B and every actual file,
+database, metadata and root identity before recording a new verification; it
+does not reconstruct the failed attempt, restore files again or grant rehearsal
+or activation acceptance. Authenticated archived atimes are applied only after
+successful content verification. Partial/changed data, live writers, bad B
+bindings and existing journals fail closed. Four focused new regressions pass;
+this method has not yet been used on the real candidate. Existing completed-
+journal recovery remains separately restricted and unchanged.

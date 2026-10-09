@@ -459,7 +459,8 @@ class CandidateController:
     @classmethod
     def recover_initial_restore(cls, layout, scope_sha256, source_sha256, provider, supervisor,
                                 sqlite_paths, *, prior_source_sha256,
-                                fallback_artifact_sha256=None, capacity_policy_sha256=None):
+                                fallback_artifact_sha256=None, capacity_policy_sha256=None,
+                                prior_journals_sha256=None):
         """Reverify one completed, never-accepted restore under a new held owner.
 
         No interrupted operation, test edit, rehearsal, activation or fence is
@@ -475,10 +476,24 @@ class CandidateController:
                 'prior controller source must be explicitly pinned')
         require(self.layout.evidence.is_dir() and not self.layout.evidence.is_symlink(),
                 'completed restore journal missing or aliased')
-        journals = list(self.layout.evidence.iterdir())
+        journals = sorted(self.layout.evidence.iterdir())
         allowed = ('0001-restored.json', '0001-initial-materialization-verified.json')
-        require(len(journals) == 1 and journals[0].name in allowed,
+        require(journals and journals[0].name in allowed,
                 'only a single completed initial restore can be recovered; later operations remain held')
+        if len(journals) > 1:
+            require(isinstance(prior_journals_sha256, dict)
+                    and set(prior_journals_sha256) == {p.name for p in journals},
+                    'only a single completed initial restore can be recovered without exact chain pins')
+        for sequence, journal in enumerate(journals, 1):
+            if sequence > 1:
+                require(journal.name == f'{sequence:04d}-initial-owner-recovered.json',
+                        'only initial-owner recovery journals may follow a completed initial restore')
+            if prior_journals_sha256 is not None:
+                with open_regular(self.layout.evidence, journal.name) as stream:
+                    require(os.fstat(stream.fileno()).st_nlink == 1
+                            and hashlib.file_digest(stream, 'sha256').hexdigest()
+                            == prior_journals_sha256.get(journal.name),
+                            'retained journal hash pin differs')
         with open_regular(self.layout.evidence, journals[0].name) as stream:
             require(os.fstat(stream.fileno()).st_nlink == 1, 'restore journal has an external hardlink')
             previous = json.load(stream)
@@ -489,6 +504,20 @@ class CandidateController:
                     and previous.get('rehearsal_accepted') is False
                     and previous.get('activation_authorized') is False,
                     'initial materialization journal claims an unsupported operation')
+        initial = previous
+        for prior_journal, journal in zip(journals, journals[1:]):
+            with open_regular(self.layout.evidence, journal.name) as stream:
+                following = json.load(stream)
+            require(following.get('prior_journal') == prior_journal.name
+                    and following.get('prior_source') == previous.get('source')
+                    and following.get('scope') == self.scope
+                    and following.get('root_binding') == self.layout.binding()
+                    and following.get('capture_id') == initial.get('capture_id')
+                    and following.get('manifest_sha256') == initial.get('manifest_sha256')
+                    and following.get('rehearsal_accepted') is False
+                    and following.get('activation_authorized') is False,
+                    'initial-only recovery journal chain binding differs')
+            previous = following
         require(previous.get('source') == prior_source_sha256
                 and previous.get('root_binding') == self.layout.binding(),
                 'retained restore source/root binding differs')
@@ -500,10 +529,10 @@ class CandidateController:
                             recorded_link_exceptions=capture_link_exceptions(verified))
         proof.update(self.restore_atimes(verified))
         self.supervisor.verify_stopped(self.layout.binding())
-        self.rows, self.boundary, self.sequence = verified['entries'], verified, 1
+        self.rows, self.boundary, self.sequence = verified['entries'], verified, len(journals)
         self.checkpoint('initial-owner-recovered', {**proof, 'capture_id': verified['capture_id'],
             'prior_source': prior_source_sha256, 'source': self.source, 'scope': self.scope,
-            'prior_journal': journals[0].name,
+            'prior_journal': journals[-1].name, 'prior_journals_sha256': prior_journals_sha256,
             'rehearsal_accepted': False, 'activation_authorized': False})
         self.phase = 'restored'
         return self

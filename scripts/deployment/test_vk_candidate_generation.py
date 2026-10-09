@@ -1,5 +1,6 @@
 """Retained small real-filesystem regressions; adapters simulate, never launch VK."""
 import copy
+import hashlib
 from io import BytesIO
 import json
 import os
@@ -315,6 +316,74 @@ class CandidateTests(unittest.TestCase):
             with self.assertRaises(Blocked):
                 self.recover_initial()
         self.assertEqual(len(list(self.layout.evidence.iterdir())), 1)
+
+    def recovery_chain(self):
+        self.restored()
+        recovered = self.recover_initial()
+        pins = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in self.layout.evidence.iterdir()}
+        return recovered, pins
+
+    def recover_pinned_chain(self, pins):
+        return CandidateController.recover_initial_restore(self.layout, "a" * 64, "e" * 64,
+            self.provider, self.supervisor, ("home/state/state.sqlite",),
+            prior_source_sha256="b" * 64, prior_journals_sha256=pins,
+            fallback_artifact_sha256="c" * 64, capacity_policy_sha256="d" * 64)
+
+    def test_initial_only_owner_handoff_preserves_chain_without_restore_or_acceptance(self):
+        _, pins = self.recovery_chain()
+        inode = (self.layout.tree / 'home/state/note').stat().st_ino
+        recovered = self.recover_pinned_chain(pins)
+        self.assertEqual(recovered.phase, 'restored')
+        self.assertEqual(recovered.sequence, 3)
+        self.assertEqual((self.layout.tree / 'home/state/note').stat().st_ino, inode)
+        for name, expected in pins.items():
+            self.assertEqual(hashlib.sha256((self.layout.evidence / name).read_bytes()).hexdigest(), expected)
+        proof = json.loads((self.layout.evidence / '0003-initial-owner-recovered.json').read_text())
+        self.assertEqual(proof['prior_journals_sha256'], pins)
+        self.assertFalse(proof['activation_authorized'])
+        self.assertIsNone(recovered.test_receipt)
+
+    def test_initial_only_chain_rejects_missing_or_changed_pins(self):
+        _, pins = self.recovery_chain()
+        with self.assertRaisesRegex(Blocked, 'single completed'):
+            self.recover_initial()
+        bad = {**pins, '0002-initial-owner-recovered.json': 'f' * 64}
+        with self.assertRaisesRegex(Blocked, 'hash pin'):
+            self.recover_pinned_chain(bad)
+        with self.assertRaisesRegex(Blocked, 'exact chain pins'):
+            self.recover_pinned_chain({next(iter(pins)): next(iter(pins.values()))})
+
+    def test_initial_only_chain_rejects_later_operation_even_if_hash_pinned(self):
+        _, pins = self.recovery_chain()
+        p = self.layout.evidence / '0003-rehearsal.json'
+        p.write_text('{}')
+        pins[p.name] = hashlib.sha256(p.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(Blocked, 'only initial-owner'):
+            self.recover_pinned_chain(pins)
+
+    def test_initial_only_chain_rejects_unlinked_or_false_binding_even_if_pinned(self):
+        _, pins = self.recovery_chain()
+        p = self.layout.evidence / '0002-initial-owner-recovered.json'
+        before = json.loads(p.read_text())
+        for key, value in [('prior_journal', 'missing'), ('prior_source', 'f' * 64),
+                           ('scope', 'f' * 64), ('manifest_sha256', 'f' * 64),
+                           ('capture_id', 'different'), ('activation_authorized', True),
+                           ('rehearsal_accepted', True)]:
+            p.write_text(json.dumps({**before, key: value}))
+            pins[p.name] = hashlib.sha256(p.read_bytes()).hexdigest()
+            with self.assertRaisesRegex(Blocked, 'chain binding'):
+                self.recover_pinned_chain(pins)
+
+    def test_initial_only_chain_rejects_live_writer_and_changed_tree(self):
+        _, pins = self.recovery_chain()
+        self.supervisor.stopped = False
+        with self.assertRaisesRegex(Blocked, 'writer still active'):
+            self.recover_pinned_chain(pins)
+        self.supervisor.stopped = True
+        (self.layout.tree / 'home/state/note').write_bytes(b'changed test edit')
+        with self.assertRaisesRegex(Blocked, 'inventory differs'):
+            self.recover_pinned_chain(pins)
 
     def test_recover_requires_completed_restore_proof(self):
         with self.assertRaisesRegex(Blocked, 'journal missing'):

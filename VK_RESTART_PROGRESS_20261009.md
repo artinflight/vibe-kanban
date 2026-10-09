@@ -808,3 +808,14 @@ application rehearsal including Linux metadata, module/scanner/controller, conse
 frontend and usage controls; fresh final held-writer catch-up; same-root promotion
 and latest-data fallback. None of these is certified by source/fixture success.
 Historical448/145/transcript415/journal/mode/link exceptions remain unchanged.
+
+Initial-only handoff source now accepts a hash-pinned contiguous chain consisting
+solely of the initial completed journal and initial-owner-recovered journals.
+It checks every chain link, scope/root/capture/manifest, explicit latest source,
+false rehearsal/activation claims, independently stopped ownership and actual
+B/tree verification. New fixtures cover preservation, missing/changed pins,
+later operations, false links, live writers and changed data. This is not a
+reconstruction of interrupted operations or operational acceptance. Actual
+PID500933 remains unchanged; no ownership transfer has been performed.
+The59 controller tests passed; package tests correctly refused the uncommitted
+working source, so the complete suite is rerun from the immutable checkpoint.

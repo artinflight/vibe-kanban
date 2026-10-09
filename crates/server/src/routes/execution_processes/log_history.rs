@@ -38,6 +38,7 @@ pub(super) struct HistoryEntry {
 pub(super) struct HistoryPage {
     entries: Vec<HistoryEntry>,
     next_before: Option<usize>,
+    capture_error: Option<&'static str>,
 }
 
 type Entries = BTreeMap<usize, Value>;
@@ -99,6 +100,25 @@ pub(super) async fn get_log_history(
         return Err(ApiError::Conflict(
             "Running logs must use the live stream".into(),
         ));
+    }
+    // Fail visibly for a durable Codex prefix, including historical captures
+    // stopped on broadcast lag. Completion/exit zero is not capture completeness.
+    if process.status == ExecutionProcessStatus::Completed
+        && process.executor_action()?.base_executor()
+            == Some(executors::executors::BaseCodingAgent::Codex)
+        && deployment
+            .container()
+            .get_msg_store_by_id(&process.id)
+            .await
+            .is_none()
+    {
+        if let Some(reason) = capture_error_for_process(&deployment.db().pool, &process).await? {
+            return Ok(Json(ApiResponse::success(HistoryPage {
+                entries: vec![],
+                next_before: None,
+                capture_error: Some(reason),
+            })));
+        }
     }
     let limit = query.limit.unwrap_or(40).clamp(1, 200);
     let key = (process.id, process.updated_at.to_rfc3339());
@@ -170,6 +190,29 @@ pub(super) async fn get_log_history(
     ))))
 }
 
+pub(crate) async fn capture_error_for_process(
+    pool: &sqlx::SqlitePool,
+    process: &ExecutionProcess,
+) -> Result<Option<&'static str>, ApiError> {
+    let path = services::services::execution_process::execution_log_file_path_for_execution(
+        pool, process.id,
+    )
+    .await?;
+    if let Some(path) = path
+        && utils::execution_logs::validate_native_capture(
+            &path,
+            services::services::report_review::MAX_RAW_BYTES,
+        )
+        .await
+        .is_err()
+    {
+        return Ok(Some(
+            "Incomplete, damaged, or unverified execution capture; reply unavailable. Native transcript evidence must be preserved; no historical fallback or review acknowledgement.",
+        ));
+    }
+    Ok(None)
+}
+
 // Log entry indices are stable identities, including sparse indices after a
 // remove. Treat replace as upsert, as the existing streaming client does.
 fn apply_entry(
@@ -222,6 +265,7 @@ fn page(entries: &Entries, before: Option<usize>, limit: usize) -> HistoryPage {
             })
             .collect(),
         next_before,
+        capture_error: None,
     }
 }
 

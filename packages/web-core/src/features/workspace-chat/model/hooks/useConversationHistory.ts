@@ -23,6 +23,7 @@ export interface UseConversationHistoryResult {
   isLoadingHistory: boolean;
   hasMoreHistory: boolean;
   historyError: boolean;
+  historyErrorDetail: string | null;
   loadMoreHistory: () => Promise<void>;
 }
 
@@ -90,6 +91,9 @@ export const useConversationHistory = ({
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [hasMoreHistory, setHasMoreHistory] = useState(false);
   const [historyError, setHistoryError] = useState(false);
+  const [historyErrorDetail, setHistoryErrorDetail] = useState<string | null>(
+    null
+  );
   const [revision, setRevision] = useState(0);
 
   const emit = useCallback(
@@ -134,6 +138,7 @@ export const useConversationHistory = ({
     scopeRef.current = scope;
     setIsLoadingHistory(false);
     setHistoryError(false);
+    setHistoryErrorDetail(null);
     setHasMoreHistory(false);
     emit(scope, 'initial', true);
     return () => {
@@ -163,6 +168,12 @@ export const useConversationHistory = ({
         await response.json();
       if (!result.success || !Array.isArray(result.data?.entries))
         throw new Error('Invalid history page');
+      if (result.data.capture_error) {
+        setHistoryErrorDetail(
+          'Capture completeness could not be verified. Earlier messages are not a current status report.'
+        );
+        throw new Error(result.data.capture_error);
+      }
       if (
         scope.abort.signal.aborted ||
         !processesRef.current.some((p) => p.id === process.id)
@@ -190,6 +201,7 @@ export const useConversationHistory = ({
       scope.initialIds ??= new Set(processesRef.current.map((p) => p.id));
       setIsLoadingHistory(true);
       setHistoryError(false);
+      setHistoryErrorDetail(null);
       try {
         let remaining = initial ? MIN_INITIAL_ENTRIES : REMAINING_BATCH_SIZE;
         for (const process of [...processesRef.current].reverse()) {
@@ -324,6 +336,7 @@ export const useConversationHistory = ({
     loadBatch,
     revision,
     historyError,
+    historyErrorDetail,
   ]);
 
   const loadMoreHistory = useCallback(async () => {
@@ -347,6 +360,7 @@ export const useConversationHistory = ({
     isLoadingHistory,
     hasMoreHistory,
     historyError,
+    historyErrorDetail,
     loadMoreHistory,
   };
 };

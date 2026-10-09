@@ -261,6 +261,51 @@ pub async fn append_log_message(session_id: Uuid, execution_id: Uuid, msg: &LogM
     Ok(())
 }
 
+/// EOF is valid only after the raw pipe AND execution metadata have drained.
+/// UI broadcast lag cannot remove raw bytes from the dedicated bounded channel.
+fn merge_capture_streams(
+    raw: BoxStream<'static, std::io::Result<LogMsg>>,
+    metadata: BoxStream<'static, std::io::Result<LogMsg>>,
+) -> BoxStream<'static, std::io::Result<LogMsg>> {
+    futures::stream::unfold(
+        (raw, metadata, false, false),
+        |(mut raw, mut metadata, mut raw_done, mut meta_done)| async move {
+            loop {
+                if raw_done && meta_done {
+                    return None;
+                }
+                let (is_raw, next) = tokio::select! {
+                    msg = raw.next(), if !raw_done => (true, msg),
+                    msg = metadata.next(), if !meta_done => (false, msg),
+                };
+                match next {
+                    Some(Ok(LogMsg::Finished)) => {
+                        if is_raw {
+                            raw_done = true;
+                        } else {
+                            meta_done = true;
+                        }
+                        if raw_done && meta_done {
+                            return Some((Ok(LogMsg::Finished), (raw, metadata, true, true)));
+                        }
+                    }
+                    None => {
+                        // Disconnection is NOT successful producer closure.
+                        return Some((
+                            Err(std::io::Error::other(
+                                "Raw capture or metadata closed without Finished",
+                            )),
+                            (raw, metadata, true, true),
+                        ));
+                    }
+                    Some(msg) => return Some((msg, (raw, metadata, raw_done, meta_done))),
+                }
+            }
+        },
+    )
+    .boxed()
+}
+
 pub fn spawn_stream_raw_logs_to_storage(
     msg_stores: Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>>,
     db: DBService,
@@ -268,6 +313,16 @@ pub fn spawn_stream_raw_logs_to_storage(
     session_id: Uuid,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
+        let store = {
+            let map = msg_stores.read().await;
+            map.get(&execution_id).cloned()
+        };
+
+        let durable = store.as_ref().and_then(|s| s.take_durable_capture());
+        if store.as_ref().is_some_and(|s| s.has_durable_capture()) && durable.is_none() {
+            tracing::error!("Raw capture already claimed for execution {}", execution_id);
+            return;
+        }
         let mut log_writer =
             match ExecutionLogWriter::new_for_execution(session_id, execution_id).await {
                 Ok(w) => w,
@@ -281,14 +336,26 @@ pub fn spawn_stream_raw_logs_to_storage(
                 }
             };
 
-        let store = {
-            let map = msg_stores.read().await;
-            map.get(&execution_id).cloned()
-        };
-
         if let Some(store) = store {
             let mut review_log_valid = true;
-            let mut stream = store.history_plus_stream_strict();
+            let mut stream: BoxStream<'static, std::io::Result<LogMsg>> = if let Some(raw) = durable
+            {
+                // Raw bytes have one lossless writer. Normalized metadata remains
+                // a separate UI stream and never substitutes for capture evidence.
+                let metadata = store
+                    .history_plus_stream()
+                    .filter_map(|msg| async move {
+                        match msg {
+                            Ok(LogMsg::Stdout(_) | LogMsg::Stderr(_) | LogMsg::Ready) => None,
+                            other => Some(other),
+                        }
+                    })
+                    .boxed();
+                merge_capture_streams(raw.boxed(), metadata)
+            } else {
+                // Historical/disposable stores retain the strict, loss-aware path.
+                store.history_plus_stream_strict()
+            };
 
             while let Some(next) = stream.next().await {
                 let msg = match next {
@@ -692,7 +759,7 @@ async fn read_execution_logs_for_execution(
     }
 }
 
-async fn execution_log_file_path_for_execution(
+pub async fn execution_log_file_path_for_execution(
     pool: &SqlitePool,
     execution_id: Uuid,
 ) -> Result<Option<std::path::PathBuf>> {

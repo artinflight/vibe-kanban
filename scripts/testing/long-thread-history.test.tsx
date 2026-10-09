@@ -342,3 +342,32 @@ test("an initially empty process list hydrates only the newest page when history
     await h.close();
   }
 });
+
+test("incomplete capture is visible and does not load older status as current", async () => {
+  const h = harness(
+    [process("old"), process("new")],
+    () =>
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            entries: [],
+            next_before: null,
+            capture_error: "Incomplete native capture",
+          },
+        }),
+        { headers: { "content-type": "application/json" } },
+      ),
+  );
+  try {
+    await h.mount();
+    assert.equal(h.result.historyError, true);
+    assert.equal(h.entries.length, 0);
+    assert.deepEqual(
+      h.calls.map((x) => x.id),
+      ["new"],
+    );
+  } finally {
+    await h.close();
+  }
+});

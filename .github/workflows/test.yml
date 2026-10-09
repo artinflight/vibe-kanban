@@ -7,7 +7,7 @@ on:
       - main
     paths-ignore:
       - .github/workflows/**
-      - '!.github/workflows/test.yml'
+      - "!.github/workflows/test.yml"
   push:
     branches:
       - staging
@@ -285,6 +285,14 @@ jobs:
             "node scripts/check-unused-i18n-keys.mjs" \
             "./scripts/check-legacy-frontend-paths.sh"
 
+      - name: Test incomplete-capture history presentation
+        env:
+          VK_TEST_OUTPUT: ${{ runner.temp }}/vk-history-tests
+          TEST_RENDERER_PATH: ${{ runner.temp }}/vk-history-tools/node_modules/react-test-renderer
+        run: |
+          npm install --prefix "$RUNNER_TEMP/vk-history-tools" --no-package-lock --ignore-scripts react-test-renderer@19.1.0
+          node scripts/testing/run-long-thread-history-tests.mjs
+
       - name: Test offline MCP approval UI contract
         env:
           VK_TEST_OUTPUT: ${{ runner.temp }}/vk-mcp-approval-tests
@@ -305,8 +313,8 @@ jobs:
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           cache-key: backend-schema-checks-${{ runner.os }}-${{ runner.arch }}-${{ env.RUNNER_LABEL }}
-          setup-node: 'true'
-          setup-sqlx-cli: 'true'
+          setup-node: "true"
+          setup-sqlx-cli: "true"
 
       - name: Check generated types
         run: npm run generate-types:check
@@ -341,8 +349,8 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
           cache-key: backend-remote-checks-${{ runner.os }}-${{ runner.arch }}-${{ env.RUNNER_LABEL }}
-          setup-node: 'true'
-          setup-sqlx-cli: 'true'
+          setup-node: "true"
+          setup-sqlx-cli: "true"
 
       - name: Setup SSH Agent for private dependencies
         if: ${{ env.VK_PRIVATE_DEPLOY_KEY != '' }}

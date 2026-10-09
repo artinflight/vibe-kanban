@@ -1767,12 +1767,6 @@ pub trait ContainerService {
             }
         }
 
-        execution_process::spawn_stream_raw_logs_to_storage(
-            self.msg_stores().clone(),
-            self.db().clone(),
-            execution_process.id,
-            session.id,
-        );
         Ok(execution_process)
     }
 

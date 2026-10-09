@@ -4,6 +4,7 @@ import type { PatchTypeWithKey } from '@/shared/hooks/useConversationHistory/typ
 export interface HistoryPage {
   entries: { index: number; entry: PatchType }[];
   next_before: number | null;
+  capture_error?: string | null;
 }
 
 /** Preserve absolute log indices so prepending a page never renumbers rows. */
@@ -12,6 +13,7 @@ export function mergeHistoryPage(
   existing: PatchTypeWithKey[],
   page: HistoryPage
 ): PatchTypeWithKey[] {
+  if (page.capture_error) throw new Error(page.capture_error);
   const entries = new Map(existing.map((entry) => [entry.patchKey, entry]));
   for (const { index, entry } of page.entries) {
     const patchKey = `${processId}:${index}`;

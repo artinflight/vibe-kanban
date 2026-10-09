@@ -1,11 +1,14 @@
 use std::{
     collections::VecDeque,
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex, RwLock},
 };
 
 use futures::{StreamExt, future};
-use tokio::{sync::broadcast, task::JoinHandle};
-use tokio_stream::wrappers::{BroadcastStream, errors::BroadcastStreamRecvError};
+use tokio::{
+    sync::{broadcast, mpsc},
+    task::JoinHandle,
+};
+use tokio_stream::wrappers::{BroadcastStream, ReceiverStream, errors::BroadcastStreamRecvError};
 
 use crate::{log_msg::LogMsg, stream_lines::LinesStreamExt};
 
@@ -31,6 +34,8 @@ struct Inner {
 pub struct MsgStore {
     inner: RwLock<Inner>,
     sender: broadcast::Sender<LogMsg>,
+    durable_sender: Option<mpsc::Sender<std::io::Result<LogMsg>>>,
+    durable_receiver: Mutex<Option<mpsc::Receiver<std::io::Result<LogMsg>>>>,
 }
 
 impl Default for MsgStore {
@@ -54,7 +59,32 @@ impl MsgStore {
                 history_evicted: false,
             }),
             sender,
+            durable_sender: None,
+            durable_receiver: Mutex::new(None),
         }
+    }
+
+    /// One bounded raw capture consumer, independent of the lossy UI broadcast.
+    /// The producer awaits capacity before publishing; slow storage backpressures
+    /// the pipe instead of dropping a suffix of a large thread/resume response.
+    pub fn with_durable_capture(history_bytes: usize, ui_capacity: usize, capacity: usize) -> Self {
+        let mut store = Self::with_limits(history_bytes, ui_capacity);
+        let (tx, rx) = mpsc::channel(capacity.max(1));
+        store.durable_sender = Some(tx);
+        store.durable_receiver = Mutex::new(Some(rx));
+        store
+    }
+
+    pub fn has_durable_capture(&self) -> bool {
+        self.durable_sender.is_some()
+    }
+
+    pub fn take_durable_capture(&self) -> Option<ReceiverStream<std::io::Result<LogMsg>>> {
+        self.durable_receiver
+            .lock()
+            .unwrap()
+            .take()
+            .map(ReceiverStream::new)
     }
 
     pub fn push(&self, msg: LogMsg) {
@@ -233,9 +263,30 @@ impl MsgStore {
 
             while let Some(next) = stream.next().await {
                 match next {
-                    Ok(msg) => self.push(msg),
-                    Err(e) => self.push(LogMsg::Stderr(format!("stream error: {e}"))),
+                    Ok(msg) => {
+                        if let Some(tx) = &self.durable_sender
+                            && tx.send(Ok(msg.clone())).await.is_err()
+                        {
+                            self.push(LogMsg::Stderr("Durable raw capture unavailable".into()));
+                            return;
+                        }
+                        self.push(msg);
+                    }
+                    Err(e) => {
+                        if let Some(tx) = &self.durable_sender {
+                            let _ = tx
+                                .send(Err(std::io::Error::other(format!(
+                                    "Raw source failed: {e}"
+                                ))))
+                                .await;
+                        }
+                        self.push(LogMsg::Stderr(format!("stream error: {e}")));
+                        return;
+                    }
                 }
+            }
+            if let Some(tx) = &self.durable_sender {
+                let _ = tx.send(Ok(LogMsg::Finished)).await;
             }
         })
     }
@@ -308,5 +359,89 @@ mod review_tests {
         assert!(store.get_history_strict().is_err());
         // Recovery readers still retain the surviving history.
         assert!(!store.get_history().is_empty());
+    }
+}
+
+#[cfg(test)]
+mod durable_capture_tests {
+    use super::*;
+    #[tokio::test]
+    async fn slow_capture_survives_ui_lag_and_eviction_and_delayed_subscription() {
+        let store = Arc::new(MsgStore::with_durable_capture(64, 2, 2));
+        let mut capture = store.take_durable_capture().unwrap();
+        assert!(store.take_durable_capture().is_none(), "one writer only");
+        let mut ui = store.history_plus_stream_strict();
+        let mut expected = vec![LogMsg::Stdout("resume prefix".into())];
+        expected.extend((0..5000).map(|_| LogMsg::Stdout("x".repeat(4096))));
+        expected.push(LogMsg::Stdout("assistant final — ✓\n".into()));
+        let source = expected.clone();
+        let producer = store.clone().spawn_forwarder(futures::stream::iter(
+            source.into_iter().map(Ok::<_, std::io::Error>),
+        ));
+        tokio::task::yield_now().await;
+        assert!(
+            !producer.is_finished(),
+            "bounded queue backpressures producer"
+        );
+        let mut actual = vec![];
+        while let Some(msg) = capture.next().await {
+            match msg.unwrap() {
+                LogMsg::Finished => break,
+                msg => actual.push(msg),
+            }
+            tokio::task::yield_now().await;
+        }
+        producer.await.unwrap();
+        assert_eq!(
+            serde_json::to_string(&actual).unwrap(),
+            serde_json::to_string(&expected).unwrap()
+        );
+        assert!(
+            store.get_history_strict().is_err(),
+            "UI eviction is not a raw loss"
+        );
+        assert!(
+            ui.next().await.unwrap().is_err(),
+            "exercise actual broadcast lag"
+        );
+    }
+    #[tokio::test]
+    async fn source_error_is_not_successful_closure() {
+        let store = Arc::new(MsgStore::with_durable_capture(1024, 2, 2));
+        let mut capture = store.take_durable_capture().unwrap();
+        let producer = store.clone().spawn_forwarder(futures::stream::iter([
+            Ok(LogMsg::Stdout("prefix".into())),
+            Err(std::io::Error::other("source read failed")),
+        ]));
+        assert!(matches!(
+            capture.next().await.unwrap().unwrap(),
+            LogMsg::Stdout(_)
+        ));
+        assert!(capture.next().await.unwrap().is_err());
+        producer.await.unwrap();
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(5), capture.next())
+                .await
+                .is_err(),
+            "no invented Finished"
+        );
+    }
+    #[tokio::test]
+    async fn disconnected_writer_stops_producer_without_claiming_closure() {
+        let store = Arc::new(MsgStore::with_durable_capture(1024, 2, 1));
+        drop(store.take_durable_capture().unwrap());
+        let producer = store.clone().spawn_forwarder(futures::stream::iter([Ok::<
+            _,
+            std::io::Error,
+        >(
+            LogMsg::Stdout("must capture".into()),
+        )]));
+        producer.await.unwrap();
+        assert!(
+            !store
+                .get_history()
+                .iter()
+                .any(|m| matches!(m, LogMsg::Finished))
+        );
     }
 }

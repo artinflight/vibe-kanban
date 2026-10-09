@@ -524,6 +524,17 @@ async fn fixture_history(
         .await
         .unwrap()
         .unwrap();
+    if let Some(reason) =
+        crate::routes::execution_processes::log_history::capture_error_for_process(
+            &c.pool, &process,
+        )
+        .await
+        .unwrap()
+    {
+        return Json(ApiResponse::success(
+            json!({"entries":[],"next_before":null,"capture_error":reason}),
+        ));
+    }
     let messages =
         services::services::report_review::replay_review_log(&c.pool, &process, &asset_dir())
             .await
@@ -628,4 +639,55 @@ async fn installed_connector_tool_receipt_to_real_http_conditional_mark_readback
     assert!(!app.unread().await);
     job.abort();
     job.await.unwrap_err();
+}
+
+#[tokio::test]
+async fn incomplete_capture_is_explicit_over_http_and_cannot_review_or_backfill() {
+    let app = App::new().await;
+    let path = utils::execution_logs::process_log_file_path(app.session, app.execution);
+    // Simulate the observed mid-thread/resume prefix in this disposable file.
+    let original = tokio::fs::read(&path).await.unwrap();
+    let partial = utils::log_msg::LogMsg::Stdout("{\"id\":3,\"result\":{\"thread\":".into());
+    tokio::fs::write(&path, serde_json::to_string(&partial).unwrap() + "\n")
+        .await
+        .unwrap();
+    let router = Router::new()
+        .route("/history/{id}", get(fixture_history))
+        .with_state(app.context.clone());
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!(
+        "http://{}/history/{}",
+        listener.local_addr().unwrap(),
+        app.execution
+    );
+    let job = tokio::spawn(async move {
+        axum::serve(listener, router).await.unwrap();
+    });
+    let result: Value = reqwest::get(&url).await.unwrap().json().await.unwrap();
+    assert!(
+        result["data"]["capture_error"]
+            .as_str()
+            .unwrap()
+            .contains("Incomplete")
+    );
+    assert_eq!(result["data"]["entries"], json!([]));
+    let (review_url, review_job) = app.serve().await;
+    let (status, _) = post_receipt(&review_url, &app.receipt("voice")).await;
+    assert_eq!(status, 409, "No valid closure/hash after damaged capture");
+    assert!(app.unread().await);
+    // Only this disposable fixture is restored from its exact original bytes.
+    // No native-transcript synthesis and no writer fence is fabricated.
+    tokio::fs::write(&path, &original).await.unwrap();
+    let result: Value = reqwest::get(&url).await.unwrap().json().await.unwrap();
+    assert!(result["data"].get("capture_error").is_none());
+    assert!(
+        result["data"]["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|entry| entry["entry"]["content"]["entry_type"]["type"] == "assistant_message")
+    );
+    assert!(app.unread().await, "Reading recovery is not delivery");
+    job.abort();
+    review_job.abort();
 }

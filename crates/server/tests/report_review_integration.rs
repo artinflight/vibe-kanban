@@ -123,6 +123,10 @@ async fn complete_untruncated_history_preserves_report_before_finished() {
 }
 
 async fn writer_fixture(store: MsgStore) -> (SqlitePool, Uuid, Uuid) {
+    writer_fixture_arc(Arc::new(store)).await
+}
+
+async fn writer_fixture_arc(store: Arc<MsgStore>) -> (SqlitePool, Uuid, Uuid) {
     // Debug asset_dir is this task's isolated source/dev_assets. Never run the
     // real deployment constructor or any agent/cleanup fixture.
     review_storage_root::assert_fixture_root();
@@ -134,7 +138,7 @@ async fn writer_fixture(store: MsgStore) -> (SqlitePool, Uuid, Uuid) {
         .execute(&pool)
         .await
         .unwrap();
-    let stores = Arc::new(RwLock::new(HashMap::from([(execution, Arc::new(store))])));
+    let stores = Arc::new(RwLock::new(HashMap::from([(execution, store)])));
     let writer = services::services::execution_process::spawn_stream_raw_logs_to_storage(
         stores,
         db::DBService { pool: pool.clone() },
@@ -188,4 +192,97 @@ async fn actual_storage_writer_finalizes_complete_flushed_report() {
             .unwrap()
             .contains("complete report bytes")
     );
+}
+
+#[tokio::test]
+async fn real_storage_writer_captures_large_resume_and_final_despite_ui_lag() {
+    let store = Arc::new(MsgStore::with_durable_capture(8 * 1024 * 1024, 2, 8));
+    let resume = serde_json::json!({"id":3,"result":{"history":"x".repeat(20 * 1024 * 1024)}})
+        .to_string()
+        + "\n";
+    let final_event = serde_json::json!({"method":"item/completed","params":{"threadId":"t","turnId":"u","item":{"type":"agentMessage","id":"final","text":"actual final survives — ✓","phase":"final_answer","memoryCitation":null}}}).to_string() + "\n";
+    let expected = resume + &final_event;
+    let chunks: Vec<_> = expected
+        .as_bytes()
+        .chunks(4096)
+        .map(|c| Ok::<_, std::io::Error>(axum::body::Bytes::copy_from_slice(c)))
+        .collect();
+    let source = store
+        .clone()
+        .spawn_forwarder(utils::execution_logs::decode_stdout(
+            futures_util::stream::iter(chunks),
+        ));
+    // Metadata Finished can arrive before the blocked raw producer drains.
+    // It must never terminate the capture of the queued suffix/final.
+    store.push_finished();
+    let (pool, execution, session) = writer_fixture_arc(store.clone()).await;
+    source.await.unwrap();
+    let path = utils::execution_logs::process_log_file_path(session, execution);
+    let (bytes, messages) =
+        utils::execution_logs::read_execution_log_strict(&path, 64 * 1024 * 1024)
+            .await
+            .unwrap();
+    let captured: String = messages
+        .into_iter()
+        .filter_map(|m| match m {
+            LogMsg::Stdout(s) => Some(s),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(captured, expected);
+    assert!(
+        store.get_history_strict().is_err(),
+        "force UI eviction independent of raw capture"
+    );
+    let proof: (i64, String) = sqlx::query_as(
+        "SELECT raw_bytes,raw_sha256 FROM workspace_review_log_finalized WHERE execution_id=?",
+    )
+    .bind(execution)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    use sha2::{Digest, Sha256};
+    assert_eq!(proof.0, bytes.len() as i64);
+    assert_eq!(proof.1, format!("{:x}", Sha256::digest(&bytes)));
+    utils::execution_logs::validate_native_capture(&path, 64 * 1024 * 1024)
+        .await
+        .unwrap();
+    // Independent replay after producer/writer exit, as on restart.
+    let (_, reopened) = utils::execution_logs::read_execution_log_strict(&path, 64 * 1024 * 1024)
+        .await
+        .unwrap();
+    let replay = services::services::report_review::normalize_review_log(
+        reopened,
+        std::path::Path::new("/isolated/fixture"),
+    )
+    .await
+    .unwrap();
+    assert!(
+        serde_json::to_string(&replay)
+            .unwrap()
+            .contains("actual final survives")
+    );
+}
+
+#[tokio::test]
+async fn interrupted_writer_valid_json_prefix_is_explicit_after_restart() {
+    review_storage_root::assert_fixture_root();
+    let path =
+        utils::assets::asset_dir().join(format!("capture-interrupted-{}.jsonl", Uuid::new_v4()));
+    let mut writer = utils::execution_logs::ExecutionLogWriter::new(path.clone())
+        .await
+        .unwrap();
+    let record = LogMsg::Stdout("{\"id\":1,\"result\":{}}\n".into());
+    writer
+        .append_jsonl_line(&(serde_json::to_string(&record).unwrap() + "\n"))
+        .await
+        .unwrap();
+    drop(writer);
+    assert!(
+        utils::execution_logs::validate_native_capture(&path, 1024)
+            .await
+            .is_err(),
+        "Valid prefix is not successful closure after restart"
+    );
+    assert!(path.with_extension("capture.json").exists());
 }

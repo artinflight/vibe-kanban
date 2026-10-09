@@ -1,3 +1,12 @@
+## October 9 isolated reply-capture repair — not deployed
+
+Read VK_REPLY_CAPTURE_20261009.md. This scoped candidate fixes loss of durable
+assistant finals under large resume/broadcast bursts and explicitly flags newer
+unavailable history rather than substituting old status. Native evidence, exact
+review safeguards and consent policy remain intact. Local builds stopped for SSD
+capacity coordination; hosted CI and Root/Dev/Staging review are required before
+activation. No production restart, deployment, badge clear or T18 redispatch.
+
 ## October 8 authorized safe restart — preparing, not ready
 
 Read VK_SAFE_RESTART_PREPARATION_20261008.md. Latest operator authority permits

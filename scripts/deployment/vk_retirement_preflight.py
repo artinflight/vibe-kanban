@@ -75,7 +75,7 @@ def validate_receipt(receipt, request, status, expected_target, expected_lease, 
 
 
 def at_held_boundary(*, lease, server, status, expected_target, expected_lease,
-                     installation, prepare, verify_gates, consume, checker=privileged_check):
+                     installation, prepare, verify_gates, consume):
     """Finish preparation, then obtain and consume ONE live receipt while held.
 
     consume is the owner's existing unprivileged boundary continuation. It must
@@ -107,7 +107,7 @@ def at_held_boundary(*, lease, server, status, expected_target, expected_lease,
     worker.start()
     try:
         monotonic_start = time.monotonic_ns()
-        receipt = checker(request)
+        receipt = privileged_check(request)
         require(not failures)
         # A backward wall-clock adjustment cannot turn an old receipt fresh.
         require(0 <= time.monotonic_ns() - monotonic_start <= 600_000_000_000)

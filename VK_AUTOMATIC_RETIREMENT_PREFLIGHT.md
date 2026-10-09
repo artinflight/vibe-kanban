@@ -190,7 +190,7 @@ Artifact SHA-256 pins:
 | --- | --- |
 | Checker | `0489bf6c2451c2c8022eea347e4443b095d42b21f12d70336d1c158c5a0147e4` |
 | Proposed sudoers rule | `42299a5e496e4abb281da0224ae2069e7cc35c92e7424290cbd3384d0d103375` |
-| Unprivileged adapter | `56b6fe4756add1a6f60e5589c6ff0650d758116ad7b6eb7a1d5f749a49fc2300` |
+| Unprivileged adapter | `d11dd0bb6d9c3ae95c3dcd3fac75067fe19aa879a8cbe2ad3cff7681b6f2c1f5` |
 | Baseline policy | `bfd27d6ecb4507805490e333c3ea55b4a3c4061268f240f48ff83d4d28dba268` |
 | `/usr/bin/python3.12` | `e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f` |
 

@@ -254,11 +254,12 @@ class BoundaryTests(unittest.TestCase):
         with PreparationLease(self.lease_path, (info.st_dev, info.st_ino)) as lease:
             server = PreparationStatus(self.base / 's', lease, self.status)
             try:
-                return client.at_held_boundary(lease=lease, server=server, status=self.status,
+                with patch.object(client, 'privileged_check', checker or self.receipt):
+                    return client.at_held_boundary(lease=lease, server=server, status=self.status,
                     expected_target=self.target, expected_lease=self.expected_lease, installation=self.installation,
                     prepare=lambda: self.events.append('prepare'),
                     verify_gates=gates or (lambda: {key: True for key in client.GATES}),
-                    consume=lambda proof: self.events.append('consume'), checker=checker or self.receipt)
+                    consume=lambda proof: self.events.append('consume'))
             finally:
                 server.close()
 

@@ -1,0 +1,168 @@
+{
+  "Staging_driver_edited": false,
+  "Staging_roots_changed": false,
+  "approval_status": "NO privilege installation/security action approval; parent obtains exact bundle approval and one-time secure admin authentication separately.",
+  "artifact_sha256": {
+    "scripts/deployment/security/historical-archive-policy.proposal.json": "1ba94de59483adc91596b4b1d10f9a0e796841da8ad8810fdb20e0033aec45a5",
+    "scripts/deployment/security/inspection-two-profile-install-plan.json": "fc58f9ae917bc7506f8f7a32457111e6d63eb5cf7b9d5979e740850ef20f8519",
+    "scripts/deployment/security/retirement-policy.proposal.json": "3eee0ef7cd50699468a36503ef52fb38c8b095fda6ce00a1b5a2cd490a1cfaa8",
+    "scripts/deployment/security/vk-inspection-two-profiles.sudoers.proposal": "cc0147a575998f5bf0bbb13b0145fb6577c404aa950b0fa9526de83457b893d3",
+    "scripts/deployment/security/vk-retirement-preflight.sudoers.proposal": "6d4436c2329c7d88ac01df3b61b1332237d97d04bc193c5dc48e3a8be162d5bd",
+    "scripts/deployment/security/vk_historical_archive_check.py": "4b1b4f607f6be9059e060d84e1b062f97bb535b11d776cc748969b647651f481",
+    "scripts/deployment/security/vk_historical_inspect_launcher.c": "de3234ba52df1b3855dc136b2eaf6bee59bdd6a39ef352d36f772aea638f1dd9",
+    "scripts/deployment/security/vk_process_inspect_launcher.c": "6491de58830a9006ecf5045315509f15767faf80d14b9fd89c10801d6cceda53",
+    "scripts/deployment/security/vk_retirement_check.py": "6e898eeb21d04cfbf4d94e5939eb20b27d89f069ee99b8b021d63893b4263d63",
+    "scripts/deployment/test_vk_historical_archive_preflight.py": "701901fc69eb11b12020413a0cfa362cea627a46ddf69667fe597e1446ac643e",
+    "scripts/deployment/test_vk_retirement_preflight.py": "144657cdf7a83f1d681762ddde8464168cfe9da42b19f72d93a5f589e90524f3",
+    "scripts/deployment/vk_historical_archive_preflight.py": "929d493d4505d8e5db18a945b724b74736c8b2f528cea65b2eba64b9bd6dc9de",
+    "scripts/deployment/vk_retirement_preflight.py": "dd1ce57909e264d97e5eed86412dbdf6aca3e93bad9d0caee4db451fcf1670e9"
+  },
+  "at": "2026-10-09T17:18:17.628110+00:00",
+  "authentication": "Role-authenticated live manifest via private owner endpoint/kernel FLOCK/peer PID/UID/start/nonce; no new signer and no independent human approval inferred from a hash or same-UID agent review.",
+  "baseline_limits": {
+    "Staging_adoption": "Not run; existing Staging retains ownership and approved unprivileged path.",
+    "cargo_workspace_tests": "Not run: unrelated rebuilding excluded.",
+    "check": "Attempted; legacy path guard passed, then TypeScript missing.",
+    "format": "Attempted; Rust formatting passed, then Prettier missing.",
+    "installed_root_acceptance": "Not run; no privilege installation authorized.",
+    "lint": "Attempted; ESLint missing."
+  },
+  "candidate_regressions": {
+    "clean_source_guard_not_bypassed": true,
+    "command": "python3 -B -m unittest discover -s scripts/deployment -p 'test_vk_candidate*.py'",
+    "count": 142,
+    "passed": true,
+    "source_commit": "4055a1b1e65bbd38fe7d586c65faa04de45cf3af"
+  },
+  "cutover_performed": false,
+  "diff_check_passed": true,
+  "duplicate_execution_started": false,
+  "eight_reviewed_PR229_source_hashes_unchanged": true,
+  "existing_LXD_boundary": "Existing admin group/socket is separate host privilege, never used/contacted as installation or sudo bypass. Broker does not control all mcp account activity.",
+  "fallback_policy": "Preserved until human QA.",
+  "focused_regressions": {
+    "commands": [
+      "python3 -B -S -m unittest discover -s scripts/deployment -p 'test_vk_retirement_preflight.py'",
+      "python3 -B -S -m unittest discover -s scripts/deployment -p 'test_vk_historical_archive_preflight.py'"
+    ],
+    "count": 54,
+    "historical_independent_negatives": [
+      "policy path/inode/hash/backup/approval replacement",
+      "unknown profile and arbitrary root request paths",
+      "target traversal and wrong identity",
+      "leaf and parent symlink",
+      "truthful hardlink identity",
+      "substitution during scan aborts before continuation",
+      "denied namespace visibility",
+      "denied protected thread visibility",
+      "wrong PID/start/source/nonce and real peer lease binding",
+      "stale/replayed output and wrong installed library hash",
+      "unproven owner target FD FLOCK guard",
+      "user-owned installed code input",
+      "delayed inventory dual-clock expiry",
+      "validator delay before immediate continuation dual-clock expiry"
+    ],
+    "historical_profile_count": 17,
+    "limitations": "Root ownership/host visibility/protected scan are explicitly modeled or substituted in fixtures. No root entrypoint execution, sudo, installed acceptance or operational integration is claimed.",
+    "passed": true,
+    "real_kernel_coverage": [
+      "Unix SO_PEERCRED/PID start and kernel FLOCK owner authentication",
+      "actual preparation and gate children before final checker and process seal; post-response SSH/subprocess attempt denied",
+      "seccomp TSYNC fork/exec/new-thread denial"
+    ]
+  },
+  "historical_binding": {
+    "archive_content_rehashed_this_turn": false,
+    "current_archive_moved": false,
+    "metadata_matches_read_only_observation": true,
+    "policy": {
+      "abi": 1,
+      "approval_reference": "Sentinel_3c972054e9688191900e38417fd55e00",
+      "backup_manifest_sha256": "27e8d486516ab818eee8376178badc9df3a5ddb6f42c6639c8021e5c7b893a2f",
+      "caller_uid": 1000,
+      "control_scope": {
+        "anchor_inode": null,
+        "filesystem_uuid": "26e4cac1-f2cf-485b-b1bc-d1be197a747e",
+        "path": "/mnt/vk-storage/vk-process-inspection-managed-v1"
+      },
+      "profile": "historical-archive-v1",
+      "target": {
+        "identity": {
+          "ctime_ns": 1791409456129506845,
+          "dev": 2065,
+          "gid": 1000,
+          "ino": 7340415,
+          "mode": 33152,
+          "mtime_ns": 1791409456129506845,
+          "nlink": 1,
+          "size": 23441521918,
+          "uid": 1000
+        },
+        "path": "/mnt/vk-storage/vk-combined-preparation-20261007/backups/checkpoint-/db5bb16b095241319a79e02e5fc8cdf6/checkpoint--db5bb16b095241319a79e02e5fc8cdf6.tar.zst",
+        "sha256": "e994567edaacc75d8aa9a3497b8384a8dbacec462854a3f7f8c5760e1a9a0ce4"
+      }
+    },
+    "separate_profile_requires_new_exact_installation_approval": true,
+    "sha256_origin": "Existing approved archive SHA; root never content-hashes the artifact. Actual unprivileged adapter requires matching SHA before final root request."
+  },
+  "implementation_commit": "4055a1b1e65bbd38fe7d586c65faa04de45cf3af",
+  "installation_plan": "scripts/deployment/security/inspection-two-profile-install-plan.json",
+  "launchers": {
+    "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "flags": [
+      "-std=c11",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wl,--build-id=none"
+    ],
+    "historical_elf_sha256": "8ee7e17dfe7bbbbdbe186f48e89eab33e3f123a16a930847889c7bf062f4a6aa",
+    "managed_elf_sha256": "33b47e5f890040bb8821a6a458dd1c4062e34c97d3e644cccd233e728051e12a",
+    "source_only_unprivileged_build_on_mounted_SSD": true,
+    "unprivileged_historical_noarg_and_arbitrary_args_rejected": true
+  },
+  "namespace_unchanged_paths": [
+    "scripts/deployment/security/vk_retirement_check.py",
+    "scripts/deployment/security/vk_process_inspect_launcher.c",
+    "scripts/deployment/security/retirement-policy.proposal.json",
+    "scripts/deployment/security/vk-retirement-preflight.sudoers.proposal"
+  ],
+  "new_backup_created": false,
+  "ops_check_passed": true,
+  "owner_changed": false,
+  "plan_validated": "All source digests, seven file destinations, two exact no-argument grants, fresh null-inode enrollment and grant count match.",
+  "policy_enrollment": {
+    "allowed_enrollment_only": [
+      "managed.scopes.managed-artifacts-v1.anchor_inode",
+      "historical.control_scope.anchor_inode"
+    ],
+    "final_installed_policy_hashes": null,
+    "root_owned_anchor_created": false,
+    "same_fresh_anchor_inode": null
+  },
+  "postscan_policy": "All preparation/SSH/hashes/gates before final held check. Only bounded in-process metadata/owner/lease/receipt/witness then immediate continuation. Dual-clock freshness before/after witness and immediately before continuation.",
+  "pr": "https://github.com/artinflight/vibe-kanban/pull/234",
+  "privilege_installed": false,
+  "privileged_namespace_files_byte_unchanged_from": "20f751aac348f05e15ac45d38b66f1906849900f",
+  "residual_TOCTOU": "Already-existing unrelated process can open/exec after its scan. No atomic global fence claimed or added as prerequisite.",
+  "retirement_performed": false,
+  "rollback": {
+    "both_adapters_admission_disabled": "adoption_enabled=False default",
+    "grant_file_only": "/etc/sudoers.d/vk-process-inspection-v1",
+    "installed_rollback_tested": false,
+    "pending": "Disarm/drain via existing owner first; removal/admission switch cannot retract existing receipt or begun action.",
+    "preserve": "Both helpers/policies, artifacts/control roots, receipts/evidence, B backups, unrelated grants and fallback until human QA.",
+    "recursive_cleanup": false,
+    "source_level_common_boundary_rollback_regressions_passed": true,
+    "withdraws_both_fixed_inspection_commands": true
+  },
+  "root_checker_executed": false,
+  "schema": 1,
+  "scope": "SOURCE-ONLY two-profile metadata-only protected process inspection",
+  "security_changed": false,
+  "service_interrupted": false,
+  "sudo_denial_retried": false,
+  "sudo_invoked": false,
+  "sudoers_syntax": "Unprivileged visudo -cf of two-profile proposal parsed OK; effective installed matching NOT tested."
+}

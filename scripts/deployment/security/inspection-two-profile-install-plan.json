@@ -1,0 +1,268 @@
+{
+  "admin_bootstrap": {
+    "independent_existing_boundary": "mcp already belongs to lxd and can reach the admin socket; this bundle neither uses nor controls that independent host privilege. Same-UID review is advisory, not enforcement. Vibe UI approval alone is not signed root authorization.",
+    "prohibited": [
+      "retry denied sudo",
+      "LXD socket or group escalation",
+      "credential extraction",
+      "password/key changes",
+      "unrelated account use",
+      "unrestricted sudo grant"
+    ],
+    "route": "Parent Desktop readiness task supplies one-time secure administrator authentication on MCP. No established agent-usable admin channel was discovered. No owner command request in this task."
+  },
+  "build": {
+    "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "flags": [
+      "-std=c11",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wl,--build-id=none"
+    ],
+    "historical_launcher_sha256": "8ee7e17dfe7bbbbdbe186f48e89eab33e3f123a16a930847889c7bf062f4a6aa",
+    "managed_launcher_sha256": "33b47e5f890040bb8821a6a458dd1c4062e34c97d3e644cccd233e728051e12a",
+    "mismatch": "Stop for review; do not silently amend a digest grant.",
+    "output_location": "verified mounted /mnt/vk-storage task directory; never compile as root or execute mutable build inputs as root",
+    "run_as": "unprivileged mcp"
+  },
+  "bundle": "vk-read-only-inspection-two-profiles-v1",
+  "code_artifact_sha256": {
+    "scripts/deployment/security/historical-archive-policy.proposal.json": "1ba94de59483adc91596b4b1d10f9a0e796841da8ad8810fdb20e0033aec45a5",
+    "scripts/deployment/security/retirement-policy.proposal.json": "3eee0ef7cd50699468a36503ef52fb38c8b095fda6ce00a1b5a2cd490a1cfaa8",
+    "scripts/deployment/security/vk-inspection-two-profiles.sudoers.proposal": "cc0147a575998f5bf0bbb13b0145fb6577c404aa950b0fa9526de83457b893d3",
+    "scripts/deployment/security/vk-retirement-preflight.sudoers.proposal": "6d4436c2329c7d88ac01df3b61b1332237d97d04bc193c5dc48e3a8be162d5bd",
+    "scripts/deployment/security/vk_historical_archive_check.py": "4b1b4f607f6be9059e060d84e1b062f97bb535b11d776cc748969b647651f481",
+    "scripts/deployment/security/vk_historical_inspect_launcher.c": "de3234ba52df1b3855dc136b2eaf6bee59bdd6a39ef352d36f772aea638f1dd9",
+    "scripts/deployment/security/vk_process_inspect_launcher.c": "6491de58830a9006ecf5045315509f15767faf80d14b9fd89c10801d6cceda53",
+    "scripts/deployment/security/vk_retirement_check.py": "6e898eeb21d04cfbf4d94e5939eb20b27d89f069ee99b8b021d63893b4263d63"
+  },
+  "directories": [
+    {
+      "mode": "0755",
+      "operation": "create only if absent; otherwise validate immutable directory",
+      "owner": "root:root",
+      "path": "/usr/local/libexec"
+    },
+    {
+      "mode": "0755",
+      "operation": "validate existing directory; create only if absent",
+      "owner": "root:root",
+      "path": "/usr/local/sbin"
+    },
+    {
+      "mode": "0755",
+      "operation": "create only if absent; otherwise validate without altering unrelated entries",
+      "owner": "root:root",
+      "path": "/etc/vibe-kanban"
+    },
+    {
+      "mode": "0755",
+      "operation": "validate existing directory; no changes to other includes",
+      "owner": "root:root",
+      "path": "/etc/sudoers.d"
+    },
+    {
+      "mode": "0755",
+      "operation": "create fresh empty directory ONLY; existing path is a blocker",
+      "owner": "root:root",
+      "path": "/mnt/vk-storage/vk-process-inspection-managed-v1"
+    },
+    {
+      "mode": "0700",
+      "operation": "create empty new child",
+      "owner": "mcp:mcp",
+      "path": "/mnt/vk-storage/vk-process-inspection-managed-v1/objects"
+    },
+    {
+      "mode": "0700",
+      "operation": "create empty new child",
+      "owner": "mcp:mcp",
+      "path": "/mnt/vk-storage/vk-process-inspection-managed-v1/control"
+    }
+  ],
+  "exact_grants": [
+    "mcp ALL=(root) NOPASSWD: NOSETENV: sha256:33b47e5f890040bb8821a6a458dd1c4062e34c97d3e644cccd233e728051e12a /usr/local/sbin/vk-process-inspect-v1 \"\"",
+    "mcp ALL=(root) NOPASSWD: NOSETENV: sha256:8ee7e17dfe7bbbbdbe186f48e89eab33e3f123a16a930847889c7bf062f4a6aa /usr/local/sbin/vk-historical-archive-inspect-v1 \"\""
+  ],
+  "files": [
+    {
+      "destination": "/usr/local/sbin/vk-process-inspect-v1",
+      "file_capabilities": false,
+      "mode": "0755",
+      "owner": "root:root",
+      "setuid": false,
+      "sha256": "33b47e5f890040bb8821a6a458dd1c4062e34c97d3e644cccd233e728051e12a",
+      "source": "scripts/deployment/security/vk_process_inspect_launcher.c (compiled using build flags)"
+    },
+    {
+      "destination": "/usr/local/sbin/vk-historical-archive-inspect-v1",
+      "file_capabilities": false,
+      "mode": "0755",
+      "owner": "root:root",
+      "setuid": false,
+      "sha256": "8ee7e17dfe7bbbbdbe186f48e89eab33e3f123a16a930847889c7bf062f4a6aa",
+      "source": "scripts/deployment/security/vk_historical_inspect_launcher.c (compiled using build flags)"
+    },
+    {
+      "destination": "/usr/local/libexec/vk-process-inspection-v1.py",
+      "file_capabilities": false,
+      "mode": "0644",
+      "owner": "root:root",
+      "setuid": false,
+      "sha256": "6e898eeb21d04cfbf4d94e5939eb20b27d89f069ee99b8b021d63893b4263d63",
+      "source": "scripts/deployment/security/vk_retirement_check.py"
+    },
+    {
+      "destination": "/usr/local/libexec/vk-historical-archive-inspection-v1.py",
+      "file_capabilities": false,
+      "mode": "0644",
+      "owner": "root:root",
+      "setuid": false,
+      "sha256": "4b1b4f607f6be9059e060d84e1b062f97bb535b11d776cc748969b647651f481",
+      "source": "scripts/deployment/security/vk_historical_archive_check.py"
+    },
+    {
+      "destination": "/etc/vibe-kanban/process-inspection-v1.json",
+      "file_capabilities": false,
+      "mode": "0600",
+      "owner": "root:root",
+      "setuid": false,
+      "sha256": "3eee0ef7cd50699468a36503ef52fb38c8b095fda6ce00a1b5a2cd490a1cfaa8",
+      "source": "scripts/deployment/security/retirement-policy.proposal.json"
+    },
+    {
+      "destination": "/etc/vibe-kanban/historical-archive-inspection-v1.json",
+      "file_capabilities": false,
+      "mode": "0600",
+      "owner": "root:root",
+      "setuid": false,
+      "sha256": "1ba94de59483adc91596b4b1d10f9a0e796841da8ad8810fdb20e0033aec45a5",
+      "source": "scripts/deployment/security/historical-archive-policy.proposal.json"
+    },
+    {
+      "destination": "/etc/sudoers.d/vk-process-inspection-v1",
+      "file_capabilities": false,
+      "mode": "0440",
+      "owner": "root:root",
+      "setuid": false,
+      "sha256": "cc0147a575998f5bf0bbb13b0145fb6577c404aa950b0fa9526de83457b893d3",
+      "source": "scripts/deployment/security/vk-inspection-two-profiles.sudoers.proposal"
+    }
+  ],
+  "grant_file_count": 1,
+  "installation_order": [
+    "Authenticate administrator once, verify approved immutable bundle and all preconditions; adapter adoption remains disabled.",
+    "Create only listed absent directories/fresh anchor and empty children. Verify no-follow ownership/modes/device/UUID and enroll the one new anchor inode in both templates.",
+    "Install fixed reviewed code and independently compiled digest-matching binaries as immutable root-owned regular single-link files without setuid/capabilities; install both final root-owned policies. Never import/execute repository code as root.",
+    "Validate proposed include using visudo -cf and complete sudo policy using administrator visudo -c. Install ONLY /etc/sudoers.d/vk-process-inspection-v1 last; validate full policy again.",
+    "Record authenticated final installation evidence and configure unprivileged adapters with exact installed hashes once. Record historical library hash as well as profile code/policy hashes.",
+    "Perform installed read-only acceptance below. A failure blocks adoption; no alternate escalation/retry loop. Existing Staging operation/controller remains unchanged."
+  ],
+  "installed_read_only_acceptance": {
+    "cases": [
+      "Effective mcp sudo matching permits only two digest-matching zero-argument binaries; argument variants and altered binary digests do not match. No shell/interpreter/sudoedit grant.",
+      "Use synthetic managed artifact and dedicated live boundary actor/private Unix endpoint/exact kernel-held lease; all artifact/B hashing and preparation channels finish before final root scan.",
+      "Exact historical profile acceptance on its existing approved inode uses a separate dedicated boundary actor/control lease; ordinary actor performs required content/backup verification BEFORE inspection. Root only O_PATH metadata and proc inspection; incumbent owner untouched.",
+      "Direct pipe receipt validates pinned code/policy/library hashes, root EUID, owner PID/start, lease, manifest, nonce, witness and wall/monotonic freshness after traversal and immediately before returning. No later SSH/hash/spawn.",
+      "Verify real full host PID/TID FD/maps/exe/cwd/root visibility including protected SSH/SFTP and nonleader threads; denied visibility or churn blocks. Host performance/freshness must pass; no weakening time or coverage gates.",
+      "Reject unknown profile/arbitrary path/traversal/extra fields/wrong owner/nonce/replayed/stale output. Run target replacement/symlink/hardlink and permission-denial negatives ONLY on synthetic fixtures; never substitute current archive or change protected host process permissions."
+    ],
+    "continuation": "consume=None; no unlink, cutover, service interruption or data mutation",
+    "not_proven": "An existing unrelated process may open/exec after its scan. No atomic global consumer fence is claimed or added as prerequisite.",
+    "performed": false
+  },
+  "not_in_bundle": [
+    "unrestricted/passwordless general sudo",
+    "root deletion",
+    "artifact content reads as root",
+    "service changes",
+    "current owner mutation",
+    "file moves",
+    "new backups",
+    "generic executor/signer",
+    "LXD or account membership changes"
+  ],
+  "operational_adoption": {
+    "default": "adoption_enabled=False on both adapters; installation does not adopt or modify current Staging owner",
+    "existing_controller_contracts": "CandidateController backup/fence/promote/fallback contracts and exact approved unprivileged continuation retain authority; no root signing service/generic executor added.",
+    "gates": "Exact target, backup, human QA/fallback, interruption and rollback approvals remain; fallback survives until human QA.",
+    "postscan": "Only bounded local identity/metadata/results/owner/lease/receipt/witness checks and immediate already-approved in-process continuation; no expensive controller status/package verify callbacks.",
+    "terminal_actor": "Actual actor authenticates and holds its own control lease. Before final scan finish all preparation/SSH/B/native hashes, close remote command channels, start final status/checker processes, then irreversible local process seal for exact continuation."
+  },
+  "policy_enrollment": {
+    "allowed_changes_only": [
+      "managed.scopes.managed-artifacts-v1.anchor_inode",
+      "historical.control_scope.anchor_inode"
+    ],
+    "historical_target_change_permitted": false,
+    "installed_policy_hashes": "Compute SHA-256 of FINAL installed bytes after enrollment; authenticated administrator installation receipt binds each exact path/code/policy/library hash, anchor inode/UUID/ownership and source commit. Source file hashes for these two entries describe templates only.",
+    "null_enrollment": "Checked-in templates intentionally fail closed; no magic inode or user-owned existing root adoption.",
+    "value": "Same actual inode of the freshly created empty root-owned managed anchor on the pinned SSD UUID; obtain through administrator O_PATH/no-follow metadata, never caller JSON."
+  },
+  "policy_scopes": {
+    "historical": {
+      "abi": 1,
+      "approval_reference": "Sentinel_3c972054e9688191900e38417fd55e00",
+      "backup_manifest_sha256": "27e8d486516ab818eee8376178badc9df3a5ddb6f42c6639c8021e5c7b893a2f",
+      "caller_uid": 1000,
+      "control_scope": {
+        "anchor_inode": null,
+        "filesystem_uuid": "26e4cac1-f2cf-485b-b1bc-d1be197a747e",
+        "path": "/mnt/vk-storage/vk-process-inspection-managed-v1"
+      },
+      "profile": "historical-archive-v1",
+      "target": {
+        "identity": {
+          "ctime_ns": 1791409456129506845,
+          "dev": 2065,
+          "gid": 1000,
+          "ino": 7340415,
+          "mode": 33152,
+          "mtime_ns": 1791409456129506845,
+          "nlink": 1,
+          "size": 23441521918,
+          "uid": 1000
+        },
+        "path": "/mnt/vk-storage/vk-combined-preparation-20261007/backups/checkpoint-/db5bb16b095241319a79e02e5fc8cdf6/checkpoint--db5bb16b095241319a79e02e5fc8cdf6.tar.zst",
+        "sha256": "e994567edaacc75d8aa9a3497b8384a8dbacec462854a3f7f8c5760e1a9a0ce4"
+      }
+    },
+    "managed": {
+      "abi": 1,
+      "caller_uid": 1000,
+      "scopes": {
+        "managed-artifacts-v1": {
+          "anchor_inode": null,
+          "filesystem_uuid": "26e4cac1-f2cf-485b-b1bc-d1be197a747e",
+          "path": "/mnt/vk-storage/vk-process-inspection-managed-v1"
+        }
+      }
+    }
+  },
+  "preconditions": [
+    "Explicit approval of THIS exact two-profile bundle, separate from historical retirement/cutover approvals.",
+    "Authenticate administrator; verify immutable source commit and all source/binary digests before installation.",
+    "Verify mounted SSD UUID 26e4cac1-f2cf-485b-b1bc-d1be197a747e, real Linux host /proc visibility, x86_64 terminal process seal support, root-owned non-user-writable OS interpreter and stdlib inputs.",
+    "Validate all existing installation ancestors by lstat: root-owned directories, no symlinks, no group/other write. Refuse destination collisions or unknown existing grant/code/policy; do not overwrite unrelated entries.",
+    "Refuse ANY existing managed anchor (including symlink), even empty; create only the new empty named scope.",
+    "Historical file must remain exactly at pinned path/device/inode/metadata; reject mismatch rather than relaxing policy. No file move, reownership, permission change, or mount change."
+  ],
+  "purpose": "One bundled administrator installation of fixed metadata-only process inspectors; neither command authorizes or performs deletion/cutover.",
+  "rollback": {
+    "administrator_only": true,
+    "performed": false,
+    "refusal_behavior": "Subsequent fixed-command denial fails closed once without retry/alternate route or continuation.",
+    "steps": [
+      "Disable adoption for BOTH adapters and disarm/drain pending operations through existing owner controls. Switch/grant withdrawal cannot retract a receipt or begun action.",
+      "Archive exact root-owned grant bytes/hash in installation evidence, then administrator removes ONLY /etc/sudoers.d/vk-process-inspection-v1 and validates remaining complete sudo policy.",
+      "Retain both helpers, policies, managed/control namespace, archive/artifacts, receipts/evidence, B backups and fallback until human QA; retain unrelated sudoers entries. No recursive cleanup or new rollback privilege."
+    ]
+  },
+  "schema": 1,
+  "source_commit": "4055a1b1e65bbd38fe7d586c65faa04de45cf3af",
+  "source_pr": "https://github.com/artinflight/vibe-kanban/pull/234",
+  "source_repository": "https://github.com/artinflight/vibe-kanban",
+  "status": "SOURCE-ONLY PROPOSAL; no installation/security action authorized or performed"
+}

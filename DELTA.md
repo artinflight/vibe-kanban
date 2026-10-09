@@ -1590,3 +1590,18 @@ actual-panel acceptance covers failure/retry/remount/navigation. Hosted final-he
 checks remain required. No Cargo build, production deployment, permission change
 or bulk assignment was performed; integrate only the bounded PR patch over the
 combined backend c3c48e63/frontend 5ce84ee2 (candidate is 11 commits behind live).
+
+
+2026-10-09 — PR237 Close/reopen submission race correction
+
+Close/Escape previously deleted pending/saved submission recovery. Dismissal now
+hides recoverable composers, reopen resumes their unique identity, and all async
+checkpoint/unlock/finish operations require that identity. Successful dismissed
+saves finish quietly; a completed composer can be replaced without old callbacks
+modifying it. Legacy remote drafts receive identities and clear stale page guards.
+Twelve committed real-panel regressions exercise actual X/Escape with delayed
+issue/assignment persistence, partial failure, hidden failure, stale replacement
+completion, edit/unread preservation and hydration. They join the sixteen existing
+Node regressions in hosted CI. No authentication/permission changes, production
+deployment or heavy MCP build. Bounded integration over c3c48e63/5ce84ee2 remains
+required; do not replace the combined release with this older staging baseline.

@@ -143,18 +143,30 @@ export function KanbanIssuePanelContainer({
   const openIssue = useCallback(
     (issueId: string) => {
       if (kanbanCreateMode && issueComposerKey) {
-        closeKanbanIssueComposer(issueComposerKey);
+        closeKanbanIssueComposer(issueComposerKey, issueComposer?.id);
       }
       appNavigation.goToProjectIssue(projectId, issueId);
     },
-    [kanbanCreateMode, issueComposerKey, appNavigation, projectId]
+    [
+      kanbanCreateMode,
+      issueComposerKey,
+      issueComposer?.id,
+      appNavigation,
+      projectId,
+    ]
   );
   const closeKanbanIssuePanel = useCallback(() => {
     if (kanbanCreateMode && issueComposerKey) {
-      closeKanbanIssueComposer(issueComposerKey);
+      closeKanbanIssueComposer(issueComposerKey, issueComposer?.id);
     }
     appNavigation.goToProject(projectId);
-  }, [kanbanCreateMode, issueComposerKey, appNavigation, projectId]);
+  }, [
+    kanbanCreateMode,
+    issueComposerKey,
+    issueComposer?.id,
+    appNavigation,
+    projectId,
+  ]);
   const updateIssueComposerDraft = useCallback(
     (patch: {
       statusId?: string;
@@ -866,12 +878,22 @@ export function KanbanIssuePanelContainer({
     )
       return;
 
+    const composerId = issueComposer?.id;
+    if (
+      mode === 'create' &&
+      (!composerId ||
+        !useKanbanIssueComposerStore
+          .getState()
+          .beginSubmission(issueComposerKey, composerId))
+    )
+      return;
+    const currentComposer = () => {
+      const entry =
+        useKanbanIssueComposerStore.getState().byKey[issueComposerKey];
+      return entry?.id === composerId ? entry : null;
+    };
     submissionInFlight.current = true;
-    setIsSubmitting(true);
-    if (mode === 'create')
-      useKanbanIssueComposerStore
-        .getState()
-        .setSubmissionPending(issueComposerKey, true);
+    if (mode !== 'create') setIsSubmitting(true);
     setSubmitFailed(false);
     try {
       if (mode === 'create') {
@@ -895,7 +917,7 @@ export function KanbanIssuePanelContainer({
           checkpoint: (progress) =>
             useKanbanIssueComposerStore
               .getState()
-              .checkpointSubmission(issueComposerKey, progress),
+              .checkpointSubmission(issueComposerKey, composerId!, progress),
           createIssue: async (form) => {
             const statusIssues = issues.filter(
               (i) => i.status_id === form.statusId
@@ -951,6 +973,8 @@ export function KanbanIssuePanelContainer({
             }).persisted,
         });
 
+        if (!currentComposer()) return;
+
         // Create tag records if tags were selected
         for (const tagId of submittedData.tagIds) {
           insertIssueTag({
@@ -959,8 +983,12 @@ export function KanbanIssuePanelContainer({
           });
         }
 
-        if (issueComposerKey) {
-          closeKanbanIssueComposer(issueComposerKey);
+        // Saving continues after dismissal, but must not reopen or navigate the view.
+        if (!currentComposer()?.isOpen) {
+          useKanbanIssueComposerStore
+            .getState()
+            .finishSubmission(issueComposerKey, composerId!);
+          return;
         }
 
         if (submittedData.createDraftWorkspace) {
@@ -976,6 +1004,7 @@ export function KanbanIssuePanelContainer({
             projectId
           );
 
+          if (!currentComposer()?.isOpen) return;
           const createState = buildWorkspaceCreateInitialState({
             prompt: initialPrompt,
             defaults,
@@ -984,6 +1013,7 @@ export function KanbanIssuePanelContainer({
           const draftId = await openWorkspaceCreateFromState(createState, {
             issueId: syncedIssue.id,
           });
+          if (!currentComposer()?.isOpen) return;
           if (!draftId) {
             await ConfirmDialog.show({
               title: t('common:error'),
@@ -994,22 +1024,39 @@ export function KanbanIssuePanelContainer({
               confirmText: t('common:ok'),
               showCancelButton: false,
             });
+            if (!currentComposer()?.isOpen) return;
+            if (
+              !useKanbanIssueComposerStore
+                .getState()
+                .finishSubmission(issueComposerKey, composerId!)
+            )
+              return;
             onExpectIssueOpen?.(syncedIssue.id);
-            openIssue(syncedIssue.id);
+            appNavigation.goToProjectIssue(projectId, syncedIssue.id);
+          } else {
+            useKanbanIssueComposerStore
+              .getState()
+              .finishSubmission(issueComposerKey, composerId!);
           }
           return; // Don't open issue panel since we're navigating away
         }
 
-        // Open the newly created issue
+        // Completion may remove only the composer that started this request.
+        if (
+          !useKanbanIssueComposerStore
+            .getState()
+            .finishSubmission(issueComposerKey, composerId!)
+        )
+          return;
         onExpectIssueOpen?.(syncedIssue.id);
-        openIssue(syncedIssue.id);
+        appNavigation.goToProjectIssue(projectId, syncedIssue.id);
       } else {
         // Update existing issue - would use update mutation
         // For now, just close the panel
         closeKanbanIssuePanel();
       }
     } catch (error) {
-      setSubmitFailed(true);
+      if (mode !== 'create' || currentComposer()?.isOpen) setSubmitFailed(true);
       console.error('Failed to save issue:', error);
     } finally {
       submissionInFlight.current = false;
@@ -1017,7 +1064,7 @@ export function KanbanIssuePanelContainer({
       if (mode === 'create') {
         useKanbanIssueComposerStore
           .getState()
-          .setSubmissionPending(issueComposerKey, false);
+          .setSubmissionPending(issueComposerKey, composerId!, false);
         void queryClient.invalidateQueries({
           queryKey: ['local-workspace-assignments'],
         });
@@ -1032,7 +1079,8 @@ export function KanbanIssuePanelContainer({
     insertIssue,
     insertIssueAssignee,
     insertIssueTag,
-    openIssue,
+    appNavigation,
+    issueComposer?.id,
     kanbanCreateDefaultParentIssueId,
     openWorkspaceCreateFromState,
     workspaces,

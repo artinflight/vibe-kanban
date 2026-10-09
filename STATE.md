@@ -6,7 +6,9 @@ inherit multi-assignees through the linked task/issue, preserve unassigned and
 unlinked history, and never clear unread or grant authentication/permissions.
 Create mode must await every selected assignment before closing or navigating.
 Partial failure retains the saved issue and confirmed assignments for retry;
-retry must never create a second issue or clear unread. This is not a deployed feature. The combined live backend `c3c48e63` and frontend
+retry must never create a second issue or clear unread. X/Escape dismissal must
+retain pending/partial recovery, reopen must resume its identity, and async
+checkpoints/cleanup must never modify a replacement composer. This is not a deployed feature. The combined live backend `c3c48e63` and frontend
 `5ce84ee2` must be preserved when integrating; older main/staging is insufficient.
 
 ## October 8: Workspace-first frontend follow-up in preparation

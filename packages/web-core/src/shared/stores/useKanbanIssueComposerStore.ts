@@ -25,6 +25,8 @@ export interface KanbanIssueComposerDraft {
 }
 
 export interface KanbanIssueComposerEntry {
+  id: string;
+  isOpen: boolean;
   initial: KanbanIssueComposerDraft;
   draft: KanbanIssueComposerDraft;
   submission?: KanbanIssueSubmission;
@@ -44,10 +46,17 @@ interface KanbanIssueComposerState {
   resetComposer: (key: string) => void;
   checkpointSubmission: (
     key: string,
+    composerId: string,
     submission: KanbanIssueSubmission
   ) => void;
-  setSubmissionPending: (key: string, pending: boolean) => void;
-  closeComposer: (key: string) => void;
+  beginSubmission: (key: string, composerId: string) => boolean;
+  setSubmissionPending: (
+    key: string,
+    composerId: string,
+    pending: boolean
+  ) => void;
+  finishSubmission: (key: string, composerId: string) => boolean;
+  closeComposer: (key: string, composerId?: string) => void;
 }
 
 const LOCAL_HOST_SCOPE = 'local';
@@ -97,16 +106,24 @@ export const useKanbanIssueComposerStore = create<KanbanIssueComposerState>()(
     byKey: {},
     openComposer: (key, options) =>
       set((state) => {
+        const current = state.byKey[key];
         if (
-          state.byKey[key]?.submission?.issue ||
-          state.byKey[key]?.submissionPending
-        )
-          return state;
+          current &&
+          (!current.isOpen ||
+            current.submission?.issue ||
+            current.submissionPending)
+        ) {
+          return {
+            byKey: { ...state.byKey, [key]: { ...current, isOpen: true } },
+          };
+        }
         const initial = toInitialComposerDraft(options);
         return {
           byKey: {
             ...state.byKey,
             [key]: {
+              id: crypto.randomUUID(),
+              isOpen: true,
               initial,
               draft: initial,
             },
@@ -158,10 +175,10 @@ export const useKanbanIssueComposerStore = create<KanbanIssueComposerState>()(
           },
         };
       }),
-    checkpointSubmission: (key, submission) =>
+    checkpointSubmission: (key, composerId, submission) =>
       set((state) => {
         const current = state.byKey[key];
-        if (!current) return state;
+        if (!current || current.id !== composerId) return state;
         return {
           byKey: {
             ...state.byKey,
@@ -169,10 +186,31 @@ export const useKanbanIssueComposerStore = create<KanbanIssueComposerState>()(
           },
         };
       }),
-    setSubmissionPending: (key, pending) =>
+    beginSubmission: (key, composerId) => {
+      let started = false;
       set((state) => {
         const current = state.byKey[key];
-        if (!current) return state;
+        if (
+          !current ||
+          current.id !== composerId ||
+          !current.isOpen ||
+          current.submissionPending
+        )
+          return state;
+        started = true;
+        return {
+          byKey: {
+            ...state.byKey,
+            [key]: { ...current, submissionPending: true },
+          },
+        };
+      });
+      return started;
+    },
+    setSubmissionPending: (key, composerId, pending) =>
+      set((state) => {
+        const current = state.byKey[key];
+        if (!current || current.id !== composerId) return state;
         return {
           byKey: {
             ...state.byKey,
@@ -180,10 +218,29 @@ export const useKanbanIssueComposerStore = create<KanbanIssueComposerState>()(
           },
         };
       }),
-    closeComposer: (key) =>
+    finishSubmission: (key, composerId) => {
+      let wasOpen = false;
       set((state) => {
-        if (!(key in state.byKey)) {
+        const current = state.byKey[key];
+        if (!current || current.id !== composerId) return state;
+        wasOpen = current.isOpen;
+        const byKey = { ...state.byKey };
+        delete byKey[key];
+        return { byKey };
+      });
+      return wasOpen;
+    },
+    closeComposer: (key, composerId) =>
+      set((state) => {
+        const current = state.byKey[key];
+        if (!current || (composerId && current.id !== composerId)) {
           return state;
+        }
+        // Dismiss the view without discarding a request or a saved issue.
+        if (current.submissionPending || current.submission?.issue) {
+          return {
+            byKey: { ...state.byKey, [key]: { ...current, isOpen: false } },
+          };
         }
 
         const byKey = { ...state.byKey };
@@ -198,7 +255,10 @@ export function useKanbanIssueComposer(
 ): KanbanIssueComposerEntry | null {
   return useKanbanIssueComposerStore(
     useCallback(
-      (state) => (composerKey ? (state.byKey[composerKey] ?? null) : null),
+      (state) => {
+        const entry = composerKey ? state.byKey[composerKey] : null;
+        return entry?.isOpen ? entry : null;
+      },
       [composerKey]
     )
   );
@@ -222,6 +282,9 @@ export function resetKanbanIssueComposer(composerKey: string): void {
   useKanbanIssueComposerStore.getState().resetComposer(composerKey);
 }
 
-export function closeKanbanIssueComposer(composerKey: string): void {
-  useKanbanIssueComposerStore.getState().closeComposer(composerKey);
+export function closeKanbanIssueComposer(
+  composerKey: string,
+  composerId?: string
+): void {
+  useKanbanIssueComposerStore.getState().closeComposer(composerKey, composerId);
 }

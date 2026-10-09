@@ -79,6 +79,8 @@ jobs:
               - 'packages/remote-web/**'
               - 'packages/ui/**'
               - 'shared/**'
+              - 'scripts/testing/kanban-issue-panel*'
+              - 'scripts/testing/run-kanban-issue-panel-tests.mjs'
               - 'scripts/check-i18n.sh'
               - 'scripts/check-unused-i18n-keys.mjs'
               - 'scripts/check-legacy-frontend-paths.sh'
@@ -271,6 +273,14 @@ jobs:
 
       - name: Check issue creation persistence, local assignments and workspace pagination
         run: node --experimental-strip-types --test packages/web-core/src/shared/lib/issueCreation.test.ts packages/web-core/src/pages/workspaces/workspaceAssignmentFilter.test.ts packages/web-core/src/pages/workspaces/workspaceSidebarPagination.test.ts
+
+      - name: Check actual issue panel Close/reopen races
+        env:
+          VK_TEST_OUTPUT: ${{ runner.temp }}/kanban-issue-panel-tests
+          TEST_RENDERER_PATH: ${{ runner.temp }}/kanban-issue-panel-tools/node_modules/react-test-renderer
+        run: |
+          npm install --prefix "${{ runner.temp }}/kanban-issue-panel-tools" --no-save --no-package-lock --ignore-scripts --no-audit --no-fund react-test-renderer@18.3.1
+          node scripts/testing/run-kanban-issue-panel-tests.mjs
 
   backend-schema-checks:
     needs: [branch-policy, branch-freshness, changes]

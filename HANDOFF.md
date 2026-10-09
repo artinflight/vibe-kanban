@@ -10,11 +10,14 @@ this staging-based source. Review: [draft PR #237](https://github.com/artinfligh
 Create mode now awaits all selected assignments and retains a composer checkpoint
 for partial failure/retry on the same issue, including panel remounts. Retry skips
 confirmed assignments; saved fields stay locked. Sixteen Node regressions and
-actual-panel partial-failure/retry acceptance pass locally. Final-head hosted
+twelve actual-panel regressions pass locally. X/Escape now dismiss recoverable
+composers; reopen restores the same identity and request guard. Async checkpoints,
+unlocks and completion are identity-fenced, and a dismissed successful save does
+not navigate. Hosted CI runs the actual Close/reopen suite with a pinned renderer. Final-head hosted
 checks remain the integration gate. Local format/governance,
 TypeScript, lint, migration replay and rendered-container
 acceptance passed. Application source applies to the combined baseline; its
-current CI workflow requires inserting the new Node test step, not replacement. MCP Cargo builds are deliberately excluded for SSD capacity.
+current CI workflow requires inserting both Node test steps, not replacement. MCP Cargo builds are deliberately excluded for SSD capacity.
 
 # October 8: Workspace-first navigation and task attention follow-up
 

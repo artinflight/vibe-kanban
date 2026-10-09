@@ -1,0 +1,17 @@
+{
+  "all_members_missing_catalog_base_mtime": 6038,
+  "archive_sha256": "735e211552c315f9f9be78eda9f28d175f2406847032f5df6a5d2307d8362ef5",
+  "atime_conflict_count": 0,
+  "candidate_restored": false,
+  "catalog_chunks_authenticated": 5,
+  "conflicting_name_hashes": [],
+  "full_linux_metadata_acceptance": false,
+  "hardlink_mtime_comparisons_missing_catalog_base_header": 0,
+  "hardlink_relationships_checked": 14889,
+  "invalid_archived_atime_count": 0,
+  "missing_archived_atime_count": 0,
+  "mode_owner_conflict_count": 0,
+  "mtime_conflict_count": 0,
+  "production_modified": false,
+  "source_original_atime_verified": false
+}

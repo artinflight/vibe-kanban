@@ -398,3 +398,72 @@ restart, route switch, deployment, merge or cleanup occurred. Atime/full restore
 metadata, actual MCP candidate capacity, final fenced catch-up, latest-data
 fallback, fresh package/controller binding and live consent acceptance remain
 release gates. Cleanup stays technically unavailable pending human QA.
+
+
+## Fresh combined CI correction and remaining metadata preparation
+
+PR230's first formatting correction passed frontend format checks and exposed
+an actual combined test-harness dependency: the merged phone layout calls
+window.matchMedia, absent from PR225's simulated browser. Added the real browser
+API shape to that fixture and expanded all mounted consent/snapshot/lifecycle
+race scenarios to both desktop and phone layouts, explicitly asserting the
+actual layout branch. No test was removed/skipped and no production UI logic
+changed. Pushed a22a93f1bd07c9e3aaa0d94598611221b86b4dee, exact remote verified;
+tree915a40de3394c628fa827b6f041bcae6c591d187. TestCI37885126071 and artifactCI
+37885126054 are running for that head. Superseded first source runs/receipts/logs
+are retained; obsolete f8CI was explicitly cancelled to release the pending
+current run. CI passing/readiness is not asserted before completion.
+
+Isolated tooling is now independently published as draftPR231
+https://github.com/artinflight/vibe-kanban/pull/231, head2104d175f82b6db4ca010a4aa97a5ea9d2d288ea
+at initial publication, remote verified. It remains a distinct PR149-equivalent
+candidate/direct-B concern, based on the existing integration work. PR149 and
+OP worktree/code were not overwritten; combined application PR230 stays separate.
+All8exact PR229 source pins are unchanged. Committed-source candidate package
+regressions now pass3/3, with6required modules including namespace scaffolding.
+Ten direct-B/catch-up/latest-data fallback contracts also pass. These checks
+remain fixtures, not actual production adapter or live consent acceptance.
+
+Corrected the remaining archive-atime restoration gap in accessible isolated
+controller code: an explicit archive timestamp policy binds every PAX atime
+as exact nonnegative nanoseconds, rejects missing/ambiguous timestamps and
+contradictory hardlink inode metadata, includes the timestamp index in the
+unchanged finite metadata budget, and reapplies/verifies timestamps after the
+last content traversal using lstat only. Operational (non-fixture) restore now
+requires that policy; it cannot silently inherit the old unsupported-atime
+path. GNU tar hardlink aliases omit repeated xattr headers, so they inherit the
+authenticated target inode's attributes; explicitly conflicting alias attributes
+still block. A first overly strict equality attempt correctly failed fixture
+coverage on that omission, was diagnosed from the retained synthetic archive,
+and corrected without changing OP's original source or source attributes.
+
+Five new -O regressions pass: exact timestamp parsing/ambiguity rejection,
+non-fixture policy enforcement before materialization, hardlink metadata
+contradiction rejection, actual private file/directory/hardlink/symlink timestamp
+restoration with protected canary metadata unchanged, and tampered/incomplete
+atime-map rejection before any timestamp write. Existing10direct-B contracts,
+7scaffold tests and2metadata-bound tests were rerun successfully after this
+change. This verifies restoration of authenticated archive headers; it does
+not invent original source atimes for normalized DB snapshots or original
+inode/ctime/birthtime identities.
+
+A targeted read-only metadata pass over the five already authenticated B catalog
+chunks checked all14889hardlink relationships: zero mode/owner, atime or mtime
+conflicts, zero hardlink comparisons lacking catalog mtime, zero missing/invalid
+archived atimes. There are6038othercatalogmembers without the retained base mtime
+field; the original authenticated tar headers remain authoritative and the
+actual provider reads their base mtime, so this catalog-only planning pass does
+not assert full mtime acceptance for them. Safe receipt is tracked, fullprivate
+catalog remains on B. No second full content/backup/storage audit, restore,
+permission change, live write, cleanup or release acceptance occurred.
+
+Concrete next operational prerequisite remains MCP native Linux candidate
+capacity. Current free space cannot hold the required candidate; the Desktop
+120GiB container is not a substitute for MCP-local production storage. Use the
+same eventual MCP generation for restore, rehearsal, final caught-up promotion
+and latest-data fallback. Existing B backup/evidence and stable incumbent stay
+protected. UID/GID1000 permission correction for only the newly generated B
+source/test-output remains unanswered and held. After capacity/source-bound
+candidate gates and live consent pass, perform the separately bounded writer
+drain/final backup/catch-up/acceptance/cutover; cleanup remains technically
+unavailable until human QA and a separately reviewed enablement.

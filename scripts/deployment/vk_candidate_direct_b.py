@@ -8,7 +8,7 @@ Explicit test factories are marked fixture-only and cannot authorize deployment.
 import base64
 import copy
 from contextlib import contextmanager
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import fcntl
 import hashlib
 import json
@@ -48,9 +48,34 @@ def metadata(member):
     return row
 
 
+def archived_atime(member):
+    require('atime' in member.pax_headers, 'archived atime proof missing')
+    try:
+        value = Decimal(member.pax_headers['atime']) * 10**9
+    except (InvalidOperation, TypeError, ValueError) as error:
+        raise Blocked('invalid archived atime') from error
+    require(value.is_finite() and value >= 0 and value == value.to_integral_value(),
+            'archived atime is not exact nonnegative nanoseconds')
+    return int(value)
+
+
+def hardlink_metadata(entries, target, names):
+    for name in names:
+        require(all(entries[name][key] == entries[target][key]
+                    for key in ('mode', 'uid', 'gid', 'mtime_ns')),
+                'archived hardlink metadata conflicts; cannot invent canonical inode metadata')
+        # GNU tar omits repeated xattr headers for hardlink aliases. Inherit
+        # the authenticated target inode's attributes; contradictory explicit
+        # alias attributes are still ambiguous and must not be normalized away.
+        require(not entries[name]['xattrs'] or entries[name]['xattrs'] == entries[target]['xattrs'],
+                'archived hardlink attributes conflict')
+
+
 class DirectBProvider:
     def __init__(self, namespace_scope_sha256, required_databases, *, archive_factory=Archive,
-                 fixture_only=False, metadata_budget_bytes=MAX_INDEX_BYTES):
+                 fixture_only=False, metadata_budget_bytes=MAX_INDEX_BYTES, restore_archived_atime=False):
+        require(type(restore_archived_atime) is bool, 'atime policy must be explicit boolean')
+        self.restore_archived_atime = restore_archived_atime
         require(type(metadata_budget_bytes) is int and 0 < metadata_budget_bytes <= 256 * 1024**2,
                 "candidate metadata budget must be explicit and bounded to 256 MiB")
         self.metadata_budget_bytes = metadata_budget_bytes
@@ -111,7 +136,7 @@ class DirectBProvider:
 
     def verify(self, capture_id):
         record = self.records[capture_id]
-        entries, locations, headers = {}, {}, {}
+        entries, locations, headers, atimes = {}, {}, {}, {}
         archives = self.archives(record)
         for index, (archive, manifest) in enumerate(archives):
             snapshots = {'payload/' + r['path']: (self.mapped(raw, record), r['sha256'])
@@ -133,6 +158,8 @@ class DirectBProvider:
                         require(member.isdir(), "namespace root is not a directory")
                         continue  # Fixture namespace context; header stays authenticated on B.
                     row = metadata(member)
+                    if self.restore_archived_atime:
+                        atimes[name] = archived_atime(member)
                     if member.isdir():
                         row['kind'] = 'directory'
                     elif member.isfile():
@@ -161,6 +188,7 @@ class DirectBProvider:
                         entries.pop(name)
                         locations.pop(name, None)
                         headers.pop(name, None)
+                        atimes.pop(name, None)
             # Count the complete encoding without allocating an extra full JSON buffer.
             encoded_bytes = 0
             for piece in json.JSONEncoder().iterencode(entries):
@@ -169,6 +197,8 @@ class DirectBProvider:
         context = None
         if record['namespace_plan'] is not None:
             context = add_context(entries, record['namespace_plan'], record['prefix'])
+            if self.restore_archived_atime:
+                atimes.update({name: 0 for name in context['generated_context_names']})
         # Canonicalize authenticated hardlink groups for exact candidate inventory.
         groups = {}
         for name, row in entries.items():
@@ -182,6 +212,10 @@ class DirectBProvider:
             require(entries.get(target, {}).get('kind') == 'file', "archived hardlink target unavailable")
             groups.setdefault(target, []).append(name)
         for target, names in groups.items():
+            hardlink_metadata(entries, target, names)
+            if self.restore_archived_atime:
+                require(len({atimes[name] for name in names}) == 1,
+                        'archived hardlink atimes conflict; cannot invent one inode timestamp')
             primary = min(names)
             source_row, location = dict(entries[target]), locations[target]
             for name in names:
@@ -194,6 +228,10 @@ class DirectBProvider:
             final_encoded_bytes += len(piece.encode())
             require(final_encoded_bytes <= self.metadata_budget_bytes,
                     'canonical candidate index exceeds explicit metadata budget')
+        for piece in json.JSONEncoder().iterencode(atimes):
+            final_encoded_bytes += len(piece.encode())
+            require(final_encoded_bytes <= self.metadata_budget_bytes,
+                    'candidate timestamps exceed explicit metadata budget')
         validate_manifest(entries)
         require(set(self.required) <= entries.keys(), "required operational database absent")
         result = record['result']
@@ -205,7 +243,9 @@ class DirectBProvider:
                  'metadata_budget_bytes': self.metadata_budget_bytes,
                  'metadata_encoded_bytes': final_encoded_bytes,
                  'namespace_scaffold': context,
-                 'metadata_limits': 'PAX retained; built-in comparison covers current UID/GID, mode, mtime, POSIX ACL/user xattrs and links. Atime is not restored; original inode/ctime/birthtime are unsupported. Foreign ownership/other xattrs block; full operational metadata acceptance remains required'}
+                 'restore_archived_atime': self.restore_archived_atime,
+                 'archived_atime_ns': atimes, 'archived_atime_sha256': digest(atimes),
+                 'metadata_limits': 'PAX retained; built-in comparison covers current UID/GID, mode, mtime, POSIX ACL/user xattrs and links. Optional exact archived-atime restoration is separately bound; original source atimes/inode/ctime/birthtime are not inferred. Foreign ownership/other xattrs block; full operational metadata acceptance remains required'}
         self.indexes[capture_id] = {'proof': proof, 'archives': archives, 'locations': locations, 'headers': headers}
         return copy.deepcopy(proof)
 

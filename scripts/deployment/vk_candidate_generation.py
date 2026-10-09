@@ -408,6 +408,12 @@ class CandidateController:
                 "full authoritative B capture required")
         rows = validate_manifest(verified["entries"])
         require(verified["manifest_sha256"] == digest(rows), "backup manifest binding mismatch")
+        if not verified.get('fixture_only'):
+            require(verified.get('restore_archived_atime') is True,
+                    'operational restore requires authenticated archived-atime policy')
+            require(set(verified['archived_atime_ns']) == set(rows)
+                    and digest(verified['archived_atime_ns']) == verified['archived_atime_sha256'],
+                    'operational archived-atime inventory binding mismatch')
         require(set(self.sqlite_paths) <= rows.keys(), "required database omitted")
         require(all(rows[p]["kind"] == "file" for p in self.sqlite_paths), "database must be a standalone snapshot")
         require(not any(p.endswith(("-wal", "-shm")) for p in rows), "SQLite sidecars require snapshot normalization")
@@ -523,6 +529,30 @@ class CandidateController:
             os.fsync(out.fileno())
         require(count == row["bytes"] and h.hexdigest() == row["sha256"], "restored bytes mismatch")
 
+    def restore_atimes(self, verified):
+        """Restore authenticated archive timestamps after content verification.
+
+        Reads on a relatime filesystem may change atime; apply after the last
+        content traversal, then inspect using lstat only. Running application
+        access may legitimately change timestamps after this stopped boundary.
+        """
+        if not verified.get('restore_archived_atime'):
+            return {'archived_atime_restored': False}
+        values, rows = verified['archived_atime_ns'], verified['entries']
+        require(set(values) == set(rows) and digest(values) == verified['archived_atime_sha256'],
+                'atime inventory binding mismatch')
+        require(all(type(value) is int and value >= 0 for value in values.values()),
+                'atime inventory contains invalid nanoseconds')
+        self.supervisor.verify_stopped(self.layout.binding())
+        for name in sorted(rows, key=lambda p: (-len(relative(p).parts), p)):
+            target = self.layout.tree / name
+            os.utime(target, ns=(values[name], rows[name]['mtime_ns']), follow_symlinks=False)
+            info = target.lstat()
+            require(info.st_atime_ns == values[name] and info.st_mtime_ns == rows[name]['mtime_ns'],
+                    'filesystem cannot restore exact archived timestamps')
+        return {'archived_atime_restored': True, 'archived_atime_sha256': digest(values),
+                'original_source_atime_verified': False}
+
     def restore(self, capture):
         require(self.phase == "new" and not self.layout.tree.exists(), "initial restore needs a new empty generation")
         verified = self.authenticated(capture)
@@ -533,6 +563,7 @@ class CandidateController:
         self.layout.tree.mkdir(parents=True, mode=0o700)
         self.materialize(verified, set(verified["entries"]))
         proof = verify_tree(self.layout, verified["entries"], self.sqlite_paths)
+        proof.update(self.restore_atimes(verified))
         self.rows, self.boundary = verified["entries"], verified
         self.checkpoint("restored", {**proof, "capture_id": capture, "source": self.source})
         self.phase = "restored"
@@ -628,6 +659,7 @@ class CandidateController:
         self.materialize(verified, changed & expected.keys())
         self.supervisor.verify_fence(verified)
         proof = verify_tree(self.layout, expected, self.sqlite_paths)
+        proof.update(self.restore_atimes(verified))
         self.rows, self.boundary = expected, verified
         self.checkpoint("refreshed", {**proof, "capture_id": capture, "quarantine": str(quarantine)})
         self.phase = "refreshed"
@@ -638,6 +670,7 @@ class CandidateController:
         self.supervisor.verify_stopped(self.layout.binding())
         self.supervisor.verify_fence(self.boundary)
         proof = verify_tree(self.layout, self.rows, self.sqlite_paths)
+        proof.update(self.restore_atimes(self.boundary))
         receipt = self.supervisor.acceptance(self.layout.binding(), self.source, self.scope, "activation")
         self.accepted(receipt, proof, "activation", self.boundary["capture_id"])
         # Recheck the volatile fence immediately before giving ownership to the adapter.

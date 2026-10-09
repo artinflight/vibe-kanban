@@ -1,0 +1,3 @@
+# WITHDRAWN FOR INSTALLATION; reusable source-only proposal. Explicit approval required.
+# Stable launcher digest, exactly zero arguments, no interpreter/command wildcard grant.
+mcp ALL=(root) NOPASSWD: NOSETENV: sha256:33b47e5f890040bb8821a6a458dd1c4062e34c97d3e644cccd233e728051e12a /usr/local/sbin/vk-process-inspect-v1 ""

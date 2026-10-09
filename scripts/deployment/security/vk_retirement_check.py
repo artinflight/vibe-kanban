@@ -246,7 +246,7 @@ def live_owner(scope_fd, request, uid):
     try:
         endpoint = os.stat('owner.sock', dir_fd=parent, follow_symlinks=False)
         require(stat.S_ISSOCK(endpoint.st_mode) and endpoint.st_uid == uid
-                and stat.S_IMODE(endpoint.st_mode) == 0o600)
+                and endpoint.st_nlink == 1 and stat.S_IMODE(endpoint.st_mode) == 0o600)
         with socket.socket(socket.AF_UNIX) as client:
             client.settimeout(2)
             client.connect(f'/proc/self/fd/{parent}/owner.sock')
@@ -261,6 +261,8 @@ def live_owner(scope_fd, request, uid):
                     break
                 raw += piece
                 require(len(raw) <= MAX_JSON)
+        current_endpoint = os.stat('owner.sock', dir_fd=parent, follow_symlinks=False)
+        require(identity(current_endpoint) == identity(endpoint))
         value = parse_json(raw)
         require(value.get('owner_pid') == request['owner_pid'] and value.get('owner_start') == request['owner_start']
                 and value.get('source') == manifest['source_sha256'] and value.get('root_binding') == manifest['root_binding']

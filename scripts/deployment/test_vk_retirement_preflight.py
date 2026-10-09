@@ -349,6 +349,24 @@ class ProtocolTests(Fixtures):
             return self.receipt(req)
         self.run_boundary(finish=finish)
 
+    def test_owner_socket_substitution_after_authenticated_response_blocks(self):
+        from types import SimpleNamespace
+        original = os.stat
+        calls = 0
+        def substitute(path, *args, **kwargs):
+            nonlocal calls
+            info = original(path, *args, **kwargs)
+            if path == 'owner.sock' and 'dir_fd' in kwargs:
+                calls += 1
+                if calls == 2:
+                    fields = {'st_' + key: getattr(info, 'st_' + key) for key in root.IDENTITY_KEYS}
+                    fields['st_ino'] += 1
+                    return SimpleNamespace(**fields)
+            return info
+        with patch.object(root.os, 'stat', side_effect=substitute), self.assertRaises(ValueError):
+            self.run_boundary()
+        self.assertEqual(calls, 2)
+
     def test_declared_target_guard_requires_exact_live_owner_FLOCK(self):
         import fcntl
         self.manifest['targets'][0]['guard_held'] = True

@@ -85,5 +85,12 @@
     "concurrent_uncertain_duplicate_cannot_return_fresh_cached_readback": true,
     "consumer_version_adoption_repair_needed": false
   },
-  "channel_binding_evidence": "channel-binding.json"
+  "channel_binding_evidence": "channel-binding.json",
+  "caller_code_commit": "9f06a0d660446fc69e11e99d5c851e351d5ff7c7",
+  "hosted_caller_ci": {
+    "conclusion": "success",
+    "url": "https://github.com/artinflight/vibe-kanban/actions/runs/38002818131",
+    "head_sha": "9f06a0d660446fc69e11e99d5c851e351d5ff7c7",
+    "coverage": "17 independent caller tests and patch hash/file boundary; actual connector integration verified locally in disposable PR236 copy"
+  }
 }

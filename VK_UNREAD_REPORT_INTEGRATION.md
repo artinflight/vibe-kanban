@@ -157,8 +157,9 @@ source inputs; CI does not pretend to have them.
 The initial15-case caller/hash/scope CI passed at source `dd57fc5ef`:
 [run38001200254](https://github.com/artinflight/vibe-kanban/actions/runs/38001200254).
 Normal full repository CI was still running when that receipt was recorded.
-The revised independent caller suite has17 cases; its current CI receipt is
-reported separately from that initial validation.
+The revised17-case caller/hash/scope CI passed at source `9f06a0d66`:
+[run38002818131](https://github.com/artinflight/vibe-kanban/actions/runs/38002818131).
+This receipt validates the source change; full repository CI remains separate.
 
 `pnpm run ops:check`, `git diff --check`, and Rust formatting passed. Required
 `pnpm run format` stopped at missing Prettier after Rust formatting; `pnpm run check`

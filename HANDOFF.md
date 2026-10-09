@@ -2,8 +2,8 @@
 
 Read VK_UNREAD_REPORT_INTEGRATION.md and scripts/report_delivery/evidence/validation.json.
 Review is in [draft PR238](https://github.com/artinflight/vibe-kanban/pull/238) into
-staging. Source `dd57fc5ef` is pushed; dedicated caller/hash/scope CI passed at
-run38001200254 (initial15-case suite). Current review evidence is hash-bound in
+staging. Reviewed source `9f06a0d66` is pushed; dedicated17-case caller/hash/scope
+CI passed at run38002818131. Current review evidence is hash-bound in
 validation.json; full repository CI is a separate gate.
 Source caller, durable confirmed-event retry and pre-presentation intent pinning
 are implemented. A one-file `report_reconciliation.py` patch is packaged in this

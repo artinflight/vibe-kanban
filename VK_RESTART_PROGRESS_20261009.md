@@ -1130,3 +1130,46 @@ held. B/current whole-state/recovery evidence, incumbent/fallback and human-QA
 cleanup boundary remain protected. No honest completion ETA exists while this
 required installed-payload correction is unavailable.
 See receipts/installed-two-profile-response-bound-blocker-20261009.json.
+
+## 18:50 archive/helper deferral: measured read-only decision
+
+The checker is needed for archive retirement, not intrinsically for a no-retirement
+cutover. Deferral requires accepted rehearsal/catch-up/latest-data-fallback space
+for this same MCP candidate. No such route is currently proved. The retained
+baseline/online index hashes match the authenticated forecast. Native free is
+about8.23GB. Known11:17catch-up requires6334836736new allocated bytes; adding
+the existing8589934592reserve gives about6.69GB deficit, not the full23.44GB
+archive. Later writes, rehearsal changes, directories/journals and fallback
+remain additional; no full restore or B backup was repeated.
+
+Quarantine already renames old files on the same filesystem: zero additional
+copy allocation. Only97same-content files/41127936allocated bytes are available
+for a possible separately reviewed metadata-only optimization. The changed
+4734447616byte dependency is green-codex-home/logs_2.sqlite; content differs,
+not just timestamp. Current scope requires it. Do not infer dependency
+irrelevance from its name or silently omit it. B historical preservation is
+separate from native operational replay and all original evidence remains.
+
+The8GiBreserve is policy headroom, not another copied payload. Omitting it leaves
+about1.90GB before later writes and rehearsal; current latest-data fallback may
+need another full4.73GB changed database while retaining prior versions. A lower
+proven reserve has not been measured or accepted. No reserve or scope reduction
+is performed. B capture already has zeroSSDarchive/snapshot payload. Existing
+B Linux builder storage is not an MCP-native candidate mount. Moving quarantine
+requires verified metadata-preserving transport and exact native-version
+retirement approval; neither is silently introduced.
+
+The shortest current path remains the bounded OP checker correction, exact
+reviewed root-payload handoff, both installed acceptances and already approved
+one-file retirement. The response-size finding was delivered into OP's existing
+active turn (queue200; no new execution). Current published source separates
+1MiBreceipts from unchanged64KiBrequests/status. Installed original hashes
+remain authoritative until a real authorized replacement is authenticated.
+Staging did not change OP source/index or install substituted payloads.
+
+Unfinished local checkpoint: scripts/deployment/vk_approved_archive_retirement.py
+is only an isolated automatic terminal actor draft. The safe receipt records its
+hash; it is compiled only, unreviewed, untested, unexecuted, unpublished and not
+adopted. Do not use it as readiness evidence. Completed immutable checkpoints
+remain published; private witnesses, receipts and mutable caches stay private.
+See receipts/archive-deferral-capacity-20261009.json.

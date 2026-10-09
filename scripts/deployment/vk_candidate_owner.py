@@ -45,14 +45,22 @@ def record_verification(state, operation, fd=1):
 
 
 class PreparationLease:
-    def __init__(self, path, expected):
+    def __init__(self, path, expected, *, expected_mode=0o600):
         self.path, self.expected, self.fd = Path(path), tuple(expected), None
+        require(expected_mode in (0o600, 0o664), 'unsupported recorded lease mode')
+        self.expected_mode = expected_mode
+
+    def protected_parent(self):
+        parent = self.path.parent.lstat()
+        require(stat.S_ISDIR(parent.st_mode) and parent.st_uid == os.getuid()
+                and stat.S_IMODE(parent.st_mode) == 0o700, 'lease parent must remain private')
 
     def __enter__(self):
+        self.protected_parent()
         info = self.path.lstat()
         require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1
                 and info.st_uid == os.getuid() and info.st_gid == os.getgid()
-                and stat.S_IMODE(info.st_mode) == 0o600
+                and stat.S_IMODE(info.st_mode) == self.expected_mode
                 and (info.st_dev, info.st_ino) == self.expected, 'unsafe preparation lease')
         fd = os.open(self.path, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
         try:
@@ -72,9 +80,12 @@ class PreparationLease:
         return self
 
     def verify(self):
+        self.protected_parent()
         require(self.fd is not None, 'preparation ownership released')
         info, current = os.fstat(self.fd), self.path.lstat()
         require(stat.S_ISREG(current.st_mode) and current.st_nlink == 1
+                and current.st_uid == os.getuid() and current.st_gid == os.getgid()
+                and stat.S_IMODE(current.st_mode) == self.expected_mode
                 and (info.st_dev, info.st_ino) == (current.st_dev, current.st_ino) == self.expected,
                 'preparation lease binding changed')
         probe = os.open(self.path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)

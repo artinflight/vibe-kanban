@@ -6,9 +6,11 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from vk_candidate_generation import Blocked
-from vk_candidate_package import build, verify
+from vk_candidate_package import build, verify, RECORDED_VERIFIERS
+from vk_prep_common import digest
 
 PARENT = Path('/mnt/vk-storage/vk-safe-release-20261008/candidate-package-tests')
 
@@ -47,6 +49,29 @@ class PackageTests(unittest.TestCase):
         with self.assertRaisesRegex(Blocked, 'only a tool-binding fixture'):
             build(self.package, self.inventory)
         self.assertFalse(self.package.exists())
+
+    def test_recorded_verifier_requires_source_and_exact_immutable_receipts(self):
+        result = build(self.package, self.inventory, fixture_only=True)
+        path = self.package / 'candidate-tool-binding.json'
+        contract = json.loads(path.read_text())
+        del contract['required_modules']['vk_candidate_owner.py']
+        path.write_text(json.dumps(contract))  # This new retained legacy fixture only.
+        with self.assertRaisesRegex(Blocked, 'required contracts'):
+            verify(self.package)
+        with self.assertRaisesRegex(Blocked, 'required contracts'):
+            verify(self.package, expected_source=result['source_commit'])
+        # Fixture registration represents an independently pinned old contract;
+        # production registers only the exact retained 01af package receipts.
+        recorded = {result['source_commit']: (digest(path), digest(self.package / 'recovery-package.json'))}
+        with patch.dict(RECORDED_VERIFIERS, recorded):
+            old = verify(self.package, expected_source=result['source_commit'])
+            self.assertEqual(old['candidate_modules_verified'], 6)
+            with self.assertRaisesRegex(Blocked, 'source differs'):
+                verify(self.package, expected_source='e' * 40)
+            with path.open('a') as out:
+                out.write(' ')
+            with self.assertRaisesRegex(Blocked, 'receipts differ'):
+                verify(self.package, expected_source=result['source_commit'])
 
 
 if __name__ == '__main__':

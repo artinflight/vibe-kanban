@@ -466,3 +466,25 @@ clearance, measured final catch-up/headroom and actual live acceptance remain
 critical-path gates. HTTPS issuer investigation and ownership repair can proceed
 independently. Nightly backup/privilege automation are follow-ups, not gates for
 this repair. Historical recovery exceptions remain unchanged.
+
+The first 521aa71a preparation start failed before ownership acquisition: its
+new seven-module verifier rejected the retained six-module 01af index-verifier
+package. The fix recognizes only that exact original source plus immutable
+contract/recovery hashes (7741c433 / e7856e60), verifies every recorded file and
+all eight PR229 pins, and retains the original package unchanged. Default/new
+packages still require all seven modules. No arbitrary legacy waiver is exposed.
+The lease's original mode is 0664 inside a UID1000 mode0700 parent. Recovery
+matches its recorded inode/mode and private parent; it does not chmod the lease
+or relax access. A focused regression rejects changed/exposed lease metadata.
+The initial failed start and its journal remain retained; no denied access was
+retried through another identity or route.
+
+HTTPS issuer diagnosis is complete without security/trust changes. The actual
+leaf issuer is My Homelab CA, not Caddy; Desktop already trusts the public root
+in CurrentUser and LocalMachine Root. Root DER SHA-256 is
+15c53cb6ab0bf38592e64636dd65784bffca275ae5407327b890c6c00067fa80.
+Loading this public certificate only into an in-memory checker context verifies
+hostname and chain at https://vibe.local, which returns200 and old frontend
+index-JMqAOzZ4.js / HTML SHA ab7c3637e64b3bafe1db5ec85f33d132e5c92609a80fd93a08cf83ed277d0f34.
+No issuer verification was disabled, no global trust changed and no private key
+or credential material was read/exported. TLS verification is no longer a gate.

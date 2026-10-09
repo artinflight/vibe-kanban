@@ -31,7 +31,7 @@ class VerifiedCheckpointProvider:
                 'derived index must be independently preserved on B')
         if not fixture_only:
             require(source_prefix == '/', 'operational cached checkpoint requires unchanged absolute namespace')
-            package = verify_package(verifier_package)
+            package = verify_package(verifier_package, expected_source=verifier_source)
             require(package['source_commit'] == verifier_source and package['fixture_only'] is False,
                     'checkpoint verifier source is not pinned/nonfixture')
             require(index_receipt.get('desktop_directory', '').startswith('B:/vk-backups/'),

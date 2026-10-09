@@ -117,3 +117,15 @@ class OwnerTests(unittest.TestCase):
         raw = json.loads(state.path.read_text())
         self.assertFalse(raw['controller_retained_alive'])
         self.assertTrue(raw['requires_live_owner_probe'])
+
+    def test_recorded_lease_mode_requires_exact_private_parent_without_chmod(self):
+        self.path.chmod(0o664)  # New fixture only; no actual candidate chmod.
+        with self.assertRaisesRegex(ValueError, 'unsafe preparation lease'):
+            with PreparationLease(self.path, self.identity):
+                pass
+        with PreparationLease(self.path, self.identity, expected_mode=0o664) as lease:
+            self.assertTrue(lease.verify())
+            self.assertEqual(self.path.stat().st_mode & 0o777, 0o664)
+            self.root.chmod(0o755)  # Retained fixture demonstrates fail-closed exposure.
+            with self.assertRaisesRegex(ValueError, 'remain private'):
+                lease.verify()

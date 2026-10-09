@@ -2,8 +2,8 @@
 
 Latest authority: Seamus approved both actions at08:40UTC. Bounded retirement
 and B builder ownership/nonroot namespace gates are complete. Actual free99.24GiB
-was measured; SAME MCP candidate root is prepared. The last observed blocker is
-Desktop SSH/Tailscale offline since09:20UTC, holding B readback/artifact/restore.
+was measured; SAME MCP candidate root is prepared. Existing SSH/B returned
+at09:38:29UTC. B-only archive readback passed; fresh isolated buildv7 is running.
 General cleanup stays off. See the final section and approved-restart receipt.
 
 Current capacity recommendation after shared-cache inspection: assess the bounded
@@ -317,7 +317,7 @@ full metadata/capacity/source/package/controller/consent/latest-data fallback ga
 Do not use estimates as measured reserve or erase448/145/transcript415/journal/
 mode/link exceptions. No new historical-recovery sign-off is created.
 
-## Approved retirement complete; observed Desktop outage holds restore
+## Approved retirement complete; retained interruption evidence
 
 The required operator-authenticated read-only clearance arrived:09:12:20UTC,
 root inspection of74,679inodes found zero consumers, zero compiler processes and
@@ -382,3 +382,44 @@ into the SAME MCP roots, measure allocation/RAM/metadata/catch-up reserve and
 accept real application/scanner/controller/consent/fallback gates. Fresh final
 fenced catch-up still precedes promotion. No restart/cutover/live repair occurred.
 No scope reduction or recovery-complete/universal-zero-loss sign-off invented.
+
+## Connection restored; recorded-link preservation and fresh build
+
+Existing SSH desktop returned at09:38:29UTC; the previous timeout is retained
+incident evidence, not a current access block. Both retired archives passed
+fresh B-only full-stream hashes through the packaged provider after local
+retirement. Post-removal journals are being preserved on B.
+
+UID1000 builder namespace/nested module preflights pass. Buildv6 failed at
+server linking: interrupted libstarlark archive contained its metadata member
+but no compiled object members, despite an existing Cargo completion fingerprint.
+Cause is unknown. The prior output is retained; buildv7 uses a fresh independent
+target and artifact directory within the SAME approved sandbox. No source,
+isolation, credential or security policy bypass; artifact acceptance is pending.
+
+Authenticated retained catalog analysis distinguishes575 recorded links whose
+virtual targets are not in the backup namespace:561 targets currently exist on
+MCP and14 are currently unavailable. Mostly these reference excluded generated
+dependencies; this is NOT an additional proved-loss count or retirement verdict.
+All link literals and historical exceptions remain preserved.
+
+The candidate provider now supports an explicit opt-in preservation policy that
+binds every missing link literal to its authenticated manifest. Strict validation
+remains the default. Virtual resolution handles paths through other symlinks;
+cycles, namespace escapes, altered exceptions and host fallthrough still block.
+Preserving a recorded missing target does not satisfy operational dependencies:
+configured selectors must resolve in independent candidate data, and rehearsal,
+promotion and latest-data fallback all additionally require actual operational
+dependency-closure acceptance. Fixture acceptance is explicitly labelled.
+
+All77 source roots and76 DB snapshots are still required; no smaller scope is
+silently substituted. Actual restore allocation, final catch-up peak, full Linux
+metadata, combined application/controller/consent acceptance and compatible
+latest-data fallback remain unverified. SAME MCP task root remains the candidate;
+B/WSL is solely the builder. Incumbent/frozen fallback and all historical evidence
+remain protected. General cleanup remains technically unavailable.
+
+Validation:35 candidate controller/scope regressions and11 actual PAX/direct-B
+contract regressions passed after the correction. These are isolated fixtures,
+not whole-state restore or application acceptance. Package binding is checked
+after committing the operational source, as required by its fail-closed builder.

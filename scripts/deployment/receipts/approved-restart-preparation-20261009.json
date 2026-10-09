@@ -199,5 +199,22 @@
     "Dot_status_used": false,
     "alternate_route_or_identity_used": false
   },
-  "B_post_removal_reverification_pending": true
+  "B_post_removal_reverification_pending": true,
+  "latest_progress": {
+    "utc": "2026-10-09T10:16:59.459928+00:00",
+    "SSH_route_returned_utc": "2026-10-09T09:38:29Z",
+    "retired_archives_B_only_post_removal_verified": true,
+    "builder_v6_link_failed": "interrupted starlark archive has no object members; cause unknown",
+    "builder_v7": "running: fresh target and artifacts; prior outputs retained",
+    "recorded_missing_virtual_link_targets": 575,
+    "targets_currently_existing_on_MCP": 561,
+    "targets_currently_unavailable": 14,
+    "missing_is_not_proved_loss": true,
+    "preservation_policy": "explicit opt-in; exact targets bound to authenticated manifest; runtime closure separately mandatory",
+    "all_original_roots_required": 77,
+    "all_original_snapshot_DBs_required": 76,
+    "actual_MCP_restore_complete": false,
+    "cutover_complete": false,
+    "general_cleanup_unavailable": true
+  }
 }

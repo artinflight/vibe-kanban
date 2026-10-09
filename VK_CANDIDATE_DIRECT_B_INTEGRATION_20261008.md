@@ -165,3 +165,18 @@ functionality clears original-object/history exceptions. Cleanup remains
 technically unavailable pending Seamus's human QA and separate scoped work.
 No backend restart, cutover, merge, cleanup, live restore or production acceptance
 occurred in this turn.
+
+## Recorded missing links: preservation versus runtime acceptance
+
+Fresh actual catalog inspection found575 missing virtual link targets;561 exist
+on the host and14 are unavailable. Host presence is not a namespace dependency
+proof. Preserve exact literals with explicit provider opt-in and manifest-bound
+exceptions; do not read host targets during virtual resolution. Default validation
+is strict. Operational selectors always resolve against the candidate inventory;
+new dependency-closure acceptance is mandatory at every accepted stage. Metadata
+restoration does not certify historical loss or current functionality.
+
+The exception inventory counts toward the bounded metadata budget. Existing
+archive/header/content authentication, hardlink metadata, archived-atime policy,
+ownership/xattr restrictions, mode0555 quarantine, writer fencing and cleanup
+prohibition remain enforced. No PR229 reviewed source file was edited.

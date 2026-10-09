@@ -135,7 +135,18 @@ def inventory(root):
     return rows
 
 
-def validate_manifest(rows):
+def validate_manifest(rows, *, recorded_link_exceptions=None):
+    """Validate preservation rows; exceptions never authorize a runtime selector.
+
+    A bound capture may contain originally dangling/external links. Only their
+    exact literal targets may be retained; host resolution is never consulted.
+    Escape/cycle/type errors are not missing dependencies and remain blockers.
+    """
+    exceptions = {} if recorded_link_exceptions is None else recorded_link_exceptions
+    require(type(exceptions) is dict, "invalid recorded link exception inventory")
+    require(all(rows.get(name, {}).get("kind") == "symlink"
+                and rows[name].get("target") == target for name, target in exceptions.items()),
+            "recorded link exception changed or omitted")
     require(bool(rows), "empty candidate scope")
     for name, row in rows.items():
         p = relative(name)
@@ -179,11 +190,39 @@ def validate_manifest(rows):
                     normalized.pop()
                 else:
                     normalized.append(part)
-            require("/".join(normalized) in rows, "link target outside restored data scope")
     for name, row in rows.items():
         if row["kind"] == "symlink":
-            resolve_virtual(rows, "/" + name)
+            try:
+                resolve_virtual(rows, "/" + name)
+            except Blocked as error:
+                require(str(error) == "namespace dependency missing" and name in exceptions,
+                        str(error))
+            else:
+                require(name not in exceptions, "resolved link must not be an exception")
     return rows
+
+
+def recorded_link_exceptions(rows):
+    """Classify missing virtual dependencies, without reading any host target."""
+    exceptions = {}
+    for name, row in rows.items():
+        if row.get("kind") == "symlink":
+            try:
+                resolve_virtual(rows, "/" + name)
+            except Blocked as error:
+                require(str(error) == "namespace dependency missing", str(error))
+                exceptions[name] = row["target"]
+    validate_manifest(rows, recorded_link_exceptions=exceptions)
+    return exceptions
+
+
+def capture_link_exceptions(verified):
+    exceptions = verified.get("recorded_link_exceptions", {})
+    if exceptions:
+        require(verified.get("recorded_link_exceptions_sha256") == digest({
+                    "manifest_sha256": verified["manifest_sha256"], "targets": exceptions}),
+                "recorded link exception binding mismatch")
+    return exceptions
 
 
 def resolve_virtual(rows, path):
@@ -258,22 +297,27 @@ def verify_sqlite(tree, paths):
             require(db.execute("PRAGMA integrity_check").fetchall() == [("ok",)], "private database integrity failed")
 
 
-def verify_tree(layout, rows, sqlite_paths):
+def verify_tree(layout, rows, sqlite_paths, *, recorded_link_exceptions=None):
     layout.validate()
-    validate_manifest(rows)
+    validate_manifest(rows, recorded_link_exceptions=recorded_link_exceptions)
     require(inventory(layout.tree) == rows, "candidate content/type/mode/owner/link inventory differs")
     verify_sqlite(layout.tree, sqlite_paths)
     return {"root_binding": layout.binding(), "manifest_sha256": digest(rows), "sqlite_paths": sorted(sqlite_paths)}
 
 
-def binding_environment(layout, selectors):
+def binding_environment(layout, selectors, *, preserved_capture=None):
     """Preserve virtual absolute selectors; return only independent backing paths.
 
     Root must give this mapping to the existing reviewed kernel boundary. These
     mappings do not authorize an environment-only launch on the host.
     """
     layout.validate()
-    rows = validate_manifest(inventory(layout.tree))
+    exceptions = {}
+    if preserved_capture is not None:
+        require(digest(preserved_capture["entries"]) == preserved_capture["manifest_sha256"],
+                "preserved capture manifest binding mismatch")
+        exceptions = capture_link_exceptions(preserved_capture)
+    rows = validate_manifest(inventory(layout.tree), recorded_link_exceptions=exceptions)
     bindings = {}
     for key, virtual in selectors.items():
         require(isinstance(virtual, str) and virtual.startswith("/") and ".." not in virtual.split("/"),
@@ -288,7 +332,7 @@ def binding_environment(layout, selectors):
             "requires_reviewed_kernel_boundary": True, "host_launch_authorized": False}
 
 
-def bind_reviewed_namespace(layout, argv, prefixes, selectors):
+def bind_reviewed_namespace(layout, argv, prefixes, selectors, *, preserved_capture=None):
     """Extend an already reviewed kernel command with candidate virtual roots.
 
     Never execute here. The supervisor must authenticate the boundary source and
@@ -311,7 +355,7 @@ def bind_reviewed_namespace(layout, argv, prefixes, selectors):
                 and ".." not in p.parts for p in normalized), "unsafe namespace prefix")
     require(all(not underneath(a, b) for a in normalized for b in normalized if a != b),
             "nested namespace prefixes need a separately reviewed mount order")
-    bindings = binding_environment(layout, selectors)
+    bindings = binding_environment(layout, selectors, preserved_capture=preserved_capture)
     require(all(all(any(underneath(Path(row[key]), p) for p in normalized)
                     for key in ("virtual", "resolved_virtual")) for row in bindings["selectors"].values()),
             "namespace mounts do not cover every selector and its link backing")
@@ -336,14 +380,15 @@ def bind_reviewed_namespace(layout, argv, prefixes, selectors):
             "boundary_reacceptance_required": True, "operational_authorization": False}
 
 
-def namespace_runtime_identity(layout, database_virtual, workspace_virtual):
+def namespace_runtime_identity(layout, database_virtual, workspace_virtual, *, preserved_capture=None):
     """Produce PR153's inode receipt for this namespace, without enrolling a DB.
 
     Call again after catch-up replaces a DB/workspace inode. A missing persisted
     dataset identity blocks; it is never synthesized from a path or history claim.
     The supervisor mounts the resulting small receipt read-only outside data.
     """
-    bindings = binding_environment(layout, {"database": database_virtual, "workspaces": workspace_virtual})
+    bindings = binding_environment(layout, {"database": database_virtual, "workspaces": workspace_virtual},
+                                   preserved_capture=preserved_capture)
     database, workspaces = [bindings["selectors"][key] for key in ("database", "workspaces")]
     require(Path(workspaces["backing"]).is_dir(), "workspace selector is not a directory")
     relative_database = Path(database["backing"]).relative_to(layout.tree).as_posix()
@@ -411,7 +456,8 @@ class CandidateController:
         require(verified["capture_id"] == capture, "backup generation mismatch")
         require(verified["full_current_state"] is True and verified["provider"] == "desktop-B",
                 "full authoritative B capture required")
-        rows = validate_manifest(verified["entries"])
+        rows = validate_manifest(verified["entries"],
+                                 recorded_link_exceptions=capture_link_exceptions(verified))
         require(verified["manifest_sha256"] == digest(rows), "backup manifest binding mismatch")
         if not verified.get('fixture_only'):
             require(verified.get('restore_archived_atime') is True,
@@ -437,6 +483,7 @@ class CandidateController:
         checks = ("private_filesystem_pid_network_manager_boundary", "no_incumbent_write_access",
                   "binary_module_scanner_bound", "capacity_controller_ready",
                   "runtime_database_workspace_identity_bound",
+                  "operational_dependency_closure_verified",
                   "whole_state_capacity_restore_verified",
                   "full_required_linux_metadata_verified",
                   "recommend_and_usage_controls_preserved", "consent_accepted",
@@ -576,7 +623,8 @@ class CandidateController:
         self.phase = "restoring"
         self.layout.tree.mkdir(parents=True, mode=0o700)
         self.materialize(verified, set(verified["entries"]))
-        proof = verify_tree(self.layout, verified["entries"], self.sqlite_paths)
+        proof = verify_tree(self.layout, verified["entries"], self.sqlite_paths,
+                            recorded_link_exceptions=capture_link_exceptions(verified))
         proof.update(self.restore_atimes(verified))
         self.rows, self.boundary = verified["entries"], verified
         self.checkpoint("restored", {**proof, "capture_id": capture, "source": self.source})
@@ -586,7 +634,8 @@ class CandidateController:
     def accept_rehearsal(self):
         require(self.phase == "restored", "candidate is not restored")
         self.supervisor.verify_stopped(self.layout.binding())
-        test_rows = validate_manifest(inventory(self.layout.tree))
+        test_rows = validate_manifest(inventory(self.layout.tree),
+                                     recorded_link_exceptions=capture_link_exceptions(self.boundary))
         verify_sqlite(self.layout.tree, self.sqlite_paths)
         proof = {"root_binding": self.layout.binding(), "manifest_sha256": digest(test_rows)}
         receipt = self.supervisor.acceptance(self.layout.binding(), self.source, self.scope, "rehearsal")
@@ -672,7 +721,8 @@ class CandidateController:
         sync_directory(quarantine.parent)
         self.materialize(verified, changed & expected.keys())
         self.supervisor.verify_fence(verified)
-        proof = verify_tree(self.layout, expected, self.sqlite_paths)
+        proof = verify_tree(self.layout, expected, self.sqlite_paths,
+                            recorded_link_exceptions=capture_link_exceptions(verified))
         proof.update(self.restore_atimes(verified))
         self.rows, self.boundary = expected, verified
         self.checkpoint("refreshed", {**proof, "capture_id": capture, "quarantine": str(quarantine)})
@@ -683,7 +733,8 @@ class CandidateController:
         require(self.phase == "refreshed", "final fenced catch-up required")
         self.supervisor.verify_stopped(self.layout.binding())
         self.supervisor.verify_fence(self.boundary)
-        proof = verify_tree(self.layout, self.rows, self.sqlite_paths)
+        proof = verify_tree(self.layout, self.rows, self.sqlite_paths,
+                            recorded_link_exceptions=capture_link_exceptions(self.boundary))
         proof.update(self.restore_atimes(self.boundary))
         receipt = self.supervisor.acceptance(self.layout.binding(), self.source, self.scope, "activation")
         self.accepted(receipt, proof, "activation", self.boundary["capture_id"])

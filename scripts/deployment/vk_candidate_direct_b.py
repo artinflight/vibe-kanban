@@ -16,7 +16,7 @@ import os
 from pathlib import Path, PurePosixPath
 
 from vk_archive_store import Archive, reference
-from vk_candidate_generation import Blocked, digest, atime_binding, require, relative, validate_manifest, inventory
+from vk_candidate_generation import Blocked, digest, atime_binding, require, relative, validate_manifest, inventory, recorded_link_exceptions
 from vk_candidate_scaffold import authenticate_plan, add_context
 
 PR229 = "754129c5fff55da2f5598d8c7beb4d4325587ead"
@@ -73,7 +73,10 @@ def hardlink_metadata(entries, target, names):
 
 class DirectBProvider:
     def __init__(self, namespace_scope_sha256, required_databases, *, archive_factory=Archive,
-                 fixture_only=False, metadata_budget_bytes=MAX_INDEX_BYTES, restore_archived_atime=False):
+                 fixture_only=False, metadata_budget_bytes=MAX_INDEX_BYTES, restore_archived_atime=False,
+                 preserve_recorded_missing_links=False):
+        require(type(preserve_recorded_missing_links) is bool, 'recorded link policy must be explicit boolean')
+        self.preserve_recorded_missing_links = preserve_recorded_missing_links
         require(type(restore_archived_atime) is bool, 'atime policy must be explicit boolean')
         self.restore_archived_atime = restore_archived_atime
         require(type(metadata_budget_bytes) is int and 0 < metadata_budget_bytes <= 256 * 1024**2,
@@ -230,12 +233,14 @@ class DirectBProvider:
                     'canonical candidate index exceeds explicit metadata budget')
         # Bind a compact timestamp vector to sorted manifest names, rather
         # than encoding every private path twice in the bounded catalog.
+        link_exceptions = recorded_link_exceptions(entries) if self.preserve_recorded_missing_links else {}
         timestamp_values = [atimes[name] for name in sorted(entries)] if self.restore_archived_atime else []
-        for piece in json.JSONEncoder().iterencode(timestamp_values):
-            final_encoded_bytes += len(piece.encode())
-            require(final_encoded_bytes <= self.metadata_budget_bytes,
-                    'candidate timestamps exceed explicit metadata budget')
-        validate_manifest(entries)
+        for metadata_vector in (timestamp_values, link_exceptions):
+            for piece in json.JSONEncoder().iterencode(metadata_vector):
+                final_encoded_bytes += len(piece.encode())
+                require(final_encoded_bytes <= self.metadata_budget_bytes,
+                        'candidate timestamps/recorded links exceed explicit metadata budget')
+        validate_manifest(entries, recorded_link_exceptions=link_exceptions)
         require(set(self.required) <= entries.keys(), "required operational database absent")
         result = record['result']
         manifest_sha256 = digest(entries)
@@ -250,6 +255,10 @@ class DirectBProvider:
                  'restore_archived_atime': self.restore_archived_atime,
                  'archived_atime_ns': timestamp_values,
                  'archived_atime_sha256': atime_binding(manifest_sha256, timestamp_values),
+                 'recorded_link_exceptions': link_exceptions,
+                 'recorded_link_exceptions_sha256': digest({'manifest_sha256': manifest_sha256,
+                                                           'targets': link_exceptions}),
+                 'operational_dependency_closure_verified': False,
                  'metadata_limits': 'PAX retained; built-in comparison covers current UID/GID, mode, mtime, POSIX ACL/user xattrs and links. Optional exact archived-atime restoration is separately bound; original source atimes/inode/ctime/birthtime are not inferred. Foreign ownership/other xattrs block; full operational metadata acceptance remains required'}
         self.indexes[capture_id] = {'proof': proof, 'archives': archives, 'locations': locations, 'headers': headers}
         return copy.deepcopy(proof)

@@ -11,7 +11,7 @@ import unittest
 from vk_candidate_generation import (
     Blocked, CandidateController, Layout, binding_environment, bind_reviewed_namespace, digest, inventory,
     open_regular, validate_manifest, verify_tree,
-    namespace_runtime_identity,
+    namespace_runtime_identity, recorded_link_exceptions,
 )
 from vk_candidate_scope import git_dependencies, query_paths
 from vk_candidate_scope_plan import compile_plan, tool_dependencies
@@ -35,7 +35,7 @@ class FixtureProvider:
                 with open_regular(tree, path) as stream:
                     content[path] = stream.read()
         self.captures[name] = ({"provider": "desktop-B", "capture_id": name,
-            "scope_sha256": "a" * 64, "full_current_state": True, "entries": rows,
+            "scope_sha256": "a" * 64, "full_current_state": True, "fixture_only": True, "entries": rows,
             "manifest_sha256": digest(rows), "origin_root_binding": origin}, content)
 
     def verify(self, capture):
@@ -76,6 +76,7 @@ class FixtureSupervisor:
         checks = ("private_filesystem_pid_network_manager_boundary", "no_incumbent_write_access",
                   "binary_module_scanner_bound", "capacity_controller_ready",
                   "runtime_database_workspace_identity_bound",
+                  "operational_dependency_closure_verified",
                   "whole_state_capacity_restore_verified",
                   "full_required_linux_metadata_verified",
                   "recommend_and_usage_controls_preserved", "consent_accepted",
@@ -418,6 +419,59 @@ class CandidateTests(unittest.TestCase):
         alias.symlink_to(self.incumbent, target_is_directory=True)
         with self.assertRaises(Blocked):
             Layout(alias / "task", alias / "task/tree", alias / "task/evidence", (self.incumbent,)).validate()
+
+    def test_recorded_missing_link_preserved_but_not_launch_authority(self):
+        (self.incumbent / "home/history-link").symlink_to("/missing-original-target")
+        self.provider.capture("initial")
+        proof = self.provider.captures["initial"][0]
+        exceptions = recorded_link_exceptions(proof["entries"])
+        proof.update(recorded_link_exceptions=exceptions,
+                     recorded_link_exceptions_sha256=digest({
+                         "manifest_sha256": proof["manifest_sha256"], "targets": exceptions}))
+        self.restored()
+        self.assertEqual(os.readlink(self.layout.tree / "home/history-link"), "/missing-original-target")
+        self.assertEqual(inventory(self.layout.tree), inventory(self.incumbent))
+        with self.assertRaisesRegex(Blocked, "namespace dependency missing"):
+            binding_environment(self.layout, {"HISTORY": "/home/history-link"})
+        configured = binding_environment(self.layout, {"WORKSPACES": "/home/worktrees"},
+                                         preserved_capture=proof)
+        self.assertEqual(configured["selectors"]["WORKSPACES"]["resolved_virtual"], "/home/state")
+        self.assertFalse(configured["host_launch_authorized"])
+        with self.assertRaisesRegex(Blocked, "namespace dependency missing"):
+            binding_environment(self.layout, {"HISTORY": "/home/history-link"}, preserved_capture=proof)
+        self.supervisor.receipt_mutator = lambda r: {**r, "checks": {
+            **r["checks"], "operational_dependency_closure_verified": False}}
+        with self.assertRaisesRegex(Blocked, "acceptance check"):
+            self.controller.accept_rehearsal()
+        self.assertEqual(self.controller.phase, "restored")
+        (self.layout.tree / "home/history-link").rename(self.layout.evidence / "retained-original-link")
+        (self.layout.tree / "home/history-link").symlink_to("/changed-unproven-target")
+        with self.assertRaisesRegex(Blocked, "exception changed"):
+            self.controller.accept_rehearsal()
+
+    def test_recorded_link_exceptions_exact_and_manifest_bound(self):
+        rows = copy.deepcopy(self.original)
+        rows["home/worktrees"]["target"] = "/missing"
+        exceptions = recorded_link_exceptions(rows)
+        for altered in ({"home/worktrees": "/other"}, {"home/non-link": "/missing"}):
+            with self.assertRaises(Blocked):
+                validate_manifest(rows, recorded_link_exceptions=altered)
+        for target in ("../../escape", "/home/worktrees"):
+            rows["home/worktrees"]["target"] = target
+            with self.assertRaises(Blocked):
+                validate_manifest(rows, recorded_link_exceptions={"home/worktrees": target})
+        proof = self.provider.captures["initial"][0]
+        proof.update(entries=rows, manifest_sha256=digest(rows), recorded_link_exceptions=exceptions,
+                     recorded_link_exceptions_sha256="f" * 64)
+        with self.assertRaisesRegex(Blocked, "exception binding mismatch"):
+            self.controller.restore("initial")
+        self.assertFalse(self.layout.tree.exists())
+
+    def test_virtual_link_through_another_link_is_in_scope(self):
+        rows = copy.deepcopy(self.original)
+        rows["home/via-link"] = {**rows["home/worktrees"], "target": "worktrees/note"}
+        self.assertIs(validate_manifest(rows), rows)
+        self.assertEqual(recorded_link_exceptions(rows), {})
 
     def test_external_hardlink_to_incumbent_blocks_inventory(self):
         self.restored()

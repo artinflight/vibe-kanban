@@ -143,6 +143,7 @@ class ContractTests(unittest.TestCase):
         pin = namespace_runtime_identity(self.layout, '/home/state/state.sqlite', '/home/worktrees')
         checks = ('private_filesystem_pid_network_manager_boundary', 'no_incumbent_write_access',
                   'binary_module_scanner_bound', 'capacity_controller_ready', 'runtime_database_workspace_identity_bound',
+                  'operational_dependency_closure_verified',
                   'whole_state_capacity_restore_verified', 'full_required_linux_metadata_verified',
                   'recommend_and_usage_controls_preserved', 'consent_accepted', 'current_report_receipts_preserved',
                   'cleanup_unavailable', 'fallback_latest_data_compatible')
@@ -159,6 +160,19 @@ class ContractTests(unittest.TestCase):
         self.acceptance('rehearsal', 'initial')
         self.controller.accept_rehearsal()
         return initial, journal
+
+    def test_authenticated_recorded_missing_link_policy_is_opt_in(self):
+        (self.inc / 'home/history-link').symlink_to('unavailable-history')
+        self.capture('initial')
+        with self.assertRaisesRegex(Blocked, 'namespace dependency missing'):
+            self.provider.verify('initial')
+        self.provider.preserve_recorded_missing_links = True
+        proof = self.provider.verify('initial')
+        self.assertEqual(proof['recorded_link_exceptions'], {'home/history-link': 'unavailable-history'})
+        self.assertFalse(proof['operational_dependency_closure_verified'])
+        self.controller.restore('initial')
+        self.assertEqual(os.readlink(self.layout.tree / 'home/history-link'), 'unavailable-history')
+        self.assertEqual(inventory(self.layout.tree), proof['entries'])
 
     def test_actual_direct_capture_chain_catchup_and_latest_data_fallback(self):
         initial, journal = self.prepare_tested()

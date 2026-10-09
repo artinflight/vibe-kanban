@@ -309,11 +309,24 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
     let class = serde_json::json!({"envelope":"bounded","scope_relation":"bounded_step","scope":"localized",
         "novelty":"established","ambiguity":"low","horizon":"short","validation":"text_comparison",
         "risks":[],"uncertainty":"low","inspection_needed":false,"reason":"Record a settled choice in existing notes."});
+    // Sanitized real defect: an independent inventory request was retained
+    // solely because it said "remaining". Exercise the sandbox + core validator,
+    // not just the pure function; no model request or live settings change.
+    let inventory = "List the remaining inventory entries from the existing records; report names and counts only, without edits or purchases.";
+    let mut inventory_class = class.clone();
+    inventory_class["scope_relation"] = "independent".into();
+    inventory_class["reason"] = "A separate read-only inventory with direct record checks.".into();
     publish(&root, "legacy_bias");
     let old_scope = Scope::for_path(&root.join("current"));
     assert_eq!(assess(&policy, caution).floor, CapabilityFloor::Frontier);
     assert_eq!(
         captured_step(&root, &policy, prompt, class.clone())
+            .assessment
+            .floor,
+        CapabilityFloor::Frontier
+    );
+    assert_eq!(
+        captured_step(&root, &policy, inventory, inventory_class.clone())
             .assessment
             .floor,
         CapabilityFloor::Frontier
@@ -342,6 +355,39 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
                 .evidence
                 .contains(&"surrounding_assignment:protected".into())
         );
+        let inventory_result =
+            captured_step(&root, &policy, inventory, inventory_class.clone()).assessment;
+        assert_eq!(inventory_result.envelope, "bounded");
+        assert_eq!(inventory_result.floor, CapabilityFloor::Routine);
+        let mut shadow = policy.clone();
+        shadow.mode = RoutingMode::Shadow;
+        let recommendation = executors::routing::choose_assessed(
+            &shadow,
+            inventory_result.floor,
+            &inventory_result.envelope,
+            &policies,
+            &availability,
+            now,
+        )
+        .unwrap();
+        assert_eq!(recommendation.0, "gpt-6-sol");
+        assert_eq!(recommendation.1.as_deref(), Some("low"));
+        let mut continuation = inventory_class.clone();
+        continuation["scope_relation"] = "continuation".into();
+        assert_eq!(
+            captured_step(&root, &policy, "Finish the remaining work", continuation)
+                .assessment
+                .floor,
+            CapabilityFloor::Frontier
+        );
+        let mut ambiguous = inventory_class.clone();
+        ambiguous["uncertainty"] = "high".into();
+        assert_eq!(
+            captured_step(&root, &policy, inventory, ambiguous)
+                .assessment
+                .floor,
+            CapabilityFloor::Frontier
+        );
         let corrected_action = routed(&policy, caution);
         assert_eq!(
             corrected_action
@@ -368,7 +414,7 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
     }
     assert_eq!(std::process::id(), pid);
     println!(
-        "same pid={pid}: negative deployment interpretation and protected-history policy changed through worker publication; cheap model selection reached admission; generic resume remains protected"
+        "same pid={pid}: negative deployment interpretation and protected-history policy changed through worker publication; cheap model selection reached admission; independent remaining-inventory recommendation corrected; ambiguous/continuing work remains protected"
     );
     let scope_a = Scope::for_path(&root.join("current"));
     let start = Instant::now();

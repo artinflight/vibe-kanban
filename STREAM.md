@@ -1,3 +1,32 @@
+# October 9: independent inventory history correction (source-only)
+
+The post-cutover review identified execution
+`4bb75e8a-81af-47ed-8b7d-ce74eabdd0bb` at 21:16:44 UTC: a native low-risk,
+localized independent inventory assessment was elevated by the word `remaining`.
+The worker now accepts its existing positive independent semantic evidence before
+that word's fallback continuation check. Unresolved references, generic approvals,
+true continuations, ambiguity, missing inspection, unknown history, current
+repository/native risks, validation failure and explicit floors remain guarded.
+This does not change qualifications, model ranks, classifier settings or CU wire
+schema. Recommend remains required; no actual model/effort or credit changes.
+
+Regression coverage uses sanitized requests and supplied structured assessments,
+not private prompts or paid inference. Hosted CI is the build/acceptance path due
+to critically low SSD capacity. The existing isolated same-process reload test
+now also exercises this inventory correction, protected continuation and ambiguous
+history through the sandbox and backend validator. Its fixture recommendations
+are not real accepted-task savings.
+
+Work remains on the preserved `fix/autoswitch-current-step-risk` source branch,
+not the recreated old V1 managed checkout. No staging/main integration, deployment,
+module publication, Automatic activation, restart or cleanup is performed.
+A compatible worker artifact will keep the current protocol2 validator and
+byte-identical live models/instructions/classifier settings. Detailed evidence:
+[VK_AUTOSWITCH_HISTORY_RETENTION_20261009.md](VK_AUTOSWITCH_HISTORY_RETENTION_20261009.md).
+VK::Staging owns any later approved publication. October30 (20x to 10x) remains
+the readiness deadline; useful real Recommend evidence and net accepted-task
+quality/usage are still required.
+
 # October 9: verify actual AutoSwitch adoption
 
 The owner's cutover adopted the corrected protocol2 backend/module. Live identity,

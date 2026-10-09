@@ -1223,6 +1223,120 @@ mod tests {
     }
 
     #[test]
+    fn independent_inventory_releases_history_despite_remaining_word() {
+        // Sanitized reproduction of the October 9 21:16:44 real assessment:
+        // native bounded/independent, localized, low ambiguity/uncertainty,
+        // text comparison, no risk or inspection. No new inference is used.
+        let mut c = bounded();
+        c.validation = "text_comparison".into();
+        for prompt in [
+            "List the remaining inventory entries from the existing records; report names and counts only, without edits or purchases.",
+            "Look up the remaining entries in the existing inventory and report the recorded totals.",
+            "Look up the recorded inventory totals and report names and counts only.",
+        ] {
+            for previous in ["normal", "protected"] {
+                let mut a = assess(prompt);
+                apply(&mut a, &c);
+                let a = retain_previous(a, prompt, Some(previous));
+                assert_eq!(a.envelope, "bounded", "{prompt}: {previous}");
+                assert_eq!(a.floor, CapabilityFloor::Routine);
+                assert!(
+                    a.triage
+                        .evidence
+                        .iter()
+                        .any(|e| e == "current_request_reassessed")
+                );
+                assert!(
+                    !a.triage
+                        .evidence
+                        .iter()
+                        .any(|e| e == "retained_session_qualification")
+                );
+                assert_eq!(
+                    crate::routing_assessment::boundary_floor(
+                        &a,
+                        CapabilityFloor::Workhorse,
+                        Some(CapabilityFloor::Frontier)
+                    ),
+                    CapabilityFloor::Workhorse
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn remaining_work_requires_independent_resolved_evidence() {
+        let prompt = "List the remaining inventory entries from the existing records.";
+        for change in 0..6 {
+            let mut c = bounded();
+            match change {
+                0 => c.scope_relation = "continuation".into(),
+                1 => c.scope_relation = "unknown".into(),
+                2 => c.scope_relation = "context_only".into(),
+                3 => c.ambiguity = "medium".into(),
+                4 => c.uncertainty = "high".into(),
+                _ => c.inspection_needed = true,
+            }
+            let mut a = assess(prompt);
+            apply(&mut a, &c);
+            assert_eq!(
+                retain_previous(a, prompt, Some("protected")).floor,
+                CapabilityFloor::Frontier,
+                "case {change}"
+            );
+        }
+        // Even an overconfident classification cannot resolve vague references
+        // or erase current validation/repository/native protection.
+        for prompt in ["continue", "Make this better", "Fix it", "Do the same"] {
+            let mut a = assess(prompt);
+            apply(&mut a, &bounded());
+            assert_eq!(
+                retain_previous(a, prompt, Some("protected")).floor,
+                CapabilityFloor::Frontier,
+                "{prompt}"
+            );
+        }
+        let mut continuation = bounded();
+        continuation.scope_relation = "continuation".into();
+        let mut a = assess("Finish the remaining work");
+        apply(&mut a, &continuation);
+        assert_eq!(
+            retain_previous(a, "Finish the remaining work", Some("protected")).floor,
+            CapabilityFloor::Frontier
+        );
+        let mut a = assess(prompt);
+        apply(&mut a, &bounded());
+        assert_eq!(
+            retain_previous(a, prompt, Some("unknown_future_envelope")).floor,
+            CapabilityFloor::Frontier
+        );
+        let mut a = assess(prompt);
+        a.validation_failure = true;
+        apply(&mut a, &bounded());
+        assert_eq!(
+            retain_previous(a, prompt, Some("protected")).floor,
+            CapabilityFloor::Frontier
+        );
+        let mut c = bounded();
+        c.risks = vec!["security".into()];
+        let mut a = assess(prompt);
+        apply(&mut a, &c);
+        assert_eq!(
+            retain_previous(a, prompt, Some("normal")).floor,
+            CapabilityFloor::Frontier
+        );
+        let mut a = assess(prompt);
+        let mut context = assess(prompt).triage;
+        context.risk = vec!["security".into()];
+        crate::routing_assessment::apply_repository_context(&mut a, &context);
+        apply(&mut a, &bounded());
+        assert_eq!(
+            retain_previous(a, prompt, Some("normal")).floor,
+            CapabilityFloor::Frontier
+        );
+    }
+
+    #[test]
     fn context_notes_do_not_become_new_security_work_or_cheap_assignments() {
         let mut c = bounded();
         c.scope_relation = "context_only".into();

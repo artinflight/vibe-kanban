@@ -1,0 +1,75 @@
+name: AutoSwitch module acceptance
+
+on:
+  push:
+    branches: [fix/autoswitch-current-step-risk]
+    paths:
+      - crates/executors/**
+      - .github/workflows/autoswitch-module-acceptance.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: autoswitch-module-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: nightly-2025-12-04
+
+jobs:
+  module:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt
+          cache-key: backend-test-Linux-X64-ubuntu-24.04
+      - name: Permit sandbox only on disposable hosted runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Executor regressions and existing same-process acceptance (zero inference)
+        env:
+          VK_ROUTING_TEST_ROOT: ${{ runner.temp }}/autoswitch-acceptance
+        run: |
+          set -o pipefail
+          mkdir -p "$VK_ROUTING_TEST_ROOT" module-artifact
+          cargo fmt --all -- --check
+          cargo test --locked -p executors --lib 2>&1 | tee module-artifact/executor-tests.log
+          cargo test --locked -p executors --test routing_module_reload -- --ignored --nocapture 2>&1 | tee module-artifact/reload.log
+      - name: Package worker without publication or policy changes
+        run: |
+          cp target/debug/vk-routing-module module-artifact/worker
+          strip module-artifact/worker
+          python3 - <<'PYCODE'
+          import hashlib, json, os
+          from pathlib import Path
+          worker = Path('module-artifact/worker')
+          receipt = {
+              'sourceCommit': os.environ['GITHUB_SHA'],
+              'sourceRepository': os.environ['GITHUB_REPOSITORY'],
+              'workflowRun': os.environ['GITHUB_RUN_ID'],
+              'workerSha256': hashlib.file_digest(worker.open('rb'), 'sha256').hexdigest(),
+              'protocol': 2,
+              'profile': 'stripped development',
+              'nativeInferenceCalls': 0,
+              'published': False,
+              'integration': 'Keep live pinned validator, models, instructions and classifier settings; prepare only in an isolated root.'
+          }
+          Path('module-artifact/build-receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          PYCODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: autoswitch-module-${{ github.sha }}
+          path: module-artifact/
+          if-no-files-found: error
+          retention-days: 14

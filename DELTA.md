@@ -1588,3 +1588,10 @@ retained by wrapper. Formatting/ops checks pass. No live publication performed.
 Final observation through21:08:56 UTC: 13 Recommend/Astra-high decisions, all
 13 native bindings Sol6.1/high; eight completed/five running, one classifier
 success/twelve fast-path decisions. Earlier ten-turn snapshot is retained.
+
+## 2026-10-09: independent inventory history fix
+
+Source-only worker correction for the confirmed 21:16:44 `remaining` bias, with
+semantic/history regressions and existing same-process acceptance extended.
+Hosted CI builds the compatible artifact; no local Cargo compilation, publication,
+restart, model policy change or Auto activation. See VK_AUTOSWITCH_HISTORY_RETENTION_20261009.md.

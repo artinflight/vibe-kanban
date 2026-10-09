@@ -1,3 +1,12 @@
+## October 9: AutoSwitch history correction is source-only
+
+An independent low-risk inventory must not inherit old task qualification solely
+because the request says `remaining`; positive current-task semantic evidence may
+resolve that word. Unresolved continuation, repository/native/current protection,
+manual floors and failure safeguards remain authoritative. This worker-only
+protocol2 correction is being validated without local Cargo builds; Recommend and
+live settings remain unchanged. See VK_AUTOSWITCH_HISTORY_RETENTION_20261009.md.
+
 ## October 9: AutoSwitch corrected boundary adopted
 
 The owner cutover's running `c3c48e63` backend and `5ce84ee2` frontend are verified

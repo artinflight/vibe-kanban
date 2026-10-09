@@ -6,19 +6,19 @@ export interface WorkspaceReviewState {
 }
 
 export function getWorkspaceAttentionLabel(
-  workspace: WorkspaceReviewState
-): 'Needs approval' | 'Needs review' | undefined {
+  workspace: WorkspaceReviewState,
+): "Needs approval" | "Needs review" | undefined {
   if (
-    workspace.latestProcessStatus === 'failed' ||
-    workspace.latestProcessStatus === 'killed'
+    workspace.latestProcessStatus === "failed" ||
+    workspace.latestProcessStatus === "killed"
   )
     return undefined;
-  if (workspace.hasPendingApproval) return 'Needs approval';
+  if (workspace.hasPendingApproval) return "Needs approval";
   if (
     workspace.hasUnseenActivity &&
     !workspace.isRunning &&
-    workspace.latestProcessStatus !== 'running'
+    workspace.latestProcessStatus !== "running"
   )
-    return 'Needs review';
+    return "Needs review";
   return undefined;
 }

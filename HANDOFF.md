@@ -17,8 +17,9 @@ prove installed root visibility and owner adoption before routine use. Preserve
 fallback through human QA and all existing backup/rollback/interruption gates.
 
 Ops passed. Format/check/lint attempts stopped at missing Prettier/TypeScript/
-ESLint. No unrelated Cargo rebuild was run. Three dependency package tests need
-committed clean source; repeat before final publication. Branch derives only from
+ESLint. No unrelated Cargo rebuild was run. All142 PR231 candidate tests pass from committed clean source; the initial
+three package failures were the expected clean-source guard. All23 focused
+tests also pass after disabling Python site initialization. Branch derives only from
 specified PR231 checkpoint, with staging untouched. Fixtures are retained under
 mounted `/mnt/vk-storage/vk-retirement-preflight-tests`.
 

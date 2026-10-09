@@ -1,6 +1,6 @@
 """Fixed-policy, read-only root checker. Install only after explicit approval.
 
-Run only via /usr/bin/python3 -I -B <installed file>, with no script arguments.
+Run only via /usr/bin/python3 -I -S -B <installed file>, with no script arguments.
 No repo imports, commands, path arguments, environment credentials or writes.
 """
 import fcntl
@@ -299,7 +299,7 @@ def check(policy, request):
 
 def main():
     try:
-        require(len(sys.argv) == 1 and sys.flags.isolated and sys.flags.dont_write_bytecode)
+        require(len(sys.argv) == 1 and sys.flags.isolated and sys.flags.no_site and sys.flags.dont_write_bytecode)
         require(os.geteuid() == 0 and os.environ.get('SUDO_UID') == '1000')
         # Python's -I ignores caller sys.path/PYTHONPATH; no local imports.
         require(__file__ == CODE)

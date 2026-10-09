@@ -42,7 +42,7 @@ that terminal, reuse its credentials or claim the old receipt remains fresh.
 The only proposed allowed invocation is:
 
 ```
-/usr/bin/python3.12 -I -B /usr/local/libexec/vk-retirement-check.py
+/usr/bin/python3.12 -I -S -B /usr/local/libexec/vk-retirement-check.py
 ```
 
 `mcp` invokes it through fixed `/usr/bin/sudo -n --` argv. Sudo matches the
@@ -50,7 +50,8 @@ interpreter digest, exact flags and exact script path, with NOSETENV and NOEXEC.
 There are no argument wildcards, environment-based policy selectors, shell,
 repository imports, subprocesses, arbitrary path reads, service operations,
 unlink, directory traversal for deletion, chmod or root receipt-file writes.
-Python isolated mode excludes user Python paths; bytecode writes are disabled.
+Python isolated mode excludes user Python paths; -S also disables site initialization
+and sitecustomize hooks. Bytecode writes are disabled.
 The interpreter, checker, policy and their ancestors must be root-owned and
 non-user-writable; the root checker enforces this at entry. OS standard-library
 code is an administrator-owned dependency, not an imported worktree input.
@@ -187,7 +188,9 @@ Artifact SHA-256 pins:
 
 | Artifact | SHA-256 |
 | --- | --- |
-| Checker | `c022cc6017d0d88101a4ad4431ab2056db10124060691fcad8246ad0345e95ed` |
+| Checker | `0489bf6c2451c2c8022eea347e4443b095d42b21f12d70336d1c158c5a0147e4` |
+| Proposed sudoers rule | `42299a5e496e4abb281da0224ae2069e7cc35c92e7424290cbd3384d0d103375` |
+| Unprivileged adapter | `56b6fe4756add1a6f60e5589c6ff0650d758116ad7b6eb7a1d5f749a49fc2300` |
 | Baseline policy | `bfd27d6ecb4507805490e333c3ea55b4a3c4061268f240f48ff83d4d28dba268` |
 | `/usr/bin/python3.12` | `e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f` |
 
@@ -216,7 +219,7 @@ visibility, changed pins, or exceptional operational approvals still involve a
 human. Grant rollback is removal of the one exact rule by the administrator,
 with existing fallback and data retained; this branch does not execute rollback.
 
-Local validation:23 focused regressions passed, including genuine same-process
+Local validation:23 focused regressions and all142 PR231 candidate regressions passed, including genuine same-process
 Unix peer/PID and held kernel lease; pinned hashing/scan ordering and FD closure;
 open FD/hardlink/map/thread consumers; protected/malformed/missing metadata;
 proc visibility/namespace mismatch; churn and deadline; symlink/path/identity/
@@ -233,4 +236,6 @@ blocked on missing TypeScript; `pnpm run lint` blocked on missing ESLint. This
 checkout has no node_modules. Full Cargo workspace tests were not run because
 this source-only task prohibits unrelated rebuilds. The dependency regressions
 initially had139 pass/3 packaging failures due to the expected clean-source
-requirement; repeat from committed clean source before publishing this draft.
+requirement; all142 passed after committing the source. The23 focused tests
+also passed after adding -S to exclude Python site initialization. A direct
+unprivileged isolated invocation emits only the generic blocked result.

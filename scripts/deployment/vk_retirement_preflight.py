@@ -13,7 +13,7 @@ import time
 
 from vk_candidate_owner import process_start
 
-COMMAND = ('/usr/bin/sudo', '-n', '--', '/usr/bin/python3.12', '-I', '-B',
+COMMAND = ('/usr/bin/sudo', '-n', '--', '/usr/bin/python3.12', '-I', '-S', '-B',
            '/usr/local/libexec/vk-retirement-check.py')
 GATES = ('target_approved', 'backup_verified', 'dependencies_excluded',
          'fallback_preserved_until_human_qa', 'rollback_ready')

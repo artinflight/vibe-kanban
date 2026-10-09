@@ -188,3 +188,44 @@ is UID1000 codex PID3211750 from installed daemon release0.162.0. Its IPC conten
 is not persistent file content; existing workflow retains warning accounting.
 No old partial is accepted/resumed, and no data or endpoint is deleted here.
 Future full invocation must install that existing helper before capture.
+
+## Current full capture and index preflight
+
+Correct workflow invocation is running as session79354:
+run_workflow_complete_capture.py, B destination whole-state-workflow-complete,
+local metadata workflow-complete-backups. It installs the unchanged runtime
+lifecycle helper before the capture function imports its warning validator.
+Source plan/journal/roots remain unchanged; previous25GB partial stays unaccepted.
+
+Read-only analysis of the already generated B inventory counted537532paths,
+67733483bytes. Even an empty-value JSON object for these names is70421143bytes,
+which exceeds the existing candidate64MiB index budget before file metadata.
+The provider now retains its64MiB default and admits an explicit finite budget
+of at most256MiB, counts JSON incrementally without another full encoding buffer,
+and checks the canonical hardlink-expanded result too. Budget/actual encoding
+size are bound into the proof. Two new regressions pass for unchanged defaults,
+invalid/unbounded budgets, accepted explicit budgets and fail-closed overflow.
+The full production index size and its actual memory fit still need measurement
+from the accepted archive; no larger operational budget is silently selected.
+
+## Compiled startup cleanup prohibition, isolated correction
+
+Prepared an exact four-file application patch against the preserved149-file
+overlay, not the failed merge index. It disables automatic legacy attachment
+migration before any marker/filesystem work and automatic orphan attachment
+deletion in the local deployment constructor. Compiled constants are false;
+no environment/marker can enable either path in this recovery release. Build-info
+exposes both flags. Existing legacy cache read fallback remains unchanged.
+
+The real-server sandbox regression now requires both compiled flags false,
+seeds a legacy cache sentinel, and tests startup with DISABLE_ATTACHMENT_CLEANUP
+unset. It checks retained legacy content/metadata without rejecting normal
+creation of unrelated new cache entries. Patch syntax and exact nightly Rust
+formatting pass; combined compilation and packaged execution remain unrun.
+
+Patch/receipt are preserved in
+B:/vk-backups/vk-safe-release-20261009/attachment-startup-gate; its exact inputs
+and resulting file hashes are bound before the private candidate source changes.
+This does not change the incumbent, original backups, or cleanup authorization.
+Later cleanup requires human QA and a separately reviewed release; no runtime
+override is introduced.

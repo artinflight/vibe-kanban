@@ -1,0 +1,28 @@
+{
+  "combined_compilation_and_live_acceptance": "unrun",
+  "files": {
+    "crates/local-deployment/src/lib.rs": {
+      "after_sha256": "a02bb15a1838285e73be7040d1ea14ed690f0c31f0cb5a425fbb0b8abe9e1fe7",
+      "before_sha256": "08f372418d82f7bffdf7ea9a58a26ebe2cec46609d81d719d6880a4133fa6141"
+    },
+    "crates/server/src/main.rs": {
+      "after_sha256": "e28571f20bf3c26e3ec7905193442019fd55e794ef1beb4f81023568b127fadb",
+      "before_sha256": "4a6b17b0a254ec95cb694f4cb6831a51d17d1e602aba8c198daf67ba1e63a109"
+    },
+    "crates/server/src/startup.rs": {
+      "after_sha256": "157666f992790ee8e4da488be87c7b24e3dace1edeb335dbc65185e66ea3a0e7",
+      "before_sha256": "c9a293993b681075e33d4411b3a37b89c50a7e70bb62d6cd31919f4365fa60ca"
+    },
+    "scripts/testing/startup-recovery-safety/server_sandbox.py": {
+      "after_sha256": "bd86a4954f600cf2f856f2e938bb278033797decaf63bf813df5b2761eb423a6",
+      "before_sha256": "e13ea8fec84285c8317a302eddd80b7c96eb7ddbb32c0c20d7b57c97d2b0e3af"
+    }
+  },
+  "legacy_cache_read_fallback_retained": true,
+  "no_runtime_override": true,
+  "overlay_sha256": "5b0af111571450643b47ab95f4df71018d03ff43abde82bc8571e0bdbef0821e",
+  "packaged_regression": "startup with legacy sentinel and cleanup env unset; assert compiled build-info flags false",
+  "patch_sha256": "0502a3835f4d7cf505a6c542857aab6cf33936d0a668f8543effacb86a5cfc5e",
+  "production_modified": false,
+  "rustfmt": "nightly-2025-12-04; edition2024; skip_children=true"
+}

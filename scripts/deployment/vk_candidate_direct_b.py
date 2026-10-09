@@ -49,7 +49,10 @@ def metadata(member):
 
 class DirectBProvider:
     def __init__(self, namespace_scope_sha256, required_databases, *, archive_factory=Archive,
-                 fixture_only=False):
+                 fixture_only=False, metadata_budget_bytes=MAX_INDEX_BYTES):
+        require(type(metadata_budget_bytes) is int and 0 < metadata_budget_bytes <= 256 * 1024**2,
+                "candidate metadata budget must be explicit and bounded to 256 MiB")
+        self.metadata_budget_bytes = metadata_budget_bytes
         require(archive_factory is Archive or fixture_only, "custom archive factory requires explicit fixture mode")
         self.scope = namespace_scope_sha256
         self.required = tuple(required_databases)
@@ -154,7 +157,11 @@ class DirectBProvider:
                         entries.pop(name)
                         locations.pop(name, None)
                         headers.pop(name, None)
-            require(len(json.dumps(entries).encode()) <= MAX_INDEX_BYTES, "candidate index exceeds metadata budget")
+            # Count the complete encoding without allocating an extra full JSON buffer.
+            encoded_bytes = 0
+            for piece in json.JSONEncoder().iterencode(entries):
+                encoded_bytes += len(piece.encode())
+                require(encoded_bytes <= self.metadata_budget_bytes, "candidate index exceeds explicit metadata budget")
         # Canonicalize authenticated hardlink groups for exact candidate inventory.
         groups = {}
         for name, row in entries.items():
@@ -175,6 +182,11 @@ class DirectBProvider:
                 if name != primary:
                     entries[name]['target'] = primary
             locations[primary] = location
+        final_encoded_bytes = 0
+        for piece in json.JSONEncoder().iterencode(entries):
+            final_encoded_bytes += len(piece.encode())
+            require(final_encoded_bytes <= self.metadata_budget_bytes,
+                    'canonical candidate index exceeds explicit metadata budget')
         validate_manifest(entries)
         require(set(self.required) <= entries.keys(), "required operational database absent")
         result = record['result']
@@ -183,6 +195,8 @@ class DirectBProvider:
                  'origin_root_binding': record['origin'], 'writer_fence': result.get('writer_fence'),
                  'frozen_boundary_verified': result.get('frozen_boundary_verified'),
                  'fixture_only': self.fixture_only, 'source_commit': PR229,
+                 'metadata_budget_bytes': self.metadata_budget_bytes,
+                 'metadata_encoded_bytes': final_encoded_bytes,
                  'metadata_limits': 'PAX retained; built-in comparison covers current UID/GID, mode, mtime, POSIX ACL/user xattrs and links. Atime is not restored; original inode/ctime/birthtime are unsupported. Foreign ownership/other xattrs block; full operational metadata acceptance remains required'}
         self.indexes[capture_id] = {'proof': proof, 'archives': archives, 'locations': locations, 'headers': headers}
         return copy.deepcopy(proof)

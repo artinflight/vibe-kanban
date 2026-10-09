@@ -1,0 +1,38 @@
+{
+  "TLS_bypassed": false,
+  "final_frontend_live": false,
+  "global_trust_changed": false,
+  "issuer": "My Homelab CA",
+  "live_routing_changed": false,
+  "manifest_start_url": null,
+  "root_sha256": "15c53cb6ab0bf38592e64636dd65784bffca275ae5407327b890c6c00067fa80",
+  "routed_assets": {
+    "/": {
+      "content_type": "text/html; charset=utf-8",
+      "sha256": "ab7c3637e64b3bafe1db5ec85f33d132e5c92609a80fd93a08cf83ed277d0f34",
+      "status": 200
+    },
+    "/api/info": {
+      "content_type": "application/json",
+      "sha256": "0e611693ee67c8ed276174df51283d120f908cb9f923c4e5441a11df30180b01",
+      "status": 200
+    },
+    "/assets/index-CQFlZPbR.css": {
+      "content_type": "text/css; charset=utf-8",
+      "sha256": "371ade02267e207abce0f803c4bc38b5e09ee87ebae056c7980269fe88db8290",
+      "status": 200
+    },
+    "/assets/index-JMqAOzZ4.js": {
+      "content_type": "text/javascript; charset=utf-8",
+      "sha256": "71b470cb64f3dffcb6abf77cb753204b67f8a4ca97225fae9399dd9c32bb7dfa",
+      "status": 200
+    },
+    "/site.webmanifest?v=workspaces-home": {
+      "content_type": "application/octet-stream",
+      "sha256": "08f65eb6a19dfdee1e360f172aa2ce87232456414e3e36ae12924289d038cc4a",
+      "status": 200
+    }
+  },
+  "scoped_TLS_verified": true,
+  "trusted_root_source": "existing Desktop CurrentUser Root"
+}

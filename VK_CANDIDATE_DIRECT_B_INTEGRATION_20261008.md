@@ -488,3 +488,36 @@ hostname and chain at https://vibe.local, which returns200 and old frontend
 index-JMqAOzZ4.js / HTML SHA ab7c3637e64b3bafe1db5ec85f33d132e5c92609a80fd93a08cf83ed277d0f34.
 No issuer verification was disabled, no global trust changed and no private key
 or credential material was read/exported. TLS verification is no longer a gate.
+
+Exact repaired source 097e1bfac31e1fd31c3469096cc8d0c050b6077d is pushed and
+remote-SHA verified. All 137 committed-source candidate/package/lifecycle tests
+passed; ops governance passed. Formatting was attempted but this sparse tools
+checkout has no package manifest. The new non-fixture package authenticates
+65 files, seven modules and all eight original PR229 pins. No backend/frontend
+artifact was rebuilt and no archive/snapshot backup payload was created.
+
+Actual unit `vk-preparation-owner-097e1bfa.service`, PID500933/start757986989,
+acquired the original lease (device2065/inode10354931, unchanged mode0664).
+It runs outside app.slice with StandardOutput/StandardError=journal and Restart=no.
+Kernel FLOCK ownership was independently observed. It is recovering the same
+completed initial generation; full fresh B/tree/DB/timestamp verification remains
+in progress. The new private progress file always records alive false and requires
+live probing; there is no stale persisted true claim. Original failed owners,
+progress and journals remain unchanged. No candidate activation or operational
+writer fence is performed by this owner.
+
+[Authenticated routed HTTPS evidence](scripts/deployment/receipts/https-existing-homelab-issuer-20261009.json)
+confirms old served HTML/JS/CSS and healthy API through normal hostname/chain
+verification with the existing public Homelab root. The corrected final frontend
+is still not live. The versioned manifest response does not supply the final new
+manifest contract; candidate/live phone acceptance remains required later.
+
+The critical path is verified recovered ownership, the held approved one-file
+capacity action, safe drain/fencing and final current-data catch-up, then actual
+application/consent/frontend acceptance before any parent-confirmed interruption.
+TLS and immutable source/tests are independent preparation and are now verified.
+The 10–20-minute future interruption target is not a measured promise: builds,
+full baseline capture/restore and immutable checks must happen online first;
+only final fenced catch-up/activation belong in the interruption. Current full
+reverification follows a released lease and is preparation, not an outage.
+Nightly backup/persistent privilege automation remain separate follow-ups.

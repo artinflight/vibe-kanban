@@ -1,6 +1,6 @@
 # October 9: Source-only automatic retirement clearance
 
-[Draft PR234](https://github.com/artinflight/vibe-kanban/pull/234) is stacked on PR231; its11-file incremental
+[Draft PR234](https://github.com/artinflight/vibe-kanban/pull/234) is stacked on PR231; its 12-file incremental
 diff has been verified. Retarget to staging after PR231 integrates. Source
 35734cda3 is pushed and remote-SHA verified. All four package-binding tests also
 pass at that exact source. The proposed sudoers file parses with unprivileged
@@ -4387,7 +4387,7 @@ User QA checklist for the no-restart frontend repair:
 
 # Latest: V2 Returned To Green, Readiness Withdrawn
 
-The23:14 UTC approved attempt failed when it stopped a transient execution unit
+The 23:14 UTC approved attempt failed when it stopped a transient execution unit
 already removed by Green shutdown. Green returned on the same data; no final
 capture or production Blue activation occurred. Recovery acceptance passed.
 Read VK_BLUE_READINESS_20260911.md's withdrawal before any further action.

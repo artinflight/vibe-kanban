@@ -2,7 +2,7 @@
 
 ## Outcome and authority
 
-Review: [draft PR234](https://github.com/artinflight/vibe-kanban/pull/234), stacked on PR231 for its narrow11-file
+Review: [draft PR234](https://github.com/artinflight/vibe-kanban/pull/234), stacked on PR231 for its 12-file
 incremental diff. Retarget to staging after dependency integration.
 
 This adds a fixed-policy root checker and an unprivileged adapter for PR231's
@@ -129,7 +129,7 @@ approval never becomes an interruption or retirement permission.
 The adapter accepts only the direct successful child output. It verifies installed
 code/policy hashes, nonce/PID/start/source/manifest/root/lease/target, complete
 visibility, and both wall-clock and monotonic freshness. The receipt is limited
-to five seconds after issuance and scan-to-issuance to35 seconds. Fresh gates,
+to five seconds after issuance and scan-to-issuance to 35 seconds. Fresh gates,
 status and lease are checked before the final freshness check and immediate
 unprivileged continuation. The nonce is removed even on failure. There is no
 stored-receipt input, retry, timestamp refresh or old manual-receipt fallback.
@@ -167,17 +167,17 @@ be supplied to this adapter to authorize another boundary.
 
 Approve all four changes together, after reviewing this PR's exact source:
 
-1. Create `/usr/local/libexec` if absent, and `/etc/vibe-kanban`, root:root0755;
+1. Create `/usr/local/libexec` if absent, and `/etc/vibe-kanban`, root:root 0755;
    verify all ancestors are real root-owned directories without group/other write
    or user-write ACLs. Preserve unrelated entries. Install only the checker at
-   `/usr/local/libexec/vk-retirement-check.py`, root:root0644. This is data for the
+   `/usr/local/libexec/vk-retirement-check.py`, root:root 0644. This is data for the
    fixed interpreter, not an executable wrapper.
 2. Install `retirement-policy.proposal.json` as
-   `/etc/vibe-kanban/retirement-policy.json`, root:root0644. No user-writable request
+   `/etc/vibe-kanban/retirement-policy.json`, root:root 0644. No user-writable request
    folder, runtime daemon, shared root socket or generalized allowlist is added.
 3. Validate the exact proposed sudoers file with `/usr/sbin/visudo -cf` in a
    root-owned staging location. Install only that rule at
-   `/etc/sudoers.d/vk-retirement-preflight`, root:root0440; validate the complete
+   `/etc/sudoers.d/vk-retirement-preflight`, root:root 0440; validate the complete
    sudoers tree. No blanket NOPASSWD, interpreter argument wildcard, sudoedit,
    service management, shell, install command or policy edit is granted to mcp.
 4. Adopt the reviewed unprivileged adapter in the owning preparation package,
@@ -222,7 +222,7 @@ visibility, changed pins, or exceptional operational approvals still involve a
 human. Grant rollback is removal of the one exact rule by the administrator,
 with existing fallback and data retained; this branch does not execute rollback.
 
-Local validation:23 focused regressions and all142 PR231 candidate regressions passed, including genuine same-process
+Local validation: 23 focused regressions and all 142 PR231 candidate regressions passed, including genuine same-process
 Unix peer/PID and held kernel lease; pinned hashing/scan ordering and FD closure;
 open FD/hardlink/map/thread consumers; protected/malformed/missing metadata;
 proc visibility/namespace mismatch; churn and deadline; symlink/path/identity/
@@ -235,12 +235,12 @@ remain Stage2 evidence. No fixture result is live clearance.
 
 The exact proposed sudoers file passes unprivileged `/usr/sbin/visudo -cf`;
 this checks syntax without installing anything or exercising a privilege grant.
-The four package-binding tests pass again at source35734cda3. Ops governance passed. `pnpm run format` ran Rust formatting successfully, then
+The four package-binding tests pass again at source 35734cda3. Ops governance passed. `pnpm run format` ran Rust formatting successfully, then
 blocked on missing Prettier. `pnpm run check` passed the legacy-path guard then
 blocked on missing TypeScript; `pnpm run lint` blocked on missing ESLint. This
 checkout has no node_modules. Full Cargo workspace tests were not run because
 this source-only task prohibits unrelated rebuilds. The dependency regressions
-initially had139 pass/3 packaging failures due to the expected clean-source
-requirement; all142 passed after committing the source. The23 focused tests
+initially had 139 pass/3 packaging failures due to the expected clean-source
+requirement; all 142 passed after committing the source. The 23 focused tests
 also passed after adding -S to exclude Python site initialization. A direct
 unprivileged isolated invocation emits only the generic blocked result.

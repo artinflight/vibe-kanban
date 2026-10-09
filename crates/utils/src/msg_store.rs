@@ -157,7 +157,12 @@ impl MsgStore {
     pub fn history_plus_stream(
         &self,
     ) -> futures::stream::BoxStream<'static, Result<LogMsg, std::io::Error>> {
-        let (history, rx) = (self.get_history(), self.get_receiver());
+        // Metadata Finished must not fall between snapshot and subscription.
+        // Publication holds the write lock; keep both reads in one boundary.
+        let inner = self.inner.read().unwrap();
+        let rx = self.sender.subscribe();
+        let history: Vec<_> = inner.history.iter().map(|s| s.msg.clone()).collect();
+        drop(inner);
 
         let hist = futures::stream::iter(history.into_iter().map(Ok::<_, std::io::Error>));
         let live = BroadcastStream::new(rx).filter_map(|res| async move {
@@ -299,26 +304,32 @@ mod review_tests {
     #[tokio::test]
     async fn review_capture_has_no_snapshot_subscription_gap_or_duplicates() {
         for _ in 0..50 {
-            let store = Arc::new(MsgStore::with_limits(1024 * 1024, 2048));
-            let writer = store.clone();
-            let thread = std::thread::spawn(move || {
+            for strict in [false, true] {
+                let store = Arc::new(MsgStore::with_limits(1024 * 1024, 2048));
+                let writer = store.clone();
+                let thread = std::thread::spawn(move || {
+                    for n in 0..1000 {
+                        writer.push_stdout(n.to_string());
+                    }
+                    writer.push_finished();
+                });
+                let mut capture = if strict {
+                    store.history_plus_stream_strict()
+                } else {
+                    store.history_plus_stream()
+                };
                 for n in 0..1000 {
-                    writer.push_stdout(n.to_string());
+                    let message =
+                        tokio::time::timeout(std::time::Duration::from_secs(2), capture.next())
+                            .await
+                            .unwrap()
+                            .unwrap()
+                            .unwrap();
+                    assert!(matches!(message, LogMsg::Stdout(s) if s==n.to_string()));
                 }
-                writer.push_finished();
-            });
-            let mut capture = store.history_plus_stream_strict();
-            for n in 0..1000 {
-                let message =
-                    tokio::time::timeout(std::time::Duration::from_secs(2), capture.next())
-                        .await
-                        .unwrap()
-                        .unwrap()
-                        .unwrap();
-                assert!(matches!(message, LogMsg::Stdout(s) if s==n.to_string()));
+                assert!(matches!(capture.next().await, Some(Ok(LogMsg::Finished))));
+                thread.join().unwrap();
             }
-            assert!(matches!(capture.next().await, Some(Ok(LogMsg::Finished))));
-            thread.join().unwrap();
         }
     }
     #[tokio::test]

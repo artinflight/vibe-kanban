@@ -345,19 +345,24 @@ test("an initially empty process list hydrates only the newest page when history
 
 test("incomplete capture is visible and does not load older status as current", async () => {
   const h = harness(
-    [process("old"), process("new")],
-    () =>
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: {
-            entries: [],
-            next_before: null,
-            capture_error: "Incomplete native capture",
-          },
-        }),
-        { headers: { "content-type": "application/json" } },
-      ),
+    [
+      { ...process("old"), created_at: "2026-10-09T20:00:00Z" },
+      { ...process("new"), created_at: "2026-10-09T21:00:00Z" },
+    ],
+    ({ id, before, limit }) =>
+      id === "new"
+        ? new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                entries: [],
+                next_before: null,
+                capture_error: "Incomplete native capture",
+              },
+            }),
+            { headers: { "content-type": "application/json" } },
+          )
+        : pageResponse(10, before, limit),
   );
   try {
     await h.mount();

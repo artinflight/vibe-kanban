@@ -286,3 +286,33 @@ async fn interrupted_writer_valid_json_prefix_is_explicit_after_restart() {
     );
     assert!(path.with_extension("capture.json").exists());
 }
+
+#[tokio::test]
+async fn failed_raw_source_cannot_close_or_publish_review_proof() {
+    let store = Arc::new(MsgStore::with_durable_capture(1024, 2, 2));
+    // A valid native prefix followed by a source error is not successful EOF,
+    // even when metadata Finished has already arrived.
+    let producer = store.clone().spawn_forwarder(futures_util::stream::iter([
+        Ok(utils::log_msg::LogMsg::Stdout(
+            "{\"id\":1,\"result\":{}}\n".into(),
+        )),
+        Err(std::io::Error::other("disposable source failed")),
+    ]));
+    store.push_finished();
+    let (pool, execution, session) = writer_fixture_arc(store).await;
+    producer.await.unwrap();
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM workspace_review_log_finalized WHERE execution_id=?",
+    )
+    .bind(execution)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(count, 0, "Failed raw source must not certify a prefix");
+    let path = utils::execution_logs::process_log_file_path(session, execution);
+    assert!(
+        utils::execution_logs::validate_native_capture(&path, 1024)
+            .await
+            .is_err()
+    );
+}

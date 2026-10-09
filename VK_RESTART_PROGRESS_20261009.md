@@ -288,3 +288,36 @@ descriptor514c96fe and archive735e2115 before inspection and again at completion
 and retains full member/snapshot coverage requirements. No candidate index or
 RAM limit is raised and no member is omitted. Session78183 is running this
 read-only corrective inspection; no restore or operational effect was started.
+
+## Independent full-member inspection completed
+
+Corrective session78183 passed. Descriptor514c96fe/archive735e2115 independently
+matched the authoritative capture receipts. All462503regular members were
+hashed;76snapshot hashes matched. Retained55725directories,4501symlinks,14889
+hardlinks;537618archive entries after snapshot/sidecar handling. All recorded
+owners areUID/GID1000; no archived special modes or extended-attribute headers
+were observed; zero members lack archived atime. This authenticates archive
+content/header evidence, not restoration of those metadata into the candidate.
+
+Regular payload93864377002bytes (87.42GiB). Candidate111.54GiB usable leaves
+24.12GiB before actual filesystem overhead/quarantine/final catch-up;8GiB working
+reserve must remain. Do not claim measured restored peak from logical bytes.
+Private catalog269021663bytes is five hash-bound chunks, each<=64MiB, on B.
+Inspection515.81seconds/823173120peakRSS. Original failed256MiB catalog retained.
+Safe summary is scripts/deployment/receipts/fresh-backup-full-file-20261009.json.
+
+A new read-only namespace preflight found27unarchived context parent directories,
+no missing hardlink targets and no special-mode members. Current provider's exact
+parent validation therefore still blocks full-root materialization. These parent
+directories need explicit, source-plan-bound namespace scaffolding; they must not
+be represented as recovered source metadata or used to fill missing data inside
+an included root. No original evidence was changed. The catalog-derived core
+index estimate171576375bytes precedes canonical hardlink expansion and tar base
+mtime fallback; it is not final provider acceptance. The256MiB provider limit
+remains unchanged. Raw parent names/catalog stay private on B.
+
+Exact remaining gates: the held workflow grant and new-source/test ownership
+correction; reviewed context-parent/atime restoration binding; measured full
+restore/peak capacity; combined application/scanner/package tests; actual native
+controller/consent/current-report acceptance; compatible latest-data fallback
+and final held-writer catch-up. No restart/cutover or historical sign-off occurred.

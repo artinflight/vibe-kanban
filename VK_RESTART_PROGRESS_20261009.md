@@ -322,7 +322,6 @@ restore/peak capacity; combined application/scanner/package tests; actual native
 controller/consent/current-report acceptance; compatible latest-data fallback
 and final held-writer catch-up. No restart/cutover or historical sign-off occurred.
 
-
 ## Owner update reconciled: stored workflow grant and MCP architecture
 
 Read-only GitHub user headers on2026-10-09T04:31:13Z identify artinflight and
@@ -399,7 +398,6 @@ metadata, actual MCP candidate capacity, final fenced catch-up, latest-data
 fallback, fresh package/controller binding and live consent acceptance remain
 release gates. Cleanup stays technically unavailable pending human QA.
 
-
 ## Fresh combined CI correction and remaining metadata preparation
 
 PR230's first formatting correction passed frontend format checks and exposed
@@ -468,7 +466,6 @@ candidate gates and live consent pass, perform the separately bounded writer
 drain/final backup/catch-up/acceptance/cutover; cleanup remains technically
 unavailable until human QA and a separately reviewed enablement.
 
-
 ## Final-boundary source progress: invocation regression and compact time index
 
 Current combined application PR230 head is7708037a4646b385e363ff734177053c657b7f4f,
@@ -526,7 +523,6 @@ cutover. Historical448/145/transcript415/journal/mode/link exceptions remain
 explicit and are not automatically operational data-loss acceptance. Stable
 incumbent/fallback and all B evidence remain protected. No permission change,
 credential/access expansion, new auth flow, production restart/cutover or cleanup.
-
 
 ## Verified publication, combined CI and actual candidate blocker (05:31 UTC)
 
@@ -603,7 +599,6 @@ No production stop/fence/restart/cutover/merge/cleanup has occurred. Cleanup rem
 technically unavailable pending human QA and a separately reviewed implementation.
 Historical448/145/transcript415/journal/mode/link exceptions remain explicit.
 
-
 Artifact37888935082 finished failed on exactc3c48e63. Dependency installation
 passed, then mandatory namespace preflight reported exactly:
 `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`.
@@ -614,7 +609,6 @@ Independent prerequisites are now specific: a permitted isolated builder with
 required namespace support (or operator-approved build capacity on the existing
 MCP sandbox), plus MCP-native same-candidate restore/catch-up storage. No repeated
 GitHub authentication is required. Pending ownership request remains unanswered.
-
 
 Additive B preservation independently hash-read back at
 B:/vk-backups/vk-safe-release-20261009/published-source-1285ddc3:
@@ -628,7 +622,6 @@ Source commits1285ddc3191a10b27d90f1478565b9c8b861e93b and
 c3c48e6324f778ccd03a5761c2314b440e9ceac3 remotely verified. Receipt-only later
 tracking commits do not claim a newer operational source or candidate acceptance.
 
-
 Fresh exact-head Test37888935110 is GREEN at
 c3c48e6324f778ccd03a5761c2314b440e9ceac3:472backend tests passed,10skipped,
 real scanner73contracts passed, desktop/phone consent fixtures and frontend,
@@ -637,12 +630,137 @@ remain skipped for missing deploy key. Artifact37888935082 remains failed on
 required namespace support; no fresh deployable package or live acceptance is
 claimed. Current CI receipt records both outcomes, not a blended green result.
 
-
 ## Read-only exact operator decisions
 
 See VK_RESTART_OPERATOR_DECISIONS_20261009.md and receipts/operator-decisions-readonly-20261009.json for measured current reference-backed scope, exact conditional local duplicate/generated reclaim paths, the already-realized64.43GiB retirement, proposed120GiB MCP native mount and narrowly scoped existing B guest builder ownership decision. No exact operational minimum or peak is invented; no scope, permissions, service, backup or cleanup changed. Source/artifact/metadata/fencing/live acceptance gates remain.
 
-
 ## Native/cache capacity follow-up
 
 Read-only shared cache assessment supersedes the premature new-device proposal. No120GiB unallocated native device exists; application/symbol outputs, all dependency/fingerprint provenance and21missing-source outputs retained;71.63GiB generated-file proposal plus27.73GiB conditional candidates could yield approximately99.58GiB on existing ext4. Exact identities/QA/privileged-use clearance/writer boundary remain required. No retirement or mount/access/source-scope change. See the appended operator decisions and native-cache-capacity-readonly receipt; private frozen manifest remains unpublished.
+
+## Exact owner approval applied; preparation continues (2026-10-09)
+
+Seamus approved both exact pending actions at08:40UTC (`Go`), pinned to
+05498ad71d32e2662b475a2584774fbaa47bb134. This is solely the bounded pre-QA
+retirement exception and the two new B builder directories. General cleanup
+remains technically unavailable; historical exceptions remain unaccepted.
+
+All19,173approved shared-cache names and35,060exclusions refresh unchanged.
+Compat inventory has9,752regular files, no special/symlink/external-hardlink
+inodes and no missing source in1,147dependency rules. Exact checkpoint/delta
+MCP and B SHA256/size match freshly. New unsealed05498ad7 provider package
+verifies62bound files,6candidate modules,8reviewed source pins and retained
+B-only archive locators. Original descriptors, full backup, directories,
+incumbent/fallback artifacts and all excluded/provenance evidence are retained.
+Existing Cargo debug/release and compat-debug profile locks are held cooperatively;
+no service is frozen for this preparation. Current server/guard/routing artifacts
+hash-match independent incumbent copies outside the shared cache.
+
+**Retirement held on authentication, not another deletion approval:** the required
+read-only privileged process check returned `sudo: a password is required`. No
+alternate identity/route or security change was attempted. Operator on MCP runs:
+
+```bash
+sudo python3 -B /mnt/vk-storage/vk-runtime-backup-20261009/approved-retirement-consumer-check.py > /mnt/vk-storage/vk-runtime-backup-20261009/approved-retirement-consumer-clearance.json
+```
+
+The helper is read-only apart from this redirected receipt; its SHA256 is
+464ad504ec045105153c01c3dc02a46972f02c1d377c75ccfb3ebb090e8204b9. It checks
+protected process exe/cwd/FD/mapping inode aliases and compiler activity, requires
+the actual lock-holder identity/FDs, reports denial explicitly and performs no
+deletions, fencing or permission changes. A stale/failed/incomplete clearance
+remains a hold. The frozen approved file list is private and preserved separately;
+no paths are expanded during retirement. No file has been retired yet.
+
+B guest ownership is corrected only within combined-source and isolated-validation
+to UID/GID1000, without following symlinks;2,944entries/2,553regular-file hashes,
+modes and mtimes verified. Toolchains, backups and candidate data are untouched.
+WSL has no passwd name for numericUID1000; the launcher drops to the APPROVED
+UID/GID using setpriv before any test/build, without creating an account or testing
+as root. Exact and nested namespace prerequisites pass as1000.
+
+A fresh independent source copy binds current PR230c3c48e63/tree d8bb5fb0.
+The old f8source/149overlay/receipts remain unchanged. Only this new build root
+is writable; OS/toolchain are read-only, backups and manager sockets are absent.
+Two technical fixture corrections are retained: read-only /bin for the shell
+interpreter, and existing /mnt/wsl/resolv.conf read-only at its unchanged target.
+No namespace denial, network route/resolver or security setting was bypassed.
+Frozen pnpm install and required formatting pass, tracked source remains clean.
+Exact candidate/compatible-fallback artifacts are building; no package success
+or live acceptance is claimed. B physical free is monitored with32GiB held for
+protected backup/future capture.
+
+Production remains MCP PID3027197; fallback1369037 stays frozen. No actual MCP
+candidate allocation/restore, final fenced catch-up, cutover or merge occurred.
+After consumer clearance, refresh and retire ONLY the frozen approved regular
+files/archive copies, preserve directories/exclusions and measure actual free
+blocks/inodes. Then restore/rehearse/catch up/promote the SAME MCP roots after
+full metadata/capacity/source/package/controller/consent/latest-data fallback gates.
+Do not use estimates as measured reserve or erase448/145/transcript415/journal/
+mode/link exceptions. No new historical-recovery sign-off is created.
+
+## Approved retirement complete; observed Desktop outage holds restore
+
+The required operator-authenticated read-only clearance arrived:09:12:20UTC,
+root inspection of74,679inodes found zero consumers, zero compiler processes and
+zero denied inspections; all held lock-holder identities/FDs verified. Before
+retirement, local/Barchive hashes, provider dependencies and every file identity
+were refreshed under the three held Cargo profile locks. The private audit bundle
+and final narrowed frozen manifest were hash-read back on B before any removal.
+
+Completed09:22:03UTC:23,007approved generated regular files and the two exact
+checkpoint/delta local archive copies retired. The allowlist was narrowed to ALSO
+retain5,918compat top-level outputs/aliases, dependency/fingerprint provenance
+and lockfiles (334,581,760bytes); no new path was added. Every directory stays.
+Actual native free increased106,338,144,256bytes to106,558,427,136bytes /99.24GiB
+immediately after retirement. This is measured free, not final restore/catch-up
+reserve. Subsequent host growth is separately observed; no capacity promise.
+
+All40,978excluded names match original inode/device/size/allocated blocks/mode/
+mtime/ctime/link counts; all11,001directories preserve identity,owner,mode. No
+permissions changed. Approved archive path/checksum/B-location breadcrumbs and
+original descriptors remain. Incumbent3027197 is running, HTTP200; protected
+fallback1369037 stays frozen. General cleanup remains technically unavailable,
+with only the granted pre-QA exception consumed. Historical exceptions unchanged.
+
+Retained B evidence before removal:
+B:/vk-backups/vk-safe-release-20261009/approved-retirement/approved-retirement-evidence-before-removal-20261009.tar.gz
+(3,265,947bytes,SHA25682fff6482dd28e4261ed82aad9fcddb9df6d237818f0a5c9739865e8458f7b30).
+Final private frozen subset:
+B:/vk-backups/vk-safe-release-20261009/approved-retirement/approved-retirement-final-file-set-20261009.private.json
+(8,084,551bytes,SHA256d91b2a7163b42ac7247008907102934eb670eb9ee06517d6da85013af415ec49).
+Post-removal journals remain on MCP pending B availability; no private ledger is
+published on GitHub. Required post-retirement B-only readback remains pending.
+
+The SAME actual MCP task root now exists at
+/mnt/vk-storage/vk-cutover-candidate-20261009 (new0700,UID/GID1000,dev2065,
+inode10354930). No mount, formatting or existing ownership change. Tree and
+payload remain unmaterialized. Its actual provider registers all77original
+roots and requires all76snapshot DBs, archived-atime restoration and an explicit
+256MiBmetadata budget. The raw published descriptor matches
+`514c96fe5da800b620427ca25da39e8120a2eb7729eef2afba118e70f6645152`. The separate RSS telemetry
+wrapper correctly failed descriptor binding; use the original published result
+and keep telemetry separate. No checker weakened or source field silently ignored.
+
+B builder setup and UID1000/nested namespace gates are complete. Source-format/
+frozen-install/source-clean checks passed. SQLite binding required isolated
+hash-verified Ubuntu libclang/LLVM/XML/ICU/resource-header packages under the
+NEW approved output root; no system package install or existing-toolchain change.
+Configuration v5 selects the official relocated Clang resource directory, retains
+all failed attempt logs and uses a fresh artifact directory. It was last observed
+compiling; final artifacts/scanner/module/runtime acceptance remain unverified.
+
+**New observed blocker:** existing SSH desktop route now returns255:
+`ssh: connect to host 100.70.23.123 port 22: Connection timed out`. Tailscale
+reports Desktop offline,last seen09:20UTC. This is actual SSH/B connectivity,
+not Dot status. No alternate route,credentials,security setting or root retry.
+Operator needs to bring Desktop back on its EXISTING SSH/Tailscale connection
+with B available; no new deletion/ownership/GitHub approval is requested. The
+GitHub MCP grant still hasworkflow. PR230/231 remain unmerged.
+
+Once that observed connection returns: verify B provider/retirement reads, observe
+actual builder outcome and bind all artifacts; run actual whole-state restore
+into the SAME MCP roots, measure allocation/RAM/metadata/catch-up reserve and
+accept real application/scanner/controller/consent/fallback gates. Fresh final
+fenced catch-up still precedes promotion. No restart/cutover/live repair occurred.
+No scope reduction or recovery-complete/universal-zero-loss sign-off invented.

@@ -1,5 +1,11 @@
 # Restart: exact operator decisions (read-only findings, 2026-10-09)
 
+Latest authority: Seamus approved both actions at08:40UTC. Bounded retirement
+and B builder ownership/nonroot namespace gates are complete. Actual free99.24GiB
+was measured; SAME MCP candidate root is prepared. The last observed blocker is
+Desktop SSH/Tailscale offline since09:20UTC, holding B readback/artifact/restore.
+General cleanup stays off. See the final section and approved-restart receipt.
+
 Current capacity recommendation after shared-cache inspection: assess the bounded
 no-purchase retirement option on the existing MCP secondary ext4 first. The
 final source/provenance-conservative manifest could reclaim71.63GiB; with the
@@ -36,13 +42,13 @@ This is neither a minimum boot footprint nor a demand for two historical restore
 
 Read-only current DB/reference joins against the authenticated retained catalog:
 
-| Set | Payload | Meaning |
-| --- | ---: | --- |
-| VK execution logs |30567346069bytes /28.47GiB|All31873backed-up log files match current execution IDs; zero unmatched files. Existing source reads logs directly, without an archive-backed runtime reader. |
-| Native index-referenced rollouts |35333497230bytes /32.91GiB|13223files referenced by retained current native indexes; includes historical continuity/CU scan sources, not just a currently running thread. |
-|20explicit current dependency DBs|6185500672bytes /5.76GiB|Consistent snapshot bytes, not raw live WAL size. |
-|Above reference-backed preservation floor|72086343971bytes /67.14GiB|Before worktrees, Git, attachments, plugins, software and reserve. Not a proven minimum-to-boot or complete operational peak. |
-|Existing46-root unreduced operational proposal, B-mapped portion|89801729231bytes /83.63GiB|82440422607file bytes plus72included DB snapshots; broad roots include unclassified material. No proposal reduction applied or approved. |
+| Set                                                              |                    Payload | Meaning                                                                                                                                                       |
+| ---------------------------------------------------------------- | -------------------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VK execution logs                                                | 30567346069bytes /28.47GiB | All31873backed-up log files match current execution IDs; zero unmatched files. Existing source reads logs directly, without an archive-backed runtime reader. |
+| Native index-referenced rollouts                                 | 35333497230bytes /32.91GiB | 13223files referenced by retained current native indexes; includes historical continuity/CU scan sources, not just a currently running thread.                |
+| 20explicit current dependency DBs                                |   6185500672bytes /5.76GiB | Consistent snapshot bytes, not raw live WAL size.                                                                                                             |
+| Above reference-backed preservation floor                        | 72086343971bytes /67.14GiB | Before worktrees, Git, attachments, plugins, software and reserve. Not a proven minimum-to-boot or complete operational peak.                                 |
+| Existing46-root unreduced operational proposal, B-mapped portion | 89801729231bytes /83.63GiB | 82440422607file bytes plus72included DB snapshots; broad roots include unclassified material. No proposal reduction applied or approved.                      |
 
 Do not call all indexed history intentionally retired or infer that it must all
 be duplicated merely to boot. The current continuity requirement preserves
@@ -75,12 +81,12 @@ cutover capacity. No historical scope reduction is requested to make it fit.
 
 Conditional local reclamation options (none approved or performed):
 
-| Exact target | Allocated reclaim | Proof and required action |
-| --- | ---: | --- |
-|/mnt/vk-storage/vk-runtime-backup-20261007/backups/checkpoint-/02136af9b9c24c08bccba0868864e597/checkpoint--02136af9b9c24c08bccba0868864e597.tar.zst|23449710592bytes /21.84GiB|B:/vk-backups/vk-runtime-backup-20261007/checkpoint--02136af9b9c24c08bccba0868864e597.tar.zst; receipt SHA9beef7c6ca1e533b9861f186d6654e5db0c4d7e13482bdddc70f0673b9b32e4d, existing full-stream/SQLite audit. Approve only local file retirement after required QA, refreshed local/Bhash+size/use checks, provider/consumer binding and breadcrumb. Keep descriptor, Bpayload and delta chain. |
-|/mnt/vk-storage/vk-runtime-backup-20261007/backups/delta-/430d3a842f5d4216862a1703e33232b8/delta--430d3a842f5d4216862a1703e33232b8.tar.zst|319234048bytes /0.30GiB|B:/vk-backups/vk-runtime-backup-20261007/delta--430d3a842f5d4216862a1703e33232b8.tar.zst; receipt SHA4b2a3881da51148f0c66f773ac292476fab9b3a973f734f09af17e37680f0c53. Same exact file-only/provider/QA gates; checkpoint ancestry remains required. |
-|/mnt/vk-storage/vk-connector-repair-20261007/cargo-target-compat|6008930304bytes /5.60GiB|Generated output; source/test receipts retained. Owner/QA release and fresh open/mapped inode+dependency clearance required; approve only this generated child, no source/evidence/sharedCargo. |
-|/mnt/vk-storage/vk-combined-preparation-20261007/backups/checkpoint-/db5bb16b095241319a79e02e5fc8cdf6/checkpoint--db5bb16b095241319a79e02e5fc8cdf6.tar.zst|23441530880bytes /21.83GiB|Failed-capture incident evidence; NOT an established verified duplicate. No reclaim credit until a preservation-only Btransfer/hash/audit/consumer check and exact later retirement approval. |
+| Exact target                                                                                                                                               |          Allocated reclaim | Proof and required action                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| /mnt/vk-storage/vk-runtime-backup-20261007/backups/checkpoint-/02136af9b9c24c08bccba0868864e597/checkpoint--02136af9b9c24c08bccba0868864e597.tar.zst       | 23449710592bytes /21.84GiB | B:/vk-backups/vk-runtime-backup-20261007/checkpoint--02136af9b9c24c08bccba0868864e597.tar.zst; receipt SHA9beef7c6ca1e533b9861f186d6654e5db0c4d7e13482bdddc70f0673b9b32e4d, existing full-stream/SQLite audit. Approve only local file retirement after required QA, refreshed local/Bhash+size/use checks, provider/consumer binding and breadcrumb. Keep descriptor, Bpayload and delta chain. |
+| /mnt/vk-storage/vk-runtime-backup-20261007/backups/delta-/430d3a842f5d4216862a1703e33232b8/delta--430d3a842f5d4216862a1703e33232b8.tar.zst                 |    319234048bytes /0.30GiB | B:/vk-backups/vk-runtime-backup-20261007/delta--430d3a842f5d4216862a1703e33232b8.tar.zst; receipt SHA4b2a3881da51148f0c66f773ac292476fab9b3a973f734f09af17e37680f0c53. Same exact file-only/provider/QA gates; checkpoint ancestry remains required.                                                                                                                                             |
+| /mnt/vk-storage/vk-connector-repair-20261007/cargo-target-compat                                                                                           |   6008930304bytes /5.60GiB | Generated output; source/test receipts retained. Owner/QA release and fresh open/mapped inode+dependency clearance required; approve only this generated child, no source/evidence/sharedCargo.                                                                                                                                                                                                  |
+| /mnt/vk-storage/vk-combined-preparation-20261007/backups/checkpoint-/db5bb16b095241319a79e02e5fc8cdf6/checkpoint--db5bb16b095241319a79e02e5fc8cdf6.tar.zst | 23441530880bytes /21.83GiB | Failed-capture incident evidence; NOT an established verified duplicate. No reclaim credit until a preservation-only Btransfer/hash/audit/consumer check and exact later retirement approval.                                                                                                                                                                                                    |
 
 The two verified duplicate archive candidates together yield22.14GiB; including
 compat output yields27.73GiB, still below even67.14GiB+reserve. Their QA/clearance
@@ -146,7 +152,6 @@ then safely drain sessions and hold writers. Fresh B boundary/catch-up must pres
 newer writes and reconcile test edits. Test latest-data fallback and promote only
 after all deployment checks pass. PR230/231 remain unmerged until then. Human QA
 keeps cleanup unavailable; no historical zero-loss/recovery-complete sign-off invented.
-
 
 ## Shared Cargo/native capacity question closed read-only
 
@@ -250,3 +255,130 @@ for future builds and not previously cleared for use/provenance/QA. That exclusi
 was appropriate for deletion authority, but did not justify recommending new
 hardware before the read-only assessment. This update supersedes the unconditional
 new-device recommendation. No user/runtime data, source scope or approvals changed.
+
+## Exact owner approval applied; preparation continues (2026-10-09)
+
+Seamus approved both exact pending actions at08:40UTC (`Go`), pinned to
+05498ad71d32e2662b475a2584774fbaa47bb134. This is solely the bounded pre-QA
+retirement exception and the two new B builder directories. General cleanup
+remains technically unavailable; historical exceptions remain unaccepted.
+
+All19,173approved shared-cache names and35,060exclusions refresh unchanged.
+Compat inventory has9,752regular files, no special/symlink/external-hardlink
+inodes and no missing source in1,147dependency rules. Exact checkpoint/delta
+MCP and B SHA256/size match freshly. New unsealed05498ad7 provider package
+verifies62bound files,6candidate modules,8reviewed source pins and retained
+B-only archive locators. Original descriptors, full backup, directories,
+incumbent/fallback artifacts and all excluded/provenance evidence are retained.
+Existing Cargo debug/release and compat-debug profile locks are held cooperatively;
+no service is frozen for this preparation. Current server/guard/routing artifacts
+hash-match independent incumbent copies outside the shared cache.
+
+**Retirement held on authentication, not another deletion approval:** the required
+read-only privileged process check returned `sudo: a password is required`. No
+alternate identity/route or security change was attempted. Operator on MCP runs:
+
+```bash
+sudo python3 -B /mnt/vk-storage/vk-runtime-backup-20261009/approved-retirement-consumer-check.py > /mnt/vk-storage/vk-runtime-backup-20261009/approved-retirement-consumer-clearance.json
+```
+
+The helper is read-only apart from this redirected receipt; its SHA256 is
+464ad504ec045105153c01c3dc02a46972f02c1d377c75ccfb3ebb090e8204b9. It checks
+protected process exe/cwd/FD/mapping inode aliases and compiler activity, requires
+the actual lock-holder identity/FDs, reports denial explicitly and performs no
+deletions, fencing or permission changes. A stale/failed/incomplete clearance
+remains a hold. The frozen approved file list is private and preserved separately;
+no paths are expanded during retirement. No file has been retired yet.
+
+B guest ownership is corrected only within combined-source and isolated-validation
+to UID/GID1000, without following symlinks;2,944entries/2,553regular-file hashes,
+modes and mtimes verified. Toolchains, backups and candidate data are untouched.
+WSL has no passwd name for numericUID1000; the launcher drops to the APPROVED
+UID/GID using setpriv before any test/build, without creating an account or testing
+as root. Exact and nested namespace prerequisites pass as1000.
+
+A fresh independent source copy binds current PR230c3c48e63/tree d8bb5fb0.
+The old f8source/149overlay/receipts remain unchanged. Only this new build root
+is writable; OS/toolchain are read-only, backups and manager sockets are absent.
+Two technical fixture corrections are retained: read-only /bin for the shell
+interpreter, and existing /mnt/wsl/resolv.conf read-only at its unchanged target.
+No namespace denial, network route/resolver or security setting was bypassed.
+Frozen pnpm install and required formatting pass, tracked source remains clean.
+Exact candidate/compatible-fallback artifacts are building; no package success
+or live acceptance is claimed. B physical free is monitored with32GiB held for
+protected backup/future capture.
+
+Production remains MCP PID3027197; fallback1369037 stays frozen. No actual MCP
+candidate allocation/restore, final fenced catch-up, cutover or merge occurred.
+After consumer clearance, refresh and retire ONLY the frozen approved regular
+files/archive copies, preserve directories/exclusions and measure actual free
+blocks/inodes. Then restore/rehearse/catch up/promote the SAME MCP roots after
+full metadata/capacity/source/package/controller/consent/latest-data fallback gates.
+Do not use estimates as measured reserve or erase448/145/transcript415/journal/
+mode/link exceptions. No new historical-recovery sign-off is created.
+
+## Approved retirement complete; observed Desktop outage holds restore
+
+The required operator-authenticated read-only clearance arrived:09:12:20UTC,
+root inspection of74,679inodes found zero consumers, zero compiler processes and
+zero denied inspections; all held lock-holder identities/FDs verified. Before
+retirement, local/Barchive hashes, provider dependencies and every file identity
+were refreshed under the three held Cargo profile locks. The private audit bundle
+and final narrowed frozen manifest were hash-read back on B before any removal.
+
+Completed09:22:03UTC:23,007approved generated regular files and the two exact
+checkpoint/delta local archive copies retired. The allowlist was narrowed to ALSO
+retain5,918compat top-level outputs/aliases, dependency/fingerprint provenance
+and lockfiles (334,581,760bytes); no new path was added. Every directory stays.
+Actual native free increased106,338,144,256bytes to106,558,427,136bytes /99.24GiB
+immediately after retirement. This is measured free, not final restore/catch-up
+reserve. Subsequent host growth is separately observed; no capacity promise.
+
+All40,978excluded names match original inode/device/size/allocated blocks/mode/
+mtime/ctime/link counts; all11,001directories preserve identity,owner,mode. No
+permissions changed. Approved archive path/checksum/B-location breadcrumbs and
+original descriptors remain. Incumbent3027197 is running, HTTP200; protected
+fallback1369037 stays frozen. General cleanup remains technically unavailable,
+with only the granted pre-QA exception consumed. Historical exceptions unchanged.
+
+Retained B evidence before removal:
+B:/vk-backups/vk-safe-release-20261009/approved-retirement/approved-retirement-evidence-before-removal-20261009.tar.gz
+(3,265,947bytes,SHA25682fff6482dd28e4261ed82aad9fcddb9df6d237818f0a5c9739865e8458f7b30).
+Final private frozen subset:
+B:/vk-backups/vk-safe-release-20261009/approved-retirement/approved-retirement-final-file-set-20261009.private.json
+(8,084,551bytes,SHA256d91b2a7163b42ac7247008907102934eb670eb9ee06517d6da85013af415ec49).
+Post-removal journals remain on MCP pending B availability; no private ledger is
+published on GitHub. Required post-retirement B-only readback remains pending.
+
+The SAME actual MCP task root now exists at
+/mnt/vk-storage/vk-cutover-candidate-20261009 (new0700,UID/GID1000,dev2065,
+inode10354930). No mount, formatting or existing ownership change. Tree and
+payload remain unmaterialized. Its actual provider registers all77original
+roots and requires all76snapshot DBs, archived-atime restoration and an explicit
+256MiBmetadata budget. The raw published descriptor matches
+`514c96fe5da800b620427ca25da39e8120a2eb7729eef2afba118e70f6645152`. The separate RSS telemetry
+wrapper correctly failed descriptor binding; use the original published result
+and keep telemetry separate. No checker weakened or source field silently ignored.
+
+B builder setup and UID1000/nested namespace gates are complete. Source-format/
+frozen-install/source-clean checks passed. SQLite binding required isolated
+hash-verified Ubuntu libclang/LLVM/XML/ICU/resource-header packages under the
+NEW approved output root; no system package install or existing-toolchain change.
+Configuration v5 selects the official relocated Clang resource directory, retains
+all failed attempt logs and uses a fresh artifact directory. It was last observed
+compiling; final artifacts/scanner/module/runtime acceptance remain unverified.
+
+**New observed blocker:** existing SSH desktop route now returns255:
+`ssh: connect to host 100.70.23.123 port 22: Connection timed out`. Tailscale
+reports Desktop offline,last seen09:20UTC. This is actual SSH/B connectivity,
+not Dot status. No alternate route,credentials,security setting or root retry.
+Operator needs to bring Desktop back on its EXISTING SSH/Tailscale connection
+with B available; no new deletion/ownership/GitHub approval is requested. The
+GitHub MCP grant still hasworkflow. PR230/231 remain unmerged.
+
+Once that observed connection returns: verify B provider/retirement reads, observe
+actual builder outcome and bind all artifacts; run actual whole-state restore
+into the SAME MCP roots, measure allocation/RAM/metadata/catch-up reserve and
+accept real application/scanner/controller/consent/fallback gates. Fresh final
+fenced catch-up still precedes promotion. No restart/cutover/live repair occurred.
+No scope reduction or recovery-complete/universal-zero-loss sign-off invented.

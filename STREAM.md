@@ -1,3 +1,16 @@
+## October 9: history correction validation complete (not deployed)
+
+Pushed candidate source `be34781714e461e13ae8a9ec05e0680f72e1ce00` passes
+hosted executor tests (158 pass/seven opt-in skipped) and the existing same-process
+reload acceptance (one pass, PID3282). The original 21:16:44 inventory prompt/native
+assessment now replays as bounded/Routine instead of retained normal/Workhorse;
+protected continuation, unknown and uncertain scope retain Frontier. The copied
+live validator accepts the compatible worker with byte-identical policy and
+instructions. See VK_AUTOSWITCH_HISTORY_RETENTION_20261009.md for immutable hashes,
+archive, test limits and retained initial failures. No local Cargo compilation,
+paid inference, publication, model/credit change, Auto activation or restart.
+This is source/module preparation readiness, not accepted-task savings.
+
 # October 9: independent inventory history correction (source-only)
 
 The post-cutover review identified execution
@@ -20,10 +33,10 @@ are not real accepted-task savings.
 Work remains on the preserved `fix/autoswitch-current-step-risk` source branch,
 not the recreated old V1 managed checkout. No staging/main integration, deployment,
 module publication, Automatic activation, restart or cleanup is performed.
-A compatible worker artifact will keep the current protocol2 validator and
+The prepared compatible worker artifact keeps the current protocol2 validator and
 byte-identical live models/instructions/classifier settings. Detailed evidence:
 [VK_AUTOSWITCH_HISTORY_RETENTION_20261009.md](VK_AUTOSWITCH_HISTORY_RETENTION_20261009.md).
-VK::Staging owns any later approved publication. October30 (20x to 10x) remains
+VK::Staging owns any later approved publication. October 30 (20x to 10x) remains
 the readiness deadline; useful real Recommend evidence and net accepted-task
 quality/usage are still required.
 
@@ -53,7 +66,7 @@ service and staging/main remain unchanged. No owner coordination or deployment.
 One VK::Staging adoption of matching backend/validator/worker protocol2 is required
 to remove the old veto; subsequent policy fixes use prepare/publish without
 backend restart. The old `current-step-665d836db-20261007` artifact is superseded,
-not deleted. October30 (20x→10x) remains the usefulness/readiness deadline.
+not deleted. October 30 (20x→10x) remains the usefulness/readiness deadline.
 Current checks/package receipts: `/mnt/vk-storage/vk-autoswitch-module-boundary-20261007`.
 Implementation `09dcd2cb2d873139904d32821bbc0924cdeabfac` is pushed; the
 final delivery also adds the omitted-input safety check and this evidence.
@@ -154,7 +167,7 @@ One formerly failed native classifier replay now completes on Luna5.6/low;
 56 routing regressions and three adapter tests passed; no net savings claim yet. Publication/turn receipts
 are retained outside Git under `/mnt/vk-storage/vk-autoswitch-reference-steps-20261005`.
 No restart, cutover, Auto enablement or staging-owner coordination. Recommend stays
-required; complete useful routing deadline remains October30 (allowance20x →10x).
+required; complete useful routing deadline remains October 30 (allowance20x →10x).
 Older entries below are historical.
 
 # October 5: AutoSwitch reloadable module

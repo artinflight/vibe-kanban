@@ -1595,3 +1595,9 @@ Source-only worker correction for the confirmed 21:16:44 `remaining` bias, with
 semantic/history regressions and existing same-process acceptance extended.
 Hosted CI builds the compatible artifact; no local Cargo compilation, publication,
 restart, model policy change or Auto activation. See VK_AUTOSWITCH_HISTORY_RETENTION_20261009.md.
+
+History fix acceptance: hosted run 37998801930 on be34781714e461e13ae8a9ec05e0680f72e1ce00
+passes 158 executor tests and one same-process test. Original captured request
+replays cheaply; protected/uncertain variants retain Frontier. Candidate passes
+the live pinned validator; immutable worker/package hashes in
+VK_AUTOSWITCH_HISTORY_RETENTION_20261009.md. Recommend and live paths unchanged.

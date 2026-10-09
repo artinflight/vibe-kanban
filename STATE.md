@@ -1,10 +1,19 @@
+## October 9: compatible inventory worker is validated, not live
+
+The source-only history correction passes hosted tests and same-process reload
+acceptance. Its candidate passes the unchanged deployed protocol2 validator;
+policy/instruction/classifier settings are preserved. Recommend remains required.
+Development has not published the release or changed the service. Exact source,
+artifact provenance and remaining owner publication boundary are documented in
+VK_AUTOSWITCH_HISTORY_RETENTION_20261009.md. No savings are inferred from recommendations.
+
 ## October 9: AutoSwitch history correction is source-only
 
 An independent low-risk inventory must not inherit old task qualification solely
 because the request says `remaining`; positive current-task semantic evidence may
 resolve that word. Unresolved continuation, repository/native/current protection,
 manual floors and failure safeguards remain authoritative. This worker-only
-protocol2 correction is being validated without local Cargo builds; Recommend and
+protocol2 correction is validated without local Cargo builds; Recommend and
 live settings remain unchanged. See VK_AUTOSWITCH_HISTORY_RETENTION_20261009.md.
 
 ## October 9: AutoSwitch corrected boundary adopted

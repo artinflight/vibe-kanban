@@ -187,13 +187,17 @@ and root-owned code with `-I -S -B`. Neither binary is setuid or capability-bear
 Root-owned non-user-writable interpreter/stdlib inputs are an installation baseline.
 
 Bootstrap creates `/usr/local/libexec` only if absent (root:root 0755), validates
-existing root-owned ancestor directories, installs the two fixed code files
+root-owned immutable ancestors of privileged code/config/sudo paths, installs
+the two fixed code files
 0644, two launchers 0755, two policies 0600 and the one grant 0440. It creates
 only the fresh empty managed anchor (root:root 0755), with empty mcp:mcp 0700
 `objects`/`control` children. No existing Staging directory is adopted or changed.
 The administrator enrolls that freshly created anchor's actual inode in both
 policy templates, with the pinned SSD UUID. Null inode templates fail closed.
-These are the only policy transformations allowed by this plan; authenticated
+The existing mcp-writable SSD parent is allowed and must not be chmod/chowned.
+For this data/control scope, bootstrap uses no-symlink traversal, pinned mounted
+filesystem and freshly root-owned anchor inode checks, not immutable ownership
+of every ancestor. These are the only policy transformations allowed by this plan; authenticated
 installation evidence records both final policy hashes. Code and policy receipts
 configure each unprivileged adapter once. Routine managed releases need no grant
 amendment. A different historical target or security boundary requires approval.
@@ -211,8 +215,12 @@ steps; existing deletion and cutover paths were not modified.
 
 Read-only discovery found no established agent-usable administrator installation
 channel or retained root terminal. Existing root daemons and unreadable sudoers
-files are not authorization. Parent's Desktop readiness task owns the one-time
-secure administrator authentication; this task asks for no terminal commands.
+files are not authorization. A supported secure administrator authentication
+route remains pending verification. Desktop readiness currently has no usable
+UI/terminal, and command-runner setup failed. Parent/root is assessing one harmless
+retry; this task has no verified outcome and makes no authentication attempt.
+The artifact is a JSON plan: no executable installer was packaged or executed.
+This task asks for no terminal commands.
 No sudo denial was retried or alternative escalation used.
 
 The account also has existing `lxd` group membership and access to LXD's admin

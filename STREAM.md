@@ -11,9 +11,12 @@ file stays at its existing path; no deletion/service privilege is proposed.
 and both clocks after witness and immediately before continuation. Existing
 native process-event tests prove post-scan subprocess attempts are denied.
 No root entrypoint, installation, live owner or Staging mutation occurred.
-Installed acceptance and operational adoption remain untested. Parent's Desktop
-authentication task owns admin readiness; LXD privileges and same-account review
-are separate boundaries, never an installation bypass. Fallback survives until
+Installed acceptance and operational adoption remain untested. Administrator
+authentication remains unverified: Desktop lacks a usable UI/terminal and its
+command-runner setup failed; parent/root is assessing one harmless retry. The
+artifact is a JSON plan only. Immutable ancestor rules apply only to privileged
+code/config/sudo paths; the existing writable SSD parent is not changed. LXD
+privileges and same-account review remain separate boundaries, never a bypass. Fallback survives until
 human QA. Earlier one-profile proposals below are historical.
 
 # October 9: Reusable source-only protected-consumer ABI

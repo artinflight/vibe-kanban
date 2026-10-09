@@ -1617,3 +1617,11 @@ installation, with fresh anchor enrollment, acceptance and grant-only rollback.
 54 focused tests pass; immediate pre-continuation dual-clock freshness retained.
 No install, privileged invocation, retirement or Staging change. See
 VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md and the two-profile source receipt.
+
+## 2026-10-09 — Installation-plan review wording correction
+
+Restricted immutable ancestor requirements to privileged code/config/sudo paths;
+SSD scope uses no-symlink, pinned filesystem/new root-owned inode checks without
+changing its writable parent. Administrator authentication remains unverified
+after failed Desktop command-runner readiness; parent/root assesses one harmless
+retry. JSON plan only, no installer packaged/executed. Code/grants/scopes unchanged.

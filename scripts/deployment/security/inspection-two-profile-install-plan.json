@@ -9,8 +9,9 @@
       "unrelated account use",
       "unrestricted sudo grant"
     ],
-    "route": "Parent Desktop readiness task supplies one-time secure administrator authentication on MCP. No established agent-usable admin channel was discovered. No owner command request in this task."
+    "route": "Pending verification: Desktop readiness has no usable UI/terminal and command-runner setup failed. Parent/root is assessing one harmless retry; its outcome is not established here. No supported administrator authentication route is currently verified. A secure owner-controlled administrator authentication channel to MCP must be verified before any approved installation. No owner command request or authentication attempt is made by this task."
   },
+  "artifact_kind": "Version-pinned JSON installation plan only; no executable installer packaged or executed.",
   "build": {
     "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
     "flags": [
@@ -191,6 +192,7 @@
     "postscan": "Only bounded local identity/metadata/results/owner/lease/receipt/witness checks and immediate already-approved in-process continuation; no expensive controller status/package verify callbacks.",
     "terminal_actor": "Actual actor authenticates and holds its own control lease. Before final scan finish all preparation/SSH/B/native hashes, close remote command channels, start final status/checker processes, then irreversible local process seal for exact continuation."
   },
+  "plan_revision": 2,
   "policy_enrollment": {
     "allowed_changes_only": [
       "managed.scopes.managed-artifacts-v1.anchor_inode",
@@ -245,8 +247,8 @@
     "Explicit approval of THIS exact two-profile bundle, separate from historical retirement/cutover approvals.",
     "Authenticate administrator; verify immutable source commit and all source/binary digests before installation.",
     "Verify mounted SSD UUID 26e4cac1-f2cf-485b-b1bc-d1be197a747e, real Linux host /proc visibility, x86_64 terminal process seal support, root-owned non-user-writable OS interpreter and stdlib inputs.",
-    "Validate all existing installation ancestors by lstat: root-owned directories, no symlinks, no group/other write. Refuse destination collisions or unknown existing grant/code/policy; do not overwrite unrelated entries.",
-    "Refuse ANY existing managed anchor (including symlink), even empty; create only the new empty named scope.",
+    "For privileged code, interpreter/stdlib, config and sudo paths ONLY, validate all ancestors by lstat: root-owned directories, no symlinks, no group/other write. Refuse destination collisions or unknown existing grant/code/policy; do not overwrite unrelated entries. This immutable ancestor requirement does not apply to the SSD data/control scope parent.",
+    "Refuse ANY existing managed anchor (including symlink), even empty; create only the new empty named root-owned scope. Traverse SSD scope components without symlinks, verify the pinned mounted filesystem UUID/device, and enroll/verify the newly root-owned anchor inode. Existing mcp-writable /mnt/vk-storage is permitted: do not chmod/chown it or adopt an existing directory. Reopening the anchor and pinned inode/ownership/filesystem checks reject substitution.",
     "Historical file must remain exactly at pinned path/device/inode/metadata; reject mismatch rather than relaxing policy. No file move, reownership, permission change, or mount change."
   ],
   "purpose": "One bundled administrator installation of fixed metadata-only process inspectors; neither command authorizes or performs deletion/cutover.",

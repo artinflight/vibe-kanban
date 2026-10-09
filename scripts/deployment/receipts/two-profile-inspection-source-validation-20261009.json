@@ -4,7 +4,7 @@
   "approval_status": "NO privilege installation/security action approval; parent obtains exact bundle approval and one-time secure admin authentication separately.",
   "artifact_sha256": {
     "scripts/deployment/security/historical-archive-policy.proposal.json": "1ba94de59483adc91596b4b1d10f9a0e796841da8ad8810fdb20e0033aec45a5",
-    "scripts/deployment/security/inspection-two-profile-install-plan.json": "fc58f9ae917bc7506f8f7a32457111e6d63eb5cf7b9d5979e740850ef20f8519",
+    "scripts/deployment/security/inspection-two-profile-install-plan.json": "a17d7f29b4b47c25811e8bf3d992f09ecd5084812d666dc761fbf4afff8a5357",
     "scripts/deployment/security/retirement-policy.proposal.json": "3eee0ef7cd50699468a36503ef52fb38c8b095fda6ce00a1b5a2cd490a1cfaa8",
     "scripts/deployment/security/vk-inspection-two-profiles.sudoers.proposal": "cc0147a575998f5bf0bbb13b0145fb6577c404aa950b0fa9526de83457b893d3",
     "scripts/deployment/security/vk-retirement-preflight.sudoers.proposal": "6d4436c2329c7d88ac01df3b61b1332237d97d04bc193c5dc48e3a8be162d5bd",
@@ -17,7 +17,7 @@
     "scripts/deployment/vk_historical_archive_preflight.py": "929d493d4505d8e5db18a945b724b74736c8b2f528cea65b2eba64b9bd6dc9de",
     "scripts/deployment/vk_retirement_preflight.py": "dd1ce57909e264d97e5eed86412dbdf6aca3e93bad9d0caee4db451fcf1670e9"
   },
-  "at": "2026-10-09T17:18:17.628110+00:00",
+  "at": "2026-10-09T17:25:41.241432+00:00",
   "authentication": "Role-authenticated live manifest via private owner endpoint/kernel FLOCK/peer PID/UID/start/nonce; no new signer and no independent human approval inferred from a hash or same-UID agent review.",
   "baseline_limits": {
     "Staging_adoption": "Not run; existing Staging retains ownership and approved unprivileged path.",
@@ -131,6 +131,18 @@
   "new_backup_created": false,
   "ops_check_passed": true,
   "owner_changed": false,
+  "plan_review_correction": {
+    "artifact_kind": "JSON plan only; no executable installer packaged or executed.",
+    "changes": [
+      "Immutable root-owned ancestors required only for privileged code/config/sudo paths; SSD scope parent remains mcp-writable and unchanged, with no-symlink/pinned mounted filesystem/new root-owned inode checks.",
+      "Administrator authentication pending verification: Desktop has no usable UI/terminal, command-runner setup failed; parent/root assessing one harmless retry without an established outcome."
+    ],
+    "code_grants_policy_scopes_unchanged": true,
+    "previous_published_bundle_head": "06a561c0d230d0c80e48252512e349fd813a78d5",
+    "revision": 2,
+    "runtime_test_evidence": "Existing 54 focused/142 candidate results remain tied to unchanged implementation commit 4055a1b1e65bbd38fe7d586c65faa04de45cf3af; not rerun for wording-only changes.",
+    "validation": "Plan field diff restricted to reviewed preconditions/route and revision metadata; all receipt digests match; code/grants/policy scopes byte-unchanged. Ops/diff checks pass. Format attempted: Rust formatting passed, then existing missing Prettier. No runtime tests repeated for wording-only correction."
+  },
   "plan_validated": "All source digests, seven file destinations, two exact no-argument grants, fresh null-inode enrollment and grant count match.",
   "policy_enrollment": {
     "allowed_enrollment_only": [

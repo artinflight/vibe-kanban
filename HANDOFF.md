@@ -26,6 +26,9 @@ bundle before any future action approval. Human QA/backup/rollback and explicit
 exceptional retirement/interruption approvals remain authoritative. Current
 Staging operations and stdout-bridge constraints return only via existing reply.
 
+All142 candidate regressions pass at64cb7f72c with the clean-source gate intact.
+Ops, diff checks and unprivileged sudoers syntax pass. Format/check/lint attempts
+stop at absent Prettier/TypeScript/ESLint; Rust formatting and legacy guard pass.
 Validation receipt records final checks and exact artifact hashes. No unrelated
 Cargo build is authorized. Historical first-design receipt remains unchanged.
 Fixtures/build output stay on mounted `/mnt/vk-storage`.

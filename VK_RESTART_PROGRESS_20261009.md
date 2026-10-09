@@ -1094,3 +1094,39 @@ This reduces setup after installation; it is not installed acceptance or
 operational adoption and does not modify OP source. Prior completed bulk
 hashing, backup/restore evidence, incumbent/fallback and historical exceptions
 remain preserved. See receipts/two-profile-explicit-main-auth-blocker-20261009.json.
+
+## 18:33 installed capability verified; both real acceptances blocked
+
+Owner installer output Sentinel_b3a812ffcb688191858a2ded89884cf5 authenticates
+the same approved plan/hash and anchor[2065,15335467]. All7root-owned file
+metadata/modes/link counts and grant[64512,1574897] match. Four readable
+payload/launcher hashes verify directly;3restricted policy/grant hashes use
+the owner-authenticated output. Denied direct reads were not bypassed. The
+managed anchor and both UID1000private children match the approved design.
+
+Both prepared installed-profile read-only acceptances were actually run and
+failed with ValueError. A bounded diagnostic managed run preserves unchanged
+fixed sudo command/checker logic and captures return1, empty stderr, root JSON
+consumer_clearance_passed:false/reason:inspection blocked. This proves the
+fixed granted command runs without another administrator authentication;
+it does not identify which internal protected scan stage first failed.
+
+There is independently a definite response-size defect on this actual host:
+425processes/4527tasks at the diagnostic snapshot,144691bytes for the required
+witness alone, versus65536installed checker/client response cap. Even a scan
+that passes cannot emit that complete witness. The fresh safe receipt records
+another actual aggregate census, without publishing process/thread identities
+or private descriptors/maps. Do not weaken coverage, claim root success, stop
+unrelated jobs, or silently change installed payload hashes.
+
+Root must coordinate the PR234 source owner for the smallest receipt-only
+bound correction, leaving request/status limits and all trust/consumer/lease/
+freshness gates intact, with review and exact corrected hashes before any
+root payload replacement. Source-owner code/worktree/index were not changed
+by Staging. No further blind acceptance retries or historical bulk hashing
+ran after the concrete blocker. Installation is now established; both real
+acceptances, operational adoption, archive retirement and cutover are still
+held. B/current whole-state/recovery evidence, incumbent/fallback and human-QA
+cleanup boundary remain protected. No honest completion ETA exists while this
+required installed-payload correction is unavailable.
+See receipts/installed-two-profile-response-bound-blocker-20261009.json.

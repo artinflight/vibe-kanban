@@ -32,7 +32,17 @@ Local endpoints under `/v1`:
   null links/assignees. It includes active and archived workspaces.
 
 The existing picker supports Seamus, dot, both and neither for local issues,
-including create-mode drafts. Local Personal/Me resolves to Seamus without
+including create-mode drafts. Creation awaits every selected assignment’s
+persisted promise before closing the composer, navigating to the issue or
+preparing a workspace draft. Partial failure names unsaved participants and
+shows **Retry saving issue**. A composer checkpoint retains the created issue,
+the submitted form and confirmed assignments across panel remounts. Retry writes
+only failed assignments to that same issue, without repeating successful
+attachment preparation or creating another issue. Saved form fields stay locked;
+concurrent submissions, reset and reopen cannot overwrite a pending recovery.
+This checkpoint is in browser memory, not durable across a full page reload;
+the created issue remains discoverable and can be assigned through its edit picker.
+Edit-picker behavior and unread state are preserved. Local Personal/Me resolves to Seamus without
 changing the authentication provider. The sidebar defaults to Mine and offers
 All in always-visible assignment controls on desktop and phone, with the choice
 retained in browser localStorage. Phone controls retain 48px touch targets. Mine excludes explicitly
@@ -54,7 +64,13 @@ not access control.
 
 ## Validation and review boundary
 
-Nine focused Node visibility/pagination regressions pass locally. Two database
+Sixteen focused Node creation/visibility/pagination regressions pass locally.
+The seven creation regressions cover multi-assignee partial failure, waiting for
+all results, repeated failure, successful retry, dot-only/shared/Seamus-only/
+unassigned creation, synchronous errors and attachment preparation retry.
+Rendered acceptance of the actual create panel verifies visible failure, enabled
+Retry with locked form, checkpoint retention during/after remount, one created
+issue, retrying only dot, no early navigation and unchanged edit picker/unread. Two database
 regressions and an HTTP API contract test are included for hosted Cargo testing:
 stable identities, dot-only/shared/Seamus-only/unassigned/unlinked inheritance,
 retry uniqueness, deletion, invalid foreign keys and unread preservation.
@@ -108,7 +124,10 @@ feature branch or rebuild an older main/staging tree over the combined release.
    with cleanup disabled. Check retained report receipts, assignments, task links,
    saved messages, unread journal/flags and runtime routing invariants. Backups
    and rollback receipts belong on Desktop B: per the restart protocol.
-5. On the candidate backend, exercise the existing picker: assign an explicit
+5. On the candidate backend, fault-inject a failed dot assignment POST during
+   shared creation, verify the visible partial error, then retry successfully:
+   there must be one created issue, both assignees, no early navigation, no
+   duplicate assignment and unchanged unread. Exercise the existing picker: assign an explicit
    dot-only test issue to dot, a shared issue to both, and a Seamus-only issue to
    Seamus. Verify active/archive Mine/All, pagination, counts, reload persistence,
    Personal/Me and direct links. Confirm unread markers survive filter changes.

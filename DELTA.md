@@ -1576,3 +1576,17 @@ This feature follow-up is not deployed; Green PID3027197, production frontend
 and configured model/effort/Recommend-only routing remain unchanged.
 
 2026-10-09: Prepared explicit local Seamus/dot IssueAssignee storage, existing picker support, and inherited workspace Mine/All visibility. Unassigned/unlinked history and unread are preserved. Draft/CI and safe combined-release adoption details: VK_LOCAL_ASSIGNMENTS.md. No rollout or permission changes.
+
+
+2026-10-09 — PR237 create-mode assignment persistence correction
+
+Independent review found creation discarded assignment persisted promises.
+Creation now waits for all participants, records the saved issue and confirmed
+assignments in the composer, shows partial failure and retries only remaining
+assignments to that issue. Fields and concurrent submission remain locked across
+remounts until persistence settles. Existing edit picker and unread are preserved.
+Seven creation regressions plus nine visibility/pagination regressions pass;
+actual-panel acceptance covers failure/retry/remount/navigation. Hosted final-head
+checks remain required. No Cargo build, production deployment, permission change
+or bulk assignment was performed; integrate only the bounded PR patch over the
+combined backend c3c48e63/frontend 5ce84ee2 (candidate is 11 commits behind live).

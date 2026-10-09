@@ -7,7 +7,11 @@ stays visible. Counts/pagination use the filtered rows; unread flags stay intact
 No live writes/deploy/restart/permission changes. Preserve combined backend
 `c3c48e63` and frontend `5ce84ee2` in eventual adoption; do not replace live from
 this staging-based source. Review: [draft PR #237](https://github.com/artinflight/vibe-kanban/pull/237).
-Final-head hosted checks remain the integration gate. Local format/governance,
+Create mode now awaits all selected assignments and retains a composer checkpoint
+for partial failure/retry on the same issue, including panel remounts. Retry skips
+confirmed assignments; saved fields stay locked. Sixteen Node regressions and
+actual-panel partial-failure/retry acceptance pass locally. Final-head hosted
+checks remain the integration gate. Local format/governance,
 TypeScript, lint, migration replay, nine Node regressions and rendered-container
 acceptance passed. Application source applies to the combined baseline; its
 current CI workflow requires inserting the new Node test step, not replacement. MCP Cargo builds are deliberately excluded for SSD capacity.

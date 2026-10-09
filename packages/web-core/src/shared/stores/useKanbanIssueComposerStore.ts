@@ -1,6 +1,10 @@
 import { useCallback } from 'react';
 import { create } from 'zustand';
-import type { IssuePriority } from 'shared/remote-types';
+import type { Issue, IssuePriority } from 'shared/remote-types';
+import type { IssueFormData } from '@vibe/ui/components/KanbanIssuePanel';
+import type { IssueCreationProgress } from '@/shared/lib/issueCreation';
+
+export type KanbanIssueSubmission = IssueCreationProgress<Issue, IssueFormData>;
 
 export interface ProjectIssueCreateOptions {
   statusId?: string;
@@ -23,6 +27,8 @@ export interface KanbanIssueComposerDraft {
 export interface KanbanIssueComposerEntry {
   initial: KanbanIssueComposerDraft;
   draft: KanbanIssueComposerDraft;
+  submission?: KanbanIssueSubmission;
+  submissionPending?: boolean;
 }
 
 interface KanbanIssueComposerState {
@@ -36,6 +42,11 @@ interface KanbanIssueComposerState {
     patch: Partial<KanbanIssueComposerDraft>
   ) => void;
   resetComposer: (key: string) => void;
+  checkpointSubmission: (
+    key: string,
+    submission: KanbanIssueSubmission
+  ) => void;
+  setSubmissionPending: (key: string, pending: boolean) => void;
   closeComposer: (key: string) => void;
 }
 
@@ -86,6 +97,11 @@ export const useKanbanIssueComposerStore = create<KanbanIssueComposerState>()(
     byKey: {},
     openComposer: (key, options) =>
       set((state) => {
+        if (
+          state.byKey[key]?.submission?.issue ||
+          state.byKey[key]?.submissionPending
+        )
+          return state;
         const initial = toInitialComposerDraft(options);
         return {
           byKey: {
@@ -100,7 +116,11 @@ export const useKanbanIssueComposerStore = create<KanbanIssueComposerState>()(
     patchComposer: (key, patch) =>
       set((state) => {
         const current = state.byKey[key];
-        if (!current) {
+        if (
+          !current ||
+          current.submission?.issue ||
+          current.submissionPending
+        ) {
           return state;
         }
 
@@ -120,7 +140,11 @@ export const useKanbanIssueComposerStore = create<KanbanIssueComposerState>()(
     resetComposer: (key) =>
       set((state) => {
         const current = state.byKey[key];
-        if (!current) {
+        if (
+          !current ||
+          current.submission?.issue ||
+          current.submissionPending
+        ) {
           return state;
         }
 
@@ -134,14 +158,37 @@ export const useKanbanIssueComposerStore = create<KanbanIssueComposerState>()(
           },
         };
       }),
+    checkpointSubmission: (key, submission) =>
+      set((state) => {
+        const current = state.byKey[key];
+        if (!current) return state;
+        return {
+          byKey: {
+            ...state.byKey,
+            [key]: { ...current, submission },
+          },
+        };
+      }),
+    setSubmissionPending: (key, pending) =>
+      set((state) => {
+        const current = state.byKey[key];
+        if (!current) return state;
+        return {
+          byKey: {
+            ...state.byKey,
+            [key]: { ...current, submissionPending: pending },
+          },
+        };
+      }),
     closeComposer: (key) =>
       set((state) => {
         if (!(key in state.byKey)) {
           return state;
         }
 
-        const { [key]: _removed, ...rest } = state.byKey;
-        return { byKey: rest };
+        const byKey = { ...state.byKey };
+        delete byKey[key];
+        return { byKey };
       }),
   })
 );

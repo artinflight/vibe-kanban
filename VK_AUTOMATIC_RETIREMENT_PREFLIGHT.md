@@ -1,246 +1,270 @@
-# Automatic protected-consumer preflight (source only)
+# Reusable protected-consumer preflight — source only
 
-## Outcome and authority
+[Draft PR234](https://github.com/artinflight/vibe-kanban/pull/234) is stacked on
+PR231 checkpoint `c57dceaac5b214fe94dfdce512827ab7b0520b75`. The earlier incident-
+specific installation proposal is superseded. **Installation approval was
+withdrawn. Nothing in this PR installs privileges or changes current Staging.**
 
-Review: [draft PR234](https://github.com/artinflight/vibe-kanban/pull/234), stacked on PR231 for its 12-file
-incremental diff. Retarget to staging after dependency integration.
+The result is a stable, read-only privileged inspection ABI and an unprivileged
+held-operation adapter. Within the bounded namespace proposed below, future
+release IDs, targets, source hashes, owner PIDs and nonces do not require root
+policy/code/sudo amendments. A restart with no retirement skips privileged
+inspection entirely. Backup, exact target authorization, interruption approval,
+rollback and fallback retention until human QA remain separate gates.
 
-This adds a fixed-policy root checker and an unprivileged adapter for PR231's
-held preparation owner. It removes the recurring operator consumer-check command
-**after separately approved installation and owner adoption**. Nothing is
-installed, granted, retired, restarted, backed up or switched by this change.
-The current urgent restart still needs its independent fresh root receipt.
+## Why ordering changed
 
-The dependency is PR231 checkpoint
-`c57dceaac5b214fe94dfdce512827ab7b0520b75`, not its mutable branch name. This is an
-isolated dependent branch; current staging and the current owner remain intact.
-PR229's eight reviewed source files, PR231's sealed packages and the approved
-application/frontend artifacts are untouched. No protected data is included.
+The 15:35:17 root receipt
+`443032f47a9abaed509d12beba4daa736e2f75aebf5e99d0a5fc60022709d894`
+preceded expensive native/B hashes and preparatory SSH/SFTP creation. Protected
+SSH/SFTP PIDs 1632206/1632291/1632292 started at 15:42:48, leaving a real inspection
+coverage gap. Staging aborted before unlink; it did not delete or cut over.
+Fresh timestamps alone would not correct that sequence.
 
-Seamus requested removing routine manual operator checking. That authorizes
-source development and this exact proposal; it does not authorize live privileged
-installation. Target retirement approval, human interruption approval, verified B
-backup/exclusion checks, rollback and human QA stay separate. In particular the
-fallback survives until successful human QA, regardless of consumer clearance.
+The adapter now does, in order:
 
-## Existing privilege route investigation
+1. Finish SSH/SFTP creation, B verification, backup/QA/rollback/authorization gate
+   callbacks and ordinary-permission artifact hashes. Freeze exact release,
+   inode/metadata/hash results and the live owner binding.
+2. Seal the managed operation's remote-command channels through its owning
+   orchestration gate. Start the local status thread and the fixed checker child.
+   These are the last new processes/threads belonging to this operation.
+3. For an exact continuation, seal fork/clone/exec across the terminal actor's
+   threads using unprivileged Linux x86_64 seccomp TSYNC. Only then submit the
+   manifest and fresh nonce to the already-created checker, inside the held lease.
+4. Root authenticates the owner, scans protected process consumers, verifies
+   owner/lease/target metadata again and returns one bounded direct stdout reply.
+5. Check local lease, target metadata, bounded in-memory live status, authenticated
+   bindings, timestamps and late PID/TID births, then perform the exact in-process
+   continuation. **No gate callback, SSH/SFTP, B hash, orchestration callback or
+   subprocess is run after clearance.** No saved-receipt input or refresh loop.
 
-Read-only discovery found `/usr/local/sbin/memory-guard-snapshot`, root-owned mode
-0755. Its fixed purpose is memory logging; it cannot perform the required
-inode-bound scan. It is unsuitable for reuse or modification here. The protected
-sudoers include was unreadable to mcp; no effective privilege rule is inferred
-from that absence of visibility. No retained root Python consumer checker was
-visible in the process inventory. Historical operator sudo produced a receipt
-at 13:35:05 UTC; a file receipt is neither a retained privileged process nor a
-fresh authorization route. No sudo command, sudo denial retry, privileged service
-API, SSH identity change or alternate escalation was attempted.
+`verify_gates` is called once before inspection. `status.live_status` and
+`lease.verify` are required to perform only bounded local/in-memory checks. The
+continuation is an already-approved unprivileged operation, not a root callback.
+The adapter contains no unlink, service operation or arbitrary root execution.
+Its process seal is irreversible and suitable only for a dedicated terminal
+operation actor, never for adoption into the current long-lived owner in place.
+The owning controller must close remote command channels before sealing;
+seccomp does not prevent writing commands to an existing SSH connection.
 
-No safe already-authorized route was established. A parent/operator who has an
-existing authenticated privileged terminal may run the already-approved pinned
-read-only command when its held boundary is ready; this branch does not commandeer
-that terminal, reuse its credentials or claim the old receipt remains fresh.
+## Trust boundaries and approved scope
 
-## Fixed root authority
-
-The only proposed allowed invocation is:
+Root owns the stable launcher, checker ABI/code and fixed policy. The only
+proposed data scope is the new **empty**, dedicated namespace:
 
 ```
-/usr/bin/python3.12 -I -S -B /usr/local/libexec/vk-retirement-check.py
+/mnt/vk-storage/vk-process-inspection-managed-v1
+  objects/<32 lowercase hex release ID>/<bounded artifact leaf>
+  control/<same release ID>/owner.lease
+  control/<same release ID>/owner.sock
 ```
 
-`mcp` invokes it through fixed `/usr/bin/sudo -n --` argv. Sudo matches the
-interpreter digest, exact flags and exact script path, with NOSETENV and NOEXEC.
-There are no argument wildcards, environment-based policy selectors, shell,
-repository imports, subprocesses, arbitrary path reads, service operations,
-unlink, directory traversal for deletion, chmod or root receipt-file writes.
-Python isolated mode excludes user Python paths; -S also disables site initialization
-and sitecustomize hooks. Bytecode writes are disabled.
-The interpreter, checker, policy and their ancestors must be root-owned and
-non-user-writable; the root checker enforces this at entry. OS standard-library
-code is an administrator-owned dependency, not an imported worktree input.
-Sudo's normal auditing remains in effect; no credential or process-content
-logging is added. Exact matching/digests follow [sudo's primary manual](https://www.sudo.ws/docs/man/1.9.14/sudoers.man.pdf).
+The scope anchor is root-owned 0755 and enrolled by inode and SSD filesystem UUID
+`26e4cac1-f2cf-485b-b1bc-d1be197a747e`. `objects`, `control` and release directories
+are mcp-owned 0700. Targets must be ordinary UID1000 single-link files with
+0400/0500/0600/0700 permissions; leases are empty, UID1000, 0600, single-link files;
+sockets are UID1000, 0600. Every relative component stays on the anchor device.
 
-The checker hardcodes only `incident-archive-db5bb16b`, the full native path,
-SHA-256 `e994567edaacc75d8aa9a3497b8384a8dbacec462854a3f7f8c5760e1a9a0ce4`,
-and every device/inode/size/mtime/ctime/link/UID/GID/mode field from the approved
-one-file exception. It also hardcodes the current retained lease/status paths.
-The root policy must match those constants. A changed target requires an
-exceptional reviewed code/policy change; mcp cannot enroll another target.
-This grant has no cleanup or general restart authority.
+The SSD mount parent is mcp-writable. Root therefore verifies the independently
+root-owned anchor inode and UUID on every operation and reopens it after scanning.
+Renaming or replacing its pathname fails closed; mcp cannot manufacture a
+replacement root-owned inode. No chmod/chown of the existing SSD mount or roots
+is proposed. Bind/mount/device changes require root authority and fail the
+recorded identity checks. Root-controlled UUID device metadata accommodates
+normal device-number changes across reboot.
 
-`retirement-policy.proposal.json` is the exact proposed baseline policy. It pins
-the candidate manifest, source and root binding, lease identity, host proc device
-and PID/mount namespaces. These were read from the October9 retained owner
-097e1bfa and lease without writing them. They are configuration pins, **not a new
-liveness receipt**. Revalidate these pins at installation/adoption; if any differs,
-stop and present a changed bundle. Do not refresh a root policy from user input.
+Root scope authorization belongs to the operator/root administrator. It is
+separate from the owning release controller's authorization of exact artifacts
+inside that scope. The controller supplies strictly bounded JSON, not a pathname
+to a manifest. Live Unix SO_PEERCRED PID/UID/start, the exact kernel FLOCK owner,
+and an ephemeral nonce authenticate that manifest and its source/root/backup
+bindings. Its SHA-256 is a content binding, **not a digital signature** or proof
+of human QA. This proposal trusts the existing UID1000 managed-controller role;
+processes sharing that UID are not cryptographically separate principals. Root
+never attests release-code trust or authorizes a deletion from that assertion.
+An independent signing authority would be a different, separately reviewed design.
 
-The only stdin fields are target ID, fresh 256-bit nonce, integer owner PID,
-start time and candidate manifest hash. Extra keys, paths, commands, duplicate
-JSON keys and oversized requests reject. Root authenticates a live Unix peer
-PID/UID/start, source/root/manifest and the owner's exact kernel FLOCK holder.
-A busy lease held by another PID is insufficient. The status server must assert
-the matching ephemeral retirement-boundary nonce; plain preparation status
-cannot obtain clearance. PID reuse, lease substitution, released ownership,
-missing status and mismatched source/root/manifest reject.
+A release manifest contains only ABI1, bounded scope/release IDs, source/root/
+backup hashes, exact lease and target identities (device, inode, size, mtime,
+ctime, links, UID, GID, mode), target hashes and exact held-guard declarations.
+No absolute path, caller-selected policy, command, interpreter, arbitrary suffix,
+manifest-file read or external key path is accepted. At most 32 targets and 64KiB
+input/output are allowed. Static root policy permits at most four explicitly
+root-enrolled scopes; this proposal enrolls exactly one.
 
-Every target/lease path component is opened with anchored O_NOFOLLOW descriptors.
-Endpoint connection is anchored through its already-open private parent and
-then authenticated with SO_PEERCRED. Symlinks, parent substitution, changed
-inodes/metadata, additional hardlinks and changed content reject. Target hashing
-uses the opened pinned regular file; path identity is rechecked. Root reads only
-that approved file, its fixed policy/code, fixed lease, bounded status, mount
-inventory and prescribed proc metadata. It never reads environ, cmdline, process
-memory, descriptor contents, credentials or backup payloads other than the
-single already-approved archive being hash-checked.
+The historical incident archive is outside this namespace. Its narrow historical
+exception does not grant deletion or enrollment of future unrelated data. Using
+this reusable capability for current outside-scope paths would require a distinct
+scope/security approval, not a routine target edit. Moving current Staging roots
+or importing that archive is neither proposed nor performed here.
 
-## Boundary integration
+## Privileged capability and consumer coverage
 
-`vk_retirement_preflight.at_held_boundary` is a source adapter; the existing
-097e1bfa production preparation driver has **not** been modified to use it.
-Adoption belongs to the parent preparation owner, after reviewed source/package
-binding and approval. It does not require a VK backend build or service restart.
-A source driver integration looks like:
+The launcher accepts zero arguments, clears its environment and executes only:
 
-```python
-status = BoundaryStatus(live_status)
-server = PreparationStatus(existing_fixed_endpoint, lease, status)
-# At the owner's actual already-authorized retirement boundary:
-at_held_boundary(
-    lease=lease, server=server, status=status,
-    expected_target=approved_target, expected_lease=approved_lease_identity,
-    installation=approved_installed_hashes,
-    prepare=finish_all_preparation,
-    verify_gates=refresh_approval_backup_exclusion_fallback_rollback,
-    consume=existing_unprivileged_boundary_continuation,
-)
+```
+/usr/bin/python3 -I -S -B /usr/local/libexec/vk-process-inspection-v1.py
 ```
 
-Only the owning process uses this adapter; do not run a second concurrent status
-accept loop while it temporarily serves root probes. It finishes expensive
-preparation first, checks all five gates, verifies its still-held lease, installs
-a fresh in-memory nonce and serves the existing status endpoint while the fixed
-checker runs. The helper hashes before scanning, closes its own target FD, scans,
-then rechecks visibility, live owner/lease and target identity. Thus the receipt
-is minted **after** hashing/preparation, at the held boundary. Parent preparation
-approval never becomes an interruption or retirement permission.
+The checker has no repository imports or subprocess/exec/deletion operations.
+Its installed code, policy, interpreter and their ancestors are required to be
+root-owned and non-user-writable; administrator-owned OS standard-library code
+is part of the installation baseline. Ordinary OS Python updates do not require
+new release-specific sudo grants. Checker/ABI/launcher changes remain exceptional
+security changes. There is no grant to a Python interpreter, shell or sudoedit.
 
-The adapter accepts only the direct successful child output. It verifies installed
-code/policy hashes, nonce/PID/start/source/manifest/root/lease/target, complete
-visibility, and both wall-clock and monotonic freshness. The receipt is limited
-to five seconds after issuance and scan-to-issuance to 35 seconds. Fresh gates,
-status and lease are checked before the final freshness check and immediate
-unprivileged continuation. The nonce is removed even on failure. There is no
-stored-receipt input, retry, timestamp refresh or old manual-receipt fallback.
-A timeout (600 seconds including hashing), denial, changed gate or any scan error
-blocks continuation. Missing installation is a hard stop, not manual polling.
+Root takes **O_PATH metadata handles**, never artifact/lease byte reads, content
+hashes or data-directory enumeration. Ordinary-permission release code verifies
+content hashes before requesting inspection. Root reads only its static code/
+policy and fixed `/proc` process metadata, FD metadata, maps, namespaces, mounts
+and locks. It emits no command lines, environments, protected FD path strings,
+map lines, memory bytes or secrets. Receipts expose counts and bounded
+PID/TID/start witnesses, plus operation bindings and code/policy hashes.
 
-A receipt asserts inspected absence at the scan, not perpetual absence of future
-consumers or permission to delete. The parent must retain the existing exclusion/
-reader-writer fence and recheck the pinned path at its actual operation. Linux
-proc inspection cannot atomically prevent an unrelated future open. This branch
-adds no deletion or blanket reader-freezing power to close that race.
+Every process and thread is checked for inode matches via exe/cwd/root, FDs and
+mapped-file device/inode. Denied/malformed inspection, incomplete visibility,
+process/task reuse or churn, substitution, scan timeout and oversized output
+fail closed. PF_KTHREAD and zombie state allow genuinely absent user exe/cwd/root;
+no name/UID heuristic excuses an opaque SSH/SFTP process. The implementation is
+conservative: inventory churn, including kernel-task churn, can still block a
+pass. Installed host visibility/performance are not yet tested.
 
-## Visibility and safe receipts
+An exact owner target FD may be an intentional archive guard. Its manifest
+`guard_held` declaration is accepted only with the exact owner PID's kernel
+exclusive whole-file FLOCK, reverified before and after scanning. Only that
+owner's FD reference is exempted. Other PIDs, the owner's maps/executable and
+unverified locks still block. The root inspector closes its own O_PATH handles
+before scanning. This guard is ownership bookkeeping, not a global reader lock.
 
-The checker requires the pinned host proc mount/device and host PID/mount
-namespaces matching PID1, and rejects hidden/subset proc mounts. It enumerates
-all processes and each process's tasks, inspecting exe/cwd/root, every FD's
-identity and maps' device/inode fields. Thread coverage follows [Linux's primary
-proc task documentation](https://www.man7.org/linux/man-pages/man5/proc_pid_task.5.html).
-It checks stable PID/start/thread inventories before/after, rejects births,
-vanishing tasks, PID reuse, unreadable live metadata and scan deadlines. Kernel
-threads are identified by PF_KTHREAD; only kernel/zombie missing exe/cwd/root
-is acceptable. FD closure is tolerated only with stable task/inventory checks.
-Any other permission/I/O/parsing problem fails closed. A churn-heavy host may
-need a later exceptional decision; automatic retry is deliberately absent.
+## Supported boundary and residual race
 
-Successful stdout contains pins, nonce, owner/lease/manifest, code/policy hashes,
-fresh timestamps and counts. It contains no process names, arguments, map text,
-FD destinations or secrets. Failure stdout is only a generic blocked result;
-exception details never expose a protected read. The checker creates no output
-file. A retained copy of successful output may be historical evidence but cannot
-be supplied to this adapter to authorize another boundary.
+This provides full attempted protected-process inspection at the held boundary,
+rejects concurrent inventory churn and late uninspected births, and prevents the
+managed terminal actor from creating new local processes afterward. A five-second
+maximum receipt age is an additional bound, not the correctness argument.
 
-## Exact one-time approval bundle (not executed)
+**An already-existing unrelated process can open a file after its FD/maps have
+been inspected, even with an unchanged PID inventory.** Advisory FLOCK, this
+scanner and the process seal do not provide atomic global file-open exclusion.
+The approved consumer-clearance and managed-owner gates are retained; no new
+unattainable global-consumer fence is required or claimed. A same-PID unrelated
+exec/open or existing remote channel remains a residual TOCTOU risk. Final local
+checks and immediate continuation minimize the interval but cannot eliminate it.
+If the operational policy demands stronger atomic exclusion, this capability
+cannot meet that demand and must not be described as doing so.
 
-Approve all four changes together, after reviewing this PR's exact source:
+## Exact one-time reusable installation proposal — NOT authorized
 
-1. Create `/usr/local/libexec` if absent, and `/etc/vibe-kanban`, root:root 0755;
-   verify all ancestors are real root-owned directories without group/other write
-   or user-write ACLs. Preserve unrelated entries. Install only the checker at
-   `/usr/local/libexec/vk-retirement-check.py`, root:root 0644. This is data for the
-   fixed interpreter, not an executable wrapper.
-2. Install `retirement-policy.proposal.json` as
-   `/etc/vibe-kanban/retirement-policy.json`, root:root 0644. No user-writable request
-   folder, runtime daemon, shared root socket or generalized allowlist is added.
-3. Validate the exact proposed sudoers file with `/usr/sbin/visudo -cf` in a
-   root-owned staging location. Install only that rule at
-   `/etc/sudoers.d/vk-retirement-preflight`, root:root 0440; validate the complete
-   sudoers tree. No blanket NOPASSWD, interpreter argument wildcard, sudoedit,
-   service management, shell, install command or policy edit is granted to mcp.
-4. Adopt the reviewed unprivileged adapter in the owning preparation package,
-   binding its source/hash and fixed policy to the owner. Keep preparation
-   non-activating and its existing retained evidence/lease intact. The current
-   driver lacks the required nonce status and will correctly reject. Parent must
-   arrange owner adoption without relaxing source, package or lease recovery
-   checks. A changed owner source/path/policy needs a reviewed amended bundle.
+Review as one bundle; no installation request is currently outstanding. Proposed
+changes, only after an explicit future action approval:
 
-Artifact SHA-256 pins:
-
-| Artifact | SHA-256 |
+| Object | Proposed change |
 | --- | --- |
-| Checker | `0489bf6c2451c2c8022eea347e4443b095d42b21f12d70336d1c158c5a0147e4` |
-| Proposed sudoers rule | `42299a5e496e4abb281da0224ae2069e7cc35c92e7424290cbd3384d0d103375` |
-| Unprivileged adapter | `d11dd0bb6d9c3ae95c3dcd3fac75067fe19aa879a8cbe2ad3cff7681b6f2c1f5` |
-| Baseline policy | `bfd27d6ecb4507805490e333c3ea55b4a3c4061268f240f48ff83d4d28dba268` |
-| `/usr/bin/python3.12` | `e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f` |
+| `/usr/local/sbin/vk-process-inspect-v1` | Install compiled launcher, root:root 0755, no setuid/capabilities; SHA-256 `33b47e5f890040bb8821a6a458dd1c4062e34c97d3e644cccd233e728051e12a` |
+| `/usr/local/libexec/vk-process-inspection-v1.py` | Install reviewed checker source, root:root 0644; hash from the source bundle receipt |
+| `/etc/vibe-kanban` | Create only if absent, root:root 0755; otherwise validate existing immutable ownership without changing unrelated entries |
+| `/etc/vibe-kanban/process-inspection-v1.json` | Install root:root 0600 ABI1 policy with caller UID1000 and exactly the scope above |
+| `/mnt/vk-storage/vk-process-inspection-managed-v1` | Create a fresh empty root:root 0755 anchor on the verified mounted SSD; refuse existing paths/symlinks; enroll its actual inode once |
+| Anchor `objects` and `control` children | Create empty mcp:mcp 0700 directories; no existing artifact adoption or data moves |
+| `/etc/sudoers.d/vk-process-inspection-v1` | Install root:root 0440 after full syntax validation; exactly the rule below |
 
-Copy into root-owned locations, then verify the destination hashes **before**
-enabling the grant or running any copied code. Checking only user-writable source
-before copying is insufficient. Verify the actual interpreter/root library
-ownership and exact sudo rule during the approved installation. An interpreter
-update that changes its digest fails closed until an exceptional grant update.
-No local payload, new SSD backup, group membership, capabilities, proc mount,
-Yama/LSM setting, polkit policy, service config or system-wide sudo default changes
-are part of this bundle.
+```
+mcp ALL=(root) NOPASSWD: NOSETENV: sha256:33b47e5f890040bb8821a6a458dd1c4062e34c97d3e644cccd233e728051e12a /usr/local/sbin/vk-process-inspect-v1 ""
+```
 
-## Minimal staged rollout and validation
+The final `""` requires no command arguments. The stable launcher digest is not a
+release/interpreter pin. NOEXEC is deliberately absent because the launcher must
+exec its fixed interpreter. Environment clearing, isolated Python, fixed code
+path and immutable root-owned code are the execution boundary. No wildcards,
+blanket passwordless sudo, arbitrary reads, root deletion, daemon installation,
+credential access, group membership or filesystem capability is proposed.
 
-Stage1 is this source-only PR: fixture tests plus PR231 owner/generation/package
-regressions. Stage2, only after the bundled action approval, is root installation
-and **read-only** installed-command acceptance at a held non-activating boundary.
-Check effective command matching rejects alternate flags/path/target/arguments,
-and that actual protected host processes can be inspected. Demonstrate wrong
-nonce, absent boundary and stale receipt rejection without retiring anything.
-Stage3 lets the already-authorized owning retirement continuation consume one
-fresh receipt. Its separate approval, verified B copy, exclusion checks and
-rollback/fallback policy remain authoritative. Cutover and human QA are unchanged.
-A repeated normal boundary requires no operator command; new targets, failed
-visibility, changed pins, or exceptional operational approvals still involve a
-human. Grant rollback is removal of the one exact rule by the administrator,
-with existing fallback and data retained; this branch does not execute rollback.
+The checked-in policy's `anchor_inode: null` deliberately fails closed. The
+single approved bootstrap would create only the fresh empty named directory,
+validate UUID/device/ownership, enroll its resulting inode and record the exact
+final policy SHA in the installation receipt. It must not infer an inode from
+user-provided JSON or adopt an existing directory. The unprivileged adapter must
+be configured with that authenticated code/policy receipt, once. Root scope
+replacement/recreation, ABI/code/grant changes require review; routine releases
+and new artifacts within this bounded scope do not.
 
-Local validation: 23 focused regressions and all 142 PR231 candidate regressions passed, including genuine same-process
-Unix peer/PID and held kernel lease; pinned hashing/scan ordering and FD closure;
-open FD/hardlink/map/thread consumers; protected/malformed/missing metadata;
-proc visibility/namespace mismatch; churn and deadline; symlink/path/identity/
-hash substitution; duplicate/oversized/extra-field requests; wrong socket peer,
-PID/start/manifest/source/root/lease; nonce replay/absent boundary; timestamp and
-code/policy substitution; gate/fallback preservation and preparation-before-scan.
-No root checker or sudo command was executed, so actual root host visibility,
-installed sudoers matching, privileged stdout provenance and owner adoption
-remain Stage2 evidence. No fixture result is live clearance.
+Compilation command (performed as mcp, output on SSD, not installed):
 
-The exact proposed sudoers file passes unprivileged `/usr/sbin/visudo -cf`;
-this checks syntax without installing anything or exercising a privilege grant.
-The four package-binding tests pass again at source 35734cda3. Ops governance passed. `pnpm run format` ran Rust formatting successfully, then
-blocked on missing Prettier. `pnpm run check` passed the legacy-path guard then
-blocked on missing TypeScript; `pnpm run lint` blocked on missing ESLint. This
-checkout has no node_modules. Full Cargo workspace tests were not run because
-this source-only task prohibits unrelated rebuilds. The dependency regressions
-initially had 139 pass/3 packaging failures due to the expected clean-source
-requirement; all 142 passed after committing the source. The 23 focused tests
-also passed after adding -S to exclude Python site initialization. A direct
-unprivileged isolated invocation emits only the generic blocked result.
+```
+cc -std=c11 -O2 -Wall -Wextra -Werror -Wl,--build-id=none \
+  scripts/deployment/security/vk_process_inspect_launcher.c \
+  -o /mnt/vk-storage/vk-retirement-preflight-tests/vk-process-inspect-v1.proposal
+```
+
+Before approving actual installation, review the bundle hashes and ownership of
+all OS interpreter/stdlib and installed-code inputs. After approval, first run
+installed **read-only** acceptance against synthetic artifacts: effective sudo
+matching, full host visibility, scope/lease/nonce substitution and opaque process
+coverage. Then Staging may separately adopt the adapter into a dedicated managed
+terminal operation, prove its existing channel closure and exact continuation,
+and retain human QA/backup/rollback gates. No live acceptance or adoption is
+claimed by this source PR.
+
+## Existing route and urgent operator bridge
+
+Read-only investigation found the fixed-purpose root-owned memory-guard snapshot
+helper unsuitable for inode consumer inspection. No safe retained privileged
+consumer-reader route was established. An unreadable sudoers include is not
+proof of an applicable grant. No sudo attempt/denial retry, service API, identity
+change or alternate escalation was used.
+
+The owner's proposed one-off operator-terminal stdout bridge is a separate
+current-path investigation: a resident completes hashes/SSH and obtains the
+receiving Unix FD before the operator runs the unchanged approved helper. It
+makes no new installation/grant and is not adopted by this PR. Compatibility
+conditions for Staging's review:
+
+- Enable SO_PASSCRED before receiving, use recvmsg for every frame/fragment,
+  bound bytes and framing, reject absent/mixed/truncated credentials and extra
+  data. UID0 authenticates a root sender, not automatically the expected scanner;
+  account for sudo PTY/proxy sender PID and connect evidence to the approved code.
+- One initial `/proc` list does not cover protected births during the scan.
+  Prove coverage at scan completion and reject uninspected late processes. Root
+  credentials on a JSON message cannot repair missing inspection coverage.
+- The unchanged historical helper has no approved archive-holder exemption.
+  A resident's target FD/FLOCK can be reported as a consumer. Do not waive a
+  failed clearance or silently substitute new root reader code.
+- Keep the same resident/lease/target binding through immediate continuation;
+  no later SSH, subprocess or B/native hash. Recheck local identity and time,
+  reject extra messages/replay. There remains the unrelated existing-process
+  open-after-inspection race described above.
+
+Staging session `7d6734c1-c8d0-4d55-ac27-b1f763d15a6e` retains operational ownership.
+User relays name executions `e7db8d73-a331-4fb0-b5c2-7230d44011ff` and
+`d9f07b0f-b92d-4b17-a60a-f1cfdf0782bb`; read-only lookup records the latter as
+completed, so no new prompt/execution was started. Findings return through the
+existing reply. The current owner, Staging roots, model/effort and approvals
+remain under that session's control.
+
+## Validation and what remains manual
+
+Focused fixtures run as mcp, without sudo or executing the root entrypoint.
+They cover real Unix peer/PID/kernel lease authentication, reusable source/release
+bindings, strict parsing, scope and inode substitution, symlinks/hardlinks,
+metadata-only target handles, protected consumer/denial/churn models, replay and
+freshness, late SSH PIDs, backup/QA gates and native terminal process sealing.
+A disposable native actor creates actual preparation/verification children,
+creates its inspection child before sealing, then proves a post-response SSH
+subprocess is denied; the privileged scan is explicitly substituted in that test.
+Source regressions do not prove installed privileged visibility or live adoption.
+
+Within the approved managed scope, ordinary future checks need no operator
+command after one-time installation and tested controller adoption. No-retirement
+restarts require no inspector. Humans still approve new scope/security changes,
+exceptional target retirement/interruption decisions, backup or rollback
+exceptions, and human QA. Failures block instead of requesting successive manual
+snapshots. Direct-B incremental backup and reserved capacity could avoid routine
+cleanup entirely; that separate project is neither implemented nor a dependency
+added here.
+
+[Source bundle/validation receipt](scripts/deployment/receipts/reusable-retirement-source-validation-20261009.json)
+records exact artifacts and remaining validation limits. The older receipt is
+historical first-design evidence, not evidence for this revision.
+Protocol references: [sudo primary manual](https://www.sudo.ws/docs/man/1.9.14/sudoers.man.pdf),
+[Linux kernel seccomp documentation](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html).

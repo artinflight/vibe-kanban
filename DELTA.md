@@ -1584,3 +1584,16 @@ failure modes from c57dceaa in an isolated branch. Exact one-time security grant
 proposal is in VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md; no live privileges, retirement,
 restart, cutover, unrelated build or new backup. Urgent root receipt remains a
 separate unresolved owner gate; fallback remains until human QA.
+
+## October 9: Reusable ABI and held-boundary ordering correction
+
+Superseded PR234's incident-specific privilege proposal after owner withdrawal.
+Stable no-argument launcher/root metadata-only ABI accepts bounded live-authenticated
+release manifests under a new proposed root-owned inode/UUID anchor; source/PID/
+release updates need no new grant within approved scope. No current installation
+or live scope/owner/service/data changes. All expensive gate/SSH/hash work moves
+before the final held scan; postscan verify_gates is removed. Native terminal
+seccomp tests deny later fork/exec/threads/SSH. Document existing-process open
+TOCTOU honestly, with no impossible global fence prerequisite. One-time bundled
+security proposal, current Staging bridge constraints and validation artifacts
+are in VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md. Preserve fallback until human QA.

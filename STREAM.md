@@ -1,18 +1,25 @@
-# October 9: Automatic held-boundary retirement preflight
+# October 9: Reusable source-only protected-consumer ABI
 
-Branch `fix/automatic-retirement-preflight` is isolated at PR231 checkpoint
-`c57dceaac5b214fe94dfdce512827ab7b0520b75`. Read
-[VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md](VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md).
-Scope: source-only fixed root consumer checker, held-owner adapter, failure-mode
-fixtures and an exact bundled one-time installation/grant proposal. No live
-privileged installation/security change, deletion, service interruption, cutover,
-application rebuild or new backup is authorized. Current staging and sealed
-PR229/231 packages remain untouched. The fallback survives until human QA.
+Branch `fix/automatic-retirement-preflight` remains isolated at PR231 checkpoint
+`c57dceaac5b214fe94dfdce512827ab7b0520b75`. [Draft PR234](https://github.com/artinflight/vibe-kanban/pull/234)
+supersedes its incident-specific proposal with a stable metadata-only root ABI,
+release-specific live-authenticated manifests and held-operation ordering.
+Read [VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md](VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md)
+for exact bounded namespace/one-time grant, trust boundaries and residual races.
 
-The urgent owner still needs fresh privileged clearance; no already-authorized
-route was established or denied sudo retried. Parent approval must precede the
-proposed installation and separately verified owner adoption. [Draft PR234](https://github.com/artinflight/vibe-kanban/pull/234) is stacked on PR231 for review; retarget to
-staging after dependency integration. Installed read-only acceptance is pending.
+All expensive/network gate checks precede final inspection; no post-scan gate
+callback remains. A dedicated terminal actor seals process creation before root
+reads its request. Late PID/TID births reject. An unchanged process can still open
+a target after inspection; no atomic global fence is claimed or added as a gate.
+Routine no-retirement restart skips root entirely. Future targets/source changes
+inside the proposed approved namespace do not change the privileged grant.
+
+Installation approval is withdrawn. No helper/security installation, target
+retirement, restart, cutover, live-owner alteration, Staging-root change,
+unrelated build or new backup is authorized/performed. Existing Staging owns
+current incident operations and its separate operator-bridge investigation.
+Fallback survives until human QA. Installed visibility and owner adoption remain
+unvalidated. Older entries below are historical scope descriptions.
 
 Current October9 restart gate update: Desktop SSH/B works; whole-state online
 backup accepted (77roots/76DBs), archive SHA735e2115. Read

@@ -1,45 +1,11 @@
 {
+  "abi": 1,
   "caller_uid": 1000,
-  "lease": {
-    "identity": {
-      "ctime_ns": 1791544149974636727,
-      "dev": 2065,
-      "gid": 1000,
-      "ino": 10354931,
-      "mode": 33204,
-      "mtime_ns": 1791544149974636727,
-      "nlink": 1,
-      "size": 0,
-      "uid": 1000
-    },
-    "path": "/mnt/vk-storage/vk-cutover-candidate-20261009/initial-restore-owner.lease"
-  },
-  "namespaces": {
-    "mnt": "mnt:[4026531841]",
-    "pid": "pid:[4026531836]"
-  },
-  "owner": {
-    "endpoint": "/mnt/vk-storage/vk-cutover-candidate-20261009/owner-097e1bfa.sock",
-    "manifest_sha256": "c7c9ec848acb017c059e4ea18e14394f708ed3076d66ff8c42c9efdad7d59503",
-    "root_binding": "cf07ddd1f356cd64ea9da1da5f053ff8ffa03ead9a53b6ae45091c45ac258a24",
-    "source": "ba1a8c921c9bef2a6893f24683d0a39412cf965c867aec8d630a4e72c63c9015"
-  },
-  "proc_dev": 22,
-  "schema": 1,
-  "target": {
-    "id": "incident-archive-db5bb16b",
-    "identity": {
-      "ctime_ns": 1791409456129506845,
-      "dev": 2065,
-      "gid": 1000,
-      "ino": 7340415,
-      "mode": 33152,
-      "mtime_ns": 1791409456129506845,
-      "nlink": 1,
-      "size": 23441521918,
-      "uid": 1000
-    },
-    "path": "/mnt/vk-storage/vk-combined-preparation-20261007/backups/checkpoint-/db5bb16b095241319a79e02e5fc8cdf6/checkpoint--db5bb16b095241319a79e02e5fc8cdf6.tar.zst",
-    "sha256": "e994567edaacc75d8aa9a3497b8384a8dbacec462854a3f7f8c5760e1a9a0ce4"
+  "scopes": {
+    "managed-artifacts-v1": {
+      "path": "/mnt/vk-storage/vk-process-inspection-managed-v1",
+      "anchor_inode": null,
+      "filesystem_uuid": "26e4cac1-f2cf-485b-b1bc-d1be197a747e"
+    }
   }
 }

@@ -1,33 +1,34 @@
-# October 9: Source-only automatic retirement clearance
+# October 9: Reusable ABI source-only follow-up
 
-[Draft PR234](https://github.com/artinflight/vibe-kanban/pull/234) is stacked on PR231; its 12-file incremental
-diff has been verified. Retarget to staging after PR231 integrates. Source
-35734cda3 is pushed and remote-SHA verified. All four package-binding tests also
-pass at that exact source. The proposed sudoers file parses with unprivileged
-`visudo -cf`; effective installed permission matching remains untested.
+[Draft PR234](https://github.com/artinflight/vibe-kanban/pull/234), stacked on PR231,
+now proposes stable metadata-only root inspection and live owner/lease/nonce
+manifest authentication. Read
+[VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md](VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md).
+The earlier incident/source/interpreter pins are superseded. The one-time scope
+is a new empty root-owned, inode/SSD-UUID-bound managed namespace; current archive
+is outside it. Exact security changes and launcher's no-argument digest grant
+are reviewable there. Null policy enrollment deliberately fails closed.
 
-Read [VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md](VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md).
-The fixed root checker hashes the exact approved archive before a full process/
-thread consumer scan, authenticates the live owner/kernel lease and ephemeral
-boundary nonce, and issues bounded safe stdout. The unprivileged adapter finishes
-preparation first and consumes one direct fresh receipt while ownership is held.
-23 focused tests pass, including real peer/PID/kernel-lease checks and rejection
-of stale/replayed/substituted receipts, symlinks, denied inspection and consumers.
+No installation is approved. No live owner/security/service/data/routing or
+Staging-root changes were made. The fresh15:35 receipt missed protected SSH/SFTP
+births15:42:48; source adapter now completes all hashes/network/gate callbacks
+before final held inspection. It removes post-scan verify_gates, then does bounded
+local metadata/owner/lease/receipt checks and exact in-process continuation.
+Native terminal process seal rejects post-response subprocess/SSH attempts.
+No independent global-consumer fence is required; unrelated existing opens remain
+a documented TOCTOU risk, not eliminated by five-second receipts or PID inventory.
 
-No installed privilege route exists in this change; the current 097e1bfa driver
-has not adopted the adapter and cannot provide its nonce status. The current
-urgent restart remains blocked on fresh root clearance. No sudo denial retry or
-live installation/service/data/security change occurred. Parent should review
-one bundled root-owned checker/policy plus exact sudoers proposal, then separately
-prove installed root visibility and owner adoption before routine use. Preserve
-fallback through human QA and all existing backup/rollback/interruption gates.
+32 focused fixtures pass, including native ordering/fork/exec/thread rejection,
+real peer/lease checks and modeled root visibility/consumer/churn failures.
+The root entrypoint has never been invoked. Privileged visibility, effective
+installed grant and Staging adoption remain untested. Parent/root may review one
+bundle before any future action approval. Human QA/backup/rollback and explicit
+exceptional retirement/interruption approvals remain authoritative. Current
+Staging operations and stdout-bridge constraints return only via existing reply.
 
-Ops passed. Format/check/lint attempts stopped at missing Prettier/TypeScript/
-ESLint. No unrelated Cargo rebuild was run. All142 PR231 candidate tests pass from committed clean source; the initial
-three package failures were the expected clean-source guard. All23 focused
-tests also pass after disabling Python site initialization. Branch derives only from
-specified PR231 checkpoint, with staging untouched. Fixtures are retained under
-mounted `/mnt/vk-storage/vk-retirement-preflight-tests`.
+Validation receipt records final checks and exact artifact hashes. No unrelated
+Cargo build is authorized. Historical first-design receipt remains unchanged.
+Fixtures/build output stay on mounted `/mnt/vk-storage`.
 
 Current October9 restart gate update: Desktop SSH/B works; whole-state online
 backup accepted (77roots/76DBs), archive SHA735e2115. Read

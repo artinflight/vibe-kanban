@@ -1,10 +1,17 @@
-"""Unprivileged held-boundary adapter for PR231's PreparationStatus.
+"""ABI1 unprivileged release controller adapter. No installed/live adoption.
 
-Owning driver wraps live_status with BoundaryStatus and passes the existing
-PreparationStatus server here. No service controls, deletion or backup writes.
+Prepare SSH/SFTP sessions and content hashes first. Root receives only a bounded
+manifest, checks metadata + inode consumers, never reads artifact content.
+A terminal operation seals fork/exec in all its own threads. Consumer clearance
+is a bounded observation, not exclusion of unrelated host opens after inspection.
 """
+import ctypes
+import errno
+import hashlib
 import json
 import os
+from pathlib import Path
+import re
 import secrets
 import select
 import subprocess
@@ -13,8 +20,7 @@ import time
 
 from vk_candidate_owner import process_start
 
-COMMAND = ('/usr/bin/sudo', '-n', '--', '/usr/bin/python3.12', '-I', '-S', '-B',
-           '/usr/local/libexec/vk-retirement-check.py')
+COMMAND = ('/usr/bin/sudo', '-n', '--', '/usr/local/sbin/vk-process-inspect-v1')
 GATES = ('target_approved', 'backup_verified', 'dependencies_excluded',
          'fallback_preserved_until_human_qa', 'rollback_ready')
 FRESH_NS = 5_000_000_000
@@ -22,103 +28,226 @@ FRESH_NS = 5_000_000_000
 
 def require(value):
     if not value:
-        raise ValueError('retirement preflight blocked')
+        raise ValueError('operation preflight blocked')
+
+
+def digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
 
 
 class BoundaryStatus:
     def __init__(self, live_status):
-        self.live_status = live_status
-        self.boundary = None
+        self.live_status, self.attestation = live_status, None
 
     def __call__(self):
         value = dict(self.live_status())
-        if self.boundary is not None:
-            value['retirement_boundary'] = dict(self.boundary)
+        if self.attestation is not None:
+            value['inspection_attestation'] = dict(self.attestation)
         return value
 
 
-def privileged_check(request):
-    # Fixed argv, clean environment, bounded output through a pipe, no shell.
-    # Timeout is inconclusive; callers must never use a prior receipt instead.
-    with subprocess.Popen(COMMAND, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                          stderr=subprocess.DEVNULL, env={'PATH': '/usr/bin:/bin', 'LANG': 'C'},
-                          close_fds=True) as child:
-        try:
-            raw, _ = child.communicate(json.dumps(request).encode(), timeout=600)
-        except subprocess.TimeoutExpired:
-            child.kill()
-            child.communicate()
-            raise ValueError('retirement preflight timed out') from None
-        require(child.returncode == 0 and len(raw) <= 65536)
+def seal_process_creation():
+    """Irreversible unprivileged seccomp TSYNC, for a TERMINAL actor only.
+
+    Checker and status thread must already exist. x86_64 only; other arches block.
+    This prevents this actor's fork/exec/new threads, not unrelated host processes
+    or commands written over preexisting SSH sockets. Those channels must be
+    sealed by the owning orchestration fence before entry.
+    """
+    require(os.uname().machine == 'x86_64')
+    class Filter(ctypes.Structure):
+        _fields_ = [('code', ctypes.c_ushort), ('jt', ctypes.c_ubyte),
+                    ('jf', ctypes.c_ubyte), ('k', ctypes.c_uint32)]
+    class Program(ctypes.Structure):
+        _fields_ = [('length', ctypes.c_ushort), ('filters', ctypes.POINTER(Filter))]
+    deny = 0x00050000 | errno.EPERM
+    rules = [(0x20, 0, 0, 4), (0x15, 1, 0, 0xc000003e), (0x06, 0, 0, deny),
+             (0x20, 0, 0, 0), (0x45, 0, 1, 0x40000000), (0x06, 0, 0, deny)]
+    for number in (56, 57, 58, 59, 322, 435):  # clone/fork/vfork/execve/execveat/clone3
+        rules.extend([(0x15, 0, 1, number), (0x06, 0, 0, deny)])
+    rules.append((0x06, 0, 0, 0x7fff0000))
+    filters = (Filter * len(rules))(*(Filter(*row) for row in rules))
+    program = Program(len(rules), filters)
+    libc = ctypes.CDLL(None, use_errno=True)
+    require(libc.prctl(38, 1, 0, 0, 0) == 0)  # PR_SET_NO_NEW_PRIVS
+    require(libc.syscall(317, 1, 1, ctypes.byref(program)) == 0)  # seccomp FILTER | TSYNC
+
+
+def task_inventory():
+    # Only visible PID/TID/start metadata. Never protected fd/maps reads by mcp.
+    result = set()
+    for name in os.listdir('/proc'):
+        if not name.isdigit():
+            continue
+        for tid in os.listdir(f'/proc/{name}/task'):
+            if tid.isdigit():
+                result.add((int(name), int(tid), process_start(f'{name}/task/{tid}')))
+    return result
+
+
+def verify_witness(witness):
+    require(type(witness) is list and len(witness) > 0)
+    covered = set()
+    for row in witness:
+        require(type(row) is list and len(row) == 3 and type(row[0]) is int
+                and type(row[1]) is int and type(row[2]) is str)
+        covered.add(tuple(row))
+    require(len(covered) == len(witness))
+    # Exits need no new inspection. Every birth/reused PID/TID is a hard stop.
+    require(task_inventory() <= covered)
+
+
+def hash_artifacts(scope_path, manifest):
+    """Ordinary actor permissions only; root never runs this code or these reads."""
+    require(re.fullmatch(r'[0-9a-f]{32}', manifest['release_id']))
+    anchor = os.open(scope_path, os.O_PATH | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        for target in manifest['targets']:
+            name = target['name']
+            require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}', name) and '..' not in name)
+            parent = os.dup(anchor)
+            try:
+                for part in ('objects', manifest['release_id']):
+                    next_fd = os.open(part, os.O_PATH | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=parent)
+                    os.close(parent)
+                    parent = next_fd
+                fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=parent)
+                with os.fdopen(fd, 'rb') as stream:
+                    def current():
+                        return {key: getattr(os.fstat(stream.fileno()), 'st_' + key) for key in target['identity']}
+                    require(current() == target['identity'])
+                    checksum = hashlib.sha256()
+                    for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                        checksum.update(chunk)
+                    require(checksum.hexdigest() == target['sha256'] and current() == target['identity'])
+            finally:
+                os.close(parent)
+    finally:
+        os.close(anchor)
+
+
+def verify_target_metadata(scope_path, manifest):
+    """Bounded O_PATH identity checks only; no content hashing or callbacks."""
+    anchor = os.open(scope_path, os.O_PATH | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        for target in manifest['targets']:
+            parent = os.dup(anchor)
+            try:
+                for part in ('objects', manifest['release_id'], target['name']):
+                    flags = os.O_PATH | os.O_NOFOLLOW | os.O_CLOEXEC
+                    if part != target['name']:
+                        flags |= os.O_DIRECTORY
+                    child = os.open(part, flags, dir_fd=parent)
+                    os.close(parent)
+                    parent = child
+                current = {key: getattr(os.fstat(parent), 'st_' + key) for key in target['identity']}
+                require(current == target['identity'])
+            finally:
+                os.close(parent)
+    finally:
+        os.close(anchor)
+
+
+def launch_checker():
+    # Created before sealing; blocks on stdin until the held operation is ready.
+    return subprocess.Popen(COMMAND, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                            stderr=subprocess.DEVNULL, env={'PATH': '/usr/bin:/bin', 'LANG': 'C'}, close_fds=True)
+
+
+def finish_checker(child, request):
+    try:
+        raw, _ = child.communicate(json.dumps(request).encode(), timeout=45)
+    except subprocess.TimeoutExpired:
+        child.kill()
+        child.communicate()
+        raise ValueError('inspection timed out') from None
+    require(child.returncode == 0 and len(raw) <= 65536)
     return json.loads(raw)
 
 
-def validate_receipt(receipt, request, status, expected_target, expected_lease, installation, now, monotonic_now):
-    require(type(receipt) is dict and type(receipt.get('schema')) is int and receipt['schema'] == 1)
+def validate_receipt(receipt, request, installation):
+    require(type(receipt) is dict and type(receipt.get('abi')) is int and receipt['abi'] == 1)
     require(set(installation) == {'code_sha256', 'policy_sha256'} and
             all(receipt.get(key) == value for key, value in installation.items()))
-    require(all(receipt.get(key) == value for key, value in request.items()))
-    require(receipt.get('source') == status['source'] and receipt.get('root_binding') == status['root_binding'])
-    require(receipt.get('lease') == expected_lease and receipt.get('target') == expected_target)
+    for field in ('nonce', 'owner_pid', 'owner_start'):
+        require(receipt.get(field) == request[field])
+    require(receipt.get('inspection_manifest_sha256') == digest(request['manifest']))
     require(receipt.get('euid') == 0 and receipt.get('consumer_clearance_passed') is True
-            and receipt.get('deletion_performed') is False and receipt.get('production_changed') is False)
-    issued, scanned = receipt.get('issued_ns'), receipt.get('scan_started_ns')
-    require(type(issued) is int and type(scanned) is int and
-            0 <= now - issued <= FRESH_NS and 0 <= issued - scanned <= 35_000_000_000)
-    mono_issued, mono_scanned = receipt.get('issued_mono_ns'), receipt.get('scan_started_mono_ns')
-    require(type(mono_issued) is int and type(mono_scanned) is int and
-            0 <= monotonic_now - mono_issued <= FRESH_NS and 0 <= mono_issued - mono_scanned <= 35_000_000_000)
+            and receipt.get('target_metadata_verified') is True
+            and receipt.get('target_content_hashes_verified_by_root') is False
+            and receipt.get('action_authorized') is False and receipt.get('deletion_performed') is False
+            and receipt.get('production_changed') is False)
+    for issued, scanned, now in (('issued_ns', 'scan_started_ns', time.time_ns()),
+                                ('issued_mono_ns', 'scan_started_mono_ns', time.monotonic_ns())):
+        require(type(receipt.get(issued)) is int and type(receipt.get(scanned)) is int and
+                0 <= now - receipt[issued] <= FRESH_NS and 0 <= receipt[issued] - receipt[scanned] <= 35_000_000_000)
     counts = receipt.get('visibility', {})
     require(counts.get('matches') == 0 and counts.get('inspection_denied') == 0
             and type(counts.get('processes')) is int and counts['processes'] > 0
             and type(counts.get('tasks')) is int and counts['tasks'] >= counts['processes'])
+    verify_witness(counts.get('witness'))
 
 
-def at_held_boundary(*, lease, server, status, expected_target, expected_lease,
-                     installation, prepare, verify_gates, consume):
-    """Finish preparation, then obtain and consume ONE live receipt while held.
+def at_held_boundary(*, lease, server, status, manifest, scope_path, installation,
+                     prepare, verify_gates, orchestration_fence,
+                     consume=None):
+    """One operation, no persisted receipt input/loop. No-target restart skips root.
 
-    consume is the owner's existing unprivileged boundary continuation. It must
-    independently preserve its target/path pins and all human interruption gates.
-    No persisted/operator receipt is accepted, no automatic retry or fallback.
+    prepare/verify_gates may do expensive/network work ONLY before clearance.
+    status.live_status and lease.verify must be bounded local metadata/in-memory
+    checks. No post-scan gate or orchestration callbacks are run. The managed
+    owner seals existing command channels before launch; the terminal actor seals
+    process creation. Neither mechanism excludes unrelated existing host opens.
     """
-    require(status.boundary is None and server.status is status)
-    prepare()  # expensive preparation must precede the scan/receipt
-    require(verify_gates() == {key: True for key in GATES})
+    require(status.attestation is None and server.status is status)
+    prepare()  # all SSH/SFTP creation, B authentication, expensive hashes FIRST
+    gates = json.loads(json.dumps(verify_gates()))
+    require(gates == {key: True for key in GATES})
     lease.verify()
-    live = status()
-    require(live.get('manifest_sha256') and live.get('source'))
-    request = {'target_id': expected_target['id'], 'nonce': secrets.token_hex(32),
-               'owner_pid': os.getpid(), 'owner_start': process_start(os.getpid()),
-               'manifest_sha256': live['manifest_sha256']}
-    status.boundary = {key: request[key] for key in ('nonce', 'target_id')}
+    if not manifest['targets']:
+        require(consume is None)  # ordinary restart with no retirement: no root check
+        return {'inspection_required': False, 'action_authorized': False}
+    manifest = json.loads(json.dumps(manifest))  # freeze the operation's release binding
+    hash_artifacts(scope_path, manifest)
+    live = json.loads(json.dumps(status()))
+    require(live['source'] == manifest['source_sha256'] and live['root_binding'] == manifest['root_binding']
+            and live['manifest_sha256'] == manifest['backup_manifest_sha256'])
+    # Owning orchestration must seal remote command/channel creation too.
+    require(orchestration_fence.seal() is True and orchestration_fence.verify() is True)
+    request = {'abi': 1, 'nonce': secrets.token_hex(32), 'owner_pid': os.getpid(),
+               'owner_start': process_start(os.getpid()), 'manifest': manifest}
+    status.attestation = {'abi': 1, 'nonce': request['nonce'], 'manifest_sha256': digest(manifest), 'boundary_held': True}
     stopped, failures = threading.Event(), []
-
     def serve():
         try:
             while not stopped.is_set():
-                ready, _, _ = select.select([server.socket], [], [], 0.05)
-                if ready:
+                if select.select([server.socket], [], [], 0.05)[0]:
                     server.serve_once()
         except Exception as error:
             failures.append(type(error).__name__)
-
     worker = threading.Thread(target=serve, daemon=True)
     worker.start()
+    child = None
     try:
-        monotonic_start = time.monotonic_ns()
-        receipt = privileged_check(request)
+        child = launch_checker()  # ONLY allowed final child, before process seal
+        if consume is not None:
+            seal_process_creation()  # dedicated terminal actor only; irreversible
+        receipt = finish_checker(child, request)  # root check INSIDE held operation
         require(not failures)
-        # A backward wall-clock adjustment cannot turn an old receipt fresh.
-        require(0 <= time.monotonic_ns() - monotonic_start <= 600_000_000_000)
         lease.verify()
-        require(status() == {**live, 'retirement_boundary': status.boundary})
-        require(verify_gates() == {key: True for key in GATES})
-        validate_receipt(receipt, request, live, expected_target, expected_lease, installation, time.time_ns(), time.monotonic_ns())
-        # Validate AFTER fresh gate/live checks, immediately before continuation.
-        return consume(receipt)
+        verify_target_metadata(scope_path, manifest)
+        require(status() == {**live, 'inspection_attestation': status.attestation})
+        validate_receipt(receipt, request, installation)  # includes late PID/TID birth rejection
+        return receipt if consume is None else consume(receipt)
     finally:
+        if child is not None:
+            if child.poll() is None:
+                child.kill()
+            child.wait(timeout=3)
+            for stream in (child.stdin, child.stdout):
+                if stream is not None:
+                    stream.close()
         stopped.set()
         worker.join(timeout=3)
-        status.boundary = None
+        status.attestation = None
         require(not worker.is_alive())

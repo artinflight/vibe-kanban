@@ -1,14 +1,18 @@
-## October 9: Source-only protected consumer automation
+## October 9: Reusable protected-consumer preflight remains source only
 
-The automatic restart/retirement preflight is prepared in an isolated dependent
-branch; see VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md. It is not installed, granted or
-operationally accepted. Root ownership and exact immutable command/path pins are
-required before privilege automation; a receipt must bind live owner/kernel
-lease/manifest/target and an ephemeral held-boundary nonce, issued after expensive
-preparation. Human interruption/retirement approvals, B backup/exclusion checks,
-rollback and fallback retention until human QA remain authoritative. Existing
-production/Staging state is unchanged; no safe existing privilege route was
-established for the urgent fresh receipt.
+PR234 supersedes its historical incident-specific installation proposal with a
+stable metadata-only root ABI and bounded managed namespace; see
+VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md. Owner withdrew installation approval.
+No security installation, live adoption, Staging mutation or current retirement
+is performed. Routine future releases in the proposed separately approved scope
+use authenticated dynamic manifests, not changed privileged grants. No-target
+restarts skip the capability. All expensive hashes/network/gate callbacks precede
+the final check inside the held operation; postscan only bounded local checks and
+exact continuation are allowed. Full attempted protected visibility/churn failure
+is required, but existing processes can still open a file afterward; no global
+atomic fence is claimed or added. Backup/target/interruption/rollback approvals
+and fallback survival until human QA remain authoritative. Installed privileged
+acceptance and separate Staging owner adoption remain unvalidated.
 
 ## October 8: Workspace-first frontend follow-up in preparation
 

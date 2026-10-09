@@ -1,0 +1,21 @@
+{
+  "fenced_large_snapshot_supported": false,
+  "isolated_source_ownership_approval_pending": true,
+  "metadata_fixture_only": true,
+  "production_deployed": false,
+  "source_parent": "e3de640de12a5ad17e6e100b6149b57cceb58120",
+  "source_sha256": {
+    "scripts/deployment/test_vk_b_disk_capture.py": "c93f62aa23ee29cb2f7410ad66a0b471329cf0c865e22b966aff6f2664fa471a",
+    "scripts/deployment/test_vk_b_disk_snapshot.py": "9daecf1d17f5655c61e2f63db0dcef78c5bddff2912027ede6db003f2d9afcbd",
+    "scripts/deployment/vk_b_disk_capture.py": "1b54b3d01b4d2ca1034ab8ec066a532888119b5b9d338f32badd36ac3c931e4c",
+    "scripts/deployment/vk_b_disk_snapshot.py": "3b508a8f8449bfa43b94946c2288da29845f7297aca5d5a3446bfbf06423fb1c"
+  },
+  "tests": {
+    "archive_and_B_inventory": 4,
+    "optimization": "Python -O",
+    "passed": true,
+    "snapshot": 6
+  },
+  "whole_state_accepted": false,
+  "workflow_approval_pending": true
+}

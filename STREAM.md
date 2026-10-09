@@ -1,3 +1,12 @@
+# October 9: Authorized safe restart preparation
+
+Read [VK_RESTART_PROGRESS_20261009.md](VK_RESTART_PROGRESS_20261009.md).
+Established Desktop SSH/B works independently of Dot. B Linux/storage and a
+verified large-DB snapshot are prepared; whole-state capture is in progress.
+Workflow publication and non-root source ownership approvals remain pending.
+No operational restart/cutover or historical-loss acceptance; earlier offline
+Desktop statements below are superseded by actual successful SSH observations.
+
 # October 8: Offline direct-B candidate integration (current isolated branch)
 
 Branch `fix/candidate-direct-b-integration-20261008` extends be704f9c with exact

@@ -1,3 +1,12 @@
+# October 9: Authorized safe restart preparation
+
+Read [VK_RESTART_PROGRESS_20261009.md](VK_RESTART_PROGRESS_20261009.md).
+Established Desktop SSH/B works independently of Dot. B Linux/storage and a
+verified large-DB snapshot are prepared; whole-state capture is in progress.
+Workflow publication and non-root source ownership approvals remain pending.
+No operational restart/cutover or historical-loss acceptance; earlier offline
+Desktop statements below are superseded by actual successful SSH observations.
+
 # October 8: Scoped offline integration handoff
 
 Read [VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md](VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md).

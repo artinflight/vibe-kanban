@@ -69,7 +69,11 @@ root package manifest and pnpm locks/workspace identical to main22f09e245. The
 bounded complete frontend patch applies cleanly to those inputs. This establishes
 compatibility with that reported source base; the owner must confirm the actual
 pinned artifact/current candidate source is still this base or reconcile newer
-changes. No owner checkout or artifact was modified for this check.
+changes. No owner checkout or artifact was modified for this check. The owner's
+subsequent comparison identified six newer frontend repairs in its actual combined
+release. Therefore the e3de640d comparison does not establish that standalone66
+assets match the actual final candidate. Combine the non-overlapping changes and
+build only the frontend, as the owner is already doing.
 
 Use an isolated release directory under mounted SSD. Bind source, all file hashes,
 entry HTML/JS/CSS, manifest and prior lazy chunks to that release. Point the actual
@@ -79,17 +83,24 @@ changing the general `frontend-dist/current` pointer changes a service pinned to
 a different runtime path. Revalidate the packaged candidate using its real API,
 without taking over its namespace, process manager or mutable data.
 
-## Offline frontend package and acceptance
+## Offline source handoff and frontend acceptance
 
 Package root:
 `/mnt/vk-storage/vk-mobile-launch-20261009/frontend-handoff-package`.
-Read `frontend-manifest.json`, `offline-acceptance.json` and
-`owner-delivery.json` there for final byte identities, validation and delivery.
+Read `source-handoff-manifest.json`, `base-compatibility.json`,
+`reference-build-disposition.json` and `owner-delivery.json` there for patch/input
+identities, validation and delivery. This directory is a verified source handoff,
+not a deployable frontend release.
 The detached build worktree is
 `/mnt/vk-storage/vk-mobile-launch-20261009/frontend-handoff-build` at 66e00728c;
 tracked source is clean, with explicitly declared dependency symlinks only.
-The build writes solely to the isolated package and submits no Sentry upload.
-No Cargo backend build or activation is part of this package preparation.
+The reference build wrote solely to the isolated package and submitted no Sentry
+upload. At 12:31 UTC it was stopped after the owner confirmed that its actual
+combined frontend has six newer non-overlapping MCP consent/chat repairs and is
+already building the required combined assets. Deploying standalone66 assets
+would omit those repairs; incomplete output is preserved and explicitly marked
+not deployable. No packaged-byte acceptance is claimed for that cancelled build.
+No Cargo backend build or activation is part of this handoff preparation.
 
 The earlier frozen `/mnt/vk-storage/vk-workspaces-release-20261009/release/frontend`
 contains 9b53418fc / `index-CCDYp2hT.js`, **not** the complete 66e00728c fix.
@@ -132,11 +143,17 @@ arguments and screenshots/results are recorded in the private package receipt.
 Live steering was accepted at 12:20 UTC via the normal app endpoint (HTTP200,
 empty queue after steer), preserving the existing executor configuration. A
 12:23 read still reported the same active execution and unchanged execution count;
-no new turn was requested. Owner adoption remains unconfirmed. Transport receipt
-and runtime details stay local and are not published.
+no new turn was requested. The owner subsequently acknowledged final66 inclusion,
+reported reconciliation with its six newer frontend repairs and started a combined
+frontend build while keeping executable/guard/routing artifacts pinned. Actual
+release packaging, asset binding and cutover acceptance remain unverified by this
+workspace. Transport receipt and runtime details stay local and are not published.
 
 Source-preview launch acceptance previously passed 18 observations at 390/412px;
-desktop1440 workflow passed. Packaged-byte acceptance is separate evidence.
+desktop1440 workflow passed. All ten functional-source CI jobs passed, including
+the frontend build. The owner must perform packaged-byte acceptance against its
+combined frontend and actual candidate; the obsolete reference build adds no such
+evidence.
 
 ## Delivery contract
 

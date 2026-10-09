@@ -6,8 +6,11 @@ Read VK_STAGING_FRONTEND_HANDOFF_20261009.md for PR228/232/233, source/base
 compatibility, package/served hash acceptance and cold/repeated Work View checks.
 The normal app live-steer endpoint accepted this instruction at 12:20 UTC for
 existing session `7d6734c1-c8d0-4d55-ac27-b1f763d15a6e`.
-No duplicate turn or independent deployment was started; owner adoption remains
-unconfirmed. Isolated package receipts are under
+No duplicate turn or independent deployment was started. The owner acknowledged
+inclusion and is building combined frontend assets retaining six newer consent/
+chat repairs. The obsolete standalone66 reference build was stopped; its partial
+output is not deployable. Actual asset binding/cutover remains unverified here.
+Isolated source-handoff receipts are under
 `/mnt/vk-storage/vk-mobile-launch-20261009/frontend-handoff-package`.
 
 No renewed frontend inclusion approval is needed. Preserve VKStaging's existing

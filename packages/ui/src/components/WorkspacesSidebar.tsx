@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import type { ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   PlusIcon,
   ArrowLeftIcon,
@@ -7,20 +7,20 @@ import {
   StackIcon,
   SpinnerIcon,
   MagnifyingGlassIcon,
-  XIcon,
-} from "@phosphor-icons/react";
-import { useTranslation } from "react-i18next";
-import { usePhoneLayout } from "../lib/usePhoneLayout";
-import { cn } from "../lib/cn";
-import { InputField } from "./InputField";
-import { WorkspaceSummary } from "./WorkspaceSummary";
-import type { AppBarHostStatus } from "./AppBar";
+  XIcon
+} from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
+import { usePhoneLayout } from '../lib/usePhoneLayout';
+import { cn } from '../lib/cn';
+import { InputField } from './InputField';
+import { WorkspaceSummary } from './WorkspaceSummary';
+import type { AppBarHostStatus } from './AppBar';
 import {
   CollapsibleSectionHeader,
-  type SectionAction,
-} from "./CollapsibleSectionHeader";
+  type SectionAction
+} from './CollapsibleSectionHeader';
 
-export type WorkspaceLayoutMode = "flat" | "accordion";
+export type WorkspaceLayoutMode = 'flat' | 'accordion';
 
 export interface WorkspacesSidebarWorkspace {
   id: string;
@@ -36,8 +36,8 @@ export interface WorkspacesSidebarWorkspace {
   activeSubagentCount?: number;
   unresolvedSubagentCount?: number;
   latestProcessCompletedAt?: string;
-  latestProcessStatus?: "running" | "completed" | "failed" | "killed";
-  prStatus?: "open" | "merged" | "closed" | "unknown";
+  latestProcessStatus?: 'running' | 'completed' | 'failed' | 'killed';
+  prStatus?: 'open' | 'merged' | 'closed' | 'unknown';
 }
 
 export interface WorkspacesSidebarPersistKeys {
@@ -47,9 +47,9 @@ export interface WorkspacesSidebarPersistKeys {
 }
 
 const DEFAULT_PERSIST_KEYS: WorkspacesSidebarPersistKeys = {
-  raisedHand: "workspaces-sidebar-raised-hand",
-  notRunning: "workspaces-sidebar-not-running",
-  running: "workspaces-sidebar-running",
+  raisedHand: 'workspaces-sidebar-raised-hand',
+  notRunning: 'workspaces-sidebar-not-running',
+  running: 'workspaces-sidebar-running'
 };
 
 export interface WorkspacesSidebarProps {
@@ -108,19 +108,19 @@ export function WorkspacesSidebarReopenTag({
   onHoverStart,
   onHoverEnd,
   ariaLabel,
-  className,
+  className
 }: WorkspacesSidebarReopenTagProps) {
   return (
     <button
       type="button"
       onMouseEnter={onHoverStart}
       onMouseLeave={onHoverEnd}
-      aria-label={ariaLabel ?? "Preview workspaces sidebar"}
-      title={ariaLabel ?? "Preview workspaces sidebar"}
+      aria-label={ariaLabel ?? 'Preview workspaces sidebar'}
+      title={ariaLabel ?? 'Preview workspaces sidebar'}
       className={cn(
-        "group inline-flex h-24 w-4 items-center justify-center rounded-md border border-border bg-secondary/95 shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 cursor-e-resize",
-        active ? "bg-panel text-normal" : "text-low hover:text-normal",
-        className,
+        'group inline-flex h-24 w-4 items-center justify-center rounded-md border border-border bg-secondary/95 shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 cursor-e-resize',
+        active ? 'bg-panel text-normal' : 'text-low hover:text-normal',
+        className
       )}
     >
       <span className="grid grid-cols-2 gap-[2px]">
@@ -139,7 +139,7 @@ function WorkspaceList({
   workspaces,
   selectedWorkspaceId,
   onSelectWorkspace,
-  onOpenWorkspaceActions,
+  onOpenWorkspaceActions
 }: {
   workspaces: WorkspacesSidebarWorkspace[];
   selectedWorkspaceId: string | null;
@@ -191,7 +191,7 @@ export function WorkspacesSidebar({
   onSelectCreate,
   showArchive = false,
   onShowArchiveChange,
-  layoutMode = "flat",
+  layoutMode = 'flat',
   onToggleLayoutMode,
   onLoadMore,
   hasMoreWorkspaces = false,
@@ -199,18 +199,18 @@ export function WorkspacesSidebar({
   onOpenWorkspaceActions,
   persistKeys = DEFAULT_PERSIST_KEYS,
   activeRemoteHost = null,
-  onOpenRemoteHostSettings,
+  onOpenRemoteHostSettings
 }: WorkspacesSidebarProps) {
-  const { t } = useTranslation(["tasks", "common"]);
+  const { t } = useTranslation(['tasks', 'common']);
   const phone = usePhoneLayout();
-  const [phoneCategory, setPhoneCategory] = useState("all");
+  const [phoneCategory, setPhoneCategory] = useState('all');
   const [listOptionsOpen, setListOptionsOpen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const handleOpenWorkspaceActions = useCallback(
     (workspaceId: string) => {
       onOpenWorkspaceActions?.(workspaceId);
     },
-    [onOpenWorkspaceActions],
+    [onOpenWorkspaceActions]
   );
 
   // Handle scroll to load more
@@ -244,50 +244,50 @@ export function WorkspacesSidebar({
         raisedHandWorkspaces: collection.filter((ws) => needsAttention(ws)),
         idleWorkspaces: collection.filter(
           (ws) =>
-            !ws.isRunning && !hasSubagentActivity(ws) && !needsAttention(ws),
+            !ws.isRunning && !hasSubagentActivity(ws) && !needsAttention(ws)
         ),
         runningWorkspaces: collection.filter(
           (ws) =>
-            (ws.isRunning || hasSubagentActivity(ws)) && !needsAttention(ws),
-        ),
+            (ws.isRunning || hasSubagentActivity(ws)) && !needsAttention(ws)
+        )
       };
     }, [workspaces, activityWorkspaces, phone]);
 
   const headerActions: SectionAction[] = [
     {
       icon: StackIcon,
-      label: "Switch workspace grouping",
+      label: 'Switch workspace grouping',
       onClick: () => onToggleLayoutMode?.(),
-      isActive: layoutMode === "accordion",
+      isActive: layoutMode === 'accordion'
     },
     {
       icon: PlusIcon,
-      label: t("common:workspaces.newWorkspace"),
-      onClick: () => onAddWorkspace?.(),
-    },
+      label: t('common:workspaces.newWorkspace'),
+      onClick: () => onAddWorkspace?.()
+    }
   ];
 
   if (phone) {
     const rows = showArchive
       ? archivedWorkspaces
-      : phoneCategory === "attention"
+      : phoneCategory === 'attention'
         ? raisedHandWorkspaces.slice(0, workspaces.length)
-        : phoneCategory === "running"
+        : phoneCategory === 'running'
           ? runningWorkspaces.slice(0, workspaces.length)
-          : phoneCategory === "ready"
+          : phoneCategory === 'ready'
             ? idleWorkspaces.slice(0, workspaces.length)
             : workspaces;
     return (
       <div className="phone-workspaces">
         <div className="phone-page-heading">
           <div>
-            <h1>{showArchive ? "Archive" : t("common:workspaces.title")}</h1>
+            <h1>{showArchive ? 'Archive' : t('common:workspaces.title')}</h1>
             <p>{totalWorkspacesCount} active workspaces</p>
           </div>
           <button
             type="button"
             className="phone-new-workspace"
-            aria-label={t("common:workspaces.newWorkspace")}
+            aria-label={t('common:workspaces.newWorkspace')}
             onClick={onAddWorkspace}
           >
             <PlusIcon size={20} /> New
@@ -303,8 +303,8 @@ export function WorkspacesSidebar({
             onChange={onSearchChange}
             actionIcon={searchQuery ? XIcon : undefined}
             actionLabel="Clear search"
-            onAction={() => onSearchChange("")}
-            placeholder={t("common:workspaces.searchPlaceholder")}
+            onAction={() => onSearchChange('')}
+            placeholder={t('common:workspaces.searchPlaceholder')}
           />
           <button
             type="button"
@@ -333,10 +333,10 @@ export function WorkspacesSidebar({
             aria-label="Workspace activity"
           >
             {[
-              ["all", "All", (activityWorkspaces ?? workspaces).length],
-              ["attention", "Attention", raisedHandWorkspaces.length],
-              ["running", "Running", runningWorkspaces.length],
-              ["ready", "Ready", idleWorkspaces.length],
+              ['all', 'All', (activityWorkspaces ?? workspaces).length],
+              ['attention', 'Attention', raisedHandWorkspaces.length],
+              ['running', 'Running', runningWorkspaces.length],
+              ['ready', 'Ready', idleWorkspaces.length]
             ].map(([id, label, count]) => (
               <button
                 key={id}
@@ -378,22 +378,22 @@ export function WorkspacesSidebar({
                   <StackIcon size={32} />
                   <h3>
                     {searchQuery
-                      ? "No matching workspaces"
+                      ? 'No matching workspaces'
                       : showArchive
-                        ? "Your archive is empty"
-                        : phoneCategory === "attention"
-                          ? "You’re all caught up"
-                          : phoneCategory === "running"
-                            ? "No agents running"
-                            : "No workspaces here yet"}
+                        ? 'Your archive is empty'
+                        : phoneCategory === 'attention'
+                          ? 'You’re all caught up'
+                          : phoneCategory === 'running'
+                            ? 'No agents running'
+                            : 'No workspaces here yet'}
                   </h3>
                   <p>
                     {searchQuery
-                      ? "Try a different name or clear your search."
-                      : "Conversations and agent activity appear here."}
+                      ? 'Try a different name or clear your search.'
+                      : 'Conversations and agent activity appear here.'}
                   </p>
                   {searchQuery && (
-                    <button type="button" onClick={() => onSearchChange("")}>
+                    <button type="button" onClick={() => onSearchChange('')}>
                       Clear search
                     </button>
                   )}
@@ -413,7 +413,7 @@ export function WorkspacesSidebar({
             ) : (
               <ArchiveIcon size={20} />
             )}
-            {showArchive ? "Back to workspaces" : "Archived workspaces"}
+            {showArchive ? 'Back to workspaces' : 'Archived workspaces'}
           </button>
         )}
       </div>
@@ -425,7 +425,7 @@ export function WorkspacesSidebar({
       {/* Header + Search */}
       <div className="flex flex-col gap-base">
         <CollapsibleSectionHeader
-          title={t("common:workspaces.title")}
+          title={t('common:workspaces.title')}
           collapsible={false}
           actions={headerActions}
           className="border-b"
@@ -438,7 +438,7 @@ export function WorkspacesSidebar({
                 ariaLabel="Search workspaces"
                 value={searchQuery}
                 onChange={onSearchChange}
-                placeholder={t("common:workspaces.searchPlaceholder")}
+                placeholder={t('common:workspaces.searchPlaceholder')}
               />
             </div>
             {searchControls}
@@ -450,8 +450,8 @@ export function WorkspacesSidebar({
             <div className="rounded-sm border border-border bg-panel/60 px-base py-half flex items-center justify-between gap-base">
               <div className="min-w-0">
                 <p className="text-xs text-low uppercase tracking-wide">
-                  {t("common:workspaces.remoteHostLabel", {
-                    defaultValue: "Remote host",
+                  {t('common:workspaces.remoteHostLabel', {
+                    defaultValue: 'Remote host'
                   })}
                 </p>
                 <p className="text-sm text-high truncate">
@@ -461,12 +461,12 @@ export function WorkspacesSidebar({
               <div className="flex items-center gap-half shrink-0">
                 <span
                   className={cn(
-                    "inline-flex h-2.5 w-2.5 rounded-full",
-                    activeRemoteHost.status === "online"
-                      ? "bg-success"
-                      : activeRemoteHost.status === "offline"
-                        ? "bg-low"
-                        : "bg-warning",
+                    'inline-flex h-2.5 w-2.5 rounded-full',
+                    activeRemoteHost.status === 'online'
+                      ? 'bg-success'
+                      : activeRemoteHost.status === 'offline'
+                        ? 'bg-low'
+                        : 'bg-warning'
                   )}
                   aria-hidden="true"
                 />
@@ -476,8 +476,8 @@ export function WorkspacesSidebar({
                     onClick={onOpenRemoteHostSettings}
                     className="text-xs text-brand hover:underline"
                   >
-                    {t("common:workspaces.remoteHostManage", {
-                      defaultValue: "Manage",
+                    {t('common:workspaces.remoteHostManage', {
+                      defaultValue: 'Manage'
                     })}
                   </button>
                 )}
@@ -503,11 +503,11 @@ export function WorkspacesSidebar({
           /* Archived workspaces view */
           <div className="flex flex-col gap-base">
             <span className="text-sm font-medium text-low px-base">
-              {t("common:workspaces.archived")}
+              {t('common:workspaces.archived')}
             </span>
             {archivedWorkspaces.length === 0 ? (
               <span className="text-sm text-low opacity-60 px-base">
-                {t("common:workspaces.noArchived")}
+                {t('common:workspaces.noArchived')}
               </span>
             ) : (
               archivedWorkspaces.map((workspace) => (
@@ -534,12 +534,12 @@ export function WorkspacesSidebar({
               ))
             )}
           </div>
-        ) : layoutMode === "accordion" ? (
+        ) : layoutMode === 'accordion' ? (
           /* Accordion layout view */
           <div className="flex flex-col gap-base">
             {/* Needs Attention section */}
             <CollapsibleSectionHeader
-              title={t("common:workspaces.needsAttention")}
+              title={t('common:workspaces.needsAttention')}
               persistKey={persistKeys.raisedHand}
               defaultExpanded={true}
             >
@@ -554,7 +554,7 @@ export function WorkspacesSidebar({
                 )}
                 {raisedHandWorkspaces.length === 0 && !draftTitle ? (
                   <span className="text-sm text-low opacity-60 pl-base">
-                    {t("common:workspaces.noWorkspaces")}
+                    {t('common:workspaces.noWorkspaces')}
                   </span>
                 ) : (
                   <WorkspaceList
@@ -569,14 +569,14 @@ export function WorkspacesSidebar({
 
             {/* Running section */}
             <CollapsibleSectionHeader
-              title={t("common:workspaces.running")}
+              title={t('common:workspaces.running')}
               persistKey={persistKeys.running}
               defaultExpanded={true}
             >
               <div className="flex flex-col gap-base py-half">
                 {runningWorkspaces.length === 0 ? (
                   <span className="text-sm text-low opacity-60 pl-base">
-                    {t("common:workspaces.noWorkspaces")}
+                    {t('common:workspaces.noWorkspaces')}
                   </span>
                 ) : (
                   <WorkspaceList
@@ -591,14 +591,14 @@ export function WorkspacesSidebar({
 
             {/* Idle section */}
             <CollapsibleSectionHeader
-              title={t("common:workspaces.idle")}
+              title={t('common:workspaces.idle')}
               persistKey={persistKeys.notRunning}
               defaultExpanded={true}
             >
               <div className="flex flex-col gap-base py-half">
                 {idleWorkspaces.length === 0 ? (
                   <span className="text-sm text-low opacity-60 pl-base">
-                    {t("common:workspaces.noWorkspaces")}
+                    {t('common:workspaces.noWorkspaces')}
                   </span>
                 ) : (
                   <WorkspaceList
@@ -616,7 +616,7 @@ export function WorkspacesSidebar({
           <div className="flex flex-col gap-base">
             <div className="flex items-center justify-between px-base">
               <span className="text-sm font-medium text-low">
-                {t("common:workspaces.active")}
+                {t('common:workspaces.active')}
               </span>
               <span className="text-xs text-low">{totalWorkspacesCount}</span>
             </div>
@@ -662,12 +662,12 @@ export function WorkspacesSidebar({
           {showArchive ? (
             <>
               <ArrowLeftIcon className="size-icon-xs" />
-              <span>{t("common:workspaces.backToActive")}</span>
+              <span>{t('common:workspaces.backToActive')}</span>
             </>
           ) : (
             <>
               <ArchiveIcon className="size-icon-xs" />
-              <span>{t("common:workspaces.viewArchive")}</span>
+              <span>{t('common:workspaces.viewArchive')}</span>
               <span className="ml-auto text-xs bg-tertiary px-1.5 py-0.5 rounded">
                 {archivedWorkspaces.length}
               </span>

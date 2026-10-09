@@ -416,6 +416,9 @@
     "tags": "Tags",
     "sortBy": "Sort",
     "workspaceSidebar": {
+      "assignmentMine": "À moi",
+      "assignmentAll": "Tout",
+      "assignmentsUnavailable": "Affectations indisponibles. Utilisez Tout pour retrouver le travail.",
       "sortDialogTitle": "Sort workspaces",
       "sortDialogDescription": "Choose how workspaces are ordered in the sidebar.",
       "sortByLabel": "Sort by",

@@ -269,6 +269,9 @@ jobs:
             "node scripts/check-unused-i18n-keys.mjs" \
             "./scripts/check-legacy-frontend-paths.sh"
 
+      - name: Check local assignment visibility and workspace pagination
+        run: node --experimental-strip-types --test packages/web-core/src/pages/workspaces/workspaceAssignmentFilter.test.ts packages/web-core/src/pages/workspaces/workspaceSidebarPagination.test.ts
+
   backend-schema-checks:
     needs: [branch-policy, branch-freshness, changes]
     if: always() && needs.branch-policy.result == 'success' && needs.branch-freshness.result == 'success' && (needs.changes.outputs.backend == 'true' || needs.changes.result == 'skipped')

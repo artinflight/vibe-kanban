@@ -416,6 +416,9 @@
     "tags": "Tags",
     "sortBy": "Sort",
     "workspaceSidebar": {
+      "assignmentMine": "我的",
+      "assignmentAll": "全部",
+      "assignmentsUnavailable": "無法取得指派資訊。使用「全部」查找所有工作。",
       "sortDialogTitle": "Sort workspaces",
       "sortDialogDescription": "Choose how workspaces are ordered in the sidebar.",
       "sortByLabel": "Sort by",

@@ -416,6 +416,9 @@
     "tags": "Tags",
     "sortBy": "Sort",
     "workspaceSidebar": {
+      "assignmentMine": "내 작업",
+      "assignmentAll": "전체",
+      "assignmentsUnavailable": "담당 정보를 불러올 수 없습니다. 전체에서 모든 작업을 확인하세요.",
       "sortDialogTitle": "Sort workspaces",
       "sortDialogDescription": "Choose how workspaces are ordered in the sidebar.",
       "sortByLabel": "Sort by",

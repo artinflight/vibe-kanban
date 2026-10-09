@@ -416,6 +416,9 @@
     "tags": "Tags",
     "sortBy": "Sort",
     "workspaceSidebar": {
+      "assignmentMine": "自分",
+      "assignmentAll": "すべて",
+      "assignmentsUnavailable": "担当データを取得できません。すべての作業は「すべて」で確認できます。",
       "sortDialogTitle": "Sort workspaces",
       "sortDialogDescription": "Choose how workspaces are ordered in the sidebar.",
       "sortByLabel": "Sort by",

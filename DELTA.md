@@ -1574,3 +1574,5 @@ ops governance pass; full Rust baseline attempts fail on absent host GTK/GLib
 pkg-config libraries. See VK_MOBILE_UX.md and the SSD evidence directory there.
 This feature follow-up is not deployed; Green PID3027197, production frontend
 and configured model/effort/Recommend-only routing remain unchanged.
+
+2026-10-09: Prepared explicit local Seamus/dot IssueAssignee storage, existing picker support, and inherited workspace Mine/All visibility. Unassigned/unlinked history and unread are preserved. Draft/CI and safe combined-release adoption details: VK_LOCAL_ASSIGNMENTS.md. No rollout or permission changes.

@@ -1,3 +1,15 @@
+# October 9: Explicit local assignments and default workspace visibility
+
+Branch `vk/442b-vk-user-assignme`, based on fork staging `e8c450fb5`, adds stable
+Seamus/dot identities, existing IssueAssignee persistence/API/picker support and
+Mine/All workspace filtering before pagination/grouping/counts. Historical
+unassigned/unlinked work remains visible. Unread and authentication/permissions
+are separate and untouched. Scope, validation and combined-release adoption plan:
+[VK_LOCAL_ASSIGNMENTS.md](VK_LOCAL_ASSIGNMENTS.md).
+Deliver a focused draft PR and verify hosted tests. No production deployment,
+service restart, bulk assignment, merge or permission changes in this task.
+Older stream entries below describe other work and do not authorize activation.
+
 # October 8: Workspace-first navigation and task attention follow-up
 
 The current frontend stream makes Workspaces the opening screen, removes the

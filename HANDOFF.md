@@ -1,3 +1,14 @@
+# October 9: Local assignment implementation for review
+
+Read [VK_LOCAL_ASSIGNMENTS.md](VK_LOCAL_ASSIGNMENTS.md). Local Seamus/dot records
+and issue assignments feed the existing picker, local Personal/Me identity and
+workspace Mine/All filtering. Mine defaults to Seamus; unassigned/unlinked history
+stays visible. Counts/pagination use the filtered rows; unread flags stay intact.
+No live writes/deploy/restart/permission changes. Preserve combined backend
+`c3c48e63` and frontend `5ce84ee2` in eventual adoption; do not replace live from
+this staging-based source. Hosted tests and draft PR metadata will be recorded
+before final handoff. MCP Cargo builds are deliberately excluded for SSD capacity.
+
 # October 8: Workspace-first navigation and task attention follow-up
 
 The current frontend stream makes Workspaces the opening screen, removes the

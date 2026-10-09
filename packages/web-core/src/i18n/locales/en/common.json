@@ -430,6 +430,9 @@
     "tags": "Tags",
     "sortBy": "Sort",
     "workspaceSidebar": {
+      "assignmentMine": "Mine",
+      "assignmentAll": "All",
+      "assignmentsUnavailable": "Assignment data unavailable. Use All to discover all work.",
       "sortDialogTitle": "Sort workspaces",
       "sortDialogDescription": "Choose how workspaces are ordered in the sidebar.",
       "sortByLabel": "Sort by",

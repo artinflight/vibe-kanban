@@ -18,7 +18,7 @@ Native terminal process seal rejects post-response subprocess/SSH attempts.
 No independent global-consumer fence is required; unrelated existing opens remain
 a documented TOCTOU risk, not eliminated by five-second receipts or PID inventory.
 
-32 focused fixtures pass, including native ordering/fork/exec/thread rejection,
+33 focused fixtures pass, including native ordering/fork/exec/thread rejection,
 real peer/lease checks and modeled root visibility/consumer/churn failures.
 The root entrypoint has never been invoked. Privileged visibility, effective
 installed grant and Staging adoption remain untested. Parent/root may review one

@@ -423,7 +423,7 @@ class ScanTests(unittest.TestCase):
             self.assertEqual(result['matches'], 0)
             self.assertEqual(result['witness'], [[10, 10, '456']])
 
-    def test_fd_hardlink_maps_exe_cwd_and_thread_consumers_block(self):
+    def test_fd_hardlink_maps_exe_cwd_root_consumers_block(self):
         for kind in ('fd', 'maps', 'exe', 'cwd', 'root'):
             proc, task = self.make_proc()
             target = proc / 'target'
@@ -438,6 +438,23 @@ class ScanTests(unittest.TestCase):
             else:
                 (task / kind).rename(task / ('retained-'+kind))
                 (task / kind).symlink_to(target)
+            with self.assertRaises(ValueError):
+                root.scan_consumers({(info.st_dev, info.st_ino)}, proc=proc)
+
+    def test_nonleader_thread_private_FD_and_maps_consumers_block(self):
+        import shutil
+        for kind in ('fd', 'maps'):
+            proc, leader = self.make_proc()
+            task = leader.parent / '11'
+            shutil.copytree(leader, task, symlinks=True)
+            (task / 'stat').write_text((leader / 'stat').read_text().replace('10 (', '11 ('))
+            target = proc / 'thread-only-target'
+            target.write_bytes(b'nonleader private consumer')
+            info = target.stat()
+            if kind == 'fd':
+                (task / 'fd/5').symlink_to(target)
+            else:
+                (task / 'maps').write_text(f'0-1 r--p 0 {os.major(info.st_dev):x}:{os.minor(info.st_dev):x} {info.st_ino} private-thread-map\n')
             with self.assertRaises(ValueError):
                 root.scan_consumers({(info.st_dev, info.st_ino)}, proc=proc)
 

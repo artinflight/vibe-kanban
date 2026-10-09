@@ -242,6 +242,16 @@ completed, so no new prompt/execution was started. Findings return through the
 existing reply. The current owner, Staging roots, model/effort and approvals
 remain under that session's control.
 
+The subsequently relayed prepare-first resident closes the archive FD and finishes
+both SSH children before waiting for an authenticated digest and actual operator
+message. Read-only source review found that its unchanged helper and later local
+scan enumerate process leaders, not each task's private FD/maps state; its denied-
+PID comparison does not establish coverage of thread births or protected PIDs
+born during the local traversal. The last receipt-age check also precedes a
+proof-file write/fsync that could block before unlink. These findings were sent
+through the current reply; no Staging source/owner was changed. This is distinct
+from the residual existing-process open race, not a request for global exclusion.
+
 ## Validation and what remains manual
 
 Focused fixtures run as mcp, without sudo or executing the root entrypoint.

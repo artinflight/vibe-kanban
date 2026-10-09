@@ -18,6 +18,18 @@
     "Same resident/lease/target and immediate continuation; no later SSH/subprocess/hash; reject replay/extra frames."
   ],
   "ordering_correction": "All expensive/network/gate callbacks precede final held inspection; no postscan gate callback; bounded local checks then exact continuation.",
+  "prepare_first_manual_source_read_only_review": {
+    "findings": [
+      "Historical root helper and resident only enumerate leaders; thread-private FDs/maps and thread births are not covered.",
+      "Only denied PIDs from one postscan list are compared; newly born protected processes during traversal can escape that comparison.",
+      "Last age check precedes proof-file write/fsync; bounded receipt age is not rechecked after that potentially blocking I/O."
+    ],
+    "not_active_process_attestation": true,
+    "observed_source_sha256": "9e4fa312673949337531b8c076b15bfe21ca5464dc09678f29349c865b169d16",
+    "ordering_improvement": "Hashes/SSH complete and archive FD closes before the operator helper.",
+    "source_path": "/mnt/vk-storage/vk-runtime-backup-20261009/retire-approved-single-incident-archive-prepare-first-20261009.py",
+    "staging_changed": false
+  },
   "privilege_installed": false,
   "read_only_execution_lookup": {
     "d9f07b0f-b92d-4b17-a60a-f1cfdf0782bb": "completed"

@@ -15,12 +15,7 @@ import unittest
 from unittest.mock import patch
 
 from vk_nightly_generation import NightlyStore, MAX_INDEX, encoded, render_schedule
-from vk_routine_restart import run as measured_run, plan_digest, execution_inventory, wait_for_real_drain
-
-
-def run(plan, driver, **kwargs):
-    kwargs.setdefault('fix_ready_monotonic', kwargs.get('clock', time.monotonic)())
-    return measured_run(plan, driver, **kwargs)
+from vk_routine_restart import run, plan_digest, execution_inventory, wait_for_real_drain
 
 
 def fixture_readback(folder, manifest):
@@ -172,6 +167,7 @@ class RestartSafeguards(unittest.TestCase):
 
 class Routine(unittest.TestCase):
     def setUp(self):
+        self.fix_ready = time.monotonic()
         self.plan = {'route': 'authoritative-current-data', 'retire_paths': [], 'cleanup_enabled': False,
                      'fallback_compatible': True, 'action_authorized': True}
         self.events = []
@@ -229,14 +225,14 @@ class Routine(unittest.TestCase):
                     self.assertEqual(log.read_text().splitlines(), ['actual-package-process-finished', 'actual-backup-process-finished'])
                     self.events.append('held'); yield
             self.driver.build, self.driver.backup, self.driver.held = prepare, backup, held
-            result = run(self.plan, self.driver)
+            result = run(self.plan, self.driver, fix_ready_monotonic=self.fix_ready)
             self.assertTrue(result['passed'])
             self.assertEqual(self.events, ['prepare', 'validate', 'backup', 'review', 'held', 'boundary', 'handover'])
 
     def test_real_active_execution_inventory_is_not_falsified_even_at_host_scale(self):
         with patch.object(self.driver, 'boundary', return_value={'authenticated_owner': True, 'lease_held': True,
                           'active_executions': list(range(4582)), 'identity_pins_match': True}):
-            result = run(self.plan, self.driver)
+            result = run(self.plan, self.driver, fix_ready_monotonic=self.fix_ready)
         self.assertFalse(result['passed'])
         self.assertNotIn('handover', self.events)
         self.assertFalse(result['production_action_attempted'])
@@ -245,15 +241,15 @@ class Routine(unittest.TestCase):
         for key, value in [('route', 'restore'), ('retire_paths', ['/archive']),
                            ('cleanup_enabled', True), ('fallback_compatible', False), ('action_authorized', False)]:
             plan = dict(self.plan); plan[key] = value
-            self.assertFalse(run(plan, self.driver)['passed'])
+            self.assertFalse(run(plan, self.driver, fix_ready_monotonic=self.fix_ready)['passed'])
         with patch.object(self.driver, 'review', return_value={'passed': True, 'approved_plan_sha256': 'wrong'}):
-            self.assertFalse(run(self.plan, self.driver)['passed'])
+            self.assertFalse(run(self.plan, self.driver, fix_ready_monotonic=self.fix_ready)['passed'])
         self.assertNotIn('handover', self.events)
         with patch.object(self.driver, 'authorization', return_value={'approved': True}):
-            self.assertFalse(run(self.plan, self.driver)['passed'])
+            self.assertFalse(run(self.plan, self.driver, fix_ready_monotonic=self.fix_ready)['passed'])
 
     def test_ten_minute_total_bound_and_separate_timing(self):
-        result = run(self.plan, self.driver)
+        result = run(self.plan, self.driver, fix_ready_monotonic=self.fix_ready)
         self.assertEqual(result['routine_goal_seconds'], 600)
         self.assertIn('preparation_seconds', result)
         self.assertIn('switch_seconds', result)
@@ -261,7 +257,7 @@ class Routine(unittest.TestCase):
             self.now = 601
             return {'verified': True, 'plan_sha256': plan_digest(plan)}
         self.driver.build = prepare
-        result = run(self.plan, self.driver, clock=lambda: self.now)
+        result = run(self.plan, self.driver, fix_ready_monotonic=0, clock=lambda: self.now)
         self.assertFalse(result['passed'])
         self.assertFalse(result['production_action_attempted'])
 
@@ -272,12 +268,17 @@ class Routine(unittest.TestCase):
         with patch.object(self.driver, 'handover', return_value={'plan_sha256': plan_digest(self.plan),
                           'live_acceptance': True, 'latest_data_preserved': True,
                           'fallback_retained': True, 'cleanup_enabled': False, 'blocked_work_resumed': False}):
-            self.assertFalse(run(self.plan, self.driver)['passed'])
+            self.assertFalse(run(self.plan, self.driver, fix_ready_monotonic=self.fix_ready)['passed'])
 
     def test_frontend_only_requires_backend_identity_and_api_compatibility(self):
         self.plan['deployment_kind'] = 'frontend-only'
         with patch.object(self.driver, 'validate', return_value={'passed': True, 'plan_sha256': plan_digest(self.plan)}):
-            self.assertFalse(run(self.plan, self.driver)['passed'])
+            self.assertFalse(run(self.plan, self.driver, fix_ready_monotonic=self.fix_ready)['passed'])
+
+    def test_production_timestamp_remains_mandatory(self):
+        with self.assertRaises(TypeError):
+            run(self.plan, self.driver)  # Deliberately omitted: no wrapper supplies it.
+        self.assertEqual(self.events, [])
 
     def test_real_sqlite_execution_completion_is_waited_for_and_never_forged(self):
         with tempfile.TemporaryDirectory(dir='/mnt/vk-storage') as raw:
@@ -303,7 +304,7 @@ class Routine(unittest.TestCase):
 
     def test_failed_acceptance_recovers_latest_and_never_restores_old_snapshot(self):
         with patch.object(self.driver, 'handover', return_value={'live_acceptance': False}):
-            result = run(self.plan, self.driver)
+            result = run(self.plan, self.driver, fix_ready_monotonic=self.fix_ready)
         self.assertFalse(result['passed'])
         self.assertEqual(result['failed_stage'], 'handover')
         self.assertTrue(result['recovery']['latest_data_preserved'])

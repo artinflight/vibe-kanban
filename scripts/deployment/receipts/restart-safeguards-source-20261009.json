@@ -8,6 +8,7 @@
     "lint": "eslint missing",
     "ops": "passed"
   },
+  "evidence_scope": "Historical head only; subsequent timestamp-call test correction requires its own exact-head run.",
   "full_VK_cold_build_measured": false,
   "full_VK_warm_build_measured": false,
   "full_build_capacity_blocker": {
@@ -57,5 +58,6 @@
     "vk_restart_build_benchmark.py": "ad2bb6a6ac1ee9e8972da4164cc0d603ea279796daa7b7770fdb3999de1c321e",
     "vk_routine_restart.py": "9d4017c7277089c8eeb98658635ed9f673fb9a6d8a102c1a11fa4ee83f464c90"
   },
+  "tested_source_head": "849a00024489b4c0794285f51f6d54ac73050150",
   "tests_run": 23
 }

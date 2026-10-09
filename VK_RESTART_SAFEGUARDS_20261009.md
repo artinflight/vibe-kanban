@@ -134,3 +134,12 @@ They retain explicit build/deployment/current-data compatibility boundaries.
 No general live patching, major rewrite, Auto activation or privileged install
 is proposed. Staging owns driver integration and any future adoption; Mission
 Perform remains uninterrupted and human QA controls later cleanup.
+
+## Timestamp test review correction
+
+The original849a00024 tests used a local wrapper that supplied FIX READY. Positive
+call sites now explicitly pass the intended timestamp to production run(), with
+zero used for simulated clocks. A new negative regression verifies the mandatory
+production keyword raises TypeError when omitted. Runtime source is unchanged.
+The historical23-test receipt covers849a00024 only; use the fresh exact-head SSD
+review receipt for the corrected source, never apply the old count to a new head.

@@ -1,3 +1,15 @@
+## October 9: Review correction — explicit FIX READY test timestamps
+
+PR235 review found timestamp call sites obscured by a test-local wrapper. The
+849a00024 wrapper supplied the mandatory argument; remove that ambiguity by
+calling production run() directly with explicit timestamps in every positive
+case. The sole omitted argument is a negative TypeError regression. Production
+signature and runtime source remain unchanged. Historical23-test receipt binds
+849a00024 only. Fresh exact-head validation is saved under mounted SSD at
+/mnt/vk-storage/vk-restart-safeguards-20261009/review-timestamp-validation-<HEAD>.safe.json.
+No deployment, scheduling, root/security change or production cleanup occurred.
+Further independent backup/failure-path findings remain pending.
+
 ## October 9: Deferred restart safeguards — source only
 
 The successful current-data cutover completed at 20:31:20 UTC in 9.94 seconds;

@@ -18,7 +18,7 @@ Native terminal process seal rejects post-response subprocess/SSH attempts.
 No independent global-consumer fence is required; unrelated existing opens remain
 a documented TOCTOU risk, not eliminated by five-second receipts or PID inventory.
 
-34 focused fixtures pass, including native ordering/fork/exec/thread rejection,
+37 focused fixtures pass, including native ordering/fork/exec/thread rejection,
 real peer/lease checks and modeled root visibility/consumer/churn failures.
 The root entrypoint has never been invoked. Privileged visibility, effective
 installed grant and Staging adoption remain untested. Parent/root may review one
@@ -26,7 +26,12 @@ bundle before any future action approval. Human QA/backup/rollback and explicit
 exceptional retirement/interruption approvals remain authoritative. Current
 Staging operations and stdout-bridge constraints return only via existing reply.
 
-All142 candidate regressions pass at64cb7f72c with the clean-source gate intact.
+Freshness is rechecked on both clocks after the witness traversal. Source rollback
+defaults adapter adoption off; administrator withdraws only the exact sudoers
+include after disarming/draining pending operations, retaining all evidence and
+fallback. Delayed-inventory/adoption-disabled/revoked-grant tests pass.
+
+All142 candidate regressions previously passed at64cb7f72c with the clean-source gate intact.
 Ops, diff checks and unprivileged sudoers syntax pass. Format/check/lint attempts
 stop at absent Prettier/TypeScript/ESLint; Rust formatting and legacy guard pass.
 Validation receipt records final checks and exact artifact hashes. No unrelated

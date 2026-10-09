@@ -14,6 +14,10 @@ a target after inspection; no atomic global fence is claimed or added as a gate.
 Routine no-retirement restart skips root entirely. Future targets/source changes
 inside the proposed approved namespace do not change the privileged grant.
 
+Receipt age is rechecked on both clocks after witness traversal. Bounded rollback
+disables adapter adoption and withdraws only the exact sudoers include, preserving
+all artifacts/evidence/fallback; it adds no deletion privilege or live action.
+
 Installation approval is withdrawn. No helper/security installation, target
 retirement, restart, cutover, live-owner alteration, Staging-root change,
 unrelated build or new backup is authorized/performed. Existing Staging owns

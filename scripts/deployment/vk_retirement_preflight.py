@@ -165,6 +165,13 @@ def finish_checker(child, request):
     return json.loads(raw)
 
 
+def validate_freshness(receipt):
+    for issued, scanned, now in (('issued_ns', 'scan_started_ns', time.time_ns()),
+                                ('issued_mono_ns', 'scan_started_mono_ns', time.monotonic_ns())):
+        require(type(receipt.get(issued)) is int and type(receipt.get(scanned)) is int and
+                0 <= now - receipt[issued] <= FRESH_NS and 0 <= receipt[issued] - receipt[scanned] <= 35_000_000_000)
+
+
 def validate_receipt(receipt, request, installation):
     require(type(receipt) is dict and type(receipt.get('abi')) is int and receipt['abi'] == 1)
     require(set(installation) == {'code_sha256', 'policy_sha256'} and
@@ -177,20 +184,18 @@ def validate_receipt(receipt, request, installation):
             and receipt.get('target_content_hashes_verified_by_root') is False
             and receipt.get('action_authorized') is False and receipt.get('deletion_performed') is False
             and receipt.get('production_changed') is False)
-    for issued, scanned, now in (('issued_ns', 'scan_started_ns', time.time_ns()),
-                                ('issued_mono_ns', 'scan_started_mono_ns', time.monotonic_ns())):
-        require(type(receipt.get(issued)) is int and type(receipt.get(scanned)) is int and
-                0 <= now - receipt[issued] <= FRESH_NS and 0 <= receipt[issued] - receipt[scanned] <= 35_000_000_000)
+    validate_freshness(receipt)
     counts = receipt.get('visibility', {})
     require(counts.get('matches') == 0 and counts.get('inspection_denied') == 0
             and type(counts.get('processes')) is int and counts['processes'] > 0
             and type(counts.get('tasks')) is int and counts['tasks'] >= counts['processes'])
     verify_witness(counts.get('witness'))
+    validate_freshness(receipt)  # traversal must not consume the continuation's age budget
 
 
 def at_held_boundary(*, lease, server, status, manifest, scope_path, installation,
                      prepare, verify_gates, orchestration_fence,
-                     consume=None):
+                     consume=None, adoption_enabled=False):
     """One operation, no persisted receipt input/loop. No-target restart skips root.
 
     prepare/verify_gates may do expensive/network work ONLY before clearance.
@@ -199,6 +204,7 @@ def at_held_boundary(*, lease, server, status, manifest, scope_path, installatio
     owner seals existing command channels before launch; the terminal actor seals
     process creation. Neither mechanism excludes unrelated existing host opens.
     """
+    require(adoption_enabled is True)  # explicit local adoption; rollback disables new admissions
     require(status.attestation is None and server.status is status)
     prepare()  # all SSH/SFTP creation, B authentication, expensive hashes FIRST
     gates = json.loads(json.dumps(verify_gates()))

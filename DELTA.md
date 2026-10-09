@@ -1597,3 +1597,14 @@ seccomp tests deny later fork/exec/threads/SSH. Document existing-process open
 TOCTOU honestly, with no impossible global fence prerequisite. One-time bundled
 security proposal, current Staging bridge constraints and validation artifacts
 are in VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md. Preserve fallback until human QA.
+
+## October 9: Bounded review fixes before installation approval
+
+Receipt freshness now repeats both wall/monotonic checks after full task-witness
+traversal, before continuation. Added deterministic delayed-inventory regression.
+Adapter admission defaults disabled; source tests cover disabled adoption and
+modeled exact-grant withdrawal without retries/action or evidence/fallback loss.
+Rollback documentation removes only /etc/sudoers.d/vk-process-inspection-v1 after
+owner-controlled pending-operation draining, with no recursive cleanup, service
+change or root deletion capability. Privileged bundle remains unchanged; no
+installation or live owner/security changes.

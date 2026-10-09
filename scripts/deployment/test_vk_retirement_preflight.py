@@ -84,12 +84,12 @@ class Fixtures(unittest.TestCase):
                 'visibility': {'processes': 1, 'tasks': 1, 'matches': 0, 'inspection_denied': 0,
                                'witness': [[os.getpid(), os.getpid(), process_start(os.getpid())]]}}
 
-    def run_boundary(self, *, finish=None, consume=None, gates=None):
+    def run_boundary(self, *, finish=None, consume=None, gates=None, adoption_enabled=True, checker=None):
         info = self.lease_path.stat()
         with PreparationLease(self.lease_path, (info.st_dev, info.st_ino)) as lease:
             parent_fd = os.open(self.lease_path.parent, os.O_PATH | os.O_DIRECTORY)
             server = PreparationStatus(Path(f'/proc/self/fd/{parent_fd}/owner.sock'), lease, self.status)
-            child = unittest.mock.Mock()
+            child = checker if checker is not None else unittest.mock.Mock()
             child.poll.return_value = 0
             def default_finish(_, req):
                 self.events.append('privileged-scan')
@@ -108,7 +108,7 @@ class Fixtures(unittest.TestCase):
                         manifest=self.manifest, scope_path=str(self.base), installation=self.installation,
                         prepare=lambda: self.events.extend(['SSH-SFTP-created', 'B-hashed']),
                         verify_gates=gates or (lambda: {key: True for key in client.GATES}),
-                        orchestration_fence=Fence(self.events), consume=consume)
+                        orchestration_fence=Fence(self.events), consume=consume, adoption_enabled=adoption_enabled)
             finally:
                 server.close()
                 os.close(parent_fd)
@@ -400,6 +400,56 @@ class ProtocolTests(Fixtures):
             with self.subTest(change=change), self.assertRaises(ValueError):
                 client.validate_receipt({**self.receipt(self.request), **change}, self.request, self.installation)
 
+    def test_delayed_inventory_expires_each_clock_before_continuation(self):
+        for delayed_clock in (0, 1):
+            proof = self.receipt(self.request)
+            proof.update(issued_ns=10_000_000_000, scan_started_ns=9_000_000_000,
+                         issued_mono_ns=10_000_000_000, scan_started_mono_ns=9_000_000_000)
+            clocks = [10_000_000_001, 10_000_000_001]
+            def slow_inventory():
+                clocks[delayed_clock] += client.FRESH_NS + 1
+                return {(os.getpid(), os.getpid(), process_start(os.getpid()))}
+            with self.subTest(clock=delayed_clock), \
+                 patch.object(client.time, 'time_ns', side_effect=lambda: clocks[0]), \
+                 patch.object(client.time, 'monotonic_ns', side_effect=lambda: clocks[1]), \
+                 patch.object(client, 'task_inventory', side_effect=slow_inventory) as inventory:
+                with self.assertRaises(ValueError):
+                    client.validate_receipt(proof, self.request, self.installation)
+                inventory.assert_called_once()
+
+    def test_rollback_disabled_adoption_blocks_before_preparation_or_checker(self):
+        action = unittest.mock.Mock()
+        artifact = self.path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.run_boundary(adoption_enabled=False, consume=action)
+        self.assertEqual(self.events, [])
+        action.assert_not_called()
+        self.assertEqual(self.path.read_bytes(), artifact)
+
+    def test_revoked_grant_fails_closed_without_retry_action_or_evidence_removal(self):
+        # Source-level model only: withdraw exactly this grant from a synthetic
+        # /etc tree, retaining its bytes as evidence. No live unlink/sudo occurs.
+        grant = self.base / 'etc/sudoers.d/vk-process-inspection-v1'
+        grant.parent.mkdir(parents=True)
+        grant.write_bytes((Path(__file__).parent / 'security/vk-retirement-preflight.sudoers.proposal').read_bytes())
+        unrelated = grant.with_name('unrelated-grant')
+        unrelated.write_bytes(b'unrelated policy must survive')
+        revoked = self.base / 'revoked-grant.evidence'
+        grant.rename(revoked)
+        self.assertFalse(grant.exists())
+        checker = unittest.mock.Mock(returncode=0 if grant.exists() else 1)
+        checker.communicate.return_value = (b'{"consumer_clearance_passed":false}', None)
+        action = unittest.mock.Mock()
+        retained = [self.path, self.base / 'fallback', self.base / 'evidence', unrelated, revoked]
+        retained[1].write_bytes(b'retain fallback until human QA')
+        retained[2].write_bytes(b'retain receipts and backup evidence')
+        before = {p: (root.identity(p.stat()), p.read_bytes()) for p in retained}
+        with self.assertRaises(ValueError):
+            self.run_boundary(checker=checker, finish=client.finish_checker, consume=action)
+        checker.communicate.assert_called_once()
+        action.assert_not_called()
+        self.assertEqual({p: (root.identity(p.stat()), p.read_bytes()) for p in retained}, before)
+
     def test_observed_protected_SSH_birth_after_scan_blocks_even_fresh_receipt(self):
         proof = self.receipt(self.request)
         born = {(os.getpid(), os.getpid(), process_start(os.getpid())),
@@ -576,7 +626,7 @@ with PreparationLease(case.lease_path, (info.st_dev, info.st_ino)) as lease:
              patch.object(client, 'task_inventory', return_value={(os.getpid(), os.getpid(), process_start(os.getpid()))}):
             result = client.at_held_boundary(lease=lease, server=server, status=case.status,
                 manifest=case.manifest, scope_path=str(case.base), installation=case.installation,
-                prepare=prepare, verify_gates=gates, orchestration_fence=Fence(), consume=consume)
+                prepare=prepare, verify_gates=gates, orchestration_fence=Fence(), consume=consume, adoption_enabled=True)
         assert result == ['preparation-child-finished', 'gate-child-finished',
                           'inspection-child-created', 'inspection-response',
                           'postscan-SSH-denied', 'exact-in-process-continuation'], result

@@ -35,7 +35,9 @@ The adapter now does, in order:
 4. Root authenticates the owner, scans protected process consumers, verifies
    owner/lease/target metadata again and returns one bounded direct stdout reply.
 5. Check local lease, target metadata, bounded in-memory live status, authenticated
-   bindings, timestamps and late PID/TID births, then perform the exact in-process
+   bindings, timestamps and late PID/TID births. Recheck both wall-clock and
+   monotonic receipt age after the complete witness traversal, immediately
+   before returning to the exact in-process
    continuation. **No gate callback, SSH/SFTP, B hash, orchestration callback or
    subprocess is run after clearance.** No saved-receipt input or refresh loop.
 
@@ -205,6 +207,42 @@ coverage. Then Staging may separately adopt the adapter into a dedicated managed
 terminal operation, prove its existing channel closure and exact continuation,
 and retain human QA/backup/rollback gates. No live acceptance or adoption is
 claimed by this source PR.
+
+## Bounded rollback — administrator only, not performed
+
+The adapter defaults to `adoption_enabled=False`; an approved owning controller
+must explicitly opt in with `adoption_enabled=True`. Disabled adoption rejects
+before preparation, privilege invocation or continuation. Installation alone
+therefore does not adopt this adapter or change the current owner.
+
+For rollback, disable admission to this adapter in the owning controller by
+setting that explicit local adoption switch false. Disarm/drain any pending
+terminal continuation through the managed owner's existing control before
+withdrawing the grant: changing the switch for future calls or removing sudoers
+cannot retract an already-issued receipt or cancel an action already underway.
+The switch is an admission check, not an in-flight cancellation API. A terminal
+actor's seccomp seal is also irreversible; do not try to reuse it for orchestration.
+
+Then an administrator removes **only** this exact privileged grant file:
+
+```
+unlink -- /etc/sudoers.d/vk-process-inspection-v1
+```
+
+This is an administrator rollback instruction, not a new agent sudo grant,
+executable rollback helper, or authorization to run it now. Validate the exact
+root-owned regular grant entry and retain its source/hash in the installation
+record before removal; validate the remaining sudo policy afterward. Do not
+remove the directory, any unrelated include, launcher, checker, policy, managed
+namespace, artifacts, receipts, backup evidence or fallback. No recursive cleanup
+or data retirement is part of rollback. Fallback still survives until human QA.
+
+A revoked-grant error blocks automatic continuation without retries or an
+alternate privilege route. Source tests model withdrawal of only the exact grant
+in a synthetic SSD fixture, retain its bytes and an unrelated grant, and prove
+that refusal leaves artifacts/evidence/fallback intact. Disabled-adoption tests
+prove no preparation/checker/action occurs. Actual privileged removal, effective
+sudo matching and operational draining remain untested; none are performed here.
 
 ## Existing route and urgent operator bridge
 

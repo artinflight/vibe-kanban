@@ -1,3 +1,22 @@
+## October 9: Corrected frontend inclusion authorized for existing VKStaging
+
+Seamus explicitly instructs that the corrected frontend deploy with staging.
+Functional source `66e00728c` has all ten CI jobs green (run37927081460).
+Read VK_STAGING_FRONTEND_HANDOFF_20261009.md for PR228/232/233, source/base
+compatibility, package/served hash acceptance and cold/repeated Work View checks.
+The normal app live-steer endpoint accepted this instruction at 12:20 UTC for
+existing session `7d6734c1-c8d0-4d55-ac27-b1f763d15a6e`.
+No duplicate turn or independent deployment was started; owner adoption remains
+unconfirmed. Isolated package receipts are under
+`/mnt/vk-storage/vk-mobile-launch-20261009/frontend-handoff-package`.
+
+No renewed frontend inclusion approval is needed. Preserve VKStaging's existing
+release/cutover authority, pinned backend/guard/module and required branch checks.
+The old activation guard now means stale-artifact/owner coordination, not an
+assumed continuing frontend approval hold. Adopt final66 or reconcile only the
+frontend onto the owner's newer base; this scope does not need a backend rebuild.
+Earlier release/approval notes below are historical and superseded for this scope.
+
 ## October 9: Mobile launch reproduced; release coordination held
 
 At 11:56 UTC, HTTPS still serves October 8 source `22f09e245`, entry

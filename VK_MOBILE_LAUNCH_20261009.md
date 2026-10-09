@@ -1,3 +1,9 @@
+> Latest owner instruction: corrected frontend inclusion with existing VKStaging
+> is explicitly authorized. Read VK_STAGING_FRONTEND_HANDOFF_20261009.md; final
+> functional source66e00728c has all ten CI jobs green. The old activation guard
+> protects against a stale package and independent deployment, not an assumed
+> unresolved frontend permission. Existing owner release/cutover rules still apply.
+
 # Mobile opening-screen investigation — October 9, 2026
 
 Seamus reports that mobile still opens directly to Create Workspace and expects

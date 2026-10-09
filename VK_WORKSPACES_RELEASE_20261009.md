@@ -1,3 +1,9 @@
+> Latest owner instruction: corrected frontend inclusion with existing VKStaging
+> is explicitly authorized. Read VK_STAGING_FRONTEND_HANDOFF_20261009.md; final
+> functional source66e00728c has all ten CI jobs green. The old activation guard
+> protects against a stale package and independent deployment, not an assumed
+> unresolved frontend permission. Existing owner release/cutover rules still apply.
+
 > October 9, 11:56 UTC update: this is historical preparation evidence. Production
 > still serves October 8. The prepared bundle lacks the newly verified tab-route
 > and PWA launch follow-up; read VK_MOBILE_LAUNCH_20261009.md. Its activation helper

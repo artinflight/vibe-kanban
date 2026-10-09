@@ -1596,3 +1596,16 @@ phone entry behavior unverified. No merge/deploy/protection/service/model change
 Frozen candidate activation is held; owner must adopt/rebuild latest source and
 complete required approval, then verify actual served version and phone launch.
 See VK_MOBILE_LAUNCH_20261009.md for exact hashes, evidence and limits.
+
+## 2026-10-09 — Corrected frontend handoff to existing VKStaging
+
+Operator explicitly authorized frontend inclusion with staging. Final functional
+source66e00728c CI passed all ten jobs. The normal live-steer route accepted the
+bounded inclusion instruction for existing session7d6734c1 at
+12:20 UTC, preserving model/effort/Recommend routing and requesting no new turn.
+Owner adoption remains unconfirmed. Isolated exact-source frontend package and
+bounded patches are prepared separately from the owner's build/cutover. No backend
+rebuild, pinned artifact replacement, protected branch change or deployment is
+part of this handoff. Prior frontend approval hold reason is superseded; stale
+artifact and owner coordination guard remains. See
+VK_STAGING_FRONTEND_HANDOFF_20261009.md and its package receipts.

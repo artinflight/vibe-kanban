@@ -12,7 +12,7 @@ import {
   HandIcon,
   TriangleIcon,
   CircleIcon,
-  PaletteIcon
+  PaletteIcon,
 } from '@phosphor-icons/react';
 import { UserAvatar, type UserAvatarUser } from './UserAvatar';
 import { RunningDots } from './RunningDots';
@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSub,
   DropdownMenuSubContent,
-  DropdownMenuSubTrigger
+  DropdownMenuSubTrigger,
 } from './DropdownMenu';
 
 export const WORKSPACE_COLORS = [
@@ -38,7 +38,7 @@ export const WORKSPACE_COLORS = [
   '262 70% 86%',
   '302 62% 85%',
   '334 78% 84%',
-  '358 74% 84%'
+  '358 74% 84%',
 ] as const;
 
 export interface WorkspacePr {
@@ -99,7 +99,7 @@ function IssueWorkspaceCardContainer({
   onClick,
   className,
   children,
-  style
+  style,
 }: IssueWorkspaceCardContainerProps) {
   return (
     <div
@@ -148,7 +148,7 @@ export function IssueWorkspaceCard({
   showOwner = true,
   showStatusBadge = true,
   showNoPrText = true,
-  className
+  className,
 }: IssueWorkspaceCardProps) {
   const { t } = useTranslation('common');
   const timeAgo = getTimeAgo(
@@ -245,7 +245,7 @@ export function IssueWorkspaceCard({
                             key={workspaceColor}
                             type="button"
                             aria-label={t('workspaces.setColor', {
-                              defaultValue: 'Set workspace color'
+                              defaultValue: 'Set workspace color',
                             })}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -257,7 +257,7 @@ export function IssueWorkspaceCard({
                                 'ring-2 ring-brand ring-offset-1 ring-offset-primary'
                             )}
                             style={{
-                              backgroundColor: `hsl(${workspaceColor})`
+                              backgroundColor: `hsl(${workspaceColor})`,
                             }}
                           />
                         ))}
@@ -272,7 +272,7 @@ export function IssueWorkspaceCard({
                           className="mt-base w-full text-left text-sm text-low hover:text-normal"
                         >
                           {t('workspaces.clearColor', {
-                            defaultValue: 'Clear color'
+                            defaultValue: 'Clear color',
                           })}
                         </button>
                       )}
@@ -300,7 +300,7 @@ export function IssueWorkspaceCard({
                     <ArchiveIcon className="size-icon-xs" />
                     {workspace.archived
                       ? t('workspaces.unarchive', {
-                          defaultValue: 'Unarchive'
+                          defaultValue: 'Unarchive',
                         })
                       : t('workspaces.archive')}
                   </DropdownMenuItem>
@@ -392,7 +392,7 @@ export function IssueWorkspaceCard({
               <span className="text-low/50 shrink-0">·</span>
               <span className="whitespace-nowrap shrink-0">
                 {t('workspaces.filesChanged', {
-                  count: workspace.filesChanged
+                  count: workspace.filesChanged,
                 })}
               </span>
             </>
@@ -456,7 +456,7 @@ export function IssueWorkspaceCard({
 export function IssueWorkspaceCreateCard({
   onClick,
   className,
-  shouldAnimateCreateButton = false
+  shouldAnimateCreateButton = false,
 }: IssueWorkspaceCreateCardProps) {
   const { t } = useTranslation('common');
 

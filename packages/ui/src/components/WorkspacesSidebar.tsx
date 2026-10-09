@@ -7,7 +7,7 @@ import {
   StackIcon,
   SpinnerIcon,
   MagnifyingGlassIcon,
-  XIcon
+  XIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { usePhoneLayout } from '../lib/usePhoneLayout';
@@ -17,7 +17,7 @@ import { WorkspaceSummary } from './WorkspaceSummary';
 import type { AppBarHostStatus } from './AppBar';
 import {
   CollapsibleSectionHeader,
-  type SectionAction
+  type SectionAction,
 } from './CollapsibleSectionHeader';
 
 export type WorkspaceLayoutMode = 'flat' | 'accordion';
@@ -49,7 +49,7 @@ export interface WorkspacesSidebarPersistKeys {
 const DEFAULT_PERSIST_KEYS: WorkspacesSidebarPersistKeys = {
   raisedHand: 'workspaces-sidebar-raised-hand',
   notRunning: 'workspaces-sidebar-not-running',
-  running: 'workspaces-sidebar-running'
+  running: 'workspaces-sidebar-running',
 };
 
 export interface WorkspacesSidebarProps {
@@ -108,7 +108,7 @@ export function WorkspacesSidebarReopenTag({
   onHoverStart,
   onHoverEnd,
   ariaLabel,
-  className
+  className,
 }: WorkspacesSidebarReopenTagProps) {
   return (
     <button
@@ -139,7 +139,7 @@ function WorkspaceList({
   workspaces,
   selectedWorkspaceId,
   onSelectWorkspace,
-  onOpenWorkspaceActions
+  onOpenWorkspaceActions,
 }: {
   workspaces: WorkspacesSidebarWorkspace[];
   selectedWorkspaceId: string | null;
@@ -199,7 +199,7 @@ export function WorkspacesSidebar({
   onOpenWorkspaceActions,
   persistKeys = DEFAULT_PERSIST_KEYS,
   activeRemoteHost = null,
-  onOpenRemoteHostSettings
+  onOpenRemoteHostSettings,
 }: WorkspacesSidebarProps) {
   const { t } = useTranslation(['tasks', 'common']);
   const phone = usePhoneLayout();
@@ -249,7 +249,7 @@ export function WorkspacesSidebar({
         runningWorkspaces: collection.filter(
           (ws) =>
             (ws.isRunning || hasSubagentActivity(ws)) && !needsAttention(ws)
-        )
+        ),
       };
     }, [workspaces, activityWorkspaces, phone]);
 
@@ -258,13 +258,13 @@ export function WorkspacesSidebar({
       icon: StackIcon,
       label: 'Switch workspace grouping',
       onClick: () => onToggleLayoutMode?.(),
-      isActive: layoutMode === 'accordion'
+      isActive: layoutMode === 'accordion',
     },
     {
       icon: PlusIcon,
       label: t('common:workspaces.newWorkspace'),
-      onClick: () => onAddWorkspace?.()
-    }
+      onClick: () => onAddWorkspace?.(),
+    },
   ];
 
   if (phone) {
@@ -336,7 +336,7 @@ export function WorkspacesSidebar({
               ['all', 'All', (activityWorkspaces ?? workspaces).length],
               ['attention', 'Attention', raisedHandWorkspaces.length],
               ['running', 'Running', runningWorkspaces.length],
-              ['ready', 'Ready', idleWorkspaces.length]
+              ['ready', 'Ready', idleWorkspaces.length],
             ].map(([id, label, count]) => (
               <button
                 key={id}
@@ -451,7 +451,7 @@ export function WorkspacesSidebar({
               <div className="min-w-0">
                 <p className="text-xs text-low uppercase tracking-wide">
                   {t('common:workspaces.remoteHostLabel', {
-                    defaultValue: 'Remote host'
+                    defaultValue: 'Remote host',
                   })}
                 </p>
                 <p className="text-sm text-high truncate">
@@ -477,7 +477,7 @@ export function WorkspacesSidebar({
                     className="text-xs text-brand hover:underline"
                   >
                     {t('common:workspaces.remoteHostManage', {
-                      defaultValue: 'Manage'
+                      defaultValue: 'Manage',
                     })}
                   </button>
                 )}

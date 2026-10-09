@@ -9,7 +9,7 @@ import {
   CircleDashedIcon,
   DotsThreeIcon,
   FlagIcon,
-  PlusIcon
+  PlusIcon,
 } from '@phosphor-icons/react';
 import { cn } from '../lib/cn';
 import { PriorityIcon, type PriorityLevel } from './PriorityIcon';
@@ -19,7 +19,7 @@ import { RunningDots } from './RunningDots';
 import { PrBadge, type PrBadgeStatus } from './PrBadge';
 import {
   RelationshipBadge,
-  type RelationshipDisplayType
+  type RelationshipDisplayType,
 } from './RelationshipBadge';
 
 export interface KanbanTag {
@@ -167,7 +167,7 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
   onAssigneeClick,
   onMoreActionsClick,
   tagEditProps,
-  isMobile
+  isMobile,
 }: KanbanCardContentProps<TTag>) {
   const { t } = useTranslation('common');
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -183,7 +183,7 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
         t('kanban.previewImageWithName', { name }),
       fileLabel: t('kanban.previewFile'),
       fileWithNameLabel: (name: string) =>
-        t('kanban.previewFileWithName', { name })
+        t('kanban.previewFileWithName', { name }),
     });
     return formatted.length > 0 ? formatted : null;
   }, [description, t]);
@@ -223,7 +223,7 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
         selectedTagIds: tagEditProps.selectedTagIds,
         onTagToggle: tagEditProps.onTagToggle,
         onCreateTag: tagEditProps.onCreateTag,
-        trigger: tagEditorTrigger
+        trigger: tagEditorTrigger,
       }) ?? tagEditorTrigger)
     : tagsDisplay;
 
@@ -353,11 +353,11 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
               className="mt-px shrink-0 rounded-sm p-half text-low transition-colors hover:bg-secondary hover:text-normal"
               aria-label={t('kanban.toggleCardDescription', {
                 defaultValue: '{{action}} description',
-                action: isDescriptionExpanded ? 'Hide' : 'Show'
+                action: isDescriptionExpanded ? 'Hide' : 'Show',
               })}
               title={t('kanban.toggleCardDescription', {
                 defaultValue: '{{action}} description',
-                action: isDescriptionExpanded ? 'Hide' : 'Show'
+                action: isDescriptionExpanded ? 'Hide' : 'Show',
               })}
             >
               {isDescriptionExpanded ? (

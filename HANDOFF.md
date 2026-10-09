@@ -1,6 +1,9 @@
 # October 9: Unread report integration pickup
 
 Read VK_UNREAD_REPORT_INTEGRATION.md and scripts/report_delivery/evidence/validation.json.
+Review is in [draft PR238](https://github.com/artinflight/vibe-kanban/pull/238) into
+staging. Source `dd57fc5ef` is pushed; dedicated caller/hash/scope CI passed at
+run38001200254. Full repository CI remained in progress at that receipt.
 Source caller, durable confirmed-event retry and pre-presentation intent pinning
 are implemented. A one-file `report_reconciliation.py` patch is packaged in this
 Vibe stream at the owner's direction; connector has no remote. Its source is

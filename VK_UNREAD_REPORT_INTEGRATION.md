@@ -7,6 +7,7 @@ durable retry and a one-file connector extension. It reuses deployed
 `workspace-review-v1` and the existing connector receipt consumer. Assignment,
 visibility and capture reliability are separate streams. Nothing is installed.
 No production unread markers or previously recorded receipts were changed.
+Review: [draft PR238](https://github.com/artinflight/vibe-kanban/pull/238) into staging.
 
 The patch is packaged in this Vibe draft PR at the owner's explicit direction.
 The connector maintenance repository has no remote; no remote was created.
@@ -119,6 +120,9 @@ copy and leaves source/runtime unchanged. It does not install or deploy anything
 tested source and results. The dedicated Python CI job tests the15 independent
 caller cases and packaged patch boundary. Connector integration needs the owner's
 source inputs; CI does not pretend to have them.
+The dedicated caller/hash/scope CI passed at source `dd57fc5ef`:
+[run38001200254](https://github.com/artinflight/vibe-kanban/actions/runs/38001200254).
+Normal full repository CI was still running when that receipt was recorded.
 
 `pnpm run ops:check`, `git diff --check`, and Rust formatting passed. Required
 `pnpm run format` stopped at missing Prettier after Rust formatting; `pnpm run check`
@@ -194,12 +198,12 @@ The CLI cannot manufacture or observe a missing transport callback.
   still-unread workspace to make acceptance look successful.
 - [ ] Re-submit the identical event after caller restart. No second marker write
   occurs and later manual unread remains intact.
-- [ ] In disposable fixtures, prepare then introduce a newer reply, running turn,
+- [x] In disposable fixtures, prepare then introduce a newer reply, running turn,
   manual unread/hold, hold release or intent change. Delayed delivery cannot clear
   it; newer activity after a successful commit remains unread.
 - [ ] Explicit user single-workspace clear still works through its existing tool;
   explicit leave-unread stays held. No unrelated workspace is selected or cleared.
 
-The first five live acceptance items remain open. There was no actual delivery
+Live acceptance remains open. There was no actual delivery
 callback, metadata refresh, authorized connector adoption or live receipt/clear in
 this task. Source implementation and synthetic acceptance do not close those gates.

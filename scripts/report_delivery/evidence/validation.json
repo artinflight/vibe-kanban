@@ -1,7 +1,7 @@
 {
   "validated_at_utc": "2026-10-09",
   "connector_source_commit": "195e3b782eaef226049b003d8ca2a205094016aa",
-  "candidate_connector_commit": "f892cf3",
+  "candidate_connector_commit": "f892cf32ad14870932f6ae12f5365acf7989d6d9",
   "source_is_disposable_copy": true,
   "connector_tests": {
     "passed": 100,
@@ -46,5 +46,13 @@
     "client metadata refresh and real tool availability",
     "channel-owner confirmed-delivery callback binding",
     "real delivered-report receipt/proof/unread readback"
-  ]
+  ],
+  "caller_code_commit": "dd57fc5ef31196b5d6bfdcb47c339c07f0af6ae6",
+  "draft_pr": "https://github.com/artinflight/vibe-kanban/pull/238",
+  "hosted_caller_ci": {
+    "conclusion": "success",
+    "url": "https://github.com/artinflight/vibe-kanban/actions/runs/38001200254",
+    "head_sha": "dd57fc5ef31196b5d6bfdcb47c339c07f0af6ae6",
+    "coverage": "15 independent caller tests and patch hash/file boundary; no actual connector fixture source on runner"
+  }
 }

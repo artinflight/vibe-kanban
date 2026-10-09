@@ -9,6 +9,7 @@ Source-only: no installation, metadata refresh, live receipt/clear, restart,
 security/config/model/effort change or combined-release rollback is authorized.
 126 synthetic tests pass on the combined connector candidate; actual channel
 callback/client catalog/adoption/live-delivery acceptance remain open.
+Review is in [draft PR238](https://github.com/artinflight/vibe-kanban/pull/238).
 
 # October 8: Workspace-first navigation and task attention follow-up
 

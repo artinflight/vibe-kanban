@@ -1576,3 +1576,10 @@ October 9 integration: current staging e8c450fb is incorporated as the normal
 PR base. Its original continuity documents remain preserved at that immutable
 commit; this stream retains newer bounded candidate/recovery tracking. No live
 service, route, credential or access change is performed by this merge.
+
+
+2026-10-09: Deferred source-only restart safeguards start from b2180dcf.
+Reuse current data; total goal includes FIX READY, build, validation and resumed
+work. Normal nightly generations become self-contained before replacement;
+incident/fallback evidence excluded. No schedule/deployment/root adoption.
+See VK_RESTART_SAFEGUARDS_20261009.md for tests and concrete remaining blockers.

@@ -1,3 +1,24 @@
+## October 9: Deferred restart safeguards — source only
+
+The successful current-data cutover completed at 20:31:20 UTC in 9.94 seconds;
+this does not establish the ten-minute FIX READY/build/validation/work-resumed
+pipeline goal. Current service is vibe-kanban-current-state-production-20261009;
+backend c3c48e63, authoritative roots retained, incumbent frozen and compatible
+latest-data cutback retained. Archive untouched; cleanup and human QA unchanged.
+
+Branch fix/restart-safeguards-20261009 implements bounded routine orchestration,
+real lifecycle drain waiting, self-contained incremental normal-nightly B
+publication/retention, source-only scripted schedule rendering and cache-preserving
+warm/cold build measurement. Read VK_RESTART_SAFEGUARDS_20261009.md and its source
+validation receipt. No production driver/timer/root code/security change was
+adopted. Physical-B mount/readback/atomic hardlink compatibility, independent
+internal review and actual full-VK warm/cold/whole-pipeline timing remain open.
+Build capacity is below the preserved 8 GiB floor; do not clear caches/evidence.
+The denied capacity updater remains on its separate internal branch, excluded
+from this source stream. No new owner command is requested.
+
+Older dated entries below are historical and do not override this observation.
+
 Current October9 restart gate update: Desktop SSH/B works; whole-state online
 backup accepted (77roots/76DBs), archive SHA735e2115. Read
 VK_RESTART_PROGRESS_20261009.md before older entries. Exact offline application

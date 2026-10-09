@@ -1,0 +1,25 @@
+{
+  "candidate_launched": false,
+  "candidate_modules_verified": 7,
+  "cleanup_available": false,
+  "current_lease_probed": true,
+  "current_owner_pid": 500933,
+  "current_owner_start": "757986989",
+  "current_preparation_source": "ba1a8c921c9bef2a6893f24683d0a39412cf965c867aec8d630a4e72c63c9015",
+  "deletion_performed": false,
+  "files_verified": 65,
+  "handoff_performed": false,
+  "initial_only_journal_pins": {
+    "0001-initial-materialization-verified.json": "7833675d80e42825dc21aab35dfcfe1fa59ed0b01057b99f427d55784662eb4e",
+    "0002-initial-owner-recovered.json": "2b0d7144d8892d45138a08429ec424399ecd1e1bf8bf4dedde93809fa2c636ab"
+  },
+  "native_available_bytes": 8581804032,
+  "operational_acceptance": false,
+  "package": "/mnt/vk-storage/vk-runtime-backup-20261009/actual-candidate-controller-package-f37b9987",
+  "production_changed": false,
+  "reserve_bytes": 8589934592,
+  "reviewed_source_files_verified": 8,
+  "root_binding": "cf07ddd1f356cd64ea9da1da5f053ff8ffa03ead9a53b6ae45091c45ac258a24",
+  "source_commit": "f37b99875dbfa08410e029735331e383c41bde37",
+  "utc": "2026-10-09T15:05:20Z"
+}

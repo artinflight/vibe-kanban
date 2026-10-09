@@ -851,3 +851,30 @@ the authenticated13:35 receipt. It remains pending as of this observation.
 A stale successful consumer observation cannot prove current protected-process
 absence at retirement. No sudo retry or alternate privileged route is attempted.
 The current native reserve and operational acceptance gates remain held.
+
+## 15:05 held state and immutable handoff checkpoint
+
+The new nonfixture controller package actual-candidate-controller-package-f37b9987
+verifies65files,7candidate modules and all8exact reviewed PR229pins. Its source is
+f37b99875dbfa08410e029735331e383c41bde37. Both existing initial-only journals are
+hash-pinned for eventual supported ownership transfer. A fresh live probe again
+verified the original preparation owner PID500933/start757986989 holding the same
+lease; no transfer, restore, application start, writer fence or cutover occurred.
+See scripts/deployment/receipts/prepared-initial-only-handoff-20261009.json.
+
+Native available at that measurement was8,581,804,032bytes, below the retained
+8,589,934,592-byte reserve by8,130,560bytes. This is observed host growth, not
+reclaim capacity. No bulk candidate operation may start until the separately
+approved single-archive retirement actually supplies measured headroom. The
+requested fresh operator receipt remains absent; the13:35authenticated receipt
+is unchanged, passing, and preserved. Interruption approval is resolved.
+
+Green PID3027197 is active with cgroup frozen0. Protected previous PID1369037
+is active and systemd/cgroup frozen1, freshly checked. Preparation PID500933
+is running, its kernel FLOCK is present. Former compiler-cache lock holder
+PID165545 has exited and its locks are no longer held; do not rely on old cache
+fence receipts for any future cache mutation. No further cache deletion is in
+scope. Future single-archive retirement still requires its own fresh consumer,
+identity/dependency and held-boundary checks; it does not expand the old allowlist.
+All remaining application/rehearsal/consent/current-receipt/catch-up/latest-data
+fallback/live acceptance requirements remain unfulfilled, not waived.

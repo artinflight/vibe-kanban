@@ -2,6 +2,9 @@
 
 ## Outcome and authority
 
+Review: [draft PR234](https://github.com/artinflight/vibe-kanban/pull/234), stacked on PR231 for its narrow11-file
+incremental diff. Retarget to staging after dependency integration.
+
 This adds a fixed-policy root checker and an unprivileged adapter for PR231's
 held preparation owner. It removes the recurring operator consumer-check command
 **after separately approved installation and owner adoption**. Nothing is
@@ -230,7 +233,9 @@ No root checker or sudo command was executed, so actual root host visibility,
 installed sudoers matching, privileged stdout provenance and owner adoption
 remain Stage2 evidence. No fixture result is live clearance.
 
-Ops governance passed. `pnpm run format` ran Rust formatting successfully, then
+The exact proposed sudoers file passes unprivileged `/usr/sbin/visudo -cf`;
+this checks syntax without installing anything or exercising a privilege grant.
+The four package-binding tests pass again at source35734cda3. Ops governance passed. `pnpm run format` ran Rust formatting successfully, then
 blocked on missing Prettier. `pnpm run check` passed the legacy-path guard then
 blocked on missing TypeScript; `pnpm run lint` blocked on missing ESLint. This
 checkout has no node_modules. Full Cargo workspace tests were not run because

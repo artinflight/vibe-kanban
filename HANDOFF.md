@@ -1,5 +1,11 @@
 # October 9: Source-only automatic retirement clearance
 
+[Draft PR234](https://github.com/artinflight/vibe-kanban/pull/234) is stacked on PR231; its11-file incremental
+diff has been verified. Retarget to staging after PR231 integrates. Source
+35734cda3 is pushed and remote-SHA verified. All four package-binding tests also
+pass at that exact source. The proposed sudoers file parses with unprivileged
+`visudo -cf`; effective installed permission matching remains untested.
+
 Read [VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md](VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md).
 The fixed root checker hashes the exact approved archive before a full process/
 thread consumer scan, authenticates the live owner/kernel lease and ephemeral

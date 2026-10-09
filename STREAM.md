@@ -11,8 +11,8 @@ PR229/231 packages remain untouched. The fallback survives until human QA.
 
 The urgent owner still needs fresh privileged clearance; no already-authorized
 route was established or denied sudo retried. Parent approval must precede the
-proposed installation and separately verified owner adoption. A draft dependent
-PR is appropriate until PR231 integration and installed read-only acceptance.
+proposed installation and separately verified owner adoption. [Draft PR234](https://github.com/artinflight/vibe-kanban/pull/234) is stacked on PR231 for review; retarget to
+staging after dependency integration. Installed read-only acceptance is pending.
 
 Current October9 restart gate update: Desktop SSH/B works; whole-state online
 backup accepted (77roots/76DBs), archive SHA735e2115. Read

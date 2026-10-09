@@ -1,0 +1,111 @@
+--- a/crates/local-deployment/src/lib.rs
++++ b/crates/local-deployment/src/lib.rs
+@@ -125,6 +125,9 @@
+     matches!(normalized.as_str(), "1" | "true" | "yes" | "on")
+ }
+ 
++// This recovery release cannot enable automatic attachment deletion at runtime.
++pub const AUTOMATIC_ATTACHMENT_CLEANUP: bool = false;
++
+ fn attachment_cleanup_disabled(value: Option<&str>) -> bool {
+     value.is_some_and(|value| {
+         matches!(
+@@ -237,9 +240,12 @@
+         };
+ 
+         let file = FileService::new(db.clone().pool)?;
+-        if attachment_cleanup_disabled(std::env::var("DISABLE_ATTACHMENT_CLEANUP").ok().as_deref())
++        if !AUTOMATIC_ATTACHMENT_CLEANUP
++            || attachment_cleanup_disabled(
++                std::env::var("DISABLE_ATTACHMENT_CLEANUP").ok().as_deref(),
++            )
+         {
+-            tracing::info!("Startup attachment cleanup disabled by DISABLE_ATTACHMENT_CLEANUP");
++            tracing::info!("Automatic attachment cleanup disabled pending human QA");
+         } else {
+             let file_service = file.clone();
+             tokio::spawn(async move {
+--- a/crates/server/src/main.rs
++++ b/crates/server/src/main.rs
+@@ -53,6 +53,8 @@
+                     "runtimeIdentityVersion": 1,
+                     "assetDirectory": utils::assets::asset_dir_path(),
+                     "automaticWorkspaceDeletion": false,
++                    "automaticAttachmentMigration": server::startup::AUTOMATIC_ATTACHMENT_MIGRATION,
++                    "automaticAttachmentCleanup": local_deployment::AUTOMATIC_ATTACHMENT_CLEANUP,
+                     "capacityLedgerVersions": [1, 2],
+                     "capacityWireVersion": 1,
+                     "initializationCompiled": !cfg!(feature = "scheduled-goal-initialization-disabled"),
+--- a/crates/server/src/startup.rs
++++ b/crates/server/src/startup.rs
+@@ -192,6 +192,10 @@
+         .expect("Failed to cleanly kill running execution processes");
+ }
+ 
++// Human QA must precede any separately reviewed cleanup release. There is no
++// runtime environment/marker override for this compiled prohibition.
++pub const AUTOMATIC_ATTACHMENT_MIGRATION: bool = false;
++
+ const LEGACY_ATTACHMENT_MIGRATION_MARKER: &str = ".attachment-directories-migrated-v1";
+ 
+ #[derive(Default)]
+@@ -214,6 +218,10 @@
+ async fn migrate_legacy_attachment_directories(
+     deployment: &DeploymentImpl,
+ ) -> Result<(), DeploymentError> {
++    if !AUTOMATIC_ATTACHMENT_MIGRATION {
++        tracing::info!("Automatic legacy attachment migration is disabled pending human QA");
++        return Ok(());
++    }
+     let marker_path = asset_dir().join(LEGACY_ATTACHMENT_MIGRATION_MARKER);
+     if marker_path.exists() {
+         return Ok(());
+--- a/scripts/testing/startup-recovery-safety/server_sandbox.py
++++ b/scripts/testing/startup-recovery-safety/server_sandbox.py
+@@ -19,7 +19,7 @@
+ base=pathlib.Path('/run/fixture')
+ def snapshot():
+     result={}
+-    for scope in ('assets','workspaces','external'):
++    for scope in ('assets','workspaces','external','home'):
+         for path in sorted((base/scope).rglob('*')):
+             meta=path.lstat()
+             result[str(path.relative_to(base))]=(meta.st_mode,meta.st_mtime_ns,
+@@ -47,7 +47,7 @@
+         # All untracked/shared-shaped sentinels must survive normal startup too.
+         after=snapshot()
+         for key,value in before.items():
+-            if key.startswith(('workspaces/','external/')):
++            if key.startswith(('workspaces/','external/','home/.cache/utils/images/')) or key == 'home/.cache/utils/images':
+                 assert after.get(key)==value, key
+     else:
+         stdout,stderr=child.communicate(timeout=5)
+@@ -60,6 +60,8 @@
+         if expected and any(arg in args for arg in ('--build-info', '--capacity-build-info')):
+             info = json.loads(stdout)
+             assert info['automaticWorkspaceDeletion'] is False
++            assert info['automaticAttachmentMigration'] is False
++            assert info['automaticAttachmentCleanup'] is False
+             assert info['runtimeIdentityVersion'] == 1
+             assert info['capacityLedgerVersions'] == [1, 2]
+             assert info['capacityWireVersion'] == 1
+@@ -107,6 +109,9 @@
+         (fixture / 'workspaces/untracked/repo/edit').chmod(0o640)
+         (fixture / 'workspaces/untracked/repo/.git').write_text('gitdir: /run/fixture/external/registration\n')
+         (fixture / 'external/registration').write_bytes(b'protected registration')
++        legacy = fixture / 'home/.cache/utils/images'
++        legacy.mkdir(parents=True)
++        (legacy / 'legacy-attachment.bin').write_bytes(b'legacy must survive startup')
+         (fixture / 'workspaces/link').symlink_to('/run/fixture/external', target_is_directory=True)
+         config = json.loads((REPO / 'scripts/testing/startup-recovery-safety/private-config.json').read_text())
+         config['workspace_dir'] = '/run/fixture/workspaces'
+@@ -137,8 +142,7 @@
+                    '--ro-bind', str(binary), '/run/test-server', '--bind', str(fixture / 'assets'), embedded_assets,
+                    '--clearenv', '--setenv', 'HOME', '/run/fixture/home', '--setenv', 'PATH', '/usr/bin:/bin',
+                    '--setenv', 'BACKEND_PORT', '39001', '--setenv', 'PREVIEW_PROXY_PORT', '39002',
+-                   '--setenv', 'RUST_LOG', 'error', '--setenv', 'VK_DISABLE_PR_MONITOR', '1',
+-                   '--setenv', 'DISABLE_ATTACHMENT_CLEANUP', '1']
++                   '--setenv', 'RUST_LOG', 'error', '--setenv', 'VK_DISABLE_PR_MONITOR', '1']
+         if label != 'missing-receipt':
+             command += ['--setenv', 'VK_RUNTIME_IDENTITY_FILE', '/run/fixture/identity']
+         reasons = {

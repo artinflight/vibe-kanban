@@ -1,0 +1,48 @@
+{
+  "anchor_identity": [
+    2065,
+    15335467
+  ],
+  "archive_removed": false,
+  "authentication_succeeded_for_fixed_checker": true,
+  "completion_estimate_verified": false,
+  "current_process_count": 434,
+  "current_required_witness_json_bytes": 146506,
+  "current_task_count": 4582,
+  "deadline_utc": "2026-10-09T19:17:00Z",
+  "diagnostic_managed_checker_returncode": 1,
+  "diagnostic_managed_checker_stderr_empty": true,
+  "diagnostic_managed_checker_stdout": {
+    "consumer_clearance_passed": false,
+    "reason": "inspection blocked"
+  },
+  "directly_verified_readable_hashes": 4,
+  "evidence_hashes": {
+    "historical-installed-acceptance-1835.private.json": "abeed7baf39329119f254751e89b2a83c33aa5127cc7c97653c2311ded6ed52e",
+    "installed-metadata-verification-1833.safe.json": "efbe131b767fc8c68e52dc44d182225bf24b9ae8adddcd06bb44695e14b9e7ea",
+    "installed-owner-1833.safe.json": "aff396c83e3f05183a83d8e4de1eb12683162318cf95fa05eb4590166655b789",
+    "managed-installed-acceptance-1834.private.json": "abeed7baf39329119f254751e89b2a83c33aa5127cc7c97653c2311ded6ed52e",
+    "managed-installed-acceptance-diagnostic-1837.private.json": "39972dd02c595595434e7cb65d6cd2e3367cbd6a9fbeeb5ac189f32f44235751"
+  },
+  "guaranteed_response_size_blocker": true,
+  "historical_exceptions_unchanged": [
+    "448 names",
+    "145 original-history gaps",
+    "transcript line415",
+    "journal/mode/link limitations"
+  ],
+  "installed_approved_plan": "29af1c33e029bc1fe9ef9467fd51a03eb586105d",
+  "installed_historical_acceptance_passed": false,
+  "installed_managed_acceptance_passed": false,
+  "installed_metadata_verified": true,
+  "installed_response_limit_bytes": 65536,
+  "native_available_bytes": 8239874048,
+  "observed_utc": "2026-10-09T18:40:39.207580+00:00",
+  "privileges_expanded": false,
+  "restart_or_cutover": false,
+  "restricted_hashes_from_owner_installer_receipt": 3,
+  "root_generic_failure_exact_internal_stage_known": false,
+  "source_correction_handoff": "PR234 owner: separate bounded receipt-size limit from unchanged request/status limits; preserve all PID/TID coverage and gates; review/hash-bind corrected root and unprivileged payloads before exact authorized replacement. Do not mutate installed code under old pins.",
+  "source_message": "Sentinel_b3a812ffcb688191858a2ded89884cf5",
+  "unsafe_substitute_route_used": false
+}

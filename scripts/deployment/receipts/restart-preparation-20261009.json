@@ -1,0 +1,34 @@
+{
+  "fenced_adapter_validation": "private fixture only; real held writer stop/lease/physical-B final acceptance unrun",
+  "fenced_large_snapshot_supported": true,
+  "full_candidate_metadata_accepted": false,
+  "isolated_source_ownership_approval_pending": true,
+  "live_controller_activation_bound": false,
+  "metadata_fixture_only": true,
+  "offline_application_source": "f8fd50327331d43f672966a53da90a5f2b13b685",
+  "production_deployed": false,
+  "source_parent": "dc8470f90e94dc59ebce4300af62fd9d5dd33e50",
+  "source_sha256": {
+    "scripts/deployment/application-patches/no-startup-attachment-cleanup.json": "806e2c90be8dbc164f7e689290281ed4a48a30d3f2bd3d310563c7cd3db84ba1",
+    "scripts/deployment/application-patches/no-startup-attachment-cleanup.patch": "0502a3835f4d7cf505a6c542857aab6cf33936d0a668f8543effacb86a5cfc5e",
+    "scripts/deployment/test_vk_b_disk_capture.py": "59ed6c4fb3f19b1837e417728f10ecfd23d077ed28c3df2e5f3948c97f6ef082",
+    "scripts/deployment/test_vk_b_disk_snapshot.py": "2dba02e743b78c39c2832c1a8d84d771d681a07a4351a29aaab5669ace2f2269",
+    "scripts/deployment/test_vk_candidate_metadata_budget.py": "68b2077c1dbca82217766cade441c10cf3cf4f3afc189ebeae17af27c4e42129",
+    "scripts/deployment/vk_b_disk_capture.py": "3bab39fb2c9a3259b6672dd48c99ce3b3dc535ffbde17ee899c4f200ee3c7d07",
+    "scripts/deployment/vk_b_disk_snapshot.py": "ba1fd175cc72f6008e77f46096e4ec30201b4943e6d9895a7907af466a69cebf",
+    "scripts/deployment/vk_candidate_direct_b.py": "dc645d181e7e09b2f6af4b64eb7f09444f1f8c18e095b2d88018210f4386f08e"
+  },
+  "tests": {
+    "archive_B_inventory_and_fenced_factory": 5,
+    "explicit_candidate_metadata_budget": 2,
+    "optimization": "Python -O",
+    "packaged_application_cleanup_prohibition": "prepared regression; not compiled/executed",
+    "passed": true,
+    "snapshot": 9
+  },
+  "whole_state_accepted": true,
+  "whole_state_archive_sha256": "735e211552c315f9f9be78eda9f28d175f2406847032f5df6a5d2307d8362ef5",
+  "whole_state_discovered_databases": 76,
+  "whole_state_frozen_boundary_verified": false,
+  "workflow_approval_pending": true
+}

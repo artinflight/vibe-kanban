@@ -1,0 +1,13 @@
+{
+  "archive_sha256": "735e211552c315f9f9be78eda9f28d175f2406847032f5df6a5d2307d8362ef5",
+  "candidate_restored": false,
+  "missing_inside_source_count": 0,
+  "missing_parent_count": 27,
+  "original_context_metadata_known": false,
+  "private_catalog_chunks_authenticated": 5,
+  "production_modified": false,
+  "scaffold_materialized": false,
+  "source_plan_sha256": "1da86062af8e708457654a9e31c3057dc3f249ee4498ef474d5cb0a62c96c1cb",
+  "strict_outside_source_ancestor_count": 27,
+  "unrelated_parent_count": 0
+}

@@ -1,0 +1,83 @@
+{
+  "inspection_only": true,
+  "no_deletion_mount_format_ownership_or_access_change": true,
+  "native_filesystems": {
+    "/": {
+      "source": "/dev/mapper/ubuntu--vg-ubuntu--lv",
+      "type": "ext4",
+      "available_bytes_observed": 42513084416
+    },
+    "/boot": {
+      "source": "/dev/sda2",
+      "type": "ext4",
+      "available_bytes_observed": 1706676224
+    },
+    "/mnt/vk-storage": {
+      "source": "/dev/sdb1",
+      "type": "ext4",
+      "available_bytes_observed": 245964800
+    }
+  },
+  "sda_gross_unpartitioned_bytes_including_tables": 2449408,
+  "sdb_gross_unpartitioned_bytes_including_tables": 1049088,
+  "sda3_minus_root_LV_maximum_free_or_metadata_bytes": 3145728,
+  "existing_unallocated_120GiB_device_identified": false,
+  "root_owned_block_devices_not_opened": true,
+  "shared_cargo_target_allocated_bytes_including_directories": 80056377344,
+  "shared_cargo_target_regular_file_inventory": {
+    "debug": 42815,
+    "release": 11418,
+    "other": 114
+  },
+  "external_hardlinked_inodes": 0,
+  "symlinks": 0,
+  "special_files": 0,
+  "inventory_errors": 0,
+  "accessible_cache_exe_cwd_fd_or_mapped_consumers": 0,
+  "compiler_processes_observed": 0,
+  "protected_proc_inspection_denials": {
+    "exe": 179,
+    "cwd": 179,
+    "maps": 44,
+    "fd_directory": 179
+  },
+  "global_privileged_use_clearance": false,
+  "current_runtime_cache_duplicates_independent_matching": {
+    "server": "5e7948921f962b9ea74597781ca2e1b0c7bd745edc0d1901a8274dab444097a2",
+    "vk_capacity_guard": "a66c85f10c8039906da37d3e3408f40b978690ddbc0b0c6edb028e8097a36680",
+    "vk_routing_module": "6ac247dc0efbe4ce6c87ad9cd9d29ebb9f094c1e49a090b6fb15babf368635df"
+  },
+  "six_build_root_service_runtime_executables_outside_cache": true,
+  "exact_historical_artifact_reconstruction_claimed": false,
+  "preserved_top_level_outputs_and_all_aliases_bytes": 2419998720,
+  "preserved_files_and_aliases": 35060,
+  "private_manifest_path": "/mnt/vk-storage/vk-runtime-backup-20261009/cargo-generated-retirement-proposal-v2.private.json",
+  "private_manifest_sha256": "aee94e175b2d0f407b364e7af8fdeaff03c5bd0b3d086df60d3b6528041df2df",
+  "conditional_generated_file_count": 19173,
+  "conditional_cache_regular_file_reclaim_bytes": 76904693760,
+  "other_caches_allocated_bytes": {
+    "capacity_build_tmp": 1079771136,
+    "vk_preparation_cache": 236290048,
+    "pnpm_store": 1018314752,
+    "npm_cache": 961044480,
+    "connector_compat": 6008930304
+  },
+  "conditional_checkpoint_and_delta_reclaim_bytes": 23768944640,
+  "conditional_no_purchase_native_room_bytes": 106928533504,
+  "full_existing_payload_plus_8GiB_floor_bytes": 102454311594,
+  "operational_proposal_payload_plus_8GiB_floor_bytes": 98391663823,
+  "headroom_above_full_payload_and_floor_bytes": 4474221910,
+  "headroom_above_proposal_and_floor_bytes": 8536869681,
+  "actual_candidate_peak_proven": false,
+  "human_QA_release_received": false,
+  "retirement_approval_received": false,
+  "cleanup_gate_changed": false,
+  "historical_backup_scope_changed": false,
+  "new_hardware_requirement_proven": false,
+  "preserved_cache_file_blocks_bytes": 3108261888,
+  "dependency_rules_checked": 6879,
+  "dependency_rules_with_unavailable_absolute_sources": 23,
+  "distinct_unavailable_source_paths": 422,
+  "direct_output_inodes_with_unavailable_source": 21,
+  "all_missing_source_direct_outputs_and_dependency_fingerprints_preserved": true
+}

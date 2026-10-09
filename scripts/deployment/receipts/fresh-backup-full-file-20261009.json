@@ -1,0 +1,56 @@
+{
+  "archive_bytes": 25006383044,
+  "archive_sha256": "735e211552c315f9f9be78eda9f28d175f2406847032f5df6a5d2307d8362ef5",
+  "candidate_index_budget_unchanged": true,
+  "candidate_restored": false,
+  "catalog_chunk_bound_bytes": 67108864,
+  "catalog_chunks": [
+    {
+      "bytes": 67108535,
+      "name": "chunk-0001.private.jsonl",
+      "sha256": "d578e753afe1cc38585e0b29b1f35da8bccc1b98229571915043c3c9c8900d9b"
+    },
+    {
+      "bytes": 67108837,
+      "name": "chunk-0002.private.jsonl",
+      "sha256": "fdea9d390f7b2e67b4afbcfdc19a6eec4cc6673a9ccd74ffbd2f6f885ff0c2c4"
+    },
+    {
+      "bytes": 67108490,
+      "name": "chunk-0003.private.jsonl",
+      "sha256": "c32c00297ff872f1c84c49a52434ce353ddaad99d275c97364bd921ec6e8d7dd"
+    },
+    {
+      "bytes": 67108672,
+      "name": "chunk-0004.private.jsonl",
+      "sha256": "844a9e0dd6f6163e56dd564179a054f74387401c6e8eef8ae13ef2910dd0f312"
+    },
+    {
+      "bytes": 587129,
+      "name": "chunk-0005.private.jsonl",
+      "sha256": "2588f6046eb36616b0b6c6798e45940bfb6324aeccc093745e2fde1a457581da"
+    }
+  ],
+  "catalog_total_bound_bytes": 1073741824,
+  "extended_metadata_header_counts": {},
+  "file_counts": {
+    "directory": 55725,
+    "file": 462503,
+    "hardlink": 14889,
+    "symlink": 4501
+  },
+  "full_member_content_inspected": true,
+  "historical_recovery_complete": false,
+  "logical_regular_file_bytes": 93864377002,
+  "members_without_atime": 0,
+  "metadata_restoration_accepted": false,
+  "owner_counts": {
+    "(1000, 1000)": 537618
+  },
+  "peak_rss_bytes": 823173120,
+  "private_catalog_bytes": 269021663,
+  "production_modified": false,
+  "published_descriptor_sha256": "514c96fe5da800b620427ca25da39e8120a2eb7729eef2afba118e70f6645152",
+  "seconds": 515.8114866560009,
+  "snapshot_hashes_verified": 76
+}

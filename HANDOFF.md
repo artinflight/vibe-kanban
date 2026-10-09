@@ -1,19 +1,46 @@
-# October 8: Workspace-first navigation and task attention follow-up
+Current October9 restart gate update: Desktop SSH/B works; whole-state online
+backup accepted (77roots/76DBs), archive SHA735e2115. Read
+VK_RESTART_PROGRESS_20261009.md before older entries. Exact offline application
+commit f8fd5032 is bound on B; tools1a3d3064 are locally committed/B-preserved.
+Workflow grant and new candidate source/test UID1000 ownership approvals remain
+pending. Full restoration/metadata/application and real controller/final writer
+fence acceptance are unrun. No deployment/restart/cutover/cleanup has occurred.
 
-The current frontend stream makes Workspaces the opening screen, removes the
-standalone chat destination from mobile navigation until a workspace is selected,
-starts untouched phone project feeds at To do, and highlights entire actionable
-Kanban/workspace cards using unread/review or approval state. Explicit status
-choices survive navigation during the browser session. Desktop Kanban columns
-remain available. Work is isolated on `vk/eb7d-vk-native-feelin`; its base tree
-matches fork/staging `5a887abf8`.
+# October 9: Authorized safe restart preparation
 
-This follow-up has not been deployed. Production remains the October 8 phone
-release described below; no backend restart, production writes, model/effort
-changes or routing activation are part of this feature work. Five viewport/theme
-cases and deterministic attention states have been validated. See VK_MOBILE_UX.md for evidence and the host GTK/GLib baseline
-limitation. Screenshots and logs are on the mounted secondary SSD at
-`/mnt/vk-storage/vk-workspaces-home-20261008`.
+Read [VK_RESTART_PROGRESS_20261009.md](VK_RESTART_PROGRESS_20261009.md).
+Established Desktop SSH/B works independently of Dot. B Linux/storage and a
+verified large-DB snapshot are prepared; whole-state capture is in progress.
+Workflow publication and non-root source ownership approvals remain pending.
+No operational restart/cutover or historical-loss acceptance; earlier offline
+Desktop statements below are superseded by actual successful SSH observations.
+
+# October 8: Scoped offline integration handoff
+
+Read [VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md](VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md).
+45 unique regressions and the kernel probe pass; 32+10 also passed from the
+fresh hash-bound tool package (operational acceptance explicitly false).
+Upstream eight pins and all 40 deployment Python files match exact corrected
+PR229 head754129c5f. Preserve existing combined release: apply only focused
+47d4293fe+754129c5f and candidate-specific changes, never this whole baseline.
+Operational activation remains blocked. Desktop/B and workflow approval are
+pending; confirmed candidate/capture memory and storage, full required metadata,
+fresh combined package/scanner/controller binding and live consent are unrun.
+The executor's 3000 MiB cap does not fit three default 1 GiB snapshot copies.
+Cleanup remains unavailable; all historical recovery exceptions remain explicit.
+New artifacts are isolated on mounted SSD, with safe B/publication handoff pending.
+
+# October 8: Candidate-as-rehearsal tooling handoff
+
+Read [VK_CANDIDATE_GENERATION_20261008.md](VK_CANDIDATE_GENERATION_20261008.md).
+Independent filesystem/controller changes and configured dependency accounting
+are ready for root's isolated integration/review. 31 regressions and a real
+cross-prefix kernel probe passed. Cleanup remains technically unavailable.
+There are no production adapters/launches or new historical-loss acceptance.
+Root coordinates PR229, capacity/full B provider, workflow authorization,
+dataset preparation and actual packaged/runtime acceptance. Private receipts
+stay outside Git; new source patch is local pending safe publication/B handoff.
+The current phone frontend and earlier release/recovery artifacts remain intact.
 
 # October 8: Phone frontend deployed
 
@@ -46,7 +73,6 @@ Rollback archive SHA256 is verified locally and on Desktop at
 artifact-only rollback preserves current application data; no full mutable-state
 backup/restore or backend continuity rehearsal was performed. Evidence and
 rollback commands are under `/mnt/vk-storage/vk-mobile-release-20261008`.
-
 
 # October 8: Revised phone UI for review
 
@@ -146,6 +172,7 @@ The host lacks Tauri GTK development packages and has under 1 GiB free SSD space
 full workspace/desktop checks therefore rely on the repository CI runners rather
 than risking the live host. Local checks cover the changed executor, services and
 frontend sources, formatting/governance, and byte-identical CU wire compatibility.
+
 ## October 2: Workspace Attention Correction
 
 Read VK_ATTENTION_PRESERVATION.md. The issue-status comparison did not verify
@@ -928,7 +955,6 @@ lightweight preview cannot validate the new backend route. The full-workspace Ru
 merge validation. No production build or deployment is claimed. Cold
 server reconstruction still scans saved logs; oversized uncached turns repeat it.
 
-
 ## September 12: Blue Live, Original Green Paused
 
 Read VK_BLUE_LIVE_20260912.md first. New production Blue4711/4712 is active;
@@ -1005,7 +1031,6 @@ Evidence: `/mnt/vk-storage/vk-cutover-20260911/warm-preparation-result.json` and
 `warm-staging-ui-result.json`. Measure the full replacement handover before
 requesting the operator's next cutover approval.
 
-
 ## Attachment Cleanup Cutover Guard
 
 - Branch `vk/4e18-cutover-attachment-safety`, baseline `9dfd19c34`.
@@ -1034,7 +1059,6 @@ requesting the operator's next cutover approval.
 - Activation smoke: use `/goal` from a Codex chat, confirm intermediate turns
   continue, stalled work receives recovery instructions, and Stop still works.
 - This merge task performs no deployment, service restart, or live state change.
-
 
 ## Recovery-first revision validated
 
@@ -1260,6 +1284,7 @@ The user clarified that loops should trigger autonomous redirection, not an imme
 - A later `pnpm run format` in the local `staging` worktree failed because that
   worktree did not have frontend dependencies installed and `prettier` was not
   found; `git diff --check` passed after the docs update.
+
 ## 2026-08-31 Attachment and UI Preference Corrections
 
 - Issue attachment uploads now route local runtime uploads through
@@ -1433,6 +1458,7 @@ The user clarified that loops should trigger autonomous redirection, not an imme
 - Script repair: `scripts/preview.sh` now invokes Vite without the extra CLI
   separator so `--host 0.0.0.0` takes effect, and runs HTTPS verification from
   the homelab route owner because MCP-to-proxy hairpin HTTPS is blocked.
+
 ## 2026-08-26 Terminal Workspace Archive Fix Staged
 
 - Root cause: terminal-status handlers existed for both `In Staging` and `Done`,
@@ -1485,6 +1511,7 @@ The user clarified that loops should trigger autonomous redirection, not an imme
   restart `vibe-kanban-green.service`, confirm the running executable hash,
   migration and reconciliation logs, run both terminal-status timing cases
   against green, and repeat live attachment upload/read/delete.
+
 ## 2026-07-13 Staging Backfill Preview Updated
 
 - Preview branch: `vk/4e18-live-backfill-to-staging`
@@ -4287,6 +4314,7 @@ User QA checklist for the no-restart frontend repair:
   the new/retained bundle markers passed. The repository smoke script itself is
   stale because it still hardcodes the 20260626 release, so equivalent
   manifest-driven live checks were run directly.
+
 # 2026-08-29 Disk Capacity Lifecycle Prepared
 
 - Branch `vk/156f-vk-disk-space-is` is based on current `fork/staging`.
@@ -4301,7 +4329,7 @@ User QA checklist for the no-restart frontend repair:
   attachment safety, green authority, and explicit-path requirements.
 - No live restart, service edit, worktree deletion, cache clearing, attachment
   mutation, or database/session mutation was performed.
-2026-08-29 durable saved-message storage prepared, not deployed:
+  2026-08-29 durable saved-message storage prepared, not deployed:
 
 - Root cause: local saved messages were embedded in the single global
   `UI_PREFERENCES` scratch JSON payload, so stale/older frontend whole-payload
@@ -4317,6 +4345,7 @@ User QA checklist for the no-restart frontend repair:
 - Per-message frontend writes are serialized so a delete cannot be overtaken by
   an earlier in-flight edit.
 - No live deploy, database mutation, frontend swap, or service restart occurred.
+
 # 2026-08-29 Colored Kanban workspaces promotion
 
 - Branch `vk/b6aa-vk-colored-works` is being promoted through a PR into
@@ -4324,6 +4353,7 @@ User QA checklist for the no-restart frontend repair:
 - The feature adds persistent, theme-aware workspace card colors through the
   existing UI-preferences scratch API; no backend restart is required.
 - Public preview: `https://mcp-server.tail744c4.ts.net:8443/`.
+
 # Latest: V2 Returned To Green, Readiness Withdrawn
 
 The23:14 UTC approved attempt failed when it stopped a transient execution unit
@@ -4341,3 +4371,8 @@ counter reset. Unit coverage verifies repeated automatic resumes and manual
 behavior. CU's offline two-agent acceptance additionally seeds recovery history
 and checks it after repeated real native stop/resume cycles. Changes target
 staging for the operator's normal deployment; this task does not cut over VK.
+
+October 9 integration: current staging e8c450fb is incorporated as the normal
+PR base. Its original continuity documents remain preserved at that immutable
+commit; this stream retains newer bounded candidate/recovery tracking. No live
+service, route, credential or access change is performed by this merge.

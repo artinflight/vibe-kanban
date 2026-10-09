@@ -1,0 +1,41 @@
+{
+  "actor_unit": "vk-current-state-release-20261009.service",
+  "backend_sha256": "2aa884b359d21373e38c49a6e1589a10e5f69f7c384d2be44515fc0fab41b70f",
+  "backend_source": "c3c48e6324f778ccd03a5761c2314b440e9ceac3",
+  "capacity_choices_and_used_grants_must_be_preserved": true,
+  "cleanup_available": false,
+  "compatible_latest_data_cutback_sha256": "c6ebdd425e097f886cca8ae7781ddecb8b96cd96fde4e8c0f70362a5612faa91",
+  "cutover_completed": false,
+  "frontend_html_sha256": "905c20c656e3eb4d9a514f5df199bcee5c6b23db4f016ff666ee32a39e3966ca",
+  "frontend_primary_assets": [
+    "/assets/index-CS-cRFJl.js",
+    "/assets/index-Y5IFow0P.css"
+  ],
+  "frontend_source": "5ce84ee21be814b1519cfb2715b50f3432c3e8ba",
+  "full_B_baseline_retained": true,
+  "human_QA_and_phone_acceptance": "pending",
+  "initial_attempt": "brief maintenance restored to incumbent before new server start; no original DB enrollment yet",
+  "migration_verification": {
+    "existing_checksums_matched": 84,
+    "pending_additive_migration_fixture_integrity": "ok"
+  },
+  "new_root_permissions_needed": false,
+  "old_incumbent_retained": true,
+  "original_archive_retirement_needed": false,
+  "owner_instruction": "2026-10-09T20:15Z: immediate cutover; additional procedural gates withdrawn, no permission to lose data or bypass access",
+  "port": 5561,
+  "preimage": {
+    "bytes": 92372992,
+    "captured_at_utc": "2026-10-09T20:21:52Z",
+    "desktop_verified": true,
+    "sha256": "e75a6a239915d0af69c03b582ae999c5e416eb87933d66b52e8f59849e1fb64a"
+  },
+  "receipt_location": "/mnt/vk-storage/vk-runtime-backup-20261009/direct-current-state-release-20261009",
+  "release_actor_source_sha256": "22b65d9a614d00abee2539bc36553d18d1056bb87390a36bc0a5693aa524a5e6",
+  "route": "established user-systemd/ownership handoff against original authoritative current roots",
+  "runtime_unit": "vibe-kanban-current-state-production-20261009.service",
+  "scope_limitation": "New current primary-DB B snapshot is not a new whole-state backup. All other latest data stays on original protected roots; existing whole-state B baseline and isolated restored tree remain retained. No omitted historical recovery exception cleared.",
+  "stale_restore_used": false,
+  "updater_installed": false,
+  "why_actor_waits": "Actual ownership API returned409; source requires zero running executions. The only running row is this preparation itself. Actor waits for actual lifecycle completion; no status fabrication or protocol bypass."
+}

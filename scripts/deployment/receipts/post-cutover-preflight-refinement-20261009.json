@@ -1,0 +1,53 @@
+{
+  "active_codex_steering": "supported queue route returns empty only after active steering; no new follow-up created",
+  "critical_path": {
+    "actor_lifecycle_seconds_approximate": 63,
+    "actor_start_utc_journal_second_resolution": "2026-10-09T20:30:17Z",
+    "actual_handoff_seconds_measured_monotonic": 9.937453607097268,
+    "cutover_completed_utc": "2026-10-09T20:31:20Z",
+    "entire_preparation_measured": false,
+    "owner_changed_instruction_to_completion_seconds_approximate": 980,
+    "receipt_timestamps_approximate_cumulative_seconds": {
+      "HTTPS_assets_health": 8.333,
+      "boot_binding_and_completed_receipt": 9.952,
+      "final_primary_DB_B_readback": 6.47,
+      "identity_enrollment": 6.49,
+      "ownership_release": 1.576
+    },
+    "ten_minute_total_routine_restart_proved": false,
+    "waiting_for_real_execution_completion_seconds_approximate": 53
+  },
+  "executor_config_unchanged": true,
+  "existing_execution_id": "e0863cef-f18d-4e39-bffc-62c359f278ec",
+  "http_status": 200,
+  "message_sha256": "df2793abe44693dbf1a2e1ccfe3b2d3d0e92ae9bc8f196c67e107300e1de8de6",
+  "new_production_actions": false,
+  "relayed_at_utc": "2026-10-09T20:51:08.958797+00:00",
+  "response": {
+    "data": {
+      "status": "empty"
+    },
+    "error_data": null,
+    "message": null,
+    "success": true
+  },
+  "routine_target_minutes": 10,
+  "session_id": "6330face-7cfb-43d8-89ff-2906f64ef64a",
+  "target_had_scheduled_grant": false,
+  "verified_current_release": {
+    "HTTPS_binary_and_assets_verified_post_turn": true,
+    "api_version": "0.1.42",
+    "archive_retired": false,
+    "backend_source": "c3c48e6324f778ccd03a5761c2314b440e9ceac3",
+    "cleanup_available": false,
+    "compatible_v2_latest_data_cutback_required": true,
+    "current_authoritative_data_reused": true,
+    "earlier_restored_tree_promoted": false,
+    "final_primary_DB_image_bytes": 92372992,
+    "final_primary_DB_image_is_whole_state_backup": false,
+    "frontend_source": "5ce84ee21be814b1519cfb2715b50f3432c3e8ba",
+    "human_QA": "pending",
+    "nightly_schedule_enabled_claim": false,
+    "retained_incumbent_frozen": true
+  }
+}

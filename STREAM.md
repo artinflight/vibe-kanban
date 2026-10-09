@@ -1,19 +1,38 @@
-# October 8: Workspace-first navigation and task attention follow-up
+Current October9 restart gate update: Desktop SSH/B works; whole-state online
+backup accepted (77roots/76DBs), archive SHA735e2115. Read
+VK_RESTART_PROGRESS_20261009.md before older entries. Exact offline application
+commit f8fd5032 is bound on B; tools1a3d3064 are locally committed/B-preserved.
+Workflow grant and new candidate source/test UID1000 ownership approvals remain
+pending. Full restoration/metadata/application and real controller/final writer
+fence acceptance are unrun. No deployment/restart/cutover/cleanup has occurred.
 
-The current frontend stream makes Workspaces the opening screen, removes the
-standalone chat destination from mobile navigation until a workspace is selected,
-starts untouched phone project feeds at To do, and highlights entire actionable
-Kanban/workspace cards using unread/review or approval state. Explicit status
-choices survive navigation during the browser session. Desktop Kanban columns
-remain available. Work is isolated on `vk/eb7d-vk-native-feelin`; its base tree
-matches fork/staging `5a887abf8`.
+# October 9: Authorized safe restart preparation
 
-This follow-up has not been deployed. Production remains the October 8 phone
-release described below; no backend restart, production writes, model/effort
-changes or routing activation are part of this feature work. Five viewport/theme
-cases and deterministic attention states have been validated. See VK_MOBILE_UX.md for evidence and the host GTK/GLib baseline
-limitation. Screenshots and logs are on the mounted secondary SSD at
-`/mnt/vk-storage/vk-workspaces-home-20261008`.
+Read [VK_RESTART_PROGRESS_20261009.md](VK_RESTART_PROGRESS_20261009.md).
+Established Desktop SSH/B works independently of Dot. B Linux/storage and a
+verified large-DB snapshot are prepared; whole-state capture is in progress.
+Workflow publication and non-root source ownership approvals remain pending.
+No operational restart/cutover or historical-loss acceptance; earlier offline
+Desktop statements below are superseded by actual successful SSH observations.
+
+# October 8: Offline direct-B candidate integration (current isolated branch)
+
+Branch `fix/candidate-direct-b-integration-20261008` extends be704f9c with exact
+PR229 tools and fail-closed candidate archive/supervisor/package contracts.
+Read [VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md](VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md).
+The prepared combined release and B overlay are preserved. This standalone
+baseline checkout is not a new prerequisite merge or a deployable application.
+Older entries below describe earlier branch scopes and releases.
+
+# October 8: Candidate generation application tooling (isolated branch)
+
+Branch `fix/candidate-generation-20261008` starts at staging `5a887abf8`.
+See [VK_CANDIDATE_GENERATION_20261008.md](VK_CANDIDATE_GENERATION_20261008.md)
+for implemented controller/path bindings, dependency accounting, retained tests
+and exact adapter/integration/space/authentication limitations. Production,
+fallback and historical recovery exceptions are preserved. This standalone patch
+does not edit OP's PR229 or replace the existing B-backed 149-file overlay.
+Historical stream entries below do not define this branch's intent.
 
 # October 8: Phone frontend deployed
 
@@ -46,7 +65,6 @@ Rollback archive SHA256 is verified locally and on Desktop at
 artifact-only rollback preserves current application data; no full mutable-state
 backup/restore or backend continuity rehearsal was performed. Evidence and
 rollback commands are under `/mnt/vk-storage/vk-mobile-release-20261008`.
-
 
 # October 8: Phone screen redesign
 
@@ -138,6 +156,7 @@ The host lacks Tauri GTK development packages and has under 1 GiB free SSD space
 full workspace/desktop checks therefore rely on the repository CI runners rather
 than risking the live host. Local checks cover the changed executor, services and
 frontend sources, formatting/governance, and byte-identical CU wire compatibility.
+
 # Workspace Attention Preservation
 
 Branch `fix/workspace-attention-preservation` starts at staging `b0f4c10a9`.
@@ -386,6 +405,7 @@ Restore GPT-6 reasoning choices and hide GPT versions below5.6 in the Codex
 selector. Updated onto staging fa7523c17, this frontend-only compatibility correction
 does not rewrite existing chat selections, drafts, defaults or native settings.
 No backend restart. See `VK_MODEL_SELECTOR_FIX.md` for evidence and deployment.
+
 ## Integrated Staging Context: VK::Weird Message
 
 Scope: reconcile native goal completion evidence within the current turn and
@@ -411,3 +431,8 @@ turn/stagnation counters, recovery plans and substantive input holds. Explicit
 manual resumes retain their current fresh-attempt behavior. No scheduling,
 quota, containment or selected-agent admission limits are relaxed. This is the
 manager-side fix; the active Chat Orchestration implementation is separate.
+
+October 9 integration: current staging e8c450fb is incorporated as the normal
+PR base. Its original continuity documents remain preserved at that immutable
+commit; this stream retains newer bounded candidate/recovery tracking. No live
+service, route, credential or access change is performed by this merge.

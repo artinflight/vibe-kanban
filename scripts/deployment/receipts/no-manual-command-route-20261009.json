@@ -1,0 +1,104 @@
+{
+  "administrator_command_requested": false,
+  "bounded_paths": [
+    {
+      "allocated_bytes": 42647552,
+      "consumer_clearance": false,
+      "path": "/mnt/vk-storage/vk-retirement-preflight-tests",
+      "retirement_authorized_by_this_receipt": false
+    },
+    {
+      "allocated_bytes": 2150400,
+      "consumer_clearance": false,
+      "path": "/mnt/vk-storage/vk-safe-release-20261008/offline-integration",
+      "retirement_authorized_by_this_receipt": false
+    },
+    {
+      "allocated_bytes": 270336000,
+      "consumer_clearance": false,
+      "path": "/mnt/vk-storage/vk-safe-release-20261009/frontend66-over-c3",
+      "retirement_authorized_by_this_receipt": false
+    },
+    {
+      "allocated_bytes": 332709888,
+      "consumer_clearance": false,
+      "path": "/mnt/vk-storage/vk-cutover-artifacts-20261009",
+      "retirement_authorized_by_this_receipt": false
+    },
+    {
+      "allocated_bytes": 635379712,
+      "consumer_clearance": false,
+      "path": "/mnt/vk-storage/vk-runtime-backup-20261009",
+      "retirement_authorized_by_this_receipt": false
+    },
+    {
+      "allocated_bytes": 451825664,
+      "consumer_clearance": false,
+      "path": "/mnt/vk-storage/vk-mobile-launch-20261009",
+      "retirement_authorized_by_this_receipt": false
+    },
+    {
+      "allocated_bytes": 1079771136,
+      "consumer_clearance": false,
+      "path": "/mnt/vk-storage/capacity-build-tmp",
+      "retirement_authorized_by_this_receipt": false
+    },
+    {
+      "allocated_bytes": 236290048,
+      "consumer_clearance": false,
+      "path": "/mnt/vk-storage/vk-preparation-cache",
+      "retirement_authorized_by_this_receipt": false
+    },
+    {
+      "allocated_bytes": 1018314752,
+      "consumer_clearance": false,
+      "path": "/mnt/vk-storage/pnpm-store",
+      "retirement_authorized_by_this_receipt": false
+    },
+    {
+      "allocated_bytes": 961044480,
+      "consumer_clearance": false,
+      "path": "/mnt/vk-storage/npm-cache",
+      "retirement_authorized_by_this_receipt": false
+    }
+  ],
+  "classification": "Generated-looking caches are not cleared inactive/disposable. Protected source, pinned runtime packages, original backup indexes and review evidence were measured only to establish an overestimate, not proposed for retirement.",
+  "executor_inspection": {
+    "installed_grants": "Only fixed metadata-only inspection launchers; no interpreter, shell or root writer grant.",
+    "loginctl_sessions_all_uid_1000": true,
+    "loginctl_sessions_observed": 6,
+    "root_candidate_processes_only_sshd": true,
+    "root_interactive_or_python_executor_observed": false,
+    "scope_limit": "Process/session metadata does not prove absence of every possible remote executor; coordinator owns current Desktop executor check. Root daemons and user sessions are not authorized execution channels."
+  },
+  "held_state": {
+    "activation_available": false,
+    "cleanup_available": false,
+    "controller_phase": "restored",
+    "fresh_peer_probe_passed": true,
+    "incumbent_and_fallback_service_state": "active/running; no changes",
+    "owner_pid": 500933
+  },
+  "hypothetical_remaining_deficit_bytes": 1664569344,
+  "installed_reusable_payload_sha256": "6e898eeb21d04cfbf4d94e5939eb20b27d89f069ee99b8b021d63893b4263d63",
+  "native_capacity": {
+    "deficit_bytes": 6695038976,
+    "free_bytes": 8229732352,
+    "known_initial_catchup_allocation_bytes": 6334836736,
+    "later_writes_and_rehearsal_not_included": true,
+    "required_lower_bound_bytes": 14924771328,
+    "unchanged_reserve_bytes": 8589934592
+  },
+  "next_supported_dependency": "Existing genuinely authorized administrator executor, if independently established by coordinator, must apply exact reviewed updater and authenticate installed hashes; then both installed-profile acceptances must pass. No commands requested of owner.",
+  "observed_at_utc": "2026-10-09T20:13:09.307270+00:00",
+  "operational_actions_performed": false,
+  "purpose": "bounded no-manual-command route investigation",
+  "relocation_result": "No sufficient authorized relocation established. Retaining native copies frees zero native blocks. Cross-filesystem relocation retires source names after copy verification and needs exact dependency/consumer/scope clearance.",
+  "sudo_retry_performed": false,
+  "updater": {
+    "bytes": 104378,
+    "installed": false,
+    "sha256": "fe3950e65e014e896a23a9cdc4782c6f9416f4bdb2f7484448dbd7dc40b993e1"
+  },
+  "upper_bound_even_including_protected_source_artifacts_and_evidence_bytes": 5030469632
+}

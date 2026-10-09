@@ -1,0 +1,71 @@
+{
+  "actual_packaged_rerun": {
+    "actual_capture_archive_contracts": 10,
+    "controller_and_scope": 32
+  },
+  "capacity_audit_source_session": "19628b6a-1c41-49d1-8509-0ca2a3517ea2",
+  "capture_memory_limit_bytes": 3145728000,
+  "default_single_db_image_limit_bytes": 1073741824,
+  "historical_recovery_complete": false,
+  "inherited_whitespace": "exact upstream legacy_capture_fixture.py has extra EOF blank line; preserved",
+  "kernel_namespace_probe_passed": true,
+  "log_sha256": {
+    "candidate-controller-validation-final.txt": "e2e21ed858183ea344dbf14ff93e0fc7c22877fe7ddf319a51cf97e8597f2210",
+    "candidate-namespace-validation-final.txt": "fdf2695e2f5385f324323ffb3aeb7ebb56e9d85167f1a6aa8cedec0974846ed0",
+    "candidate-package-validation-final.txt": "91c76523825168a874ca40b2fa8df8355b41ba186c172a37dc3dc1c47145e233",
+    "direct-b-contract-validation-final-2.txt": "3149296392482646848acb1c0767fecc4c0fd2bb1fb934d85ca9893ca5072f96",
+    "offline-integration-format.txt": "8c1134f6010c4eeaabc8f359e4042da608da695aa522ad6fc4c10f8f01a38db5",
+    "offline-integration-rustfmt.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "packaged-candidate-controller-validation.txt": "28881826a06cb1a2339042a2f3f95b56433208f6a0fd0f5e20e37d6626db32f4",
+    "packaged-direct-b-contract-validation.txt": "e6e6387a12400a14c2fc130051709237f5de847c628b35cd1f4e19cd54e1afb3"
+  },
+  "memory_fit": "not verified: three image copies exceed executor hard cap before overhead",
+  "not_run": [
+    "combined backend build/tests/CI",
+    "production full-state capture/restore",
+    "actual scanner/module/controller acceptance",
+    "candidate full required Linux metadata acceptance",
+    "live consent",
+    "restart",
+    "cutover",
+    "cleanup",
+    "GitHub write retry",
+    "B upload"
+  ],
+  "ops_check": "direct node check passed",
+  "original_history_ledger_rows": 145,
+  "packaged_binding": {
+    "candidate_modules": 5,
+    "combined_backend_binary_bound": false,
+    "files": 51,
+    "operational_acceptance": false,
+    "receipt_sha256": "b1a02c1901dbdf41f5e22df1ec9cda1807475c9eff2a19b32b64712fc2de4cd6",
+    "reviewed_source_files": 8
+  },
+  "pnpm_format": "failed: sparse checkout has no package manifest; network disabled",
+  "prior_scope_audit_repeated": false,
+  "production_modified": false,
+  "python_optimized_checks": true,
+  "reviewed_direct_b_head": "754129c5fff55da2f5598d8c7beb4d4325587ead",
+  "reviewed_source_sha256": {
+    "scripts/deployment/smoke_desktop.py": "6735851a0ab09bdbbebb3e0b7bc3c1bd028f32f4340de0f7d23f81692f926906",
+    "scripts/deployment/test_vk_archive_stream.py": "6e6561f79ac2f0df458cfad5c5f3d6bf014a61791dd1959bd0ff9d57ece79aca",
+    "scripts/deployment/vk_archive_stream.py": "9d1af55f26fb7dadd4e734e6d3d9bd5da9734f3229b568a3197c1f5b61e1ca16",
+    "scripts/deployment/vk_desktop_transport.py": "fac7325b0de5a7cd8c07ddb542ad733a7f7f3e77a2d9c15456e6d63a0d24ff87",
+    "scripts/deployment/vk_direct_capture.py": "55ef5328fee7d93a05e3796d3c1d374866d08f4eefcf67abf28ceb8dc68ec5f5",
+    "scripts/deployment/vk_operational_package.py": "20b5f02342ac5b44881103a87126a1fea1325576d88440949dbc8fc3b738d3d9",
+    "scripts/deployment/vk_recovery_package.py": "de52d4b96476f0cea982ad007efba8565f56e75dbb81a249415b22d7c05cd886",
+    "scripts/deployment/vk_rolling_backup.py": "6996f360ceba9667aeded20849150c41feeba18c0f0c0d6153b2b996d8f87918"
+  },
+  "schema": 1,
+  "scope": "offline candidate contracts; not combined release or operational acceptance",
+  "tested_source_commit": "e9109c4905818729ae0fb0abb83cd3f3b8734947",
+  "triage_rustfmt": "installed nightly check passed",
+  "unique_regressions": {
+    "actual_capture_archive_contracts": 10,
+    "controller_and_scope": 32,
+    "tool_package_binding": 3
+  },
+  "universal_zero_loss_accepted": false,
+  "unresolved_historical_names": 448
+}

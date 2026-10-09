@@ -1,0 +1,56 @@
+{
+  "approved_plan": "29af1c33e029bc1fe9ef9467fd51a03eb586105d",
+  "archive_removed": false,
+  "corrective_handoff": "Same hash-checked installer and exact plan; administrator bootstrap must invoke main; root coordinates operator authentication, no new grant.",
+  "documented_main_control": {
+    "__name__": "__main__"
+  },
+  "frozen_source_manifest": "/mnt/vk-storage/vk-runtime-backup-20261009/inspection-adapter-source-a875ccfe/source-manifest.safe.json",
+  "harmless_main_guard_reproduction_passed": true,
+  "installation_failure_reason": "logged bootstrap globals used name:main; __name__:__main__ required; main guard not invoked",
+  "installation_failure_reason_known": true,
+  "installed": false,
+  "installer": {
+    "bytes": 124669,
+    "embedded_payload_verified": true,
+    "path": "/mnt/vk-storage/vk-retirement-preflight-tests/install-two-profile-29af1c33-r1.py",
+    "sha256": "6d7db4427a7fed2e056ca28ca71057b99a7cc6cb719c74b99a25b7b778c6a6e3"
+  },
+  "last_missing_target_check_utc": "2026-10-09T18:15:39.816539+00:00",
+  "logged_main_control": {
+    "name": "main"
+  },
+  "missing_expected_paths": [
+    "/usr/local/sbin/vk-process-inspect-v1",
+    "/usr/local/sbin/vk-historical-archive-inspect-v1",
+    "/usr/local/libexec/vk-process-inspection-v1.py",
+    "/usr/local/libexec/vk-historical-archive-inspection-v1.py",
+    "/etc/vibe-kanban/process-inspection-v1.json",
+    "/etc/vibe-kanban/historical-archive-inspection-v1.json",
+    "/etc/sudoers.d/vk-process-inspection-v1",
+    "/mnt/vk-storage/vk-process-inspection-managed-v1"
+  ],
+  "next_evidence": "Root coordinates corrected already-approved administrator invocation/terminal result; no new snapshot/grant/scope",
+  "observation": "17:53-17:59UTC read-only installation verification",
+  "observed_utc": "2026-10-09T18:08:45.842183+00:00",
+  "obsolete_manual_resident2255906_alive": false,
+  "operator_completion": "Sentinel_7584cfaa11d481919cda44916f8856a7",
+  "privilege_changes": false,
+  "production_changed": false,
+  "retained_preparation_owner500933_alive": true,
+  "retained_preparation_owner_verified": {
+    "activation_available": false,
+    "cleanup_available": false,
+    "lease_held": true,
+    "phase": "restored",
+    "pid": 500933,
+    "start": "757986989"
+  },
+  "root_authentication_missing": false,
+  "root_inspection_acceptance_performed": false,
+  "ssd_uuid": "26e4cac1-f2cf-485b-b1bc-d1be197a747e",
+  "sudo_invocation_matches_advertised_path_digest_plan_flags": true,
+  "sudo_retried": false,
+  "sudo_root_session_closed_utc": "2026-10-09T17:51:23.937097Z",
+  "sudo_root_session_opened_utc": "2026-10-09T17:51:23.869090Z"
+}

@@ -1,0 +1,44 @@
+{
+  "actual_root": "/mnt/vk-storage/vk-cutover-candidate-20261009",
+  "application_started": false,
+  "backend_artifacts_sha256": {
+    "candidate": "2aa884b359d21373e38c49a6e1589a10e5f69f7c384d2be44515fc0fab41b70f",
+    "rollback": "c6ebdd425e097f886cca8ae7781ddecb8b96cd96fde4e8c0f70362a5612faa91"
+  },
+  "candidate_modified": false,
+  "cleanup_available": false,
+  "command_sha256": "e11933c469f169896070e6779cc53bba871eb8378077c22d14b42d4e84f9ed82",
+  "frontend_index_bound": true,
+  "helper_sha256": "b7ae0fffc56f42192e5cd38097aafe978ad0f22412ff03fe2e501d2cdb5db8ca",
+  "host_manager_hidden": true,
+  "incumbent_network_hidden": true,
+  "operational_acceptance": false,
+  "prior_mount_target_failure": "read-only /opt target absent; corrected inside existing private /run tmpfs, no host permissions changed",
+  "probe_kind": "read-only actual candidate mapping; no runtime/rehearsal acceptance",
+  "production_changed": false,
+  "runtime_identity_enrolled": false,
+  "selector_identities": {
+    "codex_home": [
+      2065,
+      10355209
+    ],
+    "controller": [
+      2065,
+      10355645
+    ],
+    "database": [
+      2065,
+      10365355
+    ],
+    "token": [
+      2065,
+      10445275
+    ],
+    "workspaces": [
+      2065,
+      10354955
+    ]
+  },
+  "utc": "2026-10-09T15:02:24Z",
+  "workspace_alias_resolves_to_candidate": true
+}

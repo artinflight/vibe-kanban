@@ -1,0 +1,279 @@
+{
+  "inspection_utc": "2026-10-09T09:05:50Z",
+  "owner_approval_utc": "2026-10-09T08:40:00Z",
+  "approved_decision_source": "05498ad71d32e2662b475a2584774fbaa47bb134",
+  "pre_QA_exception_only": true,
+  "general_cleanup_still_unavailable": true,
+  "cache_manifest_refresh": {
+    "counts": {
+      "conditional_generated_files": 19173,
+      "preserved_profile_outputs_and_aliases": 35060
+    },
+    "changed_counts": {
+      "conditional_generated_files": 0,
+      "preserved_profile_outputs_and_aliases": 0
+    },
+    "manifest_hash_verified": true,
+    "deletion_performed": false
+  },
+  "compat_refresh": {
+    "root": "/mnt/vk-storage/vk-connector-repair-20261007/cargo-target-compat",
+    "regular_files": 9752,
+    "directories": 1529,
+    "symlink_count": 0,
+    "special_count": 0,
+    "unique_allocated_bytes": 6002352128,
+    "external_hardlink_inode_count": 0,
+    "dependency_rules_checked": 1147,
+    "dependency_parse_errors": 0,
+    "missing_source_rules": 0,
+    "distinct_missing_sources": 0,
+    "associated_output_allocated_bytes": 0,
+    "deletion_performed": false
+  },
+  "archives": [
+    {
+      "name": "checkpoint--02136af9b9c24c08bccba0868864e597.tar.zst",
+      "sha256": "9beef7c6ca1e533b9861f186d6654e5db0c4d7e13482bdddc70f0673b9b32e4d",
+      "bytes": 23449698976,
+      "verified": true
+    },
+    {
+      "name": "delta--430d3a842f5d4216862a1703e33232b8.tar.zst",
+      "sha256": "4b2a3881da51148f0c66f773ac292476fab9b3a973f734f09af17e37680f0c53",
+      "bytes": 319227816,
+      "verified": true
+    }
+  ],
+  "provider_package": {
+    "passed": true,
+    "source_commit": "05498ad71d32e2662b475a2584774fbaa47bb134",
+    "files_verified": 62,
+    "heads": [
+      {
+        "descriptor": "heads/0.json",
+        "name": "0",
+        "original": "/mnt/vk-storage/vk-runtime-backup-20261007/delta-result.json"
+      }
+    ],
+    "cutover_authorized": false,
+    "archives_retired": 0,
+    "candidate_modules_verified": 6,
+    "reviewed_source_files_verified": 8,
+    "fixture_only": false,
+    "combined_backend_binary_bound": false,
+    "operational_acceptance": false
+  },
+  "retirement_performed": true,
+  "required_privileged_consumer_check": {
+    "attempt": "sudo -n python3 read-only proc inspection",
+    "exit": 1,
+    "stderr": "sudo: a password is required",
+    "alternate_identity_or_route_used": false,
+    "operator_script_sha256": "464ad504ec045105153c01c3dc02a46972f02c1d377c75ccfb3ebb090e8204b9",
+    "resolved_by_operator_receipt": true
+  },
+  "writer_fence": "held existing Cargo profile advisory locks, no production freeze",
+  "builder_ownership_change": {
+    "exact_targets": [
+      "/mnt/vk-storage/vk-safe-release-20261009/combined-source",
+      "/mnt/vk-storage/vk-safe-release-20261009/isolated-validation"
+    ],
+    "uid": 1000,
+    "gid": 1000,
+    "entries": 2944,
+    "regular_files": 2553,
+    "no_symlink_following": true,
+    "content_modes_mtime_verified": true,
+    "ownership_private_receipt_sha256": "60af7c7095668a6e6b4b9022046b15f9587120e483f92ae8070c9ee0de26a929"
+  },
+  "builder_preflight": {
+    "uid": 1000,
+    "gid": 1000,
+    "required_namespace_exit": 0,
+    "nested_namespace_exit": 0,
+    "backups_visible": false,
+    "manager_visible": false,
+    "toolchain_ownership_changed": false,
+    "candidate_data_ownership_changed": false,
+    "sandbox_disabled": false,
+    "credential_copied": false
+  },
+  "builder_source": "c3c48e6324f778ccd03a5761c2314b440e9ceac3",
+  "builder_tree": "d8bb5fb0678e7e7ce0951bc2dc8aa95a61ecf99a",
+  "frozen_install_passed": true,
+  "required_source_format_passed": true,
+  "source_clean_after_format": true,
+  "builder_artifacts": "v5 compilation last observed active; final outcome unobserved after Desktop offline; not accepted",
+  "candidate_architecture": "same eventual MCP instance; Desktop B only isolated builder",
+  "candidate_restored": false,
+  "production_changed": false,
+  "incumbent_PID": 3027197,
+  "fallback_PID": 1369037,
+  "fallback_frozen": true,
+  "scope_reduced": false,
+  "historical_exceptions": [
+    "448 unproven names",
+    "145 original-history rows",
+    "malformed transcript line415",
+    "journal/mode/link limitations"
+  ],
+  "retirement_result": {
+    "schema": 1,
+    "utc": "2026-10-09T09:22:03Z",
+    "approved_decision_commit": "05498ad71d32e2662b475a2584774fbaa47bb134",
+    "frozen_set_sha256": "d91b2a7163b42ac7247008907102934eb670eb9ee06517d6da85013af415ec49",
+    "consumer_clearance_age_at_preflight_seconds": 576.2139809131622,
+    "regular_generated_files_removed": 23007,
+    "native_available_before_bytes": 220282880,
+    "native_available_after_bytes": 106558427136,
+    "measured_native_increase_bytes": 106338144256,
+    "error": null,
+    "general_cleanup_enabled": false,
+    "production_changed": false,
+    "directories_removed": 0,
+    "extra_compat_excluded_names": 5918
+  },
+  "retired_archive_names": [
+    "checkpoint--02136af9b9c24c08bccba0868864e597.tar.zst",
+    "delta--430d3a842f5d4216862a1703e33232b8.tar.zst"
+  ],
+  "post_retirement": {
+    "excluded_file_names_preserved": 40978,
+    "directories_preserved_with_original_identity_owner_mode": 11001,
+    "general_cleanup_enabled": false,
+    "incumbent_PID": 3027197,
+    "incumbent_running": true,
+    "fallback_PID": 1369037,
+    "fallback_frozen": true,
+    "native_available_bytes_now": 106269945856,
+    "native_available_inodes_now": 28143192,
+    "candidate_payload_allocated": false,
+    "actual_restore_catchup_peak_accepted": false,
+    "authenticated_B_evidence_before_removal_sha256": "82fff6482dd28e4261ed82aad9fcddb9df6d237818f0a5c9739865e8458f7b30",
+    "authenticated_final_subset_B_sha256": "d91b2a7163b42ac7247008907102934eb670eb9ee06517d6da85013af415ec49",
+    "SSH_after_retirement_unavailable": true,
+    "B_post_removal_reverification_pending": true,
+    "incumbent_health_HTTP_status": 200
+  },
+  "exclusion_proof": {
+    "excluded_files_checked": 40978,
+    "identity_size_blocks_mode_mtime_ctime_link_count_changes": 0,
+    "retired_file_still_exists_count": 0,
+    "files_deleted_outside_approved_manifest": 0,
+    "general_cleanup_enabled": false
+  },
+  "privileged_consumer_clearance": {
+    "utc": "2026-10-09T09:12:20Z",
+    "euid": 0,
+    "matches": 0,
+    "inspection_denied": 0,
+    "compilers": 0,
+    "passed": true,
+    "held_locks_observed": true
+  },
+  "actual_candidate_provider_registration": {
+    "initial_capture": "initial-b6977449efc74320bf5fbbe432ae06ef",
+    "scope_sha256": "3b02850411324e49d3e4b7c785d2ce675b3788db72ac7dc94647e84fd361909f",
+    "source_plan_sha256": "1da86062af8e708457654a9e31c3057dc3f249ee4498ef474d5cb0a62c96c1cb",
+    "all_original_roots_retained": 77,
+    "all_snapshot_databases_required": 76,
+    "metadata_budget_bytes": 268435456,
+    "archived_atime_required": true,
+    "published_descriptor_authenticated_by_provider": true,
+    "exact_published_descriptor_sha256": "514c96fe5da800b620427ca25da39e8120a2eb7729eef2afba118e70f6645152",
+    "unpublished_RSS_telemetry_kept_separate": true,
+    "checker_weakened": false,
+    "registered_but_stream_not_available": true,
+    "actual_candidate_root": "/mnt/vk-storage/vk-cutover-candidate-20261009",
+    "candidate_restored": false,
+    "scope_reduced": false,
+    "production_changed": false
+  },
+  "Desktop_route": {
+    "utc": "2026-10-09T09:32:34.767804+00:00",
+    "route": "existing desktop alias",
+    "exit": 255,
+    "stdout": "",
+    "stderr": "ssh: connect to host 100.70.23.123 port 22: Connection timed out",
+    "Dot_status_used": false,
+    "alternate_route_or_identity_used": false
+  },
+  "B_post_removal_reverification_pending": true,
+  "latest_progress": {
+    "utc": "2026-10-09T10:16:59.459928+00:00",
+    "SSH_route_returned_utc": "2026-10-09T09:38:29Z",
+    "retired_archives_B_only_post_removal_verified": true,
+    "builder_v6_link_failed": "interrupted starlark archive has no object members; cause unknown",
+    "builder_v7": "running: fresh target and artifacts; prior outputs retained",
+    "recorded_missing_virtual_link_targets": 575,
+    "targets_currently_existing_on_MCP": 561,
+    "targets_currently_unavailable": 14,
+    "missing_is_not_proved_loss": true,
+    "preservation_policy": "explicit opt-in; exact targets bound to authenticated manifest; runtime closure separately mandatory",
+    "all_original_roots_required": 77,
+    "all_original_snapshot_DBs_required": 76,
+    "actual_MCP_restore_complete": false,
+    "cutover_complete": false,
+    "general_cleanup_unavailable": true,
+    "candidate_regression_tests": 85,
+    "post_removal_B_evidence": {
+      "bytes": 2686733,
+      "desktop_directory": "B:/vk-backups/vk-safe-release-20261009/approved-retirement/post-removal-1019",
+      "desktop_verified": true,
+      "name": "approved-retirement-post-removal-evidence-20261009-1019.tar.gz",
+      "sha256": "df97decf36ee772691e39fa66f1d2ee79529552587650f725e595accf15a25f0",
+      "transient_command_retries": 0
+    },
+    "original_journal": "ConnectionRefusedError: [Errno 111] Connection refused; original gap retained",
+    "new_read_only_journal": {
+      "instance": "5282e0992fa84bcb92845feb3f7edd8a",
+      "watches": 55846,
+      "errors": 0,
+      "ready": true,
+      "prior_gap_cleared": false
+    },
+    "fresh_online_checkpoint": "running; unchanged full scope; B only; new verified parent needed",
+    "unavailable_recorded_link_accounting": {
+      "unavailable_recorded_links": 14,
+      "distinct_currently_unavailable_targets": 2,
+      "patch_or_execve_wrapper_selectors": 12,
+      "preview_worktree_aliases": 2,
+      "explicit_current_runtime_selector_matches": 0,
+      "intentional_retirement_proven": false,
+      "current_functionality_loss_proven": false,
+      "remaining_unknown": "Recorded targets unavailable; lifecycle and any indirect saved-profile/session dependency unproven. Exact literals retained; current configured/runtime closure still requires acceptance."
+    },
+    "actual_full_B_provider": {
+      "all_original_roots": 77,
+      "archived_atime_bound": true,
+      "candidate_restored": false,
+      "full_restore_verified": false,
+      "manifest_sha256": "c7c9ec848acb017c059e4ea18e14394f708ed3076d66ff8c42c9efdad7d59503",
+      "members": 537645,
+      "metadata_encoded_bytes": 184457754,
+      "native_available_bytes": 105821310976,
+      "operational_dependency_closure_verified": false,
+      "passed": true,
+      "payload_bytes": 93864377002,
+      "phase": "full-B-provider-verified",
+      "production_changed": false,
+      "recorded_missing_links": 589,
+      "regular_file_block_rounding_lower_bound": 1291818326,
+      "required_databases": 76,
+      "scope_reduced": false,
+      "seconds": 1238.982,
+      "tool_source": "01af7c36f1ba969fa4457278b8fd0978fe76c2b1",
+      "utc": "2026-10-09T10:19:07.728091+00:00"
+    },
+    "candidate_bootstrap_live_source_inspection": {
+      "primary_application_DB_has_runtime_identity_table": false,
+      "valid_shape_singleton_count": 0,
+      "dataset_value_not_published": true,
+      "main_file_inode_unchanged": true,
+      "main_file_mtime_unchanged_during_read": true,
+      "inspection_only_no_enrollment": true
+    },
+    "controller_bootstrap_contract": "isolated required-DB only; no overwrite; after final catch-up promotion held until fresh same-root B generation verifies"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "available_bytes": 8664621056,
+  "catchup_performed": false,
+  "elapsed_seconds": 16.252,
+  "reserve_bytes": 8589934592,
+  "same_tree_inode": 10354932,
+  "unique_allocated_bytes": 95405559808,
+  "unique_inodes": 522757
+}

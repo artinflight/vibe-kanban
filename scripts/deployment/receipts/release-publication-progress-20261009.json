@@ -1,0 +1,56 @@
+{
+  "application_source": "c3c48e6324f778ccd03a5761c2314b440e9ceac3",
+  "prior_exact_source_tests": {
+    "commit": "7708037a4646b385e363ff734177053c657b7f4f",
+    "run": 37886243350,
+    "backend_passed": 472,
+    "backend_skipped": 10,
+    "scanner_contract_tests": 73,
+    "private_remote_checks": "skipped: deploy key absent"
+  },
+  "artifact_failure_observed": {
+    "run": 37888782559,
+    "commit": "04c998c8d6fe963fa4c025e43b37b0a7e9273a25",
+    "exact_reason": "Routing module prerequisite missing: bwrap"
+  },
+  "builder_correction": "install bubblewrap on isolated hosted builder; no host security policy change; sandbox gate mandatory",
+  "preflight_regressions": {
+    "missing_dependency_blocks_before_spawn": true,
+    "namespace_denial_blocks": true,
+    "actual_MCP_namespace_passed": true
+  },
+  "SSH_B_connected": true,
+  "production_changed": false,
+  "UID_GID_approval": "unanswered; held",
+  "local_scanner_repeat": "execution denied: mode0605 owned mcp, owner execute absent; no permission change or alternate execution",
+  "archive_source_metadata": "DB tar headers derive mode/owner/xattrs from source, exact atime/mtime from source_metadata_before when supplied; no temporary B snapshot inode substituted",
+  "whole_candidate_metadata_accepted": false,
+  "operational_scope_reduced": false,
+  "observed_free_bytes": {
+    "/mnt/vk-storage": 275693568,
+    "/": 42568028160
+  },
+  "MCP_candidate_materialized": false,
+  "cleanup_unavailable": true,
+  "observed_utc": "2026-10-09T05:31:27.544495+00:00",
+  "current_artifact_failure_observed": {
+    "run": 37888935082,
+    "commit": "c3c48e6324f778ccd03a5761c2314b440e9ceac3",
+    "dependency_install_passed": true,
+    "exact_reason": "Routing module namespace prerequisite failed: bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
+    "artifact_uploaded": false,
+    "namespace_restriction_bypassed": false,
+    "security_settings_changed": false
+  },
+  "current_exact_head_tests": {
+    "commit": "c3c48e6324f778ccd03a5761c2314b440e9ceac3",
+    "run": 37888935110,
+    "conclusion": "success",
+    "backend_passed": 472,
+    "backend_skipped": 10,
+    "real_scanner_contracts": 73,
+    "frontend_desktop_and_phone_consent": "passed",
+    "private_remote_dependency_validation": "skipped: deploy key absent",
+    "runtime_acceptance_performed": false
+  }
+}

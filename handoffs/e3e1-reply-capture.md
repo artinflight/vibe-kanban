@@ -1,3 +1,73 @@
+# Exact-source P2 review disposition — 2026-10-09, NOT DEPLOYED
+
+WHAT: Repair the two independently reviewed P2 findings against334a2a2.
+WHY: healthy Completed-before-drain must recover automatically, and short-exit/
+Stop cleanup must not remove capture ownership before writer first poll.
+CONTEXT: same isolated worktree/branch; preserve evidence and c3-relative boundary.
+SUCCESS: both source races removed, realistic compiled HTTP/writer/UI regressions
+pass at the exact revised source; no wider baseline merge or live changes.
+
+codeSha: 3af7fbda8f398117f9af7409515185fd8bd7a6ab (excludes handoffs/runs).
+Branch: fix/e3e1-lossless-reply-capture. Draft PR236 remains into staging.
+Base: c3c48e6324f778ccd03a5761c2314b440e9ceac3. Integrate only that bounded delta;
+do not independently merge the wider PR236 combined baseline.
+
+Finding1 — CONFIRMED / FIXED:
+Completed precedes metadata Finished. API now reports capture_pending only while
+an RAII capture owner is alive, including after the container map entry is gone.
+Persisted pending without a live owner, or damaged/unverified capture, remains
+terminal capture_error. UI re-reads authoritative finite history1000ms after each
+pending response, one timer per execution; no process-status/WS-EOF inference.
+Requests pause disconnected/loading, and stop on closure, terminal error, process
+removal/running, scope change/unmount. Closure loads final history and clears the
+loading state without manual retry; terminal errors retain explicit warnings.
+
+Finding2 — CONFIRMED / FIXED:
+Writer takes the existing MsgStore Arc directly. Receiver claim AND metadata
+subscription happen synchronously before spawning; the task never re-looks-up
+the map. Cleanup before its first poll cannot strand an unclaimed raw receiver.
+Cancellation drops owner/receiver and releases the producer. The real metadata
+Finished marker also survives UI broadcast eviction; raw EOF remains separately
+required. Neither this marker nor the liveness registry is a review proof.
+Existing strict closure, byte/hash, native final, revision, receipt/hold and
+manual-intent guards remain unchanged. No native transcript backfill is fabricated.
+
+Exact hosted validation SUCCESS:
+https://github.com/artinflight/vibe-kanban/actions/runs/37998670795
+Head: 3af7fbda8f398117f9af7409515185fd8bd7a6ab.
+18 utils +13 actual writer/lifecycle +10 isolated HTTP/review =41 Rust tests;
+15 UI tests; strict all-target Clippy for utils/services/local-deployment/server;
+web-core/local-web/remote-web type checks; formatting/governance PASS.
+New regressions: running→completed→pending→closed over real HTTP and UI; terminal
+owner loss; map removed before first writer poll with Finished deliberately evicted
+from the tiny UI broadcast; cancellation before first poll without stranded producer;
+automatic pending retry, terminal stop and workspace switch cancellation.
+One installed-MCP-only test remains ignored on the hosted runner. Ordinary PR
+branch/full-workspace/platform jobs were skipped by opt-in dispatch, not passed.
+Earlier green follow-up at6f499d17/run37998145590 is retained separately.
+No local Cargo build was run; only formatting and lightweight Python/governance.
+
+Connector tested code: 2e4532cf3f703b3186c22d71176aa51f81e0450f,100 Python tests
+passed. It propagates active pending separately from incomplete and preserves
+completion unknown with no older-report substitution. No polling/delivery callback
+or receipt signal is invented in connector. Runtime/auth/allowlist/routing unchanged.
+
+Exact patches, full file hashes and both revised hosted receipts are under:
+/mnt/vk-storage/vk-reply-capture-20261009/evidence/
+Use backend-p2-binding.json and connector-p2-binding.json. Both base/candidate
+revisions and SHA256 bindings are recorded; earlier artifacts are historical evidence.
+A later handoff-only commit does not alter compiled code or test files.
+
+Root/Dev/Staging pickup: review this c3-only patch and connector candidate together,
+apply only the bounded delta to the authorized integration source, then exercise
+normal integration/promotion gates. There is no scoped source blocker after hosted
+acceptance. This turn authorizes no deploy/restart, wider baseline merge or approval
+change; none occurred. Source/connector candidates are NOT installed.
+Historical damaged captures remain incomplete/current report unavailable/task
+completion unknown. Preserve transcripts, holds and badges; no live clear occurred.
+
+--- Earlier validated candidate/evidence (superseded by P2 revision above) ---
+
 # e3e1 reply-capture handoff — candidate, no deployment
 
 WHAT: Preserve durable assistant finals under MsgStore lag/large resume bursts,

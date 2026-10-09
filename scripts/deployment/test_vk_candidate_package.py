@@ -23,7 +23,7 @@ class PackageTests(unittest.TestCase):
 
     def test_new_package_and_actual_packaged_review_loader(self):
         result = build(self.package, self.inventory, fixture_only=True)
-        self.assertEqual(result['candidate_modules_verified'], 6)
+        self.assertEqual(result['candidate_modules_verified'], 7)
         self.assertEqual(result['reviewed_source_files_verified'], 8)
         self.assertFalse(result['combined_backend_binary_bound'])
         self.assertFalse(result['operational_acceptance'])

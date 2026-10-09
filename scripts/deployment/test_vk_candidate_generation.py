@@ -261,6 +261,30 @@ class CandidateTests(unittest.TestCase):
         with self.assertRaisesRegex(Blocked, 'final fenced'):
             restored.promote()
 
+    def test_recover_completed_materialization_preserves_truthful_journal(self):
+        self.materialized_without_journal()
+        self.controller.verify_initial_materialization('initial')
+        journal = self.layout.evidence / '0001-initial-materialization-verified.json'
+        before = journal.read_bytes()
+        recovered = self.recover_initial()
+        self.assertEqual(recovered.phase, 'restored')
+        self.assertEqual(journal.read_bytes(), before)
+        new = json.loads((self.layout.evidence / '0002-initial-owner-recovered.json').read_text())
+        self.assertEqual(new['prior_journal'], journal.name)
+        self.assertFalse(new['activation_authorized'])
+
+    def test_recover_materialization_rejects_unsupported_acceptance_and_scope(self):
+        self.materialized_without_journal()
+        self.controller.verify_initial_materialization('initial')
+        journal = self.layout.evidence / '0001-initial-materialization-verified.json'
+        before = json.loads(journal.read_text())
+        for key, value in [('scope', 'e' * 64), ('activation_authorized', True),
+                           ('rehearsal_accepted', True), ('restored_again', True)]:
+            changed = {**before, key: value}
+            journal.write_text(json.dumps(changed))
+            with self.assertRaisesRegex(Blocked, 'unsupported operation'):
+                self.recover_initial()
+
     def test_recover_rejects_partial_or_later_operation_journal(self):
         self.restored()
         (self.layout.evidence / '0002-refresh-intent.json').write_text('{}')

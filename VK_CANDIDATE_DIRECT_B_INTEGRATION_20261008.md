@@ -418,3 +418,51 @@ consumer clearance, final writer-fenced catch-up and latest-data fallback. No
 mutable candidate payload, browser profile, cache or private transcript is being
 published to GitHub. Original c15/807/578 packages, failed attempt and superseded
 frontend outputs remain preserved. No restart/cutover/merge has occurred.
+
+## Preparation-owner lifetime repair, October 9
+
+The 13:27 owner completed fresh B/content/76-database verification and exact
+archived-atime restoration in 1,438 seconds, then exited on a broken completion
+stdout pipe. The retained truthful journal is
+`0001-initial-materialization-verified.json`, SHA-256
+`7833675d80e42825dc21aab35dfcfe1fa59ed0b01057b99f427d55784662eb4e`.
+Its source/root/manifest binding matches the pinned driver and same actual tree.
+The old progress field `controller_retained_alive: true` is stale: PID3987800
+exited and the lease was released. Original evidence remains unchanged.
+
+The repair separates optional completion notification from verification failure.
+Notifications use unbuffered writes; closed stdout/SSH or status clients cannot
+release ownership. Actual backup/transport verification errors remain fatal.
+Durable status always stores liveness false and requires a fresh live probe.
+The probe binds Unix peer PID/UID, process start time, source, root and an actual
+held kernel lease. Non-activating status is the only accepted command; cleanup
+and operational activation remain unavailable. The actual owner will use a
+standalone user-manager unit outside app.slice with journal stdout/stderr, not
+a terminal pipe, and no automatic restart policy.
+
+Completed-initial recovery now accepts the truthful materialization journal
+without renaming it to a restore or reconstructing its failed reporting step.
+Scope and false rehearsal/activation/restored-again flags are checked. Recovery
+still authenticates B, every current file/DB/metadata relationship, archived
+timestamps and stopped ownership. Partial/later journals remain blocked.
+The two old journals and all data remain preserved; no restore is repeated.
+
+59 focused generation/lifecycle tests passed, including real process stdout
+closure after durable verification, a disconnected status client, source-bound
+live probing, lease contention/replacement, and fatal archive EOF with closed
+stdout. A fixture initially exceeded Unix socket pathname limits; shortening
+its private path fixed the fixture without weakening production checks. Full
+committed-source package validation remains to be recorded. The package now
+binds seven candidate modules while preserving all eight reviewed PR229 pins.
+
+The operator consumer receipt at 13:35:05 UTC passed with EUID0 and zero matches
+or denied inspections. Its exact file SHA-256 is
+`79ee4dab8cfedae1a752153e7c9f183e2842981946c9c26cc238e937d7e7c022`.
+Fresh read-only SSD and B hashes both match the approved archive, whose identity
+is unchanged. No retirement occurred. Four coding executions remained active
+on the last read, and operational interruption approval is still pending.
+Parent confirmation, approved one-file capacity retirement with refreshed held
+clearance, measured final catch-up/headroom and actual live acceptance remain
+critical-path gates. HTTPS issuer investigation and ownership repair can proceed
+independently. Nightly backup/privilege automation are follow-ups, not gates for
+this repair. Historical recovery exceptions remain unchanged.

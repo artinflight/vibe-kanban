@@ -476,11 +476,19 @@ class CandidateController:
         require(self.layout.evidence.is_dir() and not self.layout.evidence.is_symlink(),
                 'completed restore journal missing or aliased')
         journals = list(self.layout.evidence.iterdir())
-        require(len(journals) == 1 and journals[0].name == '0001-restored.json',
+        allowed = ('0001-restored.json', '0001-initial-materialization-verified.json')
+        require(len(journals) == 1 and journals[0].name in allowed,
                 'only a single completed initial restore can be recovered; later operations remain held')
-        with open_regular(self.layout.evidence, '0001-restored.json') as stream:
+        with open_regular(self.layout.evidence, journals[0].name) as stream:
             require(os.fstat(stream.fileno()).st_nlink == 1, 'restore journal has an external hardlink')
             previous = json.load(stream)
+        if journals[0].name == '0001-initial-materialization-verified.json':
+            require(previous.get('scope') == self.scope
+                    and previous.get('prior_attempt_reconstructed') is False
+                    and previous.get('restored_again') is False
+                    and previous.get('rehearsal_accepted') is False
+                    and previous.get('activation_authorized') is False,
+                    'initial materialization journal claims an unsupported operation')
         require(previous.get('source') == prior_source_sha256
                 and previous.get('root_binding') == self.layout.binding(),
                 'retained restore source/root binding differs')
@@ -495,6 +503,7 @@ class CandidateController:
         self.rows, self.boundary, self.sequence = verified['entries'], verified, 1
         self.checkpoint('initial-owner-recovered', {**proof, 'capture_id': verified['capture_id'],
             'prior_source': prior_source_sha256, 'source': self.source, 'scope': self.scope,
+            'prior_journal': journals[0].name,
             'rehearsal_accepted': False, 'activation_authorized': False})
         self.phase = 'restored'
         return self

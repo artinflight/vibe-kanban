@@ -19,7 +19,8 @@ import time
 POLICY = '/etc/vibe-kanban/process-inspection-v1.json'
 CODE = '/usr/local/libexec/vk-process-inspection-v1.py'
 ABI = 1
-MAX_JSON = 65536
+MAX_JSON = 65536  # requests, status, static code/policy inputs remain unchanged
+MAX_RECEIPT = 1024 * 1024  # full numeric PID/TID witness; includes trailing newline
 MAX_SCAN_SECONDS = 30
 MAX_TARGETS = 32
 IDENTITY_KEYS = {'dev', 'ino', 'size', 'mtime_ns', 'ctime_ns', 'nlink', 'uid', 'gid', 'mode'}
@@ -385,6 +386,12 @@ def check(policy, request):
         os.close(scope_fd)
 
 
+def encode_receipt(result):
+    encoded = json.dumps(result, sort_keys=True)
+    require(len(encoded.encode()) + 1 <= MAX_RECEIPT)
+    return encoded
+
+
 def main():
     try:
         require(len(sys.argv) == 1 and sys.flags.isolated and sys.flags.no_site and sys.flags.dont_write_bytecode)
@@ -401,9 +408,7 @@ def main():
         require(len(raw_code) <= MAX_JSON)
         result.update(code_sha256=hashlib.sha256(raw_code).hexdigest(),
                       policy_sha256=hashlib.sha256(raw_policy).hexdigest())
-        encoded = json.dumps(result, sort_keys=True)
-        require(len(encoded.encode()) <= MAX_JSON)
-        print(encoded)
+        print(encode_receipt(result))
         return 0
     except Exception:
         print('{"consumer_clearance_passed":false,"reason":"inspection blocked"}')

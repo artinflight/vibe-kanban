@@ -24,6 +24,7 @@ COMMAND = ('/usr/bin/sudo', '-n', '--', '/usr/local/sbin/vk-process-inspect-v1')
 GATES = ('target_approved', 'backup_verified', 'dependencies_excluded',
          'fallback_preserved_until_human_qa', 'rollback_ready')
 FRESH_NS = 5_000_000_000
+MAX_RECEIPT = 1024 * 1024  # matches root output bound including newline
 
 
 def require(value):
@@ -161,7 +162,7 @@ def finish_checker(child, request):
         child.kill()
         child.communicate()
         raise ValueError('inspection timed out') from None
-    require(child.returncode == 0 and len(raw) <= 65536)
+    require(child.returncode == 0 and len(raw) <= MAX_RECEIPT)
     return json.loads(raw)
 
 

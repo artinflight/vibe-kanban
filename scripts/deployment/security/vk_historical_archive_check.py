@@ -134,9 +134,7 @@ def main():
             common.require(len(raw) <= common.MAX_JSON)
             result[key] = hashlib.sha256(raw).hexdigest()
         result['policy_sha256'] = hashlib.sha256(raw_policy).hexdigest()
-        encoded = json.dumps(result, sort_keys=True)
-        common.require(len(encoded.encode()) <= common.MAX_JSON)
-        print(encoded)
+        print(common.encode_receipt(result))
         return 0
     except Exception:
         print('{"consumer_clearance_passed":false,"reason":"inspection blocked"}')

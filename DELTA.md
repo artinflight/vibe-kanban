@@ -8,7 +8,6 @@ See [VK_CAPACITY_CONCURRENCY.md](VK_CAPACITY_CONCURRENCY.md) for API semantics,
 real two-native-goal acceptance and deployment requirements. Companion CU changes
 are required; old clients keep one slot. Production deployment remains operator-owned.
 
-
 ## 2026-08-20T00:00:00Z | vk/13c6-vk-multi-line-pa | multiline paste line-ending hardening
 
 - Intent: fix the remaining multiline paste failure in VK prompt fields after
@@ -237,6 +236,7 @@ are required; old clients keep one slot. Production deployment remains operator-
   - backup retention validation was not rerun during the sync cleanup step
   - full test validation was not rerun after the final cleanup behavior adjustments
   - pinned workspaces still keep the existing auto-archive exception
+
 # 2026-04-19 Workspace Polling Hotfix
 
 - A second frontend churn path was identified after the earlier kanban/sidebar fix.
@@ -1125,7 +1125,6 @@ are required; old clients keep one slot. Production deployment remains operator-
 
 2026-09-11: User authorized PR #103 integration into staging for the staging management agent to deploy at the next restart. Fresh fetch and rebase found the branch current with staging; recovery revision CI is green. Deployment handoff explicitly rejects the superseded binary and preserves goal backup requirements.
 
-
 ## 2026-09-12 — Long-thread pagination prepared
 
 - `vk/ab54-vk-long-threads`: latest-40 completed log pages, 50-entry upward
@@ -1133,7 +1132,6 @@ are required; old clients keep one slot. Production deployment remains operator-
 - Bounded revision-keyed finite-replay cache; existing running streams preserved.
 - See `VK_LONG_THREADS.md` and latest handoff for tests and limitations. No live
   runtime change; matching-backend browser validation and latency measurement remain.
-
 
 ## 2026-09-13 — Long-thread staging integration requested
 
@@ -1231,7 +1229,6 @@ Read-only service inventory confirms live Blue 4711/4712 and retained Green
 requires the explicit approval in VK_BACKEND_RESTART_PROTOCOL.md after a concrete
 candidate and rehearsal; preparation is not cutover authorization.
 
-
 ## Scheduled build directories — September 14
 
 `VK_CAPACITY_BUILD_ROOTS` is an optional JSON array of at most eight existing
@@ -1256,7 +1253,6 @@ The full seven-row native suite passes at
 `/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-y5tknu8y/results.json`.
 All 64 executor unit tests passed after adding build-root admission coverage.
 Formatting and ops governance passed. The feature remains undeployed.
-
 
 ## Approved launcher/provider binding — September 14
 
@@ -1380,7 +1376,6 @@ protected consequences/context retain Frontier. No classifier model call, regist
 or CU wire changes. Twenty-two routing tests, services check, focused Clippy,
 generated types, web-core checking, format/ops and five offline recommendation
 cases pass. V1 deployment untouched; live V2 Shadow acceptance remains pending.
-
 
 ## 2026-10-01 — bounded semantic fallback for uncertain V2 requests
 
@@ -1576,3 +1571,8 @@ Desktop/B, workflow auth, real candidate/RAM/metadata/scanner/consent gates rema
 All448names/145history/transcript/journal/metadata exceptions and old artifacts
 remain. Production, fallback, permissions, routes and cleanup untouched.
 See VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md.
+
+October 9 integration: current staging e8c450fb is incorporated as the normal
+PR base. Its original continuity documents remain preserved at that immutable
+commit; this stream retains newer bounded candidate/recovery tracking. No live
+service, route, credential or access change is performed by this merge.

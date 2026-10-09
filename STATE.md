@@ -1,3 +1,9 @@
+## October 8: Workspace-first frontend follow-up in preparation
+
+Workspace landing, To do defaults on phones, and whole-card attention styling
+are being validated in an isolated feature preview. They are not live yet.
+Production identity remains the deployed release documented immediately below.
+
 ## October 8: Phone frontend deployed
 
 The operator-approved phone redesign/style pass is live at `https://vibe.local`

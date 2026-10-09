@@ -393,6 +393,7 @@ type State = {
   // Kanban view mode state
   kanbanViewMode: KanbanViewMode;
   listViewStatusFilter: string | null;
+  phoneStatusByProject: Record<string, string | null>;
 
   // Mobile tab state
   mobileActiveTab: MobileTab;
@@ -491,6 +492,7 @@ type State = {
   // Kanban view mode actions
   setKanbanViewMode: (mode: KanbanViewMode) => void;
   setListViewStatusFilter: (statusId: string | null) => void;
+  setPhoneProjectStatus: (projectId: string, statusId: string | null) => void;
 
   // Mobile tab actions
   setMobileActiveTab: (tab: MobileTab) => void;
@@ -543,9 +545,10 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
   // Kanban view mode state
   kanbanViewMode: 'kanban' as KanbanViewMode,
   listViewStatusFilter: null,
+  phoneStatusByProject: {},
 
   // Mobile tab state
-  mobileActiveTab: 'chat' as MobileTab,
+  mobileActiveTab: 'workspaces' as MobileTab,
 
   // Mobile font scale
   mobileFontScale: loadMobileFontScale(),
@@ -928,6 +931,14 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
 
   setListViewStatusFilter: (statusId) =>
     set({ listViewStatusFilter: statusId }),
+
+  setPhoneProjectStatus: (projectId, statusId) =>
+    set((s) => ({
+      phoneStatusByProject: {
+        ...s.phoneStatusByProject,
+        [projectId]: statusId,
+      },
+    })),
 
   // Mobile tab actions
   setMobileActiveTab: (tab) => set({ mobileActiveTab: tab }),

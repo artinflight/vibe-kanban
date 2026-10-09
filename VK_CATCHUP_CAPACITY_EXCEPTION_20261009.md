@@ -61,3 +61,12 @@ does not itself authorize retirement. The archive is outside all 77 current
 capture roots and does not contribute to either accepted B checkpoint. Its failed
 capture's payload directory and every other local entry remain excluded from the
 requested retirement.
+
+## Owner approval received
+
+At 12:38 UTC Seamus replied “yes” to the exact one-file exception at 2b225068.
+Approval relay evidence: assistant Sentinel_2da02c6ad39c819184682474c2302ef4,
+user Sentinel_3c972054e9688191900e38417fd55e00. This approval is recorded, but
+is not consumer clearance. The independent operator receipt is still absent;
+no retirement or access change has occurred. All documented refresh, dependency
+and held-writer checks remain required before unlinking the single pinned file.

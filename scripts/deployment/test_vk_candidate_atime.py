@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from vk_candidate_direct_b import archived_atime, DirectBProvider, hardlink_metadata
-from vk_candidate_generation import Blocked, CandidateController, Layout, digest, inventory
+from vk_candidate_generation import Blocked, CandidateController, Layout, digest, inventory, atime_binding
 
 
 class AtimeTests(unittest.TestCase):
@@ -73,9 +73,13 @@ class AtimeTests(unittest.TestCase):
                     raise Blocked('wrong fixture root')
         controller.supervisor = StoppedFixture()
         rows = inventory(tree)  # Real content traversal precedes timestamp restoration.
-        values = {name: 123000000001 for name in rows}
+        values = [321000000001 if rows[name]['kind'] == 'directory' else
+                  456000000001 if rows[name]['kind'] == 'symlink' else 123000000001
+                  for name in sorted(rows)]
+        manifest_sha256 = digest(rows)
         return controller, {'entries': rows, 'restore_archived_atime': True,
-                'archived_atime_ns': values, 'archived_atime_sha256': digest(values)}, protected
+                'manifest_sha256': manifest_sha256, 'archived_atime_ns': values,
+                'archived_atime_sha256': atime_binding(manifest_sha256, values)}, protected
 
     def test_real_private_files_links_and_directories_retain_exact_archive_atime(self):
         controller, verified, protected = self.prepared()
@@ -83,9 +87,10 @@ class AtimeTests(unittest.TestCase):
         proof = controller.restore_atimes(verified)
         self.assertTrue(proof['archived_atime_restored'])
         self.assertFalse(proof['original_source_atime_verified'])
-        for name, row in verified['entries'].items():
+        for index, name in enumerate(sorted(verified['entries'])):
+            row = verified['entries'][name]
             info = (controller.layout.tree / name).lstat()
-            self.assertEqual(info.st_atime_ns, 123000000001)
+            self.assertEqual(info.st_atime_ns, verified['archived_atime_ns'][index])
             self.assertEqual(info.st_mtime_ns, row['mtime_ns'])
         self.assertEqual((controller.layout.tree / 'state/file').stat().st_ino,
                          (controller.layout.tree / 'state/alias').stat().st_ino)
@@ -98,12 +103,16 @@ class AtimeTests(unittest.TestCase):
         controller, verified, _ = self.prepared()
         path = controller.layout.tree / 'state/file'
         before = path.stat().st_atime_ns
-        for mode in ('missing', 'changed'):
+        for mode in ('missing', 'changed', 'reordered', 'wrong_manifest'):
             bad = copy.deepcopy(verified)
             if mode == 'missing':
-                del bad['archived_atime_ns']['state/file']
+                bad['archived_atime_ns'].pop()
+            elif mode == 'changed':
+                bad['archived_atime_ns'][0] += 1
+            elif mode == 'reordered':
+                bad['archived_atime_ns'].reverse()
             else:
-                bad['archived_atime_ns']['state/file'] += 1
+                bad['entries']['state']['mtime_ns'] += 1
             with self.assertRaisesRegex(Blocked, 'binding mismatch'):
                 controller.restore_atimes(bad)
             self.assertEqual(path.stat().st_atime_ns, before)

@@ -28,6 +28,11 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def atime_binding(manifest_sha256, values):
+    return digest({'order': 'sorted_manifest_names', 'manifest_sha256': manifest_sha256,
+                   'nanoseconds': values})
+
+
 def relative(name):
     p = PurePosixPath(name)
     require(isinstance(name, str) and name and not p.is_absolute()
@@ -411,8 +416,10 @@ class CandidateController:
         if not verified.get('fixture_only'):
             require(verified.get('restore_archived_atime') is True,
                     'operational restore requires authenticated archived-atime policy')
-            require(set(verified['archived_atime_ns']) == set(rows)
-                    and digest(verified['archived_atime_ns']) == verified['archived_atime_sha256'],
+            require(type(verified['archived_atime_ns']) is list
+                    and len(verified['archived_atime_ns']) == len(rows)
+                    and atime_binding(verified['manifest_sha256'], verified['archived_atime_ns'])
+                    == verified['archived_atime_sha256'],
                     'operational archived-atime inventory binding mismatch')
         require(set(self.sqlite_paths) <= rows.keys(), "required database omitted")
         require(all(rows[p]["kind"] == "file" for p in self.sqlite_paths), "database must be a standalone snapshot")
@@ -539,18 +546,25 @@ class CandidateController:
         if not verified.get('restore_archived_atime'):
             return {'archived_atime_restored': False}
         values, rows = verified['archived_atime_ns'], verified['entries']
-        require(set(values) == set(rows) and digest(values) == verified['archived_atime_sha256'],
+        manifest_sha256 = digest(rows)
+        require(type(values) is list and len(values) == len(rows)
+                and manifest_sha256 == verified['manifest_sha256']
+                and atime_binding(manifest_sha256, values) == verified['archived_atime_sha256'],
                 'atime inventory binding mismatch')
-        require(all(type(value) is int and value >= 0 for value in values.values()),
+        require(all(type(value) is int and value >= 0 for value in values),
                 'atime inventory contains invalid nanoseconds')
         self.supervisor.verify_stopped(self.layout.binding())
-        for name in sorted(rows, key=lambda p: (-len(relative(p).parts), p)):
+        names = sorted(rows)
+        # Reverse lexical order puts every descendant before its parent.
+        for index in range(len(names) - 1, -1, -1):
+            name, value = names[index], values[index]
             target = self.layout.tree / name
-            os.utime(target, ns=(values[name], rows[name]['mtime_ns']), follow_symlinks=False)
+            os.utime(target, ns=(value, rows[name]['mtime_ns']), follow_symlinks=False)
             info = target.lstat()
-            require(info.st_atime_ns == values[name] and info.st_mtime_ns == rows[name]['mtime_ns'],
+            require(info.st_atime_ns == value and info.st_mtime_ns == rows[name]['mtime_ns'],
                     'filesystem cannot restore exact archived timestamps')
-        return {'archived_atime_restored': True, 'archived_atime_sha256': digest(values),
+        return {'archived_atime_restored': True,
+                'archived_atime_sha256': atime_binding(manifest_sha256, values),
                 'original_source_atime_verified': False}
 
     def restore(self, capture):

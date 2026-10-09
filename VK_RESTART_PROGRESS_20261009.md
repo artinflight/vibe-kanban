@@ -467,3 +467,62 @@ source/test-output remains unanswered and held. After capacity/source-bound
 candidate gates and live consent pass, perform the separately bounded writer
 drain/final backup/catch-up/acceptance/cutover; cleanup remains technically
 unavailable until human QA and a separately reviewed enablement.
+
+
+## Final-boundary source progress: invocation regression and compact time index
+
+Current combined application PR230 head is7708037a4646b385e363ff734177053c657b7f4f,
+treecec692bc2758f8d49a892d8782e6f6b59d00b6d7, remote ref verified. At predecessor
+a22a93f1 the frontend (including both consent layouts), clippy, schema, Tauri,
+scanner73-test contract, governance and freshness checks passed. Backend reported
+463passed,1failed,10skipped and8notrun after fail-fast: the original generic
+invocation test still listed the intentionally supported single
+--capacity-build-info alias as invalid, despite the dedicated exact-alias
+regression accepting it. Corrected that stale test expectation and expanded
+mixed/duplicate/serve argument rejections. Startup parser/serve behavior unchanged.
+Both exact invocation tests pass with installednightly2025-12-04 via standalone
+rustc test compilation, without production/native state access or fixture deletion.
+Fresh exact-head TestCI37886243350 and artifactCI37886243480 are running; final
+source/package acceptance still awaits these results. No failed check was waived.
+
+Archived-atime receipts now use a compact vector aligned with sorted authenticated
+manifest names; its digest binds the manifest digest, ordering and all values.
+This avoids encoding537618privatepathnames twice, retaining the default64MiB/
+explicit256MiB ceiling and counting timestamp bytes in that same budget. Restored
+core inventory remains exact; timestamps are verified separately after content
+reads, with reordered vectors, changed manifests, incomplete vectors or changed
+values rejected before metadata writes. Five timestamp regressions and the
+10direct-B/2bound tests pass after this source change. Full actual provider index
+bytes/RAM and restored filesystem allocation remain measured candidate gates,
+not inferred from the planning index estimate.
+
+Published-source-f5713ad7 B preservation was independently hash-read back: tool
+incremental pack181897bytes SHAb597abb20ba74db675c223be6956e086b029f13fa45968404b0c3d3ea0820ce1;
+then-current appa22 incremental pack20879bytes SHA4f239eba65fea59dc068944870db74bb86f5f6b3f0c4f828f3c3dd97e4907030;
+e3-to-f571 patch133936bytes SHA7a4d2a1c47b4f94a1e681790aab6a5d6447abac2bf467b33350c9157d7ff2912.
+They require the retained original Git input packs; originals and previous receipts
+are preserved. Later local source/remote commits are additive, not replacements.
+
+Capacity wording:87.42GiB is the regular-file lower bound for materializing the
+entire current unreduced77-root preservation plan, not a claim that every historical
+file is needed to start VK. The operational candidate must cover the established
+configured dependency closure and explicitly account for any B-only historical
+material; no such reduction has been applied or silently accepted. The existing
+B volume is physically on Desktop. Keeping production on MCP therefore needs
+MCP-accessible native Linux storage and a measured candidate/catch-up reserve;
+current335MBfree does not solve that. In particular the accepted current Green
+logging database snapshot alone is4734447616bytes, before attachments, agent
+history, active DBs, release artifacts and reserve. The active VK DB itself is
+91684864bytes by a read-only stat; a DB-only copy is not full state/rehearsal.
+Do not consume system-disk bulk space, delete preserved data, or switch production
+to Desktop to bypass this capacity requirement.
+
+Unrun operational outcomes: same MCP candidate full included-file/DB restore,
+actual Linux metadata/ownership/link/ACL/xattr/time acceptance, measured restore
+and catch-up peak/RAM, actual package/supervisor/controller/prerequisite binding,
+real consent acceptance, safe active-session drain/held writers, final fresh B
+boundary and catch-up, latest-data compatible fallback rehearsal and live health
+cutover. Historical448/145/transcript415/journal/mode/link exceptions remain
+explicit and are not automatically operational data-loss acceptance. Stable
+incumbent/fallback and all B evidence remain protected. No permission change,
+credential/access expansion, new auth flow, production restart/cutover or cleanup.

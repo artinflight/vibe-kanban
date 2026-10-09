@@ -16,7 +16,7 @@ import os
 from pathlib import Path, PurePosixPath
 
 from vk_archive_store import Archive, reference
-from vk_candidate_generation import Blocked, digest, require, relative, validate_manifest, inventory
+from vk_candidate_generation import Blocked, digest, atime_binding, require, relative, validate_manifest, inventory
 from vk_candidate_scaffold import authenticate_plan, add_context
 
 PR229 = "754129c5fff55da2f5598d8c7beb4d4325587ead"
@@ -228,15 +228,19 @@ class DirectBProvider:
             final_encoded_bytes += len(piece.encode())
             require(final_encoded_bytes <= self.metadata_budget_bytes,
                     'canonical candidate index exceeds explicit metadata budget')
-        for piece in json.JSONEncoder().iterencode(atimes):
+        # Bind a compact timestamp vector to sorted manifest names, rather
+        # than encoding every private path twice in the bounded catalog.
+        timestamp_values = [atimes[name] for name in sorted(entries)] if self.restore_archived_atime else []
+        for piece in json.JSONEncoder().iterencode(timestamp_values):
             final_encoded_bytes += len(piece.encode())
             require(final_encoded_bytes <= self.metadata_budget_bytes,
                     'candidate timestamps exceed explicit metadata budget')
         validate_manifest(entries)
         require(set(self.required) <= entries.keys(), "required operational database absent")
         result = record['result']
+        manifest_sha256 = digest(entries)
         proof = {'provider': 'desktop-B', 'scope_sha256': self.scope, 'capture_id': capture_id,
-                 'full_current_state': True, 'entries': entries, 'manifest_sha256': digest(entries),
+                 'full_current_state': True, 'entries': entries, 'manifest_sha256': manifest_sha256,
                  'origin_root_binding': record['origin'], 'writer_fence': result.get('writer_fence'),
                  'frozen_boundary_verified': result.get('frozen_boundary_verified'),
                  'fixture_only': self.fixture_only, 'source_commit': PR229,
@@ -244,7 +248,8 @@ class DirectBProvider:
                  'metadata_encoded_bytes': final_encoded_bytes,
                  'namespace_scaffold': context,
                  'restore_archived_atime': self.restore_archived_atime,
-                 'archived_atime_ns': atimes, 'archived_atime_sha256': digest(atimes),
+                 'archived_atime_ns': timestamp_values,
+                 'archived_atime_sha256': atime_binding(manifest_sha256, timestamp_values),
                  'metadata_limits': 'PAX retained; built-in comparison covers current UID/GID, mode, mtime, POSIX ACL/user xattrs and links. Optional exact archived-atime restoration is separately bound; original source atimes/inode/ctime/birthtime are not inferred. Foreign ownership/other xattrs block; full operational metadata acceptance remains required'}
         self.indexes[capture_id] = {'proof': proof, 'archives': archives, 'locations': locations, 'headers': headers}
         return copy.deepcopy(proof)

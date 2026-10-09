@@ -1608,3 +1608,12 @@ Rollback documentation removes only /etc/sudoers.d/vk-process-inspection-v1 afte
 owner-controlled pending-operation draining, with no recursive cleanup, service
 change or root deletion capability. Privileged bundle remains unchanged; no
 installation or live owner/security changes.
+
+## 2026-10-09 — Source-only two-profile inspection follow-up
+
+Added a separately fixed historical archive metadata-only profile/adapter using
+the unchanged audited managed scanner. Proposed one bundled two-command exact
+installation, with fresh anchor enrollment, acceptance and grant-only rollback.
+54 focused tests pass; immediate pre-continuation dual-clock freshness retained.
+No install, privileged invocation, retirement or Staging change. See
+VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md and the two-profile source receipt.

@@ -195,7 +195,7 @@ def validate_receipt(receipt, request, installation):
 
 def at_held_boundary(*, lease, server, status, manifest, scope_path, installation,
                      prepare, verify_gates, orchestration_fence,
-                     consume=None, adoption_enabled=False):
+                     consume=None, adoption_enabled=False, _handlers=None):
     """One operation, no persisted receipt input/loop. No-target restart skips root.
 
     prepare/verify_gates may do expensive/network work ONLY before clearance.
@@ -204,6 +204,8 @@ def at_held_boundary(*, lease, server, status, manifest, scope_path, installatio
     owner seals existing command channels before launch; the terminal actor seals
     process creation. Neither mechanism excludes unrelated existing host opens.
     """
+    hash_targets, verify_targets, start_checker, check_receipt = _handlers or (
+        hash_artifacts, verify_target_metadata, launch_checker, validate_receipt)
     require(adoption_enabled is True)  # explicit local adoption; rollback disables new admissions
     require(status.attestation is None and server.status is status)
     prepare()  # all SSH/SFTP creation, B authentication, expensive hashes FIRST
@@ -214,7 +216,7 @@ def at_held_boundary(*, lease, server, status, manifest, scope_path, installatio
         require(consume is None)  # ordinary restart with no retirement: no root check
         return {'inspection_required': False, 'action_authorized': False}
     manifest = json.loads(json.dumps(manifest))  # freeze the operation's release binding
-    hash_artifacts(scope_path, manifest)
+    hash_targets(scope_path, manifest)
     live = json.loads(json.dumps(status()))
     require(live['source'] == manifest['source_sha256'] and live['root_binding'] == manifest['root_binding']
             and live['manifest_sha256'] == manifest['backup_manifest_sha256'])
@@ -235,15 +237,16 @@ def at_held_boundary(*, lease, server, status, manifest, scope_path, installatio
     worker.start()
     child = None
     try:
-        child = launch_checker()  # ONLY allowed final child, before process seal
+        child = start_checker()  # ONLY allowed final child, before process seal
         if consume is not None:
             seal_process_creation()  # dedicated terminal actor only; irreversible
         receipt = finish_checker(child, request)  # root check INSIDE held operation
         require(not failures)
         lease.verify()
-        verify_target_metadata(scope_path, manifest)
+        verify_targets(scope_path, manifest)
         require(status() == {**live, 'inspection_attestation': status.attestation})
-        validate_receipt(receipt, request, installation)  # includes late PID/TID birth rejection
+        check_receipt(receipt, request, installation)  # includes late PID/TID birth rejection
+        validate_freshness(receipt)  # immediate continuation check, including profile validation
         return receipt if consume is None else consume(receipt)
     finally:
         if child is not None:

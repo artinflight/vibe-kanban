@@ -1,3 +1,21 @@
+## October 9: Two-profile source-only inspection bundle
+
+PR234 now adds a separate exact historical archive profile and unprivileged
+adapter to the unchanged managed namespace checker/launcher/policy. Read
+VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md and the version-pinned
+scripts/deployment/security/inspection-two-profile-install-plan.json for the
+single proposed administrator installation: two exact zero-argument read-only
+grants in one include, fixed root code and two pinned policies. The historical
+file stays at its existing path; no deletion/service privilege is proposed.
+54 focused tests pass, including substitution/visibility/authentication/replay
+and both clocks after witness and immediately before continuation. Existing
+native process-event tests prove post-scan subprocess attempts are denied.
+No root entrypoint, installation, live owner or Staging mutation occurred.
+Installed acceptance and operational adoption remain untested. Parent's Desktop
+authentication task owns admin readiness; LXD privileges and same-account review
+are separate boundaries, never an installation bypass. Fallback survives until
+human QA. Earlier one-profile proposals below are historical.
+
 # October 9: Reusable source-only protected-consumer ABI
 
 Branch `fix/automatic-retirement-preflight` remains isolated at PR231 checkpoint

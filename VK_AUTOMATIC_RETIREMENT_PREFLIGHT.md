@@ -1,8 +1,8 @@
-# Reusable protected-consumer preflight — source only
+# Two-profile protected-consumer preflight — source only
 
 [Draft PR234](https://github.com/artinflight/vibe-kanban/pull/234) is stacked on
-PR231 checkpoint `c57dceaac5b214fe94dfdce512827ab7b0520b75`. The earlier incident-
-specific installation proposal is superseded. **Installation approval was
+PR231 checkpoint `c57dceaac5b214fe94dfdce512827ab7b0520b75`. The earlier installation proposals are superseded by the
+[two-profile installation plan](scripts/deployment/security/inspection-two-profile-install-plan.json). **Installation approval was
 withdrawn. Nothing in this PR installs privileges or changes current Staging.**
 
 The result is a stable, read-only privileged inspection ABI and an unprivileged
@@ -52,8 +52,8 @@ seccomp does not prevent writing commands to an existing SSH connection.
 
 ## Trust boundaries and approved scope
 
-Root owns the stable launcher, checker ABI/code and fixed policy. The only
-proposed data scope is the new **empty**, dedicated namespace:
+Root owns the stable launcher, checker ABI/code and fixed policy. The reusable profile is unchanged. Its proposed data scope is the new **empty**,
+dedicated namespace:
 
 ```
 /mnt/vk-storage/vk-process-inspection-managed-v1
@@ -95,11 +95,17 @@ manifest-file read or external key path is accepted. At most 32 targets and 64Ki
 input/output are allowed. Static root policy permits at most four explicitly
 root-enrolled scopes; this proposal enrolls exactly one.
 
-The historical incident archive is outside this namespace. Its narrow historical
-exception does not grant deletion or enrollment of future unrelated data. Using
-this reusable capability for current outside-scope paths would require a distinct
-scope/security approval, not a routine target edit. Moving current Staging roots
-or importing that archive is neither proposed nor performed here.
+The historical incident archive remains outside this namespace. The separately
+proposed `historical-archive-v1` profile covers exactly that one existing path,
+device 2065, inode 7340415, size 23441521918 and the full metadata/SHA bindings in
+[its policy](scripts/deployment/security/historical-archive-policy.proposal.json).
+Both the fixed root handler and root-owned policy must match those constants;
+the request cannot select a different path. Root uses only O_PATH metadata on
+this file. The prior approved SHA is a binding, not a claim that root rehashed it.
+The unprivileged adapter hashes it before requesting root clearance.
+No file is moved into the managed scope. This historical profile never grants
+deletion, future unrelated targets or configurable path expansion. Installation
+of this additional scope requires explicit approval of the new bundle.
 
 ## Privileged capability and consumer coverage
 
@@ -156,61 +162,72 @@ checks and immediate continuation minimize the interval but cannot eliminate it.
 If the operational policy demands stronger atomic exclusion, this capability
 cannot meet that demand and must not be described as doing so.
 
-## Exact one-time reusable installation proposal — NOT authorized
+## Exact one-time two-profile installation proposal — NOT authorized
 
-Review as one bundle; no installation request is currently outstanding. Proposed
-changes, only after an explicit future action approval:
+The [version-pinned installation plan](scripts/deployment/security/inspection-two-profile-install-plan.json)
+is the authoritative bundle. It records source and binary hashes, exact object
+permissions, both policy scopes, the sole allowed enrollment change, installation
+order, read-only installed acceptance and rollback. It is a plan, not an installer
+executed here. The original namespace checker, policy template and launcher remain
+byte-for-byte unchanged. The historical handler loads that audited scanner from
+one fixed root-owned installed path; no caller-controlled code import exists.
 
-| Object | Proposed change |
-| --- | --- |
-| `/usr/local/sbin/vk-process-inspect-v1` | Install compiled launcher, root:root 0755, no setuid/capabilities; SHA-256 `33b47e5f890040bb8821a6a458dd1c4062e34c97d3e644cccd233e728051e12a` |
-| `/usr/local/libexec/vk-process-inspection-v1.py` | Install reviewed checker source, root:root 0644; hash from the source bundle receipt |
-| `/etc/vibe-kanban` | Create only if absent, root:root 0755; otherwise validate existing immutable ownership without changing unrelated entries |
-| `/etc/vibe-kanban/process-inspection-v1.json` | Install root:root 0600 ABI1 policy with caller UID1000 and exactly the scope above |
-| `/mnt/vk-storage/vk-process-inspection-managed-v1` | Create a fresh empty root:root 0755 anchor on the verified mounted SSD; refuse existing paths/symlinks; enroll its actual inode once |
-| Anchor `objects` and `control` children | Create empty mcp:mcp 0700 directories; no existing artifact adoption or data moves |
-| `/etc/sudoers.d/vk-process-inspection-v1` | Install root:root 0440 after full syntax validation; exactly the rule below |
+The one administrator-owned grant file `/etc/sudoers.d/vk-process-inspection-v1`
+would contain exactly these two digest-pinned, zero-argument commands:
 
 ```
 mcp ALL=(root) NOPASSWD: NOSETENV: sha256:33b47e5f890040bb8821a6a458dd1c4062e34c97d3e644cccd233e728051e12a /usr/local/sbin/vk-process-inspect-v1 ""
+mcp ALL=(root) NOPASSWD: NOSETENV: sha256:8ee7e17dfe7bbbbdbe186f48e89eab33e3f123a16a930847889c7bf062f4a6aa /usr/local/sbin/vk-historical-archive-inspect-v1 ""
 ```
 
-The final `""` requires no command arguments. The stable launcher digest is not a
-release/interpreter pin. NOEXEC is deliberately absent because the launcher must
-exec its fixed interpreter. Environment clearing, isolated Python, fixed code
-path and immutable root-owned code are the execution boundary. No wildcards,
-blanket passwordless sudo, arbitrary reads, root deletion, daemon installation,
-credential access, group membership or filesystem capability is proposed.
+The final `""` prohibits arguments. No interpreter, shell, sudoedit, deletion,
+service, credential, wildcard or group-membership grant exists. NOEXEC is absent
+because each environment-clearing launcher must exec its one fixed interpreter
+and root-owned code with `-I -S -B`. Neither binary is setuid or capability-bearing.
+Root-owned non-user-writable interpreter/stdlib inputs are an installation baseline.
 
-The checked-in policy's `anchor_inode: null` deliberately fails closed. The
-single approved bootstrap would create only the fresh empty named directory,
-validate UUID/device/ownership, enroll its resulting inode and record the exact
-final policy SHA in the installation receipt. It must not infer an inode from
-user-provided JSON or adopt an existing directory. The unprivileged adapter must
-be configured with that authenticated code/policy receipt, once. Root scope
-replacement/recreation, ABI/code/grant changes require review; routine releases
-and new artifacts within this bounded scope do not.
+Bootstrap creates `/usr/local/libexec` only if absent (root:root 0755), validates
+existing root-owned ancestor directories, installs the two fixed code files
+0644, two launchers 0755, two policies 0600 and the one grant 0440. It creates
+only the fresh empty managed anchor (root:root 0755), with empty mcp:mcp 0700
+`objects`/`control` children. No existing Staging directory is adopted or changed.
+The administrator enrolls that freshly created anchor's actual inode in both
+policy templates, with the pinned SSD UUID. Null inode templates fail closed.
+These are the only policy transformations allowed by this plan; authenticated
+installation evidence records both final policy hashes. Code and policy receipts
+configure each unprivileged adapter once. Routine managed releases need no grant
+amendment. A different historical target or security boundary requires approval.
 
-Compilation command (performed as mcp, output on SSD, not installed):
+The historical adapter reuses the terminal boundary sequence and the existing
+controller's backup/fence/promote/fallback contracts. Its live authenticated
+owner is the dedicated boundary actor that actually holds its private control
+lease; it does not impersonate or alter the incumbent Staging owner. Existing
+CandidateController status methods that verify/hash packages must run during
+preparation. Post-clearance status is bounded local memory/identity only.
+Operational adoption and installed read-only acceptance are separate, unperformed
+steps; existing deletion and cutover paths were not modified.
 
-```
-cc -std=c11 -O2 -Wall -Wextra -Werror -Wl,--build-id=none \
-  scripts/deployment/security/vk_process_inspect_launcher.c \
-  -o /mnt/vk-storage/vk-retirement-preflight-tests/vk-process-inspect-v1.proposal
-```
+## Practical administration boundary
 
-Before approving actual installation, review the bundle hashes and ownership of
-all OS interpreter/stdlib and installed-code inputs. After approval, first run
-installed **read-only** acceptance against synthetic artifacts: effective sudo
-matching, full host visibility, scope/lease/nonce substitution and opaque process
-coverage. Then Staging may separately adopt the adapter into a dedicated managed
-terminal operation, prove its existing channel closure and exact continuation,
-and retain human QA/backup/rollback gates. No live acceptance or adoption is
-claimed by this source PR.
+Read-only discovery found no established agent-usable administrator installation
+channel or retained root terminal. Existing root daemons and unreadable sudoers
+files are not authorization. Parent's Desktop readiness task owns the one-time
+secure administrator authentication; this task asks for no terminal commands.
+No sudo denial was retried or alternative escalation used.
+
+The account also has existing `lxd` group membership and access to LXD's admin
+socket. That is a separate host-privilege boundary, not authority to bypass sudo
+or bootstrap this installation. The socket was not contacted. These fixed
+capabilities do not govern all activity of the mcp account or revoke its existing
+privileges. Same-account secondary-agent review is advisory; it cannot enforce
+root authorization against another same-UID worker. The current Vibe approval UI
+is likewise not a signed root command authority. A future protected signer or
+broader executor is not required or introduced here. See the
+[LXD security documentation](https://canonical.com/lxd/docs/default/explanation/security/).
 
 ## Bounded rollback — administrator only, not performed
 
-The adapter defaults to `adoption_enabled=False`; an approved owning controller
+Both adapters default to `adoption_enabled=False`; an approved owning controller
 must explicitly opt in with `adoption_enabled=True`. Disabled adoption rejects
 before preparation, privilege invocation or continuation. Installation alone
 therefore does not adopt this adapter or change the current owner.
@@ -223,7 +240,8 @@ cannot retract an already-issued receipt or cancel an action already underway.
 The switch is an admission check, not an in-flight cancellation API. A terminal
 actor's seccomp seal is also irreversible; do not try to reuse it for orchestration.
 
-Then an administrator removes **only** this exact privileged grant file:
+Then an administrator removes **only** this exact privileged grant file, withdrawing
+both inspection commands:
 
 ```
 unlink -- /etc/sudoers.d/vk-process-inspection-v1
@@ -302,6 +320,9 @@ creates its inspection child before sealing, then proves a post-response SSH
 subprocess is denied; the privileged scan is explicitly substituted in that test.
 Source regressions do not prove installed privileged visibility or live adoption.
 
+After the proposed exact historical grant is approved, its read-only clearance
+also needs no operator snapshot command. Its exceptional retirement approval
+still comes from the existing controller; the root receipt grants no action.
 Within the approved managed scope, ordinary future checks need no operator
 command after one-time installation and tested controller adoption. No-retirement
 restarts require no inspector. Humans still approve new scope/security changes,
@@ -311,7 +332,7 @@ snapshots. Direct-B incremental backup and reserved capacity could avoid routine
 cleanup entirely; that separate project is neither implemented nor a dependency
 added here.
 
-[Source bundle/validation receipt](scripts/deployment/receipts/reusable-retirement-review-validation-20261009.json)
+[Source bundle/validation receipt](scripts/deployment/receipts/two-profile-inspection-source-validation-20261009.json)
 records exact artifacts and remaining validation limits. Earlier receipts are
 historical evidence for their respective source checkpoints, not this revision.
 Protocol references: [sudo primary manual](https://www.sudo.ws/docs/man/1.9.14/sudoers.man.pdf),

@@ -1,3 +1,18 @@
+## Execution-scoped warning follow-up — candidate, validation pending
+
+WHAT: Preserve execution A's terminal capture warning when older execution B
+successfully completes or closes after pending retries. WHY: available older
+history is not evidence that a newer unavailable capture has recovered. CONTEXT:
+same isolated c3-relative candidate; reviewer configuration remains unchanged
+pending owner confirmation. SUCCESS: both interleavings retain A's warning until
+an authoritative A retry succeeds, with existing pending and scope tests intact.
+
+The hook stores errors by execution ID within the existing scope. Successful
+pages clear only their own execution's error; batch start retains errors.
+Removing an execution or switching scope retires only the associated errors.
+No writer, backend, API, connector, routing, permission or live state changes.
+Hosted UI/type/compiled acceptance is pending at the next exact source commit.
+
 ## Exact-source review follow-up — candidate, validation pending
 
 WHAT: Repair both P2 findings against334a2a2. WHY: a healthy drain must not leave

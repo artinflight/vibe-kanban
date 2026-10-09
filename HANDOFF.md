@@ -1,3 +1,13 @@
+## Execution-scoped capture warnings — not deployed
+
+Review against3af7fbda found that successful older history and pending retries
+could clear a newer terminal capture warning. Errors now belong to execution IDs;
+only an authoritative success for the same execution, its removal, or a scope
+reset clears them. Batch start no longer clears unresolved errors. Three new UI
+regressions cover older completion, pending/closed recovery and execution removal.
+Hosted validation is required at the new source commit. Writer/HTTP fixes and
+one-second pending retries remain intact; approval settings are unchanged.
+
 ## Exact-source P2 follow-up — not deployed
 
 Both review findings against334a2a2 are confirmed and repaired in this candidate:

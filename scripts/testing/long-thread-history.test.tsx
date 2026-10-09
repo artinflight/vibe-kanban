@@ -476,6 +476,90 @@ async function tickCapture(t) {
   });
 }
 
+for (const pending of [false, true]) {
+  test(`older completion${pending ? " after pending retry" : ""} preserves a newer terminal capture warning`, async (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    const newer = {
+      ...process("a", "running"),
+      created_at: "2026-10-09T21:00:00Z",
+    };
+    const older = {
+      ...process("b", "running"),
+      created_at: "2026-10-09T20:00:00Z",
+    };
+    let newerDamaged = true;
+    let olderCalls = 0;
+    const h = harness(
+      [older, newer],
+      ({ id, before, limit }) => {
+        if (id === "a" && newerDamaged) return failedCaptureResponse();
+        if (id === "b" && ++olderCalls === 1 && pending)
+          return pendingResponse();
+        return pageResponse(id === "a" ? 40 : 10, before, limit);
+      },
+      true,
+    );
+    try {
+      await h.mount();
+      assert.equal(h.calls.length, 0);
+      const completedNewer = { ...newer, status: "completed" };
+      await h.update([older, completedNewer]);
+      assert.deepEqual(
+        h.calls.map((x) => x.id),
+        ["a"],
+      );
+      assert.equal(h.result.historyError, true);
+      const warning = h.result.historyErrorDetail;
+      assert.match(warning, /completeness/);
+
+      await h.update([{ ...older, status: "completed" }, completedNewer]);
+      assert.deepEqual(
+        h.calls.map((x) => x.id),
+        ["a", "b"],
+      );
+      assert.equal(h.result.historyError, true);
+      assert.equal(h.result.historyErrorDetail, warning);
+      assert.equal(h.result.isLoadingHistory, pending);
+      if (pending) await tickCapture(t);
+      assert.equal(h.entries.length, 10);
+      assert.ok(h.entries.every((entry) => entry.executionProcessId === "b"));
+      assert.equal(h.result.historyError, true);
+      assert.equal(h.result.historyErrorDetail, warning);
+      assert.equal(h.result.isLoadingHistory, false);
+      const callsAfterClosure = h.calls.length;
+      await tickCapture(t);
+      assert.equal(h.calls.length, callsAfterClosure, "Closed B stops polling");
+
+      newerDamaged = false;
+      await h.load();
+      assert.equal(h.calls.at(-1).id, "a", "Retry reads the warned execution");
+      assert.equal(h.result.historyError, false);
+      assert.equal(h.result.historyErrorDetail, null);
+      assert.equal(h.entries.length, 50);
+    } finally {
+      await h.close();
+      t.mock.timers.reset();
+    }
+  });
+}
+
+test("removing an unavailable execution clears only its scoped error", async () => {
+  const h = harness([process("a")], ({ id, before, limit }) =>
+    id === "a" ? failedCaptureResponse() : pageResponse(40, before, limit),
+  );
+  try {
+    await h.mount();
+    assert.equal(h.result.historyError, true);
+    await h.update([process("b")]);
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.historyErrorDetail, null);
+    assert.equal(h.entries.length, 40);
+    assert.ok(h.entries.every((entry) => entry.executionProcessId === "b"));
+  } finally {
+    await h.close();
+  }
+});
+
 test("running then completed then pending then closed recovers without manual retry", async (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const h = harness(

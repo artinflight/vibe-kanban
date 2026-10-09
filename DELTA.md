@@ -1591,3 +1591,9 @@ receipt explicitly historical; exact-head rerun is separate. Source-only.
 2026-10-09: PR235 oneshot fix: replace ignored RuntimeMaxSec with
 TimeoutStartSec=7200; bound shutdown with TimeoutStopSec=30. Render regression
 and opt-in disposable user-service timeout/SIGKILL validation. No adoption.
+
+2026-10-09: PR235 actual-B synthetic captures and nightly publication accepted
+on existing unprivileged WSL B route, independent Windows recovery; actual exits
+before/after publication/during fixture retention preserve current and block
+retry accumulation. Protected real data untouched; adoption/input-chain lifecycle
+remain pending. See nightly-real-b-20261009 receipt.

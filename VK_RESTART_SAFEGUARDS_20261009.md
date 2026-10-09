@@ -92,9 +92,9 @@ and actual test-run receipts are absent. No new owner command is requested.
 The source receipt records focused tests, real subprocess/kernel-lease ordering,
 real direct capture/provider/SQLite incremental recovery and a 537,739-path index
 above the former 64 MiB limit. Windows B authentication/readback is modeled in the
-owned Linux fixtures; these are not installed B acceptance. The actual mounted-B
-adapter is absent in this execution. Filesystem compatibility is therefore a real
-adoption blocker, not an assumption. Root-level helper acceptance/install was not
+owned Linux fixtures; these are not installed B acceptance. The production mounted-B job adapter remains absent. Synthetic acceptance below
+now validates the existing WSL B drvfs route and independent native Windows
+readback; this does not install or bind a production job. Root-level helper acceptance/install was not
 attempted; routine non-retirement restart has an existing unprivileged route.
 
 Independent review delegation was blocked by inherited qualification policy:
@@ -156,3 +156,50 @@ This validates user-manager timeout behavior, not a real B nightly capture or
 schedule adoption. No persistent unit/timer, production service, or data changes.
 Run with `VK_TEST_USER_SERVICE_TIMEOUT=1` and the focused Python suite; exact-head
 command/output is saved in the adjacent mounted-SSD validation receipt.
+
+### Actual B synthetic acceptance
+
+The explicit `rehearse_vk_nightly_real_b.py --execute-synthetic-fixtures` harness
+uses the unchanged direct capture, existing authenticated Desktop transport,
+default archive reader and DirectBProvider to capture a fresh synthetic SQLite
+source twice on actual B. The second capture changes the DB and deletes one
+fixture file; unchanged content remains. Authenticated proofs/payloads are handed
+to the exact nightly module in an existing WSL process dropped to UID/GID1000.
+This small fixture transport is not a production data-stream adapter. Each new
+generation is fully rehashed by a separate native Windows process before
+publication. The actual WSL B mount is checked as B:\ / 9p, with a pinned native
+B device and enrolled root identity. No root writes or persistent grants.
+
+Four independent stores in the fresh test directory exercise the same two
+captures. Successful retention removes only the synthetic first generation;
+unchanged content retains its inode and the second manifest has no parent.
+Native Windows recovers SQLite rows `before, second`, checks integrity, reads
+only current-generation objects and confirms the deleted member is absent.
+Actual fixture processes terminate at three injected boundaries: before atomic
+pointer replacement (exit73; first stays valid), after replacement/root fsync
+(exit74; second stays valid), and after one old-object unlink (exit75; second
+stays valid). A fresh reader verifies each current; further captures fail closed
+on the bounded old/partial overlap. Evidence lists exact remaining names and
+instructs preservation/reconciliation, rather than retrying into more partials.
+No partial cleanup automation is claimed. These are process-interruption tests,
+not proof of NTFS/WSL survival through host power loss.
+
+Receipt: `scripts/deployment/receipts/nightly-real-b-20261009.json`; full evidence
+remains on SSD. Runtime source and test hashes bind the exact tested code. The
+four cases completed in 21.39 seconds, not a release-pipeline measurement.
+B contains 83,986 logical file bytes, 83,936 unique-content bytes and 105,560 bytes
+of unique-file allocation reported by FileStandardInfo, excluding directory/MFT
+metadata. A separate retained filesystem probe adds 40 logical bytes/32 allocation
+bytes. Initial SSD capture fixture allocation was 122,880 bytes; later evidence
+files add small metadata overhead. No fixture tree is broadly cleaned up.
+An initial standalone rename/hardlink probe showed a transient Linux stat miss
+while native Windows saw the file. Later open/stat checks and all store cases
+passed; missing-file errors remain fail closed rather than being ignored.
+
+Remaining adoption prerequisites: a reviewed real source plan and protected
+exclusions; production capture/readback/lifecycle binding; bounded input capture
+chain rebasing/retention so upstream archives do not grow or depend on a removed
+baseline; safe interrupted-partial reconciliation; independent review and
+specific schedule/retention adoption. The current tests retain their raw capture
+archives as evidence, outside the generated nightly retention set. No nightly
+is enabled, and no production test-run/schedule receipt exists.

@@ -1,3 +1,18 @@
+## October 9: Synthetic real-B nightly acceptance
+
+PR235 nightly runtime bcf8f1f951 now passed two-generation synthetic acceptance
+on actual B NTFS through existing WSL drvfs, UID/GID1000, with independent native
+Windows object/SQLite readback. Hardlinks, atomic pointer replace and directory
+fsync succeeded. Actual process exits before/after publication and during exact
+fixture retention preserved valid current and blocked further capture with
+reconciliation status. Original capture archives/interrupted fixtures retained.
+No production inputs, backup roots, incident/fallback evidence, schedules,
+installation or privilege settings changed. This is not power-loss proof or
+nightly job adoption. Production plan/exclusions, lifecycle binding, input-chain
+rebasing/bounded retention and partial reconciliation remain open. See
+scripts/deployment/receipts/nightly-real-b-20261009.json and
+VK_RESTART_SAFEGUARDS_20261009.md. Full release timing remains unmeasured.
+
 ## October 9: PR235 oneshot deadline correction
 
 Rendered nightly service now uses TimeoutStartSec=7200 and TimeoutStopSec=30;

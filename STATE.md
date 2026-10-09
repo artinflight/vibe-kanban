@@ -11,8 +11,9 @@ real lifecycle drain waiting, self-contained incremental normal-nightly B
 publication/retention, source-only scripted schedule rendering and cache-preserving
 warm/cold build measurement. Read VK_RESTART_SAFEGUARDS_20261009.md and its source
 validation receipt. No production driver/timer/root code/security change was
-adopted. Physical-B mount/readback/atomic hardlink compatibility, independent
-internal review and actual full-VK warm/cold/whole-pipeline timing remain open.
+adopted. Synthetic real-B WSL/native-Windows two-generation acceptance now passed; real
+production plan/lifecycle/adoption and input-chain retention remain open.
+Independent review and actual full-VK warm/cold/whole-pipeline timing remain open.
 Build capacity is below the preserved 8 GiB floor; do not clear caches/evidence.
 The denied capacity updater remains on its separate internal branch, excluded
 from this source stream. No new owner command is requested.

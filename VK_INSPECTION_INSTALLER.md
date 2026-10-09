@@ -17,10 +17,11 @@ The exact generated script also needs review as the bootstrap implementation.
 
 ## One administrator invocation after explicit approval
 
-Run from an authenticated administrator context on MCP, **only after approval**:
+Run from an operator-controlled MCP terminal, **only after approval**. This uses
+existing sudo authentication; its availability/credentials are not verified here:
 
 ```sh
-/usr/bin/python3 -I -S -B -c 'import os,stat,hashlib; fd=os.open("/mnt/vk-storage/vk-retirement-preflight-tests/install-two-profile-29af1c33-r1.py",os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK); info=os.fstat(fd); assert stat.S_ISREG(info.st_mode) and info.st_size==124669; data=os.read(fd,2097153); os.close(fd); assert len(data)==124669 and hashlib.sha256(data).hexdigest()=="6d7db4427a7fed2e056ca28ca71057b99a7cc6cb719c74b99a25b7b778c6a6e3"; exec(compile(data,"reviewed-inspection-installer","exec"),{"__name__":"__main__"})' --install --approved-plan 29af1c33e029bc1fe9ef9467fd51a03eb586105d
+sudo -- /usr/bin/python3 -I -S -B -c 'import os,stat,hashlib; fd=os.open("/mnt/vk-storage/vk-retirement-preflight-tests/install-two-profile-29af1c33-r1.py",os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK); info=os.fstat(fd); assert stat.S_ISREG(info.st_mode) and info.st_size==124669; data=os.read(fd,2097153); os.close(fd); assert len(data)==124669 and hashlib.sha256(data).hexdigest()=="6d7db4427a7fed2e056ca28ca71057b99a7cc6cb719c74b99a25b7b778c6a6e3"; exec(compile(data,"reviewed-inspection-installer","exec"),{"__name__":"__main__"})' --install --approved-plan 29af1c33e029bc1fe9ef9467fd51a03eb586105d
 ```
 
 Administrator authentication is still unresolved. Both supported Desktop runner

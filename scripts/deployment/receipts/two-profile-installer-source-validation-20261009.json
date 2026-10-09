@@ -17,6 +17,13 @@
     "installed_root_acceptance": "Never run; scope approval and administrator authentication pending.",
     "lint": "Attempted; ESLint missing."
   },
+  "candidate_regressions": {
+    "clean_source_guard_not_bypassed": true,
+    "command": "python3 -B -m unittest discover -s scripts/deployment -p 'test_vk_candidate*.py'",
+    "count": 142,
+    "passed": true,
+    "source_commit": "ec466284f186340da29cc5e06f8c084df45057ff"
+  },
   "diff_check_passed": true,
   "dry_run": "Same hash-checked bootstrap --dry-run; no writes. Install already preflights automatically.",
   "fallback": "Survives until human QA; no global exclusion claim, existing controller gates retained.",
@@ -32,9 +39,10 @@
     "new_installer_and_harness": 20,
     "passed": true
   },
+  "implementation_commit": "ec466284f186340da29cc5e06f8c084df45057ff",
   "installed": false,
   "new_backup": false,
-  "one_time_admin_invocation_after_approval": "/usr/bin/python3 -I -S -B -c 'import os,stat,hashlib; fd=os.open(\"/mnt/vk-storage/vk-retirement-preflight-tests/install-two-profile-29af1c33-r1.py\",os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK); info=os.fstat(fd); assert stat.S_ISREG(info.st_mode) and info.st_size==124669; data=os.read(fd,2097153); os.close(fd); assert len(data)==124669 and hashlib.sha256(data).hexdigest()==\"6d7db4427a7fed2e056ca28ca71057b99a7cc6cb719c74b99a25b7b778c6a6e3\"; exec(compile(data,\"reviewed-inspection-installer\",\"exec\"),{\"__name__\":\"__main__\"})' --install --approved-plan 29af1c33e029bc1fe9ef9467fd51a03eb586105d",
+  "one_time_admin_invocation_after_approval": "sudo -- /usr/bin/python3 -I -S -B -c 'import os,stat,hashlib; fd=os.open(\"/mnt/vk-storage/vk-retirement-preflight-tests/install-two-profile-29af1c33-r1.py\",os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK); info=os.fstat(fd); assert stat.S_ISREG(info.st_mode) and info.st_size==124669; data=os.read(fd,2097153); os.close(fd); assert len(data)==124669 and hashlib.sha256(data).hexdigest()==\"6d7db4427a7fed2e056ca28ca71057b99a7cc6cb719c74b99a25b7b778c6a6e3\"; exec(compile(data,\"reviewed-inspection-installer\",\"exec\"),{\"__name__\":\"__main__\"})' --install --approved-plan 29af1c33e029bc1fe9ef9467fd51a03eb586105d",
   "ops_check_passed": true,
   "owner_changed": false,
   "package_byte_for_byte_reproduced": true,
@@ -49,7 +57,7 @@
   "scope": "source-only bootstrap packaging of EXACT reviewed two-profile29af1c33 installation",
   "scope_code_policies_binaries_grants_changed": false,
   "source_sha256": {
-    "VK_INSPECTION_INSTALLER.md": "c374f289cbd1d47cf1b1bbdaab5e77ca2cedb5a27a14f173757a2926bea8dace",
+    "VK_INSPECTION_INSTALLER.md": "cba875d9477549d0b1e677dc698b17c4b41c4188f6d0c827eba1ce652a9bbc73",
     "scripts/deployment/security/build_inspection_installer.py": "4915d6fc411d3d0e87ba6393396f4f7de7546930b2f6bed919f85b904cc9cc9e",
     "scripts/deployment/security/vk_inspection_installer.py": "303103593cca96d008933f3fb0892c152623b8abbcb0b96418ee8d13e511b7cf",
     "scripts/deployment/test_vk_inspection_installer.py": "7716b970e716c4449734e21d66341ecf132c76a9268d26badcf841625dbab4b6",

@@ -175,6 +175,60 @@ class CandidateTests(unittest.TestCase):
     def restored(self):
         self.controller.restore("initial")
 
+    def recover_initial(self, prior_source="b" * 64):
+        return CandidateController.recover_initial_restore(self.layout, "a" * 64, "b" * 64,
+            self.provider, self.supervisor, ("home/state/state.sqlite",),
+            prior_source_sha256=prior_source, fallback_artifact_sha256="c" * 64,
+            capacity_policy_sha256="d" * 64)
+
+    def test_recover_initial_restore_reverifies_same_tree_without_acceptance(self):
+        self.restored()
+        before = (self.layout.evidence / '0001-restored.json').read_bytes()
+        restored = self.recover_initial()
+        self.assertEqual(restored.phase, 'restored')
+        self.assertEqual(restored.sequence, 2)
+        self.assertIsNone(restored.test_receipt)
+        self.assertEqual((self.layout.evidence / '0001-restored.json').read_bytes(), before)
+        self.assertEqual(inventory(self.layout.tree), self.original)
+        with self.assertRaisesRegex(Blocked, 'final fenced'):
+            restored.promote()
+
+    def test_recover_rejects_partial_or_later_operation_journal(self):
+        self.restored()
+        (self.layout.evidence / '0002-refresh-intent.json').write_text('{}')
+        with self.assertRaisesRegex(Blocked, 'single completed'):
+            self.recover_initial()
+        self.assertEqual(len(list(self.layout.evidence.iterdir())), 2)
+
+    def test_recover_rejects_modified_candidate_and_live_writer(self):
+        self.restored()
+        self.supervisor.stopped = False
+        with self.assertRaisesRegex(Blocked, 'writer still active'):
+            self.recover_initial()
+        self.supervisor.stopped = True
+        (self.layout.tree / 'home/state/note').write_bytes(b'unaccepted test edit')
+        with self.assertRaisesRegex(Blocked, 'inventory differs'):
+            self.recover_initial()
+        self.assertEqual(len(list(self.layout.evidence.iterdir())), 1)
+
+    def test_recover_rejects_source_root_or_manifest_mismatch(self):
+        self.restored()
+        with self.assertRaisesRegex(Blocked, 'source/root'):
+            self.recover_initial('e' * 64)
+        journal = self.layout.evidence / '0001-restored.json'
+        value = json.loads(journal.read_text())
+        for key in ('root_binding', 'manifest_sha256'):
+            changed = dict(value); changed[key] = 'e' * 64
+            journal.write_text(json.dumps(changed))
+            with self.assertRaises(Blocked):
+                self.recover_initial()
+        self.assertEqual(len(list(self.layout.evidence.iterdir())), 1)
+
+    def test_recover_requires_completed_restore_proof(self):
+        with self.assertRaisesRegex(Blocked, 'journal missing'):
+            self.recover_initial()
+        self.assertFalse(self.layout.tree.exists())
+
     def accepted_rehearsal(self):
         self.restored()
         self.controller.accept_rehearsal()

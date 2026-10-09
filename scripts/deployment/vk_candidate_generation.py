@@ -427,6 +427,13 @@ class CandidateController:
 
     def __init__(self, layout, scope_sha256, source_sha256, provider, supervisor, sqlite_paths,
                  fallback_artifact_sha256=None, capacity_policy_sha256=None):
+        self._configure(layout, scope_sha256, source_sha256, provider, supervisor, sqlite_paths,
+                        fallback_artifact_sha256, capacity_policy_sha256)
+        require(not self.layout.evidence.exists() or not any(self.layout.evidence.iterdir()),
+                "retained controller journal needs explicit recovery; refusing a new owner")
+
+    def _configure(self, layout, scope_sha256, source_sha256, provider, supervisor, sqlite_paths,
+                   fallback_artifact_sha256, capacity_policy_sha256):
         self.layout = layout.validate()
         self.scope = scope_sha256
         self.source = source_sha256
@@ -443,8 +450,49 @@ class CandidateController:
         self.boundary = None
         self.test_receipt = None
         self.owner_receipt = None
-        require(not self.layout.evidence.exists() or not any(self.layout.evidence.iterdir()),
-                "retained controller journal needs explicit recovery; refusing a new owner")
+
+    @classmethod
+    def recover_initial_restore(cls, layout, scope_sha256, source_sha256, provider, supervisor,
+                                sqlite_paths, *, prior_source_sha256,
+                                fallback_artifact_sha256=None, capacity_policy_sha256=None):
+        """Reverify one completed, never-accepted restore under a new held owner.
+
+        No interrupted operation, test edit, rehearsal, activation or fence is
+        reconstructed. The real supervisor must independently exclude writers
+        and hold the new ownership lease before this method can append evidence.
+        All prior evidence remains intact; recovery returns only `restored`.
+        """
+        self = cls.__new__(cls)
+        self._configure(layout, scope_sha256, source_sha256, provider, supervisor, sqlite_paths,
+                        fallback_artifact_sha256, capacity_policy_sha256)
+        require(isinstance(prior_source_sha256, str) and len(prior_source_sha256) == 64
+                and all(c in '0123456789abcdef' for c in prior_source_sha256),
+                'prior controller source must be explicitly pinned')
+        require(self.layout.evidence.is_dir() and not self.layout.evidence.is_symlink(),
+                'completed restore journal missing or aliased')
+        journals = list(self.layout.evidence.iterdir())
+        require(len(journals) == 1 and journals[0].name == '0001-restored.json',
+                'only a single completed initial restore can be recovered; later operations remain held')
+        with open_regular(self.layout.evidence, '0001-restored.json') as stream:
+            require(os.fstat(stream.fileno()).st_nlink == 1, 'restore journal has an external hardlink')
+            previous = json.load(stream)
+        require(previous.get('source') == prior_source_sha256
+                and previous.get('root_binding') == self.layout.binding(),
+                'retained restore source/root binding differs')
+        self.supervisor.verify_stopped(self.layout.binding())
+        verified = self.authenticated(previous['capture_id'])
+        require(previous.get('manifest_sha256') == verified['manifest_sha256'],
+                'retained restore journal differs from authenticated B capture')
+        proof = verify_tree(self.layout, verified['entries'], self.sqlite_paths,
+                            recorded_link_exceptions=capture_link_exceptions(verified))
+        proof.update(self.restore_atimes(verified))
+        self.supervisor.verify_stopped(self.layout.binding())
+        self.rows, self.boundary, self.sequence = verified['entries'], verified, 1
+        self.checkpoint('initial-owner-recovered', {**proof, 'capture_id': verified['capture_id'],
+            'prior_source': prior_source_sha256, 'source': self.source, 'scope': self.scope,
+            'rehearsal_accepted': False, 'activation_authorized': False})
+        self.phase = 'restored'
+        return self
 
     def checkpoint(self, kind, value):
         self.sequence += 1

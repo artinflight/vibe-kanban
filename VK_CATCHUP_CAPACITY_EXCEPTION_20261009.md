@@ -43,3 +43,21 @@ beside the retained metadata. No general cleanup is requested.
 Consumer clearance is not yet obtained. The operator must authenticate the
 prepared read-only helper; earlier denied sudo access will not be bypassed.
 Final measured capacity and catch-up/fallback headroom still gate promotion.
+
+The helper is
+`/mnt/vk-storage/vk-runtime-backup-20261009/excluded-incident-archive-consumer-check-readonly.py`,
+SHA-256 `3a93efd9504c632df1bce17ddb060d0bd3907e14193b1372ed9e399c7d2c507d`.
+It inspects process executable/cwd/fd/map references to the single pinned inode,
+fails on inaccessible live processes or consumers, and performs no mutation.
+Operator command, after verifying that helper hash:
+
+```sh
+umask 077
+sudo python3 -B /mnt/vk-storage/vk-runtime-backup-20261009/excluded-incident-archive-consumer-check-readonly.py > /mnt/vk-storage/vk-runtime-backup-20261009/excluded-incident-archive-operator-consumer-clearance.private.json
+```
+
+The private receipt must report `consumer_clearance_passed: true`. This inspection
+does not itself authorize retirement. The archive is outside all 77 current
+capture roots and does not contribute to either accepted B checkpoint. Its failed
+capture's payload directory and every other local entry remain excluded from the
+requested retirement.

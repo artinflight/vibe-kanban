@@ -256,3 +256,35 @@ hosted checks; its 118 local candidate regressions passed from clean committed
 source. PR230 Test CI remains green; its hosted artifact job still records the
 namespace failure, separately from the successful approved isolated B build.
 No CI status is forged or protection bypassed.
+
+October 9 12:30 UTC: the fresh checkpoint `63e06af56d7146dca8b2241651c90126`
+has passed full direct-B provider verification: 77 original roots, 76 databases,
+538,717 manifest rows and authenticated archived atimes. Its 217,590,892-byte
+private index is separately hash-verified on B, SHA-256
+`3bfdc5d503aa3be39f8bbb354c9ffe98e2da07fcf7704677f9842133b2681431`.
+All 588 recorded missing-link literals remain explicit. This online capture is
+not a final fenced boundary or operational dependency acceptance. The actual
+initial candidate restore remains running and has not launched a backend.
+
+The owning controller now provides explicit recovery of **only one completed
+initial restore**. It reauthenticates B, independently requires stopped ownership,
+rechecks every file/DB/metadata relationship and retains the prior journal. It
+rejects interrupted/later operations, changed data, live writers and source/root/
+manifest mismatch. Recovery returns only `restored`, with no rehearsal/activation
+acceptance. Five regression cases passed; this handoff has not been used on the
+actual still-running restore owner.
+
+The frontend scope above is superseded by Seamus's explicit inclusion instruction.
+Final `66e00728` supplies twelve frontend product changes that do not overlap the
+six newer consent/chat repairs already in c3c48e63. A separate frontend-only
+overlay preserves both sets; the backend, guard and routing module stay pinned.
+Combined frontend TypeScript checks passed for local-web/web-core/UI. Packaged
+browser acceptance, actual candidate binding and routed/phone acceptance remain
+pending. The standalone 66 package cannot replace the combined frontend because
+it lacks those newer consent repairs.
+
+Read-only comparison of the two authenticated indexes proves an additional
+capacity requirement; see [the exact one-file exception request](VK_CATCHUP_CAPACITY_EXCEPTION_20261009.md).
+No further retirement is authorized or performed. The original incident archive
+and metadata have been bitwise preserved on B without converting the failed
+capture into accepted recovery evidence. All historical exceptions remain open.

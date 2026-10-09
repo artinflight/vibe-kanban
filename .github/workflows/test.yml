@@ -514,6 +514,6 @@ jobs:
       - name: Formatting and governance
         run: |
           cargo fmt --all -- --check
-          pnpm exec prettier --check packages/web-core/src/features/workspace-chat/ui/McpConsentCards.tsx .github/workflows/test.yml
-          pnpm exec prettier --check --single-quote --trailing-comma es5 scripts/testing/mcp-approval-ui.test.tsx
+          pnpm --filter @vibe/web-core exec prettier --check src/features/workspace-chat/ui/McpConsentCards.tsx ../../../.github/workflows/test.yml
+          pnpm --filter @vibe/web-core exec prettier --check --single-quote --trailing-comma es5 ../../../scripts/testing/mcp-approval-ui.test.tsx
           pnpm run ops:check

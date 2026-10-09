@@ -1,3 +1,24 @@
+## October 9: One-tap mobile Send correction (Dev only)
+
+After the 20:31 UTC cutover, HTTPS serves combined frontend `5ce84ee21be814b1519cfb2715b50f3432c3e8ba`.
+The owner reports Android Send requires two taps. Exact served assets reproduce
+this in Chromium with synthetic workspace/session data and a simulated keyboard:
+blur restores navigation and moves Send 69px before the compatibility mouseup;
+the first click misses, and the second submits. Physical Android is not verified.
+
+This branch retains composer focus during mobile mouse activation, restores
+navigation after viewport expansion, and shares a synchronous admission guard
+across Send/correction through persistence, request and draft cleanup. Sending
+is disabled instead of turning a repeated tap into Stop. Correction failures
+retain the draft and show an error for explicit retry. Work View landing remains.
+Functional checkpoint `081d859a6`: six exact-asset before reproductions and nine
+corrected browser cases pass, plus synchronous admission tests and frontend
+checks/lint/format. Physical Android and full local Rust remain unverified.
+Read VK_MOBILE_SEND_20261009.md for validation and release boundaries. Use PR233
+and the existing Dev/Staging workflow; no deployment/restart/merge is performed.
+Integrate onto the combined live frontend to retain newer consent/chat repairs;
+do not replace that combined tree with this older branch wholesale.
+
 ## October 9: Corrected frontend inclusion authorized for existing VKStaging
 
 Seamus explicitly instructs that the corrected frontend deploy with staging.

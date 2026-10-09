@@ -372,7 +372,10 @@ try {
         submissions()[0].payload.prompt ?? submissions()[0].payload.message,
         'One tap fixture'
       );
-      const pending = page.getByRole('button', { name: /^(Sending|Loading)/ });
+      const pending = page.getByRole('button', {
+        name: mode === 'running' ? 'Loading' : 'Sending',
+        exact: true,
+      });
       await pending.waitFor();
       assert.equal(
         await pending.isDisabled(),
@@ -488,6 +491,10 @@ try {
       });
       console.log(
         `PASS ${width}px ${mode}: first tap, pending/duplicate, retry, cancellation, keyboard, Work View`
+      );
+      await fs.writeFile(
+        `${output}/results.json`,
+        JSON.stringify(results, null, 2)
       );
       await context.close();
     }

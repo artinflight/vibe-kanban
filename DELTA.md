@@ -1616,3 +1616,11 @@ standalone66 assets would omit those fixes. Our obsolete reference build was
 stopped at 12:31 UTC without touching the owner's processes/artifacts. Partial
 output is retained and marked not deployable; only source/patch verification is
 claimed. Final combined asset binding/acceptance belongs to the existing owner.
+
+## 2026-10-09: One-tap mobile Send correction
+
+Reproduced keyboard blur/navigation shift against served `5ce84ee2` assets with
+fully synthetic fixtures. Focus-preserving activation, viewport-aware navigation,
+shared admission guard, disabled pending Send and correction failure/retry pass
+nine browser cases plus synchronous admission/frontend checks on PR233. No deployment or live drafts/messages touched. Read
+VK_MOBILE_SEND_20261009.md for final evidence and limitations.

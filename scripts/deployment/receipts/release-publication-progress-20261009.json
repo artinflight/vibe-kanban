@@ -41,5 +41,16 @@
     "artifact_uploaded": false,
     "namespace_restriction_bypassed": false,
     "security_settings_changed": false
+  },
+  "current_exact_head_tests": {
+    "commit": "c3c48e6324f778ccd03a5761c2314b440e9ceac3",
+    "run": 37888935110,
+    "conclusion": "success",
+    "backend_passed": 472,
+    "backend_skipped": 10,
+    "real_scanner_contracts": 73,
+    "frontend_desktop_and_phone_consent": "passed",
+    "private_remote_dependency_validation": "skipped: deploy key absent",
+    "runtime_acceptance_performed": false
   }
 }

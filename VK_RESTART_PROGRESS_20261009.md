@@ -627,3 +627,12 @@ scope/failure receipts are included; eight files matched physical B SHA/size.
 Source commits1285ddc3191a10b27d90f1478565b9c8b861e93b and
 c3c48e6324f778ccd03a5761c2314b440e9ceac3 remotely verified. Receipt-only later
 tracking commits do not claim a newer operational source or candidate acceptance.
+
+
+Fresh exact-head Test37888935110 is GREEN at
+c3c48e6324f778ccd03a5761c2314b440e9ceac3:472backend tests passed,10skipped,
+real scanner73contracts passed, desktop/phone consent fixtures and frontend,
+schema, clippy, Tauri, governance/freshness all passed. Private remote checks
+remain skipped for missing deploy key. Artifact37888935082 remains failed on
+required namespace support; no fresh deployable package or live acceptance is
+claimed. Current CI receipt records both outcomes, not a blended green result.

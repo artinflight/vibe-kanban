@@ -1,0 +1,95 @@
+{
+  "status": "source_only_adoption_disabled",
+  "enabled": false,
+  "existing_source_plan": {
+    "path": "/mnt/vk-storage/vk-runtime-backup-20261009/backup-plan.json",
+    "sha256": "4a7abb5628f381d943acb51e2ffc00c250e11bfb0b71b29a1ff78c1df4865b0c",
+    "roots": 77,
+    "explicit_sqlite_paths": 71,
+    "current_scope_review_required": true
+  },
+  "read_only_discovery": {
+    "maximum_declared_DB_bytes": 4734447616,
+    "declared_DB_bytes_total": 7441330176,
+    "declared_DBs_above_memory_snapshot_1GiB": 1,
+    "B_volume_device": 2360624474,
+    "B_free_bytes_observed": 134023909376,
+    "proposed_target_exists": false,
+    "VK_nightly_timer_found": false
+  },
+  "proposed_fresh_scope": {
+    "windows": "B:/vk-backups/vk-normal-nightly-v1",
+    "wsl": "/mnt/b/vk-backups/vk-normal-nightly-v1",
+    "store_child": "store",
+    "job_child": "jobs",
+    "existing_generations_enrolled": false,
+    "normal_current_generations": 1,
+    "unfinished_attempt_limit": 1,
+    "incident_recovery_fallback_retention": "all existing evidence remains outside this fresh scope"
+  },
+  "existing_routes": {
+    "ssh_alias": "desktop",
+    "strict_host_key_checking": true,
+    "WSL_distribution": "VK-Candidate-20261009",
+    "writer_uid": 1000,
+    "writer_gid": 1000,
+    "no_new_account_or_privilege": true,
+    "snapshot_extension": "vk_b_disk_capture.capture + vk_b_disk_snapshot.snapshot",
+    "metadata_and_archive_transport": "DesktopTransport + StreamingArchive",
+    "generation_handler": "NightlyStore",
+    "job_handler": "NightlyJob.tick"
+  },
+  "source_sha256": {
+    "vk_nightly_generation.py": "29dda3ffb9ae8e2aaf03f8558c837ecd2cf55eec8debbfb6750c37e333906b4b",
+    "vk_nightly_lifecycle.py": "b6cf1ad6b27bfd21fd97a795d6a32006b17b807d00e87845a388cb0fe7fc548d",
+    "vk_direct_capture.py": "55ef5328fee7d93a05e3796d3c1d374866d08f4eefcf67abf28ceb8dc68ec5f5",
+    "vk_b_disk_capture.py": "3bab39fb2c9a3259b6672dd48c99ce3b3dc535ffbde17ee899c4f200ee3c7d07",
+    "vk_b_disk_snapshot.py": "ba1fd175cc72f6008e77f46096e4ec30201b4943e6d9895a7907af466a69cebf",
+    "vk_desktop_transport.py": "fac7325b0de5a7cd8c07ddb542ad733a7f7f3e77a2d9c15456e6d63a0d24ff87",
+    "vk_archive_store.py": "95b59fb7d484ca379f58e5b543a763af6691d23c9b9381158b6a0c5bc772b40f"
+  },
+  "scheduler_proposal": {
+    "manager": "existing MCP systemd user manager",
+    "timer": "vk-normal-nightly.timer",
+    "service": "vk-normal-nightly.service",
+    "on_calendar": "*-*-* 02:00:00 UTC",
+    "randomized_delay_seconds": 60,
+    "type": "oneshot",
+    "timeout_start_seconds": 7200,
+    "timeout_stop_seconds": 30,
+    "no_new_privileges": true,
+    "routine_LLM_calls": 0,
+    "installed": false,
+    "enabled": false,
+    "production_test_run_receipt": null
+  },
+  "required_adapter_contract": {
+    "capture_parent": null,
+    "input_registration": "register exact file identity at creation before payload; seal full bytes/hash afterward",
+    "bounded_transfers": "enforce capture limit during transfer including B disk snapshots; no fallback to local payload staging",
+    "producer_attestation": "closed/reaped own producer and transport, exact scope/input nonce/candidate match",
+    "readback": "independent native Windows full object hash and SQLite integrity before publication/retention",
+    "handoff": "fixed pinned MCP capture to UID1000 WSL B writer; no unbounded in-memory payload handoff",
+    "cold_boot": "verify stable mount/volume/enrollment handling without re-enrolling existing backups"
+  },
+  "capacity_limits": {
+    "capture_bytes": null,
+    "changed_bytes": null,
+    "reserve_bytes": null,
+    "must_measure_whole_state_first": true,
+    "memory_only_capture_supported_on_this_host": false,
+    "transient_registered_file_bound": 1024,
+    "mutable_progress_bound_bytes": 16384,
+    "immutable_metadata_bound_bytes": 268435456
+  },
+  "remaining_adoption_checklist": [
+    "Independent exact-head source review; same-account secondary review is advisory, not a privilege/security boundary.",
+    "Review/pin current real source plan and source exclusions; preserve all old backup/incident/fallback scope outside new retention.",
+    "Bind the existing B-disk snapshot extension for the 4.734GB declared DB, plus authenticated bounded input-registration/handoff/quiescence adapters; memory-only capture is unsupported.",
+    "Measure transfer/changed-byte/metadata capacity and time with the full real plan; assign finite limits and reserve before any enrollment/adoption.",
+    "Test new lifecycle reconciliation on fresh real B with those adapters, including producer interruption, WSL/mount restart and independent recovery; old primitive acceptance is not new lifecycle acceptance.",
+    "Obtain applicable adoption/normal-retention/schedule authorization; enroll ONLY newly created scope, then independently review and test-run fixed job before enabling timer through supported agent route.",
+    "Verify actual timer installed/enabled, next trigger and successful test-run receipt before claiming nightlies enabled; rollback disables only new job/timer and preserves backup/evidence."
+  ],
+  "efficiency_boundary": "Generation storage is incremental with unchanged B hardlinks. Captures are parentless full transfers each run; no network-delta claim. Journal-backed or content-delta transfer remains a separate bounded efficiency improvement."
+}

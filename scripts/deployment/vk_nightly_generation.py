@@ -153,7 +153,7 @@ class NightlyStore:
                     raise ValueError('nightly full object readback failed')
 
     def advance(self, changes, absent, *, expected_previous, reserve_bytes, retention_adopted=False,
-                capture_context=None):
+                capture_context=None, generation=None, observe=None):
         """changes yields (safe archive name, metadata, stream or None).
 
         Database entries MUST come from consistent SQLite snapshots in the
@@ -183,11 +183,15 @@ class NightlyStore:
             if previous:
                 self.verify(previous)
             retained_hashes = {row['sha256'] for row in previous['entries'].values() if row['kind'] == 'file'} if previous else set()
-            generation = 'generation-' + uuid.uuid4().hex
+            generation = generation or 'generation-' + uuid.uuid4().hex
+            if not re.fullmatch('generation-[0-9a-f]{32}', generation):
+                raise ValueError('invalid reserved nightly generation')
             folder = self.root / generation
             folder.mkdir(mode=0o700)
             objects = folder / 'objects'
             objects.mkdir(mode=0o700)
+            if observe:
+                observe('directories', (folder, objects))
             entries = dict(previous['entries']) if previous else {}
             removed = {name(raw) for raw in absent}
             entries = {key: row for key, row in entries.items() if key not in removed and not any(
@@ -218,6 +222,12 @@ class NightlyStore:
                         continue  # Already fully hashed by verify(previous).
                     temporary = objects / ('partial-' + uuid.uuid4().hex)
                     fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+                    if observe:
+                        try:
+                            observe('partial', (temporary, os.fstat(fd)))
+                        except BaseException:
+                            os.close(fd)
+                            raise
                     checksum = hashlib.sha256()
                     size = 0
                     with os.fdopen(fd, 'wb') as sink:
@@ -251,6 +261,8 @@ class NightlyStore:
                         'parent': None, 'entries': entries, 'capture_context': capture_context}
             data = encoded(manifest)
             write_new(folder / 'manifest.json', data)
+            if observe:
+                observe('manifest', manifest)
             self.verify(manifest)
             if self.independent_readback is None or self.independent_readback(folder, manifest) != {
                     'physical_b_verified': True, 'generation': generation, 'scope_sha256': self.scope,
@@ -267,6 +279,8 @@ class NightlyStore:
                 finally:
                     os.close(durable_fd)
             write_new(stage, pointer)
+            if observe:
+                observe('pointer', (stage, stage.stat()))
             os.replace(stage, self.root / 'current.json')
             parent_fd = os.open(self.root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
             try:
@@ -366,14 +380,17 @@ def render_schedule(job_script, configuration):
             'schedule_receipt': None, 'test_run_receipt': None}
 
 
-def advance_verified_capture(store, provider, capture_id, *, reserve_bytes, retention_adopted=False):
+def advance_verified_capture(store, provider, capture_id, *, reserve_bytes, retention_adopted=False,
+                             generation=None, observe=None, verified_proof=None):
     """Reuse existing DirectBProvider's full archive/hash/metadata verification.
 
     Only changed file payloads traverse the existing B archive reader. Unchanged
     data acquires another B-local hardlink. A generation is self-contained; it
     has no parent dependency on a nightly selected for retirement.
     """
-    proof = provider.verify(capture_id)
+    # Optional proof comes only from the fixed caller's completed verification;
+    # providers/callers are trusted code, not a privilege authorization boundary.
+    proof = provider.verify(capture_id) if verified_proof is None else verified_proof
     if proof.get('scope_sha256') != store.scope or proof.get('full_current_state') is not True:
         raise ValueError('capture scope/authentication mismatch')
     previous = store.current()
@@ -392,4 +409,5 @@ def advance_verified_capture(store, provider, capture_id, *, reserve_bytes, rete
         return store.advance(changes(), set(before) - set(entries),
                              expected_previous=previous['generation'] if previous else None,
                              reserve_bytes=reserve_bytes, retention_adopted=retention_adopted,
+                             generation=generation, observe=observe,
                              capture_context={key: value for key, value in proof.items() if key != 'entries'})

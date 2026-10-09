@@ -1,3 +1,20 @@
+## October 9: Bounded nightly lifecycle — source only
+
+NightlyJob now records one attempt, rebases each capture with parent=None,
+atomically promotes a fully verified independent generation, and removes only
+recorded transient inputs/old normal-nightly objects. Scripted tick can reconcile
+known closed-producer failures without operator commands. Unknown artifacts,
+changed identities or replayed progress preserve data and block another capture.
+New actual-process interruption/retry tests are isolated Linux fixtures; earlier
+real-B primitive acceptance is historical, not new lifecycle acceptance. No
+production backup, timer, service, privilege or evidence mutation.
+Production binding proposal/checklist:
+scripts/deployment/receipts/nightly-production-bindings-proposed-20261009.json.
+Historical plan has 77 roots/71 explicit DBs, one 4.734GB DB: memory-only capture
+is unsupported; B-disk snapshot/registration/handoff adapters must be bound and
+accepted before adoption. Storage is incremental; transfer currently full.
+Full release timing and real job/schedule adoption remain open.
+
 ## October 9: Synthetic real-B nightly acceptance
 
 PR235 nightly runtime bcf8f1f951 now passed two-generation synthetic acceptance

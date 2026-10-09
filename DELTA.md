@@ -1597,3 +1597,9 @@ on existing unprivileged WSL B route, independent Windows recovery; actual exits
 before/after publication/during fixture retention preserve current and block
 retry accumulation. Protected real data untouched; adoption/input-chain lifecycle
 remain pending. See nightly-real-b-20261009 receipt.
+
+2026-10-09: Source-only nightly lifecycle now bounds parentless input captures,
+records exact cleanup ownership, resumes known partials/old retirement and adds
+scripted nonce/quiescence retry. New isolated process-crash/recovery tests; real
+production bindings disabled, 4.734GB DB needs existing B-disk snapshot handler.
+No production/scheduler/evidence changes. Transfer remains full, storage incremental.

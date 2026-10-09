@@ -203,3 +203,58 @@ baseline; safe interrupted-partial reconciliation; independent review and
 specific schedule/retention adoption. The current tests retain their raw capture
 archives as evidence, outside the generated nightly retention set. No nightly
 is enabled, and no production test-run/schedule receipt exists.
+
+### Bounded capture inputs and resumable nightly lifecycle
+
+`NightlyJob` is a source library for an explicitly adopted NEW sibling jobs/store
+scope. Each job reserves capacity for current plus changed generation data,
+transient compressed input/B snapshots and metadata. It requests a parentless
+independent capture and also checks the registered provider result has no parent.
+Raw input archives are therefore not a retained baseline: after independently
+verified publication, exact registered inputs are removed. Three consecutive
+fixture captures recover current SQLite data after previous generations AND raw
+archives disappear. This is incremental generation storage using B hardlinks;
+it currently transfers a full capture each run. No network-delta efficiency is
+claimed. No persistent journal/signing/root executor is added.
+
+One nonce-bound ledger records old file/directory identities, candidate hashes
+and exact transient file registrations. Small mutable progress records directory,
+partial and pointer identities; the host-scale immutable inventory is not rewritten
+per file. Exact FD-relative cleanup rechecks parent/file identities, hashes and
+allowed names. Current generation is independently reverified before old retirement.
+Missing previously recorded files permit resumable old-object retirement; arbitrary
+paths, substituted files, symlinks, unknown evidence and replayed progress block
+with actionable status. Unregistered creation/ledger-loss windows conservatively
+preserve artifacts; no blanket cleanup of incomplete folders. Same-account code
+and callbacks are cooperative operational controls, not a root security boundary.
+
+The scripted `tick` attests actual completion of the prior producer against its
+exact scope/input/candidate nonce before reconciliation. A live producer defers
+work, preserving the single unfinished attempt. Known closed-producer failures
+can reconcile and run a fresh independent capture without operator commands.
+Actual fixture process deaths before publication, after publication and during
+old retention preserve current, resume known cleanup and permit the next job.
+First-capture failure, 71 snapshot registrations, insufficient reserve, missing
+adoption/quiescence, raw parent reuse, unsealed inputs, symlink/hardlink substitution,
+path traversal and progress replay have focused regressions. These are isolated
+Linux tests; the changed lifecycle has not been rerun on real B or installed.
+
+Read-only production discovery found no VK backup timer and proposed fresh
+`B:/vk-backups/vk-normal-nightly-v1` absent. Historical plan digest
+4a7abb5628f381d943acb51e2ffc00c250e11bfb0b71b29a1ff78c1df4865b0c
+lists 77 source roots and 71 explicit DB paths; stat-only discovery found one
+4,734,447,616-byte DB above the 1GiB memory capture limit. Existing B-disk snapshot
+extension is required for that host scale. The proposal pins that extension and
+existing transport, WSL UID/GID1000, planned new scope and existing user scheduler.
+No credentials, payloads, production DB queries or existing generation writes.
+
+Remaining adoption checklist is machine-readable in
+`nightly-production-bindings-proposed-20261009.json`: independent exact-head
+review; current source-plan/exclusion review; fixed bounded B-disk snapshot and
+input-registration/MCP-to-WSL handoff/quiescence bindings; measured whole-state
+capacity/time limits; fresh real-B lifecycle/producer/mount-restart recovery tests;
+specific adoption/retention authorization; fixed-job test receipt followed by
+actual timer verification. Production limits stay unset and adoption disabled
+until measured. Rollback disables only the new timer/job, preserving all backup
+and evidence. Old incident/fallback roots are outside this fresh scope; human QA
+and previous no-cleanup policy remain. No owner command is requested.

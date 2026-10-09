@@ -34,7 +34,8 @@ fn main() {
             .map_err(|_| "Output failed")?;
         Ok(())
     })();
-    if result.is_err() {
+    if let Err(error) = result {
+        eprintln!("Routing module verification failed: {error}");
         std::process::exit(1);
     }
 }

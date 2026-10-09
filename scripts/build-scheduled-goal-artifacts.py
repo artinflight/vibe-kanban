@@ -42,6 +42,19 @@ env = {**os.environ, 'VK_BUILD_SOURCE_COMMIT': source, 'CARGO_INCREMENTAL': '0'}
 commands = []
 artifacts = {}
 
+# Observe the same namespace prerequisite used by the real module worker.
+# Never alter host security policy or silently omit sandbox verification.
+sandbox = shutil.which('bwrap')
+require(sandbox is not None, 'Routing module prerequisite missing: bwrap')
+probe = subprocess.run(['/usr/bin/prlimit', '--as=536870912', '--cpu=1', '--',
+    sandbox, '--die-with-parent', '--unshare-all', '--new-session',
+    '--ro-bind', '/usr', '/usr', '--ro-bind', '/lib', '/lib',
+    '--ro-bind', '/lib64', '/lib64', '--proc', '/proc', '--dev', '/dev',
+    '--tmpfs', '/tmp', '--remount-ro', '/tmp', '--clearenv', '/usr/bin/true'],
+    capture_output=True, text=True, timeout=15)
+require(probe.returncode == 0,
+        'Routing module namespace prerequisite failed: ' + probe.stderr[:4096])
+
 
 def cargo(args, messages=False):
     command = ['cargo', *args, '--profile', 'acceptance', '--locked']

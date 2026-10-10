@@ -309,9 +309,7 @@ async fn readonly_pool(database: &Path) -> RecoveryResult<sqlx::SqlitePool> {
                 .create_if_missing(false),
         )
         .await
-        .map_err(|error| {
-            #[cfg(test)]
-            eprintln!("Disposable read-only connection failure: {error}");
+        .map_err(|_| {
             "Existing read-only database unavailable; no creation or migration allowed".into()
         })
 }
@@ -461,13 +459,9 @@ mod tests {
     #[tokio::test]
     async fn actual_cli_core_verify_apply_duplicate_conflict_and_evidence_preservation() {
         let f = super::super::tests::Fixture::new();
-        let source_pool = f.pool().await;
         let database = f.home.path().join("fixture.sqlite");
-        sqlx::query("VACUUM INTO ?")
-            .bind(database.to_str().unwrap())
-            .execute(&source_pool)
-            .await
-            .unwrap();
+        let source_pool = f.pool_at(&database).await;
+        assert!(database.is_file());
         let pool = readonly_pool(&database).await.unwrap();
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let mut invocation = Invocation {
@@ -550,13 +544,9 @@ mod tests {
     #[tokio::test]
     async fn real_server_registry_readonly_model_binding_and_revision_mutation() {
         let f = super::super::tests::Fixture::new();
-        let source_pool = f.pool().await;
         let database = f.home.path().join("fixture.sqlite");
-        sqlx::query("VACUUM INTO ?")
-            .bind(database.to_str().unwrap())
-            .execute(&source_pool)
-            .await
-            .unwrap();
+        let source_pool = f.pool_at(&database).await;
+        assert!(database.is_file());
         let pool = readonly_pool(&database).await.unwrap();
         let process = original(&pool, f.process.id, &f.request).await.unwrap();
         let status = status_for(&process, &pool, f.home.path()).await.unwrap();

@@ -147,6 +147,24 @@ impl Fixture {
             .connect("sqlite::memory:")
             .await
             .unwrap();
+        self.populate(pool).await
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(super) async fn pool_at(&self, path: &Path) -> sqlx::SqlitePool {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(
+                sqlx::sqlite::SqliteConnectOptions::new()
+                    .filename(path)
+                    .create_if_missing(true),
+            )
+            .await
+            .unwrap();
+        self.populate(pool).await
+    }
+
+    async fn populate(&self, pool: sqlx::SqlitePool) -> sqlx::SqlitePool {
         sqlx::migrate!("../db/migrations").run(&pool).await.unwrap();
         sqlx::query(
             "INSERT INTO workspaces(id,branch,name) VALUES (?,'fixture','Recovery fixture')",

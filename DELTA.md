@@ -1097,3 +1097,5 @@
 - Deployed no-restart frontend release `/home/mcp/.local/share/vibe-kanban/frontend-dist/releases/20260626Tmultiline-rich-paste`; live asset `/assets/index-DXMultilinePaste.js`; backend PID stayed running and no service restart was performed.
 - Verified: UI typecheck, targeted diff check, live curl marker checks, and live `python3 scripts/vk_live_regression_smoke.py`.
 - Guard: future frontend/restart packages must carry forward this source fix and not roll back below `20260626Tmultiline-rich-paste`.
+
+2026-10-10: Diagnosed17:30 pre-launch failure as undersized8GiB raw catch-up estimate. Same selected paths now pass measured24/26GiB budgets with B/SSD capacity guards;17focused regressions/current/copied-schema/prepared inputs pass. Incumbent/current data protected; GitHub terminal readback added; publication still pending.

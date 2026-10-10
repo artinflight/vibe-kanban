@@ -1,5 +1,20 @@
 # STATE.md
 
+## October 10 Approved Cutover Catch-up Correction
+
+Seamus approved the quiet cutover at16:47UTC. The17:30:25 retry failed before
+candidate start because an estimated8GiB raw catch-up bound was too small.
+Incumbent1254186 remains healthy on current data; the reader is not published.
+Actual same-scope input measures14.56GiB. The correction has17focused tests,
+current/copied-schema and prepared-artifact acceptance. Fresh measured B/SSD
+capacity passes separate raw/stream/snapshot budgets without omitting inputs.
+Read [VK_CUTOVER_CATCHUP_CORRECTION_20261010.md](VK_CUTOVER_CATCHUP_CORRECTION_20261010.md).
+The unchanged2693c46d release will use a fresh quiet attempt; success/failure and
+actual live readback go to existing PR242 independently of broken chat capture.
+Prior attempts/B evidence/fallback/user prompts remain protected. Imports belong
+to Restore Missing Chats. Recommend-only and human-QA cleanup gate remain.
+Earlier incident/hold entries below are historical, not today's authority.
+
 ## October 7 Recovery Incident Blocks Pending Deployment
 
 The October5 production service remains live; no overnight release cutover has

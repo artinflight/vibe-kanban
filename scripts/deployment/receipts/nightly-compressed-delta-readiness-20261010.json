@@ -57,7 +57,7 @@
     "independent_current_recovery": true,
     "generations": 1,
     "reused_history_bytes": 1300000,
-    "restore": "B:\\vk-backups\\vk-nightly-delta-20261010-d70e5fc6b6634ca89e5db3bd2c06ad82\\recovered-fixture.sqlite",
+    "restore": "B:\\vk-backups\\vk-nightly-delta-20261010-0be9d2ca62ce4a63a5617b08c138a3e6\\recovered-fixture.sqlite",
     "B_bytes": 18956
   },
   "source_scope_preflight": {
@@ -78,13 +78,25 @@
   },
   "tests": {
     "command": "PYTHONPATH=scripts/deployment python3 -B -S -m unittest test_vk_nightly_archive_index test_vk_nightly_delta test_vk_nightly_compressed test_vk_nightly_lifecycle test_vk_nightly_provider test_vk_nightly_capture_adapter test_vk_nightly_b_diagnostics test_vk_nightly_service_timeout",
-    "ran": 73,
-    "passed": 72,
+    "ran": 74,
+    "passed": 73,
     "skipped": 1,
-    "seconds": 12.294,
+    "seconds": 11.771,
     "status": "OK"
   },
   "full_plan_accepted": false,
   "preserved_partial_inputs": "input-a7bc82dc106849eb8e44346a69e525d2: 21474333149 bytes, unchanged; fresh compressed acceptance uses a different store",
-  "limitations": "Samples estimate ratios; cold bootstrap is not nightly delta or ten-minute fix-ready pipeline evidence. Backup index preserves selected metadata as data and cannot authorize deployment. Full-plan acceptance and final schedule adoption remain required."
+  "limitations": "Samples estimate ratios; cold bootstrap is not nightly delta or ten-minute fix-ready pipeline evidence. Backup index preserves selected metadata as data and cannot authorize deployment. Full-plan acceptance and final schedule adoption remain required.",
+  "bounded_stream_buffers_bytes": 1048576,
+  "source_sha256": {
+    "vk_nightly_capture_adapter.py": "9ead90d37db70f0429e41fa2de8674f4b42b0e69f2d751edcf9026ef9ae19adb",
+    "vk_nightly_b_fault_fixture.py": "992a8a80d3a56b2978f1c60df1b317c9ac86f58e2ce5477c03dfb9e92c3aa895",
+    "vk_nightly_lifecycle.py": "ba2be32d92e5323eb2aec94c8a401ce001d04faf3d364c9c005b0c8d6d376da7",
+    "vk_nightly_archive_index.py": "0fa77d950e999105d29d298a6dab4552d3fb0dd83837fd6407e587089dea4050",
+    "vk_nightly_job.py": "3fce345fcdd559025bf512a6735f025e8861f099707d49bc76a7873f66a5c138",
+    "vk_nightly_generation.py": "2053de00f359df94da8c700c69c570d1ef3fc4ddd971c81013b4f7ed83a0b2c7",
+    "vk_nightly_delta.py": "6ea57ddc0bfaf1b7a87e2c65c190df4eef998ebcf741ec6098b53ed664bc3731",
+    "vk_nightly_b_job.py": "c0c0c5bdc87ac3b4cb843e51b1507260d27b8b453d9266cc8abbd2e180ebc83a",
+    "vk_nightly_b_fixture.py": "96af47ee2309578da90a8dcf91f2262e99573a77af928992ccc89f1739738c9b"
+  }
 }

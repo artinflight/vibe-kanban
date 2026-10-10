@@ -85,7 +85,7 @@ PAX headers retain ACLs/xattrs/SELinux, numeric IDs, times and link information.
     reader = threading.Thread(target=warnings, daemon=True)
     reader.start()
     try:
-        with tarfile.open(fileobj=process.stdout, mode="r|") as source:
+        with tarfile.open(fileobj=process.stdout, mode="r|", bufsize=1024**2) as source:
             for member in source:
                 # Preserve directory/link headers too; no new scope filtering.
                 output.addfile(member, source.extractfile(member) if member.isfile() else None)
@@ -244,7 +244,8 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
 
     def produce(stream):
         nonlocal manifest, peak_snapshot, disk_inventory
-        with tarfile.open(fileobj=stream, mode="w|", format=tarfile.PAX_FORMAT) as archive:
+        with tarfile.open(fileobj=stream, mode="w|", format=tarfile.PAX_FORMAT,
+                          bufsize=1024**2, copybufsize=1024**2) as archive:
             with measured(timings, "sqlite_snapshot_and_integrity"):
                 for raw in sorted(databases):
                     path = Path(raw)

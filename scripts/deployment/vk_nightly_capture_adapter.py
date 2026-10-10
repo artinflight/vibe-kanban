@@ -164,12 +164,15 @@ class RegisteredWorkspace:
         return self.seal(path)
     def save_proof(self,path,value):
         # Compact streaming JSON avoids duplicating a host-scale encoded buffer.
-        total=0
+        total=0;buffer=bytearray()
         with self.open_new(path) as stream:
             for piece in json.JSONEncoder(separators=(',',':')).iterencode(value):
                 data=piece.encode();total+=len(data)
                 if total>MAX_INDEX:raise ValueError('bounded proof metadata exceeded')
-                stream.write(data)
+                buffer.extend(data)
+                if len(buffer)>=1024**2:
+                    stream.write(buffer);buffer.clear()
+            if buffer:stream.write(buffer)
             stream.flush();os.fsync(stream.fileno())
         return self.seal(path)
     def mirror(self,source):

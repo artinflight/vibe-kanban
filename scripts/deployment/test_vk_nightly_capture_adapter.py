@@ -140,6 +140,14 @@ class AdapterTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'proof metadata'):
                 self.workspace.save_proof(self.destination/'oversized-proof.json',value)
         self.assertNotIn('oversized-proof.json',self.workspace.sealed)
+    def test_host_scale_proof_coalesces_capacity_accounting_writes(self):
+        value={'entries':{'path-'+str(i):{'bytes':i,'sha256':'a'*64} for i in range(10000)}}
+        calls=[];reserve=self.workspace.reserve_file
+        def counted(path,size):calls.append(size);return reserve(path,size)
+        with patch.object(self.workspace,'reserve_file',counted):
+            self.workspace.save_proof(self.destination/'coalesced-proof.json',value)
+        self.assertEqual(json.loads((self.destination/'coalesced-proof.json').read_text()),value)
+        self.assertLessEqual(len(calls),2)
 
     def test_path_and_mount_substitution_rejected_before_allocation(self):
         with self.assertRaisesRegex(ValueError,'DB outside'):

@@ -17,7 +17,7 @@ A real-B two-generation fixture independently restores changed SQLite rows,
 keeps one current, verifies all decoded objects and reuses 1.30 MB of history.
 Same 40.97 MB SQLite image: synchronous 12.85 s; asynchronous 2.30/4.02 s, same
 SHA and native integrity. Buffered metadata writes avoid tiny SSHFS round trips.
-73 focused tests: OK, one opt-in disposable service test skipped. ops:check passed;
+74 focused tests: OK, one opt-in disposable service test skipped. ops:check passed;
 format ran Rust successfully, then blocked on missing Prettier; no dependencies
 installed or heavy build. Whole-plan acceptance is still pending.
 

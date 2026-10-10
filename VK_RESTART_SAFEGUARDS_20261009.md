@@ -5,6 +5,27 @@ No service, route, root payload, grant, existing backup, timer or production dat
 was changed. Fresh normal-nightly acceptance artifacts are confined to B. The previously denied capacity-updater material is not part of this
 branch or its publication. OP's uninstalled updater remains internal.
 
+## October 10: Bounded blocker diagnostics and lossless capacity recovery
+
+Eight exact registered B captures of the failing 40.97MB historical SQLite file
+passed (five with allocation metadata, three without a pre-open native roundtrip).
+The original SQLite subcall/traceback/extended code were never captured; retired
+original destination mode/Windows attributes remain unknown, not reconstructed.
+New fixtures record every call, zero-byte Linux/native identity/mode/attributes,
+mount and native full-hash/SQLite seals. Original runtime is unchanged; no blind
+retry or speculative fix. See the bounded-blocker diagnostics receipt.
+
+The closed 4.734GB recovery fixture now survives as a 591,731,561-byte lossless
+zstd artifact, independently restored/full-hashed/SQLite verified against its
+original f95d0c03 SHA. Only the two verified redundant raw fixture copies were
+retired; the compressed equivalent and recovery procedure remain. Fixed a new
+harness Windows read-only-fsync error using writable atomic receipt staging and
+explicit SQLite close; seven small tests pass. B free129,719,201,792 exceeds the
+unchanged initial reserve126,969,970,688 (2,749,231,104 bytes margin). Capacity
+blocker closed; full-plan SQLite failure and complete whole-plan acceptance remain
+open. No whole-plan rerun, schedule, production/root/security change. Existing
+backups/incident/fallback survive. See scripts/deployment/receipts/nightly-bounded-blocker-diagnostics-20261010.json.
+
 ## October 10: Actual whole-plan acceptance — blocked, schedule disabled
 
 Pinned runtime f85fe01684e1927fa054e8b7bb673d9d6d7b7ae5 was exercised against the

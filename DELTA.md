@@ -1626,3 +1626,12 @@ changing NoNewPrivileges; no production or privileged mutation.
   partials reconciled; recovery copy/evidence retained. Full manifest/object,
   successful runtime/transfer and schedule acceptance remain open; first-run
   B reserve is short 1.065GB. No production/service/security/schedule changes.
+
+- 2026-10-10 bounded acceptance blockers: eight exact registered serial B DB
+  captures passed without reproducing SQLite readonly failure. Historical exact
+  paths/inodes preserved; original subcall/trace/code/mode/attributes unavailable.
+  Verified 4.734GB closed recovery fixture losslessly compressed to591.7MB and
+  independently recovered; only redundant raw representations retired. B reserve
+  deficit closed, current free129.719GB. New harness writable-fsync/SQLite-close
+  regression passes7 tests. Runtime/production/schedule/security unchanged;
+  whole-plan acceptance remains required.

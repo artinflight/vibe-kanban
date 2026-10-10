@@ -1676,3 +1676,34 @@ objects / 26.25 GiB reserve. CPU/IO/memory/health safeguards remain. Scheduling 
 disabled, production and printer controls unchanged. No owner command requested.
 Evidence: scripts/deployment/receipts/nightly-compressed-delta-readiness-20261010.json.
 This is not evidence for the ten-minute FIX-READY-through-work-resumed goal.
+
+## October 10: Whole-plan compressed acceptance stopped by host safeguard
+
+Published/tested source `53aaada46d83ae2d83e8281242caa1961cfef1cc` ran once in
+fresh B scope `vk-normal-nightly-compressed-v1`. All 79 SQLite images passed native
+hash/integrity: 7,847,219,200 bytes; all hashes/byte counts match the native sealed
+ledger. SQL stage ended at 1975.22 s (32.92 min), versus prior 62.17 min. Actual
+4,734,447,616-byte image took 485.87 s (8.10 min), versus prior 1479.64 s.
+
+At 3326.82 s the guard observed host SwapFree 290,320,384 bytes after two below-
+512MiB samples and stopped ONLY the test scope (exit 143). Production remained
+healthy: 164 HTTP-200 samples, max 33.13 ms. B still had 92,774,387,712 bytes free;
+no archive/input/object byte cap was reached. The cause of global swap pressure
+was not attributed. Do not claim whole-plan success or independent recovery.
+
+Scope is inactive; its new SSHFS mount is gone; both exact MCP producer and B
+job leases were reacquired read-only. No reconciliation/deletion performed.
+84 new inputs remain, 15,202,288,432 bytes, including an unsealed 7,285,506,048-byte
+archive and empty tar.log. Earlier 21.47GB partial evidence, verified backups,
+compressed f95 recovery, incident archive, incumbent/fallback and production are
+unchanged. Scheduling remains disabled. No owner command is requested.
+
+Another cold run is NOT admitted: retained inputs lower B free below the pinned
+98.25GiB cold reservation, and the observed swap floor failed. Preserve/equivalently
+verify and narrowly reconcile these exact owned partials only with applicable
+permission; then complete archive/index/object/current verification and B-only
+independent recovery when host resources support it. Do not repeat blindly.
+Evidence: scripts/deployment/receipts/nightly-compressed-whole-plan-guard-stop-20261010.json.
+Package: /mnt/vk-storage/vk-restart-safeguards-20261009/cold-delta-53aaada4,
+manifest SHA 046219eb538a396e413ae6dd4a4376d842f40b39c8603a6d2f51c270b38994ba,
+config SHA f175483c2603ef6001ab053adf57de963287698feaec3a92f22f73fd7539713f.

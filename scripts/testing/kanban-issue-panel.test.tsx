@@ -12,7 +12,10 @@ import {
   patchKanbanIssueComposer,
 } from '../../packages/web-core/src/shared/stores/useKanbanIssueComposerStore';
 import { useKanbanIssueComposerScratch } from '../../packages/web-core/src/shared/hooks/useKanbanIssueComposerScratch';
-import { useExpectedIssueOpen } from '../../packages/web-core/src/shared/hooks/useExpectedIssueOpen';
+import {
+  useExpectedIssueOpen,
+  useExpectedIssueOpenStore,
+} from '../../packages/web-core/src/shared/hooks/useExpectedIssueOpen';
 import { state, issue } from './kanban-issue-panel.fixture';
 
 // Bundled React's async act uses its browser MessageChannel fallback. Close the
@@ -146,6 +149,7 @@ beforeEach(async () => {
     runtime: 'local',
   });
   store.setState({ byKey: {} });
+  useExpectedIssueOpenStore.setState({ expected: null });
   openKanbanIssueComposer(key, { assigneeIds: ['dot', 'seamus'] });
   patchKanbanIssueComposer(key, { title: 'Dot task' });
   await act(async () => {
@@ -559,6 +563,23 @@ test('created issue expectation survives composer removal and delayed route/cach
     tree.update(<ExpectedIssueHost issueId="created" cached />)
   );
   assert.equal(expectedIssue(), null, 'collection refresh ends handoff');
+});
+
+test('created issue expectation survives the actual route layout unmount/remount before cache refresh', async () => {
+  await expectCreatedIssue();
+  await act(async () => tree.unmount());
+  await act(async () => {
+    tree = Renderer.create(<ExpectedIssueHost issueId="created" />);
+  });
+  assert.equal(
+    expectedIssue(),
+    'created',
+    'flat issue route remount retains handoff'
+  );
+  await act(async () =>
+    tree.update(<ExpectedIssueHost issueId="created" cached />)
+  );
+  assert.equal(expectedIssue(), null);
 });
 
 test('closing newly created issue clears its expectation before reopening', async () => {

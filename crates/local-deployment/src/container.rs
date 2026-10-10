@@ -1111,18 +1111,23 @@ impl LocalContainerService {
         Ok(desired_dir.to_path_buf())
     }
 
-    async fn track_child_msgs_in_store(&self, id: Uuid, child: &mut AsyncGroupChild) {
-        let store = Arc::new(MsgStore::with_limits(
+    async fn track_child_msgs_in_store(
+        &self,
+        id: Uuid,
+        session_id: Uuid,
+        child: &mut AsyncGroupChild,
+    ) {
+        let store = Arc::new(MsgStore::with_durable_capture(
             LIVE_EXECUTION_HISTORY_BYTES,
             LIVE_EXECUTION_CHANNEL_CAPACITY,
+            128,
         ));
 
         let out = child.inner().stdout.take().expect("no stdout");
         let err = child.inner().stderr.take().expect("no stderr");
 
         // Map stdout bytes -> LogMsg::Stdout
-        let out = ReaderStream::new(out)
-            .map_ok(|chunk| LogMsg::Stdout(String::from_utf8_lossy(&chunk).into_owned()));
+        let out = utils::execution_logs::decode_stdout(ReaderStream::new(out));
 
         // Map stderr bytes -> LogMsg::Stderr
         let err = ReaderStream::new(err)
@@ -1135,7 +1140,17 @@ impl LocalContainerService {
         store.clone().spawn_forwarder(merged);
 
         let mut map = self.msg_stores().write().await;
-        map.insert(id, store);
+        map.insert(id, store.clone());
+        drop(map);
+        // Claim/register the single writer before the exit monitor can remove
+        // the store, including a very short child or Stop during startup.
+        let capture = services::services::execution_process::spawn_stream_raw_logs_to_storage(
+            store,
+            self.db().clone(),
+            id,
+            session_id,
+        );
+        self.add_db_stream_handle(id, capture).await;
     }
 
     /// Create a live diff log stream for ongoing attempts for WebSocket
@@ -1922,8 +1937,12 @@ impl ContainerService for LocalContainerService {
             ))
         })??;
 
-        self.track_child_msgs_in_store(execution_process.id, &mut spawned.child)
-            .await;
+        self.track_child_msgs_in_store(
+            execution_process.id,
+            execution_process.session_id,
+            &mut spawned.child,
+        )
+        .await;
 
         if let Some(unit_name) = spawned.transient_unit_name.take() {
             self.add_transient_unit_name(execution_process.id, unit_name)

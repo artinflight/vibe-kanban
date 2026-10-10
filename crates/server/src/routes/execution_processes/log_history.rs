@@ -30,14 +30,17 @@ pub(super) struct HistoryQuery {
 
 #[derive(Serialize)]
 pub(super) struct HistoryEntry {
-    index: usize,
-    entry: Value,
+    pub(super) index: usize,
+    pub(super) entry: Value,
 }
 
 #[derive(Serialize)]
-pub(super) struct HistoryPage {
-    entries: Vec<HistoryEntry>,
-    next_before: Option<usize>,
+pub(crate) struct HistoryPage {
+    pub(super) entries: Vec<HistoryEntry>,
+    pub(super) next_before: Option<usize>,
+    pub(super) capture_error: Option<&'static str>,
+    pub(super) capture_pending: bool,
+    pub(super) recovery_notice: Option<&'static str>,
 }
 
 type Entries = BTreeMap<usize, Value>;
@@ -99,6 +102,26 @@ pub(super) async fn get_log_history(
         return Err(ApiError::Conflict(
             "Running logs must use the live stream".into(),
         ));
+    }
+    // Fail visibly for a durable Codex prefix, including historical captures
+    // stopped on broadcast lag. Completion/exit zero is not capture completeness.
+    if process.status == ExecutionProcessStatus::Completed
+        && process
+            .executor_action()
+            .map_err(|_| ApiError::BadRequest("Execution configuration unavailable".into()))?
+            .base_executor()
+            == Some(executors::executors::BaseCodingAgent::Codex)
+        && let Some(pending_page) =
+            capture_page_for_process(&deployment.db().pool, &process).await?
+    {
+        if !pending_page.capture_pending
+            && let Some(recovered) =
+                super::historical_response::read(&process, &deployment.db().pool, query.before)
+                    .await?
+        {
+            return Ok(Json(ApiResponse::success(recovered)));
+        }
+        return Ok(Json(ApiResponse::success(pending_page)));
     }
     let limit = query.limit.unwrap_or(40).clamp(1, 200);
     let key = (process.id, process.updated_at.to_rfc3339());
@@ -170,6 +193,60 @@ pub(super) async fn get_log_history(
     ))))
 }
 
+// Live writer ownership is authoritative for draining. A persisted pending
+// sidecar without a live owner (including after restart) remains terminally
+// unavailable; neither state is a successful closure/review proof.
+pub(crate) async fn capture_page_for_process(
+    pool: &sqlx::SqlitePool,
+    process: &ExecutionProcess,
+) -> Result<Option<HistoryPage>, ApiError> {
+    if services::services::execution_process::capture_in_progress(process.id) {
+        return Ok(Some(HistoryPage {
+            entries: vec![],
+            next_before: None,
+            capture_error: None,
+            capture_pending: true,
+            recovery_notice: None,
+        }));
+    }
+    Ok(capture_error_for_process(pool, process)
+        .await?
+        .map(|reason| HistoryPage {
+            entries: vec![],
+            next_before: None,
+            capture_error: Some(reason),
+            capture_pending: false,
+            recovery_notice: None,
+        }))
+}
+
+pub(crate) async fn capture_error_for_process(
+    pool: &sqlx::SqlitePool,
+    process: &ExecutionProcess,
+) -> Result<Option<&'static str>, ApiError> {
+    let path = services::services::execution_process::execution_log_file_path_for_execution(
+        pool, process.id,
+    )
+    .await
+    .map_err(|_| ApiError::BadRequest("Execution capture location unavailable".into()))?;
+    let available = if let Some(path) = path {
+        utils::execution_logs::validate_native_capture(
+            &path,
+            services::services::report_review::MAX_RAW_BYTES,
+        )
+        .await
+        .is_ok()
+    } else {
+        false
+    };
+    if !available {
+        return Ok(Some(
+            "Incomplete, damaged, or unverified execution capture; reply unavailable. Native transcript evidence must be preserved; no historical fallback or review acknowledgement.",
+        ));
+    }
+    Ok(None)
+}
+
 // Log entry indices are stable identities, including sparse indices after a
 // remove. Treat replace as upsert, as the existing streaming client does.
 fn apply_entry(
@@ -222,6 +299,9 @@ fn page(entries: &Entries, before: Option<usize>, limit: usize) -> HistoryPage {
             })
             .collect(),
         next_before,
+        capture_error: None,
+        capture_pending: false,
+        recovery_notice: None,
     }
 }
 

@@ -435,6 +435,7 @@ export function WorkspacesSidebar({
             <div className="flex-1 min-w-0">
               <InputField
                 variant="search"
+                ariaLabel="Search workspaces"
                 value={searchQuery}
                 onChange={onSearchChange}
                 placeholder={t('common:workspaces.searchPlaceholder')}

@@ -467,3 +467,58 @@ jobs:
           cargo fmt --all --manifest-path crates/tauri-app/Cargo.toml -- --check
           cargo clippy --all-targets --manifest-path crates/tauri-app/Cargo.toml -- -D warnings
           cargo check -p vibe-kanban-tauri
+
+  two-chat-reader-release:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_BUILD_JOBS: "2"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: nightly-2025-12-04
+          components: clippy,rustfmt
+          setup-node: "true"
+          cache-key: combined-capture-consent-Linux
+      - name: Prepare disposable fixtures
+        run: |
+          mkdir -p dev_assets
+          pnpm install --frozen-lockfile
+          npm install --prefix "$RUNNER_TEMP/vk-history-tools" --no-package-lock --ignore-scripts react-test-renderer@18.3.1
+      - name: Authentic recovery, CLI, capture and normal history tests
+        run: |
+          cargo test --locked -p server --lib historical_response -- --test-threads=1
+          cargo test --locked -p server --test report_review_integration -- --test-threads=1
+          cargo test --locked -p utils --lib
+          cargo clippy --locked -p server --lib --bin repair_native_final --tests -- -D warnings
+          cargo fmt --all -- --check
+      - name: Conversation and frontend validation
+        env:
+          TEST_RENDERER_PATH: ${{ runner.temp }}/vk-history-tools/node_modules/react-test-renderer
+          VK_TEST_OUTPUT: ${{ runner.temp }}/two-chat-ui
+        run: |
+          node scripts/testing/run-long-thread-history-tests.mjs
+          pnpm run web-core:check
+          pnpm run local-web:check
+          pnpm run format
+          git diff --exit-code
+          pnpm run ops:check
+      - name: Exact hash-bound matching server and warning UI
+        env:
+          VK_CHAT_ARTIFACT: ${{ runner.temp }}/two-chat-reader-artifact
+        run: python3 -B scripts/build-two-chat-reader.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: two-chat-reader-${{ github.sha }}
+          path: ${{ runner.temp }}/two-chat-reader-artifact/
+          retention-days: 14
+          if-no-files-found: error

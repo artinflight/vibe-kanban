@@ -1,3 +1,7 @@
+## October10: bounded two-chat reader publication preparation
+
+See VK_TWO_CHAT_READER_PUBLICATION_20261010.md. This isolated candidate is not yet live; current production c3/1254186 and published cdad frontend remain authoritative. Restore owner owns both exact imports.
+
 ## October 8 authorized safe restart — preparing, not ready
 
 Read VK_SAFE_RESTART_PREPARATION_20261008.md. Latest operator authority permits

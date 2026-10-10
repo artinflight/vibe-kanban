@@ -303,6 +303,7 @@ export function SessionChatBox<TExecutor extends string = string>({
   // Derived state from status
   const isDisabled = Boolean(
     status === 'sending' ||
+      status === 'queue-loading' ||
       status === 'stopping' ||
       feedbackMode?.isSubmitting ||
       editMode?.isSubmitting ||
@@ -533,7 +534,7 @@ export function SessionChatBox<TExecutor extends string = string>({
       case 'sending':
         return (
           <PrimaryButton
-            onClick={actions.onStop}
+            disabled
             actionIcon="spinner"
             value={t('conversation.actions.sending')}
           />

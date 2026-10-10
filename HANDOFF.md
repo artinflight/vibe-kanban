@@ -1,12 +1,25 @@
-## October10: bounded same-UID original-final recovery continuation
+## October10: tested same-UID recovery; matching publication required
 
-PR241's reviewed native/parser/sidecar reader remains the baseline. The local
-CLI and authoritative read-only capture-status endpoint are implemented in this
-workspace; compiled validation is running, so this is not a finished delivery.
-See VK_LOCAL_NATIVE_FINAL_REPAIR_20261010.md. No paired caller, enrollment,
-HTTP auth change, production repair/restart, Staging checkout edit or agent prompt.
-Both original chats remain unrestored; matching Staging-owned publication and
-normal API plus actual original-conversation UI acceptance are required.
+PR241 continuation codeae263d4730bf8cca33050bde85b1c3de305acec0 passes
+all8 new hosted CLI/status tests, CLI build, affected-target Clippy and Rustfmt
+(run38057745525). Hosted checkout63d76b9134417a7439070c536c4c2e17fa570f82
+has the identical source tree. Retain prior51 Rust/20 conversation/type/lint and
+both exact actual-native-source checks; no parser/frontend behavior was changed.
+See VK_LOCAL_NATIVE_FINAL_REPAIR_20261010.md. The completed source delivery is
+/mnt/vk-storage/vk-next-restart-20261010/e3e1-native-recovery/LOCAL_REPAIR_DELIVERY.safe.json
+with the three ordered minimal patches and compiled CLI. Isolated-index apply
+passes over actual c3 backend plus already-live cdad frontend; selected files
+match tested source. No whole604, assignment, consent, mobile or queue-library
+patch. No Staging checkout edits or repair prompts; Staging owns review/build/release.
+
+Both exact compiled CLI verify-only probes refuse the live missing status
+protocol (HTTP200 frontend fallback, not the required JSON). Neither sidecar
+was created, neither original normal history contains its final, and no apply
+was attempted. Need Staging's owner-authorized matching capture-dependency,
+reader/status and warning UI publication before live exact apply and API/UI
+acceptance. Do not restart backend/connector or modify the approval watcher.
+Normal CI's retained c4 staging-ancestry failure is not waived. Source delivery,
+unit tests and the saved original finals are not restoration completion.
 
 ## October10: original conversation native-final recovery, isolated
 

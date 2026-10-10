@@ -1,3 +1,14 @@
+## October10: original-response recovery publication gate
+
+The original T18/MM finals remain absent from normal live conversation history.
+A separate recovered-final sidecar must not be treated as capture completeness,
+review eligibility or permission to replay work. Recovery requires an authorized
+invocation and matching normal reader/warning UI publication, then exact original
+API and actual conversation UI readback. Unsigned HTTP imports remain denied;
+no credentials/enrollment, raw capture or database-state rewrite is authorized.
+Staging alone owns release; Recommend routing and the persistent approval watcher
+remain unchanged. See the branch's recovery handoff for current tested source.
+
 ## October 8 authorized safe restart — preparing, not ready
 
 Read VK_SAFE_RESTART_PREPARATION_20261008.md. Latest operator authority permits

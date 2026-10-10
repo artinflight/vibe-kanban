@@ -80,3 +80,33 @@ real HTTP status and the shared CLI core's verify/apply/duplicate/conflict paths
 Disposable apply checks preserve database/raw/native/closure bytes and mode0600.
 Compiled results and exact source binding belong in the delivery receipt; live
 API and original-conversation UI remain separate required acceptance.
+
+Validated code: `ae263d4730bf8cca33050bde85b1c3de305acec0`.
+[Focused hosted run38057745525](https://github.com/artinflight/vibe-kanban/actions/runs/38057745525)
+passes all8 new tests, CLI build, affected-target Clippy with `-D warnings` and
+Rustfmt. Hosted checkout `63d76b9134417a7439070c536c4c2e17fa570f82`
+has the identical full source tree. `pnpm run format` (existing SSD-hosted
+Prettier), `pnpm run ops:check`, and patch/format checks pass. Standard CI still
+fails the unchanged c4 staging-ancestry gate; this is not waived. Initial
+fixture failures were corrected without changing read-only or closure rules.
+
+The sealed delivery uses the actual c3 backend and already-live cdad frontend;
+ordered capture-dependencies/reader-recovery/local-cli patches apply in an
+isolated index and every selected file equals tested source. Staging's checkout
+and real index are untouched. The downloaded CLI hash is
+`52b0b82e48f894dd743278d3cb2f84f921407ff5764a0d4c43a60dcda26c3068`.
+Both actual verify-only probes exit1 on the absent authoritative JSON protocol
+(the live endpoint returns HTTP200 HTML). Neither apply was attempted. See
+`LOCAL_REPAIR_DELIVERY.safe.json` and
+`local-repair-compiled-and-live-gate.safe.json` under the agreed SSD task root.
+Matching publication, exact applies and original normal API/UI verification
+remain unfinished. No recovery-complete or independent-review claim is made.
+
+After verify-only refusal, both exact execution/session rows, session execution
+inventories, raw capture and closure hashes match the before snapshot; neither
+sidecar exists and normal histories still have zero entries. T18's aggregate
+workspace-row hash changed during the observation interval; its cause is not
+established by the aggregate baseline. Do not claim unread/review or full live
+preservation acceptance. Rebaseline exact target flags/rows immediately before
+future apply and verify them afterward, including UI readback without review
+acknowledgement. The restoration preservation requirement remains open.

@@ -1,3 +1,13 @@
+## October10: bounded same-UID original-final recovery continuation
+
+PR241's reviewed native/parser/sidecar reader remains the baseline. The local
+CLI and authoritative read-only capture-status endpoint are implemented in this
+workspace; compiled validation is running, so this is not a finished delivery.
+See VK_LOCAL_NATIVE_FINAL_REPAIR_20261010.md. No paired caller, enrollment,
+HTTP auth change, production repair/restart, Staging checkout edit or agent prompt.
+Both original chats remain unrestored; matching Staging-owned publication and
+normal API plus actual original-conversation UI acceptance are required.
+
 ## October10: original conversation native-final recovery, isolated
 
 Use VK_HISTORICAL_RESPONSE_RECOVERY_20261010.md and handoffs/e3e1-historical-response-recovery.md. Base is accepted joint604285af. Staging owns release integration; no production action, task replay, capture certification or badge write. Hosted acceptance pending.

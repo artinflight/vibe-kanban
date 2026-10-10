@@ -1,6 +1,6 @@
 #![allow(clippy::items_after_test_module)]
 
-mod historical_response;
+pub(crate) mod historical_response;
 pub(crate) mod log_history;
 
 use std::pin::Pin;
@@ -448,6 +448,12 @@ pub(super) fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
             deployment.clone(),
             load_execution_process_middleware,
         ));
+
+    #[cfg(target_os = "linux")]
+    let workspace_id_router = workspace_id_router.route(
+        "/native-recovery-status",
+        get(historical_response::local_repair::capture_status),
+    );
 
     let workspaces_router = Router::new()
         .route("/subagents/session", get(list_subagent_jobs_by_session))

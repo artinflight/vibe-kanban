@@ -34,6 +34,9 @@ const NOTICE: &str = "Original raw capture is incomplete. This reply was recover
 
 type RecoveryResult<T> = Result<T, String>;
 
+#[cfg(target_os = "linux")]
+pub(crate) mod local_repair;
+
 // Large native histories are verified one at a time, without retaining them.
 async fn permit() -> Result<tokio::sync::OwnedSemaphorePermit, ApiError> {
     static LIMIT: OnceLock<Arc<tokio::sync::Semaphore>> = OnceLock::new();

@@ -19,8 +19,9 @@ only workspace/session IDs, expected execution revision, native session/turn IDs
 native prefix byte length/SHA-256, original capture SHA-256, original prompt
 SHA-256 and final UTF-8 SHA-256. It accepts no text, filename, command or URL.
 Body limit is8192bytes. It requires the existing verified relay-signature
-context; unsigned local/remote calls return401. Use the existing authenticated
-paired client and normal signed request path. No new keys or auth grants.
+context; unsigned local/remote calls return401. No live paired caller exists.
+The separate exact-two-target same-UID CLI continuation is described in
+VK_LOCAL_NATIVE_FINAL_REPAIR_20261010.md. No new keys or auth grants.
 
 The backend derives the native filename under the configured Codex home. It
 rejects symlink files/directories, collisions, wrong execution/native/prompt/turn
@@ -54,8 +55,9 @@ reads the original raw log and fails; recovery does not create mark eligibility.
 2. Publish through the owner's next-restart flow; this patch does not authorize
    restart/cutover. Include session-sidecar storage in the existing state backup.
    The old backend safely ignores this optional sidecar; it cannot display it.
-3. Through the existing signed client, submit ONLY the separately retained T18
-   and MM identity/hash-bound request artifacts after fresh source checks. Native
+3. After matching owner publication, use the reviewed same-UID exact-target CLI
+   (verify-only first, explicit exact apply), or an actually existing signed client.
+   Do not enroll a caller or manufacture signing context. Native
    append-only activity is allowed; edits, missing identities or captures fail.
 4. Read each original execution via log-history and existing get_latest_agent_reply.
    Refresh/open its existing conversation; check exact original prompt, reply,

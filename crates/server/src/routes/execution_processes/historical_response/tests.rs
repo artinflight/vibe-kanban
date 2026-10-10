@@ -62,16 +62,16 @@ fn verify_actual_native_sources_read_only() {
 
 // Sanitized shapes of the actual T18/MM Oct10 native records. No private
 // prompts, reasoning, tool payloads or credentials enter this public fixture.
-struct Fixture {
-    home: tempfile::TempDir,
-    process: ExecutionProcess,
-    request: RecoveryRequest,
+pub(super) struct Fixture {
+    pub(super) home: tempfile::TempDir,
+    pub(super) process: ExecutionProcess,
+    pub(super) request: RecoveryRequest,
     source: PathBuf,
-    capture: PathBuf,
+    pub(super) capture: PathBuf,
     records: Vec<Value>,
 }
 impl Fixture {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         assert_fixture_root();
         let home = tempfile::tempdir_in(utils::assets::asset_dir()).unwrap();
         let execution = Uuid::new_v4();
@@ -141,7 +141,7 @@ impl Fixture {
             &self.capture,
         )
     }
-    async fn pool(&self) -> sqlx::SqlitePool {
+    pub(super) async fn pool(&self) -> sqlx::SqlitePool {
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect("sqlite::memory:")

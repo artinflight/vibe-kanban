@@ -60,6 +60,21 @@ def remote_command():
             '-o','ServerAliveCountMax=3','desktop','python -c "import base64;exec(base64.b64decode(\''+code+'\'))"']
 
 
+def verify_immutable_capture(config, proof):
+    """Bind current release artifacts to verified bytes before B publication."""
+    prefix=Path(config['source_prefix'])
+    for raw, expected in config.get('immutable_source_files', {}).items():
+        key=Path(raw).relative_to(prefix).as_posix()
+        row=proof['entries'].get(key,{})
+        seen=set()
+        while row.get('kind')=='hardlink':
+            if key in seen:raise ValueError('cyclic immutable artifact hardlink')
+            seen.add(key);key=row['target'];row=proof['entries'].get(key,{})
+        if (row.get('kind')!='file' or row.get('sha256')!=expected['sha256']
+                or row.get('bytes')!=expected['identity'][2]):
+            raise ValueError('verified capture omits or changes pinned current runtime artifact')
+
+
 class Resident:
     def __init__(self,config):
         self.process=subprocess.Popen(remote_command(),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
@@ -374,6 +389,7 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
             capture_id=resident.binding['candidate']
             provider.register(capture_id,result,identity(plan),identity(scope(plan)),config['source_prefix'],origin_root_binding='nightly-current-source-inventory')
             proof=provider.verify(capture_id)
+            verify_immutable_capture(config,proof)
             validate_socket_exclusions(config.get('socket_exclusions',[]))
             # Carry only the verified index; B replay maps authenticated tar
             # headers itself, avoiding another host-scale path/location vector.

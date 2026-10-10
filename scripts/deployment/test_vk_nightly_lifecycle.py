@@ -96,10 +96,23 @@ class NightlyLifecycle(fixtures.ContractTests):
 
     def test_shared_budget_insufficient_capacity_stops_before_capture(self):
         usage = __import__('shutil').disk_usage(self.root)
-        with patch('shutil.disk_usage',return_value=usage._replace(free=self.reserve-1)):
+        with patch('shutil.disk_usage',return_value=usage._replace(free=MAX_INDEX)):
             with self.assertRaises(ValueError):
                 self.job.run(self.make_capture,retention_adopted=True,reserve_bytes=self.reserve,capacity_floor_bytes=0)
         self.assertEqual(self.parents,[]);self.assertFalse((self.jobs/'attempt.json').exists())
+
+    def test_shared_budget_ceiling_is_not_minimum_free_space_for_small_delta(self):
+        usage=__import__('shutil').disk_usage(self.root)
+        # Current/protected data already consume the volume. A valid small
+        # capture can fit below the envelope without spending its floor.
+        free=MAX_INDEX+2*1024**2;reserve=MAX_INDEX+64*1024**2
+        with patch('shutil.disk_usage',return_value=usage._replace(free=free)), \
+                patch('vk_nightly_lifecycle.advance_verified_capture',wraps=lifecycle.advance_verified_capture) as advance:
+            result=self.job.run(self.make_capture,retention_adopted=True,reserve_bytes=reserve,
+                                capacity_floor_bytes=1024**2)
+        self.assertTrue(result['passed'],result)
+        self.assertLess(advance.call_args.kwargs['reserve_bytes'],1024**2)
+        self.assertEqual(self.latest_rows(),[('before',)])
 
     def test_shared_budget_input_ceiling_cannot_spend_object_or_floor_allowance(self):
         def excessive(folder,register,seal,*,parent):

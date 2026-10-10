@@ -1,3 +1,28 @@
+## Resume: guarded unprivileged adoption preparation
+
+The fixed nightly supervisor defers before expensive preparation when the
+existing memory/swap or lane guard fails, then observes runtime identity,
+loopback health and B capacity through the owned job lifetime. It stops only
+its own unreaped process group; producer quiescence still uses existing leases
+and reconciliation, never a global process fence. Current runtime artifacts
+have optional identity/hash pins checked before capture and against verified
+capture contents before publication.
+
+Own-block user-cron adoption and exact rollback preserve unrelated jobs and all
+backup/evidence data. The rendered scoped job has bounded CPU/memory, idle IO
+and escaped cron percent syntax. Its authenticated controller must supply real
+acceptance/configuration readiness and the approved UTC time. Same-account
+review is advisory, not a privilege boundary. No root helper/security changes.
+
+A shared allocation ceiling now clamps to actual available capacity rather than
+requiring the entire maximum envelope for a small valid delta. Capture/object
+hard limits, metadata allowance, free-space floor and legacy reservation behavior
+remain enforced. Sixty-three focused tests passed. Real whole-plan acceptance,
+independent recovery, schedule adoption and live restart-driver integration are
+still pending; current measurements and exact bindings remain private. No
+schedule, backup capture, production switch or protected-data cleanup occurred.
+The ten-minute FIX-READY-through-work-resumed goal is not established.
+
 ## Resume: shared bounded nightly allocation — source only
 
 The nightly lifecycle can now share a finite capture/object allocation budget

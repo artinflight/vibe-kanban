@@ -224,6 +224,8 @@ class NightlyJob:
             # Reservation includes transient compressed input and changed object
             # payload plus manifest allowance; never silently use protected backups.
             import shutil
+            free_bytes=shutil.disk_usage(self.store.root).free
+            allocation_reserve=reserve_bytes
             if capacity_floor_bytes is None:
                 minimum = self.capture_limit + self.changed_limit + MAX_INDEX
                 capture_budget = self.capture_limit
@@ -231,10 +233,11 @@ class NightlyJob:
                 if type(capacity_floor_bytes) is not int or capacity_floor_bytes < 0:
                     raise ValueError('finite nonnegative B free-space floor required')
                 minimum = capacity_floor_bytes + MAX_INDEX + 1
-                capture_budget = min(self.capture_limit, reserve_bytes - capacity_floor_bytes - MAX_INDEX) \
+                allocation_reserve=min(reserve_bytes,free_bytes) if type(reserve_bytes) is int else 0
+                capture_budget = min(self.capture_limit, allocation_reserve - capacity_floor_bytes - MAX_INDEX) \
                     if type(reserve_bytes) is int else 0
-            if type(reserve_bytes) is not int or reserve_bytes < minimum \
-                    or shutil.disk_usage(self.store.root).free < reserve_bytes:
+            if type(reserve_bytes) is not int or allocation_reserve < minimum \
+                    or (capacity_floor_bytes is None and free_bytes < reserve_bytes):
                 raise ValueError('insufficient reserved capacity for bounded capture plus generation overlap')
             previous = self.store.current()
             if previous: self.store.verify(previous)
@@ -242,7 +245,7 @@ class NightlyJob:
                      'candidate': 'generation-' + uuid.uuid4().hex, 'inputs': {},
                      'previous': self.snapshot(previous) if previous else None,
                      'expected_objects': {}, 'candidate_directories': None, 'partial': None, 'pointer': None,
-                     'capture_budget_bytes': capture_budget}
+                     'capture_budget_bytes': capture_budget,'allocation_reserve_bytes':allocation_reserve}
             self.save(value)
             folder = self.root / value['input_name'];folder.mkdir()
             value['input_identity'] = directory_pin(folder);self.save(value)
@@ -262,8 +265,9 @@ class NightlyJob:
                     # Inputs remain until verified publication. Charge their
                     # actual sealed size once, retaining both independent hard
                     # ceilings and the metadata/free-space allowance.
-                    object_budget = min(object_budget, reserve_bytes - MAX_INDEX - capacity_floor_bytes - capture_bytes)
-                    if object_budget <= 0 or shutil.disk_usage(self.store.root).free < object_budget + MAX_INDEX + capacity_floor_bytes:
+                    object_budget = min(object_budget, allocation_reserve - MAX_INDEX - capacity_floor_bytes - capture_bytes,
+                                        shutil.disk_usage(self.store.root).free - MAX_INDEX - capacity_floor_bytes)
+                    if object_budget <= 0:
                         raise ValueError('insufficient remaining B capacity after sealed capture')
                 proof = provider.verify(capture_id)
                 value['expected_objects'] = {row['sha256']: row['bytes'] for row in proof['entries'].values() if row['kind'] == 'file'}

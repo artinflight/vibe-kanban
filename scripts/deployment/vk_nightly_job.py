@@ -86,6 +86,18 @@ def validate(config,plan):
         if stat.S_ISDIR(info.st_mode) and [info.st_dev,info.st_ino]!=[row['device'],row['inode']]:
             raise ValueError('source directory substituted; review scope binding')
     if [str(p) for p in Exclusions(plan).roots]!=config['exclusion_targets']:raise ValueError('exclusion target changed')
+    for raw, row in config.get('immutable_source_files', {}).items():
+        p=Path(raw)
+        if (str(p.resolve()) != raw or not any(p == Path(root) or p.is_relative_to(Path(root)) for root in plan['sources'])):
+            raise ValueError('immutable runtime artifact outside bound source scope')
+        fd=os.open(p,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        with os.fdopen(fd,'rb') as stream:
+            before=os.fstat(stream.fileno())
+            if not stat.S_ISREG(before.st_mode) or [before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns]!=row['identity']:
+                raise ValueError('immutable runtime artifact identity changed')
+            actual=hashlib.file_digest(stream,'sha256').hexdigest();after=os.fstat(stream.fileno())
+        if actual!=row['sha256'] or [after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns]!=row['identity']:
+            raise ValueError('immutable runtime artifact bytes changed')
     for key in ('capture_limit_bytes','changed_limit_bytes','initial_changed_limit_bytes','snapshot_limit_bytes','reserve_bytes','initial_reserve_bytes',
                 'snapshot_timeout_seconds','readback_timeout_seconds','job_timeout_seconds'):
         if type(config[key]) is not int or config[key]<=0:raise ValueError('finite positive measured limits required')

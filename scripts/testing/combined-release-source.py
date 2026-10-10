@@ -133,13 +133,14 @@ def verify_capture_assignment_base():
 
 # The recovery owner tested this exact application tree on the accepted joint base.
 # Packaging may change only this fence and the scoped hosted validation workflow.
-RECOVERY_TESTED = "63d76b9134417a7439070c536c4c2e17fa570f82"
+RECOVERY_TESTED = "ae263d4730bf8cca33050bde85b1c3de305acec0"
 RECOVERY_DELIVERED = "3a166309a09cf425c4d12a8cfcc9dfa7d9b9c368"
 ACCEPTED_JOINT = "604285afbe9a8889aeff2c6a681bd3df998d3770"
 PACKAGING_ONLY = {"scripts/testing/combined-release-source.py", ".github/workflows/test.yml"}
 
 
 def verify():
+    assert git("rev-parse", RECOVERY_TESTED + "^{tree}").decode().strip() == "c829e38881fb552dcf21770e60b84a57fcdaa86b"
     subprocess.run(["git", "merge-base", "--is-ancestor", ACCEPTED_JOINT, RECOVERY_DELIVERED], check=True)
     assert not git("diff", "--name-only", RECOVERY_TESTED, RECOVERY_DELIVERED, "--", "crates", "packages", "shared", "Cargo.toml", "Cargo.lock", "pnpm-lock.yaml").strip()
     changed = set(git("diff", "--name-only", RECOVERY_DELIVERED, "HEAD").decode().splitlines())

@@ -2,8 +2,8 @@
 
 Use VK_CHAT_RESCUE_SCOPE_20261010.md and expanded-rescue-scope.safe.json in the
 agreed SSD evidence root. Three T18 named turns now terminal with authentic finals
-but normal histories empty;17 matching terminal candidates verified read-only.
-Fifteen extra compiled pins prepared; tests/publication/imports still required.
+but normal histories empty;18 matching terminal candidates verified read-only.
+Sixteen extra compiled pins prepared; tests/publication/imports still required.
 Keep original two-target tested artifact immediately usable when Staging publishes.
 Staging executionf207036e owns its already-running release. Untouched served-path
 was sidecar design, not access denial; no supported guarded data-only restoration

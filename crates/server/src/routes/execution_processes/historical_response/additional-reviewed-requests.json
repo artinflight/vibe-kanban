@@ -95,6 +95,18 @@
     "source_prefix_sha256": "0e4bfb88f894b2eef515cae3832a0aef137ebdb71b4418b8f09a1fbe6eca30cc",
     "workspace_id": "e3e1a013-43e6-4d91-91fd-7032c7881249"
   },
+  "a68f19c9-0436-48e3-b2a5-58297993065c": {
+    "execution_revision": "2026-10-10T15:50:25.473952729+00:00",
+    "native_session_id": "01a123f9-97cc-7873-a65e-2ff512659bbf",
+    "native_turn_id": "01a12682-4407-7161-b966-1e8cbcd7b443",
+    "original_capture_sha256": "5fe0775417040fdde1b0c1ed5a495ef27a337d683aaeb72212d13a89c8ae1745",
+    "prompt_sha256": "d32d4c58e44f7e2e955629410bdaabb861bba766f321790d9b291cca7de1fc9c",
+    "reply_sha256": "236a98aa837fecfa6437479c4b9da71dccc36f28b224e88bb6c64a5f59da3068",
+    "session_id": "8b6ddc79-2786-4e8c-a90b-8c7606938936",
+    "source_prefix_bytes": 34420167,
+    "source_prefix_sha256": "75c35f3ba5cd4a9347bb0e7dd181b2fca5b9afe494aa0d5afbba7d2ecfcc0763",
+    "workspace_id": "aa6fd613-656a-4ca3-9ed6-fa31d8c6a11f"
+  },
   "ac8a9072-4b7f-4d0b-a784-4f65fc2ef644": {
     "execution_revision": "2026-10-10T10:44:28.848304061+00:00",
     "native_session_id": "01a11b0c-1ee3-7291-b411-e4c36bf01f02",

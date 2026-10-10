@@ -23,10 +23,10 @@ restart after that publication. Future capture prevention is separate acceptance
 Read-only audit receipt:
 `/mnt/vk-storage/vk-next-restart-20261010/e3e1-native-recovery/expanded-rescue-scope.safe.json`.
 It inventories198 Codex executions from October10 plus the complete original
-T18/MM sessions. Seventeen terminal initialization-prefix captures have empty
+T18/MM sessions. Eighteen terminal initialization-prefix captures have empty
 normal history and a unique native start, exact original prompt suffix, final,
 matching task_complete, source-prefix hash and chronological execution binding.
-Fifteen additional compiled request pins extend the original two without changing
+Sixteen additional compiled request pins extend the original two without changing
 their already-tested pins. This is pending compiled validation and owner
 publication; neither the audit nor request files are import receipts.
 
@@ -46,7 +46,7 @@ reset and non-Codex histories are not certified healthy by this bounded audit.
 
 Retain existing51 Rust/20 conversation/type/lint and exact-two native evidence.
 Run only affected allowlist/CLI/status tests, compile the extended CLI and run
-the read-only compiled verifier against all17 exact private inputs. Deliver only
+the read-only compiled verifier against all18 exact private inputs. Deliver only
 tested source changes. Preserve the already-ready original-two artifact; their
 rescue must not wait for extended-target publication. After supported publication,
 record actual imports, duplicates/conflict refusal, exact normal API hashes and

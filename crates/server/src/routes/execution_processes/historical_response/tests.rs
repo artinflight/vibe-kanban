@@ -70,7 +70,7 @@ fn verify_reviewed_rescue_sources_read_only() {
     assert!(bytes.len() <= 256_000);
     let rows: Value = serde_json::from_slice(&bytes).unwrap();
     let rows = rows.as_array().unwrap();
-    assert_eq!(rows.len(), 17);
+    assert_eq!(rows.len(), 18);
     let mut ids = std::collections::HashSet::new();
     for row in rows {
         let process: ExecutionProcess = serde_json::from_value(row["process"].clone()).unwrap();

@@ -622,7 +622,7 @@ mod tests {
         assert!(reviewed_request(Uuid::new_v4()).is_err());
         let additional: std::collections::BTreeMap<String, RecoveryRequest> =
             serde_json::from_str(include_str!("additional-reviewed-requests.json")).unwrap();
-        assert_eq!(additional.len(), 15);
+        assert_eq!(additional.len(), 16);
         for (id, request) in additional {
             let execution: Uuid = id.parse().unwrap();
             assert_eq!(reviewed_request(execution).unwrap(), request);

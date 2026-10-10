@@ -1,5 +1,84 @@
 # Unread report clearing integration
 
+## October 10 resumed owner: fresh client publication verified
+
+Owner resumes implementation head `4696d7177` under Seamus's10:31 source/readiness
+scope. Parent Staging has a20-tool catalog and an actual summaries(limit1) read at
+10:49:42. This owner independently rechecked its20-tool catalog and actually called
+`list_workspace_unread_summaries(limit=1)` at11:30:10 UTC. Both reads succeeded.
+[Current-client evidence](scripts/report_delivery/evidence/current-client-20261010.json)
+hash-binds the parent receipt and separates those clients from older Dot sessions.
+**No Refresh is required for either verified fresh client.** Older Dot conversations
+are not independently verified; the earlier14-tool snapshots below are historical,
+not a current server/publication gate. Explicit one-workspace mark-read is callable;
+no marker was changed merely to test it. Assignment/visibility remains independent.
+
+The current20-tool record schema still lacks paired prepared intent guards and the
+prepare tool is absent. Do not send automatic receipts through that unpinned legacy
+path. The source-only rr patch adds prepare/paired guards and reuses the existing
+backend. Its adoption is a separate maintenance-owner decision; metadata checks for
+those new fields are required only after that authorized adoption. Existing
+history-module publication and Recommend-only routing are retained, not reopened.
+
+### Exact channel binding boundary
+
+The implemented entry points are `Caller.prepare(identity)` before presentation
+and `Caller.confirm(token, confirmation)` after an actual user-channel event, in
+`scripts/report_delivery/caller.py`. The channel runtime must retain the same token
+with workspace/session/execution/index/full UTF-8 hash/hash-version/revision and
+both prepared backend/local intent versions. Pass a report-specific stable event
+reference and genuine chat delivery, completed playback or explicit user-handled
+acknowledgement. The outbox persists that immutable context before record; retry
+never refreshes versions. Reuse this caller, not another connector/backend.
+
+For this owner, commentary/final output belongs to the **hosting conversation
+presentation runtime for Root/Dot (ChatGPT/Codex host)**, outside the VK backend
+and MCP connector. No exposed tool returns that runtime's post-delivery or
+completed-playback event, and no runtime repo/SDK/handler/API identifier is supplied
+in this checkout. Therefore an exact named private handler cannot be verified here.
+The unresolved API owner is that host's chat/voice transport/presentation owner,
+who must identify the actual delivering app/runtime and its supported confirmation
+handler/API. This is a runtime integration dependency, not a tool publication or
+credential problem; no synthetic delivered event is generated.
+
+The accessible VK function `useSessionSend.send` in
+`packages/web-core/src/features/workspace-chat/model/hooks/useSessionSend.ts`
+awaits `sessionsApi.followUp` to accept/queue a prompt. That is user-to-worker input,
+not confirmation that a worker report reached the user. MCP tools/call success,
+execution completion, WebSocket log capture, model final emission, audio synthesis,
+partial/cancelled playback and webhook request receipt cannot substitute for the
+missing presentation handler. e3e1/PR240 owns capture/consent; its files and package
+remain separate. Root/Dot channel ownership does not transfer to that connector.
+
+Next-restart decision: retain explicit user-requested clear readiness; keep automatic
+receipt production gated until the channel owner supplies the actual runtime/SDK
+and genuine report-confirmation handler, and maintenance adopts the guarded prepare
+contract. CLI attestation is not an end-to-end channel binding. No live connector,
+restart, security/access/credentials/permissions, routing policy or marker changes
+are authorized by this readiness work.
+
+### Inherited CI diagnosis
+
+Full run38043553814 at4696d7177 failed only backend-test job114190057751: the
+unchanged routing_triage protected-context test expected Frontier but got Workhorse
+at line509. That file is byte-identical to the stream base (SHA256
+`90caac528eef4dae2f64b4a4e4406a7224ed3e53b034184dbc00db16f4f3b09c`).
+Inspection has a40ms wall-clock budget; exhaustion before discovering the protected
+component can leave the default Workhorse floor. Runner scheduling/contention is
+therefore a plausible nondeterministic trigger, not a proven cause from this log.
+The supplied unchanged mobile rerun-green evidence supports retrying the same source.
+No routing/model/policy/test assertion was changed. The exact failed job was rerun
+as attempt2 on the same4696d7177 commit:397 passed,7 skipped, including the
+previously failing test. This establishes nondeterminism on unchanged source;
+the precise load/deadline cause remains unproven. The readiness receipt records it. Full run remote-checks reported success by skipping private-key
+checks; that is not independent remote deployment validation.
+
+Shared SSD reached0 free during finalization. Final source/readiness metadata is
+retained on `desktop:B:/vk-builds/vk-next-restart-20261010/pr238-readiness/`; the
+file-limited docs/metadata commit is published to the existing GitHub branch via
+Git API without a new remote. Local checkout/ref sync waits for capacity; all active
+work is preserved, with no cleanup or runtime/security change.
+
 ## Review boundary
 
 This candidate implements Root/dot delivery preparation, confirmed-event capture,
@@ -29,9 +108,9 @@ already supplies the bounded delta relative to live backend `c3c48e63`.
 | --- | --- | --- |
 | Backend | Live `c3c48e63`; GET review-state confirms `workspace-review-v1`, `atomic_exact_reply`, `manual_intent_guard`. | Existing backend remains authoritative; no second backend or migration. |
 | Receipt consumer | Installed `record_workspace_report_delivery` persists evidence and invokes conditional reconciliation immediately. | Pin pre-presentation intent for delayed events. |
-| Unread read | Installed `list_workspace_unread_summaries` returns backend flags. | Expose it in the actual dot/client catalog. |
+| Unread read | Actual current-client `list_workspace_unread_summaries(limit=1)` succeeds. | Preserve a fresh readback per clear; no publication action for verified clients. |
 | Server discovery | Real installed discovery returns 20 tools. | Candidate adds one read-only prepare tool and two optional guard fields. |
-| This session's catalog | Actual callable tools contain 14 Vibe tools; unread/receipt tools are absent. | Refresh existing custom-server metadata and open a new client conversation. |
+| Current resumed-owner catalog | 20 actual callable tools; unread summaries query succeeds. | Explicit clear is published. Older Dot clients remain unverified; automatic prepare contract is separate. |
 | Delivery capture | Existing connector has no confirmed voice/chat delivery callback. | Channel owner must bind the implemented caller to genuine channel confirmation. |
 | Frontend | Current release checkout is `5ce84ee21be814b1519cfb2715b50f3432c3e8ba`. | No frontend change; retain this combined release. |
 
@@ -48,11 +127,12 @@ mark requests. The catalog gap was verified against this execution's available
 tools, not guessed from server discovery. The recorded intent epoch may change
 through ordinary UI use and must never be reused as a delivery context.
 
-## October 10: explicit user clearing is independently ready on the server
+## Earlier October 10 receipt: explicit server readiness before fresh-client read
 
 Fresh evidence is in [explicit-read-20261010.json](scripts/report_delivery/evidence/explicit-read-20261010.json).
-Installed discovery still returns20 tools; this execution freshly inventories14
-callable Vibe tools, with neither mark-read nor unread summaries. An authenticated
+At the earlier09:57 inspection, installed discovery returned20 tools and that
+then-current execution inventoried14 callable Vibe tools, with neither mark-read
+nor unread summaries. An authenticated
 `list_projects` call through the existing plugin succeeded. The routed backend is
 still source `c3c48e6324f778ccd03a5761c2314b440e9ceac3`, PID1254186/port5561;
 its running binary SHA256 matches the release manifest. Read-only review-state and
@@ -61,7 +141,9 @@ Existing app permissions are default Allow low-risk actions / Use my default;
 no permission setting changed. A missing tool catalog entry is distinct from
 per-action approval. This does not establish future mark-read approval behavior.
 
-**Smallest correction: refresh existing client metadata now.** The individual
+**Historical correction for the earlier client: metadata refresh.** Current
+resumed-owner/Staging clients already query successfully; do not ask them to Refresh.
+The individual
 `mark_workspace_read({workspace_id})` operation is already deployed, advertised
 with a closed one-UUID schema and `readOnlyHint:false`, and dispatched to one fixed
 PUT `/api/workspaces/<UUID>/seen`. It needs no new backend, runtime code, connector
@@ -69,7 +151,8 @@ restart, Vibe restart, PR236 adoption, prepare tool or delivery callback. The ea
 setup wording incorrectly placed all catalog refresh behind automatic-patch adoption;
 that dependency is removed. The optional automatic patch remains source-only.
 
-At [ChatGPT Plugins](https://chatgpt.com/plugins), open the **existing Vibe MCP for
+Only for an older client that independently fails discovery/read, the supported
+procedure is: at [ChatGPT Plugins](https://chatgpt.com/plugins), open the **existing Vibe MCP for
 dot custom MCP connection**, choose **Refresh**, inspect the discovered metadata,
 and start a **new conversation with this connection selected**. Expect20 current
 server tools including the two existing unread tools;21 is only the later automatic
@@ -129,8 +212,8 @@ Explicit-path acceptance is independent of the automatic checklist below:
 
 - [x] Recheck running backend provenance, supported read-only capability and installed metadata.
 - [x] Mock explicit clear and fresh-readback races against installed modules; preserve local holds and receipt state.
-- [ ] Connection owner refreshes metadata and starts a new client conversation exposing mark-read and unread summaries.
-- [ ] That new client actually calls unread summaries read-only; no clear-for-testing.
+- [x] Current resumed-owner/Staging clients expose the20-tool catalog including mark-read and unread summaries; older clients are separate.
+- [x] Actual summaries(limit1) reads succeed in both fresh clients; no clear-for-testing.
 - [ ] On a later real explicit clear request, save the single-workspace acknowledgement and separately timed unread readback. No real clear request was executed in this task.
 
 ## Implemented behavior
@@ -266,8 +349,8 @@ No generated types, application/frontend/backend sources or schema changed.
    Retain existing receipts/holds/outbox on rollback. This task does not authorize
    installation, restart, auth changes or plugin reconnection. No Rust restart,
    new backend migration or frontend release is required by this patch.
-3. **Client metadata owner:** refresh now for the already deployed explicit-read
-   path described above (20 tools, no adoption or restart). For automatic prepare
+3. **Client metadata owner:** no refresh is needed for the verified current20-tool
+   client and successful unread read. Independently assess older Dot conversations. For automatic prepare
    availability, after separately authorized candidate adoption refresh again
    and start a fresh conversation. Confirm21 tools,
    the prepare tool's read-only annotation and paired guard properties on record.
@@ -292,8 +375,8 @@ No generated types, application/frontend/backend sources or schema changed.
 
 ### Exact remaining channel edge under available tools
 
-[Current channel/tool evidence](scripts/report_delivery/evidence/channel-binding.json)
-records14 actual callable Vibe tools and the remaining binding contract. Installed
+[Historical channel/tool evidence](scripts/report_delivery/evidence/channel-binding.json)
+records the earlier14 actual callable Vibe tools and the remaining binding contract. Installed
 initialize advertises only MCP tools, without a user-delivery/playback event source.
 None of `get_agent_replies`, `get_latest_agent_reply`, execution metadata, an MCP
 call result or this assistant's commentary/final output returns a confirmed
@@ -308,8 +391,8 @@ supply the `user_handled` outcome. Cancellation/partial playback has no confirm
 call. Model output emission, audio synthesis completion and Vibe worker completion
 are not substitute events. The CLI is a local attestation adapter, not this host
 callback. No available tool installs or observes the missing channel handler;
-end-to-end channel integration remains unimplemented. Metadata refresh remains a
-separate supported setup step and does not produce delivery evidence.
+end-to-end channel integration remains unimplemented. The current20-tool publication
+and actual unread read are verified independently of that missing callback.
 
 Read-only readiness command, usable now:
 
@@ -349,6 +432,6 @@ The CLI cannot manufacture or observe a missing transport callback.
 - [ ] Explicit user single-workspace clear still works through its existing tool;
   explicit leave-unread stays held. No unrelated workspace is selected or cleared.
 
-Live acceptance remains open. There was no actual delivery
-callback, metadata refresh, authorized connector adoption or live receipt/clear in
-this task. Source implementation and synthetic acceptance do not close those gates.
+Automatic live acceptance remains open. Current20-tool availability and actual
+unread reads are verified; there was no real channel delivery callback, guarded
+connector adoption or live receipt/clear in this task. Source implementation and synthetic acceptance do not close those gates.

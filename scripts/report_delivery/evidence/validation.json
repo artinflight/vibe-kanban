@@ -18,9 +18,8 @@
   "live_backend_pid": 1254186,
   "live_backend_executable": "/mnt/vk-storage/vk-cutover-artifacts-20261009/c3c48e63/candidate/server",
   "live_frontend_source": "5ce84ee21be814b1519cfb2715b50f3432c3e8ba",
-  "session_callable_vibe_tool_count": 14,
+  "session_callable_vibe_tool_count": 20,
   "installed_discovery_vibe_tool_count": 20,
-  "catalog_refreshed": false,
   "actual_delivery_callback_observed": false,
   "production_mark_requests": 0,
   "production_deployment": false,
@@ -35,7 +34,7 @@
   },
   "pending_acceptance": [
     "authorized connector adoption",
-    "client metadata refresh and real tool availability",
+    "After separately authorized automatic patch adoption: verify prepare tool and paired guard fields in that client. Existing explicit unread tools already query successfully.",
     "channel-owner confirmed-delivery callback binding",
     "real delivered-report receipt/proof/unread readback"
   ],
@@ -115,10 +114,9 @@
     "log_path": "/mnt/vk-storage/vk-unread-integration-20261009/explicit-installed-fixtures-20261010.log",
     "log_sha256": "a0d87fd9c4b984b0ec2f8e46e7872794f7237e1367a7a6aa0b524347477643ad"
   },
-  "minimum_explicit_setup": "Owner metadata Refresh + new conversation; no code/runtime/server restart, permission expansion or reauthentication",
+  "minimum_explicit_setup": "None for verified current owner/Staging clients:20 tools and actual summaries read pass. Older Dot clients independently unverified.",
   "pending_explicit_acceptance": [
-    "owner refresh and actual fresh client unread summaries call",
-    "single mark only on a later real explicit user clear request; no markers for testing"
+    "Only a later genuine user clear request may produce a real single-workspace clear acknowledgement/readback; no marker test here"
   ],
   "caller_code_commit": "8ed55f8ba5a35bd4832cd3439deac01383cfc9ca",
   "hosted_caller_ci": {
@@ -127,10 +125,66 @@
     "head_sha": "8ed55f8ba5a35bd4832cd3439deac01383cfc9ca",
     "coverage": "17 independent caller +3 explicit readiness tests and patch hash/file boundary; source-dependent 24 dispatcher integration tests verified locally, including installed explicit modules"
   },
-  "hosted_full_repository_ci": {
+  "earlier_client_snapshot": {
+    "callable_tool_count": 14,
+    "explicit_setup": "Owner metadata Refresh + new conversation; no code/runtime/server restart, permission expansion or reauthentication",
+    "evidence": "explicit-read-20261010.json",
+    "scope": "Earlier execution; superseded for verified current owner/Staging clients only"
+  },
+  "current_client_evidence": "current-client-20261010.json",
+  "resumed_small_tests": {
+    "caller": 17,
+    "readiness": 3,
+    "lost_response_exact_versions": 5,
+    "all_passed": true,
+    "logs": {
+      "pr238-caller-tests.safe.log": {
+        "path": "/mnt/vk-storage/vk-next-restart-20261010/pr238-caller-tests.safe.log",
+        "sha256": "080ec650044c176f9be5c33f758a7784b40d8622c5f5726b2ceafc097a7ac303"
+      },
+      "pr238-explicit-readiness-tests.safe.log": {
+        "path": "/mnt/vk-storage/vk-next-restart-20261010/pr238-explicit-readiness-tests.safe.log",
+        "sha256": "5eaf436a36f12dac457f5a2b9c9fa1c75f886c25c8b08ef996bd337a696bddd8"
+      },
+      "pr238-exact-retry-tests.safe.log": {
+        "path": "/mnt/vk-storage/vk-next-restart-20261010/pr238-exact-retry-tests.safe.log",
+        "sha256": "2eef885d0c7c7372184ac73630fad51a6181e505d956763d260660201429774b"
+      }
+    }
+  },
+  "channel_runtime_binding": "channel-runtime-binding.json",
+  "inherited_full_ci": {
+    "run": 38043553814,
+    "source_head": "4696d71771f24545c437510722d35853b3ff46f6",
+    "failed_job": 114190057751,
+    "failed_test": "routing_triage::tests::simple_language_and_discovered_protected_context_raise_the_floor",
+    "line": 509,
+    "actual": "Workhorse",
+    "expected": "Frontier",
+    "rerun_attempt": 2,
+    "rerun_job": 114203211741,
+    "status": "completed",
+    "routing_source_unchanged": true,
+    "routing_source_sha256": "90caac528eef4dae2f64b4a4e4406a7224ed3e53b034184dbc00db16f4f3b09c",
+    "diagnosis": "40ms inspection deadline/load plausible; failure log does not prove cause",
+    "policy_or_source_workaround": false,
+    "conclusion": "success",
+    "passed": 397,
+    "skipped": 7,
+    "previously_failing_test": "passed unchanged on attempt2",
+    "url": "https://github.com/artinflight/vibe-kanban/actions/runs/38043553814/attempts/2"
+  },
+  "metadata_refresh_performed_by_this_owner": false,
+  "earlier_hosted_full_repository_ci_receipt": {
     "status": "in_progress",
     "url": "https://github.com/artinflight/vibe-kanban/actions/runs/38043475044",
     "head_sha": "8ed55f8ba5a35bd4832cd3439deac01383cfc9ca",
     "observed_after_focused_ci": "branch freshness/policy, changes, ops passed; full frontend/backend/tauri checks pending"
+  },
+  "storage": {
+    "ssd_full": true,
+    "cleanup_performed": false,
+    "artifacts": "desktop:B:/vk-builds/vk-next-restart-20261010/pr238-readiness/",
+    "publication": "Existing GitHub feature branch via Git API; no new remote; local checkout synchronization pending SSD capacity."
   }
 }

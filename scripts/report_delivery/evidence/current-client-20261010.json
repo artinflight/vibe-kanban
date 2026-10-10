@@ -1,0 +1,46 @@
+{
+  "checked_at_utc": "2026-10-10T11:30:10.015761+00:00",
+  "client": "PR238 resumed owner; current execution",
+  "callable_vibe_tool_names": [
+    "mcp__codex_apps__vibe_mcp_for_dot_create_session",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_agent_replies",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_execution",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_issue",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_latest_agent_reply",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_repo",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_workspace_reconciliation_status",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_issues",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_projects",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_repos",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_session_executions",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_sessions",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_workspace_unread_summaries",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_workspaces",
+    "mcp__codex_apps__vibe_mcp_for_dot_mark_workspace_read",
+    "mcp__codex_apps__vibe_mcp_for_dot_reconcile_workspace_reports",
+    "mcp__codex_apps__vibe_mcp_for_dot_record_workspace_report_delivery",
+    "mcp__codex_apps__vibe_mcp_for_dot_run_session_prompt",
+    "mcp__codex_apps__vibe_mcp_for_dot_set_workspace_review_hold",
+    "mcp__codex_apps__vibe_mcp_for_dot_start_workspace"
+  ],
+  "callable_vibe_tool_count": 20,
+  "unread_read": {
+    "tool": "list_workspace_unread_summaries",
+    "arguments": {
+      "limit": 1
+    },
+    "isError": false,
+    "returned_count": 1,
+    "observed_at": "2026-10-10T11:30:10.015761+00:00"
+  },
+  "explicit_mark_available": true,
+  "prepare_tool_available": false,
+  "record_schema_has_prepared_guards": false,
+  "refresh_required_for_this_client": false,
+  "older_dot_client": "Not independently verified. Do not infer its catalog from this client.",
+  "parent_staging_receipt": "/mnt/vk-storage/vk-next-restart-20261010/unread-discovery-readback.safe.json",
+  "marks_sent": 0,
+  "holds_changed": false,
+  "delivery_callback_observed": false,
+  "parent_staging_receipt_sha256": "811bb0bedf0254b60852a898b58224f1470494f57ba2ed48397bb73d91dcbc1b"
+}

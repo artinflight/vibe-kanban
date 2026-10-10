@@ -1,10 +1,31 @@
+# October 10 resumed owner: next-restart pickup
+
+Resumed owner4696d7177. Parent Staging20-tool + actual summaries(limit1) read
+passed10:49:42; this owner independently queried successfully11:30:10 UTC with20
+callable tools. No Refresh needed for those clients; older Dot is independently
+unverified. See scripts/report_delivery/evidence/current-client-20261010.json.
+Explicit user clear is callable; no test marker/hold changes. Automatic prepare
+and guard metadata remain source-only. Host Root/Dot chat/voice presentation
+runtime owns genuine delivery confirmation; its actual handler/API is not exposed
+or identified in VK/connector. useSessionSend.send -> sessionsApi.followUp only
+accepts a worker prompt; never interpret it as delivered-report evidence.
+Inherited fullCI38043553814/114190057751 failed unchanged routing_triage at509;
+40ms inspection budget makes load-related failure plausible. Exact attempt2 rerun passed397 tests,7 skipped at original4696d7177;
+no routing/model/source workaround. Parent receipt and B-backed readiness
+artifact record the result. Existing history module/Recommend
+remain correct; e3e1/PR240 stays separate. Shared SSD filled during finalization; B retains final packet/receipt and GitHub
+contains the file-limited docs/metadata commit. Local Git sync is capacity-blocked.
+No extra agents, heavy build, cleanup,
+connector install/restart, security/credential/permission or production marker work.
+
 # October 10: Explicit clear pickup
 
-Fresh source/manifest/live read-only verification confirms existing mark_workspace_read
+Historical pre-refresh snapshot (superseded by the fresh-client receipt above):
+source/manifest/live read-only verification confirmed existing mark_workspace_read
 and unread summaries are already installed (20 server tools versus14 freshly
 inventoried callable tools). No explicit-path runtime correction/restart/adoption
-is needed. The connection owner must Refresh the existing Vibe MCP for dot custom
-MCP metadata and start a new conversation, then verify summaries read-only. This
+is needed. At that earlier snapshot, metadata Refresh was suggested. It is superseded for
+the successful fresh clients verified above; older Dot clients remain separate. This
 is independent of automatic delivery callback/PR238 connector-patch adoption.
 New read-only verifier has no mark command. Seven installed-module mocked tests
 and144 combined candidate tests pass. Explicit /seen advances backend manual intent;

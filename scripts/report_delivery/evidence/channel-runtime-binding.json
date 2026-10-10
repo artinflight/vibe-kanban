@@ -1,0 +1,54 @@
+{
+  "implementation_head": "4696d71771f24545c437510722d35853b3ff46f6",
+  "runtime_owner": "Hosting Root/Dot conversation presentation client (ChatGPT/Codex host); external to VK and restricted connector",
+  "actual_runtime_repo_or_app_id": "Not supplied or inspectable through this execution",
+  "actual_handler_or_api_name": null,
+  "handler_accessible": false,
+  "local_entry_points": {
+    "before_presentation": "scripts/report_delivery/caller.py:Caller.prepare(identity)",
+    "after_confirmed_report_event": "scripts/report_delivery/caller.py:Caller.confirm(token, confirmation)",
+    "uncertain_retry": "scripts/report_delivery/caller.py:Caller.retry(token)"
+  },
+  "required_context": [
+    "workspace_id",
+    "session_id",
+    "execution_id",
+    "message_index",
+    "reply_sha256",
+    "hash_version",
+    "execution_revision",
+    "expected_intent_version",
+    "expected_hold_version"
+  ],
+  "required_confirmation": [
+    "outcome",
+    "actor",
+    "channel",
+    "event_id",
+    "evidence"
+  ],
+  "accepted_genuine_outcomes": [
+    "chat_delivered",
+    "voice_playback_completed",
+    "user_handled"
+  ],
+  "immutable_retry": "Keep token and request/pins unchanged; cached applied proof has historical readback only",
+  "current_client_contract": {
+    "tools": 20,
+    "prepare_available": false,
+    "record_has_paired_guards": false,
+    "automatic_record_allowed": false
+  },
+  "excluded_local_handler": {
+    "file": "packages/web-core/src/features/workspace-chat/model/hooks/useSessionSend.ts",
+    "handler": "useSessionSend.send",
+    "api": "sessionsApi.followUp",
+    "meaning": "accepts/queues user-to-worker prompt; does not acknowledge worker report delivery",
+    "sha256": "cac8b3bffca752cbd0a92db201db97e562249aa2f1112e5868c89820165cb92d"
+  },
+  "minimum_next_decision": "Host presentation owner must identify the actual delivering runtime/app and supported report-confirmation handler/API. Until available, keep automatic receipts gated and preserve explicit-user clear readiness.",
+  "connector_maintenance_decision": "Separate authorized adoption of report_reconciliation.py patch and then verify prepare/paired guard metadata; not performed here",
+  "no_new_backend_or_connector": true,
+  "fake_delivery_events": 0,
+  "production_marker_calls": 0
+}

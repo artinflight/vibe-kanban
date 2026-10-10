@@ -21,6 +21,17 @@ from vk_nightly_lifecycle import NightlyJob, sync_directory
 
 
 MAX_CONTROL = 16384
+WINDOWS_INPUT_METADATA = r'''
+import json,os,pathlib,stat,sys
+r=json.load(sys.stdin);assert os.stat('B:/').st_dev==r['volume_device']
+p=pathlib.Path(r['path'])
+def row(p):
+ s=p.lstat();assert not s.st_file_attributes & 0x400
+ return {'path':str(p),'device':s.st_dev,'inode':s.st_ino,'bytes':s.st_size,
+         'mode':oct(s.st_mode),'Windows_attributes':s.st_file_attributes}
+assert stat.S_ISREG(p.lstat().st_mode)
+print(json.dumps({'file':row(p),'parent':row(p.parent),'metadata_only':True}))
+'''
 WINDOWS_READBACK = r'''
 import hashlib,json,os,pathlib,sqlite3,sys
 r=json.load(sys.stdin)
@@ -193,13 +204,26 @@ def run(config):
             command=receive(sys.stdin.buffer)
             if command.get('binding')!=binding:raise ValueError('stale/wrong live producer binding')
             action=command.get('action');raw=command.get('name')
-            if action in ('allocate','seal'):
+            if action in ('allocate','seal','inspect'):
                 if not isinstance(raw,str) or not re.fullmatch('[A-Za-z0-9_.-]+',raw) or raw in ('.','..'):
                     raise ValueError('unsafe registered input name')
                 path=folder/raw
                 if action=='allocate':
                     with path.open('xb') as stream:register(path,stream.fileno())
                     emit({'allocated':raw})
+                elif action=='inspect':
+                    # Only an already registered exact live input, never a
+                    # source selector or an arbitrary B path/content reader.
+                    row=job.read()['inputs'].get(raw)
+                    if row is None:raise ValueError('unknown diagnostic input')
+                    with regular(path) as stream:
+                        info=os.fstat(stream.fileno())
+                        if [info.st_dev,info.st_ino]!=row['identity']:raise ValueError('diagnostic input substituted')
+                    request={'path':'B:/'+str(path.relative_to('/mnt/b')),'volume_device':config['volume_device']}
+                    checked=subprocess.run(['/mnt/c/Python310/python.exe','-B','-c',WINDOWS_INPUT_METADATA],
+                        input=json.dumps(request),capture_output=True,text=True,timeout=15)
+                    if checked.returncode:raise ValueError('native input metadata unavailable')
+                    emit({'name':raw,'registered_identity':row['identity'],'native':json.loads(checked.stdout)})
                 else:
                     with regular(path) as stream:os.fsync(stream.fileno())
                     sync_directory(folder);seal(path);row=job.read()['inputs'][raw]

@@ -1,3 +1,15 @@
+## October 10: Failure-only SQLite diagnostics before whole-plan acceptance
+
+Active-session reconciliation found exactly one execution and an empty follow-up
+queue; no duplicate producer or continuation was started. SQLite failures now
+preserve the original error and exact operation, extended code/name, traceback,
+RO source journal/page size, source/destination/parent identities and bounded
+native Windows metadata of only the registered live input. No success-path extra
+SQLite query, retry, new snapshot semantics, permissions or scope. Three new
+regressions verify unchanged success calls, original exception preservation and
+secondary metadata failure isolation. Whole-plan acceptance remains required;
+schedule/production/printer controls remain untouched. Limits stay unchanged.
+
 ## October 10: Bounded blocker diagnostics and lossless capacity recovery
 
 Eight exact registered B captures of the failing 40.97MB historical SQLite file

@@ -32,7 +32,7 @@ def native_metadata(directory, name):
     return json.loads(result.stdout)
 
 
-def run(package, source, output, repeat, *, native_after=False):
+def run(package, source, output, repeat, *, native_after=False, inject_failure=False):
     if not 1 <= repeat <= 5: raise ValueError('one to five allocations only')
     source = source.absolute()
     if source.resolve()!=source or source.is_symlink() or source.stat().st_size > 64 * 1024**2:
@@ -56,6 +56,10 @@ def run(package, source, output, repeat, *, native_after=False):
             return super().execute(sql,*args,**kwargs)
         def backup(self, target, *args, **kwargs):
             events.append({'call':'backup','pages':kwargs.get('pages')})
+            if inject_failure:
+                error=sqlite3.OperationalError('explicitly injected diagnostic test failure')
+                error.sqlite_errorcode=1032;error.sqlite_errorname='SQLITE_READONLY_DBMOVED'
+                raise error
             return super().backup(target,*args,**kwargs)
     def observed_connect(path,*args,**kwargs):
         events.append({'call':'connect','path':str(path)})
@@ -107,6 +111,8 @@ def run(package, source, output, repeat, *, native_after=False):
                         report['failure']={'allocation':n,'type':type(error).__name__,'reason':str(error),
                             'traceback':traceback.format_exc(),'sqlite_errorcode':getattr(error,'sqlite_errorcode',None),
                             'sqlite_errorname':getattr(error,'sqlite_errorname',None),'last_call':events[-1] if events else None}
+                        report['failure']['injected']=inject_failure
+                        report['failure']['runtime_diagnostic']=getattr(error,'nightly_sqlite_diagnostic',None)
                         save();raise
                 report['allocations'][-1]['post_native']=native_metadata(resident.ready['directory'],result['snapshot']);save()
             report['passed']=True
@@ -128,4 +134,6 @@ if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--package',type=Path,required=True)
     p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--repeat',type=int,default=5);p.add_argument('--native-metadata-after',action='store_true')
-    a=p.parse_args();run(a.package,a.source,a.output,a.repeat,native_after=a.native_metadata_after)
+    p.add_argument('--inject-backup-failure',action='store_true')
+    a=p.parse_args();run(a.package,a.source,a.output,a.repeat,native_after=a.native_metadata_after,
+                        inject_failure=a.inject_backup_failure)

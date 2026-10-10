@@ -64,6 +64,40 @@ class AdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'SQLite image exceeds'):self.snapshot(maximum=1)
         self.assertEqual(len(list(self.destination.iterdir())),1)
         self.assertEqual([event[0] for event in self.resident.events],['allocate'])
+    def test_sqlite_failure_preserves_exact_error_and_stage_without_seal_or_retry(self):
+        error=sqlite3.OperationalError('attempt to write a readonly database')
+        error.sqlite_errorcode=1032;error.sqlite_errorname='SQLITE_READONLY_DBMOVED'
+        connect=sqlite3.connect;backups=[]
+        class Broken(sqlite3.Connection):
+            def backup(self,*args,**kwargs):backups.append(kwargs['pages']);raise error
+        def observed(path,*args,**kwargs):return connect(path,*args,factory=Broken,**kwargs)
+        with patch('sqlite3.connect',observed),patch.object(self.workspace,'inspect_failure',return_value={'metadata_only':True}) as inspect:
+            with self.assertRaises(sqlite3.OperationalError) as caught:self.snapshot()
+        self.assertIs(caught.exception,error);self.assertEqual(backups,[1024])
+        report=error.nightly_sqlite_diagnostic
+        self.assertEqual(report['stage'],'source.backup(destination)')
+        self.assertEqual(report['sqlite_errorcode'],1032);self.assertEqual(report['sqlite_errorname'],'SQLITE_READONLY_DBMOVED')
+        self.assertEqual(report['source_journal_mode'],'wal');self.assertEqual(report['source_page_size'],4096)
+        self.assertEqual(report['source'],str(self.source));self.assertEqual(report['destination_identity']['bytes'],0)
+        self.assertIn('OperationalError',report['traceback']);self.assertEqual([x[0] for x in self.resident.events],['allocate'])
+        inspect.assert_called_once()
+    def test_secondary_metadata_failure_cannot_hide_original_sqlite_error(self):
+        error=sqlite3.OperationalError('original failure');connect=sqlite3.connect
+        class Broken(sqlite3.Connection):
+            def backup(self,*args,**kwargs):raise error
+        with patch('sqlite3.connect',lambda *a,**k:connect(*a,factory=Broken,**k)),patch.object(self.workspace,'inspect_failure',side_effect=TimeoutError('secondary')):
+            with self.assertRaises(sqlite3.OperationalError) as caught:self.snapshot()
+        self.assertIs(caught.exception,error)
+        self.assertEqual(error.nightly_sqlite_diagnostic['diagnostic_errors'],[{'operation':'registered_destination','type':'TimeoutError'}])
+    def test_successful_snapshot_adds_no_diagnostic_sqlite_queries_or_inspection(self):
+        connect=sqlite3.connect;commands=[]
+        class Observed(sqlite3.Connection):
+            def execute(self,sql,*a,**k):commands.append(sql);return super().execute(sql,*a,**k)
+        with patch('sqlite3.connect',lambda *a,**k:connect(*a,factory=Observed,**k)),patch.object(self.workspace,'inspect_failure') as inspect:
+            self.snapshot()
+        inspect.assert_not_called()
+        self.assertNotIn('PRAGMA journal_mode',commands)
+        self.assertEqual(commands.count('PRAGMA journal_mode=OFF'),1)
     def test_capacity_reservation_accepts_host_sized_image_without_allocating_payload(self):
         size=4_734_447_616;self.workspace.limit=size+1024
         self.workspace.reserve_file(self.destination/'sqlite-consistent-host.sqlite',size)

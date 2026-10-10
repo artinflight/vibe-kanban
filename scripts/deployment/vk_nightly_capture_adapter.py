@@ -18,6 +18,7 @@ import stat
 import subprocess
 import threading
 import time
+import traceback
 import uuid
 
 from vk_archive_stream import StreamingArchive, packet
@@ -74,15 +75,15 @@ class Resident:
             self.binding=self.ready.get('binding')
         except BaseException:
             self.close();raise
-    def response(self):
-        if not select.select([self.process.stdout],[],[],self.timeout)[0]:raise TimeoutError('B resident response timed out')
+    def response(self,timeout=None):
+        if not select.select([self.process.stdout],[],[],self.timeout if timeout is None else timeout)[0]:raise TimeoutError('B resident response timed out')
         line=self.process.stdout.readline(16385)
         if not line.endswith(b'\n') or len(line)>16384:raise ValueError('B resident response missing or oversized')
         return json.loads(line)
-    def call(self,action,**kwargs):
+    def call(self,action,*,response_timeout=None,**kwargs):
         with self.lock:
             packet(self.process.stdin,{'action':action,'binding':self.binding,**kwargs})
-            return self.response()
+            return self.response(timeout=response_timeout)
     def close(self):
         if not self.process.stdin.closed:self.process.stdin.close()
         try:self.process.wait(timeout=30)
@@ -142,6 +143,10 @@ class RegisteredWorkspace:
         self.sealed[Path(path).name]=value
         self.remaining()
         return value
+    def inspect_failure(self,path):
+        path=Path(path);self.checked_root(path.parent)
+        if path.name not in self.names:raise ValueError('diagnostic input was not registered')
+        return self.resident.call('inspect',name=path.name,response_timeout=20)
     def save_json(self,path,value):
         data=(json.dumps(value,indent=2,sort_keys=True)+'\n').encode()
         if len(data)>MAX_INDEX or len(data)>self.remaining():raise ValueError('bounded B metadata limit exceeded')
@@ -229,29 +234,58 @@ def disk_snapshot(source,workspace,allowed_sources,*,maximum_bytes,timeout_secon
     if str(source) not in allowed_sources or source.is_symlink() or not source.is_file():raise ValueError('DB outside inventoried scope')
     before=metadata(source);started=time.monotonic();target=workspace.root/('sqlite-consistent-'+uuid.uuid4().hex+'.sqlite')
     with workspace.open_new(target):pass
-    src=dst=None
+    src=dst=None;stage='source.connect';page_size=None
     try:
         src=sqlite3.connect(source.as_uri()+'?mode=ro',uri=True)
-        src.execute('PRAGMA temp_store=MEMORY');src.execute('PRAGMA cache_size=-8192');src.execute('PRAGMA mmap_size=0')
-        src.execute('BEGIN');src.execute('SELECT name FROM sqlite_master LIMIT 1').fetchone()
+        stage='source.temp_store';src.execute('PRAGMA temp_store=MEMORY')
+        stage='source.cache_size';src.execute('PRAGMA cache_size=-8192')
+        stage='source.mmap_size';src.execute('PRAGMA mmap_size=0')
+        stage='source.begin';src.execute('BEGIN')
+        stage='source.schema_read';src.execute('SELECT name FROM sqlite_master LIMIT 1').fetchone()
+        stage='source.page_size'
         page_size=src.execute('PRAGMA page_size').fetchone()[0]
         def progress(status,remaining,pages):
             if pages*page_size>maximum_bytes:raise ValueError('bounded B SQLite image exceeds reservation')
             workspace.reserve_file(target,pages*page_size)
             if time.monotonic()-started>timeout_seconds:raise TimeoutError('SQLite snapshot deadline exceeded')
-        progress(None,None,src.execute('PRAGMA page_count').fetchone()[0])
-        dst=sqlite3.connect(target);dst.execute('PRAGMA temp_store=MEMORY');dst.execute('PRAGMA cache_size=-8192')
-        dst.execute('PRAGMA mmap_size=0');dst.execute('PRAGMA journal_mode=OFF')
+        stage='source.page_count';progress(None,None,src.execute('PRAGMA page_count').fetchone()[0])
+        stage='destination.connect';dst=sqlite3.connect(target)
+        stage='destination.temp_store';dst.execute('PRAGMA temp_store=MEMORY')
+        stage='destination.cache_size';dst.execute('PRAGMA cache_size=-8192')
+        stage='destination.mmap_size';dst.execute('PRAGMA mmap_size=0')
+        stage='destination.journal_mode';dst.execute('PRAGMA journal_mode=OFF')
+        stage='destination.progress_handler'
         dst.set_progress_handler(lambda: int(time.monotonic()-started>timeout_seconds),4096)
+        stage='source.backup(destination)'
         src.backup(dst,pages=1024,progress=progress)
+        stage='destination.close/source.rollback'
         dst.close();dst=None;src.rollback();src.close();src=None
         # Private-image integrity/full hash are independently checked by the
         # native B reader after SQLite destination close; no FUSE SQLite reopen.
-        row=workspace.seal(target,sqlite=True)
+        stage='native.seal';row=workspace.seal(target,sqlite=True)
         return {'source':str(source),'snapshot':target.name,'mount_root':str(workspace.root),'bytes':row['bytes'],
                 'sha256':row['sha256'],'source_metadata_before':before,'backup_api_consistent_image':True,
                 'physical_b_verified':True,'integrity':'ok','online_preparation_only':True,'writer_fenced':False,
                 'local_snapshot_payload_bytes':0,'seconds':time.monotonic()-started}
+    except sqlite3.Error as error:
+        # Failure-only, metadata-only diagnostics. Preserve the ORIGINAL error,
+        # transaction/backup semantics and unaccepted partial; never retry/seal.
+        value={'source':str(source),'destination':str(target),'parent':str(target.parent),
+               'stage':stage,'sqlite_errorcode':getattr(error,'sqlite_errorcode',None),
+               'sqlite_errorname':getattr(error,'sqlite_errorname',None),'traceback':traceback.format_exc(),
+               'source_page_size':page_size,'source_journal_mode':None,'diagnostic_errors':[]}
+        for name,path in [('source_identity',source),('destination_identity',target),('parent_identity',target.parent)]:
+            try:
+                info=path.lstat();value[name]={'device':info.st_dev,'inode':info.st_ino,'bytes':info.st_size,
+                    'mode':oct(info.st_mode),'uid':info.st_uid,'gid':info.st_gid,'mtime_ns':info.st_mtime_ns}
+            except Exception as secondary:value['diagnostic_errors'].append({'operation':name,'type':type(secondary).__name__})
+        if src is not None:
+            try:value['source_journal_mode']=src.execute('PRAGMA journal_mode').fetchone()[0]
+            except Exception as secondary:value['diagnostic_errors'].append({'operation':'source.journal_mode','type':type(secondary).__name__})
+        try:value['registered_destination']=workspace.inspect_failure(target)
+        except Exception as secondary:value['diagnostic_errors'].append({'operation':'registered_destination','type':type(secondary).__name__})
+        error.nightly_sqlite_diagnostic=value
+        raise
     finally:
         if dst:dst.close()
         if src:src.close()

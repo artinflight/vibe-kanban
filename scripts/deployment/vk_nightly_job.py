@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import stat
+import sqlite3
 import subprocess
 import sys
 import time
@@ -113,7 +114,8 @@ def main():
 
 if __name__=='__main__':
     try:raise SystemExit(main())
-    except (ValueError,OSError,subprocess.SubprocessError) as error:
+    except (ValueError,OSError,subprocess.SubprocessError,sqlite3.Error) as error:
         print(json.dumps({'passed':False,'status':'nightly_blocked','reason':str(error),
+                          'sqlite_diagnostic':getattr(error,'nightly_sqlite_diagnostic',None),
                           'next':'preserve B current/evidence; review exact scope, route, capacity or producer failure'}),file=sys.stderr)
         raise SystemExit(1)

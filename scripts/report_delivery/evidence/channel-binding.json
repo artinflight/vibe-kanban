@@ -1,0 +1,48 @@
+{
+  "checked_at_utc": "2026-10-09 23:02:35 UTC",
+  "callable_vibe_tools": [
+    "mcp__codex_apps__vibe_mcp_for_dot_create_session",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_agent_replies",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_execution",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_issue",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_latest_agent_reply",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_repo",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_issues",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_projects",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_repos",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_session_executions",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_sessions",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_workspaces",
+    "mcp__codex_apps__vibe_mcp_for_dot_run_session_prompt",
+    "mcp__codex_apps__vibe_mcp_for_dot_start_workspace"
+  ],
+  "callable_vibe_tool_count": 14,
+  "confirmed_channel_delivery_tool_exposed": false,
+  "root_output_channels": "commentary/final (no delivered-message ID or post-render/playback completion callback returned)",
+  "exact_missing_edge": {
+    "owner": "Root/dot user-channel presentation runtime",
+    "before_presentation": "prepare(identity), persist token and exact report identity associated with channel presentation",
+    "chat": "confirmed delivery of that report to the intended user -> stable message event/reference + token -> Caller.confirm(outcome=chat_delivered)",
+    "voice": "completed playback of that report, not synthesis/stream completion -> stable playback event/reference + token -> Caller.confirm(outcome=voice_playback_completed)",
+    "explicit_handled": "actual user handled acknowledgement -> stable source-event reference + token -> Caller.confirm(outcome=user_handled)"
+  },
+  "excluded_signals": [
+    "Vibe execution status",
+    "get_agent_replies/get_latest_agent_reply result",
+    "MCP tools/call response",
+    "model final output emission",
+    "audio output emission",
+    "silence/partial/cancelled playback"
+  ],
+  "metadata_refresh": "separate supported owner setup; not performed",
+  "binding_installed": false,
+  "production_marks_sent": 0,
+  "installed_initialize": {
+    "capabilities": {
+      "tools": {}
+    },
+    "server_version": "1.2",
+    "confirmed_delivery_event_source_advertised": false,
+    "read_only": true
+  }
+}

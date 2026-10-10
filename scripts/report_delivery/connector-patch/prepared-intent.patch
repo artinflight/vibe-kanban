@@ -1,0 +1,154 @@
+diff --git a/report_reconciliation.py b/report_reconciliation.py
+index 8a6d9c6..b329393 100644
+--- a/report_reconciliation.py
++++ b/report_reconciliation.py
+@@ -133,7 +133,8 @@ class Store:
+                         "SELECT receipt_id,status,detail,hold_version,created_at,updated_at,payload,proof "
+                         "FROM receipts WHERE workspace_id=? ORDER BY created_at LIMIT 100", (wid,))],
+                     "automatic_marking": "requires_verified_atomic_backend",
+-                    "polling_interval_seconds": None}
++                    "polling_interval_seconds": None,
++                    "proof_origin": "receipt_ledger", "readback_fresh": False}
+ 
+ 
+ def verify_reply(api, payload):
+@@ -213,9 +214,10 @@ def consume(api, store, receipt_id):
+         row = dict(db.execute("SELECT * FROM receipts WHERE receipt_id=?", (receipt_id,)).fetchone())
+         hold = store.hold(db, row["workspace_id"])
+     payload = json.loads(row["payload"])
+-    status, detail, proof = "pending", "", None
++    status, detail, proof, readback_fresh = "pending", "", None, False
+     if row["status"] == "applied":
+-        return {"receipt_id": receipt_id, "status": "applied", "duplicate": True}
++        return {"receipt_id": receipt_id, "status": "applied", "duplicate": True,
++                "readback_fresh": False}
+     if hold["held"]:
+         status, detail = "held", "Explicit manual review hold"
+     elif hold["version"] != row["hold_version"]:
+@@ -236,7 +238,7 @@ def consume(api, store, receipt_id):
+                 if latest_hold["held"] or latest_hold["version"] != row["hold_version"]:
+                     raise ValueError("Local hold/intent changed before atomic request")
+                 request = dict(payload, receipt_id=receipt_id, intent_version=expected_intent)
+-                proof = backend(api, row["workspace_id"], "review-receipts", "POST", request)
++                proof = dict(backend(api, row["workspace_id"], "review-receipts", "POST", request))
+                 if (proof.get("protocol") != PROTOCOL or proof.get("receipt_id") != receipt_id
+                         or proof.get("execution_id") != payload["execution_id"]
+                         or proof.get("message_index") != payload["message_index"]
+@@ -244,44 +246,66 @@ def consume(api, store, receipt_id):
+                         or proof.get("status") not in ("applied", "already_applied")):
+                     raise ValueError("Atomic acknowledgement proof mismatch")
+                 status, detail = "applied", "Backend acknowledged only the exact reviewed turn"
++                # Backend acknowledgement is historical/idempotent proof. Only
++                # this separate summary request can establish a current flag.
++                proof.pop("authoritative_readback", None)
++                proof.pop("authoritative_readback_observed_at", None)
+                 rows = workspace_unread.request(api).get("summaries", [])
+                 flags = [r.get("has_unseen_turns") for r in rows if r.get("workspace_id") == row["workspace_id"]]
+                 proof["authoritative_readback"] = flags[0] if len(flags) == 1 and type(flags[0]) is bool else "unknown"
++                proof["authoritative_readback_observed_at"] = now()
++                readback_fresh = True
+         except urllib.error.HTTPError as error:
+             status = "blocked_backend" if error.code in (400, 404, 405) else "backend_conflict"
+             detail = "Atomic backend route HTTP " + str(error.code) + "; no legacy /seen fallback"
+         except (OSError, ValueError, KeyError):
+             status, detail = "blocked_backend", "Atomic backend unavailable/uncertain; deduplicated retry only"
+     with store.locked() as db:
++        # Intent pins and immutable payload are NEVER updated on retry, including
++        # a lost response after backend commit. NULL legacy intent stays NULL;
++        # the epoch-zero fallback above is only a request value, not adoption.
+         db.execute("UPDATE receipts SET status=?,detail=?,updated_at=?,proof=? WHERE receipt_id=? "
+                    "AND (status <> 'applied' OR ? = 'applied')",
+                    (status, detail, now(), canonical(proof) if proof is not None else None, receipt_id, status))
+     return {"receipt_id": receipt_id, "workspace_id": row["workspace_id"], "status": status,
+-            "detail": detail, "proof": proof}
++            "detail": detail, "proof": proof, "readback_fresh": readback_fresh}
+ 
+ 
+ def record(api, args, store=None):
++    args = dict(args)
++    guard_keys = {"expected_intent_version", "expected_hold_version"}
++    pinned = bool(guard_keys & set(args))
++    if pinned and not guard_keys <= set(args):
++        raise ValueError("Both prepared delivery intent versions are required")
++    guards = {k: args.pop(k) for k in guard_keys} if pinned else {}
++    if any(type(v) is not int or not 0 <= v <= 9223372036854775807 for v in guards.values()):
++        raise ValueError("Prepared intent versions must be non-negative integers")
+     payload = identity(args)
+     verify_reply(api, payload)
+     store = store or Store()
+     key = canonical([payload["workspace_id"], payload["source"]["actor"],
+                      payload["source"]["channel"], payload["source"]["event_id"]])
+     rid = digest(canonical(payload))
+-    epoch = None
+-    try:
+-        epoch = capabilities(api, payload["workspace_id"])["intent_version"]
+-    except (OSError, ValueError, KeyError):
+-        pass
++    epoch = guards.get("expected_intent_version")
++    if not pinned:
++        try:
++            epoch = capabilities(api, payload["workspace_id"])["intent_version"]
++        except (OSError, ValueError, KeyError):
++            pass
+     with store.locked() as db:
+-        old = db.execute("SELECT receipt_id,payload FROM receipts WHERE event_key=?", (key,)).fetchone()
++        old = db.execute("SELECT receipt_id,payload,backend_intent_version,hold_version FROM receipts WHERE event_key=?", (key,)).fetchone()
+         if old and old["payload"] != canonical(payload):
+             raise ValueError("Delivery event reused with a different reply/evidence")
++        if old and pinned and (old["backend_intent_version"] != epoch
++                or old["hold_version"] != guards["expected_hold_version"]):
++            raise ValueError("Delivery event reused with different prepared intent")
+         if not old:
+             if db.execute("SELECT count(*) FROM receipts").fetchone()[0] >= 10_000:
+                 raise ValueError("Receipt ledger limit reached; no automatic pruning")
+             hold = store.hold(db, payload["workspace_id"])
+             db.execute("INSERT INTO receipts VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+-                (rid, payload["workspace_id"], key, canonical(payload), hold["version"],
++                (rid, payload["workspace_id"], key, canonical(payload),
++                 guards["expected_hold_version"] if pinned else hold["version"],
+                  "pending", "Actual root/dot delivered/handled signal", now(), now(), epoch, None))
+             # Durable receipt precedes the network operation. A crash can only
+             # leave a pending receipt; backend receipt_id makes retry idempotent.
+@@ -290,6 +314,23 @@ def record(api, args, store=None):
+     return dict(result, recorded=True, duplicate=bool(old))
+ 
+ 
++def prepare(api, args, store=None):
++    # Read-only preparation BEFORE presentation. It never creates a receipt.
++    if set(args) != set(RECEIPT_PROPERTIES) - {"disposition", "source"}:
++        raise ValueError("Exact complete durable reply identity required")
++    checked = identity(dict(args, disposition="delivered", source={
++        "actor": "root", "channel": "chat", "event_id": "identity-validation-only",
++        "evidence": "Identity validation only; no delivery or receipt."}))
++    identity_only = {k: checked[k] for k in args}
++    verify_reply(api, identity_only)
++    state = capabilities(api, identity_only["workspace_id"])
++    hold = (store or Store()).status(identity_only["workspace_id"])["hold"]
++    return {"delivery_context_version": 1, "identity": identity_only,
++            "expected_intent_version": state["intent_version"],
++            "expected_hold_version": hold["version"],
++            "held": state["held"] or bool(hold["held"])}
++
++
+ def set_hold(api, args, store=None):
+     if set(args) != {"workspace_id", "held", "source"} or type(args["held"]) is not bool:
+         raise ValueError("One workspace, boolean held and explicit user-intent source required")
+@@ -384,5 +425,17 @@ TOOLS = [
+     tool("reconcile_workspace_reports", "Resume this workspace's already recorded, actually delivered reports after backend recovery. At most 64 receipts; idempotent conditional exact-reply backend only. No legacy mark-all fallback and no inferred delivery.", {"workspace_id": ID}),
+ ]
+ 
++# Optional for existing explicit callers; automatic delivery callers MUST pin
++# both versions read before presentation. They are connector guards, not extra
++# fields forwarded to the existing workspace-review-v1 backend.
++TOOLS[0]["inputSchema"]["properties"] = dict(RECEIPT_PROPERTIES, **{
++    k: {"type": "integer", "minimum": 0, "maximum": 9223372036854775807}
++    for k in ("expected_intent_version", "expected_hold_version")})
++TOOLS[0]["description"] += " Automatic delivery callers must first prepare the exact report and pass both prepared intent versions unchanged."
++TOOLS.append(tool("prepare_workspace_report_delivery",
++    "Read-only: verify the exact complete durable reply and snapshot backend/manual-review intent BEFORE presenting it. Returns immutable caller context, not delivery evidence. Pass both intent versions unchanged after actual conveyance. A held report remains unread; preparation never records or clears anything.",
++    {k: v for k, v in RECEIPT_PROPERTIES.items() if k not in ("source", "disposition")}, True))
++
+ HANDLERS = {"record_workspace_report_delivery": record, "set_workspace_review_hold": set_hold,
+-            "get_workspace_reconciliation_status": status, "reconcile_workspace_reports": reconcile}
++            "get_workspace_reconciliation_status": status, "reconcile_workspace_reports": reconcile,
++            "prepare_workspace_report_delivery": prepare}

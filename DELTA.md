@@ -1574,3 +1574,49 @@ ops governance pass; full Rust baseline attempts fail on absent host GTK/GLib
 pkg-config libraries. See VK_MOBILE_UX.md and the SSD evidence directory there.
 This feature follow-up is not deployed; Green PID3027197, production frontend
 and configured model/effort/Recommend-only routing remain unchanged.
+
+2026-10-09 — Unread report integration candidate: implemented Root/dot caller,
+confirmed-event outbox and a hash-bound report_reconciliation.py patch pinning
+pre-presentation backend/local intent. Owner-approved patch packaging in Vibe;
+PR236 owner acknowledged no file overlap. Combined disposable connector100 and
+caller26 tests pass. Live read-only discovery20/cache14 and both v1 guards verified;
+backendc3c48e63/frontend5ce84ee2 unchanged. No production clear, seed, deployment,
+metadata refresh or security/config change. Adoption/channel callback and genuine
+delivered-report acceptance remain open. See VK_UNREAD_REPORT_INTEGRATION.md.
+
+2026-10-09 — PR238 targeted retry review: full consumer inspection confirms no
+backend/local intent-version adoption. Added nonzero7/2 pin/payload regressions
+for pending/restart, lost backend commit response, mirrored/offline/UI hold-release,
+legacy NULL and lost summary response. Fixed cached applied proofs to expose only
+historical readback, including concurrent duplicate return; guarded every proposed
+automatic receipt caller against unpinned requests. Combined PR236 base100 plus
+caller37 tests pass. Connector patch remains report_reconciliation.py only at
+6b092371; no PR236 files, production adoption or markers changed. Available14 tools
+expose no presentation delivery/playback callback: prepared token + actual channel
+event -> Caller.confirm remains the exact binding gap. Metadata refresh separate.
+
+2026-10-10 — Explicit unread clear independently verified: fresh installed20/client14
+catalog and live supported readonly reads; deployedc3c48e63 binary matches manifest.
+Existing mark-read metadata/dispatch needs client Refresh/new conversation only,
+not automatic prepare/callback adoption or a server restart. Corrected documentation
+gating, added read-only verifier (no mark command) and seven focused fixtures: all
+pass on actual installed modules, combined100+44 pass on untouched PR236 copy.
+Local holds and receipts preserved; backend explicit /seen intentionally advances
+manual intent, fresh unread observation kept separate from clear acceptance.
+No marker test, production adoption, plugin grants/reauth, extra workers or build.
+
+2026-10-10 — Resumed PR238 owner4696d7177: current20-tool catalog and actual
+unread summaries(limit1) read succeeded11:30:10 UTC; parent Staging confirmed
+10:49:42 separately. Removed current-client Refresh gating, preserving historical
+14-tool receipts as older-client evidence only. Explicit clear published without
+real marker tests. Named implemented Caller prepare/confirm entry points and
+excluded VK useSessionSend.send/followUp acceptance; actual hosting channel
+confirmation handler/API remains external/unidentified. Same inherited CI failure
+rerun exact4696 job; routing_triage is unchanged with40ms inspection deadline.
+Small caller/readiness + synthetic lost-response regressions run; no workers/build,
+policy/auth/security, runtime/hold/marker change or duplicate e3e1 code.
+
+2026-10-10 — Same4696 CI attempt2 green:397 passed,7 skipped; routing test
+passes unchanged. Shared SSD filled during finalization. Final B hash-verified
+source packet/receipt and existing-branch GitHub API commit preserve work; local
+Git sync waits for capacity. No cleanup, new remote or runtime changes.

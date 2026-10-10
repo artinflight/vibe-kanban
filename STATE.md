@@ -1,3 +1,48 @@
+## October 10 resumed owner: fresh client readiness
+
+Resumed owner4696d7177. Parent Staging20-tool + actual summaries(limit1) read
+passed10:49:42; this owner independently queried successfully11:30:10 UTC with20
+callable tools. No Refresh needed for those clients; older Dot is independently
+unverified. See scripts/report_delivery/evidence/current-client-20261010.json.
+Explicit user clear is callable; no test marker/hold changes. Automatic prepare
+and guard metadata remain source-only. Host Root/Dot chat/voice presentation
+runtime owns genuine delivery confirmation; its actual handler/API is not exposed
+or identified in VK/connector. useSessionSend.send -> sessionsApi.followUp only
+accepts a worker prompt; never interpret it as delivered-report evidence.
+Inherited fullCI38043553814/114190057751 failed unchanged routing_triage at509;
+40ms inspection budget makes load-related failure plausible. Exact attempt2 rerun passed397 tests,7 skipped at original4696d7177;
+no routing/model/source workaround. Parent receipt and B-backed readiness
+artifact record the result. Existing history module/Recommend
+remain correct; e3e1/PR240 stays separate. Shared SSD filled during finalization; B retains final packet/receipt and GitHub
+contains the file-limited docs/metadata commit. Local Git sync is capacity-blocked.
+No extra agents, heavy build, cleanup,
+connector install/restart, security/credential/permission or production marker work.
+
+## October 10: Explicit unread clearing readiness
+
+Historical pre-refresh snapshot (superseded by the fresh-client receipt above):
+source/manifest/live read-only verification confirmed existing mark_workspace_read
+and unread summaries are already installed (20 server tools versus14 freshly
+inventoried callable tools). No explicit-path runtime correction/restart/adoption
+is needed. At that earlier snapshot, metadata Refresh was suggested. It is superseded for
+the successful fresh clients verified above; older Dot clients remain separate. This
+is independent of automatic delivery callback/PR238 connector-patch adoption.
+New read-only verifier has no mark command. Seven installed-module mocked tests
+and144 combined candidate tests pass. Explicit /seen advances backend manual intent;
+local holds/receipt state remain unchanged, and fresh unread must be read separately.
+See VK_UNREAD_REPORT_INTEGRATION.md and
+scripts/report_delivery/evidence/explicit-read-20261010.json.
+No production markers, auth/permission/config/runtime/service/release changed.
+
+## October 9: Unread delivery integration candidate
+
+A source-only integration candidate reuses the deployed review-state v1 backend
+and connector receipts, with pre-presentation intent pins and durable confirmed-event
+retry. It is separate from assignment/visibility and PR236 capture work; see
+VK_UNREAD_REPORT_INTEGRATION.md for exact boundaries, 137 synthetic passing tests,
+read-only capability evidence and remaining adoption/client-delivery acceptance.
+The runtime, client catalog, production markers and combined release are unchanged.
+
 ## October 8: Workspace-first frontend follow-up in preparation
 
 Workspace landing, To do defaults on phones, and whole-card attention styling

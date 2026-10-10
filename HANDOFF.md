@@ -1,3 +1,71 @@
+# October 10 resumed owner: next-restart pickup
+
+Resumed owner4696d7177. Parent Staging20-tool + actual summaries(limit1) read
+passed10:49:42; this owner independently queried successfully11:30:10 UTC with20
+callable tools. No Refresh needed for those clients; older Dot is independently
+unverified. See scripts/report_delivery/evidence/current-client-20261010.json.
+Explicit user clear is callable; no test marker/hold changes. Automatic prepare
+and guard metadata remain source-only. Host Root/Dot chat/voice presentation
+runtime owns genuine delivery confirmation; its actual handler/API is not exposed
+or identified in VK/connector. useSessionSend.send -> sessionsApi.followUp only
+accepts a worker prompt; never interpret it as delivered-report evidence.
+Inherited fullCI38043553814/114190057751 failed unchanged routing_triage at509;
+40ms inspection budget makes load-related failure plausible. Exact attempt2 rerun passed397 tests,7 skipped at original4696d7177;
+no routing/model/source workaround. Parent receipt and B-backed readiness
+artifact record the result. Existing history module/Recommend
+remain correct; e3e1/PR240 stays separate. Shared SSD filled during finalization; B retains final packet/receipt and GitHub
+contains the file-limited docs/metadata commit. Local Git sync is capacity-blocked.
+No extra agents, heavy build, cleanup,
+connector install/restart, security/credential/permission or production marker work.
+
+# October 10: Explicit clear pickup
+
+Historical pre-refresh snapshot (superseded by the fresh-client receipt above):
+source/manifest/live read-only verification confirmed existing mark_workspace_read
+and unread summaries are already installed (20 server tools versus14 freshly
+inventoried callable tools). No explicit-path runtime correction/restart/adoption
+is needed. At that earlier snapshot, metadata Refresh was suggested. It is superseded for
+the successful fresh clients verified above; older Dot clients remain separate. This
+is independent of automatic delivery callback/PR238 connector-patch adoption.
+New read-only verifier has no mark command. Seven installed-module mocked tests
+and144 combined candidate tests pass. Explicit /seen advances backend manual intent;
+local holds/receipt state remain unchanged, and fresh unread must be read separately.
+See VK_UNREAD_REPORT_INTEGRATION.md and
+scripts/report_delivery/evidence/explicit-read-20261010.json.
+Reviewed source8ed55f8ba is pushed; focused20-test caller/readiness/hash CI passes
+(run38043475048). Full repository CI remains separate/in progress.
+No production markers, auth/permission/config/runtime/service/release changed.
+
+# October 9: Unread report integration pickup
+
+Read VK_UNREAD_REPORT_INTEGRATION.md and scripts/report_delivery/evidence/validation.json.
+Review is in [draft PR238](https://github.com/artinflight/vibe-kanban/pull/238) into
+staging. Reviewed source `9f06a0d66` is pushed; dedicated17-case caller/hash/scope
+CI passed at run38002818131. Current review evidence is hash-bound in
+validation.json; full repository CI is a separate gate.
+Source caller, durable confirmed-event retry and pre-presentation intent pinning
+are implemented. A one-file `report_reconciliation.py` patch is packaged in this
+Vibe stream at the owner's direction; connector has no remote. Its source is
+`/mnt/vk-storage/vk-unread-integration-20261009/connector`, code commit 6b092371.
+It applies to PR236 connector195e3b782; 100 maintenance +37 caller/integration
+tests pass on a disposable combined copy. Maintenance acknowledged no file
+boundary overlap; its adapter/status/capture/backend/UI work is untouched.
+PR238 retry review verifies immutable nonzero backend/local pins on pending/lost
+commit responses and hold/release cycles. Automatic caller guards reject legacy
+unpinned receipts; applied caches now expose only historical unread observations.
+The exact missing binding is the presentation runtime's confirmed chat-delivery
+or completed-playback event, retaining prepared token -> Caller.confirm. None of
+this session's14 tools provides that callback; the CLI is not a channel hookup.
+
+Real installed read-only discovery is20 tools, this session's catalog14. Live
+backendc3c48e63 supports both v1 guards; current frontend5ce84ee2 is preserved.
+No production unread write, receipt seed, code install, metadata refresh or
+service change occurred. Finish through separately authorized connector adoption,
+client metadata refresh, genuine channel confirmation binding and the real-evidence
+acceptance checklist. Do not reinterpret synthetic delivery as a live receipt.
+Aggregate frontend format/check/lint are blocked by missing tools; Rust formatting,
+ops and diff checks pass. No local Cargo build/tests under the capacity constraint.
+
 # October 8: Workspace-first navigation and task attention follow-up
 
 The current frontend stream makes Workspaces the opening screen, removes the

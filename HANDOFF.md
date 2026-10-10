@@ -1,3 +1,16 @@
+## October 10: Admission remains blocked after bounded resource investigation
+
+No acceptance launched or resources/data changed. Latest swap free 248.1 MiB is
+below 512 MiB floor; B is 11.85 GiB below cold reservation. All own completed-test
+PIDs are gone and six exact leases were reacquired read-only. No eligible completed
+process offers material swap relief. Incumbent/paused fallback/current owner/MP
+browser remain protected; Caspian QA completion and state-preserving release are
+not established. Ordinary random fixtures total only 128 MiB. Older unsealed
+13.65GB archive is a conditional exact release candidate requiring applicable
+preserved-evidence approval; all sealed SQL and sole compressed recovery remain.
+Details and minimal plan: VK_RESTART_SAFEGUARDS_20261009.md; receipt:
+scripts/deployment/receipts/nightly-resource-reconciliation-20261010.json.
+
 ## October 10: Whole-plan compressed acceptance stopped by host safeguard
 
 Published/tested source `53aaada46d83ae2d83e8281242caa1961cfef1cc` ran once in

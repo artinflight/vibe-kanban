@@ -1,3 +1,77 @@
+## October 10 07:12 UTC: Resource/reconciliation investigation — no run admitted
+
+Evidence: `scripts/deployment/receipts/nightly-resource-reconciliation-20261010.json`;
+private census/identity/lease probes remain in
+`/mnt/vk-storage/vk-restart-safeguards-20261009/resource-reconciliation-20261010`.
+Runtime source is unchanged from `53aaada46`; this update is evidence only.
+
+The last sample had 7,608,496,128 bytes available RAM, but only 260,165,632 bytes
+(248.1 MiB) free swap, below the unchanged 512 MiB abort floor. RAM availability
+alone does not admit another run. No cause of swap pressure has been attributed.
+Per-process swap is a point-in-time census; service cgroup measurements are also
+preserved. PID/start-time and boot identity are recorded, avoiding name-only reuse.
+
+| PID | Exact service / owner scope | Observed process swap | Release boundary |
+| --- | --- | --- | --- |
+| 3027197 | vibe-kanban-green-production-20261005.service | 2.121 GiB | Cutover receipt explicitly identifies this PID as frozen incumbent; retain pending human QA. |
+| 2590517 | vibe-kanban-paused-blue-20260912.service | 2.093 GiB | Paused-server executable, active unit; protected fallback, no termination authorization. |
+| 4160989 | caspian-android-local-qa-data-v2.service, parent 4159896 | 1.844 GiB | Firestore emulator JAR in Caspian QA scope. No completion/teardown authorization established; launcher has no export-on-exit/import. Preserve possibly volatile QA state. |
+| 764264 | vibe-kanban-blue-production-20260921.service | 1.666 GiB | Historical blue service, active; disabled boot status does not authorize stopping it. |
+| 977053 | af-mp-visily-browser-stable.service, browser parent 1541568 | 0.350 GiB, 3.621 GiB resident | Mission Perform browser. Whole unit has about 3.2 GiB process swap / 14.7 GiB summed RSS; cgroup accounting differs. Active/authenticated scope, preserve. |
+| 500933 | vk-preparation-owner-097e1bfa.service | 1.338 GiB | Intentional resident preparation lease/status owner; phase verified-awaiting-live-probe, cleanup_available=false. Do not release this owner. |
+
+All these processes are UID 1000, not anonymous kernel pressure. This identifies
+technical ownership, not permission from their task owners. No lifecycle proof
+establishes the Caspian QA task is complete. No browser tabs/login data were read.
+The current production PID 1254186 remains active; health returned HTTP 200 in
+0.737 ms. The old blue units conflict with the general retired-blue expectation;
+report that discrepancy rather than silently resolving it by stopping services.
+
+The two completed acceptance scopes are inactive/dead. Their producer children
+are gone. The recorded parent-death fixture PIDs 144636/145376/145715/145836 are
+all absent; three exact MCP producer and three B job leases were acquired read-only
+and closed. This is test resource ownership evidence, not global consumer clearance.
+An abandoned fixture-only SSHFS mount still points to the recorded lifecycle B
+input. Its exact normal user-level unmount is ordinary test teardown after
+rechecking identity/quiescence; no force/lazy unmount or data deletion is needed.
+It provides no demonstrated material RAM/swap relief. No unmount was performed.
+
+Native B inventory: free 92,769,349,632 bytes versus cold reservation
+105,495,134,208 bytes (98.25 GiB), deficit 12,725,784,576 bytes (11.85 GiB).
+The volume device remains 2360624474. Both attempt ledgers are identical to retained
+post-failure evidence; all 168 input names/native device/inode/sizes match, with
+no unexpected input names. This is metadata validation, not a new payload hash.
+
+| Retained representation | Bytes | Treatment |
+| --- | --- | --- |
+| Failed raw scope input-a7bc82dc106849eb8e44346a69e525d2 | 21,474,333,149 | Includes 7,754,559,488 sealed SQL bytes and 13,650,362,368 unsealed archive bytes; retained. |
+| Failed compressed scope input-c78d858e142844beaa8699bd48c7b9ea | 15,202,288,432 | Includes 7,847,219,200 sealed SQL bytes and 7,285,506,048 unsealed archive bytes; retained. |
+| Verified f95 recovery .sqlite.zst | 591,731,561 | Sole retained recovery payload in its folder; original/restore redundant raw copies absent. Prior independent restore/hash/SQLite proof retained. Never select this for cleanup. |
+| Two test-created throughput random fixtures | 134,217,728 | Reproducible test data; exact fixture teardown eligible once producer/identity checks apply, but too small to resolve deficit. No cleanup performed. |
+| Earlier interrupted lifecycle fixture | 25,031 | Retain its current/recovery evidence; irrelevant to capacity. |
+
+Neither failed scope has current.json. The unsealed archives are not verified
+whole-plan backups. Their retention was explicitly requested, so no deletion is
+inferred from that fact. The existing NightlyJob reconciler can retire all recorded
+inputs after quiescence and validation; DO NOT invoke it here, since that would
+also retire the sealed SQL evidence we are preserving. Reacquiring leases alone
+is not authorization to discard the evidence.
+
+Minimal next action: obtain task-owner lifecycle clearance for a genuinely
+completed QA resource (including emulator-state preservation), or wait for its
+normal completion. Do not stop Mission Perform, incumbent, paused fallback or
+preparation owner. Require fresh stable memory/swap admission above existing
+floors before any acceptance. Separately, exact authorization to retire only the
+older 13,650,362,368-byte unsealed archive would mathematically raise B free to
+106,419,712,000 bytes, 924,577,792 above the cold reservation, while keeping every
+sealed SQL image, all manifests/ledgers, compressed recovery and prior backups.
+This is a conditional release candidate, not permission or a guarantee against
+concurrent B growth. Recheck exact identities, quiescence and actual free space at
+the action boundary; preserve receipts before any approved exact-file action.
+If that marginal reserve is insufficient at admission, keep the run blocked;
+do not relax limits. No further full run, scheduling, termination, cleanup,
+security/settings change or production mutation occurred in this investigation.
+
 ## October 10: Whole-plan compressed acceptance stopped by host safeguard
 
 Published/tested source `53aaada46d83ae2d83e8281242caa1961cfef1cc` ran once in

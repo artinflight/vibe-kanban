@@ -290,6 +290,24 @@ fn idempotent_concurrent_publication_restart_and_conflicting_retry() {
     assert!(!f.capture.with_extension("capture.json").exists());
 }
 
+#[test]
+fn bounded_final_survives_json_escaping_and_restart_read() {
+    let mut f = Fixture::new();
+    let text = "\u{0001}".repeat(MAX_FINAL_BYTES);
+    f.records[6]["payload"]["content"][0]["text"] = json!(text);
+    f.records[7]["payload"]["last_agent_message"] = json!(text);
+    f.request.reply_sha256 = sha(text.as_bytes());
+    f.rewrite();
+    let record = f.recover().unwrap();
+    assert!(save(&f.capture, &record).unwrap());
+    assert_eq!(load_record(&record_path(&f.capture)).unwrap(), record);
+    f.records[6]["payload"]["content"][0]["text"] = json!(format!("{text}x"));
+    f.records[7]["payload"]["last_agent_message"] = json!(format!("{text}x"));
+    f.request.reply_sha256 = sha(format!("{text}x").as_bytes());
+    f.rewrite();
+    assert!(f.recover().is_err());
+}
+
 #[cfg(unix)]
 #[test]
 fn path_symlink_collision_and_resource_limits_fail_closed() {

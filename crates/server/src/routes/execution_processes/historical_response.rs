@@ -28,6 +28,8 @@ use crate::{DeploymentImpl, error::ApiError, middleware::RelayRequestSignatureCo
 const MAX_SOURCE_BYTES: u64 = 256 * 1024 * 1024;
 const MAX_LINE_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_FINAL_BYTES: usize = 128_000;
+// JSON escaping can expand valid UTF-8 text sixfold; bound the stored envelope too.
+const MAX_RECORD_BYTES: u64 = 1024 * 1024;
 const NOTICE: &str = "Original raw capture is incomplete. This reply was recovered from an identity-verified native transcript; other missing messages are not reconstructed. Recovery does not certify capture completeness or task success.";
 
 type RecoveryResult<T> = Result<T, String>;
@@ -517,11 +519,12 @@ fn load_record(path: &Path) -> RecoveryResult<RecoveredFinal> {
         .metadata()
         .map_err(|_| "Recovery metadata unavailable")?
         .len()
-        > 256_000
+        > MAX_RECORD_BYTES
     {
         return Err("Recovery record exceeds size bound".into());
     }
-    serde_json::from_reader(file.take(256_001)).map_err(|_| "Damaged recovery record".into())
+    serde_json::from_reader(file.take(MAX_RECORD_BYTES + 1))
+        .map_err(|_| "Damaged recovery record".into())
 }
 
 pub(super) async fn import(

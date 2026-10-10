@@ -161,7 +161,12 @@ def main():
     # No disabled configuration can launch capture even if all host probes pass.
     if config.get('adoption_authorized') is not True or config.get('retention_adopted') is not True:
         raise ValueError('whole-plan acceptance and normal-nightly adoption required')
-    first=observe(config)
+    try:
+        first=observe(config)
+    except (OSError, sqlite3.Error, subprocess.SubprocessError) as error:
+        print(json.dumps({'passed':False,'status':'observation_blocked','job_started':False,
+                          'reason':type(error).__name__}))
+        return 75  # Transient lost observation retries, still without capture.
     if first.get('reason'):
         print(json.dumps({'passed':False,'status':'resource_deferred','job_started':False,'sample':first}))
         return 75  # No full runtime hashing, metadata census or capture yet.

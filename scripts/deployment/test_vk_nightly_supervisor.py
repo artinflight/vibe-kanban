@@ -50,6 +50,18 @@ class Supervisor(unittest.TestCase):
         result=supervise(launch,unavailable,lambda value:None,timeout_seconds=1)
         launch.assert_not_called();self.assertEqual(result['status'],'observation_blocked')
 
+    def test_entrypoint_transient_preflight_loss_is_bounded_retry_without_hashing(self):
+        from contextlib import redirect_stdout
+        import io
+        with patch('sys.argv',['nightly','--config','/fixture/config','--config-sha256','a'*64]), \
+             patch('vk_nightly_supervisor.os.getuid',return_value=1000), \
+             patch('vk_nightly_supervisor.checksum',return_value='a'*64), \
+             patch.object(Path,'read_text',return_value='{"adoption_authorized":true,"retention_adopted":true}'), \
+             patch('vk_nightly_supervisor.observe',side_effect=OSError('fixture route unavailable')), \
+             patch('vk_nightly_supervisor.validate') as validation, \
+             patch('vk_nightly_supervisor.subprocess.Popen') as launch,redirect_stdout(io.StringIO()):
+            self.assertEqual(main(),75);validation.assert_not_called();launch.assert_not_called()
+
     def test_two_bad_lifetime_samples_stop_only_actual_owned_process_group(self):
         with tempfile.TemporaryDirectory(dir='/mnt/vk-storage',prefix='nightly-guard-fixture-') as raw:
             marker=Path(raw)/'child.pid'

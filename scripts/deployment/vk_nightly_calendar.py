@@ -176,7 +176,7 @@ def main():
     if args.check_calendar:
         current=datetime.now(timezone.utc)
         answer,_=decision(current,None,monotonic=time.monotonic(),boot_id='check-only')
-        print(json.dumps({'settings':schedule,'decision':answer,'schedule_installed':False,'capture_executed':False}));return 0
+        print(json.dumps({'settings':schedule,'decision':answer,'scheduler_modified':False,'capture_executed':False}));return 0
     if (schedule.get('enabled') is not True or config.get('adoption_authorized') is not True
             or config.get('retention_adopted') is not True):raise ValueError('actual whole-plan acceptance and schedule adoption remain required')
     if config['job_timeout_seconds']!=7200 or config.get('initial_job_timeout_seconds',7200)!=7200:

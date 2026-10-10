@@ -1,3 +1,30 @@
+## October10: tested same-UID recovery; matching publication required
+
+PR241 continuation codeae263d4730bf8cca33050bde85b1c3de305acec0 passes
+all8 new hosted CLI/status tests, CLI build, affected-target Clippy and Rustfmt
+(run38057745525). Hosted checkout63d76b9134417a7439070c536c4c2e17fa570f82
+has the identical source tree. Retain prior51 Rust/20 conversation/type/lint and
+both exact actual-native-source checks; no parser/frontend behavior was changed.
+See VK_LOCAL_NATIVE_FINAL_REPAIR_20261010.md. The completed source delivery is
+/mnt/vk-storage/vk-next-restart-20261010/e3e1-native-recovery/LOCAL_REPAIR_DELIVERY.safe.json
+with the three ordered minimal patches and compiled CLI. Isolated-index apply
+passes over actual c3 backend plus already-live cdad frontend; selected files
+match tested source. No whole604, assignment, consent, mobile or queue-library
+patch. No Staging checkout edits or repair prompts; Staging owns review/build/release.
+
+Both exact compiled CLI verify-only probes refuse the live missing status
+protocol (HTTP200 frontend fallback, not the required JSON). Neither sidecar
+was created, neither original normal history contains its final, and no apply
+was attempted. Need Staging's owner-authorized matching capture-dependency,
+reader/status and warning UI publication before live exact apply and API/UI
+acceptance. Do not restart backend/connector or modify the approval watcher.
+Normal CI's retained c4 staging-ancestry failure is not waived. Source delivery,
+unit tests and the saved original finals are not restoration completion.
+
+## October10: original conversation native-final recovery, isolated
+
+Use VK_HISTORICAL_RESPONSE_RECOVERY_20261010.md and handoffs/e3e1-historical-response-recovery.md. Base is accepted joint604285af. Staging owns release integration; no production action, task replay, capture certification or badge write. Hosted acceptance pending.
+
 ## October 10: bounded capture/consent pair — preparation only
 
 Current production backend is c3c48e6324f778ccd03a5761c2314b440e9ceac3;

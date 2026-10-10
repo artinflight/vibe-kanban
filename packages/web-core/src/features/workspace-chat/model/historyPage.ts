@@ -6,6 +6,7 @@ export interface HistoryPage {
   next_before: number | null;
   capture_error?: string | null;
   capture_pending?: boolean;
+  recovery_notice?: string | null;
 }
 
 /** Preserve absolute log indices so prepending a page never renumbers rows. */

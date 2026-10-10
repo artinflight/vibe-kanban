@@ -1758,3 +1758,15 @@ no production effect or readiness claim. See VK_SAFE_RESTART_PREPARATION_2026100
   frontend changes and six newer consent/chat repairs; no pinned backend, guard,
   module, schema or dependency input changed. Retained newer combined continuity
   documents; staging originals remain preserved by its immutable commit.
+
+## 2026-10-10 — bounded same-UID original-final recovery continuation
+
+Codeae263d47 adds exact-two-target verify-only/default CLI and authoritative
+server capture status while preserving signed HTTP auth and PR241 validators.
+Hosted38057745525 passes8 new tests/build/Clippy/format; source tree equals
+hosted63d76b91. Prior51 Rust/20 conversation/type/lint/native checks retained.
+Compiled same-UID live verify-only probes refuse absent JSON status protocol;
+no apply, sidecar, prompt, restart, badge/database rewrite or policy change.
+Sealed minimal c3-backend/cdad-frontend patches are in LOCAL_REPAIR_DELIVERY.safe.json.
+Matching Staging-owned publication and both genuine normal API/UI restorations
+remain required. This is source delivery, not conversation restoration.

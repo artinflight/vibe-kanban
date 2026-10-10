@@ -1,5 +1,6 @@
 #![allow(clippy::items_after_test_module)]
 
+pub(crate) mod historical_response;
 pub(crate) mod log_history;
 
 use std::pin::Pin;
@@ -437,12 +438,22 @@ pub(super) fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
         .route("/stop", post(stop_execution_process))
         .route("/repo-states", get(get_execution_process_repo_states))
         .route("/log-history", get(log_history::get_log_history))
+        .route(
+            "/recover-native-final",
+            post(historical_response::import).layer(axum::extract::DefaultBodyLimit::max(8192)),
+        )
         .route("/raw-logs/ws", get(stream_raw_logs_ws))
         .route("/normalized-logs/ws", get(stream_normalized_logs_ws))
         .layer(from_fn_with_state(
             deployment.clone(),
             load_execution_process_middleware,
         ));
+
+    #[cfg(target_os = "linux")]
+    let workspace_id_router = workspace_id_router.route(
+        "/native-recovery-status",
+        get(historical_response::local_repair::capture_status),
+    );
 
     let workspaces_router = Router::new()
         .route("/subagents/session", get(list_subagent_jobs_by_session))

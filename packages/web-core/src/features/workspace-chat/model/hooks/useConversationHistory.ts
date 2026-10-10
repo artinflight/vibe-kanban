@@ -281,8 +281,12 @@ export const useConversationHistory = ({
       scope.cursors.set(process.id, result.data.next_before);
       // An authoritative successful page resolves only this execution's error.
       // Other completed turns may still have unavailable or damaged captures.
-      scope.errors.delete(process.id);
-      publishHistoryErrors(scope);
+      if (result.data.recovery_notice) {
+        recordHistoryError(scope, process.id, result.data.recovery_notice);
+      } else {
+        scope.errors.delete(process.id);
+        publishHistoryErrors(scope);
+      }
       return result.data.entries.length;
     },
     [emit, publishHistoryErrors, recordHistoryError]

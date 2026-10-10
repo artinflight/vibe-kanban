@@ -658,3 +658,48 @@ test("pending capture timer is cancelled when switching workspace", async (t) =>
     t.mock.timers.reset();
   }
 });
+
+test("recovered native final appears under original execution with timestamp and persistent incomplete-capture notice", async () => {
+  const original = process("original");
+  const notice = "Original raw capture is incomplete. Native final recovered; task success is not certified.";
+  const recovered = () => new Response(JSON.stringify({
+    success: true,
+    data: {
+      entries: [{ index: 0, entry: { type: "NORMALIZED_ENTRY", content: {
+        timestamp: "2026-10-10T11:41:20.806+00:00",
+        entry_type: { type: "assistant_message" },
+        content: "Authentic final — unfinished work remains.",
+        metadata: { historical_recovery: { native_turn_id: "original-native-turn", original_capture_complete: false } },
+      } } }],
+      next_before: null, capture_error: null, capture_pending: false, recovery_notice: notice,
+    },
+  }), { headers: { "content-type": "application/json" } });
+  const h = harness([original], recovered);
+  try {
+    await h.mount();
+    assert.equal(h.entries.length, 1);
+    assert.equal(h.entries[0].executionProcessId, "original");
+    assert.equal(h.entries[0].patchKey, "original:0");
+    assert.equal(h.entries[0].content.timestamp, "2026-10-10T11:41:20.806+00:00");
+    assert.equal(h.entries[0].content.content, "Authentic final — unfinished work remains.");
+    assert.equal(h.result.historyErrorDetail, notice);
+    await h.load();
+    assert.equal(h.entries.length, 1);
+    assert.equal(h.result.historyErrorDetail, notice);
+  } finally { await h.close(); }
+});
+
+test("newer execution success does not hide recovered original reply or its incomplete capture notice", async () => {
+  const notice = "Original raw capture is incomplete; recovered authentic reply.";
+  const h = harness([process("a")], ({id,before,limit}) => id === "a"
+    ? new Response(JSON.stringify({success:true,data:{entries:[{index:0,entry:{type:"STDOUT",content:"recovered original"}}],next_before:null,recovery_notice:notice}}),{headers:{"content-type":"application/json"}})
+    : pageResponse(1,before,limit));
+  try {
+    await h.mount();
+    await h.update([process("a"),process("b")]);
+    await h.load();
+    assert.equal(h.entries.filter(x=>x.executionProcessId==="a").length,1);
+    assert.equal(h.entries.filter(x=>x.executionProcessId==="b").length,1);
+    assert.equal(h.result.historyErrorDetail,notice);
+  } finally {await h.close();}
+});

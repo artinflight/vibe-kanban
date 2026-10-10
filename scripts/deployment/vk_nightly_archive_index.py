@@ -14,6 +14,7 @@ from pathlib import PurePosixPath
 from vk_candidate_direct_b import PR229, DirectBProvider, metadata, hardlink_metadata
 from vk_nightly_generation import MAX_ENTRIES, MAX_INDEX, name
 from vk_candidate_generation import digest
+from vk_archive_store import reference
 
 
 def validate_backup_entries(entries):
@@ -45,14 +46,25 @@ def validate_backup_entries(entries):
 
 class NightlyArchiveProvider(DirectBProvider):
     def verify(self,capture_id):
-        record=self.records[capture_id];archives=self.archives(record)
-        if len(archives)!=1:raise ValueError('nightly input cannot depend on an archive chain')
-        archive,manifest=archives[0];entries={};locations={}
-        snapshots={'payload/'+row['path']:(self.mapped(raw,record),row['sha256']) for raw,row in manifest['sqlite_snapshots'].items()}
+        record=self.records[capture_id];result=record['result']
+        if result.get('parent') is not None:raise ValueError('nightly input cannot depend on an archive chain')
+        archive=self.factory(reference(result),desktop_only=True);manifest=None;entries={};locations={}
+        snapshots={'payload/'+row['path']:(self.mapped(raw,record),row['sha256']) for raw,row in result['sqlite_snapshots'].items()}
         found=set()
         with archive.contents() as tar:
             for member in tar:
-                if member.name=='payload/manifest.json':continue
+                # Only regular members are extracted; hardlinks use recorded
+                # canonical metadata below, never TarFile's member cache.
+                tar.members.clear()
+                if member.name=='payload/manifest.json':
+                    if manifest is not None or not member.isfile() or member.size>32*1024**2:
+                        raise ValueError('duplicate/invalid embedded backup manifest')
+                    manifest=json.load(tar.extractfile(member))
+                    if (not isinstance(manifest,dict) or manifest.get('parent') is not None
+                            or manifest.get('plan_sha256')!=record['plan'] or manifest.get('scope_sha256')!=record['scope']
+                            or any(key not in result or result[key]!=value for key,value in manifest.items())):
+                        raise ValueError('embedded backup manifest differs from bound capture')
+                    continue
                 if member.name in snapshots:
                     key,expected=snapshots[member.name];found.add(member.name)
                 else:
@@ -73,7 +85,8 @@ class NightlyArchiveProvider(DirectBProvider):
                 elif member.islnk():row.update(kind='hardlink',target=self.mapped(member.linkname,record))
                 else:raise ValueError('unsupported special backup member')
                 entries[key]=row
-        if found!=set(snapshots):raise ValueError('missing backup SQLite image')
+        if manifest is None or found!=set(snapshots):raise ValueError('missing backup manifest/SQLite image')
+        archives=[(archive,manifest)]
         for key,row in entries.items():
             if row['kind']!='hardlink':continue
             target=row['target'];seen={key}

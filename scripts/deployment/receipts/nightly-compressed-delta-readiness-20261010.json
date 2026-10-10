@@ -57,7 +57,7 @@
     "independent_current_recovery": true,
     "generations": 1,
     "reused_history_bytes": 1300000,
-    "restore": "B:\\vk-backups\\vk-nightly-delta-20261010-0be9d2ca62ce4a63a5617b08c138a3e6\\recovered-fixture.sqlite",
+    "restore": "B:\\vk-backups\\vk-nightly-delta-20261010-0f32185fe25c457a8aa126a098d22566\\recovered-fixture.sqlite",
     "B_bytes": 18956
   },
   "source_scope_preflight": {
@@ -81,7 +81,7 @@
     "ran": 74,
     "passed": 73,
     "skipped": 1,
-    "seconds": 11.771,
+    "seconds": 12.643,
     "status": "OK"
   },
   "full_plan_accepted": false,
@@ -92,11 +92,30 @@
     "vk_nightly_capture_adapter.py": "9ead90d37db70f0429e41fa2de8674f4b42b0e69f2d751edcf9026ef9ae19adb",
     "vk_nightly_b_fault_fixture.py": "992a8a80d3a56b2978f1c60df1b317c9ac86f58e2ce5477c03dfb9e92c3aa895",
     "vk_nightly_lifecycle.py": "ba2be32d92e5323eb2aec94c8a401ce001d04faf3d364c9c005b0c8d6d376da7",
-    "vk_nightly_archive_index.py": "0fa77d950e999105d29d298a6dab4552d3fb0dd83837fd6407e587089dea4050",
+    "vk_nightly_archive_index.py": "0ffa297af08ebfc08137c8b2bddd24ab8f3ee4df5a43b05a5cac178c9348cb6f",
     "vk_nightly_job.py": "3fce345fcdd559025bf512a6735f025e8861f099707d49bc76a7873f66a5c138",
     "vk_nightly_generation.py": "2053de00f359df94da8c700c69c570d1ef3fc4ddd971c81013b4f7ed83a0b2c7",
     "vk_nightly_delta.py": "6ea57ddc0bfaf1b7a87e2c65c190df4eef998ebcf741ec6098b53ed664bc3731",
     "vk_nightly_b_job.py": "c0c0c5bdc87ac3b4cb843e51b1507260d27b8b453d9266cc8abbd2e180ebc83a",
     "vk_nightly_b_fixture.py": "96af47ee2309578da90a8dcf91f2262e99573a77af928992ccc89f1739738c9b"
+  },
+  "archive_verification": "One full receipt/hash/SQL-payload/embedded-manifest pass before publication; no retained streaming tar-header history",
+  "transfer": {
+    "passed": true,
+    "bytes": 67108864,
+    "upload_seconds": 2.788111736997962,
+    "upload_MiB_per_second": 22.954603702113673,
+    "download_seconds": 1.1576256584376097,
+    "download_MiB_per_second": 55.2855748605103,
+    "native": {
+      "bytes": 67108864,
+      "sha256": "dde0c99017a6e5e2418d6bc620bb4c25bc66ff9b54af2e62b09465d7fac0dbb6",
+      "seconds": 2.3589999999967404,
+      "path": "B:\\vk-backups\\vk-nightly-throughput-20261010-0f28b78546384a2d829222a71202b5bf\\random.fixture",
+      "free_bytes": 107979460608
+    },
+    "fixture_preserved": true,
+    "no_payload_SSD_staging": true,
+    "production_changed": false
   }
 }

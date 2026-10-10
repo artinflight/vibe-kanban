@@ -89,6 +89,9 @@ PAX headers retain ACLs/xattrs/SELinux, numeric IDs, times and link information.
             for member in source:
                 # Preserve directory/link headers too; no new scope filtering.
                 output.addfile(member, source.extractfile(member) if member.isfile() else None)
+                # These are streaming copies, not random-access tar catalogs.
+                # Keep no half-million-member header history on either side.
+                source.members.clear(); output.members.clear()
         while process.stdout.read(1024**2):
             pass
         code = process.wait(timeout=60)
@@ -352,9 +355,10 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                                 or not disk_image['snapshot'].startswith('sqlite-consistent-')):
                             raise ValueError('Unsafe disk snapshot selector')
                         with (mounted / disk_image['snapshot']).open('rb') as payload:
-                            if hashlib.file_digest(payload, 'sha256').hexdigest() != checksum:
-                                raise ValueError('B snapshot changed before archiving')
-                            payload.seek(0)
+                            if nightly_selection is None:
+                                if hashlib.file_digest(payload, 'sha256').hexdigest() != checksum:
+                                    raise ValueError('B snapshot changed before archiving')
+                                payload.seek(0)
                             archive.addfile(member, payload)
                     else:
                         with io.BytesIO(image) as payload:
@@ -441,7 +445,12 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                 raise ValueError("Direct Desktop backup delivery is unverified; no local fallback")
         partial_result = {"folder": str(folder), "archive": archive.name, "receipt": receipt}
         with measured(timings, "remote_archive_snapshot_verification"):
-            verify_remote_snapshots(partial_result, snapshots, manifest)
+            if nightly_selection is None:
+                verify_remote_snapshots(partial_result, snapshots, manifest)
+            # Registered nightly inputs already passed native integrity/hash.
+            # NightlyArchiveProvider subsequently verifies the entire sealed
+            # archive, every SQL payload/hash and its embedded manifest together
+            # before any generation can publish. Avoid a redundant full replay.
         after = journal(before["sequence"])
         check_journal(after, plan)
         if after["instance"] != before["instance"] or after["sequence"] < before["sequence"]:

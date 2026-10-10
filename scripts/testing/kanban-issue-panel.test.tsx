@@ -138,6 +138,9 @@ beforeEach(async () => {
     wait: null,
     issueWait: null,
     workspaceWait: null,
+    scratchWait: null,
+    scratchRequests: [],
+    scratchWrites: [],
     failDot: false,
     runtime: 'local',
   });
@@ -397,4 +400,117 @@ test('legacy remote draft hydration assigns an identity and clears stale pending
   assert.equal(entry().isOpen, true);
   assert.equal(entry().submissionPending, false);
   assert.equal(entry().draft.title, 'Legacy draft');
+});
+
+for (const method of ['X', 'Escape'] as const) {
+  test(`${method} during real workspace scratch persistence blocks navigation and retains saved recovery`, async () => {
+    await act(async () => {
+      await panel().props.onFormChange('createDraftWorkspace', true);
+    });
+    const gate = deferred<void>();
+    state.scratchWait = gate.promise;
+    const id = entry().id;
+    const { pending } = await submit();
+    assert.equal(state.scratchRequests.length, 1);
+    assert.equal(state.scratchWrites.length, 0);
+    assert.deepEqual(entry().submission?.completedAssigneeIds, [
+      'dot',
+      'seamus',
+    ]);
+    await dismiss(method);
+    await act(async () => {
+      gate.resolve();
+      await pending;
+    });
+    assert.deepEqual(state.navigations, ['closed']);
+    assert.deepEqual(state.expected, []);
+    assert.equal(
+      state.scratchWrites.length,
+      1,
+      'saved draft remains available'
+    );
+    assert.equal(entry().id, id);
+    assert.equal(entry().isOpen, false);
+    assert.equal(entry().submissionPending, false);
+    assert.equal(entry().submission?.issue?.id, 'created');
+    await reopen();
+    await act(async () => {
+      await panel().props.onSubmit();
+    });
+    assert.equal(state.creates, 1, 'recovery uses the saved issue');
+    assert.deepEqual(state.calls, [
+      ['created', 'dot'],
+      ['created', 'seamus'],
+    ]);
+    assert.deepEqual(state.navigations, [
+      'closed',
+      ['workspace', 'p', 'created', state.scratchWrites[1].id],
+    ]);
+    assert.equal(store.getState().byKey[key], undefined);
+  });
+}
+
+test('delayed real scratch write cannot navigate or mutate a replacement composer', async () => {
+  await act(async () => {
+    await panel().props.onFormChange('createDraftWorkspace', true);
+  });
+  const gate = deferred<void>();
+  state.scratchWait = gate.promise;
+  const oldId = entry().id;
+  const { pending } = await submit();
+  assert.equal(state.scratchRequests.length, 1);
+  await dismiss('X');
+  await act(async () => {
+    store.setState({ byKey: {} });
+    openKanbanIssueComposer(key, {});
+    patchKanbanIssueComposer(key, { title: 'Replacement' });
+    assert.ok(store.getState().beginSubmission(key, entry().id));
+  });
+  const replacement = entry();
+  assert.notEqual(replacement.id, oldId);
+  await act(async () => {
+    gate.resolve();
+    await pending;
+  });
+  assert.equal(state.scratchWrites.length, 1);
+  assert.equal(entry(), replacement);
+  assert.equal(entry().submissionPending, true);
+  assert.equal(entry().submission, undefined);
+  assert.equal(entry().draft.title, 'Replacement');
+  assert.deepEqual(state.navigations, ['closed']);
+  assert.deepEqual(state.expected, []);
+  assert.equal(state.creates, 1);
+  assert.equal(state.calls.length, 2);
+});
+
+test('ordinary workspace creation navigates once after the real linked scratch write succeeds', async () => {
+  await act(async () => {
+    await panel().props.onFormChange('createDraftWorkspace', true);
+  });
+  const gate = deferred<void>();
+  state.scratchWait = gate.promise;
+  const { pending } = await submit();
+  assert.equal(state.scratchRequests.length, 1);
+  assert.equal(state.scratchWrites.length, 0);
+  assert.deepEqual(state.navigations, []);
+  await act(async () => {
+    gate.resolve();
+    await pending;
+  });
+  const scratch = state.scratchWrites[0];
+  assert.equal(scratch.type, 'DRAFT_WORKSPACE');
+  assert.equal(scratch.payload.type, 'DRAFT_WORKSPACE');
+  assert.equal(scratch.payload.data.message, 'Dot task');
+  assert.deepEqual(scratch.payload.data.linked_issue, {
+    issue_id: 'created',
+    simple_id: 'T1',
+    title: 'Dot task',
+    remote_project_id: 'p',
+  });
+  assert.deepEqual(state.navigations, [
+    ['workspace', 'p', 'created', scratch.id],
+  ]);
+  assert.equal(store.getState().byKey[key], undefined);
+  assert.equal(state.creates, 1);
+  assert.equal(state.calls.length, 2);
 });

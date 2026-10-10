@@ -10,14 +10,19 @@ this staging-based source. Review: [draft PR #237](https://github.com/artinfligh
 Create mode now awaits all selected assignments and retains a composer checkpoint
 for partial failure/retry on the same issue, including panel remounts. Retry skips
 confirmed assignments; saved fields stay locked. Sixteen Node regressions and
-twelve actual-panel regressions pass locally. X/Escape now dismiss recoverable
+sixteen actual-panel regressions pass locally. X/Escape now dismiss recoverable
 composers; reopen restores the same identity and request guard. Async checkpoints,
 unlocks and completion are identity-fenced, and a dismissed successful save does
-not navigate. Hosted CI runs the actual Close/reopen suite with a pinned renderer. Final-head hosted
+not navigate. Workspace navigation now checks current composer identity/open state after the
+scratch write; four real-helper regressions cover delayed persistence with X,
+Escape, replacement and ordinary success. The three race cases fail before the
+boundary fix. Hosted CI runs the panel suite with a pinned renderer. Final-head hosted
 checks remain the integration gate. Local format/governance,
 TypeScript, lint, migration replay and rendered-container
 acceptance passed. Application source applies to the combined baseline; its
-current CI workflow requires inserting both Node test steps, not replacement. MCP Cargo builds are deliberately excluded for SSD capacity.
+bounded patch includes both Node test steps added to the existing combined CI
+workflow, preserving all baseline steps. Receipt/artifacts are under
+`/mnt/vk-storage/vk-user-assignment-20261009/workspace-navigation`. MCP Cargo builds are deliberately excluded for SSD capacity.
 
 # October 8: Workspace-first navigation and task attention follow-up
 

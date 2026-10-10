@@ -8,6 +8,9 @@ export const state = {
   wait: null,
   issueWait: null,
   workspaceWait: null,
+  scratchWait: null,
+  scratchRequests: [],
+  scratchWrites: [],
   expected: [],
   runtime: 'local',
 };
@@ -89,13 +92,23 @@ export const useCurrentKanbanRouteState = () => ({
 const navigation = {
   goToProjectIssue: (p, id) => state.navigations.push(id),
   goToProject: () => state.navigations.push('closed'),
+  goToProjectIssueWorkspaceCreate: (projectId, issueId, draftId) =>
+    state.navigations.push(['workspace', projectId, issueId, draftId]),
+  goToProjectWorkspaceCreate: (projectId, draftId) =>
+    state.navigations.push(['workspace', projectId, draftId]),
 };
 export const useAppNavigation = () => navigation;
-export const useProjectWorkspaceCreateDraft = () => ({
-  openWorkspaceCreateFromState: () => {
-    state.navigations.push('workspace');
+// Keep persistWorkspaceCreateDraft and its serializer real; delay only the API
+// transport so navigation assertions exercise the actual post-write boundary.
+export const scratchApi = {
+  update: async (type, id, data) => {
+    const request = { type, id, ...data };
+    state.scratchRequests.push(request);
+    if (state.scratchWait) await state.scratchWait;
+    state.scratchWrites.push(request);
   },
-});
+};
+export const localStorageScratchUpdate = () => true;
 export const useAppRuntime = () => state.runtime;
 const prefs = {
   createDraftWorkspaceByDefault: false,
@@ -133,9 +146,6 @@ export const deleteAttachment = async () => {};
 export const extractAttachmentIds = () => new Set();
 export const removeAttachmentMarkdownBySource = () => ({ removed: false });
 export const replaceAttachmentSource = () => ({ replaced: false });
-export const buildWorkspaceCreatePrompt = () => '';
-export const buildLinkedIssueCreateState = () => ({});
-export const buildWorkspaceCreateInitialState = () => ({});
 export const getWorkspaceDefaults = async () => {
   if (state.workspaceWait) await state.workspaceWait;
   return {};

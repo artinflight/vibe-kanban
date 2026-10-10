@@ -44,6 +44,10 @@ and route dismissal hide pending or partially saved composers without erasing
 recovery. Reopen resumes the same composer identity, including before issue
 creation returns. Every async checkpoint, unlock and completion requires that
 identity, so an older request cannot modify a replacement at the same project key.
+Workspace-draft navigation rechecks the originating composer identity and open
+state after the real scratch write, immediately before navigating. Dismissal or
+replacement during persistence leaves the saved draft/issue/assignments intact
+without navigating; reopening can retry on the same issue.
 Successful background completion stays dismissed; after a complete save, a new
 composer receives a fresh identity. Remote draft hydration assigns identities to
 legacy drafts and clears pending guards belonging to the previous page lifetime.
@@ -71,12 +75,14 @@ not access control.
 
 ## Validation and review boundary
 
-Sixteen focused Node creation/visibility/pagination regressions and twelve actual
-panel Close/reopen regressions pass locally. The panel suite exercises the real
+Sixteen focused Node creation/visibility/pagination regressions and sixteen actual
+panel Close/reopen/navigation regressions pass locally. The panel suite exercises the real
 X button and Escape handler for delayed issue and assignment requests, dismissal
 after partial failure, failure arriving while dismissed, quiet background success,
 replacement identity fencing, edit-picker/unread preservation and legacy remote
-hydration. It runs in hosted CI with a pinned React 18.3.1 test renderer. Reproduce
+hydration. Four regressions keep the real workspace helper and draft serializer
+and delay only the scratch API write: X, Escape, replacement and ordinary success.
+The three race cases fail against the prior navigation implementation. It runs in hosted CI with a pinned React 18.3.1 test renderer. Reproduce
 with `VK_TEST_OUTPUT` on mounted SSD and `TEST_RENDERER_PATH` pointing to that
 renderer, then `node scripts/testing/run-kanban-issue-panel-tests.mjs`.
 The seven creation regressions cover multi-assignee partial failure, waiting for
@@ -96,11 +102,11 @@ Mine/All switching, active/archive/group counts, persisted reload choice, unread
 preservation and unchanged remote visibility. The reproducible fixture and logs
 are in the task artifact directory. The source regressions run in hosted CI on
 [draft PR #237](https://github.com/artinflight/vibe-kanban/pull/237); its final head
-checks are required before integration. CI executes all twenty-eight Node regressions,
+checks are required before integration. CI executes all thirty-two Node regressions,
 the database and real HTTP tests, workspace Cargo tests excluding Tauri, Clippy,
 frontend builds and type/schema checks. The remote job may skip private checks
 when its deploy key is absent; do not infer private coverage from that status. No Cargo build is run on the MCP host:
-mounted SSD has roughly 2.4 GiB available. Existing matching-lockfile frontend
+mounted SSD has roughly 1.8 GiB available. Existing matching-lockfile frontend
 dependencies are reused via private links; bulk artifacts/logs are under
 `/mnt/vk-storage/vk-user-assignment-20261009`.
 
@@ -119,8 +125,11 @@ from normal staging. The application source patch applies cleanly to frontend `5
 includes backend `c3c48e63`). Its CI frontend job differs: integrate the new Node
 assignment and actual-panel test steps into the current combined workflow rather than replacing
 that workflow; preserve its newer approval/runtime checks. Receipt:
-`/mnt/vk-storage/vk-user-assignment-20261009/close-reopen/combined-patch-check/receipt.json`.
-This proves patch applicability, not a compiled/rehearsed release.
+`/mnt/vk-storage/vk-user-assignment-20261009/workspace-navigation/combined-patch-check/receipt.json`.
+The bounded artifact includes application/tests plus additions to the combined
+workflow's existing frontend paths and test steps. Its workflow patch preserves
+all baseline steps; continuity documents are excluded. This proves patch
+applicability, not a compiled/rehearsed release.
 
 In particular the `20261007190000_workspace_report_receipts`
 migration and newer report-review runtime must be retained. Do not deploy this

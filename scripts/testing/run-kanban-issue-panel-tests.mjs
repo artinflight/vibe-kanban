@@ -26,7 +26,7 @@ await build({
     {
       name: 'panel-api-fixture',
       setup(builder) {
-        // Keep the actual panel, composer store, scratch hook and creation workflow.
+        // Keep the actual panel, composer store, scratch hook and creation/workspace workflow.
         // Replace network/providers and unrelated sections with controllable requests.
         builder.onResolve(
           {
@@ -35,7 +35,7 @@ await build({
           },
           (args) => {
             if (
-              /useKanbanIssueComposer(Store|Scratch)|issueCreation/.test(
+              /useKanbanIssueComposer(Store|Scratch)|issueCreation|useProjectWorkspaceCreateDraft|workspaceCreateState/.test(
                 args.path
               )
             )

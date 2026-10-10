@@ -1605,3 +1605,15 @@ completion, edit/unread preservation and hydration. They join the sixteen existi
 Node regressions in hosted CI. No authentication/permission changes, production
 deployment or heavy MCP build. Bounded integration over c3c48e63/5ce84ee2 remains
 required; do not replace the combined release with this older staging baseline.
+
+
+## 2026-10-10 — Workspace draft navigation boundary
+
+PR237 adds a fresh composer identity/visibility predicate immediately after real
+scratch persistence and before workspace navigation. Tests retain the actual
+helper/serializer and delay only the API transport: Close, Escape and replacement
+fail before the fix; ordinary success passes. Sixteen panel plus sixteen pure
+Node checks are the new validation baseline. Saved issue/assignees/recovery and
+unread/auth behavior remain intact. A bounded combined-source/workflow patch is
+prepared over backend c3c48e63/frontend5ce84ee2, preserving live-only changes;
+exact-head hosted CI is required. No deployment or local Cargo build.

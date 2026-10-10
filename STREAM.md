@@ -9,8 +9,9 @@ are separate and untouched. Scope, validation and combined-release adoption plan
 Review: [draft PR #237](https://github.com/artinflight/vibe-kanban/pull/237).
 Create-mode reliability follow-up awaits assignment persistence, exposes partial
 failure and retries the same saved issue. Seven new creation regressions join
-the nine visibility/pagination checks. Twelve actual panel regressions cover
-Close/Escape/reopen and stale completion identity fences. Final-head hosted tests are required
+the nine visibility/pagination checks. Sixteen actual panel regressions cover
+Close/Escape/reopen, stale completion identity fences and delayed real scratch
+persistence at the workspace-navigation boundary (four new cases). Final-head hosted tests are required
 before integration. No production deployment,
 service restart, bulk assignment, merge or permission changes in this task.
 Older stream entries below describe other work and do not authorize activation.

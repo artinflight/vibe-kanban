@@ -1012,6 +1012,7 @@ export function KanbanIssuePanelContainer({
           });
           const draftId = await openWorkspaceCreateFromState(createState, {
             issueId: syncedIssue.id,
+            canNavigate: () => currentComposer()?.isOpen === true,
           });
           if (!currentComposer()?.isOpen) return;
           if (!draftId) {

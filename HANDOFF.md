@@ -1,3 +1,13 @@
+# October 10: Unassigned creation navigation QA repair
+
+Isolated combined-candidate QA saved unassigned issues once but closed their detail
+route before collection refresh. The project layout now owns the expected-issue
+handoff across composer/sidebar removal and asynchronous route/cache arrival.
+Four new rendered hook tests join the sixteen existing panel race regressions.
+Final candidate build/CI and all real-backend recovery cases remain the gate;
+see VK_LOCAL_ASSIGNMENTS.md and Desktop B:/vk-builds/local-assignments-20261010.
+No production writes, assignment backfill, unread clearing or deployment.
+
 # October 9: Local assignment implementation for review
 
 Read [VK_LOCAL_ASSIGNMENTS.md](VK_LOCAL_ASSIGNMENTS.md). Local Seamus/dot records

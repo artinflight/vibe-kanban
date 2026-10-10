@@ -73,9 +73,24 @@ written. Hidden work retains its attention marker and reappears with that marker
 in All. All and direct issue/workspace routes preserve discoverability; Mine is
 not access control.
 
+## October 10 isolated combined-candidate QA follow-up
+
+Real-backend QA reproduced an unassigned-create navigation failure twice: the
+issue POST succeeded and exactly one issue appeared on the board, but the detail
+route closed. Assigned creation passed because the assignment writes gave the
+fallback collection time to refresh. The project layout now retains the expected
+persisted issue through composer removal, asynchronous route arrival and delayed
+collection refresh. The expectation is scoped to host/project and clears when the
+issue is available on its route, the user leaves that route, or another issue is
+opened. The sidebar no longer owns a guard that can disappear with its composer.
+Four additional rendered hook regressions cover these boundaries. This follow-up
+changes neither issue persistence/retry nor unread/auth state. Exact combined
+candidate acceptance remains required; source and evidence live on Desktop
+`B:/vk-builds/local-assignments-20261010`.
+
 ## Validation and review boundary
 
-Sixteen focused Node creation/visibility/pagination regressions and sixteen actual
+Sixteen focused Node creation/visibility/pagination regressions and twenty actual
 panel Close/reopen/navigation regressions pass locally. The panel suite exercises the real
 X button and Escape handler for delayed issue and assignment requests, dismissal
 after partial failure, failure arriving while dismissed, quiet background success,
@@ -102,11 +117,11 @@ Mine/All switching, active/archive/group counts, persisted reload choice, unread
 preservation and unchanged remote visibility. The reproducible fixture and logs
 are in the task artifact directory. The source regressions run in hosted CI on
 [draft PR #237](https://github.com/artinflight/vibe-kanban/pull/237); its final head
-checks are required before integration. CI executes all thirty-two Node regressions,
+checks are required before integration. CI executes all thirty-six Node regressions,
 the database and real HTTP tests, workspace Cargo tests excluding Tauri, Clippy,
 frontend builds and type/schema checks. The remote job may skip private checks
 when its deploy key is absent; do not infer private coverage from that status. No Cargo build is run on the MCP host:
-mounted SSD has roughly 1.8 GiB available. Existing matching-lockfile frontend
+mounted SSD has less than 0.4 GiB available; new bulk artifacts are kept on Desktop B:. Existing matching-lockfile frontend
 dependencies are reused via private links; bulk artifacts/logs are under
 `/mnt/vk-storage/vk-user-assignment-20261009`.
 

@@ -365,21 +365,11 @@ async fn execute(
     owned(home, uid)?;
     let pool = readonly_pool(database).await?;
     let process = original(&pool, invocation.execution, request).await?;
-    let capture = services::services::execution_process::execution_log_file_path_for_execution(
-        &pool, process.id,
-    )
-    .await
-    .map_err(|_| "Original capture lookup failed")?
-    .ok_or("Original capture unavailable")?;
-    if capture
-        != utils::execution_logs::process_log_file_path_in_root(
-            root,
-            request.session_id,
-            process.id,
-        )
-    {
-        return Err("Capture path differs from the exact original service storage".into());
-    }
+    // Derive from the fixed service root, not a debug binary's checkout asset
+    // directory or an inherited XDG override. The server must independently
+    // report this same existing original path in its authoritative status.
+    let capture =
+        utils::execution_logs::process_log_file_path_in_root(root, request.session_id, process.id);
     owned_tree(&capture, root, uid)?;
     owned_tree(&native_path(home, request.native_session_id)?, home, uid)?;
     let client = reqwest::Client::builder()

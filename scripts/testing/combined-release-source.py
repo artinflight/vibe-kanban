@@ -67,7 +67,7 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def verify():
+def verify_capture_assignment_base():
     approved = {}
     for ref in REVIEWED.values():
         names = git("diff", "--name-only", BACKEND, ref).decode().splitlines()
@@ -129,6 +129,41 @@ def verify():
         "preservedLiveFiles": {name: digest(blob(BASE, name)) for name in live_code},
         "incumbentStrictReaderFunctionSha256": digest(reader),
     }
+
+
+# The recovery owner tested this exact application tree on the accepted joint base.
+# Packaging may change only this fence and the scoped hosted validation workflow.
+RECOVERY_TESTED = "63d76b9134417a7439070c536c4c2e17fa570f82"
+RECOVERY_DELIVERED = "3a166309a09cf425c4d12a8cfcc9dfa7d9b9c368"
+ACCEPTED_JOINT = "604285afbe9a8889aeff2c6a681bd3df998d3770"
+PACKAGING_ONLY = {"scripts/testing/combined-release-source.py", ".github/workflows/test.yml"}
+
+
+def verify():
+    subprocess.run(["git", "merge-base", "--is-ancestor", ACCEPTED_JOINT, RECOVERY_DELIVERED], check=True)
+    assert not git("diff", "--name-only", RECOVERY_TESTED, RECOVERY_DELIVERED, "--", "crates", "packages", "shared", "Cargo.toml", "Cargo.lock", "pnpm-lock.yaml").strip()
+    changed = set(git("diff", "--name-only", RECOVERY_DELIVERED, "HEAD").decode().splitlines())
+    changed.update(git("diff", "--name-only", "HEAD").decode().splitlines())
+    assert changed <= PACKAGING_ONLY, f"Unreviewed source changes: {changed - PACKAGING_ONLY}"
+    for path, expected in ASSIGNMENT_FILES.items():
+        assert digest(Path(path).read_bytes()) == expected, path
+    for path in MOBILE_FILES:
+        if path not in ASSIGNMENT_FILES:
+            assert Path(path).read_bytes() == blob(JOINT_BASE, path), path
+    for path in ("Cargo.toml", "Cargo.lock", "pnpm-lock.yaml", "shared/types.ts"):
+        assert Path(path).read_bytes() == blob(ACCEPTED_JOINT, path), path
+    assert not git("diff", "--name-only", ACCEPTED_JOINT, RECOVERY_DELIVERED, "--", "crates/db").strip()
+    recovery_files = [p for p in git("diff", "--name-only", ACCEPTED_JOINT, RECOVERY_TESTED).decode().splitlines() if p.startswith(("crates/", "packages/", "scripts/testing/"))]
+    return {"sourceCommit": git("rev-parse", "HEAD").decode().strip(),
+            "sourceTree": git("rev-parse", "HEAD^{tree}").decode().strip(),
+            "acceptedJoint": ACCEPTED_JOINT, "recoveryTested": RECOVERY_TESTED,
+            "recoveryDelivered": RECOVERY_DELIVERED,
+            "assignmentFiles": ASSIGNMENT_FILES, "mobileFiles": sorted(MOBILE_FILES),
+            "recoveryFiles": {p: digest(Path(p).read_bytes()) for p in recovery_files},
+            "migrationSha256": ASSIGNMENT_FILES["crates/db/migrations/20261009000000_local_issue_assignments.sql"],
+            "queueRepairIncluded": False, "gitEnforcementActivated": False,
+            "unreadAutoClearEnabled": False, "nightlyScheduleEnabled": False,
+            "preservedModule": "inventory-history-be3478171-20261009", "routingMode": "Recommend-only"}
 
 
 if __name__ == "__main__":

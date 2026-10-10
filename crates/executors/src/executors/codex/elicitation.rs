@@ -29,15 +29,72 @@ fn unsafe_text(text: &str) -> bool {
         .any(|c| matches!(c, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}'))
 }
 
-/// Consent is based on invocation metadata, never on the provider's fallback
-/// question or monitor reason. Reject incomplete/oversized context rather than
-/// truncating the consequential part of an action. Render this as plain text.
+// The deployed Vibe connector accepts 60,000 Unicode characters per prompt.
+// UTF-8 can use four bytes per character. JSON escaping/formatting and verified
+// display labels have separate bounded budgets; none is a truncation budget.
+pub const MAX_STRING_CHARS: usize = 60_000;
+pub const MAX_STRING_BYTES: usize = MAX_STRING_CHARS * 4;
+pub const MAX_ARGUMENT_BYTES: usize = 512 * 1024;
+pub const MAX_DISPLAY_BYTES: usize = MAX_ARGUMENT_BYTES + 128 * 1024;
+pub const MAX_SUMMARY_BYTES: usize = 1024 * 1024;
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct ConsentValidationError {
+    pub reason: &'static str,
+    pub message: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub observed: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<usize>,
+}
+
+impl ConsentValidationError {
+    fn invalid(reason: &'static str, message: &'static str) -> Self {
+        Self {
+            reason,
+            message,
+            observed: None,
+            limit: None,
+        }
+    }
+
+    fn limit(reason: &'static str, observed: usize, limit: usize) -> Self {
+        Self {
+            reason,
+            message: "Complete approval context exceeds the supported review limit. No approval was requested or granted.",
+            observed: Some(observed),
+            limit: Some(limit),
+        }
+    }
+}
+
+type ConsentResult<T> = Result<T, ConsentValidationError>;
+
+/// Compatibility wrapper for existing context readers. The bridge uses the
+/// detailed result so validation is never reported as an operator decision.
 pub fn consent_summary(params: &McpServerElicitationRequestParams) -> Option<String> {
-    supported_message(params)?;
-    let McpServerElicitationRequest::Form { meta, .. } = &params.request else {
-        return None;
+    validate_consent(params).ok()
+}
+
+/// Invocation metadata is authoritative. Every nonsecret value is presented
+/// once, in full, as literal text. Provider questions cannot replace a target.
+pub fn validate_consent(params: &McpServerElicitationRequestParams) -> ConsentResult<String> {
+    let incomplete = || {
+        ConsentValidationError::invalid(
+            "missing_context",
+            "Complete tool identity and invocation arguments are required. No approval was requested or granted.",
+        )
     };
-    let meta = meta.as_ref()?;
+    supported_message(params).ok_or_else(|| {
+        ConsentValidationError::invalid(
+            "unsupported_request",
+            "This approval form is unsupported. No approval was requested or granted.",
+        )
+    })?;
+    let McpServerElicitationRequest::Form { meta, .. } = &params.request else {
+        return Err(incomplete());
+    };
+    let meta = meta.as_ref().ok_or_else(incomplete)?;
     fn identity(value: &serde_json::Value) -> Option<&str> {
         let text = value.as_str()?;
         (!text.trim().is_empty()
@@ -46,28 +103,42 @@ pub fn consent_summary(params: &McpServerElicitationRequestParams) -> Option<Str
             && !unsafe_text(text))
         .then_some(text)
     }
-    let tool = identity(meta.get("tool_title")?)?;
+    let tool = meta
+        .get("tool_title")
+        .and_then(identity)
+        .ok_or_else(incomplete)?;
     let connector = if params.server_name == "codex_apps" {
-        // App calls need an actual connector identity, not "this app".
         format!(
             "{} ({})",
-            identity(meta.get("connector_name")?)?,
-            identity(meta.get("connector_id")?)?
+            meta.get("connector_name")
+                .and_then(identity)
+                .ok_or_else(incomplete)?,
+            meta.get("connector_id")
+                .and_then(identity)
+                .ok_or_else(incomplete)?
         )
     } else {
         params.server_name.clone()
     };
-    let arguments = meta.get("tool_params")?.as_object()?;
-    if arguments.is_empty()
-        || arguments.keys().all(|key| sensitive(key))
-        || serde_json::to_vec(arguments).ok()?.len() > 65_536
-    {
-        // Without arguments we cannot distinguish consequential targets.
-        return None;
+    let arguments = meta
+        .get("tool_params")
+        .and_then(serde_json::Value::as_object)
+        .ok_or_else(incomplete)?;
+    let arguments_bytes = serde_json::to_vec(arguments)
+        .map_err(|_| incomplete())?
+        .len();
+    if arguments_bytes > MAX_ARGUMENT_BYTES {
+        return Err(ConsentValidationError::limit(
+            "arguments_bytes",
+            arguments_bytes,
+            MAX_ARGUMENT_BYTES,
+        ));
+    }
+    if arguments.is_empty() || arguments.keys().all(|key| sensitive(key)) {
+        return Err(incomplete());
     }
     fn sensitive(key: &str) -> bool {
         let key = key.to_ascii_lowercase().replace(['-', '_', ' '], "");
-        // Token budgets/counts are consequential action parameters, not secrets.
         if [
             "maxtokens",
             "tokencount",
@@ -99,17 +170,26 @@ pub fn consent_summary(params: &McpServerElicitationRequestParams) -> Option<Str
         value: &serde_json::Value,
         depth: usize,
         nodes: &mut usize,
-    ) -> Option<serde_json::Value> {
+    ) -> ConsentResult<serde_json::Value> {
         *nodes += 1;
         if depth > 8 || *nodes > 128 {
-            return None;
+            return Err(ConsentValidationError::invalid(
+                "structure_limit",
+                "Approval arguments exceed the supported depth or node limit. No approval was requested or granted.",
+            ));
         }
-        Some(match value {
+        let unsafe_value = || {
+            ConsentValidationError::invalid(
+                "unsafe_context",
+                "Approval context contains unsafe text or embedded credentials. No approval was requested or granted.",
+            )
+        };
+        Ok(match value {
             serde_json::Value::Object(map) => {
                 let mut output = serde_json::Map::new();
                 for (key, value) in map {
                     if key.len() > 256 || key.chars().any(char::is_control) || unsafe_text(key) {
-                        return None;
+                        return Err(unsafe_value());
                     }
                     output.insert(
                         key.clone(),
@@ -126,19 +206,31 @@ pub fn consent_summary(params: &McpServerElicitationRequestParams) -> Option<Str
                 values
                     .iter()
                     .map(|v| sanitize(v, depth + 1, nodes))
-                    .collect::<Option<Vec<_>>>()?,
+                    .collect::<ConsentResult<Vec<_>>>()?,
             ),
             serde_json::Value::String(text) => {
-                // Secrets embedded in free text/URLs cannot be safely summarized
-                // without interpreting the action; fail closed, never log them.
+                if text.len() > MAX_STRING_BYTES {
+                    return Err(ConsentValidationError::limit(
+                        "string_utf8_bytes",
+                        text.len(),
+                        MAX_STRING_BYTES,
+                    ));
+                }
+                let chars = text.chars().count();
+                if chars > MAX_STRING_CHARS {
+                    return Err(ConsentValidationError::limit(
+                        "string_characters",
+                        chars,
+                        MAX_STRING_CHARS,
+                    ));
+                }
                 let lower = text.to_ascii_lowercase();
                 static KEY_PATTERN: std::sync::LazyLock<regex::Regex> =
                     std::sync::LazyLock::new(|| {
                         regex::Regex::new(r"(?:^|[\s\x22\x27])sk-[a-zA-Z0-9_-]{16,}")
                             .expect("constant regex")
                     });
-                if text.len() > 4096
-                    || unsafe_text(text)
+                if unsafe_text(text)
                     || KEY_PATTERN.is_match(text)
                     || text
                         .chars()
@@ -156,9 +248,13 @@ pub fn consent_summary(params: &McpServerElicitationRequestParams) -> Option<Str
                     .iter()
                     .any(|s| lower.contains(s))
                     || (text.contains("://")
-                        && text.split("://").nth(1)?.split('/').next()?.contains('@'))
+                        && text.split("://").nth(1).is_some_and(|rest| {
+                            rest.split('/')
+                                .next()
+                                .is_some_and(|host| host.contains('@'))
+                        }))
                 {
-                    return None;
+                    return Err(unsafe_value());
                 }
                 value.clone()
             }
@@ -166,37 +262,88 @@ pub fn consent_summary(params: &McpServerElicitationRequestParams) -> Option<Str
         })
     }
     let safe = sanitize(&serde_json::Value::Object(arguments.clone()), 0, &mut 0)?;
-    // Container names and display labels cannot make redaction-only leaves
-    // meaningful. Check the surviving invocation values at every depth.
     if !has_meaningful_value(&safe) {
-        return None;
+        return Err(ConsentValidationError::invalid(
+            "redacted_only",
+            "Approval arguments contain no reviewable nonsecret invocation values. No approval was requested or granted.",
+        ));
     }
-    let mut summary = format!(
-        "Tool: {tool}\nConnector: {connector}\nMCP server: {}\nParameters (including target):\n{}",
-        params.server_name,
-        serde_json::to_string_pretty(&safe).ok()?
-    );
-    // Retain upstream display labels, but require their values to match the
-    // actual invocation. They may label a target; they cannot replace it.
+    // Display metadata is verified against the actual invocation, then used
+    // only as labels. Repeating a full prompt here wasted the old 8 KiB budget.
+    let mut labels = std::collections::BTreeMap::<&str, Vec<&str>>::new();
     if let Some(display) = meta.get("tool_params_display") {
-        let display = display.as_array()?;
+        let display_bytes = serde_json::to_vec(display).map_err(|_| incomplete())?.len();
+        if display_bytes > MAX_DISPLAY_BYTES {
+            return Err(ConsentValidationError::limit(
+                "display_bytes",
+                display_bytes,
+                MAX_DISPLAY_BYTES,
+            ));
+        }
+        let display = display.as_array().ok_or_else(incomplete)?;
         if display.len() > 128 {
-            return None;
+            return Err(incomplete());
         }
         for item in display {
-            let name = identity(item.get("name")?)?;
-            let label = identity(item.get("display_name")?)?;
-            if arguments.get(name)? != item.get("value")? {
-                return None;
+            let name = item.get("name").and_then(identity).ok_or_else(incomplete)?;
+            let label = item
+                .get("display_name")
+                .and_then(identity)
+                .ok_or_else(incomplete)?;
+            if arguments.get(name).is_none() || arguments.get(name) != item.get("value") {
+                return Err(ConsentValidationError::invalid(
+                    "display_mismatch",
+                    "Displayed parameters do not match the invocation. No approval was requested or granted.",
+                ));
             }
-            summary.push_str(&format!("\n{label} ({name}): {}", safe.get(name)?));
-            if summary.len() > 8192 {
-                return None;
+            let entry = labels.entry(name).or_default();
+            if !entry.contains(&label) {
+                entry.push(label);
             }
+        }
+    }
+    let mut summary = format!(
+        "Tool: {tool}\nConnector: {connector}\nMCP server: {}\nParameters (complete nonsecret invocation):",
+        params.server_name
+    );
+    for (name, value) in safe.as_object().expect("sanitized object") {
+        let label = labels
+            .get(name.as_str())
+            .map(|values| format!(" — {}", values.join("; ")))
+            .unwrap_or_default();
+        let name = serde_json::to_string(name).map_err(|_| incomplete())?;
+        if let Some(text) = value.as_str() {
+            // Literal multiline strings retain paragraph breaks for review.
+            summary.push_str(&format!("\n\nParameter {name}{label} (string, {} UTF-8 bytes):\n{text}\nEnd parameter {name}.", text.len()));
+        } else {
+            summary.push_str(&format!(
+                "\n\nParameter {name}{label} (JSON):\n{}",
+                serde_json::to_string_pretty(value).map_err(|_| incomplete())?
+            ));
         }
     }
     summary.push_str("\n\nApprove this call only.");
-    (summary.len() <= 8192).then_some(summary)
+    if summary.len() > MAX_SUMMARY_BYTES {
+        return Err(ConsentValidationError::limit(
+            "summary_bytes",
+            summary.len(),
+            MAX_SUMMARY_BYTES,
+        ));
+    }
+    Ok(summary)
+}
+
+/// The native protocol only has accept/decline/cancel. Validation uses Cancel
+/// with a bounded structured reason, never a fabricated user decision. Native
+/// Codex currently discards this detail; Vibe persists and displays it as well.
+pub fn validation_response(error: &ConsentValidationError) -> McpServerElicitationRequestResponse {
+    McpServerElicitationRequestResponse {
+        action: McpServerElicitationAction::Cancel,
+        content: Some(
+            json!({"error": {"code":"mcp_consent_validation", "details":error}, "review_requested":false, "dispatch_allowed":false}),
+        ),
+        meta: None,
+    }
 }
 
 pub fn supported_message(params: &McpServerElicitationRequestParams) -> Option<&str> {
@@ -323,7 +470,7 @@ mod tests {
         for target in [
             "bad\u{202e}target".into(),
             "sk-abcdefghijklmnopqsecret".into(),
-            "x".repeat(4097),
+            "x".repeat(MAX_STRING_CHARS + 1),
             "https://user:password@example.invalid/target".into(),
             "https://example.invalid/target?token=secret".into(),
         ] {

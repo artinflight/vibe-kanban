@@ -1,14 +1,15 @@
 //! Actual Axum handlers + native normalizer/storage writer + real SQLite on SSD.
 //! No Deployment::new, agent launch, production config, auth or live badges.
-use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use axum::{
     Router,
     routing::{get, post, put},
 };
 use db::models::coding_agent_turn::CodingAgentTurn;
+use futures_util::StreamExt;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
-use tokio::sync::{Notify, RwLock};
+use tokio::sync::Notify;
 use utils::{assets::asset_dir, msg_store::MsgStore};
 
 use super::*;
@@ -52,6 +53,11 @@ struct App {
 }
 impl App {
     async fn new() -> Self {
+        let app = Self::unwritten().await;
+        app.write_log().await;
+        app
+    }
+    async fn unwritten() -> Self {
         assert_fixture_root();
         let database = asset_dir().join(format!("review-http-{}.sqlite", Uuid::new_v4()));
         let pool = Self::connect(&database).await;
@@ -78,16 +84,14 @@ impl App {
             pool,
             before_mark: None,
         };
-        let app = Self {
+        Self {
             context,
             workspace,
             session,
             execution,
             revision,
             database,
-        };
-        app.write_log().await;
-        app
+        }
     }
     async fn connect(path: &std::path::Path) -> SqlitePool {
         SqlitePoolOptions::new()
@@ -112,9 +116,8 @@ impl App {
         store.push_stdout(&event[..17]);
         store.push_stdout(&event[17..]);
         store.push_finished();
-        let stores = Arc::new(RwLock::new(HashMap::from([(self.execution, store)])));
         services::services::execution_process::spawn_stream_raw_logs_to_storage(
-            stores,
+            store,
             db::DBService {
                 pool: self.context.pool.clone(),
             },
@@ -519,11 +522,25 @@ async fn fixture_session(
 async fn fixture_history(
     State(c): State<Fixture>,
     axum::extract::Path(id): axum::extract::Path<Uuid>,
-) -> Json<ApiResponse<Value>> {
+) -> Result<Json<ApiResponse<Value>>, ApiError> {
     let process = ExecutionProcess::find_by_id(&c.pool, id)
         .await
         .unwrap()
         .unwrap();
+    if process.status == ExecutionProcessStatus::Running {
+        return Err(ApiError::Conflict(
+            "Running logs must use the live stream".into(),
+        ));
+    }
+    if let Some(page) =
+        crate::routes::execution_processes::log_history::capture_page_for_process(&c.pool, &process)
+            .await
+            .unwrap()
+    {
+        return Ok(Json(ApiResponse::success(
+            serde_json::to_value(page).unwrap(),
+        )));
+    }
     let messages =
         services::services::report_review::replay_review_log(&c.pool, &process, &asset_dir())
             .await
@@ -545,9 +562,9 @@ async fn fixture_history(
         }
     }
     let entries:Vec<Value>=entries.into_iter().map(|(path,entry)|json!({"index":path.strip_prefix("/entries/").unwrap().parse::<usize>().unwrap(),"entry":entry})).collect();
-    Json(ApiResponse::success(
-        json!({"entries":entries,"next_before":null}),
-    ))
+    Ok(Json(ApiResponse::success(
+        json!({"entries":entries,"next_before":null,"capture_pending":false}),
+    )))
 }
 async fn fixture_summaries(State(c): State<Fixture>) -> Json<ApiResponse<Value>> {
     let unread = CodingAgentTurn::find_workspaces_with_unseen(&c.pool, false)
@@ -628,4 +645,184 @@ async fn installed_connector_tool_receipt_to_real_http_conditional_mark_readback
     assert!(!app.unread().await);
     job.abort();
     job.await.unwrap_err();
+}
+
+#[tokio::test]
+async fn incomplete_capture_is_explicit_over_http_and_cannot_review_or_backfill() {
+    let app = App::new().await;
+    let path = utils::execution_logs::process_log_file_path(app.session, app.execution);
+    // Simulate the observed mid-thread/resume prefix in this disposable file.
+    let original = tokio::fs::read(&path).await.unwrap();
+    let partial = utils::log_msg::LogMsg::Stdout("{\"id\":3,\"result\":{\"thread\":".into());
+    tokio::fs::write(&path, serde_json::to_string(&partial).unwrap() + "\n")
+        .await
+        .unwrap();
+    let router = Router::new()
+        .route("/history/{id}", get(fixture_history))
+        .with_state(app.context.clone());
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!(
+        "http://{}/history/{}",
+        listener.local_addr().unwrap(),
+        app.execution
+    );
+    let job = tokio::spawn(async move {
+        axum::serve(listener, router).await.unwrap();
+    });
+    let result: Value = reqwest::get(&url).await.unwrap().json().await.unwrap();
+    assert!(
+        result["data"]["capture_error"]
+            .as_str()
+            .unwrap()
+            .contains("Incomplete")
+    );
+    assert_eq!(result["data"]["entries"], json!([]));
+    let (review_url, review_job) = app.serve().await;
+    let (status, _) = post_receipt(&review_url, &app.receipt("voice")).await;
+    assert_eq!(status, 409, "No valid closure/hash after damaged capture");
+    assert!(app.unread().await);
+    // Only this disposable fixture is restored from its exact original bytes.
+    // No native-transcript synthesis and no writer fence is fabricated.
+    tokio::fs::write(&path, &original).await.unwrap();
+    let result: Value = reqwest::get(&url).await.unwrap().json().await.unwrap();
+    assert!(result["data"].get("capture_error").is_none());
+    assert!(
+        result["data"]["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|entry| entry["entry"]["content"]["entry_type"]["type"] == "assistant_message")
+    );
+    assert!(app.unread().await, "Reading recovery is not delivery");
+    job.abort();
+    review_job.abort();
+}
+
+#[tokio::test]
+async fn http_running_completed_draining_closed_is_authoritative_and_not_failure() {
+    let app = App::unwritten().await;
+    sqlx::query("UPDATE execution_processes SET status='running' WHERE id=?")
+        .bind(app.execution)
+        .execute(&app.context.pool)
+        .await
+        .unwrap();
+    let store = Arc::new(MsgStore::with_durable_capture(1024, 2, 1));
+    let gate = Arc::new(Notify::new());
+    let final_gate = gate.clone();
+    let source = futures_util::stream::once(async { Ok::<_,std::io::Error>(utils::log_msg::LogMsg::Stdout("{\"id\":1,\"result\":{}}\n".into())) })
+        .chain(futures_util::stream::once(async move {
+            final_gate.notified().await;
+            Ok(utils::log_msg::LogMsg::Stdout(json!({"method":"codex/event/agent_message","params":{"msg":{"type":"agent_message","message":"Fixture report"}}}).to_string()+"\n"))
+        }));
+    let writer = services::services::execution_process::spawn_stream_raw_logs_to_storage(
+        store.clone(),
+        db::DBService {
+            pool: app.context.pool.clone(),
+        },
+        app.execution,
+        app.session,
+    );
+    let producer = store.clone().spawn_forwarder(source);
+    let router = Router::new()
+        .route("/history/{id}", get(fixture_history))
+        .with_state(app.context.clone());
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!(
+        "http://{}/history/{}",
+        listener.local_addr().unwrap(),
+        app.execution
+    );
+    let job = tokio::spawn(async move {
+        axum::serve(listener, router).await.unwrap();
+    });
+    assert_eq!(reqwest::get(&url).await.unwrap().status(), 409);
+    sqlx::query("UPDATE execution_processes SET status='completed' WHERE id=?")
+        .bind(app.execution)
+        .execute(&app.context.pool)
+        .await
+        .unwrap();
+    let pending: Value = reqwest::get(&url).await.unwrap().json().await.unwrap();
+    assert_eq!(pending["data"]["capture_pending"], true);
+    assert!(pending["data"]["capture_error"].is_null());
+    assert_eq!(pending["data"]["entries"], json!([]));
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM workspace_review_log_finalized WHERE execution_id=?",
+    )
+    .bind(app.execution)
+    .fetch_one(&app.context.pool)
+    .await
+    .unwrap();
+    assert_eq!(count, 0, "Draining does not certify closure");
+    store.push_finished();
+    gate.notify_one();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        producer.await.unwrap();
+        writer.await.unwrap();
+    })
+    .await
+    .unwrap();
+    let closed: Value = reqwest::get(&url).await.unwrap().json().await.unwrap();
+    assert_eq!(closed["data"]["capture_pending"], false);
+    assert!(closed["data"].get("capture_error").is_none());
+    assert!(
+        closed["data"]["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["entry"]["content"]["content"] == "Fixture report")
+    );
+    assert!(app.unread().await, "Reading closure is not delivery");
+    job.abort();
+}
+
+#[tokio::test]
+async fn stopped_capture_owner_leaves_terminal_error_not_endless_draining() {
+    let app = App::unwritten().await;
+    let store = Arc::new(MsgStore::with_durable_capture(1024, 2, 1));
+    let writer = services::services::execution_process::spawn_stream_raw_logs_to_storage(
+        store.clone(),
+        db::DBService {
+            pool: app.context.pool.clone(),
+        },
+        app.execution,
+        app.session,
+    );
+    let path = utils::execution_logs::process_log_file_path(app.session, app.execution);
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while !path.with_extension("capture.json").exists() {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let process = ExecutionProcess::find_by_id(&app.context.pool, app.execution)
+        .await
+        .unwrap()
+        .unwrap();
+    let page = crate::routes::execution_processes::log_history::capture_page_for_process(
+        &app.context.pool,
+        &process,
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    assert_eq!(serde_json::to_value(page).unwrap()["capture_pending"], true);
+    writer.abort();
+    assert!(writer.await.unwrap_err().is_cancelled());
+    let page = crate::routes::execution_processes::log_history::capture_page_for_process(
+        &app.context.pool,
+        &process,
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    let page = serde_json::to_value(page).unwrap();
+    assert_eq!(page["capture_pending"], false);
+    assert!(
+        page["capture_error"]
+            .as_str()
+            .unwrap()
+            .contains("Incomplete")
+    );
+    assert!(app.unread().await);
 }

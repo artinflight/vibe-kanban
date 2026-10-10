@@ -1832,10 +1832,22 @@ pub fn normalize_logs(
                     NormalizedEntry {
                         timestamp: None,
                         entry_type: NormalizedEntryType::SystemMessage,
-                        content: format!(
-                            "MCP approval bridge: {}",
-                            diagnostic["origin"].as_str().unwrap_or("unknown")
-                        ),
+                        content: if diagnostic["origin"] == "consent_validation_failed" {
+                            format!(
+                                "MCP consent validation failed ({}): {}",
+                                diagnostic["validation"]["reason"]
+                                    .as_str()
+                                    .unwrap_or("unknown"),
+                                diagnostic["validation"]["message"]
+                                    .as_str()
+                                    .unwrap_or("No approval was requested or granted.")
+                            )
+                        } else {
+                            format!(
+                                "MCP approval bridge: {}",
+                                diagnostic["origin"].as_str().unwrap_or("unknown")
+                            )
+                        },
                         metadata: Some(diagnostic.clone()),
                     },
                 );
@@ -3215,6 +3227,37 @@ mod tests {
                 .iter()
                 .any(|entry| matches!(entry.entry_type, NormalizedEntryType::UserFeedback { .. }))
         );
+    }
+
+    #[tokio::test]
+    async fn mcp_approval_card_validation_is_not_user_feedback_or_owner_cancellation() {
+        let entries = normalize_lines(&[json!({"McpApprovalDiagnostic": {
+            "request_id":70, "origin":"consent_validation_failed", "review_requested":false,
+            "dispatch_allowed":false, "validation":{"reason":"string_characters",
+                "message":"Complete approval context exceeds the supported review limit. No approval was requested or granted.",
+                "observed":60001, "limit":60000}
+        }}).to_string()]).await;
+        assert_eq!(entries.len(), 1);
+        assert!(
+            entries[0]
+                .content
+                .contains("MCP consent validation failed (string_characters)")
+        );
+        assert!(
+            entries[0]
+                .content
+                .contains("No approval was requested or granted.")
+        );
+        assert_eq!(
+            entries[0].metadata.as_ref().unwrap()["validation"]["limit"],
+            60000
+        );
+        assert!(matches!(
+            entries[0].entry_type,
+            NormalizedEntryType::SystemMessage
+        ));
+        assert!(!entries[0].content.contains("user cancelled"));
+        assert!(!entries[0].content.contains("human_declined"));
     }
 
     #[tokio::test]

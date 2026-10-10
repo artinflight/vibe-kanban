@@ -1,3 +1,14 @@
+## October 10: bounded capture/consent pair — preparation only
+
+Current production backend is c3c48e6324f778ccd03a5761c2314b440e9ceac3;
+actual served frontend source is 5ce84ee21be814b1519cfb2715b50f3432c3e8ba.
+This isolated candidate starts at the latter (backend identical to c3), and
+applies only the reviewed source/test hunks of PR236 and PR239. No historical
+branch merge, production action, security/configuration change or live review
+receipt is authorized/performed by this preparation. See
+VK_COMBINED_CAPTURE_CONSENT_20261010.md and
+handoffs/e3e1-combined-capture-consent.md for the current release boundary.
+
 ## October 8 authorized safe restart — preparing, not ready
 
 Read VK_SAFE_RESTART_PREPARATION_20261008.md. Latest operator authority permits

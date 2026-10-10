@@ -2,7 +2,10 @@ use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 use db::{self, DBService, models::execution_process::ExecutionProcess};
-use executors::approvals::{ExecutorApprovalError, ExecutorApprovalService};
+use executors::{
+    approvals::{ExecutorApprovalError, ExecutorApprovalService},
+    executors::codex::elicitation::MAX_SUMMARY_BYTES,
+};
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 use utils::approvals::{ApprovalOutcome, ApprovalRequest, ApprovalStatus, QuestionStatus};
@@ -142,7 +145,7 @@ impl ExecutorApprovalService for ExecutorApprovalBridge {
         &self,
         consent_summary: &str,
     ) -> Result<String, ExecutorApprovalError> {
-        if consent_summary.trim().is_empty() || consent_summary.len() > 8192 {
+        if consent_summary.trim().is_empty() || consent_summary.len() > MAX_SUMMARY_BYTES {
             return Err(ExecutorApprovalError::ServiceUnavailable);
         }
         self.create_internal(

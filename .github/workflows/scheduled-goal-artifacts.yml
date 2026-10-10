@@ -52,7 +52,9 @@ jobs:
       - name: Install required module sandbox dependency
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends bubblewrap
+          sudo apt-get install --yes --no-install-recommends bubblewrap apparmor-profiles
+          sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+          bwrap --unshare-all --ro-bind / / --proc /proc --dev /dev -- true
       - name: Build source-fenced HTTP, rollback and test artifacts
         env:
           VK_ARTIFACT_DIR: ${{ runner.temp }}/vk-scheduled-goal-artifacts

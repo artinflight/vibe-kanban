@@ -185,7 +185,11 @@ class RegisteredWorkspace:
                 producer=threading.Thread(target=produce,name='nightly-owned-tar',daemon=True);producer.start()
                 while block:=compressor.stdout.read(1048576):
                     size+=len(block)
-                    if size>self.remaining():raise ValueError('bounded registered B archive exceeded reservation')
+                    allowance=self.remaining()
+                    if size>allowance:
+                        raise ValueError('bounded registered B archive exceeded reservation: '
+                            f'archive attempted {size} bytes; archive allowance {allowance}; '
+                            f'capture limit {self.limit}; sealed input bytes {self.limit-allowance}')
                     out.write(block);checksum.update(block)
                 producer.join(timeout=30)
                 if producer.is_alive():raise ValueError('owned capture producer has not completed')

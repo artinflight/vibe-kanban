@@ -15,6 +15,7 @@ from unittest.mock import patch
 from vk_nightly_capture_adapter import RegisteredWorkspace, disk_snapshot, mcp_lease, allowed_sqlite
 from vk_nightly_b_job import LocalVerifiedProvider, receive
 from vk_nightly_job import inventory, validate_socket_exclusions
+from vk_archive_stream import StreamingArchive
 
 
 class FakeResident:
@@ -111,6 +112,22 @@ class AdapterTests(unittest.TestCase):
             one.write(b'1234');two.write(b'5678')
             with self.assertRaisesRegex(ValueError,'aggregate'):one.write(b'9')
         self.assertEqual(sum(p.stat().st_size for p in self.destination.iterdir()),8)
+    def test_real_compressor_archive_overflow_reports_shared_capacity_and_retains_partial(self):
+        self.workspace.limit=96
+        sealed=self.destination/'sealed.sqlite'
+        with self.workspace.open_new(sealed) as stream:stream.write(b'x'*64)
+        self.workspace.seal(sealed)
+        source=StreamingArchive(self.destination,'host-sized.tar.zst',
+            lambda stream:stream.write(bytes(range(100))))
+        with self.assertRaisesRegex(ValueError,
+                'archive allowance 32; capture limit 96; sealed input bytes 64'):
+            self.workspace.mirror(source)
+        self.assertEqual((self.destination/source.name).stat().st_size,0)
+        self.assertNotIn(source.name,self.workspace.sealed)
+        self.assertIsNone(source.sha256)
+        self.assertEqual(sealed.read_bytes(),b'x'*64)
+        self.assertEqual(self.resident.events,
+            [('allocate',sealed.name),('seal',sealed.name),('allocate',source.name)])
     def test_compact_proof_stream_has_shared_capacity_bound(self):
         value={'proof':{'entries':{('path-%04d'%i):{'bytes':i,'sha256':'a'*64} for i in range(100)}}}
         path=self.destination/'nightly-proof.json'

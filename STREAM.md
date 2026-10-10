@@ -1,3 +1,38 @@
+## October 10: Diagnostic whole-plan run — input-cap blocker, disabled
+
+Exactly one active execution and an empty queue were reconciled before work.
+Runtime `2f5847fdc524c41ebfefe7083d77d5bd649be40a` then ran the approved full plan
+once under unchanged 25% CPU, nice 19/idle IO, 2 GiB soft/3 GiB hard memory and
+7200-second bounds. All 79 SQLite snapshots passed native B full-hash/integrity
+(7,754,559,488 bytes), including the prior failing historical file and actual
+4,734,447,616-byte DB. The old readonly error remains unreproduced; no snapshot
+semantics, source permissions or retries changed.
+
+The attempt failed closed after 7183.77 seconds on the combined 20GiB input cap:
+7,823,970,781 sealed bytes left 13,650,865,699 for the archive; its next 1MiB block
+exceeded that allowance. The 13,650,362,368-byte unsealed archive and all 84
+inputs remain as evidence (21,474,333,149 bytes). This is an input-representation
+and throughput blocker, not a shortage of physical B space. Minimum sampled B
+free was 108,244,684,800 bytes; 239 health samples returned 200 (maximum 42.7 ms).
+Producer/mount closure and both exact leases were verified; no duplicate retry.
+
+Precise failure-only SQLite diagnostics now include operation/extended code/name,
+traceback, source/page/journal and registered destination/parent/native attributes.
+Busy-image native inspection uses identity-matching metadata-only lstat. Future
+archive-bound failures now report exact quantities; a real compressor regression
+plus focused suite passed 26 tests. No schedule/deployment/security/production or
+printer-control changes. Existing backups/incident/fallback and compressed f95
+recovery survive. Full generation manifest/object validation, independent current
+recovery and successful whole-plan runtime are NOT established. Do not enable
+nightlies or repeat the full capture without first resolving these bounded costs
+and preserving/reconciling only this recorded attempt, then rechecking reserve.
+
+Evidence: scripts/deployment/receipts/nightly-diagnostic-whole-plan-capacity-blocker-20261010.json.
+Package: /mnt/vk-storage/vk-restart-safeguards-20261009/real-plan-diagnostics-v2;
+manifest SHA256 0b79be56006f3e2ec42f6faf11817d9d9de25c57ffe91dca1665a9de8c1f5d7d.
+No owner command is requested. The ten-minute FIX-READY-to-work-resumed goal is
+separate and remains unproven; this night-preparation attempt does not satisfy it.
+
 ## October 10: Failure-only SQLite diagnostics before whole-plan acceptance
 
 Active-session reconciliation found exactly one execution and an empty follow-up

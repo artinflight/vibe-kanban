@@ -1635,3 +1635,12 @@ changing NoNewPrivileges; no production or privileged mutation.
   deficit closed, current free129.719GB. New harness writable-fsync/SQLite-close
   regression passes7 tests. Runtime/production/schedule/security unchanged;
   whole-plan acceptance remains required.
+
+- 2026-10-10 diagnostic whole-plan acceptance: runtime2f5847fdc verified all79
+  B-only SQLite images including4.734GB/prior failure, then failed closed at
+ 7183.77s on unchanged20GiB combined input cap.84 exact inputs retained21.474GB;
+  no current/complete manifest/object/recovery acceptance or schedule enablement.
+  B minimum108.245GB,239 health checks200, producer/mount closure and both leases
+  verified. Exact failure diagnostics preserve same SQLite error/no retry; real
+  compressor capacity-message regression joins26 focused passing tests.
+  Production/security/printer/fallback/compressed recovery unchanged.

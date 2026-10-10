@@ -1,11 +1,11 @@
 Intent: Restore authentic missing native assistant finals to their original Vibe conversations, not just incident notes.
 Branch: fix/e3e1-historical-response-recovery
 Base: accepted joint604285afbe9a8889aeff2c6a681bd3df998d3770.
-Code SHA: pending final hosted acceptance; current00e2a6e8 includes recovery/API/UI/tests.
+Code SHA: ab5476206624a55f5412b3daf7c93f1abc8d9b80 (tested runtime source; this handoff update is documentation only).
 Changed: dedicated signed recovery API and mode0600 atomic no-clobber response sidecar; exact native session/turn/prompt/revision/hash checks; normal history reader and visible incomplete-capture UI notice; isolated auth/HTTP/restart/identity/damage/race regression suite.
 Files: see VK_HISTORICAL_RESPONSE_RECOVERY_20261010.md and git diff604285af.
-Commands: cargo fmt --all and git diff --check passed. No local Cargo build. Hosted compiled acceptance pending.
+Commands/results: hosted recovery run38054047189 passed: 9 recovery, 10 strict-review, 14 real storage/HTTP capture and 18 utils tests, plus20 mounted history tests; three frontend type checks, server Clippy -Dwarnings, Rustfmt and targeted Prettier passed. Read-only hosted-built verifier passed on the two actual private T18/MM native sources, exact prompt/turn/capture/final hashes, no writes. No local Cargo build. Isolated patch apply check against604285af passed.
 Decisions: preserve raw logs and strict review safeguards; no synthetic writer closure, DB state, badge eligibility, task replay or new credentials. Use existing signed paired client. Unsigned writes denied.
-Resume: inspect hosted historical-response-recovery and normal PR CI, repair only scoped failures, export exact patch/source hashes and safe request artifacts to Staging. Staging owns next-restart integration/publication; no production restart authorized.
+Resume: consume /mnt/vk-storage/vk-next-restart-20261010/e3e1-native-recovery/readiness.safe.json and recovery.patch. Staging owns direct integration/review/build and next-restart publication; no restart authorized here. Hosted checkout8130ca47d4b4abaedb1f85efeb290726696e4d43 has the exact candidate tree045dd167c45e9ed3070b82aa316db9094d4b4522. Standard PR Test38054047193 is blocked only by staging ancestry c4cc4918; source tree equals required604base, preserved per owner. No ancestry/policy bypass. Legacy scheduled-artifact RTM_NEWADDR prerequisite remains unmodified.
 Dependencies: matching backend plus frontend for persistent warning; existing dot connector reader/API metadata compatible, no new tool or MCP binary. Live recovery waits for next restart and signed import+normal reader/UI acceptance of the two actual reports.
 Known limits: response-only recovery does not rebuild missing intermediate messages, independently prove claims in final, or authorize held actions. PR240 queue/capture fix remains a separate already accepted dependency.

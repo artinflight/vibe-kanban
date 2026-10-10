@@ -1,3 +1,86 @@
+## October 10: Restore desktop attention styling; phone-only scope
+
+Further UX work in this stream is phone-only. Desktop changes are limited to
+restoring the unintended attention styling. Owner correction: attention
+visibility work applies only to phones. Desktop
+Kanban cards retain their original compact indicators; remove the added whole-card
+tint/stripe and extra attention-label row above the 767px phone breakpoint.
+Read VK_MOBILE_ATTENTION_SCOPE_20261010.md for focused changes and validation.
+Work View, mobile Send and attention state/polling are preserved. This is source
+preparation, not a production publication. The earlier combined package40e56d10
+predates this restoration and must be rebuilt by Staging before inclusion.
+
+## October 9: One-tap mobile Send correction (Dev only)
+
+After the 20:31 UTC cutover, HTTPS serves combined frontend `5ce84ee21be814b1519cfb2715b50f3432c3e8ba`.
+The owner reports Android Send requires two taps. Exact served assets reproduce
+this in Chromium with synthetic workspace/session data and a simulated keyboard:
+blur restores navigation and moves Send 69px before the compatibility mouseup;
+the first click misses, and the second submits. Physical Android is not verified.
+
+This branch retains composer focus during mobile mouse activation, restores
+navigation after viewport expansion, and shares a synchronous admission guard
+across Send/correction through persistence, request and draft cleanup. Sending
+is disabled instead of turning a repeated tap into Stop. Correction failures
+retain the draft and show an error for explicit retry. Work View landing remains.
+Functional checkpoint `081d859a6`: six exact-asset before reproductions and nine
+corrected browser cases pass, plus synchronous admission tests and frontend
+checks/lint/format. Physical Android and full local Rust remain unverified.
+Read VK_MOBILE_SEND_20261009.md for validation and release boundaries. Use PR233
+and the existing Dev/Staging workflow; no deployment/restart/merge is performed.
+Integrate onto the combined live frontend to retain newer consent/chat repairs;
+do not replace that combined tree with this older branch wholesale.
+
+## October 9: Corrected frontend inclusion authorized for existing VKStaging
+
+Seamus explicitly instructs that the corrected frontend deploy with staging.
+Functional source `66e00728c` has all ten CI jobs green (run37927081460).
+Read VK_STAGING_FRONTEND_HANDOFF_20261009.md for PR228/232/233, source/base
+compatibility, package/served hash acceptance and cold/repeated Work View checks.
+The normal app live-steer endpoint accepted this instruction at 12:20 UTC for
+existing session `7d6734c1-c8d0-4d55-ac27-b1f763d15a6e`.
+No duplicate turn or independent deployment was started. The owner acknowledged
+inclusion and is building combined frontend assets retaining six newer consent/
+chat repairs. The obsolete standalone66 reference build was stopped; its partial
+output is not deployable. Actual asset binding/cutover remains unverified here.
+Isolated source-handoff receipts are under
+`/mnt/vk-storage/vk-mobile-launch-20261009/frontend-handoff-package`.
+
+No renewed frontend inclusion approval is needed. Preserve VKStaging's existing
+release/cutover authority, pinned backend/guard/module and required branch checks.
+The old activation guard now means stale-artifact/owner coordination, not an
+assumed continuing frontend approval hold. Adopt final66 or reconcile only the
+frontend onto the owner's newer base; this scope does not need a backend rebuild.
+Earlier release/approval notes below are historical and superseded for this scope.
+
+## October 9: Mobile launch reproduced; release coordination held
+
+At 11:56 UTC, HTTPS still serves October 8 source `22f09e245`, entry
+`index-JMqAOzZ4.js`; Create Workspace is reproduced on cold and repeated launch.
+PR228's isolated `9b53418fc` bundle opens Workspaces correctly but retains a
+create-URL reload edge. This PR233 follow-up routes the mobile Workspaces tab to
+`/workspaces` and declares/versions the root PWA start URL. Read
+VK_MOBILE_LAUNCH_20261009.md for exact hashes, session/cache evidence and limits.
+390/412px launch and 1440px workflow checks pass; frontend checks pass. Rust
+validation is held behind VKStaging's active shared build; new-head CI is required.
+
+No merge/deploy/restart or protection change was made. The operator prohibits an
+alternate PR232 merge and deployment while approval is pending. VKStaging owns
+release coordination and must adopt/rebuild the latest PR233 source alongside
+PR228. The earlier frozen candidate lacks this follow-up; its activation helper
+is explicitly held. Earlier requests for merge-method permission are superseded
+by this operator instruction. No new permission request is pending from this task.
+
+## October 9: Workspace-first release prepared; production promotion pending
+
+PR228 rebase-merged into staging. PR232 has passing full CI but GitHub refused its
+rebase merge; permission for a merge commit is pending. Clean build, five workflow
+and three attention browser cases, saved messages and Desktop-mirrored rollback
+archive passed. The immutable candidate is ready; live assets/backend/configuration
+remain the October 8 release. Read VK_WORKSPACES_RELEASE_20261009.md for source,
+backup, evidence, limits and the guarded activation path. Protected staging was not
+rewritten. This records preparation, not deployment.
+
 # October 8: Workspace-first navigation and task attention follow-up
 
 The current frontend stream makes Workspaces the opening screen, removes the

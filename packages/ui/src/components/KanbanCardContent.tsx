@@ -128,7 +128,6 @@ export type KanbanCardContentProps<TTag extends KanbanTag = KanbanTag> = {
   displayId: string;
   title: string;
   primaryContent?: ReactNode;
-  attentionLabel?: string;
   description?: string | null;
   priority: PriorityLevel | null;
   tags: KanbanTag[];
@@ -151,7 +150,6 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
   displayId,
   title,
   primaryContent,
-  attentionLabel,
   description,
   priority,
   tags,
@@ -368,13 +366,6 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
             </button>
           )}
         </div>
-      )}
-
-      {attentionLabel && (
-        <span className="flex items-center gap-1 text-sm font-medium text-high">
-          <FlagIcon weight="fill" className="size-icon-xs text-brand" />
-          {attentionLabel}
-        </span>
       )}
 
       {/* Row 3: Description (optional, collapsed by default) */}

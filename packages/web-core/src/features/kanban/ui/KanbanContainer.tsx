@@ -2046,19 +2046,13 @@ export function KanbanContainer() {
                             const issueCardPullRequests =
                               getPullRequestsForIssue(issue.id);
 
-                            const attentionLabel = getIssueAttentionLabel(
-                              issue.id
-                            );
                             return (
                               <KanbanCard
                                 key={issue.id}
                                 id={issue.id}
                                 name={issue.title}
                                 index={index}
-                                className={cn(
-                                  'group',
-                                  attentionLabel && 'kanban-attention-card'
-                                )}
+                                className="group"
                                 onClick={(e) => handleCardClick(issue.id, e)}
                                 isOpen={selectedKanbanIssueId === issue.id}
                                 isMobile={isMobile}
@@ -2068,7 +2062,6 @@ export function KanbanContainer() {
                                 <KanbanCardContent
                                   displayId={issue.simple_id}
                                   title={issue.title}
-                                  attentionLabel={attentionLabel}
                                   primaryContent={
                                     issueWorkspaces.length > 0 ? (
                                       <div className="flex flex-col gap-half">

@@ -1574,3 +1574,61 @@ ops governance pass; full Rust baseline attempts fail on absent host GTK/GLib
 pkg-config libraries. See VK_MOBILE_UX.md and the SSD evidence directory there.
 This feature follow-up is not deployed; Green PID3027197, production frontend
 and configured model/effort/Recommend-only routing remain unchanged.
+
+## 2026-10-09 — Workspace-first release preparation
+
+PR228 rebase-merged into staging; PR232 full CI passed. GitHub refused the production
+rebase merge; merge-commit permission was requested. Clean build and five workflow
+plus three attention cases passed. Desktop rollback archive SHA256 verified.
+Candidate assets are packaged; October 8 production pointers and backend remain
+unchanged. See VK_WORKSPACES_RELEASE_20261009.md and SSD release evidence.
+
+## 2026-10-09 — Mobile launch reproduction and isolated follow-up
+
+Actual HTTPS bytes at 11:30/11:56 still match October 8 main22f09e245/JMqAOzZ4.
+Cold/repeated launches reproduce Create Workspace. PR228's isolated root fix
+works; a retained create URL after the mobile Workspaces tab is independently
+reproduced and repaired in this PR233 follow-up. Root PWA start URL and versioned
+manifest request added. Three versions each pass 18 launch observations at
+390/412px; follow-up desktop workflow and frontend validation pass. Rust remains
+held behind VKStaging's shared build. S25+ ADB endpoint unavailable; installed
+phone entry behavior unverified. No merge/deploy/protection/service/model change.
+Frozen candidate activation is held; owner must adopt/rebuild latest source and
+complete required approval, then verify actual served version and phone launch.
+See VK_MOBILE_LAUNCH_20261009.md for exact hashes, evidence and limits.
+
+## 2026-10-09 — Corrected frontend handoff to existing VKStaging
+
+Operator explicitly authorized frontend inclusion with staging. Final functional
+source66e00728c CI passed all ten jobs. The normal live-steer route accepted the
+bounded inclusion instruction for existing session7d6734c1 at
+12:20 UTC, preserving model/effort/Recommend routing and requesting no new turn.
+Owner adoption remains unconfirmed. Isolated exact-source frontend package and
+bounded patches are prepared separately from the owner's build/cutover. No backend
+rebuild, pinned artifact replacement, protected branch change or deployment is
+part of this handoff. Prior frontend approval hold reason is superseded; stale
+artifact and owner coordination guard remains. See
+VK_STAGING_FRONTEND_HANDOFF_20261009.md and its package receipts.
+
+The owner subsequently acknowledged final66 inclusion and identified six newer
+non-overlapping consent/chat frontend repairs. Its combined frontend is building;
+standalone66 assets would omit those fixes. Our obsolete reference build was
+stopped at 12:31 UTC without touching the owner's processes/artifacts. Partial
+output is retained and marked not deployable; only source/patch verification is
+claimed. Final combined asset binding/acceptance belongs to the existing owner.
+
+## 2026-10-09: One-tap mobile Send correction
+
+Reproduced keyboard blur/navigation shift against served `5ce84ee2` assets with
+fully synthetic fixtures. Focus-preserving activation, viewport-aware navigation,
+shared admission guard, disabled pending Send and correction failure/retry pass
+nine browser cases plus synchronous admission/frontend checks on PR233. No deployment or live drafts/messages touched. Read
+VK_MOBILE_SEND_20261009.md for final evidence and limitations.
+
+## 2026-10-10 — Restore desktop attention scope
+
+Owner clarified unread visibility was mobile-only. Restore desktop cards by
+scoping attention CSS to max-width767px and removing the added desktop label/
+card decoration. Retain phone attention, Work View and Send fixes. Focused
+synthetic browser checks and frontend validation recorded in
+VK_MOBILE_ATTENTION_SCOPE_20261010.md; no publication/restart/merge.

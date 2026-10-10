@@ -1619,3 +1619,10 @@ changing NoNewPrivileges; no production or privileged mutation.
   foreground SSHFS/zstd/tar; retry defers before B attestation while a holder
   survives. Add isolated actual parent-only SIGKILL/resource-bound fixture
   cleanup/retry regression; retain disabled schedule and production backups.
+
+- 2026-10-10 actual nightly acceptance: pinned f85 runtime verified the 4.734GB
+  live DB and independent B-only recovery, but full-plan capture failed before
+  publication at 3471s on an unreproduced SQLite readonly error. Exact recorded
+  partials reconciled; recovery copy/evidence retained. Full manifest/object,
+  successful runtime/transfer and schedule acceptance remain open; first-run
+  B reserve is short 1.065GB. No production/service/security/schedule changes.

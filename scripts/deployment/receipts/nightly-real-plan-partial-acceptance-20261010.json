@@ -1,0 +1,121 @@
+{
+  "source_head": "f85fe01684e1927fa054e8b7bb673d9d6d7b7ae5",
+  "package": "/mnt/vk-storage/vk-restart-safeguards-20261009/real-plan-f85fe0168",
+  "package_manifest_sha256": "70facd475f317bab694bf8bbc307ff7814176b5fb4783ca9c389fc965f311bd0",
+  "disabled_config_sha256": "b916a55e7863e2acca61c323229e2357119fa322df6efa9d9410b8220faaeb37",
+  "test_config_sha256": "e5d289fed238fef2b5f38e38959c61cbbd5e536a882711774479d2f830704e61",
+  "result": "whole_plan_blocked_before_publication",
+  "whole_plan_accepted": false,
+  "capture": {
+    "elapsed_seconds": 3471.0459356103092,
+    "verified_DB_count": 37,
+    "verified_DB_bytes": 7188713472,
+    "registered_input_bytes_before_reconciliation": 8107884789,
+    "partial_compressed_archive_bytes": 919171072,
+    "wire_transfer_volume_measured": false,
+    "all_manifest_and_object_hashes_verified": false,
+    "current_generation_published": false,
+    "failure": {
+      "type": "OperationalError",
+      "reason": "attempt to write a readonly database",
+      "source_basename": "db.v2.sqlite.backup-build-local-2026-08-16T142259757Z.sqlite",
+      "extended_SQLite_code_not_recorded": true,
+      "root_cause_unresolved": true
+    },
+    "bounded_diagnostics": {
+      "source_RO_schema_and_memory_backup": "passed",
+      "fresh_isolated_B_backup_same_file": "passed",
+      "bytes": 40972288
+    }
+  },
+  "large_DB": {
+    "passed": true,
+    "restore_path": "B:\\vk-backups\\vk-nightly-real-db-recovery-20261010-6a12d66e355b4144b41cce6e5225b5cf\\logs_2.private.sqlite",
+    "source_attempt": "generation-7dae79a6204e478ba2918a0df4febb2a",
+    "bytes": 4734447616,
+    "sha256": "f95d0c03678ca475bee39ee5df548c3b4b255731c6611fb3f11af3d5fa164de4",
+    "independent_copy": true,
+    "full_hash_readback": true,
+    "SQLite_integrity": "ok",
+    "page_count": 1155871,
+    "page_size": 4096,
+    "schema_version": 1,
+    "elapsed_seconds": 63.34300000000076,
+    "free_bytes": 117796904960,
+    "production_restore": false,
+    "whole_plan_accepted": false
+  },
+  "health": {
+    "service_PID": 1254186,
+    "samples": 102,
+    "all_200": true,
+    "max_response_seconds": 0.04181898571550846,
+    "test_scope_CPU_quota_percent": 25,
+    "nice": 19,
+    "io_class": "idle",
+    "memory_max_bytes": 3221225472
+  },
+  "capacity": {
+    "minimum_sampled_B_free_bytes_during_capture": 122491904000,
+    "one_second_samples": 3710,
+    "global_volume_measurement_includes_unrelated_allocations": true,
+    "post_reconciliation": {
+      "free_bytes": 125904814080,
+      "store_names": [
+        "store.json"
+      ],
+      "job_names": [
+        "job-scope.json",
+        "job.lock"
+      ],
+      "required_initial_reserve_bytes": 126969970688,
+      "deficit_bytes": 1065156608,
+      "schedule_installed": false
+    },
+    "actual_fixed_job_refusal": {
+      "event": "complete",
+      "result": {
+        "passed": false,
+        "status": "reconciliation_blocked",
+        "reason": "insufficient reserved capacity for bounded capture plus generation overlap",
+        "next": "preserve current and unexpected artifacts; review the exact binding/identity discrepancy"
+      },
+      "elapsed_seconds": 0.17421334099999974
+    },
+    "actual_fixed_job_refusal_exit_code": 1
+  },
+  "reconciliation": {
+    "passed": true,
+    "status": "first_capture_retry_ready",
+    "elapsed_seconds": 58.021911742,
+    "exact_registered_input_files_removed": 40,
+    "current_published": false,
+    "restore_copy_retained": true,
+    "attempt_ledger_preserved": true
+  },
+  "safety": {
+    "only_small_control_metadata_on_SSD": true,
+    "production_source_read_only": true,
+    "prior_verified_backups_preserved": true,
+    "incident_and_fallback_untouched": true,
+    "schedule_installed": false,
+    "privileged_changes": false,
+    "production_restore": false,
+    "restarts": false
+  },
+  "adoption_remaining": [
+    "Resolve or instrument exact SQLite failure phase and extended error; isolated reproduction passed, so no speculative retry/immutable shortcut added.",
+    "Meet unchanged initial B reserve before a bounded full-plan retry; current deficit 1065156608 bytes.",
+    "Accept complete independent current manifest/all objects/native SQLite readback/restore and measure successful total runtime, transfer and reserve.",
+    "Only after acceptance and applicable exact approval, install proposed user cron row preserving existing entries; no root installer or owner commands."
+  ],
+  "validation": {
+    "all_package_file_pins_verified": 29,
+    "disabled_configuration_check": "passed",
+    "ops_check": "passed",
+    "git_diff_check": "passed",
+    "format": "Rust passed; web stopped because Prettier is absent",
+    "synthetic_tests_repeated": false,
+    "runtime_source_modified": false
+  }
+}

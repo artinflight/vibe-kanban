@@ -1,9 +1,37 @@
 # Deferred restart safeguards — source only
 
 This stream starts from Staging's published b2180dcf, outside Mission Perform.
-No service, route, root payload, grant, backup payload, timer or production data
-was changed. The previously denied capacity-updater material is not part of this
+No service, route, root payload, grant, existing backup, timer or production data
+was changed. Fresh normal-nightly acceptance artifacts are confined to B. The previously denied capacity-updater material is not part of this
 branch or its publication. OP's uninstalled updater remains internal.
+
+## October 10: Actual whole-plan acceptance — blocked, schedule disabled
+
+Pinned runtime f85fe01684e1927fa054e8b7bb673d9d6d7b7ae5 was exercised against the
+actual 77-root plan on B, under a disposable 25% CPU user scope, nice19/idle IO.
+Fresh census: 488,978 files, 100,586,028,252 logical bytes, 79 SQLite databases.
+The 4,734,447,616-byte DB passed online backup, independent native B hash/integrity
+and an independent B-only restore/full-hash/integrity check. The whole attempt
+stopped after 3471.05 seconds, with 37 DBs verified, on a historical SQLite file:
+`attempt to write a readonly database`. The same file subsequently passed both
+bounded in-memory and fresh B-destination diagnostics; root cause is unresolved.
+Do not claim complete manifest/object verification, current publication, successful
+whole-plan runtime or nightly readiness. No speculative source fix was made.
+
+The reviewed source recovered the exact 40 recorded test inputs after producer
+closure, returning first_capture_retry_ready in 58.02 seconds. Attempt metadata
+and the independent 4.734GB recovery copy remain retained. B now has
+125,904,814,080 bytes free versus the unchanged 126,969,970,688-byte first-run
+reserve (1,065,156,608-byte deficit). Do not weaken that check or start another
+large capture without rechecking capacity. Existing backups/incident/fallback,
+production data/service, privileges and scheduling remain unchanged.
+
+Package: /mnt/vk-storage/vk-restart-safeguards-20261009/real-plan-f85fe0168;
+manifest SHA256 70facd475f317bab694bf8bbc307ff7814176b5fb4783ca9c389fc965f311bd0.
+Safe evidence: scripts/deployment/receipts/nightly-real-plan-partial-acceptance-20261010.json.
+Next: obtain exact phase/extended SQLite error if failure recurs, satisfy reserve,
+then accept complete current/readback/recovery and measured whole-plan runtime
+before the exact reviewed user-cron adoption action. No owner command is requested.
 
 ## Actual successful route and timing boundary
 

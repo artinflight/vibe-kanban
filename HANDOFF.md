@@ -1,3 +1,7 @@
+## October10: original conversation native-final recovery, isolated
+
+Use VK_HISTORICAL_RESPONSE_RECOVERY_20261010.md and handoffs/e3e1-historical-response-recovery.md. Base is accepted joint604285af. Staging owns release integration; no production action, task replay, capture certification or badge write. Hosted acceptance pending.
+
 ## October 10: bounded capture/consent pair — preparation only
 
 Current production backend is c3c48e6324f778ccd03a5761c2314b440e9ceac3;

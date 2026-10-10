@@ -1,3 +1,38 @@
+## October 9: Fixed B-disk nightly composition — source only
+
+The runnable user job binds registered B inputs, serial bounded SQLite disk
+snapshots, full verified parentless capture, live producer completion and B-local
+NightlyJob publication/recovery. Real-B isolated fixtures cover normal replacement,
+protected old/current separation and reviewed interruption windows. Current
+read-only scope measures 96.14GB logical/79 SQLite DBs, largest4.734GB. Full real
+plan throughput/first adoption remain untested and disabled. Existing UTC user
+cron is supported; NoNewPrivileges systemd mount probe fails closed and that
+control remains unchanged. See VK_RESTART_SAFEGUARDS_20261009.md. No production
+backup, schedule, service, privileged code/settings or fallback mutation.
+
+## October 9: Deferred restart safeguards — source only
+
+The successful current-data cutover completed at 20:31:20 UTC in 9.94 seconds;
+this does not establish the ten-minute FIX READY/build/validation/work-resumed
+pipeline goal. Current service is vibe-kanban-current-state-production-20261009;
+backend c3c48e63, authoritative roots retained, incumbent frozen and compatible
+latest-data cutback retained. Archive untouched; cleanup and human QA unchanged.
+
+Branch fix/restart-safeguards-20261009 implements bounded routine orchestration,
+real lifecycle drain waiting, self-contained incremental normal-nightly B
+publication/retention, source-only scripted schedule rendering and cache-preserving
+warm/cold build measurement. Read VK_RESTART_SAFEGUARDS_20261009.md and its source
+validation receipt. No production driver/timer/root code/security change was
+adopted. Synthetic real-B WSL/native-Windows two-generation acceptance now passed; real
+Source-only bounded capture rebasing and recorded partial reconciliation now
+pass isolated fixtures. Production adapters/lifecycle acceptance/adoption remain open.
+Independent review and actual full-VK warm/cold/whole-pipeline timing remain open.
+Build capacity is below the preserved 8 GiB floor; do not clear caches/evidence.
+The denied capacity updater remains on its separate internal branch, excluded
+from this source stream. No new owner command is requested.
+
+Older dated entries below are historical and do not override this observation.
+
 ## October 8: Workspace-first frontend follow-up in preparation
 
 Workspace landing, To do defaults on phones, and whole-card attention styling

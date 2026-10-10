@@ -1,0 +1,200 @@
+{
+  "runtime_source_head": "2f5847fdc524c41ebfefe7083d77d5bd649be40a",
+  "package_path": "/mnt/vk-storage/vk-restart-safeguards-20261009/real-plan-diagnostics-v2",
+  "package_manifest_sha256": "0b79be56006f3e2ec42f6faf11817d9d9de25c57ffe91dca1665a9de8c1f5d7d",
+  "config_sha256": "c92bdd7166344673349118e82bc934e949c2a00b1c43a5b1135ea101ce4830c8",
+  "execution_reconciliation": {
+    "execution_id": "1d3bb86c-9e34-4aa4-9516-0b71d02947c3",
+    "active_count": 1,
+    "queue": "empty",
+    "duplicate_started": false
+  },
+  "result": {
+    "passed": false,
+    "exit_code": 1,
+    "failure": {
+      "event": "blocked",
+      "seconds": 7183.768644766882,
+      "at": "2026-10-10T04:28:31.537772+00:00",
+      "error_type": "ValueError",
+      "reason": "bounded registered B archive exceeded reservation",
+      "sqlite_diagnostic": null
+    },
+    "current": null,
+    "candidate_created": false,
+    "full_archive_verified": false,
+    "complete_generation_manifest_verified": false,
+    "whole_plan_object_hashes_verified": false,
+    "new_current_independent_recovery_performed": false
+  },
+  "SQLite": {
+    "verified_count": 79,
+    "verified_image_bytes": 7754559488,
+    "sum_snapshot_seconds": 2502.5912094246596,
+    "all_native_sealed_hashes_match_observer": true,
+    "natural_SQLite_error_recurred": false,
+    "original_SQLite_cause": "unreproduced; no retry or speculative semantic fix",
+    "critical_results": [
+      {
+        "event": "sqlite_verified",
+        "seconds": 530.0049716308713,
+        "at": "2026-10-10T02:37:37.774093+00:00",
+        "source": "/home/mcp/.codex/logs_2.sqlite",
+        "bytes": 6070272,
+        "sha256": "8da769e81e5501a352795b9974c6677a9f24897de777fbf3c964ed0e15150987",
+        "seconds_snapshot": 2.4277186105027795,
+        "integrity": "ok"
+      },
+      {
+        "event": "sqlite_verified",
+        "seconds": 2145.1330613764003,
+        "at": "2026-10-10T03:04:32.902186+00:00",
+        "source": "/home/mcp/.local/share/vibe-kanban-green-codex-home/logs_2.sqlite",
+        "bytes": 4734447616,
+        "sha256": "ac1afa206be4ded65b14396036eb980aa1e85fafe1a080896d6a0219976985ce",
+        "seconds_snapshot": 1479.6350216744468,
+        "integrity": "ok"
+      },
+      {
+        "event": "sqlite_verified",
+        "seconds": 3240.381248725578,
+        "at": "2026-10-10T03:22:48.150371+00:00",
+        "source": "/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite",
+        "bytes": 93208576,
+        "sha256": "e548d99bc8b2e137f40a99e18518911f1d7490f211ea62791ecf031218420a94",
+        "seconds_snapshot": 28.478804600425065,
+        "integrity": "ok"
+      },
+      {
+        "event": "sqlite_verified",
+        "seconds": 3541.954000009224,
+        "at": "2026-10-10T03:27:49.723122+00:00",
+        "source": "/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite.backup-build-local-2026-08-16T142259757Z.sqlite",
+        "bytes": 40972288,
+        "sha256": "acfda3cc6e00c28f5e5022e53dd264adbc575df43cdc05cd319ba25c3c73ce6b",
+        "seconds_snapshot": 14.868633884936571,
+        "integrity": "ok"
+      },
+      {
+        "event": "sqlite_verified",
+        "seconds": 3649.249505875632,
+        "at": "2026-10-10T03:29:37.018628+00:00",
+        "source": "/home/mcp/.local/share/vibe-kanban/codex-home/logs_2.sqlite",
+        "bytes": 49152,
+        "sha256": "865333d6e119da525829bdd7a199def442b0c77822d1f552f8d9ca4a3ce21ac3",
+        "seconds_snapshot": 0.37513365503400564,
+        "integrity": "ok"
+      }
+    ]
+  },
+  "capacity": {
+    "limit_bytes": 21474836480,
+    "sealed_inputs": 83,
+    "sealed_input_bytes": 7823970781,
+    "archive_allowance_bytes": 13650865699,
+    "archive_partial_bytes": 13650362368,
+    "next_compressed_block_bytes": 1048576,
+    "retained_input_count": 84,
+    "retained_input_bytes": 21474333149,
+    "retained_4096_cluster_estimate_bytes": 21474344960,
+    "initial_B_free_bytes": 129714974720,
+    "initial_required_reserve_bytes": 126969970688,
+    "minimum_sampled_B_free_bytes": 108244684800,
+    "end_B_free_bytes": 108244684800,
+    "B_free_samples": 7131,
+    "volume_free_drop_not_exclusively_attributed_to_test": true,
+    "wire_bytes": "not measured; retained input bytes are payload, not encrypted wire traffic"
+  },
+  "resources": {
+    "CPUQuota_percent": 25,
+    "MemoryHigh_bytes": 2147483648,
+    "MemoryMax_bytes": 3221225472,
+    "nice": 19,
+    "ionice_class": 3,
+    "job_timeout_seconds": 7200,
+    "kill_grace_seconds": 30,
+    "snapshot_timeout_seconds": 1800,
+    "readback_timeout_seconds": 3600,
+    "snapshot_limit_bytes": 6442450944,
+    "max_sampled_scope_memory": 2147299328,
+    "max_sampled_load1": 22.51953125
+  },
+  "production_observation": {
+    "health_samples": 239,
+    "all_statuses_200": true,
+    "max_health_seconds": 0.0427026366814971,
+    "service_changed": false,
+    "production_restore": false,
+    "printer_controls_changed": false
+  },
+  "producer_completion": {
+    "MCP_lease_reacquired": true,
+    "B_job_lease": {
+      "UID": 1000,
+      "B_job_lease_reacquired": true
+    },
+    "scope_inactive": true,
+    "B_mount_unmounted": true,
+    "all_79_sealed_DB_hashes_match": true
+  },
+  "failure_diagnostics": {
+    "success_path_SQLite_calls_unchanged": true,
+    "same_exception_preserved": true,
+    "no_retry": true,
+    "real_B_injected_failure_path": "/mnt/vk-storage/vk-restart-safeguards-20261009/registered-injected-diagnostic-v2-20261010/registered-adapter.private.json",
+    "injected_is_not_natural_reproduction": true,
+    "native_metadata_busy_file_fix": "before/after identity-matching lstat; no file-content open"
+  },
+  "focused_tests": {
+    "command": "PYTHONPATH=scripts/deployment python3 -B -S -m unittest test_vk_nightly_capture_adapter test_vk_nightly_b_diagnostics",
+    "tests": 26,
+    "seconds": 0.477,
+    "exit_code": 0,
+    "output": "Ran 26 tests in 0.477s; OK",
+    "source_hashes": {
+      "scripts/deployment/vk_nightly_capture_adapter.py": "380c7ebcd6605eb997b3dcaa9d136ff2096e15f408de7afb4b520371c9f25468",
+      "scripts/deployment/vk_nightly_b_job.py": "cfaa82628a69f431910180c2de39babd6755d56f02ea302a52ae8f3362b68222",
+      "scripts/deployment/vk_nightly_job.py": "912e1b3f7b74d5e29f4150b2c66f1a8e51cac95f817a89f2038140feb4991e01",
+      "scripts/deployment/test_vk_nightly_capture_adapter.py": "80a1c54e9e53e02f31f8175389dc20c443685c234454800be7eddf4a769af76b"
+    }
+  },
+  "preservation": {
+    "compressed_recovery_bytes": 591731561,
+    "compressed_recovery_sha256": "2996a48c1bd5f491abffcceeb0ea2b7dad2ecea447b5f2da65ea93022f5e0bf1",
+    "existing_backups_incident_fallback_untouched": true,
+    "test_inputs_retired": false,
+    "bulk_SSD_payload_bytes": 0,
+    "privileges_changed": false,
+    "schedule_enabled": false
+  },
+  "next": "Investigate bounded capture representation/throughput before any rerun. Preserve this exact failed-input ledger and evidence. Reconcile only recorded owned inputs after equivalent evidence preservation and applicable authorization; recheck full first-run reserve. Full manifest, object hashes, independent current recovery and successful measured runtime remain required before scheduling.",
+  "private_evidence_sha256": {
+    "run-events.private.jsonl": "31455ec3c5975ec24e660c3c4817d7c978ab6f0d74055bb1138f9360da7134d2",
+    "postfailure-B.private.json": "c9dbacf71d57f0ba11cf20aced6db16bb604511dc7b8e0869e17285d1ecd60e0",
+    "watchdog.samples.safe.jsonl": "f32b33a3c512f1a42a316c471aafa07f59a3b6a02f1b578b0dedbf2976d2af37",
+    "B-free.samples.safe.jsonl": "bb1ac2af455daf9a3ce96ba784ac6f9a8530819a38e4ab4ca7951de6ab42b6b0",
+    "completion-and-leases.safe.json": "6b1e406fcef0be1e48baf16df1ab77e399a2a103431a3919bef8c9a7757b0d24"
+  },
+  "validation_limits": {
+    "ops_check": "passed",
+    "format": "Rust passed; web failed because Prettier is absent",
+    "heavy_builds_performed": false
+  },
+  "plan_binding": {
+    "plan_identity": "49ed525e6d6780c5f97f2eae8ef025693c0078e12aa59329419ea0ddcd626e73",
+    "plan_file_sha256": "566155cb7492fa8807da300659320f7bed23aec60a334d6af23b5075bc647b57",
+    "scope_sha256": "032e8ed2088f1c41bab45592c140da117a63cc5f4641492ddd130a0c443a27f8",
+    "source_scope_sha256": "74dc5e352fbeb2e0b9daba3667d9d91ce53182ac0d1a42aa7048996a396cf846",
+    "source_root_count": 77
+  },
+  "observed_cold_transfer_costs": {
+    "path_inventory_bytes": 69301594,
+    "owned_tar_inventory_position_sample_bytes": 6541312,
+    "historical_session_log_sizes_observed": [
+      1352306491,
+      12673379230
+    ],
+    "samples_not_a_complete_transfer_profile": true,
+    "captured_SQLite_images_also_streamed_into_archive": true
+  }
+}

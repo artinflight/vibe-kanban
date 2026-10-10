@@ -1,0 +1,271 @@
+{
+  "runtime_source_head": "f85fe01684e1927fa054e8b7bb673d9d6d7b7ae5",
+  "runtime_changed": false,
+  "original_failure": {
+    "source": "/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite.backup-build-local-2026-08-16T142259757Z.sqlite",
+    "MCP_destination": "/mnt/vk-storage/vk-normal-nightly-control-v1/B-input-44a9c44219e34f73b808c0b71019bcce/sqlite-consistent-6443504d0b1549798aad4f2dd5cf8e29.sqlite",
+    "B_destination": "B:/vk-backups/vk-normal-nightly-v1/jobs/input-21a6229b8640498b87d8f375c695b0a3/sqlite-consistent-6443504d0b1549798aad4f2dd5cf8e29.sqlite",
+    "call": "disk_snapshot callback inside StreamingArchive producer; exact SQLite subcall not captured",
+    "type": "OperationalError",
+    "reason": "attempt to write a readonly database",
+    "traceback": null,
+    "sqlite_errorcode": null,
+    "sqlite_errorname": null,
+    "missing_fields_reason": "original observer recorded only type/reason; original exact destination was subsequently reconciled, so retrospective metadata cannot be recovered",
+    "WSL_recorded_identity": [
+      92,
+      3659174697742437
+    ],
+    "WSL_parent_identity": [
+      92,
+      562949953918595
+    ],
+    "bytes_before_reconciliation": 0,
+    "mode": null,
+    "Windows_attributes": null,
+    "MCP_mount_parent": "/mnt/vk-storage/vk-normal-nightly-control-v1/B-input-44a9c44219e34f73b808c0b71019bcce",
+    "mount_source": "desktop:/B:/vk-backups/vk-normal-nightly-v1/jobs/input-21a6229b8640498b87d8f375c695b0a3",
+    "mount_type": "fuse.sshfs",
+    "SSHFS_options": "BatchMode=yes,ConnectTimeout=15,StrictHostKeyChecking=yes,ServerAliveInterval=15,ServerAliveCountMax=3,cache=no,sshfs_sync",
+    "source_journal_mode_now": "wal",
+    "source_page_size_now": 4096
+  },
+  "earlier_fresh_B_differences": [
+    "MCP/SFTP touch created the zero-byte destination rather than WSL resident allocate/register.",
+    "No capture-held extra RO reader; no native seal/full-hash/SQLite check.",
+    "Same core source/destination pragmas, journal_mode=OFF for private target and backup pages=1024."
+  ],
+  "exact_registered_reproducer": {
+    "passed": true,
+    "allocations": 5,
+    "seconds": 76.15545855928212,
+    "repeat_without_preopen_native_roundtrip": {
+      "passed": true,
+      "allocations": 3,
+      "seconds": 61.56693440489471
+    },
+    "first_allocation": {
+      "destination": "/mnt/vk-storage/vk-restart-safeguards-20261009/registered-diagnostic-20261010/B-input/sqlite-consistent-4b51162426604060b99a26367e7418ae.sqlite",
+      "linux": {
+        "device": 90,
+        "inode": 2,
+        "bytes": 0,
+        "mode": "0o100607",
+        "uid": 0
+      },
+      "windows": {
+        "file": {
+          "path": "B:\\vk-backups\\vk-nightly-registered-diagnostic-38443bc0c6df484b8b7d3e5eb5293fdc\\jobs\\input-275ac8f1958d48218b653213947bffea\\sqlite-consistent-4b51162426604060b99a26367e7418ae.sqlite",
+          "device": 2360624474,
+          "inode": 13510798882610255,
+          "bytes": 0,
+          "mode": "0o100666",
+          "attributes": 32
+        },
+        "parent": {
+          "path": "B:\\vk-backups\\vk-nightly-registered-diagnostic-38443bc0c6df484b8b7d3e5eb5293fdc\\jobs\\input-275ac8f1958d48218b653213947bffea",
+          "device": 2360624474,
+          "inode": 1407374884052049,
+          "bytes": 0,
+          "mode": "0o40777",
+          "attributes": 16
+        }
+      },
+      "calls": [
+        {
+          "call": "connect",
+          "path": "file:///home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite.backup-build-local-2026-08-16T142259757Z.sqlite?mode=ro"
+        },
+        {
+          "call": "execute",
+          "sql": "PRAGMA temp_store=MEMORY"
+        },
+        {
+          "call": "execute",
+          "sql": "PRAGMA cache_size=-8192"
+        },
+        {
+          "call": "execute",
+          "sql": "PRAGMA mmap_size=0"
+        },
+        {
+          "call": "execute",
+          "sql": "BEGIN"
+        },
+        {
+          "call": "execute",
+          "sql": "SELECT name FROM sqlite_master LIMIT 1"
+        },
+        {
+          "call": "execute",
+          "sql": "PRAGMA page_size"
+        },
+        {
+          "call": "execute",
+          "sql": "PRAGMA page_count"
+        },
+        {
+          "call": "connect",
+          "path": "/mnt/vk-storage/vk-restart-safeguards-20261009/registered-diagnostic-20261010/B-input/sqlite-consistent-4b51162426604060b99a26367e7418ae.sqlite"
+        },
+        {
+          "call": "execute",
+          "sql": "PRAGMA temp_store=MEMORY"
+        },
+        {
+          "call": "execute",
+          "sql": "PRAGMA cache_size=-8192"
+        },
+        {
+          "call": "execute",
+          "sql": "PRAGMA mmap_size=0"
+        },
+        {
+          "call": "execute",
+          "sql": "PRAGMA journal_mode=OFF"
+        },
+        {
+          "call": "backup",
+          "pages": 1024
+        }
+      ],
+      "result": {
+        "source": "/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite.backup-build-local-2026-08-16T142259757Z.sqlite",
+        "snapshot": "sqlite-consistent-4b51162426604060b99a26367e7418ae.sqlite",
+        "mount_root": "/mnt/vk-storage/vk-restart-safeguards-20261009/registered-diagnostic-20261010/B-input",
+        "bytes": 40972288,
+        "sha256": "acfda3cc6e00c28f5e5022e53dd264adbc575df43cdc05cd319ba25c3c73ce6b",
+        "source_metadata_before": {
+          "uid": 1000,
+          "gid": 1000,
+          "mode": 420,
+          "mtime_ns": 1786890179886004206,
+          "atime_ns": 1791595450206921145,
+          "ctime_ns": 1786890179886004206,
+          "device": 64512,
+          "inode": 5917547,
+          "xattrs": {}
+        },
+        "backup_api_consistent_image": true,
+        "physical_b_verified": true,
+        "integrity": "ok",
+        "online_preparation_only": true,
+        "writer_fenced": false,
+        "local_snapshot_payload_bytes": 0,
+        "seconds": 14.200246317312121
+      },
+      "post_native": {
+        "file": {
+          "path": "B:\\vk-backups\\vk-nightly-registered-diagnostic-38443bc0c6df484b8b7d3e5eb5293fdc\\jobs\\input-275ac8f1958d48218b653213947bffea\\sqlite-consistent-4b51162426604060b99a26367e7418ae.sqlite",
+          "device": 2360624474,
+          "inode": 13510798882610255,
+          "bytes": 40972288,
+          "mode": "0o100666",
+          "attributes": 32
+        },
+        "parent": {
+          "path": "B:\\vk-backups\\vk-nightly-registered-diagnostic-38443bc0c6df484b8b7d3e5eb5293fdc\\jobs\\input-275ac8f1958d48218b653213947bffea",
+          "device": 2360624474,
+          "inode": 1407374884052049,
+          "bytes": 0,
+          "mode": "0o40777",
+          "attributes": 16
+        }
+      }
+    },
+    "root_cause": "unreproduced; no runtime fix or blind retry added",
+    "all_data_retained": true
+  },
+  "earlier_fresh_B_metadata": {
+    "earlier_fresh_file": {
+      "path": "B:\\vk-backups\\vk-nightly-snapshot-diagnosis-8ec5947d547345a3861e815d48359f82\\private.sqlite",
+      "device": 2360624474,
+      "inode": 23362423067488364,
+      "mode": "0o100666",
+      "attributes": 32,
+      "bytes": 40972288
+    },
+    "earlier_fresh_parent": {
+      "path": "B:\\vk-backups\\vk-nightly-snapshot-diagnosis-8ec5947d547345a3861e815d48359f82",
+      "device": 2360624474,
+      "inode": 4222124651163753,
+      "mode": "0o40777",
+      "attributes": 16,
+      "bytes": 0
+    },
+    "B_free_bytes": 129719201792
+  },
+  "compression": {
+    "passed": true,
+    "artifact": "B:\\vk-backups\\vk-nightly-real-db-recovery-20261010-6a12d66e355b4144b41cce6e5225b5cf\\logs_2.private-95dffbf033a34a989695b34f7c95fab0.sqlite.zst",
+    "archive_bytes": 591731561,
+    "archive_sha256": "2996a48c1bd5f491abffcceeb0ea2b7dad2ecea447b5f2da65ea93022f5e0bf1",
+    "original_bytes": 4734447616,
+    "original_sha256": "f95d0c03678ca475bee39ee5df548c3b4b255731c6611fb3f11af3d5fa164de4",
+    "normal_restore_command": "source harness --restore-only using unchanged original restore receipt",
+    "independent_recovery": {
+      "bytes": 4734447616,
+      "sha256": "f95d0c03678ca475bee39ee5df548c3b4b255731c6611fb3f11af3d5fa164de4",
+      "integrity": "ok",
+      "identity": [
+        2360624474,
+        5348024558003465,
+        4734447616,
+        1791597047855035200
+      ]
+    },
+    "source_identity": [
+      2360624474,
+      9007199255244910,
+      4734447616,
+      1791595978436976600
+    ],
+    "source_mode": "0o100666",
+    "source_attributes": 32,
+    "retired": [
+      "B:\\vk-backups\\vk-nightly-real-db-recovery-20261010-6a12d66e355b4144b41cce6e5225b5cf\\logs_2.private.sqlite",
+      "B:\\vk-backups\\vk-nightly-real-db-recovery-20261010-6a12d66e355b4144b41cce6e5225b5cf\\verified-restore-78c5ee93d5b0467b9938fb4785c902c8.sqlite"
+    ],
+    "production_or_prior_backup_changed": false,
+    "verified_restore_path": "B:\\vk-backups\\vk-nightly-real-db-recovery-20261010-6a12d66e355b4144b41cce6e5225b5cf\\verified-restore-78c5ee93d5b0467b9938fb4785c902c8.sqlite",
+    "elapsed_seconds": 26.360000000000582,
+    "free_bytes": 129719201792
+  },
+  "capacity": {
+    "B_free_bytes": 129719201792,
+    "unchanged_initial_reserve_bytes": 126969970688,
+    "margin_bytes": 2749231104,
+    "normal_recovery_available": "rehearse_vk_nightly_recovery_compression.py --restore-only with original restore receipt",
+    "no_redundant_raw_representation_required_for_recovery": true
+  },
+  "new_harness_correction": {
+    "demonstrated_error": "Windows os.fsync on read-only receipt descriptor returned OSError EBADF before any unlink",
+    "corrected": "write/flush/fsync through writable fresh-stage descriptor, then predecessor-checked atomic receipt replacement; explicitly close SQLite reader before retirement",
+    "initial_error_evidence": "/mnt/vk-storage/vk-restart-safeguards-20261009/compression-before-retirement-fsync-failure.private.json",
+    "not_original_SQLite_failure": true
+  },
+  "validation": {
+    "new_unit_tests": 7,
+    "command": "PYTHONPATH=scripts/deployment python3 -B -S -m unittest -v test_vk_nightly_b_diagnostics",
+    "result": "OK, 7 tests in 0.062s",
+    "actual_B_capture_tests": 8,
+    "large_DB_compressed_and_independently_recovered": true,
+    "production_PID": 1254186,
+    "production_health_HTTP": 200,
+    "schedule_changed": false,
+    "prior_backups_incident_fallback_changed": false,
+    "SSD_payload_staging": false,
+    "ops_check": "passed",
+    "format": "Rust passed; web formatting unavailable because Prettier is absent"
+  },
+  "remaining_acceptance": [
+    "Original SQLite failure remains unresolved; exact registered diagnostic did not reproduce it. Future full acceptance must capture failing subcall/extended code/traceback and destination metadata before reconciliation; do not mask failures with retry.",
+    "No whole-plan rerun started in this bounded task. Complete manifest/object hashes, native readback, independent current-generation recovery and successful total runtime/transfer/peak B reserve remain unaccepted.",
+    "Only after full acceptance and applicable exact approval, install the pinned existing user-cron proposal preserving disabled entries. No root or owner commands."
+  ],
+  "source_artifacts_sha256": {
+    "scripts/deployment/rehearse_vk_nightly_sqlite_registered.py": "22476f269089073680233acb47dc4bcad786bb8c1fa5d89b51dd47031ff5fbbf",
+    "scripts/deployment/rehearse_vk_nightly_recovery_compression.py": "60bc0e2501b8b5be273916a691a62ffe9c251eaa71456a825c12c38ac81fde6e",
+    "scripts/deployment/test_vk_nightly_b_diagnostics.py": "5046dc185cea6c0d2eb3d546e359c80ccb8e17ae8b951b308d6549ee053df551"
+  }
+}

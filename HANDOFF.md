@@ -1,3 +1,373 @@
+## Nightly cron environment correction
+
+The generated user-cron pulse now explicitly supplies the existing caller's
+`/run/user/<uid>` runtime directory. Cron does not inherit a login session's
+user-bus environment, so an otherwise valid scoped launch could fail before the
+calendar or resource checks ran. Root callers are rejected. No schedule,
+service, security setting or backup generation is changed by this source fix.
+
+Twenty-six focused scheduler/calendar tests pass, including DST transitions,
+overlap/retry handling, cron preservation/rollback and the runtime-directory
+regression. Whole-plan acceptance and schedule adoption remain separate gates;
+operational measurements and current runtime bindings stay in private handoffs.
+
+## Resume: Toronto nightly calendar, adoption disabled
+
+Nightly timing uses the implementation default 02:00 America/Toronto, not a
+claimed historical user choice. A timezone-neutral 15-minute cron wake-up is
+interpreted by the fixed calendar script; no per-user CRON_TZ support is assumed.
+The spring missing hour runs at the first valid 03:00; a persistent local-day
+checkpoint suppresses normal duplicate completion. Real calendar/producer leases
+exclude overlapping jobs. A crash after B publication before the calendar
+checkpoint can cause another safe bounded delta, not an exactly-once claim.
+
+Resource deferrals retry every 30 minutes, at most sixteen attempts inside the
+02:00--10:00 local window, then automatically try the next night. Monotonic
+cooldowns and bounded reboot anchoring avoid clock-driven rapid retries or
+unbounded waits. Unexpected job failures persist actionable review status;
+existing owned-resource reconciliation and protected evidence are preserved.
+Actual private JSON status and cron stdout are reporting paths; external UI/mail
+notification delivery is not validated or claimed. Nightly job timeout is two
+hours after adoption; four-hour cold acceptance remains a separate configuration.
+
+Source tests cover DST, duplicates, active producers, inherited leases and
+clock/reboot recovery. No schedule, production backup, access/security change or
+backend cutover is performed. Whole-plan B acceptance and configuration review
+remain required. Respect the current Staging quiet boundary; do not admit a
+heavy acceptance or another worker while it is held. Git-independent backup
+verification does not waive any affected preservation-boundary obligations.
+
+## Resume: guarded unprivileged adoption preparation
+
+The fixed nightly supervisor defers before expensive preparation when the
+existing memory/swap or lane guard fails, then observes runtime identity,
+loopback health and B capacity through the owned job lifetime. It stops only
+its own unreaped process group; producer quiescence still uses existing leases
+and reconciliation, never a global process fence. Current runtime artifacts
+have optional identity/hash pins checked before capture and against verified
+capture contents before publication.
+
+Own-block user-cron adoption and exact rollback preserve unrelated jobs and all
+backup/evidence data. The rendered scoped job has bounded CPU/memory, idle IO
+and escaped cron percent syntax. Its authenticated controller must supply real
+acceptance/configuration readiness and the approved UTC time. Same-account
+review is advisory, not a privilege boundary. No root helper/security changes.
+
+A shared allocation ceiling now clamps to actual available capacity rather than
+requiring the entire maximum envelope for a small valid delta. Capture/object
+hard limits, metadata allowance, free-space floor and legacy reservation behavior
+remain enforced. Sixty-three focused tests passed. Real whole-plan acceptance,
+independent recovery, schedule adoption and live restart-driver integration are
+still pending; current measurements and exact bindings remain private. No
+schedule, backup capture, production switch or protected-data cleanup occurred.
+The ten-minute FIX-READY-through-work-resumed goal is not established.
+
+## Resume: shared bounded nightly allocation — source only
+
+The nightly lifecycle can now share a finite capture/object allocation budget
+with a separate free-space floor. The resident binds the capture budget and
+charges sealed input bytes before assigning the remaining object budget. Hard
+byte ceilings, source identity, independent readback, atomic publication and
+recorded-only retention remain enforced. Legacy callers retain their original
+reservation contract. Focused tests and a two-generation isolated B acceptance
+passed; current measurements and detailed receipts remain private. No nightly
+installation, enablement, production action or Git policy activation occurred.
+Live controller/fence adoption and whole-plan acceptance remain open.
+
+## October 10: Next-restart source packaged, adoption disabled
+
+PR235 adds opt-in held Git check-all consumer only; authoritative inventory and
+original-ledger proof remain Gitowner owned. Current package, exact hashes,
+disabled user-job templates, receipts and next binding actions are in
+VK_NEXT_RESTART_PREFLIGHT_HANDOFF_20261010.md and the Staging shared directory
+/mnt/vk-storage/vk-next-restart-20261010/pr235-source-readiness.safe.json.
+22 tiny tests passed; three extra local fixtures hit unchanged storage reserve.
+Existing B current passed fresh read-only decoded-object verification. No live
+controller/fence acceptance, full backup/rehearsal, scheduling, installation,
+cleanup or production change. Ten-minute total release remains unmeasured.
+
+## October 10: Admission remains blocked after bounded resource investigation
+
+No acceptance launched or resources/data changed. Latest swap free 248.1 MiB is
+below 512 MiB floor; B is 11.85 GiB below cold reservation. All own completed-test
+PIDs are gone and six exact leases were reacquired read-only. No eligible completed
+process offers material swap relief. Incumbent/paused fallback/current owner/MP
+browser remain protected; Caspian QA completion and state-preserving release are
+not established. Ordinary random fixtures total only 128 MiB. Older unsealed
+13.65GB archive is a conditional exact release candidate requiring applicable
+preserved-evidence approval; all sealed SQL and sole compressed recovery remain.
+Details and minimal plan: VK_RESTART_SAFEGUARDS_20261009.md; receipt:
+scripts/deployment/receipts/nightly-resource-reconciliation-20261010.json.
+
+## October 10: Whole-plan compressed acceptance stopped by host safeguard
+
+Published/tested source `53aaada46d83ae2d83e8281242caa1961cfef1cc` ran once in
+fresh B scope `vk-normal-nightly-compressed-v1`. All 79 SQLite images passed native
+hash/integrity: 7,847,219,200 bytes; all hashes/byte counts match the native sealed
+ledger. SQL stage ended at 1975.22 s (32.92 min), versus prior 62.17 min. Actual
+4,734,447,616-byte image took 485.87 s (8.10 min), versus prior 1479.64 s.
+
+At 3326.82 s the guard observed host SwapFree 290,320,384 bytes after two below-
+512MiB samples and stopped ONLY the test scope (exit 143). Production remained
+healthy: 164 HTTP-200 samples, max 33.13 ms. B still had 92,774,387,712 bytes free;
+no archive/input/object byte cap was reached. The cause of global swap pressure
+was not attributed. Do not claim whole-plan success or independent recovery.
+
+Scope is inactive; its new SSHFS mount is gone; both exact MCP producer and B
+job leases were reacquired read-only. No reconciliation/deletion performed.
+84 new inputs remain, 15,202,288,432 bytes, including an unsealed 7,285,506,048-byte
+archive and empty tar.log. Earlier 21.47GB partial evidence, verified backups,
+compressed f95 recovery, incident archive, incumbent/fallback and production are
+unchanged. Scheduling remains disabled. No owner command is requested.
+
+Another cold run is NOT admitted: retained inputs lower B free below the pinned
+98.25GiB cold reservation, and the observed swap floor failed. Preserve/equivalently
+verify and narrowly reconcile these exact owned partials only with applicable
+permission; then complete archive/index/object/current verification and B-only
+independent recovery when host resources support it. Do not repeat blindly.
+Evidence: scripts/deployment/receipts/nightly-compressed-whole-plan-guard-stop-20261010.json.
+Package: /mnt/vk-storage/vk-restart-safeguards-20261009/cold-delta-53aaada4,
+manifest SHA 046219eb538a396e413ae6dd4a4376d842f40b39c8603a6d2f51c270b38994ba,
+config SHA f175483c2603ef6001ab053adf57de963287698feaec3a92f22f73fd7539713f.
+
+## October 10: Compressed independent current and content-verified transport delta
+
+The read-only census is 103.87 GB / 490,552 files; JSONL histories account for
+74.29 GB. No new data exclusions. The old failed 21.47 GB input set remains
+untouched. New compressed acceptance uses a fresh B namespace, never the old
+attempt, incident archives, incumbent/fallback or existing verified backups.
+
+Implemented manifest-bound zlib-1 objects with exact decoded hash/size bounds,
+independent native readback, hardlinked reuse and crash-safe physical-object
+retention checks. Delta capture hashes source contents before reuse and rejects
+journal/identity changes; a complete manifest owns all recovery objects with
+parent=None. SQLite still uses fresh backup-API images on B. Backup-only indexing
+preserves sparse selected paths/metadata as data and cannot authorize deployment;
+the original candidate validator is unchanged. Unreadable subtrees fail closed.
+
+A real-B two-generation fixture independently restores changed SQLite rows,
+keeps one current, verifies all decoded objects and reuses 1.30 MB of history.
+Same 40.97 MB SQLite image: synchronous 12.85 s; asynchronous 2.30/4.02 s, same
+SHA and native integrity. Buffered metadata writes avoid tiny SSHFS round trips.
+74 focused tests: OK, one opt-in disposable service test skipped. ops:check passed;
+format ran Rust successfully, then blocked on missing Prettier; no dependencies
+installed or heavy build. Whole-plan acceptance is still pending.
+
+Byte-weighted samples estimate 38.5 GB encoded objects and 35.6 GB archive content.
+Cold caps: 48 GiB input + 44 GiB objects + 256 MiB index + 6 GiB floor = 98.25 GiB;
+B free 108,119,973,888 bytes. These are bounded estimates, not acceptance proof.
+Cold timeout four hours; nightly delta two hours, 12 GiB input / 8 GiB changed
+objects / 26.25 GiB reserve. CPU/IO/memory/health safeguards remain. Scheduling is
+disabled, production and printer controls unchanged. No owner command requested.
+Evidence: scripts/deployment/receipts/nightly-compressed-delta-readiness-20261010.json.
+This is not evidence for the ten-minute FIX-READY-through-work-resumed goal.
+
+## October 10: Diagnostic whole-plan run — input-cap blocker, disabled
+
+Exactly one active execution and an empty queue were reconciled before work.
+Runtime `2f5847fdc524c41ebfefe7083d77d5bd649be40a` then ran the approved full plan
+once under unchanged 25% CPU, nice 19/idle IO, 2 GiB soft/3 GiB hard memory and
+7200-second bounds. All 79 SQLite snapshots passed native B full-hash/integrity
+(7,754,559,488 bytes), including the prior failing historical file and actual
+4,734,447,616-byte DB. The old readonly error remains unreproduced; no snapshot
+semantics, source permissions or retries changed.
+
+The attempt failed closed after 7183.77 seconds on the combined 20GiB input cap:
+7,823,970,781 sealed bytes left 13,650,865,699 for the archive; its next 1MiB block
+exceeded that allowance. The 13,650,362,368-byte unsealed archive and all 84
+inputs remain as evidence (21,474,333,149 bytes). This is an input-representation
+and throughput blocker, not a shortage of physical B space. Minimum sampled B
+free was 108,244,684,800 bytes; 239 health samples returned 200 (maximum 42.7 ms).
+Producer/mount closure and both exact leases were verified; no duplicate retry.
+
+Precise failure-only SQLite diagnostics now include operation/extended code/name,
+traceback, source/page/journal and registered destination/parent/native attributes.
+Busy-image native inspection uses identity-matching metadata-only lstat. Future
+archive-bound failures now report exact quantities; a real compressor regression
+plus focused suite passed 26 tests. No schedule/deployment/security/production or
+printer-control changes. Existing backups/incident/fallback and compressed f95
+recovery survive. Full generation manifest/object validation, independent current
+recovery and successful whole-plan runtime are NOT established. Do not enable
+nightlies or repeat the full capture without first resolving these bounded costs
+and preserving/reconciling only this recorded attempt, then rechecking reserve.
+
+Evidence: scripts/deployment/receipts/nightly-diagnostic-whole-plan-capacity-blocker-20261010.json.
+Package: /mnt/vk-storage/vk-restart-safeguards-20261009/real-plan-diagnostics-v2;
+manifest SHA256 0b79be56006f3e2ec42f6faf11817d9d9de25c57ffe91dca1665a9de8c1f5d7d.
+No owner command is requested. The ten-minute FIX-READY-to-work-resumed goal is
+separate and remains unproven; this night-preparation attempt does not satisfy it.
+
+## October 10: Failure-only SQLite diagnostics before whole-plan acceptance
+
+Active-session reconciliation found exactly one execution and an empty follow-up
+queue; no duplicate producer or continuation was started. SQLite failures now
+preserve the original error and exact operation, extended code/name, traceback,
+RO source journal/page size, source/destination/parent identities and bounded
+native Windows metadata of only the registered live input. No success-path extra
+SQLite query, retry, new snapshot semantics, permissions or scope. Three new
+regressions verify unchanged success calls, original exception preservation and
+secondary metadata failure isolation. Whole-plan acceptance remains required;
+schedule/production/printer controls remain untouched. Limits stay unchanged.
+
+## October 10: Bounded blocker diagnostics and lossless capacity recovery
+
+Eight exact registered B captures of the failing 40.97MB historical SQLite file
+passed (five with allocation metadata, three without a pre-open native roundtrip).
+The original SQLite subcall/traceback/extended code were never captured; retired
+original destination mode/Windows attributes remain unknown, not reconstructed.
+New fixtures record every call, zero-byte Linux/native identity/mode/attributes,
+mount and native full-hash/SQLite seals. Original runtime is unchanged; no blind
+retry or speculative fix. See the bounded-blocker diagnostics receipt.
+
+The closed 4.734GB recovery fixture now survives as a 591,731,561-byte lossless
+zstd artifact, independently restored/full-hashed/SQLite verified against its
+original f95d0c03 SHA. Only the two verified redundant raw fixture copies were
+retired; the compressed equivalent and recovery procedure remain. Fixed a new
+harness Windows read-only-fsync error using writable atomic receipt staging and
+explicit SQLite close; seven small tests pass. B free129,719,201,792 exceeds the
+unchanged initial reserve126,969,970,688 (2,749,231,104 bytes margin). Capacity
+blocker closed; full-plan SQLite failure and complete whole-plan acceptance remain
+open. No whole-plan rerun, schedule, production/root/security change. Existing
+backups/incident/fallback survive. See scripts/deployment/receipts/nightly-bounded-blocker-diagnostics-20261010.json.
+
+## October 10: Actual whole-plan acceptance — blocked, schedule disabled
+
+Pinned runtime f85fe01684e1927fa054e8b7bb673d9d6d7b7ae5 was exercised against the
+actual 77-root plan on B, under a disposable 25% CPU user scope, nice19/idle IO.
+Fresh census: 488,978 files, 100,586,028,252 logical bytes, 79 SQLite databases.
+The 4,734,447,616-byte DB passed online backup, independent native B hash/integrity
+and an independent B-only restore/full-hash/integrity check. The whole attempt
+stopped after 3471.05 seconds, with 37 DBs verified, on a historical SQLite file:
+`attempt to write a readonly database`. The same file subsequently passed both
+bounded in-memory and fresh B-destination diagnostics; root cause is unresolved.
+Do not claim complete manifest/object verification, current publication, successful
+whole-plan runtime or nightly readiness. No speculative source fix was made.
+
+The reviewed source recovered the exact 40 recorded test inputs after producer
+closure, returning first_capture_retry_ready in 58.02 seconds. Attempt metadata
+and the independent 4.734GB recovery copy remain retained. B now has
+125,904,814,080 bytes free versus the unchanged 126,969,970,688-byte first-run
+reserve (1,065,156,608-byte deficit). Do not weaken that check or start another
+large capture without rechecking capacity. Existing backups/incident/fallback,
+production data/service, privileges and scheduling remain unchanged.
+
+Package: /mnt/vk-storage/vk-restart-safeguards-20261009/real-plan-f85fe0168;
+manifest SHA256 70facd475f317bab694bf8bbc307ff7814176b5fb4783ca9c389fc965f311bd0.
+Safe evidence: scripts/deployment/receipts/nightly-real-plan-partial-acceptance-20261010.json.
+Next: obtain exact phase/extended SQLite error if failure recurs, satisfy reserve,
+then accept complete current/readback/recovery and measured whole-plan runtime
+before the exact reviewed user-cron adoption action. No owner command is requested.
+
+## October 10: Parent-death producer lease correction — source only
+
+Exact foreground SSHFS/zstd/tar inherit the locked MCP lease descriptor. Parent
+SIGKILL no longer allows recovery while an owned holder survives; acquisition
+defers before any B resident/attestation. Never issue LOCK_UN on this shared open
+file description. Actual-B parent-only SIGKILL regression binds UID/PID/start
+ticks/executable hash/lease FD device-inode and exact mount source, then closes
+only matching fixture resources and checks successful scripted recovery. No
+production orphan reaper, scheduling, backup or privilege changes. Unknown
+legacy producers are not covered by acquiring this new lease. See
+VK_RESTART_SAFEGUARDS_20261009.md; production/full-size acceptance stays pending.
+
+## October 9: Fixed B-disk nightly composition — source only
+
+The runnable user job binds registered B inputs, serial bounded SQLite disk
+snapshots, full verified parentless capture, live producer completion and B-local
+NightlyJob publication/recovery. Real-B isolated fixtures cover normal replacement,
+protected old/current separation and reviewed interruption windows. Current
+read-only scope measures 96.14GB logical/79 SQLite DBs, largest4.734GB. Full real
+plan throughput/first adoption remain untested and disabled. Existing UTC user
+cron is supported; NoNewPrivileges systemd mount probe fails closed and that
+control remains unchanged. See VK_RESTART_SAFEGUARDS_20261009.md. No production
+backup, schedule, service, privileged code/settings or fallback mutation.
+
+## October 9: Two bounded nightly recovery corrections — source only
+
+An interrupted candidate cleanup now finishes only a recorded identity-matching
+empty generation after objects/ removal. Missing objects with other evidence or
+a substituted generation still blocks recovery. Published-candidate recovery
+fsyncs the store before any old-generation unlink, preserving old data if fsync
+fails. Isolated child-process regressions cover both exact interruption windows;
+no production backup, schedule, installation or privilege changes. See the
+nightly-recovery-validation-<HEAD>.safe.json receipt under
+/mnt/vk-storage/vk-restart-safeguards-20261009. Adoption prerequisites unchanged.
+
+## October 9: Bounded nightly lifecycle — source only
+
+NightlyJob now records one attempt, rebases each capture with parent=None,
+atomically promotes a fully verified independent generation, and removes only
+recorded transient inputs/old normal-nightly objects. Scripted tick can reconcile
+known closed-producer failures without operator commands. Unknown artifacts,
+changed identities or replayed progress preserve data and block another capture.
+New actual-process interruption/retry tests are isolated Linux fixtures; earlier
+real-B primitive acceptance is historical, not new lifecycle acceptance. No
+production backup, timer, service, privilege or evidence mutation.
+Production binding proposal/checklist:
+scripts/deployment/receipts/nightly-production-bindings-proposed-20261009.json.
+Historical plan has 77 roots/71 explicit DBs, one 4.734GB DB: memory-only capture
+is unsupported; B-disk snapshot/registration/handoff adapters must be bound and
+accepted before adoption. Storage is incremental; transfer currently full.
+Full release timing and real job/schedule adoption remain open.
+
+## October 9: Synthetic real-B nightly acceptance
+
+PR235 nightly runtime bcf8f1f951 now passed two-generation synthetic acceptance
+on actual B NTFS through existing WSL drvfs, UID/GID1000, with independent native
+Windows object/SQLite readback. Hardlinks, atomic pointer replace and directory
+fsync succeeded. Actual process exits before/after publication and during exact
+fixture retention preserved valid current and blocked further capture with
+reconciliation status. Original capture archives/interrupted fixtures retained.
+No production inputs, backup roots, incident/fallback evidence, schedules,
+installation or privilege settings changed. This is not power-loss proof or
+nightly job adoption. Production plan/exclusions, lifecycle binding, input-chain
+rebasing/bounded retention and partial reconciliation remain open. See
+scripts/deployment/receipts/nightly-real-b-20261009.json and
+VK_RESTART_SAFEGUARDS_20261009.md. Full release timing remains unmeasured.
+
+## October 9: PR235 oneshot deadline correction
+
+Rendered nightly service now uses TimeoutStartSec=7200 and TimeoutStopSec=30;
+RuntimeMaxSec does not bound oneshot execution. Regression checks pin these
+settings. An opt-in disposable user-manager test shortens both deadlines to one
+second, verifies timeout/SIGKILL, and stops/resets only its unique transient unit.
+No nightly job/timer is installed or enabled. Real B bindings and lifecycle
+acceptance remain required. Exact-head validation is recorded separately under
+/mnt/vk-storage/vk-restart-safeguards-20261009/oneshot-validation-<HEAD>.safe.json.
+
+## October 9: Review correction — explicit FIX READY test timestamps
+
+PR235 review found timestamp call sites obscured by a test-local wrapper. The
+849a00024 wrapper supplied the mandatory argument; remove that ambiguity by
+calling production run() directly with explicit timestamps in every positive
+case. The sole omitted argument is a negative TypeError regression. Production
+signature and runtime source remain unchanged. Historical23-test receipt binds
+849a00024 only. Fresh exact-head validation is saved under mounted SSD at
+/mnt/vk-storage/vk-restart-safeguards-20261009/review-timestamp-validation-<HEAD>.safe.json.
+No deployment, scheduling, root/security change or production cleanup occurred.
+Further independent backup/failure-path findings remain pending.
+
+## October 9: Deferred restart safeguards — source only
+
+The successful current-data cutover completed at 20:31:20 UTC in 9.94 seconds;
+this does not establish the ten-minute FIX READY/build/validation/work-resumed
+pipeline goal. Current service is vibe-kanban-current-state-production-20261009;
+backend c3c48e63, authoritative roots retained, incumbent frozen and compatible
+latest-data cutback retained. Archive untouched; cleanup and human QA unchanged.
+
+Branch fix/restart-safeguards-20261009 implements bounded routine orchestration,
+real lifecycle drain waiting, self-contained incremental normal-nightly B
+publication/retention, source-only scripted schedule rendering and cache-preserving
+warm/cold build measurement. Read VK_RESTART_SAFEGUARDS_20261009.md and its source
+validation receipt. No production driver/timer/root code/security change was
+adopted. Physical-B mount/readback/atomic hardlink compatibility, independent
+internal review and actual full-VK warm/cold/whole-pipeline timing remain open.
+Build capacity is below the preserved 8 GiB floor; do not clear caches/evidence.
+The denied capacity updater remains on its separate internal branch, excluded
+from this source stream. No new owner command is requested.
+
+Older dated entries below are historical and do not override this observation.
+
 Current October9 restart gate update: Desktop SSH/B works; whole-state online
 backup accepted (77roots/76DBs), archive SHA735e2115. Read
 VK_RESTART_PROGRESS_20261009.md before older entries. Exact offline application

@@ -1,3 +1,25 @@
+## October 10, 22:08 UTC: Chat reading restored without a backend restart
+
+The operator's latest instruction forbids a restart and supersedes the earlier
+quiet-publication notices below. A selective read proxy is now live at
+https://vibe.local. Only completed Codex finite-history GETs use an isolated
+corrected reader; all writes, live streams and other API calls use the existing
+backend 5621, PID 4089781, with unchanged process start ticks 768479166.
+
+Eight oversized captures/nine authentic native finals passed trusted HTTPS
+pagination and original-capture hash checks. The original 18 also passed through
+the candidate proxy, with their authentic replies and recovery notices retained.
+Actual 390px and 1440px browser views loaded all five screenshot-workspace
+captures and earlier pages: no capture warning or JavaScript errors. Browser
+writes were intercepted; the main backend and running agents were not restarted.
+
+Runtime/evidence: /mnt/vk-storage/vk-weird-error-20261010/no-restart-reader.
+Reader binary 4540183be41330e6dc2017111037f605a0dd0a116630c81c71d0edba10a82fb0;
+proxy implementation 3c4c03105. See VK_WEIRD_ERROR_20261010.md for routing,
+isolation, verification limits and current-data-preserving rollback. Preserve
+both newly enabled reader/proxy units and this task directory until the route
+no longer references 5640. No new imports or recovered-final sidecars were made.
+
 ## October 10: Release owner ready; safe publication boundary
 
 The latest operator notice says Staging's narrow reader is compiled and its

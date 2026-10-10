@@ -6,7 +6,8 @@ import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
 
 const run = promisify(execFile);
-const historyPath = /^\/api\/execution-processes\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/log-history$/;
+const historyPath =
+  /^\/api\/execution-processes\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/log-history$/;
 
 export function createHistoryProxy({ primaryPort, readerPort, prepare }) {
   const server = http.createServer(async (req, res) => {
@@ -21,13 +22,19 @@ export function createHistoryProxy({ primaryPort, readerPort, prepare }) {
       }
     }
     if (req.aborted || res.destroyed) return;
-    const upstream = http.request({
-      hostname: '127.0.0.1', port, method: req.method,
-      path: req.url, headers: req.headers,
-    }, reply => {
-      res.writeHead(reply.statusCode, reply.headers);
-      reply.pipe(res);
-    });
+    const upstream = http.request(
+      {
+        hostname: '127.0.0.1',
+        port,
+        method: req.method,
+        path: req.url,
+        headers: req.headers,
+      },
+      (reply) => {
+        res.writeHead(reply.statusCode, reply.headers);
+        reply.pipe(res);
+      },
+    );
     upstream.on('error', () => {
       if (!res.headersSent) res.writeHead(502);
       res.end();
@@ -55,19 +62,33 @@ export function createHistoryProxy({ primaryPort, readerPort, prepare }) {
   return server;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { VK_HISTORY_BINDINGS, VK_HISTORY_SYNC, VK_PRIMARY_DATABASE } = process.env;
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  const { VK_HISTORY_BINDINGS, VK_HISTORY_SYNC, VK_PRIMARY_DATABASE } =
+    process.env;
   if (!VK_HISTORY_BINDINGS || !VK_HISTORY_SYNC || !VK_PRIMARY_DATABASE)
-    throw new Error('Explicit reader bindings, metadata synchronizer and primary DB required');
+    throw new Error(
+      'Explicit reader bindings, metadata synchronizer and primary DB required',
+    );
   const { readFile } = await import('node:fs/promises');
   const bindings = JSON.parse(await readFile(VK_HISTORY_BINDINGS, 'utf8'));
   const server = createHistoryProxy({
     primaryPort: bindings.primary_port,
     readerPort: bindings.reader_port,
-    prepare: async id => {
-      const result = await run('/usr/bin/python3', [VK_HISTORY_SYNC,
-        VK_PRIMARY_DATABASE, bindings.database_copy, bindings.root, id],
-      { timeout: 5000, maxBuffer: 1024 });
+    prepare: async (id) => {
+      const result = await run(
+        '/usr/bin/python3',
+        [
+          VK_HISTORY_SYNC,
+          VK_PRIMARY_DATABASE,
+          bindings.database_copy,
+          bindings.root,
+          id,
+        ],
+        { timeout: 5000, maxBuffer: 1024 },
+      );
       return result.stdout.trim() === 'ready';
     },
   });

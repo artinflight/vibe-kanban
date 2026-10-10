@@ -1,3 +1,21 @@
+## October10: same approved publication retry pending
+
+Actor schema correction is tested at SCHEMA_FIX_TESTS.safe.json; prior failed
+attempt is preserved. Staging owns quiet retry; no imports until actual publication
+receipt and live protocol acceptance. Repair owner ends at the requested boundary.
+Original OP printer session42 authentic finals are already verified via API/UI.
+See current HANDOFF.md and QUIET_RETRY_CHECKPOINT.safe.json for sealed evidence.
+
+## October10 17:24: approved publication attempted, not active
+
+Staging actor failed before candidate startup on nonexistent workspaces.worktree_path.
+Actual17:00:41 receipt records recovery to incumbent on current data; live recovery
+protocol remains unavailable and original T18/MM histories empty. No imports.
+Staging owns actor correction/publication. See current repair HANDOFF.md and
+PUBLICATION_FAILURE_RESCUE_READBACK.safe.json. Original OP printer session42
+native finals are already available with exact API hashes and actual UI chronology;
+this does not certify recurrence prevention or every intermediate capture.
+
 ## October10: original-response recovery publication gate
 
 The original T18/MM finals remain absent from normal live conversation history.

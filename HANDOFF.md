@@ -1,3 +1,44 @@
+## October10: schema corrected; end for approved quiet retry
+
+Seamus reports the same approved release actor schema fix; locally preserved
+SCHEMA_FIX_TESTS.safe.json records8 regressions and live/copied-data/prepared-input
+checks. Historical17:00 failure remains preserved, not the current retry verdict.
+No new build/deploy or import by this owner. End this turn for Staging quiet retry;
+await actual mirrored PUBLICATION_READY.safe.json or failure.safe.json and existing
+session follow-up, then revalidate live protocol before imports. No new approval.
+Read QUIET_RETRY_CHECKPOINT.safe.json in the existing SSD evidence root: sealed
+original-two/18-target delivery and CI/native receipts plus original OP printer
+session42 exact API finals/42 actual UI finals below original prompts. All prompts,
+results and native evidence preserved; no printer actions, replay or agent starts.
+Session/execution/coding-turn hashes unchanged; workspace aggregate observation
+limitation retained. No capture-prevention or full-restoration completion claim.
+
+## October10 17:24: publication failed; original printer chronology visible
+
+Actual actor-state is incumbent-recovered-on-latest-current-data-no-old-db-restore
+at17:00:41.936490UTC. failure.safe.json: OperationalError no such column:
+worktree_path; candidate_started=false. publish-full-reviewed.py:148 queries the
+nonexistent workspaces.worktree_path during native/attachment catch-up; live
+schema has container_ref. No PUBLICATION_READY.safe.json exists. New production
+and fallback units inactive; incumbent1254186/5561 SHA2aa884b3 remains live.
+Public original-two recovery-status returns HTTP200 text/html, normal history0.
+No imports, restart, deployment, security or agent/printer actions by this owner.
+Staging must correct its actor schema mapping and finish approved publication;
+this owner remains ready for original-two then reviewed additional imports.
+
+OP::3D Print Issues original session2ed7a19e-006c-45ca-99aa-e8966de0a577:
+all42 authentic native finals match exact normal API UTF8 hashes. Actual original
+workspace UI,18 load-earlier operations plus full scroll, displays all42 finals
+below their original prompts, including heated-bed history; no import needed.
+This is observed original-session final chronology, not all intermediate capture
+completeness or recurrence acceptance. Browser automatic PUT seen was blocked.
+Session/execution/coding-turn row hashes unchanged; workspace aggregate changed
+concurrently, so blanket preservation is not claimed or rewritten.
+Read concise PUBLICATION_FAILURE_RESCUE_READBACK.safe.json and OP_PRINT_CHRONOLOGY
+API/UI receipts under /mnt/vk-storage/vk-next-restart-20261010/e3e1-native-recovery.
+Outcome is saved here independently of the broken chat recorder. No replacement
+prompts, inference, replay, printing or heating.
+
 ## October10: expanded rescue, not prevention
 
 Use VK_CHAT_RESCUE_SCOPE_20261010.md and expanded-rescue-scope.safe.json in the

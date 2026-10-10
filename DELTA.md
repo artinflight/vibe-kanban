@@ -1720,3 +1720,15 @@ not established. Ordinary random fixtures total only 128 MiB. Older unsealed
 preserved-evidence approval; all sealed SQL and sole compressed recovery remain.
 Details and minimal plan: VK_RESTART_SAFEGUARDS_20261009.md; receipt:
 scripts/deployment/receipts/nightly-resource-reconciliation-20261010.json.
+
+## October 10: Next-restart source packaged, adoption disabled
+
+PR235 adds opt-in held Git check-all consumer only; authoritative inventory and
+original-ledger proof remain Gitowner owned. Current package, exact hashes,
+disabled user-job templates, receipts and next binding actions are in
+VK_NEXT_RESTART_PREFLIGHT_HANDOFF_20261010.md and the Staging shared directory
+/mnt/vk-storage/vk-next-restart-20261010/pr235-source-readiness.safe.json.
+22 tiny tests passed; three extra local fixtures hit unchanged storage reserve.
+Existing B current passed fresh read-only decoded-object verification. No live
+controller/fence acceptance, full backup/rehearsal, scheduling, installation,
+cleanup or production change. Ten-minute total release remains unmeasured.

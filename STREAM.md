@@ -1,3 +1,15 @@
+## October 10: Next-restart source packaged, adoption disabled
+
+PR235 adds opt-in held Git check-all consumer only; authoritative inventory and
+original-ledger proof remain Gitowner owned. Current package, exact hashes,
+disabled user-job templates, receipts and next binding actions are in
+VK_NEXT_RESTART_PREFLIGHT_HANDOFF_20261010.md and the Staging shared directory
+/mnt/vk-storage/vk-next-restart-20261010/pr235-source-readiness.safe.json.
+22 tiny tests passed; three extra local fixtures hit unchanged storage reserve.
+Existing B current passed fresh read-only decoded-object verification. No live
+controller/fence acceptance, full backup/rehearsal, scheduling, installation,
+cleanup or production change. Ten-minute total release remains unmeasured.
+
 ## October 10: Admission remains blocked after bounded resource investigation
 
 No acceptance launched or resources/data changed. Latest swap free 248.1 MiB is

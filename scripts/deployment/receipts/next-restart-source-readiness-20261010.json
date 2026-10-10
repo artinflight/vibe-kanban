@@ -1,0 +1,326 @@
+{
+  "schema": 1,
+  "prepared_utc": "2026-10-10T10:59:13.983139+00:00",
+  "PR": 235,
+  "source_head": "d1737767dacf996758991d40099b025c0c462e86",
+  "source_only": true,
+  "sources": {
+    "journal_compat.py": {
+      "sha256": "a7d3320676c82e4e3190033a31d923cb67aee64ab752c84e8e69c4fac686428b",
+      "bytes": 9251,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/journal_compat.py"
+    },
+    "smoke_desktop.py": {
+      "sha256": "6735851a0ab09bdbbebb3e0b7bc3c1bd028f32f4340de0f7d23f81692f926906",
+      "bytes": 6946,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/smoke_desktop.py"
+    },
+    "subtree_recopy.py": {
+      "sha256": "51cb7ae5507dbb42848efb2aab79fca147570a8a57c198559186605367b42e6f",
+      "bytes": 3576,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/subtree_recopy.py"
+    },
+    "test_vk_archive_stream.py": {
+      "sha256": "6e6561f79ac2f0df458cfad5c5f3d6bf014a61791dd1959bd0ff9d57ece79aca",
+      "bytes": 10157,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/test_vk_archive_stream.py"
+    },
+    "test_vk_restart_git_boundary.py": {
+      "sha256": "3610604127340963f95ead6f2a9565dc2be83e98735d69cc5fb9210aac540b7e",
+      "bytes": 6775,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/test_vk_restart_git_boundary.py"
+    },
+    "vk_archive_store.py": {
+      "sha256": "95b59fb7d484ca379f58e5b543a763af6691d23c9b9381158b6a0c5bc772b40f",
+      "bytes": 9679,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_archive_store.py"
+    },
+    "vk_archive_stream.py": {
+      "sha256": "9d1af55f26fb7dadd4e734e6d3d9bd5da9734f3229b568a3197c1f5b61e1ca16",
+      "bytes": 8406,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_archive_stream.py"
+    },
+    "vk_b_disk_capture.py": {
+      "sha256": "23f5efa24da68aa6e11d62db81685a12224f5c4f9f87d969d5aa182472504ac8",
+      "bytes": 30237,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_b_disk_capture.py"
+    },
+    "vk_b_disk_snapshot.py": {
+      "sha256": "ba1fd175cc72f6008e77f46096e4ec30201b4943e6d9895a7907af466a69cebf",
+      "bytes": 7705,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_b_disk_snapshot.py"
+    },
+    "vk_candidate_direct_b.py": {
+      "sha256": "4071782435132a9c635f7a8913b7857231a0a98f709081729da1ba1163feb07b",
+      "bytes": 22333,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_candidate_direct_b.py"
+    },
+    "vk_candidate_generation.py": {
+      "sha256": "0cde3374caea24f1c9decf81a03373c500d0f2c4124e48d65cca3f4a7b34cb72",
+      "bytes": 59180,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_candidate_generation.py"
+    },
+    "vk_candidate_scaffold.py": {
+      "sha256": "0b1d8f7a06bf372e2a6bcda34a9ccc47d61add1e928b42e1e7020d8b4ff9ef58",
+      "bytes": 2822,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_candidate_scaffold.py"
+    },
+    "vk_change_journal.py": {
+      "sha256": "a339cf166701f3af11396f1099cfb306c691be0d208d6422e8e252e5fd3108ec",
+      "bytes": 6768,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_change_journal.py"
+    },
+    "vk_desktop_transport.py": {
+      "sha256": "fac7325b0de5a7cd8c07ddb542ad733a7f7f3e77a2d9c15456e6d63a0d24ff87",
+      "bytes": 4134,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_desktop_transport.py"
+    },
+    "vk_direct_capture.py": {
+      "sha256": "55ef5328fee7d93a05e3796d3c1d374866d08f4eefcf67abf28ceb8dc68ec5f5",
+      "bytes": 20734,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_direct_capture.py"
+    },
+    "vk_nightly_archive_index.py": {
+      "sha256": "0ffa297af08ebfc08137c8b2bddd24ab8f3ee4df5a43b05a5cac178c9348cb6f",
+      "bytes": 7393,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_nightly_archive_index.py"
+    },
+    "vk_nightly_b_job.py": {
+      "sha256": "c0c0c5bdc87ac3b4cb843e51b1507260d27b8b453d9266cc8abbd2e180ebc83a",
+      "bytes": 18689,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_nightly_b_job.py"
+    },
+    "vk_nightly_capture_adapter.py": {
+      "sha256": "9ead90d37db70f0429e41fa2de8674f4b42b0e69f2d751edcf9026ef9ae19adb",
+      "bytes": 24522,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_nightly_capture_adapter.py"
+    },
+    "vk_nightly_delta.py": {
+      "sha256": "6ea57ddc0bfaf1b7a87e2c65c190df4eef998ebcf741ec6098b53ed664bc3731",
+      "bytes": 5216,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_nightly_delta.py"
+    },
+    "vk_nightly_generation.py": {
+      "sha256": "2053de00f359df94da8c700c69c570d1ef3fc4ddd971c81013b4f7ed83a0b2c7",
+      "bytes": 26866,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_nightly_generation.py"
+    },
+    "vk_nightly_job.py": {
+      "sha256": "3fce345fcdd559025bf512a6735f025e8861f099707d49bc76a7873f66a5c138",
+      "bytes": 7646,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_nightly_job.py"
+    },
+    "vk_nightly_lifecycle.py": {
+      "sha256": "ba2be32d92e5323eb2aec94c8a401ce001d04faf3d364c9c005b0c8d6d376da7",
+      "bytes": 25977,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_nightly_lifecycle.py"
+    },
+    "vk_operational_package.py": {
+      "sha256": "20b5f02342ac5b44881103a87126a1fea1325576d88440949dbc8fc3b738d3d9",
+      "bytes": 12317,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_operational_package.py"
+    },
+    "vk_prep_common.py": {
+      "sha256": "5ab3dc9981e72aec9fea03e9970e68682f3fcd6d8ce3aaaac2c99dd7263823ca",
+      "bytes": 1595,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_prep_common.py"
+    },
+    "vk_recovery_package.py": {
+      "sha256": "de52d4b96476f0cea982ad007efba8565f56e75dbb81a249415b22d7c05cd886",
+      "bytes": 4983,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_recovery_package.py"
+    },
+    "vk_restart_build_benchmark.py": {
+      "sha256": "ad2bb6a6ac1ee9e8972da4164cc0d603ea279796daa7b7770fdb3999de1c321e",
+      "bytes": 4273,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_restart_build_benchmark.py"
+    },
+    "vk_restart_git_boundary.py": {
+      "sha256": "faf287f6402a9ee65b68b36a24f57c1177b10d4abf5f1538eae3b3090e47cfef",
+      "bytes": 8385,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_restart_git_boundary.py"
+    },
+    "vk_rolling_backup.py": {
+      "sha256": "6996f360ceba9667aeded20849150c41feeba18c0f0c0d6153b2b996d8f87918",
+      "bytes": 25722,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_rolling_backup.py"
+    },
+    "vk_routine_restart.py": {
+      "sha256": "1ff2c9d22714028506c66a0409b3f0c8c43a86502dbc52ac6e1a28fc02a9a025",
+      "bytes": 9469,
+      "path": "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/vk_routine_restart.py"
+    }
+  },
+  "entrypoints": {
+    "nightly": {
+      "source": "vk_nightly_job.py",
+      "CLI": "/usr/bin/python3 -B -S /mnt/vk-storage/vk-restart-safeguards-20261009/cold-delta-53aaada4/vk_nightly_job.py --config /mnt/vk-storage/vk-restart-safeguards-20261009/cold-delta-53aaada4/nightly-production.disabled.private.json --config-sha256 ac904d2c812b92edc37d1089a272b73f04e1e5a25a798b2af223ec4934ebcb40",
+      "safe_read_only_check": "/usr/bin/python3 -B -S /mnt/vk-storage/vk-restart-safeguards-20261009/cold-delta-53aaada4/vk_nightly_job.py --config /mnt/vk-storage/vk-restart-safeguards-20261009/cold-delta-53aaada4/nightly-production.disabled.private.json --config-sha256 ac904d2c812b92edc37d1089a272b73f04e1e5a25a798b2af223ec4934ebcb40 --check-config"
+    },
+    "restart": {
+      "source": "vk_routine_restart.py",
+      "call": "run(plan, driver, fix_ready_monotonic=fix_ready, git_boundary=reviewed_HeldGitCheck)",
+      "standalone_production_executor": false
+    },
+    "Git_gate": {
+      "source": "vk_restart_git_boundary.py",
+      "activation_default": false,
+      "interface": "HeldGitCheck(helper, policy, policy_sha256, expected_binding_sha256, read_binding, writer_fence)",
+      "schema_2_wire_field": "version",
+      "real_controller_writer_fence_accepted": false,
+      "read_binding_keys": [
+        "owner",
+        "turns",
+        "ledgers"
+      ],
+      "callback_trust": "Existing authenticated controller must supply COMPLETE authoritative latest-turn inventory and actual held writer-fence capability; a manifest boolean/same-UID review is not authority."
+    }
+  },
+  "reused_nightly_package": {
+    "path": "/mnt/vk-storage/vk-restart-safeguards-20261009/cold-delta-53aaada4",
+    "built_source_head": "53aaada46d83ae2d83e8281242caa1961cfef1cc",
+    "package_sha256": "046219eb538a396e413ae6dd4a4376d842f40b39c8603a6d2f51c270b38994ba",
+    "all_25_source_pins_match_current": true,
+    "config_sha256": "ac904d2c812b92edc37d1089a272b73f04e1e5a25a798b2af223ec4934ebcb40",
+    "check_config_passed": true,
+    "adoption_authorized": false,
+    "store_format": "zlib-1-v1",
+    "transport": "content-delta-v1",
+    "B_scope": "B:/vk-backups/vk-normal-nightly-compressed-v1",
+    "one_self_contained_current": true,
+    "promotion": "verify independent B readback; atomic current rename+directory fsync; only then exact previous normal-generation retention",
+    "incident_fallback_retention": false
+  },
+  "schedule": {
+    "service": {
+      "path": "/mnt/vk-storage/vk-next-restart-20261010/pr235-nightly.service.disabled",
+      "sha256": "7913b72513b73832115733fb8bdd3f57d1532109799f5205343cef983a30ec3a"
+    },
+    "timer": {
+      "path": "/mnt/vk-storage/vk-next-restart-20261010/pr235-nightly.timer.disabled",
+      "sha256": "d4cee63f8317fb4bd8588480dec171c5f6adba69cadf12e2895dffe00449bf67"
+    },
+    "existing_cron_proposal": {
+      "path": "/mnt/vk-storage/vk-restart-safeguards-20261009/cold-delta-53aaada4/cron.proposed",
+      "sha256": "85ba3d6799e55806276af7c7613527444ea443e939c14ed240227fe49d259d6f",
+      "syntax_validated_no_install": true
+    },
+    "installed": false,
+    "enabled": false,
+    "required_guard_binding": "Bind admission/ongoing global memory, swap, B reserve and production health checks to exact scheduled job lifetime before adoption. Cgroup limits do not establish global headroom. Never use the old test guard unchanged on a new unit."
+  },
+  "guard_reference": {
+    "path": "/mnt/vk-storage/vk-restart-safeguards-20261009/cold-delta-53aaada4/acceptance_guard.py",
+    "sha256": "35627962ba205d3c83d0bd320d5263d2bf48e642abfa52f14f020057d332cc90",
+    "actual_test_scope_only": true,
+    "memory_floor_bytes": 2684354560,
+    "swap_floor_bytes": 536870912,
+    "B_runtime_floor_bytes": 6442450944,
+    "CPUQuota": "25%",
+    "MemoryHigh": "2G",
+    "MemoryMax": "3G",
+    "healthy_HTTP_required": true
+  },
+  "already_run_evidence_sha256": {
+    "/mnt/vk-storage/vk-restart-safeguards-20261009/B-delta-9042774ea29548aebf5436e6d16965a6/acceptance.safe.json": "a0637d4930285e636d6714bc09365e887f3ebf4398dd6e18b528bde115a5ef8b",
+    "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/receipts/next-restart-existing-B-fixture-readback-20261010.json": "f8c9854fe752e1039d782384db731280f5e4c6602aab52987791a8ceab534cde",
+    "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/receipts/nightly-compressed-whole-plan-guard-stop-20261010.json": "5edb96e495697ddd86aa4fdc0160df5b1a69fa8d5173388a01506b6f80fd12bc",
+    "/mnt/vk-storage/worktrees/2f68-vk-automatic-res/_vibe_kanban_repo/scripts/deployment/receipts/nightly-resource-reconciliation-20261010.json": "d0203e85eca3180d2c6119598995eaca22526a18e778fb172f42f2f39a7caaa2",
+    "/mnt/vk-storage/vk-runtime-backup-20261009/direct-current-state-release-20261009/cutover.safe.json": "fae166a3eb0c027e12aa6771a43f6c5fda44b32b04ebbdcaaf935dcb032b746c",
+    "/mnt/vk-storage/vk-runtime-backup-20261009/direct-current-state-release-20261009/live-acceptance.safe.json": "3cfd580b3db514be791c3aed31c62ccd981e2644ee4af012d4bae156453be970",
+    "/mnt/vk-storage/vk-runtime-backup-20261009/direct-current-state-release-20261009/boot-binding.safe.json": "ac2e2c75f0f8339e531ba4c27990ee4dd9ca1527e377d39105424a993a371184"
+  },
+  "acceptance_summary": {
+    "two_generation_actual_B_fixture": true,
+    "independent_changed_SQLite_recovery_previously_passed": true,
+    "old_generation_independent_current": true,
+    "latest_existing_B_readback": {
+      "passed": true,
+      "read_only": true,
+      "new_snapshot_or_restore": false,
+      "self_contained": true,
+      "one_current": true,
+      "verified_file_entries": 3,
+      "decoded_bytes": 1308206,
+      "generation": "generation-bccff23a1bde4817bd48fe553aa3bec8",
+      "manifest_sha256": "caf2f5d5d1d4c3ae1bb5da655992f6ee1541fdf141453f6ba02c72eb2e5492fe",
+      "utc": "2026-10-10T10:56:44.415315+00:00",
+      "B_free_bytes": 88475803648
+    },
+    "all_79_actual_SQL_images_prior_run_verified": true,
+    "whole_plan_current_recovery_accepted": false,
+    "prior_SQL_stage_seconds": 1975.2179962070659,
+    "prior_largest_DB_snapshot_seconds": 485.87303602229804,
+    "prior_service_handoff_seconds": 9.937453607097268,
+    "ten_minute_full_pipeline_measured": false
+  },
+  "fresh_small_checks": {
+    "source_head": "d1737767dacf996758991d40099b025c0c462e86",
+    "command": "PYTHONPATH=scripts/deployment python3 -B -S -m unittest test_vk_restart_git_boundary.GitBoundary test_vk_restart_safeguards.Routine test_vk_nightly_delta.Delta test_vk_restart_safeguards.RestartSafeguards.test_scripted_timer_is_render_only_with_no_agent_or_privilege_calls",
+    "ran": 22,
+    "passed": 22,
+    "seconds": 0.13,
+    "real_fixture_kernel_lock_used": true,
+    "production_Git_helper_or_fence_invoked": false,
+    "extra_local_capacity_fixtures": {
+      "attempted": 3,
+      "completed": 0,
+      "blocked": "Actual SSD free below unchanged 256MiB manifest reserve; no source guard weakened."
+    },
+    "ops_check": "passed",
+    "format": "Rust passed; Prettier unavailable; no dependency installation"
+  },
+  "preserve_live_bindings": {
+    "path": "/mnt/vk-storage/vk-next-restart-20261010/live-bindings.safe.json",
+    "sha256": "7d4f52e004b5868a9ec78616226d2b464f9392af0079aec4e2ccfd535efe43e5",
+    "module": {
+      "currentPath": "/mnt/vk-storage/vk-cutover-artifacts-20261009/c3c48e63/autoswitch-module/current",
+      "releasePath": "/mnt/vk-storage/vk-cutover-artifacts-20261009/c3c48e63/autoswitch-module/releases/inventory-history-be3478171-20261009",
+      "manifestSha256": "135dfcbd451367a9d923dfdc3d2b6a49ded9106cab260030985458f06198f18c",
+      "workerSha256": "699da48e4dfafd7925028b7da92e394fd124a5255ef3d6dadc10d819c8758eb0",
+      "validatorSha256": "c0478d05803337cad53131ecd8e9c3099cd94e6310c391a7affa75c7be1cac48",
+      "modelsSha256": "e273adcf8c01f6e506f8b6ca325db12193b31c9d627d8b5cdeee20e213a35ccd",
+      "instructionsSha256": "b6f4db76edc996e015e2185b4dbc1ce15de19695529a58706807552157059958",
+      "classifierModel": "gpt-5.6-luna",
+      "classifierEffort": "low"
+    },
+    "Recommend_only": true,
+    "module_selection_changed": false,
+    "model_effort_changed": false
+  },
+  "Git_owner_bindings": {
+    "path": "/mnt/vk-storage/vk-next-restart-20261010/git-source-binding.safe.json",
+    "sha256": "6d01b0620b2824911234d45c995136ac9ea5cc9ee63dbf8f6cbf286c816395e0",
+    "corrected_helper_sha256": "d921135c0f784d06fe3f2ced25fdead8a1da749b047c7d88c6bfd6c9a85a9e34",
+    "scanner": {
+      "path": "/mnt/vk-storage/vk-cutover-artifacts-20261009/c3c48e63/preservation/gitleaks",
+      "sha256": "88f91962aa2f93ac6ab281d553b9e125f5197bbbce38f9f2437f7299c32e5509",
+      "version": "8.30.1"
+    },
+    "Git_owner_session": "14331e35-c7b1-4f95-a2fa-a219a59a3466",
+    "Git_owner_workspace_edited": false
+  },
+  "resources": {
+    "MCP_SSD_free_bytes": 121290752,
+    "MemAvailable": 10114564096,
+    "SwapFree": 1417216,
+    "B_free_bytes": 88475803648,
+    "B_observed_utc": "2026-10-10T10:56:44.415315+00:00",
+    "cold_reserve_bytes": 105495134208,
+    "cold_B_deficit_bytes": 17019330560,
+    "bulk_or_build_admitted": false,
+    "only_small_metadata_written": true
+  },
+  "remaining_actions": {
+    "Git_activation": "Git owner finishes per-repository reviewed policy/original-obligation accounting and copied-data acceptance; Staging supplies protected policy bytes, complete authoritative latest-turn read_binding and genuine existing writer_fence. Review exact adapter, run real held check-all acceptance, propagate witness through handover. Do not globally impose VK-only policy on unrelated projects.",
+    "restart_driver": "Staging implements reviewed source-bound driver methods authorization/build/validate/backup/review/held/boundary/handover/recover_latest; opt-in Git handover accepts and preserves git_boundary keyword/witness. Keep authenticated real ownership API and actual queue drain, selected history module, current authoritative data, latest-data compatible cutback and first-run usage holds.",
+    "nightly_B_acceptance": "Only after real resource guards and exact retained-evidence reconciliation approval permit it, complete one whole-plan verified current/independent restore/runtime/peak-reserve acceptance. No new full run now; existing DB-only snapshot is not whole state.",
+    "nightly_schedule": "After B acceptance and exact enrollment/retention/config/guard review plus applicable approval, bind user-level fixed job with no root/LLM/manual owner commands, verify first test-run and actual schedule receipt before enabled claim.",
+    "ten_minute_goal": "Record mandatory same-host FIX READY timestamp before build/queue. Measure real warm/cold builds and complete validation/deploy/work-resumed pipeline, building while incumbent stays online and preserving caches. Frontend-only only when proven compatible; nightlies cannot compile a future fix. Disaster recovery restoration is separate."
+  },
+  "production_changes": false,
+  "privilege_security_changes": false,
+  "cleanup_performed": false,
+  "owner_commands_requested": false,
+  "full_backup_or_rehearsal_launched": false
+}

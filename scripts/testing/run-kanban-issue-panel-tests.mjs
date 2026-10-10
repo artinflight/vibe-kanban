@@ -35,7 +35,7 @@ await build({
           },
           (args) => {
             if (
-              /useKanbanIssueComposer(Store|Scratch)|issueCreation|useProjectWorkspaceCreateDraft|workspaceCreateState/.test(
+              /useKanbanIssueComposer(Store|Scratch)|useExpectedIssueOpen|issueCreation|useProjectWorkspaceCreateDraft|workspaceCreateState/.test(
                 args.path
               )
             )

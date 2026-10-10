@@ -21,6 +21,7 @@ import { useOrganizationStore } from '@/shared/stores/useOrganizationStore';
 import { useAuth } from '@/shared/hooks/auth/useAuth';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useCurrentKanbanRouteState } from '@/shared/hooks/useCurrentKanbanRouteState';
+import { useExpectedIssueOpen } from '@/shared/hooks/useExpectedIssueOpen';
 import {
   buildKanbanIssueComposerKey,
   closeKanbanIssueComposer,
@@ -107,9 +108,19 @@ function ProjectKanbanBoard() {
 }
 
 export function ProjectKanbanLayout({ projectName }: { projectName: string }) {
-  const { issueId, isPanelOpen } = useCurrentKanbanRouteState();
+  const { issueId, isPanelOpen, hostId, projectId } =
+    useCurrentKanbanRouteState();
   const isMobile = useIsMobile();
-  const { getIssue } = useProjectContext();
+  const { getIssue, issuesById } = useProjectContext();
+  const hasIssue = useMemo(
+    () => (id: string) => issuesById.has(id),
+    [issuesById]
+  );
+  const { expectedIssueId, markExpectedIssue } = useExpectedIssueOpen(
+    `${hostId ?? 'local'}:${projectId}`,
+    issueId,
+    hasIssue
+  );
   const issue = issueId ? getIssue(issueId) : undefined;
   usePageTitle(issue?.title, projectName);
   const [kanbanLeftPanelSize, setKanbanLeftPanelSize] = usePaneSize(
@@ -117,7 +128,7 @@ export function ProjectKanbanLayout({ projectName }: { projectName: string }) {
     75
   );
 
-  const isRightPanelOpen = isPanelOpen;
+  const isRightPanelOpen = isPanelOpen || expectedIssueId !== null;
 
   if (isMobile) {
     return (
@@ -132,7 +143,10 @@ export function ProjectKanbanLayout({ projectName }: { projectName: string }) {
         </div>
         {isRightPanelOpen && (
           <div className="relative h-full overflow-hidden bg-secondary">
-            <ProjectRightSidebarContainer />
+            <ProjectRightSidebarContainer
+              expectedIssueId={expectedIssueId}
+              onExpectIssueOpen={markExpectedIssue}
+            />
           </div>
         )}
       </div>
@@ -182,7 +196,10 @@ export function ProjectKanbanLayout({ projectName }: { projectName: string }) {
           maxSize="800px"
           className="min-w-0 h-full overflow-hidden bg-secondary"
         >
-          <ProjectRightSidebarContainer />
+          <ProjectRightSidebarContainer
+            expectedIssueId={expectedIssueId}
+            onExpectIssueOpen={markExpectedIssue}
+          />
         </Panel>
       )}
     </Group>

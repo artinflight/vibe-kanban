@@ -1,3 +1,12 @@
+# October 10: Combined-candidate unassigned navigation repair
+
+Carry only the PR237 navigation repair from feature source 428ecf5aa.
+The project layout retains the expected issue through composer teardown, delayed
+route arrival and collection refresh. Four additional rendered regressions.
+Preserve all previous live-only changes and newer workflow tests. Exact-head
+build/CI and private runtime QA receipts are required before publication.
+No production data or runtime change is authorized.
+
 # October 10: Bounded local assignment candidate preparation
 
 Candidate is based on combined live frontend5ce84ee2/backendc3c48e63 with only

@@ -12,6 +12,7 @@ import {
   patchKanbanIssueComposer,
 } from '../../packages/web-core/src/shared/stores/useKanbanIssueComposerStore';
 import { useKanbanIssueComposerScratch } from '../../packages/web-core/src/shared/hooks/useKanbanIssueComposerScratch';
+import { useExpectedIssueOpen } from '../../packages/web-core/src/shared/hooks/useExpectedIssueOpen';
 import { state, issue } from './kanban-issue-panel.fixture';
 
 // Bundled React's async act uses its browser MessageChannel fallback. Close the
@@ -513,4 +514,81 @@ test('ordinary workspace creation navigates once after the real linked scratch w
   assert.equal(store.getState().byKey[key], undefined);
   assert.equal(state.creates, 1);
   assert.equal(state.calls.length, 2);
+});
+
+function ExpectedIssueHost({
+  scope = key,
+  issueId = null,
+  cached = false,
+}: {
+  scope?: string;
+  issueId?: string | null;
+  cached?: boolean;
+}) {
+  const expectation = useExpectedIssueOpen(scope, issueId, () => cached);
+  return (
+    <button
+      aria-label="Expect persisted issue"
+      data-expected={expectation.expectedIssueId}
+      onClick={() => expectation.markExpectedIssue('created')}
+    />
+  );
+}
+
+async function expectCreatedIssue() {
+  await act(async () => tree.update(<ExpectedIssueHost />));
+  await act(async () => {
+    tree.root.findByType('button').props.onClick();
+  });
+  assert.equal(
+    tree.root.findByType('button').props['data-expected'],
+    'created'
+  );
+}
+
+const expectedIssue = () =>
+  tree.root.findByType('button').props['data-expected'];
+
+test('created issue expectation survives composer removal and delayed route/cache arrival', async () => {
+  await expectCreatedIssue();
+  await act(async () => tree.update(<ExpectedIssueHost />));
+  assert.equal(expectedIssue(), 'created', 'origin route must retain handoff');
+  await act(async () => tree.update(<ExpectedIssueHost issueId="created" />));
+  assert.equal(expectedIssue(), 'created', 'uncached persisted issue resolves');
+  await act(async () =>
+    tree.update(<ExpectedIssueHost issueId="created" cached />)
+  );
+  assert.equal(expectedIssue(), null, 'collection refresh ends handoff');
+});
+
+test('closing newly created issue clears its expectation before reopening', async () => {
+  await expectCreatedIssue();
+  await act(async () => tree.update(<ExpectedIssueHost issueId="created" />));
+  await act(async () => tree.update(<ExpectedIssueHost />));
+  assert.equal(expectedIssue(), null);
+  await act(async () => tree.update(<ExpectedIssueHost issueId="created" />));
+  assert.equal(
+    expectedIssue(),
+    null,
+    'ordinary missing issue is not protected'
+  );
+});
+
+test('unrelated issue navigation cancels pending create expectation', async () => {
+  await expectCreatedIssue();
+  await act(async () => tree.update(<ExpectedIssueHost issueId="other" />));
+  assert.equal(expectedIssue(), null);
+});
+
+test('create expectation is scoped to its host/project and waits for route arrival even with an early cache refresh', async () => {
+  await expectCreatedIssue();
+  await act(async () => tree.update(<ExpectedIssueHost scope="other:p" />));
+  assert.equal(expectedIssue(), null);
+  await expectCreatedIssue();
+  await act(async () => tree.update(<ExpectedIssueHost cached />));
+  assert.equal(expectedIssue(), 'created');
+  await act(async () =>
+    tree.update(<ExpectedIssueHost issueId="created" cached />)
+  );
+  assert.equal(expectedIssue(), null);
 });

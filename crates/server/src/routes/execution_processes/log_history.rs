@@ -30,16 +30,17 @@ pub(super) struct HistoryQuery {
 
 #[derive(Serialize)]
 pub(super) struct HistoryEntry {
-    index: usize,
-    entry: Value,
+    pub(super) index: usize,
+    pub(super) entry: Value,
 }
 
 #[derive(Serialize)]
 pub(crate) struct HistoryPage {
-    entries: Vec<HistoryEntry>,
-    next_before: Option<usize>,
-    capture_error: Option<&'static str>,
-    capture_pending: bool,
+    pub(super) entries: Vec<HistoryEntry>,
+    pub(super) next_before: Option<usize>,
+    pub(super) capture_error: Option<&'static str>,
+    pub(super) capture_pending: bool,
+    pub(super) recovery_notice: Option<&'static str>,
 }
 
 type Entries = BTreeMap<usize, Value>;
@@ -113,6 +114,13 @@ pub(super) async fn get_log_history(
         && let Some(pending_page) =
             capture_page_for_process(&deployment.db().pool, &process).await?
     {
+        if !pending_page.capture_pending
+            && let Some(recovered) =
+                super::historical_response::read(&process, &deployment.db().pool, query.before)
+                    .await?
+        {
+            return Ok(Json(ApiResponse::success(recovered)));
+        }
         return Ok(Json(ApiResponse::success(pending_page)));
     }
     let limit = query.limit.unwrap_or(40).clamp(1, 200);
@@ -198,6 +206,7 @@ pub(crate) async fn capture_page_for_process(
             next_before: None,
             capture_error: None,
             capture_pending: true,
+            recovery_notice: None,
         }));
     }
     Ok(capture_error_for_process(pool, process)
@@ -207,6 +216,7 @@ pub(crate) async fn capture_page_for_process(
             next_before: None,
             capture_error: Some(reason),
             capture_pending: false,
+            recovery_notice: None,
         }))
 }
 
@@ -291,6 +301,7 @@ fn page(entries: &Entries, before: Option<usize>, limit: usize) -> HistoryPage {
         next_before,
         capture_error: None,
         capture_pending: false,
+        recovery_notice: None,
     }
 }
 

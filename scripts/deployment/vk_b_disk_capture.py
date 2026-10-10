@@ -130,7 +130,8 @@ def verify_remote_snapshots(result, snapshots, manifest):
 
 
 def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fence=None,
-            max_snapshot_bytes=MAX_SNAPSHOT_BYTES, disk_snapshot=None, disk_inventory_root=None, fenced_disk_snapshot=None, workspace=None):
+            max_snapshot_bytes=MAX_SNAPSHOT_BYTES, disk_snapshot=None, disk_inventory_root=None, fenced_disk_snapshot=None, workspace=None,
+            nightly_selection=None):
     # Import the authoritative journal/scope rules without duplicating them.
     from vk_rolling_backup import (Exclusions, check_journal, content_event, generation,
                                    scan, validate_archive_warnings, verified_parent)
@@ -182,12 +183,20 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
          "max_snapshot_bytes": max_snapshot_bytes, "metadata_file_limit": MAX_METADATA_BYTES,
          "capture_metadata_limit": MAX_CAPTURE_METADATA_BYTES})
     with measured(timings, "inventory"):
-        paths = scan(plan["sources"], plan, exclusions) if parent is None else set(before["changed"])
+        if nightly_selection is not None:
+            from vk_nightly_delta import strict_scan
+            paths = strict_scan(plan["sources"], exclusions)
+        else:
+            paths = scan(plan["sources"], plan, exclusions) if parent is None else set(before["changed"])
         if parent is not None:
             paths.update(scan([p for p in paths if Path(p).is_dir()], plan, exclusions))
         paths = {p for p in paths if not exclusions(p)}
         absent = sorted(p for p in paths if not Path(p).exists() and not Path(p).is_symlink())
         files = sorted(paths - set(absent))
+        if nightly_selection is not None:
+            if workspace is None or parent is not None or verify_fence is not None:
+                raise ValueError('nightly delta only supports registered online workspace')
+            nightly_selection.inventory(files)
         required = {str(Path(p).resolve()) for p in
                     [*plan.get("sqlite_snapshots", []), *plan.get("critical_sqlite", [])]}
         databases = required | set(parent.get("databases", []) if parent else [])
@@ -365,6 +374,8 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
             with (workspace.open_new(file_list) if workspace else file_list.open("xb")) as listing:
                 for raw in files:
                     if Path(raw).is_symlink() or str(Path(raw).resolve()) not in omitted:
+                        if nightly_selection is not None and not nightly_selection.include(raw):
+                            continue
                         item = os.fsencode(raw.lstrip("/")) + b"\0"
                         if listing.tell() + len(item) > inventory_limit:
                             raise ValueError("Backup path inventory exceeds metadata bound")
@@ -434,6 +445,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
         check_journal(after, plan)
         if after["instance"] != before["instance"] or after["sequence"] < before["sequence"]:
             raise ValueError("Journal changed during backup; refuse to advance the checkpoint")
+        if nightly_selection is not None: nightly_selection.finish(after)
         for raw in signatures:
             if (generation(raw) != signatures[raw] or content_event(raw, after)
                     or raw in readers and readers[raw].execute("PRAGMA data_version").fetchone()[0] != versions[raw]):

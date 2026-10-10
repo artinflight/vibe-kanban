@@ -1,0 +1,90 @@
+{
+  "source_base": "c2215b5891bf73a74789e6dd580a7a70dd3e1995",
+  "schedule_enabled": false,
+  "production_changed": false,
+  "census": {
+    "logical_bytes": 103866007013,
+    "unique_inode_bytes": 103771711468,
+    "files": 490552,
+    "paths": 552451,
+    "seconds": 48.70630153082311,
+    "vanished": 0,
+    "read_only": true,
+    "content_hashed": false
+  },
+  "JSONL_bytes": 74292479411,
+  "SQLite_snapshots_previous_bytes": 7754559488,
+  "compression_estimate": {
+    "logical_bytes": 103882887980,
+    "samples": 512,
+    "sampled_bytes": 33291558,
+    "estimated_zlib_object_bytes": 38535296511,
+    "estimated_zstd_archive_content_bytes": 35633798921,
+    "elapsed_seconds": 44.29451231658459,
+    "limits": "byte-weighted systematic 64KiB samples, estimator not a ratio guarantee; metadata/padding and SQLite raw transient reserve separate"
+  },
+  "B_capacity": {
+    "volume_device": 2360624474,
+    "free_bytes": 108119973888
+  },
+  "cold_caps": {
+    "input_bytes": 51539607552,
+    "encoded_object_bytes": 47244640256,
+    "metadata_bytes": 268435456,
+    "floor_bytes": 6442450944,
+    "total_reserve_bytes": 105495134208,
+    "deadline_seconds": 14400
+  },
+  "nightly_caps": {
+    "input_bytes": 12884901888,
+    "encoded_changed_object_bytes": 8589934592,
+    "reserve_bytes": 28185722880,
+    "deadline_seconds": 7200
+  },
+  "throughput": {
+    "same_SQLite_bytes": 40972288,
+    "same_SQLite_SHA256": "acfda3cc6e00c28f5e5022e53dd264adbc575df43cdc05cd319ba25c3c73ce6b",
+    "sync_seconds": 12.848977557383478,
+    "async_seconds": [
+      2.3019792418926954,
+      4.015683970414102
+    ],
+    "native_integrity": "ok",
+    "serial_allocations": 3
+  },
+  "real_B_fixture": {
+    "passed": true,
+    "independent_current_recovery": true,
+    "generations": 1,
+    "reused_history_bytes": 1300000,
+    "restore": "B:\\vk-backups\\vk-nightly-delta-20261010-d70e5fc6b6634ca89e5db3bd2c06ad82\\recovered-fixture.sqlite",
+    "B_bytes": 18956
+  },
+  "source_scope_preflight": {
+    "passed": true,
+    "paths": 552447,
+    "types": {
+      "32768": 490548,
+      "16384": 57383,
+      "40960": 4516
+    },
+    "special": [],
+    "unreadable": [],
+    "foreign_metadata_entries_preserved": 0,
+    "privileged_mode_entries_preserved_as_metadata_only": 0,
+    "seconds": 40.40197872184217,
+    "read_only": true,
+    "deployment_eligible": false
+  },
+  "tests": {
+    "command": "PYTHONPATH=scripts/deployment python3 -B -S -m unittest test_vk_nightly_archive_index test_vk_nightly_delta test_vk_nightly_compressed test_vk_nightly_lifecycle test_vk_nightly_provider test_vk_nightly_capture_adapter test_vk_nightly_b_diagnostics test_vk_nightly_service_timeout",
+    "ran": 73,
+    "passed": 72,
+    "skipped": 1,
+    "seconds": 12.294,
+    "status": "OK"
+  },
+  "full_plan_accepted": false,
+  "preserved_partial_inputs": "input-a7bc82dc106849eb8e44346a69e525d2: 21474333149 bytes, unchanged; fresh compressed acceptance uses a different store",
+  "limitations": "Samples estimate ratios; cold bootstrap is not nightly delta or ten-minute fix-ready pipeline evidence. Backup index preserves selected metadata as data and cannot authorize deployment. Full-plan acceptance and final schedule adoption remain required."
+}

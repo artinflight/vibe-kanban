@@ -14,7 +14,7 @@ from vk_nightly_job import checksum, validate_socket_exclusions
 from vk_prep_common import identity, storage
 
 
-def build(inventory_path,output):
+def build(inventory_path,output,*,compressed_delta=False):
     base=Path(__file__).parent;output=storage(output);output.mkdir(exist_ok=False)
     inventory=json.loads(Path(inventory_path).read_text())
     plan_path=Path('/mnt/vk-storage/vk-runtime-backup-20261009/backup-plan.json')
@@ -72,6 +72,18 @@ def build(inventory_path,output):
         'maximum_sqlite_bytes':inventory['maximum_DB_bytes'],'inventory_seconds':inventory['elapsed_seconds'],
         'full_production_transfer_and_runtime_accepted':False,
         'limits_basis':'read-only current census plus finite headroom; tiny fixtures do not predict whole-host throughput'}}
+    if compressed_delta:
+        # Fresh store only: leave the failed raw-format attempt and all legacy
+        # recovery/incident/fallback evidence in their existing namespaces.
+        capture=48*GiB;initial=44*GiB;floor=6*GiB
+        config.update(object_encoding='zlib-1-v1',transport='content-delta-v1',async_writes=True,
+            wsl_root='/mnt/b/vk-backups/vk-normal-nightly-compressed-v1',
+            staging='/mnt/vk-storage/vk-normal-nightly-compressed-control-v1',
+            capture_limit_bytes=12*GiB,initial_capture_limit_bytes=capture,initial_changed_limit_bytes=initial,
+            initial_reserve_bytes=capture+initial+MAX_INDEX+floor,
+            reserve_bytes=12*GiB+changed+MAX_INDEX+floor,preserved_B_floor_bytes=floor,
+            initial_job_timeout_seconds=14400)
+        config['measurement']['limits_basis']='Cold: 48GiB registered input + 44GiB encoded objects + 256MiB index + 6GiB allocation/growth floor. Sample ratios are estimates; runtime/byte caps and health abort stay enforced. Nightly: content-hashed delta, no archive parent.'
     path=output/'nightly-production.disabled.private.json'
     path.write_text(json.dumps(config,indent=2)+'\n');os.chmod(path,0o600)
     command='/usr/bin/timeout --verbose --signal=TERM --kill-after=30s 7200s /usr/bin/python3 -B -S '+str(output/'vk_nightly_job.py')
@@ -97,4 +109,5 @@ def build(inventory_path,output):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--inventory',type=Path,required=True);parser.add_argument('--output',type=Path,required=True)
-    args=parser.parse_args();print(json.dumps(build(args.inventory,args.output),indent=2))
+    parser.add_argument('--compressed-delta',action='store_true')
+    args=parser.parse_args();print(json.dumps(build(args.inventory,args.output,compressed_delta=args.compressed_delta),indent=2))

@@ -32,7 +32,7 @@ def native_metadata(directory, name):
     return json.loads(result.stdout)
 
 
-def run(package, source, output, repeat, *, native_after=False, inject_failure=False):
+def run(package, source, output, repeat, *, native_after=False, inject_failure=False, async_writes=False):
     if not 1 <= repeat <= 5: raise ValueError('one to five allocations only')
     source = source.absolute()
     if source.resolve()!=source or source.is_symlink() or source.stat().st_size > 64 * 1024**2:
@@ -47,7 +47,8 @@ def run(package, source, output, repeat, *, native_after=False, inject_failure=F
               'capture_limit_bytes':512*1024**2, 'initial_changed_limit_bytes':512*1024**2,
               'initial_reserve_bytes':2*1024**3, 'snapshot_timeout_seconds':90, 'job_timeout_seconds':450,
               'enroll_fresh':True, 'recover_only':False, 'mcp_producer_lease_held':True}
-    events=[];report={'source':str(source),'allocations':[], 'production_changed':False,'schedule_enabled':False}
+    events=[];report={'source':str(source),'allocations':[], 'production_changed':False,'schedule_enabled':False,
+                     'async_writes':async_writes}
     def save(): (output/'registered-adapter.private.json').write_text(json.dumps(report,indent=2)+'\n')
     connect=sqlite3.connect
     class Observed(sqlite3.Connection):
@@ -74,7 +75,8 @@ def run(package, source, output, repeat, *, native_after=False, inject_failure=F
             if resident.ready.get('event')!='capture_ready':raise ValueError('fixed resident not ready')
             report['resident']=resident.ready
             process=subprocess.Popen([config['sshfs_binary'],'-f','desktop:/'+resident.ready['directory'],str(mount),'-o',
-                'BatchMode=yes,ConnectTimeout=15,StrictHostKeyChecking=yes,ServerAliveInterval=15,ServerAliveCountMax=3,cache=no,sshfs_sync'],
+                'BatchMode=yes,ConnectTimeout=15,StrictHostKeyChecking=yes,ServerAliveInterval=15,ServerAliveCountMax=3,cache=no'+
+                ('' if async_writes else ',sshfs_sync')],
                 stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,pass_fds=(lease_fd,))
             deadline=time.monotonic()+30
             while True:
@@ -135,5 +137,6 @@ if __name__=='__main__':
     p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--repeat',type=int,default=5);p.add_argument('--native-metadata-after',action='store_true')
     p.add_argument('--inject-backup-failure',action='store_true')
+    p.add_argument('--async-writes',action='store_true')
     a=p.parse_args();run(a.package,a.source,a.output,a.repeat,native_after=a.native_metadata_after,
-                        inject_failure=a.inject_backup_failure)
+                        inject_failure=a.inject_backup_failure,async_writes=a.async_writes)

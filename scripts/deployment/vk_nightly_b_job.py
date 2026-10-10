@@ -34,21 +34,38 @@ assert stat.S_ISREG(p.lstat().st_mode)
 print(json.dumps({'file':row(p),'parent':row(p.parent),'metadata_only':True}))
 '''
 WINDOWS_READBACK = r'''
-import hashlib,json,os,pathlib,sqlite3,sys
+import hashlib,json,os,pathlib,sqlite3,sys,zlib
 r=json.load(sys.stdin)
 assert os.stat('B:/').st_dev==r['volume_device'],'B volume changed'
 p=pathlib.Path(r['folder']);manifest_bytes=(p/'manifest.json').read_bytes();m=json.loads(manifest_bytes)
 assert hashlib.sha256(manifest_bytes).hexdigest()==r['manifest_sha256']
 assert m['scope_sha256']==r['scope'] and m['generation']==p.name
-for h in {x['sha256'] for x in m['entries'].values() if x['kind']=='file'}:
+encoding=m.get('object_encoding');assert encoding in (None,'zlib-1-v1')
+sizes={x['sha256']:x['bytes'] for x in m['entries'].values() if x['kind']=='file'}
+for h,size in sizes.items():
  with (p/'objects'/h).open('rb') as f:
-  before=os.fstat(f.fileno());digest=hashlib.sha256()
-  for b in iter(lambda:f.read(1048576),b''):digest.update(b)
+  before=os.fstat(f.fileno());digest=hashlib.sha256();count=0
+  decoder=zlib.decompressobj() if encoding else None
+  for b in iter(lambda:f.read(1048576),b''):
+   while b:
+    data=decoder.decompress(b,1048576) if decoder else b
+    b=decoder.unconsumed_tail if decoder else b''
+    count+=len(data);assert count<=size
+    assert not decoder or not decoder.unused_data
+    digest.update(data)
+  assert count==size and (not decoder or decoder.eof)
   after=os.fstat(f.fileno())
  assert digest.hexdigest()==h and (before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns)==(after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns)
 for raw in r['databases']:
  key=pathlib.PurePosixPath(raw).relative_to(r['source_prefix']).as_posix()
  row=m['entries'][key];assert row['kind']=='file'
+ if encoding:
+  # These exact bytes already passed native immutable SQLite integrity at
+  # sealed-input acceptance. Decoded full readback above binds that proof to
+  # this current object, including recovery after the input is retired.
+  proof=m['capture_context']['nightly_database_integrity'][raw]
+  assert proof=={'sha256':row['sha256'],'bytes':row['bytes'],'integrity':'ok','volume_device':r['volume_device']}
+  continue
  f=p/'objects'/row['sha256']
  with sqlite3.connect(f.as_uri()+'?mode=ro&immutable=1',uri=True) as db:
   assert db.execute('PRAGMA integrity_check').fetchall()==[('ok',)]
@@ -191,16 +208,25 @@ def run(config):
     if config.get('enroll_fresh') is True:
         root.mkdir()  # Never mkdir exist_ok or re-enroll an existing backup root.
         (root/'store').mkdir();(root/'jobs').mkdir()
-    store=NightlyStore(root/'store',config['scope_sha256'],mount,independent_readback=readback)
+    store=NightlyStore(root/'store',config['scope_sha256'],mount,independent_readback=readback,
+                      object_encoding=config.get('object_encoding'))
     initial=store.current() is None
     changed_limit=config.get('initial_changed_limit_bytes',config['changed_limit_bytes']) if initial else config['changed_limit_bytes']
     reserve=config.get('initial_reserve_bytes',config['reserve_bytes']) if initial else config['reserve_bytes']
-    job=NightlyJob(root/'jobs',store,capture_limit_bytes=config['capture_limit_bytes'],changed_limit_bytes=changed_limit)
+    capture_limit=config.get('initial_capture_limit_bytes',config['capture_limit_bytes']) if initial else config['capture_limit_bytes']
+    job=NightlyJob(root/'jobs',store,capture_limit_bytes=capture_limit,changed_limit_bytes=changed_limit)
     if config.get('enroll_fresh') is True:store.enroll_empty();job.enroll_empty();sync_directory(root)
     def factory(folder,register,seal,*,parent):
         attempt=job.read();binding={key:attempt[key] for key in ('candidate','input_name')}
         binding['scope_sha256']=store.scope
-        emit({'event':'capture_ready','binding':binding,'directory':'B:/'+str(folder.relative_to('/mnt/b'))})
+        baseline=None;native_sqlite_seals={}
+        if config.get('transport')=='content-delta-v1' and store.current() is not None:
+            path=folder/'baseline.json';data=encoded(store.current())
+            with path.open('xb') as stream:
+                register(path,stream.fileno());stream.write(data);stream.flush();os.fsync(stream.fileno())
+            seal(path);baseline={'name':path.name,'sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)}
+        emit({'event':'capture_ready','binding':binding,'directory':'B:/'+str(folder.relative_to('/mnt/b')),
+              'baseline':baseline})
         while True:
             command=receive(sys.stdin.buffer)
             if command.get('binding')!=binding:raise ValueError('stale/wrong live producer binding')
@@ -244,6 +270,7 @@ def run(config):
                         if checked.returncode or json.loads(checked.stdout)!={'bytes':row['bytes'],'sha256':row['sha256'],'integrity':'ok'}:
                             raise ValueError('independent private B snapshot readback failed')
                         receipt['integrity']='ok'
+                        native_sqlite_seals[raw]=dict(receipt)
                     emit(receipt)
             elif action=='finish':
                 if command.get('producer_closed') is not True:raise ValueError('producer completion missing')
@@ -254,7 +281,19 @@ def run(config):
                 if len(raw)>MAX_INDEX or hashlib.sha256(raw).hexdigest()!=command.get('proof_sha256'):
                     raise ValueError('proof size/digest mismatch')
                 value=json.loads(raw);provider=LocalVerifiedProvider(folder,value,config)
+                if baseline is not None and value['proof'].get('baseline_manifest_sha256')!=baseline['sha256']:
+                    raise ValueError('delta does not match held current manifest')
                 provider.value['proof']['nightly_databases']=value['result']['databases']
+                integrity={}
+                for source,image in value['result'].get('large_b_disk_snapshots',{}).items():
+                    checked=native_sqlite_seals.get(image['snapshot'])
+                    if checked is None or (checked['sha256'],checked['bytes'])!=(image['sha256'],image['bytes']):
+                        raise ValueError('database lacks exact live native integrity seal')
+                    integrity[source]={'sha256':checked['sha256'],'bytes':checked['bytes'],'integrity':'ok',
+                                       'volume_device':config['volume_device']}
+                if store.object_encoding and set(integrity)!=set(value['result']['databases']):
+                    raise ValueError('compressed database integrity coverage incomplete')
+                provider.value['proof']['nightly_database_integrity']=integrity
                 return provider,value['capture_id'],value['result']
             else:raise ValueError('unsupported fixed job action')
     # The MCP kernel lease covers source producers; resident job.held covers B.

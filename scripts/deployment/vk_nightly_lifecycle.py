@@ -15,7 +15,7 @@ import stat
 import uuid
 
 from vk_nightly_generation import (MAX_INDEX, PRODUCER as STORE_PRODUCER, advance_verified_capture, digest_stream,
-                                  encoded, regular, write_new)
+                                  encoded, regular, write_new, object_blocks)
 
 
 PRODUCER = 'vk-normal-nightly-job-v1'
@@ -186,7 +186,7 @@ class NightlyJob:
             with regular(path) as stream:
                 result['files'][str(path.relative_to(folder))] = {
                     'identity': pin(os.fstat(stream.fileno())),
-                    'sha256': hashlib.sha256(encoded(manifest)).hexdigest() if path.name=='manifest.json' else path.name}
+                    'sha256': digest_stream(stream)}
         return result
 
     def observe(self, event, detail):
@@ -246,10 +246,13 @@ class NightlyJob:
                     raise ValueError('transient capture inputs are not sealed')
                 proof = provider.verify(capture_id)
                 value['expected_objects'] = {row['sha256']: row['bytes'] for row in proof['entries'].values() if row['kind'] == 'file'}
-                value['candidate_manifest_sha256'] = hashlib.sha256(encoded({
+                candidate_manifest = {
                     'producer': STORE_PRODUCER, 'generation': value['candidate'], 'scope_sha256': self.store.scope,
                     'parent': None, 'entries': proof['entries'],
-                    'capture_context': {key: item for key,item in proof.items() if key != 'entries'}})).hexdigest()
+                    'capture_context': {key: item for key,item in proof.items() if key != 'entries'}}
+                if self.store.object_encoding:
+                    candidate_manifest['object_encoding'] = self.store.object_encoding
+                value['candidate_manifest_sha256'] = hashlib.sha256(encoded(candidate_manifest)).hexdigest()
                 self.save(value)
                 self._active_intent = value
                 result = advance_verified_capture(self.store, provider, capture_id,
@@ -259,7 +262,8 @@ class NightlyJob:
                 # the same resumable recorded identities on normal and crash paths.
                 self._reconcile_held()
                 return {**result, 'passed': True, 'status': 'current_verified', 'capture_parent': None,
-                        'transient_inputs_retained': False, 'raw_transfer': 'full independent capture',
+                        'transient_inputs_retained': False,
+                        'raw_transfer': proof.get('transport','full independent capture'),
                         'old_generation_retained': False, 'cleanup_performed': previous is not None,
                         'retention_blocker': None}
             except Exception as error:
@@ -387,7 +391,9 @@ class NightlyJob:
                         if path.parent == objects:
                             if partial and path.name == partial['name']:
                                 if pin(info) != partial['identity']: raise ValueError('partial substituted')
-                            elif checksum != path.name: raise ValueError('unrecorded/mutated complete object')
+                            else:
+                                for _ in object_blocks(path, path.name, value['expected_objects'][path.name],
+                                                       self.store.object_encoding): pass
                         elif checksum != value.get('candidate_manifest_sha256'):
                             raise ValueError('candidate manifest changed')
                         snapshot['files'][str(path.relative_to(folder))] = {'identity': pin(info), 'sha256': checksum}

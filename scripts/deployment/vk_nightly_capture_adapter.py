@@ -27,6 +27,7 @@ from vk_b_disk_snapshot import metadata
 from vk_candidate_direct_b import DirectBProvider
 from vk_change_journal import Journal, scope
 from vk_nightly_generation import MAX_INDEX
+from vk_nightly_delta import DeltaSelection, DeltaProvider
 from vk_prep_common import identity, storage
 
 
@@ -73,6 +74,10 @@ class Resident:
             self.process.stdin.write(struct.pack('!I',len(raw))+raw);self.process.stdin.flush()
             self.ready=self.response()
             self.binding=self.ready.get('binding')
+            if (config.get('transport')=='content-delta-v1' and self.ready.get('event')=='capture_ready'
+                    and self.ready.get('baseline') is None):
+                self.timeout=config.get('initial_job_timeout_seconds',self.timeout)
+                self.config={**config,'capture_limit_bytes':config.get('initial_capture_limit_bytes',config['capture_limit_bytes'])}
         except BaseException:
             self.close();raise
     def response(self,timeout=None):
@@ -126,7 +131,9 @@ class RegisteredWorkspace:
         self.names.add(path.name)
         fd=os.open(path,os.O_WRONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
         if os.fstat(fd).st_size!=0:os.close(fd);raise ValueError('allocated input substituted')
-        stream=os.fdopen(fd,'wb');workspace=self
+        # Path inventories/proofs contain millions of tiny writes. Coalesce
+        # them; SQLite uses its own handle after the zero-byte registration.
+        stream=os.fdopen(fd,'wb',buffering=1024**2);workspace=self
         class BoundedWriter:
             def __enter__(self):return self
             def __exit__(self,*args):stream.close()
@@ -323,7 +330,8 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
             if resident.ready.get('event')!='capture_ready':raise ValueError('B resident not prepared')
             mount.mkdir()
             mount_process=subprocess.Popen([config['sshfs_binary'],'-f','desktop:/'+resident.ready['directory'],str(mount),'-o',
-                'BatchMode=yes,ConnectTimeout=15,StrictHostKeyChecking=yes,ServerAliveInterval=15,ServerAliveCountMax=3,cache=no,sshfs_sync'],
+                'BatchMode=yes,ConnectTimeout=15,StrictHostKeyChecking=yes,ServerAliveInterval=15,ServerAliveCountMax=3,cache=no'+
+                ('' if config.get('async_writes') is True else ',sshfs_sync')],
                 stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,pass_fds=(lease_fd,))
             ready_deadline=time.monotonic()+30
             while True:
@@ -334,16 +342,27 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
                     if time.monotonic()>ready_deadline:raise TimeoutError('owned B mount readiness timed out')
                     time.sleep(.1)
             journal=Journal(plan)
+            baseline=None
+            if resident.ready.get('baseline'):
+                row=resident.ready['baseline']
+                if row['name']!='baseline.json':raise ValueError('unknown held baseline selector')
+                fd=os.open(mount/row['name'],os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+                with os.fdopen(fd,'rb') as stream:raw=stream.read(MAX_INDEX+1)
+                if len(raw)!=row['bytes'] or len(raw)>MAX_INDEX or hashlib.sha256(raw).hexdigest()!=row['sha256']:
+                    raise ValueError('held baseline digest mismatch')
+                baseline=json.loads(raw)
+            selection=DeltaSelection(baseline,config['source_prefix'],config['scope_sha256']) if config.get('transport')=='content-delta-v1' else None
             try:
                 for raw in plan['sources']:journal.tree(raw)
                 journal.ready=True
                 result=capture(plan,mount,journal.report,workspace.mirror,parent=None,publish=workspace.mirror,
                     max_snapshot_bytes=1,disk_snapshot=lambda raw:disk_snapshot(raw,workspace,allowed_sqlite(plan,raw),
                         maximum_bytes=config['snapshot_limit_bytes'],timeout_seconds=config['snapshot_timeout_seconds']),
-                    disk_inventory_root=mount,workspace=workspace)
+                    disk_inventory_root=mount,workspace=workspace,nightly_selection=selection)
             finally:journal.close()
-            provider=DirectBProvider(config['scope_sha256'],[str(Path(raw).relative_to(config['source_prefix'])) for raw in result['databases']],
-                                     metadata_budget_bytes=MAX_INDEX)
+            provider_class=DirectBProvider if selection is None else DeltaProvider
+            provider=provider_class(config['scope_sha256'],[str(Path(raw).relative_to(config['source_prefix'])) for raw in result['databases']],
+                                     metadata_budget_bytes=MAX_INDEX,**({} if selection is None else {'selection':selection}))
             capture_id=resident.binding['candidate']
             provider.register(capture_id,result,identity(plan),identity(scope(plan)),config['source_prefix'],origin_root_binding='nightly-current-source-inventory')
             proof=provider.verify(capture_id)

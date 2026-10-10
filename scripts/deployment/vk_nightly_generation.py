@@ -12,11 +12,43 @@ import re
 import stat
 import uuid
 import fcntl
+import zlib
 
 
 MAX_INDEX = 256 * 1024**2
 MAX_ENTRIES = 1_000_000
 PRODUCER = 'vk-nightly-generation-v1'
+COMPRESSED = 'zlib-1-v1'
+
+
+def object_blocks(path, checksum, size, encoding=None):
+    """Lossless recovery stream with an exact decoded-size/hash bound.
+
+    Encoding is manifest-bound, never guessed from bytes. Reject concatenated,
+    truncated and oversized streams; no payload-sized allocation or temp file.
+    """
+    if encoding not in (None, COMPRESSED) or type(size) is not int or size < 0:
+        raise ValueError('unknown object encoding or invalid recovery size')
+    decoder = zlib.decompressobj() if encoding else None
+    digest = hashlib.sha256(); count = 0
+    with regular(path) as stream:
+        before = os.fstat(stream.fileno())
+        for block in iter(lambda: stream.read(1024**2), b''):
+            pending = block
+            while pending:
+                data = decoder.decompress(pending, 1024**2) if decoder else pending
+                pending = decoder.unconsumed_tail if decoder else b''
+                count += len(data)
+                if count > size or (decoder and decoder.unused_data):
+                    raise ValueError('object exceeds recovery bound or has trailing data')
+                digest.update(data)
+                if data: yield data
+        after = os.fstat(stream.fileno())
+        if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
+                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+            raise ValueError('object changed during recovery')
+    if (decoder and not decoder.eof) or count != size or digest.hexdigest() != checksum:
+        raise ValueError('nightly decoded object readback failed')
 
 
 def digest_stream(stream):
@@ -58,11 +90,14 @@ def write_new(path, data):
 
 
 class NightlyStore:
-    def __init__(self, root, scope_sha256, authenticate_mount, *, independent_readback=None):
+    def __init__(self, root, scope_sha256, authenticate_mount, *, independent_readback=None, object_encoding=None):
         self.root = Path(root)
         self.authenticate = authenticate_mount
         self.scope = scope_sha256
         self.independent_readback = independent_readback
+        if object_encoding not in (None, COMPRESSED):
+            raise ValueError('unknown nightly object encoding')
+        self.object_encoding = object_encoding
         if not re.fullmatch('[0-9a-f]{64}', scope_sha256):
             raise ValueError('exact reviewed backup scope digest required')
         # authenticate_mount must return the exact existing B mount containing
@@ -123,6 +158,8 @@ class NightlyStore:
         value = json.loads(data)
         if value.get('producer') != PRODUCER or value.get('scope_sha256') != self.scope or value.get('generation') != generation:
             raise ValueError('nightly manifest identity mismatch')
+        if value.get('object_encoding') != self.object_encoding:
+            raise ValueError('nightly encoding differs from bound store configuration')
         if len(value['entries']) > MAX_ENTRIES:
             raise ValueError('nightly entry count bound exceeded')
         for key, row in value['entries'].items():
@@ -147,10 +184,16 @@ class NightlyStore:
         objects = folder / 'objects'
         if not stat.S_ISDIR(objects.lstat().st_mode):
             raise ValueError('substituted nightly objects directory')
-        for checksum in {row['sha256'] for row in manifest['entries'].values() if row['kind'] == 'file'}:
-            with regular(objects / checksum) as stream:
-                if digest_stream(stream) != checksum:
-                    raise ValueError('nightly full object readback failed')
+        encoding = manifest.get('object_encoding')
+        if encoding != self.object_encoding: raise ValueError('nightly object encoding changed')
+        unique = {}
+        for row in manifest['entries'].values():
+            if row['kind'] == 'file':
+                if row['sha256'] in unique and unique[row['sha256']] != row['bytes']:
+                    raise ValueError('conflicting object sizes')
+                unique[row['sha256']] = row['bytes']
+        for checksum, size in unique.items():
+            for _ in object_blocks(objects / checksum, checksum, size, encoding): pass
 
     def advance(self, changes, absent, *, expected_previous, reserve_bytes, retention_adopted=False,
                 capture_context=None, generation=None, observe=None):
@@ -183,6 +226,8 @@ class NightlyStore:
             if previous:
                 self.verify(previous)
             retained_hashes = {row['sha256'] for row in previous['entries'].values() if row['kind'] == 'file'} if previous else set()
+            previous_sizes = {row['sha256']: row['bytes'] for row in previous['entries'].values()
+                              if row['kind'] == 'file'} if previous else {}
             generation = generation or 'generation-' + uuid.uuid4().hex
             if not re.fullmatch('generation-[0-9a-f]{32}', generation):
                 raise ValueError('invalid reserved nightly generation')
@@ -198,6 +243,8 @@ class NightlyStore:
                 '/'.join(key.split('/')[:index]) in removed for index in range(1, key.count('/') + 1))}
             seen = set()
             changed_bytes = 0
+            stored_bytes = 0
+            written_sizes = {}
             for raw, metadata, stream in changes:
                 raw = name(raw)
                 if raw in seen or metadata.get('kind') not in ('file', 'directory', 'symlink', 'hardlink'):
@@ -212,14 +259,27 @@ class NightlyStore:
                     if stream is None:
                         if previous is None or row['sha256'] not in retained_hashes:
                             raise ValueError('new nightly file lacks verified content')
+                        if previous_sizes.get(row['sha256']) != row['bytes']:
+                            raise ValueError('retained object logical size changed')
                         old = self.root / previous['generation'] / 'objects' / row['sha256']
                         with regular(old) as retained:
-                            if os.fstat(retained.fileno()).st_size != row['bytes']:
+                            if not self.object_encoding and os.fstat(retained.fileno()).st_size != row['bytes']:
                                 raise ValueError('retained object size differs from verified metadata')
                         entries[raw] = row
                         if len(entries) > MAX_ENTRIES:
                             raise ValueError('nightly entry bound exceeded')
                         continue  # Already fully hashed by verify(previous).
+                    if row['sha256'] in written_sizes:
+                        checksum = hashlib.sha256(); size = 0
+                        for block in iter(lambda: stream.read(1024**2), b''):
+                            size += len(block); changed_bytes += len(block)
+                            if size > row['bytes']: raise ValueError('duplicate content exceeds exact bound')
+                            checksum.update(block)
+                        if size != written_sizes[row['sha256']] or size != row['bytes'] or checksum.hexdigest()!=row['sha256']:
+                            raise ValueError('duplicate content differs from verified object')
+                        entries[raw] = row
+                        if len(entries) > MAX_ENTRIES: raise ValueError('nightly entry bound exceeded')
+                        continue
                     temporary = objects / ('partial-' + uuid.uuid4().hex)
                     fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
                     if observe:
@@ -230,14 +290,24 @@ class NightlyStore:
                             raise
                     checksum = hashlib.sha256()
                     size = 0
+                    compressor = zlib.compressobj(1) if self.object_encoding else None
                     with os.fdopen(fd, 'wb') as sink:
                         for block in iter(lambda: stream.read(1024**2), b''):
                             changed_bytes += len(block)
                             size += len(block)
-                            if changed_bytes > reserve_bytes:
-                                raise ValueError('changed nightly bytes exceed overlap reservation')
+                            if size > row['bytes']:
+                                raise ValueError('nightly input exceeds exact content bound')
                             checksum.update(block)
-                            sink.write(block)
+                            data = compressor.compress(block) if compressor else block
+                            stored_bytes += len(data)
+                            if stored_bytes > reserve_bytes:
+                                raise ValueError('stored nightly bytes exceed overlap reservation')
+                            sink.write(data)
+                        if compressor:
+                            data = compressor.flush(); stored_bytes += len(data)
+                            if stored_bytes > reserve_bytes:
+                                raise ValueError('stored nightly bytes exceed overlap reservation')
+                            sink.write(data)
                         sink.flush()
                         os.fsync(sink.fileno())
                     if checksum.hexdigest() != row['sha256'] or size != row['bytes']:
@@ -246,6 +316,7 @@ class NightlyStore:
                     if not target.exists():
                         os.link(temporary, target, follow_symlinks=False)
                     temporary.unlink()
+                    written_sizes[row['sha256']] = size
                 entries[raw] = row
                 if len(entries) > MAX_ENTRIES:
                     raise ValueError('nightly entry bound exceeded')
@@ -259,6 +330,7 @@ class NightlyStore:
                             objects / row['sha256'], follow_symlinks=False)
             manifest = {'producer': PRODUCER, 'generation': generation, 'scope_sha256': self.scope,
                         'parent': None, 'entries': entries, 'capture_context': capture_context}
+            if self.object_encoding: manifest['object_encoding'] = self.object_encoding
             data = encoded(manifest)
             write_new(folder / 'manifest.json', data)
             if observe:
@@ -293,6 +365,7 @@ class NightlyStore:
                 retired = True
             return {'passed': True, 'generation': generation, 'previous': expected_previous,
                     'changed_bytes': changed_bytes, 'self_contained': True,
+                    'stored_changed_bytes': stored_bytes,
                     'old_generation_retained': previous is not None and not retired,
                     'cleanup_performed': retired, 'local_payload_bytes': 0,
                     'retention_blocker': None if retention_adopted else 'Separately approved nightly-only retention adoption pending'}

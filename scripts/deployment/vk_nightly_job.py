@@ -60,6 +60,11 @@ def inventory(plan):
 
 
 def validate(config,plan):
+    if config.get('object_encoding') not in (None,'zlib-1-v1') or config.get('transport') not in (None,'content-delta-v1'):
+        raise ValueError('unknown nightly object/transport format')
+    for key in ('initial_capture_limit_bytes','initial_job_timeout_seconds'):
+        if key in config and (type(config[key]) is not int or config[key]<=0):
+            raise ValueError('finite positive cold-bootstrap limits required')
     if checksum(config['plan_path'])!=config['plan_file_sha256'] or identity(plan)!=config['plan_identity']:
         raise ValueError('current plan differs from reviewed binding')
     validate_socket_exclusions(config.get('socket_exclusions',[]))

@@ -1644,3 +1644,36 @@ changing NoNewPrivileges; no production or privileged mutation.
   verified. Exact failure diagnostics preserve same SQLite error/no retry; real
   compressor capacity-message regression joins26 focused passing tests.
   Production/security/printer/fallback/compressed recovery unchanged.
+
+## October 10: Compressed independent current and content-verified transport delta
+
+The read-only census is 103.87 GB / 490,552 files; JSONL histories account for
+74.29 GB. No new data exclusions. The old failed 21.47 GB input set remains
+untouched. New compressed acceptance uses a fresh B namespace, never the old
+attempt, incident archives, incumbent/fallback or existing verified backups.
+
+Implemented manifest-bound zlib-1 objects with exact decoded hash/size bounds,
+independent native readback, hardlinked reuse and crash-safe physical-object
+retention checks. Delta capture hashes source contents before reuse and rejects
+journal/identity changes; a complete manifest owns all recovery objects with
+parent=None. SQLite still uses fresh backup-API images on B. Backup-only indexing
+preserves sparse selected paths/metadata as data and cannot authorize deployment;
+the original candidate validator is unchanged. Unreadable subtrees fail closed.
+
+A real-B two-generation fixture independently restores changed SQLite rows,
+keeps one current, verifies all decoded objects and reuses 1.30 MB of history.
+Same 40.97 MB SQLite image: synchronous 12.85 s; asynchronous 2.30/4.02 s, same
+SHA and native integrity. Buffered metadata writes avoid tiny SSHFS round trips.
+73 focused tests: OK, one opt-in disposable service test skipped. ops:check passed;
+format ran Rust successfully, then blocked on missing Prettier; no dependencies
+installed or heavy build. Whole-plan acceptance is still pending.
+
+Byte-weighted samples estimate 38.5 GB encoded objects and 35.6 GB archive content.
+Cold caps: 48 GiB input + 44 GiB objects + 256 MiB index + 6 GiB floor = 98.25 GiB;
+B free 108,119,973,888 bytes. These are bounded estimates, not acceptance proof.
+Cold timeout four hours; nightly delta two hours, 12 GiB input / 8 GiB changed
+objects / 26.25 GiB reserve. CPU/IO/memory/health safeguards remain. Scheduling is
+disabled, production and printer controls unchanged. No owner command requested.
+Evidence: scripts/deployment/receipts/nightly-compressed-delta-readiness-20261010.json.
+This is not evidence for the ten-minute FIX-READY-through-work-resumed goal.
+

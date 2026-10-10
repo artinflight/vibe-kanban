@@ -1,3 +1,21 @@
+# October 9: Explicit local assignments and default workspace visibility
+
+Branch `vk/442b-vk-user-assignme`, based on fork staging `e8c450fb5`, adds stable
+Seamus/dot identities, existing IssueAssignee persistence/API/picker support and
+Mine/All workspace filtering before pagination/grouping/counts. Historical
+unassigned/unlinked work remains visible. Unread and authentication/permissions
+are separate and untouched. Scope, validation and combined-release adoption plan:
+[VK_LOCAL_ASSIGNMENTS.md](VK_LOCAL_ASSIGNMENTS.md).
+Review: [draft PR #237](https://github.com/artinflight/vibe-kanban/pull/237).
+Create-mode reliability follow-up awaits assignment persistence, exposes partial
+failure and retries the same saved issue. Seven new creation regressions join
+the nine visibility/pagination checks. Sixteen actual panel regressions cover
+Close/Escape/reopen, stale completion identity fences and delayed real scratch
+persistence at the workspace-navigation boundary (four new cases). Final-head hosted tests are required
+before integration. No production deployment,
+service restart, bulk assignment, merge or permission changes in this task.
+Older stream entries below describe other work and do not authorize activation.
+
 # October 8: Workspace-first navigation and task attention follow-up
 
 The current frontend stream makes Workspaces the opening screen, removes the

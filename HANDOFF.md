@@ -1,3 +1,39 @@
+# October 10: Unassigned creation navigation QA repair
+
+Isolated combined-candidate QA saved unassigned issues once but closed their detail
+route before collection refresh. The layout uses shared browser-memory state for the expected-issue
+handoff across composer/sidebar removal, flat route unmount/remount and delayed
+route/cache arrival. Five new rendered hook tests join the sixteen existing panel race regressions.
+Final candidate build/CI and all real-backend recovery cases remain the gate;
+see VK_LOCAL_ASSIGNMENTS.md and Desktop B:/vk-builds/local-assignments-20261010.
+No production writes, assignment backfill, unread clearing or deployment.
+
+# October 9: Local assignment implementation for review
+
+Read [VK_LOCAL_ASSIGNMENTS.md](VK_LOCAL_ASSIGNMENTS.md). Local Seamus/dot records
+and issue assignments feed the existing picker, local Personal/Me identity and
+workspace Mine/All filtering. Mine defaults to Seamus; unassigned/unlinked history
+stays visible. Counts/pagination use the filtered rows; unread flags stay intact.
+No live writes/deploy/restart/permission changes. Preserve combined backend
+`c3c48e63` and frontend `5ce84ee2` in eventual adoption; do not replace live from
+this staging-based source. Review: [draft PR #237](https://github.com/artinflight/vibe-kanban/pull/237).
+Create mode now awaits all selected assignments and retains a composer checkpoint
+for partial failure/retry on the same issue, including panel remounts. Retry skips
+confirmed assignments; saved fields stay locked. Sixteen Node regressions and
+sixteen actual-panel regressions pass locally. X/Escape now dismiss recoverable
+composers; reopen restores the same identity and request guard. Async checkpoints,
+unlocks and completion are identity-fenced, and a dismissed successful save does
+not navigate. Workspace navigation now checks current composer identity/open state after the
+scratch write; four real-helper regressions cover delayed persistence with X,
+Escape, replacement and ordinary success. The three race cases fail before the
+boundary fix. Hosted CI runs the panel suite with a pinned renderer. Final-head hosted
+checks remain the integration gate. Local format/governance,
+TypeScript, lint, migration replay and rendered-container
+acceptance passed. Application source applies to the combined baseline; its
+bounded patch includes both Node test steps added to the existing combined CI
+workflow, preserving all baseline steps. Receipt/artifacts are under
+`/mnt/vk-storage/vk-user-assignment-20261009/workspace-navigation`. MCP Cargo builds are deliberately excluded for SSD capacity.
+
 # October 8: Workspace-first navigation and task attention follow-up
 
 The current frontend stream makes Workspaces the opening screen, removes the

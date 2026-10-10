@@ -6,6 +6,8 @@ import {
   useRef,
   useMemo,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { resumeIssueCreation } from '@/shared/lib/issueCreation';
 import { useDropzone } from 'react-dropzone';
 import { useTranslation } from 'react-i18next';
 import type { OrganizationMemberWithProfile } from 'shared/types';
@@ -81,6 +83,7 @@ export function KanbanIssuePanelContainer({
 }: KanbanIssuePanelContainerProps) {
   const { t } = useTranslation('common');
   const appNavigation = useAppNavigation();
+  const queryClient = useQueryClient();
   const routeState = useCurrentKanbanRouteState();
 
   const { openWorkspaceCreateFromState } = useProjectWorkspaceCreateDraft();
@@ -140,18 +143,30 @@ export function KanbanIssuePanelContainer({
   const openIssue = useCallback(
     (issueId: string) => {
       if (kanbanCreateMode && issueComposerKey) {
-        closeKanbanIssueComposer(issueComposerKey);
+        closeKanbanIssueComposer(issueComposerKey, issueComposer?.id);
       }
       appNavigation.goToProjectIssue(projectId, issueId);
     },
-    [kanbanCreateMode, issueComposerKey, appNavigation, projectId]
+    [
+      kanbanCreateMode,
+      issueComposerKey,
+      issueComposer?.id,
+      appNavigation,
+      projectId,
+    ]
   );
   const closeKanbanIssuePanel = useCallback(() => {
     if (kanbanCreateMode && issueComposerKey) {
-      closeKanbanIssueComposer(issueComposerKey);
+      closeKanbanIssueComposer(issueComposerKey, issueComposer?.id);
     }
     appNavigation.goToProject(projectId);
-  }, [kanbanCreateMode, issueComposerKey, appNavigation, projectId]);
+  }, [
+    kanbanCreateMode,
+    issueComposerKey,
+    issueComposer?.id,
+    appNavigation,
+    projectId,
+  ]);
   const updateIssueComposerDraft = useCallback(
     (patch: {
       statusId?: string;
@@ -357,7 +372,16 @@ export function KanbanIssuePanelContainer({
       .filter((m): m is OrganizationMemberWithProfile => m != null);
   }, [displayData.assigneeIds, membersWithProfilesById]);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingHere, setIsSubmitting] = useState(false);
+  const isSubmitting = submittingHere || !!issueComposer?.submissionPending;
+  const submissionInFlight = useRef(false);
+  const [submitFailed, setSubmitFailed] = useState(false);
+  const savedSubmission = issueComposer?.submission?.issue
+    ? issueComposer.submission
+    : null;
+  const remainingAssignees = savedSubmission?.form.assigneeIds.filter(
+    (id) => !savedSubmission.completedAssigneeIds.includes(id)
+  );
 
   // Save status for description (shown in WYSIWYG toolbar)
   const [descriptionSaveStatus, setDescriptionSaveStatus] = useState<
@@ -540,6 +564,7 @@ export function KanbanIssuePanelContainer({
     isDragActive,
     open: openFilePicker,
   } = useDropzone({
+    disabled: kanbanCreateMode && (isSubmitting || savedSubmission !== null),
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) uploadFiles(acceptedFiles);
     },
@@ -551,9 +576,11 @@ export function KanbanIssuePanelContainer({
   // Paste handler for images
   const onPasteFiles = useCallback(
     (files: File[]) => {
+      if (kanbanCreateMode && (submissionInFlight.current || savedSubmission))
+        return;
       if (files.length > 0) uploadFiles(files);
     },
-    [uploadFiles]
+    [uploadFiles, kanbanCreateMode, savedSubmission]
   );
 
   // Reset local state when switching issues or modes.
@@ -660,8 +687,9 @@ export function KanbanIssuePanelContainer({
       field: K,
       value: IssueFormData[K]
     ) => {
-      // Create mode: update in-panel form state and composer draft.
+      // Create mode: keep already-saved values fixed while setup is retried.
       if (kanbanCreateMode) {
+        if (submissionInFlight.current || savedSubmission) return;
         // For statusId, open the status selection dialog with callback
         if (field === 'statusId') {
           const statusId = value as string;
@@ -817,7 +845,10 @@ export function KanbanIssuePanelContainer({
     },
     [
       kanbanCreateMode,
+      savedSubmission,
       selectedKanbanIssueId,
+      selectedIssue?.status_id,
+      updateIssue,
       projectId,
       createFormFallback,
       createFormData,
@@ -837,88 +868,133 @@ export function KanbanIssuePanelContainer({
 
   // Submit handler
   const handleSubmit = useCallback(async () => {
-    if (!displayData.title.trim() || hasPendingAttachments) return;
+    if (
+      !displayData.title.trim() ||
+      hasPendingAttachments ||
+      submissionInFlight.current ||
+      (mode === 'create' &&
+        useKanbanIssueComposerStore.getState().byKey[issueComposerKey]
+          ?.submissionPending)
+    )
+      return;
 
-    setIsSubmitting(true);
+    const composerId = issueComposer?.id;
+    if (
+      mode === 'create' &&
+      (!composerId ||
+        !useKanbanIssueComposerStore
+          .getState()
+          .beginSubmission(issueComposerKey, composerId))
+    )
+      return;
+    const currentComposer = () => {
+      const entry =
+        useKanbanIssueComposerStore.getState().byKey[issueComposerKey];
+      return entry?.id === composerId ? entry : null;
+    };
+    submissionInFlight.current = true;
+    if (mode !== 'create') setIsSubmitting(true);
+    setSubmitFailed(false);
     try {
       if (mode === 'create') {
-        // Create new issue at the top of the column
-        const statusIssues = issues.filter(
-          (i) => i.status_id === displayData.statusId
-        );
-        const minSortOrder =
-          statusIssues.length > 0
-            ? Math.min(...statusIssues.map((i) => i.sort_order))
-            : 0;
-
-        const { persisted } = insertIssue({
-          project_id: projectId,
-          status_id: displayData.statusId,
-          title: displayData.title,
-          description: displayData.description,
-          priority: displayData.priority,
-          sort_order: minSortOrder - 1,
-          start_date: null,
-          target_date: null,
-          completed_at: null,
-          parent_issue_id: kanbanCreateDefaultParentIssueId,
-          parent_issue_sort_order: null,
-          extension_metadata: null,
-        });
-
-        // Wait for the issue to be confirmed by the backend and get the synced entity
-        const syncedIssue = await persisted;
-
-        // Commit only attachments still referenced in the description
-        const allUploadedIds = getAttachmentIds();
-        if (allUploadedIds.length > 0) {
-          const referencedIds = extractAttachmentIds(
-            displayData.description ?? ''
-          );
-          const idsToCommit = allUploadedIds.filter((id) =>
-            referencedIds.has(id)
-          );
-          const idsToDelete = allUploadedIds.filter(
-            (id) => !referencedIds.has(id)
-          );
-
-          if (idsToCommit.length > 0) {
-            await commitIssueAttachments(syncedIssue.id, {
-              attachment_ids: idsToCommit,
-            });
-          }
-          for (const id of idsToDelete) {
-            deleteAttachment(id).catch((err) =>
-              console.error('Failed to delete abandoned attachment:', err)
+        const previous =
+          useKanbanIssueComposerStore.getState().byKey[issueComposerKey]
+            ?.submission;
+        const submission = previous?.issue
+          ? previous
+          : {
+              form: {
+                ...displayData,
+                assigneeIds: [...displayData.assigneeIds],
+                tagIds: [...displayData.tagIds],
+              },
+              issue: null,
+              prepared: false,
+              completedAssigneeIds: [],
+            };
+        const submittedData = submission.form;
+        const syncedIssue = await resumeIssueCreation(submission, {
+          checkpoint: (progress) =>
+            useKanbanIssueComposerStore
+              .getState()
+              .checkpointSubmission(issueComposerKey, composerId!, progress),
+          createIssue: async (form) => {
+            const statusIssues = issues.filter(
+              (i) => i.status_id === form.statusId
             );
-          }
-          clearAttachments();
-        }
-
-        // Create assignee records for all selected assignees
-        displayData.assigneeIds.forEach((userId) => {
-          insertIssueAssignee({
-            issue_id: syncedIssue.id,
-            user_id: userId,
-          });
+            const minSortOrder =
+              statusIssues.length > 0
+                ? Math.min(...statusIssues.map((i) => i.sort_order))
+                : 0;
+            return await insertIssue({
+              project_id: projectId,
+              status_id: form.statusId,
+              title: form.title,
+              description: form.description,
+              priority: form.priority,
+              sort_order: minSortOrder - 1,
+              start_date: null,
+              target_date: null,
+              completed_at: null,
+              parent_issue_id: kanbanCreateDefaultParentIssueId,
+              parent_issue_sort_order: null,
+              extension_metadata: null,
+            }).persisted;
+          },
+          prepareIssue: async (issue, form) => {
+            const allUploadedIds = getAttachmentIds();
+            if (allUploadedIds.length > 0) {
+              const referencedIds = extractAttachmentIds(
+                form.description ?? ''
+              );
+              const idsToCommit = allUploadedIds.filter((id) =>
+                referencedIds.has(id)
+              );
+              const idsToDelete = allUploadedIds.filter(
+                (id) => !referencedIds.has(id)
+              );
+              if (idsToCommit.length > 0) {
+                await commitIssueAttachments(issue.id, {
+                  attachment_ids: idsToCommit,
+                });
+              }
+              for (const id of idsToDelete) {
+                deleteAttachment(id).catch((err) =>
+                  console.error('Failed to delete abandoned attachment:', err)
+                );
+              }
+              clearAttachments();
+            }
+          },
+          insertAssignee: (issue, userId) =>
+            insertIssueAssignee({
+              issue_id: issue.id,
+              user_id: userId,
+            }).persisted,
         });
+
+        if (!currentComposer()) return;
 
         // Create tag records if tags were selected
-        for (const tagId of displayData.tagIds) {
+        for (const tagId of submittedData.tagIds) {
           insertIssueTag({
             issue_id: syncedIssue.id,
             tag_id: tagId,
           });
         }
 
-        if (issueComposerKey) {
-          closeKanbanIssueComposer(issueComposerKey);
+        // Saving continues after dismissal, but must not reopen or navigate the view.
+        if (!currentComposer()?.isOpen) {
+          useKanbanIssueComposerStore
+            .getState()
+            .finishSubmission(issueComposerKey, composerId!);
+          return;
         }
 
-        if (displayData.createDraftWorkspace) {
+        if (submittedData.createDraftWorkspace) {
           const initialPrompt = buildWorkspaceCreatePrompt(
-            displayData.title,
-            displayData.description
+            submittedData.title,
+            submittedData.description
           );
 
           // Get defaults from most recent workspace
@@ -928,6 +1004,7 @@ export function KanbanIssuePanelContainer({
             projectId
           );
 
+          if (!currentComposer()?.isOpen) return;
           const createState = buildWorkspaceCreateInitialState({
             prompt: initialPrompt,
             defaults,
@@ -935,7 +1012,9 @@ export function KanbanIssuePanelContainer({
           });
           const draftId = await openWorkspaceCreateFromState(createState, {
             issueId: syncedIssue.id,
+            canNavigate: () => currentComposer()?.isOpen === true,
           });
+          if (!currentComposer()?.isOpen) return;
           if (!draftId) {
             await ConfirmDialog.show({
               title: t('common:error'),
@@ -946,34 +1025,63 @@ export function KanbanIssuePanelContainer({
               confirmText: t('common:ok'),
               showCancelButton: false,
             });
+            if (!currentComposer()?.isOpen) return;
+            if (
+              !useKanbanIssueComposerStore
+                .getState()
+                .finishSubmission(issueComposerKey, composerId!)
+            )
+              return;
             onExpectIssueOpen?.(syncedIssue.id);
-            openIssue(syncedIssue.id);
+            appNavigation.goToProjectIssue(projectId, syncedIssue.id);
+          } else {
+            useKanbanIssueComposerStore
+              .getState()
+              .finishSubmission(issueComposerKey, composerId!);
           }
           return; // Don't open issue panel since we're navigating away
         }
 
-        // Open the newly created issue
+        // Completion may remove only the composer that started this request.
+        if (
+          !useKanbanIssueComposerStore
+            .getState()
+            .finishSubmission(issueComposerKey, composerId!)
+        )
+          return;
         onExpectIssueOpen?.(syncedIssue.id);
-        openIssue(syncedIssue.id);
+        appNavigation.goToProjectIssue(projectId, syncedIssue.id);
       } else {
         // Update existing issue - would use update mutation
         // For now, just close the panel
         closeKanbanIssuePanel();
       }
     } catch (error) {
+      if (mode !== 'create' || currentComposer()?.isOpen) setSubmitFailed(true);
       console.error('Failed to save issue:', error);
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
+      if (mode === 'create') {
+        useKanbanIssueComposerStore
+          .getState()
+          .setSubmissionPending(issueComposerKey, composerId!, false);
+        void queryClient.invalidateQueries({
+          queryKey: ['local-workspace-assignments'],
+        });
+      }
     }
   }, [
     mode,
     displayData,
+    queryClient,
     projectId,
     issues,
     insertIssue,
     insertIssueAssignee,
     insertIssueTag,
-    openIssue,
+    appNavigation,
+    issueComposer?.id,
     kanbanCreateDefaultParentIssueId,
     openWorkspaceCreateFromState,
     workspaces,
@@ -1063,7 +1171,7 @@ export function KanbanIssuePanelContainer({
     <KanbanIssuePanel
       mode={mode}
       displayId={displayId}
-      formData={displayData}
+      formData={savedSubmission?.form ?? displayData}
       assigneeUsers={displayAssigneeUsers}
       onFormChange={handlePropertyChange}
       statuses={sortedStatuses}
@@ -1098,12 +1206,40 @@ export function KanbanIssuePanelContainer({
         />
       )}
       isSubmitting={isSubmitting}
+      isFormLocked={savedSubmission !== null}
+      submitLabel={savedSubmission ? t('kanban.retryIssueSetup') : undefined}
+      submitFeedback={
+        !isSubmitting && (savedSubmission || submitFailed) ? (
+          <div role="alert" className="text-error px-base pb-base">
+            <p>
+              {savedSubmission
+                ? t('kanban.createdIssueSetupFailed', {
+                    issueId: savedSubmission.issue!.simple_id,
+                  })
+                : t('errors.generic')}
+            </p>
+            {!!remainingAssignees?.length && (
+              <p>
+                {t('kanban.unsavedAssignments', {
+                  assignees: remainingAssignees
+                    .map(
+                      (id) => membersWithProfilesById.get(id)?.username ?? id
+                    )
+                    .join(', '),
+                })}
+              </p>
+            )}
+          </div>
+        ) : undefined
+      }
       descriptionSaveStatus={
         mode === 'edit' ? descriptionSaveStatus : undefined
       }
       titleInputRef={titleInputRef}
       onDeleteDraft={
-        mode === 'create' && isCreateDraftDirty ? handleDeleteDraft : undefined
+        mode === 'create' && isCreateDraftDirty && !savedSubmission
+          ? handleDeleteDraft
+          : undefined
       }
       onCopyLink={mode === 'edit' ? handleCopyLink : undefined}
       onMoreActions={mode === 'edit' ? handleMoreActions : undefined}

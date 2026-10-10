@@ -1574,3 +1574,46 @@ ops governance pass; full Rust baseline attempts fail on absent host GTK/GLib
 pkg-config libraries. See VK_MOBILE_UX.md and the SSD evidence directory there.
 This feature follow-up is not deployed; Green PID3027197, production frontend
 and configured model/effort/Recommend-only routing remain unchanged.
+
+2026-10-09: Prepared explicit local Seamus/dot IssueAssignee storage, existing picker support, and inherited workspace Mine/All visibility. Unassigned/unlinked history and unread are preserved. Draft/CI and safe combined-release adoption details: VK_LOCAL_ASSIGNMENTS.md. No rollout or permission changes.
+
+
+2026-10-09 — PR237 create-mode assignment persistence correction
+
+Independent review found creation discarded assignment persisted promises.
+Creation now waits for all participants, records the saved issue and confirmed
+assignments in the composer, shows partial failure and retries only remaining
+assignments to that issue. Fields and concurrent submission remain locked across
+remounts until persistence settles. Existing edit picker and unread are preserved.
+Seven creation regressions plus nine visibility/pagination regressions pass;
+actual-panel acceptance covers failure/retry/remount/navigation. Hosted final-head
+checks remain required. No Cargo build, production deployment, permission change
+or bulk assignment was performed; integrate only the bounded PR patch over the
+combined backend c3c48e63/frontend 5ce84ee2 (candidate is 11 commits behind live).
+
+
+2026-10-09 — PR237 Close/reopen submission race correction
+
+Close/Escape previously deleted pending/saved submission recovery. Dismissal now
+hides recoverable composers, reopen resumes their unique identity, and all async
+checkpoint/unlock/finish operations require that identity. Successful dismissed
+saves finish quietly; a completed composer can be replaced without old callbacks
+modifying it. Legacy remote drafts receive identities and clear stale page guards.
+Twelve committed real-panel regressions exercise actual X/Escape with delayed
+issue/assignment persistence, partial failure, hidden failure, stale replacement
+completion, edit/unread preservation and hydration. They join the sixteen existing
+Node regressions in hosted CI. No authentication/permission changes, production
+deployment or heavy MCP build. Bounded integration over c3c48e63/5ce84ee2 remains
+required; do not replace the combined release with this older staging baseline.
+
+
+## 2026-10-10 — Workspace draft navigation boundary
+
+PR237 adds a fresh composer identity/visibility predicate immediately after real
+scratch persistence and before workspace navigation. Tests retain the actual
+helper/serializer and delay only the API transport: Close, Escape and replacement
+fail before the fix; ordinary success passes. Sixteen panel plus sixteen pure
+Node checks are the new validation baseline. Saved issue/assignees/recovery and
+unread/auth behavior remain intact. A bounded combined-source/workflow patch is
+prepared over backend c3c48e63/frontend5ce84ee2, preserving live-only changes;
+exact-head hosted CI is required. No deployment or local Cargo build.

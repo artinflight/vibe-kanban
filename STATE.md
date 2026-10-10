@@ -1,3 +1,18 @@
+## October 9: Local assignment invariant prepared
+
+Local assignment source is prepared on `vk/442b-vk-user-assignme`; see
+[VK_LOCAL_ASSIGNMENTS.md](VK_LOCAL_ASSIGNMENTS.md). Workspace visibility must
+inherit multi-assignees through the linked task/issue, preserve unassigned and
+unlinked history, and never clear unread or grant authentication/permissions.
+Create mode must await every selected assignment before closing or navigating.
+Partial failure retains the saved issue and confirmed assignments for retry;
+retry must never create a second issue or clear unread. X/Escape dismissal must
+retain pending/partial recovery, reopen must resume its identity, and async
+checkpoints/cleanup must never modify a replacement composer. Workspace-draft
+navigation must recheck that identity and current visibility after scratch
+persistence, at the actual navigation boundary. This is not a deployed feature. The combined live backend `c3c48e63` and frontend
+`5ce84ee2` must be preserved when integrating; older main/staging is insufficient.
+
 ## October 8: Workspace-first frontend follow-up in preparation
 
 Workspace landing, To do defaults on phones, and whole-card attention styling

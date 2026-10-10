@@ -1,3 +1,16 @@
+## October 10: Repair preserved; Staging quiet-boundary hold
+
+The requested large-chat repair is committed as `00f455072` on
+`fix/vk-large-chat-history` in
+`/mnt/vk-storage/worktrees/vk-large-chat-history-20261010` (latest staging base).
+It separates history/review limits and streams validation. Seven regressions,
+all five affected saved captures, utils Clippy and governance passed. Full
+formatting remains blocked by missing Prettier. The B-backed build started
+before the quiet notice is preserved; release/API/UI acceptance is pending.
+No live service or chat data changed. Per the latest operator notice, end this
+bounded checkpoint and hold new admissions while Staging owns publication.
+See that repair checkout's VK_LARGE_CHAT_HISTORY_20261010.md for pickup evidence.
+
 ## October 10: Large-log chat history rejection diagnosed
 
 Read-only live evidence shows the deployed history reader reuses a 32 MiB review

@@ -305,7 +305,7 @@ try {
       for (const [index, { issue }] of targets.entries()) {
         const card = cardFor(issue);
         await card.waitFor();
-        if (index < 2) {
+        if (index < 2 && mobile) {
           await card
             .getByText(index === 0 ? 'Needs review' : 'Needs approval', {
               exact: true,
@@ -320,6 +320,30 @@ try {
             'none',
             'Attention fills the entire card'
           );
+        } else if (index < 2) {
+          assert(
+            !/kanban-attention-card/.test(await card.getAttribute('class')),
+            'Desktop issue cards retain their compact attention indicators'
+          );
+          assert.equal(
+            await card
+              .getByText(index === 0 ? 'Needs review' : 'Needs approval', {
+                exact: true,
+              })
+              .count(),
+            0,
+            'Desktop does not gain the phone attention label'
+          );
+          for (const item of [
+            card,
+            ...(await card.locator('.kanban-attention-card').all()),
+          ]) {
+            assert.equal(
+              await item.evaluate((el) => getComputedStyle(el).backgroundImage),
+              'none',
+              'Phone attention tint does not apply to desktop cards'
+            );
+          }
         } else {
           await page.waitForTimeout(3500);
           assert(

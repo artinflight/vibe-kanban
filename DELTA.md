@@ -8,7 +8,6 @@ See [VK_CAPACITY_CONCURRENCY.md](VK_CAPACITY_CONCURRENCY.md) for API semantics,
 real two-native-goal acceptance and deployment requirements. Companion CU changes
 are required; old clients keep one slot. Production deployment remains operator-owned.
 
-
 ## 2026-08-20T00:00:00Z | vk/13c6-vk-multi-line-pa | multiline paste line-ending hardening
 
 - Intent: fix the remaining multiline paste failure in VK prompt fields after
@@ -237,6 +236,7 @@ are required; old clients keep one slot. Production deployment remains operator-
   - backup retention validation was not rerun during the sync cleanup step
   - full test validation was not rerun after the final cleanup behavior adjustments
   - pinned workspaces still keep the existing auto-archive exception
+
 # 2026-04-19 Workspace Polling Hotfix
 
 - A second frontend churn path was identified after the earlier kanban/sidebar fix.
@@ -1125,7 +1125,6 @@ are required; old clients keep one slot. Production deployment remains operator-
 
 2026-09-11: User authorized PR #103 integration into staging for the staging management agent to deploy at the next restart. Fresh fetch and rebase found the branch current with staging; recovery revision CI is green. Deployment handoff explicitly rejects the superseded binary and preserves goal backup requirements.
 
-
 ## 2026-09-12 — Long-thread pagination prepared
 
 - `vk/ab54-vk-long-threads`: latest-40 completed log pages, 50-entry upward
@@ -1133,7 +1132,6 @@ are required; old clients keep one slot. Production deployment remains operator-
 - Bounded revision-keyed finite-replay cache; existing running streams preserved.
 - See `VK_LONG_THREADS.md` and latest handoff for tests and limitations. No live
   runtime change; matching-backend browser validation and latency measurement remain.
-
 
 ## 2026-09-13 — Long-thread staging integration requested
 
@@ -1231,7 +1229,6 @@ Read-only service inventory confirms live Blue 4711/4712 and retained Green
 requires the explicit approval in VK_BACKEND_RESTART_PROTOCOL.md after a concrete
 candidate and rehearsal; preparation is not cutover authorization.
 
-
 ## Scheduled build directories — September 14
 
 `VK_CAPACITY_BUILD_ROOTS` is an optional JSON array of at most eight existing
@@ -1256,7 +1253,6 @@ The full seven-row native suite passes at
 `/mnt/vk-storage/codexusage-capacity/vk-continuation-acceptance-y5tknu8y/results.json`.
 All 64 executor unit tests passed after adding build-root admission coverage.
 Formatting and ops governance passed. The feature remains undeployed.
-
 
 ## Approved launcher/provider binding — September 14
 
@@ -1380,7 +1376,6 @@ protected consequences/context retain Frontier. No classifier model call, regist
 or CU wire changes. Twenty-two routing tests, services check, focused Clippy,
 generated types, web-core checking, format/ops and five offline recommendation
 cases pass. V1 deployment untouched; live V2 Shadow acceptance remains pending.
-
 
 ## 2026-10-01 — bounded semantic fallback for uncertain V2 requests
 
@@ -1562,15 +1557,204 @@ VK_MOBILE_RELEASE_20261008.md records evidence and unverified regression cases.
 The test harness now also intercepts /v1 writes and matches exact visible project
 titles when an accessible needs-review indicator extends the button name.
 
+## October 6, 2026 — scheduled first native goal run (development)
 
-## 2026-10-08: Workspace-first mobile follow-up
+Separate workspace at staging 8b562265d implements identity-bound pending intent,
+explicit firstRun admission, native-root checklist receipts, and fail-closed
+restart/hold behavior. No production, Android, paid inference or live-settings
+operation. See VK_SCHEDULED_FIRST_RUN.md and HANDOFF for validation and the
+CU-first combined acceptance/rollback gate.
 
-Implemented Workspaces as the root landing/list, contextual workspace Chat
-navigation, To do defaults with per-project session state on phones, and entire
-Kanban/workspace card attention tint/stripe/labels. Desktop board structure is
-preserved. Read-only browser tests cover five viewports/themes and deterministic
-review/approval/read/interrupted/clearing state. Frontend checks, format and
-ops governance pass; full Rust baseline attempts fail on absent host GTK/GLib
-pkg-config libraries. See VK_MOBILE_UX.md and the SSD evidence directory there.
-This feature follow-up is not deployed; Green PID3027197, production frontend
-and configured model/effort/Recommend-only routing remain unchanged.
+## PR147 staging acceptance blockers
+
+CI identified a cold/deadline-sensitive routing-triage assertion. Repair keeps
+the production budget and separately verifies semantic discovery and unknown
+fallback. Added source-fenced hosted HTTP/guard/test artifact builds and a
+compile-time disabled, v2-compatible rollback variant. Own old test binary was
+verified on Desktop B: before exact local removal; all evidence and shared data
+retained. Combined runtime acceptance and final CI are mandatory. No production
+operation or paid inference.
+
+2026-10-06 PR147 stalled graceful stop: added cfg(test) native revocation/expiry regression with actual client mutex held, outstanding private offline request and independent worker/cgroup observations. Local provider TERM/worker exit were +46/+480 ms after revocation and +7/+567 ms after last expiry; one request in each, graceful future still blocked, first-run holds/identity/receipts retained. No production enforcement change; non-test client source is unchanged from 86f62b2. Current immutable CI/build/runtime receipts and staging lcp7ys3k comparison are in /mnt/vk-storage/vk-scheduled-first-run-20261006/stalled-stop-handoff.md. Recommend/default-off/CU-first and no production/Android/paid/live-service boundaries retained.
+
+## 2026-10-06 — PR147 stop-response reliability
+
+Bound the complete graceful attempt, make HTTP one/two-worker OS stop/verification
+concurrent, and reconcile only verified matching grants. Preserve native active
+status and uncertain first-run holds/receipts. Focused offline runner regressions
+plus final source-fenced candidate/disabled-v2 rollback validation receipts belong
+to stop-response-handoff.md on the mounted SSD. No production action or cleanup.
+2026-10-05 AutoSwitch reference-step correction: classify known link collections as presentation using completed context; preserve surrounding protection and explicit floors. Repair oversized native config metadata for restricted classifiers only. See VK_AUTOSWITCH_REFERENCE_STEPS.md and retained private receipts. No backend restart or Auto activation.
+
+2026-10-05 Hot publication receipt: reference-steps-aac5bd457-20261005 active, PID3027197 unchanged, validator unchanged. Native classifier repaired (one real replay:4,711 input/259 output,9,823ms); unknown troubleshooting remains protected. Known-link replay admits Luna6/medium with no inference; Recommend experimental candidate Sol6/low. See private LIVE_PUBLICATION.json.
+
+## 2026-10-07 — AutoSwitch current-step protection
+
+Developed on `fix/autoswitch-current-step-risk` from preserved `bb5fe5f40`.
+Resolved bounded follow-ups can release inferred protection with native scope
+evidence; surrounding protected work still controls generic resumes. Narrow
+operational prohibitions no longer create deployment intent. Fifteen completed
+real assessments replayed without inference: three inappropriate Astra choices
+become Sol6/low recommendations (qualified Auto option Luna6/medium); twelve
+unchanged. No observed savings claimed. Recommend/live deployment unchanged;
+backend guard adoption belongs to VK::Staging before October30 readiness.
+See VK_AUTOSWITCH_CURRENT_STEP_RISK.md and SSD validation receipts.
+
+## 2026-10-07: repair incomplete AutoSwitch no-restart boundary
+
+The earlier module failed the requested scope: backend prompt guesses and
+mirrored history classification could veto a corrected policy. Protocol2 separates
+bounded immutable repo/native/budget/lifecycle facts from worker-owned prompt,
+semantic eligibility and inferred-history interpretation. One-time owner adoption
+removes old vetoes; later ordinary policy changes truly reload. No live action or
+Auto enablement. Implementation 09dcd2cb2 is pushed on the existing PR148 branch.
+
+Same-process sandbox proof kept PID3305974: code updates change negative-wording
+and bounded-followup decisions; 15 saved native assessments replay with three
+cheaper recommendations and 12 unchanged. Safe/manual/child/escalation/rollback/dirty
+state checks pass, including unsafe/old-protocol rejection. Zero paid calls.
+Final unit suite: 156 passed / 7 opt-in ignored; all-target Clippy and formatting/ops/CU
+bytes pass. Full local desktop/workspace checks encounter missing GLib metadata;
+use exact-head CI. A whole-suite timing assumption initially failed and was
+replaced with the directly relevant stalled-helper termination assertion.
+
+Fresh private protocol2 package/validator and receipts are under
+`/mnt/vk-storage/vk-autoswitch-module-boundary-20261007`; prepared stripped dev
+helper is not a deployed server. Old package665d836db is superseded, not deleted.
+Live PID3027197/module protocol1 remain unchanged. VK::Staging owns adoption;
+October30 readiness and separate Auto permission remain requirements.
+
+## October 7 Combined Release Preparation
+
+Reconciled both development histories without dropping their source changes.
+Application files merged automatically; the shared routing-triage test repair
+still requires combined validation. Connector patch, exact combined artifacts,
+fresh backup/full appropriate rehearsal and actual idle checks remain gates.
+No production operation or archive retirement occurred.
+
+2026-10-08: Isolated startup/recovery safety branch from staging8b562265d.
+Strict invocations, explicit identity gate and non-destructive automatic lifecycle;
+content/metadata audit retains journal gaps and post-backup uncertainty. No deploy.
+See VK_STARTUP_RECOVERY_SAFETY.md; independent review/real isolated CI pending.
+
+2026-10-08: PR153 sourcea81d46e92 passes10 checks,405 Cargo tests/7 skipped,
+16 real-binary isolation cases and14 audit regressions. Intrinsic dataset tokens
+close in-place replacement ambiguity; pure debug paths work without source mounts.
+Independent review pending. No production mutation or recovery zero-loss claim.
+
+## 2026-10-08 post-backup content reconciliation
+
+Independently replayed retained owner patches without executing historical code;
+all 11 final contents match. All 15 prior reconstruction files match current Git
+contents. Accounted for 710 mutation candidates and 47 original content differences;
+later shared-work changes remain separately reported. Added exact-context replay
+and evidence-result regressions; 27 focused Python checks pass. No shared writes,
+placement replay, production operation, new loss claim or erased journal gap.
+See VK_POST_BACKUP_RECONCILIATION_20261008.md for receipts and scope.
+
+2026-10-08 bounded recovery-evidence correction: supersedes the earlier blanket
+710-accounted/all-676-retired claim. 34 present content comparisons; 228 baseline
+Hyrox names verified at 08:53 with retained copies; 448 lack baseline contents.
+Strict full-program per-result patch binding proves 14 accepted/1 rejected pairs
+and 11 named file matches but overall fails on retained transcript line 415.
+All 15 recovery files match current maintenance commit; 145 original-history
+rows remain unresolved. Desktop packet hashes/internal manifests checked.
+Separate independent reviewer blocked by AutoSwitch qualification policy; no
+independent sign-off claimed. PR223 remote head/11 CI checks verified; c31a
+absence around 12:40 operator-reported, cause unknown. No production/shared
+writes, restore, workspace recreation, cleanup, restart or cutover. Cleanup
+requires Seamus human QA. See VK_POST_BACKUP_RECONCILIATION_20261008.md.
+
+2026-10-08 tracking-only independent-review receipt: separately authorized Astra
+High review (workspace802f378d, session27d79e0c, executiondd57bdb6) completed
+13:59:52 UTC. Independently supports corrected bounded findings at 984f5ee79 /
+d000ce732; recovery-complete and universal zero loss remain withheld. Consumed
+redacted REVIEW.txt, unresolved-448.csv and source manifest; hashes verified,
+448 unique rows. Copied only these safe tracking artifacts; old receipts remain
+historical. No duplicate reviewer or routing change. Targeted read-only source
+plan in VK_INDEPENDENT_RECOVERY_REVIEW_20261008.md; no investigation/restore/live
+repair/recreation/deletion/restart/cutover performed. No code or test changes.
+
+## 2026-10-08 targeted isolated recovery executed
+
+Executed the published retained-source investigation under the later isolated
+recovery authorization. Recovered 132 exact original commit objects; verified 129
+reachable graphs in declared scope, including the authenticated original VK
+shallow boundary. 26 rows meet original identity plus remote witness; 119 still
+lack a verified witness and 13 original objects remain unfound. All 448 names
+remain unknown, with 59 candidate copies covering 13 basenames. Recovered 14,382
+original metadata headers, authenticated the three source mode bits and initial
+journal, and found the same malformed line in eight archived transcripts.
+Native Desktop Git fetch failed wincredman/disabled prompts; no bypass. Two VK
+bundle imports failed prerequisites; preserved unchanged. Parent verification
+only, completed independent review unchanged. See VK_TARGETED_RECOVERY_FINDINGS_20261008.md.
+Production/shared files, original evidence and stable runtime untouched; no
+workspace recreation/restart/cutover/merge/cleanup/permission changes.
+
+## 2026-10-08 — Turn Git preservation development
+
+Added opt-in completion preservation with reviewed file/privacy/automation policy,
+exact original-history remote witnesses, persistent pending/blocked states and an
+isolated fail-closed controller check. VK Dev T48 is linked to the current feature
+workspace. Tests and limits are in HANDOFF.md / VK_TURN_GIT_PRESERVATION.md. No
+Staging/runtime/controller activation, restart, deployment or routing change.
+
+## 2026-10-08 — PR223 preservation P1 review correction
+
+Reproduced the unsafe `3cb3632897` scanner/retry baseline in isolated fixtures.
+Corrected scans read original raw blobs/commit messages with the approved real
+Gitleaks binary under the publication environment, bypassing refs/replace,
+attributes/drivers and grafts. Schema 2 retains original obligations across retries
+and failed admission, records generated originals before branch CAS, freshly
+rescans receipts, and invalidates any full-record change during a batch check.
+Raw worktree blob IDs/modes must match the original preserved tree; clean status
+alone cannot certify protection. Legacy receipts remain unsupported blockers.
+
+73 distinct isolated tests (72 full-suite cases plus positive real-scanner
+publication/check acceptance) and four focused Rust tests passed. Approved real
+scanner cases were exercised without skips; focused Clippy, format and ops checks
+passed. Frontend types/local-web/UI lint passed. Broad check/lint/workspace tests
+stop at missing host GLib/GObject/GIO libraries; trailing remote/I18n checks and
+full executor/UI acceptance remain open. Review logs and final remote SHA receipt:
+`/mnt/vk-storage/turn-git-preservation-review-20261008/`.
+
+Same isolated `feat/turn-git-preservation` branch, VK Dev T48 and draft PR223.
+No live activation or Staging operations. Recommend-only remains required.
+Seamus owns schema-2 controller/package integration, explicit reconciliation of
+old original-history evidence, copied-data acceptance and separately authorized
+Staging/live adoption. This correction does not authorize rollout.
+
+## 2026-10-08 — MCP approval bridge development
+
+Added isolated typed MCP consent bridge and offline UI/service/protocol regressions.
+See VK_MCP_APPROVAL_BRIDGE.md and HANDOFF.md. No activation or permission changes.
+
+## 2026-10-08 — PR225 P1 consent correction
+
+Bound MCP composer controls to individual requests/executions; gated reconnect
+consent on fresh snapshots/Ready. Added complete bounded redacted invocation
+context and fail-closed diagnostics. Mounted composer/card and real patch-hook
+fixtures replace the initial hook-only UI evidence. Configured Codex 0.159.2
+schema verified offline. See HANDOFF.md; source remains isolated and undeployed.
+
+## 2026-10-08 — PR225 nested redaction-only context P2
+
+Independent re-review closed both P1 findings at da07a5c3b. Added a recursive
+post-sanitization meaningful-value gate for the remaining P2, with compiled
+nested-object/array negative cases using matching display metadata, a positive
+mixed-target case, and offline typed-cancel/no-dispatch service coverage.
+See HANDOFF.md and PR225's P2 receipt. Isolated and undeployed; no broader redesign.
+
+## 2026-10-08 authorized safe restart preparation
+
+Four exact requested PR inputs combined with current accepted phone baseline.
+Historical exceptions remain explicit. SSD ENOSPC and proven8GiB floor block
+host backup/rehearsal/cutover; no deletion or bypass. Local incomplete source is
+Desktop-hash-preserved. Hosted combined checks/artifacts are being prepared;
+no production effect or readiness claim. See VK_SAFE_RESTART_PREPARATION_20261008.md.
+
+- 2026-10-09: Incorporated current staging e8c450fb in the scoped combined release
+  after owner-authorized final66 frontend inclusion. Preserved all twelve final
+  frontend changes and six newer consent/chat repairs; no pinned backend, guard,
+  module, schema or dependency input changed. Retained newer combined continuity
+  documents; staging originals remain preserved by its immutable commit.

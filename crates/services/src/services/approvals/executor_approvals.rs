@@ -2,7 +2,10 @@ use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 use db::{self, DBService, models::execution_process::ExecutionProcess};
-use executors::approvals::{ExecutorApprovalError, ExecutorApprovalService};
+use executors::{
+    approvals::{ExecutorApprovalError, ExecutorApprovalService},
+    executors::codex::elicitation::MAX_SUMMARY_BYTES,
+};
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 use utils::approvals::{ApprovalOutcome, ApprovalRequest, ApprovalStatus, QuestionStatus};
@@ -42,14 +45,23 @@ impl ExecutorApprovalBridge {
         tool_name: &str,
         is_question: bool,
         question_count: Option<usize>,
+        mcp_consent: Option<String>,
     ) -> Result<String, ExecutorApprovalError> {
         let request = ApprovalRequest::new(tool_name.to_string(), self.execution_process_id);
 
-        let (request, waiter) = self
-            .approvals
-            .create_with_waiter(request, is_question)
-            .await
-            .map_err(ExecutorApprovalError::request_failed)?;
+        let (request, waiter) = match mcp_consent {
+            Some(context) => {
+                self.approvals
+                    .create_with_consent(request, is_question, Some(context))
+                    .await
+            }
+            None => {
+                self.approvals
+                    .create_with_waiter(request, is_question)
+                    .await
+            }
+        }
+        .map_err(ExecutorApprovalError::request_failed)?;
 
         let approval_id = request.id.clone();
 
@@ -129,8 +141,24 @@ impl ExecutorApprovalBridge {
 
 #[async_trait]
 impl ExecutorApprovalService for ExecutorApprovalBridge {
+    async fn create_mcp_tool_approval(
+        &self,
+        consent_summary: &str,
+    ) -> Result<String, ExecutorApprovalError> {
+        if consent_summary.trim().is_empty() || consent_summary.len() > MAX_SUMMARY_BYTES {
+            return Err(ExecutorApprovalError::ServiceUnavailable);
+        }
+        self.create_internal(
+            "codex.mcp_approval",
+            false,
+            None,
+            Some(consent_summary.to_owned()),
+        )
+        .await
+    }
+
     async fn create_tool_approval(&self, tool_name: &str) -> Result<String, ExecutorApprovalError> {
-        self.create_internal(tool_name, false, None).await
+        self.create_internal(tool_name, false, None, None).await
     }
 
     async fn create_question_approval(
@@ -138,7 +166,7 @@ impl ExecutorApprovalService for ExecutorApprovalBridge {
         tool_name: &str,
         question_count: usize,
     ) -> Result<String, ExecutorApprovalError> {
-        self.create_internal(tool_name, true, Some(question_count))
+        self.create_internal(tool_name, true, Some(question_count), None)
             .await
     }
 

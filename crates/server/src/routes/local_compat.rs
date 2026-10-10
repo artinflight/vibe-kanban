@@ -2319,6 +2319,7 @@ async fn get_project(
 
 pub fn router() -> Router<DeploymentImpl> {
     Router::new()
+        .merge(super::local_assignments::router())
         .route("/projects/{project_id}", get(get_project))
         .route("/fallback/projects", get(list_fallback_projects))
         .route(
@@ -2331,10 +2332,6 @@ pub fn router() -> Router<DeploymentImpl> {
             get(list_fallback_project_workspaces),
         )
         .route("/fallback/tags", get(list_fallback_tags))
-        .route(
-            "/fallback/issue_assignees",
-            get(|| async { list_fallback_empty("issue_assignees").await }),
-        )
         .route(
             "/fallback/issue_followers",
             get(|| async { list_fallback_empty("issue_followers").await }),

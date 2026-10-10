@@ -13,7 +13,7 @@ import { useProjectContext } from '@/shared/hooks/useProjectContext';
 import { useOrgContext } from '@/shared/hooks/useOrgContext';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
 import { useActions } from '@/shared/hooks/useActions';
-import { useAuth } from '@/shared/hooks/auth/useAuth';
+import { useAssignmentIdentity } from '@/shared/hooks/useLocalParticipants';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
@@ -724,7 +724,7 @@ export function KanbanContainer() {
     isLoading: orgLoading,
   } = useOrgContext();
   const { activeWorkspaces } = useWorkspaceContext();
-  const { userId } = useAuth();
+  const userId = useAssignmentIdentity();
   const { loginStatus } = useUserSystem();
   const isLocalOnlySession =
     loginStatus?.status === 'loggedin' && !loginStatus.profile;
@@ -2046,19 +2046,13 @@ export function KanbanContainer() {
                             const issueCardPullRequests =
                               getPullRequestsForIssue(issue.id);
 
-                            const attentionLabel = getIssueAttentionLabel(
-                              issue.id
-                            );
                             return (
                               <KanbanCard
                                 key={issue.id}
                                 id={issue.id}
                                 name={issue.title}
                                 index={index}
-                                className={cn(
-                                  'group',
-                                  attentionLabel && 'kanban-attention-card'
-                                )}
+                                className="group"
                                 onClick={(e) => handleCardClick(issue.id, e)}
                                 isOpen={selectedKanbanIssueId === issue.id}
                                 isMobile={isMobile}
@@ -2068,7 +2062,6 @@ export function KanbanContainer() {
                                 <KanbanCardContent
                                   displayId={issue.simple_id}
                                   title={issue.title}
-                                  attentionLabel={attentionLabel}
                                   primaryContent={
                                     issueWorkspaces.length > 0 ? (
                                       <div className="flex flex-col gap-half">

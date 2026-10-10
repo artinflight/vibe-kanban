@@ -1222,20 +1222,22 @@ html {
   }
 }
 
-/* Tint the whole actionable card; the stripe and label also signal attention.
+/* Phone attention treatment. Desktop keeps its existing compact indicators.
    Background layers preserve custom workspace colors and selection rings. */
-.kanban-attention-card {
-  border-color: hsl(var(--brand) / 0.5);
-  background-image:
-    linear-gradient(hsl(var(--brand)), hsl(var(--brand))),
-    linear-gradient(hsl(var(--brand) / 0.12), hsl(var(--brand) / 0.12));
-  background-size:
-    3px 100%,
-    100% 100%;
-  background-repeat: no-repeat;
-}
-.kanban-attention-card:hover {
-  background-image:
-    linear-gradient(hsl(var(--brand)), hsl(var(--brand))),
-    linear-gradient(hsl(var(--brand) / 0.18), hsl(var(--brand) / 0.18));
+@media (max-width: 767px) {
+  .kanban-attention-card {
+    border-color: hsl(var(--brand) / 0.5);
+    background-image:
+      linear-gradient(hsl(var(--brand)), hsl(var(--brand))),
+      linear-gradient(hsl(var(--brand) / 0.12), hsl(var(--brand) / 0.12));
+    background-size:
+      3px 100%,
+      100% 100%;
+    background-repeat: no-repeat;
+  }
+  .kanban-attention-card:hover {
+    background-image:
+      linear-gradient(hsl(var(--brand)), hsl(var(--brand))),
+      linear-gradient(hsl(var(--brand) / 0.18), hsl(var(--brand) / 0.18));
+  }
 }

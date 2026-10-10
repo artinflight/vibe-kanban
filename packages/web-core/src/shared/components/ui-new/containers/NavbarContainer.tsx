@@ -373,7 +373,9 @@ export function NavbarContainer({
       mobileShowBack={!isOnProjectPage && mobileActiveTab !== 'workspaces'}
       onMobileTabChange={(tab) => {
         setMobileActiveTab(tab);
-        if (isOnProjectPage) appNavigation.goToWorkspaces();
+        if (isOnProjectPage || (tab === 'workspaces' && isCreateMode)) {
+          appNavigation.goToWorkspaces();
+        }
       }}
       leftSlot={
         !breadcrumbs &&

@@ -31,6 +31,42 @@ pub enum VibeKanbanError {
 
 #[tokio::main]
 async fn main() -> Result<(), VibeKanbanError> {
+    // This gate must precede TLS, telemetry, path creation and deployment/writable DB opening.
+    use utils::runtime_safety::{ServerInvocation, parse_server_invocation};
+    match parse_server_invocation(std::env::args_os().skip(1))? {
+        ServerInvocation::Help => {
+            println!(
+                "Usage: server [--help | --version | --build-info | --capacity-build-info]\nStartup requires VK_RUNTIME_IDENTITY_FILE. See VK_STARTUP_RECOVERY_SAFETY.md."
+            );
+            return Ok(());
+        }
+        ServerInvocation::Version => {
+            println!("{}", utils::version::APP_VERSION);
+            return Ok(());
+        }
+        ServerInvocation::BuildInfo => {
+            println!(
+                "{}",
+                serde_json::json!({
+                    "version": utils::version::APP_VERSION,
+                    "sourceCommit": option_env!("VK_BUILD_SOURCE_COMMIT"),
+                    "runtimeIdentityVersion": 1,
+                    "assetDirectory": utils::assets::asset_dir_path(),
+                    "automaticWorkspaceDeletion": false,
+                    "automaticAttachmentMigration": server::startup::AUTOMATIC_ATTACHMENT_MIGRATION,
+                    "automaticAttachmentCleanup": local_deployment::AUTOMATIC_ATTACHMENT_CLEANUP,
+                    "capacityLedgerVersions": [1, 2],
+                    "capacityWireVersion": 1,
+                    "initializationCompiled": !cfg!(feature = "scheduled-goal-initialization-disabled"),
+                    "scheduledGoalInitialization": if executors::capacity::first_run::enabled() { 1 } else { 0 },
+                    "frontend": "external release required; acceptance build embeds placeholder only"
+                })
+            );
+            return Ok(());
+        }
+        ServerInvocation::Serve => local_deployment::validate_startup_identity().await?,
+    }
+
     // Install rustls crypto provider before any TLS operations
     rustls::crypto::aws_lc_rs::default_provider()
         .install_default()

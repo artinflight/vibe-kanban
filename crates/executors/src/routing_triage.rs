@@ -1,14 +1,14 @@
 //! Bounded, zero-inference outcome triage. Repository text is evidence, never instructions.
-use std::{
-    io::Read,
-    path::Path,
-    sync::LazyLock,
-    time::{Duration, Instant},
-};
+#[cfg(not(test))]
+use std::time::Instant;
+use std::{io::Read, path::Path, sync::LazyLock, time::Duration};
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
+
+#[cfg(test)]
+use self::tests::InspectionInstant as Instant;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 pub struct TaskTriage {
@@ -62,7 +62,7 @@ fn protected_context(text: &str) -> bool {
     PROTECTED.is_match(text)
 }
 
-fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
+fn inspect(root: &Path, surface: &str, tooltip: bool, budget: Duration) -> RepoEvidence {
     let mut result = RepoEvidence::default();
     let Ok(root) = root.canonicalize() else {
         result.incomplete = true;
@@ -103,10 +103,7 @@ fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
                     && !e.file_type().is_symlink()
             })
         {
-            if result.entries >= 768
-                || start.elapsed() > Duration::from_millis(40)
-                || result.files >= 8
-            {
+            if result.entries >= 768 || start.elapsed() >= budget || result.files >= 8 {
                 result.incomplete = true;
                 return result;
             }
@@ -175,7 +172,7 @@ fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
                     if !parent.join("package.json").is_file() {
                         continue;
                     }
-                    if result.files >= 8 || start.elapsed() > Duration::from_millis(40) {
+                    if result.files >= 8 || start.elapsed() >= budget {
                         result.incomplete = true;
                         return result;
                     }
@@ -218,12 +215,64 @@ fn inspect(root: &Path, surface: &str, tooltip: bool) -> RepoEvidence {
     result
 }
 
-/// Infer an outcome + object + surface, then corroborate inexpensive implementation evidence.
-/// Unknown or compound outcomes remain unknown instead of requiring engineering labels.
-pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
+/// Facts read by VK, separately from replaceable prompt interpretation. A named
+/// component can be protected even when the request includes harmless cautions.
+pub fn repository_context(prompt: &str, root: Option<&Path>) -> TaskTriage {
+    let mut result = unknown();
+    // A bounded classifier must not silently miss requirements beyond its input.
+    // This is an observed budget fact, independent of any prompt-language rule.
+    if prompt.chars().nth(6144).is_some() {
+        result
+            .risk
+            .push("classification_input_exceeds_bound".into());
+        result
+            .evidence
+            .push("request_not_fully_visible_to_module".into());
+    }
+    let Some(root) = root else {
+        return result;
+    };
+    static SURFACE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\b([a-z][a-z0-9-]{2,24}) (page|screen|dialog|panel|form|menu)\b").unwrap()
+    });
     let text = prompt.to_lowercase();
-    let has = |terms: &[&str]| terms.iter().any(|term| text.contains(term));
-    let mut result = TaskTriage {
+    let mut surfaces = SURFACE.captures_iter(&text);
+    let Some(surface) = surfaces.next() else {
+        return result;
+    };
+    if surfaces.next().is_some() {
+        return result;
+    }
+    let repo = inspect(root, &surface[1], true, Duration::from_millis(40));
+    result.inspected_entries = repo.entries;
+    result.inspected_files = repo.files;
+    if repo.protected {
+        result.risk.push("protected_component_context".into());
+        result
+            .evidence
+            .push("matched_component_references_protected_subsystem".into());
+    }
+    if repo.surface {
+        result.evidence.push("existing_ui_surface".into());
+    }
+    if repo.pattern {
+        result.pattern = "existing_ui_pattern".into();
+    }
+    if repo.validation {
+        result.validation = "package_check_available_not_run".into();
+    }
+    if repo.incomplete {
+        result
+            .evidence
+            .push("inspection_incomplete_or_budget_exhausted".into());
+    }
+    result.needs_repo_inspection =
+        !(repo.surface && repo.pattern && repo.validation && !repo.incomplete);
+    result
+}
+
+fn unknown() -> TaskTriage {
+    TaskTriage {
         version: 1,
         intent: "unknown".into(),
         scope: "unknown".into(),
@@ -237,7 +286,15 @@ pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
         evidence: vec![],
         inspected_entries: 0,
         inspected_files: 0,
-    };
+    }
+}
+
+/// Infer an outcome + object + surface, then corroborate inexpensive implementation evidence.
+/// Unknown or compound outcomes remain unknown instead of requiring engineering labels.
+pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
+    let text = prompt.to_lowercase();
+    let has = |terms: &[&str]| terms.iter().any(|term| text.contains(term));
+    let mut result = unknown();
     // Plain-language consequences override apparently small visual changes.
     if has(&[
         "sign in",
@@ -380,7 +437,7 @@ pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
     let Some(root) = root else {
         return result;
     };
-    let repo = inspect(root, &surfaces[0].0, tooltip);
+    let repo = inspect(root, &surfaces[0].0, tooltip, Duration::from_millis(40));
     result.inspected_entries = repo.entries;
     result.inspected_files = repo.files;
     if repo.protected {
@@ -413,9 +470,43 @@ pub fn triage(prompt: &str, root: Option<&Path>) -> TaskTriage {
 
 #[cfg(test)]
 mod tests {
+    use std::{cell::Cell, time::Duration};
+
     use crate::{routing::CapabilityFloor, routing_assessment::assess_with_context};
 
-    struct Repo(std::path::PathBuf);
+    thread_local! {
+        // Fixture correctness must not depend on a CI worker being scheduled
+        // inside the production 40 ms inspection budget. No production knob.
+        static INSPECTION_ELAPSED: Cell<Option<Duration>> = const { Cell::new(None) };
+    }
+
+    pub(super) struct InspectionInstant(std::time::Instant);
+    impl InspectionInstant {
+        pub(super) fn now() -> Self {
+            Self(std::time::Instant::now())
+        }
+
+        pub(super) fn elapsed(&self) -> Duration {
+            INSPECTION_ELAPSED.get().unwrap_or_else(|| self.0.elapsed())
+        }
+    }
+
+    struct InspectionClock(Option<Duration>);
+    impl InspectionClock {
+        fn at(elapsed: Duration) -> Self {
+            Self(INSPECTION_ELAPSED.replace(Some(elapsed)))
+        }
+    }
+    impl Drop for InspectionClock {
+        fn drop(&mut self) {
+            INSPECTION_ELAPSED.set(self.0);
+        }
+    }
+
+    struct Repo {
+        root: std::path::PathBuf,
+        _clock: InspectionClock,
+    }
     impl Repo {
         fn new() -> Self {
             let path = std::env::temp_dir().join(format!("vk-triage-{}", uuid::Uuid::new_v4()));
@@ -430,12 +521,15 @@ mod tests {
                 "export function Settings() { return <Tooltip>Settings</Tooltip>; }",
             )
             .unwrap();
-            Self(path)
+            Self {
+                root: path,
+                _clock: InspectionClock::at(Duration::ZERO),
+            }
         }
     }
     impl Drop for Repo {
         fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.0);
+            let _ = std::fs::remove_dir_all(&self.root);
         }
     }
 
@@ -447,13 +541,48 @@ mod tests {
             "Please put some help text on the settings screen",
             "Make the button colour brighter on the settings page",
         ] {
-            let result = assess_with_context(prompt, Some(&repo.0));
+            let result = assess_with_context(prompt, Some(&repo.root));
             assert_eq!(result.envelope, "bounded", "{prompt}");
             assert_eq!(result.floor, CapabilityFloor::Routine);
             assert_eq!(result.triage.validation, "package_check_available_not_run");
             assert!(!result.triage.needs_repo_inspection);
             assert!(result.triage.inspected_files <= 8);
         }
+    }
+
+    #[test]
+    fn immutable_repository_context_survives_scope_cautions_and_changes_to_prompt_rules() {
+        let repo = Repo::new();
+        let prompt = "Add a tooltip to the settings page. No production deployment.";
+        let context = super::repository_context(prompt, Some(&repo.root));
+        assert!(context.risk.is_empty());
+        assert!(!context.needs_repo_inspection);
+        assert!(context.inspected_files > 0 && context.inspected_files <= 8);
+        assert_eq!(context.intent, "unknown"); // facts, not a second classifier
+        std::fs::write(repo.root.join("src/pages/Settings.tsx"),
+            "import {checkPermissions} from './permissions'; export const Settings = () => <Tooltip/>;").unwrap();
+        let context = super::repository_context(prompt, Some(&repo.root));
+        assert!(context.risk.contains(&"protected_component_context".into()));
+        let mut assessment = crate::routing_assessment::assess(prompt);
+        crate::routing_assessment::apply_repository_context(&mut assessment, &context);
+        assert_eq!(assessment.floor, CapabilityFloor::Frontier);
+    }
+
+    #[test]
+    fn omitted_prompt_tail_cannot_hide_risk_from_bounded_module() {
+        let prompt = format!(
+            "Fix spelling typos in README.md. {} Change authentication permissions.",
+            " ".repeat(6144)
+        );
+        let context = super::repository_context(&prompt, None);
+        assert!(
+            context
+                .risk
+                .contains(&"classification_input_exceeds_bound".into())
+        );
+        let mut assessment = crate::routing_assessment::assess("Fix spelling typos in README.md");
+        crate::routing_assessment::apply_repository_context(&mut assessment, &context);
+        assert_eq!(assessment.floor, CapabilityFloor::Frontier);
     }
 
     #[test]
@@ -465,26 +594,26 @@ mod tests {
         assert_eq!(missing.triage.uncertainty, "high");
         let repo = Repo::new();
         std::fs::rename(
-            repo.0.join("src/pages/Settings.tsx"),
-            repo.0.join("src/pages/SettingsButton.tsx"),
+            repo.root.join("src/pages/Settings.tsx"),
+            repo.root.join("src/pages/SettingsButton.tsx"),
         )
         .unwrap();
         assert_eq!(
-            assess_with_context(prompt, Some(&repo.0)).floor,
+            assess_with_context(prompt, Some(&repo.root)).floor,
             CapabilityFloor::Workhorse
         );
         std::fs::rename(
-            repo.0.join("src/pages/SettingsButton.tsx"),
-            repo.0.join("src/pages/Settings.tsx"),
+            repo.root.join("src/pages/SettingsButton.tsx"),
+            repo.root.join("src/pages/Settings.tsx"),
         )
         .unwrap();
         std::fs::write(
-            repo.0.join("package.json"),
+            repo.root.join("package.json"),
             r#"{"scripts":{"test":"echo no tests yet"}}"#,
         )
         .unwrap();
         assert_eq!(
-            assess_with_context(prompt, Some(&repo.0)).floor,
+            assess_with_context(prompt, Some(&repo.root)).floor,
             CapabilityFloor::Workhorse
         );
     }
@@ -499,14 +628,19 @@ mod tests {
             "Add a tooltip to the billing page",
         ] {
             assert_eq!(
-                assess_with_context(prompt, Some(&repo.0)).floor,
+                assess_with_context(prompt, Some(&repo.root)).floor,
                 CapabilityFloor::Frontier,
                 "{prompt}"
             );
         }
-        std::fs::write(repo.0.join("src/pages/Settings.tsx"), "import {checkPermissions} from './permissions'; export const Settings = () => <Tooltip/>;").unwrap();
-        let result = assess_with_context("Add a tooltip to the settings page", Some(&repo.0));
-        assert_eq!(result.floor, CapabilityFloor::Frontier);
+        std::fs::write(repo.root.join("src/pages/Settings.tsx"), "import {checkPermissions} from './permissions'; export const Settings = () => <Tooltip/>;").unwrap();
+        let result = assess_with_context("Add a tooltip to the settings page", Some(&repo.root));
+        assert_eq!(
+            result.floor,
+            CapabilityFloor::Frontier,
+            "{:?}",
+            result.triage
+        );
         assert!(
             result
                 .triage
@@ -515,14 +649,71 @@ mod tests {
         );
     }
 
+    #[test]
+    fn exhausted_inspection_budget_preserves_unknown_context() {
+        let repo = Repo::new();
+        let inspected = super::inspect(&repo.root, "settings", true, std::time::Duration::ZERO);
+        assert!(inspected.incomplete);
+        assert!(!inspected.surface);
+        assert!(!inspected.protected);
+        assert_eq!(inspected.entries, 0);
+    }
+
+    #[test]
+    fn exhausted_inspection_budget_stays_incomplete_and_preserves_explicit_risk() {
+        let repo = Repo::new();
+        std::fs::write(
+            repo.root.join("src/pages/Settings.tsx"),
+            "import {checkPermissions} from './permissions'; export const Settings = () => <Tooltip/>;",
+        )
+        .unwrap();
+        let _expired = InspectionClock::at(Duration::from_millis(41));
+        let result = assess_with_context("Add a tooltip to the settings page", Some(&repo.root));
+        // Budget exhaustion does not prove routine scope. With no component
+        // inspected, retain the existing unknown-context floor, not a new policy.
+        assert_eq!(result.floor, CapabilityFloor::Workhorse);
+        assert!(result.triage.needs_repo_inspection);
+        assert_eq!(result.triage.inspected_entries, 0);
+        assert!(
+            result
+                .triage
+                .evidence
+                .contains(&"inspection_incomplete_or_budget_exhausted".into())
+        );
+        assert_eq!(
+            assess_with_context("Add a tooltip to the billing page", Some(&repo.root)).floor,
+            CapabilityFloor::Frontier
+        );
+    }
+
+    #[test]
+    fn inspection_clock_is_nested_thread_local_and_restored() {
+        assert!(INSPECTION_ELAPSED.get().is_none());
+        {
+            let _fixture = InspectionClock::at(Duration::ZERO);
+            {
+                let _expired = InspectionClock::at(Duration::from_millis(41));
+                assert_eq!(
+                    InspectionInstant::now().elapsed(),
+                    Duration::from_millis(41)
+                );
+            }
+            assert_eq!(InspectionInstant::now().elapsed(), Duration::ZERO);
+            std::thread::spawn(|| assert!(INSPECTION_ELAPSED.get().is_none()))
+                .join()
+                .unwrap();
+        }
+        assert!(INSPECTION_ELAPSED.get().is_none());
+    }
+
     #[cfg(unix)]
     #[test]
     fn repo_inspection_does_not_follow_source_symlinks() {
         let repo = Repo::new();
         let external = Repo::new();
-        std::fs::remove_dir_all(repo.0.join("src")).unwrap();
-        std::os::unix::fs::symlink(external.0.join("src"), repo.0.join("src")).unwrap();
-        let result = assess_with_context("Add a tooltip to the settings page", Some(&repo.0));
+        std::fs::remove_dir_all(repo.root.join("src")).unwrap();
+        std::os::unix::fs::symlink(external.root.join("src"), repo.root.join("src")).unwrap();
+        let result = assess_with_context("Add a tooltip to the settings page", Some(&repo.root));
         assert_eq!(result.floor, CapabilityFloor::Workhorse);
         assert_eq!(result.triage.inspected_files, 0);
         assert!(result.triage.needs_repo_inspection);
@@ -539,13 +730,13 @@ mod tests {
             "Add a tooltip to the settings page that remembers preferences",
         ] {
             assert_ne!(
-                assess_with_context(prompt, Some(&repo.0)).floor,
+                assess_with_context(prompt, Some(&repo.root)).floor,
                 CapabilityFloor::Routine,
                 "{prompt}"
             );
         }
-        std::fs::write(repo.0.join("src/pages/Settings.tsx"), "x".repeat(16385)).unwrap();
-        let result = assess_with_context("Add a tooltip to the settings page", Some(&repo.0));
+        std::fs::write(repo.root.join("src/pages/Settings.tsx"), "x".repeat(16385)).unwrap();
+        let result = assess_with_context("Add a tooltip to the settings page", Some(&repo.root));
         assert_eq!(result.floor, CapabilityFloor::Workhorse);
         assert!(result.triage.needs_repo_inspection);
     }

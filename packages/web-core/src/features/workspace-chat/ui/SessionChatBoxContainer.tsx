@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { McpConsentCards } from './McpConsentCards';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
 import {
@@ -26,6 +27,7 @@ import { getLatestConfigFromProcesses } from '@/shared/lib/executor';
 import { useExecutorConfig } from '@/shared/hooks/useExecutorConfig';
 import { useSessionMessageEditor } from '../model/hooks/useSessionMessageEditor';
 import { useSessionQueueInteraction } from '../model/hooks/useSessionQueueInteraction';
+import { usePromptSubmission } from '../model/hooks/usePromptSubmission';
 import { useSessionSend } from '../model/hooks/useSessionSend';
 import { useSessionAttachments } from '../model/hooks/useSessionAttachments';
 import { useMessageEditRetry } from '../model/hooks/useMessageEditRetry';
@@ -260,7 +262,8 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     useWorkspaceExecution(workspaceId);
 
   // Approvals state
-  const { getPendingForProcess } = useApprovals();
+  const { getPendingForProcess, pendingApprovals, isConnected } =
+    useApprovals();
 
   // Get pending approval from running processes
   const pendingApproval = useMemo(() => {
@@ -558,60 +561,68 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     onSelectSession,
     executorConfig,
   });
-  const displayedSendError = uploadError ?? sendError;
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
+  const displayedSendError = uploadError ?? sendError ?? followUpError;
 
-  const handleSend = useCallback(async () => {
-    if (
-      subagentActivity.shouldConfirmBeforeSend &&
-      !window.confirm(
-        'This session has sub-agents that may still be active. Sending another prompt can make the parent agent stop monitoring them. Send anyway?'
-      )
-    ) {
-      return;
-    }
+  const { submit, isSubmitting } = usePromptSubmission();
 
-    const { prompt, isSlashCommand } = buildAgentPrompt(localMessage, [
+  const handleSend = useCallback(
+    async () =>
+      submit(async () => {
+        if (
+          subagentActivity.shouldConfirmBeforeSend &&
+          !window.confirm(
+            'This session has sub-agents that may still be active. Sending another prompt can make the parent agent stop monitoring them. Send anyway?'
+          )
+        ) {
+          return;
+        }
+
+        const { prompt, isSlashCommand } = buildAgentPrompt(localMessage, [
+          reviewMarkdown,
+        ]);
+
+        onScrollToBottom('auto');
+
+        const success = await send(prompt);
+        if (success) {
+          clearUploadError();
+          cancelDebouncedSave();
+          setLocalMessage('');
+          clearUploadedAttachments();
+          await clearDraft();
+          if (isNewSessionMode) {
+            if (!isSlashCommand) {
+              reviewContext?.clearComments();
+            }
+          } else {
+            if (!isSlashCommand) {
+              reviewContext?.clearComments();
+            }
+          }
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              onScrollToBottom('auto');
+            });
+          });
+        }
+      }),
+    [
+      submit,
+      onScrollToBottom,
+      send,
+      localMessage,
       reviewMarkdown,
-    ]);
-
-    onScrollToBottom('auto');
-
-    const success = await send(prompt);
-    if (success) {
-      clearUploadError();
-      cancelDebouncedSave();
-      setLocalMessage('');
-      clearUploadedAttachments();
-      await clearDraft();
-      if (isNewSessionMode) {
-        if (!isSlashCommand) {
-          reviewContext?.clearComments();
-        }
-      } else {
-        if (!isSlashCommand) {
-          reviewContext?.clearComments();
-        }
-      }
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          onScrollToBottom('auto');
-        });
-      });
-    }
-  }, [
-    onScrollToBottom,
-    send,
-    localMessage,
-    reviewMarkdown,
-    subagentActivity.shouldConfirmBeforeSend,
-    cancelDebouncedSave,
-    setLocalMessage,
-    clearUploadedAttachments,
-    clearUploadError,
-    isNewSessionMode,
-    clearDraft,
-    reviewContext,
-  ]);
+      subagentActivity.shouldConfirmBeforeSend,
+      cancelDebouncedSave,
+      setLocalMessage,
+      clearUploadedAttachments,
+      clearUploadError,
+      isNewSessionMode,
+      clearDraft,
+      reviewContext,
+    ]
+  );
 
   // Track previous process count for queue refresh
   const prevProcessCountRef = useRef(processes.length);
@@ -640,31 +651,45 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
 
   // Follow-up handler. The server steers active Codex turns when possible;
   // otherwise it falls back to queueing for the next run.
-  const handleSendFollowUp = useCallback(async () => {
-    // Allow correction/queue if there's a message OR review comments, and we have a config
-    if ((!localMessage.trim() && !reviewMarkdown) || !executorConfig) return;
+  const handleSendFollowUp = useCallback(
+    async () =>
+      submit(async () => {
+        // Allow correction/queue if there's a message OR review comments, and we have a config
+        if ((!localMessage.trim() && !reviewMarkdown) || !executorConfig)
+          return;
 
-    const { prompt } = buildAgentPrompt(localMessage, [reviewMarkdown]);
+        const { prompt } = buildAgentPrompt(localMessage, [reviewMarkdown]);
 
-    cancelDebouncedSave();
-    await saveToScratch(localMessage, executorConfig);
-    await sendFollowUp(prompt, executorConfig);
+        setFollowUpError(null);
+        cancelDebouncedSave();
+        await saveToScratch(localMessage, executorConfig);
+        try {
+          await sendFollowUp(prompt, executorConfig);
+        } catch (error) {
+          setFollowUpError(
+            `Failed to send: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+          return;
+        }
 
-    // Clear local state after sending (same as handleSend)
-    setLocalMessage('');
-    clearUploadedAttachments();
-    reviewContext?.clearComments();
-  }, [
-    localMessage,
-    reviewMarkdown,
-    executorConfig,
-    sendFollowUp,
-    cancelDebouncedSave,
-    saveToScratch,
-    setLocalMessage,
-    clearUploadedAttachments,
-    reviewContext,
-  ]);
+        // Clear local state after sending (same as handleSend)
+        setLocalMessage('');
+        clearUploadedAttachments();
+        reviewContext?.clearComments();
+      }),
+    [
+      submit,
+      localMessage,
+      reviewMarkdown,
+      executorConfig,
+      sendFollowUp,
+      cancelDebouncedSave,
+      saveToScratch,
+      setLocalMessage,
+      clearUploadedAttachments,
+      reviewContext,
+    ]
+  );
 
   // Editor change handler
   const handleEditorChange = useCallback(
@@ -676,6 +701,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         setLocalMessage(value);
       }
       if (sendError) clearError();
+      setFollowUpError(null);
       if (uploadError) clearUploadError();
     },
     [
@@ -755,6 +781,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     mode === 'placeholder' ||
     isQueued ||
     isSending ||
+    isSubmitting ||
     isStopping ||
     !!feedbackContext?.isSubmitting ||
     editRetryMutation.isPending ||
@@ -983,7 +1010,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     isInEditMode,
     isStopping,
     isQueueLoading,
-    isSendingFollowUp: isSending,
+    isSendingFollowUp: isSending || isSubmitting,
     isQueued,
     isAttemptRunning: isAttemptRunningReconciled,
   });
@@ -1190,6 +1217,19 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
               isTimedOut: feedbackContext.isTimedOut,
             }
           : undefined
+      }
+      consentCards={
+        <McpConsentCards
+          approvals={pendingApprovals}
+          executionProcessIds={processes
+            .filter(
+              (p) =>
+                p.status === ExecutionProcessStatus.running &&
+                p.session_id === sessionId
+            )
+            .map((p) => p.id)}
+          isConnected={isConnected}
+        />
       }
       approvalMode={
         pendingApproval && !pendingApproval.questions

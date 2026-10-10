@@ -1601,3 +1601,12 @@ passes 158 executor tests and one same-process test. Original captured request
 replays cheaply; protected/uncertain variants retain Frontier. Candidate passes
 the live pinned validator; immutable worker/package hashes in
 VK_AUTOSWITCH_HISTORY_RETENTION_20261009.md. Recommend and live paths unchanged.
+
+## 2026-10-10: live AutoSwitch worker readback
+
+Existing Staging owner published inventory-history-be3478171-20261009 at10:17:20UTC.
+Independent acceptance confirms same backend PID/start ticks, expected hashes,
+unchanged pinned validator/settings, corrected inventory and preserved protection.
+One real post-publication execution records new module/CU lifecycle, but is
+interrupted. Recommend remains; no automatic savings or completed routine result
+is inferred. See VK_AUTOSWITCH_LIVE_20261010.md and private acceptance receipts.

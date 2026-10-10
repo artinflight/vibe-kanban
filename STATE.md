@@ -1,3 +1,13 @@
+## October 10: AutoSwitch worker publication is accepted
+
+The already installed protocol2 framework now selects the validated
+`inventory-history-be3478171-20261009` worker, published by VK::Staging at
+10:17:20UTC without restarting the backend. Independent hashes, matching live
+validator, preserved settings, captured-case safeguards and one genuine admission
+prove adoption. Recommend remains mandatory; automatic switching and measurable
+accepted-task savings are not established. See VK_AUTOSWITCH_LIVE_20261010.md.
+Historical not-live notes below are superseded by this observed publication.
+
 ## October 9: compatible inventory worker is validated, not live
 
 The source-only history correction passes hosted tests and same-process reload

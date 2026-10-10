@@ -1,3 +1,22 @@
+# October 10: AutoSwitch history module published and independently verified
+
+Existing VK::Staging Check published `inventory-history-be3478171-20261009` at
+10:17:20.633637UTC into the actual c3c48e63 module root. AutoSwitch independently
+verified its live pointer, worker/manifest hashes, pinned validator, unchanged
+PID1254186/start ticks760225685, unchanged policy/instructions/classifier settings,
+and corrected captured inventory classification. No duplicate backend restart,
+Auto activation, selected-model change, build or paid verification task.
+
+One genuine post-publication admission at10:17:35 records the new hash and exact
+CU decision/native binding/end identity. It was an uncertain continuation and was
+interrupted; it is adoption evidence, not a completed cheap-task or savings proof.
+Recommend remains required and preserves actual selected models. The installed
+framework and this latest fix are live; automatic cost-saving execution is not
+activated. Next: observe normal completed Recommend work; do not generate paid
+synthetic jobs or ask the operator to test. See VK_AUTOSWITCH_LIVE_20261010.md.
+Private independent and Staging receipts are in the existing history-fix task root.
+Older not-deployed statements below describe their observation dates.
+
 ## October 9: history correction validation complete (not deployed)
 
 Pushed candidate source `be34781714e461e13ae8a9ec05e0680f72e1ce00` passes

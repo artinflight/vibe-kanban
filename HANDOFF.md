@@ -1,3 +1,13 @@
+## October 10: Large-chat history repair checkpoint; Staging quiet hold
+
+`fix/vk-large-chat-history` separates the 256 MiB history budget from the
+unchanged 32 MiB review limit and validates captures incrementally. Seven local
+regressions, all five affected original captures and utils Clippy pass. Read
+VK_LARGE_CHAT_HISTORY_20261010.md for exact evidence, pending B-backed build and
+remaining API/UI acceptance. No live deployment or restored-chat claim. The
+operator's latest notice requires holding new admissions while Staging owns the
+quiet cutover; preserve existing work and do not start a competing release.
+
 ## October10: tested same-UID recovery; matching publication required
 
 PR241 continuation codeae263d4730bf8cca33050bde85b1c3de305acec0 passes

@@ -50,6 +50,9 @@ type Entries = BTreeMap<usize, Value>;
 const CACHE_BYTES: usize = 32 * 1024 * 1024;
 const CACHE_TURNS: usize = 4;
 const CACHE_TTL: Duration = Duration::from_secs(300);
+// Chat history has its own budget; review certification deliberately retains
+// the smaller MAX_RAW_BYTES bound. Validation streams records with bounded RAM.
+const MAX_HISTORY_CAPTURE_BYTES: usize = 256 * 1024 * 1024;
 #[derive(Default)]
 struct HistoryCache {
     turns: VecDeque<CachedTurn>,
@@ -230,12 +233,9 @@ pub(crate) async fn capture_error_for_process(
     .await
     .map_err(|_| ApiError::BadRequest("Execution capture location unavailable".into()))?;
     let available = if let Some(path) = path {
-        utils::execution_logs::validate_native_capture(
-            &path,
-            services::services::report_review::MAX_RAW_BYTES,
-        )
-        .await
-        .is_ok()
+        utils::execution_logs::validate_native_capture(&path, MAX_HISTORY_CAPTURE_BYTES)
+            .await
+            .is_ok()
     } else {
         false
     };

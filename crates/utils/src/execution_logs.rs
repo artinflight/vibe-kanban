@@ -143,20 +143,76 @@ pub async fn validate_native_capture(path: &Path, maximum: usize) -> std::io::Re
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
         Err(e) => return Err(e),
     }
-    let (_, messages) = read_execution_log_strict(path, maximum).await?;
-    let stdout: String = messages
-        .iter()
-        .filter_map(|m| match m {
-            LogMsg::Stdout(s) => Some(s.as_str()),
-            _ => None,
-        })
-        .collect();
-    if stdout.is_empty() || !stdout.ends_with('\n') {
-        return Err(std::io::Error::other("Incomplete native log capture"));
+    // History can outgrow the review subsystem's budget. Validate incrementally
+    // with bounded records instead of retaining the file, every decoded message,
+    // and a second concatenated stdout copy simultaneously.
+    const MAX_RECORD_BYTES: usize = 16 * 1024 * 1024;
+    const MAX_NATIVE_RECORD_BYTES: usize = 64 * 1024 * 1024;
+    let file = tokio::fs::File::open(path).await?;
+    let mut reader = BufReader::new(file);
+    let mut raw = Vec::new();
+    let mut native = Vec::new();
+    let mut total = 0usize;
+    let mut records = 0usize;
+    let mut saw_stdout = false;
+    loop {
+        raw.clear();
+        loop {
+            let chunk = reader.fill_buf().await?;
+            if chunk.is_empty() {
+                break;
+            }
+            let length = chunk
+                .iter()
+                .position(|byte| *byte == b'\n')
+                .map_or(chunk.len(), |index| index + 1);
+            total = total.saturating_add(length);
+            if total > maximum || raw.len().saturating_add(length) > MAX_RECORD_BYTES {
+                return Err(std::io::Error::other("Capture exceeds history size bound"));
+            }
+            raw.extend_from_slice(&chunk[..length]);
+            reader.consume(length);
+            if raw.last() == Some(&b'\n') {
+                break;
+            }
+        }
+        if raw.is_empty() {
+            break;
+        }
+        if raw.last() != Some(&b'\n') {
+            return Err(std::io::Error::other("Unterminated capture record"));
+        }
+        records += 1;
+        if records > 1_000_000 {
+            return Err(std::io::Error::other("Capture record bound exceeded"));
+        }
+        let message: LogMsg = serde_json::from_slice(&raw)
+            .map_err(|_| std::io::Error::other("Invalid capture record"))?;
+        match message {
+            LogMsg::Stdout(stdout) => {
+                saw_stdout |= !stdout.is_empty();
+                for part in stdout.as_bytes().split_inclusive(|byte| *byte == b'\n') {
+                    if native.len().saturating_add(part.len()) > MAX_NATIVE_RECORD_BYTES {
+                        return Err(std::io::Error::other(
+                            "Native capture record bound exceeded",
+                        ));
+                    }
+                    native.extend_from_slice(part);
+                    if native.last() == Some(&b'\n') {
+                        // IgnoredAny checks full JSON syntax without allocating
+                        // a Value tree for potentially large tool output.
+                        serde_json::from_slice::<serde::de::IgnoredAny>(&native)
+                            .map_err(|_| std::io::Error::other("Damaged native log capture"))?;
+                        native.clear();
+                    }
+                }
+            }
+            LogMsg::Stderr(_) => {}
+            _ => return Err(std::io::Error::other("Unsupported capture record")),
+        }
     }
-    for line in stdout.lines() {
-        serde_json::from_str::<serde_json::Value>(line)
-            .map_err(|_| std::io::Error::other("Damaged native log capture"))?;
+    if !saw_stdout || !native.is_empty() {
+        return Err(std::io::Error::other("Incomplete native log capture"));
     }
     Ok(())
 }
@@ -259,6 +315,102 @@ pub async fn read_execution_log_strict(
 #[cfg(test)]
 mod capture_tests {
     use super::*;
+
+    fn test_capture_path() -> PathBuf {
+        std::env::temp_dir().join(format!("vk-history-capture-{}.jsonl", Uuid::new_v4()))
+    }
+
+    #[tokio::test]
+    async fn history_accepts_large_fragmented_native_event_without_changing_review_limit() {
+        let path = test_capture_path();
+        let mut writer = ExecutionLogWriter::new(path.clone()).await.unwrap();
+        let prefix = serde_json::to_string(&LogMsg::Stdout("{\"padding\":\"".into())).unwrap();
+        writer.append_jsonl_line(&(prefix + "\n")).await.unwrap();
+        let chunk = serde_json::to_string(&LogMsg::Stdout("a".repeat(4096))).unwrap() + "\n";
+        for _ in 0..(33 * 1024 * 1024 / 4096) {
+            writer.append_jsonl_line(&chunk).await.unwrap();
+        }
+        let suffix = serde_json::to_string(&LogMsg::Stdout("\"}\n".into())).unwrap() + "\n";
+        writer.append_jsonl_line(&suffix).await.unwrap();
+        writer.finish_for_review().await.unwrap();
+        drop(writer);
+
+        validate_native_capture(&path, 256 * 1024 * 1024)
+            .await
+            .unwrap();
+        assert!(
+            validate_native_capture(&path, 32 * 1024 * 1024)
+                .await
+                .is_err()
+        );
+        assert!(
+            read_execution_log_strict(&path, 32 * 1024 * 1024)
+                .await
+                .is_err()
+        );
+        tokio::fs::remove_file(&path).await.unwrap();
+        tokio::fs::remove_file(path.with_extension("capture.json"))
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn history_preserves_framing_and_pending_writer_rejections() {
+        let path = test_capture_path();
+        let fragmented = concat!(
+            "{\"Stdout\":\"{\\\"value\\\":\"}\n",
+            "{\"Stderr\":\"diagnostic\"}\n",
+            "{\"Stdout\":\"1}\\n{\\\"next\\\":2}\\n\"}\n"
+        );
+        tokio::fs::write(&path, fragmented).await.unwrap();
+        validate_native_capture(&path, 4096).await.unwrap();
+        tokio::fs::write(
+            path.with_extension("capture.json"),
+            b"{\"capture_state\":\"pending\"}\n",
+        )
+        .await
+        .unwrap();
+        assert!(validate_native_capture(&path, 4096).await.is_err());
+        tokio::fs::write(
+            path.with_extension("capture.json"),
+            b"{\"capture_state\":\"closed\"}\n",
+        )
+        .await
+        .unwrap();
+        validate_native_capture(&path, 4096).await.unwrap();
+
+        for invalid in [
+            "{\"Stdout\":\"{}\\n\"}", // unterminated outer record
+            "{\"Stdout\":\"{}\"}\n",  // partial native record
+            "{\"Stdout\":\"not-json\\n\"}\n",
+            "{\"Stdout\":\"{}\\n\\n\"}\n", // empty native record
+            "{\"Stderr\":\"only diagnostics\"}\n",
+            "\"Finished\"\n",
+            "\n",
+            "",
+        ] {
+            tokio::fs::write(&path, invalid).await.unwrap();
+            assert!(
+                validate_native_capture(&path, 4096).await.is_err(),
+                "{invalid:?}"
+            );
+        }
+        tokio::fs::remove_file(&path).await.unwrap();
+        tokio::fs::remove_file(path.with_extension("capture.json"))
+            .await
+            .unwrap();
+    }
+
+    // Explicit read-only acceptance against a selected saved capture, without
+    // starting a deployment, changing its sidecar, or touching database state.
+    #[tokio::test]
+    #[ignore = "requires an explicitly selected existing capture"]
+    async fn history_validates_existing_capture() {
+        let path = PathBuf::from(std::env::var("VK_CAPTURE_CHECK_PATH").unwrap());
+        validate_native_capture(&path, 256 * 1024 * 1024)
+            .await
+            .unwrap();
+    }
     #[tokio::test]
     async fn utf8_final_split_across_every_byte_is_exact() {
         let expected = "assistant final — ✓\n";

@@ -2,6 +2,7 @@
 from types import SimpleNamespace
 import re
 import unittest
+from unittest.mock import patch
 
 from vk_nightly_schedule import block, add_owned, remove_owned, apply
 
@@ -22,6 +23,14 @@ class Schedule(unittest.TestCase):
         shell_command=command.replace('\\%','%')
         self.assertIn('--property=CPUQuota=25% ',shell_command)
         self.assertIn('--config-sha256 '+'a'*64,shell_command)
+    def test_cron_supplies_own_existing_user_bus_without_login_environment(self):
+        with patch('vk_nightly_schedule.os.getuid',return_value=1203):
+            owned=block('/fixture/package','/fixture/config','a'*64,'/fixture/log')
+        command=owned.splitlines()[1].split(' ',5)[5]
+        self.assertTrue(command.startswith('/usr/bin/env XDG_RUNTIME_DIR=/run/user/1203 /usr/bin/systemd-run --user '))
+        self.assertNotIn('DBUS_SESSION_BUS_ADDRESS=',command)
+        with patch('vk_nightly_schedule.os.getuid',return_value=0):
+            with self.assertRaises(ValueError):block('/fixture/package','/fixture/config','a'*64,'/fixture/log')
     def test_rollback_preserves_all_other_lines(self):
         updated=add_owned(self.original,self.owned,timezone='Etc/UTC')
         self.assertEqual(remove_owned(updated,self.owned),self.original)

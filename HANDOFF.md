@@ -1,3 +1,16 @@
+## Nightly cron environment correction
+
+The generated user-cron pulse now explicitly supplies the existing caller's
+`/run/user/<uid>` runtime directory. Cron does not inherit a login session's
+user-bus environment, so an otherwise valid scoped launch could fail before the
+calendar or resource checks ran. Root callers are rejected. No schedule,
+service, security setting or backup generation is changed by this source fix.
+
+Twenty-six focused scheduler/calendar tests pass, including DST transitions,
+overlap/retry handling, cron preservation/rollback and the runtime-directory
+regression. Whole-plan acceptance and schedule adoption remain separate gates;
+operational measurements and current runtime bindings stay in private handoffs.
+
 ## Resume: Toronto nightly calendar, adoption disabled
 
 Nightly timing uses the implementation default 02:00 America/Toronto, not a

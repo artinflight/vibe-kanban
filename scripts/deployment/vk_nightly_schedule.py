@@ -5,6 +5,7 @@ wake-up pulse; the fixed Toronto calendar owns daily timing and retry decisions.
 Same-account source callbacks are operational gates, not security walls.
 """
 import hashlib
+import os
 import re
 import subprocess
 
@@ -18,7 +19,12 @@ def block(package, config, config_sha256, log):
         if not re.fullmatch('/[A-Za-z0-9_./-]+', str(path)) or '..' in str(path).split('/'):
             raise ValueError('fixed absolute package/config/log paths required')
     if not re.fullmatch('[0-9a-f]{64}', config_sha256):raise ValueError('configuration hash required')
-    command = ('/usr/bin/systemd-run --user --scope --quiet --collect '
+    uid = os.getuid()
+    if uid == 0:raise ValueError('nightly schedule requires the existing unprivileged user')
+    # Cron does not inherit the login session environment. Both systemd-run
+    # and the supervised systemctl probes need this existing user's bus.
+    command = ('/usr/bin/env XDG_RUNTIME_DIR=/run/user/' + str(uid)
+               + ' /usr/bin/systemd-run --user --scope --quiet --collect '
                '--property=CPUQuota=25\\% --property=MemoryHigh=2G --property=MemoryMax=3G '
                '/usr/bin/nice -n 19 /usr/bin/ionice -c 3 /usr/bin/python3 -B -S '
                + str(package) + '/vk_nightly_calendar.py --config ' + str(config)

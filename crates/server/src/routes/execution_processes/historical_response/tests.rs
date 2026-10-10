@@ -296,6 +296,46 @@ async fn history_http(
 }
 
 #[tokio::test]
+async fn existing_signed_auth_binds_recovery_arguments_and_prevents_nonce_replay() {
+    use relay_control::signing::RelaySigningService;
+    // In-memory disposable fixture keys; never reads or alters a host credential.
+    let server = RelaySigningService::new(ed25519_dalek::SigningKey::from_bytes(&[1; 32]));
+    let client = RelaySigningService::new(ed25519_dalek::SigningKey::from_bytes(&[2; 32]));
+    let session = server.create_session(client.server_public_key()).await;
+    let f = Fixture::new();
+    let body = serde_json::to_vec(&f.request).unwrap();
+    let path = format!(
+        "/api/execution-processes/{}/recover-native-final",
+        f.process.id
+    );
+    let signature = client.sign_request(session, "POST", &path, &body);
+    assert!(
+        server
+            .verify_request(&signature, "POST", &path, b"changed arguments")
+            .await
+            .is_err()
+    );
+    assert!(
+        server
+            .verify_request(&signature, "POST", "/different-execution", &body)
+            .await
+            .is_err()
+    );
+    server
+        .verify_request(&signature, "POST", &path, &body)
+        .await
+        .unwrap();
+    authorize(Some(Extension(signature.clone()))).unwrap();
+    assert!(
+        server
+            .verify_request(&signature, "POST", &path, &body)
+            .await
+            .is_err()
+    );
+    assert!(authorize(None).is_err());
+}
+
+#[tokio::test]
 async fn actual_http_recovery_normal_reader_and_restart_preserve_all_database_rows() {
     let f = Fixture::new();
     let pool = f.pool().await;
@@ -414,8 +454,8 @@ async fn actual_http_recovery_normal_reader_and_restart_preserve_all_database_ro
     );
     for table in [
         "workspace_review_log_finalized",
-        "workspace_report_receipts",
-        "workspace_review_holds",
+        "workspace_review_receipts",
+        "workspace_review_hold_events",
         "coding_agent_turns",
     ] {
         let count = sqlx::query_scalar::<_, i64>(&format!("SELECT COUNT(*) FROM {table}"))

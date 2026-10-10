@@ -8,6 +8,9 @@ on:
       - 'packages/web-core/src/features/workspace-chat/model/**'
       - 'scripts/testing/long-thread-history.test.tsx'
       - '.github/workflows/historical-response-recovery.yml'
+concurrency:
+  group: native-recovery-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   recovery:
     runs-on: ubuntu-24.04

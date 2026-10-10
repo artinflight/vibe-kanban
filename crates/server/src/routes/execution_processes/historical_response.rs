@@ -121,7 +121,7 @@ fn binding(process: &ExecutionProcess, request: &RecoveryRequest) -> RecoveryRes
     if action.base_executor() != Some(BaseCodingAgent::Codex) {
         return Err("Only an existing Codex continuation can be recovered".into());
     }
-    let ExecutorActionType::CodingAgentFollowUpRequest(followup) = action.typ else {
+    let ExecutorActionType::CodingAgentFollowUpRequest(followup) = &action.typ else {
         return Err("A recorded original native continuation identity is required".into());
     };
     if followup.reset_to_message_id.is_some()
@@ -131,7 +131,7 @@ fn binding(process: &ExecutionProcess, request: &RecoveryRequest) -> RecoveryRes
     {
         return Err("Original native session/prompt does not match the request".into());
     }
-    Ok(followup.prompt)
+    Ok(followup.prompt.clone())
 }
 
 // No request supplies a filename. Enumerate only yyyy/mm/dd directories below

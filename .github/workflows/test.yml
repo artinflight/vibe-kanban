@@ -481,14 +481,16 @@ jobs:
       CARGO_BUILD_JOBS: "2"
       CARGO_PROFILE_DEV_DEBUG: "0"
       CARGO_PROFILE_TEST_DEBUG: "0"
-      CARGO_TARGET_DIR: ${{ runner.temp }}/vk-combined-target
-      VK_TEST_OUTPUT: ${{ runner.temp }}/vk-combined-ui
-      TEST_RENDERER_PATH: ${{ runner.temp }}/vk-history-tools/node_modules/react-test-renderer
-      VK_MCP_UI_RESPONSES: ${{ runner.temp }}/vk-combined-ui/mcp-ui-responses.json
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - name: Bind disposable hosted storage
+        run: |
+          echo "CARGO_TARGET_DIR=$RUNNER_TEMP/vk-combined-target" >> "$GITHUB_ENV"
+          echo "VK_TEST_OUTPUT=$RUNNER_TEMP/vk-combined-ui" >> "$GITHUB_ENV"
+          echo "TEST_RENDERER_PATH=$RUNNER_TEMP/vk-history-tools/node_modules/react-test-renderer" >> "$GITHUB_ENV"
+          echo "VK_MCP_UI_RESPONSES=$RUNNER_TEMP/vk-combined-ui/mcp-ui-responses.json" >> "$GITHUB_ENV"
       - name: Setup Rust and Node
         uses: ./.github/actions/cargo-checks-common-setup
         with:

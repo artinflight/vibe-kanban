@@ -546,15 +546,9 @@ impl WorkspaceManager {
             return;
         }
 
-        // Always clean up the default directory
-        let default_dir = WorktreeManager::get_default_worktree_base_dir();
-        self.cleanup_orphans_in_directory(&default_dir).await;
-
-        // Also clean up custom directory if it's different from the default
-        let current_dir = Self::get_workspace_base_dir();
-        if current_dir != default_dir {
-            self.cleanup_orphans_in_directory(&current_dir).await;
-        }
+        // Report only the configured namespace. Never sweep a second, default root.
+        self.cleanup_orphans_in_directory(&Self::get_workspace_base_dir())
+            .await;
     }
 
     async fn cleanup_orphans_in_directory(&self, workspace_base_dir: &Path) {
@@ -588,7 +582,7 @@ impl WorkspaceManager {
             };
 
             let path = entry.path();
-            if !path.is_dir() {
+            if !entry.file_type().is_ok_and(|kind| kind.is_dir()) {
                 continue;
             }
 
@@ -611,61 +605,105 @@ impl WorkspaceManager {
             };
 
             if !has_tracked_workspace {
-                info!("Found orphaned workspace: {}", workspace_path_str);
-                if let Err(e) = Self::cleanup_workspace_without_repos(&path).await {
-                    error!(
-                        "Failed to remove orphaned workspace {}: {}",
-                        workspace_path_str, e
-                    );
-                } else {
-                    info!(
-                        "Successfully removed orphaned workspace: {}",
-                        workspace_path_str
-                    );
-                }
+                warn!(
+                    "Untracked workspace preserved for recovery review (ownership unknown): {}",
+                    workspace_path_str
+                );
             }
         }
     }
+}
 
-    async fn cleanup_workspace_without_repos(workspace_dir: &Path) -> Result<(), WorkspaceError> {
-        info!(
-            "Cleaning up orphaned workspace at {}",
-            workspace_dir.display()
-        );
+#[cfg(all(test, unix))]
+mod recovery_safety_tests {
+    use std::os::unix::fs::{PermissionsExt, symlink};
 
-        let entries = match std::fs::read_dir(workspace_dir) {
-            Ok(entries) => entries,
-            Err(e) => {
-                debug!(
-                    "Cannot read workspace directory {}, attempting direct removal: {}",
-                    workspace_dir.display(),
-                    e
-                );
-                return tokio::fs::remove_dir_all(workspace_dir)
+    use super::*;
+
+    #[tokio::test]
+    async fn wrong_empty_and_unreadable_databases_preserve_untracked_and_external_paths() {
+        let base = std::env::var_os("VK_SAFETY_TEST_ROOT")
+            .map(PathBuf::from)
+            .unwrap_or_else(std::env::temp_dir);
+        let fixture = base.join(format!("orphan-regression-{}", std::process::id()));
+        std::fs::create_dir(&fixture).unwrap();
+        let root = fixture.join("workspaces");
+        let orphan = root.join("untracked");
+        let external = fixture.join("external");
+        std::fs::create_dir_all(orphan.join("repo")).unwrap();
+        std::fs::create_dir(&external).unwrap();
+        std::fs::write(orphan.join("repo/edit"), b"newer uncommitted bytes").unwrap();
+        std::fs::write(orphan.join("repo/.git"), b"gitdir: external registration\n").unwrap();
+        std::fs::write(
+            external.join("sentinel"),
+            b"shared work and registration survive",
+        )
+        .unwrap();
+        std::fs::set_permissions(
+            orphan.join("repo/edit"),
+            std::fs::Permissions::from_mode(0o640),
+        )
+        .unwrap();
+        symlink(&external, root.join("linked-root")).unwrap();
+        symlink(external.join("sentinel"), orphan.join("link")).unwrap();
+        for case in ["missing-schema", "empty", "wrong", "tracked"] {
+            let pool = sqlx::sqlite::SqlitePoolOptions::new()
+                .max_connections(1)
+                .connect("sqlite::memory:")
+                .await
+                .unwrap();
+            if case != "missing-schema" {
+                sqlx::query("CREATE TABLE workspaces (id BLOB NOT NULL, container_ref TEXT)")
+                    .execute(&pool)
                     .await
-                    .map_err(WorkspaceError::Io);
+                    .unwrap();
+                if case != "empty" {
+                    let path = if case == "tracked" {
+                        orphan.clone()
+                    } else {
+                        fixture.join("different-root")
+                    };
+                    sqlx::query("INSERT INTO workspaces VALUES (?, ?)")
+                        .bind(Uuid::new_v4())
+                        .bind(path.to_string_lossy().to_string())
+                        .execute(&pool)
+                        .await
+                        .unwrap();
+                }
             }
-        };
-
-        for entry in entries.filter_map(|e| e.ok()) {
-            let path = entry.path();
-            if path.is_dir()
-                && let Err(e) = WorktreeManager::cleanup_suspected_worktree(&path).await
-            {
-                warn!("Failed to cleanup suspected worktree: {}", e);
-            }
-        }
-
-        if workspace_dir.exists()
-            && let Err(e) = tokio::fs::remove_dir_all(workspace_dir).await
-        {
-            debug!(
-                "Could not remove workspace directory {}: {}",
-                workspace_dir.display(),
-                e
+            let manager = WorkspaceManager::new(DBService { pool });
+            manager.cleanup_orphans_in_directory(&root).await;
+            assert_eq!(
+                std::fs::read(orphan.join("repo/edit")).unwrap(),
+                b"newer uncommitted bytes",
+                "{case}"
+            );
+            assert_eq!(
+                std::fs::metadata(orphan.join("repo/edit"))
+                    .unwrap()
+                    .permissions()
+                    .mode()
+                    & 0o777,
+                0o640
+            );
+            assert_eq!(
+                std::fs::read(orphan.join("repo/.git")).unwrap(),
+                b"gitdir: external registration\n"
+            );
+            assert_eq!(
+                std::fs::read(external.join("sentinel")).unwrap(),
+                b"shared work and registration survive"
+            );
+            assert_eq!(
+                std::fs::read_link(orphan.join("link")).unwrap(),
+                external.join("sentinel")
+            );
+            assert_eq!(
+                std::fs::read_link(root.join("linked-root")).unwrap(),
+                external
             );
         }
-
-        Ok(())
+        // Only this uniquely created private fixture is removed.
+        std::fs::remove_dir_all(&fixture).unwrap();
     }
 }

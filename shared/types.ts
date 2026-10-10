@@ -202,7 +202,11 @@ export type MergeStatus = "open" | "merged" | "closed" | "unknown";
 
 export type PullRequestInfo = { number: bigint, url: string, status: MergeStatus, merged_at: string | null, merge_commit_sha: string | null, };
 
-export type ApprovalInfo = { approval_id: string, tool_name: string, execution_process_id: string, is_question: boolean, created_at: string, timeout_at: string, };
+export type ApprovalInfo = { approval_id: string, tool_name: string, execution_process_id: string, is_question: boolean,
+/**
+ * Bounded, redacted invocation context for request-specific MCP consent.
+ */
+mcp_consent: string | null, created_at: string, timeout_at: string, };
 
 export type ApprovalStatus = { "status": "pending" } | { "status": "approved" } | { "status": "denied", reason?: string, } | { "status": "timed_out" };
 

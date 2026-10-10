@@ -1,0 +1,52 @@
+Independent recovery-evidence review — 2026-10-08 UTC
+
+VERDICT
+The corrected bounded content accounting is independently substantiated. Recovery-complete and universal zero-loss sign-off are withheld. The review is complete; the underlying evidence gaps remain. This is no operational approval.
+
+AUTHORITY AND PINS
+This separate reviewer session ran gpt-6-astra/high, confirmed from its own turn metadata. Seamus's task-specific approval is the supplied 2026-10-08 13:25:42 UTC transcript. No additional reviewer, routing-policy change or global-limit change was made.
+Reviewer workspace: 802f378d-7b9c-4f62-ab89-d8f8205e8391; session: 27d79e0c-3d31-4293-9f71-2985466a93c7. Staging author workspace/session remain separate.
+PR153, artinflight/vibe-kanban, branch fix/startup-recovery-safety-20261008. Initial implementation/evidence pin: 984f5ee79d575df0066c6a3afc2ee49fe02e4d0e. Final observed remote tip: d000ce732049b296f71f47d8ee88edc01b84a904 at 13:55:59 UTC. Its six-file follow-up changes documentation/receipts only; checker, tests and candidate evidence are unchanged. No subsequent author changes are covered.
+Maintenance-content pin: f36e6f10df9b5e66951c4e47c6dedbdf4f54944a; replay base: 422fe5ba0a406f03dd3a658d25e2f632f66d49ab. Current maintenance files matched that pin and its working tree was clean during this review.
+
+AUTHENTICATION
+These were fresh read-only downloads from Desktop B, not reliance on the author's downloaded copies:
+1. incident-20261007T2316-evidence.tar.zst: 35,382,789 bytes; SHA256 bf757ac1e257c7b9ca5edacba7491177b300c1db9677f0e94018dae9e8d88aa7; all 41 manifest entries matched.
+2. post-backup-reconciliation-deaa2e1dc.tar.gz: 4,200,310 bytes; SHA256 67d831c8c6289b6c1a80fb47fb2a4d2767cc34c99b0d50d1f870dfbcf64599f5; all 21 manifest entries matched. The additional 08:53 audit member hashes to 3b87711216971a96a2b9ecb71d28493481b564a667526d7a2723db0d07e99908.
+3. recovery-evidence-correction-984f5ee79.tar.gz: 264,709 bytes; SHA256 e597551a2344077d2df292e5201121ee725a9e7ae3ac9ac5c043d64ac20fa2f0; all 21 manifest entries matched and 17 committed members matched the implementation pin.
+Packet authentication proves retained bytes; it does not endorse withdrawn conclusions in old receipts. Large checkpoint/delta backup streams were not downloaded again: the regular-file baseline receipt was authenticated through the incident packet, and the 228 retained baseline file contents were separately hashed.
+
+VERIFIED FACTS
+All 710 unique candidate paths and event masks match the authenticated incident journal and every published disposition was reproduced. This verifies the supplied candidate set, not completeness of all possible incident writes.
+- 19 present files match authenticated baseline content hashes.
+- 15 present files match newer content in the pinned maintenance commit.
+- 228 absent Hyrox names have regular-file baseline rows, are outside the complete 08:53 exception set, and their retained baseline copies match. Both later-retirement witnesses match hashes in the authenticated reconciliation packet. The merge log records the superseded PR1960/branch; the checkpoint records task-worktree removal and preservation of the original VK checkout. This corroborates later intentional worktree retirement. Exact per-file removal times and every intermediate version are not proved.
+- 448 absent names have no baseline content row or 08:53 coverage: 447 generated dist names and one firebase-debug.log. Local initial-journal DELETE observations match the published journal hash, but that journal is not authenticated by the two original packets. These names remain content/lifecycle-unverified. Their exact row numbers/path digests are in unresolved-448.csv.
+
+The authenticated 08:53 audit contains 116,402 baseline entries: 116,352 verified, 47 content mismatches, three missing-mode entries, no missing files and no errors. All 50 exceptions map uniquely to retained dispositions. Independently checked 16 committed-content rows and two SQLite baseline-content rows. All 12 baseline/current Git-index semantic digests reproduce the retained comparisons: nine equal and three different. The remaining 19 administrative classifications and one registration-pointer classification are authenticated retained evidence, not proof of historical operator intent or preservation of every prior state. None clears the mode/history limitations.
+
+The 135,028,264-byte authenticated transcript has 37,814 physical lines. Across the specified 22:47–23:16 UTC window, 74 tool calls include 15 patch-bearing programs. Independent parsing verifies unique call identities, subsequent matching results, complete sequential program shapes and ordered result-slot cardinalities: 14 accepted patches, one rejected verification at call line 37343. Separate in-memory exact-context replay matches all 11 resulting files and the pinned maintenance commit. No recorded shell/JavaScript/restoration program was executed.
+All 15 recovery files were independently hashed. Eleven match replay; the other four original reconstructions match the base commit. Fourteen current files match their original reconstruction hashes. HANDOFF's original hash matches the base ancestor; its current hash matches the later maintenance commit. These are named content facts, not original-history recovery.
+
+The complete transcript scan retains one malformed line: 415, 598 bytes excluding newline, SHA256 17c828479a4803c0126d478ef14638189bc3f4a7f53fe86cf98d80153bd50ffd. The pinned checker was reproduced: exit 1, recorded_edits_verified false despite all 11 content matches. Twenty in-memory checker regressions also passed. Full application/private-dependency tests were not rerun; retained CI skips are not cleared by this review.
+
+SEPARATE ORIGINAL-HISTORY GAPS
+Fetched the ledger and original-commit/association manifests from immutable Operations commit 53f645a95973aaf30f1f4e2cceb6425c3c748621 through authenticated GitHub access; verified Git blob hashes. Ledger blob: 92a689f064986f5b8bdf06a0a31d4167759e22b7; SHA256 54dce876aabf4c725fb3a57997a35beacff4d6a87f081980b344274af84d23ae.
+All 145 rows cross-reference consistently and have no published original witness: VK 86, opNVLP 24, hyroxready-app 21, programming 11, caspian-app 3. All remain unresolved. No additional recovery or search for commit objects was attempted. Reconstructed contents do not prove original commit identity or remote ancestry. Exact rows are in independent-145-history.json.
+Source: https://github.com/artinflight/Operations/blob/53f645a95973aaf30f1f4e2cceb6425c3c748621/logs/2026-10-08-github-preservation-missing-commits.csv (accessed 2026-10-08).
+
+UNRESOLVED PROOF REQUIRED
+1. For each of the 448 names: authenticated pre-deletion content, or reliable dated per-name evidence establishing intentional retirement/disposability. A whole-worktree retirement receipt cannot supply the missing earlier lifecycle. Preserve content-unverified status where old bytes cannot be established.
+2. For transcript completeness: a complete independently authenticated original/corroborating record covering malformed line 415 and showing its relationship to the retained stream. Silently discarding or repairing the line is not proof.
+3. For original-history coverage: original commit-object identity plus a verified immutable remote witness/ancestry relationship for each of the 145 rows. Final-tree equivalence is insufficient.
+4. For metadata: authenticated type, link-target/hardlink, directory and mode evidence for 14,382 uncovered names, plus original mode evidence for the three SQLite rows. Content matches do not establish this metadata.
+5. For unobserved edits: complete, authenticated capture-to-incident coverage and prior bytes or equivalent independent witnesses. The incident journal has ready:false and two overflow records. The packet-authenticated historical note retains 45 earlier journal errors, including 31 moves outside old declared roots; their raw historical journal was not reverified here. A later zero-error journal or a current successful test cannot erase those gaps.
+
+DOCUMENTATION FINDING AND ACCESS LIMIT
+At 984f5ee79, VK_STARTUP_RECOVERY_SAFETY.md still repeated the withdrawn blanket claim. The independently inspected d000ce732 follow-up corrects it; this is resolved in the final pinned tip, not an outstanding requested edit. Published notes that the previous delegated reviewer was blocked remain historical; this artifact records the separate authorized review actually performed.
+Host/repository guidance and relevant pinned continuity/deployment documents were read. Seamus's separate agent-prompt guidance could not be obtained: connected Google Drive returned USER_NOT_LOGGED_IN / connector not connected. No authentication or policy change was attempted.
+
+BOUNDARY
+Outputs and private evidence copies exist only in this reviewer's SSD directory. No Staging workspace/archive edits, shared recovery, permission changes, cleanup, service starts/restarts, cutover, production testing, agent messages or stopped-conversation resumption were performed. No deployment/readiness approval is implied. Further operational work remains a separate task.
+
+This directory contains only the redacted report and receipts; private transcripts, raw file contents and downloaded packets remain outside it. manifest.json authenticates the review artifacts by SHA256.

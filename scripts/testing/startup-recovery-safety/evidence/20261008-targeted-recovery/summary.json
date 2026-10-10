@@ -1,0 +1,43 @@
+{
+  "observed_at": "2026-10-08T18:49:53.845146+00:00",
+  "independent_review_extended": false,
+  "original_commit_rows": 145,
+  "exact_original_objects_recovered": 132,
+  "original_objects_still_missing": 13,
+  "graphs_hash_verified_in_declared_scope": 129,
+  "original_and_remote_witness_criteria_met": 26,
+  "remote_witness_not_found": 119,
+  "unresolved_names": 448,
+  "original_name_identities_newly_proven": 0,
+  "new_retirements_proven": 0,
+  "names_with_same_name_candidate_bytes": 13,
+  "names_without_candidate_bytes": 435,
+  "candidate_copies": 59,
+  "metadata_headers": 14382,
+  "metadata_types": {
+    "5": 14050,
+    "2": 331,
+    "1": 1
+  },
+  "source_sqlite_modes_verified": 3,
+  "source_sqlite_ownership_verified": false,
+  "same_malformed_line_authenticated_copies": 8,
+  "lifecycle_sources_available": 2022,
+  "lifecycle_bytes_read": 23466444460,
+  "lifecycle_matching_events": 26043,
+  "lifecycle_distinct_names_referenced": 15,
+  "native_git_action_blocked": {
+    "action": "Fetch original Hyrox commit 0d80abb5750f8e564bcf80c5b5436d2128c7994b into isolated Desktop B object store",
+    "reason": "wincredman credential store unavailable; Username cannot be read with terminal prompts disabled",
+    "exit": 128,
+    "routes_or_credentials_changed": false
+  },
+  "remaining_unproven": [
+    "448 original paths: old bytes, exact dated lifecycle, intermediate versions and authorized disposability",
+    "13 original commit identities unless later evidence changes this count",
+    "Native tree 5411325f7e9aa19ca230043f5bb78677d3388c40 cannot be reproduced from retained API metadata; dependent graphs remain incomplete",
+    "Original publication coverage for rows without verified remote witness",
+    "Malformed transcript line 415 suffix",
+    "Journal overflow/outside-root intervals and subsequent link/mode/ownership states"
+  ]
+}

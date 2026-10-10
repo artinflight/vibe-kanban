@@ -1,5 +1,6 @@
 pub mod client;
 pub mod delegation;
+pub mod elicitation;
 pub mod goals;
 pub mod jsonrpc;
 pub mod normalize_logs;
@@ -1246,6 +1247,11 @@ impl Codex {
                 "-c".into(),
                 "agents.max_concurrent_threads_per_session=1".into(),
             ]);
+            if env.capacity.as_ref().is_some_and(|c| c.first_run.is_some()) {
+                for key in crate::capacity::policy::first_run_retry_keys()? {
+                    args.extend(["-c".into(), format!("{key}=0")]);
+                }
+            }
         }
 
         let mut effective_env = env.clone().with_profile(&self.cmd);

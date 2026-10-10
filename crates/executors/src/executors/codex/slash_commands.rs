@@ -227,7 +227,11 @@ impl Codex {
                             } else {
                                 json!({"threadId": thread_id, "objective": arguments, "status":"active"})
                             };
-                            client.goal_request("thread/goal/set", params).await?;
+                            if let Some(capacity) = &capacity {
+                                client.activate_capacity_goal(capacity, &thread_id).await?;
+                            } else {
+                                client.goal_request("thread/goal/set", params).await?;
+                            }
                             // Native goals start their own continuation; no synthetic user turn.
                         }
                     }

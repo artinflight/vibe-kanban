@@ -181,6 +181,7 @@ interface SessionChatBoxProps<TExecutor extends string = string> {
   feedbackMode?: FeedbackModeProps;
   editMode?: EditModeProps;
   approvalMode?: ApprovalModeProps;
+  consentCards?: ReactNode;
   askQuestionMode?: AskQuestionModeProps;
   reviewComments?: ReviewCommentsProps;
   subagentActivity?: SubagentActivityProps;
@@ -249,6 +250,7 @@ export function SessionChatBox<TExecutor extends string = string>({
   feedbackMode,
   editMode,
   approvalMode,
+  consentCards,
   askQuestionMode,
   reviewComments,
   subagentActivity,
@@ -725,7 +727,12 @@ export function SessionChatBox<TExecutor extends string = string>({
         localAttachments,
       })}
       error={displayError}
-      banner={renderBanner()}
+      banner={
+        <>
+          {consentCards}
+          {renderBanner()}
+        </>
+      }
       visualVariant={getVisualVariant()}
       isRunning={showRunningAnimation}
       dropzone={dropzone}

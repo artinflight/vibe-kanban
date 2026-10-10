@@ -1604,3 +1604,14 @@ pass on actual installed modules, combined100+44 pass on untouched PR236 copy.
 Local holds and receipts preserved; backend explicit /seen intentionally advances
 manual intent, fresh unread observation kept separate from clear acceptance.
 No marker test, production adoption, plugin grants/reauth, extra workers or build.
+
+2026-10-10 — Resumed PR238 owner4696d7177: current20-tool catalog and actual
+unread summaries(limit1) read succeeded11:30:10 UTC; parent Staging confirmed
+10:49:42 separately. Removed current-client Refresh gating, preserving historical
+14-tool receipts as older-client evidence only. Explicit clear published without
+real marker tests. Named implemented Caller prepare/confirm entry points and
+excluded VK useSessionSend.send/followUp acceptance; actual hosting channel
+confirmation handler/API remains external/unidentified. Same inherited CI failure
+rerun exact4696 job; routing_triage is unchanged with40ms inspection deadline.
+Small caller/readiness + synthetic lost-response regressions run; no workers/build,
+policy/auth/security, runtime/hold/marker change or duplicate e3e1 code.

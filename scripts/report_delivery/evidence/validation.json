@@ -1,5 +1,5 @@
 {
-  "validated_at_utc": "2026-10-09",
+  "validated_at_utc": "2026-10-10",
   "connector_source_commit": "195e3b782eaef226049b003d8ca2a205094016aa",
   "candidate_connector_commit": "6b09237137a73561ded002821e3832d4460daac5",
   "source_is_disposable_copy": true,
@@ -119,5 +119,18 @@
   "pending_explicit_acceptance": [
     "owner refresh and actual fresh client unread summaries call",
     "single mark only on a later real explicit user clear request; no markers for testing"
-  ]
+  ],
+  "caller_code_commit": "8ed55f8ba5a35bd4832cd3439deac01383cfc9ca",
+  "hosted_caller_ci": {
+    "conclusion": "success",
+    "url": "https://github.com/artinflight/vibe-kanban/actions/runs/38043475048",
+    "head_sha": "8ed55f8ba5a35bd4832cd3439deac01383cfc9ca",
+    "coverage": "17 independent caller +3 explicit readiness tests and patch hash/file boundary; source-dependent 24 dispatcher integration tests verified locally, including installed explicit modules"
+  },
+  "hosted_full_repository_ci": {
+    "status": "in_progress",
+    "url": "https://github.com/artinflight/vibe-kanban/actions/runs/38043475044",
+    "head_sha": "8ed55f8ba5a35bd4832cd3439deac01383cfc9ca",
+    "observed_after_focused_ci": "branch freshness/policy, changes, ops passed; full frontend/backend/tauri checks pending"
+  }
 }

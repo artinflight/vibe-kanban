@@ -9,7 +9,8 @@ is independent of automatic delivery callback/PR238 connector-patch adoption.
 New read-only verifier has no mark command. Seven installed-module mocked tests
 and144 combined candidate tests pass. Explicit /seen advances backend manual intent;
 local holds/receipt state remain unchanged, and fresh unread must be read separately.
-See VK_UNREAD_REPORT_INTEGRATION.md and evidence/explicit-read-20261010.json.
+See VK_UNREAD_REPORT_INTEGRATION.md and
+scripts/report_delivery/evidence/explicit-read-20261010.json.
 No production markers, auth/permission/config/runtime/service/release changed.
 
 ## October 9: Unread delivery integration candidate

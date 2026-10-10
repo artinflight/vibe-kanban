@@ -121,6 +121,9 @@ combined disposable PR236 candidate passes100 maintenance +44 integration/caller
 readiness cases (144 total). Tested manual SQL constants match deployed source;
 this is synthetic/SQL-contract evidence, not a live execution of the PUT route.
 No production marker, runtime file, auth/config, service or release changed.
+The focused20-test caller/readiness/hash CI passed at `8ed55f8ba`:
+[run38043475048](https://github.com/artinflight/vibe-kanban/actions/runs/38043475048).
+Full repository checks remain separate; they were in progress at this receipt.
 
 Explicit-path acceptance is independent of the automatic checklist below:
 

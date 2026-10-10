@@ -559,6 +559,8 @@ mod tests {
         let producer = store.clone().spawn_forwarder(futures_util::stream::empty::<
             Result<utils::log_msg::LogMsg, std::io::Error>,
         >());
+        // Raw EOF and the exit monitor's lifecycle marker must both drain.
+        store.push_finished();
         tokio::time::timeout(Duration::from_secs(5), writer)
             .await
             .unwrap()

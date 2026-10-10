@@ -1,3 +1,16 @@
+## October 10: Release owner ready; safe publication boundary
+
+The latest operator notice says Staging's narrow reader is compiled and its
+copied-data acceptance is complete. Read-only verification confirms the
+corrected acceptance receipt passed 160 checks, preserves the original18, and
+verifies the additional intact large histories. Its binary SHA256 is
+4540183be41330e6dc2017111037f605a0dd0a116630c81c71d0edba10a82fb0.
+Live backend5621 still returns the original capture error at this checkpoint;
+live restoration is not claimed. Staging owns the imminent authorized quiet
+publication. End this bounded turn and hold new background starts as requested.
+The saved alternate patch remains preserved, but the tested Staging reader is
+the release candidate; do not deploy or rebuild a competing reader.
+
 ## October 10: Repair preserved; Staging quiet-boundary hold
 
 The requested large-chat repair is committed as `00f455072` on

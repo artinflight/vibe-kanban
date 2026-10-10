@@ -48,8 +48,19 @@ jobs:
           pnpm run web-core:check
           pnpm run local-web:check
           pnpm run remote-web:check
+      - name: Export hosted-built read-only incident verifier
+        env:
+          VK_VERIFY_ARTIFACT: ${{ runner.temp }}/native-recovery-verifier
+        run: |
+          cargo test --locked -p server --lib --no-run --message-format=json > "$RUNNER_TEMP/recovery-test-binary.jsonl"
+          python3 scripts/testing/export-native-recovery-verifier.py "$RUNNER_TEMP/recovery-test-binary.jsonl"
       - name: Lint and format
         run: |
           cargo clippy --locked -p server --all-targets -- -D warnings
           cargo fmt --all -- --check
           pnpm --filter @vibe/web-core exec prettier --check src/features/workspace-chat/model/historyPage.ts src/features/workspace-chat/model/hooks/useConversationHistory.ts ../../.github/workflows/historical-response-recovery.yml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-recovery-verifier-${{ github.sha }}
+          path: ${{ runner.temp }}/native-recovery-verifier/
+          retention-days: 14

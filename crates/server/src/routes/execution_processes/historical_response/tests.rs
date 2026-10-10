@@ -12,6 +12,54 @@ include!(concat!(
     "/tests/fixtures/review_storage_root.rs"
 ));
 
+#[test]
+#[ignore = "Requires the two private incident identities; read-only, never a CI user-review fixture"]
+fn verify_actual_native_sources_read_only() {
+    let path = std::env::var("VK_NATIVE_RECOVERY_ACCEPTANCE_MANIFEST")
+        .expect("Explicit private manifest required");
+    let bytes = fs::read(path).unwrap();
+    assert!(bytes.len() <= 128_000);
+    let rows: Value = serde_json::from_slice(&bytes).unwrap();
+    let rows = rows.as_array().unwrap();
+    assert_eq!(rows.len(), 2);
+    let allowed = [
+        "3ce20433-f984-4c33-800f-d4987145fa4a",
+        "c64a7b0c-9c34-43e0-b70d-7e05f93751ef",
+    ];
+    let mut ids = std::collections::HashSet::new();
+    for row in rows {
+        let process: ExecutionProcess = serde_json::from_value(row["process"].clone()).unwrap();
+        assert!(allowed.contains(&process.id.to_string().as_str()));
+        assert!(ids.insert(process.id));
+        let request: RecoveryRequest = serde_json::from_value(row["request"].clone()).unwrap();
+        let capture = PathBuf::from(row["capture"].as_str().unwrap());
+        assert_eq!(
+            capture,
+            utils::execution_logs::process_log_file_path_in_root(
+                Path::new("/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban"),
+                process.session_id,
+                process.id
+            )
+        );
+        let record = recover(
+            &process,
+            &request,
+            Path::new("/home/mcp/.local/share/vibe-kanban-green-codex-home"),
+            &capture,
+        )
+        .unwrap();
+        assert_eq!(record.evidence.reply_sha256, request.reply_sha256);
+        assert_eq!(
+            bounded_file_hash(&capture).unwrap(),
+            request.original_capture_sha256
+        );
+        println!(
+            "verified original={} turn={} final_at={} reply_sha256={} no_writes=true",
+            process.id, request.native_turn_id, record.final_at, request.reply_sha256
+        );
+    }
+}
+
 // Sanitized shapes of the actual T18/MM Oct10 native records. No private
 // prompts, reasoning, tool payloads or credentials enter this public fixture.
 struct Fixture {

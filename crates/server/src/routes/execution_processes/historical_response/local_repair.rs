@@ -309,7 +309,9 @@ async fn readonly_pool(database: &Path) -> RecoveryResult<sqlx::SqlitePool> {
                 .create_if_missing(false),
         )
         .await
-        .map_err(|_| {
+        .map_err(|error| {
+            #[cfg(test)]
+            eprintln!("Disposable read-only connection failure: {error}");
             "Existing read-only database unavailable; no creation or migration allowed".into()
         })
 }

@@ -10,10 +10,12 @@ runtime owns genuine delivery confirmation; its actual handler/API is not expose
 or identified in VK/connector. useSessionSend.send -> sessionsApi.followUp only
 accepts a worker prompt; never interpret it as delivered-report evidence.
 Inherited fullCI38043553814/114190057751 failed unchanged routing_triage at509;
-40ms inspection budget makes load-related failure plausible. Exact job rerun
-at original commit; no routing/model/source workaround. Current receipt/outcome
-is in parent pr238-unread-readiness.safe.json. Existing history module/Recommend
-remain correct; e3e1/PR240 stays separate. No extra agents, heavy build, cleanup,
+40ms inspection budget makes load-related failure plausible. Exact attempt2 rerun passed397 tests,7 skipped at original4696d7177;
+no routing/model/source workaround. Parent receipt and B-backed readiness
+artifact record the result. Existing history module/Recommend
+remain correct; e3e1/PR240 stays separate. Shared SSD filled during finalization; B retains final packet/receipt and GitHub
+contains the file-limited docs/metadata commit. Local Git sync is capacity-blocked.
+No extra agents, heavy build, cleanup,
 connector install/restart, security/credential/permission or production marker work.
 
 # October 10: Explicit clear pickup

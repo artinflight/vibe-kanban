@@ -163,11 +163,16 @@
     "expected": "Frontier",
     "rerun_attempt": 2,
     "rerun_job": 114203211741,
-    "status": "in_progress",
+    "status": "completed",
     "routing_source_unchanged": true,
     "routing_source_sha256": "90caac528eef4dae2f64b4a4e4406a7224ed3e53b034184dbc00db16f4f3b09c",
     "diagnosis": "40ms inspection deadline/load plausible; failure log does not prove cause",
-    "policy_or_source_workaround": false
+    "policy_or_source_workaround": false,
+    "conclusion": "success",
+    "passed": 397,
+    "skipped": 7,
+    "previously_failing_test": "passed unchanged on attempt2",
+    "url": "https://github.com/artinflight/vibe-kanban/actions/runs/38043553814/attempts/2"
   },
   "metadata_refresh_performed_by_this_owner": false,
   "earlier_hosted_full_repository_ci_receipt": {
@@ -175,5 +180,11 @@
     "url": "https://github.com/artinflight/vibe-kanban/actions/runs/38043475044",
     "head_sha": "8ed55f8ba5a35bd4832cd3439deac01383cfc9ca",
     "observed_after_focused_ci": "branch freshness/policy, changes, ops passed; full frontend/backend/tauri checks pending"
+  },
+  "storage": {
+    "ssd_full": true,
+    "cleanup_performed": false,
+    "artifacts": "desktop:B:/vk-builds/vk-next-restart-20261010/pr238-readiness/",
+    "publication": "Existing GitHub feature branch via Git API; no new remote; local checkout synchronization pending SSD capacity."
   }
 }

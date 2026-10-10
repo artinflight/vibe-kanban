@@ -68,9 +68,16 @@ component can leave the default Workhorse floor. Runner scheduling/contention is
 therefore a plausible nondeterministic trigger, not a proven cause from this log.
 The supplied unchanged mobile rerun-green evidence supports retrying the same source.
 No routing/model/policy/test assertion was changed. The exact failed job was rerun
-as attempt2 on the same4696d7177 commit; its observed outcome is recorded in the
-readiness receipt. Full run remote-checks reported success by skipping private-key
+as attempt2 on the same4696d7177 commit:397 passed,7 skipped, including the
+previously failing test. This establishes nondeterminism on unchanged source;
+the precise load/deadline cause remains unproven. The readiness receipt records it. Full run remote-checks reported success by skipping private-key
 checks; that is not independent remote deployment validation.
+
+Shared SSD reached0 free during finalization. Final source/readiness metadata is
+retained on `desktop:B:/vk-builds/vk-next-restart-20261010/pr238-readiness/`; the
+file-limited docs/metadata commit is published to the existing GitHub branch via
+Git API without a new remote. Local checkout/ref sync waits for capacity; all active
+work is preserved, with no cleanup or runtime/security change.
 
 ## Review boundary
 

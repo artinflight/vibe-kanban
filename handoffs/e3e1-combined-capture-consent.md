@@ -72,30 +72,56 @@ Rollback manifest SHA256:
 Current server PID 1254186 and frontend/support hashes were freshly rechecked;
 no production drift, restart, deployment, data/read flag or security change.
 
-External candidate download/file verification is INCOMPLETE. At completion of
-CI, MCP DNS began returning REFUSED for api.github.com/github.com; gh could not
-connect. Existing connected GitHub artifact tool also failed transport to
-chatgpt.com. Desktop's public supported API verified successful CI and artifact
-ID/digest, but archive GET returned HTTP401; Desktop gh has no configured login.
-No credentials were copied/extracted, authentication reconfigured, DNS/proxy
-changed or alternative network grant introduced. The correct next step is
-existing authenticated artifact retrieval after normal MCP connectivity returns.
-Do not invent the unread per-file server/frontend hashes or claim independently
-verified candidate contents yet. No source/build failure remains.
+External candidate verification is now COMPLETE. A temporary MCP DNS REFUSED
+incident blocked existing authenticated clients while the hosted build finished.
+The supported anonymous archive route returned HTTP401, which was respected.
+Normal DNS recovered without any config/security change; existing MCP gh then
+streamed the exact pinned archive directly to Desktop B. No credentials were
+copied, extracted or reconfigured, and no network grant/proxy was added.
+A Windows verifier default cp1252 text-read error was corrected to explicit
+UTF-8; the preserved download was reverified instead of downloaded again.
 
-## Exact resume/publication boundary
+## Verified ready publication pair
 
-On normal connectivity, use existing authenticated gh API to stream
-`repos/artinflight/vibe-kanban/actions/artifacts/11652584455/zip` directly to
-Desktop B through `receive-hosted-artifact.py`; verify the ZIP digest above,
-sourceCommit, all manifest file hashes and >=577 compiled application source-map
-matches. Receiver and exact expected source hashes are already prepared on B.
-Then run `package-publication-pair.py` on B with that verified candidate payload.
-It retains missing incumbent assets for cached clients, refuses non-map hashed
-asset collisions, keeps new maps/index, exports a mode0755 server tar with all
-file hashes, and verifies that tar independently. It has NOT run yet.
+Raw hosted ZIP SHA256 (53,251,749 bytes):
+6c7314035e5d6821c9d2317ff54a5a31c7cccf05249048ce5bed241bd58ded8c.
+766 candidate files matched the manifest. All 577 compiled application sources
+matched source aa11dd6a with zero mismatches. Raw candidate manifest SHA256:
+ff33e1881dc285268a9221261f9abf00bcc67d75ce531e80b2cfc1c0375c4896.
+Server SHA256 (74,626,776 bytes):
+7b32f9efa5c092ca77ecd70483427648539ebf778e15a7138d3891f3986dc442.
+Raw built frontend canonical tree SHA256:
+e1495db0fe362b7de9bef1a0b6fe23ab866d3972f50fa1c6cb20e9f24839119e.
 
-Only after these checks: present the exact verified pair/tar/hash to the normal
+Ready tar, on Desktop B only (no runtime dependency on Desktop after staging):
+`B:/vk-builds/vk-combined-capture-consent-20261010/publication-pair-aa11dd6a5707bba400db2f893eebc857633be437.tar.gz`.
+69,698,620 bytes; SHA256:
+b40e1b6ae111039fe45929f2dceeaa5aa5d9be96d65a901a18ca996c2c60ac09.
+Publication manifest SHA256:
+655cdc9189a48c37641a8435adcb6b901d315967134d3cf1863eecaaaf86a20a.
+Published frontend canonical tree SHA256:
+efbe975c3ad2c33f145d86edc66f14735e03fb8332ea73783ab8283935fc1be9.
+All 1,029 artifact files and manifest were re-read from the exported tar and
+matched; server mode is0755. The pair preserves every fresh CI-built byte,
+adds 263 missing incumbent assets for cached clients, and rejects any non-map
+hash-named asset collision. 295 duplicate source maps retain the new build's
+source maps rather than old environment-specific paths; old maps stay preserved
+in the verified rollback. New index/bootstrap/assets remain from the tested
+candidate. Packaging occurs only on B; no local Cargo/frontend build was run.
+Verifier/packer scripts and immutable receipts are in the named B task folder;
+small mirrored JSON receipts are in the MCP evidence folder.
+
+## Narrow publication step (NOT performed)
+
+The release coordinator can now fetch only the verified tar to a new immutable
+MCP release directory, verify its SHA256 and all manifest files again, and use
+this exact server/frontend pair through the normal release flow. Retain existing
+capacity guard, wrapper/module/scanner, runtime identity, authorization/config,
+permissions, data, Recommend routing and owner holds. Do not merge wider PR236/
+PR239 branches or unrelated staging baselines. Normal full review and explicit
+activation authority are still required; this preparation is not a cutover.
+
+Present the exact verified pair/tar/hash to the normal
 release coordinator; stage in a new immutable release directory, preserve all
 live support/settings/data, complete normal fresh identity/capacity/current-state
 backup/restore and writer-drain gates, then obtain explicit activation authority.

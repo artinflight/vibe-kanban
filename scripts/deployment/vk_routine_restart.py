@@ -3,6 +3,7 @@
 No production driver, shell executor, restoration or retirement is supplied here.
 Review is an operational gate, not a security boundary between same-UID agents.
 """
+from contextlib import nullcontext
 import hashlib
 import json
 from pathlib import Path
@@ -49,7 +50,7 @@ def wait_for_real_drain(read_inventory, preparation_execution_hex, deadline_mono
         sleep(min(0.5, max(0, deadline_monotonic - clock())))
 
 
-def run(plan, driver, *, fix_ready_monotonic, clock=time.monotonic, budget_seconds=600):
+def run(plan, driver, *, fix_ready_monotonic, clock=time.monotonic, budget_seconds=600, git_boundary=None):
     """Prepare while incumbent serves; hand over only under the existing gates.
 
     Driver methods are trusted source adapters, never manifest command strings.
@@ -88,6 +89,10 @@ def run(plan, driver, *, fix_ready_monotonic, clock=time.monotonic, budget_secon
         require(plan.get('cleanup_enabled') is False, 'cleanup must remain disabled until separate human QA')
         require(plan.get('fallback_compatible') is True, 'latest-data compatible fallback required')
         require(plan.get('action_authorized') is True, 'specific handover authorization missing')
+        require(type(plan.get('git_activation', False)) is bool, 'explicit Git activation mode required')
+        if plan.get('git_activation') is True:
+            from vk_restart_git_boundary import HeldGitCheck
+            require(isinstance(git_boundary, HeldGitCheck), 'held Git check-all adapter missing')
         authorization = driver.authorization(plan)
         require(authorization.get('authenticated_owner_approval') is True
                 and authorization.get('authorized_plan_sha256') == expected,
@@ -122,14 +127,21 @@ def run(plan, driver, *, fix_ready_monotonic, clock=time.monotonic, budget_secon
             remaining()
             # All package hashes/network preparation/review are complete. The
             # existing handover owns its final fenced B snapshot and API gates.
-            action_budget = remaining()
-            touched = True
-            receipt = measured('handover', lambda: driver.handover(plan, package, backup, action_budget))
-            require(receipt.get('plan_sha256') == expected and receipt.get('live_acceptance') is True
-                    and receipt.get('latest_data_preserved') is True
-                    and receipt.get('fallback_retained') is True and receipt.get('cleanup_enabled') is False
-                    and receipt.get('blocked_work_resumed') is True,
-                    'handover acceptance incomplete; retain latest data and fallback')
+            gate = git_boundary.held(remaining) if plan.get('git_activation') is True else nullcontext(None)
+            phase = 'git_check_all' if plan.get('git_activation') is True else phase
+            with gate as git_witness:
+                action_budget = remaining()
+                touched = True
+                receipt = measured('handover', lambda: driver.handover(
+                    plan, package, backup, action_budget, **({'git_boundary': git_witness} if git_witness is not None else {})))
+                require(receipt.get('plan_sha256') == expected and receipt.get('live_acceptance') is True
+                        and receipt.get('latest_data_preserved') is True
+                        and receipt.get('fallback_retained') is True and receipt.get('cleanup_enabled') is False
+                        and receipt.get('blocked_work_resumed') is True,
+                        'handover acceptance incomplete; retain latest data and fallback')
+                if git_witness is not None:
+                    require(receipt.get('git_boundary') == git_witness,
+                            'handover omitted or changed pinned Git witness')
         return {'passed': True, 'plan_sha256': expected, 'stages_seconds': stages,
                 'total_seconds': clock() - started, 'routine_goal_seconds': budget_seconds,
                 'preparation_seconds': prepared_seconds, 'switch_seconds': clock() - switch_started,

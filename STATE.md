@@ -1,3 +1,10 @@
+## October 10: Large-log chat history rejection diagnosed
+
+Read-only live evidence shows the deployed history reader reuses a 32 MiB review
+log bound and labels larger, well-framed closed captures as incomplete/damaged.
+See VK_WEIRD_ERROR_20261010.md for five reproductions, current service identity,
+and validation limits. This diagnosis changes no runtime or application code.
+
 ## October 8: Workspace-first frontend follow-up in preparation
 
 Workspace landing, To do defaults on phones, and whole-card attention styling

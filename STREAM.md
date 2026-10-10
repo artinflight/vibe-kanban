@@ -1,3 +1,12 @@
+# October 10: VK::Weird Error diagnosis
+
+Branch `vk/dbe9-vk-weird-error` diagnoses the screenshot's capture-completeness
+warning. Five recent VK::Staging Check logs exceed the history reader's 32 MiB
+bound despite valid framing, closed writers and native completion events.
+See VK_WEIRD_ERROR_20261010.md. No fix or deployment was performed; a repair must
+start from current staging because this checkout predates the deployed reader.
+Older stream entries below belong to previous work.
+
 # October 8: Workspace-first navigation and task attention follow-up
 
 The current frontend stream makes Workspaces the opening screen, removes the

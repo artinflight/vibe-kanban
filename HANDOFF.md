@@ -1,3 +1,12 @@
+# October 10: VK::Weird Error diagnosed
+
+The empty conversation is a history-reader size-limit rejection, not evidence
+that these replies vanished. Live API requests and strict framing checks confirm
+five closed completed captures exceed 32 MiB; an earlier smaller capture loads.
+Read VK_WEIRD_ERROR_20261010.md for evidence and the proposed repair boundary.
+No application/runtime changes. `pnpm run format` passed Rust formatting but
+failed at missing `prettier`; no frontend dependencies were installed.
+
 # October 8: Workspace-first navigation and task attention follow-up
 
 The current frontend stream makes Workspaces the opening screen, removes the

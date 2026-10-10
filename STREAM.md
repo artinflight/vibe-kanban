@@ -1,3 +1,29 @@
+## Resume: Toronto nightly calendar, adoption disabled
+
+Nightly timing uses the implementation default 02:00 America/Toronto, not a
+claimed historical user choice. A timezone-neutral 15-minute cron wake-up is
+interpreted by the fixed calendar script; no per-user CRON_TZ support is assumed.
+The spring missing hour runs at the first valid 03:00; a persistent local-day
+checkpoint suppresses normal duplicate completion. Real calendar/producer leases
+exclude overlapping jobs. A crash after B publication before the calendar
+checkpoint can cause another safe bounded delta, not an exactly-once claim.
+
+Resource deferrals retry every 30 minutes, at most sixteen attempts inside the
+02:00--10:00 local window, then automatically try the next night. Monotonic
+cooldowns and bounded reboot anchoring avoid clock-driven rapid retries or
+unbounded waits. Unexpected job failures persist actionable review status;
+existing owned-resource reconciliation and protected evidence are preserved.
+Actual private JSON status and cron stdout are reporting paths; external UI/mail
+notification delivery is not validated or claimed. Nightly job timeout is two
+hours after adoption; four-hour cold acceptance remains a separate configuration.
+
+Source tests cover DST, duplicates, active producers, inherited leases and
+clock/reboot recovery. No schedule, production backup, access/security change or
+backend cutover is performed. Whole-plan B acceptance and configuration review
+remain required. Respect the current Staging quiet boundary; do not admit a
+heavy acceptance or another worker while it is held. Git-independent backup
+verification does not waive any affected preservation-boundary obligations.
+
 ## Resume: guarded unprivileged adoption preparation
 
 The fixed nightly supervisor defers before expensive preparation when the

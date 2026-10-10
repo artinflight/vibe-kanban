@@ -9,10 +9,16 @@ import unittest
 from unittest.mock import Mock
 from unittest.mock import patch
 
-from vk_nightly_supervisor import host_admission, MEMORY_FLOOR, SWAP_FLOOR, supervise, main
+from vk_nightly_supervisor import host_admission, MEMORY_FLOOR, SWAP_FLOOR, supervise, main, exit_code
 
 
 class Supervisor(unittest.TestCase):
+    def test_resource_lifetime_abort_is_retryable_but_job_failure_is_not(self):
+        for status in ('resource_deferred','guard_aborted','observation_blocked'):
+            self.assertEqual(exit_code({'passed':False,'status':status}),75)
+        self.assertEqual(exit_code({'passed':False,'status':'job_timeout'}),1)
+        self.assertEqual(exit_code({'passed':False,'status':'job_completed'}),1)
+        self.assertEqual(exit_code({'passed':True,'status':'job_completed'}),0)
     def test_actual_low_swap_is_not_excused_by_available_memory(self):
         self.assertIsNotNone(host_admission({'MemAvailable': 8*1024**3, 'SwapFree': 76*1024**2}, 3))
         self.assertIsNone(host_admission({'MemAvailable': MEMORY_FLOOR, 'SwapFree': SWAP_FLOOR}, 7))

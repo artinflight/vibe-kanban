@@ -8,11 +8,13 @@ from vk_nightly_schedule import block, add_owned, remove_owned, apply
 
 class Schedule(unittest.TestCase):
     def setUp(self):
-        self.owned=block('/fixture/package','/fixture/config','a'*64,'/fixture/log',hour=2,minute=0)
+        self.owned=block('/fixture/package','/fixture/config','a'*64,'/fixture/log')
         self.original='MAILTO=""\n15 3 * * * /fixture/unrelated-backup\n'
     def test_daily_script_no_llm_root_or_service_cutover(self):
-        self.assertIn('0 2 * * * ',self.owned);self.assertIn('MemoryMax=3G',self.owned)
-        self.assertIn('vk_nightly_supervisor.py',self.owned)
+        self.assertIn('*/15 * * * * ',self.owned);self.assertIn('MemoryMax=3G',self.owned)
+        self.assertIn('vk_nightly_calendar.py',self.owned)
+        self.assertNotIn('--unit=vk-normal-nightly',self.owned)
+        self.assertNotIn('CRON_TZ=',self.owned)
         for forbidden in ('sudo','codex','systemctl stop','rm '):self.assertNotIn(forbidden,self.owned)
     def test_cron_percent_does_not_split_command_or_create_stdin(self):
         command=self.owned.splitlines()[1].split(' ',5)[5]
@@ -26,9 +28,10 @@ class Schedule(unittest.TestCase):
     def test_unknown_or_changed_block_cannot_be_replaced(self):
         with self.assertRaises(ValueError):add_owned(self.original+self.owned,self.owned,timezone='UTC')
         with self.assertRaises(ValueError):remove_owned(self.original+self.owned.replace('MemoryMax=3G','MemoryMax=4G'),self.owned)
-    def test_timezone_does_not_silently_change_unrelated_jobs(self):
-        for text,timezone in [(self.original,'Europe/London'),('CRON_TZ=UTC\n'+self.original,'UTC')]:
-            with self.assertRaises(ValueError):add_owned(text,self.owned,timezone=timezone)
+    def test_wake_up_preserves_other_jobs_and_environment_timezone(self):
+        text='TZ=Europe/London\nCRON_TZ=UTC\n'+self.original
+        self.assertEqual(remove_owned(add_owned(text,self.owned,timezone='Europe/London'),self.owned),text)
+        with self.assertRaises(ValueError):add_owned(text,self.owned,timezone='')
     def test_gate_failure_is_before_any_cron_access(self):
         def denied():raise ValueError('fixture acceptance missing')
         def unexpected(*a,**kw):self.fail('gate did not precede access')

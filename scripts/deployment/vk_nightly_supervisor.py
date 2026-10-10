@@ -27,6 +27,13 @@ SWAP_FLOOR = 512 * 1024**2
 MAX_CODING_ENTRIES = 7
 
 
+def exit_code(result):
+    if result['passed']:return 0
+    # The existing producer leases/reconciliation still gate the next attempt.
+    # A lifetime resource abort must not silently disable future nightlies.
+    return 75 if result['status'] in ('resource_deferred','guard_aborted','observation_blocked') else 1
+
+
 def host_admission(meminfo, coding_entries):
     if meminfo['MemAvailable'] < MEMORY_FLOOR or meminfo['SwapFree'] < SWAP_FLOOR:
         return 'host memory/swap floor'
@@ -180,7 +187,7 @@ def main():
         return subprocess.Popen(argv,start_new_session=True)
     result = supervise(launch, lambda: observe(config), record, timeout_seconds=timeout)
     print(json.dumps({'passed': result['passed'], 'status': result['status'], 'receipt': str(receipt)}))
-    return 0 if result['passed'] else 75 if result['status'] == 'resource_deferred' else 1
+    return exit_code(result)
 
 
 if __name__ == '__main__':

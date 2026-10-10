@@ -57,6 +57,13 @@ import { useRemoteCloudHostsAppBarModel } from '@/shared/hooks/useRemoteCloudHos
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { projectsApi } from '@/shared/lib/api';
 import { paginateWorkspaceSidebar } from './workspaceSidebarPagination';
+import { useLocalParticipants } from '@/shared/hooks/useLocalParticipants';
+import {
+  filterWorkspaceAssignments,
+  workspaceAssigneesById,
+  type WorkspaceAssignmentFilter,
+  type WorkspaceAssignmentLink,
+} from './workspaceAssignmentFilter';
 
 export type WorkspaceLayoutMode = 'flat' | 'accordion';
 
@@ -271,6 +278,61 @@ export function WorkspacesSidebarContainer({
   const isMobile = useIsMobile();
   const { hosts: remoteCloudHosts } = useRemoteCloudHostsAppBarModel();
   const { hostId: routeHostId } = useParams({ strict: false });
+  const participants = useLocalParticipants();
+  const localAssignmentView = participants.isLocalOnlySession && !routeHostId;
+  const [assignmentFilter, setAssignmentFilter] =
+    useState<WorkspaceAssignmentFilter>(() => {
+      try {
+        return localStorage.getItem('vk-workspace-assignment-filter') === 'all'
+          ? 'all'
+          : 'mine';
+      } catch {
+        return 'mine';
+      }
+    });
+  const assignmentQuery = useQuery({
+    queryKey: ['local-workspace-assignments'],
+    queryFn: async () => {
+      const response = await fetch('/v1/fallback/workspace_assignments', {
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error('Unable to load workspace assignments');
+      const data = (await response.json()) as {
+        workspace_assignments: WorkspaceAssignmentLink[];
+      };
+      return data.workspace_assignments;
+    },
+    enabled: localAssignmentView,
+    staleTime: 1000,
+    refetchInterval: 3000,
+  });
+  const assigneesById = useMemo(
+    () => workspaceAssigneesById(assignmentQuery.data ?? []),
+    [assignmentQuery.data]
+  );
+  const assignmentUserId = localAssignmentView
+    ? (participants.data?.current_user_id ?? null)
+    : null;
+  const assignmentActiveWorkspaces = useMemo(
+    () =>
+      filterWorkspaceAssignments(
+        activeWorkspaces,
+        assignmentFilter,
+        assignmentUserId,
+        assigneesById
+      ),
+    [activeWorkspaces, assignmentFilter, assignmentUserId, assigneesById]
+  );
+  const assignmentArchivedWorkspaces = useMemo(
+    () =>
+      filterWorkspaceAssignments(
+        archivedWorkspaces,
+        assignmentFilter,
+        assignmentUserId,
+        assigneesById
+      ),
+    [archivedWorkspaces, assignmentFilter, assignmentUserId, assigneesById]
+  );
   const setMobileActiveTab = useUiPreferencesStore((s) => s.setMobileActiveTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [showArchive, setShowArchive] = usePersistedExpanded(
@@ -453,14 +515,20 @@ export function WorkspacesSidebarContainer({
   // Reset display limit when search, filter, or sort state changes
   useEffect(() => {
     setDisplayLimit(PAGE_SIZE);
-  }, [searchQuery, showArchive, workspaceFilters, workspaceSort]);
+  }, [
+    searchQuery,
+    showArchive,
+    workspaceFilters,
+    workspaceSort,
+    assignmentFilter,
+  ]);
 
   const searchLower = searchQuery.toLowerCase();
   const isSearching = searchQuery.length > 0;
 
   // Apply sidebar filters (project + PR), then search
   const filteredActiveWorkspaces = useMemo(() => {
-    let result = activeWorkspaces;
+    let result = assignmentActiveWorkspaces;
 
     // Project filter
     if (workspaceFilters.projectIds.length > 0) {
@@ -493,10 +561,15 @@ export function WorkspacesSidebarContainer({
     }
 
     return result;
-  }, [activeWorkspaces, workspaceFilters, projectByLocalId, searchLower]);
+  }, [
+    assignmentActiveWorkspaces,
+    workspaceFilters,
+    projectByLocalId,
+    searchLower,
+  ]);
 
   const filteredArchivedWorkspaces = useMemo(() => {
-    let result = archivedWorkspaces;
+    let result = assignmentArchivedWorkspaces;
 
     if (workspaceFilters.projectIds.length > 0) {
       const includeNoProject =
@@ -526,7 +599,12 @@ export function WorkspacesSidebarContainer({
     }
 
     return result;
-  }, [archivedWorkspaces, workspaceFilters, projectByLocalId, searchLower]);
+  }, [
+    assignmentArchivedWorkspaces,
+    workspaceFilters,
+    projectByLocalId,
+    searchLower,
+  ]);
 
   const sortWorkspaces = useCallback(
     (workspaces: Workspace[]) =>
@@ -664,6 +742,44 @@ export function WorkspacesSidebarContainer({
     running: PERSIST_KEYS.workspacesSidebarRunning,
   };
 
+  const assignmentControls = localAssignmentView ? (
+    <div className="flex flex-col gap-half">
+      <ButtonGroup>
+        {(['mine', 'all'] as const).map((filter) => (
+          <button
+            type="button"
+            aria-pressed={assignmentFilter === filter}
+            className={cn(
+              'px-base py-half text-sm transition-colors',
+              isMobile && 'min-h-12 min-w-16',
+              assignmentFilter === filter
+                ? 'bg-secondary text-normal'
+                : 'text-low hover:text-normal'
+            )}
+            key={filter}
+            onClick={() => {
+              setAssignmentFilter(filter);
+              try {
+                localStorage.setItem('vk-workspace-assignment-filter', filter);
+              } catch {
+                /* Keep the current choice in memory. */
+              }
+            }}
+          >
+            {filter === 'mine'
+              ? t('kanban.workspaceSidebar.assignmentMine')
+              : t('kanban.workspaceSidebar.assignmentAll')}
+          </button>
+        ))}
+      </ButtonGroup>
+      {(assignmentQuery.isError || participants.isError) && (
+        <span role="status" className="text-xs text-low">
+          {t('kanban.workspaceSidebar.assignmentsUnavailable')}
+        </span>
+      )}
+    </div>
+  ) : null;
+
   const searchControls = (
     <>
       <div className="shrink-0">
@@ -736,9 +852,13 @@ export function WorkspacesSidebarContainer({
     <WorkspacesSidebar
       workspaces={paginatedActiveWorkspaces}
       activityWorkspaces={sortedActiveWorkspaces}
-      totalWorkspacesCount={activeWorkspaces.length}
+      totalWorkspacesCount={sortedActiveWorkspaces.length}
       archivedWorkspaces={paginatedArchivedWorkspaces}
-      isLoading={isWorkspacesListLoading}
+      isLoading={
+        isWorkspacesListLoading ||
+        (localAssignmentView &&
+          (assignmentQuery.isLoading || participants.isLoading))
+      }
       selectedWorkspaceId={selectedWorkspaceId ?? null}
       onSelectWorkspace={handleSelectWorkspace}
       searchQuery={searchQuery}
@@ -754,6 +874,7 @@ export function WorkspacesSidebarContainer({
       onLoadMore={handleLoadMore}
       hasMoreWorkspaces={hasMoreWorkspaces && !isSearching}
       searchControls={searchControls}
+      assignmentControls={assignmentControls}
       onOpenWorkspaceActions={handleOpenWorkspaceActions}
       persistKeys={sidebarPersistKeys}
       activeRemoteHost={activeRemoteHost}

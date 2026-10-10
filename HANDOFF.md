@@ -1,3 +1,20 @@
+# October 10: Bounded local assignment candidate preparation
+
+Candidate is based on combined live frontend5ce84ee2/backendc3c48e63 with only
+reviewed assignment PR237 source202393a67 plus test workflow additions. This
+preserves live-only recovery, report review, MCP consent and routing changes;
+never merge the historical feature branch wholesale. No production assignments,
+deployment, restart or access-control changes are authorized here.
+
+Hosted exact-head Test and source-fenced artifact builds, isolated migration
+rehearsal and real-backend/browser QA are the acceptance gates. Bulk artifacts,
+private snapshot and isolated fixture state belong on Desktop B: under
+`B:/vk-builds/local-assignments-20261010`; source identities, exact-head CI,
+artifact hashes, migration and runtime receipts will be recorded there in
+`acceptance.json` and `PUBLICATION.md`. This checkout is not a deployed release.
+Publication requires the separately authorized latest-data handover and guarded
+backend/frontend switch, after refreshing volatile execution and backup checks.
+
 ## October 8 authorized safe restart — preparing, not ready
 
 Read VK_SAFE_RESTART_PREPARATION_20261008.md. Latest operator authority permits

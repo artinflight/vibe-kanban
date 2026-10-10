@@ -14,6 +14,7 @@ from rehearse_vk_nightly_real_b import desktop
 from vk_change_journal import scope
 from vk_nightly_capture_adapter import RegisteredWorkspace, run_capture
 from vk_prep_common import identity, storage
+from rehearse_vk_nightly_parent_death import parent_death_case
 
 
 def recovery_cases(config,plan,source,verify):
@@ -128,6 +129,8 @@ print(json.dumps({'passed':True,'independent_recovery':True,'current_generations
         report['producer_retry']=run_capture(config,plan)
         if not report['producer_retry']['result']['passed']:raise AssertionError('closed-producer retry failed')
         report['native_recovery']=desktop('ROOT='+repr(remote)+'\n'+verify)
+        report['parent_only_SIGKILL']=parent_death_case(config,plan,local)
+        report['parent_only_SIGKILL']['independent_current_recovery']=desktop('ROOT='+repr(remote)+'\n'+verify)
         report['recovery_cases']=recovery_cases(config,plan,source,verify)
         report['passed']=True
     except Exception as error:

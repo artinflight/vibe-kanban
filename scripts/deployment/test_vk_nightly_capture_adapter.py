@@ -112,6 +112,19 @@ class AdapterTests(unittest.TestCase):
         with mcp_lease(self.root/'lease'):
             with self.assertRaises(BlockingIOError):
                 with mcp_lease(self.root/'lease'):self.fail('concurrent producer admitted')
+    def test_parent_close_does_not_unlock_inherited_producer_lease(self):
+        lease=self.root/'lease';child=None
+        try:
+            with mcp_lease(lease) as fd:
+                self.workspace.lease_fd=fd
+                child=self.workspace.producer([sys.executable,'-B','-S','-c','import time;time.sleep(30)'])
+            # Parent-side context is CLOSED; only the exact child holds it.
+            with self.assertRaisesRegex(BlockingIOError,'inherited owned child'):
+                with mcp_lease(lease):self.fail('orphaned producer admitted recovery')
+            child.kill();child.wait()
+            with mcp_lease(lease):pass
+        finally:
+            if child is not None and child.poll() is None:child.kill();child.wait()
     def test_bounded_protocol_rejects_eof_and_oversized_control(self):
         import struct
         for data,error in [(b'',EOFError),(struct.pack('!I',16385),ValueError)]:

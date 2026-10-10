@@ -1614,3 +1614,8 @@ snapshot/transfer, compact authenticated live completion, actual-B lifecycle
 recovery fixtures and disabled runnable user job. Current scope census96.14GB/
 79DBs; production throughput/adoption pending. Existing UTC cron route avoids
 changing NoNewPrivileges; no production or privileged mutation.
+
+- October10 source-only parent-death correction: share locked MCP FD with exact
+  foreground SSHFS/zstd/tar; retry defers before B attestation while a holder
+  survives. Add isolated actual parent-only SIGKILL/resource-bound fixture
+  cleanup/retry regression; retain disabled schedule and production backups.

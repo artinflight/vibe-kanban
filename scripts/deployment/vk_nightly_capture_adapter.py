@@ -92,10 +92,15 @@ class Resident:
 
 
 class RegisteredWorkspace:
-    def __init__(self,root,resident):
+    def __init__(self,root,resident,*,lease_fd=None):
         self.root=Path(root);self.resident=resident;self.names=set();self.bytes=0
+        self.lease_fd=lease_fd
         self.limit=resident.config['capture_limit_bytes'];self.deadline=time.monotonic()+resident.timeout
         self.sealed={};self.reservations={};self.capacity_lock=threading.Lock();self.checked_root(root)
+    def producer(self,command,**kwargs):
+        # Share the LOCKED open-file description, never unlock it explicitly.
+        # Parent SIGKILL cannot release the lease while an owned child lives.
+        return subprocess.Popen(command,pass_fds=() if self.lease_fd is None else (self.lease_fd,),**kwargs)
     def checked_root(self,root):
         if Path(root)!=self.root:raise ValueError('workspace outside live input directory')
         mounted=json.loads(subprocess.check_output(['findmnt','-J','-T',str(root)]))['filesystems'][0]
@@ -162,7 +167,7 @@ class RegisteredWorkspace:
         target=self.root/source.name;checksum=hashlib.sha256();size=0
         try:
             with self.open_new(target) as out:
-                compressor=subprocess.Popen(['zstd','-T1','-3','-c'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+                compressor=self.producer(['zstd','-T1','-3','-c'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
                 def produce():
                     try:source.produce(compressor.stdin)
                     except BaseException as error:errors.append(error);compressor.kill()
@@ -259,14 +264,17 @@ def mcp_lease(path):
     if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid():
         os.close(fd);raise ValueError('MCP producer lease is not an owned regular file')
     with os.fdopen(fd,'a+b') as stream:
-        fcntl.flock(stream,fcntl.LOCK_EX|fcntl.LOCK_NB)
-        yield
+        try:fcntl.flock(stream,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise BlockingIOError('MCP producer lease still held by parent or inherited owned child; defer B reconciliation') from error
+        # close() only: LOCK_UN would also unlock the children's shared lease.
+        yield stream.fileno()
 
 
 def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
     validate_socket_exclusions(config.get('socket_exclusions',[]))
     staging=storage(config['staging']);staging.mkdir(parents=True,exist_ok=True)
-    with mcp_lease(staging/'producer.lock'):
+    with mcp_lease(staging/'producer.lock') as lease_fd:
         resident=Resident({**config,'enroll_fresh':enroll_fresh,'recover_only':recover_only,'mcp_producer_lease_held':True})
         mount=staging/('B-input-'+uuid.uuid4().hex);mounted=False;mount_process=None
         try:
@@ -275,12 +283,12 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
             mount.mkdir()
             mount_process=subprocess.Popen([config['sshfs_binary'],'-f','desktop:/'+resident.ready['directory'],str(mount),'-o',
                 'BatchMode=yes,ConnectTimeout=15,StrictHostKeyChecking=yes,ServerAliveInterval=15,ServerAliveCountMax=3,cache=no,sshfs_sync'],
-                stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+                stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,pass_fds=(lease_fd,))
             ready_deadline=time.monotonic()+30
             while True:
                 if mount_process.poll() is not None:raise ValueError('owned B mount process failed')
                 try:
-                    workspace=RegisteredWorkspace(mount,resident);mounted=True;break
+                    workspace=RegisteredWorkspace(mount,resident,lease_fd=lease_fd);mounted=True;break
                 except ValueError:
                     if time.monotonic()>ready_deadline:raise TimeoutError('owned B mount readiness timed out')
                     time.sleep(.1)

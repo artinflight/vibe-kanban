@@ -49,12 +49,12 @@
     "vk_nightly_generation.py": "29dda3ffb9ae8e2aaf03f8558c837ecd2cf55eec8debbfb6750c37e333906b4b",
     "vk_nightly_lifecycle.py": "af5443d5b8380c7761382de0f1c09e30b6aa4bebc3ca289ad9bdce4146d5e836",
     "vk_direct_capture.py": "55ef5328fee7d93a05e3796d3c1d374866d08f4eefcf67abf28ceb8dc68ec5f5",
-    "vk_b_disk_capture.py": "d1879652465fd3f2ed3beb9dbd0bfccaa7c6d06de1c21561c1465269be587cff",
+    "vk_b_disk_capture.py": "fc9c5a404187dc871a06f8581662ae96a07d8d2a06b03261df0eeda133c7116c",
     "vk_b_disk_snapshot.py": "ba1fd175cc72f6008e77f46096e4ec30201b4943e6d9895a7907af466a69cebf",
     "vk_desktop_transport.py": "fac7325b0de5a7cd8c07ddb542ad733a7f7f3e77a2d9c15456e6d63a0d24ff87",
     "vk_archive_store.py": "95b59fb7d484ca379f58e5b543a763af6691d23c9b9381158b6a0c5bc772b40f",
     "vk_nightly_job.py": "574bc5a48d4b58e6b5e47a9edf2f42103419f18f9bb7717207d2f40f563c26a3",
-    "vk_nightly_capture_adapter.py": "a793a20509bfd944a4173023f693cb46e72249c0b8456611268b90b9542c5bde",
+    "vk_nightly_capture_adapter.py": "6491ce4bf10a694bf232f7c18ed6f6068b2108963e503d51a7614a9fb35e47c0",
     "vk_nightly_b_job.py": "d6aa2cd659f024bba494bc30e37a016e677791d729905a4087fdd7d06efa2b09"
   },
   "scheduler_proposal": {
@@ -72,7 +72,7 @@
     "capture_parent": null,
     "input_registration": "register exact file identity at creation before payload; seal full bytes/hash afterward",
     "bounded_transfers": "enforce capture limit during transfer including B disk snapshots; no fallback to local payload staging",
-    "producer_attestation": "closed/reaped own producer and transport, exact scope/input nonce/candidate match",
+    "producer_attestation": "Parent and exact foreground SSHFS/zstd/tar share the locked MCP open-file description; do not LOCK_UN. Reacquisition defers while any inherited holder lives. Normal completion still closes/reaps producers/mount before live nonce-bound finish. Parent-only SIGKILL acceptance is isolated, never a global process fence.",
     "readback": "independent native Windows full object hash and SQLite integrity before publication/retention",
     "handoff": "fixed pinned MCP capture to UID1000 WSL B writer; no unbounded in-memory payload handoff",
     "cold_boot": "verify stable mount/volume/enrollment handling without re-enrolling existing backups"

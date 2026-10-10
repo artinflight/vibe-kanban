@@ -1,3 +1,15 @@
+## October 10: Parent-death producer lease correction — source only
+
+Exact foreground SSHFS/zstd/tar inherit the locked MCP lease descriptor. Parent
+SIGKILL no longer allows recovery while an owned holder survives; acquisition
+defers before any B resident/attestation. Never issue LOCK_UN on this shared open
+file description. Actual-B parent-only SIGKILL regression binds UID/PID/start
+ticks/executable hash/lease FD device-inode and exact mount source, then closes
+only matching fixture resources and checks successful scripted recovery. No
+production orphan reaper, scheduling, backup or privilege changes. Unknown
+legacy producers are not covered by acquiring this new lease. See
+VK_RESTART_SAFEGUARDS_20261009.md; production/full-size acceptance stays pending.
+
 ## October 9: Fixed B-disk nightly composition — source only
 
 The runnable user job binds registered B inputs, serial bounded SQLite disk

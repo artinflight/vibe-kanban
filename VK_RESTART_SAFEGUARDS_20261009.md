@@ -334,3 +334,24 @@ regular-file/symlink substitution instead of dropping possible data. This exact
 scope omission belongs in the final review/approval. Other future SQLite files
 inside already approved canonical roots are automatically captured within the
 same bounds; the observed 79-DB list is sizing evidence, not a recurring grant.
+
+### Parent-only death and producer lease
+
+The MCP lease descriptor is explicitly inherited by the fixed foreground SSHFS,
+zstd and tar producers. They retain the same locked open-file description;
+parent close/SIGKILL cannot release it, and no explicit LOCK_UN is issued. The
+next entry point defers before creating a B resident or issuing quiescence
+attestation while a holder survives. Normal cleanup/reaping and schedule-disabled
+behavior are unchanged. This covers the current pinned binaries, not arbitrary
+commands or a global consumer fence. It does not authorize recovery of unknown
+legacy producers or create a production process reaper.
+
+The real-B regression freezes the three actual children during active capture,
+SIGKILLs ONLY the Python parent and proves retry is blocked. Each child is bound
+by UID, PID/start ticks, executable hash and inherited lease device/inode/FD;
+the mount additionally has its exact target and Desktop input source. Test-only
+cleanup signals/unmounts only those matching isolated resources. After their
+closure the scripted retry reconciles its registered partial and publishes a
+verified independent current. No production resources or permission change.
+A surviving orphan is an explicit exceptional deferral, not claimed automatic
+production cleanup; routine successful jobs require no operator.

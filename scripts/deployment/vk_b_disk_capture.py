@@ -62,7 +62,8 @@ PAX headers retain ACLs/xattrs/SELinux, numeric IDs, times and link information.
     command = ["tar", "--atime-preserve=system", "--format=pax", "--numeric-owner", "--acls", "--xattrs",
                "--xattrs-include=*", "--selinux", *(["--ignore-failed-read"] if online else []),
                "-cf", "-", "-C", "/", "--no-recursion", "--null", "-T", str(file_list)]
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = (workspace.producer if workspace else subprocess.Popen)(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     errors = []
 
     def warnings():

@@ -170,7 +170,7 @@ class NightlyJob:
         row = value['inputs'][path.name]
         if pin(info) != row['identity']: raise ValueError('transient input substituted')
         row.update(sealed=True, bytes=info.st_size, sha256=checksum)
-        if sum(item.get('bytes', 0) for item in value['inputs'].values()) > self.capture_limit:
+        if sum(item.get('bytes', 0) for item in value['inputs'].values()) > min(self.capture_limit, value.get('capture_budget_bytes', self.capture_limit)):
             raise ValueError('transient capture capacity exceeded')
         self.save(value)
 
@@ -209,7 +209,7 @@ class NightlyJob:
         stage = self.root/'progress.new'
         write_new(stage,encoded(progress));os.replace(stage,self.root/'progress.json');sync_directory(self.root)
 
-    def run(self, capture_factory, *, retention_adopted=False, reserve_bytes):
+    def run(self, capture_factory, *, retention_adopted=False, reserve_bytes, capacity_floor_bytes=None):
         """Factory(folder, register, seal, *, parent=None) -> provider,id,descriptor.
 
         Adapter must bound bytes while streaming, close/reap its own producers
@@ -224,7 +224,16 @@ class NightlyJob:
             # Reservation includes transient compressed input and changed object
             # payload plus manifest allowance; never silently use protected backups.
             import shutil
-            if type(reserve_bytes) is not int or reserve_bytes < self.capture_limit + self.changed_limit + MAX_INDEX \
+            if capacity_floor_bytes is None:
+                minimum = self.capture_limit + self.changed_limit + MAX_INDEX
+                capture_budget = self.capture_limit
+            else:
+                if type(capacity_floor_bytes) is not int or capacity_floor_bytes < 0:
+                    raise ValueError('finite nonnegative B free-space floor required')
+                minimum = capacity_floor_bytes + MAX_INDEX + 1
+                capture_budget = min(self.capture_limit, reserve_bytes - capacity_floor_bytes - MAX_INDEX) \
+                    if type(reserve_bytes) is int else 0
+            if type(reserve_bytes) is not int or reserve_bytes < minimum \
                     or shutil.disk_usage(self.store.root).free < reserve_bytes:
                 raise ValueError('insufficient reserved capacity for bounded capture plus generation overlap')
             previous = self.store.current()
@@ -232,7 +241,8 @@ class NightlyJob:
             value = {'binding': self.binding(), 'input_name': 'input-' + uuid.uuid4().hex,
                      'candidate': 'generation-' + uuid.uuid4().hex, 'inputs': {},
                      'previous': self.snapshot(previous) if previous else None,
-                     'expected_objects': {}, 'candidate_directories': None, 'partial': None, 'pointer': None}
+                     'expected_objects': {}, 'candidate_directories': None, 'partial': None, 'pointer': None,
+                     'capture_budget_bytes': capture_budget}
             self.save(value)
             folder = self.root / value['input_name'];folder.mkdir()
             value['input_identity'] = directory_pin(folder);self.save(value)
@@ -244,6 +254,17 @@ class NightlyJob:
                 value = self.read()
                 if not value['inputs'] or any(not row['sealed'] for row in value['inputs'].values()):
                     raise ValueError('transient capture inputs are not sealed')
+                capture_bytes = sum(row['bytes'] for row in value['inputs'].values())
+                if capture_bytes > capture_budget:
+                    raise ValueError('sealed inputs exceed shared B allocation budget')
+                object_budget = self.changed_limit
+                if capacity_floor_bytes is not None:
+                    # Inputs remain until verified publication. Charge their
+                    # actual sealed size once, retaining both independent hard
+                    # ceilings and the metadata/free-space allowance.
+                    object_budget = min(object_budget, reserve_bytes - MAX_INDEX - capacity_floor_bytes - capture_bytes)
+                    if object_budget <= 0 or shutil.disk_usage(self.store.root).free < object_budget + MAX_INDEX + capacity_floor_bytes:
+                        raise ValueError('insufficient remaining B capacity after sealed capture')
                 proof = provider.verify(capture_id)
                 value['expected_objects'] = {row['sha256']: row['bytes'] for row in proof['entries'].values() if row['kind'] == 'file'}
                 candidate_manifest = {
@@ -256,7 +277,7 @@ class NightlyJob:
                 self.save(value)
                 self._active_intent = value
                 result = advance_verified_capture(self.store, provider, capture_id,
-                    reserve_bytes=self.changed_limit, retention_adopted=False,
+                    reserve_bytes=object_budget, retention_adopted=False,
                     generation=value['candidate'], observe=self.observe, verified_proof=proof)
                 # Independent clearance/readback has completed. Retention uses
                 # the same resumable recorded identities on normal and crash paths.
@@ -276,7 +297,7 @@ class NightlyJob:
         with self.held():
             return self._reconcile_held()
 
-    def tick(self, capture_factory, attest_inputs_quiescent, *, retention_adopted=False, reserve_bytes):
+    def tick(self, capture_factory, attest_inputs_quiescent, *, retention_adopted=False, reserve_bytes, capacity_floor_bytes=None):
         """Scripted scheduler entry: reconcile an owned prior attempt, then capture.
 
         The fixed adapter attests its actual producer/channel completion against
@@ -294,7 +315,8 @@ class NightlyJob:
                         return {'passed':False,'status':'input_producer_active',
                                 'next':'wait for this exact producer to close; next scripted tick retries without new inputs'}
                     self._reconcile_held()
-            return self.run(capture_factory,retention_adopted=True,reserve_bytes=reserve_bytes)
+            return self.run(capture_factory,retention_adopted=True,reserve_bytes=reserve_bytes,
+                            capacity_floor_bytes=capacity_floor_bytes)
         except (ValueError,OSError) as error:
             return {'passed':False,'status':'reconciliation_blocked','reason':str(error),
                     'next':'preserve current and unexpected artifacts; review the exact binding/identity discrepancy'}

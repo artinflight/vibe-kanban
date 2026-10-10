@@ -1,5 +1,6 @@
 """Fresh real-B compressed/delta fixture. No production or schedule adoption."""
 import hashlib
+import argparse
 import json
 import os
 from pathlib import Path
@@ -14,6 +15,9 @@ from vk_prep_common import identity, storage
 
 
 def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--shared-budget-fixture',action='store_true')
+    args=parser.parse_args()
     local=storage('/mnt/vk-storage/vk-restart-safeguards-20261009')/('B-delta-'+uuid.uuid4().hex);local.mkdir()
     source=local/'source';source.mkdir();dbpath=source/'state.sqlite'
     with sqlite3.connect(dbpath) as db:
@@ -32,6 +36,11 @@ def main():
         'sshfs_binary':'/mnt/vk-storage/vk-runtime-backup-20261009/sshfs-tool/usr/bin/sshfs',
         'fusermount_binary':'/usr/bin/fusermount','inventoried_databases':[str(dbpath)],
         'object_encoding':'zlib-1-v1','transport':'content-delta-v1','async_writes':True}
+    if args.shared_budget_fixture:
+        from vk_nightly_generation import MAX_INDEX
+        # Below the sum of the two hard ceilings; actual bounded capture and
+        # materialization share 8 MiB while retaining a separate 4 MiB floor.
+        config.update(reserve_bytes=MAX_INDEX+12*1024**2,preserved_B_floor_bytes=4*1024**2)
     report={'local':str(local),'remote':remote,'production_changed':False,'schedule_enabled':False,'runs':[]}
     started=time.monotonic()
     try:

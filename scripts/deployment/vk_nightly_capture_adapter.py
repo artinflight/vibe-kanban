@@ -78,6 +78,11 @@ class Resident:
                     and self.ready.get('baseline') is None):
                 self.timeout=config.get('initial_job_timeout_seconds',self.timeout)
                 self.config={**config,'capture_limit_bytes':config.get('initial_capture_limit_bytes',config['capture_limit_bytes'])}
+            if self.ready.get('event') == 'capture_ready':
+                budget = self.ready.get('capture_budget_bytes')
+                if type(budget) is not int or not 0 < budget <= self.config['capture_limit_bytes']:
+                    raise ValueError('B resident capture allocation budget missing or invalid')
+                self.config = {**self.config, 'capture_limit_bytes': budget}
         except BaseException:
             self.close();raise
     def response(self,timeout=None):

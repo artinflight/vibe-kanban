@@ -60,6 +60,9 @@ def inventory(plan):
 
 
 def validate(config,plan):
+    if 'preserved_B_floor_bytes' in config and (type(config['preserved_B_floor_bytes']) is not int
+                                              or config['preserved_B_floor_bytes'] < 0):
+        raise ValueError('finite nonnegative B free-space floor required')
     if config.get('object_encoding') not in (None,'zlib-1-v1') or config.get('transport') not in (None,'content-delta-v1'):
         raise ValueError('unknown nightly object/transport format')
     for key in ('initial_capture_limit_bytes','initial_job_timeout_seconds'):

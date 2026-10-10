@@ -226,7 +226,7 @@ def run(config):
                 register(path,stream.fileno());stream.write(data);stream.flush();os.fsync(stream.fileno())
             seal(path);baseline={'name':path.name,'sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)}
         emit({'event':'capture_ready','binding':binding,'directory':'B:/'+str(folder.relative_to('/mnt/b')),
-              'baseline':baseline})
+              'baseline':baseline,'capture_budget_bytes':attempt['capture_budget_bytes']})
         while True:
             command=receive(sys.stdin.buffer)
             if command.get('binding')!=binding:raise ValueError('stale/wrong live producer binding')
@@ -305,6 +305,7 @@ def run(config):
         def quiescent(attempt):
             return {'candidate':attempt['candidate'],'input_name':attempt['input_name'],
                     'scope_sha256':store.scope,'quiescent':config.get('mcp_producer_lease_held') is True}
-        result=job.tick(factory,quiescent,retention_adopted=True,reserve_bytes=reserve)
+        result=job.tick(factory,quiescent,retention_adopted=True,reserve_bytes=reserve,
+                        capacity_floor_bytes=config.get('preserved_B_floor_bytes'))
     emit({'event':'complete','result':result,'elapsed_seconds':time.monotonic()-started})
     return 0 if result['passed'] else 1

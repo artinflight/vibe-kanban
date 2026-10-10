@@ -69,6 +69,50 @@ class NightlyLifecycle(fixtures.ContractTests):
     def run_nightly(self):
         return self.job.run(self.make_capture,retention_adopted=True,reserve_bytes=self.reserve)
 
+    def test_shared_budget_accepts_valid_capture_without_sum_of_hard_ceilings(self):
+        reserve = MAX_INDEX + 1024**2
+        with self.assertRaises(ValueError):
+            self.job.run(self.make_capture,retention_adopted=True,reserve_bytes=reserve)
+        with patch('vk_nightly_lifecycle.advance_verified_capture', wraps=lifecycle.advance_verified_capture) as advance:
+            result = self.job.run(self.make_capture,retention_adopted=True,reserve_bytes=reserve,capacity_floor_bytes=0)
+        self.assertTrue(result['passed'],result)
+        budget = advance.call_args.kwargs['reserve_bytes']
+        self.assertGreater(budget,0);self.assertLess(budget,1024**2)
+        self.assertEqual(self.latest_rows(),[('before',)])
+
+    def test_shared_budget_preserves_floor_and_checks_post_capture_free_space(self):
+        reserve = MAX_INDEX + 3*1024**2
+        usage = __import__('shutil').disk_usage(self.root)
+        def capture_with_other_writer(*args,**kwargs):
+            result = self.make_capture(*args,**kwargs)
+            space.return_value = usage._replace(free=MAX_INDEX)
+            return result
+        with patch('shutil.disk_usage',return_value=usage._replace(free=reserve)) as space:
+            result = self.job.run(capture_with_other_writer,retention_adopted=True,
+                                  reserve_bytes=reserve,capacity_floor_bytes=1024**2)
+        self.assertFalse(result['passed']);self.assertIn('remaining B capacity',result['reason'])
+        self.assertIsNone(self.store_job.current())
+        self.assertTrue((self.jobs/'attempt.json').exists())
+
+    def test_shared_budget_insufficient_capacity_stops_before_capture(self):
+        usage = __import__('shutil').disk_usage(self.root)
+        with patch('shutil.disk_usage',return_value=usage._replace(free=self.reserve-1)):
+            with self.assertRaises(ValueError):
+                self.job.run(self.make_capture,retention_adopted=True,reserve_bytes=self.reserve,capacity_floor_bytes=0)
+        self.assertEqual(self.parents,[]);self.assertFalse((self.jobs/'attempt.json').exists())
+
+    def test_shared_budget_input_ceiling_cannot_spend_object_or_floor_allowance(self):
+        def excessive(folder,register,seal,*,parent):
+            p=folder/'registered'
+            with p.open('xb') as stream:
+                register(p,stream.fileno());stream.write(b'x'*2048)
+            seal(p)
+        result=self.job.run(excessive,retention_adopted=True,reserve_bytes=MAX_INDEX+1024,
+                            capacity_floor_bytes=0)
+        self.assertFalse(result['passed']);self.assertIn('capture capacity',result['reason'])
+        self.assertEqual(self.job.read()['capture_budget_bytes'],1024)
+        self.assertIsNone(self.store_job.current())
+
     def latest_rows(self):
         current=self.store_job.current();self.store_job.verify(current)
         row=current['entries']['home/state/state.sqlite']

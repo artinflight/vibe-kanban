@@ -1,3 +1,15 @@
+## Resume: shared bounded nightly allocation — source only
+
+The nightly lifecycle can now share a finite capture/object allocation budget
+with a separate free-space floor. The resident binds the capture budget and
+charges sealed input bytes before assigning the remaining object budget. Hard
+byte ceilings, source identity, independent readback, atomic publication and
+recorded-only retention remain enforced. Legacy callers retain their original
+reservation contract. Focused tests and a two-generation isolated B acceptance
+passed; current measurements and detailed receipts remain private. No nightly
+installation, enablement, production action or Git policy activation occurred.
+Live controller/fence adoption and whole-plan acceptance remain open.
+
 ## October 10: Next-restart source packaged, adoption disabled
 
 PR235 adds opt-in held Git check-all consumer only; authoritative inventory and

@@ -46,15 +46,30 @@ for key in ("automaticWorkspaceDeletion", "automaticAttachmentMigration", "autom
 assert build_info["capacityWireVersion"] == 1
 assert build_info["runtimeIdentityVersion"] == 1
 assert build_info["initializationCompiled"] is True
-subprocess.run(commands[1], env=env, check=True)
 shutil.copy2(server, output / "server")
+# Same source/schema, latest-data compatible recovery variant; never label c3
+# as a rollback binary after the additive assignment migration.
+backstop_command = ["cargo", "build", "--locked", "--profile", "acceptance", "-p", "server", "--bin", "server", "--features", "scheduled-goal-initialization-disabled"]
+commands.append(backstop_command)
+subprocess.run(backstop_command, env=env, check=True)
+backstop_info = json.loads(capture(str(server), "--capacity-build-info"))
+assert backstop_info["sourceCommit"] == source
+assert backstop_info["initializationCompiled"] is False
+assert backstop_info["scheduledGoalInitialization"] == 0
+for key in ("automaticWorkspaceDeletion", "automaticAttachmentMigration", "automaticAttachmentCleanup"):
+    assert backstop_info[key] is False, key
+(output / "migration-compatible-backstop").mkdir()
+shutil.copy2(server, output / "migration-compatible-backstop/server")
+subprocess.run(commands[1], env=env, check=True)
 shutil.copytree(repo / "packages/local-web/dist", output / "frontend")
 files = {str(path.relative_to(output)): {"sha256": sha(path), "bytes": path.stat().st_size}
          for path in sorted(output.rglob("*")) if path.is_file()}
 frontend = {name.removeprefix("frontend/"): info for name, info in files.items() if name.startswith("frontend/")}
 tree_sha = hashlib.sha256(json.dumps(frontend, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 manifest = {**binding, "files": files, "frontendTreeSha256": tree_sha,
-            "buildInfo": build_info, "commands": commands, "platform": platform.platform(),
+            "buildInfo": build_info, "migrationCompatibleBackstopBuildInfo": backstop_info,
+            "fallbackLimitation": "Latest-data compatible same-source recovery variant; old c3 rejects assignment migration. Never delete migration receipt/tables or restore stale data.",
+            "commands": commands, "platform": platform.platform(),
             "rustc": capture("rustc", "--version"), "cargo": capture("cargo", "--version"),
             "node": capture("node", "--version"), "profile": "acceptance",
             "runId": os.environ["GITHUB_RUN_ID"], "runAttempt": os.environ["GITHUB_RUN_ATTEMPT"],

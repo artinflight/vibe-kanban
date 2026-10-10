@@ -13,7 +13,7 @@ import { useProjectContext } from '@/shared/hooks/useProjectContext';
 import { useOrgContext } from '@/shared/hooks/useOrgContext';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
 import { useActions } from '@/shared/hooks/useActions';
-import { useAuth } from '@/shared/hooks/auth/useAuth';
+import { useAssignmentIdentity } from '@/shared/hooks/useLocalParticipants';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
@@ -724,7 +724,7 @@ export function KanbanContainer() {
     isLoading: orgLoading,
   } = useOrgContext();
   const { activeWorkspaces } = useWorkspaceContext();
-  const { userId } = useAuth();
+  const userId = useAssignmentIdentity();
   const { loginStatus } = useUserSystem();
   const isLocalOnlySession =
     loginStatus?.status === 'loggedin' && !loginStatus.profile;

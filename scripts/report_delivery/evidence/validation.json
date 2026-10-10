@@ -7,14 +7,6 @@
     "passed": 100,
     "skipped": 0
   },
-  "caller_tests": {
-    "passed": 37,
-    "skipped": 0,
-    "independent": 17,
-    "actual_dispatcher_integration": 20
-  },
-  "log_path": "/mnt/vk-storage/vk-unread-integration-20261009/review-patch-acceptance.log",
-  "log_sha256": "ff6545dd08e27374fd6ed4244eeccdd9c740946682c53e302b386c8f761731df",
   "backend_under_test": "existing synthetic FakeAtomic fixture; no Rust rebuild or production mark",
   "pr236_file_overlap": [],
   "owner_acknowledgement": {
@@ -71,7 +63,9 @@
     "test_caller.py": "135489c3e26a8240660c0ddf1aa46b0e8951eb748143151f237937e06a547ab6",
     "test_connector_integration.py": "c0694091cc3d6ffa4f4694838d09dfa014fd7bb2a5e0d0396d1963b793c4643e",
     "connector-patch/prepared-intent.patch": "49f777e670611c78edca46c4be3ec55052911e7c0cc695e470463ce7570c072c",
-    "connector-patch/binding.json": "2f41408e28de161d5305355df3a6102d87104de06f61bc50d4bd441b29fceeac"
+    "connector-patch/binding.json": "2f41408e28de161d5305355df3a6102d87104de06f61bc50d4bd441b29fceeac",
+    "test_explicit_read.py": "138bb175498eb726656ebf46e18670a43354de206921a6dd0fbe8dfd8993e46f",
+    "verify_explicit_read.py": "348970dfc541faee6157b366ff12155b9d7d49e0889aa668aea346808ece71d0"
   },
   "review_findings": {
     "stored_backend_and_local_pins_immutable": true,
@@ -86,11 +80,44 @@
     "consumer_version_adoption_repair_needed": false
   },
   "channel_binding_evidence": "channel-binding.json",
-  "caller_code_commit": "9f06a0d660446fc69e11e99d5c851e351d5ff7c7",
-  "hosted_caller_ci": {
-    "conclusion": "success",
-    "url": "https://github.com/artinflight/vibe-kanban/actions/runs/38002818131",
-    "head_sha": "9f06a0d660446fc69e11e99d5c851e351d5ff7c7",
-    "coverage": "17 independent caller tests and patch hash/file boundary; actual connector integration verified locally in disposable PR236 copy"
-  }
+  "retry_review_validation": {
+    "caller_tests": {
+      "passed": 37,
+      "skipped": 0,
+      "independent": 17,
+      "actual_dispatcher_integration": 20
+    },
+    "log_path": "/mnt/vk-storage/vk-unread-integration-20261009/review-patch-acceptance.log",
+    "log_sha256": "ff6545dd08e27374fd6ed4244eeccdd9c740946682c53e302b386c8f761731df",
+    "caller_code_commit": "9f06a0d660446fc69e11e99d5c851e351d5ff7c7",
+    "hosted_caller_ci": {
+      "conclusion": "success",
+      "url": "https://github.com/artinflight/vibe-kanban/actions/runs/38002818131",
+      "head_sha": "9f06a0d660446fc69e11e99d5c851e351d5ff7c7",
+      "coverage": "17 independent caller tests and patch hash/file boundary; actual connector integration verified locally in disposable PR236 copy"
+    }
+  },
+  "caller_tests": {
+    "passed": 44,
+    "skipped": 0,
+    "independent": 20,
+    "actual_dispatcher_integration": 24
+  },
+  "log_path": "/mnt/vk-storage/vk-unread-integration-20261009/explicit-acceptance-20261010.log",
+  "log_sha256": "33d4abb666c7c5185d240cf4b42f39cb6ec05a19199df54bb07caaa1f16835d5",
+  "explicit_read_evidence": "explicit-read-20261010.json",
+  "explicit_installed_fixture_tests": {
+    "passed": 7,
+    "skipped": 0,
+    "mark_transport": "mocked only",
+    "fixture_helper_source": "195e3b782eaef226049b003d8ca2a205094016aa",
+    "tested_runtime_module_hashes": "explicit-read-20261010.json:installed_source_sha256",
+    "log_path": "/mnt/vk-storage/vk-unread-integration-20261009/explicit-installed-fixtures-20261010.log",
+    "log_sha256": "a0d87fd9c4b984b0ec2f8e46e7872794f7237e1367a7a6aa0b524347477643ad"
+  },
+  "minimum_explicit_setup": "Owner metadata Refresh + new conversation; no code/runtime/server restart, permission expansion or reauthentication",
+  "pending_explicit_acceptance": [
+    "owner refresh and actual fresh client unread summaries call",
+    "single mark only on a later real explicit user clear request; no markers for testing"
+  ]
 }

@@ -1,3 +1,17 @@
+# October 10: Explicit clear pickup
+
+Fresh source/manifest/live read-only verification confirms existing mark_workspace_read
+and unread summaries are already installed (20 server tools versus14 freshly
+inventoried callable tools). No explicit-path runtime correction/restart/adoption
+is needed. The connection owner must Refresh the existing Vibe MCP for dot custom
+MCP metadata and start a new conversation, then verify summaries read-only. This
+is independent of automatic delivery callback/PR238 connector-patch adoption.
+New read-only verifier has no mark command. Seven installed-module mocked tests
+and144 combined candidate tests pass. Explicit /seen advances backend manual intent;
+local holds/receipt state remain unchanged, and fresh unread must be read separately.
+See VK_UNREAD_REPORT_INTEGRATION.md and evidence/explicit-read-20261010.json.
+No production markers, auth/permission/config/runtime/service/release changed.
+
 # October 9: Unread report integration pickup
 
 Read VK_UNREAD_REPORT_INTEGRATION.md and scripts/report_delivery/evidence/validation.json.

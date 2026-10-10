@@ -18,6 +18,8 @@ jobs:
       - uses: actions/checkout@v6
       - name: Test delivery boundary without an installed connector
         run: python3 -m unittest discover -s scripts/report_delivery -p test_caller.py -v
+      - name: Test read-only explicit clear readiness
+        run: python3 -m unittest discover -s scripts/report_delivery -p test_explicit_read.py -k ReadinessTests -v
       - name: Verify packaged patch hash and file boundary
         run: |
           python3 - <<'PY'

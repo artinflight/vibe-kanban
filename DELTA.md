@@ -1594,3 +1594,13 @@ caller37 tests pass. Connector patch remains report_reconciliation.py only at
 6b092371; no PR236 files, production adoption or markers changed. Available14 tools
 expose no presentation delivery/playback callback: prepared token + actual channel
 event -> Caller.confirm remains the exact binding gap. Metadata refresh separate.
+
+2026-10-10 — Explicit unread clear independently verified: fresh installed20/client14
+catalog and live supported readonly reads; deployedc3c48e63 binary matches manifest.
+Existing mark-read metadata/dispatch needs client Refresh/new conversation only,
+not automatic prepare/callback adoption or a server restart. Corrected documentation
+gating, added read-only verifier (no mark command) and seven focused fixtures: all
+pass on actual installed modules, combined100+44 pass on untouched PR236 copy.
+Local holds and receipts preserved; backend explicit /seen intentionally advances
+manual intent, fresh unread observation kept separate from clear acceptance.
+No marker test, production adoption, plugin grants/reauth, extra workers or build.

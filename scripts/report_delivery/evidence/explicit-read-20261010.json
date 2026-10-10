@@ -1,0 +1,109 @@
+{
+  "server_tool_names": [
+    "create_session",
+    "get_agent_replies",
+    "get_execution",
+    "get_issue",
+    "get_latest_agent_reply",
+    "get_repo",
+    "get_workspace_reconciliation_status",
+    "list_issues",
+    "list_projects",
+    "list_repos",
+    "list_session_executions",
+    "list_sessions",
+    "list_workspace_unread_summaries",
+    "list_workspaces",
+    "mark_workspace_read",
+    "reconcile_workspace_reports",
+    "record_workspace_report_delivery",
+    "run_session_prompt",
+    "set_workspace_review_hold",
+    "start_workspace"
+  ],
+  "server_tool_count": 20,
+  "explicit_mark_metadata": {
+    "name": "mark_workspace_read",
+    "description": "Only call when the user requests marking this individual workspace read. Marks its existing coding-agent turns seen using Vibe's normal per-workspace semantics; later turns may become unread. Changes read state, does not stop an agent or acknowledge task completion. Requires one hyphenated workspace UUID; no bulk or per-turn action.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"
+        }
+      },
+      "required": [
+        "workspace_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "unread_read_succeeded": true,
+  "summary_observed_at": "2026-10-10T09:57:04.428084+00:00",
+  "mark_requests": 0,
+  "client_refresh_verified": false,
+  "installed_adapter_sha256": "7f6597bc97cd9138cb28c98b7fb39ed7bf7a5ce5039b8346bd444aa6269befb3",
+  "checked_at_utc": "2026-10-10T09:57:41.175660+00:00",
+  "backend_source_commit": "c3c48e6324f778ccd03a5761c2314b440e9ceac3",
+  "backend_pid": 1254186,
+  "backend_binary_sha256": "2aa884b359d21373e38c49a6e1589a10e5f69f7c384d2be44515fc0fab41b70f",
+  "backend_service": "vibe-kanban-current-state-production-20261009.service",
+  "gateway_route": {
+    "mode": "blue",
+    "port": 5561,
+    "epoch": 1791577878239644092
+  },
+  "review_state": {
+    "protocol": "workspace-review-v1",
+    "atomic_exact_reply": true,
+    "manual_intent_guard": true,
+    "held": false,
+    "intent_version": 1
+  },
+  "installed_source_sha256": {
+    "adapter.py": "7f6597bc97cd9138cb28c98b7fb39ed7bf7a5ce5039b8346bd444aa6269befb3",
+    "workspace_unread.py": "9c2fa431e8f82910aae108bf361fd27a75ebd8eff4994788346981397afbe26f",
+    "report_reconciliation.py": "b39299db6fc6b74add70346c9222ba7e6eb1a545178b7f9626c5f3b5fe407e0f"
+  },
+  "explicit_read_module_matches_pr236_base": true,
+  "deployed_manual_sql_matches_tested_fixture": true,
+  "manual_route_semantics": {
+    "backend_hold": "explicit seen sets held=false and increments version in same transaction as marking existing workspace turns",
+    "local_hold": "unchanged; explicit mark does not invoke connector receipt/hold consumer",
+    "later_manual_hold": "advances intent again; stale automatic evidence cannot adopt it"
+  },
+  "plugin_permissions": {
+    "global": "Allow low-risk actions",
+    "specific": "Use my default",
+    "changed": false
+  },
+  "minimum_fix": "Refresh existing custom MCP connection metadata and open a new conversation; no server code/restart/adoption required for explicit clear",
+  "production_changes": false,
+  "session_callable_vibe_tools": [
+    "mcp__codex_apps__vibe_mcp_for_dot_create_session",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_agent_replies",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_execution",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_issue",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_latest_agent_reply",
+    "mcp__codex_apps__vibe_mcp_for_dot_get_repo",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_issues",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_projects",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_repos",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_session_executions",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_sessions",
+    "mcp__codex_apps__vibe_mcp_for_dot_list_workspaces",
+    "mcp__codex_apps__vibe_mcp_for_dot_run_session_prompt",
+    "mcp__codex_apps__vibe_mcp_for_dot_start_workspace"
+  ],
+  "session_callable_vibe_tool_count": 14,
+  "actual_plugin_list_projects_read_succeeded": true,
+  "plugin_connection_publication_type": "not inspectable through available tools; existing custom MCP refresh workflow documented, published-plugin continuous review distinct"
+}

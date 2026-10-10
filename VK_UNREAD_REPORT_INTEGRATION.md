@@ -1,4 +1,4 @@
-# Unread report delivery integration
+# Unread report clearing integration
 
 ## Review boundary
 
@@ -47,6 +47,88 @@ records real discovery, review-state and a supported unread-summary read, with z
 mark requests. The catalog gap was verified against this execution's available
 tools, not guessed from server discovery. The recorded intent epoch may change
 through ordinary UI use and must never be reused as a delivery context.
+
+## October 10: explicit user clearing is independently ready on the server
+
+Fresh evidence is in [explicit-read-20261010.json](scripts/report_delivery/evidence/explicit-read-20261010.json).
+Installed discovery still returns20 tools; this execution freshly inventories14
+callable Vibe tools, with neither mark-read nor unread summaries. An authenticated
+`list_projects` call through the existing plugin succeeded. The routed backend is
+still source `c3c48e6324f778ccd03a5761c2314b440e9ceac3`, PID1254186/port5561;
+its running binary SHA256 matches the release manifest. Read-only review-state and
+summaries work. Installed `workspace_unread.py` matches PR236's unchanged module.
+Existing app permissions are default Allow low-risk actions / Use my default;
+no permission setting changed. A missing tool catalog entry is distinct from
+per-action approval. This does not establish future mark-read approval behavior.
+
+**Smallest correction: refresh existing client metadata now.** The individual
+`mark_workspace_read({workspace_id})` operation is already deployed, advertised
+with a closed one-UUID schema and `readOnlyHint:false`, and dispatched to one fixed
+PUT `/api/workspaces/<UUID>/seen`. It needs no new backend, runtime code, connector
+restart, Vibe restart, PR236 adoption, prepare tool or delivery callback. The earlier
+setup wording incorrectly placed all catalog refresh behind automatic-patch adoption;
+that dependency is removed. The optional automatic patch remains source-only.
+
+At [ChatGPT Plugins](https://chatgpt.com/plugins), open the **existing Vibe MCP for
+dot custom MCP connection**, choose **Refresh**, inspect the discovered metadata,
+and start a **new conversation with this connection selected**. Expect20 current
+server tools including the two existing unread tools;21 is only the later automatic
+candidate. In that new client, verify both names are callable and actually call
+`list_workspace_unread_summaries` read-only. Server discovery does not verify client
+publication. This UI step requires the connection owner; no refresh tool is exposed
+here. Existing credentials, tunnel, network grants and app permissions are retained.
+This follows the [official custom-server refresh flow](https://developers.openai.com/plugins/deploy/connect-chatgpt#refresh-metadata).
+For a published-plugin connection instead, tool changes follow continuous review;
+these tools cannot inspect publication type/status, and cannot claim that review
+has completed. Do not reinstall, reauthenticate or create another connection to
+work around a persistent catalog gap; collect the new catalog/discovery evidence.
+
+Read-only local verification, requiring no outbox or prepared delivery event:
+
+```bash
+python3 scripts/report_delivery/verify_explicit_read.py
+```
+
+This checks advertised single-workspace schema/annotations and makes only one
+summaries read. It deliberately has **no mark command** and reports client refresh
+unverified. No real marker needs to change to validate readiness.
+
+For a later **actual user-requested clear**, resolve exactly the named workspace,
+call its existing mark tool once, and independently refresh unread summaries.
+`marked_read:true` means the backend accepted the clear; it is neither a delivery
+receipt nor a fresh `has_unseen_turns:false` observation. Find the requested UUID
+in a fresh summaries page (follow pagination if needed); an absent/malformed flag
+is unknown. A new reply/manual unread may make the fresh flag true. After an
+uncertain write, read state; never automatically repeat the PUT merely because its
+response was lost. No startup sweep, bulk request or automatic caller is added.
+
+The deployed `/seen` route uses `manual_intent(read=true)` in the same transaction
+as marking existing turns for **one** workspace: it sets backend held=false and
+increments its intent version. That is the explicit user's new read intent, not
+an inferred release caused by delivery. It does **not** touch connector-local
+holds/versions or receipts. A later manual unread/hold advances backend intent
+again; stale automatic receipts cannot adopt it. Local review holds continue to
+block automatic receipts until explicitly released. Do not silently call
+`set_workspace_review_hold(held=false)` as part of clearing, and do not bypass
+holds in the delivery caller. Running-turn protection for automatic evidence is
+unchanged; an explicit clear retains normal per-workspace UI semantics.
+
+Seven focused tests pass on the **actual installed** adapter/unread/receipt modules
+with mocked writes and the PR236 fixture helper. They cover restricted readiness,
+no marker calls during verification, local hold preservation, no receipt creation,
+post-acknowledgement new unread, lost write response and missing readback. The
+combined disposable PR236 candidate passes100 maintenance +44 integration/caller/
+readiness cases (144 total). Tested manual SQL constants match deployed source;
+this is synthetic/SQL-contract evidence, not a live execution of the PUT route.
+No production marker, runtime file, auth/config, service or release changed.
+
+Explicit-path acceptance is independent of the automatic checklist below:
+
+- [x] Recheck running backend provenance, supported read-only capability and installed metadata.
+- [x] Mock explicit clear and fresh-readback races against installed modules; preserve local holds and receipt state.
+- [ ] Connection owner refreshes metadata and starts a new client conversation exposing mark-read and unread summaries.
+- [ ] That new client actually calls unread summaries read-only; no clear-for-testing.
+- [ ] On a later real explicit clear request, save the single-workspace acknowledgement and separately timed unread readback. No real clear request was executed in this task.
 
 ## Implemented behavior
 
@@ -130,7 +212,7 @@ existing user semantics; no new confirmation gate or blanket clearing is added.
 Explicit leave-unread/release requests continue through `set_workspace_review_hold`
 or normal UI manual-intent routes. Release alone never replays old evidence.
 
-## Validation
+## October 9 delivery/retry validation
 
 The patch was applied to a disposable copy of PR236 connector head `195e3b782`,
 then all100 existing maintenance tests and37 new caller/integration tests passed.
@@ -181,8 +263,10 @@ No generated types, application/frontend/backend sources or schema changed.
    Retain existing receipts/holds/outbox on rollback. This task does not authorize
    installation, restart, auth changes or plugin reconnection. No Rust restart,
    new backend migration or frontend release is required by this patch.
-3. **Client metadata owner:** after authorized adoption, use Refresh on the existing
-   custom MCP server connection and start a fresh conversation. Confirm21 tools,
+3. **Client metadata owner:** refresh now for the already deployed explicit-read
+   path described above (20 tools, no adoption or restart). For automatic prepare
+   availability, after separately authorized candidate adoption refresh again
+   and start a fresh conversation. Confirm21 tools,
    the prepare tool's read-only annotation and paired guard properties on record.
    Then actually call unread summaries read-only from that client. A stdio
    discovery receipt alone does not establish client availability. This is the

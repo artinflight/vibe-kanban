@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import stat
 import struct
 import subprocess
 import sys
@@ -216,13 +217,19 @@ def run(config):
                     # source selector or an arbitrary B path/content reader.
                     row=job.read()['inputs'].get(raw)
                     if row is None:raise ValueError('unknown diagnostic input')
-                    with regular(path) as stream:
-                        info=os.fstat(stream.fileno())
-                        if [info.st_dev,info.st_ino]!=row['identity']:raise ValueError('diagnostic input substituted')
+                    # SQLite's still-open Windows-backed handle can deny a
+                    # concurrent data open. Inspection needs only lstat: retain
+                    # the exact registered identity/type/reparse guards.
+                    info=path.lstat()
+                    if not stat.S_ISREG(info.st_mode) or [info.st_dev,info.st_ino]!=row['identity']:
+                        raise ValueError('diagnostic input substituted')
                     request={'path':'B:/'+str(path.relative_to('/mnt/b')),'volume_device':config['volume_device']}
                     checked=subprocess.run(['/mnt/c/Python310/python.exe','-B','-c',WINDOWS_INPUT_METADATA],
                         input=json.dumps(request),capture_output=True,text=True,timeout=15)
                     if checked.returncode:raise ValueError('native input metadata unavailable')
+                    after=path.lstat()
+                    if not stat.S_ISREG(after.st_mode) or [after.st_dev,after.st_ino]!=row['identity']:
+                        raise ValueError('diagnostic input changed during native metadata read')
                     emit({'name':raw,'registered_identity':row['identity'],'native':json.loads(checked.stdout)})
                 else:
                     with regular(path) as stream:os.fsync(stream.fileno())

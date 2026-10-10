@@ -146,7 +146,10 @@ class RegisteredWorkspace:
     def inspect_failure(self,path):
         path=Path(path);self.checked_root(path.parent)
         if path.name not in self.names:raise ValueError('diagnostic input was not registered')
-        return self.resident.call('inspect',name=path.name,response_timeout=20)
+        value=self.resident.call('inspect',name=path.name,response_timeout=20)
+        if value.get('name')!=path.name or value.get('native',{}).get('metadata_only') is not True:
+            raise ValueError('registered input metadata response missing; original failure preserved')
+        return value
     def save_json(self,path,value):
         data=(json.dumps(value,indent=2,sort_keys=True)+'\n').encode()
         if len(data)>MAX_INDEX or len(data)>self.remaining():raise ValueError('bounded B metadata limit exceeded')

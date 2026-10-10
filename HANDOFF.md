@@ -7,9 +7,10 @@ PID1254186/start ticks760225685, unchanged policy/instructions/classifier settin
 and corrected captured inventory classification. No duplicate backend restart,
 Auto activation, selected-model change, build or paid verification task.
 
-One genuine post-publication admission at10:17:35 records the new hash and exact
-CU decision/native binding/end identity. It was an uncertain continuation and was
-interrupted; it is adoption evidence, not a completed cheap-task or savings proof.
+Frozen readback at10:27:01UTC has three genuine new-module admissions: one
+completed, one interrupted and one running. All retain actual GPT-6.1 Sol/high,
+with Astra/high recommendations and exact CU/native identity. Completed adoption
+is proved; correct cheaper routine recommendations and savings remain unproved.
 Recommend remains required and preserves actual selected models. The installed
 framework and this latest fix are live; automatic cost-saving execution is not
 activated. Next: observe normal completed Recommend work; do not generate paid

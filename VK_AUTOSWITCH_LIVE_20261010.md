@@ -59,6 +59,18 @@ included in output). There are 88 feed end records: 78 completed, 8 failed, 2 in
 Process completion is not reviewed acceptance; those failures are not attributed
 to model quality without evidence. No routing ID conflicts were found.
 
+A later frozen readback at **10:27:01UTC** contains three genuine admissions using
+the new module/hash: one completed, one interrupted and one running. All three
+recommend Astra/high in Recommend and bind actual GPT-6.1 Sol/high. The completed
+execution `6883f21d-fae5-4357-9442-fc54bca5a1ce` has the matching decision, native
+turn binding and completed end record. Thus completed end-to-end adoption is now
+observed; cheaper routine recommendations, accepted code quality and savings on
+the new release still are not. The first uncertain continuation and two records
+marked current high-impact intent do not establish that ordinary low-risk work is
+now consistently classified correctly. Do not equate their protection labels with
+empirical proof Astra is necessary. The private post-publication receipt preserves
+exact IDs, timestamps and native settings without prompt content.
+
 ## Original outcome and remaining limits
 
 The framework and latest history fix are now installed and observed in genuine

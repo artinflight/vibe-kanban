@@ -1,3 +1,17 @@
+## Later checkpoint: Staging candidate ready; alternate build not released
+
+The Staging reader handles a further approximately 90 MiB native event that this
+alternate 64 MiB event limit does not cover. Its tested artifact is the release
+candidate. Its real copied-data receipt passed160 checks with eight additional
+intact histories/nine authentic finals and the original18 preserved. No live
+publication is claimed by this workspace.
+
+The alternate B-backed build's utility tests passed, but server library tests
+failed their checkout-local debug-storage assertion under acceptance profile.
+No alternate server-build step or release succeeded. Preserve these outputs;
+do not relaunch this competing builder. The latest operator notice requires
+checkpoint/end and holding new starts for Staging's quiet publication.
+
 # Large-log conversation history repair — October 10 checkpoint
 
 The operator requested that the affected chats work immediately. The latest

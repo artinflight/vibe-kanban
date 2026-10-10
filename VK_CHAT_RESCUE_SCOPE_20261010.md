@@ -27,8 +27,12 @@ T18/MM sessions. Eighteen terminal initialization-prefix captures have empty
 normal history and a unique native start, exact original prompt suffix, final,
 matching task_complete, source-prefix hash and chronological execution binding.
 Sixteen additional compiled request pins extend the original two without changing
-their already-tested pins. This is pending compiled validation and owner
-publication; neither the audit nor request files are import receipts.
+their already-tested pins. Source1b9700cf passes8 focused guard/status tests,
+CLI build, Clippy and formatting (hosted38067671066); its authenticated compiled
+read-only verifier passes all18 actual native sources.
+EXTENDED_RESCUE_DELIVERY.safe.json seals the minimal patch and compiled CLI
+for Staging review. Publication and imports remain unfinished; these source
+receipts are not original UI restoration acceptance.
 
 T18 original session `d703d0fe-4c95-4b3d-ba11-7fa5b1a920ce` includes:
 

@@ -6,8 +6,11 @@ repair with preserved original evidence. No existing operator data-only writer
 was found; do not improvise an unsafe raw write or bypass the denied status guard.
 The original two-target artifact remains ready for Staging's existing publication.
 Read-only inventory198 identifies18 authentic terminal missing-final candidates,
-including all three named T18 turns;16 additional exact pins are prepared for
-focused compiled validation. No imports or visibility acceptance yet. Staging
+including all three named T18 turns;16 additional exact pins pass8 focused tests,
+CLI build, Clippy and format at1b9700cf (hosted38067671066). The compiled
+read-only actual-source verifier passes all18. EXTENDED_RESCUE_DELIVERY.safe.json
+seals the minimal patch, authenticated CLI and receipts for Staging review.
+No imports or visibility acceptance yet. Staging
 executionf207036e alone owns publication; do not interrupt or duplicate it.
 
 ## October10: tested same-UID recovery; matching publication required

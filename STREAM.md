@@ -1,3 +1,15 @@
+## October10: rescue first; verified expanded incident scope
+
+Read VK_CHAT_RESCUE_SCOPE_20261010.md. Seamus prioritizes original visibility
+before recurrence work and permits evaluation of supported reversible served-log
+repair with preserved original evidence. No existing operator data-only writer
+was found; do not improvise an unsafe raw write or bypass the denied status guard.
+The original two-target artifact remains ready for Staging's existing publication.
+Read-only inventory198 identifies17 authentic terminal missing-final candidates,
+including all three named T18 turns;15 additional exact pins are prepared for
+focused compiled validation. No imports or visibility acceptance yet. Staging
+executionf207036e alone owns publication; do not interrupt or duplicate it.
+
 ## October10: tested same-UID recovery; matching publication required
 
 PR241 continuation codeae263d4730bf8cca33050bde85b1c3de305acec0 passes

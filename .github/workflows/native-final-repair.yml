@@ -6,6 +6,7 @@ on:
       - "crates/server/src/bin/repair_native_final.rs"
       - "crates/server/src/routes/execution_processes/historical_response/local_repair.rs"
       - "crates/server/src/routes/execution_processes/historical_response/*-request.json"
+      - "crates/server/src/routes/execution_processes/historical_response/additional-reviewed-requests.json"
       - ".github/workflows/native-final-repair.yml"
 jobs:
   repair:

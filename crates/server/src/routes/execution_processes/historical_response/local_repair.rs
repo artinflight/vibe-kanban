@@ -1,4 +1,4 @@
-//! Exact-two-incident OS-authenticated repair. No deployment initialization,
+//! Exact-reviewed-incident OS-authenticated repair. No deployment initialization,
 //! migrations, HTTP writes, signing contexts, credentials or arbitrary paths.
 use std::{collections::HashSet, os::unix::fs::MetadataExt, time::Duration};
 
@@ -11,11 +11,19 @@ const HOME: &str = "/home/mcp/.local/share/vibe-kanban-green-codex-home";
 const T18: &str = "3ce20433-f984-4c33-800f-d4987145fa4a";
 const MM: &str = "c64a7b0c-9c34-43e0-b70d-7e05f93751ef";
 
-fn reviewed_request(id: Uuid) -> RecoveryResult<RecoveryRequest> {
+pub(super) fn reviewed_request(id: Uuid) -> RecoveryResult<RecoveryRequest> {
     let input = match id.to_string().as_str() {
         T18 => include_str!("t18-request.json"),
         MM => include_str!("mm-request.json"),
-        _ => return Err("Only the two reviewed original executions are allowed".into()),
+        _ => {
+            let additional: std::collections::BTreeMap<String, RecoveryRequest> =
+                serde_json::from_str(include_str!("additional-reviewed-requests.json"))
+                    .map_err(|_| "Reviewed incident bindings unavailable")?;
+            return additional
+                .get(&id.to_string())
+                .cloned()
+                .ok_or_else(|| "Only the exact reviewed original executions are allowed".into());
+        }
     };
     serde_json::from_str(input).map_err(|_| "Reviewed incident binding unavailable".into())
 }
@@ -612,6 +620,27 @@ mod tests {
             assert!(invocation(args(&extra)).is_err());
         }
         assert!(reviewed_request(Uuid::new_v4()).is_err());
+        let additional: std::collections::BTreeMap<String, RecoveryRequest> =
+            serde_json::from_str(include_str!("additional-reviewed-requests.json")).unwrap();
+        assert_eq!(additional.len(), 15);
+        for (id, request) in additional {
+            let execution: Uuid = id.parse().unwrap();
+            assert_eq!(reviewed_request(execution).unwrap(), request);
+            let args = [
+                "--target",
+                id.as_str(),
+                "--server-pid",
+                "123",
+                "--port",
+                "5561",
+            ]
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+            assert!(!invocation(args).unwrap().apply);
+            assert!(!request.prompt_sha256.is_empty());
+            assert!(!request.reply_sha256.is_empty());
+        }
         let t18 = reviewed_request(T18.parse().unwrap()).unwrap();
         let mm = reviewed_request(MM.parse().unwrap()).unwrap();
         assert_eq!(

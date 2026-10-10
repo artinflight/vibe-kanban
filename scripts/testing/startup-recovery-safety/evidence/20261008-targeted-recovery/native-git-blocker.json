@@ -1,0 +1,8 @@
+{
+  "action": "Fetch exact Hyrox original into isolated B object database only",
+  "repository": "artinflight/hyroxready-app",
+  "requested_commit": "0d80abb5750f8e564bcf80c5b5436d2128c7994b",
+  "exit": 128,
+  "stderr": "fatal: Unable to persist credentials with the 'wincredman' credential store.\r\nSee https://aka.ms/gcm/credstores for more information.\nfatal: could not read Username for 'https://github.com': terminal prompts disabled\n",
+  "observed_at": "2026-10-08T18:39:17.600775+00:00"
+}

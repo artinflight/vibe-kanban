@@ -342,3 +342,364 @@ test("an initially empty process list hydrates only the newest page when history
     await h.close();
   }
 });
+
+test("incomplete capture is visible and does not load older status as current", async () => {
+  const h = harness(
+    [
+      { ...process("old"), created_at: "2026-10-09T20:00:00Z" },
+      { ...process("new"), created_at: "2026-10-09T21:00:00Z" },
+    ],
+    ({ id, before, limit }) =>
+      id === "new"
+        ? new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                entries: [],
+                next_before: null,
+                capture_error: "Incomplete native capture",
+              },
+            }),
+            { headers: { "content-type": "application/json" } },
+          )
+        : pageResponse(10, before, limit),
+  );
+  try {
+    await h.mount();
+    assert.equal(h.result.historyError, true);
+    assert.equal(h.entries.length, 0);
+    assert.deepEqual(
+      h.calls.map((x) => x.id),
+      ["new"],
+    );
+  } finally {
+    await h.close();
+  }
+});
+
+test("unavailable capture clears only after a new authoritative retry succeeds", async () => {
+  const h = harness([process("new")], ({ before, limit }, call) =>
+    call === 1
+      ? new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              entries: [],
+              next_before: null,
+              capture_error: "Capture pending",
+            },
+          }),
+          { headers: { "content-type": "application/json" } },
+        )
+      : pageResponse(10, before, limit),
+  );
+  try {
+    await h.mount();
+    assert.equal(h.result.historyError, true);
+    assert.match(h.result.historyErrorDetail, /completeness/);
+    await h.load();
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.historyErrorDetail, null);
+    assert.equal(h.entries.length, 10);
+  } finally {
+    await h.close();
+  }
+});
+
+test("a late unavailable response cannot contaminate another workspace", async () => {
+  let resolveOld;
+  const h = harness([process("old")], ({ id, before, limit }) =>
+    id === "old"
+      ? new Promise((resolve) => {
+          resolveOld = resolve;
+        })
+      : pageResponse(10, before, limit),
+  );
+  try {
+    await h.mount();
+    await h.update([process("new")], "another-workspace");
+    await act(async () => {
+      resolveOld(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              entries: [],
+              next_before: null,
+              capture_error: "Old capture pending",
+            },
+          }),
+          { headers: { "content-type": "application/json" } },
+        ),
+      );
+      await settle();
+    });
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.historyErrorDetail, null);
+    assert.equal(h.entries.length, 10);
+  } finally {
+    await h.close();
+  }
+});
+
+const pendingResponse = () =>
+  new Response(
+    JSON.stringify({
+      success: true,
+      data: {
+        entries: [],
+        next_before: null,
+        capture_pending: true,
+        capture_error: null,
+      },
+    }),
+    { headers: { "content-type": "application/json" } },
+  );
+const failedCaptureResponse = () =>
+  new Response(
+    JSON.stringify({
+      success: true,
+      data: {
+        entries: [],
+        next_before: null,
+        capture_pending: false,
+        capture_error: "Incomplete capture",
+      },
+    }),
+    { headers: { "content-type": "application/json" } },
+  );
+
+async function tickCapture(t) {
+  await act(async () => {
+    t.mock.timers.tick(1000);
+    await settle();
+  });
+}
+
+for (const pending of [false, true]) {
+  test(`older completion${pending ? " after pending retry" : ""} preserves a newer terminal capture warning`, async (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    const newer = {
+      ...process("a", "running"),
+      created_at: "2026-10-09T21:00:00Z",
+    };
+    const older = {
+      ...process("b", "running"),
+      created_at: "2026-10-09T20:00:00Z",
+    };
+    let newerDamaged = true;
+    let olderCalls = 0;
+    const h = harness(
+      [older, newer],
+      ({ id, before, limit }) => {
+        if (id === "a" && newerDamaged) return failedCaptureResponse();
+        if (id === "b" && ++olderCalls === 1 && pending)
+          return pendingResponse();
+        return pageResponse(id === "a" ? 40 : 10, before, limit);
+      },
+      true,
+    );
+    try {
+      await h.mount();
+      assert.equal(h.calls.length, 0);
+      const completedNewer = { ...newer, status: "completed" };
+      await h.update([older, completedNewer]);
+      assert.deepEqual(
+        h.calls.map((x) => x.id),
+        ["a"],
+      );
+      assert.equal(h.result.historyError, true);
+      const warning = h.result.historyErrorDetail;
+      assert.match(warning, /completeness/);
+
+      await h.update([{ ...older, status: "completed" }, completedNewer]);
+      assert.deepEqual(
+        h.calls.map((x) => x.id),
+        ["a", "b"],
+      );
+      assert.equal(h.result.historyError, true);
+      assert.equal(h.result.historyErrorDetail, warning);
+      assert.equal(h.result.isLoadingHistory, pending);
+      if (pending) await tickCapture(t);
+      assert.equal(h.entries.length, 10);
+      assert.ok(h.entries.every((entry) => entry.executionProcessId === "b"));
+      assert.equal(h.result.historyError, true);
+      assert.equal(h.result.historyErrorDetail, warning);
+      assert.equal(h.result.isLoadingHistory, false);
+      const callsAfterClosure = h.calls.length;
+      await tickCapture(t);
+      assert.equal(h.calls.length, callsAfterClosure, "Closed B stops polling");
+
+      newerDamaged = false;
+      await h.load();
+      assert.equal(h.calls.at(-1).id, "a", "Retry reads the warned execution");
+      assert.equal(h.result.historyError, false);
+      assert.equal(h.result.historyErrorDetail, null);
+      assert.equal(h.entries.length, 50);
+    } finally {
+      await h.close();
+      t.mock.timers.reset();
+    }
+  });
+}
+
+test("removing an unavailable execution clears only its scoped error", async () => {
+  const h = harness([process("a")], ({ id, before, limit }) =>
+    id === "a" ? failedCaptureResponse() : pageResponse(40, before, limit),
+  );
+  try {
+    await h.mount();
+    assert.equal(h.result.historyError, true);
+    await h.update([process("b")]);
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.historyErrorDetail, null);
+    assert.equal(h.entries.length, 40);
+    assert.ok(h.entries.every((entry) => entry.executionProcessId === "b"));
+  } finally {
+    await h.close();
+  }
+});
+
+test("running then completed then pending then closed recovers without manual retry", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = harness(
+    [process("a", "running")],
+    ({ before, limit }, call) =>
+      call < 3 ? pendingResponse() : pageResponse(10, before, limit),
+    true,
+  );
+  try {
+    await h.mount();
+    assert.equal(h.calls.length, 0);
+    await h.update([process("a")]);
+    assert.equal(h.calls.length, 1);
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.isLoadingHistory, true);
+    await tickCapture(t);
+    assert.equal(h.calls.length, 2);
+    assert.equal(h.result.historyError, false);
+    await tickCapture(t);
+    assert.equal(h.calls.length, 3);
+    assert.equal(h.entries.length, 10);
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.historyErrorDetail, null);
+    assert.equal(h.result.isLoadingHistory, false);
+    await tickCapture(t);
+    assert.equal(h.calls.length, 3, "Closed capture stops polling");
+  } finally {
+    await h.close();
+    t.mock.timers.reset();
+  }
+});
+
+test("initial pending capture retries at one-second boundaries without a request loop", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = harness([process("a")], ({ before, limit }, call) =>
+    call === 1 ? pendingResponse() : pageResponse(10, before, limit),
+  );
+  try {
+    await h.mount();
+    assert.equal(h.calls.length, 1);
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.isLoadingHistory, true);
+    await tickCapture(t);
+    assert.equal(h.calls.length, 2);
+    assert.equal(h.entries.length, 10);
+    assert.equal(h.result.isLoadingHistory, false);
+    assert.equal(h.result.historyError, false);
+  } finally {
+    await h.close();
+    t.mock.timers.reset();
+  }
+});
+
+test("pending to terminal capture failure warns and stops automatic retries", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = harness([process("a")], (_, call) =>
+    call === 1 ? pendingResponse() : failedCaptureResponse(),
+  );
+  try {
+    await h.mount();
+    await tickCapture(t);
+    assert.equal(h.calls.length, 2);
+    assert.equal(h.result.historyError, true);
+    assert.equal(h.result.isLoadingHistory, false);
+    assert.match(h.result.historyErrorDetail, /completeness/);
+    await tickCapture(t);
+    assert.equal(h.calls.length, 2);
+  } finally {
+    await h.close();
+    t.mock.timers.reset();
+  }
+});
+
+test("pending capture timer is cancelled when switching workspace", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = harness([process("a")], ({ id, before, limit }) =>
+    id === "a" ? pendingResponse() : pageResponse(10, before, limit),
+  );
+  try {
+    await h.mount();
+    await h.update([process("b")], "different-workspace");
+    assert.deepEqual(
+      h.calls.map((x) => x.id),
+      ["a", "b"],
+    );
+    await tickCapture(t);
+    assert.deepEqual(
+      h.calls.map((x) => x.id),
+      ["a", "b"],
+    );
+    assert.equal(h.entries.length, 10);
+    assert.equal(h.result.historyError, false);
+    assert.equal(h.result.isLoadingHistory, false);
+  } finally {
+    await h.close();
+    t.mock.timers.reset();
+  }
+});
+
+test("recovered native final appears under original execution with timestamp and persistent incomplete-capture notice", async () => {
+  const original = process("original");
+  const notice = "Original raw capture is incomplete. Native final recovered; task success is not certified.";
+  const recovered = () => new Response(JSON.stringify({
+    success: true,
+    data: {
+      entries: [{ index: 0, entry: { type: "NORMALIZED_ENTRY", content: {
+        timestamp: "2026-10-10T11:41:20.806+00:00",
+        entry_type: { type: "assistant_message" },
+        content: "Authentic final — unfinished work remains.",
+        metadata: { historical_recovery: { native_turn_id: "original-native-turn", original_capture_complete: false } },
+      } } }],
+      next_before: null, capture_error: null, capture_pending: false, recovery_notice: notice,
+    },
+  }), { headers: { "content-type": "application/json" } });
+  const h = harness([original], recovered);
+  try {
+    await h.mount();
+    assert.equal(h.entries.length, 1);
+    assert.equal(h.entries[0].executionProcessId, "original");
+    assert.equal(h.entries[0].patchKey, "original:0");
+    assert.equal(h.entries[0].content.timestamp, "2026-10-10T11:41:20.806+00:00");
+    assert.equal(h.entries[0].content.content, "Authentic final — unfinished work remains.");
+    assert.equal(h.result.historyErrorDetail, notice);
+    await h.load();
+    assert.equal(h.entries.length, 1);
+    assert.equal(h.result.historyErrorDetail, notice);
+  } finally { await h.close(); }
+});
+
+test("newer execution success does not hide recovered original reply or its incomplete capture notice", async () => {
+  const notice = "Original raw capture is incomplete; recovered authentic reply.";
+  const h = harness([process("a")], ({id,before,limit}) => id === "a"
+    ? new Response(JSON.stringify({success:true,data:{entries:[{index:0,entry:{type:"STDOUT",content:"recovered original"}}],next_before:null,recovery_notice:notice}}),{headers:{"content-type":"application/json"}})
+    : pageResponse(1,before,limit));
+  try {
+    await h.mount();
+    await h.update([process("a"),process("b")]);
+    await h.load();
+    assert.equal(h.entries.filter(x=>x.executionProcessId==="a").length,1);
+    assert.equal(h.entries.filter(x=>x.executionProcessId==="b").length,1);
+    assert.equal(h.result.historyErrorDetail,notice);
+  } finally {await h.close();}
+});

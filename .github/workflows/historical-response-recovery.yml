@@ -1,0 +1,69 @@
+name: Historical response recovery
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "crates/server/src/routes/execution_processes/**"
+      - "crates/server/src/routes/execution_processes.rs"
+      - "packages/web-core/src/features/workspace-chat/model/**"
+      - "scripts/testing/long-thread-history.test.tsx"
+      - ".github/workflows/historical-response-recovery.yml"
+concurrency:
+  group: native-recovery-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      NODE_VERSION: "22"
+      PNPM_VERSION: "10.13.1"
+      CARGO_INCREMENTAL: "0"
+      CARGO_BUILD_JOBS: "2"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: nightly-2025-12-04
+          components: clippy,rustfmt
+          setup-node: "true"
+          cache-key: combined-capture-consent-Linux
+      - name: Bind disposable hosted storage
+        run: |
+          mkdir -p dev_assets
+          echo "VK_TEST_OUTPUT=$RUNNER_TEMP/recovery-ui" >> "$GITHUB_ENV"
+          echo "TEST_RENDERER_PATH=$RUNNER_TEMP/history-tools/node_modules/react-test-renderer" >> "$GITHUB_ENV"
+      - name: Compiled authentic-format recovery and real HTTP/reader tests
+        run: |
+          cargo test --locked -p server --lib historical_response -- --test-threads=1
+          cargo test --locked -p server --lib report_review -- --test-threads=1
+          cargo test --locked -p server --test report_review_integration -- --test-threads=1
+          cargo test --locked -p utils --lib
+      - name: Mounted conversation and type checks
+        run: |
+          pnpm install --frozen-lockfile
+          npm install --prefix "$RUNNER_TEMP/history-tools" --no-package-lock --ignore-scripts react-test-renderer@18.3.1
+          node scripts/testing/run-long-thread-history-tests.mjs
+          pnpm run web-core:check
+          pnpm run local-web:check
+          pnpm run remote-web:check
+      - name: Export hosted-built read-only incident verifier
+        env:
+          VK_VERIFY_ARTIFACT: ${{ runner.temp }}/native-recovery-verifier
+        run: |
+          cargo test --locked -p server --lib --no-run --message-format=json > "$RUNNER_TEMP/recovery-test-binary.jsonl"
+          python3 scripts/testing/export-native-recovery-verifier.py "$RUNNER_TEMP/recovery-test-binary.jsonl"
+      - name: Lint and format
+        run: |
+          cargo clippy --locked -p server --all-targets -- -D warnings
+          cargo fmt --all -- --check
+          pnpm --filter @vibe/web-core exec prettier --check src/features/workspace-chat/model/historyPage.ts src/features/workspace-chat/model/hooks/useConversationHistory.ts ../../.github/workflows/historical-response-recovery.yml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-recovery-verifier-${{ github.sha }}
+          path: ${{ runner.temp }}/native-recovery-verifier/
+          retention-days: 14

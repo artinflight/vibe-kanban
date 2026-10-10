@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { create, useModal } from '@ebay/nice-modal-react';
 import { useTranslation } from 'react-i18next';
 import type { Project } from 'shared/remote-types';
@@ -16,6 +17,7 @@ import { ProjectProvider } from '@/shared/providers/remote/ProjectProvider';
 import { useProjectContext } from '@/shared/hooks/useProjectContext';
 import { useOrganizationStore } from '@/shared/stores/useOrganizationStore';
 import { useOrganizationProjects } from '@/shared/hooks/useOrganizationProjects';
+import { useLocalParticipants } from '@/shared/hooks/useLocalParticipants';
 import { useCurrentAppDestination } from '@/shared/hooks/useCurrentAppDestination';
 import {
   getDestinationHostId,
@@ -64,6 +66,7 @@ function AssigneeSelectionContent({
 }) {
   const { t } = useTranslation('common');
   const modal = useModal();
+  const queryClient = useQueryClient();
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const hasCreateCallback = onCreateModeAssigneesChange != null;
   const destination = useCurrentAppDestination();
@@ -81,9 +84,17 @@ function AssigneeSelectionContent({
 
   // Get users from OrgContext - use membersWithProfilesById for OrganizationMemberWithProfile
   const { membersWithProfilesById } = useOrgContext();
+  const participants = useLocalParticipants();
   const users = useMemo(
-    () => [...membersWithProfilesById.values()],
-    [membersWithProfilesById]
+    () =>
+      participants.isLocalOnlySession
+        ? (participants.data?.members ?? [])
+        : [...membersWithProfilesById.values()],
+    [
+      membersWithProfilesById,
+      participants.isLocalOnlySession,
+      participants.data,
+    ]
   );
 
   // Get issue assignees and mutation functions from ProjectContext
@@ -103,7 +114,10 @@ function AssigneeSelectionContent({
   }, [hasCreateCallback, createModeAssigneeIds, modal.visible]);
 
   // Fallback: get/set create mode defaults from shared in-memory state.
-  const issueComposerAssigneeIds = issueComposer?.draft.assigneeIds ?? [];
+  const issueComposerAssigneeIds = useMemo(
+    () => issueComposer?.draft.assigneeIds ?? [],
+    [issueComposer?.draft.assigneeIds]
+  );
 
   const setIssueComposerAssigneeIds = useCallback(
     (assigneeIds: string[]) => {
@@ -133,12 +147,14 @@ function AssigneeSelectionContent({
   ]);
 
   const [search, setSearch] = useState('');
+  const [mutationFailed, setMutationFailed] = useState(false);
 
   // Capture focus when dialog opens and reset search
   useEffect(() => {
     if (modal.visible) {
       previousFocusRef.current = document.activeElement as HTMLElement;
       setSearch('');
+      setMutationFailed(false);
     }
   }, [modal.visible]);
 
@@ -185,11 +201,26 @@ function AssigneeSelectionContent({
               (a) => a.issue_id === issueId && a.user_id === userId
             );
             if (record) {
-              removeIssueAssignee(record.id);
+              void removeIssueAssignee(record.id)
+                .persisted.then(() =>
+                  queryClient.invalidateQueries({
+                    queryKey: ['local-workspace-assignments'],
+                  })
+                )
+                .catch(() => setMutationFailed(true));
             }
           } else {
             // Add the assignee
-            insertIssueAssignee({ issue_id: issueId, user_id: userId });
+            void insertIssueAssignee({
+              issue_id: issueId,
+              user_id: userId,
+            })
+              .persisted.then(() =>
+                queryClient.invalidateQueries({
+                  queryKey: ['local-workspace-assignments'],
+                })
+              )
+              .catch(() => setMutationFailed(true));
           }
         }
       }
@@ -205,6 +236,7 @@ function AssigneeSelectionContent({
       setIssueComposerAssigneeIds,
       insertIssueAssignee,
       removeIssueAssignee,
+      queryClient,
     ]
   );
 
@@ -224,6 +256,11 @@ function AssigneeSelectionContent({
       onOpenChange={(open) => !open && modal.hide()}
       onCloseAutoFocus={handleCloseAutoFocus}
     >
+      {mutationFailed && (
+        <p role="alert" className="px-base pt-base text-error">
+          {t('errors.generic')}
+        </p>
+      )}
       <MultiSelectCommandBar
         title={t('kanban.selectAssignees', 'Select assignees...')}
         options={options}
@@ -254,11 +291,14 @@ function AssigneeSelectionWithContext({
   const resolvedProjectId = projectId || projectDestination?.projectId;
   // Get organization ID from store (set when navigating to project)
   const selectedOrgId = useOrganizationStore((s) => s.selectedOrgId);
+  const { isLocalOnlySession } = useLocalParticipants();
 
   // Fallback: try to find org from projects if not in store
   const { data: projects = [] } = useOrganizationProjects(selectedOrgId);
   const project = projects.find((p: Project) => p.id === resolvedProjectId);
-  const organizationId = project?.organization_id ?? selectedOrgId;
+  const organizationId = isLocalOnlySession
+    ? 'local'
+    : (project?.organization_id ?? selectedOrgId);
 
   // If we don't have the required IDs, render nothing
   if (!organizationId || !resolvedProjectId) {

@@ -1138,7 +1138,7 @@ pub trait ContainerService {
             if matches!(process_status, Some(ExecutionProcessStatus::Running)) {
                 return Some(
                     store
-                        .history_plus_stream_strict()
+                        .history_plus_stream_recoverable()
                         .filter(|msg| {
                             future::ready(matches!(
                                 msg,
@@ -1201,7 +1201,7 @@ pub trait ContainerService {
             if matches!(process_status, Some(ExecutionProcessStatus::Running)) {
                 return Some(
                     store
-                        .history_plus_stream_strict() // BoxStream<Result<LogMsg, io::Error>>
+                        .history_plus_stream_recoverable() // BoxStream<Result<LogMsg, io::Error>>
                         .filter(|msg| future::ready(matches!(msg, Ok(LogMsg::JsonPatch(..)))))
                         .chain(futures::stream::once(async {
                             Ok::<_, std::io::Error>(LogMsg::Finished)
@@ -1379,7 +1379,7 @@ pub trait ContainerService {
         });
 
         let stream = temp_store
-            .history_plus_stream_strict()
+            .history_plus_stream_recoverable()
             .scan(HashSet::<String>::new(), move |sent_paths, msg| {
                 let output_finished = output_finished.clone();
                 future::ready(match msg {
@@ -1767,12 +1767,6 @@ pub trait ContainerService {
             }
         }
 
-        execution_process::spawn_stream_raw_logs_to_storage(
-            self.msg_stores().clone(),
-            self.db().clone(),
-            execution_process.id,
-            session.id,
-        );
         Ok(execution_process)
     }
 

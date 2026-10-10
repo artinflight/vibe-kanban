@@ -1,4 +1,5 @@
 import { cn } from '../lib/cn';
+import { getWorkspaceAttentionLabel } from '../lib/workspaceAttention';
 import { useTranslation } from 'react-i18next';
 import {
   GitPullRequestIcon,
@@ -165,12 +166,16 @@ export function IssueWorkspaceCard({
     isFailed ||
     isRunning ||
     (hasUnseenActivity && !isRunning);
+  const attentionLabel = !workspace.archived
+    ? getWorkspaceAttentionLabel(workspace)
+    : undefined;
   const shouldStackPrBadges = workspace.prs.length > 2;
 
   return (
     <IssueWorkspaceCardContainer
       onClick={onClick}
       className={cn(
+        attentionLabel && 'kanban-attention-card',
         color &&
           '!bg-[hsl(var(--workspace-color)/0.48)] hover:!bg-[hsl(var(--workspace-color)/0.58)] shadow-[inset_3px_0_0_hsl(var(--workspace-color)/0.85)] dark:!bg-[hsl(var(--workspace-color)/0.18)] dark:hover:!bg-[hsl(var(--workspace-color)/0.24)]',
         className

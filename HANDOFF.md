@@ -1,3 +1,84 @@
+## October10: tested same-UID recovery; matching publication required
+
+PR241 continuation codeae263d4730bf8cca33050bde85b1c3de305acec0 passes
+all8 new hosted CLI/status tests, CLI build, affected-target Clippy and Rustfmt
+(run38057745525). Hosted checkout63d76b9134417a7439070c536c4c2e17fa570f82
+has the identical source tree. Retain prior51 Rust/20 conversation/type/lint and
+both exact actual-native-source checks; no parser/frontend behavior was changed.
+See VK_LOCAL_NATIVE_FINAL_REPAIR_20261010.md. The completed source delivery is
+/mnt/vk-storage/vk-next-restart-20261010/e3e1-native-recovery/LOCAL_REPAIR_DELIVERY.safe.json
+with the three ordered minimal patches and compiled CLI. Isolated-index apply
+passes over actual c3 backend plus already-live cdad frontend; selected files
+match tested source. No whole604, assignment, consent, mobile or queue-library
+patch. No Staging checkout edits or repair prompts; Staging owns review/build/release.
+
+Both exact compiled CLI verify-only probes refuse the live missing status
+protocol (HTTP200 frontend fallback, not the required JSON). Neither sidecar
+was created, neither original normal history contains its final, and no apply
+was attempted. Need Staging's owner-authorized matching capture-dependency,
+reader/status and warning UI publication before live exact apply and API/UI
+acceptance. Do not restart backend/connector or modify the approval watcher.
+Normal CI's retained c4 staging-ancestry failure is not waived. Source delivery,
+unit tests and the saved original finals are not restoration completion.
+
+## October10: original conversation native-final recovery, isolated
+
+Use VK_HISTORICAL_RESPONSE_RECOVERY_20261010.md and handoffs/e3e1-historical-response-recovery.md. Base is accepted joint604285af. Staging owns release integration; no production action, task replay, capture certification or badge write. Hosted acceptance pending.
+
+## October 10: bounded capture/consent pair — preparation only
+
+Current production backend is c3c48e6324f778ccd03a5761c2314b440e9ceac3;
+actual served frontend source is 5ce84ee21be814b1519cfb2715b50f3432c3e8ba.
+This isolated candidate starts at the latter (backend identical to c3), and
+applies only the reviewed source/test hunks of PR236 and PR239. No historical
+branch merge, production action, security/configuration change or live review
+receipt is authorized/performed by this preparation. See
+VK_COMBINED_CAPTURE_CONSENT_20261010.md and
+handoffs/e3e1-combined-capture-consent.md for the current release boundary.
+
+## October 8 authorized safe restart — preparing, not ready
+
+Read VK_SAFE_RESTART_PREPARATION_20261008.md. Latest operator authority permits
+safe restart/cutover after fresh gates; historical recovery acceptance is not
+implied. Combined source includes the four exact PR pins atop the already-live
+phone baseline. SSD capacity/restore rehearsal, identity/controller binding,
+writer drain, Git policy/prerequisites and live consent acceptance remain gates.
+No production restart, route switch, writer interruption, cleanup or security
+setting change has occurred. Recommend and usage controls stay unchanged.
+Recovery exceptions and completed independent-review verdict remain explicit.
+
+# October 8: Phone frontend deployed
+
+The operator-approved phone redesign/style pass is live at `https://vibe.local`
+following rebase merges of PR224 into staging and PR226 into main. Production
+frontend source is main `22f09e245`; its entire tree matches clean build source
+`bdf6346d3`. Read VK_MOBILE_RELEASE_20261008.md for hashes, backup, activation,
+regression coverage and remaining limits. Earlier preparation/no-deploy entries
+below are historical.
+
+At 17:41 UTC, an atomic directory/symlink exchange activated
+`/mnt/vk-storage/vk-mobile-release-20261008/release/frontend` at the actual runtime
+frontend path. The general `frontend-dist/current` pointer also resolves there.
+The prior directory and hashed assets remain available. Backend service
+`vibe-kanban-green-production-20261005.service`, PID 3027197, binary, database,
+route 5511/5512 and execution/routing configuration were preserved. No restart
+or inference request was made; Recommend-only and configured model/effort remain
+unchanged. Future backend packages must retain this new frontend source/assets.
+
+Candidate and live Chromium acceptance passed at 360/390/412/1440px and 390px dark,
+including project/task/workspace navigation, state/Back, conversation reading,
+composing, local attachment simulation and keyboard viewport geometry. HTTPS
+asset hashes, 12 saved messages, 16 active/27 archived project order, configuration
+and backend identity matched. Full implementation/promotion CI, production build,
+format/governance checks passed. Physical Android keyboard/browser chrome,
+Safari/Firefox and production write/drag/queue/review mutations remain unverified.
+
+Rollback archive SHA256 is verified locally and on Desktop at
+`desktop:B:/vk-backups/vk-phone-frontend-20261008/frontend-before.tar.gz`. This
+artifact-only rollback preserves current application data; no full mutable-state
+backup/restore or backend continuity rehearsal was performed. Evidence and
+rollback commands are under `/mnt/vk-storage/vk-mobile-release-20261008`.
+
 # October 8: Revised phone UI for review
 
 Branch `vk/eb7d-vk-native-feelin` contains a phone screen redesign after the
@@ -22,6 +103,483 @@ only to phone searches. Follow-up screenshots/checks are under
 `/mnt/vk-storage/vk-mobile-style-20261008`; the browser harness also checks compact
 search height, separate clear targets and clear/search behavior. Desktop remains
 unchanged. The preceding redesign's full CI passed at source `121cdccb0`.
+
+## October7 historical-log and CI compatibility repair — isolated
+
+The isolated review candidate now explicitly validates deployed goal-cleared and
+sleep lifecycle notifications missing from its pinned SDK, with sanitized real
+historical-format and damaged-variant coverage. CI fixtures require debug assets
+in their compiled checkout, optional exact-root binding, and SSD storage on MCP;
+the host-installed connector test runs separately and explicitly. Narrow error
+return types resolve the two new Clippy failures without lint suppression.
+Strict file/hash/writer-closure, receipt/hold/lifecycle guarantees remain intact.
+See VK_CONNECTOR_COMPATIBILITY_20261007.md for exact acceptance and limits.
+Staging/production, live receipts and badges are untouched; root owns integration.
+
+## October7 conditional review candidate repair
+
+Pickup: /mnt/vk-storage/vk-connector-repair-20261007/source, branch
+fix/e3e1-review-log-integrity. Repairs the exact Staging findings; keeps normal UI
+recovery separate from review integrity and preserves deletion/audit lifecycle.
+Use VK_CONNECTOR_REPAIR_20261007.md and the bound repair patch/test receipts.
+No Staging edit, service restart, credential change or live badge clear occurred.
+
+# October 7 Combined Release Preparation
+
+This isolated integration branch combines reviewed PR147 at9b3f82538 and PR148
+atcb0b441a2. CU remains pinned to95e7aea47. Source integration is not release
+acceptance or deployment: the required connector unread-reconciliation patch
+is still pending reviewed handoff. Keep Recommend, scheduling ON and credits OFF.
+Use the explicit published PR149 operational pin312ac0b20 for new preparation.
+No archive deletion approval has arrived; no production state is changed.
+Both development histories below remain evidence, not current rollout authority.
+
+# PR147 bounded stop-response reliability
+
+The complete graceful attempt has a 2-second deadline, including mutex, RPC,
+log and exit-signal awaits. Independent OS stop and cgroup verification follow
+regardless of graceful outcome. HTTP worker stops run concurrently: 2+3+2 seconds
+per worker, with bounded controller lock waits, within CU's 10-second request
+budget for two workers. Unverified exit retains stopping grants and first-run
+holds/identities/receipts; native active status is never fabricated as paused or
+used as replay permission. Lease and hard-stop enforcement remain unchanged.
+
+Focused isolated regressions cover thread/log/exit-signal stalls, actual one/two
+native workers, unverifiable exit and independent lease expiry. Original authentic
+promotion/later resume remain mandatory. Final-source CI/artifacts/evidence and
+staging's exact remaining CU/HTTP/rollback acceptance are recorded in
+`/mnt/vk-storage/vk-scheduled-first-run-20261006/stop-response-handoff.md`.
+Previous evidence remains preserved in stalled-stop-handoff.md. Independent
+review at 22034d9b6 cleared observed worker containment; original revoke-write and
+last provider-request timestamps remain unavailable. No runaway claim is made.
+No production deployment/restart, Android/provider use, settings change or cleanup.
+Keep Recommend and deploy compatible CU before exposing pending candidates.
+
+# October 6: Scheduled native first run — tested draft source
+
+Branch `vk/fa60-vk-scheduled-goa` starts at fork staging `8b562265d`.
+Read VK_SCHEDULED_FIRST_RUN.md for the pinned CU contract, provenance, isolation,
+wire interface, combined acceptance and rollback requirements. No production
+deploy/restart/settings writes, real Android initialization or paid inference.
+Pending exposure is default-off and belongs to the later staging rollout after
+CU compatibility. Recommend is preserved. Local development checks listed below pass; combined CU/private-HTTP acceptance
+and rollout remain with the parent/staging owner.
+
+Validated on the final offline binary SHA-256
+`a854d6158f061d8fa60c14f5badfbf6cbe0b99b5f5036eccd16b1c0775f6c787`:
+155 executor unit tests; six real-native offline scenarios (authentic first
+turn/promotion/later resume; required input hold; one-request provider failure;
+identity changed after lease preparation rejected before model work; plan review
+hold; completed first turn without a checklist held without promotion). All used
+the reviewed CU kernel/supervisor boundary and zero host-workspace mutation
+attempts. Receipts: `/mnt/vk-storage/vk-scheduled-first-run-20261006/acceptance.json`.
+Focused executor/server all-target Clippy, frontend type checks/lint, formatting
+and ops checks pass. Broad check/lint are blocked by missing host GTK/GLib/GIO;
+full workspace tests and shared-generation checks remain CI requirements. No
+remote source paths changed. No unrestricted fixture backend was run; the
+CU/private-capacity-HTTP combined rehearsal and legacy-CU/durable rollback
+acceptance remain explicit release requirements in VK_SCHEDULED_FIRST_RUN.md.
+No backend release package or production restart was attempted.
+
+# October 7: correct the incomplete no-restart boundary
+
+Current branch `fix/autoswitch-current-step-risk` retains the earlier source and
+PR148. The prior delivery failed the requested no-restart classification scope:
+fixed backend prompt/history rules vetoed updated worker policy. Internal protocol
+2 now separates immutable repository/native/lifecycle facts from replaceable
+prompt classification and inferred history. All normal classification, semantic
+eligibility and manual-history inference use one pinned module. See
+[VK_AUTOSWITCH_RELOAD.md](VK_AUTOSWITCH_RELOAD.md).
+
+Development only: Recommend, actual model/effort, credit settings, active module,
+service and staging/main remain unchanged. No owner coordination or deployment.
+One VK::Staging adoption of matching backend/validator/worker protocol2 is required
+to remove the old veto; subsequent policy fixes use prepare/publish without
+backend restart. The old `current-step-665d836db-20261007` artifact is superseded,
+not deleted. October30 (20x→10x) remains the usefulness/readiness deadline.
+Current checks/package receipts: `/mnt/vk-storage/vk-autoswitch-module-boundary-20261007`.
+Implementation `09dcd2cb2d873139904d32821bbc0924cdeabfac` is pushed; the
+final delivery also adds the omitted-input safety check and this evidence.
+Final executor unit suite: 156 passed, seven opt-in tests not invoked. All-target
+executor Clippy, formatting/governance and byte-identical CU contract/fixture pass.
+The sandboxed reload proof (`reload-final-proof.log`) kept PID3305974 unchanged:
+negative deployment wording and history policy updated through real worker
+publication, actual model selection changed, all 15 captured real assessments
+passed (three corrected to Sol6/low, twelve unchanged), manual/Recommend behavior,
+child floors/escalation, rollback and dirty state survived. Six rejected-update
+cases include old protocol and an unsafe all-cheap worker. Native inference: zero.
+The subsequently added full-input budget guard passed its dedicated regression
+in the final 156-test suite; the same-process test is not a live production trial.
+Observed helper stages were 18/7ms, not a production latency guarantee.
+An initial expanded-suite run hit its obsolete whole-suite ten-second assertion;
+the test now verifies prompt termination of the deliberately stalled helper
+instead. Final behavior/timeout assertions pass. No failed receipt was removed.
+
+Fresh package preparation, private publication/check/render pass for protocol2
+`policy-boundary-v2-20261007` under the task root's `package`; worker SHA256
+`039a9ebb5e625a9bff871f2560a27a39efa36a62d4378ca0c38e512ad5901629`, manifest
+`3edec4e9c4e5b202c4718dcc85977063fd0603bb67a79cd5b94afac69390f7f1`.
+It is a stripped development-profile helper, not an installed production server.
+Normal candidate packaging may rebuild optimized artifacts from the same source.
+The old validator was tested only as a copied private artifact and rejects the
+new preparation clearly; no live validator/pointer was replaced. Rendered config
+was not installed. `DELIVERY.json` binds final source and paths after commit.
+
+Full check/lint/workspace-test commands were attempted; local frontend checks pass
+with the larger Node heap, but desktop/workspace Rust is blocked by missing GLib/
+GObject development metadata. All ten CI checks passed for implementation09dcd2cb2, including full backend tests,
+schema and desktop checks. The final input-budget guard/documentation commit
+requires its own fresh CI; read final head status from GitHub rather than using
+this earlier result as exact-head acceptance.
+Live Green remains PID3027197, started October5 15:33:08UTC, old protocol1 module
+`reference-lookup-bb5fe5f40-20261005`, Codex0.159.2; exact read-only identity is in
+`LIVE_IDENTITY_UNCHANGED.json`. Recommend/model/credit/runtime settings are intact.
+No staging/main integration, deployment, restart or other-agent interaction.
+
+Remaining readiness: release CI and owner adoption of the matched boundary once,
+then real Recommend evidence, protected cases, classifier overhead and total
+accepted-task quality/usage before October30. Ordinary policy corrections after
+that adoption use module prepare/publish, not another backend restart. Auto needs
+separate authorization. [PR148](https://github.com/artinflight/vibe-kanban/pull/148)
+includes unchanged PR146 prerequisites; do not adopt both as separate releases.
+Safe source remains `/mnt/vk-storage/vk-model-autoswitch-20260930/source`; the
+recreated managed checkout was not used or overwritten. Older entries below are
+historical.
+
+# October 7: AutoSwitch current-step risk correction
+
+Branch `fix/autoswitch-current-step-risk` preserves `fix/autoswitch-reference-steps`
+at `bb5fe5f40852d48dfa0049c1fd797ee829ff1265`. See
+[VK_AUTOSWITCH_CURRENT_STEP_RISK.md](VK_AUTOSWITCH_CURRENT_STEP_RISK.md).
+Scope: release inferred session protection for positively classified, resolved
+bounded follow-ups; retain the surrounding assignment for generic resumes;
+recognize explicit deployment/restart prohibitions without erasing positive
+protected operations. The stable module validator now requires native bounded
+scope evidence, and agrees with built-in independent-request handling.
+
+Recommend remains required; no Auto, credit/model configuration, deployment,
+restart, live module publication or staging-owner interaction is authorized here.
+This changes backend safety guards, so it requires backend-matched adoption by
+VK::Staging; publishing only the worker to the old backend would fail closed.
+The October 30 readiness deadline (20x to 10x allowance) remains authoritative.
+Validation: 153 executor unit tests passed (seven opt-in tests not invoked),
+15 completed real assessments replayed without inference, sandboxed module reload
+and all-target executor Clippy passed, formatting/governance and exact CU wire
+compatibility passed. Three prior Astra recommendations become Sol6/low; their
+Auto-qualified option is Luna6/medium. The other twelve are unchanged. No actual
+model changes or accepted-task savings are claimed. Frontend type checks passed
+with the larger Node heap; full desktop/workspace checks require CI because the
+host lacks GLib development metadata. Receipts:
+`/mnt/vk-storage/vk-autoswitch-current-step-risk-20261007`.
+Delivery: implementation `665d836dba44dcd1af9244992e2656745d15641e` is committed
+and pushed. [PR148](https://github.com/artinflight/vibe-kanban/pull/148)
+targets staging and includes unchanged PR146 prerequisites; integration CI is
+pending. The matching prepared module `current-step-665d836db-20261007` and
+validator are in the task's `package` directory; `DELIVERY.json` records hashes.
+They are not published live. Staging/main are unchanged. Adopt the backend,
+validator, worker/instructions and existing native adapter together. A worker-only
+hot update cannot implement this stable safety-guard correction.
+Older entries below are historical.
+
+# October 5: AutoSwitch reference-step and classifier startup correction
+
+Current branch `fix/autoswitch-reference-steps` begins at staging `8b562265d`.
+The no-restart module is live on October5 Green PID3027197/port5511, source
+`a661a8156`. See VK_AUTOSWITCH_REFERENCE_STEPS.md. Scope is a hot module fix
+for known-link presentation plus a classifier-only config metadata adapter for
+the existing native launcher. Native config exceeded the current reader limit;
+ordinary agent frames and authoritative restrictions/settings/usage remain intact.
+Live publication and old-core sandbox verification passed without restart;
+backend PID3027197 is unchanged. Release `reference-steps-aac5bd457-20261005`.
+The known-link replay admits Luna6/medium (Recommend: experimental Sol6/low).
+One formerly failed native classifier replay now completes on Luna5.6/low;
+4,711 input/259 output tokens and9,823ms, no retry. Ambiguous work stays Astra.
+56 routing regressions and three adapter tests passed; no net savings claim yet. Publication/turn receipts
+are retained outside Git under `/mnt/vk-storage/vk-autoswitch-reference-steps-20261005`.
+No restart, cutover, Auto enablement or staging-owner coordination. Recommend stays
+required; complete useful routing deadline remains October30 (allowance20x →10x).
+Older entries below are historical.
+
+## October 8 targeted recovery investigation — partial recovery verified
+
+Read VK_TARGETED_RECOVERY_FINDINGS_20261008.md and its exhaustive evidence.
+132/145 exact original commit objects are preserved only in new isolated Desktop B
+object databases; 129 graphs are hash-verified within their declared scope.
+VK uses its authenticated original shallow-history boundary. Only 26 rows meet
+original identity plus remote-witness criteria; 119 remain unresolved for coverage.
+All 448 names remain unknown; 59 same-name candidate copies cover 13 names and
+are not proof of original bytes or retirement. 14,382 captured metadata headers
+and three source mode bits were recovered; later states/ownership remain unknown.
+The initial journal is now Desktop-authenticated; its lifecycle limitations remain.
+Eight archived transcripts retain the same malformed line; no intact suffix found.
+Native Desktop Git fetch is blocked by wincredman/disabled credential prompts;
+no route/credential bypass. Two VK bundle imports failed prerequisites and remain
+explicit. Shared/live trees, workspaces, runtime and original backups are untouched.
+New findings are parent-verified, not a duplicate or extension of the Astra review.
+Recovery-complete/zero-loss acceptance remains withheld. Request additional
+original-object/lifecycle evidence or a decision on enumerated residual unknowns.
+No restart/cutover/merge/cleanup/permission change; cleanup still needs human QA.
+
+## October 8 recovery evidence correction — sign-off withheld
+
+Read VK_POST_BACKUP_RECONCILIATION_20261008.md. The earlier blanket claim that
+all 710 candidates were accounted for is withdrawn. Parent checks authenticate
+the two retained Desktop packets, individually bind 14 accepted patches and the
+rejected patch, match 11 replayed files and compare all 15 recovery files.
+The checker now fails overall on the preserved transcript parse error.
+Only 228 of 676 absent Hyrox names have baseline/08:53 evidence; the other 448
+have no baseline content and cannot be certified as later-retired. The subsequent
+investigation recovered 132 exact originals in isolation;
+13 remain unfound and 119 rows still lack verified remote witnesses. See
+VK_TARGETED_RECOVERY_FINDINGS_20261008.md for the current exhaustive accounting.
+The separately authorized Astra High
+review completed at 13:59:52 UTC and independently substantiates the corrected
+bounded findings; recovery-complete/universal-zero-loss sign-off is withheld.
+See VK_INDEPENDENT_RECOVERY_REVIEW_20261008.md for the copied redacted report,
+448-row list, source manifest and historical investigation plan, now executed.
+Earlier blocked delegation receipts are historical; no duplicate review or
+routing change is needed.
+PR223's remote commit and 11 checks are verified; the c31a workspace's absence
+around 12:40 is operator-reported and its cause unknown. No workspace recreation
+or incident-loss inference is authorized. Production/shared work remain untouched.
+The operator subsequently authorized isolated recovery from retained sources.
+No live placement, restart, cutover or cleanup. Cleanup requires Seamus human QA.
+
+## Earlier repair acceptance (source review and later evidence review now recorded)
+
+Draft [PR153](https://github.com/artinflight/vibe-kanban/pull/153), sourcea81d46e92,
+passes all10 CI checks:405 Cargo tests passed,7 skipped, plus14 audit regressions
+and the16-case real server isolation test. Its rejection reasons, intrinsic
+identity guard, read-only inspection and normal identified startup are verified.
+Read VK_STARTUP_RECOVERY_SAFETY.md for the startup/bootstrap/retention contract,
+recovery limitations, unchanged production and independent review gate.
+No deployment, restart, cutover or production token enrollment is authorized.
+
+## October 8 isolated prevention and recovery audit
+
+Draft PR153: https://github.com/artinflight/vibe-kanban/pull/153.
+First hosted run:403/404 Cargo tests passed; namespace initialization failed
+before the real binary ran. The CI profile repair retains full isolation and
+requires a corrected run. Source84d1d2a evidence is Desktop-hash-verified; see the
+packet location/hash and current review boundary in VK_STARTUP_RECOVERY_SAFETY.md.
+
+Read VK_STARTUP_RECOVERY_SAFETY.md. This repair was developed in a new worktree
+from fork staging; the original Staging maintenance workspace remains clean.
+Argument inspection/rejection precedes initialization; runtime startup requires
+an explicit database/root receipt and matching intrinsic dataset token; automatic shared-workspace deletion
+is removed. The fresh recovery audit keeps 47 content differences, three missing
+mode records, 14,382 names without authenticated metadata and both journal gaps
+explicit. No zero-loss, deployment or release-readiness claim is made.
+Real-binary sandbox tests are wired into CI; full local test execution was limited
+by dependencies/capacity. Independent review and hosted acceptance remain next.
+Do not create a production receipt, replay recovery placement, or switch services.
+
+# October 8: PR223 P1 preservation review corrections
+
+Review baseline `3cb3632897a5081224fd45d39b3cf7d772937709` was unsafe: replacement
+refs and binary diff attributes hid secrets from scanning, and retries overwrote
+original-head obligations. Nine targeted regressions reproduced these and related
+failed-admission/legacy-receipt gaps before the fixes, with the approved real
+Gitleaks executable exercised on replacement refs, attributes and same-turn retry.
+
+The correction scans raw original blobs and commit messages using Gitleaks stdin
+under the publication Git environment, bypasses local attributes/drivers and
+legacy grafts, and preserves an append-only original-commit ledger across retries
+and failed admissions. Generated commits have write-ahead obligations. Fresh
+checks rescan original bytes and reject schema-1 or incomplete receipts. Missing
+or unverifiable originals remain blockers and cannot become acceptable exclusions.
+
+Validation on the corrected source: the complete 72-case fixture suite plus one
+additional positive real-scanner publication/check test passed (73 distinct tests,
+15 configured with approved Gitleaks 8.30.1; none skipped). Four focused Rust tests,
+all-target focused Clippy, repository formatting, ops governance and branch policy
+passed. Fresh fork/staging ancestry was checked without operating its workspace.
+Frontend type checks and local-web/UI lint passed; full check/lint/workspace tests
+were attempted and stop at missing host GLib/GObject/GIO development libraries.
+Trailing remote-manifest/I18n checks and copied-data full executor/UI acceptance
+remain unverified. Logs are in the review evidence directory named below.
+Approved scanner SHA256:
+`88f91962aa2f93ac6ab281d553b9e125f5197bbbce38f9f2437f7299c32e5509`.
+
+Tracking and delivery remain VK Dev T48 and [draft PR223](https://github.com/artinflight/vibe-kanban/pull/223)
+on `feat/turn-git-preservation`. Review evidence is in
+`/mnt/vk-storage/turn-git-preservation-review-20261008/`; the final external
+`publication-receipt.json` records the exact development remote SHA after push.
+
+No live activation, Staging workspace/runtime operation, restart, recovery,
+cleanup, merge, force push, permission or network change was performed.
+Recommend-only remains required. Seamus owns controller/package integration and
+separately authorized Staging adoption. The controller consumer must require
+schema 2 and a fresh check under its complete inventory and held writer fence.
+Old receipts need explicit original-history reconciliation; do not auto-migrate
+or delete them to clear the gate. Copied-data executor/UI/stop timing acceptance
+and full CI remain rollout requirements.
+
+# October 8: Automatic turn Git preservation — development only
+
+Branch `feat/turn-git-preservation` starts at fork/staging
+`8b562265d25a3f8ee6d4fa602144e71caddfbc85`. Read
+[VK_TURN_GIT_PRESERVATION.md](VK_TURN_GIT_PRESERVATION.md) for the complete
+publication/privacy policy, exact-history receipt and fail-closed controller
+contract. VK Dev T48 / `783c983a-416e-43f5-9754-8c2f619e9918` is linked to workspace
+`c31ac191-d4cf-4ab9-b3e8-9c1a7d7c3b73`. The fork disables GitHub issues.
+
+This is opt-in source development. No config is installed and production
+enforcement is not active. Seamus owns Staging integration, installation,
+controller wiring, restart/cutover and copied-data/live acceptance. The separately
+stopped Staging conversation/workspace/runtime was not operated. Recommend-only
+routing remains required. No merges, auto-merge, cleanup, incident recovery,
+visibility/permission changes or force pushes were performed.
+
+Development delivery: [draft PR223](https://github.com/artinflight/vibe-kanban/pull/223)
+into staging. Initial implementation commit `021b12a9160c8c988dde862758ad43c7da337bdf`.
+Final remote coverage is independently checked after the documentation/link commit;
+see the private `publication-receipt.json` in the evidence directory. This is
+source delivery, not activation or production acceptance. The workspace's stored
+branch label remains `vk/c31a-vk-git-sync-enfo`; the actual isolated development
+Git branch and PR head are `feat/turn-git-preservation`. Do not promote the stored
+legacy label or the separately stopped Staging workspace.
+
+Local validation: all 40 isolated Git fixture tests passed, including real
+Gitleaks acceptance and push/PR uncertainty, exclusion, original-history,
+concurrent-writer and stale/newer-turn coverage. Four focused Rust tests passed,
+including the embedded helper and owned process-group fixtures. Focused
+all-target Clippy, formatting and ops governance passed. Local Git ancestry
+confirms the branch contains freshly fetched fork/staging; branch policy passes.
+
+Frontend type checks passed with Node's heap raised to 8 GiB after the initial
+default-heap failure. Local-web/UI lint passed. Full `pnpm run check`,
+`pnpm run lint` and `cargo test --workspace` were attempted; host GTK/GLib/GObject/GIO
+libraries are missing, so broad desktop/backend validation and trailing
+remote-manifest/I18n stages remain incomplete. Generic CI must provide that
+coverage. No native provider inference, copied-data full executor/UI acceptance
+or production acceptance was performed. Shared Cargo target/incremental policy
+was retained; fixtures, dependencies and logs used mounted SSD storage.
+
+Evidence: `/mnt/vk-storage/turn-git-preservation-20261008/` (fixture-tests.log,
+cargo-tests.log, focused-clippy.log, format.log, ops-check.log, check.log,
+lint.log and workspace-tests.log). Seamus's rollout outcomes are in the contract
+handoff: matching protected backend/policy/scanner/state packaging; complete
+controller inventory and real held writer fence; copied-data visible pending,
+blocked, successful and stop/cleanup timing acceptance; separately authorized
+Staging integration/live adoption. No Staging message was sent or conversation
+resumed. Desktop prompt guidance was read through established SSH access.
+
+# October 8: nested redaction-only context (PR225 P2)
+
+Independent re-review at `da07a5c3b9cc9331798bd51c238d998b7d3c51a1` closed
+both P1 findings; comment6063071315 identified a remaining nested-context P2.
+This turn changes only the post-sanitization meaningful-value gate and regression
+coverage. Container names, display labels, nulls, blank strings and redaction
+markers cannot supply usable invocation values. Objects and arrays are traversed
+recursively; surviving nonsecret target details and scalar values remain usable.
+Rejected context follows the existing typed Cancel/insufficient_consent_context
+path before any approval exists. Consent decisions and binding are unchanged.
+
+The compiled Rust regression at the reviewed implementation reproduced both
+nested-object and nested-array failures (matching upstream display metadata);
+the positive mixed-target case passed. The patch adds the surviving-value check
+and service-fixture cancellation/no-dispatch assertions. At publication, all
+three focused compiled Rust regressions and all-target executor/services Clippy
+passed; the executor/services suites were running. Final Rust, exact remote SHA
+and CI receipts are recorded in PR225's P2 correction comment. See VK_MCP_APPROVAL_BRIDGE.md for the validation command. The existing
+host-wide GLib/GIO dependency limitation and unsupported form/auth flows remain.
+
+Same linked VK::MCP Approval Bridge issue and draft PR225 into staging. No live
+activation, permissions/routing change, manager retry, deployment, merge, recovery
+or runtime operation. Live connector/operator validation is a separate boundary.
+Older entries below describe earlier source and validation.
+
+# October 8: P1 consent review correction (PR225)
+
+The independent review of source `80d06cecf3bd6552b85b0a058ba87e7d695e1eca`
+reported two P1 consent issues in PR225 comment6062090857. `fc6186d1c` was
+handoff-only. This corrective source turn keeps the same draft and linked
+VK::MCP Approval Bridge issue. Older validation below applies to the initial
+source, not to this correction.
+
+MCP consent now has request-specific composer cards with their own approval and
+execution IDs. These requests are excluded from implicit generic composer
+selection. A fresh approval snapshot plus Ready gates controls after reconnect;
+missing/delayed consent content cannot be approved. Snapshot context is atomic
+and does not wait for timeline logs. Cards are scoped to the displayed session.
+
+The bridge derives a bounded redacted plain-text action summary from invocation
+metadata (tool, connector, targets, parameters and verified display labels).
+Generic fallback/monitor messages are not used as action context. Insufficient,
+unsafe or oversized context returns typed Cancel with truthful attribution.
+Explicit declines, cancellation, timeout, one-shot acceptance and existing
+execution checks remain unchanged. See VK_MCP_APPROVAL_BRIDGE.md for bounds and
+runtime-schema verification through the configured Codex 0.159.2 launcher.
+
+Mounted composer/card integration passed with actual approval selector and
+WebSocket patch hook, mock transport only: A/B concurrency, reversed snapshots,
+reconnect before Ready, delayed context, cancellation, expiry and literal text.
+The synthetic backend fixtures consume the explicit mounted UI response payloads.
+Formatting, ops governance and frontend type/lint checks passed. Full local
+`pnpm run check`, `pnpm run lint`, and `cargo test --workspace` stop at the host's
+missing GLib/GIO/GObject development libraries; no packages were installed.
+The configured-launcher schema verification passed. Corrective Rust tests and
+Clippy are running at publication; final results and exact remote head/CI are
+recorded in PR225's correction receipt. Check that receipt and current head's
+CI before readiness; the initial green source checks below are not this fix's
+acceptance evidence. Current draft:
+https://github.com/artinflight/vibe-kanban/pull/225 (base staging).
+
+No live activation, approvals, manager retries, permission/routing change,
+deployment, restart, recovery, cleanup, merge or Staging runtime operation.
+Recommend remains unchanged. Independent re-review and separately authorized
+activation remain release boundaries, not work authorized by this correction.
+
+# October 8: MCP approval bridge development
+
+Branch `vk/870d-vk-mcp-approval`; linked issue VK::MCP Approval Bridge
+`08659a8a-7908-4f92-b1e5-eee0e4e1c38c`. See VK_MCP_APPROVAL_BRIDGE.md for
+scope, outcomes and isolated validation commands. The final read-only diagnostic
+report confirmed malformed null elicitation responses, not human rejection.
+No private raw logs/customer identities were copied into this public source.
+
+Source handles empty-form MCP tool consent through the actual approval lifecycle,
+with one-call grants, fail-closed typed cancellation and distinct origin messages.
+Concurrent/replayed IDs, lifecycle/EOF/stop and execution identity are covered.
+Real UI-hook payloads feed the offline service fixture; notifications/network and
+model usage are absent. Publication targets a draft PR into staging only.
+
+Draft PR: https://github.com/artinflight/vibe-kanban/pull/225 (base staging).
+Source commit `80d06cecf3bd6552b85b0a058ba87e7d695e1eca` was pushed and matched
+both `git ls-remote` and the GitHub PR head. The linked issue was reread and
+workspace `task_id` verified; no issue status/archive operation was performed.
+The workspace's repository target metadata was corrected from main to staging;
+existing draft PR225 was attached through the normal API and its issue-board
+projection reread. No agent execution or runtime operation was triggered.
+
+Validation passed: all 152 non-opt-in executor tests (six existing skips), all
+18 service tests, final five MCP service regressions using the real UI-hook
+output, four typed-protocol tests, consent-card normalization, offline UI test,
+executor/services all-target Clippy, full formatting and ops governance.
+All frontend type checks passed with NODE_OPTIONS=--max-old-space-size=8192.
+Full `pnpm run check`, `pnpm run lint` and `cargo test --workspace` reached the
+host's missing GLib/GIO development libraries and cannot pass locally. The
+first type-check attempt exhausted Node's default heap; the CI heap retry passed
+the frontend checks. No host packages or runtime settings were changed.
+
+Isolated evidence (uncommitted, SSD): `/mnt/vk-storage/vk-mcp-approval-tests`
+and `/mnt/vk-storage/vk-mcp-approval-*.log`. Public source contains synthetic
+fixtures only, not private diagnostics. Actions were inspected locally and on
+GitHub before publication. Observed source pipeline: check-only Test run
+https://github.com/artinflight/vibe-kanban/actions/runs/37791310866.
+The source run completed successfully: branch policy/freshness, governance,
+frontend (including the new offline UI contract test), generated types/SQLx,
+backend Clippy, backend tests and Tauri checks all passed. The unchanged remote
+paths use the workflow's no-deploy-key skip; no remote deployment validation is
+claimed. This final receipt changes HANDOFF.md only; source remains identical
+to the green CI commit. Its push triggers a fresh PR check run, which must be
+checked before merge. Green source CI is not live release approval.
+
+Live activation: NOT performed. Review/CI and a separately authorized release
+remain necessary before live connector/operator acceptance. Do not resume the
+manager or operate Staging's stopped conversation/runtime from this stream.
+Recommend-only routing and plugin permissions remain unchanged.
 
 # October 5: AutoSwitch reloadable module
 
@@ -96,6 +654,7 @@ The host lacks Tauri GTK development packages and has under 1 GiB free SSD space
 full workspace/desktop checks therefore rely on the repository CI runners rather
 than risking the live host. Local checks cover the changed executor, services and
 frontend sources, formatting/governance, and byte-identical CU wire compatibility.
+
 ## October 2: Workspace Attention Correction
 
 Read VK_ATTENTION_PRESERVATION.md. The issue-status comparison did not verify
@@ -878,7 +1437,6 @@ lightweight preview cannot validate the new backend route. The full-workspace Ru
 merge validation. No production build or deployment is claimed. Cold
 server reconstruction still scans saved logs; oversized uncached turns repeat it.
 
-
 ## September 12: Blue Live, Original Green Paused
 
 Read VK_BLUE_LIVE_20260912.md first. New production Blue4711/4712 is active;
@@ -955,7 +1513,6 @@ Evidence: `/mnt/vk-storage/vk-cutover-20260911/warm-preparation-result.json` and
 `warm-staging-ui-result.json`. Measure the full replacement handover before
 requesting the operator's next cutover approval.
 
-
 ## Attachment Cleanup Cutover Guard
 
 - Branch `vk/4e18-cutover-attachment-safety`, baseline `9dfd19c34`.
@@ -984,7 +1541,6 @@ requesting the operator's next cutover approval.
 - Activation smoke: use `/goal` from a Codex chat, confirm intermediate turns
   continue, stalled work receives recovery instructions, and Stop still works.
 - This merge task performs no deployment, service restart, or live state change.
-
 
 ## Recovery-first revision validated
 
@@ -1210,6 +1766,7 @@ The user clarified that loops should trigger autonomous redirection, not an imme
 - A later `pnpm run format` in the local `staging` worktree failed because that
   worktree did not have frontend dependencies installed and `prettier` was not
   found; `git diff --check` passed after the docs update.
+
 ## 2026-08-31 Attachment and UI Preference Corrections
 
 - Issue attachment uploads now route local runtime uploads through
@@ -1383,6 +1940,7 @@ The user clarified that loops should trigger autonomous redirection, not an imme
 - Script repair: `scripts/preview.sh` now invokes Vite without the extra CLI
   separator so `--host 0.0.0.0` takes effect, and runs HTTPS verification from
   the homelab route owner because MCP-to-proxy hairpin HTTPS is blocked.
+
 ## 2026-08-26 Terminal Workspace Archive Fix Staged
 
 - Root cause: terminal-status handlers existed for both `In Staging` and `Done`,
@@ -1435,6 +1993,7 @@ The user clarified that loops should trigger autonomous redirection, not an imme
   restart `vibe-kanban-green.service`, confirm the running executable hash,
   migration and reconciliation logs, run both terminal-status timing cases
   against green, and repeat live attachment upload/read/delete.
+
 ## 2026-07-13 Staging Backfill Preview Updated
 
 - Preview branch: `vk/4e18-live-backfill-to-staging`
@@ -4237,6 +4796,7 @@ User QA checklist for the no-restart frontend repair:
   the new/retained bundle markers passed. The repository smoke script itself is
   stale because it still hardcodes the 20260626 release, so equivalent
   manifest-driven live checks were run directly.
+
 # 2026-08-29 Disk Capacity Lifecycle Prepared
 
 - Branch `vk/156f-vk-disk-space-is` is based on current `fork/staging`.
@@ -4251,7 +4811,7 @@ User QA checklist for the no-restart frontend repair:
   attachment safety, green authority, and explicit-path requirements.
 - No live restart, service edit, worktree deletion, cache clearing, attachment
   mutation, or database/session mutation was performed.
-2026-08-29 durable saved-message storage prepared, not deployed:
+  2026-08-29 durable saved-message storage prepared, not deployed:
 
 - Root cause: local saved messages were embedded in the single global
   `UI_PREFERENCES` scratch JSON payload, so stale/older frontend whole-payload
@@ -4267,6 +4827,7 @@ User QA checklist for the no-restart frontend repair:
 - Per-message frontend writes are serialized so a delete cannot be overtaken by
   an earlier in-flight edit.
 - No live deploy, database mutation, frontend swap, or service restart occurred.
+
 # 2026-08-29 Colored Kanban workspaces promotion
 
 - Branch `vk/b6aa-vk-colored-works` is being promoted through a PR into
@@ -4274,6 +4835,7 @@ User QA checklist for the no-restart frontend repair:
 - The feature adds persistent, theme-aware workspace card colors through the
   existing UI-preferences scratch API; no backend restart is required.
 - Public preview: `https://mcp-server.tail744c4.ts.net:8443/`.
+
 # Latest: V2 Returned To Green, Readiness Withdrawn
 
 The23:14 UTC approved attempt failed when it stopped a transient execution unit
@@ -4291,3 +4853,15 @@ counter reset. Unit coverage verifies repeated automatic resumes and manual
 behavior. CU's offline two-agent acceptance additionally seeds recovery history
 and checks it after repeated real native stop/resume cycles. Changes target
 staging for the operator's normal deployment; this task does not cut over VK.
+
+## October 9 frontend inclusion handoff
+
+Read VK_CANDIDATE_DIRECT_B_INTEGRATION_20261008.md in draft PR231 for the current
+restore/controller boundary and the exact pending extra-capacity exception.
+Combined frontend product checkpoint:7810706ea5255a0894457c96aa158adbb947b9a1.
+The 765-file build uses index-CGxY34Zp.js and root/versioned PWA manifest; it retains
+newer consent repairs. Its private manifest is at
+/mnt/vk-storage/vk-runtime-backup-20261009/combined-frontend-7810706e-manifest.json.
+The original server/guard/module package is c3c48e63, unchanged. Browser sandbox
+startup exited SIGTRAP; no sandbox was disabled. Actual candidate/cutback binding
+and routed/phone acceptance remain pending. Do not deploy from a source/CI claim.

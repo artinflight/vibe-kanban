@@ -1,3 +1,10 @@
+# October 10 scope correction
+
+Attention styling is phone-only. Desktop whole-card tint/stripe and the extra
+attention-label row are reverted. Earlier cross-viewport attention acceptance
+below records historical behavior, not the corrected requirement. See
+VK_MOBILE_ATTENTION_SCOPE_20261010.md for current validation and release limits.
+
 # October 8 follow-up: Workspaces first and visible task attention
 
 This follow-up is a frontend-only feature preview, not a production release.
@@ -15,7 +22,7 @@ are unchanged.
   Per-project choices survive task detail, workspace and project navigation in
   the current browser session; a fresh page load defaults to To do. Desktop
   Kanban columns retain their layout.
-- Entire issue cards and linked workspace cards get an orange tint, border and
+- On phones only, entire issue cards and linked workspace cards get an orange tint, border and
   edge stripe when a completed workspace is unread, an approval is pending, or
   the issue carries its explicit Needs review flag. Labels use the readable
   theme foreground. Interrupted/failed executions do not become review items.

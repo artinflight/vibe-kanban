@@ -1,3 +1,13 @@
+## October 10: Restore desktop attention styling; phone-only scope
+
+Owner correction: attention visibility work applies only to phones. Desktop
+Kanban cards retain their original compact indicators; remove the added whole-card
+tint/stripe and extra attention-label row above the 767px phone breakpoint.
+Read VK_MOBILE_ATTENTION_SCOPE_20261010.md for focused changes and validation.
+Work View, mobile Send and attention state/polling are preserved. This is source
+preparation, not a production publication. The earlier combined package40e56d10
+predates this restoration and must be rebuilt by Staging before inclusion.
+
 ## October 9: One-tap mobile Send correction (Dev only)
 
 After the 20:31 UTC cutover, HTTPS serves combined frontend `5ce84ee21be814b1519cfb2715b50f3432c3e8ba`.

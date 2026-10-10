@@ -1624,3 +1624,11 @@ fully synthetic fixtures. Focus-preserving activation, viewport-aware navigation
 shared admission guard, disabled pending Send and correction failure/retry pass
 nine browser cases plus synchronous admission/frontend checks on PR233. No deployment or live drafts/messages touched. Read
 VK_MOBILE_SEND_20261009.md for final evidence and limitations.
+
+## 2026-10-10 — Restore desktop attention scope
+
+Owner clarified unread visibility was mobile-only. Restore desktop cards by
+scoping attention CSS to max-width767px and removing the added desktop label/
+card decoration. Retain phone attention, Work View and Send fixes. Focused
+synthetic browser checks and frontend validation recorded in
+VK_MOBILE_ATTENTION_SCOPE_20261010.md; no publication/restart/merge.

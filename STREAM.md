@@ -1,3 +1,12 @@
+# October 10: Router remount handoff follow-up
+
+Carry only PR237 source 75c1e1e1a hook/test follow-up. Flat project/issue routes
+remount the layout, so the scoped expected-issue handoff uses shared browser-memory
+state with stale-update fencing. An actual unmount/remount regression fails with
+layout-local state and passes here; twenty-one rendered tests pass.
+Prior live/combined changes and workflows remain preserved. No production writes
+or runtime activation. Acceptance receipts are on Desktop B:.
+
 # October 10: Combined-candidate unassigned navigation repair
 
 Carry only the PR237 navigation repair from feature source 428ecf5aa.

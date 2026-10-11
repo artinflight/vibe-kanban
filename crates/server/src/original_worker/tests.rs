@@ -353,6 +353,15 @@ fn call(id: usize) -> Value {
 
 #[tokio::test]
 async fn production_follow_up_resolution_launch_and_workspace_races() {
+    production_fixture(false).await;
+}
+
+#[tokio::test]
+async fn production_timeout_receipt_recovery_and_revoke_endpoint() {
+    production_fixture(true).await;
+}
+
+async fn production_fixture(timeout_lifecycle: bool) {
     let dir = tempfile::tempdir().unwrap();
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(1)
@@ -410,7 +419,18 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
         .await
         .unwrap();
     sqlx::query("CREATE TABLE thread_goals(thread_id TEXT PRIMARY KEY,goal_id TEXT,objective TEXT,status TEXT,created_at_ms INTEGER)").execute(&goals).await.unwrap();
-    let coverage = services::services::original_worker::start_input_coverage(&pool)
+    // First upgrade has no journal epoch: bootstrap must establish it only
+    // after proving quiescence and the exact release-pinned scope.
+    let coverage = Uuid::new_v4();
+    sqlx::raw_sql(
+        "CREATE TABLE vk_runtime_identity(singleton INTEGER PRIMARY KEY,dataset_id TEXT)",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query("INSERT INTO vk_runtime_identity VALUES(1,?)")
+        .bind("a".repeat(32))
+        .execute(&pool)
         .await
         .unwrap();
     let mut identities = Vec::new();
@@ -460,7 +480,11 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
         .unwrap();
         let thread = Uuid::new_v4().to_string();
         let rollout = home.join(format!("{name}.jsonl"));
-        tokio::fs::write(&rollout, b"").await.unwrap();
+        let input =
+            json!({"type":"user_message","message":"Synthetic preapproved initial owner input"});
+        let mut bytes = serde_json::to_vec(&json!({"type":"event_msg","payload":input})).unwrap();
+        bytes.push(b'\n');
+        tokio::fs::write(&rollout, bytes).await.unwrap();
         sqlx::query("INSERT INTO threads VALUES (?,?)")
             .bind(&thread)
             .bind(rollout.to_str().unwrap())
@@ -573,8 +597,8 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
                 coverage_id: coverage,
                 backend_sequence: 0,
                 rollout,
-                records: 0,
-                prefix_digest: digest(b"[]"),
+                records: 1,
+                prefix_digest: digest(&serde_json::to_vec(&vec![json!({"type":"user_message","message":"Synthetic preapproved initial owner input"})]).unwrap()),
             },
         });
         anchors.push(process.id);
@@ -607,7 +631,8 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
         .execute(&goals)
         .await
         .unwrap();
-    let ledger = Arc::new(Ledger::adopt(pool.clone(), contract).await.unwrap());
+    let ledger = exercise_bootstrap_acceptance(&deployment, &contract, dir.path()).await;
+
     let resources = Arc::new(SyntheticResources {
         failed: AtomicBool::new(false),
     });
@@ -790,6 +815,61 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
         .await
         .unwrap();
     assert_eq!(activations, 1);
+    if timeout_lifecycle {
+        let first_execution: Uuid =
+            sqlx::query_scalar("SELECT execution FROM bounded_worker_attempts WHERE activated=1")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        ledger
+            .native_receipt_uncertain(first_execution)
+            .await
+            .unwrap();
+        assert!(ledger.active().await.is_ok());
+        assert!(
+            engine.handle(anchors[0], call(30)).await.is_err(),
+            "uncertain original execution cannot replay"
+        );
+        ExecutionProcess::update_completion(
+            &pool,
+            first_execution,
+            ExecutionProcessStatus::Completed,
+            Some(0),
+        )
+        .await
+        .unwrap();
+        assert!(
+            engine.handle(anchors[0], call(31)).await.is_ok(),
+            "actual Live/follow_up path recovers only from its exact successful receipt"
+        );
+        let second_execution:Uuid=sqlx::query_scalar("SELECT execution FROM bounded_worker_attempts WHERE state='dispatching' ORDER BY rowid DESC LIMIT 1").fetch_one(&pool).await.unwrap();
+        ledger
+            .native_receipt_uncertain(second_execution)
+            .await
+            .unwrap();
+        let mut revoke = call(32);
+        revoke["params"]["name"] = json!(executors::original_worker::REVOKE);
+        assert!(
+            engine.handle(anchors[0], revoke).await.is_ok(),
+            "actual revoke endpoint remains reachable after native uncertainty"
+        );
+        assert!(engine.handle(anchors[0], call(33)).await.is_err());
+        // Terminal authority stays terminal even after a later successful execution.
+        ExecutionProcess::update_completion(
+            &pool,
+            second_execution,
+            ExecutionProcessStatus::Completed,
+            Some(0),
+        )
+        .await
+        .unwrap();
+        assert!(ledger.reconcile().await.is_err());
+
+        drop(manager);
+        container.peers.lock().await.clear();
+        return;
+    }
+
     // New native steering is rejected even though goal and executor_action did not change.
     tokio::fs::write(&ledger.contract.manager.input_seal.rollout, serde_json::to_vec(&json!({"type":"event_msg","payload":{"type":"user_message","message":"Synthetic unverified amendment"}})).unwrap()).await.unwrap();
     assert!(runtime.check(anchors[0]).await.is_err());
@@ -849,4 +929,246 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
     .expect("terminal grant must stop serializing unrelated ordinary starts");
     drop(manager);
     container.peers.lock().await.clear();
+}
+
+/// The actual loader used by both server entry points, with synthetic procfs.
+/// Every failing bootstrap leaves ingress unregistered and creates no coverage.
+async fn exercise_bootstrap_acceptance(
+    deployment: &FixtureDeployment,
+    contract: &Contract,
+    directory: &Path,
+) -> Arc<Ledger> {
+    let pool = &deployment.db().pool;
+    let mut f =
+        bootstrap::tests::Fixture::new(directory, contract, pool.connect_options().get_filename());
+    let baseline = f.receipt.clone();
+    let contract_bytes = tokio::fs::read(&f.files.contract).await.unwrap();
+    let manager_bytes = tokio::fs::read(&contract.manager.input_seal.rollout)
+        .await
+        .unwrap();
+    let worker_bytes = tokio::fs::read(&contract.worker.input_seal.rollout)
+        .await
+        .unwrap();
+    let pin = f.files.contract_sha256.clone();
+    for case in [
+        "contract_pin",
+        "proof_pin",
+        "missing_proof",
+        "changed_contract",
+        "scope_pin",
+        "dataset",
+        "database",
+        "database_object",
+        "different_epoch",
+        "future_watermark",
+        "profile_pin",
+        "home",
+        "boot",
+        "missing_ingress",
+        "missing_writer",
+        "wrong_writer",
+        "live_ingress",
+        "live_writer",
+        "unlisted_writer",
+        "unlisted_ingress",
+        "unknown_producer",
+        "open_input_file",
+        "changed_prefix",
+        "truncated_prefix",
+        "worker_input",
+        "goal_amended",
+        "goal_ready",
+        "journal_amendment",
+        "revoked",
+        "ready",
+        "suspended",
+        "different_prior_contract",
+    ] {
+        f.receipt = baseline.clone();
+        f.files.contract_sha256 = pin.clone();
+        let mut process = None;
+        match case {
+            "contract_pin" => f.files.contract_sha256="b".repeat(64),
+            "changed_contract" => { let mut c=contract.clone();c.instructions.push_str(" Synthetic unauthorized amendment");tokio::fs::write(&f.files.contract,serde_json::to_vec(&c).unwrap()).await.unwrap(); },
+            "scope_pin" => f.receipt.contract_sha256="b".repeat(64),
+            "dataset" => f.receipt.dataset_id="b".repeat(32),
+            "database" => f.receipt.database=directory.join("other-dataset.sqlite"),
+            "different_epoch"|"future_watermark"|"profile_pin" => {
+                let mut c=contract.clone();
+                if case=="different_epoch" {c.manager.input_seal.coverage_id=Uuid::new_v4();}
+                if case=="future_watermark" {c.manager.input_seal.backend_sequence=1000;}
+                if case=="profile_pin" {c.manager.profile_digest="d".repeat(64);}
+                let bytes=serde_json::to_vec(&c).unwrap();
+                f.files.contract_sha256=digest(&bytes);f.receipt.contract_sha256=f.files.contract_sha256.clone();
+                tokio::fs::write(&f.files.contract,bytes).await.unwrap();
+            },
+            "database_object" => f.receipt.database_object="unknown:object".into(),
+            "home" => f.receipt.native_home=directory.join("other-home"),
+            "boot" => f.receipt.boot_id="11111111-2222-4333-8444-666666666666".into(),
+            "missing_ingress" => f.receipt.old_ingress.clear(),
+            "missing_writer" => { f.receipt.native_writers.pop(); },
+            "wrong_writer" => f.receipt.native_writers[1].thread="unrelated-native-thread".into(),
+            "live_ingress"|"live_writer"|"unlisted_writer"|"unlisted_ingress"|"unknown_producer"|"open_input_file" => {
+                let pid=match case { "live_ingress"=>42,"live_writer"=>43,_=>88 };
+                let ticks=if pid==43 {200} else {100};
+                let env=match case {
+                    "unlisted_writer"=>format!("VK_SESSION_ID={}\0",contract.worker.session),
+                    "unlisted_ingress"=>"VK_RUNTIME_IDENTITY_FILE=/synthetic/runtime-pin\0".into(),
+                    _=>String::new(),
+                };
+                f.process(pid,ticks,&env,directory,if case=="unlisted_ingress" {"server"} else {"synthetic-helper"});
+                if case=="unknown_producer" { f.unknown_process(pid); }
+                if case=="open_input_file" { f.held_rollout(pid,&contract.worker.input_seal.rollout); }
+                process=Some(pid);
+            },
+            "changed_prefix" => tokio::fs::write(&contract.manager.input_seal.rollout,serde_json::to_vec(&json!({"type":"event_msg","payload":{"type":"user_message","message":"Synthetic changed owner history"}})).unwrap()).await.unwrap(),
+            "truncated_prefix" => tokio::fs::write(&contract.manager.input_seal.rollout,b"").await.unwrap(),
+            "worker_input" => tokio::fs::write(&contract.worker.input_seal.rollout,serde_json::to_vec(&json!({"type":"event_msg","payload":{"type":"user_message","message":"Synthetic unknown worker input"}})).unwrap()).await.unwrap(),
+            "goal_amended"|"goal_ready" => {
+                let home=executors::executors::codex::codex_home().unwrap();
+                let goals=sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect_with(sqlx::sqlite::SqliteConnectOptions::new().filename(home.join("goals_1.sqlite"))).await.unwrap();
+                sqlx::query("UPDATE thread_goals SET objective=?,status=? WHERE thread_id=?")
+                    .bind(if case=="goal_amended" {"Synthetic different objective"} else {&contract.objective})
+                    .bind(if case=="goal_ready" {"completed"} else {"active"}).bind(&contract.manager.thread).execute(&goals).await.unwrap();
+                goals.close().await;
+            },
+            "journal_amendment" => services::services::original_worker::record_input(pool,contract.manager.session,false).await.unwrap(),
+            "revoked"|"ready"|"suspended"|"different_prior_contract" => {
+                sqlx::query("INSERT INTO bounded_worker_grants(id,contract_digest,state) VALUES(?,?,?)")
+                    .bind(contract.id).bind(if case=="different_prior_contract" {"different".into()} else {digest(&serde_json::to_vec(contract).unwrap())})
+                    .bind(if case=="different_prior_contract" {"active"} else {case}).execute(pool).await.unwrap();
+            },
+            _=>{},
+        }
+        f.save();
+        if case == "proof_pin" {
+            f.files.bootstrap_sha256 = "b".repeat(64);
+        }
+        if case == "missing_proof" {
+            tokio::fs::remove_file(&f.files.bootstrap).await.unwrap();
+        }
+        let ingress = std::sync::atomic::AtomicBool::new(false);
+        let result = async {
+            let ledger = load_startup(deployment, &f.files, &f.processes).await?;
+            ingress.store(true, Ordering::SeqCst);
+            Ok::<_, io::Error>(ledger)
+        }
+        .await;
+        assert!(result.is_err(), "bootstrap case {case} must fail closed");
+        assert!(!ingress.load(Ordering::SeqCst));
+        assert_eq!(deployment.container.launches.load(Ordering::SeqCst), 0);
+        let coverage: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM bounded_native_input_coverage")
+                .fetch_one(pool)
+                .await
+                .unwrap();
+        assert_eq!(coverage, 0, "case {case} must fail before coverage");
+        let grants: i64 = sqlx::query_scalar("SELECT count(*) FROM bounded_worker_grants")
+            .fetch_one(pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            grants,
+            i64::from(matches!(
+                case,
+                "revoked" | "ready" | "suspended" | "different_prior_contract"
+            )),
+            "bootstrap must not mint/revive authority: {case}"
+        );
+        // Reset only this isolated fault fixture, not any live grant or history.
+        if let Some(pid) = process {
+            f.forget_process(pid);
+        }
+        tokio::fs::write(&f.files.contract, &contract_bytes)
+            .await
+            .unwrap();
+        tokio::fs::write(&contract.manager.input_seal.rollout, &manager_bytes)
+            .await
+            .unwrap();
+        tokio::fs::write(&contract.worker.input_seal.rollout, &worker_bytes)
+            .await
+            .unwrap();
+        if matches!(case, "goal_amended" | "goal_ready") {
+            let home = executors::executors::codex::codex_home().unwrap();
+            let goals = sqlx::sqlite::SqlitePoolOptions::new()
+                .max_connections(1)
+                .connect_with(
+                    sqlx::sqlite::SqliteConnectOptions::new().filename(home.join("goals_1.sqlite")),
+                )
+                .await
+                .unwrap();
+            sqlx::query("UPDATE thread_goals SET objective=?,status='active' WHERE thread_id=?")
+                .bind(&contract.objective)
+                .bind(&contract.manager.thread)
+                .execute(&goals)
+                .await
+                .unwrap();
+            goals.close().await;
+        }
+        if case == "journal_amendment" {
+            sqlx::query("DELETE FROM bounded_native_input_history")
+                .execute(pool)
+                .await
+                .unwrap();
+        }
+        if matches!(
+            case,
+            "revoked" | "ready" | "suspended" | "different_prior_contract"
+        ) {
+            sqlx::query("DELETE FROM bounded_worker_grants WHERE id=?")
+                .bind(contract.id)
+                .execute(pool)
+                .await
+                .unwrap();
+        }
+    }
+    f.receipt = baseline;
+    f.files.contract_sha256 = pin;
+    f.save();
+    f.process(
+        89,
+        300,
+        &format!(
+            "VK_SESSION_ID={}\0CODEX_HOME={}\0VK_RUNTIME_IDENTITY_FILE=/synthetic/runtime-pin\0",
+            Uuid::new_v4(),
+            baseline_home(&f)
+        ),
+        directory,
+        "codex",
+    );
+    let ledger = load_startup(deployment, &f.files, &f.processes)
+        .await
+        .unwrap();
+    ledger.active().await.unwrap();
+    assert_eq!(
+        deployment.container.launches.load(Ordering::SeqCst),
+        0,
+        "startup must not start either native target"
+    );
+    assert_eq!(
+        tokio::fs::read(&f.files.contract).await.unwrap(),
+        contract_bytes,
+        "never rewrite the pinned contract"
+    );
+    assert_eq!(
+        tokio::fs::read(&contract.manager.input_seal.rollout)
+            .await
+            .unwrap(),
+        manager_bytes
+    );
+    // Same pinned startup is idempotent and retains the exact preallocated epoch.
+    let restarted = load_startup(deployment, &f.files, &f.processes)
+        .await
+        .unwrap();
+    restarted.active().await.unwrap();
+    let epoch: Uuid = sqlx::query_scalar("SELECT id FROM bounded_native_input_coverage")
+        .fetch_one(pool)
+        .await
+        .unwrap();
+    assert_eq!(epoch, contract.manager.input_seal.coverage_id);
+    ledger
+}
+
+fn baseline_home(f: &bootstrap::tests::Fixture) -> String {
+    f.receipt.native_home.to_string_lossy().into_owned()
 }

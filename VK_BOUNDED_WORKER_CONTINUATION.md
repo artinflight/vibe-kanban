@@ -35,46 +35,74 @@ input survives suffix validation; images in the adopted prefix remain hashed.
 No transcript or profile contents enter diagnostics.
 
 A legacy contract captured before journaling cannot prove that old ingress has
-no pending steering. Current executable adoption still rejects it. The previous
-two-restart install/capture/adopt plan does not meet next-restart usability and is
-superseded by the following proposal; adoption mechanics are not changed here.
+no pending steering. The implemented bootstrap closes that gap by proving
+old ingress and writers gone before coverage. The previous two-restart plan is
+superseded by the approved one-restart sequence below.
 
-### Proposed one-restart bootstrap, for release-owner review
+### Implemented one-restart bootstrap
 
-Use the existing trusted private startup artifact and its SHA256 release pin,
-never an agent/API grant payload. The artifact retains the exact fixed approved
-scope, original identities, profiles, goal identity/objective, assets and native
-input-prefix digests; bootstrap may supply producer coverage, not new authority.
-The release coordinator must first prove the old ingress producer is gone and
-that neither original native thread has a writer or pending steering delivery.
-This requires the existing restart inventory plus a pinned old-producer/process
-identity receipt, checked against kernel process identity at startup. A killed
-execution row alone is insufficient. Unrelated processes are not stopped.
+The approved design is implemented on the existing release-owner startup path in
+both server entry points. Adoption completes before listeners/routers and native
+admission. Default-off startup continues journaling without creating authority.
+Configured activation requires four release settings: `VK_BOUNDED_WORKER_CONTRACT`
+and its `_SHA256` pin, and `VK_BOUNDED_WORKER_BOOTSTRAP` and its `_SHA256` pin.
+These select private owner artifacts, never agent/MCP request fields.
 
-Before any HTTP/relay/queue/scheduled request ingress, startup verifies that
-quiescence evidence against the selected dataset/native home, verifies both exact
-captured input prefixes and existing execution histories, starts durable coverage,
-and seals its watermark into a derived durable contract. No changed history can
-be recaptured into authority. Adoption must be atomic and idempotent: preserve a
-previous derived contract and all terminal/uncertain states across restart. The
-normal caller/profile/goal/assets/access/resource/capacity/ownership guards remain
-required on every dispatch. The coordinator must inventory all ingress tasks so
-no task can run between quiescence verification and admission registration.
+The bootstrap receipt binds the unchanged contract hash, selected intrinsic
+dataset token and canonical database object, native home, kernel boot identity,
+old ingress PID/start identities and inventory slots for both original native
+threads. Kernel checks refuse live pinned producers and unknown observations;
+current owned-process scanning also detects surviving/unlisted target writers,
+root/file ownership and potential ingress. Known unrelated executions may stay
+running. A PID without a start identity, a missing inventory, or a local quiescent
+flag cannot authorize adoption. No process is stopped by these checks.
 
-Required isolated acceptance: old producer/native writer still alive or unknown
-rejects bootstrap; changed/truncated/dropped/steered input rejects it; wrong
-release pin/dataset rejects it; startup ingress waits for successful adoption;
-identical bootstrap survives restart without rebaselining; revoked/ready grants
-and uncertain attempts remain closed. Validate these before changing adoption
-mechanics or calling this a one-restart-ready feature. This turn creates no
-quiescence receipt or live grant and authorizes no actual restart.
+The loader verifies original session/workspace/thread/configuration ownership,
+effective profile hashes, assets, execution histories and the unchanged current
+goal. Paused original goals are allowed at startup; actual continuation still
+requires the normal active-goal and safe worker pre-load checks. Complete/amended
+or unknown goals fail closed. Exact adopted native prefixes, plus only durable
+activated continuation inputs on later startup, are verified without rewriting
+instructions, seals or history. Process and artifact proof is rechecked after
+scope reads. Only then does the backend establish the pinned producer epoch and
+adopt/register the fixed grant. Existing coverage must match; first coverage
+requires zero preexisting journal history and zero captured watermarks.
 
-Authority is the existing verified owner approval, held by the already trusted
-release owner and backend/state. The receipt proves quiescence/freshness, not
-consent. Same-UID/backend-host compromise can alter this trusted base; the design
-provides no external custody or independent host-compromise protection. No short
-TTL, routine renewal, agent-facing creation/amendment endpoint or new access is
-introduced.
+Coverage/adoption are durable and idempotent. Prior terminal grants, changed
+scope hashes, foreign epochs, unaccounted steering or impossible watermarks
+refuse adoption. No artifact reload creates a new grant to evade terminal state.
+Later restarts retain attempts and exact authority rather than recapturing state.
+The private receipt must match the current kernel boot; refreshing technical
+release proof never renews authority or bypasses an ended grant. There is no
+short clock TTL, agent-facing creation/amendment/reactivation API or new access.
+
+The smallest activation sequence is one separately authorized restart: the
+release owner prepares the two pinned private artifacts from the already verified
+initial approval, proves old ingress and both target writers quiescent, then starts
+the reviewed candidate. Startup validates that proof and adopts before serving.
+A legitimate original-manager continuation provides live acceptance afterward.
+This turn implements/tests that sequence, but creates no live artifact, grant,
+restart or target prompt. Actual staging acceptance and live behavior remain
+separate gates. A valid scheduled artifact build is still required.
+
+Initial authority remains the verified owner approval, held by the already
+trusted release owner/backend/host and same-UID state. Process receipts prove
+technical quiescence, not consent. This provides neither external custody nor
+independent protection against backend-host compromise. It does not infer owner
+authority from unauthenticated VK input or elicitation metadata.
+
+### Receipt uncertainty and terminal authority
+
+An unavailable native receipt leaves its attempt uncertain while the fixed grant
+remains nonterminal. The unique pending-attempt index prevents another dispatch.
+Actual revoke/readiness calls remain reachable through authenticated caller and
+normal scope checks. Only the exact matching, activated, completed successful
+worker execution with unchanged bounded action clears an attempt. Missing,
+failed, dropped, foreign, altered or unactivated receipts cannot unlock it.
+Reconciliation never changes grant state, so revoked/ready/amended authority stays
+closed even if a later execution succeeds. A fresh invocation may follow known
+success; the original invocation ID is never replayed. Restart preserves this
+state. Unknown receipts do not send an automatic process-stop signal.
 
 ### Remaining guard corrections
 
@@ -86,7 +114,8 @@ fails closed. Unrelated missing idle history contributes no candidate.
 Goal/get, thread/resume and turn/start receipt delivery/waiting is bounded to ten
 seconds per RPC, including pipe writes. Timeout removes the pending response
 entry. Under the launch fence, unavailable receipts persist an uncertain attempt
-and suspend future starts. They neither replay nor send an exit signal to stop
+and block future starts until exact successful reconciliation. They neither
+replay nor send an exit signal to stop
 already-dispatched work. A late response cannot unlock authority. Explicit owner
 revocation can acknowledge after the bounded wait and persists across restart.
 

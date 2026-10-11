@@ -182,6 +182,7 @@ impl Runtime for Worker {
         Ok(())
     }
     async fn check(&self, caller: Uuid) -> io::Result<()> {
+        self.ledger.active().await?;
         self.ledger.manager_history().await?;
         self.ledger
             .caller(
@@ -211,10 +212,15 @@ impl Runtime for Worker {
             self.ledger.before_bounded_start(attempt, self.ledger.contract.worker.session, &worker_action(&self.ledger.contract)).await?;
             let execution = Uuid::new_v4();
             self.ledger.bind_receipt(attempt, execution).await?;
-            sqlx::query("INSERT INTO execution_processes(id,session_id,status,exit_code,dropped,run_reason,created_at) VALUES (?,?,'running',NULL,FALSE,'codingagent',2)")
-                .bind(execution).bind(self.ledger.contract.worker.session).execute(&self.ledger.pool).await.map_err(db_error)?;
+            sqlx::query("INSERT INTO execution_processes(id,session_id,status,exit_code,dropped,run_reason,created_at,executor_action) VALUES (?,?,'running',NULL,FALSE,'codingagent',2,?)")
+                .bind(execution).bind(self.ledger.contract.worker.session).bind(serde_json::to_string(&worker_action(&self.ledger.contract))?).execute(&self.ledger.pool).await.map_err(db_error)?;
             self.calls.fetch_add(1, Ordering::SeqCst);
-            if self.lose_reply.load(Ordering::SeqCst) { return Err(invalid("Synthetic lost dispatch receipt")); }
+            if self.lose_reply.load(Ordering::SeqCst) {
+                // Simulate native activation before the outer dispatch reply was
+                // lost. Without this producer fact even exit 0 cannot reconcile.
+                self.ledger.activate_input(execution,&self.ledger.contract.continuation()).await?;
+                return Err(invalid("Synthetic lost dispatch receipt"));
+            }
             Ok(execution)
         }).await
     }
@@ -849,8 +855,9 @@ for line in sys.stdin:
         });
         assert_eq!(events.next_line().await.unwrap().as_deref(), Some(silence));
         let ending = tokio::spawn({
-            let ledger = f.ledger.clone();
-            async move { ledger.end("revoked", "synthetic_owner_revocation").await }
+            let engine = f.engine.clone();
+            let caller = f.caller;
+            async move { engine.handle(caller, request(20, REVOKE)).await }
         });
         tokio::task::yield_now().await;
         assert!(!ending.is_finished());
@@ -890,5 +897,105 @@ for line in sys.stdin:
         cancel.cancel();
         child.kill().await.unwrap();
         child.wait().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn uncertain_receipts_recover_only_exact_success_and_terminal_tools_remain_reachable() {
+    for ending in [None, Some(REVOKE), Some(READY), Some("amended")] {
+        let f = fixture().await;
+        f.engine.handle(f.caller, request(1, TOOL)).await.unwrap();
+        let execution: Uuid = sqlx::query_scalar("SELECT execution FROM bounded_worker_attempts")
+            .fetch_one(&f.ledger.pool)
+            .await
+            .unwrap();
+        f.ledger
+            .activate_input(execution, &f.ledger.contract.continuation())
+            .await
+            .unwrap();
+        f.ledger.native_receipt_uncertain(execution).await.unwrap();
+        f.ledger.active().await.unwrap();
+        assert!(!f.ledger.terminal().await.unwrap());
+        assert!(f.engine.handle(f.caller, request(2, TOOL)).await.is_err());
+        if let Some(tool) = ending {
+            if tool == "amended" {
+                f.ledger
+                    .end("suspended", "native_goal_amended_or_unknown")
+                    .await
+                    .unwrap();
+            } else {
+                f.engine.handle(f.caller, request(20, tool)).await.unwrap();
+            }
+        }
+        let recovered = Arc::new(
+            Ledger::adopt(f.ledger.pool.clone(), f.ledger.contract.clone())
+                .await
+                .unwrap(),
+        );
+        let runtime = Arc::new(Worker {
+            ledger: recovered.clone(),
+            calls: AtomicUsize::new(0),
+            failed_guard: AtomicBool::new(false),
+            lose_reply: AtomicBool::new(false),
+        });
+        let engine = Engine {
+            ledger: recovered.clone(),
+            runtime: runtime.clone(),
+        };
+        assert!(engine.handle(f.caller, request(3, TOOL)).await.is_err());
+        // A different successful process never substitutes for the bound receipt.
+        sqlx::query("INSERT INTO execution_processes(id,session_id,status,exit_code,dropped,run_reason,created_at,executor_action) VALUES(?,?,'completed',0,FALSE,'codingagent',3,?)")
+            .bind(Uuid::new_v4()).bind(f.ledger.contract.worker.session).bind(serde_json::to_string(&worker_action(&f.ledger.contract)).unwrap()).execute(&f.ledger.pool).await.unwrap();
+        assert!(engine.handle(f.caller, request(4, TOOL)).await.is_err());
+        for fault in [
+            "failed",
+            "dropped",
+            "wrong_target",
+            "wrong_prompt",
+            "unactivated",
+        ] {
+            let mut action = worker_action(&f.ledger.contract);
+            if fault == "wrong_prompt"
+                && let ExecutorActionType::CodingAgentFollowUpRequest(r) = &mut action.typ
+            {
+                r.prompt.push_str(" Synthetic altered invocation");
+            }
+            sqlx::query("UPDATE execution_processes SET status='completed',exit_code=?,dropped=?,session_id=?,executor_action=? WHERE id=?")
+                .bind(if fault=="failed" {1} else {0}).bind(fault=="dropped")
+                .bind(if fault=="wrong_target" {Uuid::new_v4()} else {f.ledger.contract.worker.session})
+                .bind(serde_json::to_string(&action).unwrap()).bind(execution).execute(&f.ledger.pool).await.unwrap();
+            sqlx::query("UPDATE bounded_worker_attempts SET activated=? WHERE execution=?")
+                .bind(i64::from(fault != "unactivated"))
+                .bind(execution)
+                .execute(&f.ledger.pool)
+                .await
+                .unwrap();
+            assert!(
+                engine.handle(f.caller, request(5, TOOL)).await.is_err(),
+                "mismatched receipt {fault} cannot unlock dispatch"
+            );
+        }
+        sqlx::query("UPDATE execution_processes SET status='completed',exit_code=0,dropped=FALSE,session_id=?,executor_action=? WHERE id=?")
+            .bind(f.ledger.contract.worker.session).bind(serde_json::to_string(&worker_action(&f.ledger.contract)).unwrap()).bind(execution).execute(&f.ledger.pool).await.unwrap();
+        sqlx::query("UPDATE bounded_worker_attempts SET activated=1 WHERE execution=?")
+            .bind(execution)
+            .execute(&f.ledger.pool)
+            .await
+            .unwrap();
+        if ending.is_none() {
+            engine.handle(f.caller, request(6, TOOL)).await.unwrap();
+            assert_eq!(runtime.calls.load(Ordering::SeqCst), 1);
+            assert!(
+                engine.handle(f.caller, request(1, TOOL)).await.is_err(),
+                "original timed-out invocation ID is never replayed"
+            );
+        } else {
+            assert!(engine.handle(f.caller, request(6, TOOL)).await.is_err());
+            assert!(
+                recovered.reconcile().await.is_err(),
+                "successful receipt never revives terminal authority"
+            );
+            assert_eq!(runtime.calls.load(Ordering::SeqCst), 0);
+        }
     }
 }

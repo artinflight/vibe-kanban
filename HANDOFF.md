@@ -1,3 +1,22 @@
+## October11 approved one-restart bootstrap and receipt lifecycle
+
+The fde46100 correction's virtual-clock fixture is verified and remains intact.
+New source implements the approved release-owner one-restart bootstrap before
+all server/desktop ingress. Pinned fixed scope and native prefixes are retained;
+process/dataset/home proof precedes journal coverage and adoption. No recapture,
+agent grant mutation API, new access, TTL or live operation is introduced.
+Uncertainty now blocks the durable attempt, not terminal authority. Exact
+activated successful execution/action reconciliation can permit a fresh request;
+true revoked/ready/amended grants never revive. Actual revoke/readiness handler
+and production follow-up/launch regressions cover the lifecycle.
+
+Use the latest exact-head check-only CI for new compiled evidence; prior green
+runs do not certify this bootstrap. Independent review and accepted staging/release
+entry remain required. Scheduled-artifact namespace prerequisite remains FAILED.
+No Cargo on MCP, Desktop retry, restart, live grant/target prompt, permission
+change, public review-comment retry or Staging operation. The earlier interrupted
+native tests and legitimate post-restart acceptance remain unverified.
+
 ## October11 remaining review corrections
 
 The reviewed aa82 source passed534 normal-CI tests (11 skipped). The next narrow

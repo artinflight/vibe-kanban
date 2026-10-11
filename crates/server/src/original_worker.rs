@@ -29,53 +29,182 @@ use crate::{
     routes::sessions::{CreateFollowUpAttempt, follow_up_admitted},
 };
 
+mod bootstrap;
+
+struct StartupFiles {
+    contract: std::path::PathBuf,
+    contract_sha256: String,
+    bootstrap: std::path::PathBuf,
+    bootstrap_sha256: String,
+}
+
+/// All server entry points call this before listeners, routers, queues or native
+/// admission. Only release-owner startup settings can select these private files.
 pub async fn configure(deployment: DeploymentImpl) -> io::Result<()> {
-    services::services::original_worker::start_input_coverage(&deployment.db().pool).await?;
     let Ok(path) = std::env::var("VK_BOUNDED_WORKER_CONTRACT") else {
+        services::services::original_worker::start_input_coverage(&deployment.db().pool).await?;
         return Ok(());
     };
-    #[cfg(not(unix))]
+    let setting = |key: &str| {
+        std::env::var(key).map_err(|_| invalid("Pinned bootstrap startup setting missing"))
+    };
+    let files = StartupFiles {
+        contract: path.into(),
+        contract_sha256: setting("VK_BOUNDED_WORKER_CONTRACT_SHA256")?,
+        bootstrap: setting("VK_BOUNDED_WORKER_BOOTSTRAP")?.into(),
+        bootstrap_sha256: setting("VK_BOUNDED_WORKER_BOOTSTRAP_SHA256")?,
+    };
+    let ledger = load_startup(&deployment, &files, &bootstrap::Procfs::live()?).await?;
+    let runtime = Arc::new(Live {
+        deployment,
+        ledger: ledger.clone(),
+        sampled: Mutex::new(None),
+        resources: Arc::new(HostResources),
+    });
+    let engine = Arc::new(Engine {
+        ledger: ledger.clone(),
+        runtime: runtime.clone(),
+    });
+    services::services::original_worker::register(ledger)?;
+    executors::original_worker::register(Arc::new(Provider { runtime, engine }))?;
+    Ok(())
+}
+
+async fn pinned_file(
+    path: &std::path::Path,
+    pin: &str,
+) -> io::Result<(std::path::PathBuf, Vec<u8>)> {
+    let metadata = tokio::fs::symlink_metadata(path).await?;
+    if !metadata.is_file()
+        || metadata.len() > 64 * 1024
+        || pin.len() != 64
+        || !pin.bytes().all(|b| b.is_ascii_hexdigit())
     {
-        let _ = (deployment, path);
-        return Err(invalid("Bounded stdio requires Unix"));
+        return Err(invalid("Invalid pinned private startup file"));
     }
-    #[cfg(unix)]
+    let path = path.canonicalize()?;
+    let bytes = tokio::fs::read(&path).await?;
+    if digest(&bytes) != pin {
+        return Err(invalid("Private startup artifact differs from release pin"));
+    }
+    Ok((path, bytes))
+}
+
+async fn load_startup<D: Deployment>(
+    deployment: &D,
+    files: &StartupFiles,
+    processes: &bootstrap::Procfs,
+) -> io::Result<Arc<Ledger>> {
+    let (contract_path, bytes) = pinned_file(&files.contract, &files.contract_sha256).await?;
+    let contract: Contract =
+        serde_json::from_slice(&bytes).map_err(|_| invalid("Invalid fixed startup contract"))?;
+    contract.validate()?;
+    let (proof_path, bytes) = pinned_file(&files.bootstrap, &files.bootstrap_sha256).await?;
+    let proof: bootstrap::Receipt =
+        serde_json::from_slice(&bytes).map_err(|_| invalid("Invalid bootstrap process receipt"))?;
+    if [&contract.manager.root, &contract.worker.root]
+        .iter()
+        .any(|root| contract_path.starts_with(root) || proof_path.starts_with(root))
     {
-        let expected = std::env::var("VK_BOUNDED_WORKER_CONTRACT_SHA256")
-            .map_err(|_| invalid("Missing release-adopted contract pin"))?;
-        let path = std::path::Path::new(&path).canonicalize()?;
-        let metadata = tokio::fs::metadata(&path).await?;
-        if !metadata.is_file() || metadata.len() > 64 * 1024 {
-            return Err(invalid("Invalid private contract size"));
-        }
-        let bytes = tokio::fs::read(&path).await?;
-        if digest(&bytes) != expected {
-            return Err(invalid("Private contract does not match adopted release"));
-        }
-        let contract: Contract =
-            serde_json::from_slice(&bytes).map_err(|_| invalid("Invalid private contract"))?;
-        // Startup settings are adopted by the release owner from verified dot
-        // consent. Never accept this payload or digest from an agent/API request.
-        for root in [&contract.manager.root, &contract.worker.root] {
-            if path.starts_with(root) {
-                return Err(invalid("Contract cannot be loaded from an agent worktree"));
-            }
-        }
-        let ledger = Arc::new(Ledger::adopt(deployment.db().pool.clone(), contract).await?);
-        let runtime = Arc::new(Live {
-            deployment,
-            ledger: ledger.clone(),
-            sampled: Mutex::new(None),
-            resources: Arc::new(HostResources),
-        });
-        let engine = Arc::new(Engine {
-            ledger: ledger.clone(),
-            runtime: runtime.clone(),
-        });
-        services::services::original_worker::register(ledger)?;
-        executors::original_worker::register(Arc::new(Provider { runtime, engine }))?;
-        Ok(())
+        return Err(invalid(
+            "Startup authority cannot come from an agent worktree",
+        ));
     }
+    let pool = &deployment.db().pool;
+    let database = pool.connect_options().get_filename().canonicalize()?;
+    let dataset: String =
+        sqlx::query_scalar("SELECT dataset_id FROM vk_runtime_identity WHERE singleton=1")
+            .fetch_one(pool)
+            .await
+            .map_err(|_| invalid("Selected dataset provenance unavailable"))?;
+    let home = executors::executors::codex::codex_home()
+        .ok_or_else(|| invalid("Native home unknown"))?
+        .canonicalize()?;
+    if proof.contract_sha256 != files.contract_sha256
+        || proof.dataset_id != dataset
+        || proof.database != database
+        || proof.database_object != bootstrap::object(&database)?
+        || proof.native_home != home
+    {
+        return Err(invalid(
+            "Bootstrap scope, dataset or native home differs from release",
+        ));
+    }
+    let prior: Vec<(Uuid, String, String)> =
+        sqlx::query_as("SELECT id,contract_digest,state FROM bounded_worker_grants")
+            .fetch_all(pool)
+            .await
+            .map_err(|_| invalid("Prior authority unknown"))?;
+    let scope_hash = digest(&serde_json::to_vec(&contract)?);
+    if prior
+        .iter()
+        .any(|(id, hash, state)| *id != contract.id || hash != &scope_hash || state != "active")
+    {
+        return Err(invalid("Prior fixed authority is terminal or changed"));
+    }
+    // The snapshot shares production identity, profile, asset and history checks.
+    // None of these checks registers a provider, starts a process or sends input.
+    let snapshot = Arc::new(Ledger::startup_snapshot(pool.clone(), contract.clone()));
+    let checking = Live {
+        deployment: deployment.clone(),
+        ledger: snapshot.clone(),
+        sampled: Mutex::new(None),
+        resources: Arc::new(HostResources),
+    };
+    processes.verify(&proof, &contract)?;
+    checking.identity(&contract.manager).await?;
+    checking.identity(&contract.worker).await?;
+    services::services::original_worker::verify_profile(&contract.manager)?;
+    services::services::original_worker::verify_profile(&contract.worker)?;
+    checking.assets().await?;
+    snapshot.manager_history().await?;
+    snapshot.worker_history().await?;
+    let goal = executors::capacity::first_run::native(&contract.manager.thread).await?;
+    if goal.thread_id != contract.manager.thread
+        || goal.goal_id != contract.goal_id
+        || goal.created_at != contract.goal_created_at
+        || goal.objective != contract.objective
+        || !matches!(goal.status.as_str(), "active" | "paused")
+    {
+        snapshot
+            .end("suspended", "startup_goal_amended_or_ended")
+            .await?;
+        return Err(invalid("Pinned revision goal is amended, ended or unknown"));
+    }
+    for identity in [&contract.manager, &contract.worker] {
+        let allowed: Vec<String> = if identity.session == contract.worker.session {
+            sqlx::query_scalar("SELECT input_digest FROM bounded_worker_attempts WHERE grant_id=? AND activated=1 AND input_digest IS NOT NULL ORDER BY rowid")
+                .bind(contract.id).fetch_all(pool).await.map_err(|_|invalid("Prior native input receipts unknown"))?
+        } else {
+            Vec::new()
+        };
+        let bytes = services::services::original_worker::inputs::read(
+            &identity.thread,
+            &identity.input_seal,
+        )
+        .await?;
+        if services::services::original_worker::inputs::verify(
+            &bytes,
+            &identity.input_seal,
+            &allowed,
+        )
+        .is_err()
+        {
+            snapshot
+                .end("suspended", "startup_native_input_changed")
+                .await?;
+            return Err(invalid("Pinned native input history changed or is unknown"));
+        }
+    }
+    // Old producers must still be gone after the potentially slow scope reads.
+    // All ingress remains closed until both coverage and adoption have succeeded.
+    processes.verify(&proof, &contract)?;
+    pinned_file(&files.contract, &files.contract_sha256).await?;
+    pinned_file(&files.bootstrap, &files.bootstrap_sha256).await?;
+    snapshot.establish_startup_coverage().await?;
+    let ledger = Arc::new(Ledger::adopt(pool.clone(), contract).await?);
+    ledger.active().await?;
+    Ok(ledger)
 }
 
 struct Live<D: Deployment = DeploymentImpl> {

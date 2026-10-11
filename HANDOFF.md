@@ -1,5 +1,14 @@
 ## October11 startup provenance and executable monitor ordering
 
+Hosted Test38157545232 at abcf30cf1c1f5828551f7a9d95acf86b4d8ba6fc
+passed all542 Rust tests (11 skipped), including the production monitor/script,
+follow-up/launch and timeout endpoint regressions, with normal lint/schema/UI/
+Tauri checks green. Scheduled-artifact38157545143 failed before compilation at
+the mandatory bwrap loopback probe (RTM_NEWADDR: Operation not permitted).
+The final fixture routes an invalid pinned contract through the actual loader
+before checking that failed startup never starts the monitor; validate that
+exact published head via the latest PR243 Test run before review/acceptance.
+
 Independent review of cf188194 closed the receipt lifecycle and terminal
 endpoint findings; its normal CI passed 541 tests with 11 skipped. This narrow
 correction addresses only the two surviving startup findings.

@@ -4215,7 +4215,10 @@ mod delegation_tests {
     async fn bounded_feedback_start_cannot_bypass_final_activation() {
         use std::process::Stdio;
 
-        use tokio::{io::AsyncBufReadExt, process::Command};
+        use tokio::{
+            io::{AsyncBufReadExt, BufReader},
+            process::Command,
+        };
         #[derive(Debug)]
         struct Refused(tokio::sync::Notify);
         #[crate::original_worker::async_trait]

@@ -10,6 +10,11 @@ pub async fn run<T>(work: impl Future<Output = T>) -> T {
     if super::original_worker::current().is_none() {
         return work.await;
     }
+    if let Some(ledger) = super::original_worker::current()
+        && matches!(ledger.terminal().await, Ok(true))
+    {
+        return work.await;
+    }
     locked(work).await
 }
 

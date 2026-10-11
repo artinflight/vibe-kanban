@@ -1,3 +1,24 @@
+## October11 corrected feature review boundary
+
+PR243 now contains the complete integrated correction path: exact resolved-agent
+verification before launch, raw absent-routing preservation, workspace/worktree
+and queue atomicity, final native activation/feedback fencing, safe pre-load goal
+checks and durable input/steering coverage with native prefix seals. Production
+Live/follow_up/container/profile/stdio fixtures are synthetic. Use the corrected
+exact-head Test run on PR243 for authoritative compiled results; prior green or
+partial runs do not certify these paths. Independent review remains pending and
+this draft is not accepted by Staging. Root coordinates that current idle owner
+route; no historical stop applies to it.
+
+Legacy private capture/receipts are superseded. First install must remain
+default-off until the corrected producer has established durable input coverage;
+release-owner capture under that producer and a later separately authorized
+restart are the supported contract activation boundary. No live grant or restart
+occurs here. The scheduled artifact's bwrap loopback prerequisite remains FAILED.
+The previous two interrupted tests and actual post-restart legitimate-manager
+acceptance remain unverified. Same-UID/backend integrity is trusted, not external
+custody or protection against host compromise. No TTL or routine renewal exists.
+
 ## October11 independent review corrections in progress
 
 PR243 remains draft and is not staging-ready. The prior green run at03b95d857

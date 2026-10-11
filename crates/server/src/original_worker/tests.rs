@@ -834,6 +834,19 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
         steering_events, 1,
         "durable evidence exists even when executor_action stays unchanged"
     );
+    let barrier = Arc::new(tokio::sync::Barrier::new(2));
+    tokio::time::timeout(Duration::from_secs(2), async {
+        tokio::join!(
+            admission::run(async {
+                barrier.wait().await;
+            }),
+            admission::run(async {
+                barrier.wait().await;
+            })
+        );
+    })
+    .await
+    .expect("terminal grant must stop serializing unrelated ordinary starts");
     drop(manager);
     container.peers.lock().await.clear();
 }

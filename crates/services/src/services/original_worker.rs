@@ -169,6 +169,26 @@ impl Ledger {
     }
 
     pub async fn native_inputs(&self, identity: &Identity) -> io::Result<()> {
+        let coverage: Option<Uuid> =
+            sqlx::query_scalar("SELECT id FROM bounded_native_input_coverage WHERE singleton=1")
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(db_error)?;
+        let latest: i64 =
+            sqlx::query_scalar("SELECT COALESCE(max(id),0) FROM bounded_native_input_history")
+                .fetch_one(&self.pool)
+                .await
+                .map_err(db_error)?;
+        if coverage != Some(identity.input_seal.coverage_id)
+            || latest < identity.input_seal.backend_sequence
+        {
+            self.end("suspended", "input_producer_coverage_changed")
+                .await?;
+            return Err(invalid(
+                "Native input journal coverage changed or is unknown",
+            ));
+        }
+
         let unowned: i64 = sqlx::query_scalar("SELECT count(*) FROM bounded_native_input_history WHERE session_id=? AND id>? AND native_resume=0")
             .bind(identity.session).bind(identity.input_seal.backend_sequence).fetch_one(&self.pool).await.map_err(db_error)?;
         if unowned != 0 {
@@ -420,6 +440,16 @@ impl Ledger {
         })
     }
 
+    pub async fn terminal(&self) -> io::Result<bool> {
+        let state: String =
+            sqlx::query_scalar("SELECT state FROM bounded_worker_grants WHERE id=?")
+                .bind(self.contract.id)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(db_error)?;
+        Ok(matches!(state.as_str(), "revoked" | "ready" | "suspended"))
+    }
+
     pub async fn active(&self) -> io::Result<()> {
         let state: String =
             sqlx::query_scalar("SELECT state FROM bounded_worker_grants WHERE id=?")
@@ -538,7 +568,7 @@ pub async fn workspace_start(session: Uuid) -> io::Result<()> {
     let Some(ledger) = current() else {
         return Ok(());
     };
-    if ledger.active().await.is_err() {
+    if ledger.terminal().await? {
         return Ok(());
     }
     let root: (Uuid, Option<String>) = sqlx::query_as("SELECT w.id,w.container_ref FROM sessions s JOIN workspaces w ON w.id=s.workspace_id WHERE s.id=?")

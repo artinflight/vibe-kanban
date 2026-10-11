@@ -978,6 +978,8 @@ async fn exercise_bootstrap_acceptance(
         "live_writer",
         "unlisted_writer",
         "unlisted_ingress",
+        "unmarked_ingress",
+        "unscoped_native",
         "unknown_producer",
         "open_input_file",
         "changed_prefix",
@@ -1045,6 +1047,8 @@ async fn exercise_bootstrap_acceptance(
                     .bind(contract.id).bind(if case=="different_prior_contract" {"different".into()} else {digest(&serde_json::to_vec(contract).unwrap())})
                     .bind(if case=="different_prior_contract" {"active"} else {case}).execute(pool).await.unwrap();
             },
+            "unmarked_ingress" => { f.process(78,190,"",directory,"server");process=Some(78); },
+            "unscoped_native" => { f.process(78,190,"",directory,"codex");process=Some(78); },
             _=>{},
         }
         f.save();

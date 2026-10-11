@@ -97,8 +97,11 @@ An unavailable native receipt leaves its attempt uncertain while the fixed grant
 remains nonterminal. The unique pending-attempt index prevents another dispatch.
 Actual revoke/readiness calls remain reachable through authenticated caller and
 normal scope checks. Only the exact matching, activated, completed successful
-worker execution with unchanged bounded action clears an attempt. Missing,
-failed, dropped, foreign, altered or unactivated receipts cannot unlock it.
+worker execution with unchanged bounded action and a durable final summary bound
+to the original native thread clears an attempt. Process exit alone is insufficient:
+normal follow-up would otherwise inject interrupted recovery text and alter the
+fixed prompt. Missing, failed, dropped, foreign, altered or unactivated receipts
+cannot unlock it.
 Reconciliation never changes grant state, so revoked/ready/amended authority stays
 closed even if a later execution succeeds. A fresh invocation may follow known
 success; the original invocation ID is never replayed. Restart preserves this

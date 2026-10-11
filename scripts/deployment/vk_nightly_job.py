@@ -18,45 +18,30 @@ import time
 from vk_change_journal import scope
 from vk_nightly_capture_adapter import run_capture, validate_socket_exclusions
 from vk_prep_common import identity, storage
-from vk_rolling_backup import Exclusions, scan
+from vk_rolling_backup import Exclusions
+from vk_nightly_footprint import inventory as streaming_inventory
 
 
 def checksum(path):
     with Path(path).open('rb') as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
 
 
-def inventory(plan):
+def inventory(plan, *, socket_exclusions=()):
     started=time.monotonic();exclusions=Exclusions(plan)
     missing=[raw for raw in plan['sources'] if not os.path.lexists(raw)]
     if missing:raise ValueError('missing source roots require reconciled scope review')
-    paths=scan(plan['sources'],plan,exclusions)
-    required=set(plan.get('sqlite_snapshots',[]))|set(plan.get('critical_sqlite',[]))
-    files=0;logical=0;allocated=0;databases={};links=0;vanished=0
-    for raw in sorted(paths):
-        path=Path(raw)
-        try:info=path.lstat()
-        except FileNotFoundError:
-            if raw in required or raw in plan['sources']:raise ValueError('required inventory member disappeared')
-            vanished+=1;continue
-        if stat.S_ISREG(info.st_mode):
-            files+=1;logical+=info.st_size;allocated+=info.st_blocks*512
-            try:
-                with path.open('rb') as stream:header=stream.read(16)
-            except FileNotFoundError:
-                vanished+=1;continue
-            if header==b'SQLite format 3\0':databases[str(path.resolve())]=info.st_size
-        elif stat.S_ISLNK(info.st_mode):links+=1
-    if required-databases.keys():raise ValueError('declared SQLite missing, aliased or invalid during inventory')
+    value=streaming_inventory(plan,socket_exclusions=socket_exclusions)
+    databases={raw:row['bytes'] for raw,row in value['databases'].items()}
     exclusions.validate()
     return {'plan_identity':identity(plan),'source_scope_sha256':identity(scope(plan)),
             'roots':{raw:{'device':Path(raw).lstat().st_dev,'inode':Path(raw).lstat().st_ino,
                             'mode_type':stat.S_IFMT(Path(raw).lstat().st_mode),
                             'resolved_target':str(Path(raw).resolve())} for raw in plan['sources']},
             'exclusion_targets':[str(p) for p in exclusions.roots],
-            'files':files,'paths':len(paths),'symlinks':links,'logical_file_bytes':logical,
-            'allocated_file_bytes':allocated,'databases':databases,'maximum_DB_bytes':max(databases.values(),default=0),
+            'files':value['files'],'paths':value['paths'],'symlinks':value['symlinks'],'logical_file_bytes':value['logical_bytes'],
+            'allocated_file_bytes':value['allocated_bytes'],'databases':databases,'maximum_DB_bytes':max(databases.values(),default=0),
             'elapsed_seconds':time.monotonic()-started,'read_only':True,'content_hashed':False,
-            'consistency':'online metadata census, not an application-coherent backup','vanished_during_scan':vanished}
+            'consistency':'online metadata census, not an application-coherent backup','vanished_during_scan':value['vanished']}
 
 
 def validate(config,plan):
@@ -73,7 +58,7 @@ def validate(config,plan):
     validate_socket_exclusions(config.get('socket_exclusions',[]))
     if identity(scope(plan))!=config['source_scope_sha256']:raise ValueError('source scope changed')
     if set(config['source_roots'])!=set(plan['sources']):raise ValueError('source root inventory incomplete')
-    required={'vk_nightly_job.py','vk_nightly_capture_adapter.py','vk_nightly_b_job.py','vk_nightly_generation.py','vk_nightly_lifecycle.py','vk_b_disk_capture.py'}
+    required={'vk_nightly_job.py','vk_nightly_footprint.py','vk_nightly_capture_adapter.py','vk_nightly_b_job.py','vk_nightly_generation.py','vk_nightly_lifecycle.py','vk_b_disk_capture.py'}
     if not required<=config['source_sha256'].keys():raise ValueError('fixed handler pins incomplete')
     for raw,expected in config['source_sha256'].items():
         if checksum(Path(__file__).with_name(raw))!=expected:raise ValueError('fixed nightly source changed: '+raw)
@@ -114,7 +99,16 @@ def main():
     parser.add_argument('--recover-only',action='store_true')
     args=parser.parse_args()
     if args.inventory_plan:
-        value=inventory(json.loads(args.inventory_plan.read_text()))
+        plan=json.loads(args.inventory_plan.read_text());sockets=()
+        if args.config:
+            if not args.config_sha256 or checksum(args.config)!=args.config_sha256:
+                raise ValueError('inventory configuration hash changed or missing')
+            config=json.loads(args.config.read_text())
+            if checksum(args.inventory_plan)!=config['plan_file_sha256'] or identity(plan)!=config['plan_identity']:
+                raise ValueError('inventory plan differs from bound configuration')
+            validate_socket_exclusions(config.get('socket_exclusions',[]))
+            sockets=config.get('socket_exclusions',[])
+        value=inventory(plan,socket_exclusions=sockets)
         if args.inventory_output:
             with storage(args.inventory_output).open('x') as stream:json.dump(value,stream,indent=2);stream.write('\n')
         print(json.dumps({key:value[key] for key in ('files','paths','logical_file_bytes','allocated_file_bytes','maximum_DB_bytes','elapsed_seconds','read_only')}))

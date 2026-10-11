@@ -1,3 +1,18 @@
+## Streaming nightly measurement
+
+The existing inventory entrypoint now traverses source directories with bounded
+scandir iterators instead of retaining every path. File headers use pinned
+parent directory descriptors; directory substitution and unexpected special
+files fail closed. SQLite metadata and compression sample locators are bounded.
+Compression ratios remain estimates, not exact storage or recovery proof.
+
+A controller can retain the measurement cgroup's current/peak/swap/pressure
+counters before allowing its child to exit. Source fixtures cover laziness,
+overlapping roots, explicit root aliases, child-link exclusion, substitution,
+SQLite coverage and the existing inventory return contract. Private operational
+receipts distinguish actual measurement release from backup/schedule adoption.
+No production service, security grant, retained data or scheduler is changed.
+
 ## Nightly cron environment correction
 
 The generated user-cron pulse now explicitly supplies the existing caller's

@@ -3,8 +3,8 @@
 The reviewed aa82 source passed534 normal-CI tests (11 skipped). The next narrow
 correction makes ownership activity-first across archived/deleted aliases and
 unknown active roots, bounds native receipt waits, and durably suspends unknown
-receipts without stopping dispatched work. New exact-head checks are pending;
-PR243 remains draft and needs independent review before Staging acceptance.
+receipts without stopping dispatched work. Read the latest exact-head check-only CI for these regressions; PR243 remains
+draft and needs independent review before Staging acceptance.
 The scheduled-artifact loopback namespace prerequisite remains FAILED. No build
 on MCP, restart, live grant, target prompt or Staging contact occurred.
 

@@ -60,6 +60,17 @@ pub async fn native_started(
 }
 
 pub fn tool(request: &Value) -> io::Result<&str> {
+    let envelope = request
+        .as_object()
+        .ok_or_else(|| io::Error::other("Invalid MCP envelope"))?;
+    if request["jsonrpc"] != "2.0"
+        || request["method"] != "tools/call"
+        || envelope
+            .keys()
+            .any(|k| !matches!(k.as_str(), "jsonrpc" | "id" | "method" | "params"))
+    {
+        return Err(io::Error::other("Unbounded MCP envelope or metadata"));
+    }
     let params = request
         .get("params")
         .and_then(Value::as_object)
@@ -156,6 +167,26 @@ where
 }
 
 #[cfg(unix)]
+pub async fn forward(socket: PathBuf, token: String, request: Value) -> io::Result<Value> {
+    use tokio::io::AsyncReadExt;
+    let mut stream = tokio::net::UnixStream::connect(socket).await?;
+    let mut wire = serde_json::to_vec(&json!({"token":token,"request":request}))?;
+    wire.push(b'\n');
+    stream.write_all(&wire).await?;
+    stream.shutdown().await?;
+    let reader = BufReader::new(stream);
+    let mut reply = String::new();
+    reader
+        .take(LIMIT as u64 + 1)
+        .read_to_string(&mut reply)
+        .await?;
+    if reply.len() > LIMIT {
+        return Err(io::Error::other("Oversized backend receipt"));
+    }
+    serde_json::from_str(&reply).map_err(|_| io::Error::other("Invalid backend receipt"))
+}
+
+#[cfg(unix)]
 pub async fn stdio(socket: PathBuf) -> io::Result<()> {
     let token = std::env::var("VK_BOUNDED_SOCKET_TOKEN")
         .map_err(|_| io::Error::other("Missing execution binding"))?;
@@ -165,20 +196,7 @@ pub async fn stdio(socket: PathBuf) -> io::Result<()> {
         move |request| {
             let socket = socket.clone();
             let token = token.clone();
-            async move {
-                let mut stream = tokio::net::UnixStream::connect(socket).await?;
-                let mut wire = serde_json::to_vec(&json!({"token":token,"request":request}))?;
-                wire.push(b'\n');
-                stream.write_all(&wire).await?;
-                stream.shutdown().await?;
-                let mut reader = BufReader::new(stream);
-                let mut reply = String::new();
-                // The server emits only a small execution receipt or a fixed diagnostic.
-                use tokio::io::AsyncReadExt;
-                reader.take(LIMIT as u64).read_to_string(&mut reply).await?;
-                serde_json::from_str(&reply)
-                    .map_err(|_| io::Error::other("Invalid backend receipt"))
-            }
+            forward(socket, token, request)
         },
     )
     .await

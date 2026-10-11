@@ -860,6 +860,22 @@ pub async fn before_launch(session: Uuid, background: bool) -> io::Result<()> {
     admit_launch(configured(), session, background).await
 }
 
+/// Bounded worker admission cannot exercise interactive takeover authority.
+/// Read existing authority only; never revoke leases or stop another process.
+pub async fn before_bounded_worker_launch() -> io::Result<()> {
+    let Some(controller) = configured()? else {
+        return Ok(());
+    };
+    let c = controller.lock().await;
+    c.ensure_owner()?;
+    if c.state.goals.values().any(|goal| goal.grant.is_some()) {
+        return Err(invalid(
+            "Scheduled authority blocks bounded continuation; no takeover allowed",
+        ));
+    }
+    Ok(())
+}
+
 async fn admit_launch(
     controller: io::Result<Option<&Mutex<Controller>>>,
     session: Uuid,

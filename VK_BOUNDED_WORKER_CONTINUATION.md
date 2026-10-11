@@ -62,6 +62,12 @@ and fresh three-sample RAM/swap/PSI/SSD evidence. The native worker verifies thr
 model/effort, goal, assets and resources again before inference. Capacity denial
 cannot put a bounded request into the ordinary queue. Existing Figma/AE and every
 unrelated action keep their approval paths; the one-shot bridge is unchanged.
+Bounded launches use a read-only capacity-controller admission instead of the
+interactive takeover path: existing scheduled authority blocks the continuation,
+without lease revocation or stopping another execution. Manager history after the
+adopted anchor is checked at binding and invocation; only unchanged native goal
+resumes are allowed. Inputs accepted before loading this feature cannot silently
+amend its authority.
 
 ## Durable attempts
 
@@ -81,6 +87,16 @@ terminal lifecycle and uncertain receipt/restart reconciliation. Native transpor
 uses the already verified installed0.159.2 same-thread/paused-goal resume route.
 The previous two interrupted full-crate tests remain unverified; the policy
 kernel's20 tests are not acceptance for this implementation.
+
+Hosted Test run38138968513 compiled commit975856c1: all six initial continuation
+integration fixtures passed, with518 workspace tests passed and11 skipped.
+Frontend checks/approval UI fixtures and schema checks passed. Clippy and Tauri
+stopped on one unused mutable binding, corrected in the follow-up. The expanded
+fixtures now exercise the production Unix proxy/backend nonce path and exact
+ContainerService pre-spawn gate; their compiled result is pending the next run.
+Scheduled-artifact run38138968480 failed the existing bubblewrap loopback
+prerequisite (`Failed RTM_NEWADDR: Operation not permitted`), before artifact
+compilation. This is retained as a validation/release boundary, not bypassed.
 
 No Cargo build is permitted on the constrained MCP host. The established Desktop
 WSL ordinary-user context remains unavailable; no root or permission workaround

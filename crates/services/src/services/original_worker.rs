@@ -618,12 +618,16 @@ impl Ledger {
         let mut tx = self.pool.begin().await.map_err(db_error)?;
         let receipts: Vec<(Uuid, String)> = sqlx::query_as("SELECT a.id,e.executor_action FROM bounded_worker_attempts a JOIN execution_processes e ON e.id=a.execution WHERE a.grant_id=? AND a.state IN ('dispatching','uncertain') AND a.activated=1 AND a.input_digest IS NOT NULL AND e.status='completed' AND e.exit_code=0 AND e.dropped=FALSE AND e.run_reason='codingagent' AND e.session_id=?")
             .bind(self.contract.id).bind(self.contract.worker.session).fetch_all(&mut *tx).await.map_err(db_error)?;
-        let expected = worker_action(&self.contract);
+        let c = &self.contract;
         for (attempt, raw) in receipts {
             let Ok(action) = serde_json::from_str::<ExecutorAction>(&raw) else {
                 continue;
             };
-            if action.typ() != expected.typ() {
+            if !matches!(action.typ(),ExecutorActionType::CodingAgentFollowUpRequest(a)
+                if a.session_id==c.worker.thread && a.prompt==c.continuation()
+                && a.executor_config==c.worker.config && a.working_dir==c.worker.working_dir
+                && a.capacity.is_none() && a.reset_to_message_id.is_none())
+            {
                 continue;
             }
             sqlx::query("UPDATE bounded_worker_attempts SET state='completed' WHERE id=? AND grant_id=? AND state IN ('dispatching','uncertain')")

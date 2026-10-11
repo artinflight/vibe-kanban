@@ -28,6 +28,8 @@ pub struct Identity {
     pub task: Option<Uuid>,
     pub repositories: Vec<Uuid>,
     pub config: ExecutorConfig,
+    /// Effective saved profile, including launch and permission settings.
+    pub profile_digest: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -74,6 +76,7 @@ impl Contract {
             if identity.thread.is_empty()
                 || !identity.root.is_absolute()
                 || identity.repositories.is_empty()
+                || identity.profile_digest.len() != 64
                 || identity.config.executor != executors::executors::BaseCodingAgent::Codex
                 || identity.config.model_id.as_deref() != Some("gpt-6.1-sol")
                 || identity.config.reasoning_id.as_deref() != Some("high")
@@ -107,6 +110,27 @@ pub fn digest(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 
+pub fn verify_profile(identity: &Identity) -> io::Result<()> {
+    if effective_profile_digest(&identity.config)? != identity.profile_digest {
+        return Err(invalid(
+            "Original effective launch/permission profile changed",
+        ));
+    }
+    Ok(())
+}
+
+pub fn effective_profile_digest(config: &ExecutorConfig) -> io::Result<String> {
+    use executors::executors::StandardCodingAgentExecutor;
+    let mut agent = executors::profile::ExecutorConfigs::get_cached()
+        .get_coding_agent(&config.profile_id())
+        .ok_or_else(|| invalid("Original effective profile unavailable"))?;
+    agent.apply_overrides(config);
+    // Hash only; never log profile contents, which can include environment data.
+    let mut value = serde_json::to_value(&agent)?;
+    value.sort_all_objects();
+    Ok(digest(&serde_json::to_vec(&value)?))
+}
+
 pub struct Ledger {
     pub pool: SqlitePool,
     pub contract: Contract,
@@ -130,13 +154,13 @@ impl Ledger {
     /// Catch input accepted before this optional capability was loaded, too.
     /// Only native resume may follow the release-adopted manager anchor.
     pub async fn manager_history(&self) -> io::Result<()> {
-        let rows: Vec<String> = sqlx::query_scalar("SELECT executor_action FROM execution_processes WHERE session_id=? AND run_reason='codingagent' AND dropped=FALSE AND rowid > (SELECT rowid FROM execution_processes WHERE id=? AND session_id=? AND dropped=FALSE) ORDER BY rowid")
+        let rows: Vec<Option<String>> = sqlx::query_scalar("SELECT executor_action FROM execution_processes WHERE session_id=? AND run_reason='codingagent' AND dropped=FALSE AND rowid > (SELECT rowid FROM execution_processes WHERE id=? AND session_id=? AND dropped=FALSE) ORDER BY rowid")
             .bind(self.contract.manager.session).bind(self.contract.manager_anchor)
             .bind(self.contract.manager.session).fetch_all(&self.pool).await.map_err(db_error)?;
         let anchor: i64 = sqlx::query_scalar("SELECT count(*) FROM execution_processes WHERE id=? AND session_id=? AND run_reason='codingagent' AND dropped=FALSE")
             .bind(self.contract.manager_anchor).bind(self.contract.manager.session).fetch_one(&self.pool).await.map_err(db_error)?;
         let valid = anchor == 1 && rows.iter().all(|json| {
-            serde_json::from_str::<ExecutorAction>(json).ok().is_some_and(|action| {
+            json.as_deref().and_then(|v| serde_json::from_str::<ExecutorAction>(v).ok()).is_some_and(|action| {
                 matches!(action.typ(), ExecutorActionType::CodingAgentFollowUpRequest(a)
                     if a.prompt.trim() == "/goal resume" && a.session_id == self.contract.manager.thread
                     && a.executor_config == self.contract.manager.config && a.capacity.is_none()

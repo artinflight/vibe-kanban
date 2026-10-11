@@ -1,3 +1,14 @@
+## October11 bounded continuation validation
+
+PR243 is a narrow default-off backend continuation feature based on staging2693c46d,
+not promotion of the old approval-bridge branch. Test38140071765 at4f2c3368b passes
+9 integrated fixtures and521 workspace tests (11 skipped), plus applicable schema,
+Clippy, frontend and Tauri checks. Final profile-pin changes await final-head CI.
+Scheduled artifact compilation remains blocked by the hosted runner's namespace
+prerequisite. Staging acceptance/private fixed-contract adoption and live behavior
+are not verified. No restart, activation, live grant, approval-monitor change or
+real worker prompt occurred. Same-UID/backend trust remains explicit.
+
 ## October11: fixed original-worker continuation source preparation
 
 The verified dot authorization supplies the fixed initial goal contract; ordinary

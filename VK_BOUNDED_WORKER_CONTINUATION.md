@@ -12,7 +12,10 @@ The verified dot conversation supplies initial authority. The release owner must
 adopt a private contract containing the exact original manager/worker session,
 workspace, native thread, saved full executor configurations, native goal identity
 and objective, revision instructions, original execution anchors, repository/task
-ownership and immutable required-asset pins. Actual IDs, consent evidence and
+ownership, effective profile digests and immutable required-asset pins. The
+profile digests cover the resolved cached profile with saved overrides, including
+launch and permission settings; invocation rechecks them without logging their
+contents. Actual IDs, consent evidence and
 asset locations must never enter public Git, fixtures or PRs.
 
 `VK_BOUNDED_WORKER_CONTRACT` selects that private release artifact;
@@ -97,6 +100,9 @@ ContainerService pre-spawn gate; their compiled result is pending the next run.
 Scheduled-artifact run38138968480 failed the existing bubblewrap loopback
 prerequisite (`Failed RTM_NEWADDR: Operation not permitted`), before artifact
 compilation. This is retained as a validation/release boundary, not bypassed.
+Follow-up Test run38140071765 at4f2c3368b passed all nine continuation fixtures,
+521 workspace tests (11 skipped), schema, Clippy, frontend and Tauri checks.
+The final effective-profile pin regression remains pending final-head CI.
 
 No Cargo build is permitted on the constrained MCP host. The established Desktop
 WSL ordinary-user context remains unavailable; no root or permission workaround

@@ -81,6 +81,7 @@ struct Live {
 
 impl Live {
     async fn identity(&self, expected: &Identity) -> io::Result<(Session, Uuid)> {
+        services::services::original_worker::verify_profile(expected)?;
         let pool = &self.deployment.db().pool;
         let session = Session::find_by_id(pool, expected.session)
             .await
@@ -382,6 +383,7 @@ impl Backend for Provider {
             return Ok(());
         }
         self.runtime.ledger.active().await?;
+        services::services::original_worker::verify_profile(identity)?;
         if thread != identity.thread || model != "gpt-6.1-sol" || effort.as_str() != Some("high") {
             self.runtime
                 .ledger

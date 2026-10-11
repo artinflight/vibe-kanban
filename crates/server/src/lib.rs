@@ -1,5 +1,6 @@
 pub mod error;
 pub mod middleware;
+pub mod original_worker;
 pub mod relay_pairing;
 pub mod routes;
 pub mod runtime;

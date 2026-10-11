@@ -1,0 +1,393 @@
+//! Fixed release-adopted authority inside the existing trusted backend boundary.
+//! A digest is integrity evidence, not consent. No agent-facing grant mutation API.
+use std::{
+    io,
+    path::PathBuf,
+    sync::{Arc, OnceLock},
+};
+
+use executors::{
+    actions::{ExecutorAction, ExecutorActionType},
+    profile::ExecutorConfig,
+};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use sqlx::SqlitePool;
+use uuid::Uuid;
+
+use super::admission;
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Identity {
+    pub session: Uuid,
+    pub workspace: Uuid,
+    pub thread: String,
+    pub root: PathBuf,
+    pub working_dir: Option<String>,
+    pub task: Option<Uuid>,
+    pub repositories: Vec<Uuid>,
+    pub config: ExecutorConfig,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AssetPin {
+    pub path: PathBuf,
+    pub sha256: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Contract {
+    pub id: Uuid,
+    pub manager: Identity,
+    pub worker: Identity,
+    pub goal_id: String,
+    pub goal_created_at: i64,
+    pub objective: String,
+    pub revision: String,
+    pub instructions: String,
+    pub owner_evidence_digest: String,
+    pub manager_anchor: Uuid,
+    pub worker_anchor: Uuid,
+    pub assets: Vec<AssetPin>,
+}
+
+impl Contract {
+    pub fn validate(&self) -> io::Result<()> {
+        if self.id.is_nil()
+            || self.manager.session == self.worker.session
+            || self.manager.workspace == self.worker.workspace
+            || self.goal_id.is_empty()
+            || self.objective.trim().is_empty()
+            || self.revision.is_empty()
+            || self.instructions.trim().is_empty()
+            || self.instructions.len() > 48 * 1024
+            || self.owner_evidence_digest.len() != 64
+            || self.assets.is_empty()
+            || self.assets.len() > 64
+        {
+            return Err(invalid("Incomplete fixed contract"));
+        }
+        for identity in [&self.manager, &self.worker] {
+            if identity.thread.is_empty()
+                || !identity.root.is_absolute()
+                || identity.repositories.is_empty()
+                || identity.config.executor != executors::executors::BaseCodingAgent::Codex
+                || identity.config.model_id.as_deref() != Some("gpt-6.1-sol")
+                || identity.config.reasoning_id.as_deref() != Some("high")
+                || identity.config.variant.as_deref().unwrap_or("DEFAULT") != "DEFAULT"
+                || identity
+                    .config
+                    .routing
+                    .as_ref()
+                    .is_none_or(|p| p.mode != executors::routing::RoutingMode::Shadow)
+            {
+                return Err(invalid(
+                    "Fixed profile must preserve original Recommend settings",
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn continuation(&self) -> String {
+        format!(
+            "Continue your original current revision goal under this fixed owner-authorized contract (revision {}).\n\n{}\n\nPreserve original profile/model/effort and Recommend routing, existing access/resource/capacity/collision guards and assets. Marketing dates use grey placeholders across headers, chart date axes and task dates; literal dates remain only in unchanged QA sources. Stop at owner review readiness. Figma/AE retain their existing review/approval gates. No new access, restarts, purchases, publication, destructive actions, unrelated targets or scope amendments are authorized. If new or ambiguous instructions conflict, stop for verified owner direction.",
+            self.revision, self.instructions
+        )
+    }
+}
+
+pub fn invalid(message: &str) -> io::Error {
+    io::Error::other(message)
+}
+pub fn digest(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
+}
+
+pub struct Ledger {
+    pub pool: SqlitePool,
+    pub contract: Contract,
+}
+static LEDGER: OnceLock<Arc<Ledger>> = OnceLock::new();
+tokio::task_local! { static ATTEMPT: Uuid; }
+
+pub fn current() -> Option<&'static Arc<Ledger>> {
+    LEDGER.get()
+}
+pub fn in_dispatch() -> bool {
+    ATTEMPT.try_with(|_| ()).is_ok()
+}
+pub fn register(ledger: Arc<Ledger>) -> io::Result<()> {
+    LEDGER
+        .set(ledger)
+        .map_err(|_| invalid("Authority already registered"))
+}
+
+impl Ledger {
+    pub async fn caller(
+        &self,
+        caller: Uuid,
+        native: &(String, String, String, String, String),
+    ) -> io::Result<()> {
+        let row: (Uuid, Uuid, String, Uuid) = sqlx::query_as("SELECT e.session_id,s.workspace_id,e.status,(SELECT id FROM execution_processes WHERE session_id=e.session_id AND run_reason='codingagent' AND dropped=FALSE ORDER BY created_at DESC,rowid DESC LIMIT 1) FROM execution_processes e JOIN sessions s ON s.id=e.session_id WHERE e.id=? AND e.dropped=FALSE")
+            .bind(caller).fetch_one(&self.pool).await.map_err(db_error)?;
+        if row.0 != self.contract.manager.session
+            || row.1 != self.contract.manager.workspace
+            || row.2 != "running"
+            || row.3 != caller
+            || native.0 != self.contract.manager.thread
+            || native.1.is_empty()
+            || native.2 != "gpt-6.1-sol"
+            || native.3 != "high"
+            || !native
+                .4
+                .split(|c: char| !c.is_ascii_digit() && c != '.')
+                .any(|v| v == "0.159.2")
+        {
+            return Err(invalid(
+                "Caller is not the attested original manager execution",
+            ));
+        }
+        Ok(())
+    }
+
+    pub async fn goal(
+        &self,
+        goal: &executors::executors::codex::goals::NativeGoal,
+    ) -> io::Result<()> {
+        let c = &self.contract;
+        if goal.status == "complete" || goal.status == "completed" {
+            self.end("ready", "native_goal_completed").await?;
+            return Err(invalid("Original goal ended"));
+        }
+        if goal.thread_id != c.manager.thread
+            || goal.goal_id != c.goal_id
+            || goal.created_at != c.goal_created_at
+            || goal.objective != c.objective
+        {
+            self.end("suspended", "native_goal_amended_or_unknown")
+                .await?;
+            return Err(invalid(
+                "Fixed native goal changed; verified owner direction required",
+            ));
+        }
+        if goal.status != "active" {
+            return Err(invalid("Original goal is not active"));
+        }
+        Ok(())
+    }
+
+    pub async fn bind_receipt(&self, attempt: Uuid, execution: Uuid) -> io::Result<()> {
+        let n = sqlx::query("UPDATE bounded_worker_attempts SET execution=? WHERE id=? AND grant_id=? AND state='dispatching' AND execution IS NULL")
+            .bind(execution).bind(attempt).bind(self.contract.id).execute(&self.pool).await.map_err(db_error)?.rows_affected();
+        if n != 1 {
+            return Err(invalid("Attempt receipt already bound"));
+        }
+        Ok(())
+    }
+    pub async fn adopt(pool: SqlitePool, contract: Contract) -> io::Result<Self> {
+        contract.validate()?;
+        let hash = digest(&serde_json::to_vec(&contract)?);
+        let mut tx = pool.begin().await.map_err(db_error)?;
+        sqlx::query("INSERT OR IGNORE INTO bounded_worker_grants(id,contract_digest,state) VALUES (?,?,'active')")
+            .bind(contract.id).bind(&hash).execute(&mut *tx).await.map_err(db_error)?;
+        let saved: String =
+            sqlx::query_scalar("SELECT contract_digest FROM bounded_worker_grants WHERE id=?")
+                .bind(contract.id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(db_error)?;
+        if saved != hash {
+            return Err(invalid("Existing authority cannot be amended"));
+        }
+        // Reservations never replay after backend loss. Reconciliation is by actual receipt.
+        sqlx::query("UPDATE bounded_worker_attempts SET state='uncertain' WHERE grant_id=? AND state IN ('reserved','dispatching')")
+            .bind(contract.id).execute(&mut *tx).await.map_err(db_error)?;
+        tx.commit().await.map_err(db_error)?;
+        Ok(Self { pool, contract })
+    }
+
+    pub async fn active(&self) -> io::Result<()> {
+        let state: String =
+            sqlx::query_scalar("SELECT state FROM bounded_worker_grants WHERE id=?")
+                .bind(self.contract.id)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(db_error)?;
+        if state != "active" {
+            return Err(invalid("Continuation authority is not active"));
+        }
+        Ok(())
+    }
+
+    pub async fn end(&self, state: &str, reason: &str) -> io::Result<()> {
+        if !matches!(state, "revoked" | "ready" | "suspended") {
+            return Err(invalid("Invalid terminal authority transition"));
+        }
+        sqlx::query("UPDATE bounded_worker_grants SET state=?,reason=? WHERE id=? AND state IN ('active','suspended')")
+            .bind(state).bind(reason).bind(self.contract.id).execute(&self.pool).await.map_err(db_error)?;
+        Ok(())
+    }
+
+    pub async fn reserve(&self, caller: Uuid, invocation: &str) -> io::Result<Uuid> {
+        self.active().await?;
+        if invocation.is_empty() || invocation.len() > 128 {
+            return Err(invalid("Invalid invocation identity"));
+        }
+        let id = Uuid::new_v4();
+        sqlx::query("INSERT INTO bounded_worker_attempts(id,grant_id,caller,invocation,state) VALUES (?,?,?,?,'reserved')")
+            .bind(id).bind(self.contract.id).bind(caller).bind(invocation).execute(&self.pool).await.map_err(|_| invalid("Duplicate, concurrent or uncertain continuation"))?;
+        Ok(id)
+    }
+
+    pub async fn dispatch<T>(
+        &self,
+        id: Uuid,
+        work: impl std::future::Future<Output = io::Result<T>>,
+    ) -> io::Result<T> {
+        self.active().await?;
+        let n = sqlx::query("UPDATE bounded_worker_attempts SET state='dispatching' WHERE id=? AND grant_id=? AND state='reserved'")
+            .bind(id).bind(self.contract.id).execute(&self.pool).await.map_err(db_error)?.rows_affected();
+        if n != 1 {
+            return Err(invalid("Attempt cannot dispatch twice"));
+        }
+        let result = ATTEMPT.scope(id, work).await;
+        if result.is_err() {
+            sqlx::query("UPDATE bounded_worker_attempts SET state='uncertain' WHERE id=? AND state='dispatching'")
+                .bind(id).execute(&self.pool).await.map_err(db_error)?;
+        }
+        result
+    }
+
+    pub async fn reconcile(&self) -> io::Result<()> {
+        // Only a durable completed successful execution can clear an attempt.
+        // Missing, failed, running, killed and unreturned receipts remain closed.
+        sqlx::query("UPDATE bounded_worker_attempts SET state='completed' WHERE grant_id=? AND state IN ('dispatching','uncertain') AND execution IN (SELECT id FROM execution_processes WHERE status='completed' AND exit_code=0 AND dropped=FALSE AND session_id=?)")
+            .bind(self.contract.id).bind(self.contract.worker.session).execute(&self.pool).await.map_err(db_error)?;
+        Ok(())
+    }
+
+    pub async fn owns_head(&self, head: Uuid) -> io::Result<bool> {
+        Ok(head == self.contract.worker_anchor || sqlx::query_scalar::<_, i64>("SELECT count(*) FROM bounded_worker_attempts WHERE grant_id=? AND execution=? AND state='completed'")
+            .bind(self.contract.id).bind(head).fetch_one(&self.pool).await.map_err(db_error)? == 1)
+    }
+}
+
+fn db_error(_: sqlx::Error) -> io::Error {
+    invalid("Continuation state unavailable")
+}
+
+/// All callers hold the common admission lock, including ordinary input paths.
+pub async fn ordinary_input(session: Uuid, prompt: &str) -> io::Result<()> {
+    if let Some(ledger) = current()
+        && (session == ledger.contract.worker.session || session == ledger.contract.manager.session)
+        && ATTEMPT.try_with(|_| ()).is_err()
+        && !(session == ledger.contract.manager.session && prompt.trim() == "/goal resume")
+    {
+        ledger.end("suspended", "new_or_ambiguous_input").await?;
+    }
+    Ok(())
+}
+
+pub async fn before_start(session: Uuid, action: &ExecutorAction) -> io::Result<()> {
+    let Some(ledger) = current() else {
+        return Ok(());
+    };
+    if let Ok(id) = ATTEMPT.try_with(|id| *id) {
+        ledger.active().await?;
+        match action.typ() {
+            ExecutorActionType::CodingAgentFollowUpRequest(a)
+                if session == ledger.contract.worker.session
+                    && a.session_id == ledger.contract.worker.thread
+                    && a.prompt == ledger.contract.continuation()
+                    && a.executor_config == ledger.contract.worker.config
+                    && a.reset_to_message_id.is_none() =>
+            {
+                let state: String =
+                    sqlx::query_scalar("SELECT state FROM bounded_worker_attempts WHERE id=?")
+                        .bind(id)
+                        .fetch_one(&ledger.pool)
+                        .await
+                        .map_err(db_error)?;
+                if state != "dispatching" {
+                    return Err(invalid("Invalid dispatch reservation"));
+                }
+                Ok(())
+            }
+            _ => Err(invalid("Bounded dispatch action changed")),
+        }
+    } else {
+        let prompt = match action.typ() {
+            ExecutorActionType::CodingAgentInitialRequest(a) => &a.prompt,
+            ExecutorActionType::CodingAgentFollowUpRequest(a) => &a.prompt,
+            ExecutorActionType::ReviewRequest(a) => &a.prompt,
+            _ => return Ok(()),
+        };
+        ordinary_input(session, prompt).await
+    }
+}
+
+/// Persist receipt before process spawn, so transport loss cannot create a blind retry.
+pub async fn record_execution(execution: Uuid) -> io::Result<()> {
+    if let (Some(ledger), Ok(attempt)) = (current(), ATTEMPT.try_with(|id| *id)) {
+        ledger.bind_receipt(attempt, execution).await?;
+    }
+    Ok(())
+}
+
+pub async fn serialized<T>(work: impl std::future::Future<Output = T>) -> T {
+    admission::run(work).await
+}
+
+#[executors::original_worker::async_trait]
+pub trait Runtime: Send + Sync {
+    async fn prepare(&self) -> io::Result<()>;
+    async fn check(&self, caller: Uuid) -> io::Result<()>;
+    async fn admit(&self) -> io::Result<()>;
+    async fn dispatch(&self) -> io::Result<Uuid>;
+}
+
+pub struct Engine {
+    pub ledger: Arc<Ledger>,
+    pub runtime: Arc<dyn Runtime>,
+}
+
+impl Engine {
+    pub async fn handle(
+        &self,
+        caller: Uuid,
+        request: serde_json::Value,
+    ) -> io::Result<serde_json::Value> {
+        use executors::original_worker::{READY, REVOKE, TOOL, tool};
+        let name = tool(&request)?;
+        let id = request
+            .get("id")
+            .filter(|v| v.is_string() || v.is_number())
+            .ok_or_else(|| invalid("Missing invocation identity"))?;
+        if name == TOOL {
+            self.runtime.prepare().await?;
+        }
+        admission::run(async {
+            self.runtime.check(caller).await?;
+            if name != TOOL {
+                self.ledger.end(if name == READY { "ready" } else if name == REVOKE { "revoked" } else { return Err(invalid("Unsupported action")); }, "explicit_terminal_decision").await?;
+                return Ok(serde_json::json!({"jsonrpc":"2.0","id":id,"result":{"content":[{"type":"text","text":"Continuation authority ended permanently."}],"isError":false}}));
+            }
+            self.ledger.active().await?;
+            self.ledger.reconcile().await?;
+            self.runtime.admit().await?;
+            let attempt = self.ledger.reserve(caller, &id.to_string()).await?;
+            let execution = self.ledger.dispatch(attempt, self.runtime.dispatch()).await?;
+            let n = sqlx::query("UPDATE bounded_worker_attempts SET execution=? WHERE id=? AND state='dispatching' AND (execution IS NULL OR execution=?)")
+                .bind(execution).bind(attempt).bind(execution).execute(&self.ledger.pool).await.map_err(db_error)?.rows_affected();
+            if n != 1 { return Err(invalid("Dispatch receipt mismatch; reconciliation required")); }
+            Ok(serde_json::json!({"jsonrpc":"2.0","id":id,"result":{"content":[{"type":"text","text":serde_json::json!({"attempt_id":attempt,"execution_id":execution,"state":"dispatching"}).to_string()}],"isError":false}}))
+        }).await
+    }
+}
+
+#[cfg(test)]
+mod tests;

@@ -31,6 +31,17 @@ pub enum VibeKanbanError {
 
 #[tokio::main]
 async fn main() -> Result<(), VibeKanbanError> {
+    #[cfg(unix)]
+    {
+        let args: Vec<_> = std::env::args_os().skip(1).collect();
+        if args.first().is_some_and(|s| s == "--bounded-worker-stdio") {
+            if args.len() != 2 {
+                return Err(std::io::Error::other("Invalid stdio capability invocation").into());
+            }
+            executors::original_worker::stdio(std::path::PathBuf::from(&args[1])).await?;
+            return Ok(());
+        }
+    }
     // This gate must precede TLS, telemetry, path creation and deployment/writable DB opening.
     use utils::runtime_safety::{ServerInvocation, parse_server_invocation};
     match parse_server_invocation(std::env::args_os().skip(1))? {
@@ -106,6 +117,7 @@ async fn main() -> Result<(), VibeKanbanError> {
     let shutdown_token = CancellationToken::new();
 
     let deployment = DeploymentImpl::new(shutdown_token.clone()).await?;
+    server::original_worker::configure(deployment.clone()).await?;
     deployment.update_sentry_scope().await?;
     deployment
         .container()

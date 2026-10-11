@@ -132,6 +132,22 @@ pub async fn follow_up(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<CreateFollowUpAttempt>,
 ) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
+    services::services::admission::run(follow_up_admitted(
+        Extension(session),
+        State(deployment),
+        Json(payload),
+    ))
+    .await
+}
+
+async fn follow_up_admitted(
+    Extension(session): Extension<Session>,
+    State(deployment): State<DeploymentImpl>,
+    Json(payload): Json<CreateFollowUpAttempt>,
+) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
+    services::services::original_worker::ordinary_input(session.id, &payload.prompt)
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
     let pool = &deployment.db().pool;
 
     // Load workspace from session
@@ -258,6 +274,11 @@ pub async fn follow_up(
     {
         Ok(execution_process) => execution_process,
         Err(error) if error.is_execution_limit_reached() => {
+            if services::services::original_worker::in_dispatch() {
+                return Err(ApiError::Conflict(
+                    "Bounded continuation cannot be queued after failed admission".into(),
+                ));
+            }
             let queued = deployment.queued_message_service().queue_for_capacity(
                 session.id,
                 DraftFollowUpData {

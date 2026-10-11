@@ -1,3 +1,14 @@
+## October11: fixed original-worker continuation source preparation
+
+The verified dot authorization supplies the fixed initial goal contract; ordinary
+VK input cannot amend it. A narrow current-staging branch implements a default-off
+backend-bound stdio capability, durable terminal grant/attempt ledger and shared
+normal follow-up/queue admission. Backend/state integrity remains the trusted
+boundary; same-UID state has no independent external custody. No short TTL or
+routine renewal is introduced. See VK_BOUNDED_WORKER_CONTINUATION.md. Compiled
+integration/CI, review, staging acceptance and the private next-restart adoption
+item remain pending. No live grant, restart or manager/worker prompt occurred.
+
 ## October10: original-response recovery publication gate
 
 The original T18/MM finals remain absent from normal live conversation history.

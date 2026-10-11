@@ -72,6 +72,50 @@ fn active_codex_clients() -> &'static StdMutex<HashMap<Uuid, Weak<AppServerClien
     ACTIVE_CODEX_CLIENTS.get_or_init(|| StdMutex::new(HashMap::new()))
 }
 
+/// Owned live-client registry, never request metadata or a caller-provided item ID.
+pub async fn original_worker_attestation(
+    id: Uuid,
+) -> io::Result<(String, String, String, String, String)> {
+    let client = active_codex_clients()
+        .lock()
+        .map_err(|_| io::Error::other("Native registry unavailable"))?
+        .get(&id)
+        .and_then(Weak::upgrade)
+        .ok_or_else(|| io::Error::other("Native caller is not registered"))?;
+    if client.cancel.is_cancelled() {
+        return Err(io::Error::other("Native caller stopped"));
+    }
+    let thread = client
+        .thread_id
+        .lock()
+        .await
+        .clone()
+        .ok_or_else(|| io::Error::other("Native thread unavailable"))?;
+    let turn = client
+        .current_turn_id
+        .lock()
+        .await
+        .clone()
+        .ok_or_else(|| io::Error::other("Native turn unavailable"))?;
+    let model = client
+        .resolved_model
+        .get()
+        .cloned()
+        .ok_or_else(|| io::Error::other("Native model unavailable"))?;
+    let effort = serde_json::to_value(client.routed_effort.get()).map_err(io::Error::other)?;
+    Ok((
+        thread,
+        turn,
+        model,
+        effort.as_str().unwrap_or_default().to_string(),
+        client
+            .continuation_runtime
+            .get()
+            .cloned()
+            .unwrap_or_default(),
+    ))
+}
+
 pub struct AppServerClient {
     rpc: OnceLock<JsonRpcPeer>,
     delegation: OnceLock<Arc<super::delegation::Delegation>>,
@@ -86,6 +130,7 @@ pub struct AppServerClient {
     auto_approve: bool,
     plan_mode: bool,
     resolved_model: OnceLock<String>,
+    continuation_runtime: OnceLock<String>,
     routing_locked: AtomicBool,
     routing_telemetry: OnceLock<crate::routing_telemetry::NativeBinding>,
     routed_effort: OnceLock<codex_protocol::openai_models::ReasoningEffort>,
@@ -426,6 +471,7 @@ impl AppServerClient {
             auto_approve,
             plan_mode,
             resolved_model: OnceLock::new(),
+            continuation_runtime: OnceLock::new(),
             routing_locked: AtomicBool::new(false),
             routing_telemetry: OnceLock::new(),
             routed_effort: OnceLock::new(),
@@ -986,8 +1032,13 @@ impl AppServerClient {
             },
         };
 
-        self.send_request::<InitializeResponse>(request, "initialize")
+        let response = self
+            .send_request::<InitializeResponse>(request, "initialize")
             .await?;
+        let response = serde_json::to_value(response)?;
+        let _ = self
+            .continuation_runtime
+            .set(response["userAgent"].as_str().unwrap_or_default().into());
         self.send_message(&ClientNotification::Initialized).await
     }
 

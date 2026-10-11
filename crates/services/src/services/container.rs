@@ -1504,6 +1504,25 @@ pub trait ContainerService {
         executor_action: &ExecutorAction,
         run_reason: &ExecutionProcessRunReason,
     ) -> Result<ExecutionProcess, ContainerError> {
+        super::admission::run(self.start_execution_admitted(
+            workspace,
+            session,
+            executor_action,
+            run_reason,
+        ))
+        .await
+    }
+
+    async fn start_execution_admitted(
+        &self,
+        workspace: &Workspace,
+        session: &Session,
+        executor_action: &ExecutorAction,
+        run_reason: &ExecutionProcessRunReason,
+    ) -> Result<ExecutionProcess, ContainerError> {
+        super::original_worker::before_start(session.id, executor_action)
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         if matches!(run_reason, ExecutionProcessRunReason::CodingAgent)
             && let Some(error) = codex_execution_limit_error_for_action(executor_action)
         {
@@ -1602,6 +1621,9 @@ pub trait ContainerService {
             &repo_states,
         )
         .await?;
+        super::original_worker::record_execution(execution_process.id)
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         if let Some(event) = executors::routing_telemetry::decision(
             executor_action,
             &execution_process.id.to_string(),

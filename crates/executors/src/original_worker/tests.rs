@@ -126,17 +126,28 @@ fn load_preflight_rejects_active_and_unknown_goal_before_resume() {
 struct LoadFence(Arc<tokio::sync::Mutex<()>>);
 #[async_trait]
 impl LaunchGuard for LoadFence {
-    fn worker(&self) -> bool { true }
-    async fn resolved(&self, _: &CodingAgent, _: &ExecutorConfig) -> io::Result<()> { Ok(()) }
-    async fn activation(&self, _: &str, _: Option<&str>) -> io::Result<ActivationFence> { Ok(self.0.clone().lock_owned().await) }
+    fn worker(&self) -> bool {
+        true
+    }
+    async fn resolved(&self, _: &CodingAgent, _: &ExecutorConfig) -> io::Result<()> {
+        Ok(())
+    }
+    async fn activation(&self, _: &str, _: Option<&str>) -> io::Result<ActivationFence> {
+        Ok(self.0.clone().lock_owned().await)
+    }
 }
 
 #[tokio::test]
-async fn actual_thread_resume_checks_goal_before_loading_and_feedback_is_fenced() {
+async fn actual_thread_resume_checks_goal_before_loading() {
     use std::{process::Stdio, time::Duration};
+
     use tokio::io::{AsyncBufReadExt, BufReader};
     use tokio_util::sync::CancellationToken;
-    use crate::executors::codex::{client::{AppServerClient, LogWriter}, jsonrpc::{ExitSignalSender, JsonRpcPeer}};
+
+    use crate::executors::codex::{
+        client::{AppServerClient, LogWriter},
+        jsonrpc::{ExitSignalSender, JsonRpcPeer},
+    };
     for status in ["active", "unknown", "paused", "none"] {
         let mut child = tokio::process::Command::new("python3").args(["-u","-c",r#"
 import json,sys
@@ -152,19 +163,50 @@ for line in sys.stdin:
 "#,status]).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true).spawn().unwrap();
         let mut calls = BufReader::new(child.stderr.take().unwrap()).lines();
         let cancel = CancellationToken::new();
-        let client = AppServerClient::new(LogWriter::new(tokio::io::sink()),None,false,false,RepoContext::default(),false,String::new(),cancel.clone());
-        client.set_original_worker_guard(Arc::new(LoadFence(Arc::new(tokio::sync::Mutex::new(())))));
-        let (tx,_rx) = tokio::sync::oneshot::channel();
-        client.connect(JsonRpcPeer::spawn(child.stdin.take().unwrap(),child.stdout.take().unwrap(),client.clone(),ExitSignalSender::new(tx),cancel.clone()));
-        let result = client.thread_resume(serde_json::from_value(json!({"threadId":"synthetic-worker"})).unwrap()).await;
-        assert_eq!(calls.next_line().await.unwrap().as_deref(),Some("thread/goal/get"));
-        if matches!(status,"active"|"unknown") {
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        client
+            .set_original_worker_guard(Arc::new(LoadFence(Arc::new(tokio::sync::Mutex::new(())))));
+        let (tx, _rx) = tokio::sync::oneshot::channel();
+        client.connect(JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(tx),
+            cancel.clone(),
+        ));
+        let result = client
+            .thread_resume(serde_json::from_value(json!({"threadId":"synthetic-worker"})).unwrap())
+            .await;
+        assert_eq!(
+            calls.next_line().await.unwrap().as_deref(),
+            Some("thread/goal/get")
+        );
+        if matches!(status, "active" | "unknown") {
             assert!(result.is_err());
-            assert!(tokio::time::timeout(Duration::from_millis(100),calls.next_line()).await.is_err(),"active/unknown goal must never load");
+            assert!(
+                tokio::time::timeout(Duration::from_millis(100), calls.next_line())
+                    .await
+                    .is_err(),
+                "active/unknown goal must never load"
+            );
         } else {
             result.unwrap();
-            assert_eq!(calls.next_line().await.unwrap().as_deref(),Some("thread/resume"));
+            assert_eq!(
+                calls.next_line().await.unwrap().as_deref(),
+                Some("thread/resume")
+            );
         }
-        cancel.cancel(); child.kill().await.unwrap(); child.wait().await.unwrap();
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
     }
 }

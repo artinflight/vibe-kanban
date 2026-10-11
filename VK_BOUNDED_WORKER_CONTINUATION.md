@@ -6,6 +6,50 @@ review pass. The older prepared commits remain on the MCP Approval Bridge branch
 this narrow branch starts at current verified staging, retaining its newer
 consent-size and capacity fixes.
 
+## Independent-review corrections and adoption boundary
+
+The review of03b95d857 invalidated the earlier readiness claim. PR243 remains
+draft until the corrected exact head passes compiled checks and independent
+review. Historical green runs below did not cover the identified launch paths.
+
+The actual cached CodingAgent clone, with saved overrides, is checked before
+prompt/command construction or launch. Its rendered continuation is pinned in
+memory. Every worker native start, including asynchronous approval feedback,
+passes a final one-shot fence held until the native RPC responds. Terminal
+revocation/readiness shares that fence. Active or unknown worker goals are
+rejected before thread/resume, since loading can itself activate native work.
+
+Raw saved routing may be absent. A separate release-adopted Shadow/Recommend
+policy feeds a temporary resolver copy; the persisted and launched configuration
+remains identical to the originals. Collision checks cover every session in the
+worker workspace and canonical shared worktree. Queue take/start/requeue remains
+inside admission. When this capability is default-off, unrelated starts do not
+acquire its global mutex.
+
+The corrected backend journals ordinary input before steering/queueing, even
+while the capability is disabled. The private contract pins the producer coverage
+receipt, journal watermark, native rollout path and complete input-prefix digest.
+Native input, dropped/reset execution history, rollback/compaction and partial or
+unknown history cannot silently amend the grant. Only exact receipt-bound worker
+input survives suffix validation; images in the adopted prefix remain hashed.
+No transcript or profile contents enter diagnostics.
+
+A legacy contract captured before this journal existed cannot prove that no
+pending steering was accepted. It is rejected, rather than treating a local
+owner_authorized flag as evidence. The smallest supported activation sequence is:
+install the reviewed code default-off at an independently authorized restart;
+the release owner then captures the fixed private contract under the corrected
+producer's durable coverage; adopt that pinned artifact at a subsequent separately
+authorized restart. This turn authorizes neither restart nor live grant. No short
+TTL or routine renewal is added. The trusted backend/state boundary remains
+sufficient for this scoped feature, but same-UID writers or host compromise can
+alter that trusted base; this is explicitly not independent external custody.
+
+The old private source delivery receipt and contract are superseded and must not
+be used for activation. Root coordinates independent review and the currently
+clarified idle Staging acceptance after corrected head/test evidence. Scheduled
+artifact loopback isolation remains FAILED until its authorized route succeeds.
+
 ## Authority and lifetime
 
 The verified dot conversation supplies initial authority. The release owner must

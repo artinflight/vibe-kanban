@@ -242,8 +242,10 @@ async fn fixture() -> Fixture {
     .unwrap();
     sqlx::raw_sql("CREATE TABLE sessions(id BLOB PRIMARY KEY, workspace_id BLOB); CREATE TABLE execution_processes(id BLOB PRIMARY KEY,session_id BLOB,status TEXT,exit_code INTEGER,dropped BOOLEAN,run_reason TEXT,created_at INTEGER,executor_action TEXT);").execute(&pool).await.unwrap();
     let config: ExecutorConfig = serde_json::from_value(json!({"executor":"CODEX","variant":"DEFAULT","model_id":"gpt-6.1-sol","reasoning_id":"high"})).unwrap();
+    let coverage = start_input_coverage(&pool).await.unwrap();
     let identity = || Identity {
         input_seal: inputs::InputSeal {
+            coverage_id: coverage,
             backend_sequence: 0,
             rollout: "/synthetic/rollout.jsonl".into(),
             records: 0,
@@ -472,6 +474,37 @@ async fn durable_steering_before_adoption_and_dropped_resume_cannot_amend_author
         .bind(Uuid::new_v4()).bind(f.ledger.contract.manager.session).bind(serde_json::to_string(&action).unwrap()).execute(&f.ledger.pool).await.unwrap();
     assert!(f.ledger.manager_history().await.is_err());
     assert!(f.ledger.active().await.is_err());
+}
+
+#[tokio::test]
+async fn legacy_or_forged_input_coverage_cannot_be_adopted() {
+    let f = fixture().await;
+    let mut contract = f.ledger.contract.clone();
+    contract.id = Uuid::new_v4();
+    contract.manager.input_seal.coverage_id = Uuid::new_v4();
+    assert!(
+        Ledger::adopt(f.ledger.pool.clone(), contract)
+            .await
+            .is_err()
+    );
+    let mut contract = f.ledger.contract.clone();
+    contract.id = Uuid::new_v4();
+    contract.worker.input_seal.backend_sequence = 1000;
+    assert!(
+        Ledger::adopt(f.ledger.pool.clone(), contract)
+            .await
+            .is_err()
+    );
+    sqlx::query("DELETE FROM bounded_native_input_coverage")
+        .execute(&f.ledger.pool)
+        .await
+        .unwrap();
+    assert!(
+        Ledger::adopt(f.ledger.pool.clone(), f.ledger.contract.clone())
+            .await
+            .is_err()
+    );
+    // No future runtime mutation can convert an unverified old capture into consent.
 }
 
 #[tokio::test]

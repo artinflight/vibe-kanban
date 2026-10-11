@@ -80,6 +80,8 @@ impl Contract {
                 || !identity.root.is_absolute()
                 || identity.repositories.is_empty()
                 || identity.profile_digest.len() != 64
+                || identity.input_seal.coverage_id.is_nil()
+                || identity.input_seal.backend_sequence < 0
                 || identity.input_seal.prefix_digest.len() != 64
                 || !identity.input_seal.rollout.is_absolute()
                 || identity.config.executor != executors::executors::BaseCodingAgent::Codex
@@ -370,6 +372,30 @@ impl Ledger {
     }
     pub async fn adopt(pool: SqlitePool, contract: Contract) -> io::Result<Self> {
         contract.validate()?;
+        let coverage: Uuid =
+            sqlx::query_scalar("SELECT id FROM bounded_native_input_coverage WHERE singleton=1")
+                .fetch_one(&pool)
+                .await
+                .map_err(|_| invalid("Contract capture predates proven input journal coverage"))?;
+        if [&contract.manager, &contract.worker]
+            .iter()
+            .any(|identity| identity.input_seal.coverage_id != coverage)
+        {
+            return Err(invalid(
+                "Contract input capture belongs to another or unproved producer epoch",
+            ));
+        }
+        let latest: i64 =
+            sqlx::query_scalar("SELECT COALESCE(max(id),0) FROM bounded_native_input_history")
+                .fetch_one(&pool)
+                .await
+                .map_err(db_error)?;
+        if [&contract.manager, &contract.worker]
+            .iter()
+            .any(|identity| identity.input_seal.backend_sequence > latest)
+        {
+            return Err(invalid("Input capture watermark exceeds producer evidence"));
+        }
         let hash = digest(&serde_json::to_vec(&contract)?);
         let mut tx = pool.begin().await.map_err(db_error)?;
         sqlx::query("INSERT OR IGNORE INTO bounded_worker_grants(id,contract_digest,state) VALUES (?,?,'active')")
@@ -473,6 +499,22 @@ fn db_error(_: sqlx::Error) -> io::Error {
 }
 
 /// All callers hold the common admission lock, including ordinary input paths.
+/// Establish durable provenance even with the continuation feature disabled.
+/// First adoption requires a release-owner snapshot taken after this producer
+/// has begun journaling. A legacy history-only contract cannot prove pending
+/// steering that the old backend accepted without persisting it.
+pub async fn start_input_coverage(pool: &SqlitePool) -> io::Result<Uuid> {
+    sqlx::query("INSERT OR IGNORE INTO bounded_native_input_coverage(singleton,id) VALUES (1,?)")
+        .bind(Uuid::new_v4())
+        .execute(pool)
+        .await
+        .map_err(db_error)?;
+    sqlx::query_scalar("SELECT id FROM bounded_native_input_coverage WHERE singleton=1")
+        .fetch_one(pool)
+        .await
+        .map_err(db_error)
+}
+
 pub async fn record_input(
     pool: &SqlitePool,
     session: Uuid,

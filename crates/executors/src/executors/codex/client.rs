@@ -4211,4 +4211,73 @@ mod delegation_tests {
         cancel.cancel();
         process.kill().await.unwrap();
     }
+    #[tokio::test]
+    async fn bounded_feedback_start_cannot_bypass_final_activation() {
+        use std::process::Stdio;
+
+        use tokio::{io::AsyncBufReadExt, process::Command};
+        #[derive(Debug)]
+        struct Refused(tokio::sync::Notify);
+        #[crate::original_worker::async_trait]
+        impl crate::original_worker::LaunchGuard for Refused {
+            fn worker(&self) -> bool {
+                true
+            }
+            async fn resolved(
+                &self,
+                _: &crate::executors::CodingAgent,
+                _: &crate::profile::ExecutorConfig,
+            ) -> io::Result<()> {
+                Ok(())
+            }
+            async fn activation(
+                &self,
+                _: &str,
+                _: Option<&str>,
+            ) -> io::Result<crate::original_worker::ActivationFence> {
+                self.0.notify_one();
+                Err(io::Error::other("Synthetic terminal grant"))
+            }
+        }
+        let mut child = Command::new("python3").args(["-u","-c", "import sys; [print('unexpected-native-start',file=sys.stderr,flush=True) for line in sys.stdin]"])
+            .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true).spawn().unwrap();
+        let mut calls = BufReader::new(child.stderr.take().unwrap()).lines();
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        let guard = Arc::new(Refused(tokio::sync::Notify::new()));
+        client.set_original_worker_guard(guard.clone());
+        let (tx, _rx) = tokio::sync::oneshot::channel();
+        client.connect(JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(tx),
+            cancel.clone(),
+        ));
+        client.spawn_user_message(
+            "synthetic-thread".into(),
+            "Synthetic approval feedback".into(),
+        );
+        tokio::time::timeout(Duration::from_secs(2), guard.0.notified())
+            .await
+            .unwrap();
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), calls.next_line())
+                .await
+                .is_err(),
+            "feedback never reached native turn/start"
+        );
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+    }
 }

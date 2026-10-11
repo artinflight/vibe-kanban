@@ -154,7 +154,7 @@ pub async fn initialize_deployment(
     }
 
     let deployment = DeploymentImpl::new(shutdown).await?;
-    crate::original_worker::configure(deployment.clone()).await?;
+    configure_deployment(&deployment).await?;
     migrate_legacy_attachment_directories(&deployment).await?;
     deployment.update_sentry_scope().await?;
     deployment
@@ -182,6 +182,24 @@ pub async fn initialize_deployment(
     });
 
     Ok(deployment)
+}
+
+/// Standalone and desktop entry points share this ordering. A failed or pending
+/// adoption never starts executable monitors, including PR archive scripts.
+pub async fn configure_deployment(deployment: &DeploymentImpl) -> Result<(), DeploymentError> {
+    configured_background(
+        deployment,
+        crate::original_worker::configure(deployment.clone()),
+    )
+    .await
+}
+
+pub(crate) async fn configured_background<D: Deployment>(
+    deployment: &D,
+    configure: impl std::future::Future<Output = io::Result<()>>,
+) -> Result<(), DeploymentError> {
+    configure.await?;
+    deployment.start_background_services().await
 }
 
 /// Gracefully shut down running execution processes.

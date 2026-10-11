@@ -1,3 +1,36 @@
+## October11 startup provenance and executable monitor ordering
+
+Independent review of cf188194 closed the receipt lifecycle and terminal
+endpoint findings; its normal CI passed 541 tests with 11 skipped. This narrow
+correction addresses only the two surviving startup findings.
+
+A process environment UUID is no longer proof of unrelated native ownership.
+Bootstrap requires kernel cgroup membership in a supported backend transient
+service, matching manager-owned service bindings, a running persisted execution,
+workspace ownership, one persisted native thread and its indexed open rollout.
+Missing or changed evidence fails closed without stopping unrelated work.
+Synthetic integration fixtures include forged/unbound session claims and a
+fully bound unrelated writer that remains running through adoption.
+
+Both entry points now configure/adopt before starting executable background
+services. LocalDeployment construction cannot start the PR monitor. The new
+startup regression holds configuration at a deterministic barrier, refuses the
+monitor on failed startup, then exercises the production monitor, archive policy,
+normal admission and actual synthetic script launch after successful adoption.
+The previously reviewed timeout, final-summary/thread and terminal coverage is
+preserved. Use PR243's exact-head hosted Test run for compiled evidence; no Cargo
+runs on MCP. A prior green head does not certify this correction.
+
+Artifact preparation remains blocked: scheduled-goal-artifacts.yml invokes the
+source-fenced build-scheduled-goal-artifacts.py, whose mandatory bwrap loopback
+probe previously failed before compilation. vk_prepare.py is the documented
+staging-owner preparation wrapper; its local backend recipe is not a permitted
+MCP build route for this task. No valid alternative ordinary-user isolated route
+is established in the inspected project evidence. No prerequisite is waived.
+Independent exact-head review, a valid release artifact and accepted next-restart
+entry remain required. No live grant, target prompt, restart, activation, staging
+acceptance, new access/settings or public review-comment write occurred.
+
 ## October11 approved one-restart bootstrap and receipt lifecycle
 
 The fde46100 correction's virtual-clock fixture is verified and remains intact.

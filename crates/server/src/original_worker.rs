@@ -151,7 +151,7 @@ async fn load_startup<D: Deployment>(
         sampled: Mutex::new(None),
         resources: Arc::new(HostResources),
     };
-    processes.verify(&proof, &contract)?;
+    processes.verify(&proof, &contract, pool).await?;
     checking.identity(&contract.manager).await?;
     checking.identity(&contract.worker).await?;
     services::services::original_worker::verify_profile(&contract.manager)?;
@@ -198,7 +198,7 @@ async fn load_startup<D: Deployment>(
     }
     // Old producers must still be gone after the potentially slow scope reads.
     // All ingress remains closed until both coverage and adoption have succeeded.
-    processes.verify(&proof, &contract)?;
+    processes.verify(&proof, &contract, pool).await?;
     pinned_file(&files.contract, &files.contract_sha256).await?;
     pinned_file(&files.bootstrap, &files.bootstrap_sha256).await?;
     snapshot.establish_startup_coverage().await?;

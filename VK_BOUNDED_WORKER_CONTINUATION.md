@@ -53,8 +53,16 @@ dataset token and canonical database object, native home, kernel boot identity,
 old ingress PID/start identities and inventory slots for both original native
 threads. Kernel checks refuse live pinned producers and unknown observations;
 current owned-process scanning also detects surviving/unlisted target writers,
-root/file ownership and potential ingress. Known unrelated executions may stay
-running. A PID without a start identity, a missing inventory, or a local quiescent
+root/file ownership and potential ingress. Unrelated native writers are allowed
+only with kernel cgroup membership in a supported backend transient systemd unit,
+matching service-owned execution/session/workspace/home bindings, a running
+persisted execution in the selected dataset, canonical workspace ownership, one
+persisted native thread and an open descriptor for its indexed rollout. Process
+UUID labels alone, missing thread/rollout ownership, changed service membership
+or unknown producers refuse adoption. Proven unrelated work stays running; these
+checks never stop it. The existing systemd user manager/backend/host remains the
+trust boundary, not independent custody against same-UID or host compromise.
+A PID without a start identity, a missing inventory, or a local quiescent
 flag cannot authorize adoption. No process is stopped by these checks.
 
 The loader verifies original session/workspace/thread/configuration ownership,
@@ -65,7 +73,10 @@ or unknown goals fail closed. Exact adopted native prefixes, plus only durable
 activated continuation inputs on later startup, are verified without rewriting
 instructions, seals or history. Process and artifact proof is rechecked after
 scope reads. Only then does the backend establish the pinned producer epoch and
-adopt/register the fixed grant. Existing coverage must match; first coverage
+adopt/register the fixed grant. Only after successful configuration do both server
+entry points start executable background services. LocalDeployment construction
+no longer starts the PR monitor; archive-script admission cannot race bootstrap.
+Failed startup starts no executable monitor. Existing coverage must match; first coverage
 requires zero preexisting journal history and zero captured watermarks.
 
 Coverage/adoption are durable and idempotent. Prior terminal grants, changed

@@ -117,7 +117,7 @@ async fn main() -> Result<(), VibeKanbanError> {
     let shutdown_token = CancellationToken::new();
 
     let deployment = DeploymentImpl::new(shutdown_token.clone()).await?;
-    server::original_worker::configure(deployment.clone()).await?;
+    server::startup::configure_deployment(&deployment).await?;
     deployment.update_sentry_scope().await?;
     deployment
         .container()

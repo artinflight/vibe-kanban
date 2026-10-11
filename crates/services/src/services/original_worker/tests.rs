@@ -858,9 +858,11 @@ for line in sys.stdin:
         // scheduling cannot masquerade as a silence/receipt timeout.
         tokio::time::pause();
         tokio::time::advance(std::time::Duration::from_secs(11)).await;
+        // SQLite's driver has OS-backed work; paused Tokio time must not auto-
+        // advance its pool deadlines while waiting for durable acknowledgement.
+        tokio::time::resume();
         assert!(starting.await.unwrap().is_err());
         ending.await.unwrap().unwrap();
-        tokio::time::resume();
         let (state, activated): (String, i64) =
             sqlx::query_as("SELECT state,activated FROM bounded_worker_attempts")
                 .fetch_one(&f.ledger.pool)

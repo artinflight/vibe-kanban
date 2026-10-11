@@ -903,6 +903,12 @@ impl Engine {
             }
             self.ledger.active().await?;
             self.ledger.reconcile().await?;
+            // A known unresolved owned head is uncertainty, not a scope
+            // amendment. Block before admission's completed-head check so a
+            // missing/late receipt cannot accidentally terminate authority.
+            let pending: i64 = sqlx::query_scalar("SELECT count(*) FROM bounded_worker_attempts WHERE grant_id=? AND state IN ('reserved','dispatching','uncertain')")
+                .bind(self.ledger.contract.id).fetch_one(&self.ledger.pool).await.map_err(db_error)?;
+            if pending != 0 { return Err(invalid("Prior bounded attempt requires exact receipt reconciliation")); }
             self.runtime.admit().await?;
             let attempt = self.ledger.reserve(caller, &id.to_string()).await?;
             let execution = self.ledger.dispatch(attempt, self.runtime.dispatch()).await?;

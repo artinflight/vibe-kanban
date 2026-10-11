@@ -197,6 +197,14 @@ impl ContainerService for FixtureContainer {
     async fn git_branch_prefix(&self) -> String {
         "synthetic".into()
     }
+    async fn try_steer_active_turn(
+        &self,
+        session: &Session,
+        data: &DraftFollowUpData,
+    ) -> Result<bool, ContainerError> {
+        let id: Uuid = sqlx::query_scalar("SELECT id FROM execution_processes WHERE session_id=? AND status='running' ORDER BY rowid DESC LIMIT 1").bind(session.id).fetch_one(&self.db.pool).await?;
+        Ok(AppServerClient::steer_execution(id, data.message.clone()).await?)
+    }
     async fn start_execution_inner(
         &self,
         workspace: &Workspace,
@@ -213,8 +221,12 @@ impl ContainerService for FixtureContainer {
         env.insert("VK_EXECUTION_PROCESS_ID", process.id.to_string());
         env.original_worker = provider.launch_guard(&env).await?;
         // Same exact cache clone/verification helper used by follow-up spawn.
-        let _agent =
+        let agent =
             executors::original_worker::resolve_for_launch(&request.executor_config, &env).await?;
+        let executors::executors::CodingAgent::Codex(codex) = agent else {
+            panic!("Synthetic Codex");
+        };
+        let combined_prompt = codex.append_prompt.combine_prompt(&request.prompt);
         self.launches.fetch_add(1, Ordering::SeqCst);
         let peer = native_peer(
             &request.session_id,
@@ -238,7 +250,7 @@ impl ContainerService for FixtureContainer {
             .turn_start_with_mode(
                 request.session_id.clone(),
                 serde_json::from_value(
-                    json!([{"type":"text","text":request.prompt,"text_elements":[]}]),
+                    json!([{"type":"text","text":combined_prompt,"text_elements":[]}]),
                 )
                 .unwrap(),
                 None,
@@ -293,6 +305,7 @@ for line in sys.stdin:
     elif m=='thread/resume':
         t={'id':thread,'preview':'synthetic','ephemeral':False,'modelProvider':'synthetic','createdAt':1,'updatedAt':1,'status':{'type':'idle'},'path':None,'cwd':'/synthetic','cliVersion':'0.159.2','source':'exec','turns':[]}
         r={'thread':t,'model':'gpt-6.1-sol','modelProvider':'synthetic','serviceTier':None,'cwd':'/synthetic','approvalPolicy':'on-request','approvalsReviewer':'user','sandbox':{'type':'readOnly'},'reasoningEffort':'high'}
+    elif m=='turn/steer': r={'turnId':'synthetic-turn'}
     elif m=='turn/start':
         t={'id':'synthetic-turn','items':[],'status':'inProgress','error':None}
         print(json.dumps({'method':'turn/started','params':{'threadId':thread,'turn':t}}),flush=True)
@@ -490,6 +503,13 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
             .execute(&pool)
             .await
             .unwrap();
+        sqlx::query(
+            "UPDATE coding_agent_turns SET summary='Synthetic completed prior turn' WHERE id=?",
+        )
+        .bind(turn.id)
+        .execute(&pool)
+        .await
+        .unwrap();
         if name == "worker" {
             ExecutionProcess::update_completion(
                 &pool,
@@ -500,6 +520,41 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
             .await
             .unwrap();
         }
+        let process = if name == "manager" {
+            ExecutionProcess::update_completion(
+                &pool,
+                process.id,
+                ExecutionProcessStatus::Completed,
+                Some(0),
+            )
+            .await
+            .unwrap();
+            let resume = ExecutorAction::new(
+                ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+                    prompt: "/goal resume".into(),
+                    session_id: thread.clone(),
+                    executor_config: raw.clone(),
+                    working_dir: session.agent_working_dir.clone(),
+                    reset_to_message_id: None,
+                    capacity: None,
+                }),
+                None,
+            );
+            ExecutionProcess::create(
+                &pool,
+                &CreateExecutionProcess {
+                    session_id: session.id,
+                    executor_action: resume,
+                    run_reason: ExecutionProcessRunReason::CodingAgent,
+                },
+                Uuid::new_v4(),
+                &[],
+            )
+            .await
+            .unwrap()
+        } else {
+            process
+        };
         identities.push(Identity {
             session: session.id,
             workspace: workspace.id,
@@ -583,6 +638,7 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
         .unwrap();
     AppServerClient::register_active_execution(anchors[0], &manager.client);
     assert!(engine.handle(Uuid::new_v4(), call(1)).await.is_err());
+    runtime.check(anchors[0]).await.unwrap();
     resources.failed.store(true, Ordering::SeqCst);
     assert!(engine.handle(anchors[0], call(2)).await.is_err());
     resources.failed.store(false, Ordering::SeqCst);
@@ -645,7 +701,7 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
     assert_eq!(
         usize::from(a.is_ok()) + usize::from(b.is_ok()),
         1,
-        "one actual follow-up admission"
+        "one actual follow-up admission: a={a:?}, b={b:?}"
     );
     assert_eq!(container.launches.load(Ordering::SeqCst), 1);
     let action: String = sqlx::query_scalar("SELECT executor_action FROM execution_processes WHERE session_id=? ORDER BY rowid DESC LIMIT 1").bind(ledger.contract.worker.session).fetch_one(&pool).await.unwrap();
@@ -665,6 +721,45 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
     tokio::fs::write(&ledger.contract.manager.input_seal.rollout, serde_json::to_vec(&json!({"type":"event_msg","payload":{"type":"user_message","message":"Synthetic unverified amendment"}})).unwrap()).await.unwrap();
     assert!(runtime.check(anchors[0]).await.is_err());
     assert!(ledger.active().await.is_err());
+    let original_action: String =
+        sqlx::query_scalar("SELECT executor_action FROM execution_processes WHERE id=?")
+            .bind(anchors[0])
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    admission::run(crate::routes::sessions::queue::queue_message_admitted(
+        Extension(
+            Session::find_by_id(&pool, ledger.contract.manager.session)
+                .await
+                .unwrap()
+                .unwrap(),
+        ),
+        State(deployment.clone()),
+        Json(crate::routes::sessions::queue::QueueMessageRequest {
+            message: "Synthetic owner input through actual queue steering".into(),
+            executor_config: raw.clone(),
+        }),
+    ))
+    .await
+    .unwrap();
+    let same_action: String =
+        sqlx::query_scalar("SELECT executor_action FROM execution_processes WHERE id=?")
+            .bind(anchors[0])
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(same_action, original_action);
+    let steering_events: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM bounded_native_input_history WHERE session_id=? AND native_resume=0",
+    )
+    .bind(ledger.contract.manager.session)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        steering_events, 1,
+        "durable evidence exists even when executor_action stays unchanged"
+    );
     drop(manager);
     container.peers.lock().await.clear();
 }

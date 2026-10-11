@@ -1075,7 +1075,7 @@ impl AppServerClient {
         params: ThreadResumeParams,
     ) -> Result<ThreadResumeResponse, ExecutorError> {
         let _load_fence = if let Some(guard) = self.original_worker.get().filter(|g| g.worker()) {
-            let fence = guard.activation(None).await?;
+            let fence = guard.activation(&params.thread_id, None).await?;
             let snapshot = self
                 .goal_request(
                     "thread/goal/get",
@@ -1129,7 +1129,7 @@ impl AppServerClient {
                     },
                     _ => unreachable!(),
                 };
-                Some(guard.activation(Some(text)).await?)
+                Some(guard.activation(&thread_id, Some(text)).await?)
             } else {
                 None
             };
@@ -2119,6 +2119,9 @@ impl AppServerClient {
     ) {
         let peer = self.rpc().clone();
         let cancel = self.cancel.clone();
+        let bounded = self.original_worker.get().filter(|g| g.worker()).cloned();
+        let activation_input = message.clone();
+        let activation_thread = thread_id.clone();
         let request = ClientRequest::TurnStart {
             request_id: peer.next_request_id(),
             params: TurnStartParams {
@@ -2132,6 +2135,19 @@ impl AppServerClient {
             },
         };
         tokio::spawn(async move {
+            let _activation_fence = match bounded {
+                Some(guard) => match guard
+                    .activation(&activation_thread, Some(&activation_input))
+                    .await
+                {
+                    Ok(fence) => Some(fence),
+                    Err(_) => {
+                        tracing::warn!("Bounded feedback activation refused; no native turn sent");
+                        return;
+                    }
+                },
+                None => None,
+            };
             if let Err(err) = peer
                 .request::<TurnStartResponse, _>(
                     request_id(&request),

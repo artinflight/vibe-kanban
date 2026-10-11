@@ -21,7 +21,7 @@ const PROMPT_JSON_BODY_LIMIT_BYTES: usize = 100 * 1024 * 1024;
 
 /// Request body for queueing a follow-up message
 #[derive(Debug, Deserialize, TS)]
-struct QueueMessageRequest {
+pub(crate) struct QueueMessageRequest {
     pub message: String,
     pub executor_config: ExecutorConfig,
 }
@@ -40,9 +40,9 @@ async fn queue_message(
     .await
 }
 
-async fn queue_message_admitted(
+pub(crate) async fn queue_message_admitted<D: Deployment>(
     Extension(session): Extension<Session>,
-    State(deployment): State<DeploymentImpl>,
+    State(deployment): State<D>,
     Json(payload): Json<QueueMessageRequest>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
     services::services::original_worker::record_input(&deployment.db().pool, session.id, false)
@@ -66,7 +66,7 @@ async fn queue_message_admitted(
     if scheduled {
         // The active-turn send UI uses this route. A manual message must take
         // over from scheduled work, rather than steer inside its restricted lease.
-        let response = super::follow_up(
+        let response = super::follow_up_admitted(
             Extension(session),
             State(deployment),
             Json(super::CreateFollowUpAttempt {

@@ -11,6 +11,153 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 
 use super::*;
 
+struct ActivationGuard(Arc<Ledger>, Uuid);
+impl std::fmt::Debug for ActivationGuard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("SyntheticActivationGuard")
+    }
+}
+#[executors::original_worker::async_trait]
+impl executors::original_worker::LaunchGuard for ActivationGuard {
+    fn worker(&self) -> bool {
+        true
+    }
+    async fn resolved(
+        &self,
+        _: &executors::executors::CodingAgent,
+        _: &ExecutorConfig,
+    ) -> io::Result<()> {
+        Ok(())
+    }
+    async fn activation(
+        &self,
+        _: &str,
+        input: Option<&str>,
+    ) -> io::Result<executors::original_worker::ActivationFence> {
+        self.0
+            .activation_fence(async {
+                if let Some(input) = input {
+                    self.0.activate_input(self.1, input).await?;
+                }
+                Ok(())
+            })
+            .await
+    }
+}
+
+#[tokio::test]
+async fn final_native_rpc_and_revocation_have_one_ordered_commit_boundary() {
+    use std::process::Stdio;
+
+    use executors::{
+        env::RepoContext,
+        executors::codex::{
+            client::{AppServerClient, LogWriter},
+            jsonrpc::{ExitSignalSender, JsonRpcPeer},
+        },
+    };
+    use tokio::io::AsyncBufReadExt;
+    use tokio_util::sync::CancellationToken;
+    for revoke_first in [true, false] {
+        let f = fixture().await;
+        f.engine.handle(f.caller, request(1, TOOL)).await.unwrap();
+        let execution: Uuid = sqlx::query_scalar("SELECT execution FROM bounded_worker_attempts")
+            .fetch_one(&f.ledger.pool)
+            .await
+            .unwrap();
+        let release = f._directory.path().join("release-native-rpc");
+        let mut child = tokio::process::Command::new("python3").args(["-u", "-c", r#"
+import json,sys,time,os
+for line in sys.stdin:
+    q=json.loads(line)
+    print('native-activation-entered',file=sys.stderr,flush=True)
+    while not os.path.exists(sys.argv[1]): time.sleep(.005)
+    print(json.dumps({'id':q['id'],'result':{'turn':{'id':'synthetic-turn','items':[],'status':'inProgress','error':None}}}),flush=True)
+"#]).arg(&release).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true).spawn().unwrap();
+        let mut events = BufReader::new(child.stderr.take().unwrap()).lines();
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        client.set_original_worker_guard(Arc::new(ActivationGuard(f.ledger.clone(), execution)));
+        let (tx, _rx) = tokio::sync::oneshot::channel();
+        client.connect(JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(tx),
+            cancel.clone(),
+        ));
+        if revoke_first {
+            f.ledger
+                .end("revoked", "synthetic_terminal_decision")
+                .await
+                .unwrap();
+        }
+        let start = tokio::spawn({
+            let client = client.clone();
+            async move {
+                client.turn_start_with_mode("synthetic-thread".into(),serde_json::from_value(json!([{"type":"text","text":"Synthetic fixed native input","text_elements":[]}])).unwrap(),None).await
+            }
+        });
+        if revoke_first {
+            assert!(start.await.unwrap().is_err());
+            assert!(
+                tokio::time::timeout(std::time::Duration::from_millis(100), events.next_line())
+                    .await
+                    .is_err(),
+                "revocation won: no native RPC sent"
+            );
+        } else {
+            assert_eq!(
+                tokio::time::timeout(std::time::Duration::from_secs(3), events.next_line())
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .as_deref(),
+                Some("native-activation-entered")
+            );
+            let ending = tokio::spawn({
+                let ledger = f.ledger.clone();
+                async move { ledger.end("revoked", "synthetic_terminal_decision").await }
+            });
+            tokio::task::yield_now().await;
+            assert!(
+                !ending.is_finished(),
+                "terminal acknowledgement must wait for in-flight activation"
+            );
+            tokio::fs::write(&release, b"synthetic release")
+                .await
+                .unwrap();
+            start.await.unwrap().unwrap();
+            ending.await.unwrap().unwrap();
+            assert!(client.turn_start_with_mode("synthetic-thread".into(),serde_json::from_value(json!([{"type":"text","text":"Synthetic repeated activation","text_elements":[]}])).unwrap(),None).await.is_err());
+        }
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+        let activated: i64 = sqlx::query_scalar("SELECT activated FROM bounded_worker_attempts")
+            .fetch_one(&f.ledger.pool)
+            .await
+            .unwrap();
+        assert_eq!(activated, i64::from(!revoke_first));
+        let recovered = Ledger::adopt(f.ledger.pool.clone(), f.ledger.contract.clone())
+            .await
+            .unwrap();
+        assert!(
+            recovered.active().await.is_err(),
+            "terminal decision survives restart"
+        );
+    }
+}
+
 struct Fixture {
     ledger: Arc<Ledger>,
     engine: Arc<Engine>,
@@ -298,6 +445,33 @@ async fn preexisting_unauthenticated_amendment_suspends_on_load() {
     assert!(f.ledger.manager_history().await.is_err());
     assert!(f.ledger.active().await.is_err());
     assert_eq!(f.runtime.calls.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn durable_steering_before_adoption_and_dropped_resume_cannot_amend_authority() {
+    let f = fixture().await;
+    record_input(&f.ledger.pool, f.ledger.contract.manager.session, false)
+        .await
+        .unwrap();
+    // No executor_action update is necessary to detect this input.
+    assert!(
+        f.ledger
+            .native_inputs(&f.ledger.contract.manager)
+            .await
+            .is_err()
+    );
+    assert!(f.ledger.active().await.is_err());
+    let f = fixture().await;
+    let mut action = worker_action(&f.ledger.contract);
+    if let ExecutorActionType::CodingAgentFollowUpRequest(a) = &mut action.typ {
+        a.prompt = "/goal resume".into();
+        a.session_id = f.ledger.contract.manager.thread.clone();
+        a.executor_config = f.ledger.contract.manager.config.clone();
+    }
+    sqlx::query("INSERT INTO execution_processes(id,session_id,status,dropped,run_reason,created_at,executor_action) VALUES (?,?,'completed',TRUE,'codingagent',2,?)")
+        .bind(Uuid::new_v4()).bind(f.ledger.contract.manager.session).bind(serde_json::to_string(&action).unwrap()).execute(&f.ledger.pool).await.unwrap();
+    assert!(f.ledger.manager_history().await.is_err());
+    assert!(f.ledger.active().await.is_err());
 }
 
 #[tokio::test]

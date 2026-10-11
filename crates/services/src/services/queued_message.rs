@@ -148,6 +148,11 @@ impl QueuedMessageService {
         self.take_queued(session_id)
     }
 
+    /// Snapshot used under shared execution admission for worktree ownership.
+    pub fn session_ids(&self) -> Vec<Uuid> {
+        self.queue.iter().map(|entry| *entry.key()).collect()
+    }
+
     /// Check if a session has a queued message
     pub fn has_queued(&self, session_id: Uuid) -> bool {
         self.queue.contains_key(&session_id)

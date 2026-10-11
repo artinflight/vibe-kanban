@@ -45,7 +45,11 @@ async fn queue_message_admitted(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<QueueMessageRequest>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
-    services::services::original_worker::ordinary_input(session.id, &payload.message)
+    services::services::original_worker::record_input(&deployment.db().pool, session.id, false)
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
+    // Steering is an amendment even when the text resembles a native resume.
+    services::services::original_worker::ordinary_input(session.id, "active_turn_steering")
         .await
         .map_err(|e| ApiError::Conflict(e.to_string()))?;
     let scheduled = if let Ok(Some(controller)) = executors::capacity::controller::configured() {

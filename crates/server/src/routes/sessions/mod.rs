@@ -140,11 +140,20 @@ pub async fn follow_up(
     .await
 }
 
-async fn follow_up_admitted(
+pub(crate) async fn follow_up_admitted<D: Deployment>(
     Extension(session): Extension<Session>,
-    State(deployment): State<DeploymentImpl>,
+    State(deployment): State<D>,
     Json(payload): Json<CreateFollowUpAttempt>,
 ) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
+    services::services::original_worker::record_input(
+        &deployment.db().pool,
+        session.id,
+        payload.prompt.trim() == "/goal resume"
+            && payload.retry_process_id.is_none()
+            && payload.perform_git_reset != Some(true),
+    )
+    .await
+    .map_err(|e| ApiError::Conflict(e.to_string()))?;
     services::services::original_worker::ordinary_input(session.id, &payload.prompt)
         .await
         .map_err(|e| ApiError::Conflict(e.to_string()))?;

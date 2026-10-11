@@ -1416,6 +1416,7 @@ impl Codex {
             .and_then(|value| Uuid::parse_str(value).ok());
         let cancel_for_task = cancel.clone();
         let capacity_for_task = effective_env.capacity.clone();
+        let original_worker_guard = env.original_worker.clone();
 
         tokio::spawn(async move {
             let exit_signal_tx = ExitSignalSender::new(exit_signal_tx);
@@ -1432,6 +1433,9 @@ impl Codex {
                 commit_reminder_prompt,
                 cancel_for_task.clone(),
             );
+            if let Some(guard) = original_worker_guard {
+                client.set_original_worker_guard(guard);
+            }
             let rpc_peer = JsonRpcPeer::spawn(
                 child_stdin,
                 child_stdout,

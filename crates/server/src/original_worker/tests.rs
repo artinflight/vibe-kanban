@@ -1,0 +1,670 @@
+//! Production Live + follow_up + ContainerService admission; only OS/native
+//! processes and resource observations are replaced by synthetic adapters.
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    process::Stdio,
+    sync::{OnceLock, atomic::AtomicUsize},
+};
+
+use db::{
+    DBService,
+    models::{
+        coding_agent_turn::{CodingAgentTurn, CreateCodingAgentTurn},
+        execution_process::{
+            CreateExecutionProcess, ExecutionContext, ExecutionProcessRunReason,
+            ExecutionProcessStatus,
+        },
+        repo::Repo,
+        scratch::DraftFollowUpData,
+        session::CreateSession,
+        workspace::CreateWorkspace,
+        workspace_repo::{CreateWorkspaceRepo, WorkspaceRepo},
+    },
+};
+use executors::{
+    actions::{ExecutorActionType, coding_agent_follow_up::CodingAgentFollowUpRequest},
+    env::RepoContext,
+    executors::codex::{
+        client::{AppServerClient, LogWriter},
+        jsonrpc::{ExitSignalSender, JsonRpcPeer},
+    },
+    original_worker::{LaunchGuard, TOOL},
+    profile::ExecutorConfig,
+};
+use serde_json::json;
+use services::services::{
+    admission,
+    config::Config,
+    container::{ContainerError, ContainerRef, ContainerService},
+    events::EventService,
+    notification::NotificationService,
+    queued_message::QueuedMessageService,
+};
+use tokio::{
+    process::{Child, Command},
+    sync::RwLock,
+    task::JoinHandle,
+};
+use tokio_util::sync::CancellationToken;
+use utils::{log_msg::LogMsg, msg_store::MsgStore};
+
+use super::*;
+
+#[derive(Clone)]
+struct FixtureDeployment {
+    container: Arc<FixtureContainer>,
+    config: Arc<RwLock<Config>>,
+    events: EventService,
+    queue: QueuedMessageService,
+}
+
+macro_rules! unused_getter {
+    ($name:ident, $ty:ty) => {
+        fn $name(&self) -> &$ty {
+            panic!(concat!(stringify!($name), " outside fixture boundary"))
+        }
+    };
+}
+#[executors::original_worker::async_trait]
+impl Deployment for FixtureDeployment {
+    async fn new(_: CancellationToken) -> Result<Self, deployment::DeploymentError> {
+        panic!("No service startup in fixture")
+    }
+    fn user_id(&self) -> &str {
+        "synthetic"
+    }
+    fn db(&self) -> &DBService {
+        &self.container.db
+    }
+    fn config(&self) -> &Arc<RwLock<Config>> {
+        &self.config
+    }
+    fn analytics(&self) -> &Option<services::services::analytics::AnalyticsService> {
+        static NONE: Option<services::services::analytics::AnalyticsService> = None;
+        &NONE
+    }
+    fn container(&self) -> &impl ContainerService {
+        self.container.as_ref()
+    }
+    fn git(&self) -> &git::GitService {
+        &self.container.git
+    }
+    fn events(&self) -> &EventService {
+        &self.events
+    }
+    fn queued_message_service(&self) -> &QueuedMessageService {
+        &self.queue
+    }
+    unused_getter!(repo, services::services::repo::RepoService);
+    unused_getter!(file, services::services::file::FileService);
+    unused_getter!(
+        filesystem,
+        services::services::filesystem::FilesystemService
+    );
+    unused_getter!(
+        file_search_cache,
+        Arc<services::services::file_search::FileSearchCache>
+    );
+    unused_getter!(approvals, services::services::approvals::Approvals);
+    unused_getter!(auth_context, services::services::auth::AuthContext);
+    unused_getter!(relay_control, Arc<relay_control::RelayControl>);
+    unused_getter!(relay_signing, relay_control::signing::RelaySigningService);
+    unused_getter!(client_info, client_info::ClientInfo);
+    unused_getter!(remote_info, remote_info::RemoteInfo);
+    unused_getter!(preview_proxy, preview_proxy::PreviewProxyService);
+    unused_getter!(
+        trusted_key_auth,
+        trusted_key_auth::runtime::TrustedKeyAuthRuntime
+    );
+}
+
+struct FixtureContainer {
+    db: DBService,
+    git: git::GitService,
+    stores: Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>>,
+    provider: OnceLock<Arc<Provider<FixtureDeployment>>>,
+    launches: AtomicUsize,
+    worker_goal: AtomicBool,
+    peers: Mutex<Vec<NativePeer>>,
+}
+
+#[executors::original_worker::async_trait]
+impl ContainerService for FixtureContainer {
+    fn db(&self) -> &DBService {
+        &self.db
+    }
+    fn git(&self) -> &git::GitService {
+        &self.git
+    }
+    fn msg_stores(&self) -> &Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>> {
+        &self.stores
+    }
+    fn notification_service(&self) -> &NotificationService {
+        panic!("No notifications in fixture")
+    }
+    fn workspace_to_current_dir(&self, w: &Workspace) -> PathBuf {
+        w.container_ref.as_ref().unwrap().into()
+    }
+    async fn touch(&self, _: &Workspace) -> Result<(), ContainerError> {
+        Ok(())
+    }
+    async fn store_db_stream_handle(&self, _: Uuid, _: JoinHandle<()>) {
+        panic!("No log threads")
+    }
+    async fn take_db_stream_handle(&self, _: &Uuid) -> Option<JoinHandle<()>> {
+        None
+    }
+    async fn create(&self, _: &Workspace) -> Result<ContainerRef, ContainerError> {
+        panic!("No worktree creation")
+    }
+    async fn kill_all_running_processes(&self) -> Result<(), ContainerError> {
+        panic!("No process recovery")
+    }
+    async fn delete_worktree(&self, _: &Workspace) -> Result<(), ContainerError> {
+        panic!("No cleanup")
+    }
+    async fn delete(&self, _: &Workspace) -> Result<(), ContainerError> {
+        panic!("No cleanup")
+    }
+    async fn ensure_container_exists(&self, w: &Workspace) -> Result<ContainerRef, ContainerError> {
+        Ok(w.container_ref.clone().unwrap())
+    }
+    async fn is_container_clean(&self, _: &Workspace) -> Result<bool, ContainerError> {
+        Ok(true)
+    }
+    async fn stop_execution(
+        &self,
+        _: &ExecutionProcess,
+        _: ExecutionProcessStatus,
+    ) -> Result<(), ContainerError> {
+        panic!("No live stop")
+    }
+    async fn try_commit_changes(&self, _: &ExecutionContext) -> Result<bool, ContainerError> {
+        panic!("No worktree commit")
+    }
+    async fn copy_project_files(&self, _: &Path, _: &Path, _: &str) -> Result<(), ContainerError> {
+        panic!("No assets copied")
+    }
+    async fn stream_diff(
+        &self,
+        _: &Workspace,
+        _: bool,
+    ) -> Result<futures_util::stream::BoxStream<'static, Result<LogMsg, io::Error>>, ContainerError>
+    {
+        panic!("No diff streams")
+    }
+    async fn git_branch_prefix(&self) -> String {
+        "synthetic".into()
+    }
+    async fn start_execution_inner(
+        &self,
+        workspace: &Workspace,
+        process: &ExecutionProcess,
+        action: &ExecutorAction,
+    ) -> Result<(), ContainerError> {
+        let ExecutorActionType::CodingAgentFollowUpRequest(request) = action.typ() else {
+            panic!("Only synthetic follow-up")
+        };
+        let provider = self.provider.get().unwrap();
+        let mut env = ExecutionEnv::new(RepoContext::default(), false, String::new());
+        env.insert("VK_SESSION_ID", process.session_id.to_string());
+        env.insert("VK_WORKSPACE_ID", workspace.id.to_string());
+        env.insert("VK_EXECUTION_PROCESS_ID", process.id.to_string());
+        env.original_worker = provider.launch_guard(&env).await?;
+        // Same exact cache clone/verification helper used by follow-up spawn.
+        let _agent =
+            executors::original_worker::resolve_for_launch(&request.executor_config, &env).await?;
+        self.launches.fetch_add(1, Ordering::SeqCst);
+        let peer = native_peer(
+            &request.session_id,
+            self.worker_goal.load(Ordering::SeqCst),
+            env.original_worker.clone(),
+        )
+        .await;
+        let resumed = peer
+            .client
+            .thread_resume(serde_json::from_value(json!({"threadId":request.session_id})).unwrap())
+            .await?;
+        provider
+            .native_started(
+                &env,
+                &resumed.thread.id,
+                &resumed.model,
+                &serde_json::to_value(resumed.reasoning_effort).unwrap(),
+            )
+            .await?;
+        peer.client
+            .turn_start_with_mode(
+                request.session_id.clone(),
+                serde_json::from_value(
+                    json!([{"type":"text","text":request.prompt,"text_elements":[]}]),
+                )
+                .unwrap(),
+                None,
+            )
+            .await?;
+        self.peers.lock().await.push(peer);
+        Ok(())
+    }
+}
+
+struct NativePeer {
+    child: Child,
+    client: Arc<AppServerClient>,
+    cancel: CancellationToken,
+}
+impl Drop for NativePeer {
+    fn drop(&mut self) {
+        self.cancel.cancel();
+        let _ = self.child.start_kill();
+    }
+}
+
+async fn native_peer(
+    thread: &str,
+    active_goal: bool,
+    guard: Option<Arc<dyn LaunchGuard>>,
+) -> NativePeer {
+    let cancel = CancellationToken::new();
+    let client = AppServerClient::new(
+        LogWriter::new(tokio::io::sink()),
+        None,
+        false,
+        false,
+        RepoContext::default(),
+        false,
+        String::new(),
+        cancel.clone(),
+    );
+    if let Some(guard) = guard {
+        client.set_original_worker_guard(guard);
+    }
+    client.set_resolved_model("gpt-6.1-sol".into());
+    client.set_routed_effort(serde_json::from_value(json!("high")).unwrap());
+    let mut child = Command::new("python3").args(["-u", "-c", r#"
+import json,sys
+thread=sys.argv[1]; active=sys.argv[2]=='true'
+for line in sys.stdin:
+    q=json.loads(line); m=q.get('method'); p=q.get('params',{})
+    if 'id' not in q: continue
+    if m=='initialize': r={'userAgent':'codex_cli_rs/0.159.2 (synthetic)','platformFamily':'unix','platformOs':'linux'}
+    elif m=='thread/goal/get': r={'goal':{'status':'active'} if active else None}
+    elif m=='thread/resume':
+        t={'id':thread,'preview':'synthetic','ephemeral':False,'modelProvider':'synthetic','createdAt':1,'updatedAt':1,'status':{'type':'idle'},'path':None,'cwd':'/synthetic','cliVersion':'0.159.2','source':'exec','turns':[]}
+        r={'thread':t,'model':'gpt-6.1-sol','modelProvider':'synthetic','serviceTier':None,'cwd':'/synthetic','approvalPolicy':'on-request','approvalsReviewer':'user','sandbox':{'type':'readOnly'},'reasoningEffort':'high'}
+    elif m=='turn/start':
+        t={'id':'synthetic-turn','items':[],'status':'inProgress','error':None}
+        print(json.dumps({'method':'turn/started','params':{'threadId':thread,'turn':t}}),flush=True)
+        r={'turn':t}
+    else: r={}
+    print(json.dumps({'id':q['id'],'result':r}),flush=True)
+"#, thread, if active_goal { "true" } else { "false" }]).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).kill_on_drop(true).spawn().unwrap();
+    let (tx, _rx) = tokio::sync::oneshot::channel();
+    client.connect(JsonRpcPeer::spawn(
+        child.stdin.take().unwrap(),
+        child.stdout.take().unwrap(),
+        client.clone(),
+        ExitSignalSender::new(tx),
+        cancel.clone(),
+    ));
+    client.initialize().await.unwrap();
+    client.register_session(thread).await.unwrap();
+    NativePeer {
+        child,
+        client,
+        cancel,
+    }
+}
+
+struct SyntheticResources {
+    failed: AtomicBool,
+}
+#[executors::original_worker::async_trait]
+impl ResourceProbe for SyntheticResources {
+    async fn sample(&self) -> io::Result<u64> {
+        if self.failed.load(Ordering::SeqCst) {
+            Err(invalid("Synthetic resource guard"))
+        } else {
+            Ok(0)
+        }
+    }
+    fn interval(&self) -> Duration {
+        Duration::ZERO
+    }
+}
+
+fn call(id: usize) -> Value {
+    json!({"jsonrpc":"2.0","id":id,"method":"tools/call","params":{"name":TOOL,"arguments":{}}})
+}
+
+#[tokio::test]
+async fn production_follow_up_resolution_launch_and_workspace_races() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(dir.path().join("fixture.sqlite"))
+                .create_if_missing(true),
+        )
+        .await
+        .unwrap();
+    sqlx::migrate!("../db/migrations").run(&pool).await.unwrap();
+    let db = DBService { pool: pool.clone() };
+    let container = Arc::new(FixtureContainer {
+        db: db.clone(),
+        git: git::GitService::new(),
+        stores: Arc::new(RwLock::new(HashMap::new())),
+        provider: OnceLock::new(),
+        launches: AtomicUsize::new(0),
+        worker_goal: AtomicBool::new(false),
+        peers: Mutex::new(Vec::new()),
+    });
+    let deployment = FixtureDeployment {
+        container: container.clone(),
+        config: Arc::new(RwLock::new(Config::default())),
+        events: EventService::new(db, Arc::new(MsgStore::new()), Arc::new(RwLock::new(0))),
+        queue: QueuedMessageService::new(),
+    };
+    let raw: ExecutorConfig = serde_json::from_value(json!({"executor":"CODEX","variant":"DEFAULT","model_id":"gpt-6.1-sol","reasoning_id":"high"})).unwrap();
+    let home = dir.path().join("native");
+    tokio::fs::create_dir_all(&home).await.unwrap();
+    // nextest isolates test processes; this fixture never opens the real native home.
+    unsafe {
+        std::env::set_var("CODEX_HOME", &home);
+    }
+    let native = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(home.join("state_5.sqlite"))
+                .create_if_missing(true),
+        )
+        .await
+        .unwrap();
+    sqlx::query("CREATE TABLE threads(id TEXT PRIMARY KEY,rollout_path TEXT)")
+        .execute(&native)
+        .await
+        .unwrap();
+    let goals = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(home.join("goals_1.sqlite"))
+                .create_if_missing(true),
+        )
+        .await
+        .unwrap();
+    sqlx::query("CREATE TABLE thread_goals(thread_id TEXT PRIMARY KEY,goal_id TEXT,objective TEXT,status TEXT,created_at_ms INTEGER)").execute(&goals).await.unwrap();
+    let mut identities = Vec::new();
+    let mut anchors = Vec::new();
+    for name in ["manager", "worker"] {
+        let root = dir.path().join(name);
+        tokio::fs::create_dir_all(root.join("repo")).await.unwrap();
+        let workspace = Workspace::create(
+            &pool,
+            &CreateWorkspace {
+                branch: "synthetic".into(),
+                name: Some(name.into()),
+            },
+            Uuid::new_v4(),
+        )
+        .await
+        .unwrap();
+        sqlx::query("UPDATE workspaces SET container_ref=? WHERE id=?")
+            .bind(root.to_str().unwrap())
+            .bind(workspace.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let repo = Repo::find_or_create(&pool, &root.join("repo"), "Synthetic repository")
+            .await
+            .unwrap();
+        WorkspaceRepo::create_many(
+            &pool,
+            workspace.id,
+            &[CreateWorkspaceRepo {
+                repo_id: repo.id,
+                target_branch: "synthetic".into(),
+            }],
+        )
+        .await
+        .unwrap();
+        let session = Session::create(
+            &pool,
+            &CreateSession {
+                executor: Some("CODEX".into()),
+                name: Some(name.into()),
+            },
+            Uuid::new_v4(),
+            workspace.id,
+        )
+        .await
+        .unwrap();
+        let thread = Uuid::new_v4().to_string();
+        let rollout = home.join(format!("{name}.jsonl"));
+        tokio::fs::write(&rollout, b"").await.unwrap();
+        sqlx::query("INSERT INTO threads VALUES (?,?)")
+            .bind(&thread)
+            .bind(rollout.to_str().unwrap())
+            .execute(&native)
+            .await
+            .unwrap();
+        let action = ExecutorAction::new(
+            ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+                prompt: "Synthetic prior owner input".into(),
+                session_id: thread.clone(),
+                executor_config: raw.clone(),
+                working_dir: session.agent_working_dir.clone(),
+                reset_to_message_id: None,
+                capacity: None,
+            }),
+            None,
+        );
+        let process = ExecutionProcess::create(
+            &pool,
+            &CreateExecutionProcess {
+                session_id: session.id,
+                executor_action: action,
+                run_reason: ExecutionProcessRunReason::CodingAgent,
+            },
+            Uuid::new_v4(),
+            &[],
+        )
+        .await
+        .unwrap();
+        let turn = CodingAgentTurn::create(
+            &pool,
+            &CreateCodingAgentTurn {
+                execution_process_id: process.id,
+                prompt: Some("Synthetic prior input".into()),
+            },
+            Uuid::new_v4(),
+        )
+        .await
+        .unwrap();
+        sqlx::query("UPDATE coding_agent_turns SET agent_session_id=? WHERE id=?")
+            .bind(&thread)
+            .bind(turn.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        if name == "worker" {
+            ExecutionProcess::update_completion(
+                &pool,
+                process.id,
+                ExecutionProcessStatus::Completed,
+                Some(0),
+            )
+            .await
+            .unwrap();
+        }
+        identities.push(Identity {
+            session: session.id,
+            workspace: workspace.id,
+            thread,
+            root,
+            working_dir: session.agent_working_dir,
+            task: None,
+            repositories: vec![repo.id],
+            config: raw.clone(),
+            profile_digest: services::services::original_worker::effective_profile_digest(&raw)
+                .unwrap(),
+            input_seal: services::services::original_worker::inputs::InputSeal {
+                backend_sequence: 0,
+                rollout,
+                records: 0,
+                prefix_digest: digest(b"[]"),
+            },
+        });
+        anchors.push(process.id);
+    }
+    let asset = dir.path().join("asset");
+    tokio::fs::write(&asset, b"synthetic asset").await.unwrap();
+    let contract = Contract {
+        id: Uuid::new_v4(),
+        manager: identities[0].clone(),
+        worker: identities[1].clone(),
+        goal_id: "synthetic-goal".into(),
+        goal_created_at: 10,
+        objective: "Synthetic fixed marketing revision".into(),
+        revision: "synthetic-fixed-revision".into(),
+        instructions: "Keep synthetic assets; grey date placeholders throughout marketing views."
+            .into(),
+        owner_evidence_digest: "a".repeat(64),
+        manager_anchor: anchors[0],
+        worker_anchor: anchors[1],
+        assets: vec![services::services::original_worker::AssetPin {
+            path: asset,
+            sha256: digest(b"synthetic asset"),
+        }],
+        recommend: serde_json::from_value(json!({"mode":"shadow"})).unwrap(),
+    };
+    sqlx::query("INSERT INTO thread_goals VALUES (?,?,?,'active',10000)")
+        .bind(&contract.manager.thread)
+        .bind(&contract.goal_id)
+        .bind(&contract.objective)
+        .execute(&goals)
+        .await
+        .unwrap();
+    let ledger = Arc::new(Ledger::adopt(pool.clone(), contract).await.unwrap());
+    let resources = Arc::new(SyntheticResources {
+        failed: AtomicBool::new(false),
+    });
+    let runtime = Arc::new(Live {
+        deployment: deployment.clone(),
+        ledger: ledger.clone(),
+        sampled: Mutex::new(None),
+        resources: resources.clone(),
+    });
+    let engine = Arc::new(Engine {
+        ledger: ledger.clone(),
+        runtime: runtime.clone(),
+    });
+    let provider = Arc::new(Provider {
+        runtime: runtime.clone(),
+        engine: engine.clone(),
+    });
+    assert!(container.provider.set(provider).is_ok());
+    services::services::original_worker::register(ledger.clone()).unwrap();
+    let manager = native_peer(&ledger.contract.manager.thread, false, None).await;
+    manager
+        .client
+        .turn_start_with_mode(
+            ledger.contract.manager.thread.clone(),
+            serde_json::from_value(
+                json!([{"type":"text","text":"synthetic prior owner input","text_elements":[]}]),
+            )
+            .unwrap(),
+            None,
+        )
+        .await
+        .unwrap();
+    AppServerClient::register_active_execution(anchors[0], &manager.client);
+    assert!(engine.handle(Uuid::new_v4(), call(1)).await.is_err());
+    resources.failed.store(true, Ordering::SeqCst);
+    assert!(engine.handle(anchors[0], call(2)).await.is_err());
+    resources.failed.store(false, Ordering::SeqCst);
+    let sibling = Session::create(
+        &pool,
+        &CreateSession {
+            executor: Some("CODEX".into()),
+            name: Some("sibling".into()),
+        },
+        Uuid::new_v4(),
+        ledger.contract.worker.workspace,
+    )
+    .await
+    .unwrap();
+    let queued = DraftFollowUpData {
+        message: "Synthetic collision".into(),
+        executor_config: raw.clone(),
+    };
+    admission::run(async {
+        deployment.queue.queue_for_capacity(sibling.id, queued);
+    })
+    .await;
+    assert!(engine.handle(anchors[0], call(3)).await.is_err());
+    deployment.queue.cancel_queued(sibling.id);
+    let sibling_process = ExecutionProcess::create(
+        &pool,
+        &CreateExecutionProcess {
+            session_id: sibling.id,
+            executor_action: ExecutorAction::new(
+                ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+                    prompt: "Synthetic collision".into(),
+                    executor_config: raw.clone(),
+                    session_id: "synthetic-sibling".into(),
+                    working_dir: sibling.agent_working_dir.clone(),
+                    reset_to_message_id: None,
+                    capacity: None,
+                }),
+                None,
+            ),
+            run_reason: ExecutionProcessRunReason::CodingAgent,
+        },
+        Uuid::new_v4(),
+        &[],
+    )
+    .await
+    .unwrap();
+    assert!(engine.handle(anchors[0], call(4)).await.is_err());
+    ExecutionProcess::update_completion(
+        &pool,
+        sibling_process.id,
+        ExecutionProcessStatus::Completed,
+        Some(0),
+    )
+    .await
+    .unwrap();
+    let (a, b) = tokio::join!(
+        engine.handle(anchors[0], call(5)),
+        engine.handle(anchors[0], call(6))
+    );
+    assert_eq!(
+        usize::from(a.is_ok()) + usize::from(b.is_ok()),
+        1,
+        "one actual follow-up admission"
+    );
+    assert_eq!(container.launches.load(Ordering::SeqCst), 1);
+    let action: String = sqlx::query_scalar("SELECT executor_action FROM execution_processes WHERE session_id=? ORDER BY rowid DESC LIMIT 1").bind(ledger.contract.worker.session).fetch_one(&pool).await.unwrap();
+    let action: ExecutorAction = serde_json::from_str(&action).unwrap();
+    assert_eq!(executors::routing::config(&action), Some(&raw));
+    assert!(raw.routing.is_none());
+    assert_eq!(
+        action.routing_decision.as_ref().unwrap().mode,
+        executors::routing::RoutingMode::Shadow
+    );
+    let activations: i64 = sqlx::query_scalar("SELECT sum(activated) FROM bounded_worker_attempts")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(activations, 1);
+    // New native steering is rejected even though goal and executor_action did not change.
+    tokio::fs::write(&ledger.contract.manager.input_seal.rollout, serde_json::to_vec(&json!({"type":"event_msg","payload":{"type":"user_message","message":"Synthetic unverified amendment"}})).unwrap()).await.unwrap();
+    assert!(runtime.check(anchors[0]).await.is_err());
+    assert!(ledger.active().await.is_err());
+    drop(manager);
+    container.peers.lock().await.clear();
+}

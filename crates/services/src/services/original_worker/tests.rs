@@ -87,9 +87,21 @@ async fn fixture() -> Fixture {
     .execute(&pool)
     .await
     .unwrap();
+    sqlx::raw_sql(include_str!(
+        "../../../../db/migrations/20261011130000_bounded_native_activation.sql"
+    ))
+    .execute(&pool)
+    .await
+    .unwrap();
     sqlx::raw_sql("CREATE TABLE sessions(id BLOB PRIMARY KEY, workspace_id BLOB); CREATE TABLE execution_processes(id BLOB PRIMARY KEY,session_id BLOB,status TEXT,exit_code INTEGER,dropped BOOLEAN,run_reason TEXT,created_at INTEGER,executor_action TEXT);").execute(&pool).await.unwrap();
-    let config: ExecutorConfig = serde_json::from_value(json!({"executor":"CODEX","variant":"DEFAULT","model_id":"gpt-6.1-sol","reasoning_id":"high","routing":{"mode":"shadow"}})).unwrap();
+    let config: ExecutorConfig = serde_json::from_value(json!({"executor":"CODEX","variant":"DEFAULT","model_id":"gpt-6.1-sol","reasoning_id":"high"})).unwrap();
     let identity = || Identity {
+        input_seal: inputs::InputSeal {
+            backend_sequence: 0,
+            rollout: "/synthetic/rollout.jsonl".into(),
+            records: 0,
+            prefix_digest: digest(b"[]"),
+        },
         session: Uuid::new_v4(),
         workspace: Uuid::new_v4(),
         thread: Uuid::new_v4().to_string(),
@@ -101,7 +113,7 @@ async fn fixture() -> Fixture {
         repositories: vec![Uuid::new_v4()],
     };
     let caller = Uuid::new_v4();
-    let contract = Contract { id: Uuid::new_v4(), manager: identity(), worker: identity(), goal_id: "synthetic-goal".into(), goal_created_at: 10, objective: "Synthetic marketing revision".into(), revision: "synthetic-owner-revision".into(), instructions: "Retain synthetic image assets and all Figma/AE review gates; revise marketing with grey date placeholders.".into(), owner_evidence_digest: "a".repeat(64), manager_anchor: caller, worker_anchor: Uuid::new_v4(), assets: vec![AssetPin { path: "/synthetic/assets/image.png".into(), sha256: "b".repeat(64) }] };
+    let contract = Contract { recommend: serde_json::from_value(json!({"mode":"shadow"})).unwrap(), id: Uuid::new_v4(), manager: identity(), worker: identity(), goal_id: "synthetic-goal".into(), goal_created_at: 10, objective: "Synthetic marketing revision".into(), revision: "synthetic-owner-revision".into(), instructions: "Retain synthetic image assets and all Figma/AE review gates; revise marketing with grey date placeholders.".into(), owner_evidence_digest: "a".repeat(64), manager_anchor: caller, worker_anchor: Uuid::new_v4(), assets: vec![AssetPin { path: "/synthetic/assets/image.png".into(), sha256: "b".repeat(64) }] };
     sqlx::query("INSERT INTO sessions VALUES (?,?)")
         .bind(contract.manager.session)
         .bind(contract.manager.workspace)

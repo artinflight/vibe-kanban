@@ -131,6 +131,7 @@ pub struct AppServerClient {
     plan_mode: bool,
     resolved_model: OnceLock<String>,
     continuation_runtime: OnceLock<String>,
+    original_worker: OnceLock<Arc<dyn crate::original_worker::LaunchGuard>>,
     routing_locked: AtomicBool,
     routing_telemetry: OnceLock<crate::routing_telemetry::NativeBinding>,
     routed_effort: OnceLock<codex_protocol::openai_models::ReasoningEffort>,
@@ -472,6 +473,7 @@ impl AppServerClient {
             plan_mode,
             resolved_model: OnceLock::new(),
             continuation_runtime: OnceLock::new(),
+            original_worker: OnceLock::new(),
             routing_locked: AtomicBool::new(false),
             routing_telemetry: OnceLock::new(),
             routed_effort: OnceLock::new(),
@@ -943,6 +945,10 @@ impl AppServerClient {
         let _ = self.rpc.set(peer);
     }
 
+    pub fn set_original_worker_guard(&self, guard: Arc<dyn crate::original_worker::LaunchGuard>) {
+        let _ = self.original_worker.set(guard);
+    }
+
     pub fn register_active_execution(execution_process_id: Uuid, client: &Arc<Self>) {
         let _ = client.execution_id.set(execution_process_id);
         active_codex_clients()
@@ -1068,6 +1074,19 @@ impl AppServerClient {
         &self,
         params: ThreadResumeParams,
     ) -> Result<ThreadResumeResponse, ExecutorError> {
+        let _load_fence = if let Some(guard) = self.original_worker.get().filter(|g| g.worker()) {
+            let fence = guard.activation(None).await?;
+            let snapshot = self
+                .goal_request(
+                    "thread/goal/get",
+                    serde_json::json!({"threadId":params.thread_id}),
+                )
+                .await?;
+            crate::original_worker::worker_goal_load_allowed(&snapshot)?;
+            Some(fence)
+        } else {
+            None
+        };
         let request = ClientRequest::ThreadResume {
             request_id: self.next_request_id(),
             params,
@@ -1095,6 +1114,25 @@ impl AppServerClient {
                 ..Default::default()
             },
         };
+        let _activation_fence =
+            if let Some(guard) = self.original_worker.get().filter(|g| g.worker()) {
+                // Every native start, including feedback paths, passes the same
+                // one-shot activation boundary. Setup above this point is not proof.
+                let text = match &request {
+                    ClientRequest::TurnStart { params, .. } => match params.input.as_slice() {
+                        [UserInput::Text { text, .. }] => text.as_str(),
+                        _ => {
+                            return Err(ExecutorError::Io(io::Error::other(
+                                "Bounded native input changed",
+                            )));
+                        }
+                    },
+                    _ => unreachable!(),
+                };
+                Some(guard.activation(Some(text)).await?)
+            } else {
+                None
+            };
         let response: TurnStartResponse = self.send_request(request, "turn/start").await?;
         if let Some(binding) = self.routing_telemetry.get() {
             binding.turn(&thread_id, &response.turn.id).await;

@@ -72,6 +72,8 @@ tokio-tungstenite = { version = "0.26", features = ["rustls-tls-native-roots"] }
 dotenv = "0.15"
 
 [dev-dependencies]
+client-info = { path = "../client-info" }
+remote-info = { path = "../remote-info" }
 tempfile = "3"
 
 [features]

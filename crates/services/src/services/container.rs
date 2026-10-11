@@ -155,7 +155,7 @@ impl ContainerError {
 }
 
 #[async_trait]
-pub trait ContainerService {
+pub trait ContainerService: Send + Sync {
     fn msg_stores(&self) -> &Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>>;
 
     fn db(&self) -> &DBService;
@@ -1531,7 +1531,7 @@ pub trait ContainerService {
 
         // Route only here, after queue admission and before persisting the action.
         // A routing failure cannot reset Git or create another continuation loop.
-        let mut resolved_action = executor_action.clone();
+        let mut resolved_action = super::original_worker::routing_action(executor_action);
         if executors::routing::config(&resolved_action)
             .and_then(|c| c.routing.as_ref())
             .is_some_and(|p| p.mode != executors::routing::RoutingMode::Manual)
@@ -1579,6 +1579,8 @@ pub trait ContainerService {
         } else {
             resolved_action.routing_decision = None;
         }
+        super::original_worker::restore_raw_action(&mut resolved_action, executor_action)
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         let executor_action = &resolved_action;
 
         // Create new execution process record

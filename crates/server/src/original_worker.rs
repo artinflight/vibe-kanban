@@ -2,7 +2,10 @@
 //! boundary; this is not independent custody against backend-host compromise.
 use std::{
     io,
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
     time::{Duration, Instant},
 };
 
@@ -23,7 +26,7 @@ use uuid::Uuid;
 
 use crate::{
     DeploymentImpl,
-    routes::sessions::{CreateFollowUpAttempt, follow_up},
+    routes::sessions::{CreateFollowUpAttempt, follow_up_admitted},
 };
 
 pub async fn configure(deployment: DeploymentImpl) -> io::Result<()> {
@@ -62,6 +65,7 @@ pub async fn configure(deployment: DeploymentImpl) -> io::Result<()> {
             deployment,
             ledger: ledger.clone(),
             sampled: Mutex::new(None),
+            resources: Arc::new(HostResources),
         });
         let engine = Arc::new(Engine {
             ledger: ledger.clone(),
@@ -73,15 +77,15 @@ pub async fn configure(deployment: DeploymentImpl) -> io::Result<()> {
     }
 }
 
-struct Live {
-    deployment: DeploymentImpl,
+struct Live<D: Deployment = DeploymentImpl> {
+    deployment: D,
+    resources: Arc<dyn ResourceProbe>,
     ledger: Arc<Ledger>,
     sampled: Mutex<Option<(Instant, u64)>>,
 }
 
-impl Live {
+impl<D: Deployment> Live<D> {
     async fn identity(&self, expected: &Identity) -> io::Result<(Session, Uuid)> {
-        services::services::original_worker::verify_profile(expected)?;
         let pool = &self.deployment.db().pool;
         let session = Session::find_by_id(pool, expected.session)
             .await
@@ -140,6 +144,17 @@ impl Live {
         self.ledger.goal(&goal).await
     }
 
+    async fn resource_freshness(&self) -> io::Result<()> {
+        let sample = *self.sampled.lock().await;
+        let (_, baseline) = sample
+            .filter(|(stamp, _)| stamp.elapsed() <= Duration::from_secs(10))
+            .ok_or_else(|| invalid("Resource evidence is stale"))?;
+        if self.resources.sample().await? != baseline {
+            return Err(invalid("Swap activity changed before native activation"));
+        }
+        Ok(())
+    }
+
     async fn assets(&self) -> io::Result<()> {
         for pin in &self.ledger.contract.assets {
             let path = pin.path.canonicalize()?;
@@ -157,18 +172,18 @@ impl Live {
 }
 
 #[executors::original_worker::async_trait]
-impl Runtime for Live {
+impl<D: Deployment> Runtime for Live<D> {
     async fn prepare(&self) -> io::Result<()> {
         // No admission lock while sampling; ordinary input/lifecycle reads remain live.
         let mut previous = None;
         for index in 0..3 {
-            let sample = resources().await?;
+            let sample = self.resources.sample().await?;
             if previous.is_some_and(|p| p != sample) {
                 return Err(invalid("Swap out activity blocks continuation"));
             }
             previous = Some(sample);
             if index != 2 {
-                tokio::time::sleep(Duration::from_secs(10)).await;
+                tokio::time::sleep(self.resources.interval()).await;
             }
         }
         *self.sampled.lock().await = Some((
@@ -181,6 +196,9 @@ impl Runtime for Live {
     async fn check(&self, caller: Uuid) -> io::Result<()> {
         self.ledger.active().await?;
         self.ledger.manager_history().await?;
+        self.ledger
+            .native_inputs(&self.ledger.contract.manager)
+            .await?;
         let (session, head) = self.identity(&self.ledger.contract.manager).await?;
         let process = ExecutionProcess::find_by_id(&self.deployment.db().pool, caller)
             .await
@@ -206,11 +224,21 @@ impl Runtime for Live {
         if sample.is_none_or(|(stamp, _)| stamp.elapsed() > Duration::from_secs(10)) {
             return Err(invalid("Resource evidence is stale"));
         }
-        if resources().await? != sample.ok_or_else(|| invalid("Missing resource sample"))?.1 {
+        if self.resources.sample().await?
+            != sample.ok_or_else(|| invalid("Missing resource sample"))?.1
+        {
             return Err(invalid("Swap activity changed before admission"));
         }
         self.goal().await?;
         let c = &self.ledger.contract;
+        self.ledger.worker_history().await?;
+        self.ledger.native_inputs(&c.worker).await?;
+        self.ledger
+            .workspace_idle(
+                &self.deployment.queued_message_service().session_ids(),
+                None,
+            )
+            .await?;
         let (_, head) = self.identity(&c.worker).await?;
         if !self.ledger.owns_head(head).await? {
             self.ledger
@@ -247,7 +275,7 @@ impl Runtime for Live {
             .await
             .map_err(|_| invalid("Worker missing"))?
             .ok_or_else(|| invalid("Worker missing"))?;
-        let response = follow_up(
+        let response = follow_up_admitted(
             Extension(session),
             State(self.deployment.clone()),
             Json(CreateFollowUpAttempt {
@@ -268,13 +296,52 @@ impl Runtime for Live {
     }
 }
 
-struct Provider {
-    runtime: Arc<Live>,
+struct Provider<D: Deployment = DeploymentImpl> {
+    runtime: Arc<Live<D>>,
     engine: Arc<Engine>,
 }
 
 #[executors::original_worker::async_trait]
-impl Backend for Provider {
+impl<D: Deployment> Backend for Provider<D> {
+    async fn launch_guard(
+        &self,
+        env: &ExecutionEnv,
+    ) -> io::Result<Option<Arc<dyn executors::original_worker::LaunchGuard>>> {
+        let c = &self.runtime.ledger.contract;
+        let execution = env
+            .get("VK_EXECUTION_PROCESS_ID")
+            .and_then(|v| Uuid::parse_str(v).ok())
+            .ok_or_else(|| invalid("Missing execution context"))?;
+        let identity = match env.get("VK_SESSION_ID").map(String::as_str) {
+            Some(id) if id == c.worker.session.to_string() => {
+                let n: i64 = sqlx::query_scalar("SELECT count(*) FROM bounded_worker_attempts WHERE grant_id=? AND execution=? AND state='dispatching'")
+                    .bind(c.id).bind(execution).fetch_one(&self.runtime.ledger.pool).await.map_err(|_| invalid("Launch receipt unavailable"))?;
+                if n != 1 {
+                    return Ok(None);
+                }
+                &c.worker
+            }
+            Some(id) if id == c.manager.session.to_string() => {
+                if self.runtime.ledger.active().await.is_err() {
+                    return Ok(None);
+                }
+                &c.manager
+            }
+            _ => return Ok(None),
+        };
+        if env.get("VK_WORKSPACE_ID") != Some(&identity.workspace.to_string())
+            || env.capacity.is_some()
+        {
+            return Err(invalid("Launch workspace/capacity context changed"));
+        }
+        Ok(Some(Arc::new(BoundLaunch {
+            runtime: self.runtime.clone(),
+            identity: identity.clone(),
+            execution,
+            verified: AtomicBool::new(false),
+        })))
+    }
+
     async fn bind(&self, env: &ExecutionEnv) -> io::Result<Option<Transport>> {
         let c = &self.runtime.ledger.contract;
         if env.get("VK_SESSION_ID").map(String::as_str)
@@ -383,7 +450,9 @@ impl Backend for Provider {
             return Ok(());
         }
         self.runtime.ledger.active().await?;
-        services::services::original_worker::verify_profile(identity)?;
+        if env.original_worker.is_none() {
+            return Err(invalid("Bound launch instance proof missing"));
+        }
         if thread != identity.thread || model != "gpt-6.1-sol" || effort.as_str() != Some("high") {
             self.runtime
                 .ledger
@@ -403,7 +472,7 @@ impl Backend for Provider {
             self.runtime.goal().await?;
             self.runtime.assets().await?;
             executors::capacity::controller::before_bounded_worker_launch().await?;
-            resources().await?;
+            self.runtime.resource_freshness().await?;
         } else {
             let goal = executors::capacity::first_run::native(&c.manager.thread).await?;
             if goal.goal_id != c.goal_id
@@ -418,6 +487,88 @@ impl Backend for Provider {
             }
         }
         Ok(())
+    }
+}
+
+struct BoundLaunch<D: Deployment> {
+    runtime: Arc<Live<D>>,
+    identity: Identity,
+    execution: Uuid,
+    verified: AtomicBool,
+}
+impl<D: Deployment> std::fmt::Debug for BoundLaunch<D> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("BoundLaunch")
+    }
+}
+#[executors::original_worker::async_trait]
+impl<D: Deployment> executors::original_worker::LaunchGuard for BoundLaunch<D> {
+    fn worker(&self) -> bool {
+        self.identity.session == self.runtime.ledger.contract.worker.session
+    }
+    async fn resolved(
+        &self,
+        agent: &executors::executors::CodingAgent,
+        raw: &executors::profile::ExecutorConfig,
+    ) -> io::Result<()> {
+        self.runtime.ledger.active().await?;
+        if executors::original_worker::verify_resolved(
+            agent,
+            raw,
+            &self.identity.config,
+            &self.identity.profile_digest,
+        )
+        .is_err()
+        {
+            self.runtime
+                .ledger
+                .end("suspended", "resolved_launch_profile_changed")
+                .await?;
+            return Err(invalid(
+                "Actual resolved launch instance differs from fixed profile",
+            ));
+        }
+        self.verified.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+    async fn activation(
+        &self,
+        input: Option<&str>,
+    ) -> io::Result<executors::original_worker::ActivationFence> {
+        let ledger = &self.runtime.ledger;
+        ledger.activation_fence(async {
+            if !self.worker() || !self.verified.load(Ordering::SeqCst) { return Err(invalid("Exact resolved launch proof missing")); }
+            let caller: Uuid = sqlx::query_scalar("SELECT caller FROM bounded_worker_attempts WHERE grant_id=? AND execution=? AND state='dispatching'")
+                .bind(ledger.contract.id).bind(self.execution).fetch_one(&ledger.pool).await.map_err(|_| invalid("Launch receipt changed"))?;
+            self.runtime.check(caller).await?;
+            let (_, head) = self.runtime.identity(&self.identity).await?;
+            let process = ExecutionProcess::find_by_id(&ledger.pool, self.execution).await.map_err(|_| invalid("Worker execution unavailable"))?.ok_or_else(|| invalid("Worker execution missing"))?;
+            if head != self.execution || process.session_id != self.identity.session || process.status != db::models::execution_process::ExecutionProcessStatus::Running { return Err(invalid("Original worker execution binding changed")); }
+            ledger.worker_history().await?;
+            ledger.native_inputs(&self.identity).await?;
+            ledger.workspace_idle(&self.runtime.deployment.queued_message_service().session_ids(), Some(self.execution)).await?;
+            self.runtime.assets().await?;
+            executors::capacity::controller::before_bounded_worker_launch().await?;
+            if ExecutionProcess::find_running(&ledger.pool).await.map_err(|_| invalid("Global capacity unknown"))?.len() > 7 { return Err(invalid("Owner capacity lane unavailable")); }
+            self.runtime.resource_freshness().await?;
+            if let Some(input) = input { ledger.activate_input(self.execution, input).await?; }
+            Ok(())
+        }).await
+    }
+}
+
+#[executors::original_worker::async_trait]
+trait ResourceProbe: Send + Sync {
+    async fn sample(&self) -> io::Result<u64>;
+    fn interval(&self) -> Duration {
+        Duration::from_secs(10)
+    }
+}
+struct HostResources;
+#[executors::original_worker::async_trait]
+impl ResourceProbe for HostResources {
+    async fn sample(&self) -> io::Result<u64> {
+        resources().await
     }
 }
 
@@ -468,3 +619,6 @@ async fn resources() -> io::Result<u64> {
         .and_then(|v| v.parse().ok())
         .ok_or_else(|| invalid("Swap activity unavailable"))
 }
+
+#[cfg(test)]
+mod tests;

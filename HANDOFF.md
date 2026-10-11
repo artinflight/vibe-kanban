@@ -1,5 +1,14 @@
 ## October11: fixed original-worker capability requires compiled validation
 
+Draft PR243 now carries the narrow production integration over staging2693c46d.
+Test run38140071765 at4f2c3368b passed9 continuation fixtures and521 workspace
+tests (11 skipped), plus Clippy/schema/frontend/Tauri. Final effective-profile
+pin changes require final-head CI. The separate artifact builder is blocked by
+its runner's bubblewrap loopback prerequisite; do not bypass sandboxing. The
+stopped Staging conversation has not been resumed. An active owner routing and
+independent review/next-restart acceptance remain required; no live contract or
+worker prompt has been created. See VK_BOUNDED_WORKER_CONTINUATION.md.
+
 Continue feat/bounded-original-worker-continuation in this existing workspace.
 It is a narrow diff over current staging2693c46d, preserving original prepared
 commits on vk/870d-vk-mcp-approval. The prior external-custody blocker was too broad:

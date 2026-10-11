@@ -96,6 +96,7 @@ async fn fixture() -> Fixture {
         root: "/synthetic/worktree".into(),
         working_dir: None,
         config: config.clone(),
+        profile_digest: "c".repeat(64),
         task: None,
         repositories: vec![Uuid::new_v4()],
     };
@@ -151,6 +152,16 @@ fn worker_action(c: &Contract) -> ExecutorAction {
         }),
         None,
     )
+}
+
+#[tokio::test]
+async fn effective_profile_pin_checks_actual_launch_settings_without_logging_them() {
+    let f = fixture().await;
+    let mut identity = f.ledger.contract.worker.clone();
+    identity.profile_digest = effective_profile_digest(&identity.config).unwrap();
+    verify_profile(&identity).unwrap();
+    identity.config.model_id = Some("synthetic-unapproved-model".into());
+    assert!(verify_profile(&identity).is_err());
 }
 
 #[cfg(unix)]

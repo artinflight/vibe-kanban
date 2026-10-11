@@ -1,3 +1,12 @@
+## October11 fixed-contract implementation
+
+Draft PR243 is the narrow feature stream from staging2693c46d. Nine integrated
+continuation fixtures and521 workspace tests passed at4f2c3368b; final effective
+profile pin validation remains pending. The old prepared commits are preserved
+on vk/870d-vk-mcp-approval, not merged wholesale. Default-off release adoption,
+independent review, staging-owner acceptance and legitimate post-restart live
+acceptance are separate remaining gates. No deployment/restart is authorized.
+
 ## October11: fixed original-worker continuation
 
 Branch feat/bounded-original-worker-continuation starts at verified staging

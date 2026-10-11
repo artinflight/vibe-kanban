@@ -7,3 +7,9 @@ CREATE TABLE bounded_native_input_history (
     session_id BLOB NOT NULL,
     native_resume INTEGER NOT NULL CHECK(native_resume IN (0,1))
 );
+
+-- Coverage is minted by the journaling backend, never by an invocation.
+CREATE TABLE bounded_native_input_coverage (
+    singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+    id BLOB NOT NULL
+);

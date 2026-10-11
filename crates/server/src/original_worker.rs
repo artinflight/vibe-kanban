@@ -30,6 +30,7 @@ use crate::{
 };
 
 pub async fn configure(deployment: DeploymentImpl) -> io::Result<()> {
+    services::services::original_worker::start_input_coverage(&deployment.db().pool).await?;
     let Ok(path) = std::env::var("VK_BOUNDED_WORKER_CONTRACT") else {
         return Ok(());
     };

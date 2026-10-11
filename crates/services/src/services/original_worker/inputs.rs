@@ -14,6 +14,7 @@ use super::{digest, invalid};
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct InputSeal {
+    pub coverage_id: uuid::Uuid,
     pub backend_sequence: i64,
     pub rollout: PathBuf,
     pub records: usize,
@@ -66,7 +67,7 @@ fn inputs(bytes: &[u8]) -> io::Result<Vec<Input>> {
                 ),
             });
         } else if kind == "event_msg"
-            && ["rollback", "reset", "steer", "drop", "input"]
+            && ["rollback", "rolled_back", "reset", "steer", "drop", "input"]
                 .iter()
                 .any(|s| event.contains(s))
         {
@@ -154,6 +155,7 @@ mod tests {
     }
     fn seal() -> InputSeal {
         InputSeal {
+            coverage_id: uuid::Uuid::new_v4(),
             backend_sequence: 0,
             rollout: "/synthetic/native.jsonl".into(),
             records: 0,

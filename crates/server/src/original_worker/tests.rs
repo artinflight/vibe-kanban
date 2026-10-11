@@ -410,6 +410,9 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
         .await
         .unwrap();
     sqlx::query("CREATE TABLE thread_goals(thread_id TEXT PRIMARY KEY,goal_id TEXT,objective TEXT,status TEXT,created_at_ms INTEGER)").execute(&goals).await.unwrap();
+    let coverage = services::services::original_worker::start_input_coverage(&pool)
+        .await
+        .unwrap();
     let mut identities = Vec::new();
     let mut anchors = Vec::new();
     for name in ["manager", "worker"] {
@@ -567,6 +570,7 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
             profile_digest: services::services::original_worker::effective_profile_digest(&raw)
                 .unwrap(),
             input_seal: services::services::original_worker::inputs::InputSeal {
+                coverage_id: coverage,
                 backend_sequence: 0,
                 rollout,
                 records: 0,
@@ -642,6 +646,35 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
     resources.failed.store(true, Ordering::SeqCst);
     assert!(engine.handle(anchors[0], call(2)).await.is_err());
     resources.failed.store(false, Ordering::SeqCst);
+    let asset = &ledger.contract.assets[0].path;
+    tokio::fs::write(asset, b"synthetic altered asset")
+        .await
+        .unwrap();
+    assert!(engine.handle(anchors[0], call(20)).await.is_err());
+    tokio::fs::write(asset, b"synthetic asset").await.unwrap();
+    let worker_action: String =
+        sqlx::query_scalar("SELECT executor_action FROM execution_processes WHERE id=?")
+            .bind(anchors[1])
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    let mut changed: ExecutorAction = serde_json::from_str(&worker_action).unwrap();
+    if let ExecutorActionType::CodingAgentFollowUpRequest(r) = &mut changed.typ {
+        r.executor_config.reasoning_id = Some("low".into());
+    }
+    sqlx::query("UPDATE execution_processes SET executor_action=? WHERE id=?")
+        .bind(serde_json::to_string(&changed).unwrap())
+        .bind(anchors[1])
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert!(engine.handle(anchors[0], call(21)).await.is_err());
+    sqlx::query("UPDATE execution_processes SET executor_action=? WHERE id=?")
+        .bind(&worker_action)
+        .bind(anchors[1])
+        .execute(&pool)
+        .await
+        .unwrap();
     let sibling = Session::create(
         &pool,
         &CreateSession {
@@ -657,11 +690,34 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
         message: "Synthetic collision".into(),
         executor_config: raw.clone(),
     };
-    admission::run(async {
-        deployment.queue.queue_for_capacity(sibling.id, queued);
-    })
-    .await;
-    assert!(engine.handle(anchors[0], call(3)).await.is_err());
+    let entered = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let writing = tokio::spawn({
+        let entered = entered.clone();
+        let release = release.clone();
+        let queue = deployment.queue.clone();
+        let sibling_id = sibling.id;
+        async move {
+            admission::run(async {
+                entered.notify_one();
+                release.notified().await;
+                queue.queue_for_capacity(sibling_id, queued);
+            })
+            .await;
+        }
+    });
+    entered.notified().await;
+    let racing = tokio::spawn({
+        let engine = engine.clone();
+        let caller = anchors[0];
+        async move { engine.handle(caller, call(3)).await }
+    });
+    release.notify_one();
+    writing.await.unwrap();
+    assert!(
+        racing.await.unwrap().is_err(),
+        "queued sibling admission wins atomically before bounded start"
+    );
     deployment.queue.cancel_queued(sibling.id);
     let sibling_process = ExecutionProcess::create(
         &pool,
@@ -704,6 +760,23 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
         "one actual follow-up admission: a={a:?}, b={b:?}"
     );
     assert_eq!(container.launches.load(Ordering::SeqCst), 1);
+    assert!(
+        admission::run(follow_up_admitted(
+            Extension(sibling.clone()),
+            State(deployment.clone()),
+            Json(CreateFollowUpAttempt {
+                prompt: "Synthetic ordinary sibling collision".into(),
+                executor_config: raw.clone(),
+                retry_process_id: None,
+                force_when_dirty: None,
+                perform_git_reset: Some(false)
+            })
+        ))
+        .await
+        .is_err(),
+        "normal follow-up cannot start a sibling while the bound worker runs"
+    );
+
     let action: String = sqlx::query_scalar("SELECT executor_action FROM execution_processes WHERE session_id=? ORDER BY rowid DESC LIMIT 1").bind(ledger.contract.worker.session).fetch_one(&pool).await.unwrap();
     let action: ExecutorAction = serde_json::from_str(&action).unwrap();
     assert_eq!(executors::routing::config(&action), Some(&raw));
@@ -727,7 +800,7 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
             .fetch_one(&pool)
             .await
             .unwrap();
-    admission::run(crate::routes::sessions::queue::queue_message_admitted(
+    let steering = admission::run(crate::routes::sessions::queue::queue_message_admitted(
         Extension(
             Session::find_by_id(&pool, ledger.contract.manager.session)
                 .await
@@ -742,6 +815,7 @@ async fn production_follow_up_resolution_launch_and_workspace_races() {
     ))
     .await
     .unwrap();
+    assert!(steering.0.is_success());
     let same_action: String =
         sqlx::query_scalar("SELECT executor_action FROM execution_processes WHERE id=?")
             .bind(anchors[0])

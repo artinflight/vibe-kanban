@@ -216,6 +216,44 @@ mod tests {
         profile::ExecutorConfig,
     };
 
+    #[tokio::test]
+    async fn uncertain_native_setup_does_not_emit_an_automatic_stop_signal() {
+        let dir = tempfile::tempdir().unwrap();
+        unsafe {
+            std::env::set_var("VK_USE_SYSTEMD_RUN", "0");
+        }
+        let codex: Codex = serde_json::from_value(serde_json::json!({})).unwrap();
+        let (entered, receipt) = tokio::sync::oneshot::channel();
+        let command = CommandParts::new("python3".into(), vec!["-u".into(), "-c".into(), r#"
+import json,sys
+for line in sys.stdin:
+    q=json.loads(line)
+    if q.get('method')=='initialize':
+        print(json.dumps({'id':q['id'],'result':{'userAgent':'codex_cli_rs/0.159.2 (synthetic)','platformFamily':'unix','platformOs':'linux'}}),flush=True)
+"#.into()]);
+        let env = ExecutionEnv::new(crate::env::RepoContext::default(), false, String::new());
+        let mut spawned = codex
+            .spawn_app_server(dir.path(), command, &env, move |_, _| async move {
+                let _ = entered.send(());
+                Err(ExecutorError::NativeReceiptUnknown)
+            })
+            .await
+            .unwrap();
+        receipt.await.unwrap();
+        let mut exit = spawned.exit_signal.take().unwrap();
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(100), &mut exit)
+                .await
+                .is_err(),
+            "unknown receipt must not tell the container to kill work"
+        );
+        assert!(spawned.child.inner().try_wait().unwrap().is_none());
+        // Isolated fixture teardown only; production uncertainty performs neither.
+        spawned.cancel.take().unwrap().cancel();
+        spawned.child.kill().await.unwrap();
+        spawned.child.wait().await.unwrap();
+    }
+
     #[test]
     fn codex_max_active_execution_parser_requires_positive_integer() {
         assert_eq!(
@@ -1459,6 +1497,7 @@ impl Codex {
             }
             .await;
             if result.is_err()
+                && !matches!(result, Err(ExecutorError::NativeReceiptUnknown))
                 && let Some(execution_process_id) = execution_process_id
             {
                 AppServerClient::unregister_active_execution(execution_process_id);
@@ -1470,6 +1509,17 @@ impl Codex {
                         .await;
                 }
                 match &err {
+                    ExecutorError::NativeReceiptUnknown => {
+                        // The container interprets an exit signal (including a
+                        // dropped sender) as permission to kill the group. Keep
+                        // the RPC reader and active execution registered until
+                        // actual completion/disconnect or an explicit owner stop.
+                        log_writer
+                            .log_raw(&Error::launch_error(err.to_string()).raw())
+                            .await
+                            .ok();
+                        return;
+                    }
                     ExecutorError::Io(io_err)
                         if io_err.kind() == std::io::ErrorKind::BrokenPipe =>
                     {

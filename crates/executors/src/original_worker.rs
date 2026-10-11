@@ -22,6 +22,12 @@ pub trait LaunchGuard: Send + Sync + std::fmt::Debug {
         raw: &crate::profile::ExecutorConfig,
     ) -> io::Result<()>;
     async fn activation(&self, thread: &str, input: Option<&str>) -> io::Result<ActivationFence>;
+    /// Invoked under the activation fence after an unknown native receipt.
+    async fn receipt_uncertain(&self) -> io::Result<()> {
+        Err(io::Error::other(
+            "Native receipt uncertainty handler unavailable",
+        ))
+    }
     fn worker(&self) -> bool;
 }
 

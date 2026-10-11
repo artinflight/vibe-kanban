@@ -34,16 +34,61 @@ unknown history cannot silently amend the grant. Only exact receipt-bound worker
 input survives suffix validation; images in the adopted prefix remain hashed.
 No transcript or profile contents enter diagnostics.
 
-A legacy contract captured before this journal existed cannot prove that no
-pending steering was accepted. It is rejected, rather than treating a local
-owner_authorized flag as evidence. The smallest supported activation sequence is:
-install the reviewed code default-off at an independently authorized restart;
-the release owner then captures the fixed private contract under the corrected
-producer's durable coverage; adopt that pinned artifact at a subsequent separately
-authorized restart. This turn authorizes neither restart nor live grant. No short
-TTL or routine renewal is added. The trusted backend/state boundary remains
-sufficient for this scoped feature, but same-UID writers or host compromise can
-alter that trusted base; this is explicitly not independent external custody.
+A legacy contract captured before journaling cannot prove that old ingress has
+no pending steering. Current executable adoption still rejects it. The previous
+two-restart install/capture/adopt plan does not meet next-restart usability and is
+superseded by the following proposal; adoption mechanics are not changed here.
+
+### Proposed one-restart bootstrap, for release-owner review
+
+Use the existing trusted private startup artifact and its SHA256 release pin,
+never an agent/API grant payload. The artifact retains the exact fixed approved
+scope, original identities, profiles, goal identity/objective, assets and native
+input-prefix digests; bootstrap may supply producer coverage, not new authority.
+The release coordinator must first prove the old ingress producer is gone and
+that neither original native thread has a writer or pending steering delivery.
+This requires the existing restart inventory plus a pinned old-producer/process
+identity receipt, checked against kernel process identity at startup. A killed
+execution row alone is insufficient. Unrelated processes are not stopped.
+
+Before any HTTP/relay/queue/scheduled request ingress, startup verifies that
+quiescence evidence against the selected dataset/native home, verifies both exact
+captured input prefixes and existing execution histories, starts durable coverage,
+and seals its watermark into a derived durable contract. No changed history can
+be recaptured into authority. Adoption must be atomic and idempotent: preserve a
+previous derived contract and all terminal/uncertain states across restart. The
+normal caller/profile/goal/assets/access/resource/capacity/ownership guards remain
+required on every dispatch. The coordinator must inventory all ingress tasks so
+no task can run between quiescence verification and admission registration.
+
+Required isolated acceptance: old producer/native writer still alive or unknown
+rejects bootstrap; changed/truncated/dropped/steered input rejects it; wrong
+release pin/dataset rejects it; startup ingress waits for successful adoption;
+identical bootstrap survives restart without rebaselining; revoked/ready grants
+and uncertain attempts remain closed. Validate these before changing adoption
+mechanics or calling this a one-restart-ready feature. This turn creates no
+quiescence receipt or live grant and authorizes no actual restart.
+
+Authority is the existing verified owner approval, held by the already trusted
+release owner and backend/state. The receipt proves quiescence/freshness, not
+consent. Same-UID/backend-host compromise can alter this trusted base; the design
+provides no external custody or independent host-compromise protection. No short
+TTL, routine renewal, agent-facing creation/amendment endpoint or new access is
+introduced.
+
+### Remaining guard corrections
+
+Collision candidates come from running non-development executions and queued
+sessions regardless of workspace archival/deletion or execution drop flags.
+Resolve each active candidate's canonical ownership; unknown active ownership
+fails closed. Unrelated missing idle history contributes no candidate.
+
+Goal/get, thread/resume and turn/start receipt delivery/waiting is bounded to ten
+seconds per RPC, including pipe writes. Timeout removes the pending response
+entry. Under the launch fence, unavailable receipts persist an uncertain attempt
+and suspend future starts. They neither replay nor send an exit signal to stop
+already-dispatched work. A late response cannot unlock authority. Explicit owner
+revocation can acknowledge after the bounded wait and persists across restart.
 
 The old private source delivery receipt and contract are superseded and must not
 be used for activation. Root coordinates independent review and the currently
@@ -149,9 +194,8 @@ Follow-up Test run38140071765 at4f2c3368b passed all nine continuation fixtures,
 Final Test run38140591079 at03b95d857 passed all10 continuation fixtures,
 522 workspace tests (11 skipped), Clippy, schema, frontend/approval UI and Tauri.
 Scheduled artifacts remain blocked by the same runner namespace prerequisite.
-The private source delivery receipt is
-/mnt/vk-storage/vk-bounded-worker-continuation-20261011/RELEASE_HANDOFF.safe.json;
-it is proposed for review and next-restart adoption, not an accepted release entry.
+The private source delivery receipt is retained outside public source; it is
+proposed for review, not an accepted next-restart entry.
 
 No Cargo build is permitted on the constrained MCP host. The established Desktop
 WSL ordinary-user context remains unavailable; no root or permission workaround

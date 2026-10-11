@@ -504,6 +504,13 @@ async fn legacy_or_forged_input_coverage_cannot_be_adopted() {
             .await
             .is_err()
     );
+    assert!(
+        f.ledger
+            .native_inputs(&f.ledger.contract.manager)
+            .await
+            .is_err()
+    );
+    assert!(f.ledger.active().await.is_err());
     // No future runtime mutation can convert an unverified old capture into consent.
 }
 

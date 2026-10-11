@@ -188,7 +188,7 @@ impl Procfs {
                         || native_unbound
                         || backend
                         || unscoped_codex
-                        || (ingress_marker && (backend || uuid("VK_SESSION_ID").is_none()))
+                        || (ingress_marker && uuid("VK_SESSION_ID").is_none())
                     {
                         return Err(invalid("Active or potentially competing input producer"));
                     }

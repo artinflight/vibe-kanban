@@ -839,8 +839,15 @@ async fn production_fixture(timeout_lifecycle: bool) {
         .await
         .unwrap();
         assert!(
-            engine.handle(anchors[0], call(31)).await.is_ok(),
-            "actual Live/follow_up path recovers only from its exact successful receipt"
+            engine.handle(anchors[0], call(310)).await.is_err(),
+            "exit alone cannot substitute for durable native completion"
+        );
+        sqlx::query("UPDATE coding_agent_turns SET agent_session_id=?,summary='Synthetic completed bounded turn' WHERE execution_process_id=?")
+            .bind(&ledger.contract.worker.thread).bind(first_execution).execute(&pool).await.unwrap();
+        let recovered = engine.handle(anchors[0], call(31)).await;
+        assert!(
+            recovered.is_ok(),
+            "actual Live/follow_up path recovers only from its exact successful receipt: {recovered:?}"
         );
         let second_execution:Uuid=sqlx::query_scalar("SELECT execution FROM bounded_worker_attempts WHERE state='dispatching' ORDER BY rowid DESC LIMIT 1").fetch_one(&pool).await.unwrap();
         ledger
@@ -1136,6 +1143,21 @@ async fn exercise_bootstrap_acceptance(
         directory,
         "codex",
     );
+    // Existing same-thread goals are paused during a safe restart. Adoption
+    // validates their unchanged identity without activating native inference.
+    let home = executors::executors::codex::codex_home().unwrap();
+    let goals = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new().filename(home.join("goals_1.sqlite")),
+        )
+        .await
+        .unwrap();
+    sqlx::query("UPDATE thread_goals SET status='paused' WHERE thread_id=?")
+        .bind(&contract.manager.thread)
+        .execute(&goals)
+        .await
+        .unwrap();
     let ledger = load_startup(deployment, &f.files, &f.processes)
         .await
         .unwrap();
@@ -1166,6 +1188,12 @@ async fn exercise_bootstrap_acceptance(
         .await
         .unwrap();
     assert_eq!(epoch, contract.manager.input_seal.coverage_id);
+    sqlx::query("UPDATE thread_goals SET status='active' WHERE thread_id=?")
+        .bind(&contract.manager.thread)
+        .execute(&goals)
+        .await
+        .unwrap();
+    goals.close().await;
     ledger
 }
 

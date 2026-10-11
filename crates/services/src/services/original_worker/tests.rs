@@ -214,6 +214,8 @@ impl Runtime for Worker {
             self.ledger.bind_receipt(attempt, execution).await?;
             sqlx::query("INSERT INTO execution_processes(id,session_id,status,exit_code,dropped,run_reason,created_at,executor_action) VALUES (?,?,'running',NULL,FALSE,'codingagent',2,?)")
                 .bind(execution).bind(self.ledger.contract.worker.session).bind(serde_json::to_string(&worker_action(&self.ledger.contract))?).execute(&self.ledger.pool).await.map_err(db_error)?;
+            sqlx::query("INSERT INTO coding_agent_turns(execution_process_id,agent_session_id,summary) VALUES(?,?,'Synthetic completed native receipt')")
+                .bind(execution).bind(&self.ledger.contract.worker.thread).execute(&self.ledger.pool).await.map_err(db_error)?;
             self.calls.fetch_add(1, Ordering::SeqCst);
             if self.lose_reply.load(Ordering::SeqCst) {
                 // Simulate native activation before the outer dispatch reply was
@@ -249,7 +251,7 @@ async fn fixture() -> Fixture {
     .execute(&pool)
     .await
     .unwrap();
-    sqlx::raw_sql("CREATE TABLE sessions(id BLOB PRIMARY KEY, workspace_id BLOB); CREATE TABLE execution_processes(id BLOB PRIMARY KEY,session_id BLOB,status TEXT,exit_code INTEGER,dropped BOOLEAN,run_reason TEXT,created_at INTEGER,executor_action TEXT);").execute(&pool).await.unwrap();
+    sqlx::raw_sql("CREATE TABLE sessions(id BLOB PRIMARY KEY, workspace_id BLOB); CREATE TABLE execution_processes(id BLOB PRIMARY KEY,session_id BLOB,status TEXT,exit_code INTEGER,dropped BOOLEAN,run_reason TEXT,created_at INTEGER,executor_action TEXT); CREATE TABLE coding_agent_turns(execution_process_id BLOB,agent_session_id TEXT,summary TEXT);").execute(&pool).await.unwrap();
     let config: ExecutorConfig = serde_json::from_value(json!({"executor":"CODEX","variant":"DEFAULT","model_id":"gpt-6.1-sol","reasoning_id":"high"})).unwrap();
     let coverage = start_input_coverage(&pool).await.unwrap();
     let identity = || Identity {
@@ -953,6 +955,9 @@ async fn uncertain_receipts_recover_only_exact_success_and_terminal_tools_remain
             "wrong_target",
             "wrong_prompt",
             "unactivated",
+            "missing_execution",
+            "missing_summary",
+            "wrong_native_thread",
         ] {
             let mut action = worker_action(&f.ledger.contract);
             if fault == "wrong_prompt"
@@ -970,10 +975,30 @@ async fn uncertain_receipts_recover_only_exact_success_and_terminal_tools_remain
                 .execute(&f.ledger.pool)
                 .await
                 .unwrap();
+            sqlx::query("UPDATE coding_agent_turns SET summary=?,agent_session_id=? WHERE execution_process_id=?")
+                .bind(if fault=="missing_summary" {None} else {Some("Synthetic completed native receipt")})
+                .bind(if fault=="wrong_native_thread" {"synthetic-other-thread"} else {&f.ledger.contract.worker.thread})
+                .bind(execution).execute(&f.ledger.pool).await.unwrap();
+            if fault == "missing_execution" {
+                sqlx::query("UPDATE bounded_worker_attempts SET execution=? WHERE execution=?")
+                    .bind(Uuid::new_v4())
+                    .bind(execution)
+                    .execute(&f.ledger.pool)
+                    .await
+                    .unwrap();
+            }
             assert!(
                 engine.handle(f.caller, request(5, TOOL)).await.is_err(),
                 "mismatched receipt {fault} cannot unlock dispatch"
             );
+            if fault == "missing_execution" {
+                sqlx::query("UPDATE bounded_worker_attempts SET execution=? WHERE grant_id=?")
+                    .bind(execution)
+                    .bind(f.ledger.contract.id)
+                    .execute(&f.ledger.pool)
+                    .await
+                    .unwrap();
+            }
         }
         sqlx::query("UPDATE execution_processes SET status='completed',exit_code=0,dropped=FALSE,session_id=?,executor_action=? WHERE id=?")
             .bind(f.ledger.contract.worker.session).bind(serde_json::to_string(&worker_action(&f.ledger.contract)).unwrap()).bind(execution).execute(&f.ledger.pool).await.unwrap();
@@ -982,6 +1007,8 @@ async fn uncertain_receipts_recover_only_exact_success_and_terminal_tools_remain
             .execute(&f.ledger.pool)
             .await
             .unwrap();
+        sqlx::query("UPDATE coding_agent_turns SET summary='Synthetic completed native receipt',agent_session_id=? WHERE execution_process_id=?")
+            .bind(&f.ledger.contract.worker.thread).bind(execution).execute(&f.ledger.pool).await.unwrap();
         if ending.is_none() {
             engine.handle(f.caller, request(6, TOOL)).await.unwrap();
             assert_eq!(runtime.calls.load(Ordering::SeqCst), 1);

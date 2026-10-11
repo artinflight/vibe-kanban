@@ -616,8 +616,11 @@ impl Ledger {
         // attempt. Never change grant state here: terminal authority cannot revive.
         self.active().await?;
         let mut tx = self.pool.begin().await.map_err(db_error)?;
-        let receipts: Vec<(Uuid, String)> = sqlx::query_as("SELECT a.id,e.executor_action FROM bounded_worker_attempts a JOIN execution_processes e ON e.id=a.execution WHERE a.grant_id=? AND a.state IN ('dispatching','uncertain') AND a.activated=1 AND a.input_digest IS NOT NULL AND e.status='completed' AND e.exit_code=0 AND e.dropped=FALSE AND e.run_reason='codingagent' AND e.session_id=?")
-            .bind(self.contract.id).bind(self.contract.worker.session).fetch_all(&mut *tx).await.map_err(db_error)?;
+        // Process exit alone is not a native resume receipt. Without a final
+        // summary/thread binding normal follow-up injects interrupted context,
+        // changing the fixed input rather than safely resuming the original.
+        let receipts: Vec<(Uuid, String)> = sqlx::query_as("SELECT a.id,e.executor_action FROM bounded_worker_attempts a JOIN execution_processes e ON e.id=a.execution WHERE a.grant_id=? AND a.state IN ('dispatching','uncertain') AND a.activated=1 AND a.input_digest IS NOT NULL AND e.status='completed' AND e.exit_code=0 AND e.dropped=FALSE AND e.run_reason='codingagent' AND e.session_id=? AND EXISTS(SELECT 1 FROM coding_agent_turns t WHERE t.execution_process_id=e.id AND t.agent_session_id=? AND t.summary IS NOT NULL AND trim(t.summary)!='')")
+            .bind(self.contract.id).bind(self.contract.worker.session).bind(&self.contract.worker.thread).fetch_all(&mut *tx).await.map_err(db_error)?;
         let c = &self.contract;
         for (attempt, raw) in receipts {
             let Ok(action) = serde_json::from_str::<ExecutorAction>(&raw) else {

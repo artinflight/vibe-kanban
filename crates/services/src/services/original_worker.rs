@@ -90,7 +90,7 @@ impl Contract {
                     .config
                     .routing
                     .as_ref()
-                    .is_some_and(|p| p.mode != executors::routing::RoutingMode::Shadow)
+                    .is_some_and(|p| p.as_ref() != &self.recommend)
             {
                 return Err(invalid(
                     "Fixed profile must preserve original Recommend settings",
@@ -179,7 +179,14 @@ impl Ledger {
         } else {
             Vec::new()
         };
-        let bytes = inputs::read(&identity.thread, &identity.input_seal).await?;
+        let bytes = match inputs::read(&identity.thread, &identity.input_seal).await {
+            Ok(bytes) => bytes,
+            Err(_) => {
+                self.end("suspended", "native_input_source_unavailable")
+                    .await?;
+                return Err(invalid("Native input freshness cannot be proved"));
+            }
+        };
         if inputs::verify(&bytes, &identity.input_seal, &allowed).is_err() {
             self.end("suspended", "native_input_freshness_unproved")
                 .await?;
@@ -194,16 +201,19 @@ impl Ledger {
     /// Queue snapshots and start callers must hold common admission.
     pub async fn workspace_idle(&self, queued: &[Uuid], own: Option<Uuid>) -> io::Result<()> {
         let roots: Vec<(Uuid, Option<String>)> =
-            sqlx::query_as("SELECT id,container_ref FROM workspaces")
+            sqlx::query_as("SELECT id,container_ref FROM workspaces WHERE archived=FALSE AND worktree_deleted=FALSE")
                 .fetch_all(&self.pool)
                 .await
                 .map_err(db_error)?;
         let mut shared = vec![self.contract.worker.workspace];
         for (id, root) in roots {
             if let Some(root) = root {
-                let root = PathBuf::from(root)
-                    .canonicalize()
-                    .map_err(|_| invalid("Worktree ownership unknown"))?;
+                let Ok(root) = PathBuf::from(root).canonicalize() else {
+                    if id == self.contract.worker.workspace {
+                        return Err(invalid("Original worktree ownership unknown"));
+                    }
+                    continue;
+                };
                 if root.starts_with(&self.contract.worker.root)
                     || self.contract.worker.root.starts_with(&root)
                 {
@@ -486,6 +496,9 @@ pub async fn workspace_start(session: Uuid) -> io::Result<()> {
     let Some(ledger) = current() else {
         return Ok(());
     };
+    if ledger.active().await.is_err() {
+        return Ok(());
+    }
     let root: (Uuid, Option<String>) = sqlx::query_as("SELECT w.id,w.container_ref FROM sessions s JOIN workspaces w ON w.id=s.workspace_id WHERE s.id=?")
         .bind(session).fetch_one(&ledger.pool).await.map_err(db_error)?;
     let shared = root.0 == ledger.contract.worker.workspace

@@ -21,7 +21,7 @@ pub trait LaunchGuard: Send + Sync + std::fmt::Debug {
         agent: &crate::executors::CodingAgent,
         raw: &crate::profile::ExecutorConfig,
     ) -> io::Result<()>;
-    async fn activation(&self, input: Option<&str>) -> io::Result<ActivationFence>;
+    async fn activation(&self, thread: &str, input: Option<&str>) -> io::Result<ActivationFence>;
     fn worker(&self) -> bool;
 }
 
@@ -107,16 +107,6 @@ pub trait Backend: Send + Sync {
 pub async fn attach(env: &ExecutionEnv) -> io::Result<Option<Arc<dyn LaunchGuard>>> {
     match BACKEND.get() {
         Some(backend) => backend.launch_guard(env).await,
-        None => Ok(None),
-    }
-}
-
-pub async fn activation(
-    env: &ExecutionEnv,
-    input: Option<&str>,
-) -> io::Result<Option<ActivationFence>> {
-    match &env.original_worker {
-        Some(guard) => guard.activation(input).await.map(Some),
         None => Ok(None),
     }
 }

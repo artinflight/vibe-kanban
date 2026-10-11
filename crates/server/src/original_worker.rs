@@ -339,6 +339,7 @@ impl<D: Deployment> Backend for Provider<D> {
             identity: identity.clone(),
             execution,
             verified: AtomicBool::new(false),
+            input: std::sync::Mutex::new(None),
         })))
     }
 
@@ -495,6 +496,7 @@ struct BoundLaunch<D: Deployment> {
     identity: Identity,
     execution: Uuid,
     verified: AtomicBool,
+    input: std::sync::Mutex<Option<String>>,
 }
 impl<D: Deployment> std::fmt::Debug for BoundLaunch<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -528,17 +530,35 @@ impl<D: Deployment> executors::original_worker::LaunchGuard for BoundLaunch<D> {
                 "Actual resolved launch instance differs from fixed profile",
             ));
         }
+        if self.worker() {
+            let executors::executors::CodingAgent::Codex(codex) = agent else {
+                return Err(invalid("Bounded executor changed"));
+            };
+            *self
+                .input
+                .lock()
+                .map_err(|_| invalid("Launch input binding unavailable"))? = Some(
+                codex
+                    .append_prompt
+                    .combine_prompt(&self.runtime.ledger.contract.continuation()),
+            );
+        }
         self.verified.store(true, Ordering::SeqCst);
         Ok(())
     }
     async fn activation(
         &self,
+        thread: &str,
         input: Option<&str>,
     ) -> io::Result<executors::original_worker::ActivationFence> {
         let ledger = &self.runtime.ledger;
         ledger.activation_fence(async {
+            if thread != self.identity.thread || input.is_some_and(|input| self.input.lock().ok().and_then(|pin| pin.as_ref().map(|pin| pin != input)).unwrap_or(true)) {
+                ledger.end("suspended", "native_activation_input_or_target_changed").await?;
+                return Err(invalid("Bounded native activation target or prompt changed"));
+            }
             if !self.worker() || !self.verified.load(Ordering::SeqCst) { return Err(invalid("Exact resolved launch proof missing")); }
-            let caller: Uuid = sqlx::query_scalar("SELECT caller FROM bounded_worker_attempts WHERE grant_id=? AND execution=? AND state='dispatching'")
+            let caller: Uuid = sqlx::query_scalar("SELECT caller FROM bounded_worker_attempts WHERE grant_id=? AND execution=? AND state='dispatching' AND activated=0")
                 .bind(ledger.contract.id).bind(self.execution).fetch_one(&ledger.pool).await.map_err(|_| invalid("Launch receipt changed"))?;
             self.runtime.check(caller).await?;
             let (_, head) = self.runtime.identity(&self.identity).await?;

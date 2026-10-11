@@ -37,24 +37,22 @@ fn inputs(bytes: &[u8]) -> io::Result<Vec<Input>> {
         let p = &entry["payload"];
         let event = p["type"].as_str().unwrap_or("");
         if kind == "response_item" && event == "message" && p["role"] == "user" {
-            let content = p["content"]
-                .as_array()
-                .ok_or_else(|| invalid("Unknown native user input"))?;
-            let mut text = String::new();
-            for item in content {
-                if item["type"] != "input_text" {
-                    return Err(invalid("Unsupported native input content"));
-                }
-                text.push_str(
-                    item["text"]
-                        .as_str()
-                        .ok_or_else(|| invalid("Unknown native input text"))?,
-                );
-            }
+            // Adopted historical inputs may contain images. Preserve their entire
+            // payload in the prefix seal; only newly dispatched plain text can
+            // match a backend-owned continuation receipt.
+            let text = p["content"].as_array().and_then(|content| {
+                content.iter().try_fold(String::new(), |mut text, item| {
+                    if item["type"] != "input_text" {
+                        return None;
+                    }
+                    text.push_str(item["text"].as_str()?);
+                    Some(text)
+                })
+            });
             result.push(Input {
                 kind: "response".into(),
                 payload: p.clone(),
-                text: Some(text),
+                text,
             });
         } else if kind == "event_msg" && event == "user_message" {
             result.push(Input {

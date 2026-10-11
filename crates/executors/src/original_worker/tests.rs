@@ -32,7 +32,7 @@ impl LaunchGuard for Pinned {
         self.checked.store(true, Ordering::SeqCst);
         Ok(())
     }
-    async fn activation(&self, _: Option<&str>) -> io::Result<ActivationFence> {
+    async fn activation(&self, _: &str, _: Option<&str>) -> io::Result<ActivationFence> {
         Err(io::Error::other("No native process in this fixture"))
     }
 }
@@ -92,11 +92,10 @@ async fn actual_follow_up_cache_aba_rejected_before_prompt_or_launcher() {
     guard.cloned.notified().await;
     ExecutorConfigs::replace_cache_for_test(original);
     guard.inspect.notify_one();
-    let error = run
-        .await
-        .unwrap()
-        .err()
-        .expect("B must be rejected after A was restored");
+    let error = match run.await.unwrap() {
+        Err(error) => error,
+        Ok(_) => panic!("B must be rejected after A was restored"),
+    };
     assert!(
         error
             .to_string()
@@ -120,5 +119,52 @@ fn load_preflight_rejects_active_and_unknown_goal_before_resume() {
         json!({"goal":{"status":"complete"}}),
     ] {
         worker_goal_load_allowed(&v).unwrap();
+    }
+}
+
+#[derive(Debug)]
+struct LoadFence(Arc<tokio::sync::Mutex<()>>);
+#[async_trait]
+impl LaunchGuard for LoadFence {
+    fn worker(&self) -> bool { true }
+    async fn resolved(&self, _: &CodingAgent, _: &ExecutorConfig) -> io::Result<()> { Ok(()) }
+    async fn activation(&self, _: &str, _: Option<&str>) -> io::Result<ActivationFence> { Ok(self.0.clone().lock_owned().await) }
+}
+
+#[tokio::test]
+async fn actual_thread_resume_checks_goal_before_loading_and_feedback_is_fenced() {
+    use std::{process::Stdio, time::Duration};
+    use tokio::io::{AsyncBufReadExt, BufReader};
+    use tokio_util::sync::CancellationToken;
+    use crate::executors::codex::{client::{AppServerClient, LogWriter}, jsonrpc::{ExitSignalSender, JsonRpcPeer}};
+    for status in ["active", "unknown", "paused", "none"] {
+        let mut child = tokio::process::Command::new("python3").args(["-u","-c",r#"
+import json,sys
+status=sys.argv[1]
+for line in sys.stdin:
+    q=json.loads(line); m=q['method']; print(m,file=sys.stderr,flush=True)
+    if m=='thread/goal/get':
+        r={} if status=='unknown' else {'goal':None if status=='none' else {'status':status}}
+    else:
+        t={'id':'synthetic-worker','preview':'synthetic','ephemeral':False,'modelProvider':'synthetic','createdAt':1,'updatedAt':1,'status':{'type':'idle'},'path':None,'cwd':'/synthetic','cliVersion':'0.159.2','source':'exec','turns':[]}
+        r={'thread':t,'model':'gpt-6.1-sol','modelProvider':'synthetic','serviceTier':None,'cwd':'/synthetic','approvalPolicy':'on-request','approvalsReviewer':'user','sandbox':{'type':'readOnly'},'reasoningEffort':'high'}
+    print(json.dumps({'id':q['id'],'result':r}),flush=True)
+"#,status]).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true).spawn().unwrap();
+        let mut calls = BufReader::new(child.stderr.take().unwrap()).lines();
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(LogWriter::new(tokio::io::sink()),None,false,false,RepoContext::default(),false,String::new(),cancel.clone());
+        client.set_original_worker_guard(Arc::new(LoadFence(Arc::new(tokio::sync::Mutex::new(())))));
+        let (tx,_rx) = tokio::sync::oneshot::channel();
+        client.connect(JsonRpcPeer::spawn(child.stdin.take().unwrap(),child.stdout.take().unwrap(),client.clone(),ExitSignalSender::new(tx),cancel.clone()));
+        let result = client.thread_resume(serde_json::from_value(json!({"threadId":"synthetic-worker"})).unwrap()).await;
+        assert_eq!(calls.next_line().await.unwrap().as_deref(),Some("thread/goal/get"));
+        if matches!(status,"active"|"unknown") {
+            assert!(result.is_err());
+            assert!(tokio::time::timeout(Duration::from_millis(100),calls.next_line()).await.is_err(),"active/unknown goal must never load");
+        } else {
+            result.unwrap();
+            assert_eq!(calls.next_line().await.unwrap().as_deref(),Some("thread/resume"));
+        }
+        cancel.cancel(); child.kill().await.unwrap(); child.wait().await.unwrap();
     }
 }

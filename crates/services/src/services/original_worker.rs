@@ -158,6 +158,81 @@ pub fn register(ledger: Arc<Ledger>) -> io::Result<()> {
 }
 
 impl Ledger {
+    /// Read-only pre-adoption checks use the same scope validators, but this
+    /// object does not register or create authority or admit native work.
+    pub fn startup_snapshot(pool: SqlitePool, contract: Contract) -> Self {
+        Self {
+            pool,
+            contract,
+            activation: Arc::new(tokio::sync::Mutex::new(())),
+        }
+    }
+
+    /// The pinned release contract preallocates the first producer epoch. Mint
+    /// coverage only after the server proves quiescence and exact scope/input
+    /// freshness. Never rewrite any contract/seal field to fit current history.
+    pub async fn establish_startup_coverage(&self) -> io::Result<()> {
+        let c = &self.contract;
+        let mut tx = self.pool.begin().await.map_err(db_error)?;
+        let old: Option<Uuid> =
+            sqlx::query_scalar("SELECT id FROM bounded_native_input_coverage WHERE singleton=1")
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(db_error)?;
+        let latest: i64 =
+            sqlx::query_scalar("SELECT COALESCE(max(id),0) FROM bounded_native_input_history")
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(db_error)?;
+        if c.manager.input_seal.coverage_id != c.worker.input_seal.coverage_id
+            || old.is_some_and(|id| id != c.manager.input_seal.coverage_id)
+            || (old.is_none()
+                && (latest != 0
+                    || c.manager.input_seal.backend_sequence != 0
+                    || c.worker.input_seal.backend_sequence != 0))
+            || [&c.manager, &c.worker]
+                .iter()
+                .any(|i| i.input_seal.backend_sequence > latest)
+        {
+            return Err(invalid(
+                "Bootstrap producer epoch or input watermark changed",
+            ));
+        }
+        let grants: Vec<(Uuid, String, String)> =
+            sqlx::query_as("SELECT id,contract_digest,state FROM bounded_worker_grants")
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(db_error)?;
+        let pin = digest(&serde_json::to_vec(c)?);
+        if grants
+            .iter()
+            .any(|(id, hash, state)| *id != c.id || hash != &pin || state != "active")
+        {
+            return Err(invalid(
+                "Prior authority is terminal or differs from pinned bootstrap",
+            ));
+        }
+        for i in [&c.manager, &c.worker] {
+            let amendments:i64=sqlx::query_scalar("SELECT count(*) FROM bounded_native_input_history WHERE session_id=? AND id>? AND native_resume=0")
+                .bind(i.session).bind(i.input_seal.backend_sequence).fetch_one(&mut *tx).await.map_err(db_error)?;
+            if amendments != 0 {
+                sqlx::query("UPDATE bounded_worker_grants SET state='suspended',reason='startup_durable_input_amendment' WHERE id=? AND state='active'")
+                    .bind(c.id).execute(&mut *tx).await.map_err(db_error)?;
+                tx.commit().await.map_err(db_error)?;
+                return Err(invalid("Input accepted after pinned capture"));
+            }
+        }
+        sqlx::query(
+            "INSERT OR IGNORE INTO bounded_native_input_coverage(singleton,id) VALUES(1,?)",
+        )
+        .bind(c.manager.input_seal.coverage_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(db_error)?;
+        tx.commit().await.map_err(db_error)?;
+        Ok(())
+    }
+
     pub async fn activation_fence(
         &self,
         checks: impl std::future::Future<Output = io::Result<()>>,
@@ -173,7 +248,9 @@ impl Ledger {
 
     /// Called while the launch fence is held. A missing native receipt is not
     /// rejection or cancellation: dispatched work may already be running. Keep
-    /// its attempt uncertain and suspend future starts without interrupting it.
+    /// its attempt uncertain without ending authority or interrupting work.
+    /// The unique pending-attempt index blocks every subsequent dispatch until
+    /// exact successful receipt reconciliation; terminal tools remain reachable.
     pub async fn native_receipt_uncertain(&self, execution: Uuid) -> io::Result<()> {
         let mut tx = self.pool.begin().await.map_err(db_error)?;
         let changed = sqlx::query("UPDATE bounded_worker_attempts SET state='uncertain' WHERE grant_id=? AND execution=? AND state='dispatching'")
@@ -181,8 +258,6 @@ impl Ledger {
         if changed != 1 {
             return Err(invalid("Native receipt attempt binding unavailable"));
         }
-        sqlx::query("UPDATE bounded_worker_grants SET state='suspended',reason='native_receipt_unknown' WHERE id=? AND state='active'")
-            .bind(self.contract.id).execute(&mut *tx).await.map_err(db_error)?;
         tx.commit().await.map_err(db_error)?;
         Ok(())
     }
@@ -537,10 +612,24 @@ impl Ledger {
     }
 
     pub async fn reconcile(&self) -> io::Result<()> {
-        // Only a durable completed successful execution can clear an attempt.
-        // Missing, failed, running, killed and unreturned receipts remain closed.
-        sqlx::query("UPDATE bounded_worker_attempts SET state='completed' WHERE grant_id=? AND state IN ('dispatching','uncertain') AND execution IN (SELECT id FROM execution_processes WHERE status='completed' AND exit_code=0 AND dropped=FALSE AND session_id=?)")
-            .bind(self.contract.id).bind(self.contract.worker.session).execute(&self.pool).await.map_err(db_error)?;
+        // Only a matching, activated, successful bounded execution can clear an
+        // attempt. Never change grant state here: terminal authority cannot revive.
+        self.active().await?;
+        let mut tx = self.pool.begin().await.map_err(db_error)?;
+        let receipts: Vec<(Uuid, String)> = sqlx::query_as("SELECT a.id,e.executor_action FROM bounded_worker_attempts a JOIN execution_processes e ON e.id=a.execution WHERE a.grant_id=? AND a.state IN ('dispatching','uncertain') AND a.activated=1 AND a.input_digest IS NOT NULL AND e.status='completed' AND e.exit_code=0 AND e.dropped=FALSE AND e.run_reason='codingagent' AND e.session_id=?")
+            .bind(self.contract.id).bind(self.contract.worker.session).fetch_all(&mut *tx).await.map_err(db_error)?;
+        let expected = worker_action(&self.contract);
+        for (attempt, raw) in receipts {
+            let Ok(action) = serde_json::from_str::<ExecutorAction>(&raw) else {
+                continue;
+            };
+            if action.typ() != expected.typ() {
+                continue;
+            }
+            sqlx::query("UPDATE bounded_worker_attempts SET state='completed' WHERE id=? AND grant_id=? AND state IN ('dispatching','uncertain')")
+                .bind(attempt).bind(self.contract.id).execute(&mut *tx).await.map_err(db_error)?;
+        }
+        tx.commit().await.map_err(db_error)?;
         Ok(())
     }
 

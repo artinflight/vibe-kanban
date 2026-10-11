@@ -1,9 +1,11 @@
-## October11: fixed original-worker capability requires compiled validation
+## October11: tested original-worker capability awaits release ownership
 
 Draft PR243 now carries the narrow production integration over staging2693c46d.
 Test run38140071765 at4f2c3368b passed9 continuation fixtures and521 workspace
-tests (11 skipped), plus Clippy/schema/frontend/Tauri. Final effective-profile
-pin changes require final-head CI. The separate artifact builder is blocked by
+tests (11 skipped), plus Clippy/schema/frontend/Tauri. Final Test38140591079
+at03b95d857 also passed:10 continuation fixtures,522 workspace tests (11 skipped),
+Clippy/schema/frontend/Tauri. Source is test-complete; independent review, accepted
+staging SHA and private next-restart entry are not. The artifact builder is blocked by
 its runner's bubblewrap loopback prerequisite; do not bypass sandboxing. The
 stopped Staging conversation has not been resumed. An active owner routing and
 independent review/next-restart acceptance remain required; no live contract or
@@ -21,7 +23,7 @@ handler, shared admission serialization, native/profile/asset/resource checks an
 durable unique attempts, pre-spawn receipts and terminal revocation/readiness.
 Unknown amendments suspend; no short clock expiry, grants from metadata or queue
 fallback after bounded denial. Existing goal resumes attest model/effort too.
-Full compiled tests/review remain pending; don't claim readiness. Hosted check-only
+Independent review/release adoption remain pending; don't claim live readiness. Hosted check-only
 CI is authorized after workflow inspection, with no deployment triggers on this
 feature branch/staging. No MCP Cargo builds, live grants/prompts/restarts or
 approval-watcher changes. See VK_BOUNDED_WORKER_CONTINUATION.md for release steps.

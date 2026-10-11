@@ -102,7 +102,12 @@ prerequisite (`Failed RTM_NEWADDR: Operation not permitted`), before artifact
 compilation. This is retained as a validation/release boundary, not bypassed.
 Follow-up Test run38140071765 at4f2c3368b passed all nine continuation fixtures,
 521 workspace tests (11 skipped), schema, Clippy, frontend and Tauri checks.
-The final effective-profile pin regression remains pending final-head CI.
+Final Test run38140591079 at03b95d857 passed all10 continuation fixtures,
+522 workspace tests (11 skipped), Clippy, schema, frontend/approval UI and Tauri.
+Scheduled artifacts remain blocked by the same runner namespace prerequisite.
+The private source delivery receipt is
+/mnt/vk-storage/vk-bounded-worker-continuation-20261011/RELEASE_HANDOFF.safe.json;
+it is proposed for review and next-restart adoption, not an accepted release entry.
 
 No Cargo build is permitted on the constrained MCP host. The established Desktop
 WSL ordinary-user context remains unavailable; no root or permission workaround

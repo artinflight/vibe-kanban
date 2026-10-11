@@ -991,6 +991,11 @@ async fn uncertain_receipts_recover_only_exact_success_and_terminal_tools_remain
                 engine.handle(f.caller, request(5, TOOL)).await.is_err(),
                 "mismatched receipt {fault} cannot unlock dispatch"
             );
+            if ending.is_none() {
+                recovered.active().await.expect(
+                    "missing/mismatched receipt blocks attempts without ending fixed authority",
+                );
+            }
             if fault == "missing_execution" {
                 sqlx::query("UPDATE bounded_worker_attempts SET execution=? WHERE grant_id=?")
                     .bind(execution)

@@ -842,6 +842,10 @@ async fn production_fixture(timeout_lifecycle: bool) {
             engine.handle(anchors[0], call(310)).await.is_err(),
             "exit alone cannot substitute for durable native completion"
         );
+        ledger
+            .active()
+            .await
+            .expect("missing native completion is not a terminal amendment");
         sqlx::query("UPDATE coding_agent_turns SET agent_session_id=?,summary='Synthetic completed bounded turn' WHERE execution_process_id=?")
             .bind(&ledger.contract.worker.thread).bind(first_execution).execute(&pool).await.unwrap();
         let recovered = engine.handle(anchors[0], call(31)).await;

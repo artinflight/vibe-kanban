@@ -32,6 +32,22 @@ async fn queue_message(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<QueueMessageRequest>,
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    services::services::admission::run(queue_message_admitted(
+        Extension(session),
+        State(deployment),
+        Json(payload),
+    ))
+    .await
+}
+
+async fn queue_message_admitted(
+    Extension(session): Extension<Session>,
+    State(deployment): State<DeploymentImpl>,
+    Json(payload): Json<QueueMessageRequest>,
+) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
+    services::services::original_worker::ordinary_input(session.id, &payload.message)
+        .await
+        .map_err(|e| ApiError::Conflict(e.to_string()))?;
     let scheduled = if let Ok(Some(controller)) = executors::capacity::controller::configured() {
         controller
             .lock()

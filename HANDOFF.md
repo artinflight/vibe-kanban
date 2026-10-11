@@ -1,3 +1,22 @@
+## October11: fixed original-worker capability requires compiled validation
+
+Continue feat/bounded-original-worker-continuation in this existing workspace.
+It is a narrow diff over current staging2693c46d, preserving original prepared
+commits on vk/870d-vk-mcp-approval. The prior external-custody blocker was too broad:
+verified dot supplies initial authority and the trusted backend owns a fixed
+contract. Same-UID state integrity is explicit, not independent host-compromise
+protection. Public code/fixtures contain no actual customer IDs or consent text.
+
+New source wires a no-argument execution-bound stdio tool to the normal follow-up
+handler, shared admission serialization, native/profile/asset/resource checks and
+durable unique attempts, pre-spawn receipts and terminal revocation/readiness.
+Unknown amendments suspend; no short clock expiry, grants from metadata or queue
+fallback after bounded denial. Existing goal resumes attest model/effort too.
+Full compiled tests/review remain pending; don't claim readiness. Hosted check-only
+CI is authorized after workflow inspection, with no deployment triggers on this
+feature branch/staging. No MCP Cargo builds, live grants/prompts/restarts or
+approval-watcher changes. See VK_BOUNDED_WORKER_CONTINUATION.md for release steps.
+
 ## October10: tested same-UID recovery; matching publication required
 
 PR241 continuation codeae263d4730bf8cca33050bde85b1c3de305acec0 passes

@@ -1092,6 +1092,14 @@ impl Codex {
                 }
             };
 
+        crate::original_worker::native_started(
+            telemetry_env,
+            &thread_id,
+            &resolved_model,
+            &serde_json::to_value(resolved_effort)?,
+        )
+        .await?;
+
         if let Some(decision) = &routing
             && decision.mode == crate::routing::RoutingMode::Auto
         {
@@ -1222,6 +1230,26 @@ impl Codex {
         }
 
         let (program_path, mut args) = command_parts.into_resolved().await?;
+        let continuation = crate::original_worker::bind(env).await?;
+        if let Some(binding) = &continuation {
+            let command = serde_json::to_string(&std::env::current_exe()?.to_string_lossy())?;
+            let tool_args = serde_json::to_string(&[
+                "--bounded-worker-stdio",
+                binding
+                    .socket
+                    .to_str()
+                    .ok_or_else(|| std::io::Error::other("Invalid capability path"))?,
+            ])?;
+            args.extend([
+                "-c".into(),
+                format!("mcp_servers.vk_fixed_original_worker.command={command}"),
+                "-c".into(),
+                format!("mcp_servers.vk_fixed_original_worker.args={tool_args}"),
+                "-c".into(),
+                "mcp_servers.vk_fixed_original_worker.env_vars=[\"VK_BOUNDED_SOCKET_TOKEN\"]"
+                    .into(),
+            ]);
+        }
         if env
             .get("VK_ROUTING_DECISION")
             .and_then(|v| serde_json::from_str::<crate::routing::RoutingDecision>(v).ok())
@@ -1255,6 +1283,9 @@ impl Codex {
         }
 
         let mut effective_env = env.clone().with_profile(&self.cmd);
+        if let Some(binding) = continuation {
+            effective_env.insert("VK_BOUNDED_SOCKET_TOKEN", binding.token);
+        }
         if let Some(capacity) = effective_env.capacity.clone() {
             if let Some(root) = crate::capacity::policy::configured_build_roots(&capacity)?.first()
             {

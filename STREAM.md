@@ -1,3 +1,16 @@
+## October11: fixed original-worker continuation
+
+Branch feat/bounded-original-worker-continuation starts at verified staging
+2693c46d4725878f8e11310cb528b6665e916ff3 in the existing workspace. Prepared commits
+746c5dd and7ab95e7 remain on the old bridge branch; no whole-branch merge/rebase.
+Source implements the release-adopted fixed contract, process-scoped no-argument
+MCP transport, durable attempts/terminal lifecycle and atomic normal admission.
+No other target/tool is granted. Figma/AE/one-shot consent and Recommend remain.
+Synthetic integrated tests are prepared, not yet compiled. Desktop's established
+ordinary WSL account is unavailable; no root fallback or MCP Cargo build. Draft
+publication uses inspected check-only CI. Nothing is staging-ready or live yet.
+See VK_BOUNDED_WORKER_CONTINUATION.md for authority, trust and release boundaries.
+
 ## October10: tested same-UID recovery; matching publication required
 
 PR241 continuation codeae263d4730bf8cca33050bde85b1c3de305acec0 passes

@@ -564,13 +564,15 @@ impl AppServerClient {
         }
         let id = self.next_request_id();
         let request = serde_json::json!({"id": id, "method": method, "params": params});
-        tokio::time::timeout(
-            Duration::from_secs(10),
-            self.rpc()
-                .request(id, &request, method, self.cancel.clone()),
-        )
-        .await
-        .map_err(|_| ExecutorError::Io(io::Error::other("Goal API timed out")))?
+        self.rpc()
+            .request_with_deadline(
+                id,
+                &request,
+                method,
+                self.cancel.clone(),
+                Duration::from_secs(10),
+            )
+            .await
     }
 
     pub async fn refresh_goal(&self) -> Result<(), ExecutorError> {
@@ -1076,12 +1078,23 @@ impl AppServerClient {
     ) -> Result<ThreadResumeResponse, ExecutorError> {
         let _load_fence = if let Some(guard) = self.original_worker.get().filter(|g| g.worker()) {
             let fence = guard.activation(&params.thread_id, None).await?;
-            let snapshot = self
+            let snapshot = match self
                 .goal_request(
                     "thread/goal/get",
                     serde_json::json!({"threadId":params.thread_id}),
                 )
-                .await?;
+                .await
+            {
+                Ok(snapshot) => snapshot,
+                Err(_) => {
+                    if guard.receipt_uncertain().await.is_err() {
+                        tracing::warn!(
+                            "Bounded native uncertainty could not be recorded; no replay permitted"
+                        );
+                    }
+                    return Err(ExecutorError::NativeReceiptUnknown);
+                }
+            };
             crate::original_worker::worker_goal_load_allowed(&snapshot)?;
             Some(fence)
         } else {
@@ -1955,9 +1968,33 @@ impl AppServerClient {
         R: DeserializeOwned + std::fmt::Debug,
     {
         let request_id = request_id(&request);
-        self.rpc()
-            .request(request_id, &request, label, self.cancel.clone())
-            .await
+        if let Some(guard) = self.original_worker.get().filter(|g| g.worker())
+            && matches!(label, "thread/resume" | "turn/start")
+        {
+            let result = self
+                .rpc()
+                .request_with_deadline(
+                    request_id,
+                    &request,
+                    label,
+                    self.cancel.clone(),
+                    Duration::from_secs(10),
+                )
+                .await;
+            if result.is_err() {
+                if guard.receipt_uncertain().await.is_err() {
+                    tracing::warn!(
+                        "Bounded native uncertainty could not be recorded; no replay permitted"
+                    );
+                }
+                return Err(ExecutorError::NativeReceiptUnknown);
+            }
+            result
+        } else {
+            self.rpc()
+                .request(request_id, &request, label, self.cancel.clone())
+                .await
+        }
     }
 
     fn next_request_id(&self) -> RequestId {
@@ -2135,7 +2172,7 @@ impl AppServerClient {
             },
         };
         tokio::spawn(async move {
-            let _activation_fence = match bounded {
+            let _activation_fence = match &bounded {
                 Some(guard) => match guard
                     .activation(&activation_thread, Some(&activation_input))
                     .await
@@ -2148,16 +2185,33 @@ impl AppServerClient {
                 },
                 None => None,
             };
-            if let Err(err) = peer
-                .request::<TurnStartResponse, _>(
+            let result = if bounded.is_some() {
+                peer.request_with_deadline::<TurnStartResponse, _>(
+                    request_id(&request),
+                    &request,
+                    "turn/start",
+                    cancel,
+                    Duration::from_secs(10),
+                )
+                .await
+            } else {
+                peer.request::<TurnStartResponse, _>(
                     request_id(&request),
                     &request,
                     "turn/start",
                     cancel,
                 )
                 .await
-            {
-                tracing::error!("failed to send user message: {err}");
+            };
+            if result.is_err() {
+                if let Some(guard) = bounded {
+                    if guard.receipt_uncertain().await.is_err() {
+                        tracing::warn!(
+                            "Bounded native uncertainty could not be recorded; no replay permitted"
+                        );
+                    }
+                }
+                tracing::warn!("Native user-message receipt unavailable; outcome unknown");
             }
         });
     }

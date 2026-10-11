@@ -547,6 +547,12 @@ impl<D: Deployment> executors::original_worker::LaunchGuard for BoundLaunch<D> {
         self.verified.store(true, Ordering::SeqCst);
         Ok(())
     }
+    async fn receipt_uncertain(&self) -> io::Result<()> {
+        self.runtime
+            .ledger
+            .native_receipt_uncertain(self.execution)
+            .await
+    }
     async fn activation(
         &self,
         thread: &str,

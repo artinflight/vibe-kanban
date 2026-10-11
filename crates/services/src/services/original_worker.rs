@@ -171,6 +171,22 @@ impl Ledger {
         Ok(fence)
     }
 
+    /// Called while the launch fence is held. A missing native receipt is not
+    /// rejection or cancellation: dispatched work may already be running. Keep
+    /// its attempt uncertain and suspend future starts without interrupting it.
+    pub async fn native_receipt_uncertain(&self, execution: Uuid) -> io::Result<()> {
+        let mut tx = self.pool.begin().await.map_err(db_error)?;
+        let changed = sqlx::query("UPDATE bounded_worker_attempts SET state='uncertain' WHERE grant_id=? AND execution=? AND state='dispatching'")
+            .bind(self.contract.id).bind(execution).execute(&mut *tx).await.map_err(db_error)?.rows_affected();
+        if changed != 1 {
+            return Err(invalid("Native receipt attempt binding unavailable"));
+        }
+        sqlx::query("UPDATE bounded_worker_grants SET state='suspended',reason='native_receipt_unknown' WHERE id=? AND state='active'")
+            .bind(self.contract.id).execute(&mut *tx).await.map_err(db_error)?;
+        tx.commit().await.map_err(db_error)?;
+        Ok(())
+    }
+
     pub async fn native_inputs(&self, identity: &Identity) -> io::Result<()> {
         let coverage: Option<Uuid> =
             sqlx::query_scalar("SELECT id FROM bounded_native_input_coverage WHERE singleton=1")
@@ -225,36 +241,16 @@ impl Ledger {
     /// Covers all sessions in the original workspace and canonical worktree aliases.
     /// Queue snapshots and start callers must hold common admission.
     pub async fn workspace_idle(&self, queued: &[Uuid], own: Option<Uuid>) -> io::Result<()> {
-        let roots: Vec<(Uuid, Option<String>)> =
-            sqlx::query_as("SELECT id,container_ref FROM workspaces WHERE archived=FALSE AND worktree_deleted=FALSE")
-                .fetch_all(&self.pool)
-                .await
-                .map_err(db_error)?;
-        let mut shared = vec![self.contract.worker.workspace];
-        for (id, root) in roots {
-            if let Some(root) = root {
-                let Ok(root) = PathBuf::from(root).canonicalize() else {
-                    if id == self.contract.worker.workspace {
-                        return Err(invalid("Original worktree ownership unknown"));
-                    }
-                    continue;
-                };
-                if root.starts_with(&self.contract.worker.root)
-                    || self.contract.worker.root.starts_with(&root)
-                {
-                    shared.push(id);
-                }
-            }
-        }
-        let rows: Vec<(Uuid, Uuid, String)> = sqlx::query_as("SELECT e.id,s.workspace_id,e.run_reason FROM execution_processes e JOIN sessions s ON s.id=e.session_id WHERE e.status='running' AND e.dropped=FALSE")
+        // Activity, not lifecycle flags, establishes a potential competing owner.
+        // Archived workspaces may still run non-development executions, and
+        // deleted worktrees may retain aliases or queued input.
+        let running: Vec<(Uuid, Uuid)> = sqlx::query_as("SELECT e.id,s.workspace_id FROM execution_processes e JOIN sessions s ON s.id=e.session_id WHERE e.status='running' AND e.run_reason!='devserver'")
             .fetch_all(&self.pool).await.map_err(db_error)?;
-        if rows
-            .iter()
-            .any(|(id, w, reason)| Some(*id) != own && shared.contains(w) && reason != "devserver")
-        {
-            return Err(invalid(
-                "Original worker workspace/worktree is already running",
-            ));
+        let mut candidates = std::collections::HashSet::new();
+        for (id, workspace) in &running {
+            if Some(*id) != own {
+                candidates.insert(*workspace);
+            }
         }
         for session in queued {
             let workspace: Uuid =
@@ -263,9 +259,36 @@ impl Ledger {
                     .fetch_one(&self.pool)
                     .await
                     .map_err(db_error)?;
-            if shared.contains(&workspace) {
+            candidates.insert(workspace);
+        }
+        let original = self
+            .contract
+            .worker
+            .root
+            .canonicalize()
+            .map_err(|_| invalid("Original worktree ownership unknown"))?;
+        if original != self.contract.worker.root {
+            return Err(invalid("Original worktree ownership changed"));
+        }
+        for workspace in candidates {
+            if workspace == self.contract.worker.workspace {
                 return Err(invalid(
-                    "Original worker workspace/worktree has queued input",
+                    "Original worker workspace has running or queued input",
+                ));
+            }
+            let root: Option<String> =
+                sqlx::query_scalar("SELECT container_ref FROM workspaces WHERE id=?")
+                    .bind(workspace)
+                    .fetch_one(&self.pool)
+                    .await
+                    .map_err(db_error)?;
+            let root = root.ok_or_else(|| invalid("Active workspace ownership unknown"))?;
+            let root = PathBuf::from(root)
+                .canonicalize()
+                .map_err(|_| invalid("Active worktree ownership unknown"))?;
+            if root.starts_with(&original) || original.starts_with(&root) {
+                return Err(invalid(
+                    "Original worker worktree has running or queued input",
                 ));
             }
         }

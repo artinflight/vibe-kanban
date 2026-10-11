@@ -29,6 +29,9 @@ impl executors::original_worker::LaunchGuard for ActivationGuard {
     ) -> io::Result<()> {
         Ok(())
     }
+    async fn receipt_uncertain(&self) -> io::Result<()> {
+        self.0.native_receipt_uncertain(self.1).await
+    }
     async fn activation(
         &self,
         _: &str,
@@ -671,4 +674,219 @@ async fn uncertain_dispatch_requires_real_receipt_reconciliation_after_restart()
     assert!(f.engine.handle(f.caller, request(3, TOOL)).await.is_ok());
     assert_eq!(f.runtime.calls.load(Ordering::SeqCst), 2);
     assert!(f.engine.handle(f.caller, request(1, TOOL)).await.is_err());
+}
+
+#[tokio::test]
+async fn active_workspace_aliases_ignore_archive_flags_but_not_unknown_ownership() {
+    let f = fixture().await;
+    let pool = &f.ledger.pool;
+    sqlx::raw_sql("CREATE TABLE workspaces(id BLOB PRIMARY KEY,container_ref TEXT,archived BOOLEAN,worktree_deleted BOOLEAN)").execute(pool).await.unwrap();
+    let root = f._directory.path().join("worker");
+    let manager = f._directory.path().join("manager");
+    tokio::fs::create_dir_all(&root).await.unwrap();
+    tokio::fs::create_dir_all(&manager).await.unwrap();
+    let mut contract = f.ledger.contract.clone();
+    contract.id = Uuid::new_v4();
+    contract.worker.root = root.clone();
+    let ledger = Ledger::adopt(pool.clone(), contract).await.unwrap();
+    sqlx::query("INSERT INTO workspaces VALUES (?,?,FALSE,FALSE)")
+        .bind(ledger.contract.manager.workspace)
+        .bind(manager.to_str().unwrap())
+        .execute(pool)
+        .await
+        .unwrap();
+    // Missing unrelated idle history must not block admission.
+    sqlx::query("INSERT INTO workspaces VALUES (?,?,TRUE,TRUE)")
+        .bind(Uuid::new_v4())
+        .bind(f._directory.path().join("missing-idle").to_str().unwrap())
+        .execute(pool)
+        .await
+        .unwrap();
+    ledger.workspace_idle(&[], None).await.unwrap();
+    let workspace = Uuid::new_v4();
+    let session = Uuid::new_v4();
+    let process = Uuid::new_v4();
+    sqlx::query("INSERT INTO workspaces VALUES (?,?,FALSE,FALSE)")
+        .bind(workspace)
+        .bind(root.to_str().unwrap())
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO sessions VALUES (?,?)")
+        .bind(session)
+        .bind(workspace)
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO execution_processes(id,session_id,status,dropped,run_reason) VALUES (?,?,'completed',FALSE,'codingagent')").bind(process).bind(session).execute(pool).await.unwrap();
+    for (archived, deleted) in [(false, false), (true, false), (false, true), (true, true)] {
+        sqlx::query("UPDATE workspaces SET archived=?,worktree_deleted=? WHERE id=?")
+            .bind(archived)
+            .bind(deleted)
+            .bind(workspace)
+            .execute(pool)
+            .await
+            .unwrap();
+        assert!(ledger.workspace_idle(&[session], None).await.is_err());
+        sqlx::query("UPDATE execution_processes SET status='running' WHERE id=?")
+            .bind(process)
+            .execute(pool)
+            .await
+            .unwrap();
+        assert!(ledger.workspace_idle(&[], None).await.is_err());
+        // Unknown active roots, including a NULL root, cannot establish exclusivity.
+        for missing in [
+            Some(
+                f._directory
+                    .path()
+                    .join("missing-active")
+                    .to_str()
+                    .unwrap()
+                    .to_owned(),
+            ),
+            None,
+        ] {
+            sqlx::query("UPDATE workspaces SET container_ref=? WHERE id=?")
+                .bind(missing)
+                .bind(workspace)
+                .execute(pool)
+                .await
+                .unwrap();
+            assert!(ledger.workspace_idle(&[], None).await.is_err());
+            sqlx::query("UPDATE execution_processes SET status='completed' WHERE id=?")
+                .bind(process)
+                .execute(pool)
+                .await
+                .unwrap();
+            assert!(ledger.workspace_idle(&[session], None).await.is_err());
+            ledger.workspace_idle(&[], None).await.unwrap();
+            sqlx::query("UPDATE execution_processes SET status='running' WHERE id=?")
+                .bind(process)
+                .execute(pool)
+                .await
+                .unwrap();
+        }
+        sqlx::query("UPDATE workspaces SET container_ref=? WHERE id=?")
+            .bind(root.to_str().unwrap())
+            .bind(workspace)
+            .execute(pool)
+            .await
+            .unwrap();
+        sqlx::query("UPDATE execution_processes SET status='completed' WHERE id=?")
+            .bind(process)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+}
+
+#[tokio::test]
+async fn silent_native_receipts_release_fence_and_persist_uncertain_without_replay() {
+    use std::process::Stdio;
+
+    use executors::{
+        env::RepoContext,
+        executors::codex::{
+            client::{AppServerClient, LogWriter},
+            jsonrpc::{ExitSignalSender, JsonRpcPeer},
+        },
+    };
+    use tokio::io::AsyncBufReadExt;
+    use tokio_util::sync::CancellationToken;
+    for silence in ["thread/goal/get", "thread/resume", "turn/start"] {
+        let f = fixture().await;
+        f.engine.handle(f.caller, request(1, TOOL)).await.unwrap();
+        let execution: Uuid = sqlx::query_scalar("SELECT execution FROM bounded_worker_attempts")
+            .fetch_one(&f.ledger.pool)
+            .await
+            .unwrap();
+        let late = f._directory.path().join("late-native-reply");
+        let mut child = tokio::process::Command::new("python3").args(["-u","-c",r#"
+import json,sys,time,os
+for line in sys.stdin:
+    q=json.loads(line)
+    if q['method']!=sys.argv[1]:
+        print(json.dumps({'id':q['id'],'result':{'goal':None}}),flush=True)
+        continue
+    print(q['method'],file=sys.stderr,flush=True)
+    while not os.path.exists(sys.argv[2]): time.sleep(.005)
+    print(json.dumps({'id':q['id'],'result':{'turn':{'id':'synthetic-late','items':[],'status':'inProgress','error':None}}}),flush=True)
+    print('late-reply',file=sys.stderr,flush=True)
+"#]).arg(silence).arg(&late).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true).spawn().unwrap();
+        let mut events = BufReader::new(child.stderr.take().unwrap()).lines();
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        client.set_original_worker_guard(Arc::new(ActivationGuard(f.ledger.clone(), execution)));
+        let (tx, _rx) = tokio::sync::oneshot::channel();
+        client.connect(JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(tx),
+            cancel.clone(),
+        ));
+        let starting = tokio::spawn({
+            let client = client.clone();
+            let silence = silence.to_owned();
+            async move {
+                if silence == "turn/start" {
+                    client.turn_start_with_mode("synthetic-thread".into(),serde_json::from_value(json!([{"type":"text","text":"Synthetic fixed native input","text_elements":[]}])).unwrap(),None).await.map(|_|())
+                } else {
+                    let params =
+                        serde_json::from_value(json!({"threadId":"synthetic-thread"})).unwrap();
+                    client.thread_resume(params).await.map(|_| ())
+                }
+            }
+        });
+        assert_eq!(events.next_line().await.unwrap().as_deref(), Some(silence));
+        let ending = tokio::spawn({
+            let ledger = f.ledger.clone();
+            async move { ledger.end("revoked", "synthetic_owner_revocation").await }
+        });
+        tokio::task::yield_now().await;
+        assert!(!ending.is_finished());
+        // Advance only after the connected peer confirms delivery, so OS process
+        // scheduling cannot masquerade as a silence/receipt timeout.
+        tokio::time::pause();
+        tokio::time::advance(std::time::Duration::from_secs(11)).await;
+        assert!(starting.await.unwrap().is_err());
+        ending.await.unwrap().unwrap();
+        tokio::time::resume();
+        let (state, activated): (String, i64) =
+            sqlx::query_as("SELECT state,activated FROM bounded_worker_attempts")
+                .fetch_one(&f.ledger.pool)
+                .await
+                .unwrap();
+        assert_eq!(state, "uncertain");
+        assert_eq!(activated, i64::from(silence == "turn/start"));
+        assert!(f.engine.handle(f.caller, request(2, TOOL)).await.is_err());
+        tokio::fs::write(&late, b"synthetic late receipt")
+            .await
+            .unwrap();
+        assert_eq!(
+            events.next_line().await.unwrap().as_deref(),
+            Some("late-reply")
+        );
+        let recovered = Ledger::adopt(f.ledger.pool.clone(), f.ledger.contract.clone())
+            .await
+            .unwrap();
+        assert!(recovered.active().await.is_err());
+        let state: String = sqlx::query_scalar("SELECT state FROM bounded_worker_attempts")
+            .fetch_one(&f.ledger.pool)
+            .await
+            .unwrap();
+        assert_eq!(state, "uncertain");
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+    }
 }

@@ -247,6 +247,34 @@ impl JsonRpcPeer {
         await_response(receiver, label, cancel).await
     }
 
+    /// Bound both pipe delivery and receipt waiting. Removing the pending sender
+    /// makes late replies inert; never replay or interrupt work on deadline.
+    pub async fn request_with_deadline<R, T>(
+        &self,
+        request_id: RequestId,
+        message: &T,
+        label: &str,
+        cancel: CancellationToken,
+        deadline: std::time::Duration,
+    ) -> Result<R, ExecutorError>
+    where
+        R: DeserializeOwned + Debug,
+        T: Serialize + Sync,
+    {
+        let result = tokio::time::timeout(
+            deadline,
+            self.request(request_id.clone(), message, label, cancel),
+        )
+        .await;
+        self.pending.lock().await.remove(&request_id);
+        result.map_err(|_| {
+            ExecutorError::Io(io::Error::new(
+                io::ErrorKind::TimedOut,
+                format!("{label} native receipt timed out; outcome unknown"),
+            ))
+        })?
+    }
+
     async fn send_raw(&self, payload: &str) -> Result<(), ExecutorError> {
         let mut guard = self.stdin.lock().await;
         guard
@@ -449,6 +477,71 @@ mod tests {
     use serde_json::json;
 
     use super::sanitize_response_value;
+
+    #[tokio::test]
+    async fn deadline_removes_pending_receipt_and_late_response_cannot_resolve_it() {
+        use std::process::Stdio;
+
+        use crate::{
+            env::RepoContext,
+            executors::codex::client::{AppServerClient, LogWriter},
+        };
+        let mut child = tokio::process::Command::new("python3")
+            .args([
+                "-u",
+                "-c",
+                r#"
+import sys
+for line in sys.stdin: pass
+"#,
+            ])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let cancel = tokio_util::sync::CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        let (tx, _rx) = tokio::sync::oneshot::channel();
+        let peer = super::JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client,
+            super::ExitSignalSender::new(tx),
+            cancel.clone(),
+        );
+        let id = peer.next_request_id();
+        let result: Result<serde_json::Value, _> = peer
+            .request_with_deadline(
+                id.clone(),
+                &json!({"id":id,"method":"synthetic/receipt","params":{}}),
+                "synthetic/receipt",
+                cancel.clone(),
+                std::time::Duration::from_millis(30),
+            )
+            .await;
+        assert!(
+            matches!(result,Err(crate::executors::ExecutorError::Io(ref e)) if e.kind()==std::io::ErrorKind::TimedOut)
+        );
+        assert!(peer.pending.lock().await.is_empty());
+        peer.resolve(id, super::PendingResponse::Result(json!({"late":true})))
+            .await;
+        assert!(peer.pending.lock().await.is_empty());
+        assert!(!cancel.is_cancelled());
+        assert!(child.try_wait().unwrap().is_none());
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+    }
 
     #[tokio::test]
     async fn unexpected_eof_and_failed_native_turn_are_not_success() {

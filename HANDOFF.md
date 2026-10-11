@@ -1,3 +1,21 @@
+## October11 remaining review corrections
+
+The reviewed aa82 source passed534 normal-CI tests (11 skipped). The next narrow
+correction makes ownership activity-first across archived/deleted aliases and
+unknown active roots, bounds native receipt waits, and durably suspends unknown
+receipts without stopping dispatched work. New exact-head checks are pending;
+PR243 remains draft and needs independent review before Staging acceptance.
+The scheduled-artifact loopback namespace prerequisite remains FAILED. No build
+on MCP, restart, live grant, target prompt or Staging contact occurred.
+
+The two-restart sequence is superseded as the proposed outcome. A one-restart
+startup bootstrap is feasible only through the existing trusted release-owner
+startup configuration: prove old ingress and native writers quiescent, retain
+the pinned preapproved contract and exact input prefixes, establish journaling,
+and verify before request ingress. This is a proposal, not implemented adoption.
+Missing quiescence/freshness must abort startup; never recapture changed history.
+See VK_BOUNDED_WORKER_CONTINUATION.md for trust and acceptance requirements.
+
 ## October11 corrected feature review boundary
 
 PR243 now contains the complete integrated correction path: exact resolved-agent

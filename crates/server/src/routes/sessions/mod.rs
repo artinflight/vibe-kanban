@@ -199,7 +199,11 @@ async fn follow_up_admitted(
     }
     // Give an explicit owner message priority before acquiring an executor slot
     // or resetting files. This can stop an active scheduled run of this session.
-    executors::capacity::controller::before_launch(session.id, false).await?;
+    if services::services::original_worker::in_dispatch() {
+        executors::capacity::controller::before_bounded_worker_launch().await?;
+    } else {
+        executors::capacity::controller::before_launch(session.id, false).await?;
+    }
 
     if let Some(proc_id) = payload.retry_process_id {
         let force_when_dirty = payload.force_when_dirty.unwrap_or(false);

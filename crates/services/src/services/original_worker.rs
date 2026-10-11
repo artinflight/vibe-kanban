@@ -127,6 +127,30 @@ pub fn register(ledger: Arc<Ledger>) -> io::Result<()> {
 }
 
 impl Ledger {
+    /// Catch input accepted before this optional capability was loaded, too.
+    /// Only native resume may follow the release-adopted manager anchor.
+    pub async fn manager_history(&self) -> io::Result<()> {
+        let rows: Vec<String> = sqlx::query_scalar("SELECT executor_action FROM execution_processes WHERE session_id=? AND run_reason='codingagent' AND dropped=FALSE AND rowid > (SELECT rowid FROM execution_processes WHERE id=? AND session_id=? AND dropped=FALSE) ORDER BY rowid")
+            .bind(self.contract.manager.session).bind(self.contract.manager_anchor)
+            .bind(self.contract.manager.session).fetch_all(&self.pool).await.map_err(db_error)?;
+        let anchor: i64 = sqlx::query_scalar("SELECT count(*) FROM execution_processes WHERE id=? AND session_id=? AND run_reason='codingagent' AND dropped=FALSE")
+            .bind(self.contract.manager_anchor).bind(self.contract.manager.session).fetch_one(&self.pool).await.map_err(db_error)?;
+        let valid = anchor == 1 && rows.iter().all(|json| {
+            serde_json::from_str::<ExecutorAction>(json).ok().is_some_and(|action| {
+                matches!(action.typ(), ExecutorActionType::CodingAgentFollowUpRequest(a)
+                    if a.prompt.trim() == "/goal resume" && a.session_id == self.contract.manager.thread
+                    && a.executor_config == self.contract.manager.config && a.capacity.is_none()
+                    && a.reset_to_message_id.is_none())
+            })
+        });
+        if !valid {
+            self.end("suspended", "manager_history_amended_or_unknown")
+                .await?;
+            return Err(invalid("Unverified manager input after adopted anchor"));
+        }
+        Ok(())
+    }
+
     pub async fn caller(
         &self,
         caller: Uuid,
@@ -297,28 +321,7 @@ pub async fn before_start(session: Uuid, action: &ExecutorAction) -> io::Result<
         return Ok(());
     };
     if let Ok(id) = ATTEMPT.try_with(|id| *id) {
-        ledger.active().await?;
-        match action.typ() {
-            ExecutorActionType::CodingAgentFollowUpRequest(a)
-                if session == ledger.contract.worker.session
-                    && a.session_id == ledger.contract.worker.thread
-                    && a.prompt == ledger.contract.continuation()
-                    && a.executor_config == ledger.contract.worker.config
-                    && a.reset_to_message_id.is_none() =>
-            {
-                let state: String =
-                    sqlx::query_scalar("SELECT state FROM bounded_worker_attempts WHERE id=?")
-                        .bind(id)
-                        .fetch_one(&ledger.pool)
-                        .await
-                        .map_err(db_error)?;
-                if state != "dispatching" {
-                    return Err(invalid("Invalid dispatch reservation"));
-                }
-                Ok(())
-            }
-            _ => Err(invalid("Bounded dispatch action changed")),
-        }
+        ledger.before_bounded_start(id, session, action).await
     } else {
         let prompt = match action.typ() {
             ExecutorActionType::CodingAgentInitialRequest(a) => &a.prompt,
@@ -327,6 +330,44 @@ pub async fn before_start(session: Uuid, action: &ExecutorAction) -> io::Result<
             _ => return Ok(()),
         };
         ordinary_input(session, prompt).await
+    }
+}
+
+impl Ledger {
+    /// The exact gate called by ContainerService before creating/spawning work.
+    pub async fn before_bounded_start(
+        &self,
+        id: Uuid,
+        session: Uuid,
+        action: &ExecutorAction,
+    ) -> io::Result<()> {
+        let ledger = self;
+        ledger.active().await?;
+        match action.typ() {
+            ExecutorActionType::CodingAgentFollowUpRequest(a)
+                if session == ledger.contract.worker.session
+                    && a.session_id == ledger.contract.worker.thread
+                    && a.prompt == ledger.contract.continuation()
+                    && a.executor_config == ledger.contract.worker.config
+                    && a.working_dir == ledger.contract.worker.working_dir
+                    && a.capacity.is_none()
+                    && a.reset_to_message_id.is_none() =>
+            {
+                let state: String = sqlx::query_scalar(
+                    "SELECT state FROM bounded_worker_attempts WHERE id=? AND grant_id=?",
+                )
+                .bind(id)
+                .bind(ledger.contract.id)
+                .fetch_one(&ledger.pool)
+                .await
+                .map_err(db_error)?;
+                if state != "dispatching" {
+                    return Err(invalid("Invalid dispatch reservation"));
+                }
+                Ok(())
+            }
+            _ => Err(invalid("Bounded dispatch action changed")),
+        }
     }
 }
 
@@ -356,6 +397,52 @@ pub struct Engine {
 }
 
 impl Engine {
+    /// Exact backend side of the process-scoped stdio proxy, also exercised in
+    /// isolated socket fixtures. The caller comes from bind(), never the frame.
+    #[cfg(unix)]
+    pub async fn serve_connection(
+        &self,
+        caller: Uuid,
+        token: &str,
+        mut stream: tokio::net::UnixStream,
+    ) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let mut bytes = Vec::new();
+        let read = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            (&mut stream)
+                .take(executors::original_worker::LIMIT as u64 + 1)
+                .read_to_end(&mut bytes),
+        )
+        .await;
+        if !matches!(read, Ok(Ok(_))) || bytes.len() > executors::original_worker::LIMIT {
+            return;
+        }
+        let Ok(wire) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+            return;
+        };
+        if wire["token"].as_str() != Some(token)
+            || wire
+                .as_object()
+                .is_none_or(|v| v.keys().any(|k| !matches!(k.as_str(), "token" | "request")))
+        {
+            return;
+        }
+        let request = wire["request"].clone();
+        let reply = self
+            .handle(caller, request.clone())
+            .await
+            .unwrap_or_else(|_| {
+                executors::original_worker::error(
+                    &request,
+                    "Continuation blocked; no permission granted. Inspect backend state.",
+                )
+            });
+        if let Ok(reply) = serde_json::to_vec(&reply) {
+            let _ = stream.write_all(&reply).await;
+        }
+    }
+
     pub async fn handle(
         &self,
         caller: Uuid,

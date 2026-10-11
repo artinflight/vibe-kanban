@@ -18,10 +18,7 @@ use serde_json::Value;
 use services::services::original_worker::{
     Contract, Engine, Identity, Ledger, Runtime, digest, invalid,
 };
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    sync::Mutex,
-};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::{
@@ -182,6 +179,7 @@ impl Runtime for Live {
 
     async fn check(&self, caller: Uuid) -> io::Result<()> {
         self.ledger.active().await?;
+        self.ledger.manager_history().await?;
         let (session, head) = self.identity(&self.ledger.contract.manager).await?;
         let process = ExecutionProcess::find_by_id(&self.deployment.db().pool, caller)
             .await
@@ -202,6 +200,7 @@ impl Runtime for Live {
     }
 
     async fn admit(&self) -> io::Result<()> {
+        executors::capacity::controller::before_bounded_worker_launch().await?;
         let sample = *self.sampled.lock().await;
         if sample.is_none_or(|(stamp, _)| stamp.elapsed() > Duration::from_secs(10)) {
             return Err(invalid("Resource evidence is stale"));
@@ -228,7 +227,7 @@ impl Runtime for Live {
                 .deployment
                 .queued_message_service()
                 .has_queued(c.worker.session)
-            || executors::executors::codex::codex_execution_limit_error().is_some()
+            || !executors::executors::codex::original_worker_capacity_available()
         {
             return Err(invalid("Worker collision or capacity guard blocked"));
         }
@@ -287,7 +286,9 @@ impl Backend for Provider {
         }
         // Supply the transport only for the original saved configuration; a
         // same-session owner send with changed configuration suspends the grant.
-        if self.runtime.identity(&c.manager).await.is_err() {
+        if self.runtime.identity(&c.manager).await.is_err()
+            || self.runtime.ledger.manager_history().await.is_err()
+        {
             self.runtime
                 .ledger
                 .end("suspended", "manager_binding_changed")
@@ -310,10 +311,15 @@ impl Backend for Provider {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let root = utils::assets::asset_dir().join("bounded-worker-sockets");
+            // Keep the Unix pathname below sun_path's bound on the established
+            // long XDG asset root; no new network listener or access route.
+            let root = utils::assets::asset_dir().join("bw");
             tokio::fs::create_dir_all(&root).await?;
             tokio::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).await?;
-            let socket = root.join(format!("{}.sock", Uuid::new_v4()));
+            let socket = root.join(format!("{}.s", Uuid::new_v4().simple()));
+            if socket.as_os_str().as_encoded_bytes().len() > 100 {
+                return Err(invalid("Private capability socket path is too long"));
+            }
             let listener = tokio::net::UnixListener::bind(&socket)?;
             let token = format!("{}{}", Uuid::new_v4(), Uuid::new_v4());
             let expected = token.clone();
@@ -328,36 +334,13 @@ impl Backend for Provider {
                     if running != 1 {
                         break;
                     }
-                    let Ok(Ok((mut stream, _))) = accepted else {
+                    let Ok(Ok((stream, _))) = accepted else {
                         continue;
                     };
                     let token = expected.clone();
                     let engine = engine.clone();
                     tokio::spawn(async move {
-                        let mut bytes = Vec::new();
-                        let read = tokio::time::timeout(
-                            Duration::from_secs(5),
-                            (&mut stream)
-                                .take(executors::original_worker::LIMIT as u64 + 1)
-                                .read_to_end(&mut bytes),
-                        )
-                        .await;
-                        if !matches!(read, Ok(Ok(_)))
-                            || bytes.len() > executors::original_worker::LIMIT
-                        {
-                            return;
-                        }
-                        let Ok(wire) = serde_json::from_slice::<Value>(&bytes) else {
-                            return;
-                        };
-                        if wire["token"].as_str() != Some(&token) {
-                            return;
-                        }
-                        let request = wire["request"].clone();
-                        let reply = engine.handle(caller, request.clone()).await.unwrap_or_else(|_| executors::original_worker::error(&request, "Continuation blocked; no permission granted. Inspect backend state."));
-                        if let Ok(reply) = serde_json::to_vec(&reply) {
-                            let _ = stream.write_all(&reply).await;
-                        }
+                        engine.serve_connection(caller, &token, stream).await;
                     });
                 }
                 let _ = tokio::fs::remove_file(path).await;
@@ -411,8 +394,13 @@ impl Backend for Provider {
         // A worker launch must still agree with the fixed manager goal immediately
         // before inference. Initial manager resumes can be paused until native activation.
         if identity.session == c.worker.session {
+            let caller: Uuid = sqlx::query_scalar("SELECT caller FROM bounded_worker_attempts WHERE execution=? AND grant_id=? AND state='dispatching'")
+                .bind(execution.ok_or_else(|| invalid("Missing bound worker execution"))?).bind(c.id)
+                .fetch_one(&self.runtime.ledger.pool).await.map_err(|_| invalid("Missing caller receipt"))?;
+            self.runtime.check(caller).await?;
             self.runtime.goal().await?;
             self.runtime.assets().await?;
+            executors::capacity::controller::before_bounded_worker_launch().await?;
             resources().await?;
         } else {
             let goal = executors::capacity::first_run::native(&c.manager.thread).await?;

@@ -202,6 +202,11 @@ pub fn codex_execution_limit_error() -> Option<ExecutorError> {
     }
 }
 
+pub fn original_worker_capacity_available() -> bool {
+    active_codex_execution_count().saturating_add(delegation::active_count()) < 7
+        && codex_execution_limit_error().is_none()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

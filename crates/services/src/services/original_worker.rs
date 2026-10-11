@@ -163,6 +163,9 @@ impl Ledger {
         checks: impl std::future::Future<Output = io::Result<()>>,
     ) -> io::Result<executors::original_worker::ActivationFence> {
         let fence = self.activation.clone().lock_owned().await;
+        // Terminal authority must be checked before preflight can persist any
+        // activation/attempt state, and again after a guard may end the grant.
+        self.active().await?;
         ACTIVATING.scope(self.contract.id, checks).await?;
         self.active().await?;
         Ok(fence)

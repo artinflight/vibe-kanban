@@ -4,10 +4,25 @@ use services::services::original_worker::digest;
 use super::*;
 use crate::original_worker::StartupFiles;
 
+#[derive(Default)]
+struct SyntheticUnits(std::sync::Mutex<std::collections::HashMap<String, String>>);
+#[executors::original_worker::async_trait]
+impl UnitLookup for SyntheticUnits {
+    async fn properties(&self, unit: &str) -> io::Result<String> {
+        self.0
+            .lock()
+            .unwrap()
+            .get(unit)
+            .cloned()
+            .ok_or_else(|| invalid("Synthetic unit not registered"))
+    }
+}
+
 pub(in crate::original_worker) struct Fixture {
     pub(in crate::original_worker) processes: Procfs,
     pub(in crate::original_worker) receipt: Receipt,
     pub(in crate::original_worker) files: StartupFiles,
+    units: Arc<SyntheticUnits>,
 }
 impl Fixture {
     pub(in crate::original_worker) fn new(
@@ -59,15 +74,18 @@ impl Fixture {
                 },
             ],
         };
+        let units = Arc::new(SyntheticUnits::default());
         let processes = Procfs {
             uid: fs::metadata(&root).unwrap().uid(),
             root,
             own_pid: 999,
+            units: units.clone(),
         };
         let mut f = Self {
             processes,
             receipt,
             files,
+            units,
         };
         f.save();
         f
@@ -113,6 +131,15 @@ impl Fixture {
             self.processes.root.join(pid.to_string()).join("fd/3"),
         )
         .unwrap();
+    }
+    pub(in crate::original_worker) fn unit(&self, pid: u32, unit: &str, binding: &str) {
+        let group = format!("/user.slice/synthetic/{unit}");
+        fs::write(
+            self.processes.root.join(pid.to_string()).join("cgroup"),
+            format!("0::{group}\n"),
+        )
+        .unwrap();
+        self.units.0.lock().unwrap().insert(unit.into(),format!("ControlGroup={group}\nTransient=yes\nActiveState=active\nDescription=VK Codex execution\nInvocationID=11111111222243338444555555555555\nEnvironment={binding}\n"));
     }
 }
 

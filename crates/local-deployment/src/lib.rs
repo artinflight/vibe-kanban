@@ -168,6 +168,7 @@ pub struct LocalDeployment {
     ssh_config: Arc<russh::server::Config>,
     pty: PtyService,
     pr_sync_notify: Arc<Notify>,
+    background_started: Arc<OnceLock<()>>,
 }
 
 #[derive(Debug, Clone)]
@@ -350,18 +351,6 @@ impl Deployment for LocalDeployment {
             None => None,
         };
         let pr_sync_notify = Arc::new(Notify::new());
-        if is_pr_monitor_disabled() {
-            tracing::info!("PR monitor disabled by VK_DISABLE_PR_MONITOR");
-        } else {
-            let db = db.clone();
-            let analytics = analytics.as_ref().map(|s| AnalyticsContext {
-                user_id: user_id.clone(),
-                analytics_service: s.clone(),
-            });
-            let container = container.clone();
-            let rc = remote_client.clone().ok();
-            PrMonitorService::spawn(db, analytics, container, rc, pr_sync_notify.clone()).await;
-        }
 
         let deployment = Self {
             config,
@@ -393,9 +382,33 @@ impl Deployment for LocalDeployment {
             ssh_config,
             pty,
             pr_sync_notify,
+            background_started: Arc::new(OnceLock::new()),
         };
 
         Ok(deployment)
+    }
+
+    async fn start_background_services(&self) -> Result<(), DeploymentError> {
+        if self.background_started.set(()).is_err() {
+            return Ok(());
+        }
+        if is_pr_monitor_disabled() {
+            tracing::info!("PR monitor disabled by VK_DISABLE_PR_MONITOR");
+        } else {
+            let analytics = self.analytics.as_ref().map(|s| AnalyticsContext {
+                user_id: self.user_id.clone(),
+                analytics_service: s.clone(),
+            });
+            PrMonitorService::spawn(
+                self.db.clone(),
+                analytics,
+                self.container.clone(),
+                self.remote_client.clone().ok(),
+                self.pr_sync_notify.clone(),
+            )
+            .await;
+        }
+        Ok(())
     }
 
     fn user_id(&self) -> &str {

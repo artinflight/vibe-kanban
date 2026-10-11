@@ -57,6 +57,13 @@ struct FixtureDeployment {
     config: Arc<RwLock<Config>>,
     events: EventService,
     queue: QueuedMessageService,
+    monitor: Arc<FixtureMonitor>,
+}
+
+#[derive(Default)]
+struct FixtureMonitor {
+    enabled: AtomicBool,
+    handle: Mutex<Option<JoinHandle<()>>>,
 }
 
 macro_rules! unused_getter {
@@ -70,6 +77,20 @@ macro_rules! unused_getter {
 impl Deployment for FixtureDeployment {
     async fn new(_: CancellationToken) -> Result<Self, deployment::DeploymentError> {
         panic!("No service startup in fixture")
+    }
+    async fn start_background_services(&self) -> Result<(), deployment::DeploymentError> {
+        if self.monitor.enabled.load(Ordering::SeqCst) {
+            let task = services::services::pr_monitor::PrMonitorService::spawn(
+                self.container.db.clone(),
+                None,
+                self.container.as_ref().clone(),
+                None,
+                Arc::new(tokio::sync::Notify::new()),
+            )
+            .await;
+            *self.monitor.handle.lock().await = Some(task);
+        }
+        Ok(())
     }
     fn user_id(&self) -> &str {
         "synthetic"
@@ -119,14 +140,17 @@ impl Deployment for FixtureDeployment {
     );
 }
 
+#[derive(Clone)]
 struct FixtureContainer {
     db: DBService,
     git: git::GitService,
     stores: Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>>,
-    provider: OnceLock<Arc<Provider<FixtureDeployment>>>,
-    launches: AtomicUsize,
-    worker_goal: AtomicBool,
-    peers: Mutex<Vec<NativePeer>>,
+    provider: Arc<OnceLock<Arc<Provider<FixtureDeployment>>>>,
+    launches: Arc<AtomicUsize>,
+    worker_goal: Arc<AtomicBool>,
+    peers: Arc<Mutex<Vec<NativePeer>>>,
+    scripts: Arc<AtomicUsize>,
+    script_done: Arc<tokio::sync::Notify>,
 }
 
 #[executors::original_worker::async_trait]
@@ -142,6 +166,9 @@ impl ContainerService for FixtureContainer {
     }
     fn notification_service(&self) -> &NotificationService {
         panic!("No notifications in fixture")
+    }
+    fn status_worktree_cleanup_enabled(&self) -> bool {
+        false
     }
     fn workspace_to_current_dir(&self, w: &Workspace) -> PathBuf {
         w.container_ref.as_ref().unwrap().into()
@@ -211,6 +238,47 @@ impl ContainerService for FixtureContainer {
         process: &ExecutionProcess,
         action: &ExecutorAction,
     ) -> Result<(), ContainerError> {
+        if let ExecutorActionType::ScriptRequest(request) = action.typ() {
+            use executors::actions::Executable;
+            use tokio::io::AsyncReadExt;
+            services::services::original_worker::current()
+                .expect("Monitor cannot launch before authority registration")
+                .active()
+                .await?;
+            let approval =
+                services::services::approvals::executor_approvals::ExecutorApprovalBridge::new(
+                    services::services::approvals::Approvals::new(),
+                    self.db.clone(),
+                    NotificationService::new(Arc::new(RwLock::new(Config::default()))),
+                    process.id,
+                );
+            let env = ExecutionEnv::new(RepoContext::default(), false, String::new());
+            let mut child = request
+                .spawn(&self.workspace_to_current_dir(workspace), approval, &env)
+                .await?
+                .child;
+            let mut output = String::new();
+            child
+                .inner()
+                .stdout
+                .take()
+                .unwrap()
+                .read_to_string(&mut output)
+                .await?;
+            assert!(child.wait().await?.success());
+            assert_eq!(output, "synthetic-startup-monitor");
+            assert_eq!(process.run_reason, ExecutionProcessRunReason::ArchiveScript);
+            ExecutionProcess::update_completion(
+                &self.db.pool,
+                process.id,
+                ExecutionProcessStatus::Completed,
+                Some(0),
+            )
+            .await?;
+            self.scripts.fetch_add(1, Ordering::SeqCst);
+            self.script_done.notify_one();
+            return Ok(());
+        }
         let ExecutorActionType::CodingAgentFollowUpRequest(request) = action.typ() else {
             panic!("Only synthetic follow-up")
         };
@@ -353,15 +421,20 @@ fn call(id: usize) -> Value {
 
 #[tokio::test]
 async fn production_follow_up_resolution_launch_and_workspace_races() {
-    production_fixture(false).await;
+    production_fixture(false, false).await;
 }
 
 #[tokio::test]
 async fn production_timeout_receipt_recovery_and_revoke_endpoint() {
-    production_fixture(true).await;
+    production_fixture(true, false).await;
 }
 
-async fn production_fixture(timeout_lifecycle: bool) {
+#[tokio::test]
+async fn production_startup_holds_pr_monitor_archive_launch_until_adopted() {
+    production_fixture(false, true).await;
+}
+
+async fn production_fixture(timeout_lifecycle: bool, monitor_startup: bool) {
     let dir = tempfile::tempdir().unwrap();
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(1)
@@ -378,16 +451,19 @@ async fn production_fixture(timeout_lifecycle: bool) {
         db: db.clone(),
         git: git::GitService::new(),
         stores: Arc::new(RwLock::new(HashMap::new())),
-        provider: OnceLock::new(),
-        launches: AtomicUsize::new(0),
-        worker_goal: AtomicBool::new(false),
-        peers: Mutex::new(Vec::new()),
+        provider: Arc::new(OnceLock::new()),
+        launches: Arc::new(AtomicUsize::new(0)),
+        worker_goal: Arc::new(AtomicBool::new(false)),
+        peers: Arc::new(Mutex::new(Vec::new())),
+        scripts: Arc::new(AtomicUsize::new(0)),
+        script_done: Arc::new(tokio::sync::Notify::new()),
     });
     let deployment = FixtureDeployment {
         container: container.clone(),
         config: Arc::new(RwLock::new(Config::default())),
         events: EventService::new(db, Arc::new(MsgStore::new()), Arc::new(RwLock::new(0))),
         queue: QueuedMessageService::new(),
+        monitor: Arc::new(FixtureMonitor::default()),
     };
     let raw: ExecutorConfig = serde_json::from_value(json!({"executor":"CODEX","variant":"DEFAULT","model_id":"gpt-6.1-sol","reasoning_id":"high"})).unwrap();
     let home = dir.path().join("native");
@@ -631,6 +707,13 @@ async fn production_fixture(timeout_lifecycle: bool) {
         .execute(&goals)
         .await
         .unwrap();
+    if monitor_startup {
+        exercise_monitor_startup(&deployment, &contract, dir.path()).await;
+        native.close().await;
+        goals.close().await;
+        pool.close().await;
+        return;
+    }
     let ledger = exercise_bootstrap_acceptance(&deployment, &contract, dir.path()).await;
 
     let resources = Arc::new(SyntheticResources {
@@ -944,6 +1027,168 @@ async fn production_fixture(timeout_lifecycle: bool) {
 
 /// The actual loader used by both server entry points, with synthetic procfs.
 /// Every failing bootstrap leaves ingress unregistered and creates no coverage.
+async fn exercise_monitor_startup(
+    deployment: &FixtureDeployment,
+    contract: &Contract,
+    directory: &Path,
+) {
+    use std::os::unix::fs::PermissionsExt;
+
+    use db::models::pull_request::PullRequest;
+
+    // Only GitHub's external receipt is synthetic. The production monitor,
+    // archive policy, execution admission and script spawning remain real.
+    let bin = directory.join("bin");
+    tokio::fs::create_dir_all(&bin).await.unwrap();
+    let gh = bin.join("gh");
+    tokio::fs::write(
+        &gh,
+        b"#!/bin/sh\n[ \"$1\" = pr ] && [ \"$2\" = view ] || exit 1\ncat <<'JSON'\n{\"number\":1,\"url\":\"https://github.com/synthetic/fixture/pull/1\",\"state\":\"MERGED\",\"mergedAt\":\"2026-01-01T00:00:00Z\",\"mergeCommit\":{\"oid\":\"1111111111111111111111111111111111111111\"},\"title\":\"Synthetic\",\"baseRefName\":\"synthetic-review\",\"headRefName\":\"synthetic\"}\nJSON\n",
+    )
+    .await
+    .unwrap();
+    tokio::fs::set_permissions(&gh, std::fs::Permissions::from_mode(0o700))
+        .await
+        .unwrap();
+    let previous_path = std::env::var_os("PATH").unwrap();
+    let path =
+        std::env::join_paths(std::iter::once(bin).chain(std::env::split_paths(&previous_path)))
+            .unwrap();
+    // nextest runs this fixture in its own process, never a shared backend.
+    unsafe { std::env::set_var("PATH", path) };
+    let pool = &deployment.db().pool;
+    let root = directory.join("monitor");
+    tokio::fs::create_dir_all(root.join("repo")).await.unwrap();
+    let workspace = Workspace::create(
+        pool,
+        &CreateWorkspace {
+            branch: "synthetic".into(),
+            name: Some("monitor".into()),
+        },
+        Uuid::new_v4(),
+    )
+    .await
+    .unwrap();
+    sqlx::query("UPDATE workspaces SET container_ref=? WHERE id=?")
+        .bind(root.to_str().unwrap())
+        .bind(workspace.id)
+        .execute(pool)
+        .await
+        .unwrap();
+    let repo = Repo::find_or_create(pool, &root.join("repo"), "Synthetic monitor repository")
+        .await
+        .unwrap();
+    sqlx::query("UPDATE repos SET archive_script=? WHERE id=?")
+        .bind("printf synthetic-startup-monitor")
+        .bind(repo.id)
+        .execute(pool)
+        .await
+        .unwrap();
+    WorkspaceRepo::create_many(
+        pool,
+        workspace.id,
+        &[CreateWorkspaceRepo {
+            repo_id: repo.id,
+            target_branch: "synthetic-review".into(),
+        }],
+    )
+    .await
+    .unwrap();
+    let url = "https://github.com/synthetic/fixture/pull/1";
+    PullRequest::create_for_workspace(pool, workspace.id, repo.id, "synthetic-review", 1, url)
+        .await
+        .unwrap();
+    deployment.monitor.enabled.store(true, Ordering::SeqCst);
+    assert!(
+        crate::startup::configured_background(deployment, async {
+            Err(invalid("Synthetic failed configuration"))
+        })
+        .await
+        .is_err()
+    );
+    assert!(deployment.monitor.handle.lock().await.is_none());
+    assert_eq!(deployment.container.scripts.load(Ordering::SeqCst), 0);
+    assert!(
+        !Workspace::find_by_id(pool, workspace.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .archived
+    );
+
+    let entered = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let task = {
+        let deployment = deployment.clone();
+        let contract = contract.clone();
+        let directory = directory.to_owned();
+        let entered = entered.clone();
+        let release = release.clone();
+        tokio::spawn(async move {
+            crate::startup::configured_background(&deployment, async {
+                entered.notify_one();
+                release.notified().await;
+                let ledger =
+                    exercise_bootstrap_acceptance(&deployment, &contract, &directory).await;
+                services::services::original_worker::register(ledger).unwrap();
+                Ok(())
+            })
+            .await
+        })
+    };
+    entered.notified().await;
+    assert!(
+        deployment.monitor.handle.lock().await.is_none(),
+        "real monitor cannot start while adoption is pending"
+    );
+    assert_eq!(deployment.container.scripts.load(Ordering::SeqCst), 0);
+    let grants: i64 = sqlx::query_scalar("SELECT count(*) FROM bounded_worker_grants")
+        .fetch_one(pool)
+        .await
+        .unwrap();
+    assert_eq!(grants, 0);
+    assert!(
+        !Workspace::find_by_id(pool, workspace.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .archived
+    );
+    release.notify_one();
+    task.await.unwrap().unwrap();
+    tokio::time::timeout(
+        Duration::from_secs(5),
+        deployment.container.script_done.notified(),
+    )
+    .await
+    .expect(
+        "production monitor must reach archive admission and actual script launch after adoption",
+    );
+    assert_eq!(deployment.container.scripts.load(Ordering::SeqCst), 1);
+    assert!(
+        Workspace::find_by_id(pool, workspace.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .archived
+    );
+    assert_eq!(
+        PullRequest::count_open_for_workspace(pool, workspace.id)
+            .await
+            .unwrap(),
+        0
+    );
+    let archives:i64=sqlx::query_scalar("SELECT count(*) FROM execution_processes e JOIN sessions s ON s.id=e.session_id WHERE s.workspace_id=? AND e.run_reason='archivescript' AND e.status='completed' AND e.exit_code=0")
+        .bind(workspace.id).fetch_one(pool).await.unwrap();
+    assert_eq!(archives, 1);
+    assert_eq!(deployment.container.launches.load(Ordering::SeqCst), 0);
+    // Stop only this fixture's monitor, not any production service or process.
+    let handle = deployment.monitor.handle.lock().await.take().unwrap();
+    handle.abort();
+    let _ = handle.await;
+    unsafe { std::env::set_var("PATH", previous_path) };
+}
+
 async fn exercise_bootstrap_acceptance(
     deployment: &FixtureDeployment,
     contract: &Contract,
@@ -984,6 +1229,7 @@ async fn exercise_bootstrap_acceptance(
         "unlisted_ingress",
         "unmarked_ingress",
         "unscoped_native",
+        "forged_unrelated_session",
         "unknown_producer",
         "open_input_file",
         "changed_prefix",
@@ -1053,6 +1299,7 @@ async fn exercise_bootstrap_acceptance(
             },
             "unmarked_ingress" => { f.process(78,190,"",directory,"server");process=Some(78); },
             "unscoped_native" => { f.process(78,190,"",directory,"codex");process=Some(78); },
+            "forged_unrelated_session" => { f.process(78,190,&format!("VK_SESSION_ID={}\0CODEX_HOME={}\0",Uuid::new_v4(),baseline_home(&f)),directory,"codex");process=Some(78); },
             _=>{},
         }
         f.save();
@@ -1140,17 +1387,148 @@ async fn exercise_bootstrap_acceptance(
     f.receipt = baseline;
     f.files.contract_sha256 = pin;
     f.save();
+    let unrelated_root = directory.join("proven-unrelated");
+    tokio::fs::create_dir_all(&unrelated_root).await.unwrap();
+    let workspace = Workspace::create(
+        pool,
+        &CreateWorkspace {
+            branch: "synthetic-unrelated".into(),
+            name: None,
+        },
+        Uuid::new_v4(),
+    )
+    .await
+    .unwrap();
+    sqlx::query("UPDATE workspaces SET container_ref=? WHERE id=?")
+        .bind(unrelated_root.to_str().unwrap())
+        .bind(workspace.id)
+        .execute(pool)
+        .await
+        .unwrap();
+    let session = Session::create(
+        pool,
+        &CreateSession {
+            executor: Some("CODEX".into()),
+            name: None,
+        },
+        Uuid::new_v4(),
+        workspace.id,
+    )
+    .await
+    .unwrap();
+    let thread = "synthetic-proven-unrelated-thread";
+    let process = ExecutionProcess::create(
+        pool,
+        &CreateExecutionProcess {
+            session_id: session.id,
+            run_reason: ExecutionProcessRunReason::CodingAgent,
+            executor_action: ExecutorAction::new(
+                ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+                    prompt: "Synthetic unrelated input".into(),
+                    session_id: thread.into(),
+                    executor_config: contract.worker.config.clone(),
+                    working_dir: None,
+                    reset_to_message_id: None,
+                    capacity: None,
+                }),
+                None,
+            ),
+        },
+        Uuid::new_v4(),
+        &[],
+    )
+    .await
+    .unwrap();
+    let turn = CodingAgentTurn::create(
+        pool,
+        &CreateCodingAgentTurn {
+            execution_process_id: process.id,
+            prompt: Some("Synthetic unrelated input".into()),
+        },
+        Uuid::new_v4(),
+    )
+    .await
+    .unwrap();
+    let native = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(f.receipt.native_home.join("state_5.sqlite")),
+        )
+        .await
+        .unwrap();
+    let rollout = f.receipt.native_home.join("unrelated.jsonl");
+    tokio::fs::write(&rollout, b"").await.unwrap();
+    sqlx::query("INSERT INTO threads VALUES (?,?)")
+        .bind(thread)
+        .bind(rollout.to_str().unwrap())
+        .execute(&native)
+        .await
+        .unwrap();
+    native.close().await;
     f.process(
         89,
         300,
         &format!(
-            "VK_SESSION_ID={}\0CODEX_HOME={}\0VK_RUNTIME_IDENTITY_FILE=/synthetic/runtime-pin\0",
+            "VK_SESSION_ID={}\0VK_WORKSPACE_ID={}\0VK_EXECUTION_PROCESS_ID={}\0CODEX_HOME={}\0VK_RUNTIME_IDENTITY_FILE=/synthetic/runtime-pin\0",
+            session.id,workspace.id,process.id,
+            baseline_home(&f)
+        ),
+        &unrelated_root,
+        "codex",
+    );
+    assert!(
+        load_startup(deployment, &f.files, &f.processes)
+            .await
+            .is_err(),
+        "existing execution labels alone cannot prove process ownership"
+    );
+    let unit = "vk-exec-codex-11111111222243338444555555555555.service";
+    let unit_env = format!(
+        "VK_SESSION_ID={} VK_WORKSPACE_ID={} VK_EXECUTION_PROCESS_ID={} CODEX_HOME={}",
+        session.id,
+        workspace.id,
+        process.id,
+        baseline_home(&f)
+    );
+    f.unit(89, unit, &unit_env);
+    assert!(
+        load_startup(deployment, &f.files, &f.processes)
+            .await
+            .is_err(),
+        "service/execution receipt without native thread remains unknown"
+    );
+    sqlx::query("UPDATE coding_agent_turns SET agent_session_id=? WHERE id=?")
+        .bind(thread)
+        .bind(turn.id)
+        .execute(pool)
+        .await
+        .unwrap();
+    assert!(
+        load_startup(deployment, &f.files, &f.processes)
+            .await
+            .is_err(),
+        "index labels without a held rollout are not process/thread provenance"
+    );
+    f.held_rollout(89, &rollout);
+    f.unit(
+        89,
+        unit,
+        &format!(
+            "VK_SESSION_ID={} VK_WORKSPACE_ID={} VK_EXECUTION_PROCESS_ID={} CODEX_HOME={}",
+            session.id,
+            workspace.id,
             Uuid::new_v4(),
             baseline_home(&f)
         ),
-        directory,
-        "codex",
     );
+    assert!(
+        load_startup(deployment, &f.files, &f.processes)
+            .await
+            .is_err(),
+        "forged process claims cannot replace backend service identity"
+    );
+    f.unit(89, unit, &unit_env);
     // Existing same-thread goals are paused during a safe restart. Adoption
     // validates their unchanged identity without activating native inference.
     let home = executors::executors::codex::codex_home().unwrap();
@@ -1196,6 +1574,25 @@ async fn exercise_bootstrap_acceptance(
         .await
         .unwrap();
     assert_eq!(epoch, contract.manager.input_seal.coverage_id);
+    assert_eq!(
+        ExecutionProcess::find_by_id(pool, process.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .status,
+        ExecutionProcessStatus::Running,
+        "proven unrelated work is left undisturbed"
+    );
+    // Fixture activity ends only after startup tests, so later collision tests
+    // use their original synthetic global activity inventory.
+    ExecutionProcess::update_completion(
+        pool,
+        process.id,
+        ExecutionProcessStatus::Completed,
+        Some(0),
+    )
+    .await
+    .unwrap();
     sqlx::query("UPDATE thread_goals SET status='active' WHERE thread_id=?")
         .bind(&contract.manager.thread)
         .execute(&goals)

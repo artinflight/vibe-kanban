@@ -1,14 +1,27 @@
+## October11 independent review corrections in progress
+
+PR243 remains draft and is not staging-ready. The prior green run at03b95d857
+(and source-identical a5af60298) does not validate the newly reported production
+paths. Corrections bind the exact launch clone, preserve absent raw routing with
+separate Recommend evidence, fence final native activation against terminal
+revocation, check workspace/worktree collisions and seal native/durable input
+history. New compiled fixtures are pending check-only CI; no MCP build or live
+operation. The current Staging owner route is clarified by root; there is no
+verified stop applying to that current conversation. Return corrected exact-head
+CI evidence to root for independent review before Staging handoff. The scheduled
+artifact bubblewrap loopback prerequisite remains FAILED, not waived.
+
 ## October11: tested original-worker capability awaits release ownership
 
 Draft PR243 now carries the narrow production integration over staging2693c46d.
 Test run38140071765 at4f2c3368b passed9 continuation fixtures and521 workspace
 tests (11 skipped), plus Clippy/schema/frontend/Tauri. Final Test38140591079
 at03b95d857 also passed:10 continuation fixtures,522 workspace tests (11 skipped),
-Clippy/schema/frontend/Tauri. Source is test-complete; independent review, accepted
+Clippy/schema/frontend/Tauri. Prior tests did not cover the review gaps; independent review, accepted
 staging SHA and private next-restart entry are not. The artifact builder is blocked by
 its runner's bubblewrap loopback prerequisite; do not bypass sandboxing. The
-stopped Staging conversation has not been resumed. An active owner routing and
-independent review/next-restart acceptance remain required; no live contract or
+current Staging acceptance is coordinated by root after corrections and
+independent review; no live contract or
 worker prompt has been created. See VK_BOUNDED_WORKER_CONTINUATION.md.
 
 Continue feat/bounded-original-worker-continuation in this existing workspace.

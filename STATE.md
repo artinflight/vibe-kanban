@@ -1,3 +1,16 @@
+## October11 independent review corrections in progress
+
+PR243 remains draft and is not staging-ready. The prior green run at03b95d857
+(and source-identical a5af60298) does not validate the newly reported production
+paths. Corrections bind the exact launch clone, preserve absent raw routing with
+separate Recommend evidence, fence final native activation against terminal
+revocation, check workspace/worktree collisions and seal native/durable input
+history. New compiled fixtures are pending check-only CI; no MCP build or live
+operation. The current Staging owner route is clarified by root; there is no
+verified stop applying to that current conversation. Return corrected exact-head
+CI evidence to root for independent review before Staging handoff. The scheduled
+artifact bubblewrap loopback prerequisite remains FAILED, not waived.
+
 ## October11 bounded continuation validation
 
 PR243 is a narrow default-off backend continuation feature based on staging2693c46d,

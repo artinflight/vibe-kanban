@@ -1374,6 +1374,13 @@ impl LocalContainerService {
 
     /// Consume a queued follow-up and start it when the completed process allows it.
     async fn consume_queued_follow_up(&self, ctx: &ExecutionContext) -> QueuedFollowUpOutcome {
+        services::services::admission::run(self.consume_queued_follow_up_admitted(ctx)).await
+    }
+
+    async fn consume_queued_follow_up_admitted(
+        &self,
+        ctx: &ExecutionContext,
+    ) -> QueuedFollowUpOutcome {
         let Some(queued_msg) = self.queued_message_service.take_queued(ctx.session.id) else {
             return QueuedFollowUpOutcome::NoQueuedMessage;
         };
@@ -1418,6 +1425,10 @@ impl LocalContainerService {
 
     /// Start the oldest message that is waiting for global executor capacity.
     async fn consume_capacity_queued_follow_up(&self) -> QueuedFollowUpOutcome {
+        services::services::admission::run(self.consume_capacity_queued_follow_up_admitted()).await
+    }
+
+    async fn consume_capacity_queued_follow_up_admitted(&self) -> QueuedFollowUpOutcome {
         let Some(queued_msg) = self.queued_message_service.take_oldest_capacity_queued() else {
             return QueuedFollowUpOutcome::NoQueuedMessage;
         };
@@ -1928,6 +1939,7 @@ impl ContainerService for LocalContainerService {
         env.insert("VK_SESSION_ID", execution_process.session_id.to_string());
         env.insert("VK_EXECUTION_PROCESS_ID", execution_process.id.to_string());
         env.insert("VK_WORKSPACE_BRANCH", &workspace.branch);
+        env.original_worker = executors::original_worker::attach(&env).await?;
 
         // Create the child and stream, add to execution tracker with timeout
         let mut spawned = tokio::time::timeout(

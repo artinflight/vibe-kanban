@@ -11,6 +11,76 @@ use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufRea
 
 use crate::env::ExecutionEnv;
 
+/// Held across the actual native activation RPC, not merely its preflight.
+pub type ActivationFence = tokio::sync::OwnedMutexGuard<()>;
+
+#[async_trait]
+pub trait LaunchGuard: Send + Sync + std::fmt::Debug {
+    async fn resolved(
+        &self,
+        agent: &crate::executors::CodingAgent,
+        raw: &crate::profile::ExecutorConfig,
+    ) -> io::Result<()>;
+    async fn activation(&self, input: Option<&str>) -> io::Result<ActivationFence>;
+    fn worker(&self) -> bool;
+}
+
+/// The production follow-up/initial launch path clones once. Approval service
+/// injection, prompt construction and launcher resolution happen only afterwards.
+pub async fn resolve_for_launch(
+    raw: &crate::profile::ExecutorConfig,
+    env: &ExecutionEnv,
+) -> Result<crate::executors::CodingAgent, crate::executors::ExecutorError> {
+    use crate::executors::StandardCodingAgentExecutor;
+    let profile = raw.profile_id();
+    let mut agent = crate::profile::ExecutorConfigs::get_cached()
+        .get_coding_agent(&profile)
+        .ok_or_else(|| crate::executors::ExecutorError::UnknownExecutorType(profile.to_string()))?;
+    agent.apply_overrides(raw);
+    if let Some(guard) = &env.original_worker {
+        guard.resolved(&agent, raw).await?;
+    }
+    Ok(agent)
+}
+
+pub fn verify_resolved(
+    agent: &crate::executors::CodingAgent,
+    raw: &crate::profile::ExecutorConfig,
+    expected: &crate::profile::ExecutorConfig,
+    pin: &str,
+) -> io::Result<()> {
+    if raw != expected || profile_digest(agent)? != pin {
+        return Err(io::Error::other(
+            "Actual resolved launch instance differs from fixed profile",
+        ));
+    }
+    Ok(())
+}
+
+pub fn profile_digest(agent: &crate::executors::CodingAgent) -> io::Result<String> {
+    use sha2::{Digest, Sha256};
+    let mut value = serde_json::to_value(agent)?;
+    value.sort_all_objects();
+    Ok(format!("{:x}", Sha256::digest(serde_json::to_vec(&value)?)))
+}
+
+pub fn worker_goal_load_allowed(snapshot: &Value) -> io::Result<()> {
+    match snapshot.get("goal") {
+        Some(Value::Null) => Ok(()),
+        Some(goal)
+            if matches!(
+                goal.get("status").and_then(Value::as_str),
+                Some("paused" | "complete" | "completed")
+            ) =>
+        {
+            Ok(())
+        }
+        _ => Err(io::Error::other(
+            "Worker goal is active or unknown; thread was not loaded",
+        )),
+    }
+}
+
 pub const TOOL: &str = "continue_original_worker";
 pub const READY: &str = "finish_at_review_readiness";
 pub const REVOKE: &str = "revoke_original_worker_continuation";
@@ -23,6 +93,7 @@ pub struct Transport {
 
 #[async_trait]
 pub trait Backend: Send + Sync {
+    async fn launch_guard(&self, env: &ExecutionEnv) -> io::Result<Option<Arc<dyn LaunchGuard>>>;
     async fn bind(&self, env: &ExecutionEnv) -> io::Result<Option<Transport>>;
     async fn native_started(
         &self,
@@ -31,6 +102,23 @@ pub trait Backend: Send + Sync {
         model: &str,
         effort: &Value,
     ) -> io::Result<()>;
+}
+
+pub async fn attach(env: &ExecutionEnv) -> io::Result<Option<Arc<dyn LaunchGuard>>> {
+    match BACKEND.get() {
+        Some(backend) => backend.launch_guard(env).await,
+        None => Ok(None),
+    }
+}
+
+pub async fn activation(
+    env: &ExecutionEnv,
+    input: Option<&str>,
+) -> io::Result<Option<ActivationFence>> {
+    match &env.original_worker {
+        Some(guard) => guard.activation(input).await.map(Some),
+        None => Ok(None),
+    }
 }
 
 static BACKEND: OnceLock<Arc<dyn Backend>> = OnceLock::new();
@@ -201,3 +289,6 @@ pub async fn stdio(socket: PathBuf) -> io::Result<()> {
     )
     .await
 }
+
+#[cfg(test)]
+mod tests;

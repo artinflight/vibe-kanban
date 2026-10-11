@@ -2204,12 +2204,12 @@ impl AppServerClient {
                 .await
             };
             if result.is_err() {
-                if let Some(guard) = bounded {
-                    if guard.receipt_uncertain().await.is_err() {
-                        tracing::warn!(
-                            "Bounded native uncertainty could not be recorded; no replay permitted"
-                        );
-                    }
+                if let Some(guard) = bounded
+                    && guard.receipt_uncertain().await.is_err()
+                {
+                    tracing::warn!(
+                        "Bounded native uncertainty could not be recorded; no replay permitted"
+                    );
                 }
                 tracing::warn!("Native user-message receipt unavailable; outcome unknown");
             }

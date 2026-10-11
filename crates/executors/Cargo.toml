@@ -57,3 +57,6 @@ winsplit = "0.1.0"
 scheduled-goal-initialization-disabled = []
 default = []
 qa-mode = []
+
+[dev-dependencies]
+tempfile = "3"

@@ -176,11 +176,18 @@ impl Procfs {
                         name,
                         "server" | "vibe-kanban" | "vibe-kanban-serve" | "vibe-kanban-serve-prod"
                     ) || name.starts_with("vibe-kanban-serve");
+                    // An unscoped native writer may use a default home rather
+                    // than CODEX_HOME. Neither a missing marker nor missing
+                    // environment binding proves that it cannot serve a target.
+                    let unscoped_codex = (name == "codex" || name.starts_with("codex-"))
+                        && uuid("VK_SESSION_ID").is_none();
                     let ingress_marker = value("VK_RUNTIME_IDENTITY_FILE").is_some();
                     if target_session
                         || target_workspace
                         || root_owned
                         || native_unbound
+                        || backend
+                        || unscoped_codex
                         || (ingress_marker && (backend || uuid("VK_SESSION_ID").is_none()))
                     {
                         return Err(invalid("Active or potentially competing input producer"));

@@ -1025,8 +1025,8 @@ async fn production_fixture(timeout_lifecycle: bool, monitor_startup: bool) {
     container.peers.lock().await.clear();
 }
 
-/// The actual loader used by both server entry points, with synthetic procfs.
-/// Every failing bootstrap leaves ingress unregistered and creates no coverage.
+/// Both entry points' production ordering helper with the real PR monitor and
+/// archive launcher. Failed/pending adoption cannot start an executable monitor.
 async fn exercise_monitor_startup(
     deployment: &FixtureDeployment,
     contract: &Contract,
@@ -1099,9 +1099,14 @@ async fn exercise_monitor_startup(
         .await
         .unwrap();
     deployment.monitor.enabled.store(true, Ordering::SeqCst);
+    let mut failed =
+        bootstrap::tests::Fixture::new(directory, contract, pool.connect_options().get_filename());
+    failed.files.contract_sha256 = "b".repeat(64);
     assert!(
         crate::startup::configured_background(deployment, async {
-            Err(invalid("Synthetic failed configuration"))
+            load_startup(deployment, &failed.files, &failed.processes)
+                .await
+                .map(|_| ())
         })
         .await
         .is_err()
@@ -1189,6 +1194,8 @@ async fn exercise_monitor_startup(
     unsafe { std::env::set_var("PATH", previous_path) };
 }
 
+/// The actual loader used by both server entry points, with synthetic procfs.
+/// Every failing bootstrap leaves ingress unregistered and creates no coverage.
 async fn exercise_bootstrap_acceptance(
     deployment: &FixtureDeployment,
     contract: &Contract,

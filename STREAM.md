@@ -1,3 +1,46 @@
+## October 12: approved disposable-runner Bubblewrap validation
+
+The user explicitly approved only Ubuntu's official Bubblewrap apt package on
+temporary GitHub Ubuntu runners. The two relevant validation jobs install that
+package without recommendations, only when runner.environment is github-hosted
+and the OS is Linux/Ubuntu. No persistent host or Desktop installation.
+Before/after read-only hashes check namespace restriction values, AppArmor
+enablement, loaded profiles and profile files; any difference stops validation.
+No profile installation/loader, restriction disable, capability grant or bypass.
+The existing namespace probe remains mandatory even after installing Bubblewrap.
+The binary must have neither setuid/setgid bits nor file capabilities.
+
+All 37 offline accounting/workflow regressions remain required. Clean hosted
+executor/reload acceptance, final source/artifact comparison and independent
+review still gate publication. Earlier security-changing runs remain invalid.
+Per-event temporal/versioned accounting, actual-native baseline, unknown missing
+evidence and protected-task safeguards are unchanged. Recommend, selected model/
+effort and prior publication stay untouched. No merge/publication/restart.
+See VK_AUTOSWITCH_COST_EVIDENCE.md and PR244. Private receipts stay local.
+
+## October 12: mandatory AutoSwitch review correction
+
+The earlier hosted executor/reload runs changed AppArmor without authorization;
+they are not accepted validation. Receipts remain preserved. First corrective
+commit 1a668a386883a45f2ebddbfbf992b85940451e0e removes that step before any
+new push; 1299d7cffe813142cc378ed01977f0df8512139c removes the normal PR
+workflow's security-profile install. Both require an existing supported sandbox
+with security unchanged, stopping if unavailable. No merge/publication/restart.
+
+Cost reporting now matches each native execution, classifier and recovery event
+to its own timestamp, account, model/effort/tier, regime and reviewed weight
+version. Historical in-window weights remain usable after expiry; missing or
+conflicting metadata is unknown. Missing classifier evidence cannot mean zero
+unless an explicit reviewed deterministic-path receipt matches the exact
+execution, decision and module. No billing weights or savings are invented.
+
+The earlier bounded current-step source corrections remain intact. Recommend,
+selected model/effort and prior live publication stay untouched. Python accounting
+and workflow guard tests are offline; final exact-source executor/reload acceptance
+without security weakening and independent review remain publication gates.
+PR244 remains open against staging, unmerged. See VK_AUTOSWITCH_COST_EVIDENCE.md.
+Private diagnostic inputs/receipts remain outside the repository.
+
 ## October10: tested same-UID recovery; matching publication required
 
 PR241 continuation codeae263d4730bf8cca33050bde85b1c3de305acec0 passes

@@ -1,0 +1,108 @@
+name: AutoSwitch module acceptance
+
+on:
+  push:
+    branches: [fix/autoswitch-bounded-cost-evidence]
+    paths:
+      - crates/executors/**
+      - scripts/vk-autoswitch-cost-report.py
+      - scripts/testing/test-autoswitch-cost-report.py
+      - .github/workflows/autoswitch-module-acceptance.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: autoswitch-module-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: nightly-2025-12-04
+
+jobs:
+  module:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - name: Offline cost accounting regressions
+        run: python3 scripts/testing/test-autoswitch-cost-report.py
+      - name: Install official Ubuntu Bubblewrap on disposable runner
+        if: runner.environment == 'github-hosted' && runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          . /etc/os-release
+          test "$ID" = ubuntu
+          audit="$RUNNER_TEMP/vk-sandbox-audit"
+          mkdir -p "$audit"
+          security_state() {
+            sha256sum /proc/sys/kernel/apparmor_restrict_unprivileged_userns /proc/sys/kernel/unprivileged_userns_clone /sys/module/apparmor/parameters/enabled
+            sudo cat /sys/kernel/security/apparmor/profiles | LC_ALL=C sort | sha256sum
+            find /etc/apparmor.d -type f -exec sha256sum {} + | LC_ALL=C sort
+          }
+          security_state > "$audit/before.sha256"
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y bubblewrap
+          apt-cache policy bubblewrap | tee "$audit/package-policy.txt"
+          dpkg-query -W -f='${Package} ${Version} ${Status}\n' bubblewrap | tee "$audit/package-version.txt"
+          security_state > "$audit/after.sha256"
+          diff -u "$audit/before.sha256" "$audit/after.sha256"
+          test ! -u /usr/bin/bwrap
+          test ! -g /usr/bin/bwrap
+          caps="$(getcap /usr/bin/bwrap)"
+          test -z "$caps"
+          stat -c '%a %u:%g %n' /usr/bin/bwrap | tee "$audit/package-mode.txt"
+          sha256sum /usr/bin/bwrap | tee "$audit/package-binary.sha256"
+      - name: Require supported sandbox with unchanged security settings
+        run: |
+          set -euo pipefail
+          command -v bwrap
+          bwrap --unshare-all --ro-bind / / -- /bin/true
+      - uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt
+          cache-key: backend-test-Linux-X64-ubuntu-24.04
+      - name: Executor regressions and existing same-process acceptance (zero inference)
+        env:
+          VK_ROUTING_TEST_ROOT: ${{ runner.temp }}/autoswitch-acceptance
+        run: |
+          set -euo pipefail
+          mkdir -p "$VK_ROUTING_TEST_ROOT" module-artifact
+          cp -r "$RUNNER_TEMP/vk-sandbox-audit" module-artifact/security-audit
+          cargo fmt --all -- --check
+          cargo test --locked -p executors --lib -- --test-threads=1 2>&1 | tee module-artifact/executor-tests.log
+          cargo test --locked -p executors --test routing_module_reload -- --ignored --nocapture 2>&1 | tee module-artifact/reload.log
+      - name: Package worker without publication or policy changes
+        run: |
+          cp target/debug/vk-routing-module module-artifact/worker
+          strip module-artifact/worker
+          python3 - <<'PYCODE'
+          import hashlib, json, os
+          from pathlib import Path
+          worker = Path('module-artifact/worker')
+          receipt = {
+              'sourceCommit': os.environ['GITHUB_SHA'],
+              'sourceRepository': os.environ['GITHUB_REPOSITORY'],
+              'workflowRun': os.environ['GITHUB_RUN_ID'],
+              'workerSha256': hashlib.file_digest(worker.open('rb'), 'sha256').hexdigest(),
+              'protocol': 2,
+              'profile': 'stripped development',
+              'nativeInferenceCalls': 0,
+              'published': False,
+              'integration': 'Keep live pinned validator, models and classifier settings; package reviewed instructions with compatible protocol-2 worker.'
+          }
+          Path('module-artifact/build-receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          PYCODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: autoswitch-module-${{ github.sha }}
+          path: |
+            module-artifact/
+            ${{ runner.temp }}/vk-sandbox-audit/
+          if-no-files-found: error
+          retention-days: 14

@@ -15,6 +15,13 @@ pub fn apply_reference_context(a: &mut Assessment, prompt: &str, reply: Option<&
     if a.validation_failure || !a.triage.risk.is_empty() || a.envelope != "normal" {
         return;
     }
+    // These are actual assignments, not acknowledgements or permission to
+    // resume an earlier operation. Re-evaluate every current request/context;
+    // no cache or stored cheap classification can override a later hard risk.
+    if bounded_record_kind(prompt, reply).is_some() {
+        mark_bounded(a, "completed_context_bounded_record");
+        return;
+    }
     // Narrow zero-inference fast path: factual questions with matching report
     // content, no second instruction, attachment, operation or research request.
     let text = prompt.trim().to_lowercase();
@@ -58,9 +65,59 @@ pub fn apply_reference_context(a: &mut Assessment, prompt: &str, reply: Option<&
     if !known_reference {
         return;
     }
+    mark_bounded(a, "completed_context_reference_lookup");
+}
+
+/// Exact small reporting/recording requests; never infer completion or safety.
+fn bounded_record_kind(prompt: &str, reply: &str) -> Option<&'static str> {
+    let text = prompt.trim().to_lowercase();
+    if text.len() > 1000 || text.contains(['\n', ';', '[', ']']) {
+        return None;
+    }
+    let prior = reply.to_lowercase();
+    if [
+        "tests still fail",
+        "validation failed",
+        "review rejected",
+        "no verified progress",
+        "operation failed",
+        "blocked by",
+        "cannot continue",
+        "unresolved scope",
+    ]
+    .iter()
+    .any(|term| prior.contains(term))
+    {
+        return None;
+    }
+    static STATUS: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+        r"^(?:please )?(?:sitrep|status report|(?:give|show)(?: me)? (?:a |the )?status (?:report|update)|report (?:the )?(?:current )?status)[.!?]*$"
+    ).unwrap()
+    });
+    if STATUS.is_match(&text) {
+        return Some("status_report");
+    }
+    static NOTE: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+        r"^(?:please )?(?:make|add|write|record|append) (?:a |the )?(?:short )?note (?:to|in) (?:the )?(?:docs|documentation|readme|changelog|[a-z0-9_./-]+\.md) (?:that|saying) .+"
+    ).unwrap()
+    });
+    static EXTRA: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+        r"\b(?:and then|also|afterward|afterwards|then (?:run|change|fix|replace|deploy|restart)|and (?:run|change|fix|replace|deploy|restart))\b"
+    ).unwrap()
+    });
+    if NOTE.is_match(&text) && !EXTRA.is_match(&text) {
+        return Some("documentation_record");
+    }
+    None
+}
+
+fn mark_bounded(a: &mut Assessment, evidence: &str) {
     a.envelope = "bounded";
     a.floor = CapabilityFloor::Routine;
-    a.evidence = "completed_context_reference_lookup".into();
+    a.evidence = evidence.into();
     a.triage.intent = "reference_lookup".into();
     a.triage.scope = "localized".into();
     a.triage.pattern = "established".into();
@@ -69,9 +126,7 @@ pub fn apply_reference_context(a: &mut Assessment, prompt: &str, reply: Option<&
     a.triage.validation = "text_comparison".into();
     a.triage.uncertainty = "low".into();
     a.triage.needs_repo_inspection = false;
-    a.triage
-        .evidence
-        .push("completed_context_reference_lookup".into());
+    a.triage.evidence.push(evidence.into());
 }
 
 /// A cheap step must not erase the surrounding assignment's qualification.
@@ -116,6 +171,7 @@ pub fn reassess_step(a: &Assessment, prompt: &str, _previous: &str) -> bool {
             && !a.triage.needs_repo_inspection
             && matches!(a.envelope, "mechanical" | "bounded")
             && (has("completed_context_reference_lookup")
+            || has("completed_context_bounded_record")
             || has("semantic_reference_lookup")
             // Protection belongs to relevant current work, not the chat. A
             // positively classified bounded step may release inferred history;
@@ -127,6 +183,73 @@ pub fn reassess_step(a: &Assessment, prompt: &str, _previous: &str) -> bool {
 mod tests {
     use super::*;
     use crate::routing_assessment::{assess, boundary_floor, retain_previous};
+
+    #[test]
+    fn bounded_reports_and_documentation_do_not_resume_protected_work() {
+        let reply = "The previous response is complete; the facts and result are recorded.";
+        for prompt in [
+            "Sitrep",
+            "Give me a status update",
+            "Make a note to docs that I borrowed a fastener from the older device, so when it is repaired we remember to replace it",
+            "Add a note in README.md saying the earlier test used the spare connector",
+        ] {
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, Some(reply));
+            assert_eq!(a.envelope, "bounded", "{prompt}");
+            let a = retain_previous(a, prompt, Some("protected"));
+            assert_eq!(a.floor, CapabilityFloor::Routine, "{prompt}");
+            assert!(
+                a.triage
+                    .evidence
+                    .contains(&"surrounding_assignment:protected".into())
+            );
+            assert_eq!(
+                boundary_floor(&a, CapabilityFloor::Frontier, None),
+                CapabilityFloor::Frontier
+            );
+            assert_eq!(
+                boundary_floor(&a, CapabilityFloor::Workhorse, None),
+                CapabilityFloor::Workhorse
+            );
+        }
+    }
+
+    #[test]
+    fn reporting_fast_path_requires_resolved_context_and_current_safe_scope() {
+        for (prompt, reply) in [
+            ("Sitrep", None),
+            ("Sitrep", Some("")),
+            ("Sitrep", Some("Validation failed; operation failed.")),
+            ("Continue", Some("An operation is complete.")),
+            ("Yes", Some("An operation is complete.")),
+            ("Sitrep and restart it", Some("An operation is complete.")),
+            (
+                "Make a note to docs that the check ran; then change the code",
+                Some("A check is complete."),
+            ),
+            (
+                "Make a note to docs that a part was borrowed and replace the part",
+                Some("A check is complete."),
+            ),
+            (
+                "Make a note to docs that the password is available",
+                Some("A check is complete."),
+            ),
+            ("Tests still fail", Some("A check is complete.")),
+        ] {
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, reply);
+            assert_ne!(a.evidence, "completed_context_bounded_record", "{prompt}");
+            assert_eq!(
+                retain_previous(a, prompt, Some("protected")).floor,
+                CapabilityFloor::Frontier
+            );
+        }
+        let mut a = assess("Sitrep");
+        a.triage.risk.push("protected_repository_context".into());
+        apply_reference_context(&mut a, "Sitrep", Some("The previous step is complete."));
+        assert_ne!(a.evidence, "completed_context_bounded_record");
+    }
 
     const REPLY: &str = "Chosen component: 40 mm, https://example.invalid/component";
 

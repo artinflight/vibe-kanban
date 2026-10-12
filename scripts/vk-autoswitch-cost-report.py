@@ -37,6 +37,15 @@ def tokens(value):
     return result
 
 
+def known_components(value):
+    if not isinstance(value, dict):
+        return {}
+    known = {k:quantity(value[k]) for k in ('input', 'cachedInput', 'output', 'reasoning') if value.get(k) is not None}
+    if ('input' in known and known.get('cachedInput', 0) > known['input']) or ('output' in known and known.get('reasoning', 0) > known['output']):
+        raise ValueError('Inconsistent observed token subsets')
+    return known
+
+
 def identity(value):
     if not isinstance(value, dict):
         return None
@@ -151,7 +160,7 @@ def report(executions, events, usage, weights=None, outcomes=None, models=None):
         eid = execution['executionId']; d = execution['decision']; trace = d.get('semantic')
         requested = execution.get('requested', {})
         recommended = {'model': d.get('selected_model'), 'reasoningEffort': d.get('selected_effort'), 'serviceTier': d.get('service_tier')}
-        gaps = []; execution_costs = []; actual = []
+        gaps = []; execution_costs = []; actual = []; native_subtotal = collections.Counter()
         turns = bindings.get(eid, {})
         if not turns:
             gaps.append('native_binding_missing')
@@ -164,6 +173,8 @@ def report(executions, events, usage, weights=None, outcomes=None, models=None):
                 raise ValueError('Native settings conflict')
             actual.append(settings)
             complete = measured and measured.get('complete') is True and measured.get('provenance')
+            observed_count = known_components(measured.get('tokens')) if measured and measured.get('provenance') else {}
+            native_subtotal.update(observed_count)
             count = tokens(measured.get('tokens')) if complete else None
             if count is None:
                 gaps.append('execution_usage_missing_or_incomplete')
@@ -180,11 +191,11 @@ def report(executions, events, usage, weights=None, outcomes=None, models=None):
             classifier_seen.add(tid)
             if (trace.get('native_thread_id'), trace.get('native_turn_id')) in turn_owner:
                 raise ValueError('Classifier usage already belongs to an execution')
-            overhead_tokens = tokens({'input': trace.get('input_tokens'), 'cachedInput': trace.get('cached_input_tokens'), 'output': trace.get('output_tokens'), 'reasoning': trace.get('reasoning_tokens')})
+            overhead_raw = {'input': trace.get('input_tokens'), 'cachedInput': trace.get('cached_input_tokens'), 'output': trace.get('output_tokens'), 'reasoning': trace.get('reasoning_tokens')}
+            overhead_tokens = tokens(overhead_raw)
+            classifier_totals.update(known_components(overhead_raw))
             if overhead_tokens is None:
                 classifier_unknown += 1; gaps.append('classifier_usage_unknown')
-            else:
-                classifier_totals.update({k: v for k, v in overhead_tokens.items() if v is not None})
             overhead = price({'model': trace.get('model'), 'reasoningEffort': trace.get('effort'), 'serviceTier': trace.get('service_tier')}, overhead_tokens, weights, d.get('account_fingerprint'))
             if overhead is None:
                 gaps.append('classifier_cost_unknown')
@@ -202,8 +213,8 @@ def report(executions, events, usage, weights=None, outcomes=None, models=None):
             count = tokens(record.get('tokens')) if record and record.get('complete') is True else None
             proposed = price(recommended, count, weights, d.get('account_fingerprint'))
             if baseline_cost is not None and proposed is not None and candidate_safe:
-                scenario = {'kind': 'same_token_demand_only', 'baselineCost': str(baseline_cost), 'recommendedCost': str(proposed), 'grossDifference': str(baseline_cost - proposed), 'netSavings': None, 'limitations': ['lower_model_token_demand_unknown', 'candidate_retry_rework_unknown', 'comparable_accepted_outcome_missing']}
-        details.append({'executionId': eid, 'requested': requested, 'actualNative': actual, 'recommended': recommended, 'confidenceGate': confidence, 'qualificationGate': qualification, 'qualityGate': 'unreviewed', 'classification': d.get('assessed_envelope'), 'reason': d.get('reason'), 'classifierTokens': overhead_tokens, 'observedAttributedCost': None if total is None else str(total), 'costScenario': scenario, 'netSavings': None, 'gaps': sorted(set(gaps + ['comparable_accepted_outcome_missing'] + ([] if candidate_safe else ['qualification_not_established'])))})
+                scenario = {'kind': 'same_token_demand_only', 'baselineCost': str(baseline_cost), 'recommendedCost': str(proposed), 'candidateInitialCostWithObservedClassifierOverhead': str(proposed + overhead) if overhead is not None else None, 'grossDifference': str(baseline_cost - proposed), 'netSavings': None, 'limitations': ['gross_difference_excludes_overhead_and_rework', 'lower_model_token_demand_unknown', 'candidate_retry_rework_unknown', 'comparable_accepted_outcome_missing']}
+        details.append({'executionId': eid, 'requested': requested, 'actualNative': actual, 'recommended': recommended, 'confidenceGate': confidence, 'qualificationGate': qualification, 'qualityGate': 'unreviewed', 'classification': d.get('assessed_envelope'), 'reason': d.get('reason'), 'classifierTokens': overhead_tokens, 'classifierKnownTokenSubtotal': known_components(overhead_raw) if trace else {}, 'nativeKnownTokenSubtotal': dict(native_subtotal), 'baselineExecutionCost': None if baseline_cost is None else str(baseline_cost), 'observedClassifierCost': None if overhead is None else str(overhead), 'observedAttributedCost': None if total is None else str(total), 'costScenario': scenario, 'netSavings': None, 'gaps': sorted(set(gaps + ['comparable_accepted_outcome_missing'] + ([] if candidate_safe else ['qualification_not_established'])))})
     # Explicit escalation links only. A timestamp, same session or ordinary follow-up is not rework.
     roots = {}; chains = {}
     for eid in attributed:
@@ -234,10 +245,21 @@ def report(executions, events, usage, weights=None, outcomes=None, models=None):
         delta = sum((attributed[x] for x in baseline), Decimal(0)) - sum((attributed[x] for x in candidate), Decimal(0)) if eligible else None
         comparisons.append({'comparisonId': item.get('comparisonId'), 'netAcceptedTaskDifference': None if delta is None else str(delta), 'unit': weights['provenance']['unit'] if eligible else None, 'status': 'measured_usage_weighted_comparison' if eligible else 'unknown', 'gaps': [] if eligible else ['incomplete_attribution_or_quality_or_comparability_or_weights']})
     distribution = lambda settings: dict(collections.Counter('/'.join(str(x.get(k)) for k in ('model', 'reasoningEffort')) for x in settings))
-    return {'schema': 'vk.autoswitch.cost-report.v1', 'basis': 'actual_native_execution_not_all_astra', 'weights': None if weights is None else {'version': weights['version'], 'sha256': weights['sha256'], 'provenance': weights['provenance']}, 'executionCount': len(details), 'recommendations': distribution(x['recommended'] for x in details), 'actualExecutions': distribution(y for x in details for y in x['actualNative']), 'missingNativeBindings': sum(not x['actualNative'] for x in details), 'classifierKnownTokenSubtotal': dict(classifier_totals), 'classifierUnknownUsageCount': classifier_unknown, 'executions': details, 'recoveryChains': chain_rows, 'comparisons': comparisons, 'netObservedSavings': None, 'limitations': ['recommendation_is_not_execution', 'no_all_astra_counterfactual', 'weights_are_provenanced_estimates_not_observed_billing', 'process_exit_is_not_quality_acceptance']}
+    executed = collections.Counter()
+    for item in details:
+        settings = {tuple(x.get(k) for k in ('model', 'reasoningEffort')) for x in item['actualNative']}
+        if settings:
+            executed['/'.join(str(k) for k in next(iter(settings))) if len(settings) == 1 else 'mixed_native_settings'] += 1
+    return {'schema': 'vk.autoswitch.cost-report.v1', 'basis': 'actual_native_execution_not_all_astra', 'weights': None if weights is None else {'version': weights['version'], 'sha256': weights['sha256'], 'provenance': weights['provenance']}, 'executionCount': len(details), 'recommendations': distribution(x['recommended'] for x in details), 'actualExecutions': dict(executed), 'actualNativeTurns': distribution(y for x in details for y in x['actualNative']), 'missingNativeBindings': sum(not x['actualNative'] for x in details), 'classifierKnownTokenSubtotal': dict(classifier_totals), 'classifierUnknownUsageCount': classifier_unknown, 'executions': details, 'recoveryChains': chain_rows, 'comparisons': comparisons, 'netObservedSavings': None, 'limitations': ['recommendation_is_not_execution', 'no_all_astra_counterfactual', 'weights_are_provenanced_estimates_not_observed_billing', 'process_exit_is_not_quality_acceptance']}
 
 
 def read_executions(db, start, end):
+    start = start.replace('Z', '+00:00'); end = end.replace('Z', '+00:00')
+    for value in (start, end):
+        if dt.datetime.fromisoformat(value).utcoffset() != dt.timedelta(0):
+            raise ValueError('Report window requires UTC timestamps')
+    if dt.datetime.fromisoformat(start) >= dt.datetime.fromisoformat(end):
+        raise ValueError('Report window must have increasing bounds')
     connection = sqlite3.connect(Path(db).resolve().as_uri() + '?mode=ro', uri=True)
     connection.execute('PRAGMA query_only=ON')
     rows = connection.execute("SELECT id, created_at, executor_action FROM execution_processes WHERE run_reason='codingagent' AND dropped=0 AND created_at>=? AND created_at<? ORDER BY created_at", (start, end))
@@ -264,7 +286,7 @@ def main():
     outcomes = immutable_records(args.outcomes, 'vk.autoswitch.comparison.v1', lambda x: x.get('comparisonId'))
     weights = load_weights(args.weights, args.weight_evidence)
     output = report(read_executions(args.db, args.start, args.end), events, usage, weights, outcomes.values(), json.loads(args.models.read_text()))
-    output['observationWindow'] = {'startInclusive': args.start, 'endExclusive': args.end}
+    output['observationWindow'] = {'startInclusive': args.start, 'endExclusive': args.end, 'basis': 'execution_admission', 'nativeBindings': 'all_exact_attributed_turns_available_at_report_time', 'reportUtc': dt.datetime.now(dt.timezone.utc).isoformat()}
     output['inputProvenance'] = {'routingCompletePrefixSha256': events.sha256, 'routingIncompleteTail': events.incomplete_tail, 'usageCompletePrefixSha256': usage.sha256, 'usageIncompleteTail': usage.incomplete_tail, 'qualificationSha256': digest(args.models.read_bytes()), 'query': 'read-only VK execution decisions joined by exact native turn IDs'}
     print(json.dumps(output, indent=2))
 

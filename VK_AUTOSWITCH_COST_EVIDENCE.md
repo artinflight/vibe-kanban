@@ -113,3 +113,27 @@ The cost reporter is an offline source tool, not a backend scheduling service.
 October 30 remains the useful-beta deadline. Real Recommend observations and
 reviewed native usage/weight/comparable-outcome coverage, rather than a broad
 benchmark campaign, are the remaining evidence needed before any Auto decision.
+
+## Focused acceptance result
+
+Hosted module acceptance on source09f006cf8 passed188 executor unit tests
+(eight opt-in tests ignored) and one same-process reload test, with zero native
+inference. The actual pinned protocol-2 validator accepts the prepared worker.
+Private offline replay of32 recorded cases leaves all30 earlier cases unchanged;
+the two reviewed documentation/status cases move to Routine and skip the
+classifier. Replays use an empty repository fixture and summarized completed
+context for the two newest cases; they do not prove cheaper-model quality.
+
+The accounting tool reproduces the117-turn admission sample:107 Astra/high,
+seven Sol6.1/medium and three Sol6/low recommendations, versus101 actual
+Sol6.1/high,13 Astra/xhigh and three missing bindings. Native goal continuations
+are reported separately from execution counts. Known classifier subtotal is
+223,300 input (31,744 cached),10,024 output (6,343 reasoning); two classifier
+attempts have unknown usage. Existing CU observations match116 exact bound turns,
+but complete usage and subscription weights remain uncertified. No monetary or
+allowance saving is claimed. Operational IDs/inputs remain private.
+
+Python accounting tests cover actual-versus-requested baseline, partial usage,
+cache/reasoning subsets, classifier overhead, retries, complete reviewed comparisons,
+unknown weights/settings/account/tier, provenance/expiry, duplicate and conflicting
+turns, partial JSONL writes, and goal turn-versus-execution counts.

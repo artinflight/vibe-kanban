@@ -61,6 +61,14 @@ class Accounting(unittest.TestCase):
         self.assertIsNone(row['observedAttributedCost'])
         self.assertIn('classifier_usage_unknown', row['gaps'])
 
+    def test_unknown_cache_does_not_erase_known_input_output(self):
+        self.execution['decision']['semantic']['cached_input_tokens'] = None
+        self.usage[('thread','turn')]['tokens']['cachedInput'] = None
+        result = self.run_report()
+        self.assertEqual(result['classifierKnownTokenSubtotal']['input'], 100)
+        self.assertEqual(result['executions'][0]['nativeKnownTokenSubtotal']['input'], 1000)
+        self.assertIsNone(result['executions'][0]['observedAttributedCost'])
+
     def test_native_conflict_is_not_silently_resolved(self):
         self.usage[('thread', 'turn')]['model'] = 'different'
         with self.assertRaises(ValueError): self.run_report()
@@ -86,6 +94,14 @@ class Accounting(unittest.TestCase):
     def test_conflicting_binding_settings_rejected(self):
         self.events['conflict'] = {**self.events['binding'], 'eventId': 'different', 'effective': {**self.settings, 'model': 'other'}}
         with self.assertRaises(ValueError): self.run_report()
+
+    def test_goal_turns_are_not_counted_as_multiple_executions(self):
+        self.events['extra'] = {**self.events['binding'], 'eventId': 'extra', 'nativeTurnId': 'extra'}
+        self.usage[('thread','extra')] = copy.deepcopy(self.usage[('thread','turn')])
+        result = self.run_report()
+        self.assertEqual(result['actualExecutions'], {'workhorse/high': 1})
+        self.assertEqual(result['actualNativeTurns'], {'workhorse/high': 2})
+        self.assertEqual(result['executions'][0]['observedAttributedCost'], '0.007305')
 
     def test_invalid_counts_and_token_subsets_rejected(self):
         for counts in [{'input': -1, 'cachedInput': 0, 'output': 1}, {'input': 1, 'cachedInput': 2, 'output': 1}, {'input': 1, 'cachedInput': 0, 'output': 1, 'reasoning': 2}, {'input': True, 'cachedInput': 0, 'output': 1}]:

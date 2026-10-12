@@ -7,6 +7,9 @@ qualifications, exclusions, risk/failure guards and Recommend remain intact.
 Offline cost reporting uses exact native execution identity and includes classifier
 overhead/explicit recovery attempts; weights and comparable quality gaps stay
 unknown. No source in the temporary shared-launcher repair is included.
+Hosted188 executor tests and same-process reload pass; private32-case replay
+changes only the two reviewed reporting/recording steps and avoids their classifier
+calls. Accounting tests pass; no measured net savings. PR244 targets staging.
 See VK_AUTOSWITCH_COST_EVIDENCE.md for contracts and validation/rollout limits.
 Private recorded cases and operational receipts remain outside the repository.
 

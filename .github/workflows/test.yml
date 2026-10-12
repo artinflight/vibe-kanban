@@ -458,7 +458,8 @@ jobs:
           diff -u "$audit/before.sha256" "$audit/after.sha256"
           test ! -u /usr/bin/bwrap
           test ! -g /usr/bin/bwrap
-          test -z "$(getcap /usr/bin/bwrap)"
+          caps="$(getcap /usr/bin/bwrap)"
+          test -z "$caps"
           stat -c '%a %u:%g %n' /usr/bin/bwrap | tee "$audit/package-mode.txt"
           sha256sum /usr/bin/bwrap | tee "$audit/package-binary.sha256"
 

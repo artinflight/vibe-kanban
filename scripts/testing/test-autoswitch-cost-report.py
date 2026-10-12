@@ -6,6 +6,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 
 spec = importlib.util.spec_from_file_location('cost', Path(__file__).parents[1] / 'vk-autoswitch-cost-report.py')
@@ -324,7 +325,12 @@ class Accounting(unittest.TestCase):
                     if 'sudo' in line:
                         self.assertTrue(any(line.strip().startswith(command) for command in allowed), line)
             self.assertIn('test ! -u /usr/bin/bwrap', workflow)
-            self.assertIn('test -z "$(getcap /usr/bin/bwrap)"', workflow)
+            self.assertIn('caps="$(getcap /usr/bin/bwrap)"', workflow)
+            self.assertIn('test -z "$caps"', workflow)
+            check = '\n'.join(line.strip() for line in workflow.splitlines() if line.strip().startswith(('caps=', 'test -z "$caps"')))
+            for stub, expected in [('return 1', False), ('printf cap_sys_admin=ep', False), ('return 0', True)]:
+                result = subprocess.run(['bash', '-ec', 'getcap() { ' + stub + '; };\n' + check], capture_output=True)
+                self.assertEqual(result.returncode == 0, expected)
 
 
 if __name__ == '__main__':

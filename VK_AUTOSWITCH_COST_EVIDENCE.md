@@ -158,8 +158,14 @@ Earlier hosted executor/reload runs changed AppArmor settings without
 operator authorization and **are not accepted validation**. Their receipts are
 retained, superseded. The first corrective commit removes the AutoSwitch
 workflow's install/sysctl step. The normal PR workflow's AppArmor profile-loader
-was also removed before pushing: both routes now require an already working
-sandbox under unchanged security settings and stop if it is unavailable.
+was also removed before pushing: both routes require
+a supported sandbox under unchanged security settings and stop if unavailable.
+The user subsequently approved only the official Ubuntu Bubblewrap package on
+disposable GitHub Ubuntu runners. The package install is runner-guarded, with
+read-only before/after hashes of restriction values and AppArmor state/profiles;
+any difference stops validation. No persistent host install, custom profile,
+security configuration change or capability grant. The unchanged sandbox probe
+and non-privileged binary checks remain mandatory after installation.
 A restricted runner is a validation blocker, never permission for a bypass.
 No merge, new publication, rollback, backend restart or policy/model change is
 part of this correction. The known prior live publication is preserved.

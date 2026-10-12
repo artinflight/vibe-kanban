@@ -30,6 +30,31 @@ jobs:
       - uses: actions/checkout@v6
       - name: Offline cost accounting regressions
         run: python3 scripts/testing/test-autoswitch-cost-report.py
+      - name: Install official Ubuntu Bubblewrap on disposable runner
+        if: runner.environment == 'github-hosted' && runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          . /etc/os-release
+          test "$ID" = ubuntu
+          audit="$RUNNER_TEMP/vk-sandbox-audit"
+          mkdir -p "$audit"
+          security_state() {
+            sha256sum /proc/sys/kernel/apparmor_restrict_unprivileged_userns /proc/sys/kernel/unprivileged_userns_clone /sys/module/apparmor/parameters/enabled
+            sudo cat /sys/kernel/security/apparmor/profiles | LC_ALL=C sort | sha256sum
+            find /etc/apparmor.d -type f -exec sha256sum {} + | LC_ALL=C sort
+          }
+          security_state > "$audit/before.sha256"
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y bubblewrap
+          apt-cache policy bubblewrap | tee "$audit/package-policy.txt"
+          dpkg-query -W -f='${Package} ${Version} ${Status}\n' bubblewrap | tee "$audit/package-version.txt"
+          security_state > "$audit/after.sha256"
+          diff -u "$audit/before.sha256" "$audit/after.sha256"
+          test ! -u /usr/bin/bwrap
+          test ! -g /usr/bin/bwrap
+          test -z "$(getcap /usr/bin/bwrap)"
+          stat -c '%a %u:%g %n' /usr/bin/bwrap | tee "$audit/package-mode.txt"
+          sha256sum /usr/bin/bwrap | tee "$audit/package-binary.sha256"
       - name: Require supported sandbox with unchanged security settings
         run: |
           set -euo pipefail
@@ -44,8 +69,9 @@ jobs:
         env:
           VK_ROUTING_TEST_ROOT: ${{ runner.temp }}/autoswitch-acceptance
         run: |
-          set -o pipefail
+          set -euo pipefail
           mkdir -p "$VK_ROUTING_TEST_ROOT" module-artifact
+          cp -r "$RUNNER_TEMP/vk-sandbox-audit" module-artifact/security-audit
           cargo fmt --all -- --check
           cargo test --locked -p executors --lib -- --test-threads=1 2>&1 | tee module-artifact/executor-tests.log
           cargo test --locked -p executors --test routing_module_reload -- --ignored --nocapture 2>&1 | tee module-artifact/reload.log
@@ -74,6 +100,8 @@ jobs:
         if: always()
         with:
           name: autoswitch-module-${{ github.sha }}
-          path: module-artifact/
+          path: |
+            module-artifact/
+            ${{ runner.temp }}/vk-sandbox-audit/
           if-no-files-found: error
           retention-days: 14

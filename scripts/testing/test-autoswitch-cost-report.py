@@ -311,7 +311,20 @@ class Accounting(unittest.TestCase):
                 self.assertNotIn(forbidden, workflow)
             self.assertIn('command -v bwrap', workflow)
         workflow = (root / '.github/workflows/autoswitch-module-acceptance.yml').read_text()
-        self.assertNotIn('sudo', workflow)
+        for name in ('autoswitch-module-acceptance.yml', 'test.yml'):
+            workflow = (root / '.github/workflows' / name).read_text()
+            self.assertIn("if: runner.environment == 'github-hosted' && runner.os == 'Linux'", workflow)
+            self.assertIn('sudo apt-get install --no-install-recommends -y bubblewrap', workflow)
+            self.assertIn('diff -u "$audit/before.sha256" "$audit/after.sha256"', workflow)
+            allowed = ('sudo apt-get update', 'sudo apt-get install --no-install-recommends -y bubblewrap', 'sudo cat /sys/kernel/security/apparmor/profiles')
+            # Restrict privilege in the AutoSwitch acceptance workflow. Other
+            # normal PR jobs retain unrelated existing build dependencies.
+            if name == 'autoswitch-module-acceptance.yml':
+                for line in workflow.splitlines():
+                    if 'sudo' in line:
+                        self.assertTrue(any(line.strip().startswith(command) for command in allowed), line)
+            self.assertIn('test ! -u /usr/bin/bwrap', workflow)
+            self.assertIn('test -z "$(getcap /usr/bin/bwrap)"', workflow)
 
 
 if __name__ == '__main__':

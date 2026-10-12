@@ -35,11 +35,11 @@ jobs:
           cache-key: backend-test-Linux-X64-ubuntu-24.04
       - name: Offline cost accounting regressions
         run: python3 scripts/testing/test-autoswitch-cost-report.py
-      - name: Permit sandbox only on disposable hosted runner
+      - name: Require supported sandbox with unchanged security settings
         run: |
-          sudo apt-get update
-          sudo apt-get install -y bubblewrap
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          set -euo pipefail
+          command -v bwrap
+          bwrap --unshare-all --ro-bind / / -- /bin/true
       - name: Executor regressions and existing same-process acceptance (zero inference)
         env:
           VK_ROUTING_TEST_ROOT: ${{ runner.temp }}/autoswitch-acceptance

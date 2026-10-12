@@ -47,7 +47,7 @@ jobs:
           set -o pipefail
           mkdir -p "$VK_ROUTING_TEST_ROOT" module-artifact
           cargo fmt --all -- --check
-          cargo test --locked -p executors --lib 2>&1 | tee module-artifact/executor-tests.log
+          cargo test --locked -p executors --lib -- --test-threads=1 2>&1 | tee module-artifact/executor-tests.log
           cargo test --locked -p executors --test routing_module_reload -- --ignored --nocapture 2>&1 | tee module-artifact/reload.log
       - name: Package worker without publication or policy changes
         run: |

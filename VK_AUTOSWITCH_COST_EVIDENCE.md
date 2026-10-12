@@ -137,3 +137,9 @@ Python accounting tests cover actual-versus-requested baseline, partial usage,
 cache/reasoning subsets, classifier overhead, retries, complete reviewed comparisons,
 unknown weights/settings/account/tier, provenance/expiry, duplicate and conflicting
 turns, partial JSONL writes, and goal turn-versus-execution counts.
+
+The first hosted worker run passed. A later unchanged-Rust rerun hit WouldBlock
+in the pre-existing capacity ownership handover test while the full unit suite
+ran in parallel; the focused acceptance workflow now serializes those tests to
+avoid cross-test lock/fork interference. The failed receipt is retained; no
+capacity implementation, production admission limit or security setting changes.

@@ -119,7 +119,11 @@ pub fn evaluate(request: Request) -> Result<Reply, String> {
         if let Some(value) = request.semantic {
             let class: SemanticClass =
                 serde_json::from_value(value).map_err(|_| "Invalid semantic input")?;
-            crate::routing_semantic::apply(&mut a, &class);
+            if request.failed {
+                crate::routing_semantic::apply(&mut a, &class);
+            } else {
+                crate::routing_semantic::apply_for_request(&mut a, &class, &request.prompt);
+            }
         }
         a = crate::routing_assessment::retain_previous(
             a,
@@ -725,7 +729,11 @@ pub fn assess(
             .expect("checked module output");
     } else {
         if let Some(class) = semantic.as_ref().and_then(|t| t.classification.as_ref()) {
-            crate::routing_semantic::apply(&mut a, class);
+            if failed {
+                crate::routing_semantic::apply(&mut a, class);
+            } else {
+                crate::routing_semantic::apply_for_request(&mut a, class, prompt);
+            }
         }
         a = crate::routing_assessment::retain_previous(a, prompt, previous_envelope);
     }
@@ -822,6 +830,162 @@ mod tests {
         request.semantic = semantic;
         copy = serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap();
         checked(evaluate(copy)?, &request)
+    }
+
+    #[test]
+    fn bounded_recording_skips_inference_and_passes_pinned_history_guards() {
+        for prompt in [
+            "Sitrep",
+            "Make a note to docs that the spare fastener was borrowed from an older device",
+        ] {
+            let mut request = bounded_request();
+            request.prompt = prompt.into();
+            request.stage = "before".into();
+            request.semantic = None;
+            request.completed_reply =
+                Some("The prior response is complete and the facts are recorded.".into());
+            request.seed = (&crate::routing_assessment::assess(prompt)).into();
+            let first =
+                evaluate(serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap())
+                    .unwrap();
+            assert!(!first.needs_semantic);
+            let result = stages(request).unwrap();
+            assert_eq!(result.assessment.floor, CapabilityFloor::Routine);
+            assert!(
+                result
+                    .assessment
+                    .triage
+                    .evidence
+                    .contains(&"current_request_reassessed".into())
+            );
+            assert!(
+                result
+                    .assessment
+                    .triage
+                    .evidence
+                    .contains(&"surrounding_assignment:protected".into())
+            );
+        }
+    }
+
+    fn read_only_request() -> Request {
+        let mut request = bounded_request();
+        request.prompt = "Read-only: review the freshest recorded observations and compare reported counts against the logs. No edits.".into();
+        request.seed = (&crate::routing_assessment::assess(&request.prompt)).into();
+        request.completed_reply =
+            Some("The earlier observations and count report are saved.".into());
+        // Same dimensions as the real 18:44:16 admission, with private prose removed.
+        request.semantic = Some(serde_json::json!({
+            "envelope":"bounded", "scope_relation":"bounded_step", "scope":"localized",
+            "novelty":"established", "ambiguity":"low", "horizon":"short",
+            "validation":"unknown", "risks":[], "uncertainty":"low",
+            "inspection_needed":false, "reason":"A bounded check of existing observations."
+        }));
+        request
+    }
+
+    #[test]
+    fn bounded_read_only_records_have_a_direct_validation_method() {
+        for relation in ["bounded_step", "reference_lookup"] {
+            let mut request = read_only_request();
+            request.semantic.as_mut().unwrap()["scope_relation"] = relation.into();
+            let reply = stages(request).unwrap();
+            assert_eq!(reply.assessment.envelope, "bounded");
+            assert_eq!(reply.assessment.floor, CapabilityFloor::Routine);
+            assert_eq!(reply.assessment.triage.validation, "text_comparison");
+            for evidence in [
+                "bounded_read_only_fact_check",
+                "surrounding_assignment:protected",
+            ] {
+                assert!(reply.assessment.triage.evidence.contains(&evidence.into()));
+            }
+            let a = reply.assessment.into_assessment().unwrap();
+            for floor in [CapabilityFloor::Workhorse, CapabilityFloor::Frontier] {
+                assert_eq!(
+                    crate::routing_assessment::boundary_floor(&a, floor, None),
+                    floor
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn natural_fact_check_has_a_method_without_technical_scope_words() {
+        for prompt in [
+            "Check the latest counts against the logs",
+            "Verify the facts against the records. Do not restart the backend",
+        ] {
+            let mut request = read_only_request();
+            request.prompt = prompt.into();
+            request.seed = (&crate::routing_assessment::assess(prompt)).into();
+            let result = stages(request).unwrap();
+            assert_eq!(result.assessment.floor, CapabilityFloor::Routine);
+            assert_eq!(result.assessment.triage.validation, "text_comparison");
+        }
+        let mut request = read_only_request();
+        request.prompt = "Check the logs and then change the retry logic".into();
+        request.seed = (&crate::routing_assessment::assess(&request.prompt)).into();
+        assert_eq!(
+            stages(request).unwrap().assessment.floor,
+            CapabilityFloor::Frontier
+        );
+    }
+
+    #[test]
+    fn read_only_validation_does_not_erase_risk_uncertainty_or_continuation() {
+        for (key, value) in [
+            ("scope_relation", serde_json::json!("continuation")),
+            ("scope_relation", serde_json::json!("unknown")),
+            ("scope_relation", serde_json::json!("context_only")),
+            ("scope", serde_json::json!("cross_cutting")),
+            ("novelty", serde_json::json!("novel")),
+            ("ambiguity", serde_json::json!("medium")),
+            ("horizon", serde_json::json!("extended")),
+            ("uncertainty", serde_json::json!("medium")),
+            ("inspection_needed", serde_json::json!(true)),
+            ("envelope", serde_json::json!("normal")),
+            ("envelope", serde_json::json!("complex")),
+            ("risks", serde_json::json!(["security"])),
+        ] {
+            let mut request = read_only_request();
+            request.semantic.as_mut().unwrap()[key] = value;
+            let result = stages(request).unwrap().assessment;
+            assert_eq!(result.floor, CapabilityFloor::Frontier, "{key}");
+            assert!(
+                !result
+                    .triage
+                    .evidence
+                    .contains(&"bounded_read_only_fact_check".into())
+            );
+        }
+        for case in 0..11 {
+            let mut request = read_only_request();
+            match case {
+                0 => request.completed_reply = None,
+                1 => request.failed = true,
+                2 => request.semantic = None,
+                3 => request.previous_envelope = Some("unknown_future_envelope".into()),
+                4 => request
+                    .context
+                    .risk
+                    .push("protected_component_context".into()),
+                5 => request.prompt = "Read-only: review production migration logs".into(),
+                6 => request.prompt = "Read-only: review logs and change authentication".into(),
+                7 => request.prompt = "Compare the existing logs and edit the report".into(),
+                8 => request.prompt = "continue".into(),
+                9 => request.prompt = "Read-only: check it".into(),
+                10 => request.prompt = "Read-only: review logs; tests still fail".into(),
+                _ => unreachable!(),
+            }
+            // Lifecycle/native safety rejection is also a fail-closed result.
+            if let Ok(reply) = stages(request) {
+                assert_eq!(
+                    reply.assessment.floor,
+                    CapabilityFloor::Frontier,
+                    "case {case}"
+                );
+            }
+        }
     }
 
     #[test]

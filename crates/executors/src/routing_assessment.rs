@@ -204,34 +204,32 @@ pub fn independent_request(a: &Assessment, prompt: &str) -> bool {
     ] {
         text = text.strip_suffix(suffix).unwrap_or(text);
     }
-    if [
-        "this",
-        "that",
-        "it",
-        "same",
-        "continue",
-        "carry on",
-        "remaining",
-    ]
-    .iter()
-    .any(|term| contains_term(text, term))
+    if ["this", "that", "it", "same", "continue", "carry on"]
+        .iter()
+        .any(|term| contains_term(text, term))
     {
         return false;
     }
+    // "Remaining" can describe an independent inventory, not just unfinished
+    // work. Positive current-task semantic evidence resolves that ambiguity;
+    // without it the existing continuation precaution still applies. Keep the
+    // unresolved-reference and generic-approval checks above authoritative.
+    if a.triage
+        .evidence
+        .iter()
+        .any(|e| e == "semantic_independent_request")
+        && a.triage.ambiguity == "low"
+        && a.triage.uncertainty != "high"
+        && !a.triage.needs_repo_inspection
+    {
+        return true;
+    }
     // "One component" alone could still mean the previous protected component.
-    // Named documentation or an inspected UI surface provides an independent target;
-    // otherwise the semantic scope check must establish the relationship.
-    ((a.evidence == "deterministic_text_edit"
-        && (contains_term(text, "readme") || text.contains(".md")))
-        || a.evidence == "triage_ui_outcome_with_repo_evidence")
-        || (a
-            .triage
-            .evidence
-            .iter()
-            .any(|e| e == "semantic_independent_request")
-            && a.triage.ambiguity == "low"
-            && a.triage.uncertainty != "high"
-            && !a.triage.needs_repo_inspection)
+    // Named documentation or an inspected UI surface provides an independent target.
+    !contains_term(text, "remaining")
+        && ((a.evidence == "deterministic_text_edit"
+            && (contains_term(text, "readme") || text.contains(".md")))
+            || a.evidence == "triage_ui_outcome_with_repo_evidence")
 }
 
 pub fn boundary_floor(

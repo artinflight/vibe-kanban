@@ -1770,3 +1770,15 @@ no apply, sidecar, prompt, restart, badge/database rewrite or policy change.
 Sealed minimal c3-backend/cdad-frontend patches are in LOCAL_REPAIR_DELIVERY.safe.json.
 Matching Staging-owned publication and both genuine normal API/UI restorations
 remain required. This is source delivery, not conversation restoration.
+
+## October 12: AutoSwitch current-step and actual-baseline cost evidence
+
+Focused AutoSwitch-only work on fix/autoswitch-bounded-cost-evidence. Short
+completed-context reports and supplied documentation records are steps, not
+implicit resumption of old protected work. Known-link fast path, manual locks,
+qualifications, exclusions, risk/failure guards and Recommend remain intact.
+Offline cost reporting uses exact native execution identity and includes classifier
+overhead/explicit recovery attempts; weights and comparable quality gaps stay
+unknown. No source in the temporary shared-launcher repair is included.
+See VK_AUTOSWITCH_COST_EVIDENCE.md for contracts and validation/rollout limits.
+Private recorded cases and operational receipts remain outside the repository.

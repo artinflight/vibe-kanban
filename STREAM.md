@@ -1,3 +1,15 @@
+## October 12: AutoSwitch current-step and actual-baseline cost evidence
+
+Focused AutoSwitch-only work on fix/autoswitch-bounded-cost-evidence. Short
+completed-context reports and supplied documentation records are steps, not
+implicit resumption of old protected work. Known-link fast path, manual locks,
+qualifications, exclusions, risk/failure guards and Recommend remain intact.
+Offline cost reporting uses exact native execution identity and includes classifier
+overhead/explicit recovery attempts; weights and comparable quality gaps stay
+unknown. No source in the temporary shared-launcher repair is included.
+See VK_AUTOSWITCH_COST_EVIDENCE.md for contracts and validation/rollout limits.
+Private recorded cases and operational receipts remain outside the repository.
+
 ## October10: tested same-UID recovery; matching publication required
 
 PR241 continuation codeae263d4730bf8cca33050bde85b1c3de305acec0 passes

@@ -53,7 +53,7 @@ qualification are separate gates, neither is measured code quality.
 
 `--usage` accepts private JSONL records with schema `vk.autoswitch.usage.v1`, exact
 `nativeThreadId`/`nativeTurnId`, native `model`, `reasoningEffort`, `serviceTier`,
-`complete: true`, a source `provenance`, and `tokens` containing `input`,
+`complete: true`, native observation `timestamp`, a source `provenance`, and `tokens` containing `input`,
 `cachedInput`, `output`, optional `reasoning`. Export these from already verified
 native/CodexUsage attribution; this script cannot certify a fabricated export.
 Missing effort/tier/usage and conflicting bindings/settings cannot be replaced
@@ -73,7 +73,10 @@ subscription usage. Test fixtures use fictional units only.
 
 Each rate has exact `model`, `reasoningEffort`, `serviceTier`, basis
 `per_million_tokens`, nonnegative decimal `uncachedInput`, `cachedInput`, `output`.
-Missing model/settings/account-compatible weights remain unknown. Units cannot
+Missing model/settings/account-compatible weights remain unknown. Native
+observation dates must fall within the reviewed weight validity window; an
+admission timestamp is not a substitute. To price classifier overhead, include
+its exact native thread/turn observation in the usage export as well. Units cannot
 be mixed. Weights are estimates with provenance, not observed provider billing.
 
 ### Recovery and comparable outcomes

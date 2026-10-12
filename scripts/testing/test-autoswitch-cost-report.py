@@ -49,6 +49,13 @@ class Accounting(unittest.TestCase):
         self.events['binding']['effective']['serviceTier'] = None
         self.assertIsNone(self.run_report()['executions'][0]['observedAttributedCost'])
 
+    def test_weights_must_cover_the_actual_native_observation_date(self):
+        self.weights['provenance'].update(validFrom='2026-10-12T00:00:00Z', validUntil='2026-10-13T00:00:00Z')
+        counts = cost.tokens(self.usage[('thread','turn')]['tokens'])
+        for at in (None, '2026-10-11T12:00:00Z', 'invalid'):
+            self.assertIsNone(cost.price(self.settings, counts, self.weights, 'fixture-account', at))
+        self.assertEqual(cost.price(self.settings, counts, self.weights, 'fixture-account', '2026-10-12T12:00:00Z'), Decimal('.0036'))
+
     def test_missing_or_partial_native_usage_remains_unknown(self):
         for usage in ({}, {('thread', 'turn'): {**self.usage[('thread', 'turn')], 'complete': False}}):
             self.assertIsNone(self.run_report(usage=usage)['executions'][0]['observedAttributedCost'])

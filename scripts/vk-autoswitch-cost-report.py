@@ -93,12 +93,26 @@ def load_weights(path=None, proof=None, now=None):
     return {'rates': rates, 'provenance': provenance, 'sha256': digest(raw), 'version': data['version']}
 
 
-def price(settings, usage, weights, account):
+def price(settings, usage, weights, account, observed_at=None):
     if weights is None or usage is None or account != weights['provenance']['accountScope']:
         return None
     rate = weights['rates'].get(identity(settings))
     if rate is None:
         return None
+    # Real versioned weights must also cover the actual native observation,
+    # not merely be current when a historical report happens to be generated.
+    provenance = weights['provenance']
+    if provenance.get('validFrom') and provenance.get('validUntil'):
+        if not observed_at:
+            return None
+        try:
+            at = dt.datetime.fromisoformat(observed_at.replace('Z', '+00:00'))
+            begin = dt.datetime.fromisoformat(provenance['validFrom'].replace('Z', '+00:00'))
+            end = dt.datetime.fromisoformat(provenance['validUntil'].replace('Z', '+00:00'))
+            if not at.tzinfo or not begin <= at <= end:
+                return None
+        except (ValueError, TypeError):
+            return None
     uncached = usage['input'] - usage['cachedInput']
     return (uncached * rate[0] + usage['cachedInput'] * rate[1] + usage['output'] * rate[2]) / Decimal(1000000)
 
@@ -178,7 +192,7 @@ def report(executions, events, usage, weights=None, outcomes=None, models=None):
             count = tokens(measured.get('tokens')) if complete else None
             if count is None:
                 gaps.append('execution_usage_missing_or_incomplete')
-            value = price(settings, count, weights, d.get('account_fingerprint'))
+            value = price(settings, count, weights, d.get('account_fingerprint'), measured.get('timestamp') if measured else None)
             if value is None:
                 gaps.append('baseline_weights_or_settings_unknown')
             execution_costs.append(value)
@@ -196,7 +210,8 @@ def report(executions, events, usage, weights=None, outcomes=None, models=None):
             classifier_totals.update(known_components(overhead_raw))
             if overhead_tokens is None:
                 classifier_unknown += 1; gaps.append('classifier_usage_unknown')
-            overhead = price({'model': trace.get('model'), 'reasoningEffort': trace.get('effort'), 'serviceTier': trace.get('service_tier')}, overhead_tokens, weights, d.get('account_fingerprint'))
+            classifier_measurement = usage.get((trace.get('native_thread_id'), trace.get('native_turn_id')))
+            overhead = price({'model': trace.get('model'), 'reasoningEffort': trace.get('effort'), 'serviceTier': trace.get('service_tier')}, overhead_tokens, weights, d.get('account_fingerprint'), classifier_measurement.get('timestamp') if classifier_measurement else None)
             if overhead is None:
                 gaps.append('classifier_cost_unknown')
         total = baseline_cost + overhead if baseline_cost is not None and overhead is not None else None
@@ -211,7 +226,7 @@ def report(executions, events, usage, weights=None, outcomes=None, models=None):
         if baseline is not None and len(turns) == 1:
             record = usage.get(next(iter(turns)))
             count = tokens(record.get('tokens')) if record and record.get('complete') is True else None
-            proposed = price(recommended, count, weights, d.get('account_fingerprint'))
+            proposed = price(recommended, count, weights, d.get('account_fingerprint'), record.get('timestamp') if record else None)
             if baseline_cost is not None and proposed is not None and candidate_safe:
                 scenario = {'kind': 'same_token_demand_only', 'baselineCost': str(baseline_cost), 'recommendedCost': str(proposed), 'candidateInitialCostWithObservedClassifierOverhead': str(proposed + overhead) if overhead is not None else None, 'grossDifference': str(baseline_cost - proposed), 'netSavings': None, 'limitations': ['gross_difference_excludes_overhead_and_rework', 'lower_model_token_demand_unknown', 'candidate_retry_rework_unknown', 'comparable_accepted_outcome_missing']}
         details.append({'executionId': eid, 'requested': requested, 'actualNative': actual, 'recommended': recommended, 'confidenceGate': confidence, 'qualificationGate': qualification, 'qualityGate': 'unreviewed', 'classification': d.get('assessed_envelope'), 'reason': d.get('reason'), 'classifierTokens': overhead_tokens, 'classifierKnownTokenSubtotal': known_components(overhead_raw) if trace else {}, 'nativeKnownTokenSubtotal': dict(native_subtotal), 'baselineExecutionCost': None if baseline_cost is None else str(baseline_cost), 'observedClassifierCost': None if overhead is None else str(overhead), 'observedAttributedCost': None if total is None else str(total), 'costScenario': scenario, 'netSavings': None, 'gaps': sorted(set(gaps + ['comparable_accepted_outcome_missing'] + ([] if candidate_safe else ['qualification_not_established'])))})

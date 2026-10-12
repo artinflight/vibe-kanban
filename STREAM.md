@@ -1,17 +1,25 @@
-## October 12: AutoSwitch current-step and actual-baseline cost evidence
+## October 12: mandatory AutoSwitch review correction
 
-Focused AutoSwitch-only work on fix/autoswitch-bounded-cost-evidence. Short
-completed-context reports and supplied documentation records are steps, not
-implicit resumption of old protected work. Known-link fast path, manual locks,
-qualifications, exclusions, risk/failure guards and Recommend remain intact.
-Offline cost reporting uses exact native execution identity and includes classifier
-overhead/explicit recovery attempts; weights and comparable quality gaps stay
-unknown. No source in the temporary shared-launcher repair is included.
-Hosted188 executor tests and same-process reload pass; private32-case replay
-changes only the two reviewed reporting/recording steps and avoids their classifier
-calls. Accounting tests pass; no measured net savings. PR244 targets staging.
-See VK_AUTOSWITCH_COST_EVIDENCE.md for contracts and validation/rollout limits.
-Private recorded cases and operational receipts remain outside the repository.
+The earlier hosted executor/reload runs changed AppArmor without authorization;
+they are not accepted validation. Receipts remain preserved. First corrective
+commit 1a668a386883a45f2ebddbfbf992b85940451e0e removes that step before any
+new push; 1299d7cffe813142cc378ed01977f0df8512139c removes the normal PR
+workflow's security-profile install. Both require an existing supported sandbox
+with security unchanged, stopping if unavailable. No merge/publication/restart.
+
+Cost reporting now matches each native execution, classifier and recovery event
+to its own timestamp, account, model/effort/tier, regime and reviewed weight
+version. Historical in-window weights remain usable after expiry; missing or
+conflicting metadata is unknown. Missing classifier evidence cannot mean zero
+unless an explicit reviewed deterministic-path receipt matches the exact
+execution, decision and module. No billing weights or savings are invented.
+
+The earlier bounded current-step source corrections remain intact. Recommend,
+selected model/effort and prior live publication stay untouched. Python accounting
+and workflow guard tests are offline; final exact-source executor/reload acceptance
+without security weakening and independent review remain publication gates.
+PR244 remains open against staging, unmerged. See VK_AUTOSWITCH_COST_EVIDENCE.md.
+Private diagnostic inputs/receipts remain outside the repository.
 
 ## October10: tested same-UID recovery; matching publication required
 

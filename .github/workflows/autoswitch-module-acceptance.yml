@@ -28,11 +28,6 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v6
-      - uses: ./.github/actions/cargo-checks-common-setup
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: rustfmt
-          cache-key: backend-test-Linux-X64-ubuntu-24.04
       - name: Offline cost accounting regressions
         run: python3 scripts/testing/test-autoswitch-cost-report.py
       - name: Require supported sandbox with unchanged security settings
@@ -40,6 +35,11 @@ jobs:
           set -euo pipefail
           command -v bwrap
           bwrap --unshare-all --ro-bind / / -- /bin/true
+      - uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt
+          cache-key: backend-test-Linux-X64-ubuntu-24.04
       - name: Executor regressions and existing same-process acceptance (zero inference)
         env:
           VK_ROUTING_TEST_ROOT: ${{ runner.temp }}/autoswitch-acceptance

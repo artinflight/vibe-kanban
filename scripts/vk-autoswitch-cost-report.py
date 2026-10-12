@@ -53,7 +53,7 @@ def identity(value):
     return fields if all(isinstance(x, str) and x for x in fields) else None
 
 
-def load_weights(path=None, proof=None, now=None):
+def load_weights(path=None, proof=None):
     if path is None:
         return None
     if proof is None:
@@ -72,49 +72,135 @@ def load_weights(path=None, proof=None, now=None):
         raise ValueError('Weight source evidence hash mismatch')
     # The reviewed evidence must supply these exact rates/scope, not merely exist.
     evidence = json.loads(source)
-    if any(evidence.get(k) != provenance.get(k) for k in ('kind', 'source', 'sourceVersion', 'unit', 'accountScope', 'validFrom', 'validUntil')) or evidence.get('rates') != data.get('rates'):
+    if any(evidence.get(k) != provenance.get(k) for k in ('kind', 'source', 'sourceVersion', 'unit', 'accountScope', 'validFrom', 'validUntil', 'regime')) or evidence.get('rates') != data.get('rates'):
         raise ValueError('Weight data does not match reviewed source evidence')
-    current = now or dt.datetime.now(dt.timezone.utc)
     begin = dt.datetime.fromisoformat(provenance['validFrom'].replace('Z', '+00:00'))
     end = dt.datetime.fromisoformat(provenance['validUntil'].replace('Z', '+00:00'))
-    if not begin.tzinfo or not end.tzinfo or not begin <= current <= end:
-        raise ValueError('Weights are outside their validity window')
+    if not begin.tzinfo or not end.tzinfo or begin >= end:
+        raise ValueError('Invalid weight applicability interval')
     rates = {}
     for row in data.get('rates', []):
         key = identity(row)
-        if key is None or key in rates or row.get('basis') != 'per_million_tokens':
+        if key is None or row.get('basis') != 'per_million_tokens':
             raise ValueError('Rates require unique exact model/effort/tier and compatible basis')
         amounts = tuple(Decimal(str(row[k])) for k in ('uncachedInput', 'cachedInput', 'output'))
         if any(not x.is_finite() or x < 0 for x in amounts):
             raise ValueError('Invalid cost rate')
-        rates[key] = amounts
+        start = dt.datetime.fromisoformat(row.get('validFrom', provenance['validFrom']).replace('Z', '+00:00'))
+        stop = dt.datetime.fromisoformat(row.get('validUntil', provenance['validUntil']).replace('Z', '+00:00'))
+        if not start.tzinfo or not stop.tzinfo or not begin <= start < stop <= end:
+            raise ValueError('Invalid rate applicability interval')
+        regime = row.get('regime', provenance.get('regime'))
+        version = row.get('weightVersion', evidence.get('weightVersion'))
+        if not isinstance(regime, str) or not regime or not isinstance(version, str) or not version:
+            raise ValueError('Rates require explicit regime and version')
+        rates.setdefault(key, []).append({'amounts': amounts, 'from': start, 'until': stop, 'regime': regime, 'version': version})
     if not rates:
         raise ValueError('Empty rates')
     return {'rates': rates, 'provenance': provenance, 'sha256': digest(raw), 'version': data['version']}
 
 
-def price(settings, usage, weights, account, observed_at=None):
+def event_time(value):
+    try:
+        at = dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
+        return at.astimezone(dt.timezone.utc) if at.tzinfo else None
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
+def observations_agree(evidence):
+    if any(evidence.get(field) for field in ('timestampConflict', 'regimeConflict', 'weightVersionConflict', 'accountConflict')):
+        return False
+    for source_field, field, normalize in (
+        ('timestampSources', 'timestamp', event_time), ('regimeSources', 'regime', lambda x: x),
+        ('weightVersionSources', 'weightVersion', lambda x: x), ('accountSources', 'accountScope', lambda x: x),
+    ):
+        sources = evidence.get(source_field, [])
+        expected = normalize(evidence.get(field))
+        if not isinstance(sources, list) or (sources and expected is None) or any(normalize(x) != expected for x in sources):
+            return False
+    return True
+
+
+def price(settings, usage, weights, account, evidence=None):
+    """Half-open per-event applicability; never use report/admission time."""
     if weights is None or usage is None or account != weights['provenance']['accountScope']:
         return None
-    rate = weights['rates'].get(identity(settings))
-    if rate is None:
+    if not isinstance(evidence, dict) or evidence.get('accountScope') != account:
         return None
-    # Real versioned weights must also cover the actual native observation,
-    # not merely be current when a historical report happens to be generated.
-    provenance = weights['provenance']
-    if provenance.get('validFrom') and provenance.get('validUntil'):
-        if not observed_at:
-            return None
-        try:
-            at = dt.datetime.fromisoformat(observed_at.replace('Z', '+00:00'))
-            begin = dt.datetime.fromisoformat(provenance['validFrom'].replace('Z', '+00:00'))
-            end = dt.datetime.fromisoformat(provenance['validUntil'].replace('Z', '+00:00'))
-            if not at.tzinfo or not begin <= at <= end:
-                return None
-        except (ValueError, TypeError):
-            return None
+    at = event_time(evidence.get('timestamp'))
+    regime = evidence.get('regime'); version = evidence.get('weightVersion')
+    if at is None or not regime or not version or not observations_agree(evidence):
+        return None
+    matches = [r for r in weights['rates'].get(identity(settings), [])
+               if r['regime'] == regime and r['version'] == version and r['from'] <= at < r['until']]
+    if len(matches) != 1:
+        return None
+    rate = matches[0]['amounts']
     uncached = usage['input'] - usage['cachedInput']
     return (uncached * rate[0] + usage['cachedInput'] * rate[1] + usage['output'] * rate[2]) / Decimal(1000000)
+
+
+def measurement_cost(settings, measurement, weights, account):
+    if not isinstance(measurement, dict) or measurement.get('complete') is not True or not measurement.get('provenance'):
+        return None
+    if not observations_agree(measurement):
+        return None
+    count = tokens(measurement.get('tokens'))
+    if count is None:
+        return None
+    events = measurement.get('events')
+    if events is None:
+        return price(settings, count, weights, account, measurement)
+    if not isinstance(events, list) or not events:
+        return None
+    seen = {}; total = Decimal(0); summed = collections.Counter(); times = []
+    for item in events:
+        if not isinstance(item, dict):
+            return None
+        eid = item.get('eventId')
+        if not eid or (eid in seen and seen[eid] != item):
+            return None
+        if eid in seen:
+            continue
+        seen[eid] = item
+        if item.get('complete') is not True or not item.get('provenance'):
+            return None
+        if identity(item) != identity(settings):
+            return None
+        for field in ('regime', 'weightVersion', 'accountScope', 'nativeThreadId', 'nativeTurnId'):
+            if measurement.get(field) is not None and measurement[field] != item.get(field):
+                return None
+        part = tokens(item.get('tokens'))
+        value = price(settings, part, weights, account, item)
+        if value is None:
+            return None
+        total += value; summed.update({k:part[k] for k in ('input', 'cachedInput', 'output')})
+        times.append(event_time(item.get('timestamp')))
+    if any(summed[k] != count[k] for k in ('input', 'cachedInput', 'output')):
+        return None
+    if measurement.get('timestamp') is not None and event_time(measurement['timestamp']) != max(times):
+        return None
+    return total
+
+
+def verified_no_classifier(execution, proofs):
+    """Absence of a trace is not proof; require a reviewed exact execution receipt."""
+    d = execution['decision']; p = (proofs or {}).get(execution['executionId'])
+    if not isinstance(p, dict) or p.get('verified') is not True or type(p.get('calls')) is not int or p['calls'] != 0:
+        return False
+    provenance = p.get('provenance')
+    source_hash = provenance.get('sourceSha256') if isinstance(provenance, dict) else None
+    if not isinstance(provenance, dict) or not provenance.get('reviewRef') or not isinstance(source_hash, str) or len(source_hash) != 64 or any(x not in '0123456789abcdef' for x in source_hash):
+        return False
+    if p.get('executionId') != execution['executionId'] or p.get('decisionId') != d.get('id') or not p.get('decisionId'):
+        return False
+    path = p.get('path'); module_hash = p.get('moduleManifestSha256')
+    if path not in ('completed_context_reference_lookup', 'completed_context_bounded_record') or not isinstance(module_hash, str) or len(module_hash) != 64 or any(x not in '0123456789abcdef' for x in module_hash):
+        return False
+    evidence = (d.get('triage') or {}).get('evidence', [])
+    return path in evidence and 'bounded_semantic_fallback' not in evidence and any(
+        x.startswith('routing_module:') and x.endswith(':' + module_hash) for x in evidence)
 
 
 class Records(dict):
@@ -148,7 +234,7 @@ def immutable_records(path, schema, key):
     return rows
 
 
-def report(executions, events, usage, weights=None, outcomes=None, models=None):
+def report(executions, events, usage, weights=None, outcomes=None, models=None, classifier_proofs=None):
     """Missing observations stay unknown; process completion is not review acceptance."""
     decisions = {}; bindings = {}; turn_owner = {}
     for event in events.values():
@@ -192,12 +278,12 @@ def report(executions, events, usage, weights=None, outcomes=None, models=None):
             count = tokens(measured.get('tokens')) if complete else None
             if count is None:
                 gaps.append('execution_usage_missing_or_incomplete')
-            value = price(settings, count, weights, d.get('account_fingerprint'), measured.get('timestamp') if measured else None)
+            value = measurement_cost(settings, measured, weights, d.get('account_fingerprint'))
             if value is None:
                 gaps.append('baseline_weights_or_settings_unknown')
             execution_costs.append(value)
         baseline_cost = sum(execution_costs, Decimal(0)) if turns and all(v is not None for v in execution_costs) else None
-        overhead = Decimal(0); overhead_tokens = None
+        overhead = None; overhead_tokens = None; overhead_raw = {}
         if trace:
             tid = trace.get('id')
             if not tid or tid in classifier_seen:
@@ -211,9 +297,15 @@ def report(executions, events, usage, weights=None, outcomes=None, models=None):
             if overhead_tokens is None:
                 classifier_unknown += 1; gaps.append('classifier_usage_unknown')
             classifier_measurement = usage.get((trace.get('native_thread_id'), trace.get('native_turn_id')))
-            overhead = price({'model': trace.get('model'), 'reasoningEffort': trace.get('effort'), 'serviceTier': trace.get('service_tier')}, overhead_tokens, weights, d.get('account_fingerprint'), classifier_measurement.get('timestamp') if classifier_measurement else None)
+            classifier_settings = {'model': trace.get('model'), 'reasoningEffort': trace.get('effort'), 'serviceTier': trace.get('service_tier')}
+            if classifier_measurement and identity(classifier_measurement) == identity(classifier_settings) and tokens(classifier_measurement.get('tokens')) == overhead_tokens and overhead_tokens is not None:
+                overhead = measurement_cost(classifier_settings, classifier_measurement, weights, d.get('account_fingerprint'))
             if overhead is None:
                 gaps.append('classifier_cost_unknown')
+        elif verified_no_classifier(execution, classifier_proofs):
+            overhead = Decimal(0)
+        else:
+            classifier_unknown += 1; gaps.append('classifier_absence_unverified')
         total = baseline_cost + overhead if baseline_cost is not None and overhead is not None else None
         attributed[eid] = total
         triage = d.get('triage') or {}
@@ -226,7 +318,12 @@ def report(executions, events, usage, weights=None, outcomes=None, models=None):
         if baseline is not None and len(turns) == 1:
             record = usage.get(next(iter(turns)))
             count = tokens(record.get('tokens')) if record and record.get('complete') is True else None
-            proposed = price(recommended, count, weights, d.get('account_fingerprint'), record.get('timestamp') if record else None)
+            scenario_record = None
+            if record:
+                scenario_record = {**record, **recommended}
+                if record.get('events') is not None:
+                    scenario_record['events'] = [{**x, **recommended} for x in record['events']]
+            proposed = measurement_cost(recommended, scenario_record, weights, d.get('account_fingerprint'))
             if baseline_cost is not None and proposed is not None and candidate_safe:
                 scenario = {'kind': 'same_token_demand_only', 'baselineCost': str(baseline_cost), 'recommendedCost': str(proposed), 'candidateInitialCostWithObservedClassifierOverhead': str(proposed + overhead) if overhead is not None else None, 'grossDifference': str(baseline_cost - proposed), 'netSavings': None, 'limitations': ['gross_difference_excludes_overhead_and_rework', 'lower_model_token_demand_unknown', 'candidate_retry_rework_unknown', 'comparable_accepted_outcome_missing']}
         details.append({'executionId': eid, 'requested': requested, 'actualNative': actual, 'recommended': recommended, 'confidenceGate': confidence, 'qualificationGate': qualification, 'qualityGate': 'unreviewed', 'classification': d.get('assessed_envelope'), 'reason': d.get('reason'), 'classifierTokens': overhead_tokens, 'classifierKnownTokenSubtotal': known_components(overhead_raw) if trace else {}, 'nativeKnownTokenSubtotal': dict(native_subtotal), 'baselineExecutionCost': None if baseline_cost is None else str(baseline_cost), 'observedClassifierCost': None if overhead is None else str(overhead), 'observedAttributedCost': None if total is None else str(total), 'costScenario': scenario, 'netSavings': None, 'gaps': sorted(set(gaps + ['comparable_accepted_outcome_missing'] + ([] if candidate_safe else ['qualification_not_established'])))})
@@ -293,16 +390,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--db', required=True); parser.add_argument('--routing-feed', required=True)
     parser.add_argument('--start', required=True); parser.add_argument('--end', required=True)
-    parser.add_argument('--usage'); parser.add_argument('--weights'); parser.add_argument('--weight-evidence'); parser.add_argument('--outcomes')
+    parser.add_argument('--usage'); parser.add_argument('--weights'); parser.add_argument('--weight-evidence'); parser.add_argument('--outcomes'); parser.add_argument('--classifier-proof')
     parser.add_argument('--models', type=Path, default=Path(__file__).resolve().parents[1] / 'crates/executors/src/routing_models.json')
     args = parser.parse_args()
     events = immutable_records(args.routing_feed, 'vk.routing.v1', lambda x: x.get('eventId'))
     usage = immutable_records(args.usage, 'vk.autoswitch.usage.v1', lambda x: (x.get('nativeThreadId'), x.get('nativeTurnId')) if x.get('nativeThreadId') and x.get('nativeTurnId') else None)
     outcomes = immutable_records(args.outcomes, 'vk.autoswitch.comparison.v1', lambda x: x.get('comparisonId'))
+    proofs = immutable_records(args.classifier_proof, 'vk.autoswitch.classifier-path.v1', lambda x:x.get('executionId'))
     weights = load_weights(args.weights, args.weight_evidence)
-    output = report(read_executions(args.db, args.start, args.end), events, usage, weights, outcomes.values(), json.loads(args.models.read_text()))
+    output = report(read_executions(args.db, args.start, args.end), events, usage, weights, outcomes.values(), json.loads(args.models.read_text()), proofs)
     output['observationWindow'] = {'startInclusive': args.start, 'endExclusive': args.end, 'basis': 'execution_admission', 'nativeBindings': 'all_exact_attributed_turns_available_at_report_time', 'reportUtc': dt.datetime.now(dt.timezone.utc).isoformat()}
-    output['inputProvenance'] = {'routingCompletePrefixSha256': events.sha256, 'routingIncompleteTail': events.incomplete_tail, 'usageCompletePrefixSha256': usage.sha256, 'usageIncompleteTail': usage.incomplete_tail, 'qualificationSha256': digest(args.models.read_bytes()), 'query': 'read-only VK execution decisions joined by exact native turn IDs'}
+    output['inputProvenance'] = {'routingCompletePrefixSha256': events.sha256, 'routingIncompleteTail': events.incomplete_tail, 'usageCompletePrefixSha256': usage.sha256, 'usageIncompleteTail': usage.incomplete_tail, 'qualificationSha256': digest(args.models.read_bytes()), 'classifierProofCompletePrefixSha256': proofs.sha256, 'query': 'read-only VK execution decisions joined by exact native turn IDs'}
     print(json.dumps(output, indent=2))
 
 

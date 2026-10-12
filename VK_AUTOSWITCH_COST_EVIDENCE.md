@@ -53,9 +53,18 @@ qualification are separate gates, neither is measured code quality.
 
 `--usage` accepts private JSONL records with schema `vk.autoswitch.usage.v1`, exact
 `nativeThreadId`/`nativeTurnId`, native `model`, `reasoningEffort`, `serviceTier`,
-`complete: true`, native observation `timestamp`, a source `provenance`, and `tokens` containing `input`,
+`complete: true`, native observation `timestamp`, `accountScope`, `regime`, `weightVersion`, a
+source `provenance`, and `tokens` containing `input`,
 `cachedInput`, `output`, optional `reasoning`. Export these from already verified
 native/CodexUsage attribution; this script cannot certify a fabricated export.
+For a turn with usage spanning regimes or rate windows, supply `events`: additive
+native usage deltas with distinct `eventId`, timestamp, exact settings, regime,
+weightVersion, accountScope, complete/provenance and tokens. Their sums must equal
+the turn totals. Identical immutable duplicates are deduplicated; conflicting
+ones remain unknown. A supplied aggregate timestamp must equal the last event.
+Aggregate regime/version, if supplied, must agree with every event. Do not label
+a multi-regime cumulative total as a single event in the final regime.
+
 Missing effort/tier/usage and conflicting bindings/settings cannot be replaced
 by requested settings or a timestamp-nearest guess. No CU source/schema change.
 
@@ -72,12 +81,38 @@ matching hashes prove integrity, not authority or applicability of API prices to
 subscription usage. Test fixtures use fictional units only.
 
 Each rate has exact `model`, `reasoningEffort`, `serviceTier`, basis
-`per_million_tokens`, nonnegative decimal `uncachedInput`, `cachedInput`, `output`.
+`per_million_tokens`, nonnegative decimal `uncachedInput`, `cachedInput`, `output`,
+and explicit `regime` and `weightVersion` (or reviewed evidence defaults). A rate
+may have its own validFrom/validUntil within the overall evidence interval.
+The package version and sourceVersion describe provenance; they cannot substitute
+for an event's missing weightVersion/regime. Only a single exact matching rate
+may be applied. Applicability is **start-inclusive, end-exclusive per event**.
+Expired-now weights still price historical in-window events; currently valid
+weights cannot price older out-of-window events. No report-time/admission-time
+fallback. Conflicting timestamps, regimes, versions or accounts remain unknown.
+If exporters supply `timestampSources`, `regimeSources`, `weightVersionSources`
+or `accountSources`, all observations must agree with the event's fields.
 Missing model/settings/account-compatible weights remain unknown. Native
 observation dates must fall within the reviewed weight validity window; an
 admission timestamp is not a substitute. To price classifier overhead, include
-its exact native thread/turn observation in the usage export as well. Units cannot
+its exact native thread/turn observation in the usage export as well, with tokens
+matching the persisted trace. Classifier timing and applicability are independent
+of the parent execution. Units cannot
 be mixed. Weights are estimates with provenance, not observed provider billing.
+
+### Verified zero-inference paths
+
+Absence of a semantic trace never proves zero overhead. Optional
+`--classifier-proof` reads private immutable JSONL, schema
+`vk.autoswitch.classifier-path.v1`: executionId, decisionId, verified true,
+integer calls zero, path, moduleManifestSha256 and reviewed provenance
+(reviewRef/sourceSha256). Allowed paths are the existing
+completed_context_reference_lookup and completed_context_bounded_record.
+The exact decision ID, execution ID and pinned module hash must match persisted
+triage evidence, with no bounded_semantic_fallback marker. An actual semantic
+trace remains authoritative over a contradictory zero-call receipt.
+Without this explicit reviewed receipt, classifier cost remains unknown.
+This is an offline accounting receipt, not a classifier cache or routing change.
 
 ### Recovery and comparable outcomes
 
@@ -117,32 +152,35 @@ October 30 remains the useful-beta deadline. Real Recommend observations and
 reviewed native usage/weight/comparable-outcome coverage, rather than a broad
 benchmark campaign, are the remaining evidence needed before any Auto decision.
 
-## Focused acceptance result
+## Review correction and current acceptance boundary
 
-Hosted module acceptance on source09f006cf8 passed188 executor unit tests
-(eight opt-in tests ignored) and one same-process reload test, with zero native
-inference. The actual pinned protocol-2 validator accepts the prepared worker.
-Private offline replay of32 recorded cases leaves all30 earlier cases unchanged;
-the two reviewed documentation/status cases move to Routine and skip the
-classifier. Replays use an empty repository fixture and summarized completed
-context for the two newest cases; they do not prove cheaper-model quality.
+Earlier hosted executor/reload runs changed AppArmor settings without
+operator authorization and **are not accepted validation**. Their receipts are
+retained, superseded. The first corrective commit removes the AutoSwitch
+workflow's install/sysctl step. The normal PR workflow's AppArmor profile-loader
+was also removed before pushing: both routes now require an already working
+sandbox under unchanged security settings and stop if it is unavailable.
+A restricted runner is a validation blocker, never permission for a bypass.
+No merge, new publication, rollback, backend restart or policy/model change is
+part of this correction. The known prior live publication is preserved.
 
-The accounting tool reproduces the117-turn admission sample:107 Astra/high,
-seven Sol6.1/medium and three Sol6/low recommendations, versus101 actual
-Sol6.1/high,13 Astra/xhigh and three missing bindings. Native goal continuations
-are reported separately from execution counts. Known classifier subtotal is
-223,300 input (31,744 cached),10,024 output (6,343 reasoning); two classifier
-attempts have unknown usage. Existing CU observations match116 exact bound turns,
-but complete usage and subscription weights remain uncertified. No monetary or
-allowance saving is claimed. Operational IDs/inputs remain private.
+Offline accounting regressions cover per-event half-open date boundaries,
+historical expiration, changed regimes/versions, classifier-specific timing,
+per-event recovery cost, conflict/absence handling and reviewed no-inference
+receipts. Fictional fixture units never become allowance or billing weights.
+Static workflow assertions forbid the removed security-changing commands.
+Final exact-source executor/reload acceptance and independent review remain
+required before further module publication. Local accounting tests do not
+replace that requirement.
 
-Python accounting tests cover actual-versus-requested baseline, partial usage,
-cache/reasoning subsets, classifier overhead, retries, complete reviewed comparisons,
-unknown weights/settings/account/tier, provenance/expiry, duplicate and conflicting
-turns, partial JSONL writes, and goal turn-versus-execution counts.
-
-The first hosted worker run passed. A later unchanged-Rust rerun hit WouldBlock
-in the pre-existing capacity ownership handover test while the full unit suite
-ran in parallel; the focused acceptance workflow now serializes those tests to
-avoid cross-test lock/fork interference. The failed receipt is retained; no
-capacity implementation, production admission limit or security setting changes.
+The earlier private 32-case replay changed only two documentation/status cases
+and skipped their classifier; it is diagnostic evidence, not clean final-source
+acceptance or cheaper-model quality. The 117-turn admission report had 107
+Astra/high, seven Sol6.1/medium and three Sol6/low recommendations versus 101
+actual Sol6.1/high, 13 Astra/xhigh and three missing bindings. Known classifier
+subtotal was 223,300 input (31,744 cached), 10,024 output (6,343 reasoning), with
+two incomplete trace usages. The corrected read-only rerun identifies 74 absent classifier traces without
+reviewed zero-inference receipts, in addition to the two incomplete traces.
+These 76 uncertain usages are coverage gaps, not zero cost. Complete native usage, applicable subscription
+weights and comparable accepted outcomes remain uncertified: no monetary or
+allowance saving is claimed. Private IDs/inputs remain outside this repository.

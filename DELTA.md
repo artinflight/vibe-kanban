@@ -1785,3 +1785,15 @@ original histories and stable snapshots passed read-only native-index/prefix
 verification in under 3 seconds and 24 MiB peak RSS each. Private operational
 receipts stay outside Git. Capability remains default-off; review/adoption/live
 acceptance are separate. No live grant/history/continuation/restart action.
+
+## 2026-10-13 — isolated native reviewer compatibility (PR247)
+
+Source/test da209fdee aliases only inbound top-level auto_review on three typed
+thread responses. Hosted554-test baseline and source-bound acceptance builder
+pass. Four direct native turns and two actual candidate HTTP turns verify agent
+reviews, command outcomes and saved workspace-write/on-request/auto_review context.
+Private collector failures were reconciled read-only with no command replay.
+No local Cargo build, production deployment/restart/default/credential mutation
+or other-agent action. PR245/246 and Recommend remain preserved. Independent
+review/final coordinated release gates remain; scheduled routing artifact's known
+namespace prerequisite is still failed. See VK_NATIVE_REVIEW_COMPATIBILITY.md.

@@ -1763,7 +1763,7 @@ no production effect or readiness claim. See VK_SAFE_RESTART_PREPARATION_2026100
 
 Codeae263d47 adds exact-two-target verify-only/default CLI and authoritative
 server capture status while preserving signed HTTP auth and PR241 validators.
-Hosted38057745525 passes8 new tests/build/Clippy/format; source tree equals
+Hosted38057745525 passes 8 new tests/build/Clippy/format; source tree equals
 hosted63d76b91. Prior51 Rust/20 conversation/type/lint/native checks retained.
 Compiled same-UID live verify-only probes refuse absent JSON status protocol;
 no apply, sidecar, prompt, restart, badge/database rewrite or policy change.
@@ -1776,3 +1776,12 @@ remain required. This is source delivery, not conversation restoration.
 Prepared streaming native-input verification and synthetic large-history/integrity
 regressions from staging d786124a1. Hosted compiled and private read-only acceptance
 remain pending. No production, grant, target-history or continuation changes.
+
+## 2026-10-13 — large-history compiled and private-data acceptance
+
+PR #245 code/test head df717cf8e passed 548 hosted Rust tests (13 skipped), normal
+schema/lint/frontend/Tauri checks and 8 optimized focused tests. Both private
+original histories and stable snapshots passed read-only native-index/prefix
+verification in under 3 seconds and 24 MiB peak RSS each. Private operational
+receipts stay outside Git. Capability remains default-off; review/adoption/live
+acceptance are separate. No live grant/history/continuation/restart action.

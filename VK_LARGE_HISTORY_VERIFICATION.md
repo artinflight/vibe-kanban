@@ -45,8 +45,27 @@ pass/refusal and elapsed time. Resource measurement and private manifests remain
 on mounted secondary storage. A reference prefix generated solely for this
 inspection proves reader compatibility, never owner authority or activation.
 
-Status: source prepared; exact-head compiled integration checks and actual-data
-resource measurements pending. No Cargo compilation on MCP. No restart,
-deployment, activation, live grant write, original-history change, target prompt,
-merge or restart inclusion is part of this repair. Independent review and the
-original final review/Figma gate remain required.
+Validation: code/test commit df717cf8e passed hosted Test run 38376417585 with 548 Rust
+tests (13 skipped), schema, Clippy, frontend and Tauri checks. The 192/384 MiB
+production startup/admission fixture passed. The optimized focused workflow
+38376417683 passed 8 tests (two explicitly private probes skipped in CI). Both
+private original histories and their stable snapshots then passed the compiled
+read-only verifier against the original Rust materialized-array reference,
+each below 3 seconds and 24 MiB peak RSS. Precise private receipts, identities,
+source snapshots and measurements remain outside public Git.
+
+Local format, ops governance and frontend lint passed. Local TypeScript ran out
+of Node heap; hosted frontend validation passed. No Cargo compilation occurred
+on MCP. The first Python inspection reference was refused because cross-language
+JSON encoding did not match Rust; no live seal was changed. The accepted reference
+uses the original Rust serialization, and streaming measurements exclude reference
+materialization. A concurrent manager snapshot was refused before a stable copy
+was obtained without prompting or stopping the source session.
+
+Draft PR #245 carries the final published-head checks. The documentation follow-up
+changes no executable source. Reader acceptance does not certify release adoption
+or a live continuation: the capability remains default-off. Independent review,
+release-owner adoption, separately authorized live acceptance and the unchanged
+final user review/Figma gate remain. No restart, deployment, activation, live
+grant write, original-history change, target prompt, merge or promise of restart
+inclusion is part of this repair.

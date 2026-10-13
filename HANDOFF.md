@@ -1,19 +1,27 @@
-## October 13 large native-history verification repair
+## October 13 large native-history verification repair — validated draft
 
-The repair branch starts at current fork staging d786124a1. Source replaces the
-128 MiB whole-file gate with bounded-record streaming verification shared by
-startup adoption and invocation. Prefix serialization remains compatible;
-world-state instruction/permission records are sealed as amendments, accounting
-records are parsed, and unknown envelopes still fail closed. File identity,
-extent/timestamps and native-index binding are rechecked after each scan.
+Draft PR #245 replaces the 128 MiB whole-file gate with bounded-record streaming
+verification shared by startup adoption and invocation. Prefix serialization is
+preserved. World-state instruction/permission records are sealed as amendments;
+accounting records are parsed, and unknown envelopes still fail closed. File
+object/extent/timestamps and native-index binding are rechecked after each scan.
 
-Synthetic coverage includes large output histories and a large sealed input
-prefix, invalid/truncated JSON, changed inputs, unauthorized suffixes, native
-index failures and deterministic concurrent mutation. Compiled validation and
-private read-only real-history acceptance are pending the exact-head hosted
-checks. This is preparation only: capability remains default-off, with no grant,
-history, continuation, deployment, restart or staging-owner action.
-See VK_LARGE_HISTORY_VERIFICATION.md for the acceptance boundary.
+Code/test head df717cf8e passes hosted Test run 38376417585: 548 Rust tests, 13 skipped,
+plus schema, Clippy, frontend and Tauri checks. Optimized verification workflow
+38376417683 passes 8 focused tests and exports the source-bound verifier. Both
+private original histories and stable snapshots passed read-only verification
+against the original Rust payload-array encoding, each below 3 seconds and 24 MiB
+peak RSS. Exact private identities and receipts remain outside Git. Final
+published-head checks are linked from the draft PR; this documentation follow-up
+does not change executable source. Local format/ops/frontend lint pass; local
+TypeScript exceeded Node heap, while hosted frontend checks passed.
+
+The capability stays default-off. No live grants, original histories, target
+prompts, continuations, deployment, restart or staging-owner actions occurred.
+Independent review and release-owner adoption remain, followed by separately
+authorized live acceptance and the unchanged user final-review/Figma gate.
+New world-state/compaction input still fails closed. See
+VK_LARGE_HISTORY_VERIFICATION.md for scope and acceptance limits.
 
 ## October11 startup provenance and executable monitor ordering
 

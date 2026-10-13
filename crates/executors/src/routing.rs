@@ -836,7 +836,9 @@ mod tests {
         let a = crate::routing_assessment::retain_previous(a, prompt, Some("protected"));
         for (explicit, model, effort) in [
             (CapabilityFloor::Assessed, "gpt-6-sol", "low"),
-            (CapabilityFloor::Workhorse, "gpt-6.1-sol", "medium"),
+            // The existing shadow-only Sol6/low pair itself carries Workhorse
+            // qualification; a floor does not pin a model generation.
+            (CapabilityFloor::Workhorse, "gpt-6-sol", "low"),
             (CapabilityFloor::Frontier, "gpt-6-astra", "high"),
         ] {
             policy.floor = explicit;

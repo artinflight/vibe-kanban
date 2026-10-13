@@ -244,7 +244,12 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
         serde_json::to_vec(&availability).unwrap(),
     )
     .unwrap();
-    let worker = Path::new(env!("CARGO_BIN_EXE_vk-routing-module"));
+    // Permit the exact hosted artifact to be exercised on a compatible isolated
+    // host without rebuilding there. Publication still uses the pinned loader.
+    let worker_path = std::env::var_os("VK_ROUTING_TEST_WORKER")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| env!("CARGO_BIN_EXE_vk-routing-module").into());
+    let worker = worker_path.as_path();
     release(&root, "a", worker, None);
     // Reproduce the old biases in replaceable code, then load the corrected
     // real Rust worker into the SAME running backend. No backend rebuild/restart.

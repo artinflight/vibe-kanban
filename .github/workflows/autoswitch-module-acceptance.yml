@@ -24,8 +24,8 @@ env:
 
 jobs:
   policy-regressions:
-    # Pure policy/consumer functions only. This is not worker/sandbox acceptance
-    # and never packages a module; the independent module job remains mandatory.
+    # This is not worker/sandbox acceptance. Export unaccepted binaries so the
+    # identical full-isolation tests can run on a compatible unchanged host.
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -44,6 +44,40 @@ jobs:
           for suite in routing_context::tests routing_assessment::tests routing_semantic::tests routing_module::tests routing::tests; do
             cargo test --locked -p executors --lib "$suite" -- --test-threads=1 2>&1 | tee "policy-results/${suite//::/-}.log"
           done
+      - name: Build unaccepted candidate and portable acceptance executables
+        run: |
+          set -euo pipefail
+          cargo build --locked -p executors --bin vk-routing-module
+          cargo test --locked -p executors --lib --no-run --message-format=json > policy-results/lib-build.json
+          cargo test --locked -p executors --test routing_module_reload --no-run --message-format=json > policy-results/reload-build.json
+          python3 - <<'PYCODE'
+          import hashlib, json, os, shutil, subprocess
+          from pathlib import Path
+          out = Path('unaccepted-candidate')
+          out.mkdir()
+          shutil.copy2('target/debug/vk-routing-module', out / 'worker')
+          for report, name in [('lib-build.json', 'executor-tests'), ('reload-build.json', 'reload-tests')]:
+              artifacts = [json.loads(line) for line in Path('policy-results', report).read_text().splitlines()]
+              executables = [a['executable'] for a in artifacts if a.get('reason') == 'compiler-artifact' and a.get('profile', {}).get('test') and a.get('executable')]
+              if len(executables) != 1:
+                  raise RuntimeError('Expected exactly one test executable')
+              shutil.copy2(executables[0], out / name)
+          hashes = {}
+          for name in ['worker', 'executor-tests', 'reload-tests']:
+              subprocess.run(['strip', str(out / name)], check=True)
+              hashes[name] = hashlib.sha256((out / name).read_bytes()).hexdigest()
+          (out / 'build-receipt.json').write_text(json.dumps({
+              'sourceCommit': os.environ['GITHUB_SHA'], 'workflowRun': os.environ['GITHUB_RUN_ID'],
+              'sha256': hashes, 'protocol': 2, 'accepted': False, 'published': False,
+              'requires': 'Full executor/reload tests under unchanged full sandbox, pinned live validator checks and independent acceptance before publication.'
+          }, indent=2) + '\n')
+          PYCODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: autoswitch-unaccepted-candidate-${{ github.sha }}
+          path: unaccepted-candidate/
+          if-no-files-found: error
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         if: always()
         with:

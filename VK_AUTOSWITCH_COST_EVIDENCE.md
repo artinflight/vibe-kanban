@@ -41,8 +41,11 @@ not proof of account availability, cheaper execution quality or savings.
 
 A hosted pure-policy job exercises the real context/assessment/semantic/worker
 validator/candidate functions without a subprocess sandbox or inference. It is
-not executor or same-process reload acceptance, and produces no publishable
-worker. The existing full-sandbox job and independent review remain required.
+not executor or same-process reload acceptance. CI can export explicitly
+unaccepted worker/test binaries for full testing on a compatible unchanged host
+without local compilation. Artifact hashes and the existing full-isolation tests
+must pass there; the failed hosted probe is never counted as acceptance. Pinned
+validator checks and independent review remain required before publication.
 
 ## Read-only cost report
 

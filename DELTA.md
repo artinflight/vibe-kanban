@@ -1827,3 +1827,5 @@ effort and prior publication stay untouched. No merge/publication/restart.
 See VK_AUTOSWITCH_COST_EVIDENCE.md and PR244. Private receipts stay local.
 
 2026-10-13 AutoSwitch current output questions: extend the completed-context zero-inference reporting path; preserve protected continuation, actual failure and manual constraints. Add pure hosted policy regressions separately from mandatory sandbox acceptance; no live publication or settings change. See STREAM.md and PR244.
+
+2026-10-13 AutoSwitch deployment requested: host full sandbox probe passes unchanged. Prepare hosted worker/test artifacts for isolated full acceptance without local builds; publication remains gated on acceptance and independent review.

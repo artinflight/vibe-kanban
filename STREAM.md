@@ -1,3 +1,18 @@
+## October 13: authorized deployment, acceptance preparation
+
+The owner now requests deployment. The unchanged full Bubblewrap isolation probe
+passes on this host; the hosted runner still rejects network namespace setup.
+CI exports an explicitly unaccepted worker plus the exact executor/reload test
+executables, so the full original sandbox checks can run in a private isolated
+SSD directory without a local Cargo build or security changes. The test harness
+accepts an explicit worker artifact path; default Cargo invocation is unchanged.
+
+No failed hosted gate is waived. Verify artifact/source hashes, run full tests
+with private HOME/XDG/Codex state, then check the candidate through the unchanged
+backend-matched validator. Publication still requires independent acceptance.
+Use only the existing module prepare/publish path; retain rollback and prove the
+backend PID/settings survive. No backend restart, staging merge or Auto activation.
+
 ## October 13: current output questions preserve their reporting scope
 
 Natural questions about whether an established feature is producing better

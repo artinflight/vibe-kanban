@@ -399,7 +399,10 @@ class Engine:
             fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         except FileExistsError:
             raise Blocked('Git index is locked by another writer') from None
-        owned_lock = os.fstat(fd)
+        # Keep a kernel reference through pathname replacement and cleanup so
+        # the owned inode cannot be freed/reused by a later writer.
+        lock_lease = os.dup(fd)
+        owned_lock = os.fstat(lock_lease)
         try:
             with os.fdopen(fd, 'wb') as output, tempfile.TemporaryDirectory(dir=self.root) as folder:
                 env = {'GIT_INDEX_FILE': str(Path(folder) / 'index')}
@@ -437,9 +440,12 @@ class Engine:
         finally:
             # os.replace releases our pathname. Another writer may already own
             # a new index.lock there; never delete its file during our cleanup.
-            current_lock = lock.lstat() if lock.exists() else None
-            if current_lock and (current_lock.st_dev, current_lock.st_ino) == (owned_lock.st_dev, owned_lock.st_ino):
-                lock.unlink()
+            try:
+                current_lock = lock.lstat() if lock.exists() else None
+                if current_lock and (current_lock.st_dev, current_lock.st_ino) == (owned_lock.st_dev, owned_lock.st_ino):
+                    lock.unlink()
+            finally:
+                os.close(lock_lease)
 
     def preserve_repo(self, entry, policy, request, remember):
         repo = Path(entry['path'])

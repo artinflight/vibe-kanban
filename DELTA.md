@@ -1770,3 +1770,9 @@ no apply, sidecar, prompt, restart, badge/database rewrite or policy change.
 Sealed minimal c3-backend/cdad-frontend patches are in LOCAL_REPAIR_DELIVERY.safe.json.
 Matching Staging-owned publication and both genuine normal API/UI restorations
 remain required. This is source delivery, not conversation restoration.
+
+## 2026-10-13 — large native-history verification repair
+
+Prepared streaming native-input verification and synthetic large-history/integrity
+regressions from staging d786124a1. Hosted compiled and private read-only acceptance
+remain pending. No production, grant, target-history or continuation changes.

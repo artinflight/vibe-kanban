@@ -178,16 +178,12 @@ async fn load_startup<D: Deployment>(
         } else {
             Vec::new()
         };
-        let bytes = services::services::original_worker::inputs::read(
+        if services::services::original_worker::inputs::verify_native(
             &identity.thread,
-            &identity.input_seal,
-        )
-        .await?;
-        if services::services::original_worker::inputs::verify(
-            &bytes,
             &identity.input_seal,
             &allowed,
         )
+        .await
         .is_err()
         {
             snapshot

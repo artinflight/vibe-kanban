@@ -295,15 +295,10 @@ impl Ledger {
         } else {
             Vec::new()
         };
-        let bytes = match inputs::read(&identity.thread, &identity.input_seal).await {
-            Ok(bytes) => bytes,
-            Err(_) => {
-                self.end("suspended", "native_input_source_unavailable")
-                    .await?;
-                return Err(invalid("Native input freshness cannot be proved"));
-            }
-        };
-        if inputs::verify(&bytes, &identity.input_seal, &allowed).is_err() {
+        if inputs::verify_native(&identity.thread, &identity.input_seal, &allowed)
+            .await
+            .is_err()
+        {
             self.end("suspended", "native_input_freshness_unproved")
                 .await?;
             return Err(invalid(

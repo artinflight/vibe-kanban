@@ -79,6 +79,9 @@ push exit status, old reports and fixture metadata alone are insufficient.
 `checkpoint_only` receipts must not be mistaken for whole-workspace or controller
 acceptance. Excluded/private/ignored content remains explicitly outside Git protection.
 It is neither uploaded nor declared backed up by a successful checkpoint.
+Explicit private directories, transcript/rollout directories and `.private` filenames
+are denied even if mistakenly allowlisted. A commit releases only its own index
+lock inode; a newly acquired writer lock is retained and keeps publication pending.
 
 After a network failure or restart, retain working files, index, original ledgers,
 private receipts and queue/outbox rows. Restore the same reviewed policy and
@@ -97,11 +100,18 @@ explicitly cancelled through the existing queue API; cancellation does not repla
 Prepare a clean combined candidate containing this feature and the exact reviewed
 PR245 head. Run the existing Test workflow at that combined commit with
 `github_sync_candidate=true`, `expected_candidate_source=<combined SHA>` and
-`approval_fix_head=<PR245 SHA>`. The build refuses a moved PR245 head or missing
+`approval_fix_head=<PR245 SHA>`, `automatic_sync_head=<feature SHA>`. The build
+refuses moved component heads or missing
 ancestry, runs the normal workspace tests, builds the backend in the acceptance
 profile and uploads the immutable server plus its source/hash manifest. Preserve
 the external frontend release: this backend-only change authorizes no asset swap.
 Do not confuse a hosted build with actual local end-hook acceptance.
+
+Treat the checkpoint worker and its helper group as writers during any later
+handover. Drain pending attempts through the normal idle/admission boundary and
+the existing continuously held controller fence; never terminate an owner turn or
+remove an unowned index lock to obtain readiness. A timed-out commit can leave an
+owned lock for scoped reconciliation; retain its contents and original ledger.
 
 Before nomination, review exact source and policy/scanner hashes, repository IDs,
 literal allowed filenames, existing destination/audience, base/default workflow

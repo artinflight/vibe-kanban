@@ -137,6 +137,35 @@ else: sys.exit(1)
         self.assertFalse(self.prfile.exists())
         self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), self.base)
 
+    def test_explicit_private_text_cannot_be_published_even_if_allowlisted(self):
+        self.config['repositories']['repo']['allowed'].append('handoff.private.md')
+        self.request['turn'] = 'private-text-owner'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
+        self.changed('handoff.private.md', 'Synthetic private transcript; never publish\n')
+        result = self.engine.checkpoint(self.request)
+        self.assertEqual(result['state'], 'blocked', result)
+        self.assertFalse(self.prfile.exists())
+        self.assertEqual(git(self.remote, 'rev-parse', 'refs/heads/feat/fixture'), self.base)
+
+    def test_checkpoint_never_removes_another_writers_index_lock_after_replace(self):
+        self.changed()
+        index = Path(git(self.repo, 'rev-parse', '--path-format=absolute', '--git-path', 'index'))
+        lock = index.with_name(index.name + '.lock')
+        replace = m.os.replace
+        def concurrent_lock(source, destination):
+            replace(source, destination)
+            if Path(destination) == index:
+                lock.write_bytes(b'synthetic other writer owns this lock')
+        with patch.object(m.os, 'replace', side_effect=concurrent_lock):
+            result = self.engine.checkpoint(self.request)
+        self.assertEqual(result['state'], 'blocked', result)
+        self.assertEqual(lock.read_bytes(), b'synthetic other writer owns this lock')
+        self.assertEqual(git(self.remote, 'rev-parse', 'refs/heads/feat/fixture'), self.base)
+        # Release only this test's own simulated competing writer.
+        lock.unlink()
+        self.assertEqual(self.engine.checkpoint(self.request)['state'], 'verified')
+        self.assertEqual(git(self.repo, 'rev-list', '--count', self.base+'..HEAD'), '1')
+
     def test_delayed_owner_jobs_verify_remote_without_certifying_latest_turn(self):
         self.changed(value='first owner\n')
         git(self.repo, 'add', 'src/main.txt')

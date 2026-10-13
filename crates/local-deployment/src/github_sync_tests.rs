@@ -778,6 +778,9 @@ async fn legacy_observation_gate_survives_restart_disable_and_policy_rollback_fo
         std::fs::write(&fixture.policy, saved).unwrap();
         fixture.reopen().await;
         let calls = fixture.offer_green_legacy_receipt();
+        // Offer exactly the stale A witness the old legacy path could certify.
+        fixture.container.preservation_fixture.as_mut().unwrap().0["repositories"][0]["receipt"]
+            ["commit"] = json!(fixture.a);
         if !policy_present {
             fixture.container.preservation_config = None;
         }
@@ -862,6 +865,21 @@ async fn legacy_observation_gate_survives_restart_disable_and_policy_rollback_fo
                     .contains("observation is unproven")
             );
         }
+        // A helper reply already in flight must not persist a stale green either.
+        let mut offered = fixture
+            .container
+            .preservation_fixture
+            .as_ref()
+            .unwrap()
+            .0
+            .clone();
+        offered["workspace"] = json!(ctx.workspace.id);
+        offered["turn"] = json!(ctx.execution_process.id);
+        let report = fixture
+            .container
+            .record_preservation_report(&ctx, request.clone(), offered)
+            .await;
+        assert_eq!(report["state"], "blocked");
         // Direct completion entrypoint has the same gate before fencing/helper work.
         assert_eq!(
             fixture

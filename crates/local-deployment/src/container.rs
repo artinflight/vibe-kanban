@@ -598,6 +598,15 @@ impl LocalContainerService {
         request: serde_json::Value,
         report: serde_json::Value,
     ) -> serde_json::Value {
+        // Recheck before accepting a green helper receipt, including uncertainty
+        // retained/created while a legacy helper was in flight.
+        let report = if crate::turn_preservation::verified(&report) {
+            self.workspace_observation_gate(ctx.workspace.id, ctx.execution_process.id)
+                .await
+                .unwrap_or(report)
+        } else {
+            report
+        };
         let message = crate::turn_preservation::message(&report);
         // Preserve the executor outcome separately. A successful agent may still have blocked Git preservation.
         let turn =

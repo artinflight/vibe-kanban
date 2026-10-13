@@ -1763,7 +1763,7 @@ no production effect or readiness claim. See VK_SAFE_RESTART_PREPARATION_2026100
 
 Codeae263d47 adds exact-two-target verify-only/default CLI and authoritative
 server capture status while preserving signed HTTP auth and PR241 validators.
-Hosted38057745525 passes 8 new tests/build/Clippy/format; source tree equals
+Hosted38057745525 passes8 new tests/build/Clippy/format; source tree equals
 hosted63d76b91. Prior51 Rust/20 conversation/type/lint/native checks retained.
 Compiled same-UID live verify-only probes refuse absent JSON status protocol;
 no apply, sidecar, prompt, restart, badge/database rewrite or policy change.

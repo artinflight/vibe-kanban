@@ -15,6 +15,10 @@ SHA matches the hosted manifest and passed18 isolated local startup cases. Curre
 Staging ancestry is now reconciled with identical executable source; the final
 head-bound build/check receipt belongs in the private release handoff. Independent
 review permission remains pending; no independent acceptance is claimed.
+A resumed rollback fix makes explicit queue cancellation retire its durable row
+even with scheduling disabled; failed database deletion preserves the visible held
+batch. The restored-batch regression now covers both outcomes in enabled and
+disabled runs. Exact final evidence is recorded privately after CI.
 No live configuration, Staging start/message, restart/cutover or cleanup happened.
 
 Prepare this feature with PR245 in the SAME candidate for the SAME next safe-idle

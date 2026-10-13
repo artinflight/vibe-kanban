@@ -192,13 +192,8 @@ async fn cancel_queued_message_admitted(
 ) -> Result<ResponseJson<ApiResponse<QueueStatus>>, ApiError> {
     deployment
         .queued_message_service()
-        .cancel_queued(session.id);
-    if services::services::admission::automatic_git_sync() {
-        deployment
-            .queued_message_service()
-            .persist(&deployment.db().pool, session.id)
-            .await?;
-    }
+        .cancel_durable(&deployment.db().pool, session.id)
+        .await?;
 
     deployment
         .track_if_analytics_allowed(

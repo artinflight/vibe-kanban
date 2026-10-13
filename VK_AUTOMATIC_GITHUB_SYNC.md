@@ -96,6 +96,8 @@ and private outbox evidence. An explicit exact-ID
 workspace's input dismissed and keeps its original private row. This is an operator
 decision, not automatic handling. Uncertain queued dispatch can be reconciled and
 explicitly cancelled through the existing queue API; cancellation does not replay it.
+Cancellation retires its durable batch even when scheduling is disabled. A database
+failure leaves the batch visible and held; acknowledgement cannot hide surviving input.
 
 ## Same-restart candidate with PR245
 

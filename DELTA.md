@@ -1805,3 +1805,12 @@ cases pass. Reconciled current Staging ancestry while retaining executable sourc
 Final head-bound evidence is tracked in the private release handoff. Independent
 review permission, release-owner acceptance and live enforcement remain open.
 No restart, Staging prompt, live setting, media operation or cleanup occurred.
+
+## 2026-10-13 — durable queue cancellation during rollback
+
+Explicit cancellation now deletes its durable batch before retiring the visible
+queue, regardless of scheduling mode. A failed database deletion preserves the
+visible batch and recovery hold. The restored-batch regression exercises failure
+and another restart in both enabled and disabled configurations. Fresh exact-head
+checks and source-bound paired build supersede the prior candidate for nomination;
+private handoff records their result. No production operation occurred.

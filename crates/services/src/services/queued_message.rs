@@ -137,6 +137,20 @@ impl QueuedMessageService {
         self.queue.remove(&session_id).map(|(_, v)| v)
     }
 
+    /// Explicit cancellation retires restored input even with scheduling disabled.
+    /// Keep the visible batch and recovery hold if durable cancellation fails.
+    pub async fn cancel_durable(
+        &self,
+        pool: &sqlx::SqlitePool,
+        session_id: Uuid,
+    ) -> Result<Option<QueuedMessage>, sqlx::Error> {
+        sqlx::query("DELETE FROM turn_github_sync_user_queue WHERE session_id = ?")
+            .bind(session_id)
+            .execute(pool)
+            .await?;
+        Ok(self.cancel_queued(session_id))
+    }
+
     /// Get the queued message for a session (if any)
     pub fn get_queued(&self, session_id: Uuid) -> Option<QueuedMessage> {
         self.queue.get(&session_id).map(|r| r.clone())
@@ -398,9 +412,24 @@ mod tests {
         assert!(interrupted.has_queued(session));
         assert!(interrupted.take_queued(session).is_none());
         assert!(interrupted.take_oldest_capacity_queued().is_none());
-        // Explicit queue cancellation may retire the preserved batch.
-        interrupted.cancel_queued(session);
-        interrupted.persist(&pool, session).await.unwrap();
+        // A failed durable cancellation must keep the held batch visible.
+        let unavailable = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+        assert!(
+            interrupted
+                .cancel_durable(&unavailable, session)
+                .await
+                .is_err()
+        );
+        assert!(interrupted.has_queued(session));
+        assert!(interrupted.take_queued(session).is_none());
+        // The same cancellation used by the API must survive another restart,
+        // including disabled scheduling and deleted session metadata.
+        let cancelled = interrupted
+            .cancel_durable(&pool, session)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(cancelled.messages.len(), 2);
         let empty = QueuedMessageService::new();
         empty.restore(&pool).await.unwrap();
         assert!(!empty.has_queued(session));

@@ -118,6 +118,73 @@ else: sys.exit(1)
         self.assertIn(contains, result['reason'])
         return result
 
+    def enable_handoff(self, name='SYNC_HANDOFF.md'):
+        self.config['repositories']['repo']['allowed'].append(name)
+        self.config['repositories']['repo']['handoff_file'] = name
+        self.engine = FixtureEngine(self.config, str(self.gh))
+        self.request['turn'] = 'handoff-owner'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
+
+    def test_changed_content_handoff_retains_user_docs_reuses_pr_and_is_idempotent(self):
+        document = self.repo / 'SYNC_HANDOFF.md'
+        document.write_text('Existing operator handoff.\n')
+        self.enable_handoff()
+        self.changed(value='Approved public source change\n')
+        result = self.end()
+        self.assertEqual(result['state'], 'verified', result)
+        text = document.read_text()
+        self.assertTrue(text.startswith('Existing operator handoff.\n'))
+        self.assertIn('"src/main.txt": modified; SHA-256', text)
+        self.assertNotIn('Approved public source change', text)
+        head = git(self.repo, 'rev-parse', 'HEAD')
+        self.assertEqual(self.end()['state'], 'verified')
+        self.assertEqual(document.read_text(), text)
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), head)
+        self.request['turn'] = 'next-handoff-owner'
+        self.engine.begin(self.request)
+        self.changed('src/new file.txt', 'Next public change\n')
+        self.assertEqual(self.end()['state'], 'verified')
+        self.assertEqual(json.loads(self.prfile.read_text())['number'], 1)
+        self.assertEqual(document.read_text().count('<!-- vk-github-sync'), 2)
+
+    def test_read_only_turn_creates_no_handoff_commit_or_pr(self):
+        self.enable_handoff()
+        self.assertEqual(self.end()['state'], 'verified')
+        self.assertFalse((self.repo / 'SYNC_HANDOFF.md').exists())
+        self.assertFalse(self.prfile.exists())
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), self.base)
+
+    def test_handoff_cannot_publish_private_paths_or_escape_repository(self):
+        self.enable_handoff('HANDOFF.private.md')
+        self.changed()
+        self.assertBlocked('excluded or unreviewed')
+        self.assertFalse((self.repo / 'HANDOFF.private.md').exists())
+        self.assertFalse(self.prfile.exists())
+
+    def test_ignored_handoff_is_retained_without_being_written_or_published(self):
+        self.enable_handoff('runtime/HANDOFF.md')
+        (self.repo / 'runtime').mkdir()
+        document = self.repo / 'runtime/HANDOFF.md'
+        document.write_text('Private excluded handoff.\n')
+        # Establish the ignored-file baseline before this owner turn.
+        self.request['turn'] = 'ignored-handoff-owner'
+        self.engine.begin(self.request)
+        self.changed()
+        self.assertBlocked('handoff destination is ignored')
+        self.assertEqual(document.read_text(), 'Private excluded handoff.\n')
+        self.assertFalse(self.prfile.exists())
+
+    def test_observation_ack_requires_all_originals_persisted(self):
+        self.changed()
+        git(self.repo, 'add', '.')
+        git(self.repo, 'commit', '-qm', 'Completed B')
+        b = git(self.repo, 'rev-parse', 'HEAD')
+        report = self.engine.observe_finished(self.request)
+        self.assertIs(report['observation_complete'], True)
+        self.assertIn(b, m.read_json(self.engine.state_path(self.request))['obligations']['repo']['commits'])
+        git(self.repo, 'reset', '--hard', self.base)
+        self.assertEqual(self.engine.checkpoint(self.request)['state'], 'blocked')
+
     def test_changed_tracked_and_untracked_exact_history_and_draft(self):
         self.changed()
         self.changed('src/new file.txt', 'untracked source\n')

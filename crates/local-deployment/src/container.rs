@@ -128,6 +128,8 @@ pub struct LocalContainerService {
     queued_message_service: QueuedMessageService,
     notification_service: NotificationService,
     remote_client: Option<RemoteClient>,
+    #[cfg(test)]
+    preservation_config: Option<std::path::PathBuf>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -184,6 +186,8 @@ impl LocalContainerService {
             queued_message_service,
             notification_service,
             remote_client,
+            #[cfg(test)]
+            preservation_config: None,
         }
     }
 
@@ -666,6 +670,56 @@ impl LocalContainerService {
         });
     }
 
+    async fn invoke_preservation(
+        &self,
+        action: &str,
+        request: serde_json::Value,
+    ) -> serde_json::Value {
+        #[cfg(test)]
+        if let Some(config) = &self.preservation_config {
+            return crate::turn_preservation::invoke_with_config(action, request, config).await;
+        }
+        crate::turn_preservation::invoke(action, request).await
+    }
+
+    /// Called under admission, before exposing terminal status to resets/worker.
+    /// The pre-launch pending row remains authoritative if any step cannot persist.
+    async fn observe_completed_turn(&self, execution: Uuid) {
+        match TurnGithubSync::needs_observation(&self.db.pool, execution).await {
+            Ok(false) => return,
+            Err(error) => {
+                tracing::error!(%execution, %error, "Cannot read completion observation; pending gate retained");
+                return;
+            }
+            Ok(true) => {}
+        }
+        let report = match ExecutionProcess::load_context(&self.db.pool, execution).await {
+            Ok(ctx) => {
+                let request = Self::preservation_request(
+                    &ctx.workspace,
+                    &ctx.execution_process,
+                    &ctx.repos,
+                    false,
+                );
+                self.invoke_preservation("observe-finished", request).await
+            }
+            Err(_) => {
+                json!({"version": 2, "state": "blocked", "reason": "owner context unavailable during completion; original obligation retained"})
+            }
+        };
+        if let Err(error) = TurnGithubSync::record_observation(
+            &self.db.pool,
+            execution,
+            crate::turn_preservation::observed(&report),
+            &report.to_string(),
+        )
+        .await
+        {
+            tracing::error!(%execution, %error, "Cannot persist completion observation; pending gate retained");
+        }
+        self.emit_preservation_message(execution, &report).await;
+    }
+
     async fn sync_one_idle_turn(&self) {
         let Ok(jobs) = TurnGithubSync::ready(&self.db.pool).await else {
             tracing::error!("Cannot read durable GitHub checkpoint queue");
@@ -770,7 +824,17 @@ impl LocalContainerService {
             } else {
                 request["writers_fenced"] = json!(true);
                 request["outcome"] = json!(ctx.execution_process.status);
-                crate::turn_preservation::invoke("checkpoint", request.clone()).await
+                match TurnGithubSync::has_unobserved(&self.db.pool, job.workspace_id).await {
+                    Ok(false) => {
+                        self.invoke_preservation("checkpoint", request.clone())
+                            .await
+                    }
+                    _ => crate::turn_preservation::blocked(
+                        &job.workspace_id.to_string(),
+                        &job.execution_process_id.to_string(),
+                        "completed-turn observation is unproven; original obligation retained; scoped reconciliation required",
+                    ),
+                }
             };
             let previous = job
                 .report
@@ -884,18 +948,9 @@ impl LocalContainerService {
             };
 
             services::services::admission::run(async {
-                if services::services::admission::automatic_git_sync()
-                    && let Ok(ctx) = ExecutionProcess::load_context(&db.pool, exec_id).await
-                    && ctx.execution_process.run_reason == ExecutionProcessRunReason::CodingAgent
-                {
-                    let request = Self::preservation_request(
-                        &ctx.workspace,
-                        &ctx.execution_process,
-                        &ctx.repos,
-                        false,
-                    );
-                    let _ = crate::turn_preservation::invoke("observe-finished", request).await;
-                }
+                // Durable admission, rather than the current flag, determines whether
+                // this owner needs observation (also covers flags changed mid-turn).
+                container.observe_completed_turn(exec_id).await;
                 if !ExecutionProcess::was_stopped(&db.pool, exec_id).await
                     && let Err(e) =
                         ExecutionProcess::update_completion(&db.pool, exec_id, status, exit_code)
@@ -911,8 +966,14 @@ impl LocalContainerService {
                 if let Err(e) = container.update_executor_session_summary(&exec_id).await {
                     tracing::warn!("Failed to update executor session summary: {}", e);
                 }
-                let scheduled_sync = services::services::admission::automatic_git_sync()
-                    && ctx.execution_process.run_reason == ExecutionProcessRunReason::CodingAgent;
+                // A retained scheduled owner cannot fall back to the legacy end/commit
+                // hook when scheduling is disabled during its execution or rollback.
+                let scheduled_sync = ctx.execution_process.run_reason
+                    == ExecutionProcessRunReason::CodingAgent
+                    && (services::services::admission::automatic_git_sync()
+                        || TurnGithubSync::is_scheduled(&db.pool, exec_id)
+                            .await
+                            .unwrap_or(true));
                 let preservation = if scheduled_sync {
                     Some(crate::turn_preservation::blocked(
                         &ctx.workspace.id.to_string(),

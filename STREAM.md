@@ -1,3 +1,20 @@
+## October 13 PR246 observation-loss correction
+
+Independent review rejected 598fe060: a discarded completion observation could
+lose B and certify the older A ledger after reset. That candidate is withdrawn.
+The correction adds a pre-launch durable observation gate, strict helper ACK,
+workspace-wide reset/worker/SQL verification guards, and sticky failure/restart
+semantics. Tests use the real completion monitor, normal reset and idle worker,
+including missing callback, policy restore and failed observation persistence.
+Automatic changed-content handoff uses an explicitly reviewed literal destination;
+existing docs, private exclusions, draft creation/reuse and explicit merge approval
+are preserved. See VK_AUTOMATIC_GITHUB_SYNC.md for reconciliation and rollout limits.
+
+Use corrected exact-head compiled checks on PR246. Fresh independent review is
+required; the previous review does not approve the corrected source.
+Staging owns combined PR245/246/247 integration and full combined validation.
+No merge, live restart, forced idle boundary or unrelated agent operation occurs here.
+
 ## October13 automatic GitHub sync after every completed turn
 
 This stream implements the same-name local T36 issue on the existing workspace.

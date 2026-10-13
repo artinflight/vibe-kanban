@@ -421,20 +421,25 @@ fn call(id: usize) -> Value {
 
 #[tokio::test]
 async fn production_follow_up_resolution_launch_and_workspace_races() {
-    production_fixture(false, false).await;
+    production_fixture(false, false, false).await;
 }
 
 #[tokio::test]
 async fn production_timeout_receipt_recovery_and_revoke_endpoint() {
-    production_fixture(true, false).await;
+    production_fixture(true, false, false).await;
 }
 
 #[tokio::test]
 async fn production_startup_holds_pr_monitor_archive_launch_until_adopted() {
-    production_fixture(false, true).await;
+    production_fixture(false, true, false).await;
 }
 
-async fn production_fixture(timeout_lifecycle: bool, monitor_startup: bool) {
+#[tokio::test]
+async fn production_large_history_startup_and_native_input_admission() {
+    production_fixture(false, false, true).await;
+}
+
+async fn production_fixture(timeout_lifecycle: bool, monitor_startup: bool, large_history: bool) {
     let dir = tempfile::tempdir().unwrap();
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(1)
@@ -715,6 +720,13 @@ async fn production_fixture(timeout_lifecycle: bool, monitor_startup: bool) {
         return;
     }
     let ledger = exercise_bootstrap_acceptance(&deployment, &contract, dir.path()).await;
+    if large_history {
+        exercise_large_history(&deployment, &contract, &ledger, dir.path()).await;
+        native.close().await;
+        goals.close().await;
+        pool.close().await;
+        return;
+    }
 
     let resources = Arc::new(SyntheticResources {
         failed: AtomicBool::new(false),
@@ -1611,4 +1623,99 @@ async fn exercise_bootstrap_acceptance(
 
 fn baseline_home(f: &bootstrap::tests::Fixture) -> String {
     f.receipt.native_home.to_string_lossy().into_owned()
+}
+
+// Uses the real startup loader, native index, input journal and terminal ledger.
+// Large fixtures are generated locally; no customer histories belong in CI.
+async fn exercise_large_history(
+    deployment: &FixtureDeployment,
+    contract: &Contract,
+    ledger: &Ledger,
+    directory: &Path,
+) {
+    use std::io::{Seek, SeekFrom, Write};
+    let mut line = serde_json::to_vec(&json!({"type":"response_item","payload":{"type":"function_call_output","output":"x".repeat(64 * 1024)}})).unwrap();
+    line.push(b'\n');
+    for (identity, mib) in [(&contract.manager, 192u64), (&contract.worker, 384)] {
+        let mut file = std::io::BufWriter::new(
+            std::fs::OpenOptions::new()
+                .append(true)
+                .open(&identity.input_seal.rollout)
+                .unwrap(),
+        );
+        file.write_all(b"\n").unwrap();
+        for _ in 0..(mib * 1024 * 1024 / line.len() as u64 + 1) {
+            file.write_all(&line).unwrap();
+        }
+        file.flush().unwrap();
+    }
+    let bootstrap_dir = directory.join("large-bootstrap");
+    std::fs::create_dir(&bootstrap_dir).unwrap();
+    let mut fixture = bootstrap::tests::Fixture::new(
+        &bootstrap_dir,
+        contract,
+        deployment.db().pool.connect_options().get_filename(),
+    );
+    fixture.save();
+    load_startup(deployment, &fixture.files, &fixture.processes)
+        .await
+        .unwrap()
+        .active()
+        .await
+        .unwrap();
+    let worker = &contract.worker;
+    let path = &worker.input_seal.rollout;
+    let size = std::fs::metadata(path).unwrap().len();
+    ledger.native_inputs(&contract.manager).await.unwrap();
+    ledger.native_inputs(worker).await.unwrap();
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .read(true)
+        .open(path)
+        .unwrap();
+    file.set_len(size - 2).unwrap();
+    assert!(
+        load_startup(deployment, &fixture.files, &fixture.processes)
+            .await
+            .is_err()
+    );
+    file.seek(SeekFrom::Start(size - 2)).unwrap();
+    file.write_all(b"}\n").unwrap();
+    sqlx::query("UPDATE bounded_worker_grants SET state='active' WHERE id=?")
+        .bind(contract.id)
+        .execute(&deployment.db().pool)
+        .await
+        .unwrap();
+    for suffix in [
+        b"{\"type\":\"response_item\",\"payload\":".as_slice(),
+        b"{\"type\":\"future_unknown\",\"payload\":{}}\n",
+        b"{\"type\":\"event_msg\",\"payload\":{\"type\":\"user_message\",\"message\":\"unauthorized\"}}\n",
+        b"{\"type\":\"event_msg\",\"payload\":{\"type\":\"thread_rolled_back\",\"num_turns\":1}}\n",
+    ] {
+        file.seek(SeekFrom::Start(size)).unwrap();
+        file.write_all(suffix).unwrap();
+        assert!(load_startup(deployment, &fixture.files, &fixture.processes).await.is_err());
+        assert_eq!(deployment.container.launches.load(Ordering::SeqCst), 0);
+        file.set_len(size).unwrap();
+        // Only the synthetic ledger is reset between independent fault cases.
+        sqlx::query("UPDATE bounded_worker_grants SET state='active' WHERE id=?").bind(contract.id).execute(&deployment.db().pool).await.unwrap();
+    }
+    // Same-size, still-valid JSON edit in the sealed input before large output.
+    use std::io::BufRead;
+    let mut original = Vec::new();
+    std::io::BufReader::new(std::fs::File::open(path).unwrap())
+        .read_until(b'\n', &mut original)
+        .unwrap();
+    let offset = original
+        .windows(b"preapproved".len())
+        .position(|s| s == b"preapproved")
+        .unwrap();
+    file.seek(SeekFrom::Start(offset as u64)).unwrap();
+    file.write_all(b"disapproved").unwrap();
+    assert!(ledger.native_inputs(worker).await.is_err());
+    assert!(
+        ledger.active().await.is_err(),
+        "failed real-scale verification must suspend authority"
+    );
+    assert_eq!(deployment.container.launches.load(Ordering::SeqCst), 0);
 }

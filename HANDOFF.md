@@ -17,6 +17,31 @@ preparation handoff, not release acceptance. Interim coverage was broadened to e
 completed turn until restart; the existing busy preservation owner was not prompted.
 Private next-idle evidence/handoff remains outside Git. Independent review is pending.
 
+## October 13 large native-history verification repair — validated draft
+
+Draft PR #245 replaces the 128 MiB whole-file gate with bounded-record streaming
+verification shared by startup adoption and invocation. Prefix serialization is
+preserved. World-state instruction/permission records are sealed as amendments;
+accounting records are parsed, and unknown envelopes still fail closed. File
+object/extent/timestamps and native-index binding are rechecked after each scan.
+
+Code/test head df717cf8e passes hosted Test run 38376417585: 548 Rust tests, 13 skipped,
+plus schema, Clippy, frontend and Tauri checks. Optimized verification workflow
+38376417683 passes 8 focused tests and exports the source-bound verifier. Both
+private original histories and stable snapshots passed read-only verification
+against the original Rust payload-array encoding, each below 3 seconds and 24 MiB
+peak RSS. Exact private identities and receipts remain outside Git. Final
+published-head checks are linked from the draft PR; this documentation follow-up
+does not change executable source. Local format/ops/frontend lint pass; local
+TypeScript exceeded Node heap, while hosted frontend checks passed.
+
+The capability stays default-off. No live grants, original histories, target
+prompts, continuations, deployment, restart or staging-owner actions occurred.
+Independent review and release-owner adoption remain, followed by separately
+authorized live acceptance and the unchanged user final-review/Figma gate.
+New world-state/compaction input still fails closed. See
+VK_LARGE_HISTORY_VERIFICATION.md for scope and acceptance limits.
+
 ## October11 startup provenance and executable monitor ordering
 
 Hosted Test38157545232 at abcf30cf1c1f5828551f7a9d95acf86b4d8ba6fc

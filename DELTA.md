@@ -1779,3 +1779,17 @@ checkpoints avoid extra agent turns.76 real-scanner helper fixtures passed. Comp
 integration, independent review and exact-head combined PR245 build remain pending.
 Operating/rollback guidance is VK_AUTOMATIC_GITHUB_SYNC.md. No live activation,
 Staging message/start, restart/cutover, forced stop, media operation or cleanup.
+## 2026-10-13 — large native-history verification repair
+
+Prepared streaming native-input verification and synthetic large-history/integrity
+regressions from staging d786124a1. Hosted compiled and private read-only acceptance
+remain pending. No production, grant, target-history or continuation changes.
+
+## 2026-10-13 — large-history compiled and private-data acceptance
+
+PR #245 code/test head df717cf8e passed 548 hosted Rust tests (13 skipped), normal
+schema/lint/frontend/Tauri checks and 8 optimized focused tests. Both private
+original histories and stable snapshots passed read-only native-index/prefix
+verification in under 3 seconds and 24 MiB peak RSS each. Private operational
+receipts stay outside Git. Capability remains default-off; review/adoption/live
+acceptance are separate. No live grant/history/continuation/restart action.

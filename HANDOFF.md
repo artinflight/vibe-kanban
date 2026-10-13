@@ -1,18 +1,26 @@
-## October 13 native Approve for me compatibility — isolated preparation
+## October 13 native Approve for me compatibility — validated draft PR247
 
-This workspace starts at current fork/staging 7f06d040a. It changes only the
-inbound top-level approvalsReviewer auto_review spelling in thread/start,
-thread/resume and thread/fork typed response copies. Native configuration,
-requests, raw history, decisions, human elicitation and Recommend are unchanged.
-The deployed d45035b0 JSON-RPC source equals this staging base byte-for-byte.
-PR245 and the PR246 coordinated release remain separate and untouched.
+This isolated workspace changes eight production lines: top-level auto_review
+maps to the equivalent guardian_subagent only in typed thread/start, resume and
+fork response copies. Runtime/schema alias equivalence is verified. Native
+configuration, outbound requests, raw history, nested payloads, decisions, human
+elicitation, Recommend and live DEFAULT permissions are unchanged.
 
-Focused tests reproduce the pinned decoder rejection and exercise actual
-await_response for all three concrete protocol types, legacy/invalid values,
-method/nesting scope, policy/sandbox/history/error/identity preservation and
-Auto versus Supervised policy precedence. Hosted compilation and actual native
-review acceptance are pending. Do not deploy/restart, change live DEFAULT or
-credentials, or operate other agents. See VK_NATIVE_REVIEW_COMPATIBILITY.md.
+Executable/test head da209fdee passes hosted Test38421738894:554 Rust tests,
+13 existing skips, plus Clippy/schema/frontend/Tauri checks. Hosted native
+compatibility38421739086 passes focused/startup fixtures and exports a source-bound
+acceptance backend. Four direct native turns (same-process second turn, fresh
+resume, fork) and two actual Vibe HTTP worker turns pass linked agent review,
+command outcome and saved workspace-write/on-request/auto_review checks. Private
+receipts are retained on SSD; collector errors were reconciled without repeating
+commands. The private backend is stopped. No live deployment/restart/profile or
+credential change, other-agent operation or local Cargo compilation occurred.
+
+PR245 history integrity and PR246 coordinated release remain separate. Independent
+review, release-owner final-candidate integration/validation and normal approved
+cutover remain. The existing scheduled-artifact bwrap namespace gate is FAILED,
+not waived. See VK_NATIVE_REVIEW_COMPATIBILITY.md for exact source/artifact hashes,
+validation boundaries and scoped rollout/rollback guidance.
 
 ## October 13 large native-history verification repair — validated draft
 

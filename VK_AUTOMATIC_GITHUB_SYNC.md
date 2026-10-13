@@ -13,7 +13,8 @@ Each admitted coding-agent execution creates one immutable durable checkpoint
 row before launch. This conservatively includes read-only turns; those produce
 no empty commit or new PR. Successful, failed and interrupted owner outcomes
 remain separate from remote Git coverage. The worker uses persisted terminal
-execution status, so loss of a completion callback does not discard its job.
+execution status; a pending observation is created before launch, so loss of a
+completion callback does not discard its obligation.
 Unbound/missing owner, group, source or policy evidence remains unverified.
 
 The worker starts once after normal startup identity validation and original
@@ -39,7 +40,27 @@ There is no automatic merge, reset, force push, worktree deletion or new access.
 ## Earlier turns, retries and user work
 
 The normal completion callback records original heads under admission before a
-later turn starts. New turn ledgers inherit existing original obligations.
+later turn starts. It accepts only a successful, owner-bound helper acknowledgement
+that all original obligations have been persisted. The durable observation state
+starts `pending`. The tracked completion callback persists an `observing` claim
+before invoking the helper, and makes one observation attempt. Helper failure
+becomes sticky `failed`; a failed claim write leaves `pending`, while a failed final
+write leaves `observing`. Neither unknown state permits a retroactive observation
+of rewritten source. Restoring policy, a later callback, a restart or a new
+owner cannot infer the missing completed history. Missing owner context and lost
+callbacks also retain the pending gate. New turn ledgers inherit observed originals.
+
+Any unresolved observation in the workspace blocks normal session reset and
+worker publication for every queued owner in that workspace. The SQL verification
+transition enforces the same condition, independent of pagination, retry timing,
+owner metadata deletion and scheduling flags. A failed observation does not stop
+admitted automatic owner work; its checkpoint remains blocked. Legacy owner
+admission is held for the affected workspace while an observation is unresolved,
+even if scheduling or publication policy has been disabled. Incoming work must
+remain queued/private rather than being discarded. Reconciliation must prove and retain the actual completed
+history; this feature provides no automatic clear/dismiss API for observations.
+The new migration treats old rows, including previously verified rows, as unproven
+observations. A historical green at `598fe060` is not evidence for this correction.
 The helper's new `checkpoint` operation can preserve an older queued turn at a
 later idle boundary without moving the latest-turn pointer. Its receipt describes
 accumulated eligible work at that boundary, not a retroactive snapshot of every
@@ -66,6 +87,46 @@ outbox before they wait on admission. Handler cancellation/failure leaves them
 pending; normal acknowledgement marks them handled. The worker defers checkpoints
 for the affected workspace while a pending input is unresolved. It does not
 invent a delivery/handling claim from silence, idle state or executor success.
+
+## Legacy operation and rollback cannot bypass uncertainty
+
+The observation gate applies to the whole affected workspace, including new
+executions without a scheduled checkpoint row. Legacy `begin` admission, `end`
+completion and all backend `check`/`check-all`/`checkpoint` coverage calls check
+retained SQLite observations before invoking the helper. Query failure also blocks.
+Completion checks uncertainty before selecting either the legacy end hook or the
+unconfigured fallback; disabling scheduling or removing/restoring the legacy
+policy cannot enable broad commit/cleanup or a green preservation report.
+
+Scheduled `begin` and completion observation still capture originals, and `block`
+can retain a failure. These operations do not certify remote coverage or clear
+uncertainty. Clean legacy workspaces with no unresolved observations retain their
+existing behavior, including previously observed scheduled owners. Standalone
+helper receipts are repository evidence; they do not reconcile VK's retained
+workspace observations or authorize release. This correction withdraws the
+`1bb69a4a8` candidate. Staging's existing combined PR248 remains held pending a
+corrected exact-head review and its release checks.
+
+## Automatic changed-content handoff
+
+Automatic changed-content checkpoints require the per-repository policy to name
+`handoff_file`, for example
+`"handoff_file": "SYNC_HANDOFF.md"`, and must explicitly include that literal
+filename in `allowed`. Missing authority blocks changed-content publication rather
+than silently omitting the approved handoff. Read-only checkpoints need no new
+document destination. The separate PR223 end hook retains its compatibility. This scopes documentation to already authorized public
+content rather than adding a global publication destination. At a safe checkpoint,
+changed eligible content produces a handoff entry listing added/modified/deleted
+paths and SHA-256 digests. Source text, prompts, transcripts, media and runtime
+evidence are never copied into the generated entry. Existing document content is
+retained, ignored/private destinations are refused, and content markers deduplicate
+retries. The document itself cannot cause another handoff entry. Read-only turns
+produce neither a document nor an empty commit/PR.
+
+The generated document passes the same file policy, scanner, snapshot/index and
+remote verification as source. The helper initially creates a draft only when a
+changed task branch has no matching open PR; subsequent checkpoints reuse that PR.
+It never merges. Merge remains subject to explicit operator approval.
 
 ## Evidence and recovery
 
@@ -99,10 +160,12 @@ explicitly cancelled through the existing queue API; cancellation does not repla
 Cancellation retires its durable batch even when scheduling is disabled. A database
 failure leaves the batch visible and held; acknowledgement cannot hide surviving input.
 
-## Same-restart candidate with PR245
+## Same-restart candidate with PR245 and PR247
 
-Prepare a clean combined candidate containing this feature and the exact reviewed
-PR245 head. Run the existing Test workflow at that combined commit with
+The existing Staging owner prepares the combined PR245/246/247 candidate. This
+feature correction supplies its exact SHA and evidence without duplicating that
+integration. Prepare a clean candidate containing all exact reviewed component
+heads; the older `598fe060` feature nomination is withdrawn. Run the existing Test workflow at that combined commit with
 `github_sync_candidate=true`, `expected_candidate_source=<combined SHA>` and
 `approval_fix_head=<PR245 SHA>`, `automatic_sync_head=<feature SHA>`. The build
 refuses moved component heads or missing
@@ -125,7 +188,7 @@ or unrelated archived-history/backup gate is added. Unresolved originals and
 unknown associations still block their actual affected scopes.
 
 The release owner alone owns the next safe-idle restart and live settings. Combine
-the approval fix and this feature in that one candidate, preserve native routing
+the approval fix, this feature and PR247 in that one candidate, preserve native routing
 and the selected model/effort, and keep cleanup closed. After authorized cutover,
 observe a genuine substantive owner completion, queued/incoming user work, one
 checkpoint job, and fresh remote equality through the status endpoint and private

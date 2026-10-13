@@ -1827,3 +1827,5 @@ compiled validation and paired artifact are recorded in the private handoff.
 Prepared exact PR245/PR246 baseline plus selected reviewed PR247 native paths and
 the disposable-runner bwrap profile correction. Independent review and private
 actual-authority/runtime-overlay acceptance remain gates; no activation claimed.
+
+- Combined release preparation refreshed with independently reviewed PR24664c3e25d and passing exact-head CI, retaining PR245/247 and the approved runner profile. Combined/private acceptance and authority/storage/idle remain held; no live activation.

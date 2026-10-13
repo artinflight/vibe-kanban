@@ -25,6 +25,12 @@ pub fn verified(report: &Value) -> bool {
         && report.get("state").and_then(Value::as_str) == Some("verified")
 }
 
+pub fn observed(report: &Value) -> bool {
+    report["version"] == 2
+        && report["observation_complete"] == true
+        && matches!(report["state"].as_str(), Some("pending" | "verified"))
+}
+
 pub fn changed(report: &Value) -> bool {
     report["repositories"]
         .as_array()
@@ -117,7 +123,7 @@ pub async fn invoke(action: &str, request: Value) -> Value {
     invoke_with_config(action, request, Path::new(&config)).await
 }
 
-async fn invoke_with_config(action: &str, request: Value, config: &Path) -> Value {
+pub(crate) async fn invoke_with_config(action: &str, request: Value, config: &Path) -> Value {
     let workspace = request["workspace"].as_str().unwrap_or("unknown");
     let turn = request["turn"].as_str().unwrap_or("unknown");
     let fail = |reason| blocked(workspace, turn, reason);
@@ -177,7 +183,10 @@ async fn invoke_with_config(action: &str, request: Value, config: &Path) -> Valu
                     if report["version"] == 2
                         && report["workspace"] == request["workspace"]
                         && report["turn"] == request["turn"]
-                        && (!verified(&report) || output.status.success()) =>
+                        && (!verified(&report) || output.status.success())
+                        && (action != "observe-finished"
+                            || !observed(&report)
+                            || output.status.success()) =>
                 {
                     report
                 }
@@ -204,6 +213,21 @@ mod tests {
             assert!(!verified(&report));
         }
         assert!(verified(&json!({"version": 2, "state": "verified"})));
+    }
+
+    #[test]
+    fn observation_ack_is_distinct_from_pending_or_verified_coverage() {
+        for report in [
+            json!({"version":2,"state":"pending"}),
+            json!({"version":2,"state":"verified"}),
+            json!({"version":2,"state":"blocked","observation_complete":true}),
+            json!({"version":1,"state":"pending","observation_complete":true}),
+        ] {
+            assert!(!observed(&report));
+        }
+        assert!(observed(
+            &json!({"version":2,"state":"pending","observation_complete":true})
+        ));
     }
 
     #[test]

@@ -12,6 +12,8 @@ pub struct TurnGithubSync {
     pub state: String,
     pub attempts: i64,
     pub report: Option<String>,
+    pub observation_state: String,
+    pub observation_report: Option<String>,
 }
 
 impl TurnGithubSync {
@@ -26,10 +28,47 @@ impl TurnGithubSync {
         Ok(())
     }
 
+    /// Sticky failure: neither a later callback nor worker can reconstruct lost history.
+    pub async fn record_observation(
+        pool: &SqlitePool,
+        execution: Uuid,
+        observed: bool,
+        report: &str,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE turn_github_sync SET observation_state = ?, observation_report = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE execution_process_id = ? AND observation_state = 'observing'")
+            .bind(if observed { "observed" } else { "failed" }).bind(report).bind(execution).execute(pool).await?;
+        Ok(())
+    }
+
+    /// Independent of owner metadata, scheduling flags, retry timing and page limits.
+    pub async fn has_unobserved(pool: &SqlitePool, workspace: Uuid) -> Result<bool, sqlx::Error> {
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM turn_github_sync WHERE workspace_id = ? AND observation_state != 'observed')")
+            .bind(workspace).fetch_one(pool).await
+    }
+
+    pub async fn is_scheduled(pool: &SqlitePool, execution: Uuid) -> Result<bool, sqlx::Error> {
+        sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM turn_github_sync WHERE execution_process_id = ?)",
+        )
+        .bind(execution)
+        .fetch_one(pool)
+        .await
+    }
+
+    /// Write-ahead claim: uncertain/failed final persistence must never allow a
+    /// second observation of rewritten history. Workers never retry this claim.
+    pub async fn claim_observation(
+        pool: &SqlitePool,
+        execution: Uuid,
+    ) -> Result<bool, sqlx::Error> {
+        Ok(sqlx::query("UPDATE turn_github_sync SET observation_state = 'observing' WHERE execution_process_id = ? AND observation_state = 'pending'")
+            .bind(execution).execute(pool).await?.rows_affected() == 1)
+    }
+
     pub async fn ready(pool: &SqlitePool) -> Result<Vec<Self>, sqlx::Error> {
         // Persisted executor completion, rather than a transient callback, makes restart
         // recovery possible. A missing completion remains waiting, never successful.
-        sqlx::query_as("SELECT j.execution_process_id, j.workspace_id, j.request, j.writer_group, j.state, j.attempts, j.report FROM turn_github_sync j LEFT JOIN execution_processes e ON e.id = j.execution_process_id WHERE j.state != 'verified' AND (e.id IS NULL OR e.status != 'running') AND j.retry_at <= unixepoch() ORDER BY j.retry_at, j.created_at, j.rowid LIMIT 64")
+        sqlx::query_as("SELECT j.execution_process_id, j.workspace_id, j.request, j.writer_group, j.state, j.attempts, j.report, j.observation_state, j.observation_report FROM turn_github_sync j LEFT JOIN execution_processes e ON e.id = j.execution_process_id WHERE j.state != 'verified' AND (e.id IS NULL OR e.status != 'running') AND j.retry_at <= unixepoch() ORDER BY j.retry_at, j.created_at, j.rowid LIMIT 64")
             .fetch_all(pool).await
     }
 
@@ -58,8 +97,8 @@ impl TurnGithubSync {
     ) -> Result<(), sqlx::Error> {
         // No in-flight state to strand after a crash. Retry reconciles the helper's
         // existing receipt and exact remote witness before another commit/push.
-        sqlx::query("UPDATE turn_github_sync SET state = ?, report = ?, attempts = attempts + 1, retry_at = unixepoch() + min(3600, 30 * (1 << min(attempts, 7))), updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE execution_process_id = ? AND state != 'verified'")
-            .bind(state).bind(report).bind(self.execution_process_id).execute(pool).await?;
+        sqlx::query("UPDATE turn_github_sync SET state = ?, report = ?, attempts = attempts + 1, retry_at = unixepoch() + min(3600, 30 * (1 << min(attempts, 7))), updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE execution_process_id = ? AND state != 'verified' AND (? != 'verified' OR NOT EXISTS(SELECT 1 FROM turn_github_sync unobserved WHERE unobserved.workspace_id = turn_github_sync.workspace_id AND unobserved.observation_state != 'observed'))")
+            .bind(state).bind(report).bind(self.execution_process_id).bind(state).execute(pool).await?;
         Ok(())
     }
 
@@ -67,7 +106,7 @@ impl TurnGithubSync {
         pool: &SqlitePool,
         workspace: Uuid,
     ) -> Result<Vec<Self>, sqlx::Error> {
-        sqlx::query_as("SELECT execution_process_id, workspace_id, request, writer_group, state, attempts, report FROM turn_github_sync WHERE workspace_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 64")
+        sqlx::query_as("SELECT execution_process_id, workspace_id, request, writer_group, state, attempts, report, observation_state, observation_report FROM turn_github_sync WHERE workspace_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 64")
             .bind(workspace).fetch_all(pool).await
     }
 }
@@ -77,12 +116,85 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn observation_migration_revokes_unproven_greens_without_losing_owner() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::raw_sql(include_str!(
+            "../../migrations/20261013120000_turn_github_sync.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        let owner = Uuid::new_v4();
+        let workspace = Uuid::new_v4();
+        TurnGithubSync::enqueue(&pool, owner, workspace, "retained request")
+            .await
+            .unwrap();
+        sqlx::query("UPDATE turn_github_sync SET state = 'verified', report = 'old A proof'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::raw_sql(include_str!(
+            "../../migrations/20261013160000_turn_github_sync_observation.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        let job = TurnGithubSync::for_workspace(&pool, workspace)
+            .await
+            .unwrap()
+            .remove(0);
+        assert_eq!(job.execution_process_id, owner);
+        assert_eq!(job.request, "retained request");
+        assert_eq!(job.state, "blocked");
+        assert_eq!(job.observation_state, "pending");
+        assert!(
+            TurnGithubSync::has_unobserved(&pool, workspace)
+                .await
+                .unwrap()
+        );
+        assert!(
+            TurnGithubSync::claim_observation(&pool, owner)
+                .await
+                .unwrap()
+        );
+        TurnGithubSync::record_observation(&pool, owner, false, "failure")
+            .await
+            .unwrap();
+        TurnGithubSync::record_observation(&pool, owner, true, "late callback")
+            .await
+            .unwrap();
+        assert_eq!(
+            TurnGithubSync::for_workspace(&pool, workspace)
+                .await
+                .unwrap()[0]
+                .observation_state,
+            "failed"
+        );
+        job.record(&pool, "verified", "stale old A proof")
+            .await
+            .unwrap();
+        assert_eq!(
+            TurnGithubSync::for_workspace(&pool, workspace)
+                .await
+                .unwrap()[0]
+                .state,
+            "blocked"
+        );
+    }
+
+    #[tokio::test]
     async fn owner_identity_retry_and_completion_survive_queue_reopen() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         sqlx::raw_sql("CREATE TABLE execution_processes (id BLOB PRIMARY KEY, status TEXT); CREATE TABLE workspaces (id BLOB PRIMARY KEY);")
             .execute(&pool).await.unwrap();
         sqlx::raw_sql(include_str!(
             "../../migrations/20261013120000_turn_github_sync.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::raw_sql(include_str!(
+            "../../migrations/20261013160000_turn_github_sync_observation.sql"
         ))
         .execute(&pool)
         .await
@@ -128,6 +240,14 @@ mod tests {
         let restored = TurnGithubSync::ready(&pool).await.unwrap().remove(0);
         assert_eq!(restored.state, "blocked");
         assert_eq!(restored.attempts, 1);
+        assert!(
+            TurnGithubSync::claim_observation(&pool, owner)
+                .await
+                .unwrap()
+        );
+        TurnGithubSync::record_observation(&pool, owner, true, "durable-originals")
+            .await
+            .unwrap();
         restored
             .record(&pool, "verified", "exact-remote-proof")
             .await

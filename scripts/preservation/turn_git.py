@@ -447,6 +447,64 @@ class Engine:
             finally:
                 os.close(lock_lease)
 
+    def update_handoff(self, repo, policy, before, snap, turn, required=False):
+        """Append bounded content metadata only to the explicitly reviewed document.
+
+        User documentation is retained. Retries reuse the same content marker;
+        the generated document cannot trigger a further changed-content handoff.
+        """
+        name = policy.get('handoff_file')
+        changes = {p: value for p, value in snap['files'].items()
+                   if p != name and value != before['files'].get(p)}
+        changes.update({p: None for p in before['files'] if p != name and p not in snap['files']})
+        if not changes:
+            return snap
+        require(name is not None or not required,
+                'changed-content checkpoint requires a reviewed handoff_file destination')
+        if name is None:
+            return snap  # Preserve compatibility with the separately used PR223 end hook.
+        require(isinstance(name, str) and name in policy['allowed'],
+                'automatic handoff needs a literal reviewed destination')
+        eligible([name], policy)
+        require(not name.startswith('.github/'), 'automatic handoff cannot change publication automation')
+        require(all(ord(c) >= 32 for c in name), 'invalid handoff destination')
+        eligible(changes, policy)
+        marker = '<!-- vk-github-sync ' + turn + ' ' + digest(changes) + ' -->'
+        require(name not in snap['ignored'], 'handoff destination is ignored; excluded files are not Git-protected')
+        target = repo / name
+        # Parent traversal and symlinks cannot redirect this write outside the owner.
+        require(target.parent.resolve().is_relative_to(repo) and target.parent.is_dir(),
+                'handoff parent is unavailable or outside repository')
+        old = target.read_bytes() if name in snap['files'] and snap['files'][name] is not None else b''
+        require(len(old) <= 5 * 1024 * 1024 and b'\0' not in old, 'handoff must be bounded text')
+        old.decode('utf-8')
+        if marker.encode() in old:
+            return snap
+        lines = [marker, '## Automatic GitHub checkpoint', '', 'Turn: `' + turn + '`.',
+                 'Changed eligible content since turn admission:', '']
+        for path, value in sorted(changes.items()):
+            status = 'deleted' if value is None else ('added' if not before['files'].get(path) else 'modified')
+            lines.append('- ' + json.dumps(path, ensure_ascii=True) + ': ' + status +
+                         ('.' if value is None else '; SHA-256 `' + value[0] + '`.'))
+        lines += ['', 'Excluded files are not Git-protected. Merge requires explicit approval.', '']
+        addition = ('\n\n' + '\n'.join(lines)).encode()
+        require(len(old) + len(addition) <= 5 * 1024 * 1024, 'handoff exceeds bounded text limit')
+        require(snapshot(repo) == snap, 'workspace changed before handoff update')
+        flags = os.O_WRONLY | os.O_APPEND | os.O_NOFOLLOW
+        if not old and not target.exists():
+            flags |= os.O_CREAT | os.O_EXCL
+        with os.fdopen(os.open(target, flags, 0o644), 'ab') as document:
+            document.write(addition)
+            document.flush()
+            os.fsync(document.fileno())
+        current = snapshot(repo)
+        require({k: v for k, v in current['files'].items() if k != name} ==
+                {k: v for k, v in snap['files'].items() if k != name} and
+                all(current[k] == snap[k] for k in ['head', 'branch', 'ignored', 'index']) and
+                target.read_bytes() == old + addition,
+                'concurrent writer changed content during handoff update')
+        return current
+
     def preserve_repo(self, entry, policy, request, remember):
         repo = Path(entry['path'])
         before = entry['before']
@@ -491,6 +549,8 @@ class Engine:
                 'remote automation source moved since publication review')
         require(workflows(repo, policy['automation_commit']) == policy['automation_workflow_digest'],
                 'automation source digest differs from review')
+        snap = self.update_handoff(repo, policy, before, snap, request['turn'],
+                                   required=request.get('handoff_required') is True)
         changed = bool(snap['status']) or snap['head'] != before['head']
         if snap['status']:
             head = self.commit(repo, policy, snap, request['turn'], remember)
@@ -551,11 +611,13 @@ class Engine:
         require([(e['id'], e['path']) for e in record['repositories']] ==
                 [(i['id'], str(Path(i['path']).resolve())) for i in request['repositories']],
                 'affected repository inventory differs from admitted turn')
+        record['observation_complete'] = False
         try:
             for entry in record['repositories']:
                 entry['original_commits'] = list(self.observe(record, entry))
                 atomic_json(path, record)
             self.require_obligations(record)
+            record['observation_complete'] = True
         except (Blocked, OSError, KeyError, ValueError):
             for entry in record['repositories']:
                 record['obligations'][entry['id']]['unverifiable'] = True
@@ -745,7 +807,9 @@ def main():
                       turn=request.get('turn'), repositories=request.get('repositories', []), reason=str(error) if isinstance(error, Blocked)
                       else 'preservation IO or contract failure')
     print(json.dumps(result, sort_keys=True))
-    return 0 if result['state'] in ['verified', 'pending'] and args.action == 'begin' or result['state'] == 'verified' else 2
+    return 0 if ((args.action == 'observe-finished' and result.get('observation_complete') is True)
+                 or (result['state'] in ['verified', 'pending'] and args.action == 'begin')
+                 or result['state'] == 'verified') else 2
 
 
 if __name__ == '__main__':

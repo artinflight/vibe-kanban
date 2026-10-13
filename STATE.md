@@ -1,3 +1,17 @@
+# Combined reviewed release preparation — held before activation
+
+The current integration uses reviewed PR246
+64c3e25d03c7b92e191a6c40fdf37862cb33d302, merged PR245, and native PR247 with
+approved disposable-runner correction dd46e1a73793d86656cae5bcd93be67a8fd6364e.
+PR246 exact-head Test38442500226 passed; independent exact-source review is
+accepted. Earlier feature and combined nominations are superseded.
+
+This is source preparation only. Final combined Test/native/source-bound artifacts,
+private runtime/copied-current acceptance, authenticated current-revision authority,
+approved healthy backup destination/current-data preservation and genuine all-owner
+idle remain required. No merge, activation, restart, backup retirement or policy
+change follows this integration. Private operational/consent data stay outside Git.
+
 ## Combined safe-idle release preparation
 
 The release owner is preparing PR245 large-history verification, PR246 automatic

@@ -274,6 +274,27 @@ for line in sys.stdin:
     }
 
     #[test]
+    fn native_review_permission_overrides_preserve_explicit_on_request() {
+        use crate::{executors::StandardCodingAgentExecutor, model_selector::PermissionPolicy};
+        for (policy, expected) in [
+            (PermissionPolicy::Auto, V2AskForApproval::Never),
+            (PermissionPolicy::Supervised, V2AskForApproval::OnRequest),
+        ] {
+            let mut codex: Codex = serde_json::from_value(serde_json::json!({
+                "ask_for_approval":"on-request", "sandbox":"workspace-write"
+            }))
+            .unwrap();
+            let mut config = ExecutorConfig::new(crate::executors::BaseCodingAgent::Codex);
+            config.permission_policy = Some(policy);
+            codex.apply_overrides(&config);
+            let start = codex.build_thread_start_params(std::path::Path::new("/workspace"));
+            assert_eq!(start.approval_policy, Some(expected));
+            let resume = super::resume_params_from("fixture".into(), start);
+            assert_eq!(resume.approval_policy, Some(expected));
+        }
+    }
+
+    #[test]
     fn routed_overrides_reach_start_and_resume_parameters() {
         use crate::executors::StandardCodingAgentExecutor;
         let mut codex: Codex = serde_json::from_value(serde_json::json!({})).unwrap();

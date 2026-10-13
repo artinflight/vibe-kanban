@@ -1,3 +1,44 @@
+# Combined reviewed release preparation — held before activation
+
+The current integration uses reviewed PR246
+64c3e25d03c7b92e191a6c40fdf37862cb33d302, merged PR245, and native PR247 with
+approved disposable-runner correction dd46e1a73793d86656cae5bcd93be67a8fd6364e.
+PR246 exact-head Test38442500226 passed; independent exact-source review is
+accepted. Earlier feature and combined nominations are superseded.
+
+This is source preparation only. Final combined Test/native/source-bound artifacts,
+private runtime/copied-current acceptance, authenticated current-revision authority,
+approved healthy backup destination/current-data preservation and genuine all-owner
+idle remain required. No merge, activation, restart, backup retirement or policy
+change follows this integration. Private operational/consent data stay outside Git.
+
+## Combined safe-idle release preparation
+
+The release owner is preparing PR245 large-history verification, PR246 automatic
+GitHub checkpoints, PR247 native auto-review compatibility and the narrow
+Ubuntu bwrap profile correction on the disposable artifact runner. Read
+VK_COMBINED_SAFE_IDLE_RELEASE.md. This candidate does not merge component PRs
+or activate any feature. PR246 independent review, current original-history
+integrity/authority, final source-bound artifacts/private retained-reader overlay,
+configured preservation acceptance, backups/rollback and actual idle remain
+required. Native Approve for me is workspace-write/on-request/auto_review;
+Recommend and unrelated approval boundaries remain intact. No forced agent stop,
+cleanup, Desktop/MCP policy change or historical branch replacement is permitted.
+
+## October13 automatic GitHub sync development
+
+A scoped feature stream now extends the existing corrected PR223 preservation
+helper with durable per-owner-turn scheduling, safe idle admission, private input/
+queue durability and remote-verified receipts. See VK_AUTOMATIC_GITHUB_SYNC.md.
+It remains opt-in and uninstalled by this change; source/fixture evidence is not
+production enforcement acceptance. Publication policies and private originals remain
+separate scoped requirements. Cleanup is unchanged and closed.
+
+The feature and approval fix PR245 must be built/tested together for one next safe
+restart. No Staging operation or cutover occurred; the release owner's cancelled
+call remains pending clarification. Existing preservation work owns interim coverage
+for every completed work turn until that restart. No duplicate audit was launched.
+
 ## October11 startup provenance and executable monitor ordering
 
 Hosted Test38157545232 at abcf30cf1c1f5828551f7a9d95acf86b4d8ba6fc

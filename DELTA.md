@@ -1771,6 +1771,14 @@ Sealed minimal c3-backend/cdad-frontend patches are in LOCAL_REPAIR_DELIVERY.saf
 Matching Staging-owned publication and both genuine normal API/UI restorations
 remain required. This is source delivery, not conversation restoration.
 
+## 2026-10-13 — automatic GitHub sync source preparation
+
+Verified/reused the existing same-name local issue/workspace linkage. Extended
+corrected PR223 preservation, completion/admission and user queues; direct durable
+checkpoints avoid extra agent turns.76 real-scanner helper fixtures passed. Compiled
+integration, independent review and exact-head combined PR245 build remain pending.
+Operating/rollback guidance is VK_AUTOMATIC_GITHUB_SYNC.md. No live activation,
+Staging message/start, restart/cutover, forced stop, media operation or cleanup.
 ## 2026-10-13 — large native-history verification repair
 
 Prepared streaming native-input verification and synthetic large-history/integrity
@@ -1785,3 +1793,39 @@ original histories and stable snapshots passed read-only native-index/prefix
 verification in under 3 seconds and 24 MiB peak RSS each. Private operational
 receipts stay outside Git. Capability remains default-off; review/adoption/live
 acceptance are separate. No live grant/history/continuation/restart action.
+
+## 2026-10-13 — recovered automatic-sync validation and integration
+
+Recovered draft PR246 and verified exact native issue/workspace association.
+Combined e26f5945 includes exact PR245 c37f3623 and automatic-sync7e83dbfe;
+Test38396831309 passes552 Rust tests (13 skipped), four enabled-mode fixtures,
+applicable lint/schema/frontend/desktop checks and the source-bound backend build.
+Downloaded artifact SHA matches its manifest;18 local masked-namespace startup
+cases pass. Reconciled current Staging ancestry while retaining executable source.
+Final head-bound evidence is tracked in the private release handoff. Independent
+review permission, release-owner acceptance and live enforcement remain open.
+No restart, Staging prompt, live setting, media operation or cleanup occurred.
+
+## 2026-10-13 — durable queue cancellation during rollback
+
+Explicit cancellation now deletes its durable batch before retiring the visible
+queue, regardless of scheduling mode. A failed database deletion preserves the
+visible batch and recovery hold. The restored-batch regression exercises failure
+and another restart in both enabled and disabled configurations. Fresh exact-head
+checks and source-bound paired build supersede the prior candidate for nomination;
+private handoff records their result. No production operation occurred.
+
+## 2026-10-13 — session reset checkpoint admission
+
+The session reset endpoint now uses the existing shared admission boundary,
+matching follow-up retries and workspace Git routes. Explicit user resets retain
+their existing behavior and cannot race checkpoint verification. Final exact-head
+compiled validation and paired artifact are recorded in the private handoff.
+
+## Combined release-owner preparation
+
+Prepared exact PR245/PR246 baseline plus selected reviewed PR247 native paths and
+the disposable-runner bwrap profile correction. Independent review and private
+actual-authority/runtime-overlay acceptance remain gates; no activation claimed.
+
+- Combined release preparation refreshed with independently reviewed PR24664c3e25d and passing exact-head CI, retaining PR245/247 and the approved runner profile. Combined/private acceptance and authority/storage/idle remain held; no live activation.

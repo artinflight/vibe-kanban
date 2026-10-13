@@ -24,6 +24,7 @@ use db::{
         repo::Repo,
         scratch::DraftFollowUpData,
         session::{CreateSession, Session, SessionError},
+        turn_github_sync::TurnGithubSync,
         workspace::{Workspace, WorkspaceError},
         workspace_repo::WorkspaceRepo,
     },
@@ -981,6 +982,14 @@ pub trait ContainerService: Send + Sync {
         let workspace = Workspace::find_by_id(pool, session.workspace_id)
             .await?
             .ok_or_else(|| ContainerError::Other(anyhow!("Workspace not found")))?;
+
+        // Keep this guard even with scheduling disabled: a retained obligation
+        // cannot be discarded by rollback, manual reset, or follow-up retry.
+        if TurnGithubSync::has_unobserved(pool, workspace.id).await? {
+            return Err(ContainerError::Other(anyhow!(
+                "Completed-turn observation is unproven; original obligation retained. Reset requires scoped reconciliation."
+            )));
+        }
 
         let repos = WorkspaceRepo::find_repos_for_workspace(pool, workspace.id).await?;
         let repo_states =

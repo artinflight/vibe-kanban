@@ -40,6 +40,51 @@ pub async fn get_workspace(
     Ok(ResponseJson(ApiResponse::success(workspace)))
 }
 
+/// Sanitized durable status. Source bytes, prompts, policy and private inventory
+/// remain outside this API; full evidence belongs in the private helper ledger.
+pub async fn github_sync_status(
+    Extension(workspace): Extension<Workspace>,
+    State(deployment): State<DeploymentImpl>,
+) -> Result<ResponseJson<ApiResponse<serde_json::Value>>, ApiError> {
+    let jobs = db::models::turn_github_sync::TurnGithubSync::for_workspace(
+        &deployment.db().pool,
+        workspace.id,
+    )
+    .await?;
+    let statuses = jobs
+        .into_iter()
+        .map(|job| {
+            let report = job
+                .report
+                .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok());
+            serde_json::json!({"execution_process_id": job.execution_process_id,
+            "state": job.state, "attempts": job.attempts,
+            "observation_state": job.observation_state,
+            "observation_reason": job.observation_report.as_ref().and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok()).map(|r| r["reason"].clone()),
+            "reason": report.as_ref().and_then(|r| r["reason"].as_str()),
+            "remote": report.as_ref().and_then(|r| r["repositories"].as_array()).map(|repos|
+                repos.iter().map(|r| serde_json::json!({"commit": r["receipt"]["commit"],
+                    "pr": r["receipt"]["pr"]["url"]})).collect::<Vec<_>>())})
+        })
+        .collect::<Vec<_>>();
+    let pending_inputs =
+        services::services::queued_message::QueuedMessageService::pending_incoming(
+            &deployment.db().pool,
+            workspace.id,
+        )
+        .await?;
+    let pending_queues =
+        services::services::queued_message::QueuedMessageService::pending_user_queue(
+            &deployment.db().pool,
+            workspace.id,
+        )
+        .await?;
+    Ok(ResponseJson(ApiResponse::success(
+        serde_json::json!({"checkpoints": statuses, "pending_input_ids": pending_inputs,
+            "pending_queue_session_ids": pending_queues}),
+    )))
+}
+
 pub async fn update_workspace(
     Extension(workspace): Extension<Workspace>,
     State(deployment): State<DeploymentImpl>,
@@ -107,6 +152,29 @@ pub async fn update_workspace(
     }
 
     Ok(ResponseJson(ApiResponse::success(updated)))
+}
+
+/// Explicit, exact-ID dismissal after reconciliation. Keep the private original;
+/// never infer user-input handling from idle or a successful executor outcome.
+pub async fn dismiss_github_sync_input(
+    Extension(workspace): Extension<Workspace>,
+    State(deployment): State<DeploymentImpl>,
+    Query(ResolveCheckpointInput { input_id }): Query<ResolveCheckpointInput>,
+) -> Result<ResponseJson<ApiResponse<serde_json::Value>>, ApiError> {
+    let dismissed = services::services::queued_message::QueuedMessageService::dismiss_incoming(
+        &deployment.db().pool,
+        workspace.id,
+        input_id,
+    )
+    .await?;
+    Ok(ResponseJson(ApiResponse::success(
+        serde_json::json!({"dismissed": dismissed}),
+    )))
+}
+
+#[derive(Deserialize)]
+pub struct ResolveCheckpointInput {
+    pub input_id: uuid::Uuid,
 }
 
 pub async fn get_first_user_message(

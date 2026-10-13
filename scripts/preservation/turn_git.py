@@ -20,10 +20,12 @@ VERSION = 2
 DENIED = re.compile(
     r"(^|/)(\.env(?:\..*)?|\.git|\.ssh|credentials?|secrets?|runtime|"
     r"dev_assets|attachments?|uploads?|customer[s_-]?|client[s_-]?|"
-    r"invoices?|financial|account[s_-]?|node_modules|target)(/|$)|"
+    r"invoices?|financial|account[s_-]?|private|transcripts?|rollouts?|node_modules|target)(/|$)|"
+    r"(^|/)[^/]*\.private(?:\.|$)|"
     r"\.(pem|key|p12|pfx|sqlite(?:3)?|db|zip|pdf|xlsx?|csv|exe|dll|so)$", re.I
 )
 IDENT = re.compile(r"^[A-Za-z0-9_-]+$")
+CHECKPOINT_DEADLINE = None
 
 
 class Blocked(Exception):
@@ -40,9 +42,11 @@ def digest(value):
 
 
 def run(args, cwd=None, env=None, data=None):
+    budget = 60 if CHECKPOINT_DEADLINE is None else min(60, CHECKPOINT_DEADLINE - time.monotonic())
+    require(budget > 0, 'checkpoint time budget exhausted; retry remains pending')
     try:
         result = subprocess.run(args, cwd=cwd, env=env, input=data,
-                                capture_output=True, timeout=60)
+                                capture_output=True, timeout=budget)
     except (OSError, subprocess.TimeoutExpired):
         raise Blocked(f"{Path(args[0]).name} unavailable or timed out") from None
     require(result.returncode == 0, f"{Path(args[0]).name} {args[1]} failed")
@@ -395,6 +399,10 @@ class Engine:
             fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         except FileExistsError:
             raise Blocked('Git index is locked by another writer') from None
+        # Keep a kernel reference through pathname replacement and cleanup so
+        # the owned inode cannot be freed/reused by a later writer.
+        lock_lease = os.dup(fd)
+        owned_lock = os.fstat(lock_lease)
         try:
             with os.fdopen(fd, 'wb') as output, tempfile.TemporaryDirectory(dir=self.root) as folder:
                 env = {'GIT_INDEX_FILE': str(Path(folder) / 'index')}
@@ -430,8 +438,72 @@ class Engine:
             os.replace(lock, index)
             return head
         finally:
-            if lock.exists():
-                lock.unlink()
+            # os.replace releases our pathname. Another writer may already own
+            # a new index.lock there; never delete its file during our cleanup.
+            try:
+                current_lock = lock.lstat() if lock.exists() else None
+                if current_lock and (current_lock.st_dev, current_lock.st_ino) == (owned_lock.st_dev, owned_lock.st_ino):
+                    lock.unlink()
+            finally:
+                os.close(lock_lease)
+
+    def update_handoff(self, repo, policy, before, snap, turn, required=False):
+        """Append bounded content metadata only to the explicitly reviewed document.
+
+        User documentation is retained. Retries reuse the same content marker;
+        the generated document cannot trigger a further changed-content handoff.
+        """
+        name = policy.get('handoff_file')
+        changes = {p: value for p, value in snap['files'].items()
+                   if p != name and value != before['files'].get(p)}
+        changes.update({p: None for p in before['files'] if p != name and p not in snap['files']})
+        if not changes:
+            return snap
+        require(name is not None or not required,
+                'changed-content checkpoint requires a reviewed handoff_file destination')
+        if name is None:
+            return snap  # Preserve compatibility with the separately used PR223 end hook.
+        require(isinstance(name, str) and name in policy['allowed'],
+                'automatic handoff needs a literal reviewed destination')
+        eligible([name], policy)
+        require(not name.startswith('.github/'), 'automatic handoff cannot change publication automation')
+        require(all(ord(c) >= 32 for c in name), 'invalid handoff destination')
+        eligible(changes, policy)
+        marker = '<!-- vk-github-sync ' + turn + ' ' + digest(changes) + ' -->'
+        require(name not in snap['ignored'], 'handoff destination is ignored; excluded files are not Git-protected')
+        target = repo / name
+        # Parent traversal and symlinks cannot redirect this write outside the owner.
+        require(target.parent.resolve().is_relative_to(repo) and target.parent.is_dir(),
+                'handoff parent is unavailable or outside repository')
+        old = target.read_bytes() if name in snap['files'] and snap['files'][name] is not None else b''
+        require(len(old) <= 5 * 1024 * 1024 and b'\0' not in old, 'handoff must be bounded text')
+        old.decode('utf-8')
+        if marker.encode() in old:
+            return snap
+        lines = [marker, '## Automatic GitHub checkpoint', '', 'Turn: `' + turn + '`.',
+                 'Changed eligible content since turn admission:', '']
+        for path, value in sorted(changes.items()):
+            status = 'deleted' if value is None else ('added' if not before['files'].get(path) else 'modified')
+            lines.append('- ' + json.dumps(path, ensure_ascii=True) + ': ' + status +
+                         ('.' if value is None else '; SHA-256 `' + value[0] + '`.'))
+        lines += ['', 'Excluded files are not Git-protected. Merge requires explicit approval.', '']
+        addition = ('\n\n' + '\n'.join(lines)).encode()
+        require(len(old) + len(addition) <= 5 * 1024 * 1024, 'handoff exceeds bounded text limit')
+        require(snapshot(repo) == snap, 'workspace changed before handoff update')
+        flags = os.O_WRONLY | os.O_APPEND | os.O_NOFOLLOW
+        if not old and not target.exists():
+            flags |= os.O_CREAT | os.O_EXCL
+        with os.fdopen(os.open(target, flags, 0o644), 'ab') as document:
+            document.write(addition)
+            document.flush()
+            os.fsync(document.fileno())
+        current = snapshot(repo)
+        require({k: v for k, v in current['files'].items() if k != name} ==
+                {k: v for k, v in snap['files'].items() if k != name} and
+                all(current[k] == snap[k] for k in ['head', 'branch', 'ignored', 'index']) and
+                target.read_bytes() == old + addition,
+                'concurrent writer changed content during handoff update')
+        return current
 
     def preserve_repo(self, entry, policy, request, remember):
         repo = Path(entry['path'])
@@ -477,6 +549,8 @@ class Engine:
                 'remote automation source moved since publication review')
         require(workflows(repo, policy['automation_commit']) == policy['automation_workflow_digest'],
                 'automation source digest differs from review')
+        snap = self.update_handoff(repo, policy, before, snap, request['turn'],
+                                   required=request.get('handoff_required') is True)
         changed = bool(snap['status']) or snap['head'] != before['head']
         if snap['status']:
             head = self.commit(repo, policy, snap, request['turn'], remember)
@@ -484,6 +558,9 @@ class Engine:
             head = snap['head']
             self.scan(repo, policy, head)
         stable = snapshot(repo)
+        index_path = Path(line(repo, 'rev-parse', '--path-format=absolute', '--git-path', 'index'))
+        require(not index_path.with_name(index_path.name + '.lock').exists(),
+                'Git index became locked by another writer; checkpoint remains pending')
         require(not stable['status'], 'worktree or index remains dirty after commit')
         require(stable['head'] == head, 'original head changed during preservation')
         require_tree_bytes(repo, stable)
@@ -523,19 +600,54 @@ class Engine:
         return dict(**witness, after=stable, changed=changed,
                     ignored_not_git_protected=sorted(stable['ignored']))
 
-    def end(self, request):
+    def observe_finished(self, request):
+        """Record original heads before another admitted turn can rewrite ancestry.
+
+        This records obligations only, never a writer fence or remote coverage.
+        """
+        path = self.state_path(request)
+        record = read_json(path)
+        require(record['config'] == digest(self.config), 'policy changed after turn admission')
+        require([(e['id'], e['path']) for e in record['repositories']] ==
+                [(i['id'], str(Path(i['path']).resolve())) for i in request['repositories']],
+                'affected repository inventory differs from admitted turn')
+        record['observation_complete'] = False
+        try:
+            for entry in record['repositories']:
+                entry['original_commits'] = list(self.observe(record, entry))
+                atomic_json(path, record)
+            self.require_obligations(record)
+            record['observation_complete'] = True
+        except (Blocked, OSError, KeyError, ValueError):
+            for entry in record['repositories']:
+                record['obligations'][entry['id']]['unverifiable'] = True
+            record.update(state='blocked', reason='completed original history observation failed')
+        atomic_json(path, record)
+        return record
+
+    def checkpoint(self, request):
+        # Queued turns get scoped coverage at a later idle boundary. This does
+        # not certify the latest workspace/controller boundary.
+        global CHECKPOINT_DEADLINE
+        CHECKPOINT_DEADLINE = time.monotonic() + 90
+        try:
+            return self.end(request, checkpoint=True)
+        finally:
+            CHECKPOINT_DEADLINE = None
+
+    def end(self, request, checkpoint=False):
         path = self.state_path(request)
         record = read_json(path)
         self.require_obligations(record)
         require(bool(request['repositories']) and bool(record['repositories']),
                 'empty affected repository inventory')
-        require(read_json(path.parent / 'latest.json')['turn'] == request['turn'],
+        require(checkpoint or read_json(path.parent / 'latest.json')['turn'] == request['turn'],
                 'a newer turn is pending; earlier turn cannot certify the workspace')
         require(record['config'] == digest(self.config), 'policy changed after turn admission')
         require([(e['id'], e['path'], e.get('required_commits', []), e.get('required_files', [])) for e in record['repositories']] ==
                 [(i['id'], str(Path(i['path']).resolve()), i.get('required_commits', []), i.get('required_files', [])) for i in request['repositories']],
                 'affected repository inventory differs from admitted turn')
-        record.update(state='pending', reason='preservation in progress')
+        record.update(state='pending', reason='preservation in progress', checkpoint_only=checkpoint)
         atomic_json(path, record)
         try:
             require(request.get('writers_fenced') is True, 'writers are not fenced')
@@ -557,6 +669,11 @@ class Engine:
                         atomic_json(path, record)
 
                     # Verify prior success first on retry; no duplicate commits or PR creation.
+                    if checkpoint and entry.get('receipt') and snapshot(repo) != entry['receipt']['after']:
+                        # Retain the prior proof. preserve_repo still requires every
+                        # observed original as ancestry before refreshing coverage.
+                        entry.setdefault('receipt_history', []).append(entry.pop('receipt'))
+                        atomic_json(path, record)
                     if entry.get('receipt'):
                         self.check_repo(entry, policy)
                     else:
@@ -567,7 +684,7 @@ class Engine:
             for entry in record['repositories']:
                 require(snapshot(Path(entry['path'])) == entry['receipt']['after'],
                         'earlier repository changed while another repository was preserved')
-            require(read_json(path.parent / 'latest.json')['turn'] == request['turn'],
+            require(checkpoint or read_json(path.parent / 'latest.json')['turn'] == request['turn'],
                     'newer turn admitted during preservation')
             record.update(state='verified', reason='eligible work has exact remote commit coverage',
                           outcome=request.get('outcome', 'unknown'))
@@ -673,7 +790,7 @@ class Engine:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=['begin', 'end', 'check', 'check-all', 'block'])
+    parser.add_argument('action', choices=['begin', 'end', 'checkpoint', 'observe-finished', 'check', 'check-all', 'block'])
     parser.add_argument('--config', required=True)
     args = parser.parse_args()
     request = {}
@@ -690,7 +807,9 @@ def main():
                       turn=request.get('turn'), repositories=request.get('repositories', []), reason=str(error) if isinstance(error, Blocked)
                       else 'preservation IO or contract failure')
     print(json.dumps(result, sort_keys=True))
-    return 0 if result['state'] in ['verified', 'pending'] and args.action == 'begin' or result['state'] == 'verified' else 2
+    return 0 if ((args.action == 'observe-finished' and result.get('observation_complete') is True)
+                 or (result['state'] in ['verified', 'pending'] and args.action == 'begin')
+                 or result['state'] == 'verified') else 2
 
 
 if __name__ == '__main__':

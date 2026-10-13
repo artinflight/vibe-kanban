@@ -118,6 +118,96 @@ else: sys.exit(1)
         self.assertIn(contains, result['reason'])
         return result
 
+    def enable_handoff(self, name='SYNC_HANDOFF.md'):
+        self.config['repositories']['repo']['allowed'].append(name)
+        self.config['repositories']['repo']['handoff_file'] = name
+        self.engine = FixtureEngine(self.config, str(self.gh))
+        self.request['turn'] = 'handoff-owner'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
+
+    def test_changed_content_handoff_retains_user_docs_reuses_pr_and_is_idempotent(self):
+        document = self.repo / 'SYNC_HANDOFF.md'
+        document.write_text('Existing operator handoff.\n')
+        self.enable_handoff()
+        self.request['handoff_required'] = True
+        self.changed(value='Approved public source change\n')
+        result = self.end()
+        self.assertEqual(result['state'], 'verified', result)
+        text = document.read_text()
+        self.assertTrue(text.startswith('Existing operator handoff.\n'))
+        self.assertIn('"src/main.txt": modified; SHA-256', text)
+        self.assertNotIn('Approved public source change', text)
+        head = git(self.repo, 'rev-parse', 'HEAD')
+        self.assertEqual(self.end()['state'], 'verified')
+        self.assertEqual(document.read_text(), text)
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), head)
+        self.request['turn'] = 'next-handoff-owner'
+        self.engine.begin(self.request)
+        self.changed('src/new file.txt', 'Next public change\n')
+        self.assertEqual(self.end()['state'], 'verified')
+        self.assertEqual(json.loads(self.prfile.read_text())['number'], 1)
+        self.assertEqual(document.read_text().count('<!-- vk-github-sync'), 2)
+
+    def test_read_only_turn_creates_no_handoff_commit_or_pr(self):
+        self.enable_handoff()
+        self.assertEqual(self.end()['state'], 'verified')
+        self.assertFalse((self.repo / 'SYNC_HANDOFF.md').exists())
+        self.assertFalse(self.prfile.exists())
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), self.base)
+
+    def test_handoff_cannot_publish_private_paths_or_escape_repository(self):
+        self.enable_handoff('HANDOFF.private.md')
+        self.changed()
+        self.assertBlocked('excluded or unreviewed')
+        self.assertFalse((self.repo / 'HANDOFF.private.md').exists())
+        self.assertFalse(self.prfile.exists())
+
+    def test_ignored_handoff_is_retained_without_being_written_or_published(self):
+        self.config['repositories']['repo']['allowed'].append('.gitignore')
+        self.enable_handoff()
+        (self.repo / '.gitignore').write_text('runtime/\nSYNC_HANDOFF.md\n')
+        document = self.repo / 'SYNC_HANDOFF.md'
+        document.write_text('Private excluded handoff.\n')
+        # Establish the ignored-file baseline before this owner turn.
+        self.request['turn'] = 'ignored-handoff-owner'
+        self.engine.begin(self.request)
+        self.changed()
+        self.assertBlocked('handoff destination is ignored')
+        self.assertEqual(document.read_text(), 'Private excluded handoff.\n')
+        self.assertFalse(self.prfile.exists())
+
+    def test_handoff_cannot_modify_publication_automation(self):
+        self.enable_handoff('.github/workflows/handoff.yml')
+        self.changed()
+        self.assertBlocked('handoff cannot change publication automation')
+        self.assertFalse((self.repo / '.github').exists())
+        self.assertFalse(self.prfile.exists())
+
+    def test_automatic_checkpoint_requires_reviewed_changed_content_handoff(self):
+        self.request['handoff_required'] = True
+        self.changed()
+        result = self.engine.checkpoint(self.request)
+        self.assertEqual(result['state'], 'blocked')
+        self.assertIn('requires a reviewed handoff_file', result['reason'])
+        self.assertFalse(self.prfile.exists())
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), self.base)
+
+    def test_automatic_read_only_checkpoint_needs_no_new_handoff_destination(self):
+        self.request['handoff_required'] = True
+        self.assertEqual(self.engine.checkpoint(self.request)['state'], 'verified')
+        self.assertFalse(self.prfile.exists())
+
+    def test_observation_ack_requires_all_originals_persisted(self):
+        self.changed()
+        git(self.repo, 'add', '.')
+        git(self.repo, 'commit', '-qm', 'Completed B')
+        b = git(self.repo, 'rev-parse', 'HEAD')
+        report = self.engine.observe_finished(self.request)
+        self.assertIs(report['observation_complete'], True)
+        self.assertIn(b, m.read_json(self.engine.state_path(self.request))['obligations']['repo']['commits'])
+        git(self.repo, 'reset', '--hard', self.base)
+        self.assertEqual(self.engine.checkpoint(self.request)['state'], 'blocked')
+
     def test_changed_tracked_and_untracked_exact_history_and_draft(self):
         self.changed()
         self.changed('src/new file.txt', 'untracked source\n')
@@ -136,6 +226,88 @@ else: sys.exit(1)
         self.assertEqual(self.end()['state'], 'verified')
         self.assertFalse(self.prfile.exists())
         self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), self.base)
+
+    def test_explicit_private_text_cannot_be_published_even_if_allowlisted(self):
+        self.config['repositories']['repo']['allowed'].append('handoff.private.md')
+        self.request['turn'] = 'private-text-owner'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
+        self.changed('handoff.private.md', 'Synthetic private transcript; never publish\n')
+        result = self.engine.checkpoint(self.request)
+        self.assertEqual(result['state'], 'blocked', result)
+        self.assertFalse(self.prfile.exists())
+        self.assertEqual(git(self.remote, 'rev-parse', 'refs/heads/feat/fixture'), self.base)
+
+    def test_checkpoint_never_removes_another_writers_index_lock_after_replace(self):
+        self.changed()
+        index = Path(git(self.repo, 'rev-parse', '--path-format=absolute', '--git-path', 'index'))
+        lock = index.with_name(index.name + '.lock')
+        replace = m.os.replace
+        def concurrent_lock(source, destination):
+            replace(source, destination)
+            if Path(destination) == index:
+                lock.write_bytes(b'synthetic other writer owns this lock')
+        with patch.object(m.os, 'replace', side_effect=concurrent_lock):
+            result = self.engine.checkpoint(self.request)
+        self.assertEqual(result['state'], 'blocked', result)
+        self.assertEqual(lock.read_bytes(), b'synthetic other writer owns this lock')
+        self.assertEqual(git(self.remote, 'rev-parse', 'refs/heads/feat/fixture'), self.base)
+        # Release only this test's own simulated competing writer.
+        lock.unlink()
+        self.assertEqual(self.engine.checkpoint(self.request)['state'], 'verified')
+        self.assertEqual(git(self.repo, 'rev-list', '--count', self.base+'..HEAD'), '1')
+
+    def test_delayed_owner_jobs_verify_remote_without_certifying_latest_turn(self):
+        self.changed(value='first owner\n')
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', 'first owner original')
+        original = git(self.repo, 'rev-parse', 'HEAD')
+        self.engine.observe_finished(self.request)
+        newer = dict(self.request, turn='newer-owner')
+        self.assertEqual(self.engine.begin(newer)['state'], 'pending')
+        self.changed(value='second owner\n')
+        old = self.engine.checkpoint(self.request)
+        self.assertEqual(old['state'], 'verified', old)
+        self.assertTrue(old['checkpoint_only'])
+        self.assertIn(original, old['obligations']['repo']['commits'])
+        with self.assertRaisesRegex(m.Blocked, 'latest|newer'):
+            self.engine.check(self.request)
+        fresh = self.engine.checkpoint(newer)
+        self.assertEqual(fresh['state'], 'verified', fresh)
+        head = git(self.repo, 'rev-parse', 'HEAD')
+        self.assertEqual(git(self.remote, 'rev-parse', 'refs/heads/feat/fixture'), head)
+        self.assertEqual(git(self.repo, 'rev-list', '--count', self.base+'..HEAD'), '2')
+        self.assertEqual(self.engine.checkpoint(self.request)['state'], 'verified')
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), head)
+
+    def test_observed_completed_original_cannot_be_erased_by_later_turn(self):
+        self.changed(value='first original\n')
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', 'completed original')
+        original = git(self.repo, 'rev-parse', 'HEAD')
+        self.engine.observe_finished(self.request)
+        # Fixture-only rewrite, never a production operation.
+        git(self.repo, 'reset', '--hard', self.base)
+        later = dict(self.request, turn='later')
+        result = self.engine.begin(later)
+        self.assertIn(original, result['obligations']['repo']['commits'])
+        result = self.engine.checkpoint(later)
+        self.assertEqual(result['state'], 'blocked', result)
+        self.assertFalse(self.prfile.exists())
+
+    def test_checkpoint_retry_refreshes_coverage_and_retains_prior_receipt(self):
+        self.changed(value='first bytes\n')
+        first = self.engine.checkpoint(self.request)
+        self.assertEqual(first['state'], 'verified', first)
+        prior = first['repositories'][0]['receipt']['commit']
+        self.changed(value='new owner bytes\n')
+        retried = self.engine.checkpoint(self.request)
+        self.assertEqual(retried['state'], 'verified', retried)
+        entry = retried['repositories'][0]
+        self.assertEqual(entry['receipt_history'][0]['commit'], prior)
+        self.assertIn(prior, entry['original_commits'])
+        head = git(self.repo, 'rev-parse', 'HEAD')
+        self.assertEqual(self.engine.checkpoint(self.request)['state'], 'verified')
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), head)
 
     def test_failed_and_interrupted_turns_preserve_work_without_success_claim(self):
         for outcome in ['failed', 'killed']:

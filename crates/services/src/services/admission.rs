@@ -7,6 +7,9 @@ static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 tokio::task_local! { static HELD: bool; }
 
 pub async fn run<T>(work: impl Future<Output = T>) -> T {
+    if automatic_git_sync() {
+        return locked(work).await;
+    }
     if super::original_worker::current().is_none() {
         return work.await;
     }
@@ -16,6 +19,12 @@ pub async fn run<T>(work: impl Future<Output = T>) -> T {
         return work.await;
     }
     locked(work).await
+}
+
+/// The checkpoint worker shares normal input/launch serialization. Publication
+/// policy is a separate setting; enabling scheduling does not authorize files.
+pub fn automatic_git_sync() -> bool {
+    std::env::var("VK_AUTOMATIC_GITHUB_SYNC").is_ok_and(|value| value == "1")
 }
 
 pub async fn locked<T>(work: impl Future<Output = T>) -> T {

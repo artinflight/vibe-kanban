@@ -20,7 +20,8 @@ VERSION = 2
 DENIED = re.compile(
     r"(^|/)(\.env(?:\..*)?|\.git|\.ssh|credentials?|secrets?|runtime|"
     r"dev_assets|attachments?|uploads?|customer[s_-]?|client[s_-]?|"
-    r"invoices?|financial|account[s_-]?|node_modules|target)(/|$)|"
+    r"invoices?|financial|account[s_-]?|private|transcripts?|rollouts?|node_modules|target)(/|$)|"
+    r"(^|/)[^/]*\.private(?:\.|$)|"
     r"\.(pem|key|p12|pfx|sqlite(?:3)?|db|zip|pdf|xlsx?|csv|exe|dll|so)$", re.I
 )
 IDENT = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -398,6 +399,7 @@ class Engine:
             fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         except FileExistsError:
             raise Blocked('Git index is locked by another writer') from None
+        owned_lock = os.fstat(fd)
         try:
             with os.fdopen(fd, 'wb') as output, tempfile.TemporaryDirectory(dir=self.root) as folder:
                 env = {'GIT_INDEX_FILE': str(Path(folder) / 'index')}
@@ -433,7 +435,10 @@ class Engine:
             os.replace(lock, index)
             return head
         finally:
-            if lock.exists():
+            # os.replace releases our pathname. Another writer may already own
+            # a new index.lock there; never delete its file during our cleanup.
+            current_lock = lock.lstat() if lock.exists() else None
+            if current_lock and (current_lock.st_dev, current_lock.st_ino) == (owned_lock.st_dev, owned_lock.st_ino):
                 lock.unlink()
 
     def preserve_repo(self, entry, policy, request, remember):
@@ -487,6 +492,9 @@ class Engine:
             head = snap['head']
             self.scan(repo, policy, head)
         stable = snapshot(repo)
+        index_path = Path(line(repo, 'rev-parse', '--path-format=absolute', '--git-path', 'index'))
+        require(not index_path.with_name(index_path.name + '.lock').exists(),
+                'Git index became locked by another writer; checkpoint remains pending')
         require(not stable['status'], 'worktree or index remains dirty after commit')
         require(stable['head'] == head, 'original head changed during preservation')
         require_tree_bytes(repo, stable)

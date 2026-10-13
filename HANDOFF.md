@@ -1,3 +1,19 @@
+## October 13 native Approve for me compatibility — isolated preparation
+
+This workspace starts at current fork/staging 7f06d040a. It changes only the
+inbound top-level approvalsReviewer auto_review spelling in thread/start,
+thread/resume and thread/fork typed response copies. Native configuration,
+requests, raw history, decisions, human elicitation and Recommend are unchanged.
+The deployed d45035b0 JSON-RPC source equals this staging base byte-for-byte.
+PR245 and the PR246 coordinated release remain separate and untouched.
+
+Focused tests reproduce the pinned decoder rejection and exercise actual
+await_response for all three concrete protocol types, legacy/invalid values,
+method/nesting scope, policy/sandbox/history/error/identity preservation and
+Auto versus Supervised policy precedence. Hosted compilation and actual native
+review acceptance are pending. Do not deploy/restart, change live DEFAULT or
+credentials, or operate other agents. See VK_NATIVE_REVIEW_COMPATIBILITY.md.
+
 ## October 13 large native-history verification repair — validated draft
 
 Draft PR #245 replaces the 128 MiB whole-file gate with bounded-record streaming

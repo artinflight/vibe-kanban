@@ -2,7 +2,7 @@
 
 This stream implements the same-name local T36 issue on the existing workspace.
 The issue/workspace association was verified through the supported VK read API;
-no duplicate task/workspace was created. Current base is fork/staging d786124a1.
+no duplicate task/workspace was created. Current base is fork/staging 7f06d040a, incorporating exact PR245 c37f3623.
 Reuse corrected PR223 cc203a035 and its original-history/privacy boundaries.
 
 Add one durable job per coding owner execution, defer to safe idle admission,

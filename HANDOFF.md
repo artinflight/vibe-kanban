@@ -9,9 +9,12 @@ publication review; never reconstruct missing baselines or claim exclusions cove
 Initial real-scanner helper suite:76 tests passed with no skips; subsequent privacy/
 owned-lock regressions passed. First hosted backend run at2d37c565 passed545 tests
 (11 skipped), including worker/queue fixtures. Its lint finding was corrected.
-Formatting and bounded local TypeScript checks passed. Current exact-head/enabled
-mode checks and combined PR245 artifact evidence belong in the PR and private
-release handoff; earlier receipts do not certify later corrections.
+Formatting and bounded local TypeScript checks passed. Combined candidate e26f5945 passed552 workspace tests (13 skipped), four enabled
+fixtures and applicable lint/schema/frontend/desktop checks. Its downloaded backend
+SHA matches the hosted manifest and passed18 isolated local startup cases. Current
+Staging ancestry is now reconciled with identical executable source; the final
+head-bound build/check receipt belongs in the private release handoff. Independent
+review permission remains pending; no independent acceptance is claimed.
 No live configuration, Staging start/message, restart/cutover or cleanup happened.
 
 Prepare this feature with PR245 in the SAME candidate for the SAME next safe-idle

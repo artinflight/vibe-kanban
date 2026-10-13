@@ -34,7 +34,10 @@ escape/rebinding and concurrent append/truncate/rewrite/replacement. Existing
 production launch, profile/collision, terminal and no-replay regressions remain.
 
 The check-only Large history verification workflow exports the exact source's
-compiled read-only test verifier. The private request specifies native home,
+optimized compiled read-only test verifier. An independent test-only reference
+materializes the original payload array using the workspace's Rust JSON number
+encoding and key ordering. This avoids cross-language seal serialization drift;
+its private receipt is not an adopted grant. The private request specifies native home,
 thread, seal and authorized receipt digests outside Git. The ignored verifier
 opens only the native index/history read-only; it neither opens a VK ledger nor
 adopts a contract, starts a server or dispatches input. Its output contains only

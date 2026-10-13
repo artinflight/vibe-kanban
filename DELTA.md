@@ -1770,3 +1770,12 @@ no apply, sidecar, prompt, restart, badge/database rewrite or policy change.
 Sealed minimal c3-backend/cdad-frontend patches are in LOCAL_REPAIR_DELIVERY.safe.json.
 Matching Staging-owned publication and both genuine normal API/UI restorations
 remain required. This is source delivery, not conversation restoration.
+
+## 2026-10-13 — automatic GitHub sync source preparation
+
+Verified/reused the existing same-name local issue/workspace linkage. Extended
+corrected PR223 preservation, completion/admission and user queues; direct durable
+checkpoints avoid extra agent turns.76 real-scanner helper fixtures passed. Compiled
+integration, independent review and exact-head combined PR245 build remain pending.
+Operating/rollback guidance is VK_AUTOMATIC_GITHUB_SYNC.md. No live activation,
+Staging message/start, restart/cutover, forced stop, media operation or cleanup.

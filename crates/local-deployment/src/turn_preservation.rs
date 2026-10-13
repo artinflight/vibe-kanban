@@ -1,9 +1,13 @@
 //! Opt-in completion hook. Publication policy and receipts live outside agent sources.
 //! Disabled unless VK_TURN_GIT_PRESERVATION_CONFIG is explicitly set by the operator.
-use std::{path::Path, process::Stdio};
+use std::{path::Path, process::Stdio, time::Duration};
 
+use command_group::AsyncCommandGroup;
 use serde_json::{Value, json};
-use tokio::{io::AsyncWriteExt, process::Command};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    process::Command,
+};
 
 const HELPER: &str = include_str!("../../../scripts/preservation/turn_git.py");
 
@@ -128,14 +132,43 @@ async fn invoke_with_config(action: &str, request: Value, config: &Path) -> Valu
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .kill_on_drop(true)
-            .spawn()?;
+            .group_spawn()?;
         let mut stdin = child
+            .inner()
             .stdin
             .take()
             .ok_or_else(|| std::io::Error::other("helper stdin missing"))?;
-        stdin.write_all(request.to_string().as_bytes()).await?;
-        drop(stdin);
-        child.wait_with_output().await
+        let stdout = child
+            .inner()
+            .stdout
+            .take()
+            .ok_or_else(|| std::io::Error::other("helper stdout missing"))?;
+        let operation = async {
+            stdin.write_all(request.to_string().as_bytes()).await?;
+            drop(stdin);
+            let read = async {
+                let mut bytes = Vec::new();
+                stdout
+                    .take(4 * 1024 * 1024 + 1)
+                    .read_to_end(&mut bytes)
+                    .await?;
+                Ok::<_, std::io::Error>(bytes)
+            };
+            let (status, stdout) = tokio::try_join!(child.wait(), read)?;
+            Ok::<_, std::io::Error>(std::process::Output {
+                status,
+                stdout,
+                stderr: Vec::new(),
+            })
+        };
+        match tokio::time::timeout(Duration::from_secs(110), operation).await {
+            Ok(result) => result,
+            Err(_) => {
+                // Bound only our helper and its children, never an owner agent.
+                let _ = crate::command::kill_process_group(&mut child).await;
+                Err(std::io::Error::other("checkpoint helper deadline exceeded"))
+            }
+        }
     };
     match execution.await {
         Ok(output) if output.stdout.len() <= 4 * 1024 * 1024 => {

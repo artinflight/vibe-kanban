@@ -16,5 +16,6 @@ pub mod session;
 pub mod subagent_job;
 pub mod tag;
 pub mod task;
+pub mod turn_github_sync;
 pub mod workspace;
 pub mod workspace_repo;

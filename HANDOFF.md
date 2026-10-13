@@ -1,3 +1,22 @@
+## October13 automatic-sync implementation pickup
+
+Current stream: local T36, VK::Automatic GitHub Sync After Every Turn. Supported
+VK project-workspaces read verified linkage to this existing workspace; no duplicate.
+Implementation extends PR223's helper, native completion/admission and user queue.
+See VK_AUTOMATIC_GITHUB_SYNC.md. Preserve original ledgers, private content and
+publication review; never reconstruct missing baselines or claim exclusions covered.
+
+Local real-scanner helper suite:76 tests passed with no skips. Formatting completed
+after installing missing workspace dependencies on mounted SSD. Compiled worker,
+queue/admission regressions, exact-head CI and combined PR245 artifact are pending.
+No live configuration, Staging start/message, restart/cutover or cleanup happened.
+
+Prepare this feature with PR245 in the SAME candidate for the SAME next safe-idle
+restart. Release owner is awaiting clarification following cancellation; this is a
+preparation handoff, not release acceptance. Interim coverage was broadened to every
+completed turn until restart; the existing busy preservation owner was not prompted.
+Private next-idle evidence/handoff remains outside Git. Independent review is pending.
+
 ## October11 startup provenance and executable monitor ordering
 
 Hosted Test38157545232 at abcf30cf1c1f5828551f7a9d95acf86b4d8ba6fc

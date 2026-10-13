@@ -13,6 +13,17 @@ on:
       - staging
       - main
   workflow_dispatch:
+    inputs:
+      github_sync_candidate:
+        description: Build an immutable automatic-sync + PR245 backend candidate
+        type: boolean
+        default: false
+      expected_candidate_source:
+        description: Exact 40-character combined candidate commit (required for candidate build)
+        type: string
+      approval_fix_head:
+        description: Exact reviewed PR245 head which must be an ancestor of the candidate
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -450,6 +461,48 @@ jobs:
 
       - name: Run Cargo tests
         run: cargo nextest run --workspace --exclude vibe-kanban-tauri
+
+      - name: Build source-bound combined checkpoint candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.github_sync_candidate
+        env:
+          EXPECTED_SOURCE: ${{ inputs.expected_candidate_source }}
+          APPROVAL_HEAD: ${{ inputs.approval_fix_head }}
+          CARGO_INCREMENTAL: "0"
+        run: |
+          git fetch --no-tags origin refs/pull/245/head
+          python3 - <<'PY'
+          import os, re, subprocess
+          def git(*args):
+              return subprocess.check_output(['git', *args], text=True).strip()
+          expected, approval = os.environ['EXPECTED_SOURCE'], os.environ['APPROVAL_HEAD']
+          assert re.fullmatch(r'[0-9a-f]{40}', expected)
+          assert re.fullmatch(r'[0-9a-f]{40}', approval)
+          assert git('rev-parse', 'HEAD') == expected
+          assert git('rev-parse', 'FETCH_HEAD') == approval, 'PR245 moved; rebuild/review exact input'
+          subprocess.run(['git', 'fetch', '--unshallow', 'origin'], check=False)
+          subprocess.run(['git', 'merge-base', '--is-ancestor', approval, expected], check=True)
+          assert not git('status', '--porcelain', '--untracked-files=no')
+          PY
+          VK_BUILD_SOURCE_COMMIT="$EXPECTED_SOURCE" cargo build --locked --profile acceptance --bin server
+          mkdir -p "$RUNNER_TEMP/github-sync-candidate"
+          cp target/acceptance/server "$RUNNER_TEMP/github-sync-candidate/server"
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP'])/'github-sync-candidate'
+          server = root/'server'
+          receipt = {'source': os.environ['EXPECTED_SOURCE'], 'approval_fix_head': os.environ['APPROVAL_HEAD'],
+                     'server_sha256': hashlib.sha256(server.read_bytes()).hexdigest(),
+                     'server_bytes': server.stat().st_size, 'live_installation': False}
+          (root/'manifest.json').write_text(json.dumps(receipt, indent=2)+'\n')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch' && inputs.github_sync_candidate
+        with:
+          name: github-sync-candidate-${{ inputs.expected_candidate_source }}
+          path: ${{ runner.temp }}/github-sync-candidate
+          if-no-files-found: error
 
   tauri-checks:
     needs: [branch-policy, branch-freshness, changes]

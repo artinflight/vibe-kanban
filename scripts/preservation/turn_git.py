@@ -24,6 +24,7 @@ DENIED = re.compile(
     r"\.(pem|key|p12|pfx|sqlite(?:3)?|db|zip|pdf|xlsx?|csv|exe|dll|so)$", re.I
 )
 IDENT = re.compile(r"^[A-Za-z0-9_-]+$")
+CHECKPOINT_DEADLINE = None
 
 
 class Blocked(Exception):
@@ -40,9 +41,11 @@ def digest(value):
 
 
 def run(args, cwd=None, env=None, data=None):
+    budget = 60 if CHECKPOINT_DEADLINE is None else min(60, CHECKPOINT_DEADLINE - time.monotonic())
+    require(budget > 0, 'checkpoint time budget exhausted; retry remains pending')
     try:
         result = subprocess.run(args, cwd=cwd, env=env, input=data,
-                                capture_output=True, timeout=60)
+                                capture_output=True, timeout=budget)
     except (OSError, subprocess.TimeoutExpired):
         raise Blocked(f"{Path(args[0]).name} unavailable or timed out") from None
     require(result.returncode == 0, f"{Path(args[0]).name} {args[1]} failed")
@@ -523,19 +526,52 @@ class Engine:
         return dict(**witness, after=stable, changed=changed,
                     ignored_not_git_protected=sorted(stable['ignored']))
 
-    def end(self, request):
+    def observe_finished(self, request):
+        """Record original heads before another admitted turn can rewrite ancestry.
+
+        This records obligations only, never a writer fence or remote coverage.
+        """
+        path = self.state_path(request)
+        record = read_json(path)
+        require(record['config'] == digest(self.config), 'policy changed after turn admission')
+        require([(e['id'], e['path']) for e in record['repositories']] ==
+                [(i['id'], str(Path(i['path']).resolve())) for i in request['repositories']],
+                'affected repository inventory differs from admitted turn')
+        try:
+            for entry in record['repositories']:
+                entry['original_commits'] = list(self.observe(record, entry))
+                atomic_json(path, record)
+            self.require_obligations(record)
+        except (Blocked, OSError, KeyError, ValueError):
+            for entry in record['repositories']:
+                record['obligations'][entry['id']]['unverifiable'] = True
+            record.update(state='blocked', reason='completed original history observation failed')
+        atomic_json(path, record)
+        return record
+
+    def checkpoint(self, request):
+        # Queued turns get scoped coverage at a later idle boundary. This does
+        # not certify the latest workspace/controller boundary.
+        global CHECKPOINT_DEADLINE
+        CHECKPOINT_DEADLINE = time.monotonic() + 90
+        try:
+            return self.end(request, checkpoint=True)
+        finally:
+            CHECKPOINT_DEADLINE = None
+
+    def end(self, request, checkpoint=False):
         path = self.state_path(request)
         record = read_json(path)
         self.require_obligations(record)
         require(bool(request['repositories']) and bool(record['repositories']),
                 'empty affected repository inventory')
-        require(read_json(path.parent / 'latest.json')['turn'] == request['turn'],
+        require(checkpoint or read_json(path.parent / 'latest.json')['turn'] == request['turn'],
                 'a newer turn is pending; earlier turn cannot certify the workspace')
         require(record['config'] == digest(self.config), 'policy changed after turn admission')
         require([(e['id'], e['path'], e.get('required_commits', []), e.get('required_files', [])) for e in record['repositories']] ==
                 [(i['id'], str(Path(i['path']).resolve()), i.get('required_commits', []), i.get('required_files', [])) for i in request['repositories']],
                 'affected repository inventory differs from admitted turn')
-        record.update(state='pending', reason='preservation in progress')
+        record.update(state='pending', reason='preservation in progress', checkpoint_only=checkpoint)
         atomic_json(path, record)
         try:
             require(request.get('writers_fenced') is True, 'writers are not fenced')
@@ -557,6 +593,11 @@ class Engine:
                         atomic_json(path, record)
 
                     # Verify prior success first on retry; no duplicate commits or PR creation.
+                    if checkpoint and entry.get('receipt') and snapshot(repo) != entry['receipt']['after']:
+                        # Retain the prior proof. preserve_repo still requires every
+                        # observed original as ancestry before refreshing coverage.
+                        entry.setdefault('receipt_history', []).append(entry.pop('receipt'))
+                        atomic_json(path, record)
                     if entry.get('receipt'):
                         self.check_repo(entry, policy)
                     else:
@@ -567,7 +608,7 @@ class Engine:
             for entry in record['repositories']:
                 require(snapshot(Path(entry['path'])) == entry['receipt']['after'],
                         'earlier repository changed while another repository was preserved')
-            require(read_json(path.parent / 'latest.json')['turn'] == request['turn'],
+            require(checkpoint or read_json(path.parent / 'latest.json')['turn'] == request['turn'],
                     'newer turn admitted during preservation')
             record.update(state='verified', reason='eligible work has exact remote commit coverage',
                           outcome=request.get('outcome', 'unknown'))
@@ -673,7 +714,7 @@ class Engine:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=['begin', 'end', 'check', 'check-all', 'block'])
+    parser.add_argument('action', choices=['begin', 'end', 'checkpoint', 'observe-finished', 'check', 'check-all', 'block'])
     parser.add_argument('--config', required=True)
     args = parser.parse_args()
     request = {}

@@ -1,3 +1,24 @@
+## October13 automatic GitHub sync after every completed turn
+
+This stream implements the same-name local T36 issue on the existing workspace.
+The issue/workspace association was verified through the supported VK read API;
+no duplicate task/workspace was created. Current base is fork/staging d786124a1.
+Reuse corrected PR223 cc203a035 and its original-history/privacy boundaries.
+
+Add one durable job per coding owner execution, defer to safe idle admission,
+preserve queued/incoming user work, prevent sync-prompt loops/duplicate jobs, and
+verify exact remote coverage through the existing helper. Prepare and test this
+feature together with exact approval-fix PR245 in one next-restart candidate.
+No Staging prompt, live setting, cutover, forced stop or media operation is in scope.
+Recommend and the selected model/effort remain unchanged. Cleanup stays closed.
+
+See VK_AUTOMATIC_GITHUB_SYNC.md for operating/rollback and validation boundaries.
+Real-scanner helper fixtures passed76 cases locally; new compiled backend fixtures
+and exact-head combined build are pending. These fixtures do not establish live
+configured/enabled/enforced publication. Interim every-completed-turn coverage is
+still owned by the existing preservation task; a private next-idle handoff records
+the broadened requirement and the lack of a non-interrupting delivery mechanism.
+
 ## October11 startup provenance and executable monitor ordering
 
 Hosted Test38157545232 at abcf30cf1c1f5828551f7a9d95acf86b4d8ba6fc

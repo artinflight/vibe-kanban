@@ -137,6 +137,59 @@ else: sys.exit(1)
         self.assertFalse(self.prfile.exists())
         self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), self.base)
 
+    def test_delayed_owner_jobs_verify_remote_without_certifying_latest_turn(self):
+        self.changed(value='first owner\n')
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', 'first owner original')
+        original = git(self.repo, 'rev-parse', 'HEAD')
+        self.engine.observe_finished(self.request)
+        newer = dict(self.request, turn='newer-owner')
+        self.assertEqual(self.engine.begin(newer)['state'], 'pending')
+        self.changed(value='second owner\n')
+        old = self.engine.checkpoint(self.request)
+        self.assertEqual(old['state'], 'verified', old)
+        self.assertTrue(old['checkpoint_only'])
+        self.assertIn(original, old['obligations']['repo']['commits'])
+        with self.assertRaisesRegex(m.Blocked, 'latest|newer'):
+            self.engine.check(self.request)
+        fresh = self.engine.checkpoint(newer)
+        self.assertEqual(fresh['state'], 'verified', fresh)
+        head = git(self.repo, 'rev-parse', 'HEAD')
+        self.assertEqual(git(self.remote, 'rev-parse', 'refs/heads/feat/fixture'), head)
+        self.assertEqual(git(self.repo, 'rev-list', '--count', self.base+'..HEAD'), '2')
+        self.assertEqual(self.engine.checkpoint(self.request)['state'], 'verified')
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), head)
+
+    def test_observed_completed_original_cannot_be_erased_by_later_turn(self):
+        self.changed(value='first original\n')
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', 'completed original')
+        original = git(self.repo, 'rev-parse', 'HEAD')
+        self.engine.observe_finished(self.request)
+        # Fixture-only rewrite, never a production operation.
+        git(self.repo, 'reset', '--hard', self.base)
+        later = dict(self.request, turn='later')
+        result = self.engine.begin(later)
+        self.assertIn(original, result['obligations']['repo']['commits'])
+        result = self.engine.checkpoint(later)
+        self.assertEqual(result['state'], 'blocked', result)
+        self.assertFalse(self.prfile.exists())
+
+    def test_checkpoint_retry_refreshes_coverage_and_retains_prior_receipt(self):
+        self.changed(value='first bytes\n')
+        first = self.engine.checkpoint(self.request)
+        self.assertEqual(first['state'], 'verified', first)
+        prior = first['repositories'][0]['receipt']['commit']
+        self.changed(value='new owner bytes\n')
+        retried = self.engine.checkpoint(self.request)
+        self.assertEqual(retried['state'], 'verified', retried)
+        entry = retried['repositories'][0]
+        self.assertEqual(entry['receipt_history'][0]['commit'], prior)
+        self.assertIn(prior, entry['original_commits'])
+        head = git(self.repo, 'rev-parse', 'HEAD')
+        self.assertEqual(self.engine.checkpoint(self.request)['state'], 'verified')
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), head)
+
     def test_failed_and_interrupted_turns_preserve_work_without_success_claim(self):
         for outcome in ['failed', 'killed']:
             with self.subTest(outcome=outcome):

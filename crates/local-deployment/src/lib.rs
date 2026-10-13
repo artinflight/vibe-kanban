@@ -259,6 +259,7 @@ impl Deployment for LocalDeployment {
 
         let approvals = Approvals::new();
         let queued_message_service = QueuedMessageService::new();
+        queued_message_service.restore(&db.pool).await?;
 
         let oauth_credentials = Arc::new(OAuthCredentials::new(credentials_path()));
         if let Err(e) = oauth_credentials.load().await {
@@ -392,6 +393,8 @@ impl Deployment for LocalDeployment {
         if self.background_started.set(()).is_err() {
             return Ok(());
         }
+        self.container
+            .spawn_github_sync_worker(self.shutdown.clone());
         if is_pr_monitor_disabled() {
             tracing::info!("PR monitor disabled by VK_DISABLE_PR_MONITOR");
         } else {

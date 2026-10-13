@@ -111,7 +111,7 @@ pub async fn update_session(
     Ok(ResponseJson(ApiResponse::success(updated)))
 }
 
-#[derive(Debug, Deserialize, TS)]
+#[derive(Debug, serde::Serialize, Deserialize, TS)]
 pub struct CreateFollowUpAttempt {
     pub prompt: String,
     pub executor_config: ExecutorConfig,
@@ -132,12 +132,24 @@ pub async fn follow_up(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<CreateFollowUpAttempt>,
 ) -> Result<ResponseJson<ApiResponse<ExecutionProcess, QueueStatus>>, ApiError> {
-    services::services::admission::run(follow_up_admitted(
+    let pool = deployment.db().pool.clone();
+    let received = services::services::queued_message::QueuedMessageService::receive(
+        &pool,
+        session.id,
+        serde_json::json!({"kind": "follow_up", "payload": &payload}),
+    )
+    .await?;
+    let result = services::services::admission::run(follow_up_admitted(
         Extension(session),
         State(deployment),
         Json(payload),
     ))
-    .await
+    .await;
+    if result.is_ok() {
+        services::services::queued_message::QueuedMessageService::acknowledge(&pool, received)
+            .await?;
+    }
+    result
 }
 
 pub(crate) async fn follow_up_admitted<D: Deployment>(
@@ -299,6 +311,12 @@ pub(crate) async fn follow_up_admitted<D: Deployment>(
                     executor_config: payload.executor_config.clone(),
                 },
             );
+            if services::services::admission::automatic_git_sync() {
+                deployment
+                    .queued_message_service()
+                    .persist(pool, session.id)
+                    .await?;
+            }
 
             deployment
                 .track_if_analytics_allowed(

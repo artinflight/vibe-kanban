@@ -79,12 +79,14 @@ pub enum QueueStatus {
 #[derive(Clone)]
 pub struct QueuedMessageService {
     queue: Arc<DashMap<Uuid, QueuedMessage>>,
+    recovery_holds: Arc<DashMap<Uuid, ()>>,
 }
 
 impl QueuedMessageService {
     pub fn new() -> Self {
         Self {
             queue: Arc::new(DashMap::new()),
+            recovery_holds: Arc::new(DashMap::new()),
         }
     }
 
@@ -109,6 +111,15 @@ impl QueuedMessageService {
 
     /// Queue a message that should start when global executor capacity opens.
     pub fn queue_for_capacity(&self, session_id: Uuid, data: DraftFollowUpData) -> QueuedMessage {
+        if self.has_queued(session_id) {
+            let mut queued = self.queue_message(session_id, data);
+            queued.wait_for_capacity = true;
+            if let Some(mut entry) = self.queue.get_mut(&session_id) {
+                entry.wait_for_capacity = true;
+                return entry.clone();
+            }
+            return queued;
+        }
         let queued = QueuedMessage {
             session_id,
             data: data.clone(),
@@ -122,6 +133,7 @@ impl QueuedMessageService {
 
     /// Cancel/remove a queued message for a session
     pub fn cancel_queued(&self, session_id: Uuid) -> Option<QueuedMessage> {
+        self.recovery_holds.remove(&session_id);
         self.queue.remove(&session_id).map(|(_, v)| v)
     }
 
@@ -133,6 +145,9 @@ impl QueuedMessageService {
     /// Take (remove and return) the queued message for a session.
     /// Used by finalization flow to consume the queued message.
     pub fn take_queued(&self, session_id: Uuid) -> Option<QueuedMessage> {
+        if self.recovery_holds.contains_key(&session_id) {
+            return None;
+        }
         self.queue.remove(&session_id).map(|(_, v)| v)
     }
 
@@ -141,7 +156,9 @@ impl QueuedMessageService {
         let session_id = self
             .queue
             .iter()
-            .filter(|entry| entry.value().wait_for_capacity)
+            .filter(|entry| {
+                entry.value().wait_for_capacity && !self.recovery_holds.contains_key(entry.key())
+            })
             .min_by_key(|entry| entry.value().queued_at)
             .map(|entry| *entry.key())?;
 
@@ -151,6 +168,117 @@ impl QueuedMessageService {
     /// Snapshot used under shared execution admission for worktree ownership.
     pub fn session_ids(&self) -> Vec<Uuid> {
         self.queue.iter().map(|entry| *entry.key()).collect()
+    }
+
+    /// Requeue an admitted batch intact, preserving every message and routing choice.
+    pub fn restore_message(&self, queued: QueuedMessage) {
+        self.queue.insert(queued.session_id, queued);
+    }
+
+    pub async fn persist(
+        &self,
+        pool: &sqlx::SqlitePool,
+        session_id: Uuid,
+    ) -> Result<(), sqlx::Error> {
+        if let Some(queued) = self.get_queued(session_id) {
+            let data = serde_json::to_string(&queued)
+                .map_err(|_| sqlx::Error::Protocol("queue serialization failed".into()))?;
+            let state = if self.recovery_holds.contains_key(&session_id) {
+                "dispatching"
+            } else {
+                "queued"
+            };
+            sqlx::query("INSERT INTO turn_github_sync_user_queue VALUES (?, ?, ?) ON CONFLICT(session_id) DO UPDATE SET data = excluded.data, state = excluded.state")
+                .bind(session_id).bind(data).bind(state).execute(pool).await?;
+        } else {
+            sqlx::query("DELETE FROM turn_github_sync_user_queue WHERE session_id = ?")
+                .bind(session_id)
+                .execute(pool)
+                .await?;
+        }
+        Ok(())
+    }
+
+    pub async fn restore(&self, pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {
+        let rows: Vec<(Uuid, String, String)> =
+            sqlx::query_as("SELECT session_id, data, state FROM turn_github_sync_user_queue")
+                .fetch_all(pool)
+                .await?;
+        for (session_id, data, state) in rows {
+            let queued: QueuedMessage = serde_json::from_str(&data).map_err(|_| {
+                sqlx::Error::Protocol("invalid durable queue; input retained".into())
+            })?;
+            if queued.session_id != session_id {
+                return Err(sqlx::Error::Protocol("durable queue owner mismatch".into()));
+            }
+            if state == "dispatching" {
+                self.recovery_holds.insert(session_id, ());
+            }
+            self.queue.insert(session_id, queued);
+        }
+        Ok(())
+    }
+
+    pub async fn begin_dispatch(
+        &self,
+        pool: &sqlx::SqlitePool,
+        session_id: Uuid,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "UPDATE turn_github_sync_user_queue SET state = 'dispatching' WHERE session_id = ?",
+        )
+        .bind(session_id)
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn receive(
+        pool: &sqlx::SqlitePool,
+        session_id: Uuid,
+        data: serde_json::Value,
+    ) -> Result<Option<Uuid>, sqlx::Error> {
+        if !super::admission::automatic_git_sync() {
+            return Ok(None);
+        }
+        let id = Uuid::new_v4();
+        sqlx::query(
+            "INSERT INTO turn_github_sync_incoming (id, session_id, data) VALUES (?, ?, ?)",
+        )
+        .bind(id)
+        .bind(session_id)
+        .bind(data.to_string())
+        .execute(pool)
+        .await?;
+        Ok(Some(id))
+    }
+
+    pub async fn acknowledge(pool: &sqlx::SqlitePool, id: Option<Uuid>) -> Result<(), sqlx::Error> {
+        if let Some(id) = id {
+            sqlx::query("UPDATE turn_github_sync_incoming SET state = 'handled' WHERE id = ? AND state = 'received'")
+                .bind(id)
+                .execute(pool)
+                .await?;
+        }
+        Ok(())
+    }
+
+    pub async fn pending_incoming(
+        pool: &sqlx::SqlitePool,
+        workspace: Uuid,
+    ) -> Result<Vec<Uuid>, sqlx::Error> {
+        sqlx::query_scalar("SELECT q.id FROM turn_github_sync_incoming q JOIN sessions s ON s.id = q.session_id WHERE s.workspace_id = ? AND q.state = 'received'")
+            .bind(workspace).fetch_all(pool).await
+    }
+
+    pub async fn dismiss_incoming(
+        pool: &sqlx::SqlitePool,
+        workspace: Uuid,
+        id: Uuid,
+    ) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query("UPDATE turn_github_sync_incoming SET state = 'dismissed' WHERE id = ? AND state = 'received' AND session_id IN (SELECT id FROM sessions WHERE workspace_id = ?)")
+            .bind(id).bind(workspace).execute(pool).await?;
+        Ok(result.rows_affected() == 1)
     }
 
     /// Check if a session has a queued message
@@ -179,6 +307,40 @@ mod tests {
     use executors::{executors::BaseCodingAgent, profile::ExecutorConfig};
 
     use super::*;
+
+    #[tokio::test]
+    async fn restored_batches_preserve_order_and_uncertain_dispatch_never_replays() {
+        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::raw_sql(include_str!(
+            "../../../db/migrations/20261013120000_turn_github_sync.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        let session = Uuid::new_v4();
+        let service = QueuedMessageService::new();
+        service.queue_message(session, draft("first user message"));
+        service.queue_for_capacity(session, draft("second user message"));
+        service.persist(&pool, session).await.unwrap();
+        let reopened = QueuedMessageService::new();
+        reopened.restore(&pool).await.unwrap();
+        let data = reopened.get_queued(session).unwrap();
+        assert_eq!(data.messages.len(), 2);
+        assert_eq!(data.messages[0].message, "first user message");
+        assert_eq!(data.messages[1].message, "second user message");
+        reopened.begin_dispatch(&pool, session).await.unwrap();
+        let interrupted = QueuedMessageService::new();
+        interrupted.restore(&pool).await.unwrap();
+        assert!(interrupted.has_queued(session));
+        assert!(interrupted.take_queued(session).is_none());
+        assert!(interrupted.take_oldest_capacity_queued().is_none());
+        // Explicit queue cancellation may retire the preserved batch.
+        interrupted.cancel_queued(session);
+        interrupted.persist(&pool, session).await.unwrap();
+        let empty = QueuedMessageService::new();
+        empty.restore(&pool).await.unwrap();
+        assert!(!empty.has_queued(session));
+    }
 
     fn draft(message: &str) -> DraftFollowUpData {
         DraftFollowUpData {

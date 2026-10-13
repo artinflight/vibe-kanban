@@ -1,3 +1,17 @@
+## October13 automatic GitHub sync development
+
+A scoped feature stream now extends the existing corrected PR223 preservation
+helper with durable per-owner-turn scheduling, safe idle admission, private input/
+queue durability and remote-verified receipts. See VK_AUTOMATIC_GITHUB_SYNC.md.
+It remains opt-in and uninstalled by this change; source/fixture evidence is not
+production enforcement acceptance. Publication policies and private originals remain
+separate scoped requirements. Cleanup is unchanged and closed.
+
+The feature and approval fix PR245 must be built/tested together for one next safe
+restart. No Staging operation or cutover occurred; the release owner's cancelled
+call remains pending clarification. Existing preservation work owns interim coverage
+for every completed work turn until that restart. No duplicate audit was launched.
+
 ## October11 startup provenance and executable monitor ordering
 
 Hosted Test38157545232 at abcf30cf1c1f5828551f7a9d95acf86b4d8ba6fc

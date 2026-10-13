@@ -162,9 +162,10 @@ else: sys.exit(1)
         self.assertFalse(self.prfile.exists())
 
     def test_ignored_handoff_is_retained_without_being_written_or_published(self):
-        self.enable_handoff('runtime/HANDOFF.md')
-        (self.repo / 'runtime').mkdir()
-        document = self.repo / 'runtime/HANDOFF.md'
+        self.config['repositories']['repo']['allowed'].append('.gitignore')
+        self.enable_handoff()
+        (self.repo / '.gitignore').write_text('runtime/\nSYNC_HANDOFF.md\n')
+        document = self.repo / 'SYNC_HANDOFF.md'
         document.write_text('Private excluded handoff.\n')
         # Establish the ignored-file baseline before this owner turn.
         self.request['turn'] = 'ignored-handoff-owner'
@@ -172,6 +173,13 @@ else: sys.exit(1)
         self.changed()
         self.assertBlocked('handoff destination is ignored')
         self.assertEqual(document.read_text(), 'Private excluded handoff.\n')
+        self.assertFalse(self.prfile.exists())
+
+    def test_handoff_cannot_modify_publication_automation(self):
+        self.enable_handoff('.github/workflows/handoff.yml')
+        self.changed()
+        self.assertBlocked('handoff cannot change publication automation')
+        self.assertFalse((self.repo / '.github').exists())
         self.assertFalse(self.prfile.exists())
 
     def test_observation_ack_requires_all_originals_persisted(self):

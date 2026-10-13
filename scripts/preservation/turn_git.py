@@ -459,6 +459,7 @@ class Engine:
         require(isinstance(name, str) and name in policy['allowed'],
                 'automatic handoff needs a literal reviewed destination')
         eligible([name], policy)
+        require(not name.startswith('.github/'), 'automatic handoff cannot change publication automation')
         require(all(ord(c) >= 32 for c in name), 'invalid handoff destination')
         changes = {p: value for p, value in snap['files'].items()
                    if p != name and value != before['files'].get(p)}

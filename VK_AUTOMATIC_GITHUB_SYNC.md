@@ -42,8 +42,11 @@ There is no automatic merge, reset, force push, worktree deletion or new access.
 The normal completion callback records original heads under admission before a
 later turn starts. It accepts only a successful, owner-bound helper acknowledgement
 that all original obligations have been persisted. The durable observation state
-starts `pending`; helper failure becomes sticky `failed`, and a failed database
-write leaves it `pending`. Restoring policy, a later callback, a restart or a new
+starts `pending`. The tracked completion callback persists an `observing` claim
+before invoking the helper, and makes one observation attempt. Helper failure
+becomes sticky `failed`; a failed claim write leaves `pending`, while a failed final
+write leaves `observing`. Neither unknown state permits a retroactive observation
+of rewritten source. Restoring policy, a later callback, a restart or a new
 owner cannot infer the missing completed history. Missing owner context and lost
 callbacks also retain the pending gate. New turn ledgers inherit observed originals.
 
@@ -84,9 +87,12 @@ invent a delivery/handling claim from silence, idle state or executor success.
 
 ## Automatic changed-content handoff
 
-The reviewed per-repository policy may name `handoff_file`, for example
+Automatic changed-content checkpoints require the per-repository policy to name
+`handoff_file`, for example
 `"handoff_file": "SYNC_HANDOFF.md"`, and must explicitly include that literal
-filename in `allowed`. This scopes documentation to already authorized public
+filename in `allowed`. Missing authority blocks changed-content publication rather
+than silently omitting the approved handoff. Read-only checkpoints need no new
+document destination. The separate PR223 end hook retains its compatibility. This scopes documentation to already authorized public
 content rather than adding a global publication destination. At a safe checkpoint,
 changed eligible content produces a handoff entry listing added/modified/deleted
 paths and SHA-256 digests. Source text, prompts, transcripts, media and runtime

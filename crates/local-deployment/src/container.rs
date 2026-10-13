@@ -685,10 +685,15 @@ impl LocalContainerService {
     /// Called under admission, before exposing terminal status to resets/worker.
     /// The pre-launch pending row remains authoritative if any step cannot persist.
     async fn observe_completed_turn(&self, execution: Uuid) {
-        match TurnGithubSync::needs_observation(&self.db.pool, execution).await {
+        // An observation belongs to the actual tracked completion callback,
+        // never a retroactive read of today's source after restart/reset.
+        if !self.child_store.read().await.contains_key(&execution) {
+            return;
+        }
+        match TurnGithubSync::claim_observation(&self.db.pool, execution).await {
             Ok(false) => return,
             Err(error) => {
-                tracing::error!(%execution, %error, "Cannot read completion observation; pending gate retained");
+                tracing::error!(%execution, %error, "Cannot claim completion observation; pending gate retained");
                 return;
             }
             Ok(true) => {}
@@ -715,7 +720,7 @@ impl LocalContainerService {
         )
         .await
         {
-            tracing::error!(%execution, %error, "Cannot persist completion observation; pending gate retained");
+            tracing::error!(%execution, %error, "Cannot persist completion observation; write-ahead gate retained");
         }
         self.emit_preservation_message(execution, &report).await;
     }
@@ -824,6 +829,7 @@ impl LocalContainerService {
             } else {
                 request["writers_fenced"] = json!(true);
                 request["outcome"] = json!(ctx.execution_process.status);
+                request["handoff_required"] = json!(true);
                 match TurnGithubSync::has_unobserved(&self.db.pool, job.workspace_id).await {
                     Ok(false) => {
                         self.invoke_preservation("checkpoint", request.clone())

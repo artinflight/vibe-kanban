@@ -447,25 +447,27 @@ class Engine:
             finally:
                 os.close(lock_lease)
 
-    def update_handoff(self, repo, policy, before, snap, turn):
+    def update_handoff(self, repo, policy, before, snap, turn, required=False):
         """Append bounded content metadata only to the explicitly reviewed document.
 
         User documentation is retained. Retries reuse the same content marker;
         the generated document cannot trigger a further changed-content handoff.
         """
         name = policy.get('handoff_file')
-        if name is None:
-            return snap
-        require(isinstance(name, str) and name in policy['allowed'],
-                'automatic handoff needs a literal reviewed destination')
-        eligible([name], policy)
-        require(not name.startswith('.github/'), 'automatic handoff cannot change publication automation')
-        require(all(ord(c) >= 32 for c in name), 'invalid handoff destination')
         changes = {p: value for p, value in snap['files'].items()
                    if p != name and value != before['files'].get(p)}
         changes.update({p: None for p in before['files'] if p != name and p not in snap['files']})
         if not changes:
             return snap
+        require(name is not None or not required,
+                'changed-content checkpoint requires a reviewed handoff_file destination')
+        if name is None:
+            return snap  # Preserve compatibility with the separately used PR223 end hook.
+        require(isinstance(name, str) and name in policy['allowed'],
+                'automatic handoff needs a literal reviewed destination')
+        eligible([name], policy)
+        require(not name.startswith('.github/'), 'automatic handoff cannot change publication automation')
+        require(all(ord(c) >= 32 for c in name), 'invalid handoff destination')
         eligible(changes, policy)
         marker = '<!-- vk-github-sync ' + turn + ' ' + digest(changes) + ' -->'
         require(name not in snap['ignored'], 'handoff destination is ignored; excluded files are not Git-protected')
@@ -547,7 +549,8 @@ class Engine:
                 'remote automation source moved since publication review')
         require(workflows(repo, policy['automation_commit']) == policy['automation_workflow_digest'],
                 'automation source digest differs from review')
-        snap = self.update_handoff(repo, policy, before, snap, request['turn'])
+        snap = self.update_handoff(repo, policy, before, snap, request['turn'],
+                                   required=request.get('handoff_required') is True)
         changed = bool(snap['status']) or snap['head'] != before['head']
         if snap['status']:
             head = self.commit(repo, policy, snap, request['turn'], remember)

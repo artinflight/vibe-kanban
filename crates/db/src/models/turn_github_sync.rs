@@ -35,7 +35,7 @@ impl TurnGithubSync {
         observed: bool,
         report: &str,
     ) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE turn_github_sync SET observation_state = ?, observation_report = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE execution_process_id = ? AND observation_state = 'pending'")
+        sqlx::query("UPDATE turn_github_sync SET observation_state = ?, observation_report = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE execution_process_id = ? AND observation_state = 'observing'")
             .bind(if observed { "observed" } else { "failed" }).bind(report).bind(execution).execute(pool).await?;
         Ok(())
     }
@@ -55,12 +55,14 @@ impl TurnGithubSync {
         .await
     }
 
-    pub async fn needs_observation(
+    /// Write-ahead claim: uncertain/failed final persistence must never allow a
+    /// second observation of rewritten history. Workers never retry this claim.
+    pub async fn claim_observation(
         pool: &SqlitePool,
         execution: Uuid,
     ) -> Result<bool, sqlx::Error> {
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM turn_github_sync WHERE execution_process_id = ? AND observation_state = 'pending')")
-            .bind(execution).fetch_one(pool).await
+        Ok(sqlx::query("UPDATE turn_github_sync SET observation_state = 'observing' WHERE execution_process_id = ? AND observation_state = 'pending'")
+            .bind(execution).execute(pool).await?.rows_affected() == 1)
     }
 
     pub async fn ready(pool: &SqlitePool) -> Result<Vec<Self>, sqlx::Error> {
@@ -150,6 +152,11 @@ mod tests {
                 .await
                 .unwrap()
         );
+        assert!(
+            TurnGithubSync::claim_observation(&pool, owner)
+                .await
+                .unwrap()
+        );
         TurnGithubSync::record_observation(&pool, owner, false, "failure")
             .await
             .unwrap();
@@ -233,6 +240,11 @@ mod tests {
         let restored = TurnGithubSync::ready(&pool).await.unwrap().remove(0);
         assert_eq!(restored.state, "blocked");
         assert_eq!(restored.attempts, 1);
+        assert!(
+            TurnGithubSync::claim_observation(&pool, owner)
+                .await
+                .unwrap()
+        );
         TurnGithubSync::record_observation(&pool, owner, true, "durable-originals")
             .await
             .unwrap();

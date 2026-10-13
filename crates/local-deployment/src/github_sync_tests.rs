@@ -123,6 +123,11 @@ async fn idle_worker_preserves_queued_input_live_writers_and_failed_jobs_without
         .await
         .unwrap();
     // This fixture isolates idle/input fencing; completion observation is covered below.
+    assert!(
+        TurnGithubSync::claim_observation(&pool, execution.id)
+            .await
+            .unwrap()
+    );
     TurnGithubSync::record_observation(&pool, execution.id, true, "fixture durable originals")
         .await
         .unwrap();
@@ -471,13 +476,13 @@ impl ObservationFixture {
         .await
         .unwrap()
         .unwrap();
-        assert_ne!(
+        assert_eq!(
             ExecutionProcess::find_by_id(&self.container.db.pool, self.execution)
                 .await
                 .unwrap()
                 .unwrap()
                 .status,
-            ExecutionProcessStatus::Running
+            ExecutionProcessStatus::Completed
         );
     }
 
@@ -532,6 +537,11 @@ impl ObservationFixture {
         TurnGithubSync::enqueue(pool, later, self.workspace, &self.request.to_string())
             .await
             .unwrap();
+        assert!(
+            TurnGithubSync::claim_observation(pool, later)
+                .await
+                .unwrap()
+        );
         TurnGithubSync::record_observation(pool, later, true, "later originals")
             .await
             .unwrap();
@@ -581,9 +591,10 @@ async fn observation_callback_failure_reset_and_worker_survive_restart_and_polic
 #[cfg(target_os = "linux")]
 #[tokio::test]
 async fn observation_callback_persistence_failure_and_lost_callback_keep_pending_gate() {
-    for lose_callback in [false, true] {
+    for stage in ["lost", "claim", "finish-success", "finish-failure"] {
         let mut fixture = ObservationFixture::new().await;
-        if lose_callback {
+        let saved_policy = std::fs::read(&fixture.policy).unwrap();
+        if stage == "lost" {
             ExecutionProcess::update_completion(
                 &fixture.container.db.pool,
                 fixture.execution,
@@ -596,16 +607,42 @@ async fn observation_callback_persistence_failure_and_lost_callback_keep_pending
                 .await
                 .unwrap();
         } else {
-            sqlx::raw_sql("CREATE TRIGGER fail_observation BEFORE UPDATE OF observation_state ON turn_github_sync BEGIN SELECT RAISE(FAIL, 'synthetic persistence failure'); END;")
+            let condition = if stage == "claim" {
+                "1"
+            } else {
+                "NEW.observation_state != 'observing'"
+            };
+            sqlx::raw_sql(&format!("CREATE TRIGGER fail_observation BEFORE UPDATE OF observation_state ON turn_github_sync WHEN {condition} BEGIN SELECT RAISE(FAIL, 'synthetic persistence failure'); END;"))
                 .execute(&fixture.container.db.pool).await.unwrap();
+            if stage == "finish-failure" {
+                std::fs::remove_file(&fixture.policy).unwrap();
+            }
             fixture.callback().await;
             sqlx::raw_sql("DROP TRIGGER fail_observation")
                 .execute(&fixture.container.db.pool)
                 .await
                 .unwrap();
+            std::fs::write(&fixture.policy, saved_policy).unwrap();
         }
         fixture.reopen().await;
-        fixture.assert_gate("pending").await;
+        let expected = if stage.starts_with("finish") {
+            "observing"
+        } else {
+            "pending"
+        };
+        fixture.assert_gate(expected).await;
+        // Even after external B->A, restored policy must not recapture A as B.
+        fixture
+            .container
+            .observe_completed_turn(fixture.execution)
+            .await;
+        let job = TurnGithubSync::for_workspace(&fixture.container.db.pool, fixture.workspace)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|j| j.execution_process_id == fixture.execution)
+            .unwrap();
+        assert_eq!(job.observation_state, expected);
     }
 }
 

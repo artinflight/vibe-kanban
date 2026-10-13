@@ -129,6 +129,7 @@ else: sys.exit(1)
         document = self.repo / 'SYNC_HANDOFF.md'
         document.write_text('Existing operator handoff.\n')
         self.enable_handoff()
+        self.request['handoff_required'] = True
         self.changed(value='Approved public source change\n')
         result = self.end()
         self.assertEqual(result['state'], 'verified', result)
@@ -180,6 +181,20 @@ else: sys.exit(1)
         self.changed()
         self.assertBlocked('handoff cannot change publication automation')
         self.assertFalse((self.repo / '.github').exists())
+        self.assertFalse(self.prfile.exists())
+
+    def test_automatic_checkpoint_requires_reviewed_changed_content_handoff(self):
+        self.request['handoff_required'] = True
+        self.changed()
+        result = self.engine.checkpoint(self.request)
+        self.assertEqual(result['state'], 'blocked')
+        self.assertIn('requires a reviewed handoff_file', result['reason'])
+        self.assertFalse(self.prfile.exists())
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), self.base)
+
+    def test_automatic_read_only_checkpoint_needs_no_new_handoff_destination(self):
+        self.request['handoff_required'] = True
+        self.assertEqual(self.engine.checkpoint(self.request)['state'], 'verified')
         self.assertFalse(self.prfile.exists())
 
     def test_observation_ack_requires_all_originals_persisted(self):

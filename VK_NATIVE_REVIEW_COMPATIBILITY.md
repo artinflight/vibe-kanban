@@ -187,3 +187,19 @@ bridge baselines through this patch, activate AutoSwitch modes, change native or
 Vibe DEFAULT permissions, or use this fixture as a production rollback dataset.
 Rollout/rollback must preserve latest native/Vibe data and the existing combined
 source/paired artifact contract. No deployment or live acceptance is claimed.
+
+## Disposable routing-artifact runner correction
+
+The release owner applies Ubuntu's authenticated `apparmor-profiles` package and
+loads only `/usr/share/apparmor/extra-profiles/bwrap-userns-restrict` with
+`apparmor_parser -r` in the disposable routing-artifact GitHub runner. This matches
+the existing normal Test and native-compatibility runner setup. The build script's
+mandatory namespace prerequisite remains unchanged. No Desktop or MCP host
+policy, global relaxation, alternate sandbox or full-access mode is introduced.
+
+The prior failed artifact runs remain failed evidence. Require the corrected
+source-bound artifact build and the final combined PR245/PR246/PR247 validation
+before nomination. Explicitly dispatch the native-compatibility workflow on the
+combined source when path filters omit it. Native acceptance must still prove
+`workspace-write`, `on-request`, `auto_review`, matching review/action bindings,
+unchanged integrity checks and the real original-manager/worker authority.

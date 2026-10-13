@@ -54,7 +54,10 @@ Any unresolved observation in the workspace blocks normal session reset and
 worker publication for every queued owner in that workspace. The SQL verification
 transition enforces the same condition, independent of pagination, retry timing,
 owner metadata deletion and scheduling flags. A failed observation does not stop
-incoming user work. Reconciliation must prove and retain the actual completed
+admitted automatic owner work; its checkpoint remains blocked. Legacy owner
+admission is held for the affected workspace while an observation is unresolved,
+even if scheduling or publication policy has been disabled. Incoming work must
+remain queued/private rather than being discarded. Reconciliation must prove and retain the actual completed
 history; this feature provides no automatic clear/dismiss API for observations.
 The new migration treats old rows, including previously verified rows, as unproven
 observations. A historical green at `598fe060` is not evidence for this correction.
@@ -84,6 +87,25 @@ outbox before they wait on admission. Handler cancellation/failure leaves them
 pending; normal acknowledgement marks them handled. The worker defers checkpoints
 for the affected workspace while a pending input is unresolved. It does not
 invent a delivery/handling claim from silence, idle state or executor success.
+
+## Legacy operation and rollback cannot bypass uncertainty
+
+The observation gate applies to the whole affected workspace, including new
+executions without a scheduled checkpoint row. Legacy `begin` admission, `end`
+completion and all backend `check`/`check-all`/`checkpoint` coverage calls check
+retained SQLite observations before invoking the helper. Query failure also blocks.
+Completion checks uncertainty before selecting either the legacy end hook or the
+unconfigured fallback; disabling scheduling or removing/restoring the legacy
+policy cannot enable broad commit/cleanup or a green preservation report.
+
+Scheduled `begin` and completion observation still capture originals, and `block`
+can retain a failure. These operations do not certify remote coverage or clear
+uncertainty. Clean legacy workspaces with no unresolved observations retain their
+existing behavior, including previously observed scheduled owners. Standalone
+helper receipts are repository evidence; they do not reconcile VK's retained
+workspace observations or authorize release. This correction withdraws the
+`1bb69a4a8` candidate. Staging's existing combined PR248 remains held pending a
+corrected exact-head review and its release checks.
 
 ## Automatic changed-content handoff
 

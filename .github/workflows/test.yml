@@ -470,7 +470,7 @@ jobs:
           VK_AUTOMATIC_GITHUB_SYNC: "1"
         run: >-
           cargo nextest run -p db -p local-deployment -p services
-          -E 'test(observation_) | test(owner_identity_retry) | test(idle_worker_preserves) | test(restored_batches) | test(incoming_input_survives)'
+          -E 'test(legacy_observation_) | test(observation_) | test(owner_identity_retry) | test(idle_worker_preserves) | test(restored_batches) | test(incoming_input_survives)'
 
       - name: Build source-bound combined checkpoint candidate
         if: github.event_name == 'workflow_dispatch' && inputs.github_sync_candidate

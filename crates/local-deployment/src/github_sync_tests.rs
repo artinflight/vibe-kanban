@@ -277,7 +277,7 @@ async fn observation_container(pool: sqlx::SqlitePool, policy: &Path) -> LocalCo
 
 #[cfg(target_os = "linux")]
 impl ObservationFixture {
-    async fn new() -> Self {
+    async fn new(scheduled: bool) -> Self {
         let root = tempfile::tempdir().unwrap();
         let repo_path = root.path().join("repo");
         std::fs::create_dir(&repo_path).unwrap();
@@ -410,9 +410,11 @@ impl ObservationFixture {
             &ctx.repos,
             false,
         );
-        TurnGithubSync::enqueue(&pool, execution.id, workspace.id, &request.to_string())
-            .await
-            .unwrap();
+        if scheduled {
+            TurnGithubSync::enqueue(&pool, execution.id, workspace.id, &request.to_string())
+                .await
+                .unwrap();
+        }
         let policy = root.path().join("policy.json");
         std::fs::create_dir(root.path().join("private-state")).unwrap();
         let mut mount = root.path();
@@ -430,12 +432,16 @@ impl ObservationFixture {
             "repositories": { repo.id.to_string(): {"common_dir": common_dir, "allowed": ["source.txt"]} }
         }).to_string()).unwrap();
         let container = observation_container(pool, &policy).await;
-        assert_eq!(
+        let admitted = if scheduled {
+            container
+                .invoke_preservation_helper("begin", request.clone())
+                .await
+        } else {
             container
                 .invoke_preservation("begin", request.clone())
-                .await["state"],
-            "pending"
-        );
+                .await
+        };
+        assert_eq!(admitted["state"], "pending", "{admitted}");
         std::fs::write(repo_path.join("source.txt"), "B\n").unwrap();
         fixture_git(&repo_path, &["add", "."]);
         fixture_git(&repo_path, &["commit", "-qm", "B"]);
@@ -457,27 +463,31 @@ impl ObservationFixture {
     }
 
     async fn callback(&self) {
+        self.callback_for(self.execution).await;
+    }
+
+    async fn callback_for(&self, execution: Uuid) {
         use command_group::AsyncCommandGroup;
         let mut child = tokio::process::Command::new("true").group_spawn().unwrap();
         let group = child.inner().id().unwrap();
-        TurnGithubSync::bind_group(&self.container.db.pool, self.execution, group)
+        TurnGithubSync::bind_group(&self.container.db.pool, execution, group)
             .await
             .unwrap();
         self.container
             .child_store
             .write()
             .await
-            .insert(self.execution, Arc::new(RwLock::new(child)));
+            .insert(execution, Arc::new(RwLock::new(child)));
         tokio::time::timeout(
             Duration::from_secs(15),
             self.container
-                .spawn_exit_monitor(&self.execution, None, Some(group)),
+                .spawn_exit_monitor(&execution, None, Some(group)),
         )
         .await
         .unwrap()
         .unwrap();
         assert_eq!(
-            ExecutionProcess::find_by_id(&self.container.db.pool, self.execution)
+            ExecutionProcess::find_by_id(&self.container.db.pool, execution)
                 .await
                 .unwrap()
                 .unwrap()
@@ -567,7 +577,7 @@ impl ObservationFixture {
 #[tokio::test]
 async fn observation_callback_failure_reset_and_worker_survive_restart_and_policy_restore() {
     for policy_changed in [false, true] {
-        let mut fixture = ObservationFixture::new().await;
+        let mut fixture = ObservationFixture::new(true).await;
         let saved = std::fs::read(&fixture.policy).unwrap();
         if policy_changed {
             let mut policy: serde_json::Value = serde_json::from_slice(&saved).unwrap();
@@ -592,7 +602,7 @@ async fn observation_callback_failure_reset_and_worker_survive_restart_and_polic
 #[tokio::test]
 async fn observation_callback_persistence_failure_and_lost_callback_keep_pending_gate() {
     for stage in ["lost", "claim", "finish-success", "finish-failure"] {
-        let mut fixture = ObservationFixture::new().await;
+        let mut fixture = ObservationFixture::new(true).await;
         let saved_policy = std::fs::read(&fixture.policy).unwrap();
         if stage == "lost" {
             ExecutionProcess::update_completion(
@@ -649,7 +659,7 @@ async fn observation_callback_persistence_failure_and_lost_callback_keep_pending
 #[cfg(target_os = "linux")]
 #[tokio::test]
 async fn observation_callback_acknowledges_original_b_before_normal_reset() {
-    let fixture = ObservationFixture::new().await;
+    let fixture = ObservationFixture::new(true).await;
     fixture.callback().await;
     assert!(
         !TurnGithubSync::has_unobserved(&fixture.container.db.pool, fixture.workspace)
@@ -686,4 +696,280 @@ async fn observation_callback_acknowledges_original_b_before_normal_reset() {
         job.state, "verified",
         "reset must retain the original owner's job"
     );
+}
+
+#[cfg(target_os = "linux")]
+impl ObservationFixture {
+    async fn new_legacy_owner(&self) -> (ExecutionContext, ExecutorAction) {
+        use executors::actions::script::{ScriptContext, ScriptRequest, ScriptRequestLanguage};
+        // Real launch path with a synthetic script, never a native agent or network task.
+        let action = ExecutorAction::new(
+            ExecutorActionType::ScriptRequest(ScriptRequest {
+                script: "true".into(),
+                language: ScriptRequestLanguage::Bash,
+                context: ScriptContext::SetupScript,
+                working_dir: None,
+            }),
+            None,
+        );
+        let execution = ExecutionProcess::create(
+            &self.container.db.pool,
+            &CreateExecutionProcess {
+                session_id: self.session,
+                executor_action: action.clone(),
+                run_reason: ExecutionProcessRunReason::CodingAgent,
+            },
+            Uuid::new_v4(),
+            &[],
+        )
+        .await
+        .unwrap();
+        CodingAgentTurn::create(
+            &self.container.db.pool,
+            &CreateCodingAgentTurn {
+                execution_process_id: execution.id,
+                prompt: None,
+            },
+            Uuid::new_v4(),
+        )
+        .await
+        .unwrap();
+        CodingAgentTurn::update_summary(
+            &self.container.db.pool,
+            execution.id,
+            "New unscheduled owner",
+        )
+        .await
+        .unwrap();
+        assert!(
+            !TurnGithubSync::is_scheduled(&self.container.db.pool, execution.id)
+                .await
+                .unwrap()
+        );
+        (
+            ExecutionProcess::load_context(&self.container.db.pool, execution.id)
+                .await
+                .unwrap(),
+            action,
+        )
+    }
+
+    fn offer_green_legacy_receipt(&mut self) -> Arc<RwLock<Vec<String>>> {
+        let calls = Arc::new(RwLock::new(Vec::new()));
+        // Controlled helper boundary offers a bound green report. The production
+        // admission/monitor/coverage gates must refuse to request or accept it.
+        let report = json!({"version":2,"state":"verified", "reason":"synthetic exact remote witness",
+            "repositories":[{"receipt":{"commit":self.b,"changed":false}}]});
+        self.container.preservation_fixture = Some((report, calls.clone()));
+        self.container.automatic_sync_override = Some(false);
+        calls
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn legacy_observation_gate_survives_restart_disable_and_policy_rollback_for_new_owner() {
+    for policy_present in [true, false] {
+        let mut fixture = ObservationFixture::new(true).await;
+        // No rewrite: the current head stays B. Failure is durable only in SQLite.
+        let saved = std::fs::read(&fixture.policy).unwrap();
+        std::fs::remove_file(&fixture.policy).unwrap();
+        fixture.callback().await;
+        std::fs::write(&fixture.policy, saved).unwrap();
+        fixture.reopen().await;
+        let calls = fixture.offer_green_legacy_receipt();
+        if !policy_present {
+            fixture.container.preservation_config = None;
+        }
+        assert!(!fixture.container.automatic_sync_enabled());
+        let (ctx, action) = fixture.new_legacy_owner().await;
+        let before_ledger = std::fs::read(
+            fixture
+                ._root
+                .path()
+                .join("private-state")
+                .join(fixture.workspace.to_string())
+                .join("latest.json"),
+        )
+        .unwrap();
+        let error = fixture
+            .container
+            .start_execution_inner(&ctx.workspace, &ctx.execution_process, &action)
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("observation is unproven"));
+        assert!(
+            !fixture
+                .container
+                .child_store
+                .read()
+                .await
+                .contains_key(&ctx.execution_process.id)
+        );
+        assert!(
+            calls.read().await.is_empty(),
+            "admission must stop before helper/launch"
+        );
+        assert_eq!(
+            std::fs::read(
+                fixture
+                    ._root
+                    .path()
+                    .join("private-state")
+                    .join(fixture.workspace.to_string())
+                    .join("latest.json")
+            )
+            .unwrap(),
+            before_ledger
+        );
+        // A late/in-flight unscheduled completion must also stay blocked, even
+        // when there is no legacy policy and the old selector would choose None.
+        fixture.callback_for(ctx.execution_process.id).await;
+        let summary = CodingAgentTurn::find_by_execution_process_id(
+            &fixture.container.db.pool,
+            ctx.execution_process.id,
+        )
+        .await
+        .unwrap()
+        .unwrap()
+        .summary
+        .unwrap();
+        assert!(summary.starts_with("New unscheduled owner"));
+        assert!(
+            summary.contains("Git preservation blocked")
+                && summary.contains("observation is unproven"),
+            "{summary}"
+        );
+        assert!(!summary.contains("Git preservation verified"));
+        let request = LocalContainerService::preservation_request(
+            &ctx.workspace,
+            &ctx.execution_process,
+            &ctx.repos,
+            true,
+        );
+        for action in ["begin", "end", "check", "checkpoint", "check-all"] {
+            let request = if action == "check-all" {
+                json!({"turns":[request.clone()]})
+            } else {
+                request.clone()
+            };
+            let report = fixture.container.invoke_preservation(action, request).await;
+            assert_eq!(report["state"], "blocked", "{action}: {report}");
+            assert!(
+                report["reason"]
+                    .as_str()
+                    .unwrap()
+                    .contains("observation is unproven")
+            );
+        }
+        // Direct completion entrypoint has the same gate before fencing/helper work.
+        assert_eq!(
+            fixture
+                .container
+                .preserve_finished_turn(&ctx, Some(u32::MAX))
+                .await["state"],
+            "blocked"
+        );
+        assert!(calls.read().await.iter().all(|action| action == "block"));
+        let jobs = TurnGithubSync::for_workspace(&fixture.container.db.pool, fixture.workspace)
+            .await
+            .unwrap();
+        assert_eq!(
+            jobs.len(),
+            1,
+            "legacy owner must not create/replace a scheduled obligation"
+        );
+        assert_eq!(jobs[0].execution_process_id, fixture.execution);
+        assert_eq!(jobs[0].observation_state, "failed");
+        assert_eq!(
+            fixture_git(&fixture.repo, &["rev-parse", "HEAD"]),
+            fixture.b
+        );
+        fixture.reopen().await;
+        assert!(
+            TurnGithubSync::has_unobserved(&fixture.container.db.pool, fixture.workspace)
+                .await
+                .unwrap()
+        );
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn legacy_observation_gate_preserves_clean_admission_and_completion() {
+    for scheduled_history in [false, true] {
+        let mut fixture = ObservationFixture::new(scheduled_history).await;
+        if scheduled_history {
+            fixture.callback().await;
+        } else {
+            ExecutionProcess::update_completion(
+                &fixture.container.db.pool,
+                fixture.execution,
+                ExecutionProcessStatus::Completed,
+                Some(0),
+            )
+            .await
+            .unwrap();
+        }
+        fixture.reopen().await;
+        assert!(
+            !TurnGithubSync::has_unobserved(&fixture.container.db.pool, fixture.workspace)
+                .await
+                .unwrap()
+        );
+        let calls = fixture.offer_green_legacy_receipt();
+        let (ctx, action) = fixture.new_legacy_owner().await;
+        fixture
+            .container
+            .start_execution_inner(&ctx.workspace, &ctx.execution_process, &action)
+            .await
+            .unwrap();
+        let handle = fixture
+            .container
+            .exit_monitor_handles
+            .write()
+            .await
+            .remove(&ctx.execution_process.id)
+            .unwrap();
+        tokio::time::timeout(Duration::from_secs(20), handle)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(&*calls.read().await, &["begin", "end"]);
+        let summary = CodingAgentTurn::find_by_execution_process_id(
+            &fixture.container.db.pool,
+            ctx.execution_process.id,
+        )
+        .await
+        .unwrap()
+        .unwrap()
+        .summary
+        .unwrap();
+        assert!(summary.contains("Git preservation verified"), "{summary}");
+        assert!(
+            !TurnGithubSync::is_scheduled(&fixture.container.db.pool, ctx.execution_process.id)
+                .await
+                .unwrap()
+        );
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn legacy_observation_gate_refuses_coverage_when_workspace_state_is_unreadable() {
+    let mut fixture = ObservationFixture::new(false).await;
+    let calls = fixture.offer_green_legacy_receipt();
+    fixture.container.db.pool.close().await;
+    for action in ["begin", "end", "check", "checkpoint", "check-all"] {
+        let request = if action == "check-all" {
+            json!({"turns":[fixture.request.clone()]})
+        } else {
+            fixture.request.clone()
+        };
+        assert_eq!(
+            fixture.container.invoke_preservation(action, request).await["state"],
+            "blocked"
+        );
+    }
+    assert!(calls.read().await.is_empty());
 }

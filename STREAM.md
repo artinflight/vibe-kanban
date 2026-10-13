@@ -1,3 +1,17 @@
+## October 13 PR246 legacy rollback correction
+
+Fresh independent review confirmed the durable callback and ignored-destination
+fixes at1bb69a4a8 but found a P1 new-unscheduled-owner bypass. That candidate is
+withdrawn; Staging's existing PR248 candidate remains held. Legacy begin/end and
+all backend coverage actions now check retained workspace observation state,
+independent of scheduling and policy. Legacy admission and the completion fallback
+also check it before launching/certifying work. Scheduled original capture remains
+available without claiming coverage; uncertainty cannot be cleared by mode changes.
+Tests cover actual start/monitor paths, SQLite reopen, policy rollback/removal,
+new owners without queue rows, helper-call refusal and normal clean legacy work.
+Use exact-head PR246 checks and a fresh independent re-review for the correction.
+Staging remains the combined release owner. No merge, restart or unrelated retask.
+
 ## October 13 PR246 observation-loss correction
 
 Independent review rejected 598fe060: a discarded completion observation could

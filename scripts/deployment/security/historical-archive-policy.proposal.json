@@ -1,0 +1,27 @@
+{
+  "abi": 1,
+  "approval_reference": "Sentinel_3c972054e9688191900e38417fd55e00",
+  "backup_manifest_sha256": "27e8d486516ab818eee8376178badc9df3a5ddb6f42c6639c8021e5c7b893a2f",
+  "caller_uid": 1000,
+  "control_scope": {
+    "anchor_inode": null,
+    "filesystem_uuid": "26e4cac1-f2cf-485b-b1bc-d1be197a747e",
+    "path": "/mnt/vk-storage/vk-process-inspection-managed-v1"
+  },
+  "profile": "historical-archive-v1",
+  "target": {
+    "identity": {
+      "ctime_ns": 1791409456129506845,
+      "dev": 2065,
+      "gid": 1000,
+      "ino": 7340415,
+      "mode": 33152,
+      "mtime_ns": 1791409456129506845,
+      "nlink": 1,
+      "size": 23441521918,
+      "uid": 1000
+    },
+    "path": "/mnt/vk-storage/vk-combined-preparation-20261007/backups/checkpoint-/db5bb16b095241319a79e02e5fc8cdf6/checkpoint--db5bb16b095241319a79e02e5fc8cdf6.tar.zst",
+    "sha256": "e994567edaacc75d8aa9a3497b8384a8dbacec462854a3f7f8c5760e1a9a0ce4"
+  }
+}

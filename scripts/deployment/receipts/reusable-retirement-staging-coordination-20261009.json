@@ -1,0 +1,56 @@
+{
+  "backup_created": false,
+  "consumer_gate": "retained; no independent global fence prerequisite",
+  "coordination_delivery": "Normal existing reply; no duplicate session prompt.",
+  "evidence_source": "user/root coordination relay and read-only existing held driver/attempt receipt",
+  "installation_approval": "withdrawn; no installation authorized",
+  "live_owner_altered": false,
+  "new_execution_started": false,
+  "observed_receipt": {
+    "at": "2026-10-09T15:35:17Z",
+    "sha256": "443032f47a9abaed509d12beba4daa736e2f75aebf5e99d0a5fc60022709d894"
+  },
+  "observed_result": "retirement aborted before unlink; no restart/cutover",
+  "operator_bridge_constraints": [
+    "Authenticate every recvmsg fragment before bounded frame acceptance; account for sudo proxy/PTY sender.",
+    "Prove protected births during scan are covered; root-origin JSON is not proof of scan completeness.",
+    "Unchanged helper has no intentional owner archive-FD exemption; never waive a failed clearance.",
+    "Same resident/lease/target and immediate continuation; no later SSH/subprocess/hash; reject replay/extra frames."
+  ],
+  "ordering_correction": "All expensive/network/gate callbacks precede final held inspection; no postscan gate callback; bounded local checks then exact continuation.",
+  "prepare_first_manual_source_read_only_review": {
+    "findings": [
+      "Historical root helper and resident only enumerate leaders; thread-private FDs/maps and thread births are not covered.",
+      "Only denied PIDs from one postscan list are compared; newly born protected processes during traversal can escape that comparison.",
+      "Last age check precedes proof-file write/fsync; bounded receipt age is not rechecked after that potentially blocking I/O."
+    ],
+    "not_active_process_attestation": true,
+    "observed_source_sha256": "9e4fa312673949337531b8c076b15bfe21ca5464dc09678f29349c865b169d16",
+    "ordering_improvement": "Hashes/SSH complete and archive FD closes before the operator helper.",
+    "source_path": "/mnt/vk-storage/vk-runtime-backup-20261009/retire-approved-single-incident-archive-prepare-first-20261009.py",
+    "staging_changed": false
+  },
+  "privilege_installed": false,
+  "read_only_execution_lookup": {
+    "d9f07b0f-b92d-4b17-a60a-f1cfdf0782bb": "completed"
+  },
+  "residual_limit": "Existing process can open or exec after inspection; stable inventory/fresh receipt/process seal do not exclude that TOCTOU.",
+  "retirement_performed": false,
+  "schema": 1,
+  "scope": "source-only coordination; no execution or operational mutation",
+  "staging_roots_changed": false,
+  "staging_session": "7d6734c1-c8d0-4d55-ac27-b1f763d15a6e",
+  "sudo_attempted": false,
+  "uninspected_protected_SSH_SFTP_births": {
+    "at": "2026-10-09T15:42:48Z",
+    "pids": [
+      1632206,
+      1632291,
+      1632292
+    ]
+  },
+  "user_relay_execution_ids": [
+    "e7db8d73-a331-4fb0-b5c2-7230d44011ff",
+    "d9f07b0f-b92d-4b17-a60a-f1cfdf0782bb"
+  ]
+}

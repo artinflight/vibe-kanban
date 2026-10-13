@@ -1,3 +1,62 @@
+## October 9: Exact reviewed scope packaged for one admin invocation
+
+Read VK_INSPECTION_INSTALLER.md for the self-contained pinned source-only installer
+and prepared dry-run, read-only acceptance and grant-only rollback commands.
+The reviewed29af1c33 plan, inspector code/policies, binaries and grants remain
+unchanged. No privileged invocation/install/security/live-owner action occurred;
+adoption stays untouched. 20 unprivileged installer/harness fixtures and all54
+checker tests pass. Root OS/visibility and installed acceptance are never-run
+boundaries. Both Desktop runner attempts failed; authentication remains unverified.
+Owner approval is pending. Older JSON-only/no-package notes are historical.
+
+## October 9: Two-profile source-only inspection bundle
+
+PR234 now adds a separate exact historical archive profile and unprivileged
+adapter to the unchanged managed namespace checker/launcher/policy. Read
+VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md and the version-pinned
+scripts/deployment/security/inspection-two-profile-install-plan.json for the
+single proposed administrator installation: two exact zero-argument read-only
+grants in one include, fixed root code and two pinned policies. The historical
+file stays at its existing path; no deletion/service privilege is proposed.
+54 focused tests pass, including substitution/visibility/authentication/replay
+and both clocks after witness and immediately before continuation. Existing
+native process-event tests prove post-scan subprocess attempts are denied.
+No root entrypoint, installation, live owner or Staging mutation occurred.
+Installed acceptance and operational adoption remain untested. Administrator
+authentication remains unverified: Desktop lacks a usable UI/terminal and its
+command-runner setup failed; parent/root is assessing one harmless retry. The
+artifact is a JSON plan only. Immutable ancestor rules apply only to privileged
+code/config/sudo paths; the existing writable SSD parent is not changed. LXD
+privileges and same-account review remain separate boundaries, never a bypass. Fallback survives until
+human QA. Earlier one-profile proposals below are historical.
+
+# October 9: Reusable source-only protected-consumer ABI
+
+Branch `fix/automatic-retirement-preflight` remains isolated at PR231 checkpoint
+`c57dceaac5b214fe94dfdce512827ab7b0520b75`. [Draft PR234](https://github.com/artinflight/vibe-kanban/pull/234)
+supersedes its incident-specific proposal with a stable metadata-only root ABI,
+release-specific live-authenticated manifests and held-operation ordering.
+Read [VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md](VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md)
+for exact bounded namespace/one-time grant, trust boundaries and residual races.
+
+All expensive/network gate checks precede final inspection; no post-scan gate
+callback remains. A dedicated terminal actor seals process creation before root
+reads its request. Late PID/TID births reject. An unchanged process can still open
+a target after inspection; no atomic global fence is claimed or added as a gate.
+Routine no-retirement restart skips root entirely. Future targets/source changes
+inside the proposed approved namespace do not change the privileged grant.
+
+Receipt age is rechecked on both clocks after witness traversal. Bounded rollback
+disables adapter adoption and withdraws only the exact sudoers include, preserving
+all artifacts/evidence/fallback; it adds no deletion privilege or live action.
+
+Installation approval is withdrawn. No helper/security installation, target
+retirement, restart, cutover, live-owner alteration, Staging-root change,
+unrelated build or new backup is authorized/performed. Existing Staging owns
+current incident operations and its separate operator-bridge investigation.
+Fallback survives until human QA. Installed visibility and owner adoption remain
+unvalidated. Older entries below are historical scope descriptions.
+
 Current October9 restart gate update: Desktop SSH/B works; whole-state online
 backup accepted (77roots/76DBs), archive SHA735e2115. Read
 VK_RESTART_PROGRESS_20261009.md before older entries. Exact offline application

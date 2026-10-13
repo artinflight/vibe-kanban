@@ -1,0 +1,33 @@
+{
+  "artifact_sha256": {
+    "scripts/deployment/security/retirement-policy.proposal.json": "bfd27d6ecb4507805490e333c3ea55b4a3c4061268f240f48ff83d4d28dba268",
+    "scripts/deployment/security/vk-retirement-preflight.sudoers.proposal": "42299a5e496e4abb281da0224ae2069e7cc35c92e7424290cbd3384d0d103375",
+    "scripts/deployment/security/vk_retirement_check.py": "0489bf6c2451c2c8022eea347e4443b095d42b21f12d70336d1c158c5a0147e4",
+    "scripts/deployment/vk_retirement_preflight.py": "d11dd0bb6d9c3ae95c3dcd3fac75067fe19aa879a8cbe2ad3cff7681b6f2c1f5"
+  },
+  "base_checkpoint": "c57dceaac5b214fe94dfdce512827ab7b0520b75",
+  "baseline_limits": {
+    "cargo_workspace_tests": "Not run; no unrelated rebuilds authorized",
+    "check": "legacy-path guard passed; TypeScript absent",
+    "format": "Rust format passed; Prettier absent",
+    "lint": "ESLint absent"
+  },
+  "candidate_regression_commit": "014b8abd4",
+  "candidate_regressions_passed": 142,
+  "eight_reviewed_PR229_source_hashes_unchanged": true,
+  "final_package_regressions_passed": 4,
+  "implementation_commit": "35734cda38d453e1196868955f963800e1bf79aa",
+  "new_backup_created": false,
+  "ops_check_passed": true,
+  "owner_adopted": false,
+  "pr": "https://github.com/artinflight/vibe-kanban/pull/234",
+  "preflight_regressions_passed": 23,
+  "privilege_installed": false,
+  "production_changed": false,
+  "retirement_performed": false,
+  "root_checker_executed": false,
+  "schema": 1,
+  "scope": "source-only automatic retirement consumer preflight",
+  "sudoers_proposal_syntax": "visudo -cf parsed OK (unprivileged)",
+  "urgent_fresh_root_receipt_obtained": false
+}

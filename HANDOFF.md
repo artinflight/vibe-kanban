@@ -1,3 +1,75 @@
+## October 9: Exact reviewed scope packaged for one admin invocation
+
+Read VK_INSPECTION_INSTALLER.md for the self-contained pinned source-only installer
+and prepared dry-run, read-only acceptance and grant-only rollback commands.
+The reviewed29af1c33 plan, inspector code/policies, binaries and grants remain
+unchanged. No privileged invocation/install/security/live-owner action occurred;
+adoption stays untouched. 20 unprivileged installer/harness fixtures and all54
+checker tests pass. Root OS/visibility and installed acceptance are never-run
+boundaries. Both Desktop runner attempts failed; authentication remains unverified.
+Owner approval is pending. Older JSON-only/no-package notes are historical.
+
+## October 9: Two-profile source-only inspection bundle
+
+PR234 now adds a separate exact historical archive profile and unprivileged
+adapter to the unchanged managed namespace checker/launcher/policy. Read
+VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md and the version-pinned
+scripts/deployment/security/inspection-two-profile-install-plan.json for the
+single proposed administrator installation: two exact zero-argument read-only
+grants in one include, fixed root code and two pinned policies. The historical
+file stays at its existing path; no deletion/service privilege is proposed.
+54 focused tests pass, including substitution/visibility/authentication/replay
+and both clocks after witness and immediately before continuation. Existing
+native process-event tests prove post-scan subprocess attempts are denied.
+No root entrypoint, installation, live owner or Staging mutation occurred.
+Installed acceptance and operational adoption remain untested. Administrator
+authentication remains unverified: Desktop lacks a usable UI/terminal and its
+command-runner setup failed; parent/root is assessing one harmless retry. The
+artifact is a JSON plan only. Immutable ancestor rules apply only to privileged
+code/config/sudo paths; the existing writable SSD parent is not changed. LXD
+privileges and same-account review remain separate boundaries, never a bypass. Fallback survives until
+human QA. Earlier one-profile proposals below are historical.
+
+# October 9: Reusable ABI source-only follow-up
+
+[Draft PR234](https://github.com/artinflight/vibe-kanban/pull/234), stacked on PR231,
+now proposes stable metadata-only root inspection and live owner/lease/nonce
+manifest authentication. Read
+[VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md](VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md).
+The earlier incident/source/interpreter pins are superseded. The one-time scope
+is a new empty root-owned, inode/SSD-UUID-bound managed namespace; current archive
+is outside it. Exact security changes and launcher's no-argument digest grant
+are reviewable there. Null policy enrollment deliberately fails closed.
+
+No installation is approved. No live owner/security/service/data/routing or
+Staging-root changes were made. The fresh15:35 receipt missed protected SSH/SFTP
+births15:42:48; source adapter now completes all hashes/network/gate callbacks
+before final held inspection. It removes post-scan verify_gates, then does bounded
+local metadata/owner/lease/receipt checks and exact in-process continuation.
+Native terminal process seal rejects post-response subprocess/SSH attempts.
+No independent global-consumer fence is required; unrelated existing opens remain
+a documented TOCTOU risk, not eliminated by five-second receipts or PID inventory.
+
+37 focused fixtures pass, including native ordering/fork/exec/thread rejection,
+real peer/lease checks and modeled root visibility/consumer/churn failures.
+The root entrypoint has never been invoked. Privileged visibility, effective
+installed grant and Staging adoption remain untested. Parent/root may review one
+bundle before any future action approval. Human QA/backup/rollback and explicit
+exceptional retirement/interruption approvals remain authoritative. Current
+Staging operations and stdout-bridge constraints return only via existing reply.
+
+Freshness is rechecked on both clocks after the witness traversal. Source rollback
+defaults adapter adoption off; administrator withdraws only the exact sudoers
+include after disarming/draining pending operations, retaining all evidence and
+fallback. Delayed-inventory/adoption-disabled/revoked-grant tests pass.
+
+All142 candidate regressions pass at49a47cc78 with the clean-source gate intact.
+Ops, diff checks and unprivileged sudoers syntax pass. Format/check/lint attempts
+stop at absent Prettier/TypeScript/ESLint; Rust formatting and legacy guard pass.
+Validation receipt records final checks and exact artifact hashes. No unrelated
+Cargo build is authorized. Historical first-design receipt remains unchanged.
+Fixtures/build output stay on mounted `/mnt/vk-storage`.
+
 Current October9 restart gate update: Desktop SSH/B works; whole-state online
 backup accepted (77roots/76DBs), archive SHA735e2115. Read
 VK_RESTART_PROGRESS_20261009.md before older entries. Exact offline application
@@ -4356,7 +4428,7 @@ User QA checklist for the no-restart frontend repair:
 
 # Latest: V2 Returned To Green, Readiness Withdrawn
 
-The23:14 UTC approved attempt failed when it stopped a transient execution unit
+The 23:14 UTC approved attempt failed when it stopped a transient execution unit
 already removed by Green shutdown. Green returned on the same data; no final
 capture or production Blue activation occurred. Recovery acceptance passed.
 Read VK_BLUE_READINESS_20260911.md's withdrawal before any further action.

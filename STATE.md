@@ -1,3 +1,53 @@
+## October 9: Exact reviewed scope packaged for one admin invocation
+
+Read VK_INSPECTION_INSTALLER.md for the self-contained pinned source-only installer
+and prepared dry-run, read-only acceptance and grant-only rollback commands.
+The reviewed29af1c33 plan, inspector code/policies, binaries and grants remain
+unchanged. No privileged invocation/install/security/live-owner action occurred;
+adoption stays untouched. 20 unprivileged installer/harness fixtures and all54
+checker tests pass. Root OS/visibility and installed acceptance are never-run
+boundaries. Both Desktop runner attempts failed; authentication remains unverified.
+Owner approval is pending. Older JSON-only/no-package notes are historical.
+
+## October 9: Two-profile source-only inspection bundle
+
+PR234 now adds a separate exact historical archive profile and unprivileged
+adapter to the unchanged managed namespace checker/launcher/policy. Read
+VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md and the version-pinned
+scripts/deployment/security/inspection-two-profile-install-plan.json for the
+single proposed administrator installation: two exact zero-argument read-only
+grants in one include, fixed root code and two pinned policies. The historical
+file stays at its existing path; no deletion/service privilege is proposed.
+54 focused tests pass, including substitution/visibility/authentication/replay
+and both clocks after witness and immediately before continuation. Existing
+native process-event tests prove post-scan subprocess attempts are denied.
+No root entrypoint, installation, live owner or Staging mutation occurred.
+Installed acceptance and operational adoption remain untested. Administrator
+authentication remains unverified: Desktop lacks a usable UI/terminal and its
+command-runner setup failed; parent/root is assessing one harmless retry. The
+artifact is a JSON plan only. Immutable ancestor rules apply only to privileged
+code/config/sudo paths; the existing writable SSD parent is not changed. LXD
+privileges and same-account review remain separate boundaries, never a bypass. Fallback survives until
+human QA. Earlier one-profile proposals below are historical.
+
+## October 9: Reusable protected-consumer preflight remains source only
+
+PR234 supersedes its historical incident-specific installation proposal with a
+stable metadata-only root ABI and bounded managed namespace; see
+VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md. Owner withdrew installation approval.
+No security installation, live adoption, Staging mutation or current retirement
+is performed. Routine future releases in the proposed separately approved scope
+use authenticated dynamic manifests, not changed privileged grants. No-target
+restarts skip the capability. All expensive hashes/network/gate callbacks precede
+the final check inside the held operation; postscan only bounded local checks and
+exact continuation are allowed. Full attempted protected visibility/churn failure
+is required, but existing processes can still open a file afterward; no global
+atomic fence is claimed or added. Backup/target/interruption/rollback approvals
+and fallback survival until human QA remain authoritative. Both clocks are rechecked after task-witness traversal. Bounded rollback disables
+new adapter admission and removes only its exact grant, preserving all artifacts,
+evidence and fallback. Installed privileged acceptance and separate Staging
+owner adoption remain unvalidated.
+
 ## October 8: Workspace-first frontend follow-up in preparation
 
 Workspace landing, To do defaults on phones, and whole-card attention styling

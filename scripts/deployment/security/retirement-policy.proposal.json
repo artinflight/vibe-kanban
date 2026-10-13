@@ -1,0 +1,11 @@
+{
+  "abi": 1,
+  "caller_uid": 1000,
+  "scopes": {
+    "managed-artifacts-v1": {
+      "path": "/mnt/vk-storage/vk-process-inspection-managed-v1",
+      "anchor_inode": null,
+      "filesystem_uuid": "26e4cac1-f2cf-485b-b1bc-d1be197a747e"
+    }
+  }
+}

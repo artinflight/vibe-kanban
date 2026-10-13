@@ -1,0 +1,98 @@
+{
+  "approval_status": "Owner withdrew installation; no current installation/action approval request.",
+  "artifact_sha256": {
+    "scripts/deployment/security/retirement-policy.proposal.json": "3eee0ef7cd50699468a36503ef52fb38c8b095fda6ce00a1b5a2cd490a1cfaa8",
+    "scripts/deployment/security/vk-retirement-preflight.sudoers.proposal": "6d4436c2329c7d88ac01df3b61b1332237d97d04bc193c5dc48e3a8be162d5bd",
+    "scripts/deployment/security/vk_process_inspect_launcher.c": "6491de58830a9006ecf5045315509f15767faf80d14b9fd89c10801d6cceda53",
+    "scripts/deployment/security/vk_retirement_check.py": "6e898eeb21d04cfbf4d94e5939eb20b27d89f069ee99b8b021d63893b4263d63",
+    "scripts/deployment/test_vk_retirement_preflight.py": "d280c387a99c98f0f0f21b6803f8e40b16b45aa51eb7e1615fc5d675def60122",
+    "scripts/deployment/vk_retirement_preflight.py": "394c89547fcafd2f81f2352681f4505e95c87c0c3c66e640a07e3fee1be7c719"
+  },
+  "at": "2026-10-09T16:24:52.397252+00:00",
+  "authentication": "Live SO_PEERCRED PID/UID/start + exact kernel FLOCK + matching manifest/nonce status; NOT independent digital release signature or QA authorization.",
+  "base_checkpoint": "c57dceaac5b214fe94dfdce512827ab7b0520b75",
+  "baseline_limits": {
+    "cargo_workspace_tests": "Not run: no unrelated rebuilding authorized.",
+    "check": "Attempted; legacy path guard passed, TypeScript missing.",
+    "format": "Attempted; Rust formatting passed, Prettier missing.",
+    "installed_root_visibility": "Not tested; root entrypoint not executed.",
+    "lint": "Attempted; ESLint missing.",
+    "operational_adoption": "Not tested; Staging integration belongs to existing session."
+  },
+  "candidate_regressions": {
+    "clean_source_guard_not_bypassed": true,
+    "command": "python3 -B -m unittest discover -s scripts/deployment -p 'test_vk_candidate*.py'",
+    "count": 142,
+    "passed": true,
+    "source_commit": "64cb7f72c0893866cf60c311049b56983383f0f9"
+  },
+  "consumer_gate": "Retained; no independent global fence prerequisite.",
+  "diff_check_passed": true,
+  "duplicate_execution_started": false,
+  "eight_reviewed_PR229_source_hashes_unchanged": true,
+  "fallback_policy": "Preserved until human QA.",
+  "focused_regressions": {
+    "command": "python3 -B -S -m unittest discover -s scripts/deployment -p 'test_vk_retirement_preflight.py'",
+    "count": 34,
+    "modeled_root_failures": [
+      "Opaque/non-dumpable access denial",
+      "Process/task churn and late SSH PIDs",
+      "Nonleader private FD/maps consumer",
+      "All inode consumer kinds",
+      "Symlink/parent/hardlink/cross-device/metadata substitution",
+      "Scope anchor ownership/inode replacement",
+      "Nonce/source/manifest/owner/start/lease mismatch",
+      "Owner endpoint replacement",
+      "Replay/timestamp/installed code hash/invented action claims",
+      "Malformed maps/input and scan timeout"
+    ],
+    "native_kernel_tests": [
+      "Fork/exec/new-thread denial including preexisting thread TSYNC.",
+      "Real prepare and gate children before inspection; inspection child before seal; attempted SSH subprocess after response denied."
+    ],
+    "passed": true,
+    "privileged_scanner_substituted_in_native_order_test": true
+  },
+  "implementation_commit": "64cb7f72c0893866cf60c311049b56983383f0f9",
+  "launcher_proposal": {
+    "compiled_elf_sha256": "33b47e5f890040bb8821a6a458dd1c4062e34c97d3e644cccd233e728051e12a",
+    "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "flags": [
+      "-std=c11",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wl,--build-id=none"
+    ],
+    "installed": false,
+    "setuid": false,
+    "sudo_invoked": false,
+    "unprivileged_noarg_and_arbitrary_args_rejected": true
+  },
+  "new_backup_created": false,
+  "ops_check_passed": true,
+  "owner_adopted": false,
+  "policy_enrollment": {
+    "anchor_inode": null,
+    "filesystem_uuid": "26e4cac1-f2cf-485b-b1bc-d1be197a747e",
+    "installed_policy_sha256": null,
+    "new_empty_anchor_only": true,
+    "path": "/mnt/vk-storage/vk-process-inspection-managed-v1",
+    "requires_separate_explicit_action_approval": true,
+    "template_fails_closed": true
+  },
+  "postscan_callback_policy": "verify_gates and orchestration callbacks never invoked after scan; bounded local status/lease/metadata/receipt checks only before exact continuation",
+  "pr": "https://github.com/artinflight/vibe-kanban/pull/234",
+  "privilege_installed": false,
+  "privileged_abi": "1; stable code/launcher/policy, dynamic role-authenticated manifests; no artifact-content reads",
+  "production_changed": false,
+  "residual_TOCTOU": "Already-existing unrelated process can open/exec after scan; no global atomic exclusion claimed.",
+  "retirement_performed": false,
+  "root_checker_executed": false,
+  "schema": 1,
+  "scope": "reusable source-only ABI1 metadata-only protected-process preflight",
+  "staging_roots_changed": false,
+  "sudo_denial_retried": false,
+  "sudoers_proposal_syntax": "unprivileged visudo -cf parsed OK; installed matching untested"
+}

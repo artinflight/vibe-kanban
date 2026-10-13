@@ -1576,3 +1576,60 @@ October 9 integration: current staging e8c450fb is incorporated as the normal
 PR base. Its original continuity documents remain preserved at that immutable
 commit; this stream retains newer bounded candidate/recovery tracking. No live
 service, route, credential or access change is performed by this merge.
+
+## October 9: Automatic protected consumer preflight source
+
+Prepared a fixed root checker, source-only PR231 boundary adapter and tested
+failure modes from c57dceaa in an isolated branch. Exact one-time security grant
+proposal is in VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md; no live privileges, retirement,
+restart, cutover, unrelated build or new backup. Urgent root receipt remains a
+separate unresolved owner gate; fallback remains until human QA.
+
+## October 9: Reusable ABI and held-boundary ordering correction
+
+Superseded PR234's incident-specific privilege proposal after owner withdrawal.
+Stable no-argument launcher/root metadata-only ABI accepts bounded live-authenticated
+release manifests under a new proposed root-owned inode/UUID anchor; source/PID/
+release updates need no new grant within approved scope. No current installation
+or live scope/owner/service/data changes. All expensive gate/SSH/hash work moves
+before the final held scan; postscan verify_gates is removed. Native terminal
+seccomp tests deny later fork/exec/threads/SSH. Document existing-process open
+TOCTOU honestly, with no impossible global fence prerequisite. One-time bundled
+security proposal, current Staging bridge constraints and validation artifacts
+are in VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md. Preserve fallback until human QA.
+
+## October 9: Bounded review fixes before installation approval
+
+Receipt freshness now repeats both wall/monotonic checks after full task-witness
+traversal, before continuation. Added deterministic delayed-inventory regression.
+Adapter admission defaults disabled; source tests cover disabled adoption and
+modeled exact-grant withdrawal without retries/action or evidence/fallback loss.
+Rollback documentation removes only /etc/sudoers.d/vk-process-inspection-v1 after
+owner-controlled pending-operation draining, with no recursive cleanup, service
+change or root deletion capability. Privileged bundle remains unchanged; no
+installation or live owner/security changes.
+
+## 2026-10-09 — Source-only two-profile inspection follow-up
+
+Added a separately fixed historical archive metadata-only profile/adapter using
+the unchanged audited managed scanner. Proposed one bundled two-command exact
+installation, with fresh anchor enrollment, acceptance and grant-only rollback.
+54 focused tests pass; immediate pre-continuation dual-clock freshness retained.
+No install, privileged invocation, retirement or Staging change. See
+VK_AUTOMATIC_RETIREMENT_PREFLIGHT.md and the two-profile source receipt.
+
+## 2026-10-09 — Installation-plan review wording correction
+
+Restricted immutable ancestor requirements to privileged code/config/sudo paths;
+SSD scope uses no-symlink, pinned filesystem/new root-owned inode checks without
+changing its writable parent. Administrator authentication remains unverified
+after failed Desktop command-runner readiness; parent/root assesses one harmless
+retry. JSON plan only, no installer packaged/executed. Code/grants/scopes unchanged.
+
+## 2026-10-09 — Package exact reviewed two-profile bootstrap
+
+Prepared embedded version-pinned administrator installer, atomic validated grant
+publication, failure/provenance withdrawal and inspection-only acceptance harness.
+Reviewed29af1c33 scope/plan and capabilities unchanged. 20 unprivileged fixtures
+and54 checker tests pass. No root invocation, installation, adoption or live change.
+Both Desktop runner attempts failed; secure administrator authentication unverified.

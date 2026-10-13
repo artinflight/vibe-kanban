@@ -14,6 +14,64 @@ pub struct TurnGithubSync {
     pub report: Option<String>,
 }
 
+impl TurnGithubSync {
+    pub async fn enqueue(
+        pool: &SqlitePool,
+        execution: Uuid,
+        workspace: Uuid,
+        request: &str,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query("INSERT INTO turn_github_sync (execution_process_id, workspace_id, request) VALUES (?, ?, ?) ON CONFLICT(execution_process_id) DO NOTHING")
+            .bind(execution).bind(workspace).bind(request).execute(pool).await?;
+        Ok(())
+    }
+
+    pub async fn ready(pool: &SqlitePool) -> Result<Vec<Self>, sqlx::Error> {
+        // Persisted executor completion, rather than a transient callback, makes restart
+        // recovery possible. A missing completion remains waiting, never successful.
+        sqlx::query_as("SELECT j.execution_process_id, j.workspace_id, j.request, j.writer_group, j.state, j.attempts, j.report FROM turn_github_sync j LEFT JOIN execution_processes e ON e.id = j.execution_process_id WHERE j.state != 'verified' AND (e.id IS NULL OR e.status != 'running') AND j.retry_at <= unixepoch() ORDER BY j.retry_at, j.created_at, j.rowid LIMIT 64")
+            .fetch_all(pool).await
+    }
+
+    pub async fn defer(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        // Fairness across a page of busy owners without counting a sync attempt.
+        sqlx::query("UPDATE turn_github_sync SET retry_at = unixepoch() + 5 WHERE execution_process_id = ? AND state != 'verified'")
+            .bind(self.execution_process_id).execute(pool).await?;
+        Ok(())
+    }
+
+    pub async fn bind_group(
+        pool: &SqlitePool,
+        execution: Uuid,
+        group: u32,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE turn_github_sync SET writer_group = ? WHERE execution_process_id = ? AND writer_group IS NULL")
+            .bind(i64::from(group)).bind(execution).execute(pool).await?;
+        Ok(())
+    }
+
+    pub async fn record(
+        &self,
+        pool: &SqlitePool,
+        state: &str,
+        report: &str,
+    ) -> Result<(), sqlx::Error> {
+        // No in-flight state to strand after a crash. Retry reconciles the helper's
+        // existing receipt and exact remote witness before another commit/push.
+        sqlx::query("UPDATE turn_github_sync SET state = ?, report = ?, attempts = attempts + 1, retry_at = unixepoch() + min(3600, 30 * (1 << min(attempts, 7))), updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE execution_process_id = ? AND state != 'verified'")
+            .bind(state).bind(report).bind(self.execution_process_id).execute(pool).await?;
+        Ok(())
+    }
+
+    pub async fn for_workspace(
+        pool: &SqlitePool,
+        workspace: Uuid,
+    ) -> Result<Vec<Self>, sqlx::Error> {
+        sqlx::query_as("SELECT execution_process_id, workspace_id, request, writer_group, state, attempts, report FROM turn_github_sync WHERE workspace_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 64")
+            .bind(workspace).fetch_all(pool).await
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,63 +142,5 @@ mod tests {
             status[0].state, "verified",
             "stale completion must not overwrite success"
         );
-    }
-}
-
-impl TurnGithubSync {
-    pub async fn enqueue(
-        pool: &SqlitePool,
-        execution: Uuid,
-        workspace: Uuid,
-        request: &str,
-    ) -> Result<(), sqlx::Error> {
-        sqlx::query("INSERT INTO turn_github_sync (execution_process_id, workspace_id, request) VALUES (?, ?, ?) ON CONFLICT(execution_process_id) DO NOTHING")
-            .bind(execution).bind(workspace).bind(request).execute(pool).await?;
-        Ok(())
-    }
-
-    pub async fn ready(pool: &SqlitePool) -> Result<Vec<Self>, sqlx::Error> {
-        // Persisted executor completion, rather than a transient callback, makes restart
-        // recovery possible. A missing completion remains waiting, never successful.
-        sqlx::query_as("SELECT j.execution_process_id, j.workspace_id, j.request, j.writer_group, j.state, j.attempts, j.report FROM turn_github_sync j LEFT JOIN execution_processes e ON e.id = j.execution_process_id WHERE j.state != 'verified' AND (e.id IS NULL OR e.status != 'running') AND j.retry_at <= unixepoch() ORDER BY j.retry_at, j.created_at, j.rowid LIMIT 64")
-            .fetch_all(pool).await
-    }
-
-    pub async fn defer(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
-        // Fairness across a page of busy owners without counting a sync attempt.
-        sqlx::query("UPDATE turn_github_sync SET retry_at = unixepoch() + 5 WHERE execution_process_id = ? AND state != 'verified'")
-            .bind(self.execution_process_id).execute(pool).await?;
-        Ok(())
-    }
-
-    pub async fn bind_group(
-        pool: &SqlitePool,
-        execution: Uuid,
-        group: u32,
-    ) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE turn_github_sync SET writer_group = ? WHERE execution_process_id = ? AND writer_group IS NULL")
-            .bind(i64::from(group)).bind(execution).execute(pool).await?;
-        Ok(())
-    }
-
-    pub async fn record(
-        &self,
-        pool: &SqlitePool,
-        state: &str,
-        report: &str,
-    ) -> Result<(), sqlx::Error> {
-        // No in-flight state to strand after a crash. Retry reconciles the helper's
-        // existing receipt and exact remote witness before another commit/push.
-        sqlx::query("UPDATE turn_github_sync SET state = ?, report = ?, attempts = attempts + 1, retry_at = unixepoch() + min(3600, 30 * (1 << min(attempts, 7))), updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE execution_process_id = ? AND state != 'verified'")
-            .bind(state).bind(report).bind(self.execution_process_id).execute(pool).await?;
-        Ok(())
-    }
-
-    pub async fn for_workspace(
-        pool: &SqlitePool,
-        workspace: Uuid,
-    ) -> Result<Vec<Self>, sqlx::Error> {
-        sqlx::query_as("SELECT execution_process_id, workspace_id, request, writer_group, state, attempts, report FROM turn_github_sync WHERE workspace_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 64")
-            .bind(workspace).fetch_all(pool).await
     }
 }

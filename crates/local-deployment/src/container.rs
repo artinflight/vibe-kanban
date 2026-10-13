@@ -1059,6 +1059,10 @@ impl LocalContainerService {
                 }
 
                 if scheduled_sync {
+                    // Owner completion and remote coverage are separate events.
+                    // A missing publication policy must not suppress the actual
+                    // completion signal used by interim preservation observers.
+                    container.notify_agent_turn_completion(&ctx).await;
                     container.consume_queued_follow_up(&ctx).await;
                     container.consume_capacity_queued_follow_up().await;
                 }

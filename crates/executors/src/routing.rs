@@ -818,6 +818,101 @@ mod tests {
     }
 
     #[test]
+    fn progress_question_candidate_obeys_floors_exclusions_and_qualification() {
+        let (mut policy, mut models, mut availability) = fixture();
+        policy.mode = RoutingMode::Shadow;
+        policy.floor = CapabilityFloor::Assessed;
+        for proof in &mut availability.models {
+            proof.supported_efforts.push("low".into());
+            proof.verified_efforts.push("low".into());
+        }
+        let prompt = "Do we have better recommendations?";
+        let mut a = crate::routing_assessment::assess(prompt);
+        crate::routing_context::apply_reference_context(
+            &mut a,
+            prompt,
+            Some("Recommend mode and selected settings are unchanged; CI is blocked."),
+        );
+        let a = crate::routing_assessment::retain_previous(a, prompt, Some("protected"));
+        for (explicit, model, effort) in [
+            (CapabilityFloor::Assessed, "gpt-6-sol", "low"),
+            (CapabilityFloor::Workhorse, "gpt-6.1-sol", "medium"),
+            (CapabilityFloor::Frontier, "gpt-6-astra", "high"),
+        ] {
+            policy.floor = explicit;
+            let floor = crate::routing_assessment::boundary_floor(
+                &a,
+                explicit,
+                Some(CapabilityFloor::Frontier),
+            );
+            assert_eq!(
+                choose_assessed(&policy, floor, a.envelope, &models, &availability, 100).unwrap(),
+                (model.into(), effort.into())
+            );
+        }
+        policy.denied_models.push("gpt-6-astra".into());
+        assert!(
+            choose_assessed(
+                &policy,
+                CapabilityFloor::Frontier,
+                a.envelope,
+                &models,
+                &availability,
+                100
+            )
+            .is_err()
+        );
+        policy.floor = CapabilityFloor::Assessed;
+        for model in &mut models {
+            model.qualifications.clear();
+        }
+        assert!(
+            choose_assessed(&policy, a.floor, a.envelope, &models, &availability, 100).is_err()
+        );
+    }
+
+    #[test]
+    fn progress_question_preserves_selected_settings_and_failed_execution_floor() {
+        let (mut policy, _, _) = fixture();
+        policy.mode = RoutingMode::Shadow;
+        policy.floor = CapabilityFloor::Assessed;
+        let mut prior = action(Some(policy.clone()));
+        if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut prior.typ {
+            r.prompt = "Change authentication permissions".into();
+        }
+        resolve_action(&mut prior, None, false).unwrap();
+        for failed in [false, true] {
+            let mut next = action(Some(policy.clone()));
+            if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut next.typ {
+                r.prompt = "Do we have better recommendations?".into();
+                r.executor_config.model_id = Some("gpt-6.1-sol".into());
+                r.executor_config.reasoning_id = Some("high".into());
+            }
+            let before = serde_json::to_value(&next.typ).unwrap();
+            resolve_action_impl(
+                &mut next,
+                Some(&prior),
+                failed,
+                None,
+                false,
+                Some("Recommend mode remains enabled. CI is blocked by the sandbox."),
+            )
+            .unwrap();
+            assert_eq!(serde_json::to_value(&next.typ).unwrap(), before);
+            let d = next.routing_decision.unwrap();
+            assert!(d.semantic.is_none());
+            assert_eq!(
+                d.floor,
+                if failed {
+                    CapabilityFloor::Frontier
+                } else {
+                    CapabilityFloor::Routine
+                }
+            );
+        }
+    }
+
+    #[test]
     fn diagnostic_reassessment_uses_workhorse_pair_without_overriding_manual_floor() {
         let (mut policy, models, availability) = fixture();
         policy.floor = CapabilityFloor::Assessed;

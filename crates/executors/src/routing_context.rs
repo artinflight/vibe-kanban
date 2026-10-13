@@ -81,13 +81,51 @@ fn bounded_record_kind(prompt: &str, reply: &str) -> Option<&'static str> {
         "review rejected",
         "no verified progress",
         "operation failed",
-        "blocked by",
-        "cannot continue",
         "unresolved scope",
     ]
     .iter()
     .any(|term| prior.contains(term))
     {
+        return None;
+    }
+    // Ask about observed output, not for a new recommendation or permission to
+    // resume a blocked operation. The current speech act and a matching topic
+    // in completed context establish this small reporting step. A blocker in
+    // another part of that report does not turn the question into remediation.
+    // Keep the grammar closed: extra actions, safety judgments, unknown topics
+    // and unresolved pronouns still need the normal semantic/safety path.
+    static PROGRESS: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(concat!(
+            r"^(?:please )?(?:do we (?:now )?have|are we (?:now )?getting) ",
+            r"(?:any |better |improved |new |updated |more |fewer )?",
+            r"(recommendations|results|reports)(?: (?:yet|now))?[.!?]*$"
+        ))
+        .unwrap()
+    });
+    if let Some(question) = PROGRESS.captures(&text) {
+        let subject = &question[1];
+        let topic_present = prior
+            .split(|c: char| !c.is_alphanumeric())
+            .any(|word| word == subject || word == subject.trim_end_matches('s'));
+        // Recommend is the name of an output mode, not a request to design new
+        // alternatives. Its presence resolves "recommendations" in a status
+        // question even when the last reply mostly discussed validation.
+        static RECOMMEND_MODE: LazyLock<Regex> =
+            LazyLock::new(|| Regex::new(r"\brecommend(?:ation)? mode\b").unwrap());
+        static RECORDED_RECOMMENDATIONS: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"\b(?:recorded|observed|generated) (?:model |routing )recommendations\b")
+                .unwrap()
+        });
+        let known_output = if subject == "recommendations" {
+            RECOMMEND_MODE.is_match(&prior) || RECORDED_RECOMMENDATIONS.is_match(&prior)
+        } else {
+            topic_present
+        };
+        if known_output {
+            return Some("observed_output_status");
+        }
+    }
+    if prior.contains("blocked by") || prior.contains("cannot continue") {
         return None;
     }
     static STATUS: LazyLock<Regex> = LazyLock::new(|| {
@@ -183,6 +221,109 @@ pub fn reassess_step(a: &Assessment, prompt: &str, _previous: &str) -> bool {
 mod tests {
     use super::*;
     use crate::routing_assessment::{assess, boundary_floor, retain_previous};
+
+    #[test]
+    fn progress_questions_report_existing_outputs_without_resuming_blocked_work() {
+        // Sanitized context shape from the observed defect; no private paths,
+        // native identities or operator transcript is needed for this fixture.
+        let report = "CI is blocked by an unsupported sandbox. Recommend mode and selected settings are unchanged.";
+        for (prompt, reply) in [
+            ("Do we have better recommendations?", report),
+            ("Are we getting better recommendations now?", report),
+            ("Do we now have updated recommendations?", report),
+            (
+                "Do we have any results yet?",
+                "The recorded results are available.",
+            ),
+            (
+                "Are we getting improved reports?",
+                "The report generator is installed.",
+            ),
+        ] {
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, Some(reply));
+            assert_eq!(a.evidence, "completed_context_bounded_record", "{prompt}");
+            let a = retain_previous(a, prompt, Some("protected"));
+            assert_eq!(a.floor, CapabilityFloor::Routine, "{prompt}");
+            assert!(
+                a.triage
+                    .evidence
+                    .contains(&"surrounding_assignment:protected".into())
+            );
+            assert_eq!(a.triage.validation, "text_comparison");
+            assert!(!a.triage.needs_repo_inspection);
+        }
+    }
+
+    #[test]
+    fn progress_questions_require_a_resolved_reporting_step_not_new_advice() {
+        let reply = "Recommend mode is unchanged; CI is blocked by the sandbox.";
+        for (prompt, context) in [
+            ("Do we have better recommendations?", None),
+            (
+                "Do we have better recommendations?",
+                Some("The package is installed."),
+            ),
+            (
+                "Do we have better recommendations?",
+                Some("My recommendation is to redesign the security boundary."),
+            ),
+            (
+                "Do we have better recommendations?",
+                Some("Recommendation validation failed."),
+            ),
+            (
+                "Do we have better recommendations?",
+                Some("Recommend mode: unresolved scope."),
+            ),
+            (
+                "Do we have better recommendations?",
+                Some("Recommend mode: tests still fail."),
+            ),
+            (
+                "Do we have better recommendations for bypassing the sandbox?",
+                Some(reply),
+            ),
+            (
+                "Do we have better recommendations? Then apply them",
+                Some(reply),
+            ),
+            (
+                "Do we have better recommendations and restart it?",
+                Some(reply),
+            ),
+            ("Are the recommendations safe?", Some(reply)),
+            ("Recommend a better approach", Some(reply)),
+            ("Do we have better permissions?", Some(reply)),
+            ("Is it better?", Some(reply)),
+            ("Fix it", Some(reply)),
+            ("Continue", Some(reply)),
+        ] {
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, context);
+            assert_ne!(a.evidence, "completed_context_bounded_record", "{prompt}");
+            assert_eq!(
+                retain_previous(a, prompt, Some("protected")).floor,
+                CapabilityFloor::Frontier,
+                "{prompt}"
+            );
+        }
+        let prompt = "Do we have better recommendations?";
+        for failure in [false, true] {
+            let mut a = assess(prompt);
+            if failure {
+                a.validation_failure = true;
+            } else {
+                a.triage.risk.push("protected_repository_context".into());
+            }
+            apply_reference_context(&mut a, prompt, Some(reply));
+            assert_ne!(a.evidence, "completed_context_bounded_record");
+            assert_eq!(
+                retain_previous(a, prompt, Some("protected")).floor,
+                CapabilityFloor::Frontier
+            );
+        }
+    }
 
     #[test]
     fn bounded_reports_and_documentation_do_not_resume_protected_work() {

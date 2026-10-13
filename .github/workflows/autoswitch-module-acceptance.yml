@@ -23,6 +23,34 @@ env:
   RUST_TOOLCHAIN: nightly-2025-12-04
 
 jobs:
+  policy-regressions:
+    # Pure policy/consumer functions only. This is not worker/sandbox acceptance
+    # and never packages a module; the independent module job remains mandatory.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt
+          cache-key: backend-test-Linux-X64-ubuntu-24.04
+      - name: Offline policy and accounting regressions (no subprocess sandbox or inference)
+        run: |
+          set -euo pipefail
+          mkdir -p policy-results
+          cargo fmt --all -- --check
+          python3 scripts/testing/test-autoswitch-cost-report.py 2>&1 | tee policy-results/accounting.log
+          for suite in routing_context::tests routing_assessment::tests routing_semantic::tests routing_module::tests routing::tests; do
+            cargo test --locked -p executors --lib "$suite" -- --test-threads=1 2>&1 | tee "policy-results/${suite//::/-}.log"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: autoswitch-policy-${{ github.sha }}
+          path: policy-results/
+          if-no-files-found: warn
+          retention-days: 14
   module:
     runs-on: ubuntu-24.04
     timeout-minutes: 35

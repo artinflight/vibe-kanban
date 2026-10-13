@@ -24,6 +24,26 @@ and factual reporting as steps, while genuine diagnosis and protected operations
 retain their existing minimums. Native semantic evidence is not rewritten to
 invent confidence or erase risk.
 
+### Follow-up reporting scope
+
+Natural progress questions about existing outputs are classified before semantic
+inference when the completed reply identifies the output. Recommendation
+questions require a named Recommend mode or recorded/observed/generated
+model or routing recommendations. A prior suggestion alone is insufficient. The closed reporting
+grammar excludes extra actions, safety judgments, new advice, unresolved pronouns
+and unknown topics. Existing failure and protected-context checks still apply.
+
+This uses the existing `completed_context_bounded_record` evidence. No cache or
+new cost assumption is added: a missing classifier trace is still unknown unless
+an exact reviewed zero-inference receipt establishes that path. The synthetic
+candidate check expects Sol6/low in Recommend under the existing registry; it is
+not proof of account availability, cheaper execution quality or savings.
+
+A hosted pure-policy job exercises the real context/assessment/semantic/worker
+validator/candidate functions without a subprocess sandbox or inference. It is
+not executor or same-process reload acceptance, and produces no publishable
+worker. The existing full-sandbox job and independent review remain required.
+
 ## Read-only cost report
 
 `scripts/vk-autoswitch-cost-report.py` reads VK decisions and the existing

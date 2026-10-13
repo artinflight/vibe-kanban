@@ -1,3 +1,28 @@
+## October 13: current output questions preserve their reporting scope
+
+Natural questions about whether an established feature is producing better
+recommendations/results/reports now use the completed-context reporting path.
+The narrow grammar requires a known output topic and no additional action;
+recommendations require an output-mode or recorded-output reference, not merely
+an earlier suggestion. A blocked validation job elsewhere in the previous reply
+does not change this question into repair work. Known validation failures,
+unresolved scope, current risks, actual failed executions, floors and exclusions
+remain protected. Subsequent continuation restores the surrounding assignment.
+
+Semantic instructions also distinguish observed-output questions from requests
+for new alternatives or applying them. No new context field, cache, model call,
+policy/catalog change or backend restart is introduced. Existing protocol-2
+history validation and cost-path evidence remain compatible. Generic unclear
+questions still take the conservative path; this is not a universal topic resolver.
+
+Focused pure Rust policy/consumer tests run in a separate hosted job with no
+sandbox/inference subprocess. This does not waive or bypass the separate full
+sandbox/executor/reload acceptance gate: the Ubuntu namespace probe was blocked
+on the last reviewed head and publication still needs successful exact-source
+acceptance plus independent review. No merge/publication/restart or security
+changes. Recommend and selected execution settings remain unchanged. See PR244
+for exact source/check results; private evidence remains local.
+
 ## October 12: approved disposable-runner Bubblewrap validation
 
 The user explicitly approved only Ubuntu's official Bubblewrap apt package on

@@ -833,6 +833,42 @@ mod tests {
     }
 
     #[test]
+    fn progress_question_skips_semantic_and_preserves_following_protected_continuation() {
+        let mut request = bounded_request();
+        request.prompt = "Do we have better recommendations?".into();
+        request.seed = (&crate::routing_assessment::assess(&request.prompt)).into();
+        request.completed_reply =
+            Some("CI remains blocked. Recommend mode and selected settings are unchanged.".into());
+        let copy = serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap();
+        let pre = checked(evaluate(copy).unwrap(), &request).unwrap();
+        assert!(!pre.needs_semantic);
+        request.seed = pre.assessment;
+        request.stage = "after".into();
+        let copy = serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap();
+        let post = checked(evaluate(copy).unwrap(), &request).unwrap();
+        assert_eq!(post.assessment.floor, CapabilityFloor::Routine);
+        assert!(
+            post.assessment
+                .triage
+                .evidence
+                .contains(&"surrounding_assignment:protected".into())
+        );
+
+        for prompt in ["Continue", "Fix it", "Apply the recommendations"] {
+            request.stage = "before".into();
+            request.prompt = prompt.into();
+            request.seed = (&crate::routing_assessment::assess(prompt)).into();
+            assert_eq!(
+                stages(serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap())
+                    .unwrap()
+                    .assessment
+                    .floor,
+                CapabilityFloor::Frontier
+            );
+        }
+    }
+
+    #[test]
     fn bounded_recording_skips_inference_and_passes_pinned_history_guards() {
         for prompt in [
             "Sitrep",

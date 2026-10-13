@@ -13,8 +13,10 @@ No Staging prompt, live setting, cutover, forced stop or media operation is in s
 Recommend and the selected model/effort remain unchanged. Cleanup stays closed.
 
 See VK_AUTOMATIC_GITHUB_SYNC.md for operating/rollback and validation boundaries.
-Real-scanner helper fixtures passed76 cases locally; new compiled backend fixtures
-and exact-head combined build are pending. These fixtures do not establish live
+Initial real-scanner helper fixtures passed76 cases; subsequent privacy/owned-lock
+regressions passed. The first hosted backend run passed545 tests (11 skipped).
+Use the current PR and private release handoff for final exact-head/enabled-mode
+checks and the combined PR245 artifact, not an earlier receipt. These fixtures do not establish live
 configured/enabled/enforced publication. Interim every-completed-turn coverage is
 still owned by the existing preservation task; a private next-idle handoff records
 the broadened requirement. It was appended to the existing private tracking issue

@@ -55,7 +55,9 @@ The existing queue now persists accepted batches privately before acknowledgemen
 Dispatch is durably marked before launch. A restart restores queued batches;
 uncertain dispatch remains visible in the queue and is held for reconciliation,
 never automatically replayed. A known launch failure restores its complete batch.
-Scratch is deleted only after a successful start. No queue is replaced with a
+Scratch is deleted only after a successful start. Actual owner-turn completion
+notifications remain separate from queued Git coverage; the checkpoint worker
+does not emit another coding-turn completion event. No queue is replaced with a
 sync prompt. Ordinary user input and native continuation retain their existing
 authorization and Recommend routing boundaries.
 

@@ -1,3 +1,16 @@
+## Combined safe-idle release preparation
+
+The release owner is preparing PR245 large-history verification, PR246 automatic
+GitHub checkpoints, PR247 native auto-review compatibility and the narrow
+Ubuntu bwrap profile correction on the disposable artifact runner. Read
+VK_COMBINED_SAFE_IDLE_RELEASE.md. This candidate does not merge component PRs
+or activate any feature. PR246 independent review, current original-history
+integrity/authority, final source-bound artifacts/private retained-reader overlay,
+configured preservation acceptance, backups/rollback and actual idle remain
+required. Native Approve for me is workspace-write/on-request/auto_review;
+Recommend and unrelated approval boundaries remain intact. No forced agent stop,
+cleanup, Desktop/MCP policy change or historical branch replacement is permitted.
+
 ## October13 automatic GitHub sync after every completed turn
 
 This stream implements the same-name local T36 issue on the existing workspace.

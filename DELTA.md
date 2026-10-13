@@ -1821,3 +1821,9 @@ The session reset endpoint now uses the existing shared admission boundary,
 matching follow-up retries and workspace Git routes. Explicit user resets retain
 their existing behavior and cannot race checkpoint verification. Final exact-head
 compiled validation and paired artifact are recorded in the private handoff.
+
+## Combined release-owner preparation
+
+Prepared exact PR245/PR246 baseline plus selected reviewed PR247 native paths and
+the disposable-runner bwrap profile correction. Independent review and private
+actual-authority/runtime-overlay acceptance remain gates; no activation claimed.

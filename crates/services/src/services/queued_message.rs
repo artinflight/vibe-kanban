@@ -181,6 +181,21 @@ impl QueuedMessageService {
         session_id: Uuid,
     ) -> Result<(), sqlx::Error> {
         if let Some(queued) = self.get_queued(session_id) {
+            let old_owner: Option<Uuid> = sqlx::query_scalar(
+                "SELECT workspace_id FROM turn_github_sync_user_queue WHERE session_id = ?",
+            )
+            .bind(session_id)
+            .fetch_optional(pool)
+            .await?;
+            let workspace: Uuid = match old_owner {
+                Some(owner) => owner,
+                None => {
+                    sqlx::query_scalar("SELECT workspace_id FROM sessions WHERE id = ?")
+                        .bind(session_id)
+                        .fetch_one(pool)
+                        .await?
+                }
+            };
             let data = serde_json::to_string(&queued)
                 .map_err(|_| sqlx::Error::Protocol("queue serialization failed".into()))?;
             let state = if self.recovery_holds.contains_key(&session_id) {
@@ -188,8 +203,8 @@ impl QueuedMessageService {
             } else {
                 "queued"
             };
-            sqlx::query("INSERT INTO turn_github_sync_user_queue VALUES (?, ?, ?) ON CONFLICT(session_id) DO UPDATE SET data = excluded.data, state = excluded.state")
-                .bind(session_id).bind(data).bind(state).execute(pool).await?;
+            sqlx::query("INSERT INTO turn_github_sync_user_queue VALUES (?, ?, ?, ?) ON CONFLICT(session_id) DO UPDATE SET data = excluded.data, state = excluded.state")
+                .bind(session_id).bind(workspace).bind(data).bind(state).execute(pool).await?;
         } else {
             sqlx::query("DELETE FROM turn_github_sync_user_queue WHERE session_id = ?")
                 .bind(session_id)
@@ -211,7 +226,7 @@ impl QueuedMessageService {
             if queued.session_id != session_id {
                 return Err(sqlx::Error::Protocol("durable queue owner mismatch".into()));
             }
-            if state == "dispatching" {
+            if state == "dispatching" || !super::admission::automatic_git_sync() {
                 self.recovery_holds.insert(session_id, ());
             }
             self.queue.insert(session_id, queued);
@@ -242,11 +257,16 @@ impl QueuedMessageService {
             return Ok(None);
         }
         let id = Uuid::new_v4();
+        let workspace: Uuid = sqlx::query_scalar("SELECT workspace_id FROM sessions WHERE id = ?")
+            .bind(session_id)
+            .fetch_one(pool)
+            .await?;
         sqlx::query(
-            "INSERT INTO turn_github_sync_incoming (id, session_id, data) VALUES (?, ?, ?)",
+            "INSERT INTO turn_github_sync_incoming (id, session_id, workspace_id, data) VALUES (?, ?, ?, ?)",
         )
         .bind(id)
         .bind(session_id)
+        .bind(workspace)
         .bind(data.to_string())
         .execute(pool)
         .await?;
@@ -267,7 +287,7 @@ impl QueuedMessageService {
         pool: &sqlx::SqlitePool,
         workspace: Uuid,
     ) -> Result<Vec<Uuid>, sqlx::Error> {
-        sqlx::query_scalar("SELECT q.id FROM turn_github_sync_incoming q JOIN sessions s ON s.id = q.session_id WHERE s.workspace_id = ? AND q.state = 'received'")
+        sqlx::query_scalar("SELECT id FROM turn_github_sync_incoming WHERE workspace_id = ? AND state = 'received'")
             .bind(workspace).fetch_all(pool).await
     }
 
@@ -276,9 +296,21 @@ impl QueuedMessageService {
         workspace: Uuid,
         id: Uuid,
     ) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("UPDATE turn_github_sync_incoming SET state = 'dismissed' WHERE id = ? AND state = 'received' AND session_id IN (SELECT id FROM sessions WHERE workspace_id = ?)")
+        let result = sqlx::query("UPDATE turn_github_sync_incoming SET state = 'dismissed' WHERE id = ? AND state = 'received' AND workspace_id = ?")
             .bind(id).bind(workspace).execute(pool).await?;
         Ok(result.rows_affected() == 1)
+    }
+
+    pub async fn pending_user_queue(
+        pool: &sqlx::SqlitePool,
+        workspace: Uuid,
+    ) -> Result<Vec<Uuid>, sqlx::Error> {
+        sqlx::query_scalar(
+            "SELECT session_id FROM turn_github_sync_user_queue WHERE workspace_id = ?",
+        )
+        .bind(workspace)
+        .fetch_all(pool)
+        .await
     }
 
     /// Check if a session has a queued message
@@ -318,6 +350,17 @@ mod tests {
         .await
         .unwrap();
         let session = Uuid::new_v4();
+        let workspace = Uuid::new_v4();
+        sqlx::query("CREATE TABLE sessions (id BLOB PRIMARY KEY, workspace_id BLOB)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO sessions VALUES (?, ?)")
+            .bind(session)
+            .bind(workspace)
+            .execute(&pool)
+            .await
+            .unwrap();
         let service = QueuedMessageService::new();
         service.queue_message(session, draft("first user message"));
         service.queue_for_capacity(session, draft("second user message"));
@@ -328,6 +371,27 @@ mod tests {
         assert_eq!(data.messages.len(), 2);
         assert_eq!(data.messages[0].message, "first user message");
         assert_eq!(data.messages[1].message, "second user message");
+        if super::super::admission::automatic_git_sync() {
+            assert!(
+                reopened.take_queued(session).is_some(),
+                "known queued input can resume normally"
+            );
+        } else {
+            assert!(
+                reopened.take_queued(session).is_none(),
+                "disabled rollback holds restored work"
+            );
+        }
+        sqlx::query("DELETE FROM sessions")
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            QueuedMessageService::pending_user_queue(&pool, workspace)
+                .await
+                .unwrap(),
+            vec![session]
+        );
         reopened.begin_dispatch(&pool, session).await.unwrap();
         let interrupted = QueuedMessageService::new();
         interrupted.restore(&pool).await.unwrap();
@@ -340,6 +404,78 @@ mod tests {
         let empty = QueuedMessageService::new();
         empty.restore(&pool).await.unwrap();
         assert!(!empty.has_queued(session));
+    }
+
+    #[tokio::test]
+    async fn incoming_input_survives_cancelled_handler_and_missing_session_with_exact_scope() {
+        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::raw_sql(include_str!(
+            "../../../db/migrations/20261013120000_turn_github_sync.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("CREATE TABLE sessions (id BLOB PRIMARY KEY, workspace_id BLOB)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let session = Uuid::new_v4();
+        let workspace = Uuid::new_v4();
+        sqlx::query("INSERT INTO sessions VALUES (?, ?)")
+            .bind(session)
+            .bind(workspace)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let input = QueuedMessageService::receive(
+            &pool,
+            session,
+            serde_json::json!({"message": "Synthetic private input"}),
+        )
+        .await
+        .unwrap();
+        if !super::super::admission::automatic_git_sync() {
+            assert!(input.is_none());
+            return;
+        }
+        let input = input.unwrap();
+        // Handler never acquired checkpoint admission or dispatched the action.
+        sqlx::query("DELETE FROM sessions")
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            QueuedMessageService::pending_incoming(&pool, workspace)
+                .await
+                .unwrap(),
+            vec![input]
+        );
+        assert!(
+            !QueuedMessageService::dismiss_incoming(&pool, Uuid::new_v4(), input)
+                .await
+                .unwrap()
+        );
+        assert!(
+            QueuedMessageService::dismiss_incoming(&pool, workspace, input)
+                .await
+                .unwrap()
+        );
+        assert!(
+            QueuedMessageService::pending_incoming(&pool, workspace)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        let original: String =
+            sqlx::query_scalar("SELECT data FROM turn_github_sync_incoming WHERE id = ?")
+                .bind(input)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert!(
+            original.contains("Synthetic private input"),
+            "explicit dismissal retains the private original"
+        );
     }
 
     fn draft(message: &str) -> DraftFollowUpData {

@@ -17,7 +17,8 @@ Real-scanner helper fixtures passed76 cases locally; new compiled backend fixtur
 and exact-head combined build are pending. These fixtures do not establish live
 configured/enabled/enforced publication. Interim every-completed-turn coverage is
 still owned by the existing preservation task; a private next-idle handoff records
-the broadened requirement and the lack of a non-interrupting delivery mechanism.
+the broadened requirement. It was appended to the existing private tracking issue
+through a supported non-interrupting comment; consumption/coverage remains unverified.
 
 ## October11 startup provenance and executable monitor ordering
 

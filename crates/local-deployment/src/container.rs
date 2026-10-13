@@ -576,16 +576,9 @@ impl LocalContainerService {
     ) -> serde_json::Value {
         let message = crate::turn_preservation::message(&report);
         // Preserve the executor outcome separately. A successful agent may still have blocked Git preservation.
-        let turn = match CodingAgentTurn::find_by_execution_process_id(
-            &self.db.pool,
-            ctx.execution_process.id,
-        )
-        .await
-        {
-            Ok(Some(turn)) => Ok(Some(turn)),
-            Ok(None) => Ok(None),
-            Err(error) => Err(error),
-        };
+        let turn =
+            CodingAgentTurn::find_by_execution_process_id(&self.db.pool, ctx.execution_process.id)
+                .await;
         let report = if let Ok(Some(turn)) = turn {
             let marker = "\n\n[Automatic GitHub checkpoint]\n";
             let original = turn.summary.as_deref().unwrap_or("");
@@ -730,6 +723,11 @@ impl LocalContainerService {
             // silently discard it behind a green checkpoint.
             match QueuedMessageService::pending_incoming(&self.db.pool, ctx.workspace.id).await {
                 Ok(incoming) if !incoming.is_empty() => busy = true,
+                Err(_) => return,
+                _ => {}
+            }
+            match QueuedMessageService::pending_user_queue(&self.db.pool, ctx.workspace.id).await {
+                Ok(queued) if !queued.is_empty() => busy = true,
                 Err(_) => return,
                 _ => {}
             }

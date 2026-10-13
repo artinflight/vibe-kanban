@@ -18,6 +18,7 @@ CREATE INDEX turn_github_sync_pending ON turn_github_sync(state, retry_at);
 -- is retained for review rather than automatically replaying the user's work.
 CREATE TABLE turn_github_sync_user_queue (
     session_id BLOB PRIMARY KEY NOT NULL,
+    workspace_id BLOB NOT NULL,
     data TEXT NOT NULL,
     state TEXT NOT NULL CHECK (state IN ('queued', 'dispatching'))
 );
@@ -27,6 +28,7 @@ CREATE TABLE turn_github_sync_user_queue (
 CREATE TABLE turn_github_sync_incoming (
     id BLOB PRIMARY KEY NOT NULL,
     session_id BLOB NOT NULL,
+    workspace_id BLOB NOT NULL,
     data TEXT NOT NULL,
     state TEXT NOT NULL DEFAULT 'received' CHECK (state IN ('received', 'handled', 'dismissed'))
 );

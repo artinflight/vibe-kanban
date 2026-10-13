@@ -71,8 +71,15 @@ pub async fn github_sync_status(
             workspace.id,
         )
         .await?;
+    let pending_queues =
+        services::services::queued_message::QueuedMessageService::pending_user_queue(
+            &deployment.db().pool,
+            workspace.id,
+        )
+        .await?;
     Ok(ResponseJson(ApiResponse::success(
-        serde_json::json!({"checkpoints": statuses, "pending_input_ids": pending_inputs}),
+        serde_json::json!({"checkpoints": statuses, "pending_input_ids": pending_inputs,
+            "pending_queue_session_ids": pending_queues}),
     )))
 }
 

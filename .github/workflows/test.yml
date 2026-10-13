@@ -462,6 +462,13 @@ jobs:
       - name: Run Cargo tests
         run: cargo nextest run --workspace --exclude vibe-kanban-tauri
 
+      - name: Exercise automatic checkpoint and input persistence with scheduling enabled
+        env:
+          VK_AUTOMATIC_GITHUB_SYNC: "1"
+        run: >-
+          cargo nextest run -p db -p local-deployment -p services
+          -E 'test(owner_identity_retry) | test(idle_worker_preserves) | test(restored_batches) | test(incoming_input_survives)'
+
       - name: Build source-bound combined checkpoint candidate
         if: github.event_name == 'workflow_dispatch' && inputs.github_sync_candidate
         env:
@@ -537,7 +544,7 @@ jobs:
   combined-capture-consent-acceptance:
     # Focused validation of the actual production baseline; normal PR/release
     # policy gates remain unchanged. This job never deploys or starts Vibe.
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && !inputs.github_sync_candidate
     runs-on: *runner_label
     timeout-minutes: 120
     permissions:

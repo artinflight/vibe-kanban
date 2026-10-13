@@ -118,8 +118,11 @@ checkpoint job, and fresh remote equality through the status endpoint and privat
 ledger. Read-only, retry and interruption fixtures are bounded evidence, not
 production enforcement acceptance. No forced agent stops or media operations.
 
-Rollback disables `VK_AUTOMATIC_GITHUB_SYNC` and retains all durable rows and
-private helper state. Use the established latest-data release rollback protocol;
-an older binary cannot automatically replay/reconcile this queue and must not
-restore an old database over newer user work. Disabling publication is not
-permission to clean up unprotected content.
+Rollback uses the same schema-compatible candidate binary with
+`VK_AUTOMATIC_GITHUB_SYNC` disabled and the previously verified preservation
+environment restored. It retains durable rows and private helper state. Restored
+user batches are held for reconciliation while scheduling is disabled. An older
+binary is not a proven rollback: its migration set may reject the new schema and
+it cannot reconcile these queues. Prove compatibility before nominating one; never
+restore an old database over newer user work. Follow the established latest-data
+release rollback protocol. Disabling publication does not permit cleanup.

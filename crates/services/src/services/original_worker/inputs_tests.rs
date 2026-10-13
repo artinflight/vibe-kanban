@@ -28,6 +28,21 @@ async fn large_sealed_input_prefix_is_streamed_through_the_native_index() {
     verify_in_home(home.path(), "synthetic", &seal, &[])
         .await
         .unwrap();
+    file.write_all(b"{\"type\":\"event_msg\",\"payload\":{\"type\":\"user_message\",\"message\":\"fixed continuation\"}}\n").unwrap();
+    file.flush().unwrap();
+    verify_in_home(
+        home.path(),
+        "synthetic",
+        &seal,
+        &[digest(b"fixed continuation")],
+    )
+    .await
+    .unwrap();
+    assert!(
+        verify_in_home(home.path(), "synthetic", &seal, &[])
+            .await
+            .is_err()
+    );
 }
 
 fn sealed(payloads: &[Value]) -> InputSeal {
@@ -244,5 +259,36 @@ async fn verify_private_history_read_only() {
         result.is_ok(),
         "Native freshness not proved: {}",
         result.unwrap_err()
+    );
+}
+
+#[test]
+#[ignore = "Private reference only; redirect the seal receipt to private storage, never CI"]
+fn reference_private_history_read_only() {
+    // Acceptance reference uses the original materialized payload-array encoding,
+    // including serde_json's numeric representation and preserve_order feature.
+    // This is deliberately separate from the measured streaming verifier and
+    // creates no contract or authority. Only use a stable private snapshot.
+    let request = std::env::var_os("VK_HISTORY_ACCEPTANCE_REQUEST").unwrap();
+    let request: Value = serde_json::from_slice(&std::fs::read(request).unwrap()).unwrap();
+    let seal: InputSeal = serde_json::from_value(request["seal"].clone()).unwrap();
+    let snapshot = Snapshot::open(seal.rollout).unwrap();
+    let mut payloads = Vec::new();
+    let mut reader = BufReader::new(&snapshot.file);
+    let mut line = Vec::new();
+    while reader.read_until(b'\n', &mut line).unwrap() != 0 {
+        assert!(line.len() as u64 <= MAX_RECORD_BYTES);
+        if line != b"\n"
+            && let Some(record) = input(&line).unwrap()
+        {
+            payloads.push(record.payload);
+        }
+        line.clear();
+    }
+    snapshot.unchanged().unwrap();
+    println!(
+        "reference_records={} reference_digest={}",
+        payloads.len(),
+        digest(&serde_json::to_vec(&payloads).unwrap())
     );
 }

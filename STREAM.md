@@ -1,3 +1,20 @@
+## October 13 large native-history verification repair
+
+The repair branch starts at current fork staging d786124a1. Source replaces the
+128 MiB whole-file gate with bounded-record streaming verification shared by
+startup adoption and invocation. Prefix serialization remains compatible;
+world-state instruction/permission records are sealed as amendments, accounting
+records are parsed, and unknown envelopes still fail closed. File identity,
+extent/timestamps and native-index binding are rechecked after each scan.
+
+Synthetic coverage includes large output histories and a large sealed input
+prefix, invalid/truncated JSON, changed inputs, unauthorized suffixes, native
+index failures and deterministic concurrent mutation. Compiled validation and
+private read-only real-history acceptance are pending the exact-head hosted
+checks. This is preparation only: capability remains default-off, with no grant,
+history, continuation, deployment, restart or staging-owner action.
+See VK_LARGE_HISTORY_VERIFICATION.md for the acceptance boundary.
+
 ## October11 startup provenance and executable monitor ordering
 
 Hosted Test38157545232 at abcf30cf1c1f5828551f7a9d95acf86b4d8ba6fc

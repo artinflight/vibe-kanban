@@ -1814,3 +1814,10 @@ visible batch and recovery hold. The restored-batch regression exercises failure
 and another restart in both enabled and disabled configurations. Fresh exact-head
 checks and source-bound paired build supersede the prior candidate for nomination;
 private handoff records their result. No production operation occurred.
+
+## 2026-10-13 — session reset checkpoint admission
+
+The session reset endpoint now uses the existing shared admission boundary,
+matching follow-up retries and workspace Git routes. Explicit user resets retain
+their existing behavior and cannot race checkpoint verification. Final exact-head
+compiled validation and paired artifact are recorded in the private handoff.

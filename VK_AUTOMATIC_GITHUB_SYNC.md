@@ -21,7 +21,7 @@ worker adoption. Every five seconds it considers a bounded fair page, then
 attempts at most one checkpoint. It waits for the owner's child tracker and
 Linux process group, overlapping workspace roots and externally observed
 workspace processes to be idle. It never stops an active turn. Normal input,
-launch and workspace Git mutations share admission serialization through the
+launch, manual session resets and workspace Git mutations share admission serialization through the
 attempt and receipt persistence. Helper subprocesses have an overall 90-second
 checkpoint command budget, a 110-second backend helper-group deadline and
 per-command timeouts; incoming requests can wait

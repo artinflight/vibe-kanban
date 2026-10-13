@@ -372,6 +372,19 @@ pub async fn reset_process(
     State(deployment): State<DeploymentImpl>,
     Json(payload): Json<ResetProcessRequest>,
 ) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
+    services::services::admission::run(reset_process_admitted(
+        Extension(session),
+        State(deployment),
+        Json(payload),
+    ))
+    .await
+}
+
+async fn reset_process_admitted(
+    Extension(session): Extension<Session>,
+    State(deployment): State<DeploymentImpl>,
+    Json(payload): Json<ResetProcessRequest>,
+) -> Result<ResponseJson<ApiResponse<()>>, ApiError> {
     let force_when_dirty = payload.force_when_dirty.unwrap_or(false);
     let perform_git_reset = payload.perform_git_reset.unwrap_or(true);
 

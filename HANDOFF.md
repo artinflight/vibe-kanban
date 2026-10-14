@@ -7,11 +7,14 @@ with [VK_RESTART_EFFICIENCY_20261014.md](VK_RESTART_EFFICIENCY_20261014.md).
 Its private release receipts identify current runtime and compatible rollback;
 do not reuse an old PID, service, source tree or actor from the history below.
 
-Staging now owns efficiency for the next restart. Existing preparation-cache
-tooling is pinned and tested, current artifact bytes reverified, and bounded
-four-worker all-session queue checks are integrated into a disabled controller
-fixture. Cold/full-pipeline timing and actual next-release adoption remain
-unverified. Backup scheduling is not claimed enabled.
+Staging now owns efficiency for the next restart. The audit and focused repairs
+to the existing preparation runner are implemented in scripts/deployment.
+54 runner tests and 16 disabled-controller regressions pass. The real 2,523-file
+sealed source plus accepted artifact reuse was verified without compiler work,
+payload copying or another full backup. Begin with implementation-r2 receipts in
+the efficiency task and the usage sequence in VK_RESTART_EFFICIENCY_20261014.md.
+Cold/full-pipeline timing and actual next-release adoption remain unverified.
+Backup scheduling is not claimed enabled; production is unchanged.
 
 B cleanup parallel-owner pickup:
 `/mnt/vk-storage/vk-b-retention-list-20261014/PARALLEL_CLEANUP_HANDOFF_20261014.md`.

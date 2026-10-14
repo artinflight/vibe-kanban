@@ -1110,3 +1110,17 @@ Four-worker fixture queue sweep covers all 1,139 sessions with no production
 requests. Full ten-minute pipeline/cold timing and live adoption remain unproven.
 No build, restart, cleanup, timer or external publication. Format attempted;
 frontend formatter unavailable. Read VK_RESTART_EFFICIENCY_20261014.md.
+
+## 2026-10-14: Restart efficiency implementation completed locally
+
+Imported the existing source-identical Staging preparation runner and implemented
+exclusive fail-fast cache ownership, up-front graph/command/input validation,
+corrupt-receipt step recovery, sealed non-Git source reuse, zero-copy accepted
+artifact verification, bounded queue admission and source/receipt-bound complete
+pipeline timing. Generic backend builds require the established isolated plan.
+54 focused preparation tests and16 disabled-controller regressions pass. Actual
+2523-file source/accepted-artifact reuse runs without compiler work or backup
+repetition. Narrow patch checked against Staging962d2673; no Staging merge or
+production deployment. Whole ten-minute/cold release timing remains unproved.
+Ops check passes; format attempted, Prettier missing. Detailed receipts remain
+local in the efficiency implementation-r2 task; no external diagnostics.

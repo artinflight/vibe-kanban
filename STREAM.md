@@ -6,9 +6,12 @@ Current Staging scope is a repeatable, measured restart path building on the
 successful October 14 combined release. Reuse exact accepted artifacts and
 validation, preserve warm compiler caches, complete bulk backup/restore work
 online, and retain final current-data/quiet/ownership/live-acceptance checks.
-The ten-minute target includes build through production work resuming; it has
-not yet been demonstrated. The new queue-reader integration is an unarmed
-engineering fixture, not a production-controller change.
+The audit and existing preparation-runner repairs are now implemented in
+scripts/deployment: source-bound cache reuse, sealed snapshots, early prerequisite
+checks, immediate duplicate-owner refusal, bounded queue submission and honest
+whole-pipeline timing. The ten-minute target includes build through production
+work resuming; it has not yet been demonstrated. The controller integration
+remains an unarmed engineering fixture, not a production-controller change.
 
 Read [VK_RESTART_EFFICIENCY_20261014.md](VK_RESTART_EFFICIENCY_20261014.md) and its
 private validation receipts. A separate cleanup owner will own the B retention

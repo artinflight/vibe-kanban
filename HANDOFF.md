@@ -1,3 +1,32 @@
+## October 14: output-status module published without a restart
+
+The independently reviewed module `output-status-876d7a554-20261013`, built from
+source `876d7a55440024d6fcc832b7e0467330825a676e`, is published through the existing
+prepare/publish/check path. Its manifest SHA-256 is
+`ed0e4b4852225371767e17b07a96c20f5c90747c629a1140f9c3594835652775`.
+The previous immutable release remains available for atomic rollback.
+
+Recorded acceptance: 61 hosted policy tests, 37 accounting/workflow tests,
+193 executor tests and the full-isolation same-process reload/rollback test pass;
+eight opt-in executor tests remain ignored. The hosted namespace failure is not
+accepted evidence; the exact exported artifacts passed on the existing supported
+host with security settings unchanged. Both the pinned loader and the current
+backend-matched validator accepted the package. Independent review found no blocker.
+
+Live readback confirms unchanged backend process, healthy API, unchanged config
+and executor settings, Recommend mode and selected model/effort. Model policy and
+classifier model/effort are unchanged. Active turns stay pinned; new execution
+boundaries can adopt the correction. No new real execution was observed during
+the immediate readback, so this establishes publication and compatibility, not
+observed cheaper execution, quality or savings. Inspect subsequent ordinary
+Recommend decisions; do not manufacture inference work. Private receipts remain
+outside Git. No backend restart, Auto activation or staging/main merge occurred.
+
+Deployment documentation passes governance and whitespace checks. The required
+format command completed Rust formatting, then stopped because the existing
+frontend Prettier executable is absent; no dependencies were installed and no
+frontend or runtime source changed in this deployment-only follow-up.
+
 ## October 13: authorized deployment, acceptance preparation
 
 The owner now requests deployment. The unchanged full Bubblewrap isolation probe

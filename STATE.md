@@ -1,3 +1,12 @@
+## October 14: AutoSwitch ordinary policy updates
+
+The supported protocol-2 routing-module path has published an independently
+reviewed classification correction without restarting the active backend.
+Current process/configuration readback and compatible sandboxed loader checks
+pass. Recommend remains required; publication does not activate automatic model
+switching or establish realized savings. Exact source/module validation and
+remaining ordinary-task observation are recorded in HANDOFF.md.
+
 ## October10: original-response recovery publication gate
 
 The original T18/MM finals remain absent from normal live conversation history.

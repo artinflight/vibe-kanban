@@ -43,6 +43,7 @@ pub(super) fn config_overrides(
     }
     let overrides = overrides.get_or_insert_default();
     overrides.insert("approvals_reviewer".into(), json!("auto_review"));
+    overrides.insert("features.guardian_approval".into(), json!(true));
     overrides.insert("apps".into(), Value::Object(apps));
     Ok(())
 }

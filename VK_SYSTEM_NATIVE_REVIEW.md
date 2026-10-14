@@ -61,3 +61,7 @@ Running processes are not silently reconfigured: natural new turns/processes and
 resumes must be verified at their actual activation boundary; original-history
 seals and fixed-worker authority are never rewritten or bypassed. No new arbitrary
 approval gate is introduced by these existing constraints.
+
+## Additional human-boundary coverage
+
+Additional candidate safeguards: native human-only tool fallbacks require an interactive service; Noop cannot approve them. Native permission-expansion requests receive typed, turn-scoped responses through the human approval service rather than JSON null. Guardian enablement is pinned while managed native constraints still fail closed. Actual native/MCP acceptance remains pending the source-bound builder.

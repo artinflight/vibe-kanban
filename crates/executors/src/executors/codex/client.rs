@@ -1623,8 +1623,44 @@ impl AppServerClient {
             ServerRequest::McpServerElicitationRequest { request_id, params } => {
                 self.start_elicitation(peer, request_id, params).await
             }
-            ServerRequest::ChatgptAuthTokensRefresh { .. }
-            | ServerRequest::PermissionsRequestApproval { .. } => {
+            ServerRequest::PermissionsRequestApproval { request_id, params } => {
+                let context = format!(
+                    "Native permission request: {}\n{}",
+                    params.reason.as_deref().unwrap_or(""),
+                    serde_json::to_string(&params.permissions)?
+                );
+                let status = self
+                    .request_tool_approval("permissions", &context, &params.item_id)
+                    .await?;
+                self.log_writer
+                    .log_raw(
+                        &Approval::approval_response(
+                            params.item_id.clone(),
+                            context,
+                            status.clone(),
+                        )
+                        .raw(),
+                    )
+                    .await?;
+                let permissions = if matches!(status, ApprovalStatus::Approved) {
+                    codex_app_server_protocol::GrantedPermissionProfile {
+                        network: params.permissions.network,
+                        file_system: params.permissions.file_system,
+                    }
+                } else {
+                    Default::default()
+                };
+                send_server_response(
+                    peer,
+                    request_id,
+                    codex_app_server_protocol::PermissionsRequestApprovalResponse {
+                        permissions,
+                        scope: codex_app_server_protocol::PermissionGrantScope::Turn,
+                    },
+                )
+                .await
+            }
+            ServerRequest::ChatgptAuthTokensRefresh { .. } => {
                 tracing::warn!("received unhandled v2 server request: {:?}", request);
                 let response = JSONRPCResponse {
                     id: request.id().clone(),
@@ -1844,6 +1880,11 @@ impl AppServerClient {
             .as_ref()
             .ok_or(ExecutorApprovalError::ServiceUnavailable)?;
 
+        if self.native_review_enabled.load(Ordering::SeqCst)
+            && !approval_service.supports_interactive_approvals()
+        {
+            return Err(ExecutorApprovalError::ServiceUnavailable.into());
+        }
         let approval_id = approval_service
             .create_tool_approval(tool_name)
             .or_else(|err| async {
@@ -4512,5 +4553,135 @@ for line in sys.stdin:
         cancel.cancel();
         child.kill().await.unwrap();
         child.wait().await.unwrap();
+    }
+    #[tokio::test]
+    async fn native_review_human_fallback_cannot_use_noop_or_auto_approve() {
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            Some(Arc::new(crate::approvals::NoopExecutorApprovalService)),
+            true,
+            false,
+            crate::env::RepoContext::default(),
+            false,
+            String::new(),
+            CancellationToken::new(),
+        );
+        client.enable_native_review();
+        assert!(
+            client
+                .request_tool_approval("bash", "codex.exec_command", "item")
+                .await
+                .is_err()
+        );
+        let (decision, _) =
+            client.command_execution_decision(&ApprovalStatus::Denied { reason: None });
+        assert_eq!(decision, CommandExecutionApprovalDecision::Decline);
+        let (decision, _) = client.file_change_decision(&ApprovalStatus::Denied { reason: None });
+        assert_eq!(decision, FileChangeApprovalDecision::Decline);
+    }
+    #[tokio::test]
+    async fn native_review_permission_fallback_requires_human_and_grants_only_the_turn() {
+        use std::process::Stdio;
+        struct Human(ApprovalStatus);
+        #[async_trait]
+        impl ExecutorApprovalService for Human {
+            fn supports_interactive_approvals(&self) -> bool {
+                true
+            }
+            async fn create_tool_approval(
+                &self,
+                _tool: &str,
+            ) -> Result<String, ExecutorApprovalError> {
+                Ok("explicit-human-fixture".into())
+            }
+            async fn create_question_approval(
+                &self,
+                _tool: &str,
+                _count: usize,
+            ) -> Result<String, ExecutorApprovalError> {
+                Err(ExecutorApprovalError::ServiceUnavailable)
+            }
+            async fn wait_tool_approval(
+                &self,
+                _id: &str,
+                _cancel: CancellationToken,
+            ) -> Result<ApprovalStatus, ExecutorApprovalError> {
+                Ok(self.0.clone())
+            }
+            async fn wait_question_answer(
+                &self,
+                _id: &str,
+                _cancel: CancellationToken,
+            ) -> Result<QuestionStatus, ExecutorApprovalError> {
+                Err(ExecutorApprovalError::ServiceUnavailable)
+            }
+        }
+        for status in [
+            ApprovalStatus::Approved,
+            ApprovalStatus::Denied { reason: None },
+            ApprovalStatus::TimedOut,
+        ] {
+            let mut child = tokio::process::Command::new("python3")
+                .args([
+                    "-u",
+                    "-c",
+                    "import sys
+for line in sys.stdin: print(line.strip(),file=sys.stderr,flush=True)",
+                ])
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .kill_on_drop(true)
+                .spawn()
+                .unwrap();
+            let cancel = CancellationToken::new();
+            let client = AppServerClient::new(
+                LogWriter::new(tokio::io::sink()),
+                Some(Arc::new(Human(status.clone()))),
+                false,
+                false,
+                crate::env::RepoContext::default(),
+                false,
+                String::new(),
+                cancel.clone(),
+            );
+            client.enable_native_review();
+            let (tx, _rx) = tokio::sync::oneshot::channel();
+            let peer = JsonRpcPeer::spawn(
+                child.stdin.take().unwrap(),
+                child.stdout.take().unwrap(),
+                client.clone(),
+                ExitSignalSender::new(tx),
+                cancel.clone(),
+            );
+            client.connect(peer.clone());
+            let request=ServerRequest::try_from(serde_json::from_value::<JSONRPCRequest>(serde_json::json!({
+                "id":"permission-human-fixture","method":"item/permissions/requestApproval","params":{
+                    "threadId":"root","turnId":"turn","itemId":"permission-item","reason":"fixture",
+                    "permissions":{"network":{"enabled":true},"fileSystem":null}
+                }})).unwrap()).unwrap();
+            client.handle_server_request(&peer, request).await.unwrap();
+            use tokio::io::AsyncBufReadExt;
+            let mut lines = tokio::io::BufReader::new(child.stderr.take().unwrap()).lines();
+            let raw = tokio::time::timeout(Duration::from_secs(3), lines.next_line())
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            let response: Value = serde_json::from_str(&raw).unwrap();
+            assert_eq!(response["id"], "permission-human-fixture");
+            assert_eq!(response["result"]["scope"], "turn");
+            if matches!(status, ApprovalStatus::Approved) {
+                assert_eq!(
+                    response["result"]["permissions"]["network"]["enabled"],
+                    true
+                );
+            } else {
+                assert_eq!(response["result"]["permissions"], serde_json::json!({}));
+            }
+            cancel.cancel();
+            child.kill().await.unwrap();
+            child.wait().await.unwrap();
+        }
     }
 }

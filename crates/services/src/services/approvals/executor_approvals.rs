@@ -141,6 +141,10 @@ impl ExecutorApprovalBridge {
 
 #[async_trait]
 impl ExecutorApprovalService for ExecutorApprovalBridge {
+    fn supports_interactive_approvals(&self) -> bool {
+        true
+    }
+
     async fn create_mcp_tool_approval(
         &self,
         consent_summary: &str,

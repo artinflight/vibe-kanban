@@ -64,6 +64,8 @@ pub(super) fn config_overrides(
     let overrides = overrides.get_or_insert_default();
     overrides.insert("approvals_reviewer".into(), json!("auto_review"));
     overrides.insert("features.guardian_approval".into(), json!(true));
+    // Otherwise input to an already-escalated terminal skips native review.
+    overrides.insert("features.write_stdin_approval".into(), json!(true));
     let mut apps = Value::Object(apps);
     omit_null_properties(&mut apps);
     overrides.insert("apps".into(), apps);
@@ -98,6 +100,7 @@ mod tests {
         let overrides = overrides.unwrap();
         assert_eq!(overrides["apps"], expected);
         assert_eq!(overrides["approvals_reviewer"], "auto_review");
+        assert_eq!(overrides["features.write_stdin_approval"], true);
         assert_eq!(overrides["model_reasoning_effort"], "high");
         assert_eq!(
             original["config"]["apps"]["_default"]["approvals_reviewer"],

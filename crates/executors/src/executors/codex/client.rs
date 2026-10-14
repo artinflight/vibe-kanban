@@ -4496,6 +4496,7 @@ for line in sys.stdin:
  else:
   config=r['params']['config']
   assert config['approvals_reviewer']=='auto_review'
+  assert config['features.write_stdin_approval'] is True
   assert config['apps']['example']['approvals_reviewer']=='auto_review'
   assert config['apps']['example']['links']['account']['approvals_reviewer']=='auto_review'
   assert config['apps']['example']['enabled'] is False

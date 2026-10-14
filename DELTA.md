@@ -1099,3 +1099,14 @@
 - Guard: future frontend/restart packages must carry forward this source fix and not roll back below `20260626Tmultiline-rich-paste`.
 
 2026-10-10: Diagnosed17:30 pre-launch failure as undersized8GiB raw catch-up estimate. Same selected paths now pass measured24/26GiB budgets with B/SSD capacity guards;17focused regressions/current/copied-schema/prepared inputs pass. Incumbent/current data protected; GitHub terminal readback added; publication still pending.
+
+## 2026-10-14: Cleanup handoff and restart efficiency
+
+Recorded the completed combined release and private B cleanup handoff, including
+the owner's 500 GB target without inferred deletion/read clearance. Staging now
+owns measured restart efficiency. Reused existing source-bound preparation
+tooling: 26 cache tests, 8 queue tests and 16 disabled-controller regressions pass.
+Four-worker fixture queue sweep covers all 1,139 sessions with no production
+requests. Full ten-minute pipeline/cold timing and live adoption remain unproven.
+No build, restart, cleanup, timer or external publication. Format attempted;
+frontend formatter unavailable. Read VK_RESTART_EFFICIENCY_20261014.md.

@@ -1,5 +1,23 @@
 # STATE.md
 
+## October 14: Release Completed; Restart Efficiency Is Current Work
+
+The combined release was verified live at 18:05:35 UTC on October 14. The actual
+interruption was 115.41 seconds, with current data reused and compatible
+latest-data rollback retained. Trusted HTTPS and all 18 recovered-final
+protocol/once-only results passed. Native approval is an opt-in
+workspace-write/on-request/auto_review profile; scoped Git sync is enabled under
+its reviewed policy. Original-manager/original-worker continuation is deferred.
+Models, Recommend, reader/proxy/frontend and historical exceptions are preserved.
+
+The owner's current assignment is restart efficiency before another release,
+not another production restart in this turn. Read
+[VK_RESTART_EFFICIENCY_20261014.md](VK_RESTART_EFFICIENCY_20261014.md).
+B cleanup is being handed to a separate owner with a 500 GB target and explicit
+retention/media constraints in the private handoff linked there. No blanket
+deletion, payload-read clearance or human-QA approval is inferred. Earlier dated
+status and operational examples below are historical.
+
 ## October 10 Approved Cutover Catch-up Correction
 
 Seamus approved the quiet cutover at16:47UTC. The17:30:25 retry failed before

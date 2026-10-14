@@ -1,5 +1,24 @@
 # HANDOFF.md
 
+## October 14 Current Pickup
+
+Combined cutover is complete and verified, not awaiting another retry. Start
+with [VK_RESTART_EFFICIENCY_20261014.md](VK_RESTART_EFFICIENCY_20261014.md).
+Its private release receipts identify current runtime and compatible rollback;
+do not reuse an old PID, service, source tree or actor from the history below.
+
+Staging now owns efficiency for the next restart. Existing preparation-cache
+tooling is pinned and tested, current artifact bytes reverified, and bounded
+four-worker all-session queue checks are integrated into a disabled controller
+fixture. Cold/full-pipeline timing and actual next-release adoption remain
+unverified. Backup scheduling is not claimed enabled.
+
+B cleanup parallel-owner pickup:
+`/mnt/vk-storage/vk-b-retention-list-20261014/PARALLEL_CLEANUP_HANDOFF_20261014.md`.
+Target is at least 500 decimal GB. Respect B/R payload holds, unique-history and
+consumer checks, and the human-QA cleanup boundary. No deletion was performed.
+Keep cleanup separate from current release/build caches and restart ownership.
+
 ## October 10 Approved Cutover Catch-up Correction
 
 Seamus approved the quiet cutover at16:47UTC. The17:30:25 retry failed before

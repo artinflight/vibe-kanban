@@ -1,5 +1,20 @@
 # STREAM.md
 
+## October 14: Restart Efficiency; B Cleanup Handoff
+
+Current Staging scope is a repeatable, measured restart path building on the
+successful October 14 combined release. Reuse exact accepted artifacts and
+validation, preserve warm compiler caches, complete bulk backup/restore work
+online, and retain final current-data/quiet/ownership/live-acceptance checks.
+The ten-minute target includes build through production work resuming; it has
+not yet been demonstrated. The new queue-reader integration is an unarmed
+engineering fixture, not a production-controller change.
+
+Read [VK_RESTART_EFFICIENCY_20261014.md](VK_RESTART_EFFICIENCY_20261014.md) and its
+private validation receipts. A separate cleanup owner will own the B retention
+packet; Staging does not launch or duplicate that owner. No restart, cleanup,
+timer/security change or external diagnostics publication is part of this turn.
+
 ## October 10 Approved Cutover Catch-up Correction
 
 Seamus approved the quiet cutover at16:47UTC. The17:30:25 retry failed before

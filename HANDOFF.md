@@ -1,3 +1,21 @@
+## October 14 local reviewed-baseline link repair
+
+Staging's accepted 962d2673 source copy failed begin with reviewed 64c3 because
+CLAUDE.md and docs/CLAUDE.md are tracked links. A local-only correction adds explicit
+reviewed base/link/regular-target integrity pins and uses them in admission and all
+snapshot/coverage paths. Changed/unreviewed links, escapes, private paths, Gitlinks
+and changed targets stay blocked. The private index retains exact unchanged HEAD
+objects; changed objects keep source/scanner checks. This also permits ordinary
+source handoff in the actual VK tree without rewriting unchanged image assets.
+
+Tests and a sealed patch/source receipt are prepared locally for Staging. No
+GitHub/PR publication, live configuration, deployment, restart, agent retask or
+heavy MCP build is authorized in this repair. Recommend and model/effort remain.
+The helper is embedded: Staging must integrate the local patch and two literal
+policy pins, rebuild and run its combined acceptance before release. Exact-head
+review/build acceptance remains pending; 64c3 alone does not include this repair.
+See VK_TURN_GIT_PRESERVATION.md for the strict optional policy contract.
+
 # Dot reply notifications — live October 16, 22:38 UTC
 
 Seamus's approved Dot service/connector and combined frontend rollout is live.

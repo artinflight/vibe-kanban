@@ -5,6 +5,26 @@ use serde_json::{Value, json};
 
 use crate::executors::ExecutorError;
 
+// Config/read serializes absent optional fields as null. TOML has no null:
+// forwarding one through config overrides becomes an invalid empty string.
+// Removing null properties restores their original absence/inheritance.
+fn omit_null_properties(value: &mut Value) {
+    match value {
+        Value::Object(object) => {
+            object.retain(|_, value| !value.is_null());
+            for value in object.values_mut() {
+                omit_null_properties(value);
+            }
+        }
+        Value::Array(array) => {
+            for value in array {
+                omit_null_properties(value);
+            }
+        }
+        _ => {}
+    }
+}
+
 /// Preserve app enablement, tool approval modes and all other native settings.
 /// App and connected-account reviewer overrides take precedence over the root,
 /// so reconcile every declared app/link, not a hardcoded connector/tool list.
@@ -44,7 +64,9 @@ pub(super) fn config_overrides(
     let overrides = overrides.get_or_insert_default();
     overrides.insert("approvals_reviewer".into(), json!("auto_review"));
     overrides.insert("features.guardian_approval".into(), json!(true));
-    overrides.insert("apps".into(), Value::Object(apps));
+    let mut apps = Value::Object(apps);
+    omit_null_properties(&mut apps);
+    overrides.insert("apps".into(), apps);
     Ok(())
 }
 
@@ -55,7 +77,7 @@ mod tests {
     #[test]
     fn native_review_reconciles_defaults_apps_and_links_without_tool_exclusions() {
         let original = json!({"config":{"approvals_reviewer":"user","apps":{
-            "_default":{"approvals_reviewer":"user","enabled":false},
+            "_default":{"approvals_reviewer":"user","enabled":false,"default_tools_approval_mode":null},
             "arbitrary.connector/id":{"approvals_reviewer":"user","enabled":true,
                 "tools":{"read":{"approval_mode":"prompt"},"write":{"enabled":false}},
                 "links":{"a.b":{"approvals_reviewer":"user","default_tools_approval_mode":"prompt"},"other":{}}}
@@ -67,6 +89,7 @@ mod tests {
             expected["arbitrary.connector/id"]["links"][link]["approvals_reviewer"] =
                 json!("auto_review");
         }
+        omit_null_properties(&mut expected);
         let mut overrides = Some(HashMap::from([(
             "model_reasoning_effort".into(),
             json!("high"),

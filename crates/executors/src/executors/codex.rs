@@ -922,7 +922,11 @@ impl Codex {
     }
 
     fn build_thread_start_params(&self, cwd: &Path) -> ThreadStartParams {
-        let sandbox = effective_sandbox_mode(self.sandbox.as_ref());
+        let sandbox = effective_sandbox_mode(if self.plan {
+            Some(&SandboxMode::ReadOnly)
+        } else {
+            self.sandbox.as_ref()
+        });
 
         // Auto means native review, never unconditional acceptance. This also
         // replaces stale Never/OnFailure selections in old profiles/sessions.

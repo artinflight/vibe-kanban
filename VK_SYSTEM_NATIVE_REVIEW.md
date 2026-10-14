@@ -65,3 +65,13 @@ approval gate is introduced by these existing constraints.
 ## Additional human-boundary coverage
 
 Additional candidate safeguards: native human-only tool fallbacks require an interactive service; Noop cannot approve them. Native permission-expansion requests receive typed, turn-scoped responses through the human approval service rather than JSON null. Guardian enablement is pinned while managed native constraints still fail closed. Actual native/MCP acceptance remains pending the source-bound builder.
+
+## Installed protocol correction
+
+The account-backed MCP preflight found that native config/read emits null optional
+app fields. Those are absent/inherited TOML values; passing them through write
+overrides produces invalid empty strings. The candidate removes null object
+properties only within the app configuration before round-trip, while preserving
+non-null enablement/tool approval values and repairing reviewers. The first
+preflight failed before any model turn or tool dispatch; it was not blindly
+replayed after a billed/uncertain command. An explicit null regression covers it.

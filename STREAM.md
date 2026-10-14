@@ -1,3 +1,14 @@
+# System-wide native Approve for me — October14 follow-up
+
+Scope is all Vibe Codex profiles/projects and supported approval categories,
+including MCP; not merely an opt-in profile or shell decoder patch. Latest staging
+962d2673f already includes PR245/246/247 through PR248. This clean follow-up owns
+policy enforcement, stale app/link reconciliation, command/connector/resume tests
+and verified rollout preparation. See VK_SYSTEM_NATIVE_REVIEW.md. Existing live
+reviewer is user despite the available opt-in profile. T18 remains untouched.
+Live policy writes, merge and restart still require exact-action authorization.
+Implementation/testing is in progress; no system-wide activation is claimed.
+
 # Combined reviewed release preparation — held before activation
 
 The current integration uses reviewed PR246

@@ -3,7 +3,8 @@ on:
   pull_request:
     branches: [staging]
     paths:
-      - "crates/executors/src/executors/codex/jsonrpc.rs"
+      - "crates/executors/src/executors/codex/**"
+      - "crates/executors/src/executors/codex.rs"
       - "scripts/testing/export-native-review-artifacts.py"
       - ".github/workflows/native-review-compatibility.yml"
   workflow_dispatch:
@@ -34,7 +35,7 @@ jobs:
       - name: Typed await_response and existing history/error regressions
         run: |
           cargo test --locked --profile acceptance -p executors --lib executors::codex::jsonrpc::tests
-          cargo test --locked --profile acceptance -p executors --lib native_review_permission_overrides
+          cargo test --locked --profile acceptance -p executors --lib native_review
       - name: Build source-bound isolated acceptance backend
         env:
           VK_BUILD_SOURCE_COMMIT: ${{ env.VK_EXPECTED_SOURCE }}

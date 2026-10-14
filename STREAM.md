@@ -1,3 +1,21 @@
+# Native review PR249 — verified implementation, release held
+
+Code/test head9afe687c9 passes Full Test38640253559, native38640253455 and
+source-fenced artifacts38640258375. Actual source-bound DEFAULT command, genuine
+legacy-user resume/MCP and stdin with stale CLI flags pass. All seven native
+review variants have runtime evidence, including managed network, execve and
+mandatory-human/denial preservation;17 root test turns total. Read
+VK_SYSTEM_NATIVE_REVIEW.md for exact source/hash/review receipts and limits.
+
+All production Codex profiles/projects use native review; this is prepared source
+behavior, not live activation. Six native setting edits and one DEFAULT edit are
+reviewable but unapplied. Private source preserves all three live reader files;
+its exact fenced-build exception is requested and pending. No live security
+setting, credentials, merge, restart, deployment, T18 or other-agent change.
+The release owner must preserve PR245/246 and current private readers, finish
+private/copied-current/rollback acceptance, then obtain exact-action activation
+authorization and a natural safe-idle window. Recommend remains unchanged.
+
 # System-wide native Approve for me — October14 follow-up
 
 Scope is all Vibe Codex profiles/projects and supported approval categories,

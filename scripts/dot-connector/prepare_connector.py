@@ -14,8 +14,12 @@ def patched(source):
     anchors = [
         ("import approval_notifications\n", "import approval_notifications\nimport steering\n"),
         (" + approval_notifications.TOOLS}}", " + approval_notifications.TOOLS + steering.TOOLS}}"),
-        ('            if name == "run_session_prompt":',
-         '            if name in steering.HANDLERS:\n'
+        ('                if name in {"start_workspace","run_session_prompt"}:',
+         '                if name == "run_session_prompt":\n'
+         '                    tool["description"] = "Start a new turn in an idle session; capacity may queue it. For a running CODEX correction use steer_session_prompt with exact execution_id and a stable request_id. This tool never steers. " + tool.get("description", "")\n'
+         '                if name in {"start_workspace","run_session_prompt"}:'),
+        ('\n            if name == "run_session_prompt":',
+         '\n            if name in steering.HANDLERS:\n'
          '                return {"jsonrpc":"2.0","id":msg["id"],"result":steering.HANDLERS[name](sys.modules[__name__],args)}\n'
          '            if name == "run_session_prompt":'),
     ]

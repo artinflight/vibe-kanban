@@ -79,9 +79,9 @@ async fn stored(pool: &SqlitePool, request: Uuid) -> Result<Option<Stored>, ApiE
         .bind(request).fetch_optional(pool).await?)
 }
 
-fn receipt(request_id: Uuid, row: Stored) -> Result<Receipt, ApiError> {
+fn receipt(request_id: Uuid, row: Stored) -> Result<Receipt, &'static str> {
     let status: Status = serde_json::from_value(serde_json::Value::String(row.5))
-        .map_err(|_| ApiError::Conflict("Invalid steering receipt; do not resend".into()))?;
+        .map_err(|_| "Invalid steering receipt; do not resend")?;
     Ok(Receipt {
         request_id,
         session_id: row.0,
@@ -141,7 +141,7 @@ where
                 "request_id already belongs to a different steering request".into(),
             ));
         }
-        return receipt(request.request_id, row);
+        return receipt(request.request_id, row).map_err(ApiError::from);
     }
     // A cancelled handler or database failure leaves 'unknown' permanently.
     // Native errors may follow delivery; never infer non-delivery from them.
@@ -178,24 +178,43 @@ async fn target_status(
     if process.session_id != session.id {
         return Ok(Some(Status::TargetMismatch));
     }
+    if session
+        .executor
+        .as_deref()
+        .is_some_and(|executor| executor != "CODEX")
+    {
+        return Ok(Some(Status::UnsupportedExecutor));
+    }
     if process.dropped
         || process.status != ExecutionProcessStatus::Running
         || process.run_reason != ExecutionProcessRunReason::CodingAgent
     {
         return Ok(Some(Status::NotRunning));
     }
-    if process
+    let action = process
         .executor_action()
-        .map_err(|_| ApiError::Conflict("Invalid execution configuration".into()))?
-        .base_executor()
-        != Some(BaseCodingAgent::Codex)
-    {
+        .map_err(|_| ApiError::Conflict("Invalid execution configuration".into()))?;
+    if action.base_executor() != Some(BaseCodingAgent::Codex) {
         return Ok(Some(Status::UnsupportedExecutor));
+    }
+    if matches!(action.typ(), executors::actions::ExecutorActionType::CodingAgentFollowUpRequest(request) if request.capacity.is_some())
+    {
+        return Ok(Some(Status::ScheduledWork));
     }
     Ok(None)
 }
 
-async fn scheduled(session: Uuid) -> Result<bool, ApiError> {
+pub(crate) async fn ownership_block(session: Uuid) -> Result<Option<Status>, ApiError> {
+    if let Some(ledger) = original_worker::current()
+        && (session == ledger.contract.manager.session || session == ledger.contract.worker.session)
+        && !ledger
+            .terminal()
+            .await
+            .map_err(|_| ApiError::Conflict("Bounded ownership unavailable".into()))?
+    {
+        // A generic correction must not amend/stop a bounded owner's contract.
+        return Ok(Some(Status::Blocked));
+    }
     match executors::capacity::controller::configured() {
         Ok(Some(controller)) => Ok(controller
             .lock()
@@ -203,8 +222,9 @@ async fn scheduled(session: Uuid) -> Result<bool, ApiError> {
             .state
             .goals
             .get(&session)
-            .is_some_and(|goal| goal.grant.is_some())),
-        Ok(None) => Ok(false),
+            .is_some_and(|goal| goal.grant.is_some())
+            .then_some(Status::ScheduledWork)),
+        Ok(None) => Ok(None),
         Err(_) => Err(ApiError::Conflict("Scheduled ownership unavailable".into())),
     }
 }
@@ -222,6 +242,7 @@ struct Target {
     status: &'static str,
     thread_id: Option<String>,
     turn_id: Option<String>,
+    queue_pending: bool,
 }
 
 async fn get_target<D: Deployment>(
@@ -232,8 +253,8 @@ async fn get_target<D: Deployment>(
     let invalid = target_status(&deployment.db().pool, &session, query.execution_id).await?;
     let (status, binding) = if let Some(status) = invalid {
         (status_name(&status), None)
-    } else if scheduled(session.id).await? {
-        ("scheduled_work", None)
+    } else if let Some(status) = ownership_block(session.id).await? {
+        (status_name(&status), None)
     } else {
         match deployment
             .container()
@@ -251,6 +272,7 @@ async fn get_target<D: Deployment>(
         status,
         thread_id,
         turn_id,
+        queue_pending: deployment.queued_message_service().has_queued(session.id),
     })))
 }
 
@@ -275,8 +297,8 @@ async fn steer<D: Deployment>(
             return Ok(status);
         }
         // Unlike /queue, never invoke scheduled takeover or before_launch.
-        if scheduled(session.id).await? {
-            return Ok(Status::ScheduledWork);
+        if let Some(status) = ownership_block(session.id).await? {
+            return Ok(status);
         }
         if deployment
             .container()
@@ -289,12 +311,8 @@ async fn steer<D: Deployment>(
         original_worker::record_input(pool, session.id, false)
             .await
             .map_err(|e| ApiError::Conflict(e.to_string()))?;
-        if original_worker::ordinary_input(session.id, "active_turn_steering")
-            .await
-            .is_err()
-        {
-            return Ok(Status::Blocked);
-        }
+        // Active bounded owners were rejected above. Do not call ordinary_input:
+        // that legacy amendment path may suspend an owner's contract.
         Ok(
             match deployment
                 .container()
@@ -366,7 +384,7 @@ pub(crate) fn router_for<D: Deployment>(deployment: &D) -> Router<D> {
         .route("/", post(steer::<D>))
         .route("/target", get(get_target::<D>))
         .route("/{request_id}", get(get_receipt::<D>))
-        .layer(DefaultBodyLimit::max(300_000))
+        .layer(DefaultBodyLimit::max(1024 * 1024))
         .layer(from_fn_with_state(deployment.clone(), load_scope::<D>))
 }
 

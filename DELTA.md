@@ -1850,3 +1850,9 @@ identity, durable request receipts and no launch/stop/queue fallback. Preserves
 ca3fe817 capacity correction.13 new and14 existing connector tests pass against
 current source; compiled Rust and isolated HTTP/native acceptance are pending.
 No live connector installation, service restart or access-policy change.
+
+Initial implementation99e5778db passed579 Rust tests/13 skips and12 enabled
+checkpoint tests in Test38812713572, including real HTTP/SQLite/synthetic-native
+steering and replay. Two lint findings are corrected; final safety refinements
+and an ignored single-turn account-backed acceptance test are prepared.14 new
+connector tests and14 unchanged capacity/Recommend regressions pass locally.

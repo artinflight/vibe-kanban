@@ -4,9 +4,11 @@ The user authorized implementation after ff83afe93. The branch now adds a
 separate backend steering API and durable idempotency receipts plus a reviewable
 connector overlay in `scripts/dot-connector/`. Legacy follow-up/queue behavior
 and the live ca3fe817 capacity response fix are preserved. No live connector edit
-or backend restart is performed. Python tests:13 new and14 current-connector
-capacity/Recommend regressions pass; compiled Rust/isolated HTTP-native fixture
-validation is pending. See the overlay README for exact rollout requirements.
+or backend restart is performed. Python tests:14 new and14 current-connector
+capacity/Recommend regressions pass. The initial compiled Rust/isolated HTTP-native
+fixture run passed; two lint findings are corrected locally. Current refinements
+and a separate ignored real-native acceptance test need final-head validation.
+See the overlay README for exact rollout requirements.
 
 ## Retained investigation
 

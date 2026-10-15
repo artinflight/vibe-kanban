@@ -1,6 +1,8 @@
 """Explicit Codex steering; fixed URLs, identity fences, one POST, no fallback."""
 import hashlib
 import json
+import re
+import uuid
 
 STATUSES = frozenset(("steered", "not_running", "not_ready", "unsupported_executor",
                       "target_mismatch", "scheduled_work", "blocked", "unknown"))
@@ -40,6 +42,10 @@ def validate_receipt(value, sid, rid, eid=None, digest=None, binding=None):
         raise ValueError("Steering receipt identity mismatch; do not resend")
     if value.get("status") not in STATUSES:
         raise ValueError("Invalid steering receipt; do not resend")
+    if (not isinstance(value.get("message_sha256"), str)
+            or re.fullmatch(r"[0-9a-f]{64}", value["message_sha256"]) is None
+            or str(uuid.UUID(value.get("execution_id", ""))) != value["execution_id"]):
+        raise ValueError("Invalid steering receipt fingerprint; do not resend")
     expected = None if value["status"] == "unknown" else value["status"] == "steered"
     if "delivered" not in value or value["delivered"] is not expected:
         raise ValueError("Contradictory steering receipt; do not resend")
@@ -85,11 +91,14 @@ def steer(api, args):
     target = unwrap(api.http_get(f"{path}/target?execution_id={eid}"))
     if not isinstance(target, dict) or target.get("session_id") != sid or target.get("execution_id") != eid:
         raise ValueError("Steering target identity mismatch; no request sent")
+    if type(target.get("queue_pending")) is not bool:
+        raise ValueError("Invalid queue admission metadata; no request sent")
     if target.get("status") != "ready":
         if target.get("status") not in STATUSES - {"steered", "unknown"}:
             raise ValueError("Unrecognized steering admission; no request sent")
         return result(api, {"session_id": sid, "execution_id": eid, "request_id": rid,
                             "status": target["status"], "delivered": False,
+                            "queue_pending": target["queue_pending"],
                             "message": "No correction sent; no new execution or queued message created."})
     if not all(isinstance(target.get(k), str) and 0 < len(target[k]) <= 256
                for k in ("thread_id", "turn_id")):

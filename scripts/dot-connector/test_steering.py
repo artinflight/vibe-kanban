@@ -17,6 +17,7 @@ def envelope(value):
 
 def target(**changes):
     return dict(dict(session_id=SID, execution_id=EID, status="ready",
+                     queue_pending=False,
                      thread_id="isolated-thread", turn_id="isolated-turn"), **changes)
 
 
@@ -89,6 +90,15 @@ class SteeringTests(unittest.TestCase):
             self.assertTrue(reply["isError"])
             self.assertNotEqual(content(reply)["delivered"], True)
             service.post_fixed.assert_called_once()
+
+    def test_waiting_capacity_queue_is_reported_without_steering_starting_or_resending(self):
+        service = api()
+        service.http_get.side_effect = [envelope(None), envelope(target(status="not_running", queue_pending=True))]
+        value = content(steering.steer(service, ARGS))
+        self.assertEqual(value["status"], "not_running")
+        self.assertTrue(value["queue_pending"])
+        self.assertFalse(value["delivered"])
+        service.post_fixed.assert_not_called()
 
     def test_timeout_reconciles_only_exact_receipt_without_resend(self):
         service = api()

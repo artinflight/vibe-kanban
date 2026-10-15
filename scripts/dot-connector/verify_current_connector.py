@@ -1,5 +1,6 @@
 """Test the prepared patch against a read-only live-source snapshot. No live calls."""
 import argparse
+import ast
 import hashlib
 import json
 from pathlib import Path
@@ -18,6 +19,11 @@ def main():
     args = parser.parse_args()
     raw = (args.source / "adapter.py").read_bytes()
     candidate = patched(raw.decode())
+    before = {node.name: ast.dump(node) for node in ast.parse(raw).body
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    after = {node.name: ast.dump(node) for node in ast.parse(candidate).body
+             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    assert before == after, "Existing connector functions changed"
     sys.path.append(str(args.source))
     module = types.ModuleType("adapter")
     sys.modules["adapter"] = module
@@ -30,11 +36,13 @@ def main():
     if not result.wasSuccessful():
         raise SystemExit(1)
     upstream = Mock()
-    upstream.request.return_value = {"result": {"tools": []}}
+    upstream.request.return_value = {"result": {"tools": [{"name":"run_session_prompt","description":"Existing follow-up tool","inputSchema":{"type":"object"}}]}}
     adapter = module.Adapter(upstream)
     tools = adapter.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
     names = {tool["name"] for tool in tools["result"]["tools"]}
     assert set(steering.HANDLERS) <= names
+    followup = next(tool for tool in tools["result"]["tools"] if tool["name"] == "run_session_prompt")
+    assert "steer_session_prompt" in followup["description"]
     mock = Mock(return_value=module.result({"status": "fixture"}))
     with patch.dict(steering.HANDLERS, {"steer_session_prompt": mock}):
         adapter.handle({"jsonrpc": "2.0", "id": 2, "method": "tools/call",

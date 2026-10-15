@@ -42,6 +42,16 @@ Codex peer; it checks one POST, receipt readback, no extra execution/launch/stop
 and an unchanged pre-existing queue. This is protocol-fixture acceptance, not a
 real paid model's behavioral response.
 
+The ignored compiled test
+`explicit_steering_real_isolated_native_session` is the separate account-backed
+acceptance path. It requires `VK_DOT_STEERING_REAL=1`, a fresh dedicated
+`CODEX_HOME` under `/mnt/vk-storage/vk-dot-steering/`, and the exact native binary
+in `VK_DOT_STEERING_NATIVE_BIN`. Run it only from a manifest-verified matching
+executor test artifact. It starts one read-only/on-request thread, sends one
+correction, and verifies the final marker in the same sole native turn. It must
+never point at a production home or existing user thread. Native account material
+stays private in the dedicated home; no account data belongs in source/artifacts.
+
 ## Deployment requirements
 
 1. Coordinate the adapter baseline with connector task

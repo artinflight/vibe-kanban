@@ -188,7 +188,7 @@ async fn native_failure_and_cancelled_dispatch_remain_uncertain_without_replay()
     let cancelled = super::tests::request(execution.id);
     let result = tokio::time::timeout(
         std::time::Duration::from_millis(20),
-        admit(&pool, session.id, &cancelled, || std::future::pending()),
+        admit(&pool, session.id, &cancelled, std::future::pending),
     )
     .await;
     assert!(result.is_err());
@@ -204,13 +204,18 @@ async fn native_failure_and_cancelled_dispatch_remain_uncertain_without_replay()
 }
 
 #[tokio::test]
-async fn exact_session_and_coding_execution_are_required_even_with_newer_running_rows() {
+async fn exact_session_coding_state_executor_and_scheduled_authority_are_required() {
     let (pool, session, execution) = fixture().await;
     assert_eq!(
         target_status(&pool, &session, execution.id).await.unwrap(),
         None
     );
     let mut foreign = session.clone();
+    foreign.executor = Some("CLAUDE_CODE".into());
+    assert_eq!(
+        target_status(&pool, &foreign, execution.id).await.unwrap(),
+        Some(Status::UnsupportedExecutor)
+    );
     foreign.id = Uuid::new_v4();
     assert_eq!(
         target_status(&pool, &foreign, execution.id).await.unwrap(),
@@ -262,6 +267,73 @@ async fn exact_session_and_coding_execution_are_required_even_with_newer_running
         target_status(&pool, &session, execution.id).await.unwrap(),
         Some(Status::UnsupportedExecutor)
     );
+    let capacity = serde_json::from_value(serde_json::json!({"issuer_epoch":"synthetic","id":"synthetic","allocation_id":"synthetic",
+        "expires_at_ms":0,"stop_at_ms":0,"lease_file":"synthetic-unused","guard_binary":"synthetic-unused"})).unwrap();
+    let scheduled = ExecutorAction::new(
+        ExecutorActionType::CodingAgentFollowUpRequest(
+            executors::actions::coding_agent_follow_up::CodingAgentFollowUpRequest {
+                capacity: Some(Box::new(capacity)),
+                prompt: "/goal resume".into(),
+                session_id: "synthetic-thread".into(),
+                reset_to_message_id: None,
+                working_dir: None,
+                executor_config: ExecutorConfig::new(BaseCodingAgent::Codex),
+            },
+        ),
+        None,
+    );
+    sqlx::query("UPDATE execution_processes SET executor_action=?")
+        .bind(serde_json::to_string(&scheduled).unwrap())
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        target_status(&pool, &session, execution.id).await.unwrap(),
+        Some(Status::ScheduledWork)
+    );
+}
+
+#[tokio::test]
+async fn receipts_survive_database_reopen_without_replaying_uncertain_dispatch() {
+    let directory = tempfile::tempdir().unwrap();
+    let options = sqlx::sqlite::SqliteConnectOptions::new()
+        .filename(directory.path().join("receipts.sqlite"))
+        .create_if_missing(true);
+    let pool = sqlx::SqlitePool::connect_with(options.clone())
+        .await
+        .unwrap();
+    sqlx::query("CREATE TABLE sessions (id BLOB PRIMARY KEY)")
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::raw_sql(include_str!(
+        "../../../../../db/migrations/20261015220000_session_steering_receipts.sql"
+    ))
+    .execute(&pool)
+    .await
+    .unwrap();
+    let session = Uuid::new_v4();
+    sqlx::query("INSERT INTO sessions VALUES (?)")
+        .bind(session)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let request = request(Uuid::new_v4());
+    let result = admit(&pool, session, &request, || async {
+        Err(ApiError::Conflict("synthetic uncertain write".into()))
+    })
+    .await
+    .unwrap();
+    assert_eq!(result.status, Status::Unknown);
+    pool.close().await;
+    let reopened = sqlx::SqlitePool::connect_with(options).await.unwrap();
+    let value = admit(&reopened, session, &request, || async {
+        panic!("restart must not replay")
+    })
+    .await
+    .unwrap();
+    assert_eq!(value.status, Status::Unknown);
+    assert_eq!(value.delivered, None);
 }
 
 #[tokio::test]

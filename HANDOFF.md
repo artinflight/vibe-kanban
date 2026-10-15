@@ -4,9 +4,17 @@ Implementation is in progress on this branch. Read
 `scripts/dot-connector/README.md`; the new API cannot start/stop/queue work and
 uses exact execution/thread/turn identity plus durable request receipts. The
 connector overlay preserves the live ca3fe817 fix and existing Recommend policy.
-13 new Python tests and14 existing connector regressions pass against its patched
-current source. Rust/native/HTTP fixture validation is pending. No live connector
+14 new Python tests and14 existing connector regressions pass against its patched
+current source. Initial Rust/native/HTTP fixtures passed; two lint findings are
+corrected locally and final-head/native-account acceptance is pending. No live connector
 files, credentials, access settings, service restart or unrelated agents changed.
+
+Draft [PR250](https://github.com/artinflight/vibe-kanban/pull/250) is open into
+staging. Initial99e5778db Test38812713572 passed579 Rust tests (13 skipped), all13
+initial connector tests,12 enabled checkpoint cases, frontend/schema/ops checks.
+Its only failures were the corrected large-error/redundant-closure lint findings.
+Final refinements add guarded-owner rejection, scheduled-action checks, queue
+metadata, restart recovery coverage and a separately opted-in real native test.
 
 ## Retained investigation pickup
 

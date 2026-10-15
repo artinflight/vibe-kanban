@@ -930,6 +930,13 @@ async fn production_fixture(timeout_lifecycle: bool, monitor_startup: bool, larg
         .await
         .unwrap();
     AppServerClient::register_active_execution(anchors[0], &manager.client);
+    assert_eq!(
+        crate::routes::sessions::steering::ownership_block(ledger.contract.manager.session)
+            .await
+            .unwrap(),
+        Some(crate::routes::sessions::steering::Status::Blocked)
+    );
+    ledger.active().await.unwrap();
     assert!(engine.handle(Uuid::new_v4(), call(1)).await.is_err());
     runtime.check(anchors[0]).await.unwrap();
     resources.failed.store(true, Ordering::SeqCst);

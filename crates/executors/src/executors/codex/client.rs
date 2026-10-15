@@ -2897,6 +2897,135 @@ mod goal_integration_tests {
     use super::*;
 
     #[tokio::test]
+    #[ignore = "one account-backed isolated Codex turn; requires VK_DOT_STEERING_REAL=1 and a dedicated SSD home"]
+    async fn explicit_steering_real_isolated_native_session() {
+        use std::{path::PathBuf, process::Stdio};
+        assert_eq!(std::env::var("VK_DOT_STEERING_REAL").as_deref(), Ok("1"));
+        let home = PathBuf::from(std::env::var("CODEX_HOME").expect("dedicated CODEX_HOME"))
+            .canonicalize()
+            .unwrap();
+        assert!(
+            home.starts_with("/mnt/vk-storage/")
+                && home
+                    .components()
+                    .any(|part| part.as_os_str() == "vk-dot-steering"),
+            "Never use a production native home"
+        );
+        assert!(
+            !home.join("sessions").exists(),
+            "Use a fresh isolated native home"
+        );
+        let work = home.join("work");
+        tokio::fs::create_dir(&work).await.unwrap();
+        let binary = std::env::var("VK_DOT_STEERING_NATIVE_BIN").expect("exact native binary");
+        let mut command = Command::new(binary);
+        command.arg("app-server").current_dir(&work).env_clear();
+        for key in ["HOME", "PATH", "LANG", "CODEX_HOME"] {
+            if let Some(value) = std::env::var_os(key) {
+                command.env(key, value);
+            }
+        }
+        let mut child = command
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        let (exit_tx, _exit_rx) = tokio::sync::oneshot::channel();
+        client.connect(JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(exit_tx),
+            cancel.clone(),
+        ));
+        client.initialize().await.unwrap();
+        let thread=client.thread_start(serde_json::from_value(serde_json::json!({
+            "model":"gpt-6.1-sol","cwd":work,"approvalPolicy":"on-request","sandbox":"read-only","ephemeral":false
+        })).unwrap()).await.unwrap().thread.id;
+        let execution = Uuid::new_v4();
+        AppServerClient::register_active_execution(execution, &client);
+        let marker = format!("STEERING_VERIFIED_{}", Uuid::new_v4().simple());
+        let initial = "This is an isolated steering acceptance test. Run only `sleep 20` once, then answer ORIGINAL_ONLY. Do not read or write files, access network, or run other commands. A correction may arrive during this same turn.";
+        client
+            .turn_start_with_mode(
+                thread.clone(),
+                vec![UserInput::Text {
+                    text: initial.into(),
+                    text_elements: vec![],
+                }],
+                None,
+            )
+            .await
+            .unwrap();
+        let (bound_thread, bound_turn) = AppServerClient::steering_target(execution)
+            .await
+            .expect("active turn");
+        assert_eq!(bound_thread, thread);
+        assert!(AppServerClient::steer_bound_turn(execution,bound_thread,bound_turn.clone(),format!("Correction for this same turn: replace the final answer with exactly {marker}. Do not start another turn or run any additional command.")).await.unwrap());
+        tokio::time::timeout(Duration::from_secs(90), async {
+            while client.current_turn_id.lock().await.is_some() {
+                sleep(Duration::from_millis(200)).await;
+            }
+        })
+        .await
+        .expect("dedicated test turn did not complete");
+        let response: ThreadReadResponse = client
+            .send_request(
+                ClientRequest::ThreadRead {
+                    request_id: client.next_request_id(),
+                    params: ThreadReadParams {
+                        thread_id: thread,
+                        include_turns: true,
+                    },
+                },
+                "thread/read",
+            )
+            .await
+            .unwrap();
+        let history = serde_json::to_value(response).unwrap();
+        let turns = history["thread"]["turns"]
+            .as_array()
+            .expect("native history");
+        assert_eq!(
+            turns.len(),
+            1,
+            "steering must not create another native turn"
+        );
+        assert_eq!(turns[0]["id"], bound_turn);
+        assert!(
+            turns[0]["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|item| item["type"] == "agentMessage"
+                    && item["text"]
+                        .as_str()
+                        .is_some_and(|text| text.trim() == marker)),
+            "same-turn final correction missing"
+        );
+        AppServerClient::unregister_active_execution(execution);
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+        println!(
+            "PASS: one real native turn, one identity-bound correction, same-turn final answer verified"
+        );
+    }
+
+    #[tokio::test]
     async fn explicit_steering_binds_execution_thread_turn_without_start_interrupt_or_fallback() {
         use std::process::Stdio;
 

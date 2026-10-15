@@ -1,3 +1,16 @@
+## Whole-session archive acceptance and native resume
+
+A bounded source-only archive/read boundary restores every pinned byte and
+required reference into a fresh no-follow directory before invoking a reader.
+The opt-in native acceptance exercises installed native persistence and real
+thread/resume in isolated credential-free homes with three complete versions;
+reports separate current closure, incremental transfer and cumulative storage.
+See scripts/deployment/VK_HISTORY_ARCHIVAL_CONTRACT.md. Populated provider history
+DBs remain in the registered backup scope. Injected fixtures do not prove model
+continuation, complete UI browsing or production minimum size. Current native
+format/resource findings and exact receipts remain private in the consolidation
+handoff. No production reader hook, archive retirement, B read or adoption.
+
 ## Complete-session history compaction investigation
 
 Source-only bounded experiments preserve exact bytes while comparing record,

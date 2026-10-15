@@ -6,6 +6,63 @@ Operational samples, identities, sizes and receipts stay in the private handoff.
 The separate consolidation owner retains ownership of the B backup and all held
 payloads. This work never opens those payloads.
 
+## Whole-session acceptance and on-demand boundary
+
+`vk_history_archive_acceptance.py` adds a bounded pinned-manifest recovery boundary.
+It validates all objects, the full-file hashes, session identity and required
+references before creating a fresh directory. Ancestors and writes use no-follow
+directory descriptors; existing destinations are rejected. The reader callback
+runs synchronously only after complete file writes, fsync and root identity
+readback. Failures preserve partial fixtures without recursive cleanup. This
+isolated adapter does not merge into a live home, provide a production lease,
+restore full POSIX metadata, add privilege or install reader hooks.
+
+`verify_vk_native_history_archive.py` is an explicit opt-in acceptance script.
+Use only a NEW private fixture directory on approved bulk storage, an existing
+authorized launcher and compressor, and a bounded caller-owned resource scope.
+It uses a fresh credential-free CODEX_HOME and an RPC allowlist without
+`turn/start`, tools or inference. Native `thread/inject_items` persists synthetic
+messages; three complete versions are sealed and physically restored before
+real `thread/resume` calls. The returned native path must point into the restored
+home; regenerated state DB references and SQLite integrity are checked. Corrupt
+or missing objects must fail before the reader starts. Solid zstd tar readback
+also verifies every original member byte. Receipts bind source hashes/revision,
+runtime history mode, retained cgroup counters and exact measured results.
+
+Per-generation independent closure, newly transferred objects plus manifest,
+and cumulative unique objects plus all three manifests are separate quantities.
+The cumulative figure compares repeated full versions; normal one-current
+retention is the latest independent closure, with bounded replacement overlap.
+Each manifest explicitly owns its closure and needs no predecessor manifest.
+Synthetic small-session ratios are not estimates for the real history corpus.
+
+Current native paginated history has a registered `thread_history_1.sqlite` in
+addition to rollout files. Preserve a consistent complete image, including WAL
+through the existing SQLite snapshot adapter, and its thread/projection references.
+The fixture explicitly retains it. A rollout-only injected-message fixture can
+resume and regenerate an empty projection; that does NOT certify rebuilding a
+populated real historical-turn database. Do not exclude this existing database
+scope or call the small fixture a production minimum. Do not diagnose an EAGAIN
+database-open error as missing data without resource evidence: a deliberately
+small test task cap can prevent SQLite worker-thread creation. Retain pids peak
+and rejection counters alongside memory/pressure counters.
+
+The credential-free native test proves local native rehydration and resume, not
+an authenticated continuation or historical Vibe browsing. Injected messages do
+not produce model turns, so an empty history-items result is not browsing success.
+No model turn is attempted without an authorized account route. The exact remaining
+acceptance requires a permitted isolated completed model turn and real Vibe replay.
+No credential copying or mock-provider success substitutes for that evidence.
+
+For production demand hydration, integrate the reviewed boundary BEFORE
+`load_raw_log_messages` and BEFORE native `thread/resume`, using the existing
+controller's verified session/catalog mapping and per-scope ownership lease.
+Reconcile populated shared provider DBs, concurrent readers, file metadata and
+crash/idempotency behavior without overwriting live files. Existing completed-log
+readers can consume restored complete bytes; they currently do not discover an
+archive or call this adapter. Those hooks remain uninstalled and unimplemented
+in production. No local history offload or retention change is authorized.
+
 ## Required recovery outcomes
 
 There is no supported universal last-N-turn, last-N-token or date cutoff. A model

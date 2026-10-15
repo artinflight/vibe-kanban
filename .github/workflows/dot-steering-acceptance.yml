@@ -30,7 +30,7 @@ jobs:
           toolchain: nightly-2025-12-04
           cache-key: backend-test-Linux-X64-ubuntu-24.04
       - name: Verify steering protocol fixture without account access
-        run: cargo test --locked -p executors --lib explicit_steering_binds_execution_thread_turn_without_start_interrupt_or_fallback
+        run: cargo test --locked -p executors --lib steering_
       - name: Test connector and overlay preparation
         run: python3 -B -m unittest discover -s scripts/dot-connector -p 'test_*.py' -v
       - name: Export source-bound executor test binary

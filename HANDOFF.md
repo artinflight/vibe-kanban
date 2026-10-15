@@ -1,30 +1,35 @@
-# Dot explicit steering development pickup — October 15
+# Dot explicit steering review handoff — October 15
 
-Implementation is in progress on this branch. Read
-`scripts/dot-connector/README.md`; the new API cannot start/stop/queue work and
-uses exact execution/thread/turn identity plus durable request receipts. The
-connector overlay preserves the live ca3fe817 fix and existing Recommend policy.
-14 new Python tests and14 existing connector regressions pass against its patched
-current source. Initial Rust/native/HTTP fixtures passed; two lint findings are
-corrected locally and final-head/native-account acceptance is pending. No live connector
-files, credentials, access settings, service restart or unrelated agents changed.
+[PR #250](https://github.com/artinflight/vibe-kanban/pull/250) targets staging.
+Read `scripts/dot-connector/README.md`: explicit steering requires exact session,
+execution and native turn identity, reserves a durable receipt and never starts,
+stops or queues an execution. Protected owners are rejected without amendment.
+The independent connector overlay preserves ca3fe817 and Recommend policy;
+no shared connector file was edited. Coordinate adoption with the named owner
+task and verify the exact current adapter hash before applying the overlay.
 
-Draft [PR250](https://github.com/artinflight/vibe-kanban/pull/250) is open into
-staging. Initial99e5778db Test38812713572 passed579 Rust tests (13 skipped), all13
-initial connector tests,12 enabled checkpoint cases, frontend/schema/ops checks.
-Its only failures were the corrected large-error/redundant-closure lint findings.
-Final refinements add guarded-owner rejection, scheduled-action checks, queue
-metadata, restart recovery coverage and a separately opted-in real native test.
+Runtime source `9f5825ce3` passes full Test run 38819080520: 580 Rust tests/14 skips,
+14 connector tests and 12 enabled persistence cases, with applicable lint/schema/
+frontend/Tauri checks. 14 current connector capacity/Recommend tests pass against
+the patched candidate. Focused artifact run 38819080321 passed; all 2538 tracked source
+hashes and the executor binary hash were verified before the real native sample.
 
-Code d8906243f passes full Test38815715507:580 Rust tests/14 skips,14 connector
-tests and12 enabled persistence cases, plus applicable schema/lint/frontend/Tauri
-checks. Native artifact38815715510 passed and all2536 source hashes plus both
-binaries were verified. Its first isolated account-backed attempt stopped at
-readiness before any steering call (native turn/start answered before the
-turn/started callback). The private auth copy was removed. The harness now waits
-for bounded readiness without resending or starting a replacement turn; a focused
-source-bound executor artifact workflow avoids repeating a server build for this
-test-only correction. Final account-backed acceptance remains pending.
+Real native behavior is VERIFIED from original durable history: one thread,
+one turn, one correction, exact final marker and read-only/on-request policy.
+The test harness then timed out trying thread/read after ordinary completion
+closed its peer reader. Independent reconciliation used the retained history,
+not a resend; the original timeout and reconciliation receipts are both retained
+privately under `/mnt/vk-storage/vk-dot-steering/144289d9d/evidence/`.
+An earlier readiness-only attempt sent zero corrections. Both temporary auth
+copies were removed and owned test processes stopped. No further model call was
+used to reconcile the result. Production runtime source is unchanged afterward.
+
+The harness now waits for readiness and collects completion notifications,
+with a new offline regression for an open stream and wrong/duplicate identities.
+The paid harness was not rerun after this collection-only fix. Use current PR
+checks for its compiled regression evidence. Local Rust formatting/ops/diff
+checks pass; full local format stops at missing Prettier. Hosted UI checks pass.
+No production Vibe/connector restart, deployment or access-policy change occurred.
 
 ## Retained investigation pickup
 
@@ -1488,7 +1493,7 @@ package or replace the running binary in place.
 Both P1 findings are repaired in application commit `a6106d2e0`: scheduled resumes
 preserve complete model/reasoning choices (including newer saved chat selections),
 and the fresh frontend retains the live structured goal-checkpoint renderer.
-All14 database tests, six rendering tests, four native/offline model-selection
+All 14 database tests, six rendering tests, four native/offline model-selection
 runs, fresh desktop/mobile browser acceptance, focused Clippy, UI checks/lint,
 formatting and ops checks passed. Details and limits: [PR112_REVIEW_FIXES.md](PR112_REVIEW_FIXES.md).
 New candidate: `/mnt/vk-storage/codexusage-capacity/pr112-repair/manifest.json`.
@@ -6586,7 +6591,7 @@ package or replace the running binary in place.
 Both P1 findings are repaired in application commit `a6106d2e0`: scheduled resumes
 preserve complete model/reasoning choices (including newer saved chat selections),
 and the fresh frontend retains the live structured goal-checkpoint renderer.
-All14 database tests, six rendering tests, four native/offline model-selection
+All 14 database tests, six rendering tests, four native/offline model-selection
 runs, fresh desktop/mobile browser acceptance, focused Clippy, UI checks/lint,
 formatting and ops checks passed. Details and limits: [PR112_REVIEW_FIXES.md](PR112_REVIEW_FIXES.md).
 New candidate: `/mnt/vk-storage/codexusage-capacity/pr112-repair/manifest.json`.

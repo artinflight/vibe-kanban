@@ -1,10 +1,12 @@
 # Dot explicit steering source preparation — October 15
 
-Explicit session/execution/native-turn-fenced steering and durable at-most-once
-receipts are being implemented separately from existing queue/takeover semantics.
-The connector is prepared as an independent overlay preserving ca3fe817; no live
-installation or activation is claimed. See `scripts/dot-connector/README.md` and
-the current branch handoff for validation and release requirements.
+PR250 prepares explicit session/execution/native-turn-fenced steering and durable
+at-most-once receipts separately from existing queue/takeover semantics. Full CI
+and an isolated real native correction validate the runtime source. The connector
+overlay preserves ca3fe817; no live installation or activation is claimed. Real
+sample evidence was reconciled from its original native history after a test-only
+post-completion readback timeout, without resending. See the overlay README and
+branch handoff for exact evidence and release requirements.
 
 # Dot session-control investigation — October 15
 

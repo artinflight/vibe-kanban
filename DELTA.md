@@ -1851,15 +1851,26 @@ ca3fe817 capacity correction.13 new and14 existing connector tests pass against
 current source; compiled Rust and isolated HTTP/native acceptance are pending.
 No live connector installation, service restart or access-policy change.
 
-Initial implementation99e5778db passed579 Rust tests/13 skips and12 enabled
+Initial implementation99e5778db passed579 Rust tests/13 skips and 12 enabled
 checkpoint tests in Test38812713572, including real HTTP/SQLite/synthetic-native
 steering and replay. Two lint findings are corrected; final safety refinements
 and an ignored single-turn account-backed acceptance test are prepared.14 new
 connector tests and14 unchanged capacity/Recommend regressions pass locally.
 
-d8906243f passed full Test38815715507 (580 Rust/14 skips,14 connector and12
+d8906243f passed full Test38815715507 (580 Rust/14 skips,14 connector and 12
 enabled persistence cases) and native artifacts38815715510. A real isolated
 attempt exposed the harness's immediate readiness assumption before any steering
 call. Added bounded notification readiness waiting and focused executor artifact
 export; no native correction was blindly retried and the private auth copy was
 removed. Account-backed final-answer acceptance remains pending.
+
+9f5825ce3 passes full Test run 38819080520 and focused artifact run 38819080321. All 2538
+source hashes and its executor binary were verified. A real isolated native
+session completed its sole turn with one correction and the exact final marker;
+original history verifies read-only/on-request policy. The harness's later
+thread/read hung because ordinary completion closes the peer reader. Retained
+history independently reconciled the result without another model request or
+correction; original timeout evidence is preserved. Both private auth copies were
+removed. A test-only completion-notification collector and offline open-stream/
+identity regression replace that terminal RPC. Runtime source is unchanged;
+the paid harness was not rerun. No live connector edit, restart or deployment.

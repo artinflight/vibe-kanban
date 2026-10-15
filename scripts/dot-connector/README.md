@@ -20,6 +20,8 @@ sends at most one native `turn/steer` with `expectedTurnId`. Missing/replaced
 targets and unavailable native clients cannot launch, interrupt or queue a turn.
 Native failures, lost responses and interrupted handlers remain uncertain.
 Existing queued prompts and current model/effort/permission/routing are untouched.
+Target admission includes `queue_pending`; waiting-capacity work is reported
+without consuming its queue or treating it as a running native turn.
 
 ## Validation
 
@@ -56,6 +58,20 @@ with exact commit/tree, all tracked source hashes and binary SHA256. It does not
 start a backend or access a native account; normal backend/release checks remain
 separate. The harness waits for `turn/started` readiness after `turn/start`, since
 the response can arrive before that notification. It never retries a correction.
+It collects logged completion notifications: ordinary completion closes the
+client's peer reader, so post-completion native RPC is not an evidence source.
+
+Runtime source `9f5825ce3` passed full Test run 38819080520: 580 Rust tests/14 skips,
+14 connector tests and 12 enabled persistence cases, with applicable lint/schema/
+frontend/Tauri checks. 14 current connector capacity/Recommend regressions passed
+against the patched source. Focused artifact run 38819080321 bound all 2538 source
+hashes and its executor binary. One real read-only/on-request native session
+applied one correction in its sole turn and produced the exact final marker.
+The original native history verified that result after the harness's terminal
+readback timed out; no additional model request/correction was used for that
+reconciliation. One earlier readiness-only attempt sent zero corrections.
+Both private auth copies were removed. Only test collection changed afterward,
+with an offline terminal-stream regression; the paid harness was not rerun.
 
 ## Deployment requirements
 
@@ -78,9 +94,10 @@ the response can arrive before that notification. It never retries a correction.
    module. Recheck the actual installed adapter immediately before adoption.
    Any changed hash requires reconciliation rather than force-applying the patch.
 4. Preserve the existing connector dependencies, key/tunnel settings, all
-   unrelated tools and current queue fix. Adopt only reviewed `adapter.py` and
-   `steering.py` as a coordinated connector release, then reload that connector
-   alone and refresh cached Dot tool discovery. These steps are release
+   unrelated tools and current queue fix. Install the reviewed `steering.py`
+   module first, atomically replace the exact-baseline reviewed `adapter.py`,
+   then reload that connector alone and refresh cached Dot tool discovery.
+   These steps are a coordinated connector release and are release
    requirements, not actions performed by the preparation helper.
 5. Confirm the new backend endpoints before using the tool. An old backend
    returns an unsupported/unavailable error; the connector never falls back to

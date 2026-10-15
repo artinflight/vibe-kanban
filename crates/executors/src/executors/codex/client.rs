@@ -2896,6 +2896,97 @@ mod goal_integration_tests {
 
     use super::*;
 
+    async fn steering_completion_events(reader: impl tokio::io::AsyncRead + Unpin) -> Vec<Value> {
+        use tokio::io::{AsyncBufReadExt, BufReader};
+        let mut lines = BufReader::new(reader).lines();
+        let mut events = Vec::new();
+        while let Some(line) = lines.next_line().await.unwrap() {
+            let Ok(value) = serde_json::from_str::<Value>(&line) else {
+                continue;
+            };
+            let method = value["method"].as_str().unwrap_or("");
+            if matches!(method, "turn/started" | "item/completed" | "turn/completed") {
+                let complete = method == "turn/completed";
+                events.push(value);
+                if complete {
+                    return events;
+                }
+            }
+        }
+        panic!("native completion notification missing");
+    }
+
+    fn steering_completion_matches(
+        events: &[Value],
+        thread: &str,
+        turn: &str,
+        marker: &str,
+    ) -> bool {
+        let own: Vec<_> = events
+            .iter()
+            .filter(|event| event["params"]["threadId"] == thread)
+            .collect();
+        let starts: Vec<_> = own
+            .iter()
+            .filter(|event| event["method"] == "turn/started")
+            .collect();
+        let last_agent = own.iter().rfind(|event| {
+            event["method"] == "item/completed"
+                && event["params"]["turnId"] == turn
+                && event["params"]["item"]["type"] == "agentMessage"
+        });
+        starts.len() == 1
+            && starts[0]["params"]["turn"]["id"] == turn
+            && last_agent.is_some_and(|event| {
+                event["params"]["item"]["text"]
+                    .as_str()
+                    .is_some_and(|text| text.trim() == marker)
+            })
+            && own.last().is_some_and(|event| {
+                event["method"] == "turn/completed"
+                    && event["params"]["turn"]["id"] == turn
+                    && event["params"]["turn"]["status"] == "completed"
+            })
+    }
+
+    #[tokio::test]
+    async fn steering_evidence_completes_on_terminal_notification_without_follow_up_rpc() {
+        let events = vec![
+            serde_json::json!({"method":"turn/started","params":{"threadId":"own","turn":{"id":"turn"}}}),
+            serde_json::json!({"method":"item/completed","params":{"threadId":"own","turnId":"turn","item":{"type":"agentMessage","text":"marker"}}}),
+            serde_json::json!({"method":"turn/completed","params":{"threadId":"own","turn":{"id":"turn","status":"completed"}}}),
+        ];
+        let (mut writer, reader) = tokio::io::duplex(8192);
+        for event in &events {
+            writer
+                .write_all(format!("{event}\n").as_bytes())
+                .await
+                .unwrap();
+        }
+        // Keep the stream open: ordinary completion ends the peer's reader, not
+        // the native process. Evidence collection must not wait for EOF or RPC.
+        let read = tokio::time::timeout(Duration::from_secs(1), steering_completion_events(reader))
+            .await
+            .unwrap();
+        assert!(steering_completion_matches(&read, "own", "turn", "marker"));
+        assert!(!steering_completion_matches(
+            &read, "other", "turn", "marker"
+        ));
+        assert!(!steering_completion_matches(
+            &read, "own", "other", "marker"
+        ));
+        let mut changed = read.clone();
+        changed[1]["params"]["item"]["text"] = serde_json::json!("wrong final answer");
+        assert!(!steering_completion_matches(
+            &changed, "own", "turn", "marker"
+        ));
+        let mut duplicate = read.clone();
+        duplicate.insert(0, events[0].clone());
+        assert!(!steering_completion_matches(
+            &duplicate, "own", "turn", "marker"
+        ));
+    }
+
     #[tokio::test]
     #[ignore = "one account-backed isolated Codex turn; requires VK_DOT_STEERING_REAL=1 and a dedicated SSD home"]
     async fn explicit_steering_real_isolated_native_session() {
@@ -2933,8 +3024,10 @@ mod goal_integration_tests {
             .spawn()
             .unwrap();
         let cancel = CancellationToken::new();
+        let (log_writer, log_reader) = tokio::io::duplex(64 * 1024);
+        let evidence = tokio::spawn(steering_completion_events(log_reader));
         let client = AppServerClient::new(
-            LogWriter::new(tokio::io::sink()),
+            LogWriter::new(log_writer),
             None,
             false,
             false,
@@ -2985,46 +3078,15 @@ mod goal_integration_tests {
         .expect("native turn did not become ready");
         assert_eq!(bound_thread, thread);
         assert!(AppServerClient::steer_bound_turn(execution,bound_thread,bound_turn.clone(),format!("Correction for this same turn: replace the final answer with exactly {marker}. Do not start another turn or run any additional command.")).await.unwrap());
-        tokio::time::timeout(Duration::from_secs(90), async {
-            while client.current_turn_id.lock().await.is_some() {
-                sleep(Duration::from_millis(200)).await;
-            }
-        })
-        .await
-        .expect("dedicated test turn did not complete");
-        let response: ThreadReadResponse = client
-            .send_request(
-                ClientRequest::ThreadRead {
-                    request_id: client.next_request_id(),
-                    params: ThreadReadParams {
-                        thread_id: thread,
-                        include_turns: true,
-                    },
-                },
-                "thread/read",
-            )
+        // Ordinary completion closes JsonRpcPeer's reader. Consume the already
+        // logged completion event instead of issuing thread/read on that peer.
+        let events = tokio::time::timeout(Duration::from_secs(90), evidence)
             .await
+            .expect("dedicated test turn did not complete")
             .unwrap();
-        let history = serde_json::to_value(response).unwrap();
-        let turns = history["thread"]["turns"]
-            .as_array()
-            .expect("native history");
-        assert_eq!(
-            turns.len(),
-            1,
-            "steering must not create another native turn"
-        );
-        assert_eq!(turns[0]["id"], bound_turn);
         assert!(
-            turns[0]["items"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|item| item["type"] == "agentMessage"
-                    && item["text"]
-                        .as_str()
-                        .is_some_and(|text| text.trim() == marker)),
-            "same-turn final correction missing"
+            steering_completion_matches(&events, &thread, &bound_turn, &marker),
+            "one native turn with the same-turn final correction required"
         );
         AppServerClient::unregister_active_execution(execution);
         cancel.cancel();

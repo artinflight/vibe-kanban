@@ -28,7 +28,13 @@ impl ExecutorApprovalError {
 /// Abstraction for executor approval backends.
 #[async_trait]
 pub trait ExecutorApprovalService: Send + Sync {
-    /// MCP consent must be provided by an interactive backend, even in auto mode.
+    /// Native human-only fallbacks require an interactive owner. No-op services
+    /// must not turn these decisions into unconditional approval.
+    fn supports_interactive_approvals(&self) -> bool {
+        false
+    }
+
+    /// MCP consent forwarded for a human decision requires an interactive backend.
     /// Noninteractive/no-op services fail closed by default.
     async fn create_mcp_tool_approval(
         &self,

@@ -3,6 +3,7 @@ pub mod delegation;
 pub mod elicitation;
 pub mod goals;
 pub mod jsonrpc;
+mod native_review;
 pub mod normalize_logs;
 #[cfg(any(target_os = "linux", test))]
 mod process_capacity;
@@ -36,38 +37,13 @@ pub(crate) fn resolve_model(model: Option<&str>) -> (Option<&str>, bool) {
     }
 }
 
-fn host_blocks_unprivileged_userns() -> bool {
-    if let Ok(value) = env::var("VK_ASSUME_USERNS_BLOCKED") {
-        let value = value.trim().to_ascii_lowercase();
-        if matches!(value.as_str(), "1" | "true" | "yes" | "on") {
-            return true;
-        }
-        if matches!(value.as_str(), "0" | "false" | "no" | "off") {
-            return false;
-        }
-    }
-
-    std::fs::read_to_string("/proc/sys/kernel/apparmor_restrict_unprivileged_userns")
-        .map(|value| value.trim() == "1")
-        .unwrap_or(false)
-}
-
+// Never turn a sandbox setup problem into full access. Native Codex must fail
+// closed if the requested boundary cannot be established on this host.
 fn effective_sandbox_mode(requested: Option<&SandboxMode>) -> Option<V2SandboxMode> {
-    let requested = match requested {
-        None | Some(SandboxMode::Auto) => V2SandboxMode::WorkspaceWrite,
+    Some(match requested {
         Some(SandboxMode::ReadOnly) => V2SandboxMode::ReadOnly,
-        Some(SandboxMode::WorkspaceWrite) => V2SandboxMode::WorkspaceWrite,
-        Some(SandboxMode::DangerFullAccess) => V2SandboxMode::DangerFullAccess,
-    };
-
-    if host_blocks_unprivileged_userns() && requested != V2SandboxMode::DangerFullAccess {
-        tracing::warn!(
-            "Host blocks unprivileged user namespaces; forcing Codex sandbox to danger-full-access"
-        );
-        Some(V2SandboxMode::DangerFullAccess)
-    } else {
-        Some(requested)
-    }
+        _ => V2SandboxMode::WorkspaceWrite,
+    })
 }
 
 pub(crate) fn fork_params_from(thread_id: String, params: ThreadStartParams) -> ThreadForkParams {
@@ -274,10 +250,32 @@ for line in sys.stdin:
     }
 
     #[test]
+    fn native_review_covers_stale_profiles_and_never_upgrades_read_only() {
+        for sandbox in ["danger-full-access", "auto", "workspace-write", "read-only"] {
+            for policy in ["never", "on-failure", "on-request", "unless-trusted"] {
+                let codex: Codex = serde_json::from_value(
+                    serde_json::json!({"sandbox":sandbox,"ask_for_approval":policy}),
+                )
+                .unwrap();
+                let params = codex.build_thread_start_params(std::path::Path::new("/workspace"));
+                assert_eq!(params.approval_policy, Some(V2AskForApproval::OnRequest));
+                assert_eq!(
+                    params.sandbox,
+                    Some(if sandbox == "read-only" {
+                        V2SandboxMode::ReadOnly
+                    } else {
+                        V2SandboxMode::WorkspaceWrite
+                    })
+                );
+            }
+        }
+    }
+
+    #[test]
     fn native_review_permission_overrides_preserve_explicit_on_request() {
         use crate::{executors::StandardCodingAgentExecutor, model_selector::PermissionPolicy};
         for (policy, expected) in [
-            (PermissionPolicy::Auto, V2AskForApproval::Never),
+            (PermissionPolicy::Auto, V2AskForApproval::OnRequest),
             (PermissionPolicy::Supervised, V2AskForApproval::OnRequest),
         ] {
             let mut codex: Codex = serde_json::from_value(serde_json::json!({
@@ -433,7 +431,7 @@ for line in sys.stdin:
         });
 
         assert!(!codex.plan);
-        assert_eq!(codex.ask_for_approval, Some(AskForApproval::Never));
+        assert_eq!(codex.ask_for_approval, Some(AskForApproval::OnRequest));
     }
 }
 
@@ -597,7 +595,7 @@ impl StandardCodingAgentExecutor for Codex {
         if let Some(permission_policy) = &executor_config.permission_policy {
             match permission_policy {
                 crate::model_selector::PermissionPolicy::Auto => {
-                    self.ask_for_approval = Some(AskForApproval::Never);
+                    self.ask_for_approval = Some(AskForApproval::OnRequest);
                     self.plan = false;
                 }
                 crate::model_selector::PermissionPolicy::Supervised => {
@@ -924,19 +922,15 @@ impl Codex {
     }
 
     fn build_thread_start_params(&self, cwd: &Path) -> ThreadStartParams {
-        let sandbox = effective_sandbox_mode(self.sandbox.as_ref());
+        let sandbox = effective_sandbox_mode(if self.plan {
+            Some(&SandboxMode::ReadOnly)
+        } else {
+            self.sandbox.as_ref()
+        });
 
-        let approval_policy = match self.ask_for_approval.as_ref() {
-            None if matches!(self.sandbox.as_ref(), None | Some(SandboxMode::Auto)) => {
-                // match the Auto preset in codex
-                Some(V2AskForApproval::OnRequest)
-            }
-            None => None,
-            Some(AskForApproval::UnlessTrusted) => Some(V2AskForApproval::UnlessTrusted),
-            Some(AskForApproval::OnFailure) => Some(V2AskForApproval::OnFailure),
-            Some(AskForApproval::OnRequest) => Some(V2AskForApproval::OnRequest),
-            Some(AskForApproval::Never) => Some(V2AskForApproval::Never),
-        };
+        // Auto means native review, never unconditional acceptance. This also
+        // replaces stale Never/OnFailure selections in old profiles/sessions.
+        let approval_policy = Some(V2AskForApproval::OnRequest);
 
         let mut config = self.build_config_overrides();
         // V1 top-level params that moved into config overrides in v2
@@ -1461,10 +1455,9 @@ impl Codex {
         let (exit_signal_tx, exit_signal_rx) = tokio::sync::oneshot::channel();
         let cancel = tokio_util::sync::CancellationToken::new();
 
-        let auto_approve = matches!(
-            (&self.sandbox, &self.ask_for_approval),
-            (Some(SandboxMode::DangerFullAccess), None)
-        );
+        // Native reviewer decisions and mandatory human requests must never
+        // be replaced by Vibe's historical full-access approval shortcut.
+        let auto_approve = false;
         let plan_mode = self.plan;
         let approvals = self.approvals.clone();
         let repo_context = env.repo_context.clone();
@@ -1492,6 +1485,7 @@ impl Codex {
                 commit_reminder_prompt,
                 cancel_for_task.clone(),
             );
+            client.enable_native_review();
             if let Some(guard) = original_worker_guard {
                 client.set_original_worker_guard(guard);
             }

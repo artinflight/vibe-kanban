@@ -128,6 +128,8 @@ pub struct AppServerClient {
     current_turn_id: Mutex<Option<String>>,
     pending_feedback: Mutex<VecDeque<String>>,
     auto_approve: bool,
+    native_review_enabled: AtomicBool,
+    native_review_private_responses: Mutex<HashSet<RequestId>>,
     plan_mode: bool,
     resolved_model: OnceLock<String>,
     continuation_runtime: OnceLock<String>,
@@ -470,6 +472,8 @@ impl AppServerClient {
             log_writer,
             approvals,
             auto_approve,
+            native_review_enabled: AtomicBool::new(false),
+            native_review_private_responses: Mutex::new(HashSet::new()),
             plan_mode,
             resolved_model: OnceLock::new(),
             continuation_runtime: OnceLock::new(),
@@ -1050,10 +1054,57 @@ impl AppServerClient {
         self.send_message(&ClientNotification::Initialized).await
     }
 
+    /// Every production Codex executor enables this; no profile/project opt-in.
+    pub fn enable_native_review(&self) {
+        self.native_review_enabled.store(true, Ordering::SeqCst);
+    }
+
+    async fn native_review_config(
+        &self,
+        cwd: Option<String>,
+        config: &mut Option<HashMap<String, Value>>,
+    ) -> Result<(), ExecutorError> {
+        if !self.native_review_enabled.load(Ordering::SeqCst) {
+            return Ok(());
+        }
+        let id = self.next_request_id();
+        // Config layers can contain MCP credentials. Suppress this specific raw
+        // response before it reaches process logs; retain late-response privacy.
+        self.native_review_private_responses
+            .lock()
+            .await
+            .insert(id.clone());
+        let request = serde_json::json!({"id":id,"method":"config/read","params":{"cwd":cwd,"includeLayers":false}});
+        let response: Value = self
+            .rpc()
+            .request_with_deadline(
+                id,
+                &request,
+                "native review config/read",
+                self.cancel.clone(),
+                Duration::from_secs(30),
+            )
+            .await
+            .map_err(|_| {
+                ExecutorError::Io(io::Error::other(
+                    "Native review configuration could not be verified",
+                ))
+            })?;
+        super::native_review::config_overrides(&response, config)
+    }
+
     pub async fn thread_start(
         &self,
-        params: ThreadStartParams,
+        mut params: ThreadStartParams,
     ) -> Result<ThreadStartResponse, ExecutorError> {
+        if self.native_review_enabled.load(Ordering::SeqCst) {
+            params.approval_policy = Some(codex_app_server_protocol::AskForApproval::OnRequest);
+            if params.sandbox != Some(codex_app_server_protocol::SandboxMode::ReadOnly) {
+                params.sandbox = Some(codex_app_server_protocol::SandboxMode::WorkspaceWrite);
+            }
+        }
+        self.native_review_config(params.cwd.clone(), &mut params.config)
+            .await?;
         let request = ClientRequest::ThreadStart {
             request_id: self.next_request_id(),
             params,
@@ -1063,8 +1114,16 @@ impl AppServerClient {
 
     pub async fn thread_fork(
         &self,
-        params: ThreadForkParams,
+        mut params: ThreadForkParams,
     ) -> Result<ThreadForkResponse, ExecutorError> {
+        if self.native_review_enabled.load(Ordering::SeqCst) {
+            params.approval_policy = Some(codex_app_server_protocol::AskForApproval::OnRequest);
+            if params.sandbox != Some(codex_app_server_protocol::SandboxMode::ReadOnly) {
+                params.sandbox = Some(codex_app_server_protocol::SandboxMode::WorkspaceWrite);
+            }
+        }
+        self.native_review_config(params.cwd.clone(), &mut params.config)
+            .await?;
         let request = ClientRequest::ThreadFork {
             request_id: self.next_request_id(),
             params,
@@ -1074,8 +1133,16 @@ impl AppServerClient {
 
     pub async fn thread_resume(
         &self,
-        params: ThreadResumeParams,
+        mut params: ThreadResumeParams,
     ) -> Result<ThreadResumeResponse, ExecutorError> {
+        if self.native_review_enabled.load(Ordering::SeqCst) {
+            params.approval_policy = Some(codex_app_server_protocol::AskForApproval::OnRequest);
+            if params.sandbox != Some(codex_app_server_protocol::SandboxMode::ReadOnly) {
+                params.sandbox = Some(codex_app_server_protocol::SandboxMode::WorkspaceWrite);
+            }
+        }
+        self.native_review_config(params.cwd.clone(), &mut params.config)
+            .await?;
         let _load_fence = if let Some(guard) = self.original_worker.get().filter(|g| g.worker()) {
             let fence = guard.activation(&params.thread_id, None).await?;
             let snapshot = match self
@@ -1124,6 +1191,14 @@ impl AppServerClient {
                 thread_id: thread_id.clone(),
                 input,
                 collaboration_mode,
+                approval_policy: self
+                    .native_review_enabled
+                    .load(Ordering::SeqCst)
+                    .then_some(codex_app_server_protocol::AskForApproval::OnRequest),
+                approvals_reviewer: self
+                    .native_review_enabled
+                    .load(Ordering::SeqCst)
+                    .then_some(codex_app_server_protocol::ApprovalsReviewer::GuardianSubagent),
                 ..Default::default()
             },
         };
@@ -1548,8 +1623,44 @@ impl AppServerClient {
             ServerRequest::McpServerElicitationRequest { request_id, params } => {
                 self.start_elicitation(peer, request_id, params).await
             }
-            ServerRequest::ChatgptAuthTokensRefresh { .. }
-            | ServerRequest::PermissionsRequestApproval { .. } => {
+            ServerRequest::PermissionsRequestApproval { request_id, params } => {
+                let context = format!(
+                    "Native permission request: {}\n{}",
+                    params.reason.as_deref().unwrap_or(""),
+                    serde_json::to_string(&params.permissions)?
+                );
+                let status = self
+                    .request_tool_approval("permissions", &context, &params.item_id)
+                    .await?;
+                self.log_writer
+                    .log_raw(
+                        &Approval::approval_response(
+                            params.item_id.clone(),
+                            context,
+                            status.clone(),
+                        )
+                        .raw(),
+                    )
+                    .await?;
+                let permissions = if matches!(status, ApprovalStatus::Approved) {
+                    codex_app_server_protocol::GrantedPermissionProfile {
+                        network: params.permissions.network,
+                        file_system: params.permissions.file_system,
+                    }
+                } else {
+                    Default::default()
+                };
+                send_server_response(
+                    peer,
+                    request_id,
+                    codex_app_server_protocol::PermissionsRequestApprovalResponse {
+                        permissions,
+                        scope: codex_app_server_protocol::PermissionGrantScope::Turn,
+                    },
+                )
+                .await
+            }
+            ServerRequest::ChatgptAuthTokensRefresh { .. } => {
                 tracing::warn!("received unhandled v2 server request: {:?}", request);
                 let response = JSONRPCResponse {
                     id: request.id().clone(),
@@ -1761,7 +1872,7 @@ impl AppServerClient {
         display_tool_name: &str,
         tool_call_id: &str,
     ) -> Result<ApprovalStatus, ExecutorError> {
-        if self.auto_approve {
+        if self.auto_approve && !self.native_review_enabled.load(Ordering::SeqCst) {
             return Ok(ApprovalStatus::Approved);
         }
         let approval_service = self
@@ -1769,6 +1880,11 @@ impl AppServerClient {
             .as_ref()
             .ok_or(ExecutorApprovalError::ServiceUnavailable)?;
 
+        if self.native_review_enabled.load(Ordering::SeqCst)
+            && !approval_service.supports_interactive_approvals()
+        {
+            return Err(ExecutorApprovalError::ServiceUnavailable.into());
+        }
         let approval_id = approval_service
             .create_tool_approval(tool_name)
             .or_else(|err| async {
@@ -2005,7 +2121,7 @@ impl AppServerClient {
         &self,
         status: &ApprovalStatus,
     ) -> (CommandExecutionApprovalDecision, Option<String>) {
-        if self.auto_approve {
+        if self.auto_approve && !self.native_review_enabled.load(Ordering::SeqCst) {
             return (CommandExecutionApprovalDecision::AcceptForSession, None);
         }
 
@@ -2032,7 +2148,7 @@ impl AppServerClient {
         &self,
         status: &ApprovalStatus,
     ) -> (FileChangeApprovalDecision, Option<String>) {
-        if self.auto_approve {
+        if self.auto_approve && !self.native_review_enabled.load(Ordering::SeqCst) {
             return (FileChangeApprovalDecision::AcceptForSession, None);
         }
 
@@ -2168,6 +2284,14 @@ impl AppServerClient {
                     text_elements: vec![],
                 }],
                 collaboration_mode,
+                approval_policy: self
+                    .native_review_enabled
+                    .load(Ordering::SeqCst)
+                    .then_some(codex_app_server_protocol::AskForApproval::OnRequest),
+                approvals_reviewer: self
+                    .native_review_enabled
+                    .load(Ordering::SeqCst)
+                    .then_some(codex_app_server_protocol::ApprovalsReviewer::GuardianSubagent),
                 ..Default::default()
             },
         };
@@ -2279,6 +2403,14 @@ impl JsonRpcCallbacks for AppServerClient {
         raw: &str,
         response: &JSONRPCResponse,
     ) -> Result<(), ExecutorError> {
+        if self
+            .native_review_private_responses
+            .lock()
+            .await
+            .remove(&response.id)
+        {
+            return Ok(());
+        }
         if self.delegation_requests.lock().await.remove(&response.id) {
             return self.log_writer.log_raw(&serde_json::json!({"method":"vk/delegation/native","params":{"response":response}}).to_string()).await;
         }
@@ -2291,6 +2423,14 @@ impl JsonRpcCallbacks for AppServerClient {
         raw: &str,
         error: &JSONRPCError,
     ) -> Result<(), ExecutorError> {
+        if self
+            .native_review_private_responses
+            .lock()
+            .await
+            .remove(&error.id)
+        {
+            return Ok(());
+        }
         if self.delegation_requests.lock().await.remove(&error.id) {
             return self
                 .log_writer
@@ -4336,5 +4476,213 @@ mod delegation_tests {
         cancel.cancel();
         child.kill().await.unwrap();
         child.wait().await.unwrap();
+    }
+    #[tokio::test]
+    async fn native_review_real_requests_reconcile_apps_and_do_not_log_private_config() {
+        use std::process::Stdio;
+        let log = tempfile::NamedTempFile::new().unwrap();
+        let fixture: Value =
+            serde_json::from_str(include_str!("fixtures/new-error-resume.json")).unwrap();
+        let mut fixture = fixture;
+        fixture["approvalsReviewer"] = serde_json::json!("auto_review");
+        fixture["thread"]["turns"] = serde_json::json!([]);
+        let mut child = tokio::process::Command::new("python3").args(["-u", "-c", r#"
+import json,sys
+fixture=json.loads(sys.argv[1])
+for line in sys.stdin:
+ r=json.loads(line)
+ if r['method']=='config/read':
+  result={'config':{'apps':{'example':{'enabled':False,'approvals_reviewer':'user','links':{'account':{'approvals_reviewer':'user'}}}},'synthetic_secret':'fixture-private-config-marker'}}
+ else:
+  config=r['params']['config']
+  assert config['approvals_reviewer']=='auto_review'
+  assert config['features.write_stdin_approval'] is True
+  assert config['apps']['example']['approvals_reviewer']=='auto_review'
+  assert config['apps']['example']['links']['account']['approvals_reviewer']=='auto_review'
+  assert config['apps']['example']['enabled'] is False
+  result=fixture
+ print(json.dumps({'id':r['id'],'result':result}),flush=True)
+"#]).arg(fixture.to_string()).stdin(Stdio::piped()).stdout(Stdio::piped()).kill_on_drop(true).spawn().unwrap();
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::fs::File::create(log.path()).await.unwrap()),
+            None,
+            false,
+            false,
+            crate::env::RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        client.enable_native_review();
+        let (tx, _rx) = tokio::sync::oneshot::channel();
+        let peer = JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(tx),
+            cancel.clone(),
+        );
+        client.connect(peer);
+        let params = ThreadStartParams {
+            cwd: Some("/workspace".into()),
+            ..Default::default()
+        };
+        client.thread_start(params.clone()).await.unwrap();
+        client
+            .thread_resume(super::super::resume_params_from(
+                "fixture".into(),
+                params.clone(),
+            ))
+            .await
+            .unwrap();
+        client
+            .thread_fork(super::super::fork_params_from("fixture".into(), params))
+            .await
+            .unwrap();
+        let raw = tokio::fs::read_to_string(log.path()).await.unwrap();
+        assert!(raw.contains("auto_review"));
+        assert!(!raw.contains("fixture-private-config-marker"));
+        assert!(!raw.contains("synthetic_secret"));
+        assert!(
+            client
+                .native_review_private_responses
+                .lock()
+                .await
+                .is_empty()
+        );
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+    }
+    #[tokio::test]
+    async fn native_review_human_fallback_cannot_use_noop_or_auto_approve() {
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            Some(Arc::new(crate::approvals::NoopExecutorApprovalService)),
+            true,
+            false,
+            crate::env::RepoContext::default(),
+            false,
+            String::new(),
+            CancellationToken::new(),
+        );
+        client.enable_native_review();
+        assert!(
+            client
+                .request_tool_approval("bash", "codex.exec_command", "item")
+                .await
+                .is_err()
+        );
+        let (decision, _) =
+            client.command_execution_decision(&ApprovalStatus::Denied { reason: None });
+        assert_eq!(decision, CommandExecutionApprovalDecision::Decline);
+        let (decision, _) = client.file_change_decision(&ApprovalStatus::Denied { reason: None });
+        assert_eq!(decision, FileChangeApprovalDecision::Decline);
+    }
+    #[tokio::test]
+    async fn native_review_permission_fallback_requires_human_and_grants_only_the_turn() {
+        use std::process::Stdio;
+        struct Human(ApprovalStatus);
+        #[async_trait]
+        impl ExecutorApprovalService for Human {
+            fn supports_interactive_approvals(&self) -> bool {
+                true
+            }
+            async fn create_tool_approval(
+                &self,
+                _tool: &str,
+            ) -> Result<String, ExecutorApprovalError> {
+                Ok("explicit-human-fixture".into())
+            }
+            async fn create_question_approval(
+                &self,
+                _tool: &str,
+                _count: usize,
+            ) -> Result<String, ExecutorApprovalError> {
+                Err(ExecutorApprovalError::ServiceUnavailable)
+            }
+            async fn wait_tool_approval(
+                &self,
+                _id: &str,
+                _cancel: CancellationToken,
+            ) -> Result<ApprovalStatus, ExecutorApprovalError> {
+                Ok(self.0.clone())
+            }
+            async fn wait_question_answer(
+                &self,
+                _id: &str,
+                _cancel: CancellationToken,
+            ) -> Result<QuestionStatus, ExecutorApprovalError> {
+                Err(ExecutorApprovalError::ServiceUnavailable)
+            }
+        }
+        for status in [
+            ApprovalStatus::Approved,
+            ApprovalStatus::Denied { reason: None },
+            ApprovalStatus::TimedOut,
+        ] {
+            let mut child = tokio::process::Command::new("python3")
+                .args([
+                    "-u",
+                    "-c",
+                    "import sys
+for line in sys.stdin: print(line.strip(),file=sys.stderr,flush=True)",
+                ])
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .kill_on_drop(true)
+                .spawn()
+                .unwrap();
+            let cancel = CancellationToken::new();
+            let client = AppServerClient::new(
+                LogWriter::new(tokio::io::sink()),
+                Some(Arc::new(Human(status.clone()))),
+                false,
+                false,
+                crate::env::RepoContext::default(),
+                false,
+                String::new(),
+                cancel.clone(),
+            );
+            client.enable_native_review();
+            let (tx, _rx) = tokio::sync::oneshot::channel();
+            let peer = JsonRpcPeer::spawn(
+                child.stdin.take().unwrap(),
+                child.stdout.take().unwrap(),
+                client.clone(),
+                ExitSignalSender::new(tx),
+                cancel.clone(),
+            );
+            client.connect(peer.clone());
+            let request=ServerRequest::try_from(serde_json::from_value::<JSONRPCRequest>(serde_json::json!({
+                "id":"permission-human-fixture","method":"item/permissions/requestApproval","params":{
+                    "threadId":"root","turnId":"turn","itemId":"permission-item","reason":"fixture",
+                    "permissions":{"network":{"enabled":true},"fileSystem":null}
+                }})).unwrap()).unwrap();
+            client.handle_server_request(&peer, request).await.unwrap();
+            use tokio::io::AsyncBufReadExt;
+            let mut lines = tokio::io::BufReader::new(child.stderr.take().unwrap()).lines();
+            let raw = tokio::time::timeout(Duration::from_secs(3), lines.next_line())
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            let response: Value = serde_json::from_str(&raw).unwrap();
+            assert_eq!(response["id"], "permission-human-fixture");
+            assert_eq!(response["result"]["scope"], "turn");
+            if matches!(status, ApprovalStatus::Approved) {
+                assert_eq!(
+                    response["result"]["permissions"]["network"]["enabled"],
+                    true
+                );
+            } else {
+                assert_eq!(response["result"]["permissions"], serde_json::json!({}));
+            }
+            cancel.cancel();
+            child.kill().await.unwrap();
+            child.wait().await.unwrap();
+        }
     }
 }

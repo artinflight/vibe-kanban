@@ -1,5 +1,21 @@
 # STREAM.md
 
+## October 15: Requested Native Approval Restart Preparation
+
+Current scope is the owner-requested preparation of the updated native approval
+fix, with thorough testing before any switch. PR249 is integrated into staging;
+the source-bound private candidate and compatible rollback have copied-data
+acceptance. Preserve the accepted frontend, private readers, current data and
+module/configuration bindings. Finish backup restore verification and the tested
+quiet-handoff controller before activation; never interrupt active user work.
+
+The efficiency changes are pushed. The release controller now consumes the
+reviewed bounded concurrent queue check, preserving every session and pending
+prompt. Private build preparation pins its required compilation-only frontend
+input before Cargo; the real external frontend remains separately bound. Native
+persistent policy/profile proposals remain unapplied. Source integration and
+artifact acceptance are not a claim of live enablement or a ten-minute release.
+
 ## October 14: Restart Efficiency; B Cleanup Handoff
 
 Current Staging scope is a repeatable, measured restart path building on the

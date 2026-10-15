@@ -1,5 +1,22 @@
 # HANDOFF.md
 
+## October 15 Current Pickup
+
+The updated approval fix PR249 is merged at staging
+`9b4d51d2244da563bf40796bd64ed4466c4fbe95`; the merged tree equals the tested
+head. The matching private candidate and retained rollback each passed 191
+copied-current-data checks with all 18 authentic finals preserved exactly once.
+Do not rebuild the accepted candidate or substitute the public-only server.
+
+Restart preparation is underway; production is unchanged. Continue from the
+existing private release manifest and live progress receipts. A fresh independent
+whole-current backup is verified, with measured restore readback still running.
+Final package/controller/current-data and natural-quiet checks remain. The scoped
+code-only release needs no persistent native configuration/profile writes;
+request-local overrides enforce native auto_review/on-request/workspace-write,
+preserving read-only/Plan and mandatory human decisions. Original-worker
+continuation stays deferred; do not alter goals/history/seals or cleanup gates.
+
 ## October 14 Current Pickup
 
 Combined cutover is complete and verified, not awaiting another retry. Start

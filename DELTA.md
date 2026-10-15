@@ -1124,3 +1124,12 @@ repetition. Narrow patch checked against Staging962d2673; no Staging merge or
 production deployment. Whole ten-minute/cold release timing remains unproved.
 Ops check passes; format attempted, Prettier missing. Detailed receipts remain
 local in the efficiency implementation-r2 task; no external diagnostics.
+
+
+## October 15 native approval release preparation
+
+Completed efficiency changes are pushed. PR249 is integrated through its normal
+Staging PR path; exact merged/tested trees match. Matching retained-private-source
+candidate and current-data-compatible rollback each pass191 HTTP checks. Fresh
+independent backup is verified; restore readback and final quiet release checks
+remain. No live switch, persistent policy/profile edit, import or cleanup occurred.

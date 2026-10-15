@@ -1,5 +1,21 @@
 # STATE.md
 
+## October 15: Updated Native Approval Source Integrated
+
+PR249 is merged into staging at `9b4d51d2244da563bf40796bd64ed4466c4fbe95`.
+Its tree matches the tested reviewed head. The matching private backend and
+retained rollback each pass 191 copied-current-data HTTP checks, preserving all
+18 recovered finals exactly once. Production has not switched to this fix.
+
+The release owner is preparing the requested restart. Fresh independent backup
+capture is verified; measured restore readback, final package/controller binding
+and the genuine quiet handoff remain release gates. The new executor enforces
+native review per new/resumed/fork/feedback turn, so this minimal code-only release
+does not require the proposed persistent native configuration/profile edits.
+Read-only/Plan, mandatory human forms, managed constraints, models, Recommend,
+existing Git scope and deferred original-worker authority remain preserved.
+Detailed operational evidence stays in the private release handoff.
+
 ## October 14: Release Completed; Restart Efficiency Is Current Work
 
 The combined release was verified live at 18:05:35 UTC on October 14. The actual

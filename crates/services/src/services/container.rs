@@ -185,6 +185,21 @@ pub trait ContainerService: Send + Sync {
         Ok(false)
     }
 
+    /// Explicit steering never selects a replacement execution or starts work.
+    async fn steering_target(&self, _execution_id: Uuid) -> Option<(String, String)> {
+        None
+    }
+
+    async fn steer_bound_turn(
+        &self,
+        _execution_id: Uuid,
+        _thread_id: String,
+        _turn_id: String,
+        _message: String,
+    ) -> Result<bool, ContainerError> {
+        Ok(false)
+    }
+
     async fn discover_executor_options(
         &self,
         executor_profile_id: ExecutorProfileId,

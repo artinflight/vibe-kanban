@@ -2122,6 +2122,27 @@ impl ContainerService for LocalContainerService {
         PathBuf::from(workspace.container_ref.clone().unwrap_or_default())
     }
 
+    async fn steering_target(&self, execution_id: Uuid) -> Option<(String, String)> {
+        executors::executors::codex::client::AppServerClient::steering_target(execution_id).await
+    }
+
+    async fn steer_bound_turn(
+        &self,
+        execution_id: Uuid,
+        thread_id: String,
+        turn_id: String,
+        message: String,
+    ) -> Result<bool, ContainerError> {
+        executors::executors::codex::client::AppServerClient::steer_bound_turn(
+            execution_id,
+            thread_id,
+            turn_id,
+            message,
+        )
+        .await
+        .map_err(ContainerError::ExecutorError)
+    }
+
     async fn try_steer_active_turn(
         &self,
         session: &Session,

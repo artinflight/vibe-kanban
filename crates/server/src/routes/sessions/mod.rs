@@ -1,5 +1,6 @@
 pub mod queue;
 pub mod review;
+pub mod steering;
 
 use axum::{
     Extension, Json, Router,
@@ -476,6 +477,7 @@ pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let sessions_router = Router::new()
         .route("/", get(get_sessions).post(create_session))
         .nest("/{session_id}", session_id_router)
+        .nest("/{session_id}/steer", steering::router(deployment))
         .nest("/{session_id}/queue", queue::router(deployment));
 
     Router::new().nest("/sessions", sessions_router)

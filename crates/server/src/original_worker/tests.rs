@@ -224,6 +224,18 @@ impl ContainerService for FixtureContainer {
     async fn git_branch_prefix(&self) -> String {
         "synthetic".into()
     }
+    async fn steering_target(&self, id: Uuid) -> Option<(String, String)> {
+        AppServerClient::steering_target(id).await
+    }
+    async fn steer_bound_turn(
+        &self,
+        id: Uuid,
+        thread: String,
+        turn: String,
+        message: String,
+    ) -> Result<bool, ContainerError> {
+        Ok(AppServerClient::steer_bound_turn(id, thread, turn, message).await?)
+    }
     async fn try_steer_active_turn(
         &self,
         session: &Session,
@@ -422,6 +434,163 @@ fn call(id: usize) -> Value {
 #[tokio::test]
 async fn production_follow_up_resolution_launch_and_workspace_races() {
     production_fixture(false, false, false).await;
+}
+
+#[tokio::test]
+async fn explicit_dot_steering_isolated_session_http_native_and_replay_preserve_queue() {
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+    sqlx::migrate!("../db/migrations").run(&pool).await.unwrap();
+    let db = DBService { pool: pool.clone() };
+    let container = Arc::new(FixtureContainer {
+        db: db.clone(),
+        git: git::GitService::new(),
+        stores: Arc::new(RwLock::new(HashMap::new())),
+        provider: Arc::new(OnceLock::new()),
+        launches: Arc::new(AtomicUsize::new(0)),
+        worker_goal: Arc::new(AtomicBool::new(false)),
+        peers: Arc::new(Mutex::new(Vec::new())),
+        scripts: Arc::new(AtomicUsize::new(0)),
+        script_done: Arc::new(tokio::sync::Notify::new()),
+    });
+    let deployment = FixtureDeployment {
+        container: container.clone(),
+        config: Arc::new(RwLock::new(Config::default())),
+        events: EventService::new(db, Arc::new(MsgStore::new()), Arc::new(RwLock::new(0))),
+        queue: QueuedMessageService::new(),
+        monitor: Arc::new(FixtureMonitor::default()),
+    };
+    let workspace = Workspace::create(
+        &pool,
+        &CreateWorkspace {
+            branch: "isolated-dot-steer".into(),
+            name: None,
+        },
+        Uuid::new_v4(),
+    )
+    .await
+    .unwrap();
+    let session = Session::create(
+        &pool,
+        &CreateSession {
+            executor: Some("CODEX".into()),
+            name: Some("Isolated Dot steering acceptance".into()),
+        },
+        Uuid::new_v4(),
+        workspace.id,
+    )
+    .await
+    .unwrap();
+    let thread = Uuid::new_v4().to_string();
+    let raw = ExecutorConfig::new(executors::executors::BaseCodingAgent::Codex);
+    let action = ExecutorAction::new(
+        ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+            prompt: "Synthetic initial input".into(),
+            session_id: thread.clone(),
+            executor_config: raw.clone(),
+            working_dir: None,
+            reset_to_message_id: None,
+            capacity: None,
+        }),
+        None,
+    );
+    let execution = ExecutionProcess::create(
+        &pool,
+        &CreateExecutionProcess {
+            session_id: session.id,
+            executor_action: action,
+            run_reason: ExecutionProcessRunReason::CodingAgent,
+        },
+        Uuid::new_v4(),
+        &[],
+    )
+    .await
+    .unwrap();
+    let peer = native_peer(&thread, false, None).await;
+    peer.client
+        .turn_start_with_mode(
+            thread.clone(),
+            serde_json::from_value(
+                json!([{"type":"text","text":"Isolated initial input","text_elements":[]}]),
+            )
+            .unwrap(),
+            None,
+        )
+        .await
+        .unwrap();
+    AppServerClient::register_active_execution(execution.id, &peer.client);
+    deployment.queue.queue_for_capacity(
+        session.id,
+        DraftFollowUpData {
+            message: "Existing deferred user prompt".into(),
+            executor_config: raw,
+        },
+    );
+    let before = serde_json::to_value(deployment.queue.get_status(session.id)).unwrap();
+    let app = axum::Router::new()
+        .nest(
+            "/api/sessions/{session_id}/steer",
+            crate::routes::sessions::steering::router_for(&deployment),
+        )
+        .with_state(deployment.clone());
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../scripts/dot-connector");
+    let output=Command::new("python3").args(["-B","-c",r#"
+import sys,json,uuid,urllib.request,types
+sys.path.insert(0,sys.argv[1])
+import steering
+base=sys.argv[2]; posts=[]
+def get(path):
+    with urllib.request.urlopen(base+path,timeout=10) as r:return json.load(r)
+def post(path,payload):
+    posts.append(path)
+    req=urllib.request.Request(base+path,data=json.dumps(payload).encode(),headers={'Content-Type':'application/json'},method='POST')
+    with urllib.request.urlopen(req,timeout=10) as r:return json.load(r)['data']
+api=types.SimpleNamespace(valid_uuid=lambda x:str(uuid.UUID(x)),http_get=get,post_fixed=post,result=lambda x:{'content':[{'type':'text','text':json.dumps(x)}],'isError':False})
+args={'session_id':sys.argv[3],'execution_id':sys.argv[4],'request_id':str(uuid.uuid4()),'prompt':'Use the verified API; keep this turn running.'}
+first=steering.steer(api,args);second=steering.steer(api,args)
+assert not first['isError'] and not second['isError'], (first,second)
+a=json.loads(first['content'][0]['text']);b=json.loads(second['content'][0]['text'])
+assert a==b and a['status']=='steered' and a['delivered'] is True,(a,b)
+assert len(posts)==1,posts
+read=steering.get_receipt(api,{k:args[k] for k in ('session_id','request_id')})
+assert json.loads(read['content'][0]['text'])==a
+print(json.dumps({'status':a['status'],'posts':len(posts),'receipt_readback':True}))
+"#]).arg(script).arg(format!("http://{address}")).arg(session.id.to_string()).arg(execution.id.to_string()).output().await.unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        serde_json::from_slice::<Value>(&output.stdout).unwrap()["posts"],
+        1
+    );
+    assert_eq!(
+        before,
+        serde_json::to_value(deployment.queue.get_status(session.id)).unwrap()
+    );
+    assert_eq!(container.launches.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        ExecutionProcess::find_by_id(&pool, execution.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .status,
+        ExecutionProcessStatus::Running
+    );
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM execution_processes")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+    AppServerClient::unregister_active_execution(execution.id);
+    server.abort();
 }
 
 #[tokio::test]

@@ -1842,3 +1842,11 @@ tests passed. VK already supports native Codex steering, but explicit deferred
 Codex prompts need a public queue-only mode. Recorded connector override, API,
 selection policy, receipt/race/recovery requirements in VK_DOT_SESSION_STEERING.md.
 Documentation only; no prompt, executable change, restart or deployment.
+
+## 2026-10-15 — explicit Dot steering development
+
+Added isolated connector overlay and backend steering path with exact target
+identity, durable request receipts and no launch/stop/queue fallback. Preserves
+ca3fe817 capacity correction.13 new and14 existing connector tests pass against
+current source; compiled Rust and isolated HTTP/native acceptance are pending.
+No live connector installation, service restart or access-policy change.

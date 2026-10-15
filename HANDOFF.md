@@ -1,3 +1,15 @@
+# Dot explicit steering development pickup — October 15
+
+Implementation is in progress on this branch. Read
+`scripts/dot-connector/README.md`; the new API cannot start/stop/queue work and
+uses exact execution/thread/turn identity plus durable request receipts. The
+connector overlay preserves the live ca3fe817 fix and existing Recommend policy.
+13 new Python tests and14 existing connector regressions pass against its patched
+current source. Rust/native/HTTP fixture validation is pending. No live connector
+files, credentials, access settings, service restart or unrelated agents changed.
+
+## Retained investigation pickup
+
 # Dot steering/queue investigation pickup — October 15
 
 Read [VK_DOT_SESSION_STEERING.md](VK_DOT_SESSION_STEERING.md). Dot's external

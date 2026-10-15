@@ -970,6 +970,63 @@ impl AppServerClient {
             .remove(&execution_process_id);
     }
 
+    pub async fn steering_target(execution_id: Uuid) -> Option<(String, String)> {
+        let client = active_codex_clients()
+            .lock()
+            .expect("active Codex client registry poisoned")
+            .get(&execution_id)
+            .and_then(Weak::upgrade)?;
+        if client.cancel.is_cancelled() || client.capacity_stopped.load(Ordering::SeqCst) {
+            return None;
+        }
+        let thread = client.thread_id.lock().await.clone()?;
+        let turn = client.current_turn_id.lock().await.clone()?;
+        Some((thread, turn))
+    }
+
+    /// One native request, fenced to the caller's observed execution and turn.
+    /// A changed target is never retried against a newer turn.
+    pub async fn steer_bound_turn(
+        execution_id: Uuid,
+        thread_id: String,
+        turn_id: String,
+        message: String,
+    ) -> Result<bool, ExecutorError> {
+        let client = active_codex_clients()
+            .lock()
+            .expect("active Codex client registry poisoned")
+            .get(&execution_id)
+            .and_then(Weak::upgrade);
+        let Some(client) = client else {
+            return Ok(false);
+        };
+        if client.cancel.is_cancelled()
+            || client.capacity_stopped.load(Ordering::SeqCst)
+            || client.thread_id.lock().await.as_ref() != Some(&thread_id)
+            || client.current_turn_id.lock().await.as_ref() != Some(&turn_id)
+        {
+            return Ok(false);
+        }
+        let expected_turn = turn_id.clone();
+        let response = tokio::time::timeout(
+            Duration::from_secs(10),
+            client.turn_steer(
+                thread_id,
+                turn_id,
+                vec![UserInput::Text {
+                    text: message,
+                    text_elements: vec![],
+                }],
+            ),
+        )
+        .await
+        .map_err(|_| ExecutorError::Io(io::Error::other("Steering response uncertain")))??;
+        if response.turn_id != expected_turn {
+            return Err(ExecutorError::NativeReceiptUnknown);
+        }
+        Ok(true)
+    }
+
     pub async fn steer_execution(
         execution_process_id: Uuid,
         message: String,
@@ -2838,6 +2895,117 @@ mod goal_integration_tests {
     use tokio::process::Command;
 
     use super::*;
+
+    #[tokio::test]
+    async fn explicit_steering_binds_execution_thread_turn_without_start_interrupt_or_fallback() {
+        use std::process::Stdio;
+
+        use tokio::io::{AsyncBufReadExt, BufReader};
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        let execution = Uuid::new_v4();
+        AppServerClient::register_active_execution(execution, &client);
+        assert!(AppServerClient::steering_target(execution).await.is_none());
+        *client.thread_id.lock().await = Some("isolated-thread".into());
+        *client.current_turn_id.lock().await = Some("isolated-turn".into());
+        let mut child = Command::new("python3").args(["-u", "-c", r#"
+import json, sys
+for line in sys.stdin:
+    request=json.loads(line)
+    print(line.strip(),file=sys.stderr,flush=True)
+    if request['params']['input'][0]['text']=='simulate lost/error response':
+        print(json.dumps({'id':request['id'],'error':{'code':-32000,'message':'uncertain'}}),flush=True)
+    else:
+        print(json.dumps({'id':request['id'],'result':{'turnId':'isolated-turn'}}),flush=True)
+"#]).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true).spawn().unwrap();
+        let mut requests = BufReader::new(child.stderr.take().unwrap()).lines();
+        let (exit_tx, _exit_rx) = tokio::sync::oneshot::channel();
+        let peer = JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(exit_tx),
+            cancel.clone(),
+        );
+        assert!(client.rpc.set(peer).is_ok());
+        for (id, thread, turn) in [
+            (Uuid::new_v4(), "isolated-thread", "isolated-turn"),
+            (execution, "other-thread", "isolated-turn"),
+            (execution, "isolated-thread", "other-turn"),
+        ] {
+            assert!(
+                !AppServerClient::steer_bound_turn(
+                    id,
+                    thread.into(),
+                    turn.into(),
+                    "not sent".into()
+                )
+                .await
+                .unwrap()
+            );
+        }
+        assert!(
+            AppServerClient::steer_bound_turn(
+                execution,
+                "isolated-thread".into(),
+                "isolated-turn".into(),
+                "verified correction".into()
+            )
+            .await
+            .unwrap()
+        );
+        let line = tokio::time::timeout(Duration::from_secs(5), requests.next_line())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        let value: Value = serde_json::from_str(&line).unwrap();
+        assert_eq!(value["method"], "turn/steer");
+        assert_eq!(value["params"]["threadId"], "isolated-thread");
+        assert_eq!(value["params"]["expectedTurnId"], "isolated-turn");
+        assert!(
+            AppServerClient::steer_bound_turn(
+                execution,
+                "isolated-thread".into(),
+                "isolated-turn".into(),
+                "simulate lost/error response".into()
+            )
+            .await
+            .is_err()
+        );
+        assert!(requests.next_line().await.unwrap().is_some());
+        *client.current_turn_id.lock().await = Some("next-turn".into());
+        assert!(
+            !AppServerClient::steer_bound_turn(
+                execution,
+                "isolated-thread".into(),
+                "isolated-turn".into(),
+                "no retarget".into()
+            )
+            .await
+            .unwrap()
+        );
+        client.capacity_stopped.store(true, Ordering::SeqCst);
+        assert!(AppServerClient::steering_target(execution).await.is_none());
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), requests.next_line())
+                .await
+                .is_err()
+        );
+        AppServerClient::unregister_active_execution(execution);
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+    }
 
     #[tokio::test]
     async fn completion_reconciliation_steers_once_without_starting_a_turn() {

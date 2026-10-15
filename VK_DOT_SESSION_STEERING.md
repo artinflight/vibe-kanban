@@ -1,5 +1,12 @@
 # Dot steering and follow-up investigation — 2026-10-15
 
+Implementation follow-up: the user authorized development after ff83afe93.
+The current branch implements explicit steering as a separate API and connector
+overlay; see [the implementation and rollout guide](scripts/dot-connector/README.md).
+The investigation below is retained as historical evidence. Explicit deferred
+Codex queue delivery is not added: the corrected scope preserves queue semantics
+and never substitutes a later execution for active-turn steering.
+
 Dot's exact `Session is running; no follow-up sent` refusal originates in the
 external connector, before any prompt POST reaches VK. Supporting active steering
 requires changing that connector. Supporting an explicitly deferred Codex prompt

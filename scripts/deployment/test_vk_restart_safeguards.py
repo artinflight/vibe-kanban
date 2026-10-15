@@ -140,7 +140,7 @@ class RestartSafeguards(unittest.TestCase):
 
     def test_scripted_timer_is_render_only_with_no_agent_or_privilege_calls(self):
         units = render_schedule('/mnt/vk-storage/approved-job.py', '/mnt/vk-storage/config.json')
-        self.assertIn('02:00:00 UTC', units['timer'])
+        self.assertIn('02:00:00 America/Toronto', units['timer'])
         self.assertIn('NoNewPrivileges=yes', units['service'])
         self.assertIn('Type=oneshot\n', units['service'])
         self.assertIn('TimeoutStartSec=7200\n', units['service'])

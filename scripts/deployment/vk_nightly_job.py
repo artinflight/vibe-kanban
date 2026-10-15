@@ -58,7 +58,7 @@ def validate(config,plan):
     validate_socket_exclusions(config.get('socket_exclusions',[]))
     if identity(scope(plan))!=config['source_scope_sha256']:raise ValueError('source scope changed')
     if set(config['source_roots'])!=set(plan['sources']):raise ValueError('source root inventory incomplete')
-    required={'vk_nightly_job.py','vk_nightly_footprint.py','vk_nightly_capture_adapter.py','vk_nightly_b_job.py','vk_nightly_generation.py','vk_nightly_lifecycle.py','vk_b_disk_capture.py'}
+    required={'vk_nightly_job.py','vk_nightly_restart_baseline.py','vk_nightly_footprint.py','vk_nightly_capture_adapter.py','vk_nightly_b_job.py','vk_nightly_generation.py','vk_nightly_lifecycle.py','vk_b_disk_capture.py'}
     if not required<=config['source_sha256'].keys():raise ValueError('fixed handler pins incomplete')
     for raw,expected in config['source_sha256'].items():
         if checksum(Path(__file__).with_name(raw))!=expected:raise ValueError('fixed nightly source changed: '+raw)

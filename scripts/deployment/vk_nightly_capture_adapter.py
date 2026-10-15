@@ -25,7 +25,8 @@ from vk_archive_stream import StreamingArchive, packet
 from vk_b_disk_capture import capture
 from vk_b_disk_snapshot import metadata
 from vk_candidate_direct_b import DirectBProvider
-from vk_change_journal import Journal, scope
+from vk_change_journal import scope
+from vk_nightly_restart_baseline import capture_binding, capture_journal
 from vk_nightly_generation import MAX_INDEX
 from vk_nightly_delta import DeltaSelection, DeltaProvider
 from vk_prep_common import identity, storage
@@ -342,7 +343,7 @@ def mcp_lease(path):
         yield stream.fileno()
 
 
-def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
+def run_capture(config,plan,*,enroll_fresh=False,recover_only=False,journal_reader=None):
     validate_socket_exclusions(config.get('socket_exclusions',[]))
     staging=storage(config['staging']);staging.mkdir(parents=True,exist_ok=True)
     with mcp_lease(staging/'producer.lock') as lease_fd:
@@ -364,7 +365,6 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
                 except ValueError:
                     if time.monotonic()>ready_deadline:raise TimeoutError('owned B mount readiness timed out')
                     time.sleep(.1)
-            journal=Journal(plan)
             baseline=None
             if resident.ready.get('baseline'):
                 row=resident.ready['baseline']
@@ -375,14 +375,11 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
                     raise ValueError('held baseline digest mismatch')
                 baseline=json.loads(raw)
             selection=DeltaSelection(baseline,config['source_prefix'],config['scope_sha256']) if config.get('transport')=='content-delta-v1' else None
-            try:
-                for raw in plan['sources']:journal.tree(raw)
-                journal.ready=True
-                result=capture(plan,mount,journal.report,workspace.mirror,parent=None,publish=workspace.mirror,
+            with capture_journal(plan,journal_reader) as journal:
+                result=capture(plan,mount,journal,workspace.mirror,parent=None,publish=workspace.mirror,
                     max_snapshot_bytes=1,disk_snapshot=lambda raw:disk_snapshot(raw,workspace,allowed_sqlite(plan,raw),
                         maximum_bytes=config['snapshot_limit_bytes'],timeout_seconds=config['snapshot_timeout_seconds']),
                     disk_inventory_root=mount,workspace=workspace,nightly_selection=selection)
-            finally:journal.close()
             provider_class=DirectBProvider if selection is None else DeltaProvider
             provider=provider_class(config['scope_sha256'],[str(Path(raw).relative_to(config['source_prefix'])) for raw in result['databases']],
                                      metadata_budget_bytes=MAX_INDEX,**({} if selection is None else {'selection':selection}))
@@ -390,6 +387,7 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False):
             provider.register(capture_id,result,identity(plan),identity(scope(plan)),config['source_prefix'],origin_root_binding='nightly-current-source-inventory')
             proof=provider.verify(capture_id)
             verify_immutable_capture(config,proof)
+            proof['restart_capture']=capture_binding(result,plan,config['source_prefix'],proof)
             validate_socket_exclusions(config.get('socket_exclusions',[]))
             # Carry only the verified index; B replay maps authenticated tar
             # headers itself, avoiding another host-scale path/location vector.

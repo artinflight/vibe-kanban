@@ -1,3 +1,19 @@
+## Nightly baseline/restart compatibility
+
+Nightly captures now retain an explicit restart capture binding in the independent
+manifest. A read-only consumer holds the existing store lease, checks pinned
+manifest/object/SQLite identities and physical readback, then validates actual
+journal continuity from capture START. Existing owner-managed journal readers
+are trusted source callbacks whose lifecycle remains with that owner. The CLI
+private watcher remains backup-only across runs. Dependent archive chains are
+not independent nightly generations and are not adopted into nightly retention.
+
+See scripts/deployment/VK_NIGHTLY_RESTART_CONTRACT.md for controller interfaces,
+physical recovery and activation prerequisites. Source fixtures cover the actual
+archive/index-to-nightly contract, independent second-generation SQLite recovery,
+lease lifetime and continuity/identity failures. Scheduling remains disabled;
+current operational evidence and capacity stay in private local handoffs.
+
 ## Streaming nightly measurement
 
 The existing inventory entrypoint now traverses source directories with bounded

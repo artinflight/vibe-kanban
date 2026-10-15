@@ -447,7 +447,7 @@ def render_schedule(job_script, configuration):
                'TimeoutStartSec=7200\nTimeoutStopSec=30\nExecStart=/usr/bin/python3 -B ' + str(job_script)
                + ' --config ' + str(configuration) + '\n')
     timer = ('[Unit]\nDescription=Normal VK nightly schedule\n[Timer]\n'
-             'OnCalendar=*-*-* 02:00:00 UTC\nRandomizedDelaySec=60\nPersistent=true\n'
+             'OnCalendar=*-*-* 02:00:00 America/Toronto\nRandomizedDelaySec=60\nPersistent=true\n'
              'Unit=vk-normal-nightly.service\n[Install]\nWantedBy=timers.target\n')
     return {'service': service, 'timer': timer, 'enabled': False,
             'schedule_receipt': None, 'test_run_receipt': None}

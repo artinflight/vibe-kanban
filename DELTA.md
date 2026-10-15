@@ -1833,3 +1833,12 @@ actual-authority/runtime-overlay acceptance remain gates; no activation claimed.
 ## 2026-10-14 — PR249 system-wide native review preparation
 
 Code/test9afe687c9 passes Full Test38640253559 (572 tests/13 skips plus12 scheduling tests), native38640253455 (14 typed/history plus12 policy tests), and source-fenced artifacts38640258375. Actual DEFAULT start, genuine legacy-user resume/MCP and corrected stdin with stale CLI flags pass;17 root turns cover seven native review variants, denial and mandatory-human preservation. All779 artifacts/2527 source hashes independently verified. Private source retains three live reader files; exact fenced build exception is pending. No live settings, credentials, merge/restart/deploy or other-agent operation. Read VK_SYSTEM_NATIVE_REVIEW.md and PR249; Recommend/PR245/246 remain intact.
+
+## 2026-10-15 — Dot steering and queue diagnosis
+
+Traced exact running-session refusal to external Dot `adapter.py:session_configs`;
+mocked `local_followup` reproduced it with zero POSTs. Nine configuration-policy
+tests passed. VK already supports native Codex steering, but explicit deferred
+Codex prompts need a public queue-only mode. Recorded connector override, API,
+selection policy, receipt/race/recovery requirements in VK_DOT_SESSION_STEERING.md.
+Documentation only; no prompt, executable change, restart or deployment.

@@ -1,3 +1,22 @@
+# Dot steering/queue investigation pickup — October 15
+
+Read [VK_DOT_SESSION_STEERING.md](VK_DOT_SESSION_STEERING.md). Dot's external
+`adapter.py:session_configs` rejects any running execution before POST; its
+`local_followup` only calls `/follow-up`. Existing `/queue` can steer Codex but
+has no explicit Codex queue-only mode. Do not merely remove the connector guard
+or change the Rust MCP tool: Dot intercepts this tool locally. Preserve Recommend,
+selection/permission policy and uncertain-write handling in any implementation.
+
+Validation: nine connector `test_recommend` mocks passed; a direct mocked
+`local_followup` reproduced the exact refusal and asserted zero POSTs. Active
+backend binary contains steering/readiness strings; no live delivery is claimed.
+`pnpm run ops:check` and `git diff --check` pass. `pnpm run format` completed
+Rust formatting but stopped at web-core because `prettier` is not installed in
+this checkout; no executable source changed. No live prompt, service restart or
+deployment. Investigation only; no commit/push.
+
+## Retained prior-stream context
+
 # Native review PR249 — verified implementation, release held
 
 Code/test head9afe687c9 passes Full Test38640253559, native38640253455 and

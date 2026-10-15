@@ -1,3 +1,15 @@
+# Dot running-agent steering and queue investigation — October 15
+
+Branch `vk/a674-vk-dot-turn-stee` investigates the reported Dot refusal.
+Root cause and required connector/backend changes are documented in
+[VK_DOT_SESSION_STEERING.md](VK_DOT_SESSION_STEERING.md). Exact refusal reproduced
+with mocked running state and zero POSTs; nine existing configuration-policy
+tests pass. Scope is investigation, without implementation or live mutations.
+Next implementation should expose existing steering and add explicit deferred
+Codex delivery while retaining Recommend and current selection/permission policy.
+
+## Retained prior-stream context
+
 # Native review PR249 — verified implementation, release held
 
 Code/test head9afe687c9 passes Full Test38640253559, native38640253455 and

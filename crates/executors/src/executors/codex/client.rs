@@ -2956,6 +2956,7 @@ mod goal_integration_tests {
             "model":"gpt-6.1-sol","cwd":work,"approvalPolicy":"on-request","sandbox":"read-only","ephemeral":false
         })).unwrap()).await.unwrap().thread.id;
         let execution = Uuid::new_v4();
+        client.register_session(&thread).await.unwrap();
         AppServerClient::register_active_execution(execution, &client);
         let marker = format!("STEERING_VERIFIED_{}", Uuid::new_v4().simple());
         let initial = "This is an isolated steering acceptance test. Run only `sleep 20` once, then answer ORIGINAL_ONLY. Do not read or write files, access network, or run other commands. A correction may arrive during this same turn.";

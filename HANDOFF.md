@@ -9,9 +9,10 @@ copied-current-data checks with all 18 authentic finals preserved exactly once.
 Do not rebuild the accepted candidate or substitute the public-only server.
 
 Restart preparation is underway; production is unchanged. Continue from the
-existing private release manifest and live progress receipts. A fresh independent
-whole-current backup is verified, with measured restore readback still running.
-Final package/controller/current-data and natural-quiet checks remain. The scoped
+existing private release manifest and live progress receipts. The fresh independent
+whole-current backup and measured full payload/metadata/database restore readback
+are verified. Controller and artifact bindings pass; final current-data and
+natural-quiet checks remain. The scoped
 code-only release needs no persistent native configuration/profile writes;
 request-local overrides enforce native auto_review/on-request/workspace-write,
 preserving read-only/Plan and mandatory human decisions. Original-worker

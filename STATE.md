@@ -8,8 +8,9 @@ retained rollback each pass 191 copied-current-data HTTP checks, preserving all
 18 recovered finals exactly once. Production has not switched to this fix.
 
 The release owner is preparing the requested restart. Fresh independent backup
-capture is verified; measured restore readback, final package/controller binding
-and the genuine quiet handoff remain release gates. The new executor enforces
+capture and measured restore readback are verified, including all included payload
+bytes and 89 databases. Candidate/controller/package bindings pass; final latest-data
+catch-up and the genuine quiet handoff remain release gates. The new executor enforces
 native review per new/resumed/fork/feedback turn, so this minimal code-only release
 does not require the proposed persistent native configuration/profile edits.
 Read-only/Plan, mandatory human forms, managed constraints, models, Recommend,

@@ -366,40 +366,46 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
         assert_eq!(inventory_result.floor, CapabilityFloor::Routine);
         let mut shadow = policy.clone();
         shadow.mode = RoutingMode::Shadow;
-        let (progress, semantic) = routing_module::assess(
+        for prompt in [
             "Do we have better recommendations?",
-            Some("Validate the candidate without changing security settings"),
-            Some(
-                "CI is blocked by the sandbox. Recommend mode and selected settings are unchanged.",
-            ),
-            Some("protected"),
-            Some(&root),
-            false,
-            &shadow,
-            false,
-            serde_json::Value::Null,
-        );
-        assert!(semantic.is_none());
-        assert!(routing_module::warning().is_none());
-        assert_eq!(progress.envelope, "bounded");
-        assert!(
-            progress
-                .triage
-                .evidence
-                .contains(&"surrounding_assignment:protected".into())
-        );
-        assert_eq!(
-            executors::routing::choose_assessed(
+            "Any news on less expensive recommendations?",
+            "Good, now, we need substantially more space free on SSD. Give me a report of large uses of space",
+        ] {
+            let (progress, semantic) = routing_module::assess(
+                prompt,
+                Some("Validate the candidate without changing security settings"),
+                Some(
+                    "CI is blocked by the sandbox. Recommend mode and selected settings are unchanged.",
+                ),
+                Some("protected"),
+                Some(&root),
+                false,
                 &shadow,
-                progress.floor,
-                progress.envelope,
-                &policies,
-                &availability,
-                now
-            )
-            .unwrap(),
-            ("gpt-6-sol".into(), "low".into())
-        );
+                false,
+                serde_json::Value::Null,
+            );
+            assert!(semantic.is_none());
+            assert!(routing_module::warning().is_none());
+            assert_eq!(progress.envelope, "bounded");
+            assert!(
+                progress
+                    .triage
+                    .evidence
+                    .contains(&"surrounding_assignment:protected".into())
+            );
+            assert_eq!(
+                executors::routing::choose_assessed(
+                    &shadow,
+                    progress.floor,
+                    progress.envelope,
+                    &policies,
+                    &availability,
+                    now
+                )
+                .unwrap(),
+                ("gpt-6-sol".into(), "low".into())
+            );
+        }
         let recommendation = executors::routing::choose_assessed(
             &shadow,
             inventory_result.floor,

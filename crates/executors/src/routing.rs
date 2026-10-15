@@ -883,34 +883,40 @@ mod tests {
             r.prompt = "Change authentication permissions".into();
         }
         resolve_action(&mut prior, None, false).unwrap();
-        for failed in [false, true] {
-            let mut next = action(Some(policy.clone()));
-            if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut next.typ {
-                r.prompt = "Do we have better recommendations?".into();
-                r.executor_config.model_id = Some("gpt-6.1-sol".into());
-                r.executor_config.reasoning_id = Some("high".into());
-            }
-            let before = serde_json::to_value(&next.typ).unwrap();
-            resolve_action_impl(
-                &mut next,
-                Some(&prior),
-                failed,
-                None,
-                false,
-                Some("Recommend mode remains enabled. CI is blocked by the sandbox."),
-            )
-            .unwrap();
-            assert_eq!(serde_json::to_value(&next.typ).unwrap(), before);
-            let d = next.routing_decision.unwrap();
-            assert!(d.semantic.is_none());
-            assert_eq!(
-                d.floor,
-                if failed {
-                    CapabilityFloor::Frontier
-                } else {
-                    CapabilityFloor::Routine
+        for prompt in [
+            "Do we have better recommendations?",
+            "Any news on less expensive recommendations?",
+            "Show me disk usage",
+        ] {
+            for failed in [false, true] {
+                let mut next = action(Some(policy.clone()));
+                if let ExecutorActionType::CodingAgentInitialRequest(r) = &mut next.typ {
+                    r.prompt = prompt.into();
+                    r.executor_config.model_id = Some("gpt-6.1-sol".into());
+                    r.executor_config.reasoning_id = Some("high".into());
                 }
-            );
+                let before = serde_json::to_value(&next.typ).unwrap();
+                resolve_action_impl(
+                    &mut next,
+                    Some(&prior),
+                    failed,
+                    None,
+                    false,
+                    Some("Recommend mode remains enabled. CI is blocked by the sandbox."),
+                )
+                .unwrap();
+                assert_eq!(serde_json::to_value(&next.typ).unwrap(), before);
+                let d = next.routing_decision.unwrap();
+                assert!(d.semantic.is_none());
+                assert_eq!(
+                    d.floor,
+                    if failed {
+                        CapabilityFloor::Frontier
+                    } else {
+                        CapabilityFloor::Routine
+                    }
+                );
+            }
         }
     }
 

@@ -1831,3 +1831,5 @@ See VK_AUTOSWITCH_COST_EVIDENCE.md and PR244. Private receipts stay local.
 2026-10-13 AutoSwitch deployment requested: host full sandbox probe passes unchanged. Prepare hosted worker/test artifacts for isolated full acceptance without local builds; publication remains gated on acceptance and independent review.
 
 - 2026-10-14: Published reviewed AutoSwitch output-status-876d7a554-20261013 through the existing no-restart module path. Exact artifacts, full isolated acceptance and independent review passed; live process/configuration preserved. Recommend unchanged; ordinary-task adoption and actual savings remain separate observations. Private receipts retained outside Git.
+
+- 2026-10-15: Prepared focused ordinary-report corrections for observed output-status and storage-inventory misses, with zero-inference and protected-continuation regressions. Validation/publication pending; Recommend and selected models preserved.

@@ -869,6 +869,62 @@ mod tests {
     }
 
     #[test]
+    fn ordinary_reports_release_history_without_inference_or_lowering_protected_facts() {
+        for (prompt, reply) in [
+            (
+                "Any news on less expensive recommendations?",
+                "Recommend mode is enabled; results are recorded.",
+            ),
+            (
+                "Good, now, we need substantially more space free on SSD. Give me a report of large uses of space",
+                "The earlier storage cleanup is complete; further removal is blocked by retention policy.",
+            ),
+        ] {
+            let mut request = bounded_request();
+            request.prompt = prompt.into();
+            request.completed_reply = Some(reply.into());
+            request.seed = (&crate::routing_assessment::assess(prompt)).into();
+            let pre = checked(
+                evaluate(serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap())
+                    .unwrap(),
+                &request,
+            )
+            .unwrap();
+            assert!(!pre.needs_semantic, "{prompt}");
+            let result =
+                stages(serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap())
+                    .unwrap();
+            assert_eq!(
+                result.assessment.floor,
+                CapabilityFloor::Routine,
+                "{prompt}"
+            );
+            assert!(
+                result
+                    .assessment
+                    .triage
+                    .evidence
+                    .contains(&"surrounding_assignment:protected".into())
+            );
+            for failure in [false, true] {
+                let mut guarded: Request =
+                    serde_json::from_value(serde_json::to_value(&request).unwrap()).unwrap();
+                if failure {
+                    guarded.failed = true;
+                } else {
+                    guarded
+                        .context
+                        .risk
+                        .push("protected_component_context".into());
+                }
+                if let Ok(result) = stages(guarded) {
+                    assert_eq!(result.assessment.floor, CapabilityFloor::Frontier);
+                }
+            }
+        }
+    }
+
+    #[test]
     fn bounded_recording_skips_inference_and_passes_pinned_history_guards() {
         for prompt in [
             "Sitrep",

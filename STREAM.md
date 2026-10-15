@@ -1,3 +1,17 @@
+## October 15: ordinary report history correction in preparation
+
+Real post-publication observations exposed missed natural output-status wording
+and storage inventory being treated as unfinished cleanup. Extend the existing
+completed-context reporting fast path: known-output questions and closed
+storage-usage reports may qualify without inference. Storage counts across
+multiple directories do not authorize cross-system modifications. Current risk,
+failed validation, missing context, additional operations, explicit floors and
+unknown continuation remain protected. Keep surrounding qualification for later
+continuation. Semantic instructions clarify the same distinction; no native
+classification, qualification/catalog, pricing/accounting or execution settings
+are rewritten. Recommend remains required. Tests and no-restart publication are
+in progress; do not assume this prepared correction is live.
+
 ## October 14: output-status module published without a restart
 
 The independently reviewed module `output-status-876d7a554-20261013`, built from

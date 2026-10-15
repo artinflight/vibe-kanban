@@ -96,8 +96,10 @@ fn bounded_record_kind(prompt: &str, reply: &str) -> Option<&'static str> {
     // and unresolved pronouns still need the normal semantic/safety path.
     static PROGRESS: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(concat!(
-            r"^(?:please )?(?:do we (?:now )?have|are we (?:now )?getting) ",
-            r"(?:any |better |improved |new |updated |more |fewer )?",
+            r"^(?:please )?(?:do we (?:now )?have |are we (?:now )?getting |",
+            r"(?:any |what(?:'s| is) the )?(?:news|updates?) on )",
+            r"(?:any |better |improved |new |updated |more |fewer |",
+            r"less expensive |cheaper |lower cost |lower-cost )?",
             r"(recommendations|results|reports)(?: (?:yet|now))?[.!?]*$"
         ))
         .unwrap()
@@ -124,6 +126,27 @@ fn bounded_record_kind(prompt: &str, reply: &str) -> Option<&'static str> {
         if known_output {
             return Some("observed_output_status");
         }
+    }
+    // Inspecting storage use is not permission to free space. Require a whole
+    // observational request with a closed target vocabulary; desired capacity
+    // may precede it, but no operation, arbitrary suffix or unresolved target.
+    // Counting multiple directories is one inventory, not cross-system edits.
+    // Failure evidence above and current/native repository risk still win.
+    static STORAGE_REPORT: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(concat!(
+            r"^(?:(?:good|okay|ok|all right),? (?:now,? )?)?",
+            r"(?:(?:we|i) (?:need|want) (?:substantially |much |some )?more ",
+            r"(?:space free|free space) on (?:the )?(?:ssd|disk|drive)[.!] )?",
+            r"(?:please )?(?:(?:give|show)(?: me)? (?:a |the )?report (?:of|on) |",
+            r"(?:report|list|show)(?: me)? (?:the )?)",
+            r"(?:large uses of space|(?:current )?(?:disk|ssd|storage) (?:usage|use)|",
+            r"(?:largest|biggest) (?:files|directories|folders)(?: on (?:the )?(?:ssd|disk|drive))?)",
+            r"[.!?]*$"
+        ))
+        .unwrap()
+    });
+    if STORAGE_REPORT.is_match(&text) {
+        return Some("storage_usage_report");
     }
     if prior.contains("blocked by") || prior.contains("cannot continue") {
         return None;
@@ -229,6 +252,13 @@ mod tests {
         let report = "CI is blocked by an unsupported sandbox. Recommend mode and selected settings are unchanged.";
         for (prompt, reply) in [
             ("Do we have better recommendations?", report),
+            ("Any news on less expensive recommendations?", report),
+            ("Any update on cheaper recommendations?", report),
+            ("What's the news on lower-cost recommendations?", report),
+            (
+                "Updates on improved results?",
+                "The recorded results are available.",
+            ),
             ("Are we getting better recommendations now?", report),
             ("Do we now have updated recommendations?", report),
             (
@@ -292,6 +322,23 @@ mod tests {
                 "Do we have better recommendations and restart it?",
                 Some(reply),
             ),
+            ("Any news on cheaper recommendations?", None),
+            (
+                "Any news on cheaper recommendations?",
+                Some("My recommendation is to replace the firewall."),
+            ),
+            (
+                "Any news on cheaper recommendations? Apply them",
+                Some(reply),
+            ),
+            (
+                "Any news on cheaper recommendations for bypassing permissions?",
+                Some(reply),
+            ),
+            (
+                "Any news on cheaper recommendations?",
+                Some("Recommend mode: tests still fail."),
+            ),
             ("Are the recommendations safe?", Some(reply)),
             ("Recommend a better approach", Some(reply)),
             ("Do we have better permissions?", Some(reply)),
@@ -318,6 +365,77 @@ mod tests {
             }
             apply_reference_context(&mut a, prompt, Some(reply));
             assert_ne!(a.evidence, "completed_context_bounded_record");
+            assert_eq!(
+                retain_previous(a, prompt, Some("protected")).floor,
+                CapabilityFloor::Frontier
+            );
+        }
+    }
+
+    #[test]
+    fn storage_inventory_is_reporting_not_cleanup_or_cross_system_change() {
+        let reply = "The earlier cleanup operation is complete; further removal is blocked by retention policy.";
+        for prompt in [
+            "Good, now, we need substantially more space free on SSD. Give me a report of large uses of space",
+            "Show me disk usage",
+            "Please list the largest directories on the SSD",
+            "Give me a report on storage usage",
+        ] {
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, Some(reply));
+            assert_eq!(a.evidence, "completed_context_bounded_record", "{prompt}");
+            assert!(!crate::routing_semantic::needed(&a, false));
+            let a = retain_previous(a, prompt, Some("protected"));
+            assert_eq!(a.floor, CapabilityFloor::Routine, "{prompt}");
+            assert!(
+                a.triage
+                    .evidence
+                    .contains(&"surrounding_assignment:protected".into())
+            );
+            assert_eq!(
+                boundary_floor(&a, CapabilityFloor::Frontier, None),
+                CapabilityFloor::Frontier
+            );
+        }
+        for prompt in [
+            "Give me a report of large uses of space and delete the biggest files",
+            "Show me disk usage. Then free space",
+            "List the largest directories and fix permissions",
+            "List the largest files including passwords",
+            "Show me storage usage for production data migration",
+            "Show me disk usage; disable retention checks",
+            "We need more space free on SSD. Delete the largest directories",
+            "Show me its usage",
+            "Is it safe to remove the largest directories?",
+            "Continue",
+        ] {
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, Some(reply));
+            assert_ne!(a.evidence, "completed_context_bounded_record", "{prompt}");
+            assert_eq!(
+                retain_previous(a, prompt, Some("protected")).floor,
+                CapabilityFloor::Frontier,
+                "{prompt}"
+            );
+        }
+        for reply in [None, Some("Validation failed; no verified progress.")] {
+            let prompt = "Show me disk usage";
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, reply);
+            assert_eq!(
+                retain_previous(a, prompt, Some("protected")).floor,
+                CapabilityFloor::Frontier
+            );
+        }
+        for failure in [false, true] {
+            let prompt = "Show me disk usage";
+            let mut a = assess(prompt);
+            if failure {
+                a.validation_failure = true;
+            } else {
+                a.triage.risk.push("protected_repository_context".into());
+            }
+            apply_reference_context(&mut a, prompt, Some(reply));
             assert_eq!(
                 retain_previous(a, prompt, Some("protected")).floor,
                 CapabilityFloor::Frontier

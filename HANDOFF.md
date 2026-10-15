@@ -1,3 +1,15 @@
+## Complete-session history compaction investigation
+
+Source-only bounded experiments preserve exact bytes while comparing record,
+chunk and reversible stdout-framing reuse. An independent-generation physical
+fixture checks SQLite/session/native-log references, dirty work and attachments.
+See scripts/deployment/VK_HISTORY_ARCHIVAL_CONTRACT.md for complete-session
+archival/hydration, active resume and exact reproducible-output exclusion gates.
+Operational sample measurements and the consolidation-owner handoff remain
+private/local. No held B payload, production history, backup scope, retention,
+schedule or service is changed. Real archive-backed resume/browsing and whole
+catalog compaction are not adopted or proved by the fixtures.
+
 ## Backup content audit and lean restore proposals
 
 Read-only metadata-index auditing now separates logical file sizes, tar regular

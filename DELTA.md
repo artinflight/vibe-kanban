@@ -1833,3 +1833,5 @@ See VK_AUTOSWITCH_COST_EVIDENCE.md and PR244. Private receipts stay local.
 - 2026-10-14: Published reviewed AutoSwitch output-status-876d7a554-20261013 through the existing no-restart module path. Exact artifacts, full isolated acceptance and independent review passed; live process/configuration preserved. Recommend unchanged; ordinary-task adoption and actual savings remain separate observations. Private receipts retained outside Git.
 
 - 2026-10-15: Prepared focused ordinary-report corrections for observed output-status and storage-inventory misses, with zero-inference and protected-continuation regressions. Validation/publication pending; Recommend and selected models preserved.
+
+- 2026-10-15: Published report-scope-f8901e1e9-20261015 after exact-source 63 policy/37 accounting/195 executor and full-isolation reload tests, pinned validator and independent acceptance. Live process/configuration unchanged, Recommend preserved, rollback retained. Both missed reporting cases select Sol6/low without classifier inference in acceptance; real outcome/savings remain separate observations.

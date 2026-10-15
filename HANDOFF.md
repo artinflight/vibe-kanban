@@ -1,16 +1,36 @@
-## October 15: ordinary report history correction in preparation
+## October 15: report-scope correction published without a restart
 
-Real post-publication observations exposed missed natural output-status wording
-and storage inventory being treated as unfinished cleanup. Extend the existing
-completed-context reporting fast path: known-output questions and closed
-storage-usage reports may qualify without inference. Storage counts across
-multiple directories do not authorize cross-system modifications. Current risk,
-failed validation, missing context, additional operations, explicit floors and
-unknown continuation remain protected. Keep surrounding qualification for later
-continuation. Semantic instructions clarify the same distinction; no native
-classification, qualification/catalog, pricing/accounting or execution settings
-are rewritten. Recommend remains required. Tests and no-restart publication are
-in progress; do not assume this prepared correction is live.
+Published `report-scope-f8901e1e9-20261015`, exact source
+`f8901e1e9d240f7a72771e02eefa84cb444c19e3`, through the established module helper.
+Manifest SHA-256: `54ec69d061aef96c628d37d66f5ff657d760bbd22e2e02a06b3d118a6acdbc9f`.
+Both observed misses now choose Sol6/low in the real sandboxed same-process
+acceptance: natural questions about cheaper recorded recommendations and a
+storage-usage report after earlier protected cleanup. Both use the existing
+zero-inference reporting path. Cleanup, additional actions, current risk, failed
+validation, unresolved context and explicit floors remain protected. A following
+continuation restores the surrounding assignment. Model/qualification policy,
+accounting rules, classifier model/effort and selected execution settings are
+unchanged; Recommend remains required.
+
+Accepted exact-source validation: 63 hosted policy tests, 37 accounting/workflow
+tests, 195 executor tests (eight opt-in tests ignored), one full-isolation
+reload/rollback test, unchanged pinned-validator checks and independent review.
+Hosted run 38808190491's full-sandbox job remains failed at the unchanged
+namespace probe; it is not accepted evidence. Source-bound binaries passed the
+original full sandbox on the existing supported host, without a local build or
+security change. Initial strip/reload attempts failed on the newly generated
+private artifact's missing owner-write bit; correcting only that artifact to
+0700 preserved hashes and allowed normal strip/copy. Failed receipts are retained.
+Rust formatting, governance and whitespace checks pass; the full format command
+stopped at the pre-existing missing frontend Prettier, with no frontend changes.
+
+Live module/env/hash, process and health readback pass. API configuration/executor
+digests and Recommend/selected model/effort match prepublication. No restart,
+Auto activation, registry change or staging/main merge. The previous immutable
+output-status release remains available for rollback. New boundaries adopt the
+correction; admitted turns remain pinned. Private operational receipts stay
+outside Git. Test recommendations are not measured accepted-task savings; inspect
+subsequent ordinary turns without generating synthetic inference work.
 
 ## October 14: output-status module published without a restart
 

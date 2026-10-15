@@ -1,3 +1,12 @@
+## October 15: AutoSwitch reporting correction active
+
+The independently accepted report-scope module is published through the existing
+no-restart protocol-2 path. Live process and configuration readback are unchanged.
+Ordinary factual reporting may release irrelevant inferred session history;
+current risks, failures, manual constraints and protected continuations retain
+qualification. Recommend remains required; no actual savings are established by
+the regression results. HANDOFF.md records exact source and validation.
+
 ## October 14: AutoSwitch ordinary policy updates
 
 The supported protocol-2 routing-module path has published an independently

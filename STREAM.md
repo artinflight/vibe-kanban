@@ -1,3 +1,17 @@
+## Backup content audit and lean restore proposals
+
+Read-only metadata-index auditing now separates logical file sizes, tar regular
+payloads, hardlinks and content-hash uniqueness, with bounded memory/cardinality.
+It never opens held backup payloads. Categories are measurement hints, not an
+exclusion policy. A pure proposal helper and physical tiny restore fixture
+preserve dirty/untracked source, Git/history, attachments and runtime artifacts;
+rebuild inputs must remain pinned and recoverable, including retained hardlink
+aliases whose former canonical path would be excluded.
+
+See scripts/deployment/VK_BACKUP_CONTENT_AUDIT.md. Measured operational reports
+stay private/local; no production plan, retained backup, schedule or service is
+changed. Real dependency/cache exclusions still need exact-path recovery proof.
+
 ## Nightly baseline/restart compatibility
 
 Nightly captures now retain an explicit restart capture binding in the independent

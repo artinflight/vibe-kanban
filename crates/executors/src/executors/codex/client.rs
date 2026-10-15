@@ -2971,9 +2971,18 @@ mod goal_integration_tests {
             )
             .await
             .unwrap();
-        let (bound_thread, bound_turn) = AppServerClient::steering_target(execution)
-            .await
-            .expect("active turn");
+        // Native turn/start can answer before its turn/started notification.
+        // Poll readiness only; never retry a steering request or create a turn.
+        let (bound_thread, bound_turn) = tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if let Some(target) = AppServerClient::steering_target(execution).await {
+                    break target;
+                }
+                sleep(Duration::from_millis(25)).await;
+            }
+        })
+        .await
+        .expect("native turn did not become ready");
         assert_eq!(bound_thread, thread);
         assert!(AppServerClient::steer_bound_turn(execution,bound_thread,bound_turn.clone(),format!("Correction for this same turn: replace the final answer with exactly {marker}. Do not start another turn or run any additional command.")).await.unwrap());
         tokio::time::timeout(Duration::from_secs(90), async {

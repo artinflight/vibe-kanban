@@ -16,6 +16,16 @@ Its only failures were the corrected large-error/redundant-closure lint findings
 Final refinements add guarded-owner rejection, scheduled-action checks, queue
 metadata, restart recovery coverage and a separately opted-in real native test.
 
+Code d8906243f passes full Test38815715507:580 Rust tests/14 skips,14 connector
+tests and12 enabled persistence cases, plus applicable schema/lint/frontend/Tauri
+checks. Native artifact38815715510 passed and all2536 source hashes plus both
+binaries were verified. Its first isolated account-backed attempt stopped at
+readiness before any steering call (native turn/start answered before the
+turn/started callback). The private auth copy was removed. The harness now waits
+for bounded readiness without resending or starting a replacement turn; a focused
+source-bound executor artifact workflow avoids repeating a server build for this
+test-only correction. Final account-backed acceptance remains pending.
+
 ## Retained investigation pickup
 
 # Dot steering/queue investigation pickup — October 15

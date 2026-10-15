@@ -1856,3 +1856,10 @@ checkpoint tests in Test38812713572, including real HTTP/SQLite/synthetic-native
 steering and replay. Two lint findings are corrected; final safety refinements
 and an ignored single-turn account-backed acceptance test are prepared.14 new
 connector tests and14 unchanged capacity/Recommend regressions pass locally.
+
+d8906243f passed full Test38815715507 (580 Rust/14 skips,14 connector and12
+enabled persistence cases) and native artifacts38815715510. A real isolated
+attempt exposed the harness's immediate readiness assumption before any steering
+call. Added bounded notification readiness waiting and focused executor artifact
+export; no native correction was blindly retried and the private auth copy was
+removed. Account-backed final-answer acceptance remains pending.

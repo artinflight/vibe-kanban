@@ -1,0 +1,47 @@
+name: Dot steering acceptance artifact
+on:
+  pull_request:
+    branches: [staging]
+    paths:
+      - 'crates/executors/src/executors/codex/client.rs'
+      - 'scripts/dot-connector/**'
+      - '.github/workflows/dot-steering-acceptance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: dot-steering-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  executor-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CARGO_INCREMENTAL: '0'
+      CARGO_BUILD_JOBS: '2'
+      VK_EXPECTED_SOURCE: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.VK_EXPECTED_SOURCE }}
+          persist-credentials: false
+      - uses: ./.github/actions/cargo-checks-common-setup
+        with:
+          toolchain: nightly-2025-12-04
+          cache-key: backend-test-Linux-X64-ubuntu-24.04
+      - name: Verify steering protocol fixture without account access
+        run: cargo test --locked -p executors --lib explicit_steering_binds_execution_thread_turn_without_start_interrupt_or_fallback
+      - name: Test connector and overlay preparation
+        run: python3 -B -m unittest discover -s scripts/dot-connector -p 'test_*.py' -v
+      - name: Export source-bound executor test binary
+        env:
+          VK_STEERING_TEST_ARTIFACT: ${{ runner.temp }}/dot-steering-artifact
+        run: |
+          cargo test --locked -p executors --lib --no-run --message-format=json > "$RUNNER_TEMP/dot-steering-tests.jsonl"
+          python3 -B scripts/dot-connector/export_test_artifact.py "$RUNNER_TEMP/dot-steering-tests.jsonl"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dot-steering-${{ env.VK_EXPECTED_SOURCE }}
+          path: ${{ runner.temp }}/dot-steering-artifact/
+          retention-days: 14
+          if-no-files-found: error

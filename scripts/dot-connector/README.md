@@ -51,6 +51,11 @@ executor test artifact. It starts one read-only/on-request thread, sends one
 correction, and verifies the final marker in the same sole native turn. It must
 never point at a production home or existing user thread. Native account material
 stays private in the dedicated home; no account data belongs in source/artifacts.
+The focused `Dot steering acceptance artifact` workflow exports this test binary
+with exact commit/tree, all tracked source hashes and binary SHA256. It does not
+start a backend or access a native account; normal backend/release checks remain
+separate. The harness waits for `turn/started` readiness after `turn/start`, since
+the response can arrive before that notification. It never retries a correction.
 
 ## Deployment requirements
 

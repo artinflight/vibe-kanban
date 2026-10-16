@@ -3,7 +3,7 @@
 Published as [draft PR #255](https://github.com/artinflight/vibe-kanban/pull/255)
 against `staging`, stacked on [preservation PR #254](https://github.com/artinflight/vibe-kanban/pull/254).
 The PR records the mobile-only comparison, merge order, host validation limit,
-and pending physical keyboard/real Dot roundtrip/deployment acceptance. The
+and pending phone keyboard/phone roundtrip/deployment acceptance. The
 mobile issue is [T60](https://vibe.local/projects/1cf19067-4055-4432-bbc1-581919f9185d/issues/c961527e-f090-4eac-9483-2480d016a552).
 Publication does not activate the new mobile tab.
 
@@ -34,6 +34,19 @@ controls have 44px touch targets, long context labels wrap, and the chat can
 scroll when the keyboard reduces the available height. Existing pairing, project
 scope, CSRF, receipt and retry behavior is retained.
 
+## Desktop success and remaining connector/phone checks
+
+Seamus confirms that the first desktop Dot chat request/reply test succeeded on
+October 16, witnessed in his screenshot. It used the integration task's available
+connector. This is a successful desktop reply test; the mobile browser harness
+below still uses simulated pairing and sends.
+
+Direct root Dot connector access remains unverified because root Dot still lacks
+the new tools. A real phone roundtrip and physical S25+ software-keyboard
+acceptance also remain unverified, pending Seamus making the phone available.
+No private conversation identifiers, receipt identifiers or screenshot contents
+are included in this correction. Publishing it does not authorize deployment.
+
 ## Validation
 
 Repository formatting, ops governance, all four frontend TypeScript checks,
@@ -44,7 +57,11 @@ were attempted before publication with the shared SSD Cargo target and increment
 compilation disabled. The frontend stages passed; the Rust stages fail on this
 host's missing `glib-2.0` pkg-config development library. Later aggregate stages
 are not certified. No Rust, remote deployment, schema or generated types changed.
-GitHub CI is still required before merge.
+GitHub CI passed for the pre-correction heads of both
+[preservation #254](https://github.com/artinflight/vibe-kanban/actions/runs/38911578393)
+and [mobile #255](https://github.com/artinflight/vibe-kanban/actions/runs/38914513436).
+The mobile run validated `9b5625be5`. Later commits require their own checks;
+passing CI does not establish phone or connector-route acceptance.
 
 `scripts/testing/mobile-dot-browser.mjs` exercises the real branch frontend at
 360/393/412px, 844px landscape and 1440px desktop. It simulates browser pairing,
@@ -78,5 +95,7 @@ verify incumbent immutable files, and follow the frontend activation/rollback
 runbook. Live deployment is pending; publishing or merging this PR does not activate it. The phone browser needs its own unconsumed
 pairing code entered privately by the operator at https://vibe.local; existing
 desktop pairing does not authenticate the phone. This task neither generates nor
-reads a real pairing code. Actual Dot roundtrip requires the existing integration's
-scoped subscription; the simulated send test is not proof of external delivery.
+reads a real pairing code. The successful desktop reply used the integration
+task's available connector. Direct root Dot access and a real phone roundtrip
+remain unverified; the simulated mobile send test does not establish either.
+Mobile deployment remains pending and is not authorized by this correction.

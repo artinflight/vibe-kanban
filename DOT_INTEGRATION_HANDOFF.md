@@ -3,7 +3,18 @@
 This branch preserves the existing integration for review against `staging` in
 `artinflight/vibe-kanban`. It performs no deployment. Status below was reconciled
 on 2026-10-16 from the clean original worktrees, their activation notes, and
-read-only service/release-pointer checks. It does not certify a real Dot reply.
+read-only service/release-pointer checks. The preservation task itself did not
+conduct live reply acceptance.
+
+## Later desktop reply correction — October 16
+
+Seamus confirms that the first desktop Dot chat request/reply test succeeded,
+witnessed in his screenshot. It used the integration task's available connector.
+Direct root Dot connector access remains unverified because root Dot still lacks
+the new tools. A real phone roundtrip and physical keyboard acceptance remain
+pending Seamus making the phone available. This correction carries no private
+conversation or receipt identifiers and authorizes no deployment. It is published
+through the mobile follow-up; the preservation branch/workspace are unchanged.
 
 ## What is live
 
@@ -41,9 +52,10 @@ portrait/landscape at 360/390/412px, keyboard open, long labels/errors, Notes
 expanded/collapsed, pairing, send, history scrolling and lost-response retry.
 No phone or rendered-browser acceptance is claimed by this preservation task.
 
-The original activation record also leaves actual browser pairing and the real
-Dot event/reply roundtrip unverified. The actual Dot context must own its correct
-project/thread subscription, then verify one authorized message, webhook receipt,
+The original activation record predates the successful desktop reply described
+above. Direct root Dot access and a real phone roundtrip remain unverified.
+For those separate acceptance checks, the responsible Dot context must own its
+correct project/thread subscription, then verify one authorized message, webhook receipt,
 exact persisted reply and retained-history readback. A webhook 2xx is not a reply
 and is not evidence that a person saw it. Reconcile uncertain delivery before
 retrying; preserve event/request IDs and existing approval subscriptions.

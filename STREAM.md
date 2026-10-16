@@ -1,9 +1,24 @@
+# Dot desktop reply correction — October 16
+
+Seamus confirms that today's first desktop Dot chat request/reply test succeeded,
+witnessed in his screenshot. It used the integration task's available connector.
+Direct root Dot connector access remains unverified: root Dot still lacks the new
+tools. The desktop result does not establish a real phone roundtrip or S25+
+software-keyboard acceptance. Both phone checks remain pending Seamus making the
+phone available. No private conversation or receipt identifiers are published.
+This correction does not authorize or perform mobile deployment.
+
+Both PRs' pre-correction heads passed GitHub CI: [preservation #254](https://github.com/artinflight/vibe-kanban/actions/runs/38911578393)
+and [mobile #255](https://github.com/artinflight/vibe-kanban/actions/runs/38914513436).
+The mobile head was `9b5625be5`; these results do not claim phone acceptance or
+certify later commits. The preservation branch/workspace remain untouched.
+
 # Mobile Dot PR published — October16
 
 Published as [draft PR #255](https://github.com/artinflight/vibe-kanban/pull/255)
 against `staging`, stacked on [preservation PR #254](https://github.com/artinflight/vibe-kanban/pull/254).
 The PR records the mobile-only comparison, merge order, host validation limit,
-and pending physical keyboard/real Dot roundtrip/deployment acceptance. The
+and pending phone keyboard/phone roundtrip/deployment acceptance. The
 mobile issue is [T60](https://vibe.local/projects/1cf19067-4055-4432-bbc1-581919f9185d/issues/c961527e-f090-4eac-9483-2480d016a552).
 Publication does not activate the new mobile tab.
 
@@ -15,7 +30,7 @@ pinned at `14fca343bc1f466cb369524570a199271082208c`. Only this mobile branch wa
 rebased; preservation workspace `de2d98a3-b73f-4e70-9445-caee5cae188c` and its
 branch remain untouched. Review the delta above that shared commit. Integrate
 #254 first, then rebase mobile onto staging before merging. Actual S25+ keyboard
-acceptance, a real paired Dot roundtrip and mobile activation remain pending.
+acceptance, a real phone roundtrip and mobile activation remain pending.
 Required aggregate checks reach the Rust stage and stop on missing GLib host
 libraries; frontend checks and the previously tested product bytes are preserved.
 
@@ -44,8 +59,8 @@ copies on `vk/de2d-vk-preserve-dot`, based on current `fork/staging`. Read
 [the reconciled source/deployment handoff](DOT_INTEGRATION_HANDOFF.md) and
 [commit provenance](DOT_PRESERVATION_COMMITS.json). The reported live browser
 test uses frontend `975f62c7c`; the prepared mobile correction is not selected by
-the observed live pointer. Mobile acceptance and an actual Dot reply remain
-unverified. The separate mobile owner retains its active workspace and changes.
+the observed live pointer. Mobile acceptance and a real phone roundtrip remain
+unverified; the later successful desktop reply is recorded in the correction above. The separate mobile owner retains its active workspace and changes.
 This preservation task does not deploy, restart or change pairing/subscriptions.
 
 # Clickable summary links release — live October 16

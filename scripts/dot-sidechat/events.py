@@ -24,15 +24,31 @@ class Events:
 
     def _scope(self, principal, arguments):
         self.store._principal(principal, ("owner",))
-        if not isinstance(arguments, dict) or set(arguments) not in ({"thread_id"}, {"project_id"}):
-            raise Rejected("Exactly one thread_id or project_id is required")
+        if not isinstance(arguments, dict) or set(arguments) not in ({"thread_id"}, {"project_id"}, {"project_ids"}, {"all_projects","exclude_project_ids"}):
+            raise Rejected("Exactly one explicit scope or all_projects with explicit exclusions is required")
+        if 'all_projects' in arguments:
+            excluded=arguments['exclude_project_ids']
+            if arguments['all_projects'] is not True or not isinstance(excluded,list) or len(excluded)>1000 or any(not isinstance(v,str) or not 1<=len(v)<=200 for v in excluded) or len(set(excluded))!=len(excluded):
+                raise Rejected('All-project mode requires true and bounded distinct exclusions')
+            if not self.db.execute('SELECT 1 FROM owner_project_policies WHERE owner=? AND enabled=1',(principal.owner,)).fetchone():
+                raise Rejected('Owner has not enabled persistent all-project access')
+            return canonical({'all_projects':True,'exclude_project_ids':sorted(excluded)})
+        if "project_ids" in arguments:
+            values=arguments["project_ids"]
+            if not isinstance(values,list) or not 1<=len(values)<=100 or any(not isinstance(v,str) or not 1<=len(v)<=200 for v in values) or len(set(values))!=len(values):
+                raise Rejected("Bounded distinct project IDs required")
+            for value in values:
+                self._scope(principal,{"project_id":value})
+            return canonical({"project_ids":sorted(values)})
         value = next(iter(arguments.values()))
         if not isinstance(value, str) or not 1 <= len(value) <= 200:
             raise Rejected("Invalid event scope")
         if "thread_id" in arguments:
             self.store._thread(principal, value)
-        elif not self.db.execute("SELECT 1 FROM scopes WHERE owner=? AND project=?",
-                                 (principal.owner, value)).fetchone():
+        elif not (self.db.execute("SELECT 1 FROM scopes WHERE owner=? AND project=?",
+                                  (principal.owner, value)).fetchone() or
+                  self.db.execute("SELECT 1 FROM project_grants WHERE owner=? AND project=?",
+                                  (principal.owner, value)).fetchone()):
             raise Rejected("Project unavailable")
         return canonical(arguments)
 
@@ -76,7 +92,13 @@ class Events:
 
     def _matches(self, sub, thread):
         filters=json.loads(sub["filters"])
-        return filters.get("thread_id",thread["id"])==thread["id"] and filters.get("project_id",thread["project"])==thread["project"]
+        if filters.get('all_projects') is True:
+            return (thread['project'] not in filters['exclude_project_ids'] and
+                    bool(self.db.execute('SELECT 1 FROM owner_project_policies WHERE owner=? AND enabled=1',(sub['owner'],)).fetchone()) and
+                    bool(self.db.execute('SELECT 1 FROM project_grants WHERE owner=? AND project=?',(sub['owner'],thread['project'])).fetchone()))
+        return (filters.get("thread_id",thread["id"])==thread["id"] and
+                filters.get("project_id",thread["project"])==thread["project"] and
+                thread["project"] in filters.get("project_ids",[thread["project"]]))
 
     def sync(self, owner):
         """Apply exact owner filters to existing and newly-created issue threads."""
@@ -95,7 +117,12 @@ class Events:
             except Rejected:
                 self.db.execute("UPDATE bindings SET active=0 WHERE thread=?",(thread["id"],))
                 continue
-            self.store.bind(principal,thread["id"],sub["id"],ttl=max(60,min(86400,int(sub["expires"]-self.clock()))))
+            try:
+                self.store.bind(principal,thread["id"],sub["id"],ttl=max(60,min(86400,int(sub["expires"]-self.clock()))))
+            except Rejected:
+                # An older destination needs explicit migration; keep other threads
+                # delivering and never implicitly reroute this one's private data.
+                self.db.execute('UPDATE bindings SET active=0 WHERE thread=?',(thread['id'],))
 
     def deliver_one(self, owner):
         self.sync(owner)
@@ -108,7 +135,11 @@ class Events:
             if not self._matches(sub,scope):
                 return 410
             keys=[sub["secret"],sub["previous_secret"]] if sub["previous_secret"] and sub["rotation_until"]>self.clock() else sub["secret"]
-            status,_=self.sender(sub["url"],keys,sub["id"],event["eventId"],event)
+            # The legacy browser may still store per-thread cursors. This event
+            # advertises no protocol replay, so every outgoing wire cursor is null.
+            # Do not rewrite the immutable outbox or resend accepted deliveries.
+            wire_event = dict(event, cursor=None)
+            status,_=self.sender(sub["url"],keys,sub["id"],event["eventId"],wire_event)
             if status==410:
                 self.db.execute("UPDATE sidechat_subscriptions SET active=0 WHERE id=?",(sub["id"],))
             return status

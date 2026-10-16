@@ -132,6 +132,7 @@ class BrowserAPI:
         owner, thread, scope = self.scope(session, workspace)
         page = self.store.read(owner, thread["id"], after=after, through=through, limit=50)
         page["scope"] = scope
+        page["capabilities"] = {"notifications":True}
         page["receipts"] = {m["id"]: self.store.receipt(owner, thread["id"], m["id"])
                             for m in page["messages"] if m["role"] == "owner"}
         return page
@@ -141,6 +142,20 @@ class BrowserAPI:
             raise Rejected("Unexpected send argument")
         owner, thread, scope = self.scope(session, args["workspace"])
         return self.store.append(owner, thread["id"], scope["workspace"], args["request"], args["body"])
+
+
+    def notifications(self, session):
+        return self.store.notifications(Principal(session['owner'],'owner'),json.loads(session['projects']))
+
+    def seen(self, session, args):
+        if set(args)!={'workspace','messages'}:raise Rejected('Unexpected read argument')
+        owner,thread,scope=self.scope(session,args['workspace'])
+        return self.store.seen_replies(owner,thread['id'],scope['workspace'],args['messages'])
+
+    def attention(self, session, args):
+        if set(args)!={'workspace','message','action'}:raise Rejected('Unexpected attention argument')
+        owner,thread,scope=self.scope(session,args['workspace'])
+        return self.store.set_sidechat_attention(owner,thread['id'],scope['workspace'],args['message'],args['action'])
 
 
 def handler(api, origin):
@@ -221,6 +236,12 @@ def handler(api, origin):
             if self.command == "POST" and route == "logout" and not args:
                 api.auth.revoke(session["id"])
                 return self.output(200, {"revoked": True}, "")
+            if self.command=='GET' and route=='notifications' and not parsed.query:
+                return self.output(200,api.notifications(session))
+            if self.command=='POST' and route=='seen':
+                return self.output(200,api.seen(session,args))
+            if self.command=='POST' and route=='attention':
+                return self.output(200,api.attention(session,args))
             if self.command == "POST" and route == "send":
                 return self.output(200, api.send(session, args))
             if self.command == "GET" and route == "thread":

@@ -1,3 +1,10 @@
+> Latest: [current root reply and complete scope](../../DOT_RELIABILITY_ROLLOUT.md).
+> Root directly replied to the retained phone test; server readback confirms one
+> persisted reply and two non-overlapping notification subscriptions covering all
+> current/archived and future projects. Root still lacks pending discovery.
+> Fresh automatic routing and user-visible receipt remain unverified. No new
+> refresh, pairing or activation is needed. Historical notes below are superseded.
+
 > Subsequent operator confirmation (2026-10-16): the first real desktop
 > roundtrip succeeded through the integration task's paired connector; Seamus's
 > screenshot showed the persisted reply. Direct root connector access and the

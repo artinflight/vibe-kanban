@@ -1,3 +1,4 @@
+import type { DotActivityState } from './DotActivityIndicators';
 import type { ReactNode } from 'react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
@@ -22,7 +23,7 @@ import {
 
 export type WorkspaceLayoutMode = 'flat' | 'accordion';
 
-export interface WorkspacesSidebarWorkspace {
+export interface WorkspacesSidebarWorkspace extends DotActivityState {
   id: string;
   name: string;
   filesChanged?: number;
@@ -163,6 +164,8 @@ function WorkspaceList({
           hasPendingApproval={workspace.hasPendingApproval}
           hasRunningDevServer={workspace.hasRunningDevServer}
           hasUnseenActivity={workspace.hasUnseenActivity}
+          dotUnreadCount={workspace.dotUnreadCount}
+          dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
           activeSubagentCount={workspace.activeSubagentCount}
           unresolvedSubagentCount={workspace.unresolvedSubagentCount}
           latestProcessCompletedAt={workspace.latestProcessCompletedAt}
@@ -239,6 +242,8 @@ export function WorkspacesSidebar({
       const hasSubagentActivity = (ws: WorkspacesSidebarWorkspace) =>
         (ws.activeSubagentCount ?? 0) + (ws.unresolvedSubagentCount ?? 0) > 0;
       const needsAttention = (ws: WorkspacesSidebarWorkspace) =>
+        (ws.dotNeedsAttentionCount ?? 0) > 0 ||
+        (ws.dotUnreadCount ?? 0) > 0 ||
         ws.hasPendingApproval ||
         (ws.hasUnseenActivity && !ws.isRunning && !hasSubagentActivity(ws));
 
@@ -533,6 +538,8 @@ export function WorkspacesSidebar({
                   hasPendingApproval={workspace.hasPendingApproval}
                   hasRunningDevServer={workspace.hasRunningDevServer}
                   hasUnseenActivity={workspace.hasUnseenActivity}
+                  dotUnreadCount={workspace.dotUnreadCount}
+                  dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
                   latestProcessCompletedAt={workspace.latestProcessCompletedAt}
                   latestProcessStatus={workspace.latestProcessStatus}
                   prStatus={workspace.prStatus}
@@ -650,6 +657,8 @@ export function WorkspacesSidebar({
                 hasPendingApproval={workspace.hasPendingApproval}
                 hasRunningDevServer={workspace.hasRunningDevServer}
                 hasUnseenActivity={workspace.hasUnseenActivity}
+                dotUnreadCount={workspace.dotUnreadCount}
+                dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
                 latestProcessCompletedAt={workspace.latestProcessCompletedAt}
                 latestProcessStatus={workspace.latestProcessStatus}
                 prStatus={workspace.prStatus}

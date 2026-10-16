@@ -15,6 +15,7 @@ type Snapshot = {
   receipts: Record<string, SidechatReceipt>;
   through: number;
   next_after: number | null;
+  capabilities?: { notifications: boolean };
 };
 class PairingRequired extends Error {}
 
@@ -156,6 +157,56 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
     return () => window.clearInterval(timer);
   }, [refresh]);
 
+  const readReplies = useCallback(
+    async (messages: string[]) => {
+      if (!session || !workspaceId) return;
+      try {
+        await api(
+          'seen',
+          lifetime.current.signal,
+          { workspace: workspaceId, messages },
+          session.csrf
+        );
+        setSnapshot((previous) =>
+          previous
+            ? {
+                ...previous,
+                messages: previous.messages.map((m) =>
+                  messages.includes(m.id) ? { ...m, seen: true } : m
+                ),
+              }
+            : previous
+        );
+        window.dispatchEvent(new CustomEvent('dot-sidechat-changed'));
+      } catch (failure) {
+        if (!lifetime.current.signal.aborted)
+          setError((failure as Error).message);
+        throw failure;
+      }
+    },
+    [session, workspaceId]
+  );
+
+  async function attention(
+    message: string,
+    action: 'action' | 'resolve' | 'reopen'
+  ) {
+    if (!session || !workspaceId) return;
+    try {
+      await api(
+        'attention',
+        lifetime.current.signal,
+        { workspace: workspaceId, message, action },
+        session.csrf
+      );
+      window.dispatchEvent(new CustomEvent('dot-sidechat-changed'));
+      await refresh();
+    } catch (failure) {
+      if (!lifetime.current.signal.aborted)
+        setError((failure as Error).message);
+    }
+  }
+
   async function pair() {
     if (busy.current) return;
     busy.current = true;
@@ -168,6 +219,9 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
       setSnapshot(null);
       setError(null);
       setSession(value);
+      window.dispatchEvent(
+        new CustomEvent('dot-sidechat-changed', { detail: { reset: true } })
+      );
       setLoading(true);
     } catch (failure) {
       setError((failure as Error).message);
@@ -226,6 +280,9 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
       setDraft('');
       setSnapshot(null);
       setSession(null);
+      window.dispatchEvent(
+        new CustomEvent('dot-sidechat-changed', { detail: { reset: true } })
+      );
     } catch (failure) {
       setError((failure as Error).message);
     } finally {
@@ -284,6 +341,9 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
       ) : (
         <DotSidechatPanel
           live
+          notificationsEnabled={snapshot?.capabilities?.notifications ?? false}
+          onRead={readReplies}
+          onAttention={(message, action) => void attention(message, action)}
           messages={snapshot?.messages ?? []}
           receipts={snapshot?.receipts ?? {}}
           issueLabel={snapshot?.scope.issue_label ?? 'Issue conversation'}

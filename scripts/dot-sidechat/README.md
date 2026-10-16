@@ -1,3 +1,10 @@
+> Latest: [current root reply and complete scope](../../DOT_RELIABILITY_ROLLOUT.md).
+> Root directly replied to the retained phone test; server readback confirms one
+> persisted reply and two non-overlapping notification subscriptions covering all
+> current/archived and future projects. Root still lacks pending discovery.
+> Fresh automatic routing and user-visible receipt remain unverified. No new
+> refresh, pairing or activation is needed. Historical notes below are superseded.
+
 > Subsequent operator confirmation (2026-10-16): the first real desktop
 > roundtrip succeeded through the integration task's paired connector; Seamus's
 > screenshot showed the persisted reply. Direct root connector access and the
@@ -143,3 +150,35 @@ identity as browser authentication or publish private conversation data to compe
 
 The proof bootstrap creates an empty thread only. A real dot subscription, an owner
 message/event, and a real appended reply remain separate evidence gates.
+
+
+## Persistent all-project policy
+
+The current owner-approved rollout is already applied and both notification
+triggers are registered. Preserve them; do not reapply its plan, create duplicate
+subscriptions or repeat metadata refresh. The procedure below describes the
+helper for a separately authorized new rollout, not a pending current action.
+
+Use `scope_rollout.py plan --all-projects` with the real read-only Vibe inventory
+and private sidechat database, then the guarded `apply` command with its exact
+reviewed digest and current verified private backup. This mode includes archived
+projects and records the existing paired sessions approved by the owner. The
+publisher reconciles authoritative projects every five seconds into those
+sessions and subscription grants. It does not create or revive sessions, modify
+credentials/expiration or broaden later pairings that were not in the review.
+
+The private plan contains one supported platform subscription request with
+`all_projects: true` and `exclude_project_ids` listing projects already covered by
+existing finite subscriptions. Existing destinations and renewals stay intact;
+new and future projects use the broad subscription. Register that request through
+the platform's actual `events/subscribe` flow after metadata refresh. Applying
+browser access does not register it, and HTTP acceptance does not prove a reply.
+Never write a subscription directly into SQLite or copy its callback credentials.
+
+Future growth requires the publisher to remain healthy and the broad subscription
+to be renewed by its platform owner. An inventory read failure retains existing
+scope and logs a sanitized scan error; it does not silently invent project IDs.
+A trusted operator may disable `owner_project_policies.enabled` for the exact owner
+to stop further expansion/broad delivery. That does not revoke already granted
+access or browser sessions: those are separate explicit actions preserving chat
+history. See the rollout handoff for activation, backup and rollback receipts.

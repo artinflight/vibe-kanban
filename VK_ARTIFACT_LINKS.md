@@ -83,8 +83,10 @@ in both actual frontend build outputs against the shared public source.
 
 ## Current rollout
 
-Implemented at `ae41a599b` on staging baseline `805aa7741`, then installed and
-verified on October 16. The existing Dot frontend remains selected at
+Implemented on staging baseline `805aa7741`, then installed and
+verified on October 16. The current source includes the shared-public packaging
+correction and cross-origin frame-navigation policy. The installation receipt
+binds the exact installed code. The existing Dot frontend remains selected at
 `/mnt/vk-storage/vk-dot-notification-rollout-20261016/release`.
 Only `vk-artifact-viewer.html` was added, SHA256
 `608ff558710727d459ec5cb9479e4a6692aac830eedb85a0451e1947d5af0dfd`.

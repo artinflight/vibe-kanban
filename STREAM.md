@@ -1,6 +1,6 @@
 # First-response generated artifact delivery — October 16 follow-up
 
-Based on current staging `805aa7741`; code checkpoint `ae41a599b` adds the
+Based on staging `805aa7741`; this follow-up adds the
 native attachment publisher, standalone sandboxed HTML viewer, seven real HTTP
 regressions and desktop/phone browser acceptance. This closes the missing
 publication step exposed by OP::3D Print Issues, while retaining the web-link

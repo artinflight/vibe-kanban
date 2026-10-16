@@ -32,7 +32,8 @@ Filesystem hrefs remain disabled. This is a verified publish-before-reply tool
 and shared instruction, not automatic rewriting of every historical/local path.
 Do not assume an already running turn adopted new instructions, or claim the
 operator's physical phone was tested. No restart, new public route or broad
-filesystem endpoint was introduced. The code checkpoint is `ae41a599b`.
+filesystem endpoint was introduced. The durable installation receipt binds the exact installed code; use the current
+artifact-delivery PR, including its shared-public packaging and frame policy.
 
 # Dot reply notifications — live October 16, 22:38 UTC
 

@@ -62,9 +62,11 @@ See [the original mobile acceptance checklist](DOT_MOBILE_REVIEW.md).
 
 The mobile agent owns workspace `2e35466b-127e-41ba-ab56-1dd47bdb8b85` and branch
 `vk/2e35-vk-mobile-dot-in`. Its active work is not imported, committed, rebased,
-reset or deployed here. Continue mobile and S25+ acceptance with that owner:
-portrait/landscape at 360/390/412px, keyboard open, long labels/errors, Notes
-expanded/collapsed, pairing, send, history scrolling and lost-response retry.
+reset or deployed here. That owner retains its active UI inspection. Seamus has
+confirmed phone pairing and sending, so this task does not resume geometry,
+keyboard, pairing or browser debugging. The earlier mobile checklist is retained
+as historical preparation evidence; the remaining acceptance here is a natural
+root-to-phone message/reply roundtrip.
 Seamus subsequently confirmed phone pairing and sending; no further phone UI
 debugging is needed for that issue. The real phone message-to-reply roundtrip
 remains unverified. See the latest reliability/rollout handoff above.

@@ -1,3 +1,13 @@
+# Clickable summary links — October 16
+
+Branch `vk/242a-vk-clickable-lin` repairs the read-only shared chat renderer.
+Bare/inline-code/angle URLs were text, while the link sanitizer disabled HTTP.
+The repair links those web addresses on first render and subsequent streaming
+updates and preserves explicit links, source examples and composer behavior.
+See [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md). Mounted regressions: 16 pass;
+the original renderer fails nine. UI/shared checks, UI lint, formatting and ops
+checks passed. No live deployment, preview or backend restart occurred.
+
 # Dot explicit steering implementation — October 15
 
 The user authorized development after ff83afe93. PR #250 prepares a separate

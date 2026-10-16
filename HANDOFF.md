@@ -1,3 +1,15 @@
+# Clickable summary links pickup — October 16
+
+Read [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md). Frontend-only repair is
+committed on `vk/242a-vk-clickable-lin` with this handoff; no push, PR or
+deployment yet.
+The production Markdown sync and link plugins pass all 16 mounted DOM cases;
+the original renderer fails nine of them. UI type check/lint and shared frontend
+check (4 GiB Node heap) pass. Full formatting, UI formatting, ops and diff checks
+pass. Local artifacts are under ignored `.vk-preview/link-validation/` on the SSD.
+Next: review and normal frontend integration/release, then click a summary URL
+in the live UI. Real-browser/phone and live activation remain unverified.
+
 # Dot explicit steering review handoff — October 15
 
 [PR #250](https://github.com/artinflight/vibe-kanban/pull/250) targets staging.

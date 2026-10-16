@@ -95,6 +95,7 @@ jobs:
               - 'shared/**'
               - 'scripts/testing/kanban-issue-panel*'
               - 'scripts/testing/run-kanban-issue-panel-tests.mjs'
+              - 'scripts/testing/*read-only-web-links*'
               - 'scripts/check-i18n.sh'
               - 'scripts/check-unused-i18n-keys.mjs'
               - 'scripts/check-legacy-frontend-paths.sh'
@@ -312,6 +313,11 @@ jobs:
         run: |
           npm install --prefix "${{ runner.temp }}/kanban-issue-panel-tools" --no-save --no-package-lock --ignore-scripts --no-audit --no-fund react-test-renderer@18.3.1
           node scripts/testing/run-kanban-issue-panel-tests.mjs
+
+      - name: Test first-render chat links
+        env:
+          VK_TEST_OUTPUT: ${{ runner.temp }}/vk-web-link-tests
+        run: node scripts/testing/run-read-only-web-links-tests.mjs
 
       - name: Test offline MCP approval UI contract
         env:

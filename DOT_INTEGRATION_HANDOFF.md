@@ -91,12 +91,12 @@ the explicitly fake fixture. Neither flag provisions a server or authentication.
 | `0f1a9daae` | [69f36c3f3](https://github.com/artinflight/vibe-kanban/commit/69f36c3f35cceb80014e5a228f01a7d0ef09de66) | feat: prepare authenticated dot sidechat connector bridge |
 | `1952864f5` | [c5497db86](https://github.com/artinflight/vibe-kanban/commit/c5497db863599101abcf6d68da700b7b19906dd6) | docs: record live sidechat connector and remaining integration gates |
 | `6ed8b593a` | [4e1ca9ab3](https://github.com/artinflight/vibe-kanban/commit/4e1ca9ab36626eb95d044d6b9c31c37bcbe243f5) | docs: verify live Vibe route and browser identity boundary |
-| `535e89fb8` | [51fff7f75](https://github.com/artinflight/vibe-kanban/commit/51fff7f7573f25e1b52a448f4cd4a3df250f2e71) | feat: prepare authenticated browser sidechat and live sidebar transport |
-| `2da6263f7` | [4e344de75](https://github.com/artinflight/vibe-kanban/commit/4e344de751aea73505bc4f75fe32f46c0a692d43) | feat: retain approved browser pairing until revocation |
-| `f898872c5` | [504b10700](https://github.com/artinflight/vibe-kanban/commit/504b107007733408bbb4f277c28f7e1a072a6a36) | docs: record approved live browser sidechat test activation |
-| `72768eaa6` | [99bf6626a](https://github.com/artinflight/vibe-kanban/commit/99bf6626af209f52fefa2990911e9880e7d41716) | feat: prepare Dot sidebar on current production frontend source |
-| `975f62c7c` | [679fa6c28](https://github.com/artinflight/vibe-kanban/commit/679fa6c28934ab254b9f6fe00c3781e46d3d5706) | feat: retain browser pairing until disconnect or revocation |
-| `c71c2ee7d` | [b981a1e6e](https://github.com/artinflight/vibe-kanban/commit/b981a1e6e33d34670e7a652538c2312dc2921b5b) | fix: prepare touch-friendly mobile dot chat layout |
+| `535e89fb8` | [b92a025da](https://github.com/artinflight/vibe-kanban/commit/b92a025da876966d0139d14dac0ae41893919e67) | feat: prepare authenticated browser sidechat and live sidebar transport |
+| `2da6263f7` | [4b95d24ca](https://github.com/artinflight/vibe-kanban/commit/4b95d24ca19ff943b264b120f72acf1baa5b2107) | feat: retain approved browser pairing until revocation |
+| `f898872c5` | [269c12af3](https://github.com/artinflight/vibe-kanban/commit/269c12af3641396a36595bf32d4443645877a5aa) | docs: record approved live browser sidechat test activation |
+| `72768eaa6` | [b869b190e](https://github.com/artinflight/vibe-kanban/commit/b869b190eb94e2481e00f468cb88fdf842cd8d9f) | feat: prepare Dot sidebar on current production frontend source |
+| `975f62c7c` | [ef5c307a6](https://github.com/artinflight/vibe-kanban/commit/ef5c307a6ea943c3fd7723b6cb49e4257beeb1e8) | feat: retain browser pairing until disconnect or revocation |
+| `c71c2ee7d` | [c85279429](https://github.com/artinflight/vibe-kanban/commit/c852794299653bcf739d921d945b50f6c0bfa312) | fix: prepare touch-friendly mobile dot chat layout |
 
 The machine-readable provenance map is [DOT_PRESERVATION_COMMITS.json](DOT_PRESERVATION_COMMITS.json).
 The code/commit inventory, public-history secret scan and validation limits are

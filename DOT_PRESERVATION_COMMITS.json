@@ -26,32 +26,32 @@
   },
   {
     "original": "535e89fb8e9940d5937a44106a86029243722c9c",
-    "preserved": "51fff7f7573f25e1b52a448f4cd4a3df250f2e71",
+    "preserved": "b92a025da876966d0139d14dac0ae41893919e67",
     "subject": "feat: prepare authenticated browser sidechat and live sidebar transport"
   },
   {
     "original": "2da6263f73374578e31f805a846160ae65a107d3",
-    "preserved": "4e344de751aea73505bc4f75fe32f46c0a692d43",
+    "preserved": "4b95d24ca19ff943b264b120f72acf1baa5b2107",
     "subject": "feat: retain approved browser pairing until revocation"
   },
   {
     "original": "f898872c5edb6854a07b56ba817b1cf34c50a56f",
-    "preserved": "504b107007733408bbb4f277c28f7e1a072a6a36",
+    "preserved": "269c12af3641396a36595bf32d4443645877a5aa",
     "subject": "docs: record approved live browser sidechat test activation"
   },
   {
     "original": "72768eaa6a8a7dd8c00111e24a48fe8d0f15b83d",
-    "preserved": "99bf6626af209f52fefa2990911e9880e7d41716",
+    "preserved": "b869b190eb94e2481e00f468cb88fdf842cd8d9f",
     "subject": "feat: prepare Dot sidebar on current production frontend source"
   },
   {
     "original": "975f62c7cfe006ed4bee41a581a1b97cee978957",
-    "preserved": "679fa6c28934ab254b9f6fe00c3781e46d3d5706",
+    "preserved": "ef5c307a6ea943c3fd7723b6cb49e4257beeb1e8",
     "subject": "feat: retain browser pairing until disconnect or revocation"
   },
   {
     "original": "c71c2ee7d25693c9353d88a7dd4a1bbb7dd32b5a",
-    "preserved": "b981a1e6e33d34670e7a652538c2312dc2921b5b",
+    "preserved": "c852794299653bcf739d921d945b50f6c0bfa312",
     "subject": "fix: prepare touch-friendly mobile dot chat layout"
   }
 ]

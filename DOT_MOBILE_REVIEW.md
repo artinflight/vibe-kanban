@@ -1,3 +1,7 @@
+> Preserved from original UI commit `c71c2ee7d`. This describes prepared work,
+> not completion of the separately owned mobile task. See
+> [the reconciled handoff](DOT_INTEGRATION_HANDOFF.md).
+
 # Dot on Android: verification and remaining acceptance
 
 ## Existing live behavior

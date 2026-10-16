@@ -1883,3 +1883,11 @@ the paid harness was not rerun. No live connector edit, restart or deployment.
 - Bounded cached reads preserve history; uncertain evidence remains unresolved.
 - Regression coverage includes AutoSwitch's resumed-parent failure and child
   reuse. This source merge is for the next backend restart, not live activation.
+
+
+## 2026-10-16 — Preserve existing Dot sidechat integration
+
+Reconciled eight API and three UI commits in the dedicated preservation workspace;
+original worktrees remain intact. Public copies sanitize historical operational
+details and retain Original-Commit provenance. DOT_INTEGRATION_HANDOFF.md records
+live source, unfinished mobile/actual-Dot acceptance and ownership. No deployment.

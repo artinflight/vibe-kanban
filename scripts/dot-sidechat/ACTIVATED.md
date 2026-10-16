@@ -1,3 +1,8 @@
+> Preservation note (2026-10-16): this is a sanitized historical record.
+> Read [the reconciled handoff](../../DOT_INTEGRATION_HANDOFF.md) for current
+> live versus unfinished status. UUIDs/addresses may be placeholders; do not
+> use this record as executable deployment or subscription configuration.
+
 # Activated VK Dev browser test - 2026-10-16
 
 Seamus approved activation at10:57 UTC with browser pairing until disconnect or

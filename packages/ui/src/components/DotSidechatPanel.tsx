@@ -55,9 +55,12 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
       const link = new URLSearchParams(window.location.hash.slice(1));
       if (link.get('thread') !== props.threadId) return;
       const message = link.get('message');
-      if (!message || !props.messages.some((item) => item.id === message)) return;
+      if (!message || !props.messages.some((item) => item.id === message))
+        return;
       setFollowLatest(false);
-      document.getElementById('message-' + message)?.scrollIntoView({ block: 'center' });
+      document
+        .getElementById('message-' + message)
+        ?.scrollIntoView({ block: 'center' });
     };
     reveal();
     window.addEventListener('hashchange', reveal);

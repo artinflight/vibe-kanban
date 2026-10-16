@@ -1,3 +1,8 @@
+> Preservation note (2026-10-16): this is a sanitized historical record.
+> Read [the reconciled handoff](../../DOT_INTEGRATION_HANDOFF.md) for current
+> live versus unfinished status. UUIDs/addresses may be placeholders; do not
+> use this record as executable deployment or subscription configuration.
+
 # Activation approved at 10:57 UTC on 2026-10-16
 
 Seamus explicitly approved the VK Dev test, new TLS sidecar/proxy route and browser pairing UNTIL DISCONNECT/REVOCATION. This supersedes the historical 24-hour proposal below. No server-side expiry applies to new browser sessions. The persistent cookie is renewed on authenticated chat requests; browser cookie deletion/retention limits can still require pairing again. One-use codes still expire after10 minutes. Preserve the newly live clickable-links source2249da3e rather than the older5ce84ee2 candidate.

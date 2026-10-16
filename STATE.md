@@ -1,3 +1,14 @@
+# Dot integration preservation — October 16
+
+The original eight API and three UI commits are preserved as sanitized public
+copies on `vk/de2d-vk-preserve-dot`, based on current `fork/staging`. Read
+[the reconciled source/deployment handoff](DOT_INTEGRATION_HANDOFF.md) and
+[commit provenance](DOT_PRESERVATION_COMMITS.json). The reported live browser
+test uses frontend `975f62c7c`; the prepared mobile correction is not selected by
+the observed live pointer. Mobile acceptance and an actual Dot reply remain
+unverified. The separate mobile owner retains its active workspace and changes.
+This preservation task does not deploy, restart or change pairing/subscriptions.
+
 # Summary web-link rendering — live October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) is merged into

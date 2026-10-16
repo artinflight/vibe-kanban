@@ -1,3 +1,8 @@
+> Preservation note (2026-10-16): this is a sanitized historical record.
+> Read [the reconciled handoff](../../DOT_INTEGRATION_HANDOFF.md) for current
+> live versus unfinished status. UUIDs/addresses may be placeholders; do not
+> use this record as executable deployment or subscription configuration.
+
 # Live connector checkpoint — actual conversation still pending
 
 The additive sidechat connector bridge was installed after the owner authorized completion.

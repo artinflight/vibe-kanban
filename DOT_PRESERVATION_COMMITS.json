@@ -1,0 +1,57 @@
+[
+  {
+    "original": "4c929ece1e0104f0cce5dfecb14a9dde35d2fe88",
+    "preserved": "0a221b0102b026014e2d3ad3103839ac24f68d77",
+    "subject": "prototype: add private issue-scoped dot sidechat fixtures"
+  },
+  {
+    "original": "1c0c62cbca16cfae8dc01fcc2252a56ed1851f08",
+    "preserved": "ebe173df1f7b3419798c45f2834c843631b7f2a2",
+    "subject": "prototype: bind sidechat events to explicit owner reply intent"
+  },
+  {
+    "original": "0f1a9daae28f7f770e5bbde06abf0ce0563e06ff",
+    "preserved": "69f36c3f35cceb80014e5a228f01a7d0ef09de66",
+    "subject": "feat: prepare authenticated dot sidechat connector bridge"
+  },
+  {
+    "original": "1952864f54ca193dca396d5ad55b364af1f95ddb",
+    "preserved": "c5497db863599101abcf6d68da700b7b19906dd6",
+    "subject": "docs: record live sidechat connector and remaining integration gates"
+  },
+  {
+    "original": "6ed8b593a1add070eecd1ff81d4ba72a4d45f49d",
+    "preserved": "4e1ca9ab36626eb95d044d6b9c31c37bcbe243f5",
+    "subject": "docs: verify live Vibe route and browser identity boundary"
+  },
+  {
+    "original": "535e89fb8e9940d5937a44106a86029243722c9c",
+    "preserved": "51fff7f7573f25e1b52a448f4cd4a3df250f2e71",
+    "subject": "feat: prepare authenticated browser sidechat and live sidebar transport"
+  },
+  {
+    "original": "2da6263f73374578e31f805a846160ae65a107d3",
+    "preserved": "4e344de751aea73505bc4f75fe32f46c0a692d43",
+    "subject": "feat: retain approved browser pairing until revocation"
+  },
+  {
+    "original": "f898872c5edb6854a07b56ba817b1cf34c50a56f",
+    "preserved": "504b107007733408bbb4f277c28f7e1a072a6a36",
+    "subject": "docs: record approved live browser sidechat test activation"
+  },
+  {
+    "original": "72768eaa6a8a7dd8c00111e24a48fe8d0f15b83d",
+    "preserved": "99bf6626af209f52fefa2990911e9880e7d41716",
+    "subject": "feat: prepare Dot sidebar on current production frontend source"
+  },
+  {
+    "original": "975f62c7cfe006ed4bee41a581a1b97cee978957",
+    "preserved": "679fa6c28934ab254b9f6fe00c3781e46d3d5706",
+    "subject": "feat: retain browser pairing until disconnect or revocation"
+  },
+  {
+    "original": "c71c2ee7d25693c9353d88a7dd4a1bbb7dd32b5a",
+    "preserved": "b981a1e6e33d34670e7a652538c2312dc2921b5b",
+    "subject": "fix: prepare touch-friendly mobile dot chat layout"
+  }
+]

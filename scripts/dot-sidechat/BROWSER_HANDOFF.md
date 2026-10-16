@@ -1,3 +1,8 @@
+> Preservation note (2026-10-16): this is a sanitized historical record.
+> Read [the reconciled handoff](../../DOT_INTEGRATION_HANDOFF.md) for current
+> live versus unfinished status. UUIDs/addresses may be placeholders; do not
+> use this record as executable deployment or subscription configuration.
+
 # Browser route and authentication verification - 2026-10-16
 
 Verified: https://vibe.local resolves on Windows to 192.0.2.20.

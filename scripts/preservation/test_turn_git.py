@@ -496,6 +496,75 @@ else: sys.exit(1)
         git(self.repo, 'reset', '--hard', self.base)
         self.assertEqual(self.engine.checkpoint(self.request)['state'], 'blocked')
 
+    def test_failed_publication_admission_still_captures_completed_original(self):
+        policy = self.config['repositories'].pop('repo')
+        self.request['turn'] = 'no-publication-policy'
+        begun = self.engine.begin(self.request)
+        self.assertEqual(begun['state'], 'blocked')
+        self.assertEqual(begun['repositories'], [])
+        self.changed(value='Completed B without publication authority\n')
+        git(self.repo, 'add', '.')
+        git(self.repo, 'commit', '-qm', 'Completed B')
+        b = git(self.repo, 'rev-parse', 'HEAD')
+        ack = self.engine.observe_finished(self.request)
+        self.assertIs(ack['observation_complete'], True)
+        self.assertEqual(ack['state'], 'pending')
+        self.assertEqual(ack['admission_failure'], 'repository has no approved publication policy')
+        record = m.read_json(self.engine.state_path(self.request))
+        self.assertEqual(record['state'], 'blocked')
+        self.assertIn(b, record['obligations']['repo']['commits'])
+        pending = self.engine.checkpoint(self.request)
+        self.assertEqual(pending['state'], 'pending')
+        self.assertIs(pending['publication_pending'], True)
+        self.assertFalse(self.prfile.exists())
+        self.engine.block(dict(self.request, reason='later generic worker error'))
+        self.assertEqual(m.read_json(self.engine.state_path(self.request))['admission_failure'],
+                         'repository has no approved publication policy')
+        self.config['repositories']['repo'] = policy
+        git(self.repo, 'reset', '--hard', self.base)
+        self.engine = FixtureEngine(self.config, str(self.gh))  # Process restart.
+        self.request['turn'] = 'new-owner-after-policy-restore'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
+        self.assertBlocked('merge-base failed')
+        self.assertFalse(self.prfile.exists())
+
+    def test_failed_admission_observation_refuses_wrong_inventory_and_owner(self):
+        self.config['repositories'].clear()
+        self.request['turn'] = 'failed-admission-identity'
+        self.engine.begin(self.request)
+        for inventory in [[], [dict(id='other', path=str(self.repo))],
+                          [dict(id='repo', path=str(self.root))]]:
+            with self.assertRaisesRegex(m.Blocked, 'inventory differs'):
+                self.engine.observe_finished(dict(self.request, repositories=inventory))
+        path = self.engine.state_path(self.request)
+        record = m.read_json(path)
+        record['workspace'] = 'forged-workspace'
+        m.atomic_json(path, record)
+        with self.assertRaisesRegex(m.Blocked, 'owner differs'):
+            self.engine.observe_finished(self.request)
+
+    def test_completion_capture_survives_publication_policy_change_without_grant(self):
+        self.config['repositories'].clear()
+        self.changed()
+        git(self.repo, 'add', '.')
+        git(self.repo, 'commit', '-qm', 'B')
+        b = git(self.repo, 'rev-parse', 'HEAD')
+        self.assertTrue(self.engine.observe_finished(self.request)['observation_complete'])
+        self.assertIn(b, m.read_json(self.engine.state_path(self.request))['obligations']['repo']['commits'])
+        with self.assertRaisesRegex(m.Blocked, 'policy changed'):
+            self.engine.checkpoint(self.request)
+
+    def test_legacy_empty_admission_cannot_be_retroactively_observed(self):
+        self.config['repositories'].clear()
+        self.request['turn'] = 'legacy-failed-admission'
+        self.engine.begin(self.request)
+        path = self.engine.state_path(self.request)
+        record = m.read_json(path)
+        del record['observation_inventory']
+        m.atomic_json(path, record)
+        with self.assertRaisesRegex(m.Blocked, 'inventory differs'):
+            self.engine.observe_finished(self.request)
+
     def test_changed_tracked_and_untracked_exact_history_and_draft(self):
         self.changed()
         self.changed('src/new file.txt', 'untracked source\n')

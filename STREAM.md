@@ -1,3 +1,25 @@
+## October 16 completed-observation tracking repair
+
+The recurring CP Invoice Assistant warning was a tracking fault after publication
+admission failed: empty admitted repositories prevented completed-head capture.
+The correction registers exact capture inventory before publication admission,
+retains the first cause, and keeps missing-policy publication pending/informational
+without claiming remote coverage. Idle-worker pending reports deduplicate.
+
+A narrowly scoped, SHA-bound maintenance command reconciles legacy inventory-fault
+observations only from contemporaneous native execution repository records. It
+retains all originals, journals old evidence, refuses active/queued work and cannot
+mark publication verified. CP's 16 historical observation faults were reconciled
+through that path; source/index/refs and agent work were untouched. PR452 and later
+recorded heads are verified in a fresh remote staging witness; disconnected12dad
+is retained in a private source bundle. No policy grant or source publication.
+
+See VK_AUTOMATIC_GITHUB_SYNC.md for exact boundaries and maintenance behavior.
+The prevention fix still needs source-bound backend checks and matching package
+adoption by the release owner. No heavy MCP build, GitHub/PR write, deployment,
+restart, credential/access change or unrelated agent operation occurred. Recommend
+and selected model/effort remain unchanged. Private evidence is outside Git.
+
 ## October 14 local reviewed-baseline link repair
 
 Staging's accepted 962d2673 source copy failed begin with reviewed 64c3 because

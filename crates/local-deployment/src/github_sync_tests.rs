@@ -278,6 +278,10 @@ async fn observation_container(pool: sqlx::SqlitePool, policy: &Path) -> LocalCo
 #[cfg(target_os = "linux")]
 impl ObservationFixture {
     async fn new(scheduled: bool) -> Self {
+        Self::with_publication_policy(scheduled, true).await
+    }
+
+    async fn with_publication_policy(scheduled: bool, approved: bool) -> Self {
         let root = tempfile::tempdir().unwrap();
         let repo_path = root.path().join("repo");
         std::fs::create_dir(&repo_path).unwrap();
@@ -431,6 +435,12 @@ impl ObservationFixture {
         std::fs::write(&policy, json!({"storage_mount": mount, "state_root": root.path().join("private-state"),
             "repositories": { repo.id.to_string(): {"common_dir": common_dir, "allowed": ["source.txt"]} }
         }).to_string()).unwrap();
+        if !approved {
+            let mut config: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(&policy).unwrap()).unwrap();
+            config["repositories"] = json!({});
+            std::fs::write(&policy, config.to_string()).unwrap();
+        }
         let container = observation_container(pool, &policy).await;
         let admitted = if scheduled {
             container
@@ -441,7 +451,11 @@ impl ObservationFixture {
                 .invoke_preservation("begin", request.clone())
                 .await
         };
-        assert_eq!(admitted["state"], "pending", "{admitted}");
+        assert_eq!(
+            admitted["state"],
+            if approved { "pending" } else { "blocked" },
+            "{admitted}"
+        );
         std::fs::write(repo_path.join("source.txt"), "B\n").unwrap();
         fixture_git(&repo_path, &["add", "."]);
         fixture_git(&repo_path, &["commit", "-qm", "B"]);
@@ -594,7 +608,27 @@ async fn observation_callback_failure_reset_and_worker_survive_restart_and_polic
             .observe_completed_turn(fixture.execution)
             .await;
         fixture.reopen().await;
-        fixture.assert_gate("failed").await;
+        if policy_changed {
+            // Publication-policy edits cannot suppress a registered owner's
+            // terminal-original capture; restoration still grants no stale A proof.
+            let jobs = TurnGithubSync::for_workspace(&fixture.container.db.pool, fixture.workspace)
+                .await
+                .unwrap();
+            assert_eq!(jobs[0].observation_state, "observed");
+            let ledger = fixture
+                ._root
+                .path()
+                .join("private-state")
+                .join(fixture.workspace.to_string())
+                .join(format!("{}.json", fixture.execution));
+            assert!(
+                std::fs::read_to_string(ledger)
+                    .unwrap()
+                    .contains(&fixture.b)
+            );
+        } else {
+            fixture.assert_gate("failed").await;
+        }
     }
 }
 
@@ -990,4 +1024,58 @@ async fn legacy_observation_gate_refuses_coverage_when_workspace_state_is_unread
         );
     }
     assert!(calls.read().await.is_empty());
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn missing_publication_policy_callback_retains_b_across_reset_restart_and_idle_worker() {
+    let mut fixture = ObservationFixture::with_publication_policy(true, false).await;
+    fixture.callback().await;
+    let jobs = TurnGithubSync::for_workspace(&fixture.container.db.pool, fixture.workspace)
+        .await
+        .unwrap();
+    assert_eq!(jobs[0].observation_state, "observed");
+    let ledger = fixture
+        ._root
+        .path()
+        .join("private-state")
+        .join(fixture.workspace.to_string())
+        .join(format!("{}.json", fixture.execution));
+    let evidence: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&ledger).unwrap()).unwrap();
+    assert_eq!(evidence["state"], "blocked");
+    assert_eq!(
+        evidence["admission_failure"],
+        "repository has no approved publication policy"
+    );
+    assert!(evidence["obligations"].to_string().contains(&fixture.b));
+    assert!(evidence["repositories"].as_array().unwrap().is_empty());
+    fixture
+        .container
+        .reset_session_to_process(fixture.session, fixture.execution, true, true)
+        .await
+        .unwrap();
+    assert_eq!(
+        fixture_git(&fixture.repo, &["rev-parse", "HEAD"]),
+        fixture.a
+    );
+    fixture.reopen().await;
+    fixture.container.sync_one_idle_turn().await;
+    assert!(
+        std::fs::read_to_string(ledger)
+            .unwrap()
+            .contains(&fixture.b)
+    );
+    let jobs = TurnGithubSync::for_workspace(&fixture.container.db.pool, fixture.workspace)
+        .await
+        .unwrap();
+    assert!(jobs.iter().all(|job| job.state != "verified"));
+    assert_eq!(jobs[0].state, "waiting");
+    assert!(
+        jobs[0]
+            .report
+            .as_ref()
+            .unwrap()
+            .contains("publication awaits a reviewed repository policy")
+    );
 }

@@ -645,7 +645,9 @@ impl LocalContainerService {
                 "missing or unreadable coding turn summary",
             )
         };
-        if !crate::turn_preservation::verified(&report) {
+        if !crate::turn_preservation::verified(&report)
+            && !crate::turn_preservation::awaiting_policy(&report)
+        {
             let mut blocked_request = request;
             blocked_request["reason"] = report["reason"].clone();
             let _ = self.invoke_preservation("block", blocked_request).await;
@@ -957,17 +959,19 @@ impl LocalContainerService {
                 .report
                 .as_ref()
                 .and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok());
-            let same_block = report["state"] == "blocked"
+            let same_status = matches!(report["state"].as_str(), Some("blocked" | "pending"))
                 && previous.as_ref().is_some_and(|old| {
-                    old["state"] == "blocked" && old["reason"] == report["reason"]
+                    old["state"] == report["state"] && old["reason"] == report["reason"]
                 });
-            let report = if same_block {
+            let report = if same_status {
                 report
             } else {
                 self.record_preservation_report(&ctx, request, report).await
             };
             let state = if crate::turn_preservation::verified(&report) {
                 "verified"
+            } else if crate::turn_preservation::awaiting_policy(&report) {
+                "waiting"
             } else {
                 "blocked"
             };

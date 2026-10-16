@@ -371,6 +371,13 @@ class Engine:
             require(bool(request['repositories']), 'empty affected repository inventory')
             require(len({i['id'] for i in request['repositories']}) == len(request['repositories']),
                     'duplicate repository inventory')
+            # Capture authority is the exact requested inventory, not the subset
+            # admitted for publication. A policy/snapshot failure must not hide B
+            # from the real completion callback after begin captured only A.
+            record['observation_inventory'] = [
+                dict(id=i['id'], path=str(Path(i['path']).resolve()))
+                for i in request['repositories']]
+            atomic_json(path, record)
             # Observe every affected original before admitting any repository. Continue
             # capture after an error so a failed multi-repository admission loses no heads.
             errors = []
@@ -397,6 +404,7 @@ class Engine:
         except (Blocked, OSError, KeyError, ValueError) as error:
             record.update(state='blocked', reason=str(error) if isinstance(error, Blocked)
                           else 'preservation IO or contract failure')
+            record['admission_failure'] = record['reason']
             atomic_json(path, record)
         return record
 
@@ -728,22 +736,41 @@ class Engine:
         """
         path = self.state_path(request)
         record = read_json(path)
-        require(record['config'] == digest(self.config), 'policy changed after turn admission')
-        require([(e['id'], e['path']) for e in record['repositories']] ==
+        require(record['version'] == VERSION and record['workspace'] == request['workspace'] and
+                record['turn'] == request['turn'], 'completion observation owner differs from admitted turn')
+        inventory = record.get('observation_inventory', record['repositories'])
+        require(inventory and [(e['id'], e['path']) for e in inventory] ==
                 [(i['id'], str(Path(i['path']).resolve())) for i in request['repositories']],
                 'affected repository inventory differs from admitted turn')
+        # Publication review/config changes still block end/check, but cannot
+        # prevent original capture for this already registered exact inventory.
+        for entry in inventory:
+            require(entry['id'] in record['obligations'] and
+                    record['obligations'][entry['id']]['path'] == entry['path'],
+                    'completion observation has no matching original obligation')
         record['observation_complete'] = False
         try:
-            for entry in record['repositories']:
-                entry['original_commits'] = list(self.observe(record, entry))
+            for entry in inventory:
+                originals = self.observe(record, entry)
+                for admitted in record['repositories']:
+                    if admitted['id'] == entry['id']:
+                        admitted['original_commits'] = list(originals)
                 atomic_json(path, record)
-            self.require_obligations(record)
+            require(all(not record['obligations'][e['id']].get('unverifiable') for e in inventory),
+                    'completed original history observation was unverifiable')
             record['observation_complete'] = True
         except (Blocked, OSError, KeyError, ValueError):
-            for entry in record['repositories']:
+            for entry in inventory:
                 record['obligations'][entry['id']]['unverifiable'] = True
             record.update(state='blocked', reason='completed original history observation failed')
         atomic_json(path, record)
+        if record['observation_complete'] and record.get('admission_failure'):
+            # ACK only durable head capture. The stored admission remains blocked;
+            # no snapshot, remote proof, policy grant or green receipt is invented.
+            return dict(version=VERSION, workspace=record['workspace'], turn=record['turn'],
+                        state='pending', observation_complete=True,
+                        reason='completed original heads durably observed; publication admission remains blocked',
+                        admission_failure=record['admission_failure'])
         return record
 
     def checkpoint(self, request):
@@ -759,6 +786,18 @@ class Engine:
     def end(self, request, checkpoint=False):
         path = self.state_path(request)
         record = read_json(path)
+        if record.get('admission_failure') == 'repository has no approved publication policy' and record.get('observation_complete') is True:
+            capture = record.get('observation_inventory') or record.get('reconciled_observation_inventory')
+            require(record['version'] == VERSION and record['workspace'] == request['workspace'] and
+                    record['turn'] == request['turn'] and capture and capture ==
+                    [dict(id=i['id'], path=str(Path(i['path']).resolve())) for i in request['repositories']],
+                    'awaiting-policy owner or inventory differs from registered capture')
+            return dict(version=VERSION, workspace=record['workspace'], turn=record['turn'],
+                        state='pending', observation_complete=True, publication_pending=True,
+                        admission_failure=record['admission_failure'],
+                        reason='original heads retained; publication awaits a reviewed repository policy')
+        require(not record.get('admission_failure'),
+                'turn admission blocked: ' + str(record.get('admission_failure')))
         self.require_obligations(record)
         require(bool(request['repositories']) and bool(record['repositories']),
                 'empty affected repository inventory')
@@ -930,6 +969,7 @@ def main():
     print(json.dumps(result, sort_keys=True))
     return 0 if ((args.action == 'observe-finished' and result.get('observation_complete') is True)
                  or (result['state'] in ['verified', 'pending'] and args.action == 'begin')
+                 or (result['state'] == 'pending' and result.get('publication_pending') is True)
                  or result['state'] == 'verified') else 2
 
 

@@ -1,4 +1,5 @@
 import { useMemo, useCallback } from 'react';
+import { isDotSidechatEnabled } from '@/shared/lib/dotSidechat';
 import { useTranslation } from 'react-i18next';
 import { useMobileSheet } from '@/shared/hooks/useMobileSheet';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
@@ -10,6 +11,7 @@ import { useOrganizationStore } from '@/shared/stores/useOrganizationStore';
 import {
   Navbar,
   MOBILE_TABS,
+  DOT_MOBILE_TAB,
   type NavbarSectionItem,
   type NavbarBreadcrumbItem,
   type MobileTabId,
@@ -366,7 +368,11 @@ export function NavbarContainer({
       onOpenDrawer={onOpenDrawer}
       mobileTabs={
         selectedWorkspace || isCreateMode
-          ? MOBILE_TABS
+          ? MOBILE_TABS.flatMap((tab) =>
+              tab.id === 'chat' && isDotSidechatEnabled && !isCreateMode
+                ? [tab, DOT_MOBILE_TAB]
+                : [tab]
+            )
           : MOBILE_TABS.filter((tab) => tab.id === 'workspaces')
       }
       mobileActiveTab={mobileActiveTab as MobileTabId}

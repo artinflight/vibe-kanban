@@ -1,3 +1,12 @@
+# Mobile Dot integration — October16
+
+Branch `vk/2e35-vk-mobile-dot-in` starts from `2249da3e9`. Import the already-live
+Dot frontend and prepared responsive CSS, then give enabled local phone builds
+a direct Dot tab beside Chat and a full-height conversation. Keep desktop,
+remote, pairing and delivery semantics. See [VK_MOBILE_DOT.md](VK_MOBILE_DOT.md)
+for source provenance, checks and pending physical/live acceptance. No service
+restart, frontend activation, real pairing or external message was performed.
+
 # Dot integration preservation — October 16
 
 [PR #254](https://github.com/artinflight/vibe-kanban/pull/254) publishes this preserved source into a draft review

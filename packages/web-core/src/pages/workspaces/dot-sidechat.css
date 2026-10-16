@@ -271,7 +271,7 @@
   font-size: 11px;
 }
 
-/* The mobile Git/details tab is full-width. Keep chat reachable when the
+/* The mobile Dot tab is full-width. Keep chat reachable when the
    software keyboard reduces its height, without changing desktop sizing. */
 @media (max-width: 767px) {
   .dot-access {

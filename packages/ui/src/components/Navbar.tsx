@@ -5,6 +5,7 @@ import type { Icon } from '@phosphor-icons/react';
 import {
   Layout as LayoutIcon,
   ChatsTeardrop as ChatsTeardropIcon,
+  ChatCircleDots as ChatCircleDotsIcon,
   GitDiff as GitDiffIcon,
   Terminal as TerminalIcon,
   Desktop as DesktopIcon,
@@ -97,10 +98,17 @@ function NavbarIconButton({
 export type MobileTabId =
   | 'workspaces'
   | 'chat'
+  | 'dot'
   | 'changes'
   | 'logs'
   | 'preview'
   | 'git';
+
+export const DOT_MOBILE_TAB = {
+  id: 'dot',
+  icon: ChatCircleDotsIcon,
+  label: 'Dot',
+} as const;
 
 export const MOBILE_TABS: { id: MobileTabId; icon: Icon; label: string }[] = [
   { id: 'workspaces', icon: LayoutIcon, label: 'Workspaces' },
@@ -249,10 +257,10 @@ export function Navbar({
     const tabs = mobileTabs ?? MOBILE_TABS;
     const navigationSlot = mobileNavigationSlot;
     const primaryTabs = tabs.filter((tab) =>
-      ['workspaces', 'chat', 'changes'].includes(tab.id)
+      ['workspaces', 'chat', 'dot', 'changes'].includes(tab.id)
     );
     const secondaryTabs = tabs.filter(
-      (tab) => !['workspaces', 'chat', 'changes'].includes(tab.id)
+      (tab) => !['workspaces', 'chat', 'dot', 'changes'].includes(tab.id)
     );
     const isSecondaryActive = secondaryTabs.some(
       (tab) => tab.id === mobileActiveTab

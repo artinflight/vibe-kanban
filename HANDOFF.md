@@ -1,3 +1,17 @@
+# Mobile Dot integration pickup — October16
+
+The task branch includes the already-live Dot frontend plus the prepared mobile
+CSS and a direct mobile Dot tab. Phone Git no longer mounts a duplicate Dot
+panel. Drafts survive tab switches. Browser tests pass at360/393/412/844/1440px
+with simulated pairing/send/retry; no external prompt was sent. See
+[VK_MOBILE_DOT.md](VK_MOBILE_DOT.md). Physical S25+ ADB is available but its screen
+slept during Chrome testing; await operator unlock for actual keyboard QA.
+Preview uses the existing gateway4720 because historical4511 is inactive.
+Production build and all four frontend type checks passed; local/UI lint and
+focused shared lint pass, with the base RightSidebar dependency warning retained.
+No live deployment or restart occurred. Evidence is on mounted SSD under
+`/mnt/vk-storage/vk-mobile-dot-20261016/`.
+
 # Dot integration preservation — October 16
 
 [PR #254](https://github.com/artinflight/vibe-kanban/pull/254) publishes this preserved source into a draft review

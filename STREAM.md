@@ -1,3 +1,14 @@
+# Connectivity watcher stream — October 16
+
+Branch `vk/281e-vk-intermittent` adds the standalone diagnostic watcher, unit
+template, nine offline tests and [runbook](VK_CONNECTIVITY_WATCHER.md). The local
+issue is linked to this workspace. Runtime source/logs are copied outside the
+worktree to `/mnt/vk-storage/vk-connectivity-watch-20261016/`; the enabled service
+expires October 19 at 15:07:44 UTC and survives this task ending. Network/DNS
+configuration and the live application are unchanged. Correlate the next natural
+failure before proposing a fix. Source, tests and docs are committed together;
+no push or PR is requested.
+
 # Clickable summary links release — live October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) merged into staging

@@ -23,8 +23,12 @@ copies on `vk/de2d-vk-preserve-dot`, based on current `fork/staging`. Read
 [the reconciled source/deployment handoff](DOT_INTEGRATION_HANDOFF.md) and
 [commit provenance](DOT_PRESERVATION_COMMITS.json). The reported live browser
 test uses frontend `975f62c7c`; the prepared mobile correction is not selected by
-the observed live pointer. Mobile acceptance and a real phone roundtrip remain
-unverified; the later successful desktop reply is recorded in the correction above. The separate mobile owner retains its active workspace and changes.
+the observed live pointer. Seamus confirmed the first desktop roundtrip:
+the webhook reached Dot, its exact reply persisted through the integration task's
+available paired connector, and his screenshot showed the reply. Direct root dot
+connector access remains unresolved; the real phone roundtrip and mobile acceptance
+remain separate and unverified here. Private chat and receipt identifiers are not
+published. The mobile owner retains its active workspace and changes.
 This preservation task does not deploy, restart or change pairing/subscriptions.
 
 # Summary web-link rendering — live October 16

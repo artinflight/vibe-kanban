@@ -1894,3 +1894,12 @@ live source, unfinished mobile/actual-Dot acceptance and ownership. No deploymen
 
 Publication receipt: [draft PR #254](https://github.com/artinflight/vibe-kanban/pull/254) targets staging;
 Vibe T61 links the preserved source and mobile owner. Original worktrees remain clean.
+
+
+## 2026-10-16 — Correct desktop Dot acceptance boundary for PR254
+
+Recorded Seamus's confirmation of the first successful desktop message/webhook/
+persisted-reply exchange and screenshot. The integration task's paired connector
+provided the reply route; direct root connector access remains unresolved. Real
+phone acceptance remains separately owned. No private conversation, screenshot,
+pairing data or receipt identifiers are published, and no live test is replayed.

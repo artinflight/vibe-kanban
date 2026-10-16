@@ -3,18 +3,8 @@
 This branch preserves the existing integration for review against `staging` in
 `artinflight/vibe-kanban`. It performs no deployment. Status below was reconciled
 on 2026-10-16 from the clean original worktrees, their activation notes, and
-read-only service/release-pointer checks. The preservation task itself did not
-conduct live reply acceptance.
-
-## Later desktop reply correction — October 16
-
-Seamus confirms that the first desktop Dot chat request/reply test succeeded,
-witnessed in his screenshot. It used the integration task's available connector.
-Direct root Dot connector access remains unverified because root Dot still lacks
-the new tools. A real phone roundtrip and physical keyboard acceptance remain
-pending Seamus making the phone available. This correction carries no private
-conversation or receipt identifiers and authorizes no deployment. It is published
-through the mobile follow-up; the preservation branch/workspace are unchanged.
+read-only service/release-pointer checks, and Seamus's subsequent confirmation
+of the first successful desktop roundtrip. The evidence boundaries are below.
 
 ## What is live
 
@@ -38,6 +28,26 @@ Its hashes and source references are historical activation evidence, not fresh
 end-to-end verification. Private receipts, keys, pairing material, chat history,
 subscriptions and runtime databases remain outside this repository.
 
+## Confirmed desktop roundtrip and its boundary
+
+Seamus confirmed the first real desktop Dot chat roundtrip on 2026-10-16:
+an owner message reached Dot through the webhook, the exact Dot reply was
+persisted through the integration task's available paired connector, and his
+12:07 UTC screenshot showed the reply in the desktop UI. This operator-confirmed
+result supersedes the activation record's earlier statement that no real reply
+had been verified. It is not a fixture or a webhook-acceptance-only result.
+
+The proof used the connector available to the integration task. Root dot was
+still missing the new sidechat tools in that reported test; direct root connector
+access and reply delivery remain unresolved and unverified. Do not treat the
+successful integration-task route as proof of the root route, or resend the
+already successful message to recreate evidence. A real phone roundtrip and
+mobile acceptance remain with the separate mobile owner.
+
+This documentation records the operator's confirmation without publishing the
+conversation, screenshot, pairing material or private delivery/receipt identifiers.
+The preservation task did not independently rerun this live test.
+
 ## What is unfinished and who owns it
 
 The later `c71c2ee7d` responsive correction is preserved here, but the observed
@@ -52,14 +62,15 @@ portrait/landscape at 360/390/412px, keyboard open, long labels/errors, Notes
 expanded/collapsed, pairing, send, history scrolling and lost-response retry.
 No phone or rendered-browser acceptance is claimed by this preservation task.
 
-The original activation record predates the successful desktop reply described
-above. Direct root Dot access and a real phone roundtrip remain unverified.
-For those separate acceptance checks, the responsible Dot context must own its
-correct project/thread subscription, then verify one authorized message, webhook receipt,
-exact persisted reply and retained-history readback. A webhook 2xx is not a reply
-and is not evidence that a person saw it. Reconcile uncertain delivery before
-retrying; preserve event/request IDs and existing approval subscriptions.
-Do not run historical bootstrap/deployment instructions as part of this handoff.
+The remaining connector acceptance is the direct root dot route: confirm that
+the intended root context exposes the new tools and can persist an authorized
+reply through its own available connector. Retained-history recovery and broader
+UI QA beyond the confirmed desktop exchange are not established by the screenshot.
+A webhook 2xx alone is not a reply or evidence of viewing; the confirmed desktop
+exchange has the additional persistence and owner screenshot evidence above.
+Reconcile uncertain delivery before retrying, and preserve existing approval
+subscriptions. Do not run historical bootstrap/deployment instructions as part
+of this handoff.
 
 ## Source inventory and reconciliation
 
@@ -144,7 +155,13 @@ handoff identifiers, not chat/session/grant identifiers.
   lacks the `glib-2.0`/`gobject-2.0` pkg-config development files. Later stages
   (including remote Rust and the final i18n check) were not reached. No Rust,
   remote deployment, database schema or generated shared types changed here.
-  GitHub CI remains required before merge; no full Rust-suite pass is claimed.
+  The local Rust limitation remains. Hosted Test run
+  [38911578393](https://github.com/artinflight/vibe-kanban/actions/runs/38911578393)
+  passed for source baseline `14fca343b`, including frontend, backend tests,
+  Clippy, generated types/SQLx and Tauri. Remote-dependency checks did not execute
+  without the private deploy key; workflow-dispatch-only combined acceptance was
+  skipped. The current correction changes documentation only; its final head
+  and CI receipt are recorded on PR #254.
 - Passed: inventory of all 31 source/config paths and eleven original commits;
   original API/UI worktrees remain clean. Differences from the chosen original
   source are confined to two formatted TSX components, a synthetic proof UUID,
@@ -156,8 +173,12 @@ handoff identifiers, not chat/session/grant identifiers.
   detected as a generic API key; other rules remain enabled. Private original
   histories are not ancestors of the published branch, so tip-only redaction
   cannot leave their operational details in published ancestors.
-- Not exercised: rendered desktop/mobile/Android QA, actual browser pairing,
-  real subscriptions or a real Dot reply. No production chat write, grant,
+- Operator-confirmed live evidence: the first desktop webhook/reply-persistence
+  roundtrip succeeded through the integration task's connector; Seamus's screenshot
+  confirms the displayed reply. Direct root connector access and a real phone
+  roundtrip remain unverified. This preservation task did not rerun pairing,
+  subscriptions, live chat or rendered browser/Android QA.
+- No production chat write, grant,
   service restart, proxy change, frontend switch or mobile-owner edit occurred.
 
 Private validation logs are retained on the mounted SSD under

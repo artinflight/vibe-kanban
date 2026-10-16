@@ -16,7 +16,12 @@ const browser = await chromium.launch({
   headless: true,
   chromiumSandbox: true,
 });
-const report = { checks: [], errors: [], blockedWrites: [], sessionStatuses: [] };
+const report = {
+  checks: [],
+  errors: [],
+  blockedWrites: [],
+  sessionStatuses: [],
+};
 let page;
 try {
   const context = await browser.newContext({

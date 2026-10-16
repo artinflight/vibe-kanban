@@ -1,3 +1,22 @@
+# Mobile Dot direct link live — October 16
+
+The navigation correction is live at 17:24 UTC from app source `9d76d7faf`.
+Project issue/workspace navigation now exposes Dot; the direct mobile
+`/workspaces/<id>?dot=1#dot` link selects the Dot conversation immediately.
+See VK_MOBILE_DOT.md for the exact operator link, asset identity and rollback.
+
+The actual S25 opened that link and displayed Disconnect and Send to Dot. The
+browser is already paired; no fresh code is needed despite the old one-use code
+expiring. No credentials, conversation contents or browser session data were
+inspected, and no pairing or message was submitted. Keyboard/real phone reply
+remain unverified. The laptop was untouched.
+
+All four frontend type checks, relevant lint, build, formatting, ops and candidate/
+live route regressions passed. Exact app-source frontend CI passed; other CI jobs
+were still running at rollout. Local aggregate Rust checks hit the existing
+missing GLib/GObject development packages. No service restart or PR merge.
+All five service PIDs and project count/order (43) stayed unchanged.
+
 # Mobile Dot frontend live for phone QA — October 16
 
 The operator explicitly requested deployment so Seamus can test on his phone.

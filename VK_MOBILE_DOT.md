@@ -4,8 +4,9 @@
 
 The live mobile assets were verified unchanged when the operator reported that
 Dot was missing. Inspection of the actual S25 installed Chrome app found a
-clickable Dot control in its bottom navigation. The phone subsequently locked;
-no private inputs, browser session data, pairing or conversation were inspected.
+clickable Dot control in its bottom navigation. The phone subsequently locked; after it became available, the corrected direct
+link was verified on the actual S25. No private inputs, browser session data or
+conversation contents were inspected.
 
 The navigation gap is route-specific: project/issue pages use the project
 navigation instead of the standalone workspace tabs. This correction adds Dot
@@ -14,15 +15,36 @@ workspace's standalone Dot panel. Boards without a selected workspace retain
 their existing navigation because a conversation needs workspace context.
 
 The direct route is
-[this workspace's Dot panel](https://vibe.local/workspaces/2e35466b-127e-41ba-ab56-1dd47bdb8b85#dot).
+[this workspace's Dot panel](https://vibe.local/workspaces/2e35466b-127e-41ba-ab56-1dd47bdb8b85?dot=1#dot).
 The `#dot` fragment selects Dot on initial mobile navigation; changing tabs
 updates the fragment. Opening this link does not mark the hidden agent chat
 seen. It does not pair a browser or send a message.
 
-Deployment and actual-phone panel validation for this correction are pending.
-The earlier privately delivered phone pairing code has expired. A new code must
-be handed off privately after the interface is reachable. Physical keyboard and
-real phone reply acceptance remain separate from viewport/browser checks.
+The correction is live from 17:24 UTC, built from
+`9d76d7faf00a0997c9580cf3c8d3bd63f6440ad1`. Its entry script is
+`/assets/index-B-YJtP-l.js`; the frontend index SHA256 is
+`dc9b625641fe034e55dee46c68d34b38a0b2fe68f026abc3a11f7473e7c89af3`.
+All four frontend TypeScript projects, local-web/UI lint, focused shared lint,
+formatting, ops governance and the packaged production build passed. Candidate
+and live read-only route checks passed, including the actual unpaired 401 gate,
+project shortcut, initial Dot selection, tab changes and hidden-chat attention.
+[Exact app-source frontend CI passed](https://github.com/artinflight/vibe-kanban/actions/runs/38938599536);
+other jobs were still running at rollout. Local aggregate Rust checks remain
+blocked by missing GLib/GObject development packages; no backend was changed.
+
+On the actual S25, opening the exact link above showed the Dot conversation,
+**Disconnect**, and **Send to Dot**. This browser was already paired: the earlier
+one-use code has expired, but no fresh code is needed for that existing pairing.
+No new grant was created and no pairing or message was submitted by this fix.
+Physical keyboard and real phone reply acceptance remain unverified.
+
+All five monitored service PIDs and the 43-project order stayed unchanged.
+The frontend-only rollback archive on Desktop B: passed full readback/restore
+verification for 1,656 files. Its SHA256 is
+`123ee60b2e36b2ed105b654038327d5c79ec07a7e8579f0f048542c21ad011db`.
+The previous mobile release remains intact. Private build/deployment receipts
+and browser reports are under `/mnt/vk-storage/vk-mobile-dot-route-20261016/`.
+No GitHub PR was merged and no service was restarted.
 
 ## Live phone QA deployment — October 16
 

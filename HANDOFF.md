@@ -1,3 +1,35 @@
+# Automatic sub-agent activity correction — October 16
+
+Prepared on current `fork/staging` (`872f69996`) from source fix `2315ff268`.
+The AutoSwitch case had an open child edge despite a durable `task_complete`;
+the parent's latest recorded thread association was a day older. The fix reads
+the child's latest turn for both session listings and workspace counts, handles
+completion/interruption and later reuse, and preserves newer acknowledged closes.
+
+Reads are asynchronous, bounded to eight concurrent 1 MiB tails, and cached by
+file length/mtime with at most 1,024 entries. Missing, partial, malformed or
+changing history remains unresolved unless existing tracking supplies status.
+No status read mutates Codex/VK records, archives threads or changes transcripts.
+Regression fixtures preserve AutoSwitch's resumed-parent shape and cover reuse,
+delayed tracking, interrupted/error turns, uncertainty and cache invalidation.
+
+Validation and PR receipts: `/mnt/vk-storage/vk-subagent-status-pr-20261016/`.
+Current-staging validation passes all 24 DB tests, repository formatting, ops
+checks and diff checks. Local frontend lint passes. The full `pnpm run lint`
+stops in desktop native dependencies because this host lacks the required GLib/
+GTK/WebKit development libraries. The initial type check exhausted Node's default
+heap; the 8 GiB retry passes all four frontend checks and stops at the same GLib
+requirement in the backend. The full workspace test command is also being run;
+GitHub's configured backend and desktop jobs must pass before merge. Exact
+receipts are in the validation directory.
+
+Release handoff: include the final merged commit in the next backend candidate;
+build it from current integration state, follow the restart runbook, and verify
+that completed children show zero active/unresolved counts while new child turns
+remain visible. No frontend change or database migration is needed. No live
+restart or deployment is authorised by this source merge. PR189 remains the
+separate preserved explicit-close feature; this PR only fixes status inference.
+
 # Dot explicit steering review handoff — October 15
 
 [PR #250](https://github.com/artinflight/vibe-kanban/pull/250) targets staging.

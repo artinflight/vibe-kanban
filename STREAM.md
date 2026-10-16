@@ -1,3 +1,20 @@
+# First-response generated artifact delivery — October 16 follow-up
+
+Based on current staging `805aa7741`; code checkpoint `ae41a599b` adds the
+native attachment publisher, standalone sandboxed HTML viewer, seven real HTTP
+regressions and desktop/phone browser acceptance. This closes the missing
+publication step exposed by OP::3D Print Issues, while retaining the web-link
+renderer fix and current Mobile/Steering/Dot frontend.
+
+The helper and shared first-reply rule are installed outside disposable
+worktrees. Only one static viewer file was added to the current release; no
+pointer, existing asset, backend, gateway, agent or preview route was replaced.
+The exact original report was uploaded in its own workspace and first-response
+Markdown was clicked through the actual production-editor fixture. Embedded
+images and next/previous controls pass at 1440px and 393px with zero API writes
+during browser QA. The original conversation and source report are unchanged.
+See [VK_ARTIFACT_LINKS.md](VK_ARTIFACT_LINKS.md) for scope and limitations.
+
 # Dot reply notifications — live October 16, 22:38 UTC
 
 Seamus's approved Dot service/connector and combined frontend rollout is live.

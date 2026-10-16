@@ -79,9 +79,34 @@ file is uploaded by these tests. The publication tests run in frontend CI.
 
 ## Current rollout
 
-Prepared on current staging `805aa7741`. The existing live Dot release and all
-hashed app assets must be preserved. Only the standalone viewer needs an
-additive static-file installation; no backend, gateway or agent restart is
-required. Activation and exact-report acceptance are pending at this source
-checkpoint; record their actual receipts before claiming the current report
-is available.
+Implemented at `ae41a599b` on staging baseline `805aa7741`, then installed and
+verified on October 16. The existing Dot frontend remains selected at
+`/mnt/vk-storage/vk-dot-notification-rollout-20261016/release`.
+Only `vk-artifact-viewer.html` was added, SHA256
+`a5a6732cd0e823f2bb3f8141fa4ceb7cd8584d6d2a9b0346621358662c6eff95`.
+The unchanged index SHA256 is
+`f842a0df7e2c6d30ac8fa2fd1afebf0bb29631a603f33d95e7bca96274c0a5bd`;
+existing JS/CSS, pointer, API version0.1.42 and all service PIDs were preserved.
+No backend restart or experimental database was required.
+
+The installed helper and public TLS certificate are versioned outside task
+worktrees under `/mnt/vk-storage/vk-published-artifacts/releases/` with a
+`current` pointer. The shared Codex-home `AGENTS.md` requires publication before
+the first reply. Every previous instruction was preserved; its exact rollback
+was mirrored and hash-verified on Desktop B at
+`B:/vk-backups/vk-artifact-links-20261016/AGENTS.before.md`.
+
+The exact original 1.7 MB self-contained print report was uploaded in its own
+workspace. Native and operator-facing SHA256 match the source. Its returned
+first-response Markdown was clicked in the actual production-editor fixture
+at1440px and393px, opening the real served viewer and uploaded report. Embedded
+images loaded and Next/Previous frame controls worked. No page errors occurred;
+browser QA used only GET requests. This is viewport acceptance, not physical
+phone testing. The source file and original conversation are unchanged.
+
+Activation, rollback and exact-report private receipts are under
+`/mnt/vk-storage/vk-artifact-links-20261016/`. They contain the delivered URL;
+it is intentionally not published to GitHub. Rollback removes only the added
+viewer/helper and restores the shared instruction backup, without restoring
+application data or restarting services. Do not delete uploaded report files as
+part of that rollback; attachment retention is a separate operation.

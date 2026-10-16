@@ -1,3 +1,39 @@
+# Generated deliverable links — installed October 16 follow-up
+
+The reported OP::3D Print Issues link was an unpublished filesystem target,
+not a regression of the HTTP(S) renderer. Read
+[VK_ARTIFACT_LINKS.md](VK_ARTIFACT_LINKS.md). Before offering a generated file,
+use `/home/mcp/.local/bin/vk-publish-artifact FILE --label "Open report"` and
+paste its verified Markdown. The shared Codex-home instruction is installed.
+The helper uses the existing workspace/session environment and native upload
+API, verifies both operator-facing and native bytes, reuses acknowledged uploads
+and stops on uncertain uploads. HTML reports require embedded resources.
+
+The standalone viewer is now in the existing Dot release under
+`/mnt/vk-storage/vk-dot-notification-rollout-20261016/release/vk-artifact-viewer.html`,
+SHA256 `a5a6732cd0e823f2bb3f8141fa4ceb7cd8584d6d2a9b0346621358662c6eff95`.
+App/API version remains 0.1.42; index SHA256
+`f842a0df7e2c6d30ac8fa2fd1afebf0bb29631a603f33d95e7bca96274c0a5bd`
+and all existing app assets, frontend pointer and service PIDs are unchanged.
+The public source file ships automatically in subsequent frontend builds.
+
+Seven HTTP tests and sandboxed Chromium controls/isolation/error tests pass.
+The actual original report also passes desktop/phone first-response Markdown
+clicks, embedded-image loading and next/previous controls. Browser QA sent
+only GET requests. Source report and historical reply were not edited.
+Durable helper versions/receipts are in `/mnt/vk-storage/vk-published-artifacts/`;
+activation and exact-report private acceptance are in
+`/mnt/vk-storage/vk-artifact-links-20261016/`. Shared instruction rollback is
+hash-verified at `desktop:B:/vk-backups/vk-artifact-links-20261016/AGENTS.before.md`.
+Rollback removes only this added viewer/helper and restores the exact shared
+instruction backup; it does not restore application data or restart services.
+
+Filesystem hrefs remain disabled. This is a verified publish-before-reply tool
+and shared instruction, not automatic rewriting of every historical/local path.
+Do not assume an already running turn adopted new instructions, or claim the
+operator's physical phone was tested. No restart, new public route or broad
+filesystem endpoint was introduced. The code checkpoint is `ae41a599b`.
+
 # Dot reply notifications — live October 16, 22:38 UTC
 
 Seamus's approved Dot service/connector and combined frontend rollout is live.

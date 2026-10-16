@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="vk-artifact-viewer-v1" content="1" />
+    <title>VK report</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 12px;
+        border-bottom: 1px solid;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      p {
+        margin: 12px;
+      }
+      iframe {
+        flex: 1;
+        width: 100%;
+        border: 0;
+        background: white;
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="name">VK report</h1>
+      <a id="download" hidden>Download original</a>
+    </header>
+    <p id="status" role="status">Loading report…</p>
+    <iframe
+      title="Report preview"
+      sandbox="allow-scripts"
+      referrerpolicy="no-referrer"
+      hidden
+    ></iframe>
+    <script>
+      // Fetch only a native attachment UUID; never accept a host filesystem path or remote URL.
+      (async () => {
+        const query = new URLSearchParams(location.search);
+        const id = query.get('id') || '';
+        const status = document.getElementById('status');
+        try {
+          if (
+            !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+              id
+            )
+          ) {
+            throw new Error('This report link has no valid attachment ID.');
+          }
+          const name = query.get('name') || 'Report';
+          document.getElementById('name').textContent = name;
+          document.title = name + ' — VK';
+          const url = '/api/attachments/' + id + '/file';
+          const response = await fetch(url, {
+            credentials: 'same-origin',
+            redirect: 'error',
+          });
+          if (!response.ok)
+            throw new Error(
+              'The report could not be loaded (' + response.status + ').'
+            );
+          const html = await response.text();
+          const frame = document.querySelector('iframe');
+          // Opaque sandbox origin plus a restrictive policy: report scripts can drive
+          // their own controls, but cannot access VK, send requests or load remote assets.
+          const policy =
+            "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; form-action 'none'; base-uri 'none'";
+          frame.srcdoc =
+            '<!doctype html><meta http-equiv="Content-Security-Policy" content="' +
+            policy +
+            '">' +
+            html;
+          frame.hidden = false;
+          const download = document.getElementById('download');
+          download.href = url;
+          download.download = name;
+          download.hidden = false;
+          status.hidden = true;
+        } catch (error) {
+          status.textContent =
+            error.message || 'The report could not be loaded.';
+        }
+      })();
+    </script>
+  </body>
+</html>

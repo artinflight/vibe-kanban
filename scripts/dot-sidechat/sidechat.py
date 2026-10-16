@@ -54,6 +54,11 @@ class Store:
         CREATE TABLE IF NOT EXISTS project_grants(
           owner TEXT NOT NULL, project TEXT NOT NULL,
           PRIMARY KEY(owner,project));
+        CREATE TABLE IF NOT EXISTS owner_project_policies(
+          owner TEXT PRIMARY KEY, enabled INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS all_project_sessions(
+          owner TEXT NOT NULL, session TEXT NOT NULL,
+          PRIMARY KEY(owner,session));
         CREATE TABLE IF NOT EXISTS threads(
           id TEXT PRIMARY KEY, owner TEXT NOT NULL, project TEXT NOT NULL,
           issue TEXT NOT NULL, created REAL NOT NULL,

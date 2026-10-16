@@ -29,6 +29,20 @@
             "minItems": 1,
             "maxItems": 100,
             "uniqueItems": true
+          },
+          "all_projects": {
+            "type": "boolean",
+            "const": true
+          },
+          "exclude_project_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "maxItems": 1000,
+            "uniqueItems": true
           }
         },
         "oneOf": [
@@ -45,6 +59,12 @@
           {
             "required": [
               "project_ids"
+            ]
+          },
+          {
+            "required": [
+              "all_projects",
+              "exclude_project_ids"
             ]
           }
         ],

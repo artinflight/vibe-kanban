@@ -110,7 +110,11 @@ separate admission reason when available.
 `scripts/preservation/reconcile_observation.py` provides a narrowly scoped repair
 for legacy completed owners whose observation failed specifically because an empty
 publication admission was compared with a nonempty requested inventory. Default
-operation is plan-only. Apply requires the exact plan SHA-256 and a genuine idle
+operation is plan-only. `--turn <execution UUID>` restricts a plan to one exact
+owner; all other workspace observation gates remain unchanged, including killed
+or otherwise unproven owners. The plan still binds the complete workspace owner
+inventory and refuses newly arriving work at apply time. Omitting `--turn` retains
+the original whole-workspace behavior. Apply requires the exact plan SHA-256 and a genuine idle
 boundary with no queued/incoming user work and sufficient *natural* worker backoff.
 It never creates an idle gap or retimes a checkpoint.
 

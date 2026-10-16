@@ -7,6 +7,7 @@ publication permission and cannot mark Git coverage verified. No source/index,
 Git refs, execution, input, summary or service is modified.
 """
 import argparse
+from contextlib import closing
 import base64
 import datetime
 import fcntl
@@ -96,8 +97,9 @@ def eligible_job(job):
             'only the exact completed legacy inventory fault can be reconciled')
 
 
-def create_plan(database, config_path, workspace, output):
+def create_plan(database, config_path, workspace, output, turn=None):
     workspace = str(uuid.UUID(workspace))
+    selected_turn = None if turn is None else str(uuid.UUID(turn))
     config = read_json(Path(config_path))
     mount = Path(config['storage_mount']).resolve()
     state_root = Path(config['state_root']).resolve()
@@ -105,52 +107,55 @@ def create_plan(database, config_path, workspace, output):
     require(mount.is_mount() and output.is_relative_to(mount) and
             state_root.is_relative_to(mount), 'repair evidence requires approved mounted storage')
     require(not output.exists(), 'plan exists; preserve its original evidence')
-    connection = connect(database)
-    connection.execute('BEGIN')
-    idle(connection, workspace)
-    selected = jobs(connection, workspace)
-    require(selected, 'no scoped checkpoint rows')
-    entries = []
-    originals = {}
-    for job in selected:
-        eligible_job(job)
-        request = json.loads(job['request'])
-        turn = str(uuid.UUID(bytes=job['execution_process_id']))
-        require(request['workspace'] == workspace and request['turn'] == turn,
-                'durable request owner mismatch')
-        ledger_path = state_root / workspace / (turn + '.json')
-        raw = ledger_path.read_bytes()
-        record = json.loads(raw)
-        require(record.get('version') == 2 and record['workspace'] == workspace and
-                record['turn'] == turn and record.get('config') == digest(config) and
-                record['repositories'] == [] and not record.get('observation_inventory'),
-                'legacy partial admission/config identity mismatch')
-        states = native_states(connection, job)
-        inventory = {i['id']: str(Path(i['path']).resolve()) for i in request['repositories']}
-        require(len(inventory) == len(request['repositories']) and inventory and
-                set(inventory) == {s['repo_id'] for s in states} == set(record['obligations']),
-                'original/request/native repository inventories differ')
-        for state in states:
-            ident = state['repo_id']
-            require(ident not in config.get('repositories', {}),
-                    'repair is restricted to the proven missing-policy admission fault')
-            repo = Path(inventory[ident])
-            require(not output.is_relative_to(repo) and not state_root.is_relative_to(repo),
-                    'repair evidence must be outside the source worktree')
-            obligation = record['obligations'][ident]
-            require(obligation['path'] == str(repo) and not obligation.get('unverifiable') and
-                    state['before_head_commit'] in obligation['commits'],
-                    'original admission HEAD/provenance mismatch')
-            known = originals.setdefault(ident, dict(path=str(repo), commits=[]))
-            require(known['path'] == str(repo), 'repository path changed between owners')
-            known['commits'] = sorted(set(known['commits'] + obligation['commits'] +
-                                         [state['before_head_commit'], state['after_head_commit']]))
-        entries.append(dict(turn=turn, request=job['request'],
-                            old_observation_report=job['observation_report'],
-                            native_states=states, ledger=str(ledger_path),
-                            ledger_before_base64=base64.b64encode(raw).decode(),
-                            ledger_before_sha256=sha(raw)))
-    connection.close()
+    with closing(connect(database)) as connection:
+        connection.execute('BEGIN')
+        idle(connection, workspace)
+        selected = jobs(connection, workspace)
+        require(selected, 'no scoped checkpoint rows')
+        owner_inventory = sorted(str(uuid.UUID(bytes=j['execution_process_id'])) for j in selected)
+        if selected_turn is not None:
+            selected = [j for j in selected if str(uuid.UUID(bytes=j['execution_process_id'])) == selected_turn]
+            require(len(selected) == 1, 'selected turn is not a checkpoint owner in this workspace')
+        entries = []
+        originals = {}
+        for job in selected:
+            eligible_job(job)
+            request = json.loads(job['request'])
+            turn = str(uuid.UUID(bytes=job['execution_process_id']))
+            require(request['workspace'] == workspace and request['turn'] == turn,
+                    'durable request owner mismatch')
+            ledger_path = state_root / workspace / (turn + '.json')
+            raw = ledger_path.read_bytes()
+            record = json.loads(raw)
+            require(record.get('version') == 2 and record['workspace'] == workspace and
+                    record['turn'] == turn and record.get('config') == digest(config) and
+                    record['repositories'] == [] and not record.get('observation_inventory'),
+                    'legacy partial admission/config identity mismatch')
+            states = native_states(connection, job)
+            inventory = {i['id']: str(Path(i['path']).resolve()) for i in request['repositories']}
+            require(len(inventory) == len(request['repositories']) and inventory and
+                    set(inventory) == {s['repo_id'] for s in states} == set(record['obligations']),
+                    'original/request/native repository inventories differ')
+            for state in states:
+                ident = state['repo_id']
+                require(ident not in config.get('repositories', {}),
+                        'repair is restricted to the proven missing-policy admission fault')
+                repo = Path(inventory[ident])
+                require(not output.is_relative_to(repo) and not state_root.is_relative_to(repo),
+                        'repair evidence must be outside the source worktree')
+                obligation = record['obligations'][ident]
+                require(obligation['path'] == str(repo) and not obligation.get('unverifiable') and
+                        state['before_head_commit'] in obligation['commits'],
+                        'original admission HEAD/provenance mismatch')
+                known = originals.setdefault(ident, dict(path=str(repo), commits=[]))
+                require(known['path'] == str(repo), 'repository path changed between owners')
+                known['commits'] = sorted(set(known['commits'] + obligation['commits'] +
+                                             [state['before_head_commit'], state['after_head_commit']]))
+            entries.append(dict(turn=turn, request=job['request'],
+                                old_observation_report=job['observation_report'],
+                                native_states=states, ledger=str(ledger_path),
+                                ledger_before_base64=base64.b64encode(raw).decode(),
+                                ledger_before_sha256=sha(raw)))
     for original in originals.values():
         for oid in original['commits']:
             check_original(Path(original['path']), oid)
@@ -158,6 +163,8 @@ def create_plan(database, config_path, workspace, output):
                 database=str(Path(database).resolve()), config=str(Path(config_path).resolve()),
                 config_digest=digest(config), workspace=workspace, originals=originals,
                 entries=entries, publication_permission=False, coverage_verified=False)
+    if selected_turn is not None:
+        plan.update(selected_turn=selected_turn, workspace_owner_inventory=owner_inventory)
     atomic_json(output, plan)
     return dict(state='planned', plan=str(output), sha256=sha(output.read_bytes()),
                 turns=len(entries), originals=originals, coverage_verified=False)
@@ -199,6 +206,13 @@ def apply_plan(plan_path, expected_sha):
             connection.execute('BEGIN IMMEDIATE')
             idle(connection, plan['workspace'])
             current = jobs(connection, plan['workspace'])
+            if 'selected_turn' in plan:
+                require(sorted(str(uuid.UUID(bytes=j['execution_process_id'])) for j in current) ==
+                        plan['workspace_owner_inventory'], 'owner inventory changed after planning')
+                require([e['turn'] for e in plan['entries']] == [plan['selected_turn']],
+                        'selected turn differs from repair entries')
+                current = [j for j in current if str(uuid.UUID(bytes=j['execution_process_id'])) ==
+                           plan['selected_turn']]
             require({str(uuid.UUID(bytes=j['execution_process_id'])) for j in current} ==
                     {e['turn'] for e in plan['entries']}, 'owner inventory changed after planning')
             by_turn = {str(uuid.UUID(bytes=j['execution_process_id'])): j for j in current}
@@ -300,6 +314,7 @@ def main():
     parser.add_argument('--database')
     parser.add_argument('--config')
     parser.add_argument('--workspace')
+    parser.add_argument('--turn', help='Plan only this exact owner; retain every other observation gate')
     parser.add_argument('--plan')
     parser.add_argument('--apply')
     parser.add_argument('--sha256')
@@ -310,7 +325,7 @@ def main():
             result = apply_plan(args.apply, args.sha256)
         else:
             require(all([args.database, args.config, args.workspace, args.plan]), 'incomplete plan arguments')
-            result = create_plan(args.database, args.config, args.workspace, args.plan)
+            result = create_plan(args.database, args.config, args.workspace, args.plan, args.turn)
         print(json.dumps(result, sort_keys=True))
         return 0
     except (Blocked, OSError, ValueError, KeyError, sqlite3.Error) as error:

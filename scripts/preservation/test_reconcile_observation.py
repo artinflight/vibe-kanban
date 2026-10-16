@@ -70,10 +70,64 @@ CREATE TABLE turn_github_sync_user_queue(workspace_id BLOB);
 
     def plan_repair(self):
         result = repair.create_plan(self.database, self.config, str(self.workspace), self.plan)
+        self.assertNotIn('selected_turn', read_json(self.plan))
         return result['sha256']
 
     def state(self):
         return self.connection.execute('SELECT observation_state,state FROM turn_github_sync').fetchone()
+
+    def unrelated_owner(self):
+        other = uuid.uuid4()
+        self.connection.execute('INSERT INTO execution_processes VALUES(?,?,?,?,0,?)',
+                                (other.bytes, self.session.bytes, 'killed',
+                                 '2026-10-16T08:02:00+00:00', '2026-10-16T08:01:00+00:00'))
+        request = dict(self.request, turn=str(other))
+        self.connection.execute('INSERT INTO turn_github_sync VALUES(?,?,?,?,?,?,?,?,?,?)',
+                                (other.bytes, self.workspace.bytes, json.dumps(request),
+                                 'blocked', 'pending', None, 'original unrelated report',
+                                 int(time.time()) + 3600, '2026-10-16 08:01:00', '2026-10-16 08:02:00'))
+        self.connection.commit()
+        return other
+
+    def test_exact_turn_repair_leaves_unrelated_uncertainty_intact(self):
+        other = self.unrelated_owner()
+        with self.assertRaisesRegex(Blocked, 'exact completed legacy'):
+            self.plan_repair()
+        digest = repair.create_plan(self.database, self.config, str(self.workspace),
+                                    self.plan, str(self.turn))['sha256']
+        self.assertEqual(len(read_json(self.plan)['entries']), 1)
+        self.assertEqual(repair.apply_plan(self.plan, digest)['turns'], 1)
+        self.assertTrue(repair.apply_plan(self.plan, digest)['already_applied'])
+        untouched = self.connection.execute(
+            'SELECT observation_state,state,report FROM turn_github_sync WHERE execution_process_id=?',
+            (other.bytes,)).fetchone()
+        self.assertEqual(untouched, ('pending', 'blocked', 'original unrelated report'))
+        self.assertEqual(self.connection.execute(
+            "SELECT count(*) FROM turn_github_sync WHERE observation_state!='observed'").fetchone()[0], 1)
+
+    def test_exact_turn_plan_refuses_new_owner_or_changed_selection(self):
+        digest = repair.create_plan(self.database, self.config, str(self.workspace),
+                                    self.plan, str(self.turn))['sha256']
+        self.unrelated_owner()
+        with self.assertRaisesRegex(Blocked, 'owner inventory changed'):
+            repair.apply_plan(self.plan, digest)
+        self.assertEqual(self.connection.execute(
+            'SELECT observation_state FROM turn_github_sync WHERE execution_process_id=?',
+            (self.turn.bytes,)).fetchone()[0], 'failed')
+        self.connection.execute('DELETE FROM execution_processes WHERE id!=?', (self.turn.bytes,))
+        self.connection.execute('DELETE FROM turn_github_sync WHERE execution_process_id!=?', (self.turn.bytes,))
+        self.connection.commit()
+        plan = read_json(self.plan)
+        plan['selected_turn'] = str(uuid.uuid4())
+        atomic_json(self.plan, plan)
+        with self.assertRaisesRegex(Blocked, 'selected turn differs'):
+            repair.apply_plan(self.plan, hashlib.sha256(self.plan.read_bytes()).hexdigest())
+
+    def test_exact_turn_plan_refuses_unknown_owner(self):
+        with self.assertRaisesRegex(Blocked, 'not a checkpoint owner'):
+            repair.create_plan(self.database, self.config, str(self.workspace),
+                               self.plan, str(uuid.uuid4()))
+        self.assertFalse(self.plan.exists())
 
     def test_execution_time_heads_reconcile_after_reset_without_green_coverage(self):
         digest = self.plan_repair()

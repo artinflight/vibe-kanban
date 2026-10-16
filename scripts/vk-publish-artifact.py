@@ -97,7 +97,7 @@ def publish(path, api_base, public_origin, receipts, label=None, download=False,
         raise ValueError("Stored attachment did not match the source; no link delivered")
     if hashlib.sha256(request(public_origin + api_path, context=context)).hexdigest() != digest:
         raise ValueError("Operator-facing attachment did not match; no link delivered")
-    query = urllib.parse.urlencode({"id": file_id, "name": path.name})
+    query = urllib.parse.urlencode({"id": file_id, "name": path.name, "v": "1"})
     url = public_origin + ("/vk-artifact-viewer.html?" + query if html else api_path)
     text = (label or path.name).replace("\n", " ").replace("\r", " ")
     for char in ("\\", "[", "]"):

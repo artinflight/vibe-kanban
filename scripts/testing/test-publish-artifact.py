@@ -71,7 +71,7 @@ class Publication(unittest.TestCase):
         result = self.publish(label="Frame-by-frame review")
         self.assertTrue(result["verified"])
         self.assertEqual(result["mode"], "html-preview")
-        self.assertEqual(result["markdown"], "[Frame-by-frame review](" + self.origin + "/vk-artifact-viewer.html?id=" + FILE_ID + "&name=review.html)")
+        self.assertEqual(result["markdown"], "[Frame-by-frame review](" + self.origin + "/vk-artifact-viewer.html?id=" + FILE_ID + "&name=review.html&v=1)")
         self.assertIn(self.payload, self.server.request_body)
         self.assertEqual(self.server.upload_path, f"/api/workspaces/{WORKSPACE_ID}/attachments/upload?session_id={SESSION_ID}")
         self.assertEqual(self.publish()["attachment_id"], FILE_ID)

@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="frame-src 'self'; object-src 'none'; base-uri 'none'"
+    />
     <meta name="vk-artifact-viewer-v1" content="1" />
     <title>VK report</title>
     <style>
@@ -65,7 +69,7 @@
         try {
           if (
             !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-              id
+              id,
             )
           ) {
             throw new Error('This report link has no valid attachment ID.');
@@ -80,7 +84,7 @@
           });
           if (!response.ok)
             throw new Error(
-              'The report could not be loaded (' + response.status + ').'
+              'The report could not be loaded (' + response.status + ').',
             );
           const html = await response.text();
           const frame = document.querySelector('iframe');

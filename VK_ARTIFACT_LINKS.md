@@ -34,6 +34,9 @@ resources. Bundle a multi-file report deliberately rather than sharing its
 parent directory or presenting a broken preview. The helper accepts one file
 up to 50 MiB. Attachment retention follows VK's existing attachment lifecycle.
 
+HTML viewer links include a version query so later viewer updates can change
+the cache key of immutable static responses.
+
 ## Boundaries and verification
 
 The viewer accepts only an attachment UUID, never an arbitrary path or URL.
@@ -56,7 +59,7 @@ vibe.local certificate retrieved through trusted Homelab SSH. TLS and hostname
 verification stay enabled; no global trust or server configuration changes.
 
 The source helper is `scripts/vk-publish-artifact.py`; the standalone viewer is
-`packages/local-web/public/vk-artifact-viewer.html`, included in later builds.
+`packages/public/vk-artifact-viewer.html`, included in later builds.
 The durable host installation must live outside a disposable task worktree.
 The shared Codex-home `AGENTS.md` and repository rule require publication before
 the first reply. This is an agent instruction plus a verified publication tool,
@@ -75,7 +78,8 @@ Seven real HTTP tests cover first-response Markdown, byte verification,
 acknowledged reuse, uncertain uploads, missing viewer, unpublished resources
 and origin validation. Sandboxed Chromium exercises report controls, parent and
 network isolation, invalid IDs, downloads and phone/desktop layouts. No live
-file is uploaded by these tests. The publication tests run in frontend CI.
+file is uploaded by these tests. The publication tests run in frontend CI, which also compares the viewer bytes
+in both actual frontend build outputs against the shared public source.
 
 ## Current rollout
 
@@ -83,7 +87,7 @@ Implemented at `ae41a599b` on staging baseline `805aa7741`, then installed and
 verified on October 16. The existing Dot frontend remains selected at
 `/mnt/vk-storage/vk-dot-notification-rollout-20261016/release`.
 Only `vk-artifact-viewer.html` was added, SHA256
-`a5a6732cd0e823f2bb3f8141fa4ceb7cd8584d6d2a9b0346621358662c6eff95`.
+`608ff558710727d459ec5cb9479e4a6692aac830eedb85a0451e1947d5af0dfd`.
 The unchanged index SHA256 is
 `f842a0df7e2c6d30ac8fa2fd1afebf0bb29631a603f33d95e7bca96274c0a5bd`;
 existing JS/CSS, pointer, API version0.1.42 and all service PIDs were preserved.

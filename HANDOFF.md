@@ -11,7 +11,7 @@ and stops on uncertain uploads. HTML reports require embedded resources.
 
 The standalone viewer is now in the existing Dot release under
 `/mnt/vk-storage/vk-dot-notification-rollout-20261016/release/vk-artifact-viewer.html`,
-SHA256 `a5a6732cd0e823f2bb3f8141fa4ceb7cd8584d6d2a9b0346621358662c6eff95`.
+SHA256 `608ff558710727d459ec5cb9479e4a6692aac830eedb85a0451e1947d5af0dfd`.
 App/API version remains 0.1.42; index SHA256
 `f842a0df7e2c6d30ac8fa2fd1afebf0bb29631a603f33d95e7bca96274c0a5bd`
 and all existing app assets, frontend pointer and service PIDs are unchanged.

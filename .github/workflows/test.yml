@@ -88,6 +88,7 @@ jobs:
         with:
           filters: |
             frontend:
+              - 'packages/public/**'
               - 'packages/local-web/**'
               - 'packages/web-core/**'
               - 'packages/remote-web/**'
@@ -342,7 +343,10 @@ jobs:
         run: node scripts/testing/run-read-only-web-links-tests.mjs
 
       - name: Test verified artifact publication
-        run: python3 scripts/testing/test-publish-artifact.py
+        run: |
+          python3 scripts/testing/test-publish-artifact.py
+          cmp packages/public/vk-artifact-viewer.html packages/local-web/dist/vk-artifact-viewer.html
+          cmp packages/public/vk-artifact-viewer.html packages/remote-web/dist/vk-artifact-viewer.html
 
       - name: Test offline MCP approval UI contract
         env:

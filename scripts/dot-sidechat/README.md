@@ -1,3 +1,5 @@
+> Current status: connector bridge installed; browser UI not deployed. See LIVE_HANDOFF.md and BROWSER_HANDOFF.md. Original prototype sections below describe their historical validation stage.
+
 # Private Dot sidechat — isolated prototype
 
 This is source/fixture evidence, not a deployed feature or a verified actual-dot roundtrip.

@@ -1,3 +1,77 @@
+# Mobile Dot direct link live — October 16
+
+The navigation correction is live at 17:24 UTC from app source `9d76d7faf`.
+Project issue/workspace navigation now exposes Dot; the direct mobile
+`/workspaces/<id>?dot=1#dot` link selects the Dot conversation immediately.
+See VK_MOBILE_DOT.md for the exact operator link, asset identity and rollback.
+
+The actual S25 opened that link and displayed Disconnect and Send to Dot. The
+browser is already paired; no fresh code is needed despite the old one-use code
+expiring. No credentials, conversation contents or browser session data were
+inspected, and no pairing or message was submitted. Keyboard/real phone reply
+remain unverified. The laptop was untouched.
+
+All four frontend type checks, relevant lint, build, formatting, ops and candidate/
+live route regressions passed. Exact app-source frontend CI passed; other CI jobs
+were still running at rollout. Local aggregate Rust checks hit the existing
+missing GLib/GObject development packages. No service restart or PR merge.
+All five service PIDs and project count/order (43) stayed unchanged.
+
+# Mobile Dot frontend live for phone QA — October 16
+
+The operator explicitly requested deployment so Seamus can test on his phone.
+The frontend-only QA release became live at 15:41 UTC on [Vibe](https://vibe.local/),
+from clean source `5ffaa3b4687d342e940fa80b4b963b8efc6d06e0` with real Dot enabled.
+Its [exact-source CI](https://github.com/artinflight/vibe-kanban/actions/runs/38923258466)
+passed. PRs #254 and #255 remain drafts; no GitHub promotion or merge occurred.
+No backend, gateway, Dot browser API or approval service was restarted.
+
+The new mobile Dot tab is beside Chat after opening a workspace. All five
+packaged viewports passed; live 393px/1440px browsers verified navigation, the
+real unpaired 401 gate and no page errors. Project count/order stayed at 43 and
+all five monitored service PIDs stayed unchanged. Old assets and inline
+compatibility scripts are retained. A Desktop rollback archive passed full
+readback/restore verification for 1,551 files. See VK_MOBILE_DOT.md for source,
+asset and rollback details and the exact validation limits.
+
+Physical S25+ keyboard and a real phone roundtrip remain for Seamus to test.
+Refresh Vibe, open an issue-linked workspace, and tap Dot; pair the phone browser
+privately if prompted. The confirmed desktop reply used the integration task's
+connector; direct root Dot tools remain a separate unresolved route.
+
+# Dot desktop reply correction — October 16
+
+Seamus confirms that today's first desktop Dot chat request/reply test succeeded,
+witnessed in his screenshot. It used the integration task's available connector.
+Direct root Dot connector access remains unverified: root Dot still lacks the new
+tools. The desktop result does not establish a real phone roundtrip or S25+
+software-keyboard acceptance. Both phone checks remain pending Seamus making the
+phone available. No private conversation or receipt identifiers are published.
+This correction does not authorize or perform mobile deployment.
+
+Both PRs' pre-correction heads passed GitHub CI: [preservation #254](https://github.com/artinflight/vibe-kanban/actions/runs/38911578393)
+and [mobile #255](https://github.com/artinflight/vibe-kanban/actions/runs/38914513436).
+The mobile head was `9b5625be5`; these results do not claim phone acceptance or
+certify later commits. The preservation branch/workspace remain untouched.
+
+# Dot integration preservation — October 16
+
+[PR #254](https://github.com/artinflight/vibe-kanban/pull/254) publishes this preserved source into a draft review
+against `staging`. Vibe issue T61 links the publication and separate mobile owner.
+
+The original eight API and three UI commits are preserved as sanitized public
+copies on `vk/de2d-vk-preserve-dot`, based on current `fork/staging`. Read
+[the reconciled source/deployment handoff](DOT_INTEGRATION_HANDOFF.md) and
+[commit provenance](DOT_PRESERVATION_COMMITS.json). The reported live browser
+test uses frontend `975f62c7c`; the prepared mobile correction is not selected by
+the observed live pointer. Seamus confirmed the first desktop roundtrip:
+the webhook reached Dot, its exact reply persisted through the integration task's
+available paired connector, and his screenshot showed the reply. Direct root dot
+connector access remains unresolved; the real phone roundtrip and mobile acceptance
+remain separate and unverified here. Private chat and receipt identifiers are not
+published. The mobile owner retains its active workspace and changes.
+This preservation task does not deploy, restart or change pairing/subscriptions.
+
 # Summary web-link rendering — live October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) is merged into

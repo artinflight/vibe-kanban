@@ -1883,3 +1883,34 @@ the paid harness was not rerun. No live connector edit, restart or deployment.
 - Bounded cached reads preserve history; uncertain evidence remains unresolved.
 - Regression coverage includes AutoSwitch's resumed-parent failure and child
   reuse. This source merge is for the next backend restart, not live activation.
+
+
+## 2026-10-16 — Preserve existing Dot sidechat integration
+
+Reconciled eight API and three UI commits in the dedicated preservation workspace;
+original worktrees remain intact. Public copies sanitize historical operational
+details and retain Original-Commit provenance. DOT_INTEGRATION_HANDOFF.md records
+live source, unfinished mobile/actual-Dot acceptance and ownership. No deployment.
+
+Publication receipt: [draft PR #254](https://github.com/artinflight/vibe-kanban/pull/254) targets staging;
+Vibe T61 links the preserved source and mobile owner. Original worktrees remain clean.
+
+
+## 2026-10-16 — Correct desktop Dot acceptance boundary for PR254
+
+Recorded Seamus's confirmation of the first successful desktop message/webhook/
+persisted-reply exchange and screenshot. The integration task's paired connector
+provided the reply route; direct root connector access remains unresolved. Real
+phone acceptance remains separately owned. No private conversation, screenshot,
+pairing data or receipt identifiers are published, and no live test is replayed.
+
+
+2026-10-16 mobile Dot phone QA deployment:
+
+- Explicit operator deployment request activated the clean frontend from `5ffaa3b46`
+  at 15:41 UTC; PR254/255 stay draft and unmerged. No backend or connector restart.
+- Exact-source CI and five packaged viewport tests passed; actual live 393/1440px
+  browsers verified the unpaired gate and navigation. All five monitored PIDs
+  and the order of 43 projects stayed unchanged. Desktop static rollback fully restored
+  and hash-verified1,551 files. See VK_MOBILE_DOT.md for assets and limits.
+- Physical S25+ keyboard and real phone reply acceptance remain pending.

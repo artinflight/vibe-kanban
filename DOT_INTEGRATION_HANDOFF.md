@@ -1,6 +1,7 @@
 # Dot chat integration: preservation and handoff
 
-> Latest: [reply reliability and all-project rollout](DOT_RELIABILITY_ROLLOUT.md).
+> Latest: [discovery trace and supported resolution](DOT_DISCOVERY_TRACE.md),
+> plus [reply reliability and all-project rollout](DOT_RELIABILITY_ROLLOUT.md).
 > Phone pairing/send now work; a natural root reply is still unverified.
 > The earlier desktop success used a manual integration-task relay.
 

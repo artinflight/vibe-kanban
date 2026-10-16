@@ -1,5 +1,14 @@
 # Dot reply reliability and all-project rollout
 
+## Discovery follow-up
+
+Seamus performed Refresh Tools at about 17:54 UTC. The configured facade exposes
+the complete schema and the registered coding-plugin recovery call now succeeds;
+root and an earlier fresh internal worker still report stale inventories/event
+filters. Read [the timestamped trace and supported resolution](DOT_DISCOVERY_TRACE.md).
+Do not repeat the same refresh or assume an exact platform cache root cause.
+No runtime/permission/credential/subscription changes were made while tracing.
+
 ## Current result
 
 Seamus approved connector-only activation at 17:39 UTC on 2026-10-16 and explicitly
@@ -123,9 +132,11 @@ forcing another root's tool inventory or event-task hydration.
 
 ## Required real-phone acceptance
 
-1. Refresh the existing Vibe MCP connection through the supported platform flow.
-   Confirm root's own inventory exposes all four tools and the new all-project
-   event schema. Retain existing subscriptions and history; do not pair again.
+1. The existing connection was refreshed at about 17:54 UTC. Resolve the remaining
+   metadata/root-inventory discrepancy through the supported escalation above;
+   another identical refresh is not the next step. Confirm root's own inventory
+   exposes all four tools and the current event schema. Preserve subscriptions
+   and history; do not pair again.
 2. Root inspects its actual event-task context. If the envelope remains absent,
    use pending-message recovery to identify the retained unanswered message.
 3. Root reads the exact owner message, checks whether a reply already exists,

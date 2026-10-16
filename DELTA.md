@@ -1936,3 +1936,21 @@ That actual platform subscription and root metadata/tool-context verification
 remain blocked on capabilities unavailable to this coding execution. One real
 phone message remains unanswered; no manual relay is claimed as phone acceptance.
 Owner approval and scope decisions are settled; no pairing/UI debugging remains.
+
+
+## 2026-10-16 — Trace refreshed Dot discovery discrepancy
+
+The updated service received server/discover, tools/list and events/list at
+17:53:53 UTC in the reported refresh window. Its configured facade advertises
+four sidechat tools and current/all/future event filters. A registered pending
+recovery call succeeded at 18:00:50–51 on the same adapter child; this coding
+execution now exposes the new recovery tool. Root and earlier worker metadata
+still differ. No duplicate local tunnel, wrong release or binary mismatch found.
+
+DOT_DISCOVERY_TRACE.md contains exact public schema fingerprints, timestamped
+comparisons, measurement limits and a supported platform escalation packet.
+Method-only logs cannot reconstruct historical response bodies or independently
+verify the root's stored connection/catalog record. No exact cache component or
+review hold is claimed. No repeated refresh, permissions/credential/subscription
+change, service restart, reply relay or mobile work occurred. Root phone reply
+and complete notification registration remain acceptance gaps.

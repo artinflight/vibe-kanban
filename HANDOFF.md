@@ -1,3 +1,15 @@
+# Dot discovery trace — October 16 follow-up
+
+The reported 17:54 refresh window reached the updated connector at 17:53:53 UTC.
+The configured facade advertises all four tools and complete all-project event
+filters. This resumed coding execution now exposes pending recovery and its
+registered-plugin call succeeded on the same adapter child. Root/earlier worker
+catalogs still differ. Exact cache location and root registration binding are
+not observable here; see [the evidence and supported escalation packet](DOT_DISCOVERY_TRACE.md).
+Another identical refresh is not the proposed resolution. No services, permissions,
+credentials, subscriptions, browser scope or mobile-owner work changed in this trace.
+Natural root phone reply and broad notification registration remain open.
+
 # Dot connector activation and complete project scope — October 16
 
 Seamus approved connector-only activation and all current, archived and future

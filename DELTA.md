@@ -1897,3 +1897,12 @@ the paid harness was not rerun. No live connector edit, restart or deployment.
 - Pushed source `ca9911225` and opened https://github.com/artinflight/vibe-kanban/pull/257 into staging.
 - Fresh format/ops/frontend type checks and lint pass. Full check/lint/workspace Rust commands were attempted but blocked by missing GLib/GObject desktop dependencies.
 - Applicable CI, review, staging acceptance, package/QA and authorized rollout remain; production is unchanged.
+
+## 2026-10-16 — Steering frontend release prepared
+
+- Verified actual live Mobile/Dot source 9d76d7faf lacks PR257 and reproduced the returned sent text in its compiled bundle.
+- All exact-head CI passed; merged PR257 into staging as 9301e6a46 and updated clean canonical references.
+- Built and published pinned candidate 1d074941d preserving exact live frontend plus steering fix; release entry index-CGY9AEy0.js remains staged, not activated.
+- Preparation/build/types/lint, nine packaged steering/Send cases, five Mobile/Dot viewports, 21 history and 16 link checks pass; static Desktop rollback restored all 1,760 files.
+- Activation preflight passes without changing production. Final owner approval/static switch, post-switch acceptance and tab refresh remain. PR254 notification work is excluded and independently owned.
+- Stable handoff: VK_SENT_STEERING_RELEASE_COORDINATION.md and /mnt/vk-storage/vk-sent-steering-release-20261016/.

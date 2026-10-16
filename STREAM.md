@@ -1,3 +1,15 @@
+# Steering rollout readiness stream — October 16
+
+- Handoff branch: `docs/sent-steering-rollout-readiness`, based on merged PR257.
+- PR257: merged to staging at `9301e6a46`; no main promotion or live activation.
+- Pinned build source: `1d074941dc4145f6827beb2c43775bab6caec20e` on
+  `prep/sent-steering-live-20261016`, published for reproducibility.
+- Source/release: `/mnt/vk-storage/vk-sent-steering-release-20261016/source` and
+  `/mnt/vk-storage/vk-sent-steering-release-20261016/release`.
+- Remaining action: release-owner approval and atomic frontend activation with
+  fresh identity checks/post-switch acceptance; then normal browser refresh.
+- Coordination and notification exclusion: `VK_SENT_STEERING_RELEASE_COORDINATION.md`.
+
 # Sent steering draft correction — October 16
 
 Branch `vk/54f8-vk-sent-steering`, based on current `fork/staging` at `2249da3e9`.

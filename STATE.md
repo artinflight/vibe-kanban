@@ -1,3 +1,18 @@
+# Steering fix release prepared, not activated — October 16
+
+PR257 is merged into staging at `9301e6a463a4832cc14976c7a19fa40f58567b05`.
+The actual live frontend remains the Mobile/Dot release at
+`/mnt/vk-storage/vk-mobile-dot-route-20261016/release`, serving
+`/assets/index-B-YJtP-l.js`; mapped sources and compiled reproduction prove it
+still lacks PR257. This is not a failed deployment of the fix.
+
+A clean, source-fenced frontend candidate preserves that exact live functionality
+and adds only PR257. Its production build, compiled browser checks, preservation
+checks and static rollback restore pass. Activation approval is still separate;
+no live pointer or runtime PID changed. New PR254 Dot notification/UI/store work
+is excluded and does not hold this release. Read
+[the stable coordination note](VK_SENT_STEERING_RELEASE_COORDINATION.md).
+
 # Steering draft persistence correction — October 16
 
 Confirmed immediate active-turn delivery must clear its persisted recovery draft.

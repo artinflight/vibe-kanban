@@ -5,8 +5,18 @@ Created in the local vibe-kanban project and linked to workspace
 `54f815cd-930d-42e3-9fb5-a39d214bcf86`; the persisted workspace task ID was verified.
 GitHub issues are disabled for `artinflight/vibe-kanban`.
 
-PR: [#257 — Stop sent steering messages reappearing as drafts](https://github.com/artinflight/vibe-kanban/pull/257), targeting `staging`.
+PR: [#257 — Stop sent steering messages reappearing as drafts](https://github.com/artinflight/vibe-kanban/pull/257), merged into `staging` at `9301e6a46`.
 Source fix: `ca9911225`, pushed and verified on GitHub.
+
+## Current release status
+
+The fix is merged and the release candidate is built and verified, but it is not
+activated. Fresh served-bundle/source-map checks and a synthetic reproduction
+confirm that the actual live Mobile/Dot release still lacks the fix. Read
+[the current coordination/readiness note](VK_SENT_STEERING_RELEASE_COORDINATION.md)
+for exact source/package paths, completed checks and remaining activation action.
+The older local build/library limitations below are historical; hosted CI and
+the successful combined production build have now closed those validation gaps.
 
 ## Cause and correction
 
@@ -86,6 +96,9 @@ target and incremental compilation disabled; each exits 101 in desktop native
 dependencies because this host lacks GLib/GObject development libraries. The Rust
 suite does not run. Receipts: `.vk-preview/steering-test/pr-validation/results.json`.
 
-Still required before release: passing applicable CI and review, staging
-acceptance, frontend packaging and human UI QA, then an authorized frontend
-rollout. No approval to merge or deploy is implied by publishing the PR.
+The later release preparation closes CI, staging integration, packaging and
+compiled functional/preservation QA. Still required: release-owner approval for
+the exact static activation and rollback scope, fresh volatile preflight and
+post-switch acceptance. Existing browser tabs then need refresh. Known old sent
+drafts may need one explicit clear; no unsafe draft migration is performed.
+The new PR254 notification work remains excluded and separately owned.

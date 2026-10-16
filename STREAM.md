@@ -1,3 +1,18 @@
+# Sent steering draft correction — October 16
+
+Branch `vk/54f8-vk-sent-steering`, based on current `fork/staging` at `2249da3e9`.
+[Matching issue](https://vibe.local/projects/e2645d00-9bc6-4136-8d6e-0c2fcf032d77/issues/e662a94d-0fff-428b-9f43-9d771ebcc8e1) is linked to workspace
+`54f815cd-930d-42e3-9fb5-a39d214bcf86`.
+
+Scope: clear the persisted follow-up recovery draft only after confirmed immediate
+delivery; retain failed/queued drafts and explicit queue cancellation.
+The existing mobile Send fixture now persists scratch state across navigation.
+No backend/API/types change, deployment, restart or production asset switch.
+Final focused browser regression passes at 390/412/1440 pixels, with type checks,
+lint, formatting and ops checks passing. Production packaging remains unverified
+because of task memory pressure; no live activation occurred.
+See [VK_SENT_STEERING_DRAFT.md](VK_SENT_STEERING_DRAFT.md).
+
 # Clickable summary links release — live October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) merged into staging

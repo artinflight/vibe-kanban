@@ -1883,3 +1883,11 @@ the paid harness was not rerun. No live connector edit, restart or deployment.
 - Bounded cached reads preserve history; uncertain evidence remains unresolved.
 - Regression coverage includes AutoSwitch's resumed-parent failure and child
   reuse. This source merge is for the next backend restart, not live activation.
+
+## 2026-10-16 — Sent steering draft correction
+
+- Created and linked local issue `e662a94d-0fff-428b-9f43-9d771ebcc8e1`.
+- Queue hook returns delivery status; composer deletes only immediately delivered drafts.
+- Final source browser regression passes at 390/412/1440 pixels; queued and failed recovery remain intact.
+- Type checks, frontend/shared lint, formatting and ops pass. Production bundling remains unverified; no deployment occurred.
+- Evidence and commands: `VK_SENT_STEERING_DRAFT.md`.

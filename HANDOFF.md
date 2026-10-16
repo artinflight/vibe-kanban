@@ -1,3 +1,22 @@
+# Sent steering draft correction pickup — October 16
+
+[Issue](https://vibe.local/projects/e2645d00-9bc6-4136-8d6e-0c2fcf032d77/issues/e662a94d-0fff-428b-9f43-9d771ebcc8e1) was created in the local vibe-kanban project and its workspace link
+was verified through the live API. GitHub issues are disabled in this fork.
+
+`SessionChatBoxContainer.handleSendFollowUp` saved a recovery scratch before
+sending and never deleted it after immediate delivery. The queue hook now returns
+the API status; the composer awaits `clearDraft()` only for an empty queue result,
+under the existing submission guard. Failed and queued drafts remain recoverable.
+Backend queue consumption owns cleanup after a queued run actually starts.
+
+Final synthetic steering browser tests pass at 390/412/1440 pixels, including
+navigation/reload, failed draft recovery, retry and queued-draft preservation.
+Web-core/local-web type checks, frontend/shared-file lint, formatting and ops pass.
+Production bundling is unverified: the default heap failed and the larger build
+was stopped during swap-heavy packaging. No full Rust workspace suite was run.
+Read [VK_SENT_STEERING_DRAFT.md](VK_SENT_STEERING_DRAFT.md) for commands and evidence.
+Source-only task; production is unchanged.
+
 # Clickable summary links — activated October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) merged into staging

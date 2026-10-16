@@ -16,7 +16,8 @@ const browser = await chromium.launch({
   headless: true,
   chromiumSandbox: true,
 });
-const report = { checks: [], errors: [], blockedWrites: [] };
+const report = { checks: [], errors: [], blockedWrites: [], sessionStatuses: [] };
+let page;
 try {
   const context = await browser.newContext({
     viewport: { width: 393, height: 852 },
@@ -24,7 +25,7 @@ try {
     hasTouch: true,
     ignoreHTTPSErrors: true,
   });
-  const page = await context.newPage();
+  page = await context.newPage();
   page.on('pageerror', (error) => report.errors.push(error.message));
   await page.route(/\/(api|v1)\//, async (route) => {
     const request = route.request();
@@ -44,16 +45,30 @@ try {
     }
     const headers = { ...request.headers(), origin: api };
     delete headers.host;
-    const response = await route.fetch({
-      url: api + url.pathname + url.search,
-      headers,
-    });
-    return route.fulfill({ response });
+    if (url.pathname.startsWith('/api/dot-sidechat/')) {
+      try {
+        const response = await route.fetch({
+          url: api + url.pathname + url.search,
+          headers,
+        });
+        if (url.pathname.endsWith('/session')) {
+          report.sessionStatuses.push(response.status());
+        }
+        return await route.fulfill({ response });
+      } catch (error) {
+        if (!/already handled|closed|disposed|aborted/i.test(error.message)) {
+          report.errors.push(error.message);
+        }
+        return;
+      }
+    }
+    return route.continue({ headers });
   });
   const nav = page.getByRole('navigation', { name: 'Primary navigation' });
   const pair = page.getByRole('region', { name: 'Pair private Dot chat' });
   await page.goto(`${base}/workspaces/${workspaceId}#dot`);
   await pair.waitFor({ state: 'visible', timeout: 60000 });
+  assert.ok(report.sessionStatuses.includes(401), 'Real unpaired Dot gate');
   assert.equal(
     await nav
       .getByRole('button', { name: 'Dot', exact: true })
@@ -87,7 +102,7 @@ try {
   report.checks.push(
     'Issue workspace exposes Dot and opens its standalone conversation'
   );
-  assert.equal(await page.locator('.dot-panel').count(), 1);
+  assert.equal(await page.locator('#dot-pair').count(), 1);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > innerWidth + 1
   );
@@ -105,6 +120,7 @@ try {
     'A board without workspace context does not offer a broken conversation'
   );
 } finally {
+  await page?.unrouteAll({ behavior: 'wait' });
   await browser.close();
   await fs.mkdir(output, { recursive: true });
   await fs.writeFile(

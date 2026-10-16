@@ -1,5 +1,9 @@
 # Dot chat integration: preservation and handoff
 
+> Latest: [reply reliability and all-project rollout](DOT_RELIABILITY_ROLLOUT.md).
+> Phone pairing/send now work; a natural root reply is still unverified.
+> The earlier desktop success used a manual integration-task relay.
+
 This branch preserves the existing integration for review against `staging` in
 `artinflight/vibe-kanban`. It performs no deployment. Status below was reconciled
 on 2026-10-16 from the clean original worktrees, their activation notes, and
@@ -46,7 +50,8 @@ mobile acceptance remain with the separate mobile owner.
 
 This documentation records the operator's confirmation without publishing the
 conversation, screenshot, pairing material or private delivery/receipt identifiers.
-The preservation task did not independently rerun this live test.
+The preservation task did not independently rerun this live test. It was a manual
+integration-task relay, not an unattended reply through root's own connector.
 
 ## What is unfinished and who owns it
 
@@ -60,7 +65,9 @@ The mobile agent owns workspace `2e35466b-127e-41ba-ab56-1dd47bdb8b85` and branc
 reset or deployed here. Continue mobile and S25+ acceptance with that owner:
 portrait/landscape at 360/390/412px, keyboard open, long labels/errors, Notes
 expanded/collapsed, pairing, send, history scrolling and lost-response retry.
-No phone or rendered-browser acceptance is claimed by this preservation task.
+Seamus subsequently confirmed phone pairing and sending; no further phone UI
+debugging is needed for that issue. The real phone message-to-reply roundtrip
+remains unverified. See the latest reliability/rollout handoff above.
 
 The remaining connector acceptance is the direct root dot route: confirm that
 the intended root context exposes the new tools and can persist an authorized

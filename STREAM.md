@@ -1,3 +1,15 @@
+# Dot reply reliability and all-project preparation — October 16
+
+Read [the reliability investigation and guarded rollout](DOT_RELIABILITY_ROLLOUT.md).
+The phone is paired and its 17:06 message has one accepted webhook but no reply.
+Stored/signed context is complete; root context/tool availability remains a platform
+boundary. The earlier desktop reply was a manual integration-task relay. No further
+phone UI investigation is required; the active mobile owner retains files/browser work.
+Source adds read-only pending-context recovery, compatible non-replay cursors and an
+explicit project-scope planner. The two current indefinite VK Dev-only browser
+sessions have NOT been broadened; 43-current/17-active snapshots are prepared for
+an explicit persistent-access decision. Existing subscriptions remain unchanged.
+
 # Dot integration preservation — October 16
 
 [PR #254](https://github.com/artinflight/vibe-kanban/pull/254) publishes this preserved source into a draft review

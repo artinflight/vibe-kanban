@@ -1903,3 +1903,14 @@ persisted-reply exchange and screenshot. The integration task's paired connector
 provided the reply route; direct root connector access remains unresolved. Real
 phone acceptance remains separately owned. No private conversation, screenshot,
 pairing data or receipt identifiers are published, and no live test is replayed.
+
+
+## 2026-10-16 — Dot context recovery and explicit all-project planning
+
+Investigated the accepted phone event without exposing private content or IDs;
+stored/signed context is complete. Added read-only unanswered-context recovery,
+non-replay cursor compatibility, explicit project authorization and a stale-plan-
+fenced browser-scope planner with CI regressions. Prepared 43-current/17-active
+snapshots for both existing indefinite sessions; access/subscriptions are unchanged.
+The desktop result was a manual relay. Root catalog/context is a platform boundary;
+a natural real phone reply is not yet verified. Mobile owner files/browser retained.

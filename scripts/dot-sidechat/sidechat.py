@@ -51,6 +51,9 @@ class Store:
         CREATE TABLE IF NOT EXISTS scopes(
           owner TEXT, project TEXT, issue TEXT, workspace TEXT,
           PRIMARY KEY(owner,workspace));
+        CREATE TABLE IF NOT EXISTS project_grants(
+          owner TEXT NOT NULL, project TEXT NOT NULL,
+          PRIMARY KEY(owner,project));
         CREATE TABLE IF NOT EXISTS threads(
           id TEXT PRIMARY KEY, owner TEXT NOT NULL, project TEXT NOT NULL,
           issue TEXT NOT NULL, created REAL NOT NULL,
@@ -170,7 +173,7 @@ class Store:
                                     "author_type": "authenticated_owner",
                                     "intent": "sidechat_reply_requested",
                                     "reply_scope": "same_thread_only",
-                                    "message_sha256": digest}, "cursor": str(seq)}
+                                    "message_sha256": digest}, "cursor": None}
                 self.db.execute("INSERT INTO outbox(event,message,thread,payload,updated) VALUES (?,?,?,?,?)",
                                 (eid, mid, thread, canonical(payload), now))
             return dict(self.db.execute("SELECT * FROM messages WHERE id=?", (mid,)).fetchone())
@@ -201,6 +204,49 @@ class Store:
                 }
         return {"thread": dict(scope), "messages": rows, "through": through,
                 "next_after": rows[-1]["seq"] if more else None, "complete": not more}
+
+    def pending(self, principal, after=0, limit=20, through=None):
+        """Read-only recovery when the platform wake omits its event context.
+
+        Snapshot cursors never acknowledge, claim, resend or manufacture an event.
+        Only registered exact owner/workspace scopes and unanswered messages appear.
+        """
+        self._principal(principal, ("dot",))
+        if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 100:
+            raise Rejected("Invalid pagination")
+        high = self.db.execute("SELECT COALESCE(MAX(m.rowid),0) FROM messages m JOIN threads t ON t.id=m.thread WHERE t.owner=?", (principal.owner,)).fetchone()[0]
+        if through is None:
+            through = high
+        if type(through) is not int or not after <= through <= high:
+            raise Rejected("Invalid snapshot")
+        rows = self.db.execute("""
+          SELECT m.rowid AS position,m.id,m.thread,m.workspace,m.seq,m.hash,
+                 t.project,t.issue,o.event,o.payload
+          FROM messages m JOIN threads t ON t.id=m.thread JOIN outbox o ON o.message=m.id
+          WHERE t.owner=? AND m.role='owner' AND m.rowid>? AND m.rowid<=?
+          AND NOT EXISTS(SELECT 1 FROM messages r WHERE r.reply_to=m.id)
+          AND EXISTS(SELECT 1 FROM scopes s WHERE s.owner=t.owner AND s.project=t.project
+                     AND s.issue=t.issue AND s.workspace=m.workspace)
+          ORDER BY m.rowid LIMIT ?
+          """, (principal.owner,after,through,limit+1)).fetchall()
+        more = len(rows)>limit
+        rows = rows[:limit]
+        items = []
+        for row in rows:
+            event = json.loads(row["payload"])
+            expected = {"thread_id":row["thread"],"project_id":row["project"],
+                        "issue_id":row["issue"],"workspace_id":row["workspace"],
+                        "message_id":row["id"],"sequence":row["seq"],
+                        "message_sha256":row["hash"],"author_type":"authenticated_owner",
+                        "intent":"sidechat_reply_requested","reply_scope":"same_thread_only"}
+            if event.get("eventId")!=row["event"] or event.get("name")!=EVENT or event.get("data")!=expected:
+                raise Rejected("Stored event context is inconsistent; do not guess a reply target")
+            items.append({"event":event,
+                          "reply_request":str(uuid.uuid5(uuid.NAMESPACE_URL,"vibe-sidechat:"+row["event"])),
+                          "delivery":self.receipt(principal,row["thread"],row["id"])})
+        return {"items":items,"through":through,
+                "next_after":rows[-1]["position"] if more else None,
+                "complete":not more}
 
     def bind(self, principal, thread, subscription, ttl=3600):
         """Trusted events/subscribe adapter AFTER callback verification only."""
@@ -270,6 +316,7 @@ class Store:
     def tool(self, principal, name, args):
         """Minimal allowlisted adapter contract: no owner/role argument accepted."""
         allowed = {
+            "list_pending_sidechat_messages": ({"after", "limit", "through"}, self.pending),
             "read_sidechat_thread": ({"thread", "after", "limit", "through"}, self.read),
             "append_dot_reply": ({"thread", "workspace", "request", "body", "reply_to", "event_id"}, self.append),
             "get_sidechat_delivery": ({"thread", "message"}, self.receipt),

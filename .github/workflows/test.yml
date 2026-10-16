@@ -269,6 +269,13 @@ jobs:
       - name: Run ops governance checks
         run: pnpm run ops:check
 
+  dot-sidechat-contracts:
+    runs-on: *runner_label
+    steps:
+      - uses: actions/checkout@v6
+      - name: Test sidechat recovery, delivery and project-scope rollout
+        run: python3 -B -m unittest discover -s scripts/dot-sidechat -v
+
   frontend-checks:
     needs: [branch-policy, branch-freshness, changes]
     if: always() && (needs.branch-policy.result == 'success' || github.event_name == 'workflow_dispatch') && (needs.branch-freshness.result == 'success' || github.event_name == 'workflow_dispatch') && (needs.changes.outputs.frontend == 'true' || needs.changes.result == 'skipped')

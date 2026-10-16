@@ -31,8 +31,10 @@ class Events:
             raise Rejected("Invalid event scope")
         if "thread_id" in arguments:
             self.store._thread(principal, value)
-        elif not self.db.execute("SELECT 1 FROM scopes WHERE owner=? AND project=?",
-                                 (principal.owner, value)).fetchone():
+        elif not (self.db.execute("SELECT 1 FROM scopes WHERE owner=? AND project=?",
+                                  (principal.owner, value)).fetchone() or
+                  self.db.execute("SELECT 1 FROM project_grants WHERE owner=? AND project=?",
+                                  (principal.owner, value)).fetchone()):
             raise Rejected("Project unavailable")
         return canonical(arguments)
 
@@ -108,7 +110,11 @@ class Events:
             if not self._matches(sub,scope):
                 return 410
             keys=[sub["secret"],sub["previous_secret"]] if sub["previous_secret"] and sub["rotation_until"]>self.clock() else sub["secret"]
-            status,_=self.sender(sub["url"],keys,sub["id"],event["eventId"],event)
+            # The legacy browser may still store per-thread cursors. This event
+            # advertises no protocol replay, so every outgoing wire cursor is null.
+            # Do not rewrite the immutable outbox or resend accepted deliveries.
+            wire_event = dict(event, cursor=None)
+            status,_=self.sender(sub["url"],keys,sub["id"],event["eventId"],wire_event)
             if status==410:
                 self.db.execute("UPDATE sidechat_subscriptions SET active=0 WHERE id=?",(sub["id"],))
             return status

@@ -70,12 +70,12 @@ class BrowserAuth:
             self.store.db.execute("UPDATE browser_grants SET used=1 WHERE id=?", (grant["id"],))
             self.store.db.execute("INSERT INTO browser_sessions VALUES (?,?,?,?,?,?,0)",
                 (sid, digest(token), grant["owner"], grant["projects"], csrf,
-                 self.store.clock()+86400))
+                 0))
         return token, self.session(token)
 
     def session(self, token):
         row = self.store.db.execute(
-            "SELECT * FROM browser_sessions WHERE token_hash=? AND revoked=0 AND expires>?",
+            "SELECT * FROM browser_sessions WHERE token_hash=? AND revoked=0 AND (expires=0 OR expires>?)",
             (digest(token), self.store.clock())).fetchone()
         if not row:
             raise AuthRequired("Pair this browser to use private Dot chat")
@@ -165,8 +165,10 @@ def handler(api, origin):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Content-Length", str(len(raw)))
+            if cookie is None:
+                cookie = getattr(self, "session_cookie", None)
             if cookie is not None:
-                self.send_header("Set-Cookie", COOKIE+"="+cookie+"; Path=/api/dot-sidechat/; Secure; HttpOnly; SameSite=Strict; Max-Age="+("86400" if cookie else "0"))
+                self.send_header("Set-Cookie", COOKIE+"="+cookie+"; Path=/api/dot-sidechat/; Secure; HttpOnly; SameSite=Strict; Max-Age="+("34560000" if cookie else "0"))
             self.end_headers()
             self.wfile.write(raw)
 
@@ -206,15 +208,16 @@ def handler(api, origin):
                     return self.output(429, {"error": "Pairing rate limit; retry in one minute"})
                 failures.append(now)
                 token, session = api.auth.pair(args["code"])
-                return self.output(200, {"csrf": session["csrf"], "expires": session["expires"], "session_id": session["id"]}, token)
+                return self.output(200, {"csrf": session["csrf"], "expires": session["expires"] or None, "session_id": session["id"]}, token)
             cookie = SimpleCookie()
             cookie.load(self.headers.get("Cookie", ""))
             value = cookie.get(COOKIE)
             session = api.auth.session(value.value if value else "")
+            self.session_cookie = value.value
             if self.command == "POST" and not secrets.compare_digest(self.headers.get("X-Dot-CSRF", ""), session["csrf"]):
                 raise Rejected("CSRF check failed")
             if self.command == "GET" and route == "session" and not parsed.query:
-                return self.output(200, {"csrf": session["csrf"], "expires": session["expires"], "session_id": session["id"]})
+                return self.output(200, {"csrf": session["csrf"], "expires": session["expires"] or None, "session_id": session["id"]})
             if self.command == "POST" and route == "logout" and not args:
                 api.auth.revoke(session["id"])
                 return self.output(200, {"revoked": True}, "")

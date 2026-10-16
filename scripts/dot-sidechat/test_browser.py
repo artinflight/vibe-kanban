@@ -38,11 +38,12 @@ class BrowserTests(unittest.TestCase):
         self.now[0] += 601
         with self.assertRaises(AuthRequired): self.api.auth.pair(other["pairing_code"])
 
-    def test_session_expiry_and_revoke_pending_grants(self):
-        self.now[0] += 86401
-        with self.assertRaises(AuthRequired): self.api.auth.session(self.token)
+    def test_session_persists_until_revoked_and_revoke_pending_grants(self):
+        self.now[0] += 10*365*86400
+        self.assertEqual(self.api.auth.session(self.token)["id"], self.session["id"])
         pending = self.api.auth.grant("owner", [self.project])
         self.api.auth.revoke_all("owner")
+        with self.assertRaises(AuthRequired): self.api.auth.session(self.token)
         with self.assertRaises(AuthRequired): self.api.auth.pair(pending["pairing_code"])
 
     def test_scope_is_server_owned_and_relinks_fail_closed(self):

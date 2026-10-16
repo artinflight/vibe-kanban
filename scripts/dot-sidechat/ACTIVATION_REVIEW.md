@@ -1,3 +1,7 @@
+# Activation approved at 10:57 UTC on 2026-10-16
+
+Seamus explicitly approved the VK Dev test, new TLS sidecar/proxy route and browser pairing UNTIL DISCONNECT/REVOCATION. This supersedes the historical 24-hour proposal below. No server-side expiry applies to new browser sessions. The persistent cookie is renewed on authenticated chat requests; browser cookie deletion/retention limits can still require pairing again. One-use codes still expire after10 minutes. Preserve the newly live clickable-links source2249da3e rather than the older5ce84ee2 candidate.
+
 # Private browser integration: implementation and activation review
 
 Implementation is prepared, not activated. No new live credential, browser grant,

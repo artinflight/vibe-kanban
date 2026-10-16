@@ -1,3 +1,9 @@
+> Subsequent operator confirmation (2026-10-16): the first real desktop
+> roundtrip succeeded through the integration task's paired connector; Seamus's
+> screenshot showed the persisted reply. Direct root connector access and the
+> real phone roundtrip remain unverified. See the reconciled handoff below;
+> the older pending statements in this historical record are superseded.
+
 > Preservation note (2026-10-16): this is a sanitized historical record.
 > Read [the reconciled handoff](../../DOT_INTEGRATION_HANDOFF.md) for current
 > live versus unfinished status. UUIDs/addresses may be placeholders; do not

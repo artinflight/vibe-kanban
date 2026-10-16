@@ -1,3 +1,6 @@
+> Current attention connector verification and main-conversation discovery status:
+> [DOT_ATTENTION_CONNECTOR.md](../../DOT_ATTENTION_CONNECTOR.md).
+
 > Latest: [current root reply and complete scope](../../DOT_RELIABILITY_ROLLOUT.md).
 > Root directly replied to the retained phone test; server readback confirms one
 > persisted reply and two non-overlapping notification subscriptions covering all

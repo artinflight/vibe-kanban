@@ -1,3 +1,19 @@
+# Dot reply notifications — live October 16, 22:38 UTC
+
+Seamus's approved Dot service/connector and combined frontend rollout is live.
+App/API version remains **0.1.42**; entry is `index-CrPmgoRY.js`, frontend source
+`aebe6a442`, complete public source `7222b127c`, merged PR254 at `28fdcfddf`.
+Real served UI/live API checks pass at desktop and mobile viewport sizes:
+separate violet badges, visible reply read, durable attention, Resolve/Reopen,
+and unchanged coding-agent flags. Nine served Steering cases also pass.
+Dot-only service restart/readiness took 1.38 seconds; Vibe and agents were not restarted.
+All 43 current projects including 26 archived and automatic future scope remain.
+Paired sessions/subscriptions/credentials and prior messages are preserved.
+[Current deployment, tests, rollback and phone acceptance](DOT_NOTIFICATION_ROLLOUT.md).
+Physical phone automation was blocked by auto-review's shared authenticated-tab
+boundary; only Seamus's fresh paired-phone reply/visible receipt remains to test.
+Older prepared/not-deployed and pending-PR notes below are historical.
+
 # Dot unread and Needs Attention — October 16 implementation
 
 Separate violet Dot indicators and durable independent read/attention state are

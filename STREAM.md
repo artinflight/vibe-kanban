@@ -1,5 +1,9 @@
 # Dot reply reliability and all-project preparation — October 16
 
+Source `d8ceceb8f` is staged with a verified Desktop B sidechat backup. Live
+installation/restarts were blocked by automatic approval review pending exact
+owner approval; no pointer, service, paired scope or subscription changed.
+
 Read [the reliability investigation and guarded rollout](DOT_RELIABILITY_ROLLOUT.md).
 The phone is paired and its 17:06 message has one accepted webhook but no reply.
 Stored/signed context is complete; root context/tool availability remains a platform

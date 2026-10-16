@@ -53,6 +53,30 @@ an existing root inventory from this coding workspace.
   stale-plan fence, not evidence of human consent. Existing session credentials,
   expiration, messages, pending grants and subscriptions are preserved.
 
+## Staged release and activation boundary
+
+Source `d8ceceb8f` is published and staged as immutable Python files under
+`/mnt/vk-storage/vk-dot-reliability-20261016/artifact`. A current private SQLite-aware
+sidechat backup passed integrity verification and its Desktop B mirror checksum
+matches. The private staging receipt is retained alongside the artifact; backup
+contents, credentials and private plan IDs are not published.
+
+No live pointer, service, browser scope or subscription has changed. Automatic
+approval review rejected the proposed live installation and connector/publisher
+restarts because it required specific approval for that exact live rollout and
+cited service-disruption risk. It was not retried or bypassed. The reviewed action
+is limited to the sidechat module pointer and `vibe-dot-connector.service` plus
+`vibe-dot-sidechat-publisher.service`; the browser API, frontend, Vibe backend,
+phone/browser inspection and approval subscriptions stay untouched.
+
+After activation approval, recheck source/runtime hashes and current backup/state,
+install the staged module set, restart only those two services, and verify unchanged
+paired scopes/subscriptions and no accepted-event replay. Restore only the previous
+module pointer and those services if health fails; never roll back current chat data.
+Then rescan the actual root plugin through supported platform UI. A successful
+natural root-to-phone reply in the current VK Dev scope precedes broader rollout.
+The separate persistent-access decision below remains required before scope expansion.
+
 ## Exact rollout decision
 
 Current state: two paired browser sessions, each limited to VK Dev and each valid

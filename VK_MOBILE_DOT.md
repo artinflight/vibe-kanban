@@ -1,5 +1,12 @@
 # Mobile Dot navigation
 
+Published as [draft PR #255](https://github.com/artinflight/vibe-kanban/pull/255)
+against `staging`, stacked on [preservation PR #254](https://github.com/artinflight/vibe-kanban/pull/254).
+The PR records the mobile-only comparison, merge order, host validation limit,
+and pending physical keyboard/real Dot roundtrip/deployment acceptance. The
+mobile issue is [T60](https://vibe.local/projects/1cf19067-4055-4432-bbc1-581919f9185d/issues/c961527e-f090-4eac-9483-2480d016a552).
+Publication does not activate the new mobile tab.
+
 The local workspace navigation includes a **Dot** button beside **Chat** when
 `VITE_DOT_SIDECHAT=1` (or the isolated fixture flag) is enabled. Dot gets the full
 mobile content area. Git/details retains its existing tools and Notes. Desktop

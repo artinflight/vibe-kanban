@@ -1,3 +1,12 @@
+# Mobile Dot PR published — October16
+
+Published as [draft PR #255](https://github.com/artinflight/vibe-kanban/pull/255)
+against `staging`, stacked on [preservation PR #254](https://github.com/artinflight/vibe-kanban/pull/254).
+The PR records the mobile-only comparison, merge order, host validation limit,
+and pending physical keyboard/real Dot roundtrip/deployment acceptance. The
+mobile issue is [T60](https://vibe.local/projects/1cf19067-4055-4432-bbc1-581919f9185d/issues/c961527e-f090-4eac-9483-2480d016a552).
+Publication does not activate the new mobile tab.
+
 # Mobile publication dependency — October16
 
 This mobile branch is stacked on the exact sanitized API/UI history from

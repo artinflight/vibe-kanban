@@ -853,3 +853,13 @@ October 9 integration: current staging e8c450fb is incorporated as the normal
 PR base. Its original continuity documents remain preserved at that immutable
 commit; this stream retains newer bounded candidate/recovery tracking. No live
 service, route, credential or access change is performed by this merge.
+## Nightly integration: exact-root rebuild acceptance
+
+The separate Nightly Backup Efficiency Integration workspace owns current-staging
+imports, chunked nightly storage, controller/scheduler binding and adoption. This
+stream supplies the non-overlapping `vk_backup_rebuild_proof` helper and focused
+fixtures. It compares complete output inventories and independently reads rebuilt
+bytes before proposing an omission; dirty/ignored patches and protected work fail
+closed. Complete restore metadata, retained inputs and hardlink aliases survive.
+The integrated restorer must consume that catalog and pass whole-plan recovery
+before any production exclusion. No live scope, schedule, service or data changed.

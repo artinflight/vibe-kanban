@@ -42,6 +42,27 @@ required-state coverage plus actual restore/rebuild acceptance for each proposed
 root. A fixture with an offline pinned dependency is not proof that arbitrary
 real registries, native modules or toolchains remain available after disaster.
 
+`vk_backup_rebuild_proof.certify` adds an exact-root acceptance boundary for an
+independently rebuilt artifact. The controller supplies the captured inventory,
+approved roots, protected-work inventory and hash-pinned retained recipe/inputs.
+The proof compares every descendant pathname, file size/hash and symlink literal,
+then physically reads every rebuilt file within an explicit byte budget. Local
+patches, extra ignored files, deleted package files, changed inputs and changes
+during readback reject the entire proposed root. The reader callbacks must address
+the independent rebuild, not the original dependency tree. This helper neither
+executes recipes nor attests that a registry or toolchain is available.
+
+The result includes both a reduced capture projection and the **complete original
+restore catalog**, including original metadata and hardlink relationships. A
+controller must retain that catalog, every required recipe/input object and any
+content shared with retained aliases. Never pass the reduced projection alone to
+an unchanged manifest/restore implementation: that would silently lose the omitted
+files. Production adoption requires the integrated restorer to recreate the exact
+complete catalog from a single current generation and verify it independently
+without the old generation, original output directory or online package registry.
+No real directory is certified merely by the offline fixture test. Pending proof
+means keep the directory in the payload; it is not a reason to omit user work.
+
 Report measured source logical, allocated (only where actually available), unique
 content, archive compressed bytes and retained generation/chain bytes separately.
 Lean-size estimates must name retained state, omitted candidate classes, database

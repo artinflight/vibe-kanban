@@ -4816,3 +4816,13 @@ October 9 integration: current staging e8c450fb is incorporated as the normal
 PR base. Its original continuity documents remain preserved at that immutable
 commit; this stream retains newer bounded candidate/recovery tracking. No live
 service, route, credential or access change is performed by this merge.
+## Nightly efficiency integration follow-up
+
+Use `vk_backup_rebuild_proof.certify` only at the exact-root independent rebuild
+boundary; see scripts/deployment/VK_BACKUP_CONTENT_AUDIT.md. This is a proof input
+for the separate integration owner's controller, never an automatic basename
+filter or production activation. Preserve the complete restore catalog and
+retained recipe/input objects; a reduced capture projection alone loses files.
+Thirty-seven focused proof/audit/history fixtures pass. Real-root and whole-plan
+acceptance, reviewed bindings and enabled schedule remain adoption requirements.
+Private coordination/readiness receipts remain in the existing shared handoff.

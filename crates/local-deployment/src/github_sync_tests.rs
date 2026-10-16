@@ -1078,4 +1078,34 @@ async fn missing_publication_policy_callback_retains_b_across_reset_restart_and_
             .unwrap()
             .contains("publication awaits a reviewed repository policy")
     );
+    let summary = CodingAgentTurn::find_by_execution_process_id(
+        &fixture.container.db.pool,
+        fixture.execution,
+    )
+    .await
+    .unwrap()
+    .unwrap()
+    .summary
+    .unwrap();
+    assert!(summary.contains("Git preservation pending"));
+    assert!(!summary.contains("Git preservation verified"));
+    sqlx::query("UPDATE turn_github_sync SET retry_at=0 WHERE execution_process_id=?")
+        .bind(fixture.execution)
+        .execute(&fixture.container.db.pool)
+        .await
+        .unwrap();
+    fixture.container.sync_one_idle_turn().await;
+    let retried = CodingAgentTurn::find_by_execution_process_id(
+        &fixture.container.db.pool,
+        fixture.execution,
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    assert_eq!(retried.summary.as_deref(), Some(summary.as_str()));
+    let jobs = TurnGithubSync::for_workspace(&fixture.container.db.pool, fixture.workspace)
+        .await
+        .unwrap();
+    assert_eq!(jobs[0].state, "waiting");
+    assert_eq!(jobs[0].observation_state, "observed");
 }

@@ -251,3 +251,20 @@ binary is not a proven rollback: its migration set may reject the new schema and
 it cannot reconcile these queues. Prove compatibility before nominating one; never
 restore an old database over newer user work. Follow the established latest-data
 release rollback protocol. Disabling publication does not permit cleanup.
+
+## Deploying the publication-admission correction
+
+The helper is compiled into `local-deployment::turn_preservation` with
+`include_str!`. Updating a Python source file, pushing a branch or merging a PR
+does not update the running completion callback or worker. The release owner must
+integrate the source into the accepted combined candidate, rebuild that backend,
+validate its exact source/hash and perform the separately approved safe-idle
+restart. Preserve all live settings and existing reviewed policy boundaries.
+
+A successful corrected callback records `observation_state=observed`, retains
+original and terminal commits, and leaves missing-policy publication `waiting`
+with an informational pending status. Repeated idle attempts do not duplicate
+that report. No remote receipt is inferred. Historical failed observations stay
+failed until separately reconciled from contemporaneous native records; merely
+installing this correction does not clear them. Unpublished source still needs
+normal reviewed publication, and ignored/private runtime data remains excluded.

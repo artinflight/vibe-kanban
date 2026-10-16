@@ -1,24 +1,26 @@
-## October 16 completed-observation tracking repair
+## October 16 publication-admission recurrence correction
 
-The recurring CP Invoice Assistant warning was a tracking fault after publication
-admission failed: empty admitted repositories prevented completed-head capture.
-The correction registers exact capture inventory before publication admission,
-retains the first cause, and keeps missing-policy publication pending/informational
-without claiming remote coverage. Idle-worker pending reports deduplicate.
+PR246 merged at64c3; its running helper still compares an empty publication
+admission against the completed owner's requested repository inventory. This
+follow-up ports the retained local corrections onto current staging. Capture
+inventory is durable before admission, original terminal heads survive failed
+publication admission, and missing publication policy stays pending rather than
+claiming remote coverage. The reviewed baseline-link correction is included so
+unchanged accepted VK source remains admissible without weakening deny rules.
 
-A narrowly scoped, SHA-bound maintenance command reconciles legacy inventory-fault
-observations only from contemporaneous native execution repository records. It
-retains all originals, journals old evidence, refuses active/queued work and cannot
-mark publication verified. CP's 16 historical observation faults were reconciled
-through that path; source/index/refs and agent work were untouched. PR452 and later
-recorded heads are verified in a fresh remote staging witness; disconnected12dad
-is retained in a private source bundle. No policy grant or source publication.
+The real callback/reset/database-reopen/idle-worker regression runs in normal
+and scheduling-enabled CI, including repeated-pending report deduplication.
+Historical observation reconciliation is separate and requires exact native
+provenance at genuine idle. No unrelated workspace gates are cleared. A local
+commit or merged PR alone cannot certify newer unpublished commits or private
+runtime data. Details and operating boundaries: VK_AUTOMATIC_GITHUB_SYNC.md.
 
-See VK_AUTOMATIC_GITHUB_SYNC.md for exact boundaries and maintenance behavior.
-The prevention fix still needs source-bound backend checks and matching package
-adoption by the release owner. No heavy MCP build, GitHub/PR write, deployment,
-restart, credential/access change or unrelated agent operation occurred. Recommend
-and selected model/effort remain unchanged. Private evidence is outside Git.
+Publication is authorized for this source correction; deployment is not.
+The release owner must integrate this exact source, rebuild the backend (which
+embeds the helper), obtain exact-head review, and run combined acceptance before
+a separately authorized safe-idle restart. Existing live settings, Recommend,
+permissions, inputs and active owners remain untouched. Earlier local-only
+publication restrictions below describe the historical preparation stage.
 
 ## October 14 local reviewed-baseline link repair
 

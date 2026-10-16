@@ -1,3 +1,37 @@
+# STREAM.md
+
+## Stream Identifier
+
+- Branch: `fix/subagent-turn-activity`
+- Base: `fork/staging` at `872f69996` (fetched 2026-10-16).
+- Worktree: `/mnt/vk-storage/vk-subagent-status-pr-20261016/source`
+
+## Objective
+
+Stop completed Codex child turns from making finished workspaces appear active,
+while preserving active follow-up work and uncertainty when evidence is missing.
+
+## Scope
+
+- Use the latest durable child turn for session listings and workspace counts.
+- Remove the parent-completion timestamp heuristic; open threads remain reusable.
+- Bound asynchronous history reads and cache only derived status.
+- Cover AutoSwitch's resumed-parent failure, subsequent turns, interruption,
+  delayed tracking, missing/partial logs and transcript preservation.
+
+## Validation and Rollout
+
+- Current-staging validation passes all 24 DB tests, formatting and ops checks.
+- Local desktop baseline commands need GLib/GTK/WebKit libraries unavailable on
+  this host; the repository CI jobs supply the full merge validation.
+- Current-candidate validation and PR receipts are recorded in `HANDOFF.md` and
+  `/mnt/vk-storage/vk-subagent-status-pr-20261016/`.
+- Merge into `staging` for inclusion in the next backend build/restart; no live
+  deployment, frontend asset swap, or database mutation is part of this task.
+- The older explicit close-tool feature remains separately preserved in PR189.
+
+## Retained integration context
+
 # Dot explicit steering implementation — October 15
 
 The user authorized development after ff83afe93. PR #250 prepares a separate

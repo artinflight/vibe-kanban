@@ -1874,3 +1874,12 @@ correction; original timeout evidence is preserved. Both private auth copies wer
 removed. A test-only completion-notification collector and offline open-stream/
 identity regression replace that terminal RPC. Runtime source is unchanged;
 the paid harness was not rerun. No live connector edit, restart or deployment.
+
+## 2026-10-16 — Automatic child-turn activity correction
+
+- Ported the focused status fix from `2315ff268` onto current staging. Latest
+  durable child turns replace the open-edge/parent-time heuristic for both
+  session listings and workspace counts; new turns remain visible.
+- Bounded cached reads preserve history; uncertain evidence remains unresolved.
+- Regression coverage includes AutoSwitch's resumed-parent failure and child
+  reuse. This source merge is for the next backend restart, not live activation.

@@ -1,7 +1,8 @@
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
-use chrono::{DateTime, Duration as ChronoDuration, TimeZone, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use executors::executors::codex::codex_home;
+use futures::{StreamExt, stream};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     ConnectOptions, FromRow, QueryBuilder, Sqlite, SqlitePool, Type,
@@ -9,6 +10,12 @@ use sqlx::{
 };
 use ts_rs::TS;
 use uuid::Uuid;
+
+#[cfg(test)]
+mod regression_tests;
+mod rollout;
+
+use rollout::TurnState;
 
 #[derive(Debug, Clone, Type, Serialize, Deserialize, PartialEq, Eq, TS)]
 #[sqlx(type_name = "subagent_job_status", rename_all = "snake_case")]
@@ -46,7 +53,6 @@ struct SessionAgentThreadRow {
     session_id: Uuid,
     execution_process_id: Uuid,
     agent_session_id: String,
-    parent_completed_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, FromRow)]
@@ -55,8 +61,14 @@ struct CodexThreadSpawnRow {
     child_thread_id: String,
     edge_status: String,
     nickname: Option<String>,
+    rollout_path: Option<String>,
     created_at_ms: Option<i64>,
     updated_at_ms: Option<i64>,
+}
+
+struct CodexThreadJob {
+    job: SubagentJob,
+    turn_state: Option<TurnState>,
 }
 
 impl SubagentJobStatus {
@@ -97,11 +109,9 @@ impl SubagentJob {
         pool: &SqlitePool,
         session_id: Uuid,
     ) -> Result<Vec<Self>, sqlx::Error> {
-        let mut jobs = Self::find_by_session_id(pool, session_id).await?;
-        let mut codex_jobs = find_codex_thread_jobs(pool, &[session_id]).await?;
-        jobs.append(&mut codex_jobs);
-        jobs.sort_by_key(|job| (job.created_at, job.updated_at));
-        Ok(deduplicate_jobs(jobs))
+        let jobs = Self::find_by_session_id(pool, session_id).await?;
+        let codex_jobs = find_codex_thread_jobs(pool, &[session_id]).await?;
+        Ok(reconcile_codex_jobs(jobs, codex_jobs))
     }
 
     pub async fn active_counts_by_session_ids_with_codex_threads(
@@ -112,11 +122,11 @@ impl SubagentJob {
             return Ok(HashMap::new());
         }
 
-        let mut jobs = find_jobs_for_sessions(pool, session_ids).await?;
-        jobs.append(&mut find_codex_thread_jobs(pool, session_ids).await?);
+        let jobs = find_jobs_for_sessions(pool, session_ids).await?;
+        let codex_jobs = find_codex_thread_jobs(pool, session_ids).await?;
 
         let mut counts = HashMap::<Uuid, SubagentJobCounts>::new();
-        for job in deduplicate_jobs(jobs) {
+        for job in reconcile_codex_jobs(jobs, codex_jobs) {
             increment_active_count(&mut counts, job.session_id, &job.status);
         }
 
@@ -238,8 +248,7 @@ async fn find_agent_threads_for_sessions(
         r#"SELECT
             ep.session_id,
             cat.execution_process_id,
-            cat.agent_session_id,
-            ep.completed_at AS parent_completed_at
+            cat.agent_session_id
            FROM coding_agent_turns cat
            JOIN execution_processes ep ON ep.id = cat.execution_process_id
            WHERE ep.dropped = FALSE
@@ -263,7 +272,7 @@ async fn find_agent_threads_for_sessions(
 async fn find_codex_thread_jobs(
     pool: &SqlitePool,
     session_ids: &[Uuid],
-) -> Result<Vec<SubagentJob>, sqlx::Error> {
+) -> Result<Vec<CodexThreadJob>, sqlx::Error> {
     let thread_rows = find_agent_threads_for_sessions(pool, session_ids).await?;
     if thread_rows.is_empty() {
         return Ok(Vec::new());
@@ -274,13 +283,18 @@ async fn find_codex_thread_jobs(
         None => return Ok(Vec::new()),
     };
 
-    let mut thread_context = HashMap::<String, (Uuid, Uuid, Option<DateTime<Utc>>)>::new();
+    find_codex_thread_jobs_in_pool(&codex_pool, thread_rows).await
+}
+
+async fn find_codex_thread_jobs_in_pool(
+    codex_pool: &SqlitePool,
+    thread_rows: Vec<SessionAgentThreadRow>,
+) -> Result<Vec<CodexThreadJob>, sqlx::Error> {
+    let mut thread_context = HashMap::<String, (Uuid, Uuid)>::new();
     for row in thread_rows {
-        thread_context.entry(row.agent_session_id).or_insert((
-            row.session_id,
-            row.execution_process_id,
-            row.parent_completed_at,
-        ));
+        thread_context
+            .entry(row.agent_session_id)
+            .or_insert((row.session_id, row.execution_process_id));
     }
 
     let mut builder = QueryBuilder::<Sqlite>::new(
@@ -322,6 +336,7 @@ async fn find_codex_thread_jobs(
              d.child_thread_id,
              d.edge_status,
              t.agent_nickname AS nickname,
+             t.rollout_path,
              t.created_at_ms,
              t.updated_at_ms
            FROM descendants d
@@ -331,23 +346,36 @@ async fn find_codex_thread_jobs(
 
     let rows = builder
         .build_query_as::<CodexThreadSpawnRow>()
-        .fetch_all(&codex_pool)
+        .fetch_all(codex_pool)
         .await?;
 
     let now = Utc::now();
-    Ok(rows
-        .into_iter()
-        .filter_map(|row| {
-            let (session_id, execution_process_id, parent_completed_at) =
-                thread_context.get(&row.root_thread_id).copied()?;
-            let created_at = ms_to_utc(row.created_at_ms).unwrap_or(now);
-            let updated_at = ms_to_utc(row.updated_at_ms).unwrap_or(created_at);
-            let status = codex_edge_status(
-                &row.edge_status,
-                ms_to_utc(row.updated_at_ms),
-                parent_completed_at,
-            );
-            Some(SubagentJob {
+    Ok(stream::iter(rows.into_iter().filter_map(|row| {
+        let (session_id, execution_process_id) =
+            thread_context.get(&row.root_thread_id).copied()?;
+        Some((row, session_id, execution_process_id))
+    }))
+    .map(|(row, session_id, execution_process_id)| async move {
+        let created_at = ms_to_utc(row.created_at_ms).unwrap_or(now);
+        // An open spawn edge means the thread can receive more work, not
+        // that its latest turn is running. Parent execution timestamps can
+        // belong to an earlier resume and cannot establish child liveness.
+        let turn_state = if row.edge_status == "open" {
+            match row.rollout_path.as_deref() {
+                Some(path) => rollout::latest_turn_state(path).await,
+                None => None,
+            }
+        } else {
+            None
+        };
+        let updated_at = turn_state
+            .as_ref()
+            .map(|state| state.timestamp)
+            .or_else(|| ms_to_utc(row.updated_at_ms))
+            .unwrap_or(created_at);
+        let status = codex_edge_status(&row.edge_status, turn_state.as_ref());
+        CodexThreadJob {
+            job: SubagentJob {
                 id: Uuid::parse_str(&row.child_thread_id).unwrap_or_else(|_| Uuid::new_v4()),
                 session_id,
                 execution_process_id,
@@ -357,9 +385,13 @@ async fn find_codex_thread_jobs(
                 status,
                 created_at,
                 updated_at,
-            })
-        })
-        .collect())
+            },
+            turn_state,
+        }
+    })
+    .buffer_unordered(8)
+    .collect()
+    .await)
 }
 
 async fn codex_state_pool() -> Option<SqlitePool> {
@@ -397,24 +429,35 @@ fn ms_to_utc(ms: Option<i64>) -> Option<DateTime<Utc>> {
     Utc.timestamp_millis_opt(ms?).single()
 }
 
-fn codex_edge_status(
-    edge_status: &str,
-    child_updated_at: Option<DateTime<Utc>>,
-    parent_completed_at: Option<DateTime<Utc>>,
-) -> SubagentJobStatus {
+fn codex_edge_status(edge_status: &str, turn_state: Option<&TurnState>) -> SubagentJobStatus {
     match edge_status {
         "closed" => SubagentJobStatus::Completed,
-        "open" => {
-            if let Some(parent_completed_at) = parent_completed_at {
-                let stale_cutoff = parent_completed_at + ChronoDuration::seconds(30);
-                if child_updated_at.is_none_or(|updated_at| updated_at <= stale_cutoff) {
-                    return SubagentJobStatus::Completed;
-                }
-            }
-            SubagentJobStatus::Running
-        }
+        "open" => turn_state
+            .map(|state| state.status.clone())
+            .unwrap_or(SubagentJobStatus::Unresolved),
         _ => SubagentJobStatus::Unresolved,
     }
+}
+
+fn reconcile_codex_jobs(
+    mut jobs: Vec<SubagentJob>,
+    codex_jobs: Vec<CodexThreadJob>,
+) -> Vec<SubagentJob> {
+    for codex in codex_jobs {
+        if let Some(state) = &codex.turn_state {
+            // The latest child turn supersedes old wait/spawn bookkeeping,
+            // including completion of an earlier turn when a child is reused.
+            // Keep a newer acknowledged close until a subsequent turn starts.
+            jobs.retain(|job| {
+                job.session_id != codex.job.session_id
+                    || job.agent_id != codex.job.agent_id
+                    || (job.status == SubagentJobStatus::Failed
+                        && job.completed_at.is_some_and(|at| at > state.timestamp))
+            });
+        }
+        jobs.push(codex.job);
+    }
+    deduplicate_jobs(jobs)
 }
 
 fn increment_active_count(
@@ -431,10 +474,10 @@ fn increment_active_count(
 }
 
 fn deduplicate_jobs(jobs: Vec<SubagentJob>) -> Vec<SubagentJob> {
-    let mut by_agent = HashMap::<String, SubagentJob>::new();
+    let mut by_agent = HashMap::<(Uuid, String), SubagentJob>::new();
     for job in jobs {
         by_agent
-            .entry(job.agent_id.clone())
+            .entry((job.session_id, job.agent_id.clone()))
             .and_modify(|existing| {
                 if status_rank(&job.status) >= status_rank(&existing.status) {
                     *existing = job.clone();
@@ -459,35 +502,25 @@ fn status_rank(status: &SubagentJobStatus) -> u8 {
 
 #[cfg(test)]
 mod tests {
-    use chrono::{Duration as ChronoDuration, Utc};
+    use chrono::Utc;
     use sqlx::{Row, sqlite::SqlitePoolOptions};
     use uuid::Uuid;
 
     use super::{SubagentJob, SubagentJobStatus, codex_edge_status};
 
     #[test]
-    fn completed_parent_codex_open_edge_is_not_counted_as_running_when_stale() {
-        let completed_at = Utc::now();
-
+    fn open_edge_without_turn_evidence_is_unknown_not_running_or_completed() {
         assert_eq!(
-            codex_edge_status("open", Some(completed_at), Some(completed_at)),
+            codex_edge_status("open", None),
+            SubagentJobStatus::Unresolved
+        );
+        assert_eq!(
+            codex_edge_status("closed", None),
             SubagentJobStatus::Completed
         );
         assert_eq!(
-            codex_edge_status("open", None, Some(completed_at)),
-            SubagentJobStatus::Completed
-        );
-        assert_eq!(
-            codex_edge_status(
-                "open",
-                Some(completed_at + ChronoDuration::seconds(31)),
-                Some(completed_at)
-            ),
-            SubagentJobStatus::Running
-        );
-        assert_eq!(
-            codex_edge_status("open", Some(completed_at), None),
-            SubagentJobStatus::Running
+            codex_edge_status("unknown", None),
+            SubagentJobStatus::Unresolved
         );
     }
 

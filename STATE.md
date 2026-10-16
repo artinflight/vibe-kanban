@@ -1,3 +1,14 @@
+# Automatic sub-agent activity correction — October 16
+
+The focused `fix/subagent-turn-activity` branch corrects completed Codex children
+remaining active after parent resumes. Session listings and workspace summaries
+read the latest durable child turn instead of inferring activity from an open
+spawn edge or an older parent execution. Reused children can become active again;
+unavailable evidence remains unresolved. No live deployment or restart occurred.
+The next backend candidate must include this change and verify completed/reused
+child indicators during restart QA. This is independent of preservation PR189's
+older explicit close-tool work.
+
 # Dot explicit steering source preparation — October 15
 
 PR250 prepares explicit session/execution/native-turn-fenced steering and durable

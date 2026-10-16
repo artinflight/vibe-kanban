@@ -59,7 +59,7 @@ class ScopeRolloutTests(unittest.TestCase):
             ('fixture','owner',json.dumps({'project_id':self.project}),'https://fixture.invalid','fixture-key',self.now[0]+7200))
         plan=build_plan(self.store.db,self.vibe,now=self.now[0])
         before=[tuple(row) for row in self.store.db.execute('SELECT * FROM sidechat_subscriptions')]
-        self.assertEqual([{'project_id':self.other}],[r['arguments'] for r in plan['subscription_requests']])
+        self.assertEqual([{'project_ids':[self.other]}],[r['arguments'] for r in plan['subscription_requests']])
         apply_plan(self.store.db,self.vibe,plan,plan['plan_sha256'],now=self.now[0])
         self.assertEqual(before,[tuple(row) for row in self.store.db.execute('SELECT * FROM sidechat_subscriptions')])
 

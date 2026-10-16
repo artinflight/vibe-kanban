@@ -24,8 +24,15 @@ class Events:
 
     def _scope(self, principal, arguments):
         self.store._principal(principal, ("owner",))
-        if not isinstance(arguments, dict) or set(arguments) not in ({"thread_id"}, {"project_id"}):
-            raise Rejected("Exactly one thread_id or project_id is required")
+        if not isinstance(arguments, dict) or set(arguments) not in ({"thread_id"}, {"project_id"}, {"project_ids"}):
+            raise Rejected("Exactly one thread_id, project_id or explicit project_ids list is required")
+        if "project_ids" in arguments:
+            values=arguments["project_ids"]
+            if not isinstance(values,list) or not 1<=len(values)<=100 or any(not isinstance(v,str) or not 1<=len(v)<=200 for v in values) or len(set(values))!=len(values):
+                raise Rejected("Bounded distinct project IDs required")
+            for value in values:
+                self._scope(principal,{"project_id":value})
+            return canonical({"project_ids":sorted(values)})
         value = next(iter(arguments.values()))
         if not isinstance(value, str) or not 1 <= len(value) <= 200:
             raise Rejected("Invalid event scope")
@@ -78,7 +85,9 @@ class Events:
 
     def _matches(self, sub, thread):
         filters=json.loads(sub["filters"])
-        return filters.get("thread_id",thread["id"])==thread["id"] and filters.get("project_id",thread["project"])==thread["project"]
+        return (filters.get("thread_id",thread["id"])==thread["id"] and
+                filters.get("project_id",thread["project"])==thread["project"] and
+                thread["project"] in filters.get("project_ids",[thread["project"]]))
 
     def sync(self, owner):
         """Apply exact owner filters to existing and newly-created issue threads."""

@@ -57,15 +57,18 @@ def build_plan(sidechat, vibe, include_archived=False, now=None):
     covered=set()
     for subscription in expected['subscriptions']:
         filters=json.loads(subscription['filters'])
-        if set(filters)!={'project_id'}:raise ValueError('Review non-project subscriptions before adding destinations')
-        covered.add(filters['project_id'])
-    if len(covered)!=len(expected['subscriptions']):
-        raise ValueError('Overlapping project subscriptions require reconciliation')
+        if set(filters)=={'project_id'}:values={filters['project_id']}
+        elif set(filters)=={'project_ids'}:values=set(filters['project_ids'])
+        else:raise ValueError('Review non-project subscriptions before adding destinations')
+        if covered & values:raise ValueError('Overlapping project subscriptions require reconciliation')
+        covered.update(values)
+    remaining=sorted(target-covered)
+    requests=[{'name':'vk.sidechat.owner_message.created','arguments':{'project_ids':remaining[i:i+100]}}
+              for i in range(0,len(remaining),100)]
     body={'version':1,'created':now,'expires':now+3600,'owner':owner,
         'include_archived':include_archived,'future_projects':False,
         'target_projects':selected,'expected':expected,
-        'subscription_requests':[{'name':'vk.sidechat.owner_message.created','arguments':{'project_id':p}}
-                                 for p in sorted(target-covered)]}
+        'subscription_requests':requests}
     body['plan_sha256']=hashlib.sha256(canonical(body).encode()).hexdigest()
     return body
 
@@ -107,6 +110,7 @@ def summary(plan):
         'indefinite_sessions':sum(s['expires']==0 for s in plan['expected']['sessions']),
         'existing_subscriptions_preserved':len(plan['expected']['subscriptions']),
         'additional_platform_subscriptions_needed':len(plan['subscription_requests']),
+        'additional_projects_subscribed':sum(len(r['arguments']['project_ids']) for r in plan['subscription_requests']),
         'future_projects':False,'applied':False}
 
 

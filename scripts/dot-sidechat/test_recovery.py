@@ -91,6 +91,30 @@ class RecoveryTests(unittest.TestCase):
         self.assertIsNone(events.deliver_one('alice'))
         self.assertEqual(1,len(sent))
 
+    def test_explicit_project_group_preserves_existing_destination_without_overlap(self):
+        sent=[]
+        def sender(url,key,sid,eid,body):
+            if body.get('type')=='verification':return 200,json.dumps({'challenge':body['challenge']})
+            sent.append((sid,body));return 200,''
+        events=Events(self.s,sender,lambda:self.now)
+        def params(arguments):
+            return {'name':events.definition()['name'],'arguments':arguments,
+                'delivery':{'mode':'webhook','url':'https://fixture.invalid/callback','secret':'fixture-key'},'ttlMs':60000}
+        original=events.subscribe(self.owner,params({'project_id':'p'}))
+        self.s.db.execute("INSERT INTO project_grants VALUES ('alice','new')")
+        additional=events.subscribe(self.owner,params({'project_ids':['new']}))
+        self.send()
+        self.s.register_scope('alice','new','new-issue','new-workspace')
+        thread=self.s.resolve(self.owner,'new','new-issue','new-workspace')['id']
+        import uuid
+        self.s.append(self.owner,thread,'new-workspace',str(uuid.uuid4()),'New project owner text')
+        events.deliver_one('alice');events.deliver_one('alice')
+        self.assertEqual({original['id'],additional['id']},{x[0] for x in sent})
+        self.assertEqual(2,len(sent))
+        self.assertIsNone(events.deliver_one('alice'))
+        for values in ([],['new','new'],['unauthorized'],['new','unauthorized'],[True]):
+            with self.assertRaises(Rejected):events._scope(self.owner,{'project_ids':values})
+
     def test_only_explicit_project_grants_allow_preparing_new_project(self):
         events=Events(self.s,lambda *args:None,lambda:self.now)
         with self.assertRaises(Rejected):events._scope(self.owner,{'project_id':'new'})

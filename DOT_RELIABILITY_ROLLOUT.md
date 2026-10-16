@@ -61,8 +61,8 @@ The authoritative local inventory has 43 projects: 17 active and 26 archived.
 
 | Prepared option | Existing browsers | Project scope per browser | Additional subscriptions | Future projects |
 | --- | --- | --- | --- | --- |
-| All current projects | Both existing paired sessions | Explicit snapshot of 43, including 26 archived | 42, preserving the existing VK Dev subscription | Excluded |
-| Active-only alternative | Both existing paired sessions | Explicit snapshot of 17 active projects | 16, preserving the existing VK Dev subscription | Excluded |
+| All current projects | Both existing paired sessions | Explicit snapshot of 43, including 26 archived | One explicit group for the other 42 projects; existing VK Dev retained | Excluded |
+| Active-only alternative | Both existing paired sessions | Explicit snapshot of 17 active projects | One explicit group for the other 16 projects; existing VK Dev retained | Excluded |
 
 Neither option has been applied. The owner's choice must explicitly authorize the
 persistent access expansion for both existing paired browsers until disconnect or
@@ -74,9 +74,9 @@ After that decision, regenerate the private plan if stale, take/verify a current
 SQLite-aware sidechat backup on mounted SSD staging and mirror it to Desktop B,
 then use the guarded apply command with the exact reviewed digest and backup.
 Private plans/receipts/backups stay outside Git. The application changes no event
-subscriptions. The intended actual Dot context must create each additional finite
-project subscription through the supported platform flow, using its newly granted
-project authorization. Preserve the existing subscription and avoid overlapping
+subscriptions. The intended actual Dot context must create the additional finite, explicit
+project-list subscription through the supported platform flow, using its newly
+granted project authorization. The bounded list excludes VK Dev to avoid overlap. Preserve the existing subscription and avoid overlapping
 filters; ambiguous overlap deliberately stops publishing instead of double-sending.
 Do not copy callback secrets or create subscriptions directly in SQLite.
 
@@ -108,7 +108,7 @@ subscription change is needed for the prepared Python connector correction.
 
 ## Validation and publication
 
-43 isolated sidechat tests pass, including recovery, corruption/owner/scope fences,
+44 isolated sidechat tests pass, including recovery, corruption/owner/scope fences,
 pagination, duplicate replies, legacy cursor compatibility, exact scope application,
 stale-plan rejection and existing-subscription preservation. All 28 existing
 capacity/Recommend/status connector regressions pass against the unchanged installed

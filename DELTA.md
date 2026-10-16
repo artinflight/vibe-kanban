@@ -1918,3 +1918,21 @@ a natural real phone reply is not yet verified. Mobile owner files/browser retai
 Staging receipt: source d8ceceb8f and verified Desktop B mirror are prepared.
 Automatic approval review denied the exact live install/restarts for missing
 specific authorization and disruption risk; no live change or workaround occurred.
+
+
+## 2026-10-16 — Approved connector activation and automatic complete project scope
+
+Exact owner approval resolved the earlier review block. The single authorized
+retry succeeded, then validated source d2c79543e activated the complete policy:
+both existing sessions now cover all 43 current projects, including 26 archived;
+future projects are reconciled automatically every five seconds. Private current
+SQLite backup and Desktop B mirror were verified before application. Only the
+connector and publisher restarted. Original subscription metadata and accepted
+attempts, browser PID, frontend and mobile owner work were preserved.
+
+49 sidechat tests and 28 existing connector regressions pass. New broad event
+arguments exclude the already subscribed project to avoid duplicate delivery.
+That actual platform subscription and root metadata/tool-context verification
+remain blocked on capabilities unavailable to this coding execution. One real
+phone message remains unanswered; no manual relay is claimed as phone acceptance.
+Owner approval and scope decisions are settled; no pairing/UI debugging remains.

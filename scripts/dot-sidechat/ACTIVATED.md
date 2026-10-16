@@ -1,6 +1,8 @@
 > Latest reliability/scope status: [rollout handoff](../../DOT_RELIABILITY_ROLLOUT.md).
 > Phone pairing/send are confirmed; root reply delivery is not. The desktop
-> result was a manual integration-task relay. Existing access is not expanded.
+> result was a manual integration-task relay. Both existing paired sessions
+> now cover all current/archived and future projects. Complete notifications
+> still require the supported broad platform subscription.
 
 > Subsequent operator confirmation (2026-10-16): the first real desktop
 > roundtrip succeeded through the integration task's paired connector; Seamus's

@@ -1,18 +1,18 @@
-# Dot reply reliability and all-project preparation — October 16
+# Dot connector activation and complete project scope — October 16
 
-Source `d8ceceb8f` is staged with a verified Desktop B sidechat backup. Live
-installation/restarts were blocked by automatic approval review pending exact
-owner approval; no pointer, service, paired scope or subscription changed.
+Seamus approved connector-only activation and all current, archived and future
+projects. The once-retried activation succeeded. Installed source `d2c79543e`
+expands both existing paired sessions from VK Dev-only to all 43 projects,
+including 26 archived, with automatic future-project reconciliation every five
+seconds. Existing subscriptions, credentials, expiration and revocation were
+preserved. Only the connector/publisher restarted; mobile owner work is untouched.
 
-Read [the reliability investigation and guarded rollout](DOT_RELIABILITY_ROLLOUT.md).
-The phone is paired and its 17:06 message has one accepted webhook but no reply.
-Stored/signed context is complete; root context/tool availability remains a platform
-boundary. The earlier desktop reply was a manual integration-task relay. No further
-phone UI investigation is required; the active mobile owner retains files/browser work.
-Source adds read-only pending-context recovery, compatible non-replay cursors and an
-explicit project-scope planner. The two current indefinite VK Dev-only browser
-sessions have NOT been broadened; 43-current/17-active snapshots are prepared for
-an explicit persistent-access decision. Existing subscriptions remain unchanged.
+Read [the exact activation and rollout handoff](DOT_RELIABILITY_ROLLOUT.md).
+All-project browser access is live. Its additional broad platform subscription is
+still required for complete notifications, and root's refreshed tool inventory
+remains unverified. The retained phone message has one accepted webhook and no
+persisted reply; the desktop success was a manual integration-task relay. No more
+phone pairing/UI debugging or owner scope/activation decision is pending.
 
 # Dot integration preservation — October 16
 
@@ -36,7 +36,7 @@ available paired connector, and his screenshot showed the reply. Direct root dot
 connector access remains unresolved; the real phone roundtrip and mobile acceptance
 remain separate and unverified here. Private chat and receipt identifiers are not
 published. The mobile owner retains its active workspace and changes.
-This preservation task does not deploy, restart or change pairing/subscriptions.
+The initial preservation phase made no runtime changes; the authorized connector-only activation and scope expansion above supersede that earlier boundary.
 
 # Clickable summary links — activated October 16
 

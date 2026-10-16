@@ -5,7 +5,8 @@
 > The earlier desktop success used a manual integration-task relay.
 
 This branch preserves the existing integration for review against `staging` in
-`artinflight/vibe-kanban`. It performs no deployment. Status below was reconciled
+`artinflight/vibe-kanban`. Its later authorized connector-only activation and
+complete browser-project scope are recorded in the latest rollout handoff. Status below was reconciled
 on 2026-10-16 from the clean original worktrees, their activation notes, and
 read-only service/release-pointer checks, and Seamus's subsequent confirmation
 of the first successful desktop roundtrip. The evidence boundaries are below.
@@ -17,8 +18,11 @@ private outbox publisher, scoped browser API, TLS proxy route and sidebar were
 installed for the approved VK Dev test. The browser, publisher and connector
 services were observed running during preservation. The live frontend pointer
 still selects source `975f62c7c`, based on the clickable-links baseline
-`2249da3e9`. The connector source pointer selects `0f1a9daae`; browser API source
-is recorded as `2da6263f7`. Preserving this branch does not change those pointers.
+`2249da3e9`. The initial connector source was `0f1a9daae`; it is now `d2c79543e` after
+the approved connector-only rollout. Browser API source remains `2da6263f7`.
+Both existing paired sessions now cover all current/archived and future projects;
+the additional notification subscription and natural root-to-phone reply remain
+platform acceptance gaps. See the latest handoff for exact evidence.
 
 Dot appears below Notes in the right sidebar. On the original mobile layout it
 is in the Git/details tab; Chat remains the coding-agent conversation. The

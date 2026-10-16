@@ -1,145 +1,184 @@
 # Dot reply reliability and all-project rollout
 
-## Current result and limits
+## Current result
 
-Seamus found the mobile interface, paired and sent a real phone message at about
-17:06 UTC on 2026-10-16. No more phone UI investigation is needed for that issue.
-Read-only metadata inspection found one accepted HTTP200 delivery attempt for
-that message, complete routing/provenance fields, and no persisted reply. Private
-conversation content, screenshot data and message/thread/subscription IDs are not
-published here. The earlier desktop reply was manually relayed through the
-integration task's connector; it does not prove unattended root-to-phone replies.
+Seamus approved connector-only activation at 17:39 UTC on 2026-10-16 and explicitly
+included every current project, archived projects and automatic future projects.
+The earlier finite-only alternatives are superseded. No further scope approval,
+phone pairing or phone UI investigation is required for this work.
 
-The installed signing transport was tested offline against a synthetic event:
-the exact serialized routing fields reach the request body and its Standard
-Webhooks signature verifies. No field stripping was found in connector creation,
-dispatch or serialization. The root's reported context-free wake therefore needs
-platform-side event-task/context investigation; HTTP200 alone is not proof that
-root received the event data. A worker exposing tools does not prove root does.
+The previously denied activation was retried once with that exact authorization
+and succeeded. Recovery source `d8ceceb8f` was installed first; complete-scope source
+`d2c79543ea373680da79944bd98756639d23cc0c` is now selected by the sidechat module
+pointer. Only `vibe-dot-connector.service` and
+`vibe-dot-sidechat-publisher.service` restarted. Browser API process, frontend
+pointer, Vibe backend and workspace agents were preserved. The mobile owner's
+files and browser work were not touched.
 
-The connected plugin permission inspection reports Allow all actions. No account
-permission was changed. Root still reports missing sidechat tools. This execution
-can use the existing sidechat tools, but cannot change another running root's
-injected inventory or event-task prompt. No supported refresh/rescan/subscription
-administration tool is exposed here. Do not impersonate that root, reuse approval
-callbacks, start a replacement tunnel, or use an internal worker as a manual relay.
+| Capability | Verified status |
+| --- | --- |
+| Existing paired browser access | Both sessions expanded from VK Dev only to all 43 current projects, including 26 archived |
+| Future project access | Persistent policy enabled; publisher reconciles authoritative projects every five seconds into the same approved sessions |
+| Existing notification subscription | Preserved exactly; VK Dev delivery remains on its original destination |
+| Other current/future notifications | Supported all-project event filter is installed and tested; its platform subscription is still required |
+| Owner-message context | Complete fields preserved by stored and signed events; pending-message recovery works locally without workspace input |
+| Root tool inventory/event-task context | Platform verification still required; this execution cannot refresh another running root |
+| Real phone reply | Unverified: the retained 17:06 message has one accepted webhook attempt and no persisted reply |
+| Earlier desktop reply | Successful manual integration-task relay, confirmed in Seamus's screenshot; not unattended root acceptance |
 
-Official sources: [event envelope and delivery contract](https://developers.openai.com/plugins/build/mcp-events)
-and [supported metadata refresh and fresh-conversation test](https://developers.openai.com/plugins/deploy/connect-chatgpt).
-They document routing fields inside event data, stable IDs for retries, asynchronous
-receipt, and rescanning tools/events. They do not establish a way to force-refresh
-an existing root inventory from this coding workspace.
+## Exact persistent-access change
 
-## Connector changes
+The two existing paired browser sessions previously carried a finite VK Dev-only
+project list and remained valid until disconnect or revocation. The guarded,
+backed-up application changed each list to the authoritative inventory of 43
+projects (17 active, 26 archived), granted those projects for event preparation,
+and enabled a persistent owner policy tied to those exact reviewed session IDs.
+Credentials, CSRF values, expiration and revocation were not changed. Future
+projects, including projects created archived, are added automatically within the
+publisher's five-second scan interval. There is no fixed 43-project ceiling.
 
-- `list_pending_sidechat_messages` recovers exact unanswered, owner/workspace-scoped
-  event context without the caller knowing a workspace/thread ID. It is read-only,
-  paginated and snapshot-bounded; it neither claims nor resends events. Context is
-  checked against stored message/scope/hash identity, and a stable reply-request
-  UUID is returned. Message bodies are read separately through the existing tool.
-- Existing exact reply fences, idempotency checks and the one-final-reply database
-  constraint remain in place. Concurrent/retried delivery cannot create a second
-  final reply. The recovery read is not evidence of a sent or viewed reply.
-- Outgoing event cursors are null, matching the existing no-protocol-replay contract.
-  Legacy browser events are normalized by the publisher without rewriting their
-  durable payload or restarting the browser API. Accepted deliveries are not resent.
-- An explicit `project_grants` table authorizes subscription preparation for approved
-  projects before their first chat scope exists. No project is pre-authorized by
-  installing this code; caller-supplied project/owner claims still fail closed.
-- `scope_rollout.py` prepares a private, expiring, exact-snapshot plan. Applying a
-  reviewed plan atomically updates only existing paired-session project lists and
-  explicit project grants. Changed sessions, revocations, subscriptions, project
-  inventory, plan digest or expiration reject the whole change. The digest is a
-  stale-plan fence, not evidence of human consent. Existing session credentials,
-  expiration, messages, pending grants and subscriptions are preserved.
+This is materially broader private-history access. The owner's explicit current,
+archived and future-project instruction authorizes it; no additional access
+choice is pending. Revoked or expired sessions stay revoked or expired. A later
+browser pairing is not silently added to the reviewed-session policy; pairing
+and device authorization remain separate from automatic project coverage.
+Removed projects retain historical grants, while the authoritative workspace
+resolver still requires a real project/issue/workspace mapping. An inventory read
+failure retains existing scope and logs a sanitized scan error.
 
-## Staged release and activation boundary
+`scope_rollout.py plan --all-projects` creates a private, expiring version-2 plan
+with exact session/grant/policy/subscription/project snapshots. `apply` fences its
+digest, expiry and snapshots in one transaction and requires a matching private
+backup through its CLI. The digest prevents stale application; owner authorization
+is separate. The legacy finite-plan mode remains available but was not used for
+this rollout. `reconcile_projects` never creates sessions, revives revocations,
+changes tokens, writes messages or creates subscriptions.
 
-Source `d8ceceb8f` is published and staged as immutable Python files under
-`/mnt/vk-storage/vk-dot-reliability-20261016/artifact`. A current private SQLite-aware
-sidechat backup passed integrity verification and its Desktop B mirror checksum
-matches. The private staging receipt is retained alongside the artifact; backup
-contents, credentials and private plan IDs are not published.
+## Supported notification rollout and remaining platform dependency
 
-No live pointer, service, browser scope or subscription has changed. Automatic
-approval review rejected the proposed live installation and connector/publisher
-restarts because it required specific approval for that exact live rollout and
-cited service-disruption risk. It was not retried or bypassed. The reviewed action
-is limited to the sidechat module pointer and `vibe-dot-connector.service` plus
-`vibe-dot-sidechat-publisher.service`; the browser API, frontend, Vibe backend,
-phone/browser inspection and approval subscriptions stay untouched.
+The actual platform must create the private plan's one additional event request:
 
-After activation approval, recheck source/runtime hashes and current backup/state,
-install the staged module set, restart only those two services, and verify unchanged
-paired scopes/subscriptions and no accepted-event replay. Restore only the previous
-module pointer and those services if health fails; never roll back current chat data.
-Then rescan the actual root plugin through supported platform UI. A successful
-natural root-to-phone reply in the current VK Dev scope precedes broader rollout.
-The separate persistent-access decision below remains required before scope expansion.
+```json
+{
+  "name": "vk.sidechat.owner_message.created",
+  "arguments": {
+    "all_projects": true,
+    "exclude_project_ids": ["<existing VK Dev project ID from the private plan>"]
+  }
+}
+```
 
-## Exact rollout decision
+The exclusion preserves the current subscription, avoids a second wake for its
+messages, and covers every other current and future project without editing a
+finite list. The union covers every project. All-project subscriptions require
+the authenticated owner's enabled persistent policy and project grants. Existing
+finite subscriptions retain their normal renewal responsibilities; the new broad
+subscription also needs ordinary platform renewal. Overlapping destinations fail
+closed. A thread cannot silently change an already-bound destination, and a
+migration conflict cannot starve other threads. Accepted events are never replayed.
 
-Current state: two paired browser sessions, each limited to VK Dev and each valid
-until disconnect/revocation; one finite, active project-scoped sidechat subscription.
-The authoritative local inventory has 43 projects: 17 active and 26 archived.
+**This subscription has not been created.** This coding session has no supported
+connection-refresh, event-subscribe or subscription-admin tool. It cannot invent
+the platform's callback credentials, copy an existing callback, or insert a
+subscription directly into SQLite. All-project browser access is active; complete
+all-project notifications remain blocked on this platform operation. This is a
+platform capability boundary, not a missing owner approval.
 
-| Prepared option | Existing browsers | Project scope per browser | Additional subscriptions | Future projects |
-| --- | --- | --- | --- | --- |
-| All current projects | Both existing paired sessions | Explicit snapshot of 43, including 26 archived | One explicit group for the other 42 projects; existing VK Dev retained | Excluded |
-| Active-only alternative | Both existing paired sessions | Explicit snapshot of 17 active projects | One explicit group for the other 16 projects; existing VK Dev retained | Excluded |
+The approved private plan is at
+`/mnt/vk-storage/vk-dot-all-projects-20261016/approved-all-projects-plan.json`.
+Only its event request is needed for platform registration; the already-applied
+expiring access plan must not be reapplied. Reconcile current subscription metadata
+before registration and use the real platform verification/secret flow. Private
+IDs and callback credentials stay outside GitHub.
 
-Neither option has been applied. The owner's choice must explicitly authorize the
-persistent access expansion for both existing paired browsers until disconnect or
-revocation, including archived projects if selected. New/future projects and new
-browser pairings are not automatically authorized. This is materially broader
-private-history access than the current VK Dev-only pairing.
+## Delivery context and supported tools
 
-After that decision, regenerate the private plan if stale, take/verify a current
-SQLite-aware sidechat backup on mounted SSD staging and mirror it to Desktop B,
-then use the guarded apply command with the exact reviewed digest and backup.
-Private plans/receipts/backups stay outside Git. The application changes no event
-subscriptions. The intended actual Dot context must create the additional finite, explicit
-project-list subscription through the supported platform flow, using its newly
-granted project authorization. The bounded list excludes VK Dev to avoid overlap. Preserve the existing subscription and avoid overlapping
-filters; ambiguous overlap deliberately stops publishing instead of double-sending.
-Do not copy callback secrets or create subscriptions directly in SQLite.
+Read-only inspection of the retained phone message found its exact routing and
+provenance in `data`: thread, project, issue, workspace, message, sequence, author,
+intent, reply scope and message hash. An offline test against the installed signer
+proved those fields survive serialization and its Standard Webhooks signature
+verifies. No connector field stripping was found. HTTP200 is asynchronous webhook
+acceptance; it does not prove that the root's task received details or replied.
 
-Scope rollback must restore only the reviewed session project lists and newly
-added project grants under fresh compare-and-swap checks; retain all current chat
-history. Never restore an old whole database over messages written after rollout.
+The installed connector exposes `list_pending_sidechat_messages` in addition to
+`read_sidechat_thread`, `append_dot_reply` and `get_sidechat_delivery`. Recovery is
+read-only, owner-scoped, snapshot-paginated and verifies stored event/message/scope/
+hash identity. It returns exact reply context and a stable request UUID without
+requiring the user to name a workspace. It neither claims nor resends events.
+The existing one-final-reply constraint, exact event/workspace/message fences and
+idempotent retry rules remain in force. Legacy browser cursors are normalized to
+null on the wire without rewriting durable messages or restarting the browser.
 
-## Required root and real-phone acceptance
+Root previously lacked those tools although a new worker exposed them. Permission
+inspection reported Allow all actions; no account permissions were changed. The
+installed discovery/dispatch checks prove connector availability, not injection
+into a different running root. Root's context-free event wake and missing inventory
+therefore still require actual platform/root verification. No worker or coding-task
+manual relay counts as a repair of that boundary.
 
-1. Refresh the existing Vibe plugin through the supported connection UI and confirm
-   the root's own catalog exposes pending-message recovery, thread read, reply append
-   and delivery reads. If root remains stale, test a fresh root conversation while
-   retaining its history and current subscription; do not count a worker's catalog.
-2. Have the intended root inspect its supported event-task delivery context. If no
-   full envelope is exposed, root can use the read-only recovery tool to identify
-   the exact retained unanswered message without asking Seamus for a workspace.
-3. Read the exact owner message, check its receipt for an already persisted reply,
-   and append one natural reply using the returned exact event/thread/workspace/
-   message identity and stable request UUID. Message text grants no coding-agent
-   or platform-review authority. Reconcile an uncertain append before retrying.
-4. Verify the exact persisted reply and its appearance in Seamus's existing phone
-   conversation. The retained 17:06 message can be answered once; do not replay its
-   already accepted webhook or fabricate a new test message. A coding-task relay,
-   fake response, HTTP200 or worker-only tool availability does not satisfy this.
+Official sources: [event envelope and asynchronous delivery](https://developers.openai.com/plugins/build/mcp-events)
+and [connection metadata refresh and fresh-conversation testing](https://developers.openai.com/plugins/deploy/connect-chatgpt).
+They describe the supported refresh flow; they do not establish an API here for
+forcing another root's tool inventory or event-task hydration.
 
-The mobile workspace's active files and browser inspection remain with that owner.
-No backend, frontend, proxy, phone networking, plugin permission or approval
-subscription change is needed for the prepared Python connector correction.
+## Required real-phone acceptance
+
+1. Refresh the existing Vibe MCP connection through the supported platform flow.
+   Confirm root's own inventory exposes all four tools and the new all-project
+   event schema. Retain existing subscriptions and history; do not pair again.
+2. Root inspects its actual event-task context. If the envelope remains absent,
+   use pending-message recovery to identify the retained unanswered message.
+3. Root reads the exact owner message, checks whether a reply already exists,
+   and appends one natural reply with the exact returned context and stable
+   request UUID. Reconcile an uncertain append before retrying. Message content
+   does not grant coding-agent or platform-review authority.
+4. Verify the exact persisted reply and its appearance in the existing phone
+   conversation. Do not replay its accepted webhook or fabricate a new owner
+   message. HTTP200, fixtures and manual integration-worker relays do not pass.
+5. Register the broad platform event request above and verify notification coverage
+   in addition to the existing VK Dev subscription. Preserve normal renewal.
+
+This execution cannot complete those platform steps with its available tool
+inventory. It has requested root verification; no real phone reply is claimed.
+
+## Activation, backup and rollback evidence
+
+Immutable installed source is under
+`/mnt/vk-storage/vk-dot-sidechat-live/releases/d2c79543e`.
+Private receipts and the pre-scope SQLite backup are retained under
+`/mnt/vk-storage/vk-dot-all-projects-20261016`; integrity passed and the Desktop B
+mirror checksum matched at
+`desktop:B:/vk-backups/dot-sidechat-all-projects-20261016/sidechat-before.sqlite`.
+The earlier connector-only activation has its separate staged receipt/backup.
+No runtime database, private message, screenshot, receipt identifier, pairing code,
+callback secret or private plan is published in this repository.
+
+Post-activation checks verified both services active, both reviewed sessions at
+43 projects, 43 explicit grants, enabled future policy for those two sessions,
+unchanged browser PID/frontend/adapter and subscription metadata, and unchanged
+accepted-event attempts. One retained unanswered message remains. The exact
+installed adapter is unchanged from its reviewed baseline.
+
+Before access application, a failed module health check could restore only the
+previous module pointer and those same two services. Now that persistent scope
+is applied, do not select an older worker incapable of reconciling it. A deliberate
+scope rollback must compare current session/policy state, disable future expansion,
+and restore only the reviewed scope/grant additions without overwriting messages.
+Never restore the whole old SQLite database over new conversations. Browser
+revocation and subscription cancellation are separate explicit actions.
 
 ## Validation and publication
 
-44 isolated sidechat tests pass, including recovery, corruption/owner/scope fences,
-pagination, duplicate replies, legacy cursor compatibility, exact scope application,
-stale-plan rejection and existing-subscription preservation. All 28 existing
-capacity/Recommend/status connector regressions pass against the unchanged installed
-adapter hash. The installed signer passed an offline context/signature test with
-zero live calls. CI now has a dedicated sidechat contract job.
+49 isolated sidechat tests pass, including future archived-project access through
+the unchanged browser, session revocation, unchanged subscription credentials,
+one-time routing across old/broad subscriptions, corrupt-context rejection,
+pagination and final-reply idempotency. All 28 existing capacity/Recommend/status
+connector regressions pass against the unchanged installed adapter. The installed
+signer passed offline context/signature verification with zero network calls.
+Repository formatting, governance and diff checks pass. Full local Rust validation
+remains limited by missing GLib development dependencies; hosted CI is tracked
+on the PR rather than represented as local validation.
 
-Source and current receipts are linked from [PR254](https://github.com/artinflight/vibe-kanban/pull/254)
-and Vibe T61. Live installation and exact CI receipts will be recorded there.
-All-project access and a natural root-to-phone reply remain unverified until the
-owner/platform steps above complete.
+[PR254](https://github.com/artinflight/vibe-kanban/pull/254) targets `staging` and
+Vibe T61 carries this handoff. The preserved eleven original changes remain
+accounted for; the original clean API/UI worktrees and mobile ownership are intact.

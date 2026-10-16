@@ -1,3 +1,15 @@
+# Dot unread and Needs Attention — October 16 implementation
+
+Separate violet Dot indicators and durable independent read/attention state are
+implemented in PR254 for desktop, phone and issue-linked workspaces. Visible
+focused replies clear only Dot unread; explicit Resolve clears attention.
+Coding-agent notification state is untouched. This source is not activated.
+Read [the notification implementation and coordinated release handoff](DOT_NOTIFICATION_HANDOFF.md).
+Sent Steering's pinned Mobile+Steering candidate excludes this feature; preserve
+both features in a later combined frontend, after the new sidechat API is live.
+No mobile-owner files/browser, live services, permissions or subscriptions changed.
+The earlier root reply/subscription reconciliation below remains applicable.
+
 # Root reply and complete notification registration — October 16 follow-up
 
 Root's view caught up at 18:07 UTC without another refresh. Root directly read

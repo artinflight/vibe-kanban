@@ -7,6 +7,8 @@ export interface SidechatMessage {
   body: string;
   workspace: string;
   created: number;
+  seen?: boolean;
+  attention?: { kind: 'question' | 'action'; resolved: boolean } | null;
 }
 
 export interface SidechatReceipt {
@@ -16,6 +18,12 @@ export interface SidechatReceipt {
 
 export interface DotSidechatPanelProps {
   live?: boolean;
+  notificationsEnabled?: boolean;
+  onRead?: (messages: string[]) => Promise<void>;
+  onAttention?: (
+    message: string,
+    action: 'action' | 'resolve' | 'reopen'
+  ) => void;
   draftLocked?: boolean;
   messages: SidechatMessage[];
   receipts: Record<string, SidechatReceipt>;
@@ -45,6 +53,97 @@ function deliveryLabel(receipt?: SidechatReceipt) {
 export function DotSidechatPanel(props: DotSidechatPanelProps) {
   const history = useRef<HTMLDivElement>(null);
   const [followLatest, setFollowLatest] = useState(true);
+  const readsInFlight = useRef(new Set<string>());
+  const readsConfirmed = useRef(new Set<string>());
+  useEffect(() => {
+    if (!props.live || !props.notificationsEnabled || !props.onRead) return;
+    const visibleReplies = () => {
+      const root = history.current;
+      if (
+        !root ||
+        document.visibilityState !== 'visible' ||
+        !document.hasFocus()
+      )
+        return;
+      const bounds = root.getBoundingClientRect();
+      const ids = props.messages
+        .filter(
+          (m) =>
+            m.role === 'dot' &&
+            m.seen === false &&
+            !readsInFlight.current.has(m.id) &&
+            !readsConfirmed.current.has(m.id)
+        )
+        .filter((m) => {
+          const node = root.querySelector<HTMLElement>(
+            `[data-dot-read="${CSS.escape(m.id)}"]`
+          );
+          if (!node || node.getClientRects().length === 0) return false;
+          for (
+            let parent: HTMLElement | null = node.parentElement;
+            parent;
+            parent = parent.parentElement
+          ) {
+            const style = getComputedStyle(parent);
+            if (
+              parent.hidden ||
+              parent.getAttribute('aria-hidden') === 'true' ||
+              parent.hasAttribute('inert') ||
+              style.display === 'none' ||
+              style.visibility === 'hidden' ||
+              style.opacity === '0'
+            )
+              return false;
+          }
+          const rect = node.getBoundingClientRect();
+          // Only the reply's end becoming visible counts. Loading/polling history,
+          // a hidden phone tab, or scrolling above a long reply does not read it.
+          return (
+            rect.height > 0 &&
+            rect.width > 0 &&
+            rect.top >= Math.max(0, bounds.top) &&
+            rect.bottom <= Math.min(window.innerHeight, bounds.bottom) &&
+            rect.right > Math.max(0, bounds.left) &&
+            rect.left < Math.min(window.innerWidth, bounds.right)
+          );
+        })
+        .map((m) => m.id)
+        .slice(0, 100);
+      if (!ids.length) return;
+      ids.forEach((id) => readsInFlight.current.add(id));
+      void props.onRead!(ids)
+        .then(() => ids.forEach((id) => readsConfirmed.current.add(id)))
+        .catch(() => undefined)
+        .finally(() => ids.forEach((id) => readsInFlight.current.delete(id)));
+    };
+    const observedRoot = history.current;
+    const resize =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(visibleReplies);
+    if (observedRoot) resize?.observe(observedRoot);
+    const intersection =
+      typeof IntersectionObserver === 'undefined'
+        ? null
+        : new IntersectionObserver(visibleReplies, { threshold: 1 });
+    observedRoot
+      ?.querySelectorAll('[data-dot-read]')
+      .forEach((node) => intersection?.observe(node));
+    const frame = requestAnimationFrame(visibleReplies);
+    observedRoot?.addEventListener('scroll', visibleReplies);
+    window.addEventListener('focus', visibleReplies);
+    window.addEventListener('resize', visibleReplies);
+    document.addEventListener('visibilitychange', visibleReplies);
+    return () => {
+      cancelAnimationFrame(frame);
+      observedRoot?.removeEventListener('scroll', visibleReplies);
+      resize?.disconnect();
+      intersection?.disconnect();
+      window.removeEventListener('focus', visibleReplies);
+      window.removeEventListener('resize', visibleReplies);
+      document.removeEventListener('visibilitychange', visibleReplies);
+    };
+  }, [props.messages, props.live, props.notificationsEnabled, props.onRead]);
   useEffect(() => {
     if (followLatest && history.current)
       history.current.scrollTop = history.current.scrollHeight;
@@ -146,6 +245,53 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
               </a>
             </div>
             <p>{message.body}</p>
+            {message.role === 'dot' &&
+              props.live &&
+              props.notificationsEnabled && (
+                <div className="dot-reply-actions">
+                  {message.attention && (
+                    <span className="dot-attention-label">
+                      {message.attention.resolved
+                        ? 'Resolved'
+                        : 'Needs Attention'}{' '}
+                      · {message.attention.kind}
+                    </span>
+                  )}
+                  {props.onAttention && (
+                    <button
+                      type="button"
+                      aria-label={
+                        message.attention
+                          ? `${message.attention.resolved ? 'Reopen' : 'Resolve'} Dot ${message.attention.kind}`
+                          : 'Mark Dot reply as needing attention'
+                      }
+                      onClick={() =>
+                        props.onAttention?.(
+                          message.id,
+                          message.attention
+                            ? message.attention.resolved
+                              ? 'reopen'
+                              : 'resolve'
+                            : 'action'
+                        )
+                      }
+                    >
+                      {message.attention
+                        ? message.attention.resolved
+                          ? 'Reopen'
+                          : 'Resolve'
+                        : 'Needs attention'}
+                    </button>
+                  )}
+                </div>
+              )}
+            {message.role === 'dot' && (
+              <span
+                data-dot-read={message.id}
+                className="dot-read-marker"
+                aria-hidden="true"
+              />
+            )}
             {message.role === 'owner' && (
               <small>{deliveryLabel(props.receipts[message.id])}</small>
             )}

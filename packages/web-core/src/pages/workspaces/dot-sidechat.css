@@ -331,3 +331,33 @@
     flex-wrap: wrap;
   }
 }
+
+.dot-read-marker {
+  display: block;
+  height: 1px;
+  width: 1px;
+}
+.dot-reply-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.dot-reply-actions button {
+  min-height: 36px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 4px 10px;
+  color: hsl(var(--dot-activity, 270 65% 43%));
+}
+.dot-attention-label {
+  color: hsl(var(--dot-activity, 270 65% 43%));
+  font-weight: 600;
+}
+@media (pointer: coarse) {
+  .dot-reply-actions button {
+    min-height: 44px;
+  }
+}

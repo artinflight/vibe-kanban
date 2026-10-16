@@ -1,3 +1,5 @@
+import { DotActivityIndicators } from '@vibe/ui/components/DotActivityIndicators';
+import { useDotNotifications } from '@/shared/hooks/useDotNotifications';
 import {
   useMemo,
   useCallback,
@@ -724,6 +726,7 @@ export function KanbanContainer() {
     isLoading: orgLoading,
   } = useOrgContext();
   const { activeWorkspaces } = useWorkspaceContext();
+  const dotNotifications = useDotNotifications();
   const userId = useAssignmentIdentity();
   const { loginStatus } = useUserSystem();
   const isLocalOnlySession =
@@ -1253,6 +1256,8 @@ export function KanbanContainer() {
             hasPendingApproval: localWorkspace?.hasPendingApproval,
             hasRunningDevServer: localWorkspace?.hasRunningDevServer,
             hasUnseenActivity: localWorkspace?.hasUnseenActivity,
+            dotUnreadCount: localWorkspace?.dotUnreadCount,
+            dotNeedsAttentionCount: localWorkspace?.dotNeedsAttentionCount,
             latestProcessCompletedAt: localWorkspace?.latestProcessCompletedAt,
             latestProcessStatus: localWorkspace?.latestProcessStatus,
           };
@@ -1876,6 +1881,16 @@ export function KanbanContainer() {
                           <span className="phone-task-title">
                             {issue.title}
                           </span>
+                          <DotActivityIndicators
+                            dotUnreadCount={
+                              dotNotifications.find((n) => n.issue_id === id)
+                                ?.unread_count
+                            }
+                            dotNeedsAttentionCount={
+                              dotNotifications.find((n) => n.issue_id === id)
+                                ?.needs_attention_count
+                            }
+                          />
                           {attentionLabel && (
                             <span className="phone-task-review">
                               {attentionLabel}

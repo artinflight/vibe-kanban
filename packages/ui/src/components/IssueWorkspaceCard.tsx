@@ -1,3 +1,7 @@
+import {
+  DotActivityIndicators,
+  type DotActivityState,
+} from './DotActivityIndicators';
 import { cn } from '../lib/cn';
 import { getWorkspaceAttentionLabel } from '../lib/workspaceAttention';
 import { useTranslation } from 'react-i18next';
@@ -47,7 +51,7 @@ export interface WorkspacePr {
   status: 'open' | 'merged' | 'closed';
 }
 
-export interface WorkspaceWithStats {
+export interface WorkspaceWithStats extends DotActivityState {
   id: string;
   localWorkspaceId: string | null;
   name: string | null;
@@ -382,6 +386,10 @@ export function IssueWorkspaceCard({
             )}
           </div>
 
+          <DotActivityIndicators
+            dotUnreadCount={workspace.dotUnreadCount}
+            dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
+          />
           {hasLiveStatusIndicator && (
             <span className="text-low/50 shrink-0">·</span>
           )}

@@ -1,4 +1,8 @@
 import {
+  DotActivityIndicators,
+  type DotActivityState,
+} from './DotActivityIndicators';
+import {
   PushPinIcon,
   HandIcon,
   TriangleIcon,
@@ -29,7 +33,7 @@ const formatRelativeElapsed = (dateString: string): string => {
   return `${diffDays}d ago`;
 };
 
-export interface WorkspaceSummaryProps {
+export interface WorkspaceSummaryProps extends DotActivityState {
   name: string;
   workspaceId?: string;
   filesChanged?: number;
@@ -66,6 +70,8 @@ export function WorkspaceSummary({
   hasPendingApproval = false,
   hasRunningDevServer = false,
   hasUnseenActivity = false,
+  dotUnreadCount = 0,
+  dotNeedsAttentionCount = 0,
   activeSubagentCount = 0,
   unresolvedSubagentCount = 0,
   latestProcessCompletedAt,
@@ -140,7 +146,11 @@ export function WorkspaceSummary({
               {name}
             </span>
             <span className="phone-workspace-caption">
-              {state}
+              <span>{state}</span>
+              <DotActivityIndicators
+                dotUnreadCount={dotUnreadCount}
+                dotNeedsAttentionCount={dotNeedsAttentionCount}
+              />
               {latestProcessCompletedAt && !isRunning && (
                 <> · {formatRelativeElapsed(latestProcessCompletedAt)}</>
               )}
@@ -204,7 +214,10 @@ export function WorkspaceSummary({
         >
           {name}
         </div>
-        {(!summary || isActive) && (
+        {(!summary ||
+          isActive ||
+          dotUnreadCount > 0 ||
+          dotNeedsAttentionCount > 0) && (
           <div className="flex w-full items-center gap-base text-sm h-5">
             {/* Dev server running - leftmost */}
             {hasRunningDevServer && (
@@ -244,6 +257,10 @@ export function WorkspaceSummary({
                 />
               )}
 
+            <DotActivityIndicators
+              dotUnreadCount={dotUnreadCount}
+              dotNeedsAttentionCount={dotNeedsAttentionCount}
+            />
             {/* Sub-agent activity from the Codex thread graph */}
             {hasSubagentActivity && (
               <span

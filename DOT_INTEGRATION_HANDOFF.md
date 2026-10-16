@@ -1,3 +1,5 @@
+> Current addition: [Dot reply notification source and deployment handoff](DOT_NOTIFICATION_HANDOFF.md). Separate unread/attention UI and durable state are prepared, not activated. Preserve Mobile/Dot and Sent Steering in the next combined candidate.
+
 # Dot chat integration: preservation and handoff
 
 > Latest: [discovery trace and supported resolution](DOT_DISCOVERY_TRACE.md),

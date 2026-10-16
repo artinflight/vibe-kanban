@@ -1,3 +1,24 @@
+# Connectivity watcher installed — October 16
+
+Read [VK_CONNECTIVITY_WATCHER.md](VK_CONNECTIVITY_WATCHER.md). The matching local
+issue is created and linked to workspace `281e1381-05fa-479c-944b-8d67d489a762`.
+`vk-connectivity-watch.service` runs independently from SSD copies, every 30s,
+with fixed expiry October 19 at 15:07:44 UTC and bounded private JSONL logs.
+The corrected collector reads both historic startup failures, native model/
+address-lookup errors and failed execution IDs. Shared connectivity is a strong
+lead, not a proven root cause; the reported GitHub failure's original timestamp
+remains unverified. Initial setup defects before 15:10 are documented separately.
+Ten tests, ops/diff checks and unit verification pass. Full local check/lint/
+format stop on absent frontend tools; workspace Rust tests stop on absent GLib.
+Pre-PR inspection found persistent journal glob-expansion timeouts. The updated
+collector discovers active units over systemd and queries exact names instead;
+the installed source preserves the original expiry and cursors. The operator
+requested push and a PR into staging. The branch is pushed and
+[PR #256](https://github.com/artinflight/vibe-kanban/pull/256) is open against
+staging. Await hosted CI, review and the next recurrence;
+no merge is requested. No application restart, DNS change or authenticated retry
+occurred. Preserve logs for recurrence.
+
 # Clickable summary links — activated October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) merged into staging

@@ -1,3 +1,13 @@
+# Agent connectivity diagnostics — October 16
+
+A separate read-only `vk-connectivity-watch.service` is installed on the mounted
+SSD with fixed expiry October 19 at 15:07:44 UTC. It compares DNS/HTTPS layers
+and records classified native/backend errors and failed-execution metadata.
+Multiple processes failed in the 14:23–24 and 14:46–47 windows, with verified
+native address-lookup errors during the first; root cause remains unproven.
+See [VK_CONNECTIVITY_WATCHER.md](VK_CONNECTIVITY_WATCHER.md) for the linked local
+issue, evidence, limits and stop command. No VK restart or DNS change occurred.
+
 # Summary web-link rendering — live October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) is merged into

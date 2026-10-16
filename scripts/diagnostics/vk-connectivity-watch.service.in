@@ -1,0 +1,23 @@
+[Unit]
+Description=Bounded VK agent connectivity diagnostics (expires automatically)
+After=network-online.target
+ConditionPathIsMountPoint=/mnt/vk-storage
+
+[Service]
+Type=simple
+UMask=0077
+ExecStart=/usr/bin/python3 -B @ROOT@/bin/connectivity_watch.py --output @ROOT@/logs --codex-logs /home/mcp/.local/share/vibe-kanban-green-codex-home/logs_2.sqlite --vk-db /home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite --resolvers 127.0.0.53 100.100.100.100 10.0.0.97 1.1.1.1 --lookback 7200 --until @UNTIL@
+Restart=on-failure
+RestartSec=30
+MemoryMax=256M
+CPUQuota=20%
+TasksMax=96
+LimitCORE=0
+Nice=10
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=@ROOT@
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+
+[Install]
+WantedBy=default.target

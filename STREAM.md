@@ -1,3 +1,21 @@
+# Connectivity watcher stream — October 16
+
+Branch `vk/281e-vk-intermittent` adds the standalone diagnostic watcher, unit
+template, ten offline tests and [runbook](VK_CONNECTIVITY_WATCHER.md). The local
+issue is linked to this workspace. Runtime source/logs are copied outside the
+worktree to `/mnt/vk-storage/vk-connectivity-watch-20261016/`; the enabled service
+expires October 19 at 15:07:44 UTC and survives this task ending. Network/DNS
+configuration and the live application are unchanged. Correlate the next natural
+failure before proposing a fix. The operator requested push and a PR into
+`staging`; the branch is pushed and
+[PR #256](https://github.com/artinflight/vibe-kanban/pull/256) is open. Merge
+remains separate. Pre-PR inspection found journal unit-glob
+expansion timing out repeatedly. The corrected collector discovers running VK
+units over systemd and queries exact names, following future releases without
+the expensive historical glob. Expiry/cursors are preserved. Focused tests,
+ops checks and branch policy pass. Full local checks/lint/format lack frontend
+tools, and workspace Rust tests lack GLib; hosted CI must supply that baseline.
+
 # Clickable summary links release — live October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) merged into staging

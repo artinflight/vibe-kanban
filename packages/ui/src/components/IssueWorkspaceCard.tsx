@@ -349,7 +349,10 @@ export function IssueWorkspaceCard({
       >
         <div
           className={cn(
-            'flex items-center flex-wrap sm:flex-nowrap gap-half text-sm text-low min-w-0 overflow-hidden',
+            'flex items-center flex-wrap gap-half text-sm text-low min-w-0',
+            !workspace.dotUnreadCount &&
+              !workspace.dotNeedsAttentionCount &&
+              'sm:flex-nowrap overflow-hidden',
             shouldStackPrBadges ? 'w-full' : 'flex-1'
           )}
         >

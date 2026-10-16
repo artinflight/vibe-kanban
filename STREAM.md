@@ -1,14 +1,16 @@
-# Clickable summary links release — October 16
+# Clickable summary links release — live October 16
 
-Branch `vk/242a-vk-clickable-lin` is pushed and PR251 owns staging integration.
-All 16 link and 21 history tests pass; real sandboxed editor clicks pass at
-desktop and phone widths. Preserve the byte-identical live history fallback.
-The first hosted run passed all standard jobs, including backend tests, while
-its unrelated old-release source fence rejected this branch. Use PR251/current
-checks for integration status and final source-bound artifact evidence.
-The exact frontend rollback is mirrored and restore-verified on Desktop B.
-Full mutable-state backup remains unresolved by actual capacity; no live asset
-change or restart occurred. See [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md).
+[PR #251](https://github.com/artinflight/vibe-kanban/pull/251) merged into staging
+at `cb613654ad911ffa976ee53ea125a1dd67bd2bbe`; exact-head Test run38885247672
+passed. The source-equivalent frontend package is live as version 0.1.42 after
+an atomic pointer switch at 10:30 UTC. All 16 link and 21 history regressions
+pass; the byte-identical incumbent history fallback remains included.
+
+The operator approved the verified Desktop B frontend rollback in place of a
+fresh full mutable-state backup. Release hashes, served files, retained old
+assets and unchanged service PIDs passed validation. Sandboxed Chromium checked
+the live app and actual served editor at desktop and phone widths with API
+writes blocked. See [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md).
 
 ## Retained staging sub-agent stream
 

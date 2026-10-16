@@ -1,3 +1,17 @@
+# Mobile Dot route correction — October 16
+
+The reported missing UI is a navigation gap: project/issue pages do not show
+the standalone workspace tabs. The actual S25 installed Chrome app did expose a
+clickable Dot tab before the phone locked. The currently served entry assets
+match the earlier deployed release; this was not an observed asset replacement.
+
+The correction adds a local issue-workspace Dot shortcut and a direct
+`/workspaces/<id>#dot` entry that selects Dot without marking hidden agent chat
+seen. See VK_MOBILE_DOT.md for the exact operator link and validation status.
+The phone must be unlocked for actual panel verification; keyboard and real
+phone reply remain unverified. The earlier pairing note expired. No new code,
+pairing, browser session inspection or conversation send was performed.
+
 # Mobile Dot frontend live for phone QA — October 16
 
 The operator explicitly requested deployment so Seamus can test on his phone.

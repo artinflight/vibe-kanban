@@ -186,6 +186,7 @@ export interface NavbarProps {
   onOpenCommandBar?: () => void;
   onOpenSettings?: () => void;
   onNavigateToBoard?: (() => void) | null;
+  onNavigateToDot?: () => void;
   onNavigateBack?: () => void;
   onReload?: () => void;
   onOpenDrawer?: () => void;
@@ -216,6 +217,7 @@ export function Navbar({
   onOpenCommandBar,
   onOpenSettings,
   onNavigateToBoard,
+  onNavigateToDot,
   onNavigateBack,
   onReload,
   onOpenDrawer,
@@ -284,6 +286,14 @@ export function Navbar({
               </span>
               <span>Workspaces</span>
             </button>
+            {onNavigateToDot && (
+              <button type="button" onClick={onNavigateToDot}>
+                <span className="mobile-nav-symbol">
+                  <ChatCircleDotsIcon />
+                </span>
+                <span>Dot</span>
+              </button>
+            )}
           </>
         ) : (
           primaryTabs.map((tab) => {

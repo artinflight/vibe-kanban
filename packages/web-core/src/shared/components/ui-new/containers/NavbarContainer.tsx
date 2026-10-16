@@ -1,4 +1,5 @@
 import { useMemo, useCallback } from 'react';
+import { useLocation, useNavigate } from '@tanstack/react-router';
 import { isDotSidechatEnabled } from '@/shared/lib/dotSidechat';
 import { useTranslation } from 'react-i18next';
 import { useMobileSheet } from '@/shared/hooks/useMobileSheet';
@@ -39,7 +40,10 @@ import { useActionVisibilityContext } from '@/shared/hooks/useActionVisibilityCo
 import { useMobileActiveTab } from '@/shared/stores/useUiPreferencesStore';
 import { CommandBarDialog } from '@/shared/dialogs/command-bar/CommandBarDialog';
 import { SettingsDialog } from '@/shared/dialogs/settings/SettingsDialog';
-import { getProjectDestination } from '@/shared/lib/routes/appNavigation';
+import {
+  getDestinationHostId,
+  getProjectDestination,
+} from '@/shared/lib/routes/appNavigation';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useCurrentAppDestination } from '@/shared/hooks/useCurrentAppDestination';
 import { getRemoteAuthDegradedMessage } from '@/shared/lib/auth/remoteAuthDegraded';
@@ -140,6 +144,8 @@ export function NavbarContainer({
   const isLocalOnlySession =
     loginStatus?.status === 'loggedin' && !loginStatus.profile;
   const appNavigation = useAppNavigation();
+  const navigate = useNavigate();
+  const hash = useLocation({ select: (location) => location.hash });
   const destination = useCurrentAppDestination();
   const projectDestination = useMemo(
     () => getProjectDestination(destination),
@@ -149,7 +155,11 @@ export function NavbarContainer({
   const projectId = projectDestination?.projectId ?? null;
   const isOnProjectSubRoute =
     projectDestination !== null && projectDestination.kind !== 'project';
-  const [mobileActiveTab, setMobileActiveTab] = useMobileActiveTab();
+  const [storedMobileActiveTab, setMobileActiveTab] = useMobileActiveTab();
+  const mobileActiveTab =
+    isDotSidechatEnabled && selectedWorkspace && hash === 'dot'
+      ? 'dot'
+      : storedMobileActiveTab;
 
   // Find remote workspace linked to current local workspace
   const linkedRemoteWorkspace = useMemo(() => {
@@ -365,6 +375,20 @@ export function NavbarContainer({
       onOpenSettings={handleOpenSettings}
       onNavigateBack={handleNavigateBack}
       onNavigateToBoard={handleNavigateToBoard}
+      onNavigateToDot={
+        isDotSidechatEnabled &&
+        selectedWorkspace &&
+        !isCreateMode &&
+        !getDestinationHostId(destination)
+          ? () => {
+              void navigate({
+                to: '/workspaces/$workspaceId',
+                params: { workspaceId: selectedWorkspace.id },
+                hash: 'dot',
+              });
+            }
+          : undefined
+      }
       onOpenDrawer={onOpenDrawer}
       mobileTabs={
         selectedWorkspace || isCreateMode
@@ -381,6 +405,8 @@ export function NavbarContainer({
         setMobileActiveTab(tab);
         if (isOnProjectPage || (tab === 'workspaces' && isCreateMode)) {
           appNavigation.goToWorkspaces();
+        } else if (isDotSidechatEnabled) {
+          void navigate({ hash: tab === 'dot' ? 'dot' : '', replace: true });
         }
       }}
       leftSlot={

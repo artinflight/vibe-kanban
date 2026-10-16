@@ -1,5 +1,29 @@
 # Mobile Dot navigation
 
+## Direct navigation correction — October 16
+
+The live mobile assets were verified unchanged when the operator reported that
+Dot was missing. Inspection of the actual S25 installed Chrome app found a
+clickable Dot control in its bottom navigation. The phone subsequently locked;
+no private inputs, browser session data, pairing or conversation were inspected.
+
+The navigation gap is route-specific: project/issue pages use the project
+navigation instead of the standalone workspace tabs. This correction adds Dot
+to that navigation when a local workspace is selected. It opens the same
+workspace's standalone Dot panel. Boards without a selected workspace retain
+their existing navigation because a conversation needs workspace context.
+
+The direct route is
+[this workspace's Dot panel](https://vibe.local/workspaces/2e35466b-127e-41ba-ab56-1dd47bdb8b85#dot).
+The `#dot` fragment selects Dot on initial mobile navigation; changing tabs
+updates the fragment. Opening this link does not mark the hidden agent chat
+seen. It does not pair a browser or send a message.
+
+Deployment and actual-phone panel validation for this correction are pending.
+The earlier privately delivered phone pairing code has expired. A new code must
+be handed off privately after the interface is reachable. Physical keyboard and
+real phone reply acceptance remain separate from viewport/browser checks.
+
 ## Live phone QA deployment — October 16
 
 The operator's later explicit deployment request authorized this frontend-only
@@ -41,8 +65,8 @@ queue updates, codeblock copy, attachment writes, sub-agent state semantics or
 saved-message REST/WebSocket/picker behavior. Those source areas and incumbent
 assets were retained; no broader interactive regression pass is claimed.
 
-**Seamus's next check:** refresh Vibe on the S25+, open an issue-linked workspace,
-and tap **Dot** beside **Chat**. The phone needs its own private pairing code if
+**Seamus's next check:** open the direct workspace Dot link above on the S25+.
+The standalone workspace page has **Dot** beside **Chat**. The phone needs its own private pairing code if
 it is not already paired. Physical keyboard and actual phone message/reply
 acceptance remain pending. The desktop reply proof and root-connector boundary
 are unchanged by this frontend deployment.

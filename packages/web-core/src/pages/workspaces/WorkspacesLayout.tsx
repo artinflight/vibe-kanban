@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocation } from '@tanstack/react-router';
 import { workspacesApi } from '@/shared/lib/api';
 import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 import { Group, Layout, Panel, Separator } from 'react-resizable-panels';
@@ -114,7 +115,12 @@ export function WorkspacesLayout() {
       : 'create-mode-seed-default';
 
   const isMobile = useIsMobile();
-  const [mobileTab, setMobileTab] = useMobileActiveTab();
+  const hash = useLocation({ select: (location) => location.hash });
+  const [storedMobileTab, setMobileTab] = useMobileActiveTab();
+  const mobileTab =
+    isDotSidechatEnabled && workspaceId && !isCreateMode && hash === 'dot'
+      ? 'dot'
+      : storedMobileTab;
   useEffect(() => {
     if (isMobile)
       setMobileTab(workspaceId || isCreateMode ? 'chat' : 'workspaces');

@@ -1,10 +1,13 @@
 # Dot integration preservation — October 16
 
+[PR #254](https://github.com/artinflight/vibe-kanban/pull/254) publishes this preserved source into a draft review
+against `staging`. Vibe issue T61 links the publication and separate mobile owner.
+
 Vibe issue T61 tracks preservation separately from mobile T60. Formatting,
 governance, 31 Python cases, both DOM suites and frontend types/lint pass;
 full Rust checks stop at this host's missing GLib development dependencies.
 Full-history secret scanning and source inventory pass. See the linked handoff
-for exact limits and the forthcoming staging PR.
+for exact limits and draft PR #254.
 
 The original eight API and three UI commits are preserved as sanitized public
 copies on `vk/de2d-vk-preserve-dot`, based on current `fork/staging`. Read

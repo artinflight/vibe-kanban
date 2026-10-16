@@ -108,7 +108,7 @@ recorded below; this PR publishes source for review and does not merge staging.
 - Dedicated preservation issue: [open issue](https://vibe.local/projects/1cf19067-4055-4432-bbc1-581919f9185d/issues/b9d9191d-5d68-5046-a54d-16186a87205b).
 - Mobile follow-up: [open owner workspace](https://vibe.local/workspaces/2e35466b-127e-41ba-ab56-1dd47bdb8b85).
 - Published source: [preservation branch](https://github.com/artinflight/vibe-kanban/tree/vk/de2d-vk-preserve-dot).
-- PR: pending publication; will be linked before final handoff.
+- PR: [#254 — preservation into staging](https://github.com/artinflight/vibe-kanban/pull/254) (draft; no merge or deployment).
 
 This preservation workspace initially shared mobile issue T60. Only its own
 association was moved to the dedicated issue; the mobile workspace association
@@ -147,5 +147,6 @@ handoff identifiers, not chat/session/grant identifiers.
 - Not exercised: rendered desktop/mobile/Android QA, actual browser pairing,
   real subscriptions or a real Dot reply. No production chat write, grant,
   service restart, proxy change, frontend switch or mobile-owner edit occurred.
+
 Private validation logs are retained on the mounted SSD under
 `/mnt/vk-storage/vk-dot-preservation-20261016/validation/`.

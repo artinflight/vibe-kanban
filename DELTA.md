@@ -1891,3 +1891,6 @@ Reconciled eight API and three UI commits in the dedicated preservation workspac
 original worktrees remain intact. Public copies sanitize historical operational
 details and retain Original-Commit provenance. DOT_INTEGRATION_HANDOFF.md records
 live source, unfinished mobile/actual-Dot acceptance and ownership. No deployment.
+
+Publication receipt: [draft PR #254](https://github.com/artinflight/vibe-kanban/pull/254) targets staging;
+Vibe T61 links the preserved source and mobile owner. Original worktrees remain clean.

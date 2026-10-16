@@ -31,6 +31,7 @@ import {
   type WorkspacesMainContainerHandle,
 } from './WorkspacesMainContainer';
 import { RightSidebar } from './RightSidebar';
+import { ResizableSidePane } from '@vibe/ui/components/ResizableSidePane';
 import { ChangesPanelContainer } from './ChangesPanelContainer';
 import { CreateChatBoxContainer } from '@/shared/components/CreateChatBoxContainer';
 import { PreviewBrowserContainer } from './PreviewBrowserContainer';
@@ -444,13 +445,15 @@ export function WorkspacesLayout() {
           </Group>
 
           {isRightSidebarVisible && !isCreateMode && (
-            <div className="w-[300px] shrink-0 h-full overflow-hidden">
+            <ResizableSidePane
+              enabled={import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1'}
+            >
               <RightSidebar
                 rightMainPanelMode={rightMainPanelMode}
                 selectedWorkspace={selectedWorkspace}
                 repos={repos}
               />
-            </div>
+            </ResizableSidePane>
           )}
         </div>
       </ChangesViewProvider>

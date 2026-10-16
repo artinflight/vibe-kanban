@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react';
+import { DotSidechatFixture } from './DotSidechatFixture';
 import { useTranslation } from 'react-i18next';
 import { FileTreeContainer } from './FileTreeContainer';
 import { ProcessListContainer } from './ProcessListContainer';
@@ -193,8 +194,20 @@ export const RightSidebar = memo(function RightSidebar({
   ]);
 
   return (
-    <div className="h-full border-l bg-secondary overflow-y-auto">
-      <div className="divide-y border-b">
+    <div
+      className={
+        import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1'
+          ? 'h-full border-l bg-secondary flex flex-col overflow-hidden'
+          : 'h-full border-l bg-secondary overflow-y-auto'
+      }
+    >
+      <div
+        className={
+          import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1'
+            ? 'divide-y border-b overflow-auto max-h-[40%] shrink-0'
+            : 'divide-y border-b'
+        }
+      >
         {sections
           .filter((section) => section.visible)
           .map((section) => (
@@ -215,6 +228,11 @@ export const RightSidebar = memo(function RightSidebar({
             </div>
           ))}
       </div>
+      {import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1' && (
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <DotSidechatFixture />
+        </div>
+      )}
     </div>
   );
 });

@@ -270,3 +270,64 @@
   padding: 8px 16px;
   font-size: 11px;
 }
+
+/* The mobile Git/details tab is full-width. Keep chat reachable when the
+   software keyboard reduces its height, without changing desktop sizing. */
+@media (max-width: 767px) {
+  .dot-access {
+    height: 100%;
+    box-sizing: border-box;
+  }
+  .dot-fixture-container {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+  .dot-panel {
+    flex-shrink: 0;
+    min-width: 0;
+  }
+  .dot-heading,
+  .dot-scope,
+  .dot-history {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .dot-scope {
+    overflow-wrap: anywhere;
+  }
+  .dot-history {
+    min-height: 64px;
+  }
+  .dot-composer {
+    flex-shrink: 0;
+    padding: 10px 12px max(10px, env(safe-area-inset-bottom));
+  }
+  .dot-composer textarea,
+  .dot-access input {
+    font-size: 16px;
+    min-width: 0;
+  }
+  .dot-composer-actions {
+    flex-wrap: wrap;
+  }
+  .dot-composer-actions > span {
+    display: none;
+  }
+  .dot-composer-actions > button {
+    margin-left: auto;
+  }
+  .dot-heading button,
+  .dot-composer-actions button,
+  .dot-access button,
+  .dot-session button,
+  .dot-error button,
+  .dot-latest {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .dot-session {
+    flex-shrink: 0;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}

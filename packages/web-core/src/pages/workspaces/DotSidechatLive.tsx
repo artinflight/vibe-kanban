@@ -245,7 +245,8 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
         <h3>Private chat with Dot</h3>
         <p>
           Pair this browser with a one-use code from your Vibe administrator.
-          Access stays valid until you disconnect or it is revoked, and covers only the approved projects.
+          Access stays valid until you disconnect or it is revoked, and covers
+          only the approved projects.
         </p>
         <form
           onSubmit={(event) => {

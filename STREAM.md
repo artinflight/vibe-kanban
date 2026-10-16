@@ -1,6 +1,8 @@
 # Sent steering draft correction — October 16
 
 Branch `vk/54f8-vk-sent-steering`, based on current `fork/staging` at `2249da3e9`.
+Source fix `ca9911225` is pushed; [PR #257](https://github.com/artinflight/vibe-kanban/pull/257)
+is open into `staging`. Publication checks and remaining gates are in `HANDOFF.md`.
 [Matching issue](https://vibe.local/projects/e2645d00-9bc6-4136-8d6e-0c2fcf032d77/issues/e662a94d-0fff-428b-9f43-9d771ebcc8e1) is linked to workspace
 `54f815cd-930d-42e3-9fb5-a39d214bcf86`.
 

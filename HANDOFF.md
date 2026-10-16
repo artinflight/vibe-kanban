@@ -1,3 +1,21 @@
+# Sent steering fix publication — PR257
+
+[PR #257](https://github.com/artinflight/vibe-kanban/pull/257) is open into
+`staging`; source fix `ca9911225` was pushed and verified on GitHub. The matching
+local issue remains In review and linked to this workspace.
+
+Fresh publication checks: formatting, ops, all four frontend type checks and
+local-web/UI lint pass. `pnpm run check`, `pnpm run lint` and
+`cargo test --workspace` were attempted sequentially using the shared SSD Cargo
+target with incremental compilation disabled. All stop in desktop native build
+dependencies because GLib/GObject development libraries are absent; Rust tests
+were not executed. Exact command/exit receipts are under
+`.vk-preview/steering-test/pr-validation/`.
+
+Remaining: passing applicable CI and review, staging acceptance, frontend package
+build and human UI QA, then separately authorized rollout. Earlier synthetic
+390/412/1440 regression evidence remains valid. No production mutation/restart.
+
 # Sent steering draft correction pickup — October 16
 
 [Issue](https://vibe.local/projects/e2645d00-9bc6-4136-8d6e-0c2fcf032d77/issues/e662a94d-0fff-428b-9f43-9d771ebcc8e1) was created in the local vibe-kanban project and its workspace link
@@ -13,7 +31,8 @@ Final synthetic steering browser tests pass at 390/412/1440 pixels, including
 navigation/reload, failed draft recovery, retry and queued-draft preservation.
 Web-core/local-web type checks, frontend/shared-file lint, formatting and ops pass.
 Production bundling is unverified: the default heap failed and the larger build
-was stopped during swap-heavy packaging. No full Rust workspace suite was run.
+was stopped during swap-heavy packaging. The later full Rust workspace command
+was attempted but blocked by missing native desktop libraries.
 Read [VK_SENT_STEERING_DRAFT.md](VK_SENT_STEERING_DRAFT.md) for commands and evidence.
 Source-only task; production is unchanged.
 

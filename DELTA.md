@@ -1891,3 +1891,9 @@ the paid harness was not rerun. No live connector edit, restart or deployment.
 - Final source browser regression passes at 390/412/1440 pixels; queued and failed recovery remain intact.
 - Type checks, frontend/shared lint, formatting and ops pass. Production bundling remains unverified; no deployment occurred.
 - Evidence and commands: `VK_SENT_STEERING_DRAFT.md`.
+
+## 2026-10-16 — Steering fix published as PR257
+
+- Pushed source `ca9911225` and opened https://github.com/artinflight/vibe-kanban/pull/257 into staging.
+- Fresh format/ops/frontend type checks and lint pass. Full check/lint/workspace Rust commands were attempted but blocked by missing GLib/GObject desktop dependencies.
+- Applicable CI, review, staging acceptance, package/QA and authorized rollout remain; production is unchanged.

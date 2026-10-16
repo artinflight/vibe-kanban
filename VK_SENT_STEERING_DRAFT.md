@@ -5,6 +5,9 @@ Created in the local vibe-kanban project and linked to workspace
 `54f815cd-930d-42e3-9fb5-a39d214bcf86`; the persisted workspace task ID was verified.
 GitHub issues are disabled for `artinflight/vibe-kanban`.
 
+PR: [#257 — Stop sent steering messages reappearing as drafts](https://github.com/artinflight/vibe-kanban/pull/257), targeting `staging`.
+Source fix: `ca9911225`, pushed and verified on GitHub.
+
 ## Cause and correction
 
 The active-turn handler saves a `DRAFT_FOLLOW_UP` recovery scratch before its
@@ -74,5 +77,15 @@ This temporary frontend is only for automated tests and is stopped afterward.
 
 Prepared source only. No live asset swap, backend restart or deployment occurred.
 Review and validate in the fork's local preview before promotion to staging;
-any later live activation follows the deployment runbook. The full Rust workspace
-suite is outside this frontend-only task's focused validation.
+any later live activation follows the deployment runbook.
+
+The fresh pre-PR baseline passes formatting, ops, all four frontend type checks
+and local-web/UI lint. Full `pnpm run check`, `pnpm run lint` and
+`cargo test --workspace` were attempted sequentially with the shared SSD Cargo
+target and incremental compilation disabled; each exits 101 in desktop native
+dependencies because this host lacks GLib/GObject development libraries. The Rust
+suite does not run. Receipts: `.vk-preview/steering-test/pr-validation/results.json`.
+
+Still required before release: passing applicable CI and review, staging
+acceptance, frontend packaging and human UI QA, then an authorized frontend
+rollout. No approval to merge or deploy is implied by publishing the PR.

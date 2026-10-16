@@ -1,3 +1,15 @@
+# Mobile publication dependency — October16
+
+This mobile branch is stacked on the exact sanitized API/UI history from
+[preservation PR #254](https://github.com/artinflight/vibe-kanban/pull/254),
+pinned at `14fca343bc1f466cb369524570a199271082208c`. Only this mobile branch was
+rebased; preservation workspace `de2d98a3-b73f-4e70-9445-caee5cae188c` and its
+branch remain untouched. Review the delta above that shared commit. Integrate
+#254 first, then rebase mobile onto staging before merging. Actual S25+ keyboard
+acceptance, a real paired Dot roundtrip and mobile activation remain pending.
+Required aggregate checks reach the Rust stage and stop on missing GLib host
+libraries; frontend checks and the previously tested product bytes are preserved.
+
 # Mobile Dot integration — October16
 
 Branch `vk/2e35-vk-mobile-dot-in` starts from `2249da3e9`. Import the already-live

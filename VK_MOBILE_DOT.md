@@ -6,11 +6,20 @@ mobile content area. Git/details retains its existing tools and Notes. Desktop
 keeps the resizable sidebar. The remote frontend and builds without the flag
 retain their existing navigation.
 
-This stream starts from `2249da3e9` and incorporates the live frontend integration
-from `72768eaa6` / `975f62c7c` and the responsive preparation from `c71c2ee7d`.
-Those changes existed on the separate `activation/dot-sidechat` branch; importing
-them here preserves the live integration while making the mobile change reviewable.
-It does not install or change the external browser API or connector.
+This mobile follow-up is stacked on [preservation PR #254](https://github.com/artinflight/vibe-kanban/pull/254),
+branch `vk/de2d-vk-preserve-dot`, pinned at
+`14fca343bc1f466cb369524570a199271082208c`. That shared baseline owns the original
+API, sidebar UI and responsive CSS. The original mobile commit `6a3af844c` was
+replayed onto that history before publication; its frontend files remain byte
+identical. The preservation branch and workspace were not modified.
+
+Review the mobile-only delta from the pinned preservation commit to this branch.
+Both PRs target `staging`, so GitHub's aggregate diff includes the shared baseline
+until #254 is integrated. Merge the preservation work first, then rebase this
+follow-up onto the resulting staging commit before merging it. Do not use the
+mobile PR as a second independent publication of the API/UI baseline. Its changes
+are the labeled Dot navigation, full-screen mounting, shared wrapper/flag, browser
+acceptance harness and mobile notes. It does not change connector/API behavior.
 
 The mobile panel remains mounted when switching tabs, preserving drafts and
 pending requests. It resets when the workspace changes. Inputs use 16px text,
@@ -23,7 +32,12 @@ scope, CSRF, receipt and retry behavior is retained.
 Repository formatting, ops governance, all four frontend TypeScript checks,
 and the production frontend build pass (with an 8GiB Node heap). Local-web and UI lint pass. Focused shared lint passes except for the
 pre-existing RightSidebar useMemo dependency warning (also present at the base).
-No Rust or generated API types changed; the Rust workspace suite was not run.
+The required `pnpm run check`, `pnpm run lint` and `cargo test --workspace`
+were attempted before publication with the shared SSD Cargo target and incremental
+compilation disabled. The frontend stages passed; the Rust stages fail on this
+host's missing `glib-2.0` pkg-config development library. Later aggregate stages
+are not certified. No Rust, remote deployment, schema or generated types changed.
+GitHub CI is still required before merge.
 
 `scripts/testing/mobile-dot-browser.mjs` exercises the real branch frontend at
 360/393/412px, 844px landscape and 1440px desktop. It simulates browser pairing,
@@ -54,7 +68,7 @@ browser-size checks as physical phone acceptance.
 
 Before activation, complete a clean source-bound frontend package, preserve and
 verify incumbent immutable files, and follow the frontend activation/rollback
-runbook. Live deployment is pending. The phone browser needs its own unconsumed
+runbook. Live deployment is pending; publishing or merging this PR does not activate it. The phone browser needs its own unconsumed
 pairing code entered privately by the operator at https://vibe.local; existing
 desktop pairing does not authenticate the phone. This task neither generates nor
 reads a real pairing code. Actual Dot roundtrip requires the existing integration's

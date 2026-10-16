@@ -1,3 +1,18 @@
+# Dot attention connector discovery — October 16 follow-up
+
+Seamus confirms the deployed badges. Main Dot still lacks the attention tool
+and append argument; its attention workflow remains unaccepted. The installed
+facade publishes both and passes isolated discovery/dispatch/lifecycle tests;
+all 58 sidechat tests pass. Registered-service logs show 232 tool calls with
+zero failures but zero catalog requests since the 22:37 UTC deployment.
+No connector compatibility defect is demonstrated. The supported next step is
+one metadata refresh of the existing connection after this deployment, followed
+by main-conversation annotate/resolve acceptance. A session that remains stale
+after its app catalog updates is a platform limitation, not a QA success.
+[Exact tools, evidence, supported resolution and limits](DOT_ATTENTION_CONNECTOR.md).
+No live changes/restart; chats, subscriptions, Mobile and Sent Steering preserved.
+Older rollout and phone-test notes below remain historical.
+
 # Dot reply notifications — live October 16, 22:38 UTC
 
 Seamus's approved Dot service/connector and combined frontend rollout is live.

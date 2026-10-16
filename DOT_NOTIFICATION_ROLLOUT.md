@@ -1,3 +1,8 @@
+> Attention discovery follow-up: Seamus confirms the badges, but main Dot
+> still lacks attention controls. The installed connector publishes and dispatches
+> them correctly; see [the current evidence and supported resolution](DOT_ATTENTION_CONNECTOR.md).
+> Main-conversation annotate/resolve acceptance remains open.
+
 # Dot notification rollout — live October 16
 
 Seamus approved deployment of the Dot chat service/connector and combined

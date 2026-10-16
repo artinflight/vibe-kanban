@@ -1,3 +1,20 @@
+# Generated report links — live October 16 follow-up
+
+The OP::3D Print Issues failure was a Markdown link to an unpublished local
+HTML file. The web-link repair remained present in the newer Dot frontend.
+The first-response workflow now requires `vk-publish-artifact`, installed as a
+shared host capability, to upload and verify generated files before offering
+links. The native workspace/session API retains each file as an attachment.
+
+A standalone sandboxed HTML viewer was added to the existing live Dot release;
+its index, JS/CSS, pointer and service PIDs are unchanged. The exact print
+report opens from the returned Markdown at desktop/phone sizes, with working
+embedded frames and next/previous controls. Version remains 0.1.42.
+Read [VK_ARTIFACT_LINKS.md](VK_ARTIFACT_LINKS.md) for boundaries and receipts.
+Existing filesystem links are not rewritten; the publication helper and shared
+instruction cover new delivery. Already running turns cannot be assumed to have
+read new instructions. No blanket guarantee of agent compliance is claimed.
+
 # Dot reply notifications — live October 16, 22:38 UTC
 
 Seamus's approved Dot service/connector and combined frontend rollout is live.

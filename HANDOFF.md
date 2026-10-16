@@ -1,3 +1,26 @@
+# Clickable summary links release pickup — October 16
+
+Read [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md).
+[PR #251](https://github.com/artinflight/vibe-kanban/pull/251) owns staging
+integration; its current exact-head checks are authoritative for merge status.
+All 16 link and 21 history tests pass. Sandboxed Chromium verified real clicks
+in the actual editor at desktop and phone widths. The branch preserves the sole
+live-only history hook byte for byte. Local frontend checks/lint, formatting,
+ops and the initial production build passed. The first hosted run passed every
+standard job, including Rust tests; its unrelated old-release source fence failed.
+A final preservation build and exact-head PR checks bind the release candidate.
+
+No live assets or backend processes were changed. An exact frontend rollback
+archive was mirrored to `desktop:B:/vk-backups/vk-clickable-links-20261016/`,
+SHA256 `55932328398d219a521ec826fbffca892e8b78fa723a34accae6a0e4dc0f9fb5`;
+all 1,342 files passed a physical restore/readback. This is a frontend rollback,
+not a fresh mutable-state backup. The legacy lean helper would stage about65 GB
+of live sessions with about44 GB free on SSD; Desktop B has about25 GB free.
+Existing release backup receipts describe a30.4 GB Laptop backup, not a fresh
+Desktop B backup. The full-backup prerequisite remains unresolved. Do not claim
+live activation or silently waive it. Private artifacts remain under ignored
+`.vk-preview/link-validation/` on mounted SSD storage.
+
 # Automatic sub-agent activity correction — October 16
 
 Prepared on current `fork/staging` (`872f69996`) from source fix `2315ff268`.

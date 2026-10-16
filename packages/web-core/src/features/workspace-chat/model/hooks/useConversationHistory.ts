@@ -302,14 +302,33 @@ export const useConversationHistory = ({
       let fetchingId: string | null = null;
       try {
         let remaining = initial ? MIN_INITIAL_ENTRIES : REMAINING_BATCH_SIZE;
+        let pageLoaded = false;
+        let failedPage: { error: unknown } | null = null;
         for (const process of [...processesRef.current].reverse()) {
           if (scope.abort.signal.aborted) return;
           if (isRunning(process) || scope.cursors.get(process.id) === null)
             continue;
           fetchingId = process.id;
-          remaining -= await fetchPage(scope, process, remaining);
+          try {
+            remaining -= await fetchPage(scope, process, remaining);
+            pageLoaded = true;
+          } catch (error) {
+            if (scope.abort.signal.aborted || error instanceof CapturePending)
+              throw error;
+            // An unavailable turn must retain its warning and original prompt,
+            // while other authoritative pages remain reachable. Leave its cursor
+            // retryable; never invent entries or infer capture completeness.
+            scope.displayed[process.id] ??= {
+              executionProcess: process,
+              entries: [],
+            };
+            recordHistoryError(scope, process.id);
+            failedPage = { error };
+            console.warn('Unable to load conversation history', error);
+          }
           if (remaining <= 0) break;
         }
+        if (!pageLoaded && failedPage) throw failedPage.error;
         scope.initialLoaded = true;
         emit(scope, initial ? 'initial' : 'historic');
       } catch (error) {

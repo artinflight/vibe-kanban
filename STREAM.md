@@ -1,4 +1,16 @@
-# STREAM.md
+# Clickable summary links release — October 16
+
+Branch `vk/242a-vk-clickable-lin` is pushed and PR251 owns staging integration.
+All 16 link and 21 history tests pass; real sandboxed editor clicks pass at
+desktop and phone widths. Preserve the byte-identical live history fallback.
+The first hosted run passed all standard jobs, including backend tests, while
+its unrelated old-release source fence rejected this branch. Use PR251/current
+checks for integration status and final source-bound artifact evidence.
+The exact frontend rollback is mirrored and restore-verified on Desktop B.
+Full mutable-state backup remains unresolved by actual capacity; no live asset
+change or restart occurred. See [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md).
+
+## Retained staging sub-agent stream
 
 ## Stream Identifier
 

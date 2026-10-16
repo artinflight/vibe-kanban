@@ -1,3 +1,11 @@
+# Summary web-link rendering — October 16
+
+Read [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md) for the reproduced renderer
+failure and prepared repair. Read-only chat must recognize HTTP(S) addresses in
+prose and URL-only inline code on first render and streaming updates. Explicit
+Markdown and detected web links share sanitization; code examples and unsafe
+schemes remain inert. This is source validation, not live activation.
+
 # Automatic sub-agent activity correction — October 16
 
 The focused `fix/subagent-turn-activity` branch corrects completed Codex children

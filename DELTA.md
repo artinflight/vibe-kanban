@@ -1883,3 +1883,17 @@ the paid harness was not rerun. No live connector edit, restart or deployment.
 - Bounded cached reads preserve history; uncertain evidence remains unresolved.
 - Regression coverage includes AutoSwitch's resumed-parent failure and child
   reuse. This source merge is for the next backend restart, not live activation.
+
+## 2026-10-16 — Sent steering draft correction
+
+- Created and linked local issue `e662a94d-0fff-428b-9f43-9d771ebcc8e1`.
+- Queue hook returns delivery status; composer deletes only immediately delivered drafts.
+- Final source browser regression passes at 390/412/1440 pixels; queued and failed recovery remain intact.
+- Type checks, frontend/shared lint, formatting and ops pass. Production bundling remains unverified; no deployment occurred.
+- Evidence and commands: `VK_SENT_STEERING_DRAFT.md`.
+
+## 2026-10-16 — Steering fix published as PR257
+
+- Pushed source `ca9911225` and opened https://github.com/artinflight/vibe-kanban/pull/257 into staging.
+- Fresh format/ops/frontend type checks and lint pass. Full check/lint/workspace Rust commands were attempted but blocked by missing GLib/GObject desktop dependencies.
+- Applicable CI, review, staging acceptance, package/QA and authorized rollout remain; production is unchanged.

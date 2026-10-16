@@ -1,3 +1,11 @@
+# Steering draft persistence correction — October 16
+
+Confirmed immediate active-turn delivery must clear its persisted recovery draft.
+Failed delivery and queued follow-ups retain the draft for recovery.
+The composer previously cleared only visible state, so remounting restored sent
+text. This frontend source correction is prepared separately from live deployment.
+See [VK_SENT_STEERING_DRAFT.md](VK_SENT_STEERING_DRAFT.md) for issue and validation.
+
 # Summary web-link rendering — live October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) is merged into

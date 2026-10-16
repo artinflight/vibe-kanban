@@ -1,3 +1,23 @@
+# Dot unread and Needs Attention — October 16 implementation
+
+Separate violet Dot indicators and durable independent read/attention state are
+implemented in PR254 for desktop, phone and issue-linked workspaces. Visible
+focused replies clear only Dot unread; explicit Resolve clears attention.
+Coding-agent notification state is untouched. This source is not activated.
+Read [the notification implementation and coordinated release handoff](DOT_NOTIFICATION_HANDOFF.md).
+Sent Steering's pinned Mobile+Steering candidate excludes this feature; preserve
+both features in a later combined frontend, after the new sidechat API is live.
+No mobile-owner files/browser, live services, permissions or subscriptions changed.
+The earlier root reply/subscription reconciliation below remains applicable.
+
+# Sent Steering staging reconciliation
+
+PR257 is now merged at `9301e6a46`; the prepared release source is
+`1d074941d`, with its newer packaging evidence owned by the Sent Steering agent.
+The original publication notes below are retained as history; their pending-PR
+and packaging statements are superseded. Mobile+Steering and notification source
+must be combined without replacing either feature.
+
 # Steering draft persistence correction — October 16
 
 Confirmed immediate active-turn delivery must clear its persisted recovery draft.
@@ -5,6 +25,57 @@ Failed delivery and queued follow-ups retain the draft for recovery.
 The composer previously cleared only visible state, so remounting restored sent
 text. This frontend source correction is prepared separately from live deployment.
 See [VK_SENT_STEERING_DRAFT.md](VK_SENT_STEERING_DRAFT.md) for issue and validation.
+
+# Root reply and complete notification registration — October 16 follow-up
+
+Root's view caught up at 18:07 UTC without another refresh. Root directly read
+and replied to the retained phone test and verified reply persistence. Root also
+updated the existing enabled Reply to Vibe chats automation through the supported
+flow. Independent server readback confirms two active, unexpired, non-overlapping
+subscriptions: original VK Dev plus all projects excluding exactly VK Dev. Each
+of all 43 current projects, including 26 archived, matches one destination;
+the future-project policy is enabled. The original subscription is preserved.
+
+The previous root reply/registration blockers are superseded. Root still lacks
+list_pending_sidechat_messages. A fresh automatic message-to-reply roundtrip
+without a manual workspace hint and Seamus's user-visible receipt remain open.
+Seamus has already been asked for a fresh message; no additional refresh, pairing,
+activation or mobile UI investigation is needed. See [current evidence and acceptance](DOT_RELIABILITY_ROLLOUT.md).
+This reconciliation changes documentation only; no runtime state or mobile work.
+
+# Dot connector activation and complete project scope — October 16
+
+Seamus approved connector-only activation and all current, archived and future
+projects. The once-retried activation succeeded. Installed source `d2c79543e`
+expands both existing paired sessions from VK Dev-only to all 43 projects,
+including 26 archived, with automatic future-project reconciliation every five
+seconds. Existing subscriptions, credentials, expiration and revocation were
+preserved. Only the connector/publisher restarted; mobile owner work is untouched.
+
+Read [the exact activation and rollout handoff](DOT_RELIABILITY_ROLLOUT.md).
+All-project browser access and both notification registrations are live. Root
+replied directly to the retained phone message; the earlier desktop result was
+a manual integration-task relay. Fresh automatic routing and human viewing
+remain unverified, and root still lacks pending-message recovery. No more
+phone pairing/UI debugging or owner scope/activation decision is pending.
+
+# Dot integration preservation — October 16
+
+[PR #254](https://github.com/artinflight/vibe-kanban/pull/254) publishes this preserved source into a draft review
+against `staging`. Vibe issue T61 links the publication and separate mobile owner.
+
+The original eight API and three UI commits are preserved as sanitized public
+copies on `vk/de2d-vk-preserve-dot`, based on current `fork/staging`. Read
+[the reconciled source/deployment handoff](DOT_INTEGRATION_HANDOFF.md) and
+[commit provenance](DOT_PRESERVATION_COMMITS.json). The reported live browser
+test uses frontend `975f62c7c`; the prepared mobile correction is not selected by
+the observed live pointer. Seamus confirmed the first desktop roundtrip:
+the webhook reached Dot, its exact reply persisted through the integration task's
+available paired connector, and his screenshot showed the reply. Direct root dot
+connector access remains unresolved; the real phone roundtrip and mobile acceptance
+remain separate and unverified here. Private chat and receipt identifiers are not
+published. The mobile owner retains its active workspace and changes.
+The initial preservation phase made no runtime changes; the authorized connector-only activation and scope expansion above supersede that earlier boundary.
 
 # Summary web-link rendering — live October 16
 

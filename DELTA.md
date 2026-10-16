@@ -1884,6 +1884,109 @@ the paid harness was not rerun. No live connector edit, restart or deployment.
 - Regression coverage includes AutoSwitch's resumed-parent failure and child
   reuse. This source merge is for the next backend restart, not live activation.
 
+
+## 2026-10-16 — Preserve existing Dot sidechat integration
+
+Reconciled eight API and three UI commits in the dedicated preservation workspace;
+original worktrees remain intact. Public copies sanitize historical operational
+details and retain Original-Commit provenance. DOT_INTEGRATION_HANDOFF.md records
+live source, unfinished mobile/actual-Dot acceptance and ownership. No deployment.
+
+Publication receipt: [draft PR #254](https://github.com/artinflight/vibe-kanban/pull/254) targets staging;
+Vibe T61 links the preserved source and mobile owner. Original worktrees remain clean.
+
+
+## 2026-10-16 — Correct desktop Dot acceptance boundary for PR254
+
+Recorded Seamus's confirmation of the first successful desktop message/webhook/
+persisted-reply exchange and screenshot. The integration task's paired connector
+provided the reply route; direct root connector access remains unresolved. Real
+phone acceptance remains separately owned. No private conversation, screenshot,
+pairing data or receipt identifiers are published, and no live test is replayed.
+
+
+## 2026-10-16 — Dot context recovery and explicit all-project planning
+
+Investigated the accepted phone event without exposing private content or IDs;
+stored/signed context is complete. Added read-only unanswered-context recovery,
+non-replay cursor compatibility, explicit project authorization and a stale-plan-
+fenced browser-scope planner with CI regressions. Prepared 43-current/17-active
+snapshots for both existing indefinite sessions; access/subscriptions are unchanged.
+The desktop result was a manual relay. Root catalog/context is a platform boundary;
+a natural real phone reply is not yet verified. Mobile owner files/browser retained.
+
+Staging receipt: source d8ceceb8f and verified Desktop B mirror are prepared.
+Automatic approval review denied the exact live install/restarts for missing
+specific authorization and disruption risk; no live change or workaround occurred.
+
+
+## 2026-10-16 — Approved connector activation and automatic complete project scope
+
+Exact owner approval resolved the earlier review block. The single authorized
+retry succeeded, then validated source d2c79543e activated the complete policy:
+both existing sessions now cover all 43 current projects, including 26 archived;
+future projects are reconciled automatically every five seconds. Private current
+SQLite backup and Desktop B mirror were verified before application. Only the
+connector and publisher restarted. Original subscription metadata and accepted
+attempts, browser PID, frontend and mobile owner work were preserved.
+
+49 sidechat tests and 28 existing connector regressions pass. New broad event
+arguments exclude the already subscribed project to avoid duplicate delivery.
+That actual platform subscription and root metadata/tool-context verification
+remain blocked on capabilities unavailable to this coding execution. One real
+phone message remains unanswered; no manual relay is claimed as phone acceptance.
+Owner approval and scope decisions are settled; no pairing/UI debugging remains.
+
+
+## 2026-10-16 — Trace refreshed Dot discovery discrepancy
+
+The updated service received server/discover, tools/list and events/list at
+17:53:53 UTC in the reported refresh window. Its configured facade advertises
+four sidechat tools and current/all/future event filters. A registered pending
+recovery call succeeded at 18:00:50–51 on the same adapter child; this coding
+execution now exposes the new recovery tool. Root and earlier worker metadata
+still differ. No duplicate local tunnel, wrong release or binary mismatch found.
+
+DOT_DISCOVERY_TRACE.md contains exact public schema fingerprints, timestamped
+comparisons, measurement limits and a supported platform escalation packet.
+Method-only logs cannot reconstruct historical response bodies or independently
+verify the root's stored connection/catalog record. No exact cache component or
+review hold is claimed. No repeated refresh, permissions/credential/subscription
+change, service restart, reply relay or mobile work occurred. Root phone reply
+and complete notification registration remain acceptance gaps.
+
+
+## 2026-10-16 — Root reply and complete notification registration verified
+
+Root's owner reports its view caught up at 18:07 UTC without another refresh.
+Root directly read the retained phone message, checked no reply existed, wrote
+one and verified reply_persisted=true. The enabled Reply to Vibe chats automation
+was updated through the supported platform flow with original VK Dev plus
+all-projects-excluding-VK-Dev triggers. The earlier root reply/broad-registration
+blockers are superseded.
+
+Independent read-only server inspection at 18:23 UTC confirms exactly two active,
+unexpired, non-overlapping subscriptions for the owner; original identity/filter
+preserved; all 43 current projects including 26 archived match one destination;
+future policy enabled; existing message-thread bindings valid. Exactly one phone
+reply is persisted in the original thread/workspace, without accepted-event replay.
+Root pending discovery remains absent. A fresh automatic roundtrip without a
+workspace hint and user-visible receipt remain unverified; Seamus was already
+asked for the new message. No new refresh/pairing/activation/runtime changes or
+mobile work occurred during reconciliation. Private IDs/content remain excluded.
+
+
+## 2026-10-16 — independent Dot unread and Needs Attention
+
+Added owner/issue-scoped persistent Dot read/attention state and separate violet
+indicators on desktop/mobile workspace and issue surfaces. Visible focused replies
+acknowledge explicit IDs; resolution is independent and explicit. Synthetic Python,
+DOM and Chromium cases cover persistence, shared issues, read races and coding-agent
+isolation. Release coordinated with Sent Steering; notification backend/frontend
+remain undeployed. See DOT_NOTIFICATION_HANDOFF.md for source, validation and the
+backend-first combined Mobile+Steering release procedure.
+
+
 ## 2026-10-16 — Sent steering draft correction
 
 - Created and linked local issue `e662a94d-0fff-428b-9f43-9d771ebcc8e1`.

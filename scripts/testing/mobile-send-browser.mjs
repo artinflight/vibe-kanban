@@ -108,6 +108,30 @@ try {
         unknown = new Set();
       let failNext = false;
       let created = false;
+      let queueNext = false;
+      let queueStatus = { status: 'empty' };
+      let releaseFirstSubmission;
+      const firstSubmissionGate = new Promise((resolve) => {
+        releaseFirstSubmission = resolve;
+      });
+      // Persist fixture drafts across page lifetimes, just like the server.
+      const scratches = new Map();
+      const scratchStreams = new Map();
+      const draftPath = `/api/scratch/DRAFT_FOLLOW_UP/${sid}`;
+      const publishScratch = (path) => {
+        for (const stream of scratchStreams.get(path) ?? [])
+          stream.send(
+            JSON.stringify({
+              JsonPatch: [
+                {
+                  op: 'replace',
+                  path: '/scratch',
+                  value: scratches.get(path) ?? null,
+                },
+              ],
+            })
+          );
+      };
       const proc = {
         id: '00000000-0000-4000-8000-000000000030',
         session_id: sid,
@@ -160,6 +184,8 @@ try {
             (p.endsWith('/queue') && r.method() === 'POST')
           ) {
             await new Promise((resolve) => setTimeout(resolve, 300));
+            if (submissions().length === 1 && process.env.VK_EXPECT_BUG !== '1')
+              await firstSubmissionGate;
             if (failNext) {
               failNext = false;
               return route.fulfill({
@@ -197,9 +223,33 @@ try {
               data = session;
             } else data = mode === 'new' && !created ? [] : [session];
           } else if (p === `/api/sessions/${sid}`) data = session;
-          else if (p.endsWith('/queue')) data = { status: 'empty' };
-          else if (p.includes('/scratch/')) data = null;
-          else if (p === `/api/execution-processes/${proc.id}`) data = proc;
+          else if (p.endsWith('/queue')) {
+            if (r.method() === 'POST' && queueNext) {
+              queueNext = false;
+              const message = r.postDataJSON();
+              queueStatus = {
+                status: 'queued',
+                message: {
+                  session_id: sid,
+                  data: message,
+                  messages: [message],
+                  queued_at: ws.created_at,
+                  wait_for_capacity: false,
+                },
+              };
+            }
+            if (r.method() === 'DELETE') queueStatus = { status: 'empty' };
+            data = queueStatus;
+          } else if (p.includes('/scratch/')) {
+            if (r.method() === 'PUT')
+              scratches.set(p, {
+                id: p.split('/').at(-1),
+                ...r.postDataJSON(),
+              });
+            if (r.method() === 'DELETE') scratches.delete(p);
+            publishScratch(p);
+            data = scratches.get(p) ?? null;
+          } else if (p === `/api/execution-processes/${proc.id}`) data = proc;
           else if (p.includes('subagent')) data = [];
           else if (p.includes('preset-options'))
             data = {
@@ -250,6 +300,14 @@ try {
             execution_processes: mode === 'running' ? { [proc.id]: proc } : {},
           };
         else if (u.pathname.includes('approvals')) data = { approvals: {} };
+        else if (u.pathname.includes('/scratch/')) {
+          const path = u.pathname.replace('/stream/ws', '');
+          const streams = scratchStreams.get(path) ?? new Set();
+          streams.add(route);
+          scratchStreams.set(path, streams);
+          route.onClose(() => streams.delete(route));
+          data = { scratch: scratches.get(path) ?? null };
+        }
         route.send(
           JSON.stringify({
             JsonPatch: Object.entries(data).map(([key, value]) => ({
@@ -389,6 +447,7 @@ try {
           before.y + before.height / 2
         );
       else await pending.evaluate((el) => el.click());
+      releaseFirstSubmission();
       await page.waitForTimeout(650);
       assert.equal(
         submissions().length,
@@ -412,6 +471,41 @@ try {
         '',
         'Successful submission clears fixture draft'
       );
+      const returnToWorkspace = async () => {
+        await goto('/workspaces');
+        await page.waitForURL('**/workspaces');
+        await goto(`/workspaces/${wid}`);
+        await editor.waitFor();
+        if (mode === 'running')
+          await page
+            .getByText('Fixture agent message', { exact: true })
+            .waitFor();
+      };
+      if (mode === 'running') {
+        await returnToWorkspace();
+        assert.equal(
+          await editor.innerText(),
+          '',
+          'Sent steering stays cleared after navigation'
+        );
+        assert.equal(
+          scratches.has(draftPath),
+          false,
+          'Delivered steering deletes persisted draft'
+        );
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await editor.waitFor();
+        assert.equal(
+          await editor.innerText(),
+          '',
+          'Sent steering stays cleared after reload'
+        );
+        assert.equal(
+          submissions().length,
+          1,
+          'Navigation never resends steering'
+        );
+      }
       // Failed request retains the draft and releases the admission guard for retry.
       failNext = true;
       await editor.fill('Retry fixture');
@@ -420,6 +514,18 @@ try {
       await page.getByText(/Fixture failure/).waitFor();
 
       assert.equal(await editor.innerText(), 'Retry fixture');
+      if (mode === 'running') {
+        assert.equal(
+          scratches.get(draftPath)?.payload.data.message,
+          'Retry fixture'
+        );
+        await returnToWorkspace();
+        assert.equal(
+          await editor.innerText(),
+          'Retry fixture',
+          'Failed steering is recoverable after navigation'
+        );
+      }
       await editor.focus();
       await simulateKeyboard();
       await tap();
@@ -452,6 +558,44 @@ try {
         'Enter on focused Send submits once'
       );
       await page.waitForTimeout(650);
+      if (mode === 'running') {
+        queueNext = true;
+        await editor.fill('Queue fallback fixture');
+        await simulateKeyboard();
+        await tap();
+        const cancelQueue = page.getByRole('button', {
+          name: 'Cancel Queue',
+          exact: true,
+        });
+        await cancelQueue.waitFor();
+        await page.waitForTimeout(650);
+        assert.equal(
+          scratches.get(draftPath)?.payload.data.message,
+          'Queue fallback fixture',
+          'Queue fallback retains recovery draft until consumption'
+        );
+        await returnToWorkspace();
+        await cancelQueue.waitFor();
+        assert.equal(
+          await editor.innerText(),
+          'Queue fallback fixture',
+          'Queued message comes from queue state after navigation'
+        );
+        await cancelQueue.click();
+        await send().waitFor();
+        assert.equal(
+          await editor.innerText(),
+          'Queue fallback fixture',
+          'Explicit cancellation restores queued message for editing'
+        );
+        assert.equal(
+          submissions().length,
+          5,
+          'Queue cancellation does not resend'
+        );
+        await editor.focus();
+        await simulateKeyboard();
+      }
       if (mobile) {
         assert.equal(
           await page
@@ -487,6 +631,11 @@ try {
         cancel: true,
         keyboard: true,
         landing: true,
+        ...(mode === 'running' && {
+          draftNavigation: true,
+          failedDraftRecovery: true,
+          queueRestore: true,
+        }),
         events: await page.evaluate(() => window.sendEvents),
       });
       console.log(

@@ -10,6 +10,31 @@ both features in a later combined frontend, after the new sidechat API is live.
 No mobile-owner files/browser, live services, permissions or subscriptions changed.
 The earlier root reply/subscription reconciliation below remains applicable.
 
+# Sent Steering staging reconciliation
+
+PR257 is now merged at `9301e6a46`; the prepared release source is
+`1d074941d`, with its newer packaging evidence owned by the Sent Steering agent.
+The original publication notes below are retained as history; their pending-PR
+and packaging statements are superseded. Mobile+Steering and notification source
+must be combined without replacing either feature.
+
+# Sent steering draft correction — October 16
+
+Branch `vk/54f8-vk-sent-steering`, based on current `fork/staging` at `2249da3e9`.
+Source fix `ca9911225` is pushed; [PR #257](https://github.com/artinflight/vibe-kanban/pull/257)
+is open into `staging`. Publication checks and remaining gates are in `HANDOFF.md`.
+[Matching issue](https://vibe.local/projects/e2645d00-9bc6-4136-8d6e-0c2fcf032d77/issues/e662a94d-0fff-428b-9f43-9d771ebcc8e1) is linked to workspace
+`54f815cd-930d-42e3-9fb5-a39d214bcf86`.
+
+Scope: clear the persisted follow-up recovery draft only after confirmed immediate
+delivery; retain failed/queued drafts and explicit queue cancellation.
+The existing mobile Send fixture now persists scratch state across navigation.
+No backend/API/types change, deployment, restart or production asset switch.
+Final focused browser regression passes at 390/412/1440 pixels, with type checks,
+lint, formatting and ops checks passing. Production packaging remains unverified
+because of task memory pressure; no live activation occurred.
+See [VK_SENT_STEERING_DRAFT.md](VK_SENT_STEERING_DRAFT.md).
+
 # Root reply and complete notification registration — October 16 follow-up
 
 Root's view caught up at 18:07 UTC without another refresh. Root directly read

@@ -10,6 +10,22 @@ both features in a later combined frontend, after the new sidechat API is live.
 No mobile-owner files/browser, live services, permissions or subscriptions changed.
 The earlier root reply/subscription reconciliation below remains applicable.
 
+# Sent Steering staging reconciliation
+
+PR257 is now merged at `9301e6a46`; the prepared release source is
+`1d074941d`, with its newer packaging evidence owned by the Sent Steering agent.
+The original publication notes below are retained as history; their pending-PR
+and packaging statements are superseded. Mobile+Steering and notification source
+must be combined without replacing either feature.
+
+# Steering draft persistence correction — October 16
+
+Confirmed immediate active-turn delivery must clear its persisted recovery draft.
+Failed delivery and queued follow-ups retain the draft for recovery.
+The composer previously cleared only visible state, so remounting restored sent
+text. This frontend source correction is prepared separately from live deployment.
+See [VK_SENT_STEERING_DRAFT.md](VK_SENT_STEERING_DRAFT.md) for issue and validation.
+
 # Root reply and complete notification registration — October 16 follow-up
 
 Root's view caught up at 18:07 UTC without another refresh. Root directly read

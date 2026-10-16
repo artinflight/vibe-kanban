@@ -6,6 +6,16 @@ on 2026-10-16 from the clean original worktrees, their activation notes, and
 read-only service/release-pointer checks, and Seamus's subsequent confirmation
 of the first successful desktop roundtrip. The evidence boundaries are below.
 
+## Later mobile frontend QA rollout — October 16
+
+The separately authorized mobile frontend is now live from source `5ffaa3b46`
+at 15:41 UTC. It adds the direct Dot tab and prepared responsive CSS. See
+[the mobile deployment record](VK_MOBILE_DOT.md) for exact build/CI, live browser
+and rollback evidence. PRs #254/#255 stay draft and unmerged; the preservation
+branch/workspace and live API/connector services were not changed. Physical
+phone acceptance remains pending. The original pointer observations below are
+historical; the mobile record identifies the current frontend.
+
 ## What is live
 
 The original activation record reports that the additive connector/event bridge,

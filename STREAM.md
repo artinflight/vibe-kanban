@@ -1,3 +1,25 @@
+# Mobile Dot frontend live for phone QA — October 16
+
+The operator explicitly requested deployment so Seamus can test on his phone.
+The frontend-only QA release became live at 15:41 UTC on [Vibe](https://vibe.local/),
+from clean source `5ffaa3b4687d342e940fa80b4b963b8efc6d06e0` with real Dot enabled.
+Its [exact-source CI](https://github.com/artinflight/vibe-kanban/actions/runs/38923258466)
+passed. PRs #254 and #255 remain drafts; no GitHub promotion or merge occurred.
+No backend, gateway, Dot browser API or approval service was restarted.
+
+The new mobile Dot tab is beside Chat after opening a workspace. All five
+packaged viewports passed; live 393px/1440px browsers verified navigation, the
+real unpaired 401 gate and no page errors. Project count/order stayed at 43 and
+all five monitored service PIDs stayed unchanged. Old assets and inline
+compatibility scripts are retained. A Desktop rollback archive passed full
+readback/restore verification for 1,551 files. See VK_MOBILE_DOT.md for source,
+asset and rollback details and the exact validation limits.
+
+Physical S25+ keyboard and a real phone roundtrip remain for Seamus to test.
+Refresh Vibe, open an issue-linked workspace, and tap Dot; pair the phone browser
+privately if prompted. The confirmed desktop reply used the integration task's
+connector; direct root Dot tools remain a separate unresolved route.
+
 # Dot desktop reply correction — October 16
 
 Seamus confirms that today's first desktop Dot chat request/reply test succeeded,

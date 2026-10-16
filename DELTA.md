@@ -1903,3 +1903,14 @@ persisted-reply exchange and screenshot. The integration task's paired connector
 provided the reply route; direct root connector access remains unresolved. Real
 phone acceptance remains separately owned. No private conversation, screenshot,
 pairing data or receipt identifiers are published, and no live test is replayed.
+
+
+2026-10-16 mobile Dot phone QA deployment:
+
+- Explicit operator deployment request activated the clean frontend from `5ffaa3b46`
+  at 15:41 UTC; PR254/255 stay draft and unmerged. No backend or connector restart.
+- Exact-source CI and five packaged viewport tests passed; actual live 393/1440px
+  browsers verified the unpaired gate and navigation. All five monitored PIDs
+  and the order of 43 projects stayed unchanged. Desktop static rollback fully restored
+  and hash-verified1,551 files. See VK_MOBILE_DOT.md for assets and limits.
+- Physical S25+ keyboard and real phone reply acceptance remain pending.

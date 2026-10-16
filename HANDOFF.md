@@ -13,7 +13,9 @@ format stop on absent frontend tools; workspace Rust tests stop on absent GLib.
 Pre-PR inspection found persistent journal glob-expansion timeouts. The updated
 collector discovers active units over systemd and queries exact names instead;
 the installed source preserves the original expiry and cursors. The operator
-requested push and a PR into staging. Await hosted CI and the next recurrence;
+requested push and a PR into staging. The branch is pushed and
+[PR #256](https://github.com/artinflight/vibe-kanban/pull/256) is open against
+staging. Await hosted CI, review and the next recurrence;
 no merge is requested. No application restart, DNS change or authenticated retry
 occurred. Preserve logs for recurrence.
 

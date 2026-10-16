@@ -111,6 +111,46 @@ new state table. Preserve a migration-aware implementation until reactivation,
 otherwise later replies need deliberate backfill without resetting prior reads.
 No activation or persistent-access change was performed by this implementation.
 
+## Publication and combined-source evidence
+
+Notification implementation `166b0776b` and staging merge `ab9a9cf9b` are pushed
+on PR254, which GitHub reports mergeable against `staging`. The source delta,
+regression suites and this handoff are also recorded on Vibe T61. Full-history
+secret scanning covers 26 public commits/256 blob versions; all eleven original
+commit mappings and 31 original source paths remain accounted for. Original
+private histories remain unreachable from the public head.
+
+The separate combined source is pinned locally at `15c06c16f` on
+`prep/dot-notifications-mobile-steering-20261016`, under
+`/mnt/vk-storage/vk-dot-notifications-20261016/integration/source`.
+It starts from exact Mobile+Sent source `1d074941d`, applies only the notification
+frontend delta, and supplies the complete sanitized sidechat source from PR254.
+Its `source-manifest.json` proves every other frontend file is unchanged,
+including both Sent Steering runtime files and Mobile workspace routing/sidebar.
+Combined-source DOM and Chromium 390/1440 acceptance pass. Initial shared-dependency
+links pointed types at the old UI; these were corrected in the isolated candidate
+without changing the release owner's dependencies. A fresh combined type check
+is a separate release-preparation receipt. This is source integration evidence;
+no production bundle, activation or real-device acceptance is claimed for it.
+The local candidate's baseline history is not pushed; the reviewable notification
+source and tests are published through PR254.
+
+All four frontend package type checks and local-web/UI/shared-file lint pass in
+the publication workspace. Formatting and governance pass. `pnpm run check`,
+`pnpm run lint` and `cargo test --workspace` were attempted using the shared SSD
+Cargo target with incremental compilation disabled; native GLib/GObject build
+dependencies prevent completing the Rust baseline locally. Hosted validation is
+[PR254's Test run38971730822](https://github.com/artinflight/vibe-kanban/actions/runs/38971730822):
+sidechat, frontend (including new notification suites), schema, Clippy, Tauri,
+governance and preservation jobs have passed; full backend tests were still
+running at this record. Use the PR Checks tab for final-head status.
+
+The tested commit and API-first integration requirements were sent to the Sent
+Steering owner's active turn through Vibe's supported queue. That owner is
+independently activating the approved `1d074941d` package, without the new
+notifications; recheck its final live identity before later notification packaging.
+No extra persistent-access decision is introduced by these read/attention fields.
+
 ## Remaining acceptance and platform limitation
 
 The earlier retained phone message has one verified direct root reply. A fresh

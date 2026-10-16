@@ -37,7 +37,8 @@ class NotificationContracts(unittest.TestCase):
         page=self.s.read(self.owner,self.t)
         dot=next(m for m in page['messages'] if m['id']==reply['id'])
         self.assertTrue(dot['seen']);self.assertTrue(dot['attention']['resolved'])
-        self.s.set_sidechat_attention(self.dot,self.t,'w',reply['id'],'reopen')
+        self.s.tool(self.dot,'set_sidechat_attention',{'thread':self.t,'workspace':'w','message':reply['id'],'action':'reopen'})
+        self.assertEqual(2,self.s.db.execute('SELECT COUNT(*) FROM outbox').fetchone()[0])
         self.assertEqual((0,1),self.counts())
 
     def test_resolve_does_not_mark_unread_reply_seen_and_plain_reply_can_be_flagged(self):

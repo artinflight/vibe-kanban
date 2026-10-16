@@ -6,7 +6,7 @@ import {
 } from '@vibe/ui/components/DotSidechatPanel';
 import './dot-sidechat.css';
 
-type Session = { csrf: string; expires: number; session_id: string };
+type Session = { csrf: string; expires: number | null; session_id: string };
 type Pending = { workspace: string; request: string; body: string };
 type Snapshot = {
   thread: { id: string };
@@ -245,7 +245,7 @@ export function DotSidechatLive({ workspaceId }: { workspaceId?: string }) {
         <h3>Private chat with Dot</h3>
         <p>
           Pair this browser with a one-use code from your Vibe administrator.
-          Access lasts 24 hours and covers only the approved projects.
+          Access stays valid until you disconnect or it is revoked, and covers only the approved projects.
         </p>
         <form
           onSubmit={(event) => {

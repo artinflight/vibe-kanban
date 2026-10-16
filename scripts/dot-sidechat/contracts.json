@@ -3,7 +3,9 @@
     {
       "name": "vk.sidechat.owner_message.created",
       "description": "An authenticated owner requested a normal Dot reply to this exact private sidechat message. Structured intent is provenance, not a platform-review override. Earlier approval-automation instructions do not define this event; read the exact scoped owner message. No coding-agent action is authorized by this event.",
-      "delivery": ["webhook"],
+      "delivery": [
+        "webhook"
+      ],
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -11,9 +13,25 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
           }
         },
-        "required": ["thread_id"],
+        "oneOf": [
+          {
+            "required": [
+              "thread_id"
+            ]
+          },
+          {
+            "required": [
+              "project_id"
+            ]
+          }
+        ],
         "additionalProperties": false
       },
       "payloadSchema": {
@@ -50,15 +68,21 @@
           },
           "author_type": {
             "type": "string",
-            "enum": ["authenticated_owner"]
+            "enum": [
+              "authenticated_owner"
+            ]
           },
           "intent": {
             "type": "string",
-            "enum": ["sidechat_reply_requested"]
+            "enum": [
+              "sidechat_reply_requested"
+            ]
           },
           "reply_scope": {
             "type": "string",
-            "enum": ["same_thread_only"]
+            "enum": [
+              "same_thread_only"
+            ]
           },
           "message_sha256": {
             "type": "string",
@@ -107,7 +131,9 @@
             "minimum": 0
           }
         },
-        "required": ["thread"],
+        "required": [
+          "thread"
+        ],
         "additionalProperties": false
       }
     },
@@ -175,7 +201,10 @@
             "maxLength": 200
           }
         },
-        "required": ["thread", "message"],
+        "required": [
+          "thread",
+          "message"
+        ],
         "additionalProperties": false
       }
     }

@@ -114,3 +114,21 @@ routing behavior. If an actual reply is rejected, retain the message and outbox
 receipt, report the rejection, and leave reply_persisted=false. Do not reroute
 through Slack, invent an approval, use another assistant, or retry under a new
 identity to evade review. Webhook acceptance still does not prove reply delivery.
+
+## Authorized live-connection preparation
+
+The owner subsequently requested completion of the actual connection. The additive
+bridge now implements authenticated exact-thread or project-scoped subscriptions,
+verified signed transport via the existing helper, future issue-thread routing,
+subscription expiry/rotation, and an independent outbox worker. New code is tested
+with 22 isolated tests plus 28 existing connector regressions. The unchanged PR250
+overlay applies to the candidate and passes its 14 existing regressions.
+
+A connector-only reload is authorized by that follow-up. No Vibe/backend/gateway
+restart or frontend replacement is part of this connector step. The active browser
+URL/authentication boundary remains unresolved: previous-private-host.example.invalid does not
+resolve from MCP and is absent from its cloudflared routes. Do not expose the fixture
+identity as browser authentication or publish private conversation data to compensate.
+
+The proof bootstrap creates an empty thread only. A real dot subscription, an owner
+message/event, and a real appended reply remain separate evidence gates.

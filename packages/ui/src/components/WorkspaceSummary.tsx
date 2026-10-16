@@ -86,6 +86,7 @@ export function WorkspaceSummary({
   const { t } = useTranslation('common');
   const phone = usePhoneLayout();
   const hasChanges = filesChanged !== undefined && filesChanged > 0;
+  const hasDotActivity = dotUnreadCount > 0 || dotNeedsAttentionCount > 0;
   const isFailed =
     latestProcessStatus === 'failed' || latestProcessStatus === 'killed';
   const subagentCount = activeSubagentCount + unresolvedSubagentCount;
@@ -195,7 +196,7 @@ export function WorkspaceSummary({
         onClick={onClick}
         className={cn(
           'flex w-full cursor-pointer flex-col text-left px-base py-half transition-all duration-150',
-          isActive
+          isActive || hasDotActivity
             ? 'text-normal'
             : 'text-low sm:opacity-60 sm:hover:opacity-100 sm:hover:text-normal'
         )}
@@ -214,11 +215,13 @@ export function WorkspaceSummary({
         >
           {name}
         </div>
-        {(!summary ||
-          isActive ||
-          dotUnreadCount > 0 ||
-          dotNeedsAttentionCount > 0) && (
-          <div className="flex w-full items-center gap-base text-sm h-5">
+        {(!summary || isActive || hasDotActivity) && (
+          <div
+            className={cn(
+              'flex w-full items-center gap-base text-sm',
+              hasDotActivity ? 'flex-wrap min-h-5' : 'h-5'
+            )}
+          >
             {/* Dev server running - leftmost */}
             {hasRunningDevServer && (
               <PlayIcon

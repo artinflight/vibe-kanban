@@ -85,6 +85,31 @@ try {
       .first()
       .evaluate((n) => getComputedStyle(n).color);
     assert.match(colors, /rgb\(\d+, \d+, \d+\)/);
+    const readable = await page
+      .locator('#workspace-list [data-dot-indicators] > [aria-label]')
+      .evaluateAll((nodes) =>
+        nodes.every((n) => {
+          const r = n.getBoundingClientRect();
+          for (let p = n; p; p = p.parentElement) {
+            const style = getComputedStyle(p);
+            if (Number(style.opacity) < 1) return false;
+            if (/hidden|clip/.test(style.overflowX + style.overflowY)) {
+              const bounds = p.getBoundingClientRect();
+              if (
+                r.left < bounds.left - 1 ||
+                r.right > bounds.right + 1 ||
+                r.bottom > bounds.bottom + 1
+              )
+                return false;
+            }
+          }
+          return true;
+        })
+      );
+    assert.ok(
+      readable,
+      'Dot indicators must remain readable and unclipped in a narrow sidebar with coding status and file stats'
+    );
     await page.screenshot({
       path: `${output}/dot-notifications-${width}-unread.png`,
       fullPage: true,

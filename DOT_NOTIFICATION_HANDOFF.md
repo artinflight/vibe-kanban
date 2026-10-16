@@ -111,6 +111,16 @@ new state table. Preserve a migration-aware implementation until reactivation,
 otherwise later replies need deliberate backfill without resetting prior reads.
 No activation or persistent-access change was performed by this implementation.
 
+## Narrow-sidebar acceptance follow-up
+
+Chromium additionally checks both badges inside a 288-pixel sidebar with a pinned
+workspace, coding-agent activity and file/diff stats. It reproduced clipped or
+faded desktop indicators before the fix and passes after it. Dot-bearing status
+rows grow/wrap and retain full opacity; rows without Dot activity keep their
+existing layout. Badge groups fit their containing width on phone and desktop.
+The same runtime/test follow-up is applied to the isolated combined source before
+handoff; its manifest retains every non-notification Mobile/Steering source.
+
 ## Publication and combined-source evidence
 
 Notification implementation `166b0776b` and staging merge `ab9a9cf9b` are pushed
@@ -120,7 +130,7 @@ secret scanning covers 26 public commits/256 blob versions; all eleven original
 commit mappings and 31 original source paths remain accounted for. Original
 private histories remain unreachable from the public head.
 
-The separate combined source is pinned locally at `15c06c16f` on
+The separate combined source is pinned locally at `aebe6a442` (narrow-sidebar follow-up to `15c06c16f`) on
 `prep/dot-notifications-mobile-steering-20261016`, under
 `/mnt/vk-storage/vk-dot-notifications-20261016/integration/source`.
 It starts from exact Mobile+Sent source `1d074941d`, applies only the notification
@@ -139,16 +149,18 @@ All four frontend package type checks and local-web/UI/shared-file lint pass in
 the publication workspace. Formatting and governance pass. `pnpm run check`,
 `pnpm run lint` and `cargo test --workspace` were attempted using the shared SSD
 Cargo target with incremental compilation disabled; native GLib/GObject build
-dependencies prevent completing the Rust baseline locally. Hosted validation is
-[PR254's Test run38971730822](https://github.com/artinflight/vibe-kanban/actions/runs/38971730822):
-sidechat, frontend (including new notification suites), schema, Clippy, Tauri,
-governance and preservation jobs have passed; full backend tests were still
-running at this record. Use the PR Checks tab for final-head status.
+dependencies prevent completing the Rust baseline locally. Publication `1664ef7b0` passed the complete hosted
+[Test run38972360145](https://github.com/artinflight/vibe-kanban/actions/runs/38972360145),
+including full backend tests, frontend/new notification suites, schema, Clippy,
+Tauri, governance and preservation. The narrow-sidebar correction has additional
+Chromium acceptance and fresh UI checks; use the PR Checks tab for final-head CI.
 
 The tested commit and API-first integration requirements were sent to the Sent
-Steering owner's active turn through Vibe's supported queue. That owner is
-independently activating the approved `1d074941d` package, without the new
-notifications; recheck its final live identity before later notification packaging.
+Steering owner's active turn through Vibe's supported queue. That owner activated the approved `1d074941d` package at 21:49:43 UTC, without
+the new notifications. Independent loopback readback matches its served
+`/assets/index-CGY9AEy0.js` byte for byte. The stable final coordination note is
+also retained in `/mnt/vk-storage/vk-sent-steering-release-20261016/source/` and
+the release root. Recheck live identity before later notification packaging.
 No extra persistent-access decision is introduced by these read/attention fields.
 
 ## Remaining acceptance and platform limitation

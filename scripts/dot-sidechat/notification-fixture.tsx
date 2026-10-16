@@ -19,9 +19,13 @@ function Fixture() {
   };
   return (
     <div className="new-design">
-      <aside id="workspace-list">
+      <aside id="workspace-list" style={{ width: 288, maxWidth: '100%' }}>
         <WorkspaceSummary
           name="Workspace A"
+          filesChanged={8}
+          linesAdded={120}
+          linesRemoved={24}
+          isPinned
           hasUnseenActivity
           latestProcessStatus="completed"
           {...dot}

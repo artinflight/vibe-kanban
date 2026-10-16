@@ -14,7 +14,7 @@ export function DotActivityIndicators({
   };
   return (
     <span
-      className="inline-flex shrink-0 flex-wrap items-center gap-1"
+      className="inline-flex max-w-full shrink-0 flex-wrap items-center gap-1"
       data-dot-indicators
     >
       {dotUnreadCount > 0 && (

@@ -2000,3 +2000,16 @@ backend-first combined Mobile+Steering release procedure.
 - Pushed source `ca9911225` and opened https://github.com/artinflight/vibe-kanban/pull/257 into staging.
 - Fresh format/ops/frontend type checks and lint pass. Full check/lint/workspace Rust commands were attempted but blocked by missing GLib/GObject desktop dependencies.
 - Applicable CI, review, staging acceptance, package/QA and authorized rollout remain; production is unchanged.
+
+
+## 2026-10-16 — approved Dot notification deployment
+
+Activated Python Dot source7222b127c and combined frontend aebe6a442 at22:37/22:38UTC.
+App0.1.42 serves index-CrPmgoRY.js. Desktop/mobile-viewport live API/UI acceptance
+and nine served Steering cases pass; owner access, two subscriptions,43 projects
+(26 archived), future policy and prior messages are preserved. Dot-only readiness
+interruption1.38s; no Vibe/agent restart. Desktop backups restored/read back.
+Physical phone DevTools was rejected by automatic approval review for its shared
+authenticated-tab boundary; no retry/alternate route. Seamus's fresh paired-phone
+question/reply/notification confirmation remains. PR254 merged into staging28fdcfddf.
+See DOT_NOTIFICATION_ROLLOUT.md and the bounded live QA scripts for receipts.

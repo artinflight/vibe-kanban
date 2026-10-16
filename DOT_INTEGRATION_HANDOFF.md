@@ -1,3 +1,5 @@
+> **Current live addition:** [Dot notification rollout](DOT_NOTIFICATION_ROLLOUT.md) records the approved service/frontend deployment, preserved Mobile+Sent Steering, live QA and physical-phone acceptance boundary.
+
 > Current addition: [Dot reply notification source and deployment handoff](DOT_NOTIFICATION_HANDOFF.md). Separate unread/attention UI and durable state are prepared, not activated. Preserve Mobile/Dot and Sent Steering in the next combined candidate.
 
 # Dot chat integration: preservation and handoff

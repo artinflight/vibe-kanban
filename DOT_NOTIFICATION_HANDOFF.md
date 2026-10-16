@@ -1,3 +1,5 @@
+> **Deployed:** See [live rollout and final acceptance](DOT_NOTIFICATION_ROLLOUT.md). The prepared/not-deployed statements below describe the implementation handoff before the approved activation.
+
 # Dot reply notifications — implementation handoff
 
 Implemented in PR [254](https://github.com/artinflight/vibe-kanban/pull/254),

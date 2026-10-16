@@ -1,14 +1,15 @@
-# Clickable summary links pickup — October 16
+# Clickable summary links release pickup — October 16
 
-Read [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md). Frontend-only repair is
-committed on `vk/242a-vk-clickable-lin` with this handoff; no push, PR or
-deployment yet.
-The production Markdown sync and link plugins pass all 16 mounted DOM cases;
-the original renderer fails nine of them. UI type check/lint and shared frontend
-check (4 GiB Node heap) pass. Full formatting, UI formatting, ops and diff checks
-pass. Local artifacts are under ignored `.vk-preview/link-validation/` on the SSD.
-Next: review and normal frontend integration/release, then click a summary URL
-in the live UI. Real-browser/phone and live activation remain unverified.
+Read [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md). The link fix is pushed on
+`vk/242a-vk-clickable-lin`; current integration preserves the sole live-only
+history-page fallback before rebuilding. All 16 link and 21 history tests pass.
+Sandboxed Chromium exercised the actual editor and real link clicks at desktop
+and phone widths. Local frontend checks/lint and the initial build passed.
+Hosted regular checks at 520cc2c97 passed except backend tests still running;
+the separate old-release source-fenced job rejects this unrelated branch.
+Final preservation commit/PR/CI/release work is in progress. No live asset change
+or backend restart has occurred. Private artifacts stay under ignored
+`.vk-preview/link-validation/` on mounted SSD storage.
 
 # Dot explicit steering review handoff — October 15
 

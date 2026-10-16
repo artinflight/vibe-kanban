@@ -136,6 +136,9 @@ function harness(initialProcesses, request, allowLive = false) {
     get result() {
       return result;
     },
+    get timeline() {
+      return timeline;
+    },
     get entries() {
       return Object.values(timeline?.executionProcessState ?? {}).flatMap(
         (p) => p.entries,
@@ -367,10 +370,13 @@ test("incomplete capture is visible and does not load older status as current", 
   try {
     await h.mount();
     assert.equal(h.result.historyError, true);
-    assert.equal(h.entries.length, 0);
+    assert.equal(h.entries.length, 10);
+    assert.ok(h.entries.every((entry) => entry.executionProcessId === "old"));
+    assert.equal(h.timeline.executionProcessState.new.executionProcess.id, "new");
+    assert.deepEqual(h.timeline.executionProcessState.new.entries, []);
     assert.deepEqual(
       h.calls.map((x) => x.id),
-      ["new"],
+      ["new", "old"],
     );
   } finally {
     await h.close();
@@ -468,6 +474,33 @@ const failedCaptureResponse = () =>
     }),
     { headers: { "content-type": "application/json" } },
   );
+
+test("an unavailable newest turn retains its warning while older history loads", async () => {
+  let repaired = false;
+  const h = harness([process("a"), process("b")], ({ id, before, limit }) =>
+    id === "b" && !repaired
+      ? failedCaptureResponse()
+      : pageResponse(id === "a" ? 40 : 10, before, limit),
+  );
+  try {
+    await h.mount();
+    assert.deepEqual(h.calls.map((call) => call.id), ["b", "a"]);
+    assert.equal(h.entries.length, 40);
+    assert.ok(h.entries.every((entry) => entry.executionProcessId === "a"));
+    assert.equal(h.result.historyError, true);
+    assert.equal(h.result.isLoadingHistory, false);
+    assert.equal(h.result.hasMoreHistory, true);
+    await settle();
+    assert.equal(h.calls.length, 2, "A failed turn does not cause a request loop");
+    repaired = true;
+    await h.load();
+    assert.equal(h.calls.at(-1).id, "b");
+    assert.equal(h.entries.length, 50);
+    assert.equal(h.result.historyError, false);
+  } finally {
+    await h.close();
+  }
+});
 
 async function tickCapture(t) {
   await act(async () => {

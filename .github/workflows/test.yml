@@ -96,6 +96,7 @@ jobs:
               - 'scripts/testing/kanban-issue-panel*'
               - 'scripts/testing/run-kanban-issue-panel-tests.mjs'
               - 'scripts/testing/*read-only-web-links*'
+              - 'scripts/testing/*long-thread-history*'
               - 'scripts/check-i18n.sh'
               - 'scripts/check-unused-i18n-keys.mjs'
               - 'scripts/check-legacy-frontend-paths.sh'
@@ -313,6 +314,14 @@ jobs:
         run: |
           npm install --prefix "${{ runner.temp }}/kanban-issue-panel-tools" --no-save --no-package-lock --ignore-scripts --no-audit --no-fund react-test-renderer@18.3.1
           node scripts/testing/run-kanban-issue-panel-tests.mjs
+
+      - name: Preserve live conversation history fallback
+        env:
+          VK_TEST_OUTPUT: ${{ runner.temp }}/vk-history-tests
+          TEST_RENDERER_PATH: ${{ runner.temp }}/vk-history-tools/node_modules/react-test-renderer
+        run: |
+          npm install --prefix "${{ runner.temp }}/vk-history-tools" --no-save --no-package-lock --ignore-scripts --no-audit --no-fund react-test-renderer@18.3.1
+          node scripts/testing/run-long-thread-history-tests.mjs
 
       - name: Test first-render chat links
         env:

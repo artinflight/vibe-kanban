@@ -1,36 +1,37 @@
-# Steering frontend ready for owner activation — October 16
+# Steering frontend activated — October 16
 
-PR257 is merged into staging (`9301e6a46`) after exact-head CI and nine compiled
-Send/steering cases pass. The old live bundle still contains the bug; no pointer
-switch has occurred. All production runtime PIDs remained unchanged.
+Seamus explicitly approved the frontend-only rollout. Live acceptance completed
+at 2026-10-16 21:49:43 UTC. Version 0.1.42 now serves `/assets/index-CGY9AEy0.js`
+from `/mnt/vk-storage/vk-sent-steering-release-20261016/release`, built at exact
+source `1d074941dc4145f6827beb2c43775bab6caec20e`. PR257 is merged into staging.
+All five monitored runtime PIDs stayed unchanged, and the 43-project API list
+kept its order. Public and loopback new/retained entry hashes pass. The real live
+Dot unpaired gate and mobile/desktop navigation pass with writes blocked.
 
-Use `/mnt/vk-storage/vk-sent-steering-release-20261016/READINESS.json`,
-`release-manifest.json` and `activation-preflight.json`. The clean source commit
-is `1d074941dc4145f6827beb2c43775bab6caec20e`, preserving the exact live Mobile/Dot
-baseline plus PR257. The full compiled package is in `release/`; entry
-`/assets/index-CGY9AEy0.js`. Source maps and unchanged sources preserve existing
-Mobile/Dot, history, links and compatibility scripts. No new notifications.
+Post-switch actual-served frontend tests pass all nine Send/steering cases at
+390/412/1440px and all five Mobile/Dot widths 360/393/412/844/1440px. Delivered
+drafts stay empty after navigation/reload, failed/queued drafts remain recoverable,
+and Dot tab/draft/retry behavior is preserved. Steering API/WS and Dot message
+responses are synthetic; no actual prompt/real Dot message was sent.
+Physical phone QA and broader live mutation/saved-message/attachment/clipboard
+roundtrips were not re-exercised; see the stable note's explicit coverage limits.
 
-Production build, four frontend types, lint, preparation tests, nine compiled
-steering/Send cases, five mocked Mobile/Dot viewports, 21 history and 16 link
-checks pass. Two read-only live viewports pass. Desktop B archive upload/hash,
-readback and full restore verify 1,760 current static files (424,489,943 bytes).
-No full mutable-state backup is claimed or required by preparation; the final
-owner approval must accept the explicitly static-only activation/rollback scope.
+Durable activation/rollback evidence: `activation.json`, `READINESS.json`,
+`release-manifest.json`, `post-activation-browser.log`, and post-switch browser
+results under `/mnt/vk-storage/vk-sent-steering-release-20261016`.
+Desktop rollback archive remains verified:
+`desktop:B:/vk-backups/vk-sent-steering-release-20261016/frontend-before.tar.zst`,
+SHA256 `0256874e9395f7e02a15a0b54aa07cd70675f68a6a591eaf7bc0017b53acd777`.
+The prior tree remains `/mnt/vk-storage/vk-mobile-dot-route-20261016/release`.
+Rollback changes only the static pointer; never restore stale app data.
 
-Only the release owner's final static activation authorization and fresh
-preflight/post-switch acceptance remain. `activate-frontend.py` defaults to
-read-only preflight; its `--activate` flag is reserved for that approved action.
-It performs no service restart or database restore and retains old entry assets.
-Seven execution rows were running at the read-only inventory; no agent is stopped.
-Existing tabs need refresh after activation. A known already-sent legacy draft
-may need clearing once; unsent/failed/queued drafts must not be bulk-deleted.
-
-Stable cross-owner note: `VK_SENT_STEERING_RELEASE_COORDINATION.md`. PR254's new
-persistent Dot unread/Needs Attention/violet badge/API/store work is not included,
-is not ready, and is not a blocker for this pinned steering candidate. The Dot
-owner will provide its tested commits, integration checks and deployment handoff
-separately. Never enable that new UI against the old sidechat API implicitly.
+Existing Mobile/Dot and PR257 are included; the new PR254 notifications are not.
+Read `VK_SENT_STEERING_RELEASE_COORDINATION.md` for final regression results and
+the separate backend-first notification handoff. No interruption, agent stop,
+phone reboot or re-pair is needed. Refresh existing tabs; clear a known sent
+legacy draft once if needed, without resending or bulk-deleting unsent drafts.
+Earlier preparation/publication sections below are historical and superseded
+by this activation receipt and the coordination note.
 
 # Sent steering fix publication — PR257
 

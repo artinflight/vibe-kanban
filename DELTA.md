@@ -1906,3 +1906,16 @@ the paid harness was not rerun. No live connector edit, restart or deployment.
 - Preparation/build/types/lint, nine packaged steering/Send cases, five Mobile/Dot viewports, 21 history and 16 link checks pass; static Desktop rollback restored all 1,760 files.
 - Activation preflight passes without changing production. Final owner approval/static switch, post-switch acceptance and tab refresh remain. PR254 notification work is excluded and independently owned.
 - Stable handoff: VK_SENT_STEERING_RELEASE_COORDINATION.md and /mnt/vk-storage/vk-sent-steering-release-20261016/.
+
+## 2026-10-16 — Approved steering frontend activated
+
+Seamus's explicit frontend-only approval authorized the prepared atomic switch.
+Live acceptance at 21:49:43 UTC: version 0.1.42, source 1d074941dc4145f6827beb2c43775bab6caec20e,
+entry index-CGY9AEy0.js, release /mnt/vk-storage/vk-sent-steering-release-20261016/release.
+Public/loopback new+old entry hashes, five unchanged runtime PIDs and unchanged
+43-project order pass. Actual-served synthetic steering passes 9 cases; existing
+Mobile/Dot passes 5 viewports; real unpaired gate/read-only checks pass 2 widths.
+No restart or agent interruption. New PR254 notifications remain excluded;
+owner handoff 166b0776b/ab9a9cf9b is recorded for a separate backend-first release.
+Coordination note copied into release root and prepared source after the build.
+Refresh tabs; clear known sent legacy text once if needed without resending.

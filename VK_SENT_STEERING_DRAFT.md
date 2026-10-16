@@ -10,13 +10,14 @@ Source fix: `ca9911225`, pushed and verified on GitHub.
 
 ## Current release status
 
-The fix is merged and the release candidate is built and verified, but it is not
-activated. Fresh served-bundle/source-map checks and a synthetic reproduction
-confirm that the actual live Mobile/Dot release still lacks the fix. Read
-[the current coordination/readiness note](VK_SENT_STEERING_RELEASE_COORDINATION.md)
-for exact source/package paths, completed checks and remaining activation action.
-The older local build/library limitations below are historical; hosted CI and
-the successful combined production build have now closed those validation gaps.
+The fix is merged and live after Seamus's frontend-only approval. Acceptance
+completed at 2026-10-16 21:49:43 UTC, version 0.1.42, built source
+`1d074941dc4145f6827beb2c43775bab6caec20e`, entry `/assets/index-CGY9AEy0.js`.
+No service restarted. Existing Mobile/Dot is preserved; new PR254 notifications
+remain excluded. Read [the coordination note](VK_SENT_STEERING_RELEASE_COORDINATION.md)
+for final post-switch results, immutable source and rollback paths.
+The older local limitations below are historical; hosted CI, successful
+production packaging and live acceptance close those release gates.
 
 ## Cause and correction
 
@@ -33,7 +34,7 @@ queue consumption clears the scratch only after the queued run starts, preservin
 recovery if dispatch fails or a non-durable queue is lost on restart.
 No backend, schema, generated type or queue delivery semantics change.
 
-## Validation
+## Original source validation (historical)
 
 Passed:
 
@@ -85,20 +86,9 @@ This temporary frontend is only for automated tests and is stopped afterward.
 
 ## Rollout
 
-Prepared source only. No live asset swap, backend restart or deployment occurred.
-Review and validate in the fork's local preview before promotion to staging;
-any later live activation follows the deployment runbook.
-
-The fresh pre-PR baseline passes formatting, ops, all four frontend type checks
-and local-web/UI lint. Full `pnpm run check`, `pnpm run lint` and
-`cargo test --workspace` were attempted sequentially with the shared SSD Cargo
-target and incremental compilation disabled; each exits 101 in desktop native
-dependencies because this host lacks GLib/GObject development libraries. The Rust
-suite does not run. Receipts: `.vk-preview/steering-test/pr-validation/results.json`.
-
-The later release preparation closes CI, staging integration, packaging and
-compiled functional/preservation QA. Still required: release-owner approval for
-the exact static activation and rollback scope, fresh volatile preflight and
-post-switch acceptance. Existing browser tabs then need refresh. Known old sent
-drafts may need one explicit clear; no unsafe draft migration is performed.
-The new PR254 notification work remains excluded and separately owned.
+Authorized static-only activation and fresh hash/PID/API/browser acceptance are
+complete. Receipt: `/mnt/vk-storage/vk-sent-steering-release-20261016/activation.json`.
+The full prepared package and Desktop rollback were verified before switching.
+Existing tabs need refresh. A known already-sent older draft may need one clear;
+no bulk migration or message resend is required. Notification deployment remains
+separate and backend-first. See the coordination note for final test details.

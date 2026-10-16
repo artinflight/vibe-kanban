@@ -1,24 +1,30 @@
-# Steering fix release prepared, not activated — October 16
+# Steering fix live — October 16
 
+Seamus approved the frontend-only rollout (reported approval at 21:23 UTC).
+The prepared atomic static-pointer switch completed live acceptance at
+21:49:43 UTC, without restarting any service or stopping agents.
+Version remains **0.1.42**; frontend source is
+`1d074941dc4145f6827beb2c43775bab6caec20e`, serving
+`/assets/index-CGY9AEy0.js` from
+`/mnt/vk-storage/vk-sent-steering-release-20261016/release`.
 PR257 is merged into staging at `9301e6a463a4832cc14976c7a19fa40f58567b05`.
-The actual live frontend remains the Mobile/Dot release at
-`/mnt/vk-storage/vk-mobile-dot-route-20261016/release`, serving
-`/assets/index-B-YJtP-l.js`; mapped sources and compiled reproduction prove it
-still lacks PR257. This is not a failed deployment of the fix.
+Existing Mobile/Dot, history, links, old hashed assets and compatibility scripts
+are preserved. New PR254 notifications/API/store changes are excluded.
 
-A clean, source-fenced frontend candidate preserves that exact live functionality
-and adds only PR257. Its production build, compiled browser checks, preservation
-checks and static rollback restore pass. Activation approval is still separate;
-no live pointer or runtime PID changed. New PR254 Dot notification/UI/store work
-is excluded and does not hold this release. Read
-[the stable coordination note](VK_SENT_STEERING_RELEASE_COORDINATION.md).
+`activation.json` under the release root records verified public/loopback entry
+hashes, unchanged API version, all five unchanged runtime PIDs and 43 projects
+with unchanged ordering. Actual live read-only mobile/desktop checks pass.
+See [the stable coordination note](VK_SENT_STEERING_RELEASE_COORDINATION.md)
+for post-switch regression evidence, source paths and the later Dot handoff.
+Existing tabs should refresh; a known already-sent legacy draft may need one
+explicit clear without resending. Failed/queued/unsent drafts remain protected.
 
 # Steering draft persistence correction — October 16
 
 Confirmed immediate active-turn delivery must clear its persisted recovery draft.
 Failed delivery and queued follow-ups retain the draft for recovery.
 The composer previously cleared only visible state, so remounting restored sent
-text. This frontend source correction is prepared separately from live deployment.
+text. This correction is now live in the frontend release identified above.
 See [VK_SENT_STEERING_DRAFT.md](VK_SENT_STEERING_DRAFT.md) for issue and validation.
 
 # Summary web-link rendering — live October 16

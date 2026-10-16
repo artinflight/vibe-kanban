@@ -1,14 +1,24 @@
 # Clickable summary links release pickup — October 16
 
-Read [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md). The link fix is pushed on
-`vk/242a-vk-clickable-lin`; current integration preserves the sole live-only
-history-page fallback before rebuilding. All 16 link and 21 history tests pass.
-Sandboxed Chromium exercised the actual editor and real link clicks at desktop
-and phone widths. Local frontend checks/lint and the initial build passed.
-Hosted regular checks at 520cc2c97 passed except backend tests still running;
-the separate old-release source-fenced job rejects this unrelated branch.
-Final preservation commit/PR/CI/release work is in progress. No live asset change
-or backend restart has occurred. Private artifacts stay under ignored
+Read [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md).
+[PR #251](https://github.com/artinflight/vibe-kanban/pull/251) owns staging
+integration; its current exact-head checks are authoritative for merge status.
+All 16 link and 21 history tests pass. Sandboxed Chromium verified real clicks
+in the actual editor at desktop and phone widths. The branch preserves the sole
+live-only history hook byte for byte. Local frontend checks/lint, formatting,
+ops and the initial production build passed. The first hosted run passed every
+standard job, including Rust tests; its unrelated old-release source fence failed.
+A final preservation build and exact-head PR checks bind the release candidate.
+
+No live assets or backend processes were changed. An exact frontend rollback
+archive was mirrored to `desktop:B:/vk-backups/vk-clickable-links-20261016/`,
+SHA256 `55932328398d219a521ec826fbffca892e8b78fa723a34accae6a0e4dc0f9fb5`;
+all 1,342 files passed a physical restore/readback. This is a frontend rollback,
+not a fresh mutable-state backup. The legacy lean helper would stage about65 GB
+of live sessions with about44 GB free on SSD; Desktop B has about25 GB free.
+Existing release backup receipts describe a30.4 GB Laptop backup, not a fresh
+Desktop B backup. The full-backup prerequisite remains unresolved. Do not claim
+live activation or silently waive it. Private artifacts remain under ignored
 `.vk-preview/link-validation/` on mounted SSD storage.
 
 # Dot explicit steering review handoff — October 15

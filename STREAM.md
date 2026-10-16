@@ -1,12 +1,14 @@
 # Clickable summary links release — October 16
 
-Branch `vk/242a-vk-clickable-lin` is pushed. Link rendering passes 16 DOM cases
-and real sandboxed desktop/phone-width editor click tests. Release inspection
-identified one live-only history fallback; preserve its exact source in this
-branch and cover it with the 21-case history suite in frontend CI. The initial
-production build passed. Final integration CI/build, staging PR and activation
-remain in progress; no live asset mutation or restart occurred.
-See [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md).
+Branch `vk/242a-vk-clickable-lin` is pushed and PR251 owns staging integration.
+All 16 link and 21 history tests pass; real sandboxed editor clicks pass at
+desktop and phone widths. Preserve the byte-identical live history fallback.
+The first hosted run passed all standard jobs, including backend tests, while
+its unrelated old-release source fence rejected this branch. Use PR251/current
+checks for integration status and final source-bound artifact evidence.
+The exact frontend rollback is mirrored and restore-verified on Desktop B.
+Full mutable-state backup remains unresolved by actual capacity; no live asset
+change or restart occurred. See [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md).
 
 # Dot explicit steering implementation — October 15
 

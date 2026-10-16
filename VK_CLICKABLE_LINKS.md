@@ -82,9 +82,23 @@ navigation targets were intercepted; no live data was written. All 21 history
 regressions pass. The production frontend build passed at the initial link-fix
 commit; the final preservation source requires its own release build.
 
-No backend code or generated shared types changed. Source is pushed. Staging PR,
-final artifact/CI acceptance and live activation are being completed. The normal
+No backend code or generated shared types changed. Source is pushed;
+[PR251](https://github.com/artinflight/vibe-kanban/pull/251) owns staging
+integration. Its current checks are authoritative. The initial hosted run passed
+all standard jobs, including backend tests. The normal
 full hosted workflow includes a separate combined-capture-consent source fence
 pinned to an older release: it rejects this branch as outside that unrelated
 source scope. Its failure must not be reported as a green full workflow. Normal
 PR validation skips that release-specific job. No backend restart is needed.
+
+
+The verified frontend rollback archive is on
+`desktop:B:/vk-backups/vk-clickable-links-20261016/frontend.tar.zst`, SHA256
+`55932328398d219a521ec826fbffca892e8b78fa723a34accae6a0e4dc0f9fb5`.
+Physical restore/readback verified all1,342 files. This scoped rollback is not a
+fresh full mutable-state backup. The legacy lean helper stages65 GB of sessions,
+exceeding the roughly44 GB currently free on the SSD; Desktop B has25 GB free.
+Existing release backup evidence covers a30.4 GB archive on Laptop, not a new
+Desktop B backup. Under the deployment runbook, the full-backup prerequisite
+must be resolved before live activation; it has not been waived. Live assets,
+application data and backend processes remain unchanged.

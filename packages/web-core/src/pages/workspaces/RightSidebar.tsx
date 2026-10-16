@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
-import { DotSidechatLive } from './DotSidechatLive';
-import { DotSidechatFixture } from './DotSidechatFixture';
+import { DotSidechat } from './DotSidechat';
+import { isDotSidechatEnabled } from '@/shared/lib/dotSidechat';
 import { useTranslation } from 'react-i18next';
 import { FileTreeContainer } from './FileTreeContainer';
 import { ProcessListContainer } from './ProcessListContainer';
@@ -38,12 +38,14 @@ export interface RightSidebarProps {
   rightMainPanelMode: RightMainPanelMode | null;
   selectedWorkspace: Workspace | undefined;
   repos: RepoWithTargetBranch[];
+  showDot?: boolean;
 }
 
 export const RightSidebar = memo(function RightSidebar({
   rightMainPanelMode,
   selectedWorkspace,
   repos,
+  showDot = isDotSidechatEnabled,
 }: RightSidebarProps) {
   const { t } = useTranslation(['tasks', 'common']);
   const diffs = useDiffs();
@@ -197,16 +199,14 @@ export const RightSidebar = memo(function RightSidebar({
   return (
     <div
       className={
-        import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1' ||
-        import.meta.env.VITE_DOT_SIDECHAT === '1'
+        showDot
           ? 'h-full border-l bg-secondary flex flex-col overflow-hidden'
           : 'h-full border-l bg-secondary overflow-y-auto'
       }
     >
       <div
         className={
-          import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1' ||
-          import.meta.env.VITE_DOT_SIDECHAT === '1'
+          showDot
             ? 'divide-y border-b overflow-auto max-h-[40%] shrink-0'
             : 'divide-y border-b'
         }
@@ -231,17 +231,9 @@ export const RightSidebar = memo(function RightSidebar({
             </div>
           ))}
       </div>
-      {(import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1' ||
-        import.meta.env.VITE_DOT_SIDECHAT === '1') && (
+      {showDot && (
         <div className="flex-1 min-h-0 overflow-hidden">
-          {import.meta.env.VITE_DOT_SIDECHAT === '1' ? (
-            <DotSidechatLive
-              key={selectedWorkspace?.id ?? 'none'}
-              workspaceId={selectedWorkspace?.id}
-            />
-          ) : (
-            <DotSidechatFixture />
-          )}
+          <DotSidechat workspaceId={selectedWorkspace?.id} />
         </div>
       )}
     </div>

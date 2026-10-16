@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocation } from '@tanstack/react-router';
 import { workspacesApi } from '@/shared/lib/api';
 import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 import { Group, Layout, Panel, Separator } from 'react-resizable-panels';
@@ -31,6 +32,8 @@ import {
   type WorkspacesMainContainerHandle,
 } from './WorkspacesMainContainer';
 import { RightSidebar } from './RightSidebar';
+import { DotSidechat } from './DotSidechat';
+import { isDotSidechatEnabled } from '@/shared/lib/dotSidechat';
 import { ResizableSidePane } from '@vibe/ui/components/ResizableSidePane';
 import { ChangesPanelContainer } from './ChangesPanelContainer';
 import { CreateChatBoxContainer } from '@/shared/components/CreateChatBoxContainer';
@@ -112,7 +115,12 @@ export function WorkspacesLayout() {
       : 'create-mode-seed-default';
 
   const isMobile = useIsMobile();
-  const [mobileTab, setMobileTab] = useMobileActiveTab();
+  const hash = useLocation({ select: (location) => location.hash });
+  const [storedMobileTab, setMobileTab] = useMobileActiveTab();
+  const mobileTab =
+    isDotSidechatEnabled && workspaceId && !isCreateMode && hash === 'dot'
+      ? 'dot'
+      : storedMobileTab;
   useEffect(() => {
     if (isMobile)
       setMobileTab(workspaceId || isCreateMode ? 'chat' : 'workspaces');
@@ -334,6 +342,17 @@ export function WorkspacesLayout() {
               )}
             </div>
 
+            {isDotSidechatEnabled && selectedWorkspace && !isCreateMode && (
+              <div
+                className={cn(
+                  'flex-1 min-h-0 overflow-hidden',
+                  mobileTab !== 'dot' && 'hidden'
+                )}
+              >
+                <DotSidechat workspaceId={selectedWorkspace.id} />
+              </div>
+            )}
+
             {/* Git tab */}
             <div
               className={cn(
@@ -346,6 +365,7 @@ export function WorkspacesLayout() {
                   rightMainPanelMode={rightMainPanelMode}
                   selectedWorkspace={selectedWorkspace}
                   repos={repos}
+                  showDot={false}
                 />
               )}
             </div>
@@ -445,12 +465,7 @@ export function WorkspacesLayout() {
           </Group>
 
           {isRightSidebarVisible && !isCreateMode && (
-            <ResizableSidePane
-              enabled={
-                import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1' ||
-                import.meta.env.VITE_DOT_SIDECHAT === '1'
-              }
-            >
+            <ResizableSidePane enabled={isDotSidechatEnabled}>
               <RightSidebar
                 rightMainPanelMode={rightMainPanelMode}
                 selectedWorkspace={selectedWorkspace}

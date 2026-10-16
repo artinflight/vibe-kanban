@@ -61,7 +61,9 @@ The watcher reads native WARN/ERROR diagnostics from `logs_2.sqlite`, with a
 restricted target allowlist, and records fixed error categories with process/
 thread IDs. It never copies diagnostic bodies, debug prompts, tool payloads or
 transcripts. It reads VK failed-execution metadata, including workspace/session
-IDs, and matching backend journal errors. Native and journal events retain
+IDs, and matching backend journal errors. It discovers running VK service names
+over systemd each cycle and queries exact journal units, following releases
+without expanding historical journal unit globs. Native and journal events retain
 their original timestamps separately from collection time. A two-minute
 multi-process failure window gets an explicit correlation record. All SQLite
 connections are read-only and bounded; cursors survive service restarts.
@@ -103,10 +105,11 @@ the application as part of adjusting this diagnostic service.
 
 ## Validation and limits
 
-Nine offline tests pass: error distinction, DNS statuses, aborted probes,
+Ten offline tests pass: error distinction, DNS statuses, aborted probes,
 unauthenticated HTTP error responses, command timeouts, prompt/body exclusion,
-restart cursors, smaller replacement databases, journal byte-array messages and
-deduplication/recovery, rotation and fixed-expiry behavior (some cases share tests).
+restart cursors, smaller replacement databases, journal byte-array messages,
+deduplication/recovery, service replacement without historical unit globs,
+rotation and fixed-expiry behavior (some cases share tests).
 Run `python3 -B scripts/diagnostics/test_connectivity_watch.py`.
 `systemd-analyze --user verify`, `pnpm run ops:check` and `git diff --check` pass.
 Live collection captured the actual native incident history, failed executions
@@ -120,8 +123,21 @@ watcher setup defects, not new evidence of host network failures. They remain
 in the log for transparency; use the corrected watcher generation from 15:10.
 The corrected unit allows 96 tasks and disables core dumps.
 
+Pre-PR live inspection at 15:46 found repeated journal source timeouts despite
+healthy DNS/HTTPS and native/DB collection. The journal wildcard expanded against
+historical service names and exceeded the 15-second bound. Exact-unit queries
+completed in under one second outside the service. The updated collector now
+discovers running units via systemd, then uses exact journal filters. Only the
+watcher was restarted, retaining the expiry and cursors so unread journal events
+can be recovered. Earlier clean samples remain valid, but heartbeat source errors
+identify the subsequent journal collection gap. Installed-source and fresh-cycle
+validation are recorded in the private `publication-validation.json` receipt.
+
 `pnpm run format` was attempted: Rust formatting completed, then frontend
 formatting stopped because this checkout has no installed `prettier` binary.
-No frontend/Rust application code changed. Full app suites were not run;
-no DNS outage, authenticated startup or provider failure was deliberately induced.
+Pre-PR `pnpm run check` and `pnpm run lint` were attempted and stopped on missing
+`tsc`/`eslint`. `cargo test --workspace`, using the shared SSD target with
+incremental builds disabled, stopped on missing `glib-2.0.pc`. No frontend/Rust
+application code changed; hosted CI must supply the full application baseline.
+No DNS outage, authenticated startup or provider failure was deliberately induced.
 The next natural failure is needed to determine its cause. No fix is claimed.

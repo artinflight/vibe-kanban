@@ -188,9 +188,22 @@ class Watcher:
 
     def journal_events(self):
         since = self.state.get('journal_since', time.time() - self.args.lookback)
-        code, out = run(['journalctl', '--user', '-u', 'vibe-kanban*.service',
-                         '--since', '@' + str(int(since)),
-                         '--grep', JOURNAL_PATTERN, '--no-pager', '-o', 'json'], timeout=15)
+        # journalctl expands unit globs against historical journal fields, which
+        # can dominate each poll on this host. Discover current units over D-Bus
+        # and query exact names; repeat discovery to follow application releases.
+        code, out = run(['systemctl', '--user', 'list-units', '--type=service',
+                         '--state=running', '--plain', '--no-legend',
+                         'vibe-kanban*.service'], timeout=3)
+        units = [line.split()[0] for line in out.splitlines() if line.split()
+                 and re.fullmatch(r'vibe-kanban[\w.-]*\.service', line.split()[0])]
+        if code != 0 or not units:
+            self.emit(dict(kind='source_error', source='journal_units', exit=code))
+            return
+        argv = ['journalctl', '--user']
+        for unit in units:
+            argv += ['-u', unit]
+        code, out = run(argv + ['--since', '@' + str(int(since)),
+                               '--grep', JOURNAL_PATTERN, '--no-pager', '-o', 'json'], timeout=15)
         if code not in (0, 1):
             self.emit(dict(kind='source_error', source='journal', exit=code))
             return

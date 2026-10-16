@@ -125,17 +125,35 @@ class ConnectivityTests(unittest.TestCase):
         instance.state = {'journal_since': 100}
         events = []
         instance.emit = events.append
-        with patch.object(watch, 'run', return_value=(124, '')):
+        discovery = (0, 'vibe-kanban-native-review-20261015.service loaded active running VK')
+        with patch.object(watch, 'run', side_effect=[discovery, (124, '')]):
             instance.journal_events()
         self.assertEqual(instance.state['journal_since'], 100)
         row = {'__CURSOR': 'fixture', '__REALTIME_TIMESTAMP': '1792160644981018',
                '_SYSTEMD_USER_UNIT': 'vibe-kanban-native-review-20261015.service',
                'MESSAGE': 'Codex spawn error: account/read request failed: workspace routing discovery timed out SECRET'}
-        with patch.object(watch, 'run', return_value=(0, watch.json.dumps(row))):
+        with patch.object(watch, 'run', side_effect=[discovery, (0, watch.json.dumps(row)),
+                                                   discovery, (0, watch.json.dumps(row))]):
             instance.journal_events()
             instance.journal_events()
         self.assertEqual([e['kind'] for e in events], ['source_error', 'journal_error'])
         self.assertNotIn('SECRET', str(events))
+
+    def test_journal_discovers_replacement_service_without_historical_glob(self):
+        instance = watch.Watcher.__new__(watch.Watcher)
+        instance.args = SimpleNamespace(lookback=600)
+        instance.state = {'journal_since': 100}
+        events = []
+        instance.emit = events.append
+        with patch.object(watch, 'run', side_effect=[
+            (0, 'vibe-kanban-next.service loaded active running VK'), (1, ''),
+        ]) as run:
+            instance.journal_events()
+        query = run.call_args_list[1].args[0]
+        self.assertIn('vibe-kanban-next.service', query)
+        self.assertNotIn('vibe-kanban*.service', query)
+        self.assertGreater(instance.state['journal_since'], 100)
+        self.assertEqual(events, [])
 
     def test_fixed_expiry_does_not_start_probes_after_restart(self):
         argv = ['watch', '--output', '/mnt/vk-storage/fixture', '--codex-logs', '/fixture',

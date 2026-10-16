@@ -8,10 +8,14 @@ The corrected collector reads both historic startup failures, native model/
 address-lookup errors and failed execution IDs. Shared connectivity is a strong
 lead, not a proven root cause; the reported GitHub failure's original timestamp
 remains unverified. Initial setup defects before 15:10 are documented separately.
-Nine tests, ops/diff checks and unit verification pass. Full repository format
-was attempted but frontend Prettier is unavailable. No application restart,
-DNS change or authenticated retry occurred. Source, tests and documentation are
-committed on this branch; no push or PR. Preserve logs for recurrence.
+Ten tests, ops/diff checks and unit verification pass. Full local check/lint/
+format stop on absent frontend tools; workspace Rust tests stop on absent GLib.
+Pre-PR inspection found persistent journal glob-expansion timeouts. The updated
+collector discovers active units over systemd and queries exact names instead;
+the installed source preserves the original expiry and cursors. The operator
+requested push and a PR into staging. Await hosted CI and the next recurrence;
+no merge is requested. No application restart, DNS change or authenticated retry
+occurred. Preserve logs for recurrence.
 
 # Clickable summary links — activated October 16
 

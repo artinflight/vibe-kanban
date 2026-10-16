@@ -1,3 +1,13 @@
+# Nightly backup efficiency integration — October 16
+
+Branch `vk/604d-vk-nightly-backu` integrates PR235's backup-only source at
+`240a7b2c7`, plus lossless chunk storage in independent nightly generations.
+Local issue T40 is linked to this workspace. Read
+[VK_NIGHTLY_BACKUP_EFFICIENCY.md](VK_NIGHTLY_BACKUP_EFFICIENCY.md) for scope,
+restoration evidence and operational boundaries. Routine restart automation,
+production scheduling and existing recovery retirement are outside this source
+change. The former stream notes below remain retained release context.
+
 # Clickable summary links release — live October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) merged into staging

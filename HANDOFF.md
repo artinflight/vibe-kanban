@@ -1,3 +1,18 @@
+# Nightly backup efficiency pickup — October 16
+
+Local T40 (`f394eccb-cbb6-4e6a-a0ba-87ba8d51f904`) is created and linked to
+workspace `604d90d0`. This stream imports PR235 backup/capture/lifecycle/recovery
+contracts and adds independent lossless chunk closure, prefix reuse, native
+readback support and leased restart decoding. Rebuild proposals remain exact
+and preserve required work; no live exclusions are applied. Read
+[VK_NIGHTLY_BACKUP_EFFICIENCY.md](VK_NIGHTLY_BACKUP_EFFICIENCY.md).
+Private fixture receipts are under `/mnt/vk-storage/vk-nightly-efficiency-20261016/`.
+No production backup, scheduling, restart or historical retirement is claimed.
+Whole-plan physical acceptance and operational package adoption remain required.
+The unified fixture runner reports 340 tests: 339 passed, one explicit opt-in
+service test skipped. Ops, syntax, historical source pins and diff checks pass.
+Full format stops after Rust formatting because Prettier is unavailable.
+
 # Clickable summary links — activated October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) merged into staging

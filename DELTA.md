@@ -1883,3 +1883,10 @@ the paid harness was not rerun. No live connector edit, restart or deployment.
 - Bounded cached reads preserve history; uncertain evidence remains unresolved.
 - Regression coverage includes AutoSwitch's resumed-parent failure and child
   reuse. This source merge is for the next backend restart, not live activation.
+
+## 2026-10-16 Nightly backup efficiency integration
+
+- Created local Vibe T40 and linked workspace604d90d0. Imported the PR235 backup-only dependency closure at240a7b2c7; routine restart automation remains separate.
+- Added opt-in independent chunked nightly storage, prefix reuse, complete-byte decoding, native readback and leased restart-baseline support. Exact rebuild proposals retain protected work and enable no live exclusion.
+- Unified isolated fixture validation:339 passed/1 opt-in skip; ops, Python syntax, historical source pins and whitespace checks pass. Full format reaches Rust then stops at missing Prettier.
+- No live schedule, production backup/restart, source retirement or whole-plan B restore acceptance. See VK_NIGHTLY_BACKUP_EFFICIENCY.md for adoption requirements and private evidence location.

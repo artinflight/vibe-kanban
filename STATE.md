@@ -1,3 +1,11 @@
+# Nightly backup source integration — October 16
+
+The nightly efficiency stream prepares PR235's independent backup and restart
+baseline contracts with lossless chunk storage. It does not activate scheduling,
+change the live plan or authorize a restart/retirement. See
+[VK_NIGHTLY_BACKUP_EFFICIENCY.md](VK_NIGHTLY_BACKUP_EFFICIENCY.md) and local T40.
+Production whole-plan recovery acceptance remains separate from fixture evidence.
+
 # Summary web-link rendering — live October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) is merged into

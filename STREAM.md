@@ -1,3 +1,38 @@
+# Dot explicit steering implementation — October 15
+
+The user authorized development after ff83afe93. PR #250 prepares a separate
+identity-fenced steering API, durable receipts and a reviewed connector overlay
+in `scripts/dot-connector/`. Legacy follow-up/queue behavior and live ca3fe817
+are preserved. No live connector edit, restart or access-policy change occurred.
+
+Runtime source `9f5825ce3` passes full Test run 38819080520: 580 Rust tests/14 skips,
+14 connector tests, 12 enabled persistence cases and applicable lint/schema/UI/
+Tauri checks. All 14 existing capacity/Recommend regressions also passed against
+the candidate. A real isolated native session applied one correction in its sole
+turn and produced the exact final marker under read-only/on-request policy.
+Original native history independently verified this after a harness-only terminal
+readback timeout; no correction was resent. An earlier readiness attempt sent no
+correction. Both private auth copies were removed and owned processes stopped.
+
+Only test evidence collection changed afterward: ordinary completion closes the
+peer reader, so the harness now consumes terminal notifications, with an offline
+regression. Product runtime code is unchanged from the verified sample. Current
+checks are linked from PR #250. See the overlay README for deployment requirements.
+
+## Retained investigation
+
+# Dot running-agent steering and queue investigation — October 15
+
+Branch `vk/a674-vk-dot-turn-stee` investigates the reported Dot refusal.
+Root cause and required connector/backend changes are documented in
+[VK_DOT_SESSION_STEERING.md](VK_DOT_SESSION_STEERING.md). Exact refusal reproduced
+with mocked running state and zero POSTs; nine existing configuration-policy
+tests pass. Scope is investigation, without implementation or live mutations.
+Next implementation should expose existing steering and add explicit deferred
+Codex delivery while retaining Recommend and current selection/permission policy.
+
+## Retained prior-stream context
+
 # Native review PR249 — verified implementation, release held
 
 Code/test head9afe687c9 passes Full Test38640253559, native38640253455 and

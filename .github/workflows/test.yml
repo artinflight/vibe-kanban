@@ -114,6 +114,7 @@ jobs:
               - 'docs/audits/**'
               - 'docs/operations/**'
             backend:
+              - 'scripts/dot-connector/**'
               - 'crates/api-types/**'
               - 'crates/client-info/**'
               - 'crates/db/**'
@@ -464,6 +465,9 @@ jobs:
 
       - name: Run Cargo tests
         run: cargo nextest run --workspace --exclude vibe-kanban-tauri
+
+      - name: Test explicit Dot steering connector
+        run: python3 -B -m unittest discover -s scripts/dot-connector -p 'test_*.py' -v
 
       - name: Exercise automatic checkpoint and input persistence with scheduling enabled
         env:

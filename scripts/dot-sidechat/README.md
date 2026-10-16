@@ -1,7 +1,9 @@
-> Latest reliability/scope status: [rollout handoff](../../DOT_RELIABILITY_ROLLOUT.md).
-> Phone pairing/send are confirmed; root reply delivery is not. The desktop
-> result was a manual integration-task relay. The owner approved all current,
-> archived and future projects; see the latest handoff for applied scope.
+> Latest: [current root reply and complete scope](../../DOT_RELIABILITY_ROLLOUT.md).
+> Root directly replied to the retained phone test; server readback confirms one
+> persisted reply and two non-overlapping notification subscriptions covering all
+> current/archived and future projects. Root still lacks pending discovery.
+> Fresh automatic routing and user-visible receipt remain unverified. No new
+> refresh, pairing or activation is needed. Historical notes below are superseded.
 
 > Subsequent operator confirmation (2026-10-16): the first real desktop
 > roundtrip succeeded through the integration task's paired connector; Seamus's
@@ -151,6 +153,11 @@ message/event, and a real appended reply remain separate evidence gates.
 
 
 ## Persistent all-project policy
+
+The current owner-approved rollout is already applied and both notification
+triggers are registered. Preserve them; do not reapply its plan, create duplicate
+subscriptions or repeat metadata refresh. The procedure below describes the
+helper for a separately authorized new rollout, not a pending current action.
 
 Use `scope_rollout.py plan --all-projects` with the real read-only Vibe inventory
 and private sidechat database, then the guarded `apply` command with its exact

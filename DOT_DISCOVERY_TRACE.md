@@ -1,25 +1,37 @@
 # Dot discovery discrepancy — 2026-10-16
 
-## Finding and limits
+## Current resolution and remaining limit
 
-The existing connection reaches the updated connector. A read-only pending-context
-call through the registered Vibe MCP plugin succeeded at 18:00:50–18:00:51 UTC,
-and the running service logged its `tools/call` at 18:00:51.264011 UTC. It returned
-one unanswered message with complete exact routing context. No conversation text
-or private event/thread/message/receipt identifiers are included here.
+Root's owner reports its view caught up at 18:07 UTC without another refresh:
+thread read, reply append and delivery read are available, and the complete broad
+event schema is visible. Root directly replied to the retained phone test and
+verified persistence, then updated the existing enabled automation with original
+VK Dev and all-projects-excluding-VK-Dev triggers through the supported flow.
+Read-only server inspection at 18:23 UTC independently confirms both active,
+non-overlapping subscriptions and exactly one same-thread/workspace phone reply.
 
-The coding execution's new turn now exposes all four sidechat tools, including
-`list_pending_sidechat_messages`. This differs from the reported root inventory
-(no sidechat tools) and earlier fresh internal worker (three original tools).
-It proves that recovery is callable through the registered connection in this
-execution. It does not prove that an existing root has received those tools.
+The previous inability to reply/register broad scope is superseded. Root still
+lacks `list_pending_sidechat_messages`, although the connector and this coding
+execution expose it. A fresh automatic roundtrip and user-visible reply receipt
+remain unverified. See [the current rollout handoff](DOT_RELIABILITY_ROLLOUT.md).
+No further refresh, pairing, activation or automation replacement is requested.
 
-The configured installed facade advertises the complete event schema. The
-reported root/worker view still has the old two-filter definition. The evidence
-points to platform metadata propagation or conversation-inventory selection, but
-does **not** identify an exact cache component. The platform's stored catalog,
-metadata review/import state and per-conversation binding are not exposed here.
-Do not label an unobserved internal cache as a proven root cause.
+The trace below preserves the evidence collected before that owner confirmation
+was available. The reported views changed with time; an exact platform cache,
+metadata review state or root-inventory mechanism was never established. The
+support packet now applies only to the remaining pending-discovery availability
+or a fresh context-free wake failure. It is not a prerequisite to root's verified
+reply capability or the already completed broad subscription registration.
+
+## Historical finding and limits
+
+A registered pending-context call through this coding execution succeeded at
+18:00:50–18:00:51 UTC on the same adapter child that handled discovery. This coding
+execution exposed all four tools while the earlier reported root/worker views
+were stale. The configured installed facade also returned the complete schema.
+This established a platform metadata/context discrepancy, without identifying an
+exact cache component or proving root's stored catalog. No private conversation
+or receipt identifiers were published.
 
 ## Evidence
 
@@ -79,7 +91,7 @@ The sanitized reproducible private probe and trace are retained at
 conversation bodies. Final readback still found one accepted phone delivery
 attempt without a reply and zero broad platform subscriptions.
 
-## Supported resolution and escalation packet
+## Historical resolution packet — remaining recovery tool only
 
 Seamus already performed the documented refresh, and the server received discovery
 in that window. Another identical refresh is not the proposed resolution.
@@ -120,9 +132,9 @@ in [the rollout handoff](DOT_RELIABILITY_ROLLOUT.md).
 
 ## Acceptance still open
 
-Browser access to current, archived and future projects remains active. Root's
-actual inventory, complete notification subscription and natural root-to-phone
-reply remain unverified. The coding execution did not append or relay a reply,
-resend a webhook, change any scope, restart any service, or touch the mobile
-owner's files/browser while tracing discovery. A successful recovery read does
-not mean the phone received a reply.
+Browser access and both notification registrations cover current, archived and
+future projects. Root's retained-message reply is persisted, independently checked
+in the original thread/workspace. Root's pending-discovery tool remains absent;
+fresh automatic event-to-reply routing and Seamus's visible receipt remain open.
+The coding execution did not append/relay a reply, resend a webhook, change scopes,
+restart services or touch the mobile owner's work during trace/reconciliation.

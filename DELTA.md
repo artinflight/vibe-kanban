@@ -1954,3 +1954,23 @@ verify the root's stored connection/catalog record. No exact cache component or
 review hold is claimed. No repeated refresh, permissions/credential/subscription
 change, service restart, reply relay or mobile work occurred. Root phone reply
 and complete notification registration remain acceptance gaps.
+
+
+## 2026-10-16 — Root reply and complete notification registration verified
+
+Root's owner reports its view caught up at 18:07 UTC without another refresh.
+Root directly read the retained phone message, checked no reply existed, wrote
+one and verified reply_persisted=true. The enabled Reply to Vibe chats automation
+was updated through the supported platform flow with original VK Dev plus
+all-projects-excluding-VK-Dev triggers. The earlier root reply/broad-registration
+blockers are superseded.
+
+Independent read-only server inspection at 18:23 UTC confirms exactly two active,
+unexpired, non-overlapping subscriptions for the owner; original identity/filter
+preserved; all 43 current projects including 26 archived match one destination;
+future policy enabled; existing message-thread bindings valid. Exactly one phone
+reply is persisted in the original thread/workspace, without accepted-event replay.
+Root pending discovery remains absent. A fresh automatic roundtrip without a
+workspace hint and user-visible receipt remain unverified; Seamus was already
+asked for the new message. No new refresh/pairing/activation/runtime changes or
+mobile work occurred during reconciliation. Private IDs/content remain excluded.

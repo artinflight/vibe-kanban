@@ -2,7 +2,8 @@
 
 > Latest: [discovery trace and supported resolution](DOT_DISCOVERY_TRACE.md),
 > plus [reply reliability and all-project rollout](DOT_RELIABILITY_ROLLOUT.md).
-> Phone pairing/send now work; a natural root reply is still unverified.
+> Root directly replied to the retained phone test; both notification triggers
+> are registered. Fresh automatic routing and user-visible receipt remain open.
 > The earlier desktop success used a manual integration-task relay.
 
 This branch preserves the existing integration for review against `staging` in
@@ -22,8 +23,9 @@ still selects source `975f62c7c`, based on the clickable-links baseline
 `2249da3e9`. The initial connector source was `0f1a9daae`; it is now `d2c79543e` after
 the approved connector-only rollout. Browser API source remains `2da6263f7`.
 Both existing paired sessions now cover all current/archived and future projects;
-the additional notification subscription and natural root-to-phone reply remain
-platform acceptance gaps. See the latest handoff for exact evidence.
+both original and broad notification subscriptions are now registered. Root
+replied directly to the retained phone test; fresh automatic end-to-end and human
+viewing evidence remain open. See the latest handoff for exact evidence.
 
 Dot appears below Notes in the right sidebar. On the original mobile layout it
 is in the Git/details tab; Chat remains the coding-agent conversation. The
@@ -46,12 +48,14 @@ persisted through the integration task's available paired connector, and his
 result supersedes the activation record's earlier statement that no real reply
 had been verified. It is not a fixture or a webhook-acceptance-only result.
 
-The proof used the connector available to the integration task. Root dot was
-still missing the new sidechat tools in that reported test; direct root connector
-access and reply delivery remain unresolved and unverified. Do not treat the
-successful integration-task route as proof of the root route, or resend the
-already successful message to recreate evidence. A real phone roundtrip and
-mobile acceptance remain with the separate mobile owner.
+That desktop proof used the integration task's connector while root lacked the
+new tools. It does not establish unattended root replies. Root subsequently gained
+thread read, reply append and delivery read at 18:07 UTC, directly replied to the
+retained phone test and verified persistence. Independent server readback confirms
+one reply in that message's original thread and workspace. Neither successful
+message should be resent to recreate evidence. The new phone result supersedes
+the earlier inability to use root's own reply connector; fresh automatic routing
+and Seamus's visible receipt remain unverified.
 
 This documentation records the operator's confirmation without publishing the
 conversation, screenshot, pairing material or private delivery/receipt identifiers.
@@ -69,22 +73,19 @@ The mobile agent owns workspace `2e35466b-127e-41ba-ab56-1dd47bdb8b85` and branc
 `vk/2e35-vk-mobile-dot-in`. Its active work is not imported, committed, rebased,
 reset or deployed here. That owner retains its active UI inspection. Seamus has
 confirmed phone pairing and sending, so this task does not resume geometry,
-keyboard, pairing or browser debugging. The earlier mobile checklist is retained
-as historical preparation evidence; the remaining acceptance here is a natural
-root-to-phone message/reply roundtrip.
-Seamus subsequently confirmed phone pairing and sending; no further phone UI
-debugging is needed for that issue. The real phone message-to-reply roundtrip
-remains unverified. See the latest reliability/rollout handoff above.
+keyboard, pairing or browser debugging. The earlier mobile checklist is historical
+preparation evidence. The retained phone test now has a direct root reply;
+remaining acceptance is a fresh automatic message-to-reply roundtrip without
+manually naming a workspace, plus Seamus's confirmation of its visible receipt.
 
-The remaining connector acceptance is the direct root dot route: confirm that
-the intended root context exposes the new tools and can persist an authorized
-reply through its own available connector. Retained-history recovery and broader
-UI QA beyond the confirmed desktop exchange are not established by the screenshot.
-A webhook 2xx alone is not a reply or evidence of viewing; the confirmed desktop
-exchange has the additional persistence and owner screenshot evidence above.
-Reconcile uncertain delivery before retrying, and preserve existing approval
-subscriptions. Do not run historical bootstrap/deployment instructions as part
-of this handoff.
+Root still lacks pending-message discovery. Its three reply tools and broad event
+schema are available, and both original and broad notification subscriptions are
+registered. The source recovery tool works through this coding execution but its
+availability in root remains a distinct platform limitation. Preserve the existing
+enabled automation, both triggers and approval subscriptions. A webhook 2xx and
+reply persistence are separate from human viewing; reconcile uncertain writes
+before retrying. No further refresh, pairing, activation or historical bootstrap
+procedure is required for this handoff.
 
 ## Source inventory and reconciliation
 
@@ -189,11 +190,15 @@ handoff identifiers, not chat/session/grant identifiers.
   cannot leave their operational details in published ancestors.
 - Operator-confirmed live evidence: the first desktop webhook/reply-persistence
   roundtrip succeeded through the integration task's connector; Seamus's screenshot
-  confirms the displayed reply. Direct root connector access and a real phone
-  roundtrip remain unverified. This preservation task did not rerun pairing,
-  subscriptions, live chat or rendered browser/Android QA.
-- No production chat write, grant,
-  service restart, proxy change, frontend switch or mobile-owner edit occurred.
+  confirms the displayed reply. Root's later direct phone-test reply is also
+  persisted, independently verified in its original thread/workspace. Both
+  non-overlapping notification subscriptions are registered. Fresh automatic
+  end-to-end and phone-visible receipt evidence remain open. This reconciliation
+  did not rerun pairing, append/relay a reply or perform browser/Android QA.
+- The initial preservation phase made no runtime changes. Subsequent approved
+  connector/publisher activation and complete-project access are documented in
+  the rollout handoff. This latest reconciliation is read-only; no activation,
+  subscription mutation, reply relay or mobile-owner edit occurred.
 
 Private validation logs are retained on the mounted SSD under
 `/mnt/vk-storage/vk-dot-preservation-20261016/validation/`.

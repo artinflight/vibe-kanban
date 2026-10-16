@@ -1,14 +1,19 @@
-# Dot discovery trace — October 16 follow-up
+# Root reply and complete notification registration — October 16 follow-up
 
-The reported 17:54 refresh window reached the updated connector at 17:53:53 UTC.
-The configured facade advertises all four tools and complete all-project event
-filters. This resumed coding execution now exposes pending recovery and its
-registered-plugin call succeeded on the same adapter child. Root/earlier worker
-catalogs still differ. Exact cache location and root registration binding are
-not observable here; see [the evidence and supported escalation packet](DOT_DISCOVERY_TRACE.md).
-Another identical refresh is not the proposed resolution. No services, permissions,
-credentials, subscriptions, browser scope or mobile-owner work changed in this trace.
-Natural root phone reply and broad notification registration remain open.
+Root's view caught up at 18:07 UTC without another refresh. Root directly read
+and replied to the retained phone test and verified reply persistence. Root also
+updated the existing enabled Reply to Vibe chats automation through the supported
+flow. Independent server readback confirms two active, unexpired, non-overlapping
+subscriptions: original VK Dev plus all projects excluding exactly VK Dev. Each
+of all 43 current projects, including 26 archived, matches one destination;
+the future-project policy is enabled. The original subscription is preserved.
+
+The previous root reply/registration blockers are superseded. Root still lacks
+list_pending_sidechat_messages. A fresh automatic message-to-reply roundtrip
+without a manual workspace hint and Seamus's user-visible receipt remain open.
+Seamus has already been asked for a fresh message; no additional refresh, pairing,
+activation or mobile UI investigation is needed. See [current evidence and acceptance](DOT_RELIABILITY_ROLLOUT.md).
+This reconciliation changes documentation only; no runtime state or mobile work.
 
 # Dot connector activation and complete project scope — October 16
 
@@ -20,10 +25,10 @@ seconds. Existing subscriptions, credentials, expiration and revocation were
 preserved. Only the connector/publisher restarted; mobile owner work is untouched.
 
 Read [the exact activation and rollout handoff](DOT_RELIABILITY_ROLLOUT.md).
-All-project browser access is live. Its additional broad platform subscription is
-still required for complete notifications, and root's refreshed tool inventory
-remains unverified. The retained phone message has one accepted webhook and no
-persisted reply; the desktop success was a manual integration-task relay. No more
+All-project browser access and both notification registrations are live. Root
+replied directly to the retained phone message; the earlier desktop result was
+a manual integration-task relay. Fresh automatic routing and human viewing
+remain unverified, and root still lacks pending-message recovery. No more
 phone pairing/UI debugging or owner scope/activation decision is pending.
 
 # Dot integration preservation — October 16

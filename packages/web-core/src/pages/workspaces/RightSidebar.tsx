@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react';
+import { DotSidechatLive } from './DotSidechatLive';
 import { DotSidechatFixture } from './DotSidechatFixture';
 import { useTranslation } from 'react-i18next';
 import { FileTreeContainer } from './FileTreeContainer';
@@ -196,14 +197,16 @@ export const RightSidebar = memo(function RightSidebar({
   return (
     <div
       className={
-        import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1'
+        import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1' ||
+        import.meta.env.VITE_DOT_SIDECHAT === '1'
           ? 'h-full border-l bg-secondary flex flex-col overflow-hidden'
           : 'h-full border-l bg-secondary overflow-y-auto'
       }
     >
       <div
         className={
-          import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1'
+          import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1' ||
+          import.meta.env.VITE_DOT_SIDECHAT === '1'
             ? 'divide-y border-b overflow-auto max-h-[40%] shrink-0'
             : 'divide-y border-b'
         }
@@ -228,9 +231,17 @@ export const RightSidebar = memo(function RightSidebar({
             </div>
           ))}
       </div>
-      {import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1' && (
+      {(import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1' ||
+        import.meta.env.VITE_DOT_SIDECHAT === '1') && (
         <div className="flex-1 min-h-0 overflow-hidden">
-          <DotSidechatFixture />
+          {import.meta.env.VITE_DOT_SIDECHAT === '1' ? (
+            <DotSidechatLive
+              key={selectedWorkspace?.id ?? 'none'}
+              workspaceId={selectedWorkspace?.id}
+            />
+          ) : (
+            <DotSidechatFixture />
+          )}
         </div>
       )}
     </div>

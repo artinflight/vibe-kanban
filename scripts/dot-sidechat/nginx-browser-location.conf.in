@@ -1,0 +1,19 @@
+# TEMPLATE ONLY. Add inside existing vibe.local TLS server after approval.
+# Install only the PUBLIC pinned sidecar certificate at the path below.
+location ^~ /api/dot-sidechat/ {
+    limit_except GET POST { deny all; }
+    client_max_body_size 64k;
+    proxy_pass https://@SIDECAR_ADDRESS@:18974;
+    proxy_ssl_server_name on;
+    proxy_ssl_name vk-dot-sidechat.internal;
+    proxy_ssl_verify on;
+    proxy_ssl_trusted_certificate /etc/nginx/ssl/vk-dot-sidechat.crt;
+    proxy_ssl_verify_depth 1;
+    proxy_set_header Host vibe.local;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_connect_timeout 5s;
+    proxy_read_timeout 15s;
+    access_log off;
+}

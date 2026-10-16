@@ -446,7 +446,10 @@ export function WorkspacesLayout() {
 
           {isRightSidebarVisible && !isCreateMode && (
             <ResizableSidePane
-              enabled={import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1'}
+              enabled={
+                import.meta.env.VITE_DOT_SIDECHAT_FIXTURE === '1' ||
+                import.meta.env.VITE_DOT_SIDECHAT === '1'
+              }
             >
               <RightSidebar
                 rightMainPanelMode={rightMainPanelMode}

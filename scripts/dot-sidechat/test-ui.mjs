@@ -1,7 +1,7 @@
 // DOM contract tests against the isolated fixture only; not visual browser acceptance.
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-const origin = "http://127.0.0.1:18973";
+const origin = process.env.DOT_FIXTURE_ORIGIN || "http://127.0.0.1:18973";
 const waitFor = async (fn) => {
   for (let i = 0; i < 100; i++) {
     if (fn()) return;

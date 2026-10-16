@@ -13,7 +13,7 @@ Markdown links for PR and preview fields; instructions alone did not cover the
 renderer gap. This investigation reproduces that mechanism, rather than claiming
 an audit of every historical agent reply.
 
-## Prepared repair
+## Live repair
 
 `ReadOnlyWebLinkPlugin` registers a display-only text transform before Markdown
 synchronization. It creates real links for HTTP(S) URLs in prose and URL-only
@@ -38,10 +38,10 @@ or change file-navigation behavior.
 
 ## Live frontend preservation
 
-Active frontend discovery on October 16 found `/assets/index-Djfpggqs.js` served
+Before activation, frontend discovery on October 16 found `/assets/index-Djfpggqs.js` served
 through `vk-frontend-static.service` and `vk-standby-gateway.service`; the backend
 is `vibe-kanban-native-review-20261015.service`. The historical green service and
-port 4511 are inactive. All mapped sources reachable from the live entrypoint
+port 4511 are inactive. All mapped sources reachable from that incumbent entrypoint
 match this branch except the link-rendering changes and one live-only
 `useConversationHistory.ts` fallback. Old immutable chunks remain in the live
 asset directory, so auditing every `.map` there mixes obsolete source versions;
@@ -79,26 +79,53 @@ The actual production `WYSIWYGEditor` also passed sandboxed Chromium tests at
 1440px and 393px: first-render bare/inline-code/HTTP links open a real new tab;
 streamed replacements stay clickable and fenced code stays inert. Synthetic
 navigation targets were intercepted; no live data was written. All 21 history
-regressions pass. The production frontend build passed at the initial link-fix
-commit; the final preservation source requires its own release build.
+regressions pass. The final preservation production build passed, and its frontend
+inputs are identical to the merged staging source.
 
-No backend code or generated shared types changed. Source is pushed;
-[PR251](https://github.com/artinflight/vibe-kanban/pull/251) owns staging
-integration. Its current checks are authoritative. The initial hosted run passed
-all standard jobs, including backend tests. The normal
-full hosted workflow includes a separate combined-capture-consent source fence
-pinned to an older release: it rejects this branch as outside that unrelated
-source scope. Its failure must not be reported as a green full workflow. Normal
-PR validation skips that release-specific job. No backend restart is needed.
+[PR #251](https://github.com/artinflight/vibe-kanban/pull/251) merged into staging
+at `cb613654ad911ffa976ee53ea125a1dd67bd2bbe` after exact integrated-head
+[Test run38885247672](https://github.com/artinflight/vibe-kanban/actions/runs/38885247672)
+passed. Its standard frontend, backend and applicable desktop checks passed;
+the unrelated old-release source fence was skipped on normal PR validation.
+No backend code or generated shared types were changed by this repair.
 
+## Live activation and rollback
 
-The verified frontend rollback archive is on
+The operator explicitly authorized the verified Desktop B frontend rollback in
+place of a fresh full mutable-state backup. The legacy helper would stage65 GB
+of live sessions with only22 GB free on SSD; Desktop B had about25 GB free.
+This exception covers the frontend pointer switch only. No full backup is claimed.
+
+Before activation, current fork/staging was freshly fetched and matched the
+merged source. All 1,446 release files passed SHA256/size checks; all 1,342
+incumbent files still matched the rollback manifest. The Desktop archive hash
+was freshly rechecked. The archive is
 `desktop:B:/vk-backups/vk-clickable-links-20261016/frontend.tar.zst`, SHA256
 `55932328398d219a521ec826fbffca892e8b78fa723a34accae6a0e4dc0f9fb5`.
-Physical restore/readback verified all1,342 files. This scoped rollback is not a
-fresh full mutable-state backup. The legacy lean helper stages65 GB of sessions,
-exceeding the roughly44 GB currently free on the SSD; Desktop B has25 GB free.
-Existing release backup evidence covers a30.4 GB archive on Laptop, not a new
-Desktop B backup. Under the deployment runbook, the full-backup prerequisite
-must be resolved before live activation; it has not been waived. Live assets,
-application data and backend processes remain unchanged.
+Physical restore/readback had verified every file.
+
+At 2026-10-16 10:30:36 UTC, the current frontend symlink was atomically switched
+to `/mnt/vk-storage/vk-clickable-links-20261016/release`. Both the live gateway
+and static server serve the exact packaged index and entry assets:
+`/assets/index-DX_bn9dg.js`, index SHA256
+`1d350a0c5f09a7f082517571d590c134ad2b8a94ef9a39233363da74b88758c3`.
+The old entry asset remains available for existing tabs. The API still reports
+version0.1.42. Backend PID3927146, static PID3368 and gateway PID602359 remained
+unchanged. No restart, data migration, route or access-policy change occurred.
+
+Sandboxed Chromium loaded the actual live app at 1440px and 393px without page
+errors. All mutating API requests were blocked. In this task's read-only editor,
+synthetic text held only in browser memory produced three first-render links
+(bare HTTPS, URL-only inline code and HTTP), each opening a real intercepted
+new tab; a streamed replacement also stayed clickable. No conversation history
+was changed. The earlier production-editor fixture additionally covers explicit
+Markdown and fenced-code exclusion. Temporary browsers were closed afterward.
+
+The old frontend remains at
+`/mnt/vk-storage/vk-safe-release-20261009/frontend66-over-c3/packages/local-web/dist-v6`.
+Rollback atomically restores the current pointer to that directory without
+restarting services or restoring application data. Immutable old assets were
+retained in the new package. Durable manifests and activation/browser receipts
+are under `/mnt/vk-storage/vk-clickable-links-20261016/`, outside the task
+worktree. Refresh an existing VK tab to load the renderer. No public preview
+was generated; production is [Open VK](https://vibe.local/).

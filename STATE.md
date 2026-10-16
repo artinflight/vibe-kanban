@@ -1,10 +1,19 @@
-# Summary web-link rendering — October 16
+# Summary web-link rendering — live October 16
 
-Read [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md) for the reproduced renderer
-failure and prepared repair. Read-only chat must recognize HTTP(S) addresses in
-prose and URL-only inline code on first render and streaming updates. Explicit
-Markdown and detected web links share sanitization; code examples and unsafe
-schemes remain inert. This is source validation, not live activation.
+[PR #251](https://github.com/artinflight/vibe-kanban/pull/251) is merged into
+staging at `cb613654ad911ffa976ee53ea125a1dd67bd2bbe`. Version 0.1.42 is live
+through the verified frontend release under
+`/mnt/vk-storage/vk-clickable-links-20261016/release`, activated at 10:30 UTC.
+Read-only chat recognizes HTTP(S) addresses in prose and URL-only inline code
+on first render and streaming updates. Explicit Markdown and detected web links
+share sanitization; code examples and unsafe schemes remain inert.
+The existing live history fallback is preserved byte for byte.
+
+The operator explicitly authorized the verified Desktop B frontend rollback
+instead of a fresh full mutable-state backup. All packaged and incumbent files
+were verified before the atomic pointer switch. Backend, static and gateway
+PIDs remained unchanged. See [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md) for
+source, CI, live browser and rollback evidence.
 
 # Automatic sub-agent activity correction — October 16
 

@@ -1,25 +1,32 @@
-# Clickable summary links release pickup — October 16
+# Clickable summary links — activated October 16
 
-Read [VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md).
-[PR #251](https://github.com/artinflight/vibe-kanban/pull/251) owns staging
-integration; its current exact-head checks are authoritative for merge status.
-All 16 link and 21 history tests pass. Sandboxed Chromium verified real clicks
-in the actual editor at desktop and phone widths. The branch preserves the sole
-live-only history hook byte for byte. Local frontend checks/lint, formatting,
-ops and the initial production build passed. The first hosted run passed every
-standard job, including Rust tests; its unrelated old-release source fence failed.
-A final preservation build and exact-head PR checks bind the release candidate.
+[PR #251](https://github.com/artinflight/vibe-kanban/pull/251) merged into staging
+at `cb613654ad911ffa976ee53ea125a1dd67bd2bbe` with passing exact-head CI
+[38885247672](https://github.com/artinflight/vibe-kanban/actions/runs/38885247672).
+Version 0.1.42 is live at [Open VK](https://vibe.local/) after the 10:30 UTC
+frontend-only activation. Refresh existing tabs to load the new renderer.
+No backend restart, data migration or routing/policy change occurred.
 
-No live assets or backend processes were changed. An exact frontend rollback
-archive was mirrored to `desktop:B:/vk-backups/vk-clickable-links-20261016/`,
-SHA256 `55932328398d219a521ec826fbffca892e8b78fa723a34accae6a0e4dc0f9fb5`;
-all 1,342 files passed a physical restore/readback. This is a frontend rollback,
-not a fresh mutable-state backup. The legacy lean helper would stage about65 GB
-of live sessions with about44 GB free on SSD; Desktop B has about25 GB free.
-Existing release backup receipts describe a30.4 GB Laptop backup, not a fresh
-Desktop B backup. The full-backup prerequisite remains unresolved. Do not claim
-live activation or silently waive it. Private artifacts remain under ignored
-`.vk-preview/link-validation/` on mounted SSD storage.
+The current pointer targets
+`/mnt/vk-storage/vk-clickable-links-20261016/release`; entry JS is
+`/assets/index-DX_bn9dg.js`, index SHA256
+`1d350a0c5f09a7f082517571d590c134ad2b8a94ef9a39233363da74b88758c3`.
+All 1,446 packaged files and 1,342 incumbent files were freshly hash-verified.
+All 16 link and 21 history tests pass; live sandboxed desktop/phone checks
+verified real synthetic link clicks and streamed replacements with API writes
+blocked. The incumbent history fallback is preserved byte for byte.
+
+The operator explicitly approved using the scoped frontend rollback instead
+of a fresh full mutable-state backup. Desktop archive:
+`desktop:B:/vk-backups/vk-clickable-links-20261016/frontend.tar.zst`, SHA256
+`55932328398d219a521ec826fbffca892e8b78fa723a34accae6a0e4dc0f9fb5`;
+all 1,342 files passed physical restore/readback. The prior frontend remains at
+`/mnt/vk-storage/vk-safe-release-20261009/frontend66-over-c3/packages/local-web/dist-v6`.
+A frontend rollback atomically restores the current pointer to that directory;
+it does not restore application data or restart any service. Durable release,
+activation, validation and rollback receipts are outside the task worktree at
+`/mnt/vk-storage/vk-clickable-links-20261016/`. Read
+[VK_CLICKABLE_LINKS.md](VK_CLICKABLE_LINKS.md) before a subsequent release.
 
 # Automatic sub-agent activity correction — October 16
 

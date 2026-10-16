@@ -1,0 +1,172 @@
+{
+  "runtime_source_head": "bcf8f1f951d0d72da9bd51a3376531a56c104a5e",
+  "source_sha256": {
+    "vk_nightly_generation.py": "bdd0d637dfbedbe05de2f6249476e0637307e69078e585f05d8c613acf85bea0",
+    "vk_nightly_b_fixture.py": "96af47ee2309578da90a8dcf91f2262e99573a77af928992ccc89f1739738c9b",
+    "rehearse_vk_nightly_real_b.py": "aa574f3d120dd9a8fe8361365e9a249ce9feb9123286906e0fedfc56b92b28cc"
+  },
+  "command": "PYTHONPATH=scripts/deployment python3 -B -S scripts/deployment/rehearse_vk_nightly_real_b.py --execute-synthetic-fixtures",
+  "passed": true,
+  "elapsed_seconds": 21.385899920016527,
+  "local_evidence": "/mnt/vk-storage/vk-restart-safeguards-20261009/real-b-acceptance-3325013866c14a00af0abe706238f305/acceptance.safe.json",
+  "receipt_sha256": "e64ec6eccef5e8a5c7843fa750fa82fab947eef3fcc4626e9b5cc58e8ed0c3b4",
+  "B_test_directory": "B:/vk-backups/vk-nightly-acceptance-20261009-771102be72114fd187b2977af17278f6",
+  "actual_capture_binding": "vk_direct_capture.capture + DesktopTransport + default DirectBProvider/Archive",
+  "captures": {
+    "first": {
+      "entries": 5,
+      "fixture_only": false,
+      "manifest_sha256": "77d25748ec1db7f413a4831147f4f896ab8ce1b498794f5c30265a4435bcf6e0"
+    },
+    "second": {
+      "entries": 4,
+      "fixture_only": false,
+      "manifest_sha256": "0764a1965df907a1cdde42605aae1a853e43ddbed1a0b79baa9a869b6f4e2ec7"
+    }
+  },
+  "execution": "Existing authenticated Desktop SSH; existing WSL B drvfs mount; process UID/GID1000 after setpriv; no root writes or persistent privilege changes.",
+  "primitive_acceptance": {
+    "hardlinks": true,
+    "atomic_pointer_replace": true,
+    "directory_fsync": true,
+    "independent_native_windows_object_readback": true
+  },
+  "cases": {
+    "success": {
+      "exit_code": 0,
+      "reconciliation": {
+        "current_verified": true,
+        "current_generation": "generation-01df79f3a48b4888965add1a5543b0e1",
+        "parent": null,
+        "capture_blocker": null,
+        "retained_names": [
+          "current.json",
+          "generation-01df79f3a48b4888965add1a5543b0e1",
+          "lease",
+          "store.json"
+        ],
+        "reconciliation": "none"
+      },
+      "independent_recovery": {
+        "passed": true,
+        "rows": [
+          "before",
+          "second"
+        ],
+        "integrity": "ok",
+        "current_generation": "generation-01df79f3a48b4888965add1a5543b0e1",
+        "first_generation_reads": 0,
+        "deleted_entry_absent": true
+      }
+    },
+    "before-publication": {
+      "exit_code": 73,
+      "reconciliation": {
+        "current_verified": true,
+        "current_generation": "generation-49c28e1032c74770a09bb8b5c0e3bf60",
+        "parent": null,
+        "capture_blocker": "unexpected protected evidence or partial in nightly-only directory",
+        "retained_names": [
+          "current-cc3c11643e4a48d7838e21aa9900890a.json",
+          "current.json",
+          "generation-49c28e1032c74770a09bb8b5c0e3bf60",
+          "generation-ce945768f6604a4dae1a4d0c8c812329",
+          "lease",
+          "store.json"
+        ],
+        "reconciliation": "Preserve current and interrupted fixture artifacts. Diagnose the exact old/partial generation before separately reviewed reconciliation; do not repeat capture, delete unknown paths, or restore earlier data."
+      },
+      "independent_recovery": {
+        "passed": true,
+        "rows": [
+          "before"
+        ],
+        "integrity": "ok",
+        "current_generation": "generation-49c28e1032c74770a09bb8b5c0e3bf60",
+        "first_generation_reads": 0,
+        "deleted_entry_absent": false
+      }
+    },
+    "after-publication": {
+      "exit_code": 74,
+      "reconciliation": {
+        "current_verified": true,
+        "current_generation": "generation-e5c63680b17149f2a9a064d4bd8ec97c",
+        "parent": null,
+        "capture_blocker": "retained previous/failed nightly overlap needs reconciliation; no unbounded partial accumulation",
+        "retained_names": [
+          "current.json",
+          "generation-4f0a304477944474a347e83ae23c314d",
+          "generation-e5c63680b17149f2a9a064d4bd8ec97c",
+          "lease",
+          "store.json"
+        ],
+        "reconciliation": "Preserve current and interrupted fixture artifacts. Diagnose the exact old/partial generation before separately reviewed reconciliation; do not repeat capture, delete unknown paths, or restore earlier data."
+      },
+      "independent_recovery": {
+        "passed": true,
+        "rows": [
+          "before",
+          "second"
+        ],
+        "integrity": "ok",
+        "current_generation": "generation-e5c63680b17149f2a9a064d4bd8ec97c",
+        "first_generation_reads": 0,
+        "deleted_entry_absent": true
+      }
+    },
+    "during-retention": {
+      "exit_code": 75,
+      "reconciliation": {
+        "current_verified": true,
+        "current_generation": "generation-eb4870753f424ac69c6d5f83e0b4beea",
+        "parent": null,
+        "capture_blocker": "retained previous/failed nightly overlap needs reconciliation; no unbounded partial accumulation",
+        "retained_names": [
+          "current.json",
+          "generation-09d926af09544d98b4644087f83b8e91",
+          "generation-eb4870753f424ac69c6d5f83e0b4beea",
+          "lease",
+          "store.json"
+        ],
+        "reconciliation": "Preserve current and interrupted fixture artifacts. Diagnose the exact old/partial generation before separately reviewed reconciliation; do not repeat capture, delete unknown paths, or restore earlier data."
+      },
+      "independent_recovery": {
+        "passed": true,
+        "rows": [
+          "before",
+          "second"
+        ],
+        "integrity": "ok",
+        "current_generation": "generation-eb4870753f424ac69c6d5f83e0b4beea",
+        "first_generation_reads": 0,
+        "deleted_entry_absent": true
+      }
+    }
+  },
+  "B_storage": {
+    "B:/vk-backups/vk-nightly-acceptance-20261009-771102be72114fd187b2977af17278f6": {
+      "files": 44,
+      "logical_file_bytes": 83986,
+      "unique_inode_bytes": 83936,
+      "unique_file_allocation_bytes": 105560,
+      "allocation_api": "FileStandardInfo.AllocationSize",
+      "excludes_directory_metadata": true
+    },
+    "B:/vk-backups/vk-nightly-acceptance-20261009-5c30ccfa5f5d4e7cb9e416e0ceb9c40e": {
+      "files": 5,
+      "logical_file_bytes": 40,
+      "unique_inode_bytes": 26,
+      "unique_file_allocation_bytes": 32,
+      "allocation_api": "FileStandardInfo.AllocationSize",
+      "excludes_directory_metadata": true
+    }
+  },
+  "SSD_initial_capture_fixture_bytes": 122880,
+  "limits": [
+    "Process termination injection does not establish host power-loss durability.",
+    "Initial standalone rename/hardlink probe had a transient WSL stat miss; native Windows found the file. Later open/stat probe and full publication tests passed; no success is synthesized on a missing file.",
+    "Real production capture plan, protected exclusions, job/lifecycle binding, bounded capture-chain rebasing/retention, interrupted-partial reconciliation and separately authorized schedule adoption remain pending.",
+    "Capture archives and interrupted test artifacts are preserved outside normal fixture-generation retention; no live backup/data/evidence inspected or retired."
+  ]
+}

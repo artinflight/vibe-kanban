@@ -53,7 +53,7 @@ def memory_snapshot(source, maximum):
         snapshot.close()
 
 
-def source_members(output, file_list, log, online, validate):
+def source_members(output, file_list, log, online, validate, *, workspace=None):
     """GNU tar records Linux metadata; reframe those members into the same stream.
 
 No sparse encoding is requested: the resulting ordinary member size is truthful.
@@ -62,18 +62,21 @@ PAX headers retain ACLs/xattrs/SELinux, numeric IDs, times and link information.
     command = ["tar", "--atime-preserve=system", "--format=pax", "--numeric-owner", "--acls", "--xattrs",
                "--xattrs-include=*", "--selinux", *(["--ignore-failed-read"] if online else []),
                "-cf", "-", "-C", "/", "--no-recursion", "--null", "-T", str(file_list)]
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = (workspace.producer if workspace else subprocess.Popen)(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     errors = []
 
     def warnings():
         size = 0
         try:
-            with log.open("xb") as sink:
+            with (workspace.open_new(log) if workspace else log.open("xb")) as sink:
                 while block := process.stderr.read(65536):
                     size += len(block)
                     if size > MAX_WARNING_BYTES:
                         raise ValueError("Archive warning log exceeds metadata bound")
                     sink.write(block)
+                sink.flush();os.fsync(sink.fileno())
+            if workspace: workspace.seal(log)
         except BaseException as error:
             errors.append(error)
             if process.poll() is None:
@@ -82,10 +85,13 @@ PAX headers retain ACLs/xattrs/SELinux, numeric IDs, times and link information.
     reader = threading.Thread(target=warnings, daemon=True)
     reader.start()
     try:
-        with tarfile.open(fileobj=process.stdout, mode="r|") as source:
+        with tarfile.open(fileobj=process.stdout, mode="r|", bufsize=1024**2) as source:
             for member in source:
                 # Preserve directory/link headers too; no new scope filtering.
                 output.addfile(member, source.extractfile(member) if member.isfile() else None)
+                # These are streaming copies, not random-access tar catalogs.
+                # Keep no half-million-member header history on either side.
+                source.members.clear(); output.members.clear()
         while process.stdout.read(1024**2):
             pass
         code = process.wait(timeout=60)
@@ -127,7 +133,8 @@ def verify_remote_snapshots(result, snapshots, manifest):
 
 
 def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fence=None,
-            max_snapshot_bytes=MAX_SNAPSHOT_BYTES, disk_snapshot=None, disk_inventory_root=None, fenced_disk_snapshot=None):
+            max_snapshot_bytes=MAX_SNAPSHOT_BYTES, disk_snapshot=None, disk_inventory_root=None, fenced_disk_snapshot=None, workspace=None,
+            nightly_selection=None):
     # Import the authoritative journal/scope rules without duplicating them.
     from vk_rolling_backup import (Exclusions, check_journal, content_event, generation,
                                    scan, validate_archive_warnings, verified_parent)
@@ -136,7 +143,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
     driver = {"reviewed_base_head": "754129c5fff55da2f5598d8c7beb4d4325587ead",
               "reviewed_base_pins": base_pins, "extension_sha256": digest(Path(__file__)),
               "operational_acceptance": False}
-    root = storage(root)
+    root = workspace.checked_root(root) if workspace else storage(root)
     if any(root.is_relative_to(Path(p).resolve()) for p in plan["sources"]):
         raise ValueError("Backup staging must be outside watched source roots")
     if any(not Path(p).exists() for p in plan["sources"]):
@@ -157,28 +164,42 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
         check_journal(before, plan)
         if parent is not None:
             verified_parent(parent, plan, before)
-    folder = root / ("checkpoint-" if parent is None else "delta-") / uuid.uuid4().hex
-    folder.mkdir(parents=True, mode=0o700)
+    folder = root if workspace else root / ("checkpoint-" if parent is None else "delta-") / uuid.uuid4().hex
+    if not workspace: folder.mkdir(parents=True, mode=0o700)
+    if workspace and (parent is not None or verify_fence is not None):
+        raise ValueError("Registered nightly workspace supports independent online capture only")
     def bounded_save(path, value):
         # Include atomic replacement scratch and the new local head. Existing
         # historical receipts are not silently deleted to satisfy this budget.
         data_size = len(json.dumps(value, indent=2, sort_keys=True).encode()) + 1
-        used = sum(p.stat().st_blocks * 512 for p in folder.iterdir() if p.is_file())
+        used = sum(p.stat().st_blocks * 512 for p in folder.iterdir() if p.is_file()
+                   and (not workspace or not p.name.endswith((".sqlite", ".tar.zst"))))
         if data_size > MAX_METADATA_BYTES or used + data_size + 8192 > MAX_CAPTURE_METADATA_BYTES:
             raise ValueError("Capture metadata exceeds its bounded local allowance")
-        save(path, value)
+        if workspace:
+            workspace.save_json(path, value)
+        else:
+            save(path, value)
 
     bounded_save(folder / "direct-stream.json", {"schema": 1, "local_archive": False,
          "retry": "A failed stream requires a fresh capture; never concatenate or silently stage locally",
          "max_snapshot_bytes": max_snapshot_bytes, "metadata_file_limit": MAX_METADATA_BYTES,
          "capture_metadata_limit": MAX_CAPTURE_METADATA_BYTES})
     with measured(timings, "inventory"):
-        paths = scan(plan["sources"], plan, exclusions) if parent is None else set(before["changed"])
+        if nightly_selection is not None:
+            from vk_nightly_delta import strict_scan
+            paths = strict_scan(plan["sources"], exclusions)
+        else:
+            paths = scan(plan["sources"], plan, exclusions) if parent is None else set(before["changed"])
         if parent is not None:
             paths.update(scan([p for p in paths if Path(p).is_dir()], plan, exclusions))
         paths = {p for p in paths if not exclusions(p)}
         absent = sorted(p for p in paths if not Path(p).exists() and not Path(p).is_symlink())
         files = sorted(paths - set(absent))
+        if nightly_selection is not None:
+            if workspace is None or parent is not None or verify_fence is not None:
+                raise ValueError('nightly delta only supports registered online workspace')
+            nightly_selection.inventory(files)
         required = {str(Path(p).resolve()) for p in
                     [*plan.get("sqlite_snapshots", []), *plan.get("critical_sqlite", [])]}
         databases = required | set(parent.get("databases", []) if parent else [])
@@ -201,7 +222,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
     disk_root = None
     if disk_inventory_root is not None:
         from vk_b_disk_snapshot import checked_mount
-        disk_root = checked_mount(disk_inventory_root)
+        disk_root = workspace.checked_root(disk_inventory_root) if workspace else checked_mount(disk_inventory_root)
 
     def stable_boundary():
         exclusions.validate()
@@ -226,7 +247,8 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
 
     def produce(stream):
         nonlocal manifest, peak_snapshot, disk_inventory
-        with tarfile.open(fileobj=stream, mode="w|", format=tarfile.PAX_FORMAT) as archive:
+        with tarfile.open(fileobj=stream, mode="w|", format=tarfile.PAX_FORMAT,
+                          bufsize=1024**2, copybufsize=1024**2) as archive:
             with measured(timings, "sqlite_snapshot_and_integrity"):
                 for raw in sorted(databases):
                     path = Path(raw)
@@ -328,14 +350,15 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                     checksum = disk_image['sha256'] if disk_image else hashlib.sha256(image).hexdigest()
                     if disk_image:
                         from vk_b_disk_snapshot import checked_mount
-                        mounted = checked_mount(disk_image['mount_root'])
+                        mounted = workspace.checked_root(disk_image['mount_root']) if workspace else checked_mount(disk_image['mount_root'])
                         if (Path(disk_image['snapshot']).name != disk_image['snapshot']
                                 or not disk_image['snapshot'].startswith('sqlite-consistent-')):
                             raise ValueError('Unsafe disk snapshot selector')
                         with (mounted / disk_image['snapshot']).open('rb') as payload:
-                            if hashlib.file_digest(payload, 'sha256').hexdigest() != checksum:
-                                raise ValueError('B snapshot changed before archiving')
-                            payload.seek(0)
+                            if nightly_selection is None:
+                                if hashlib.file_digest(payload, 'sha256').hexdigest() != checksum:
+                                    raise ValueError('B snapshot changed before archiving')
+                                payload.seek(0)
                             archive.addfile(member, payload)
                     else:
                         with io.BytesIO(image) as payload:
@@ -353,9 +376,11 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
             inventory_limit = 256 * 1024**2 if disk_root else MAX_METADATA_BYTES
             list_hash = hashlib.sha256()
             path_count = 0
-            with file_list.open("xb") as listing:
+            with (workspace.open_new(file_list) if workspace else file_list.open("xb")) as listing:
                 for raw in files:
                     if Path(raw).is_symlink() or str(Path(raw).resolve()) not in omitted:
+                        if nightly_selection is not None and not nightly_selection.include(raw):
+                            continue
                         item = os.fsencode(raw.lstrip("/")) + b"\0"
                         if listing.tell() + len(item) > inventory_limit:
                             raise ValueError("Backup path inventory exceeds metadata bound")
@@ -364,9 +389,10 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                         path_count += 1
                 listing.flush()
                 os.fsync(listing.fileno())
+            if workspace: workspace.seal(file_list)
             if disk_root:
                 from vk_b_disk_snapshot import checked_mount
-                checked_mount(disk_root)
+                workspace.checked_root(disk_root) if workspace else checked_mount(disk_root)
                 with file_list.open('rb') as stream:
                     if hashlib.file_digest(stream, 'sha256').hexdigest() != list_hash.hexdigest():
                         raise ValueError('B path inventory differs from generated source scope')
@@ -399,9 +425,9 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                     raise ValueError("Journal changed during archive")
                 return validate_archive_warnings(log, watched, plan, verify_fence is None)
 
-            warnings.extend(source_members(archive, file_list, folder / "tar.log", verify_fence is None, validate))
+            warnings.extend(source_members(archive, file_list, folder / "tar.log", verify_fence is None, validate, workspace=workspace))
             if disk_root:
-                checked_mount(disk_root)
+                workspace.checked_root(disk_root) if workspace else checked_mount(disk_root)
                 with file_list.open('rb') as stream:
                     if hashlib.file_digest(stream, 'sha256').hexdigest() != list_hash.hexdigest():
                         raise ValueError('B source inventory changed while archiving')
@@ -419,11 +445,17 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                 raise ValueError("Direct Desktop backup delivery is unverified; no local fallback")
         partial_result = {"folder": str(folder), "archive": archive.name, "receipt": receipt}
         with measured(timings, "remote_archive_snapshot_verification"):
-            verify_remote_snapshots(partial_result, snapshots, manifest)
+            if nightly_selection is None:
+                verify_remote_snapshots(partial_result, snapshots, manifest)
+            # Registered nightly inputs already passed native integrity/hash.
+            # NightlyArchiveProvider subsequently verifies the entire sealed
+            # archive, every SQL payload/hash and its embedded manifest together
+            # before any generation can publish. Avoid a redundant full replay.
         after = journal(before["sequence"])
         check_journal(after, plan)
         if after["instance"] != before["instance"] or after["sequence"] < before["sequence"]:
             raise ValueError("Journal changed during backup; refuse to advance the checkpoint")
+        if nightly_selection is not None: nightly_selection.finish(after)
         for raw in signatures:
             if (generation(raw) != signatures[raw] or content_event(raw, after)
                     or raw in readers and readers[raw].execute("PRAGMA data_version").fetchone()[0] != versions[raw]):

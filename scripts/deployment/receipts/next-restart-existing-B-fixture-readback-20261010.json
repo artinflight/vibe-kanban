@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "read_only": true,
+  "new_snapshot_or_restore": false,
+  "self_contained": true,
+  "one_current": true,
+  "verified_file_entries": 3,
+  "decoded_bytes": 1308206,
+  "generation": "generation-bccff23a1bde4817bd48fe553aa3bec8",
+  "manifest_sha256": "caf2f5d5d1d4c3ae1bb5da655992f6ee1541fdf141453f6ba02c72eb2e5492fe",
+  "utc": "2026-10-10T10:56:44.415315+00:00",
+  "B_free_bytes": 88475803648
+}

@@ -1,0 +1,63 @@
+{
+  "actual_cutover_seconds": 9.937453607097268,
+  "actual_cutover_total_preparation_proven": false,
+  "baseline_checks": {
+    "cargo_workspace": "not run: no Rust source change and storage reserve below required floor",
+    "check": "legacy frontend guard passed; tsc missing",
+    "format": "Rust format passed; Prettier missing",
+    "lint": "eslint missing",
+    "ops": "passed"
+  },
+  "evidence_scope": "Historical head only; subsequent timestamp-call test correction requires its own exact-head run.",
+  "full_VK_cold_build_measured": false,
+  "full_VK_warm_build_measured": false,
+  "full_build_capacity_blocker": {
+    "default_additional_cold_build_bytes": 17179869184,
+    "preserved_reserve_bytes": 8589934592,
+    "ssd_free_bytes": 3856019456
+  },
+  "full_fix_ready_pipeline_measured": false,
+  "host_scale": {
+    "index_bound_bytes": 268435456,
+    "manifest_paths": 537739,
+    "old_64mib_exceeded": true
+  },
+  "independent_review": {
+    "blocker": "Shadow recommendation exceeds inherited child qualification; no child spawned or policy changed",
+    "completed": false
+  },
+  "nightly_enabled": false,
+  "normal_nightly_retention_live": false,
+  "passed": true,
+  "peak_parent_rss_kib": 699700,
+  "production_changed": false,
+  "publication_excludes_uninstalled_updater": true,
+  "root_changes": false,
+  "rust_release_fixture_builds": [
+    {
+      "cold": {
+        "blocked": null,
+        "exit_code": 0,
+        "seconds": 0.15125300269573927
+      },
+      "warm": {
+        "blocked": null,
+        "exit_code": 0,
+        "seconds": 0.050802988931536674
+      }
+    }
+  ],
+  "schema": 1,
+  "seconds": 3.4144501630216837,
+  "source_base": "b2180dcfe4f3d435e5bbd8cfcd39051bc7ed70f3",
+  "source_sha256": {
+    "test_vk_nightly_provider.py": "b01a211fea6489b288c872230c07676ba80997437b5fedd9a866d8c2d860341e",
+    "test_vk_restart_build_benchmark.py": "94e380512a82c668be042ad17f028420a5f08812e0a005e96c2f2706b0d3e738",
+    "test_vk_restart_safeguards.py": "f71e08cbdc27d5d28e6f41b2317f29196ce7ae805954f764b052718cedd67369",
+    "vk_nightly_generation.py": "f7a4c80b9e3a17073f2afca2d8f857b1e8355ad12a461d1c8d3efbce17c8f07b",
+    "vk_restart_build_benchmark.py": "ad2bb6a6ac1ee9e8972da4164cc0d603ea279796daa7b7770fdb3999de1c321e",
+    "vk_routine_restart.py": "9d4017c7277089c8eeb98658635ed9f673fb9a6d8a102c1a11fa4ee83f464c90"
+  },
+  "tested_source_head": "849a00024489b4c0794285f51f6d54ac73050150",
+  "tests_run": 23
+}

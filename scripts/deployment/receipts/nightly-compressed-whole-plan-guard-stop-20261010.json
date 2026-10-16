@@ -1,0 +1,76 @@
+{
+  "source_head": "53aaada46d83ae2d83e8281242caa1961cfef1cc",
+  "package_manifest_sha256": "046219eb538a396e413ae6dd4a4376d842f40b39c8603a6d2f51c270b38994ba",
+  "config_sha256": "f175483c2603ef6001ab053adf57de963287698feaec3a92f22f73fd7539713f",
+  "passed": false,
+  "full_plan_current_and_recovery_accepted": false,
+  "elapsed_seconds": 3326.8215124318376,
+  "exit_code": 143,
+  "stop": {
+    "reason": "host memory/swap floor: stop only backup test, preserve active work",
+    "only_scope_stopped": "vk-nightly-cold-delta-53aaada4-20261010.scope",
+    "row": {
+      "seconds": 3326.8215124318376,
+      "load": [
+        10.46826171875,
+        11.59423828125,
+        9.64501953125
+      ],
+      "MemAvailable": 8147349504,
+      "SwapFree": 290320384,
+      "health": 200,
+      "health_seconds": 0.0006445432081818581,
+      "B_free_bytes": 92774387712,
+      "memory_current": "1622687744"
+    }
+  },
+  "snapshots": {
+    "count": 79,
+    "bytes": 7847219200,
+    "summed_snapshot_seconds": 820.3321062428877,
+    "completed_at_seconds": 1975.2179962070659,
+    "all_native_hash_integrity_passed": true,
+    "largest": {
+      "seconds": 1268.6877012280747,
+      "bytes": 4734447616,
+      "sha256": "dd718d441b27fd0a41eadeb7e52699992633d45ccb3a3d66d746d8126e892dea",
+      "seconds_snapshot": 485.87303602229804,
+      "integrity": "ok"
+    }
+  },
+  "telemetry": {
+    "samples": 164,
+    "all_health_200": true,
+    "max_health_seconds": 0.033125399611890316,
+    "minimum_B_free_bytes": 92774387712,
+    "maximum_scope_memory_bytes": 2147463168
+  },
+  "preserved": {
+    "input_name": "input-c78d858e142844beaa8699bd48c7b9ea",
+    "input_count": 84,
+    "input_bytes": 15202288432,
+    "unsealed": [
+      {
+        "name": "tar.log",
+        "bytes": 0
+      },
+      {
+        "name": "vk-normal-nightly-compressed-control-v1-B-input-5ce439be07134d05844ea3139e8f4a45.tar.zst",
+        "bytes": 7285506048
+      }
+    ],
+    "current_present": false,
+    "prior_input_a7bc_unchanged": true,
+    "fallback_incident_and_legacy_backup_unchanged": true
+  },
+  "MCP_lease_reacquired": true,
+  "B_lease": {
+    "B_job_lease_reacquired": true,
+    "uid": 1000,
+    "read_only_no_reconciliation": true
+  },
+  "schedule_enabled": false,
+  "production_changed": false,
+  "no_owner_command": true,
+  "remaining": "Do not blindly repeat. Host swap floor and retained-partial reservation prevent another admitted cold run; preserve/reconcile exact owned evidence first, then complete archive/index/object/current verification and independent B-only recovery. No full performance claim."
+}

@@ -1,0 +1,110 @@
+{
+  "status": "source_only_adoption_disabled",
+  "enabled": false,
+  "existing_source_plan": {
+    "path": "/mnt/vk-storage/vk-runtime-backup-20261009/backup-plan.json",
+    "sha256": "4a7abb5628f381d943acb51e2ffc00c250e11bfb0b71b29a1ff78c1df4865b0c",
+    "roots": 77,
+    "explicit_sqlite_paths": 71,
+    "current_scope_review_required": true
+  },
+  "read_only_discovery": {
+    "maximum_declared_DB_bytes": 4734447616,
+    "declared_DB_bytes_total": 7441330176,
+    "declared_DBs_above_memory_snapshot_1GiB": 1,
+    "B_volume_device": 2360624474,
+    "B_free_bytes_observed": 134023909376,
+    "proposed_target_exists": false,
+    "VK_nightly_timer_found": false,
+    "current_files": 487126,
+    "current_paths": 548540,
+    "current_logical_bytes": 96144285466,
+    "detected_SQLite_paths": 79,
+    "detected_SQLite_bytes": 7451316224,
+    "online_vanished_paths": 14
+  },
+  "proposed_fresh_scope": {
+    "windows": "B:/vk-backups/vk-normal-nightly-v1",
+    "wsl": "/mnt/b/vk-backups/vk-normal-nightly-v1",
+    "store_child": "store",
+    "job_child": "jobs",
+    "existing_generations_enrolled": false,
+    "normal_current_generations": 1,
+    "unfinished_attempt_limit": 1,
+    "incident_recovery_fallback_retention": "all existing evidence remains outside this fresh scope"
+  },
+  "existing_routes": {
+    "ssh_alias": "desktop",
+    "strict_host_key_checking": true,
+    "WSL_distribution": "VK-Candidate-20261009",
+    "writer_uid": 1000,
+    "writer_gid": 1000,
+    "no_new_account_or_privilege": true,
+    "snapshot_extension": "vk_b_disk_capture.capture + vk_b_disk_snapshot.snapshot",
+    "metadata_and_archive_transport": "DesktopTransport + StreamingArchive",
+    "generation_handler": "NightlyStore",
+    "job_handler": "NightlyJob.tick"
+  },
+  "source_sha256": {
+    "vk_nightly_generation.py": "29dda3ffb9ae8e2aaf03f8558c837ecd2cf55eec8debbfb6750c37e333906b4b",
+    "vk_nightly_lifecycle.py": "af5443d5b8380c7761382de0f1c09e30b6aa4bebc3ca289ad9bdce4146d5e836",
+    "vk_direct_capture.py": "55ef5328fee7d93a05e3796d3c1d374866d08f4eefcf67abf28ceb8dc68ec5f5",
+    "vk_b_disk_capture.py": "fc9c5a404187dc871a06f8581662ae96a07d8d2a06b03261df0eeda133c7116c",
+    "vk_b_disk_snapshot.py": "ba1fd175cc72f6008e77f46096e4ec30201b4943e6d9895a7907af466a69cebf",
+    "vk_desktop_transport.py": "fac7325b0de5a7cd8c07ddb542ad733a7f7f3e77a2d9c15456e6d63a0d24ff87",
+    "vk_archive_store.py": "95b59fb7d484ca379f58e5b543a763af6691d23c9b9381158b6a0c5bc772b40f",
+    "vk_nightly_job.py": "574bc5a48d4b58e6b5e47a9edf2f42103419f18f9bb7717207d2f40f563c26a3",
+    "vk_nightly_capture_adapter.py": "6491ce4bf10a694bf232f7c18ed6f6068b2108963e503d51a7614a9fb35e47c0",
+    "vk_nightly_b_job.py": "d6aa2cd659f024bba494bc30e37a016e677791d729905a4087fdd7d06efa2b09"
+  },
+  "scheduler_proposal": {
+    "manager": "existing active MCP user cron; host timezone Etc/UTC",
+    "on_calendar": "0 2 * * *",
+    "installed": false,
+    "enabled": false,
+    "routine_LLM_calls": 0,
+    "job_timeout_seconds": 7200,
+    "kill_grace_seconds": 30,
+    "rollback": "remove ONLY new cron row; preserve existing entries, all backups and evidence",
+    "systemd_template": "unchanged NoNewPrivileges=yes; actual probe denies required existing FUSE helper; not proposed for this adapter"
+  },
+  "required_adapter_contract": {
+    "capture_parent": null,
+    "input_registration": "register exact file identity at creation before payload; seal full bytes/hash afterward",
+    "bounded_transfers": "enforce capture limit during transfer including B disk snapshots; no fallback to local payload staging",
+    "producer_attestation": "Parent and exact foreground SSHFS/zstd/tar share the locked MCP open-file description; do not LOCK_UN. Reacquisition defers while any inherited holder lives. Normal completion still closes/reaps producers/mount before live nonce-bound finish. Parent-only SIGKILL acceptance is isolated, never a global process fence.",
+    "readback": "independent native Windows full object hash and SQLite integrity before publication/retention",
+    "handoff": "fixed pinned MCP capture to UID1000 WSL B writer; no unbounded in-memory payload handoff",
+    "cold_boot": "verify stable mount/volume/enrollment handling without re-enrolling existing backups"
+  },
+  "capacity_limits": {
+    "capture_bytes": 21474836480,
+    "changed_bytes": 8589934592,
+    "reserve_bytes": 32480690176,
+    "must_measure_whole_state_first": true,
+    "memory_only_capture_supported_on_this_host": false,
+    "transient_registered_file_bound": 1024,
+    "mutable_progress_bound_bytes": 16384,
+    "immutable_metadata_bound_bytes": 268435456,
+    "initial_changed_bytes": 103079215104,
+    "initial_reserve_bytes": 126969970688,
+    "snapshot_bytes": 6442450944,
+    "full_production_transfer_runtime_measured": false,
+    "limits_basis": "measured current logical census plus finite bounded headroom; fixture throughput is not whole-host acceptance"
+  },
+  "remaining_adoption_checklist": [
+    "Independent review of exact source/package/config hashes and current 77-root source/exclusion bindings.",
+    "Explicitly authorize fresh normal B scope enrollment/retention and one full-plan recovery/capacity/runtime test; do not enroll old evidence.",
+    "Require successful whole-plan physical-B recovery receipt within proposed bounds before adding only new pinned cron row to existing UTC user crontab.",
+    "Verify installed exact row and successful next run; rollback only new row/own process, preserving data/evidence.",
+    "Cold OS/WSL remount changing enrolled device/inode identities remains fail-closed; no silent re-enrollment or boot-readiness claim."
+  ],
+  "efficiency_boundary": "Generation storage is incremental with unchanged B hardlinks. Captures are parentless full transfers each run; no network-delta claim. Journal-backed or content-delta transfer remains a separate bounded efficiency improvement.",
+  "fixed_adapter_status": "source implemented; real-B synthetic lifecycle and production pre-adoption artifacts validated separately; no production adoption",
+  "exact_scope_amendment_proposal": {
+    "path": "/home/mcp/.codex/app-server-daemon/daemon-updater.sock",
+    "policy": "omit ONLY an owned Unix socket or absent transient endpoint; regular files/symlinks reject adoption/job",
+    "historical_plan_mutated": false,
+    "approval_pending": true
+  }
+}

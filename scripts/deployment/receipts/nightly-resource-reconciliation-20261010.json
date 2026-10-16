@@ -1,0 +1,63 @@
+{
+  "captured_utc": "2026-10-10T07:12:40.034204+00:00",
+  "task": "bounded resource/reconciliation investigation; no acceptance launched",
+  "source_head": "ed27284ccabd70549c235c5034a7cf4478f64c0b",
+  "memory_bytes": {
+    "MemAvailable": 7608496128,
+    "SwapTotal": 29653807104,
+    "SwapFree": 260165632
+  },
+  "swap_abort_floor_bytes": 536870912,
+  "swap_floor_passed": false,
+  "B_free_bytes": 92769349632,
+  "cold_required_bytes": 105495134208,
+  "B_deficit_bytes": 12725784576,
+  "failed_input_bytes": 36676621581,
+  "unsealed_archive_bytes": 20935868416,
+  "sealed_sqlite_bytes": 15601778688,
+  "compressed_recovery_bytes": 591731561,
+  "ordinary_throughput_fixture_bytes": 134217728,
+  "minimal_old_partial_candidate": {
+    "scope": "vk-normal-nightly-v1",
+    "name": "vk-normal-nightly-control-v1-B-input-767a79bdf1814b77a16dc76b401b028f.tar.zst",
+    "bytes": 13650362368,
+    "free_after_hypothetical_release": 106419712000,
+    "margin_over_cold_reserve_after_release": 924577792,
+    "released": false,
+    "approval_required": "prior preserve-partial-evidence instruction; exact bounded release only, preserve all sealed images and receipts"
+  },
+  "identity_comparison": {
+    "vk-normal-nightly-compressed-v1": {
+      "same_attempt": true,
+      "prior_native_identity_and_size_mismatches": [],
+      "files_compared": 84
+    },
+    "vk-normal-nightly-v1": {
+      "same_attempt": true,
+      "prior_native_identity_and_size_mismatches": [],
+      "files_compared": 84
+    }
+  },
+  "test_pids_remaining": 0,
+  "all_three_MCP_and_B_leases_reacquired_read_only": true,
+  "test_scopes_inactive": true,
+  "legacy_fixture_mount_still_present": true,
+  "production_health_http": 200,
+  "production_health_seconds": 0.000737,
+  "runtime_source_changed": false,
+  "acceptance_run_launched": false,
+  "schedule_enabled": false,
+  "processes_stopped": false,
+  "files_deleted": false,
+  "settings_changed": false,
+  "fresh_full_payload_hashes_performed": false,
+  "evidence_directory": "/mnt/vk-storage/vk-restart-safeguards-20261009/resource-reconciliation-20261010",
+  "evidence_sha256": {
+    "B-inventory.private.json": "fff891e9fcf4341ab7b8c556dfecce4abde84ef632aa805ee3e86e611f55b48f",
+    "B_inventory.py": "a3b2f44d3582eebe3a74c42baf090a721b2976e40d6e33b20c408f653475f1a4",
+    "identity-comparison.safe.json": "6ff99dfc65e812ba7caacf874cae7bf71b18d4aba3d4cc68b912f9566e237e16",
+    "memory-ownership.private.json": "a684e50ee909c8866591fa7456fbc3be94217d0a9cb515937ae53da882ef6971",
+    "quiescence.private.json": "357fbfdfb29b3a91647beb498c10a42d7a20b723b95b3af850fb6d11f0ff79e9",
+    "quiescence.py": "3dfb655bfdb3418f801e943bbea7fa68cb6af04ba7b0b23c7e94514fada121eb"
+  }
+}

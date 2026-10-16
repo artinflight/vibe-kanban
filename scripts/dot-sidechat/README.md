@@ -53,7 +53,7 @@ The standalone shell uses the same chat and resize components. The production-la
 
 ## Verified and unverified
 
-17 isolated Python tests pass. UI and web-core TypeScript checks pass.
+18 isolated Python tests pass. UI and web-core TypeScript checks pass.
 New UI components pass targeted lint. Including RightSidebar in the strict lint invocation reports its pre-existing useMemo dependency warning (changesExpanded/devServerExpanded/processesExpanded); that dependency array is unchanged by this branch.
 DOM acceptance passes Notes placement, fixture labeling, keyboard resize, owner send, webhook-accepted versus reply-persisted states, and reload-retained history.
 Normal repository formatting completes using the existing Cargo/Node PATH.
@@ -93,3 +93,24 @@ None of these prerequisites has been silently satisfied. The proof remains block
 - Add real browser visual/mobile/accessibility tests and screenshots.
 - Backend routes/migrations require reviewed Vibe build/restart. A UI-only fixture needs no Vibe restart; connector-only proof needs only the separately coordinated connector reload/rescan.
 - Keep Send to workspace agent a separate future action. Reuse PR250 steering receipt semantics after deployment, retain Recommend-only routing and the capacity queue fix, and never auto-forward sidechat.
+
+## Per-event intent and platform review
+
+Each owner-message event carries server-generated author_type=authenticated_owner,
+intent=sidechat_reply_requested, reply_scope=same_thread_only and the exact message
+SHA256, in addition to owner-authorized thread/project/issue/workspace/message IDs.
+Transcript reads attach the same immutable message identity and explicit
+coding_agent_action_authorized=false and platform_review_bypass=false.
+
+These are provenance facts about a normal reply request, not instructions to
+override system policy or evidence that platform review has approved an action.
+Free-form message text cannot overwrite them. The receiver must scope the event
+to its exact owner message and subscription, rather than importing older approval
+automation instructions as authority for this separate conversation.
+
+The owner has reported Slack replies being rejected under older approval
+automation instructions. This prototype does not diagnose or fix that platform
+routing behavior. If an actual reply is rejected, retain the message and outbox
+receipt, report the rejection, and leave reply_persisted=false. Do not reroute
+through Slack, invent an approval, use another assistant, or retry under a new
+identity to evade review. Webhook acceptance still does not prove reply delivery.

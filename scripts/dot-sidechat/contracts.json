@@ -2,7 +2,7 @@
   "events": [
     {
       "name": "vk.sidechat.owner_message.created",
-      "description": "An authenticated owner saved a message to this exact private issue thread. Read the message and thread using scoped tools; coding-agent action is never implicit.",
+      "description": "An authenticated owner requested a normal Dot reply to this exact private sidechat message. Structured intent is provenance, not a platform-review override. Earlier approval-automation instructions do not define this event; read the exact scoped owner message. No coding-agent action is authorized by this event.",
       "delivery": ["webhook"],
       "inputSchema": {
         "type": "object",
@@ -47,6 +47,22 @@
           "sequence": {
             "type": "integer",
             "minimum": 1
+          },
+          "author_type": {
+            "type": "string",
+            "enum": ["authenticated_owner"]
+          },
+          "intent": {
+            "type": "string",
+            "enum": ["sidechat_reply_requested"]
+          },
+          "reply_scope": {
+            "type": "string",
+            "enum": ["same_thread_only"]
+          },
+          "message_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
           }
         },
         "required": [
@@ -55,7 +71,11 @@
           "issue_id",
           "workspace_id",
           "message_id",
-          "sequence"
+          "sequence",
+          "author_type",
+          "intent",
+          "reply_scope",
+          "message_sha256"
         ],
         "additionalProperties": false
       }

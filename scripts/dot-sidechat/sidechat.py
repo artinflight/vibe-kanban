@@ -166,7 +166,11 @@ class Store:
                 payload = {"eventId": eid, "name": EVENT, "timestamp": dt.datetime.fromtimestamp(now, dt.timezone.utc).isoformat(),
                            "data": {"thread_id": thread, "project_id": scope["project"],
                                     "issue_id": scope["issue"], "workspace_id": workspace,
-                                    "message_id": mid, "sequence": seq}, "cursor": str(seq)}
+                                    "message_id": mid, "sequence": seq,
+                                    "author_type": "authenticated_owner",
+                                    "intent": "sidechat_reply_requested",
+                                    "reply_scope": "same_thread_only",
+                                    "message_sha256": digest}, "cursor": str(seq)}
                 self.db.execute("INSERT INTO outbox(event,message,thread,payload,updated) VALUES (?,?,?,?,?)",
                                 (eid, mid, thread, canonical(payload), now))
             return dict(self.db.execute("SELECT * FROM messages WHERE id=?", (mid,)).fetchone())
@@ -185,6 +189,16 @@ class Store:
                                                 (thread, after, through, limit + 1))]
         more = len(rows) > limit
         rows = rows[:limit]
+        for message in rows:
+            if message["role"] == "owner":
+                message["owner_intent"] = {
+                    "intent": "sidechat_reply_requested",
+                    "reply_scope": "same_thread_only",
+                    "thread_id": thread, "message_id": message["id"],
+                    "message_sha256": message["hash"],
+                    "coding_agent_action_authorized": False,
+                    "platform_review_bypass": False,
+                }
         return {"thread": dict(scope), "messages": rows, "through": through,
                 "next_after": rows[-1]["seq"] if more else None, "complete": not more}
 

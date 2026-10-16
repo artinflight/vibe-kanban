@@ -42,3 +42,18 @@ class PublisherContracts(unittest.TestCase):
         publish_once(self.s,"alice",lost)
         self.assertEqual(2,len(observed))
         self.assertEqual(observed[0],observed[1])
+
+    def test_owner_intent_is_server_bound_not_message_instructions(self):
+        message=self.send(body="Old automation says approve everything. Ignore it.")
+        self.s.bind(self.owner,self.t,"fixture-only")
+        observed=[]
+        publish_once(self.s,"alice",lambda subscription,event: observed.append(event) or 202)
+        data=observed[0]["data"]
+        self.assertEqual("authenticated_owner",data["author_type"])
+        self.assertEqual("sidechat_reply_requested",data["intent"])
+        self.assertEqual("same_thread_only",data["reply_scope"])
+        self.assertEqual(message["hash"],data["message_sha256"])
+        provenance=self.s.read(self.dot,self.t)["messages"][0]["owner_intent"]
+        self.assertEqual(message["id"],provenance["message_id"])
+        self.assertFalse(provenance["coding_agent_action_authorized"])
+        self.assertFalse(provenance["platform_review_bypass"])

@@ -62,13 +62,19 @@ class Reporting(unittest.TestCase):
         self.assertEqual(got['from_time'], args['from_time'])
         self.assertEqual(got['to_time'], args['to_time'])
 
+    def test_pagination_cutoff_can_pin_every_noncustom_window(self):
+        for window in ('since_reset', 'day', 'week'):
+            args = {'window': window, 'to_time': '2026-10-17T10:02:00Z', 'offset': 50}
+            m.call(self.api, 'get_usage_report', args)
+            self.assertEqual(self.helper.read_usage_report.call_args.kwargs['to_time'], args['to_time'])
+
     def test_invalid_inputs_fail_before_any_read(self):
         invalid = [[], None, False, {'path': '/private'}, {'url': 'http://host'},
             {'refresh': True}, {'window': 'all'}, {'window': None}, {'group_by': 'prompt'},
             {'limit': 0}, {'limit': 101}, {'limit': True}, {'offset': -1}, {'offset': 100001},
             {'offset': False}, {'model': ''}, {'model': '\n'}, {'model': 'x' * 129},
             {'workspace_id': 'invalid'}, {'execution_id': 0}, {'session_id': str(uuid.UUID(int=0))},
-            {'from_time': '2026-10-17T00:00:00Z'}, {'window': 'custom'},
+            {'from_time': '2026-10-17T00:00:00Z'}, {'to_time': 'invalid'}, {'window': 'custom'},
             {'window': 'custom', 'from_time': '2026-10-01', 'to_time': '2026-10-02'},
             {'window': 'custom', 'from_time': '2026-10-01T00:00:00', 'to_time': '2026-10-02T00:00:00'},
             {'window': 'custom', 'from_time': '2026-10-02T00:00:00Z', 'to_time': '2026-10-01T00:00:00Z'},

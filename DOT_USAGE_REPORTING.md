@@ -13,7 +13,7 @@ reserve credits, change settings or trigger provider/model calls.
 | Argument | Supported values |
 | --- | --- |
 | `window` | `since_reset` (default), `day`, `week`, `custom` |
-| `from_time`, `to_time` | Explicit RFC3339 timestamps, both required for `custom` only |
+| `from_time`, `to_time` | RFC3339; both required for `custom`; `to_time` can pin any window |
 | `group_by` | `workspace` (default), `project`, `session`, `execution`, `model` |
 | Entity filters | `project_id`, `workspace_id`, `session_id`, `execution_id`: UUIDs |
 | `model` | Exact model name, at most 128 characters |
@@ -79,7 +79,7 @@ frontend and workspace agents remain running. Rollback restores only the prior
 connector source and reloads the same unit; never restore old chat/receipt data
 over new writes. Existing subscriptions and paired access stay untouched.
 
-Current candidate: 43 light Python tests and 28 installed-policy/read regressions
+Current candidate: 44 light Python tests and 28 installed-policy/read regressions
 pass, including unchanged schemas, CU-only isolation, independent stale state,
 null/exact-value preservation, input bounds and denied controls. `pnpm run format`
 was attempted: Rust formatting passed; frontend formatting stopped because

@@ -66,8 +66,10 @@ def arguments(args):
         start, end = (_timestamp(result.get(key)) for key in ('from_time', 'to_time'))
         if not dt.timedelta(0) < end - start <= dt.timedelta(days=31):
             raise ValueError('Custom interval must be positive and at most 31 days')
-    elif 'from_time' in result or 'to_time' in result:
-        raise ValueError('Explicit timestamps require window=custom')
+    elif 'from_time' in result:
+        raise ValueError('Explicit from_time requires window=custom')
+    if 'to_time' in result:
+        _timestamp(result['to_time'])  # Pin any window to its returned pagination cutoff.
     for key in ('project_id', 'workspace_id', 'session_id', 'execution_id'):
         if key in result:
             if not isinstance(result[key], str):

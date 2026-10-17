@@ -55,3 +55,7 @@ line range, widening it when the task needs surrounding constraints.
 
 Current release coordination, newer Sidebar adoption and remaining private gates:
 [October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
+
+Current Dot existing-conversation/voice evidence and supported follow-up protocol:
+[Dot follow-up delivery](DOT_FOLLOWUP_DELIVERY.md). Source tests do not establish
+platform voice acknowledgment or automatic unattended monitoring.

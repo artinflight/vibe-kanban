@@ -2020,3 +2020,10 @@ Implemented private project Dot Chat/shared planning with canonical task links,
 revision/idempotency protection, separate project attention and responsive UI.
 Coordinated Preserve Dot/CU1.6 and Staging. No production adoption.
 See VK_PROJECT_COLLABORATION.md for validation and release requirements.
+
+- 2026-10-17: PR270 preserves answered-conversation lookup through cached status
+  and original-event, duplicate-safe later replies. Functional source831cd88d9
+  adopted with connector-only reload; registered recovery/write/retry/readback
+  verified one unread result and no new owner event. CU/Stop and other services
+  preserved. Voice parent receipt/device and unattended wake remain unverified;
+  no uncertain Staging/Nightly/Disk actions repeated. See DOT_FOLLOWUP_DELIVERY.md.

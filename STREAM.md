@@ -1,9 +1,11 @@
-# Release preparation / efficiency integration
+# Usage-efficiency follow-up: compact job outcomes
 
-Base: staging `7110930b6d9d1fa3f403a963a1ded49140b3eec1` (PR262 merged).
-PR266: `perf/usage-efficiency-20261017`. Source implementation stays with existing
-Automatic Restart Preflight; Staging owns this integration and release acceptance.
-No new execution owner or nightly job.
+Base: staging `d0b0bb298` (PR266 merged). Branch:
+`fix/compact-job-outcomes-20261017`, existing Automatic Restart Preflight owner.
+This follow-up adds bounded durable outcomes to the existing runner and measures
+actual JSON payload reduction. Approval-review share is not evidence of waste;
+models, AutoSwitch, all approval checks and QA remain unchanged. Staging retains
+release ownership; no new execution owner or nightly job.
 
 Seamus authorized reducing repeated pickup input and redundant work while
 keeping models, effort, AutoSwitch, full history and acceptance unchanged.

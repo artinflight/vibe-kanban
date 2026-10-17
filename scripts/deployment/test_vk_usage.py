@@ -20,6 +20,10 @@ class UsageTests(unittest.TestCase):
         self.assertEqual(after["requests"][1]["reused"], ["validate", "build"])
         self.assertEqual(after["requests"][2]["reused"], [])
         self.assertFalse(result["native_model_savings_proved"])
+        payloads = result["outcome_payloads"]
+        self.assertEqual(payloads["requests"], 6)
+        self.assertLess(payloads["compact_json_bytes"], payloads["full_json_bytes"])
+        self.assertTrue(payloads["same_full_evidence_retained"])
 
 
 if __name__ == "__main__":

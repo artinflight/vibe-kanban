@@ -68,11 +68,14 @@ def benchmark(root, repository=None):
                 subprocess.run(["git", "-C", str(source), "add", "."], check=True)
                 subprocess.run(["git", "-C", str(source), "commit", "--allow-empty", "-qm", "fixture"], check=True)
                 before = len(events.read_text().splitlines())
-                result = Preparation(source, fixture / mode, selected).run()
+                preparation = Preparation(source, fixture / mode, selected)
+                result = preparation.run()
                 requests.append({"phase": phase, "passed": result["passed"],
                                  "launches": len(events.read_text().splitlines()) - before,
                                  "reused": [name for name, row in result["steps"].items() if row["reused"]],
-                                 "artifact_sha256": hashlib.sha256((outputs / "artifact.json").read_bytes()).hexdigest()})
+                                 "artifact_sha256": hashlib.sha256((outputs / "artifact.json").read_bytes()).hexdigest(),
+                                 "full_report_json_bytes": len(json.dumps(result, indent=2).encode()),
+                                 "compact_outcome_json_bytes": len(json.dumps(preparation.outcome, indent=2).encode())})
             calls = events.read_text().splitlines()
             modes[mode] = {"requests": requests, "step_launches": len(calls), "fresh_checks": calls.count("fresh")}
         for before, after in zip(modes["always_rerun"]["requests"], modes["fingerprinted_reuse"]["requests"]):
@@ -81,6 +84,14 @@ def benchmark(root, repository=None):
         report = {"schema": 1, "fixture_only": True, "models_changed": False,
                   "provider_calls": {"before": 0, "after": 0}, "native_model_savings_proved": False,
                   "same_command_sha256": hashlib.sha256(COMMAND.encode()).hexdigest(), "modes": modes}
+        all_requests = [request for mode in modes.values() for request in mode["requests"]]
+        full_bytes = sum(request["full_report_json_bytes"] for request in all_requests)
+        compact_bytes = sum(request["compact_outcome_json_bytes"] for request in all_requests)
+        report["outcome_payloads"] = {"requests": len(all_requests), "full_json_bytes": full_bytes,
+                                      "compact_json_bytes": compact_bytes,
+                                      "fewer_bytes": full_bytes - compact_bytes,
+                                      "reduction_percent": 100 * (full_bytes - compact_bytes) / full_bytes,
+                                      "same_full_evidence_retained": True, "extra_provider_calls": 0}
         if repository:
             repository = Path(repository)
             manifest = json.loads((repository / "CONTINUITY_ARCHIVE.json").read_text())

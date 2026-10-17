@@ -18,7 +18,24 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
-## October17 corrected background capacity continuation — 07:00UTC
+## October17 packaging correction and Staging hold — 10:09UTC
+
+R2 ended07:04:41UTC, exit1/233s before payload capture: the derived package
+omitted receipts/direct-stream-20261008.json. No full capacity result exists.
+A new r3 package recursively includes the original verified receipt directory;
+all8 historical source hashes and26 targeted capacity/adapter tests pass.
+Capacity main now checks that provenance before opening B jobs/watchers.
+The failed package and all previous recovery data remain preserved.
+
+Staging requested the heavy-work window and leads release completion. Nightly
+holds capacity/restore launches10:09:40–10:39:40UTC unless released earlier.
+No Nightly heavy unit is running and r3 is prepared, unlaunched, with no timer.
+Recheck current Staging state and fresh resource admission before launch. The
+operator's separate~246-credit ceiling remains distinct from included weekly0%.
+PR264 public checks are green per Staging; private candidate/rollback acceptance
+remains Staging-owned. No production switch, deployment or schedule is claimed.
+
+## Historical corrected background capacity continuation — 07:00UTC
 
 After the two passing source copies, the user authorized a complete corrected
 capacity check and requested no agent turn wait on a long measurement. The

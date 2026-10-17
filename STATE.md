@@ -1,4 +1,15 @@
-# Nightly corrected capacity check RUNNING — October17 07:00UTC
+# Nightly retry prepared, Staging window held — October17 10:09UTC
+
+No heavy Nightly job is running. R2 failed07:04:41UTC before payload because
+the derived package omitted its provenance receipt directory. A new complete
+r3 package passes8 source pins and26 targeted tests; fail-fast provenance
+validation is added before B work. Retry is unlaunched for Staging's requested
+10:09:40–10:39:40UTC compiler/acceptance window, with no automatic launch. Fresh
+coordination/admission is required afterward. Complete backup fit/restore,
+deployment and schedule remain unverified; all recovery data are preserved.
+Included weekly0% does not expand the operator's separate~246-credit ceiling.
+
+# Historical nightly capacity check — failed07:04UTC
 
 One user-authorized detached capacity continuation started07:00:49UTC,
 measurementPID1455995/start32474761, unitvk-nightly-capacity-r2-45a7799cf.service.

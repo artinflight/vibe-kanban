@@ -206,6 +206,9 @@ def main():
     if not args.measure_full:raise ValueError('explicit full-stream measurement required')
     from vk_nightly_job import checksum,validate
     from vk_nightly_capture_adapter import RegisteredWorkspace,run_capture
+    from vk_candidate_direct_b import source_pins
+    # Validate the packaged provenance receipt before opening a B job/watcher.
+    source_pins()
     if checksum(args.config)!=args.config_sha256:raise ValueError('measurement configuration changed')
     config=json.loads(args.config.read_text());plan=json.loads(Path(config['plan_path']).read_text());validate(config,plan)
     if config.get('capacity_measurement_only') is not True or not config['wsl_root'].startswith('/mnt/b/vk-backups/vk-nightly-capacity-'):

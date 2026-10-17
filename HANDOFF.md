@@ -1,4 +1,29 @@
-# Corrected capacity continuation RUNNING — October17 07:00UTC
+# Staging compiler window HELD — October17 10:09UTC
+
+Staging leads today's release. At user request, no Nightly capacity/restore
+launch during10:09:40–10:39:40UTC, or until Staging explicitly releases early.
+No heavy Nightly unit is running; capacity-r3-receipts is prepared but UNLAUNCHED,
+with no timer/automatic launch. Recheck actual Staging phase and fresh host/B
+admission before any later launch. All guards and the separate~246-credit
+ceiling remain; included weekly0% is not added credit authorization.
+
+Capacity-r2 actually ended07:04:41UTC, exit1 after233s, BEFORE payload capture:
+the derived package omitted receipts/direct-stream-20261008.json. This packaging
+mistake is fixed in a NEW recursively copied r3 package; the failed package/data
+remain untouched. Its receipt and all8 historical source hashes pass;26 targeted
+capacity/adapter tests pass. Capacity main now checks provenance before B work.
+No complete size result exists. Prior30 verified images, two successful source
+probes and all unverified data remain preserved. Full capacity/physical restore
+and operational adoption/schedule remain unverified. Staging reports all exact
+PR264 public combined checks green; private cached candidate/rollback acceptance
+is theirs. No production switch is authorized by this coordination turn.
+
+On release, use capacity-r3-receipts/config.private.json and run.private.py only
+after fresh admission. Its four-hour supervisor remains unchanged; collect the
+same named terminal/measurement diagnostics there and return without agent wait.
+Current admission was only observed10:09UTC and must not be reused after hold.
+
+# Historical corrected capacity continuation — ended07:04UTC
 
 User explicitly authorizes the next complete capacity check and asks that no
 agent turn remain active merely waiting. One detached service is running:

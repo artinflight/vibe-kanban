@@ -23,6 +23,47 @@ the advance, subtract overnight usage twice, or treat a false stop flag or the
 temporary completed-turn checkpoint as extra funding or launch permission.
 Readback itself neither reserves funds nor stops agents.
 
+## Cached-tool compatibility for the original CU workspace
+
+Seamus confirmed that main Dot and a fresh read-only worker cannot discover
+`get_credit_budget`. Treat standalone discovery as failed. No additional user
+check or metadata refresh is required for this compatibility path.
+
+Use the already-discoverable `get_workspace_reconciliation_status` with its
+unchanged sole `workspace_id` argument selecting the original CU workspace.
+Only that privately bound workspace receives an additive `credit_budget` object:
+
+```text
+credit_budget.status                 current | stale | unavailable
+credit_budget.fresh                  independent budget observation freshness
+credit_budget.readback               complete account-credit-budget-v1 or null
+credit_budget.readback.observedAt     CU observation timestamp
+credit_budget.readback.expiresAt      CU 60-second expiry
+```
+
+All original delivery/hold/receipt fields retain their values and meaning,
+including top-level `readback_fresh`. In particular, delivery
+`readback_fresh:false` can coexist with `credit_budget.fresh:true`; neither
+confirms the other. Other workspaces receive exactly their original response
+and do not perform a CU GET. The existing reader runs only after the delivery
+store has released its lock. It performs one fixed local GET per matching call,
+with no cache, arithmetic, provider poll, new tool/schema, daemon or permission.
+
+The additive preparation helper replaces only the existing status function in
+`report_reconciliation.py`, pinned to its installed SHA. Every other AST node,
+all tool definitions, adapter, fixed reader, Stop module and release files stay
+unchanged. The real CU workspace binding and generated installed module are
+private deployment data; the public helper/tests use no real workspace IDs.
+Seven compatibility tests plus the existing 25 connector tests pass. They cover
+exact preservation, non-CU isolation, stale/unavailable independence, repeated
+fresh reads and unchanged argument/UUID validation. Installed old-tool route
+acceptance and the exact module hash are recorded in the PR/Vibe handoff.
+
+This path is adopted by an atomic module-file replacement at the existing
+request boundary. No service/agent restart, browser, actor, routing, ledger or
+backend change is authorized. Frozen PR264 remains untouched. Standalone tool
+catalog propagation is a separate unresolved platform issue.
+
 ## Validation and installation boundary
 
 Eleven new reader/transport/schema tests and the existing fourteen steering
@@ -83,10 +124,9 @@ non-destructive, idempotent and closed-world. All backend writes were disabled
 in this acceptance. No agent/provider refresh, real Stop, new turn, queued-text,
 permission or Recommend change was performed.
 
-**Main Dot catalog adoption remains unverified.** This coding execution still
-has no budget/Stop controls in its supplied inventory; it is not the separate
-main conversation. Installed discovery/readback does not establish platform
-catalog propagation. No repeated refresh or credential replacement is requested.
+**Standalone tool discovery is now confirmed failed in main Dot and a fresh worker.** Installed discovery/readback does not establish platform catalog propagation.
+Use the scoped old-tool compatibility path above; no further user test, repeated
+refresh or credential replacement is requested.
 
 Staging's steering-over-1.4 hash was reproduced exactly. Applying Budget then
 Steering or Steering then Budget yields identical combined 1.5 source SHA256

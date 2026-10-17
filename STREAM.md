@@ -1,3 +1,16 @@
+# CU credit readback through existing status — October 17 compatibility
+
+Seamus confirms standalone get_credit_budget discovery FAILED in main Dot and a
+fresh worker. The requested compatibility adds credit_budget only to existing
+get_workspace_reconciliation_status for the privately bound original CU workspace.
+It reuses the installed fixed reader, preserving exact/null data and independent
+current/stale/unavailable freshness. All delivery/hold/receipt/readback_fresh
+fields and every other workspace stay unchanged.32 light Python tests pass.
+No new tool/schema, worker, restart, Cargo, browser, provider poll or routing.
+PR264/backend Stop/release files are frozen and untouched in this budget stream.
+Installed old-tool acceptance/source hashes are recorded in the PR/Vibe handoff.
+[Compatibility contract and current handoff](DOT_CREDIT_BUDGET.md).
+
 # Dot credit-budget readback — live October 17, 02:33 UTC
 
 Connector1.5 now publishes no-argument read-only `get_credit_budget` through

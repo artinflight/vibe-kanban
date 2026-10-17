@@ -4,7 +4,7 @@ use std::future::Future;
 
 use axum::{
     Extension, Json,
-    extract::{Path, State},
+    extract::{Query, State},
 };
 use chrono::{DateTime, Utc};
 use db::models::{
@@ -206,14 +206,18 @@ pub(crate) async fn stop(
     .await
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ReceiptQuery {
+    request_id: Uuid,
+}
+
 pub(crate) async fn read_receipt(
     Extension(process): Extension<ExecutionProcess>,
     State(deployment): State<DeploymentImpl>,
-    Path((execution_id, request_id)): Path<(Uuid, Uuid)>,
+    Query(ReceiptQuery { request_id }): Query<ReceiptQuery>,
 ) -> Result<Json<ApiResponse<Option<Receipt>>>, ApiError> {
-    if execution_id != process.id {
-        return Err(ApiError::BadRequest("Execution mismatch".into()));
-    }
+    let execution_id = process.id;
     let row:Option<(Uuid,Uuid,Uuid,DateTime<Utc>,String)>=sqlx::query_as("SELECT execution_id,session_id,workspace_id,expected_created_at,reason FROM execution_stop_requests WHERE request_id=? AND execution_id=?")
         .bind(request_id).bind(execution_id).fetch_optional(&deployment.db().pool).await?;
     let result =

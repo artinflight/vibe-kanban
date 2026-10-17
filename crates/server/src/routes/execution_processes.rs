@@ -443,10 +443,7 @@ pub(super) fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
                 .post(stop_control::stop)
                 .layer(axum::extract::DefaultBodyLimit::max(4096)),
         )
-        .route(
-            "/stop-requests/{request_id}",
-            get(stop_control::read_receipt),
-        )
+        .route("/stop-requests", get(stop_control::read_receipt))
         .route("/repo-states", get(get_execution_process_repo_states))
         .route("/log-history", get(log_history::get_log_history))
         .route(

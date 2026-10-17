@@ -74,7 +74,7 @@ def target(api, values):
 
 
 def receipt(api, values):
-    value = unwrap(api.http_get(f'/api/execution-processes/{values["execution_id"]}/stop-requests/{values["request_id"]}'))
+    value = unwrap(api.http_get(f'/api/execution-processes/{values["execution_id"]}/stop-requests?request_id={values["request_id"]}'))
     return None if value is None else validate_receipt(value, values)
 
 

@@ -1891,3 +1891,5 @@ was used. The private review packet/package is ready for that gate, followed by
 the established prepare/publish/check route with a fresh identity/settings check.
 PR244 stays open/unmerged. No actual savings or cheap-model quality acceptance
 is claimed from replay. Operational inputs/receipts remain outside Git.
+
+- 2026-10-17 22:54:50 UTC: Operator-directed publication of status-scope-8544d46d3-20261017 through the established no-restart helper. Exact deployed hashes, pinned validator, unchanged process/health/settings and retained rollback verified. Separate review remained unavailable and is not claimed. No runtime source change, Auto activation or paid inference; recorded-case outcomes are not measured savings.

@@ -1,3 +1,37 @@
+## October 17: status-scope correction published without a restart
+
+At 22:54:50 UTC, the operator-directed publication selected
+`status-scope-8544d46d3-20261017` through the established prepare/publish/check
+helper. Runtime source is `8544d46d3ea8ac276a1dc5faed5fc097567f6645`; the
+manifest SHA-256 is `3566e2aff807da66230146ebda7a2c5af3376d11eb7d691d11dd759698ad9859`.
+All four deployed files match the tested package. The unchanged pinned validator
+accepts both the new release and retained report-scope rollback release.
+
+The operator explicitly requested this deployment after being told that the
+separate reviewer was unavailable. This is operator-directed adoption, not a
+claim that independent acceptance occurred. Existing exact-source evidence
+remains: 67 policy and 37 accounting/workflow regressions, 199 executor tests
+(eight opt-in tests ignored), and full-isolation same-process reload/rollback
+acceptance with five recorded cases. The failed hosted namespace job is not
+accepted evidence; full isolation passed on the existing supported host without
+security changes. No runtime source changed during this publication.
+
+Live readback confirms the same backend process/start time/binary, healthy APIs,
+unchanged configuration/executor digests, Recommend and selected model/effort.
+Registry, classifier settings and the backend-matched validator are unchanged.
+New execution boundaries use the release; admitted turns remain pinned. No paid
+test, backend restart, Auto activation, staging/main merge or queue change.
+The two status-question replays choose Sol6/low without classifier inference;
+capacity-changing requests and protected continuations retain their safeguards.
+Replay is not observed savings or lower-model quality acceptance. Check subsequent
+ordinary turns for actual adoption and recommendation outcomes; private operational
+receipts remain outside Git.
+
+Immediate readback through 22:55:58 UTC observed no new ordinary admission after
+publication; fresh real-turn adoption remains to be observed. Rust formatting,
+governance and whitespace checks pass. The required full format command stops
+at the existing missing frontend Prettier; no frontend files changed.
+
 ## October 17: status-scope correction tested; independent acceptance pending
 
 Runtime source `8544d46d3ea8ac276a1dc5faed5fc097567f6645` is committed and

@@ -1,3 +1,13 @@
+## October 17: AutoSwitch status-question correction published
+
+The tested status-scope module is published through the established no-restart
+path under the operator's direct deployment instruction. Backend identity,
+health, Recommend mode and selected execution settings are unchanged. Ordinary
+status questions can avoid irrelevant protected history without classifier
+inference; genuine risky work remains guarded. The retained release provides
+rollback. Independent reviewer availability and the exact validation/adoption
+limits are recorded in HANDOFF.md; realized savings remain unverified.
+
 ## October 15: AutoSwitch reporting correction active
 
 The independently accepted report-scope module is published through the existing

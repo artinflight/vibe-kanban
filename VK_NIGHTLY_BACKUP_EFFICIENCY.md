@@ -18,7 +18,26 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
-## October17 result collection and current storage blocker — 12:25UTC
+## October17 current B lower bound — 13:03UTC
+
+SSD free9,161,347,072bytes meets8GiB individual planning headroom; full scratch
+peak remains unmeasured. Fresh capture admission fails at B6,173,691,904bytes,
+below unchanged6GiB floor. No heavy phase was started; Staging remains idle in
+its latest completed reply and has the available window while capacity is blocked.
+
+A bounded0.294s read-only BEGIN/schema/page-count audit covers all108 known
+databases, missing0/errors0: snapshot spans5,216,837,632bytes, largest2,298,052,608.
+This does not discover new databases or establish a coherent full backup. With
+T26's protected8GiB B retention floor, Nightly's unchanged2GiB+1MiB metadata
+allowance and245-byte descriptor, the known-input lower bound is15,955,304,693
+free bytes,9,781,612,789more than observed. Even using only the configured6GiB
+floor gives7,634,129,141bytes short. Neither figure includes compressed archive,
+generation objects, proof/growth or full restore. Disk Space receives exact
+timestamped evidence through its existing private coordination; no source,
+recovery or retained offload originals are removed. Existing acceptance fixtures
+are reused. Full production fit/restore, deployment and schedule remain pending.
+
+## Historical result collection and storage blocker — 12:25UTC
 
 R3 ended10:50:10UTC, guard_aborted after466s: consecutive samples counted8
 coding entries against maximum7. Only245-byte descriptor sealed, no SQLite

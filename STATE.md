@@ -1,4 +1,15 @@
-# Nightly capacity storage blocker — October17 12:25UTC
+# Nightly B capacity blocker — October17 13:03UTC
+
+SSD8.53GiB meets the individual planning target. B has5.75GiB free, below
+Nightly's unchanged6GiB floor; no heavy work started. Read-only audit of108
+known databases gives4.86GiB snapshot payload, largest2.14GiB, missing/errors0.
+Preserving T26's8GiB B reserve plus existing metadata allowance requires at
+least14.86GiB free:9.11GiB additional, BEFORE archive/objects/growth/full restore.
+Disk Space received this specific lower bound; all recovery remains preserved.
+Staging's window stays available. Full capture/restore/deployment/schedule remain
+unverified; detailed private receipts and constraints are in HANDOFF.md.
+
+# Historical Nightly SSD blocker — October17 12:25UTC
 
 R3 guard-aborted10:50UTC because8 coding entries exceeded7; no complete capacity
 result. Lane count is now3. Current Sidebar/Dot activation has been reconciled

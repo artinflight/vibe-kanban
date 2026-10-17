@@ -1,4 +1,30 @@
-# Capacity progress collection — October17 12:25UTC
+# Current B capacity blocker — October17 13:03UTC
+
+T26 restored SSD free9,161,347,072bytes (8.53GiB): individual8GiB planning
+allowance met, full meter peak unknown, no simultaneous Staging reservation.
+Fresh capture admission fails because B now has6,173,691,904bytes (5.75GiB),
+below unchanged Nightly6GiB floor. No heavy job/build/restore was launched.
+Staging's latest completed12:57 reply remains idle; its release/need for fresh
+coordinated demand accounting is retained. Heavy window remains available there.
+
+A0.294s read-only page-count audit covers all108 known databases, missing0,
+errors0: consistent-image payload5,216,837,632bytes (4.86GiB), largest
+2,298,052,608bytes (2.14GiB). This is a known-set lower bound, not a new full
+census or coherent backup. With T26's protected8GiB B reserve, unchanged Nightly
+2GiB+1MiB metadata allowance and245-byte descriptor, required free B is at least
+15,955,304,693bytes (14.86GiB): shortfall9,781,612,789bytes (9.11GiB).
+Using only Nightly's configured6GiB floor still leaves7,634,129,141bytes short.
+Both exclude archive/object/proof/growth and whole-tree restore allocation.
+
+Exact private receipt:CURRENT_KNOWN_SQLITE_CAPACITY_20261017T1301.private.json;
+specific lower-bound request forwarded to T26's existing diagnostics and B
+consolidation coordination. Preserve every recovery/source/T26 retained original;
+no deletion or floor reduction authorized. SSD OS fallback not used. Need safe
+B capacity before a single coordinated measured-capture window. Existing scale,
+WAL, native B fixture restores and two-copy tests are reused; full production
+capture/restore, operational deployment and schedule remain unverified/inactive.
+
+# Historical capacity progress collection — October17 12:25UTC
 
 R3 stopped10:50:10UTC after466s: two samples counted8 active coding entries,
 exceeding unchanged maximum7. Only245-byte descriptor sealed; no SQLite payload

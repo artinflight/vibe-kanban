@@ -208,7 +208,7 @@ async fn conflicting_request_identity_is_not_reused() {
 #[tokio::test]
 async fn independent_completion_wins_atomic_claim_without_a_stop() {
     let (pool, request) = fixture().await;
-    sqlx::query("CREATE TRIGGER completion_wins BEFORE UPDATE OF status ON execution_processes WHEN NEW.status='killed' BEGIN UPDATE execution_processes SET status='completed' WHERE id=OLD.id; SELECT RAISE(IGNORE); END").execute(&pool).await.unwrap();
+    sqlx::query("CREATE TRIGGER completion_wins BEFORE INSERT ON execution_stop_claims BEGIN UPDATE execution_processes SET status='completed' WHERE id=NEW.execution_id; SELECT RAISE(IGNORE); END").execute(&pool).await.unwrap();
     let result = admit(&pool, &request, |_| async {
         panic!("Completion won the race")
     })
@@ -255,6 +255,14 @@ async fn failed_or_cancelled_dispatch_remains_unknown_and_is_never_replayed() {
     assert_eq!(failed.status, "unknown");
     assert_eq!(failed.stopped, None);
     assert_eq!(
+        ExecutionProcess::find_by_id(&pool, request.execution_id)
+            .await
+            .unwrap()
+            .unwrap()
+            .status,
+        ExecutionProcessStatus::Running
+    );
+    assert_eq!(
         admit(&pool, &request, |_| async {
             panic!("Unknown stop cannot be resent")
         })
@@ -285,6 +293,58 @@ async fn failed_or_cancelled_dispatch_remains_unknown_and_is_never_replayed() {
     .unwrap();
     assert_eq!(readback.status, "unknown");
     assert_eq!(readback.stopped, None);
+    assert_eq!(
+        ExecutionProcess::find_by_id(&pool, request.execution_id)
+            .await
+            .unwrap()
+            .unwrap()
+            .status,
+        ExecutionProcessStatus::Running
+    );
+}
+
+#[tokio::test]
+async fn losing_http_waiter_does_not_abandon_the_owned_stop() {
+    let (pool, request) = fixture().await;
+    let worker_pool = pool.clone();
+    let worker_request = request.clone();
+    let (started, ready) = tokio::sync::oneshot::channel();
+    let (release, resume) = tokio::sync::oneshot::channel();
+    let waiter = tokio::spawn(finish_owned(async move {
+        admit(&worker_pool, &worker_request, |_| async move {
+            let _ = started.send(());
+            let _ = resume.await;
+            Ok(())
+        })
+        .await
+    }));
+    ready.await.unwrap();
+    waiter.abort();
+    let _ = waiter.await;
+    release.send(()).unwrap();
+    tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        loop {
+            if previous(&pool, &request)
+                .await
+                .unwrap()
+                .is_some_and(|r| r.stopped == Some(true))
+            {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        admit(&pool, &request, |_| async {
+            panic!("Owned stop cannot be resent")
+        })
+        .await
+        .unwrap()
+        .stopped,
+        Some(true)
+    );
 }
 
 #[tokio::test]

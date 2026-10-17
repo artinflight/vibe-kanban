@@ -8,3 +8,9 @@ CREATE TABLE execution_stop_requests (
     status TEXT NOT NULL DEFAULT 'unknown',
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now'))
 );
+
+-- Reserve an exact execution without advertising completion before dispatch.
+CREATE TABLE execution_stop_claims (
+    execution_id BLOB PRIMARY KEY NOT NULL,
+    request_id BLOB NOT NULL UNIQUE
+);

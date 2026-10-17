@@ -139,13 +139,24 @@ where
             "not_running"
         }
         Some(process) => {
-            // Claim terminal state atomically before invoking the existing exact
-            // container stop. A completed turn can never be rewritten as killed.
-            let claimed=sqlx::query("UPDATE execution_processes SET status='killed',exit_code=NULL,completed_at=strftime('%Y-%m-%d %H:%M:%f','now'),updated_at=strftime('%Y-%m-%d %H:%M:%f','now') WHERE id=? AND session_id=? AND status='running' AND dropped=0")
-                .bind(process.id).bind(request.session_id).execute(pool).await?.rows_affected();
+            // Reserve without changing process status. An interrupted request
+            // must not advertise a killed process that is still alive.
+            let claimed=sqlx::query("INSERT INTO execution_stop_claims(execution_id,request_id) SELECT id,? FROM execution_processes WHERE id=? AND session_id=? AND status='running' AND dropped=0 ON CONFLICT(execution_id) DO NOTHING")
+                .bind(request.request_id).bind(process.id).bind(request.session_id).execute(pool).await?.rows_affected();
             if claimed == 0 {
-                "not_running"
+                let current = ExecutionProcess::find_by_id(pool, process.id).await?;
+                if current.is_some_and(|current| current.status == ExecutionProcessStatus::Running)
+                {
+                    "unknown"
+                } else {
+                    "not_running"
+                }
             } else if dispatch(process).await.is_ok() {
+                // Only confirmed dispatch can finalize a still-running row.
+                // The real container already marks completion; never overwrite
+                // another terminal outcome. Its receipt remains the evidence.
+                sqlx::query("UPDATE execution_processes SET status='killed',exit_code=NULL,completed_at=strftime('%Y-%m-%d %H:%M:%f','now'),updated_at=strftime('%Y-%m-%d %H:%M:%f','now') WHERE id=? AND status='running'")
+                    .bind(request.execution_id).execute(pool).await?;
                 "stopped"
             } else {
                 "unknown"
@@ -167,10 +178,16 @@ pub(crate) async fn inspect(
     let session = Session::find_by_id(&deployment.db().pool, process.session_id)
         .await?
         .ok_or_else(|| ApiError::Conflict("Session unavailable".into()))?;
+    let active_stop_request: Option<Uuid> =
+        sqlx::query_scalar("SELECT request_id FROM execution_stop_claims WHERE execution_id=?")
+            .bind(process.id)
+            .fetch_optional(&deployment.db().pool)
+            .await?;
     Ok(Json(ApiResponse::success(
         serde_json::json!({"version":1,"execution_id":process.id,"session_id":session.id,
         "workspace_id":session.workspace_id,"expected_created_at":process.created_at,
         "execution_status":process.status,"run_reason":process.run_reason,"dropped":process.dropped,
+        "active_stop_request_id":active_stop_request,
         "serialized_admission":admission::automatic_git_sync(),
         "status": if !admission::automatic_git_sync() {"unsupported"} else if process.status==ExecutionProcessStatus::Running && process.run_reason==ExecutionProcessRunReason::CodingAgent && !process.dropped {"ready"} else {"not_running"}}),
     )))
@@ -191,7 +208,8 @@ pub(crate) async fn stop(
             "Exact stop requires serialized admission".into(),
         ));
     }
-    admission::locked(async {
+    // Losing the HTTP waiter must not cancel an accepted Stop halfway through.
+    finish_owned(admission::locked(async move {
         let deployment = &deployment;
         let result = admit(&deployment.db().pool, &request, |current| async move {
             deployment
@@ -202,8 +220,18 @@ pub(crate) async fn stop(
         })
         .await?;
         Ok(Json(ApiResponse::success(result)))
-    })
+    }))
     .await
+}
+
+async fn finish_owned<T: Send + 'static>(
+    work: impl Future<Output = Result<T, ApiError>> + Send + 'static,
+) -> Result<T, ApiError> {
+    tokio::spawn(work).await.map_err(|_| {
+        ApiError::Conflict(
+            "Stop outcome unknown; inspect the original request receipt, never resend".into(),
+        )
+    })?
 }
 
 #[derive(Deserialize)]

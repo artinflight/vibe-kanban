@@ -20,7 +20,7 @@ One POST goes only to that guarded endpoint. An absent endpoint returns
 workspace Stop**. Authentication, Recommend routing and other tools stay intact.
 
 The backend holds the existing shared admission lock across fresh validation,
-atomic running-to-killed claim and exact container Stop. The pre-existing
+atomic execution claim and exact container Stop. The pre-existing
 `VK_AUTOMATIC_GITHUB_SYNC=1` setting guarantees that normal launches/completions
 use the same lock. Without that guarantee the feature fails closed; this change
 does not enable a policy flag. Independent terminal writers cannot win the
@@ -29,11 +29,15 @@ finished/dropped executions and non-agent scripts cannot reach container Stop.
 No execution ID is retargeted to a replacement turn.
 
 `execution_stop_requests` reserves an `unknown` receipt before side effects.
+A separate unique execution claim does not advertise a killed process before
+dispatch. The owned stop task retains admission and continues if its HTTP waiter
+disconnects; interruption must not abandon a half-finished stop or open admission
+early. Readback includes the active original request ID.
 Matching retries read it without dispatch. Conflicting identities/reasons are
 rejected. Multiple request IDs for one execution still get at most one claimed
 stop. Only `status=stopped, stopped=true` confirms that exact container Stop
-returned successfully. Lost responses, errors and cancelled handlers remain
-`unknown, stopped=null`; a database `killed` status alone is not confirmation.
+returned successfully. Lost responses, errors and interrupted dispatch remain
+`unknown, stopped=null` until a confirmed owned result is persisted; a database `killed` status alone is not confirmation.
 Read back the same request; never resend uncertainty under a fresh UUID.
 
 The existing container Stop performs goal-pause best effort and process-group

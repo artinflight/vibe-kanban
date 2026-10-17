@@ -1,3 +1,30 @@
+# Corrected capacity continuation RUNNING — October17 07:00UTC
+
+User explicitly authorizes the next complete capacity check and asks that no
+agent turn remain active merely waiting. One detached service is running:
+vk-nightly-capacity-r2-45a7799cf.service, supervisorPID1455985, measurementPID
+1455995/start32474761, start07:00:49.537423UTC. Four-hour supervisor, expected
+deadline about11:00:49UTC; original CPU25%,High2G/Max3G,Swap0,Tasks32 and
+host/B/live-health guards retained. Fresh B namespace ends3b8bf1839b8f492cbf6b1d3b3fe4e2a6.
+Admission passes; B30,246,600,704bytes, SSD8,601,911,296bytes observed before start.
+
+Receipts/control are under capacity-r2-45a7799cf in the existing October17 SSD
+evidence root. Collect terminal.safe.json and RESULT.txt; success additionally
+writes CAPACITY_ASSESSMENT.safe.json and measurement/capacity-result.private.json.
+Failure preserves measurement/stream-failure.private.json with original error,
+traceback and source/stage diagnostics, plus unit.log and supervisor.private.json.
+If still running, inspect this same unit/PID/progress; do not replace it.
+
+The corrected sealed package/profile and existing scale/WAL/two-copy evidence
+are reused. Incomplete old images lack finished manifest/source bindings and
+cannot substitute for fresh production inputs under the current design; all
+remain preserved. No old inputs are reconciled/retired or changed. No automatic
+restore, operational deployment or schedule activation is queued. On completion,
+review actual space including retained old data, transient archive/proof/objects,
+metadata/growth and restore capacity; then scope physical acceptance if feasible.
+The generated assessment is a model with explicit unmeasured allocations, not
+proof of fit or restoration. Preserve partials on any failure/timeout.
+
 # Single-source B capture result — October 17
 
 The requested bounded probe completed06:54:36.034402–06:56:10.523929UTC,

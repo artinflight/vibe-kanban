@@ -1,3 +1,13 @@
+# Nightly corrected capacity check RUNNING — October17 07:00UTC
+
+One user-authorized detached capacity continuation started07:00:49UTC,
+measurementPID1455995/start32474761, unitvk-nightly-capacity-r2-45a7799cf.service.
+Four-hour supervisor and original guards remain; all previous recovery data
+are preserved. The agent returns without waiting. HANDOFF.md names exact
+terminal/failure receipts to collect; do not launch a replacement. Complete
+backup fit and whole-plan physical restore remain unknown. No deployment or
+schedule activation is claimed; the bounded two-copy result below is reused.
+
 # Nightly bounded source capture — October 17
 
 The likely failed source now passes two independent actual registered-B copies,

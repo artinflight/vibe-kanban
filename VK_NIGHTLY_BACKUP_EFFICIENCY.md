@@ -18,6 +18,29 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
+## October17 corrected background capacity continuation — 07:00UTC
+
+After the two passing source copies, the user authorized a complete corrected
+capacity check and requested no agent turn wait on a long measurement. The
+single detached unitvk-nightly-capacity-r2-45a7799cf.service started07:00:49UTC,
+measurementPID1455995/start32474761. The original four-hour supervisor and
+resource/health guards remain. B30,246,600,704bytes and SSD8,601,911,296bytes
+were available at admission. No Staging compiler/nightly overlap was observed.
+
+Current package/profile, census, scale lifecycle and WAL/fixture evidence are
+reused. Prior incomplete images have no completed manifest/source binding, so
+fresh consistent inputs are required; all old captures and probe images remain
+preserved. The stream counts/discards archive/object payload rather than
+publishing an operational backup. No physical restore or activation is queued.
+
+Private capacity-r2-45a7799cf receipts include durable terminal/result or original
+failure diagnostics and a successful-stream space assessment. The assessment
+includes rounded transient inputs/archive, unique object allocation, fixed
+metadata reserve, preserved floor and restore payload. Proof/filesystem/growth
+allocation is explicitly incomplete, so it does not certify fit or restoration.
+Collect this existing run's result rather than starting another measurement;
+HANDOFF.md gives exact names and the next acceptance step.
+
 ## October17 bounded affected-source copy — complete
 
 The corrected diagnostic package, derived from sealed6bfd27244 with the two

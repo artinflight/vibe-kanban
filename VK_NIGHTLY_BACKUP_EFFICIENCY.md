@@ -18,7 +18,21 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
-## October17 packaging correction and Staging hold — 10:09UTC
+## October17 corrected r3 launch — 10:42UTC
+
+The10:09:40–10:39:40UTC hold elapsed. Staging's running turn received active
+window coordination (HTTP200/empty, no new execution); no explicit release ack
+was received. No heavy host compiler/acceptance phase was observed, original
+admission passed, and all39 package files/eight historical hashes revalidated.
+The single detached r3 measurement started10:42:25UTC, PID3690479/start33804395,
+unitvk-nightly-capacity-r3-receipts.service, bounded4h with unchanged guards.
+B free27,876,061,184bytes. Existing index/WAL/two-copy evidence is reused and
+all old inputs are preserved. Current receipts live under capacity-r3-receipts;
+no physical restore, operational deployment or schedule activation is claimed.
+Collect this exact job's terminal/capacity/failure evidence rather than replacing
+it. Private build acceptance remains Staging-owned and pending in its live update.
+
+## Historical packaging correction and Staging hold — 10:09UTC
 
 R2 ended07:04:41UTC, exit1/233s before payload capture: the derived package
 omitted receipts/direct-stream-20261008.json. No full capacity result exists.

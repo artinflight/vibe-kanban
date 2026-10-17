@@ -1,4 +1,13 @@
-# Nightly retry prepared, Staging window held — October17 10:09UTC
+# Nightly r3 capacity running — October17 10:42UTC
+
+After the bounded Staging hold expired and fresh admission passed, the verified
+complete package launched one detached vk-nightly-capacity-r3-receipts.service,
+PID3690479/start33804395,10:42:25UTC, four-hour limit. Existing guards/data are
+preserved; Staging's active turn was notified without a new execution. Full
+capacity/restore and schedule remain unverified. HANDOFF.md names the current
+receipts. No agent wait loop or additional provider generation is running.
+
+# Historical Nightly retry hold — expired10:39:40UTC
 
 No heavy Nightly job is running. R2 failed07:04:41UTC before payload because
 the derived package omitted its provenance receipt directory. A new complete

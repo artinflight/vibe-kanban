@@ -1,4 +1,26 @@
-# Staging compiler window HELD — October17 10:09UTC
+# Corrected r3 capacity RUNNING — October17 10:42UTC
+
+The bounded Staging hold expired10:39:40UTC. At10:40–10:42 no heavy host
+compiler/acceptance unit was observed; fresh original admission passed.
+Coordination was actively steered into Staging's existing turn (HTTP200/empty,
+no new execution); its latest live update reports private compiler PSI-held and
+public-artifact fixtures next. No explicit release acknowledgement was received.
+
+The prepared39-file package and all8 provenance hashes were rechecked unchanged.
+One detached vk-nightly-capacity-r3-receipts.service began10:42:25.873447UTC,
+measurementPID3690479/start33804395. Four-hour limit, about14:42:26UTC; unchanged
+CPU25%,High2G/Max3G,Swap0,Tasks32 and resource/health guards. B27,876,061,184bytes
+free at fresh admission. All prior captures remain untouched. No restore queued.
+
+Collect existing capacity-r3-receipts/{terminal.safe.json,RESULT.txt,
+CAPACITY_ASSESSMENT.safe.json,measurement/capacity-result.private.json} under
+the October17 SSD evidence root, or original-error measurement/stream-failure.private.json
+and unit.log on failure. Do not replace a running job. The space assessment is
+a model, not physical backup/restore acceptance. No deployment/schedule claim.
+Fresh included usage reads3%, separate remaining-credit ledger unverified;
+operator's~246 ceiling is unchanged. No new agent/provider generation launched.
+
+# Historical Staging compiler hold — expired10:39:40UTC
 
 Staging leads today's release. At user request, no Nightly capacity/restore
 launch during10:09:40–10:39:40UTC, or until Staging explicitly releases early.

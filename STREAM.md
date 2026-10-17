@@ -1,3 +1,16 @@
+# Project collaboration sidebar — October 17
+
+Branch `vk/7db7-vk-project-dot-c` starts at fork/staging `7110930b6`.
+Scope: private project Dot Chat and shared checklist/milestone/decision/question
+entries in Projects, canonical task/owner/workspace links, desktop/mobile and
+current/future projects. Existing event/tool schemas and issue/agent notification
+semantics remain. No CU module changes or production activation belong here.
+VK Dev issue `1900eb48-bf48-4500-97fd-56eb5ae01a3e` is linked to this workspace.
+Preserve Dot and Staging received contract/release handoffs. The separate Dot
+service/connector release is required; no Rust backend source changed. Read
+VK_PROJECT_COLLABORATION.md for validation, preview and integration limits.
+Older entries below describe other streams and do not define this branch.
+
 # First-response generated artifact delivery — October 16 follow-up
 
 Based on staging `805aa7741`; this follow-up adds the

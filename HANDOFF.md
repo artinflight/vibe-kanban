@@ -1,3 +1,16 @@
+# Project sidebar pickup — October 17
+
+Feature branch `vk/7db7-vk-project-dot-c`, staging base `7110930b6`, issue
+`1900eb48-bf48-4500-97fd-56eb5ae01a3e`. Read VK_PROJECT_COLLABORATION.md.
+Source includes private project chat, shared plans with conflict/idempotency
+handling, live canonical task/owner/workspace links and separate project Dot
+badges. Tests use disposable sidechat state and block Vibe writes. No production
+service/assets/private data were changed; normal issue/workspace tracking was
+created. Preserve Dot confirmed compatibility; Staging owns coordinated adoption.
+Keep complete project_collaboration.py bundle and live CU1.6 pins. Do not treat
+this feature as included in frozen PR264 without explicit integration.
+Rust workspace checks and post-adoption/physical-phone acceptance remain limits.
+
 # Generated deliverable links — installed October 16 follow-up
 
 The reported OP::3D Print Issues link was an unpublished filesystem target,

@@ -5,6 +5,7 @@ project, issue or role claims. HTTPS terminates at the existing Vibe proxy;
 a non-loopback listener requires TLS and an exact trusted proxy address.
 """
 import argparse
+from contextlib import closing
 import hashlib
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -20,6 +21,7 @@ import urllib.parse
 import uuid
 
 from sidechat import Principal, Rejected, Store
+from project_collaboration import Conflict
 
 PREFIX = "/api/dot-sidechat/"
 COOKIE = "__Secure-vibe-dot"
@@ -115,6 +117,21 @@ class WorkspaceResolver:
                 "issue_label": row[2], "workspace_label": row[3] or str(wid)}
 
 
+    def project(self, project):
+        pid = uuid.UUID(project)
+        with closing(sqlite3.connect(self.path.as_uri()+"?mode=ro", uri=True, timeout=2)) as con:
+            con.execute("PRAGMA query_only=ON")
+            row = con.execute("SELECT name FROM projects WHERE id=?", (pid.bytes,)).fetchone()
+        if not row:
+            raise Rejected("Project unavailable")
+        return {"project": str(pid), "project_label": row[0]}
+
+    def issue_in_project(self, project, issue):
+        with closing(sqlite3.connect(self.path.as_uri()+"?mode=ro", uri=True, timeout=2)) as con:
+            con.execute("PRAGMA query_only=ON")
+            return con.execute("SELECT 1 FROM tasks WHERE id=? AND project_id=?", (uuid.UUID(issue).bytes, uuid.UUID(project).bytes)).fetchone() is not None
+
+
 class BrowserAPI:
     def __init__(self, store, resolver):
         self.store, self.resolver, self.auth = store, resolver, BrowserAuth(store)
@@ -128,8 +145,48 @@ class BrowserAPI:
         thread = self.store.resolve(owner, scope["project"], scope["issue"], scope["workspace"])
         return owner, thread, scope
 
+    def project_scope(self, session, project):
+        from project_collaboration import ProjectCollaboration
+        project = str(uuid.UUID(project))
+        if project not in json.loads(session['projects']):
+            raise Rejected("Project is outside this browser's grant")
+        # Verify the authoritative project before registering its private context.
+        self.resolver.project(project)
+        owner = Principal(session['owner'], 'owner')
+        context = 'project:' + project
+        self.store.register_scope(owner.owner, project, context, context)
+        collaboration = ProjectCollaboration(self.store, self.resolver)
+        return owner, collaboration
+
+    def project_page(self, session, project, after=0, through=None):
+        owner, collaboration = self.project_scope(session, project)
+        thread, scope = collaboration.thread(owner, project)
+        return self.snapshot(owner, thread, scope, after, through)
+
+    def project_plan(self, session, project):
+        owner, collaboration = self.project_scope(session, project)
+        return collaboration.read(owner, project)
+
+    def project_write(self, session, args):
+        if set(args) != {'project', 'request', 'entry'}:
+            raise Rejected('Unexpected planning argument')
+        owner, collaboration = self.project_scope(session, args['project'])
+        return collaboration.write(owner, args['project'], args['request'], args['entry'])
+
+    def target(self, session, args):
+        if 'project' in args and 'workspace' not in args:
+            owner, collaboration = self.project_scope(session, args['project'])
+            thread, scope = collaboration.thread(owner, args['project'])
+            return owner, thread, scope
+        if 'workspace' in args and 'project' not in args:
+            return self.scope(session, args['workspace'])
+        raise Rejected('Exactly one project or workspace target required')
+
     def page(self, session, workspace, after=0, through=None):
         owner, thread, scope = self.scope(session, workspace)
+        return self.snapshot(owner, thread, scope, after, through)
+
+    def snapshot(self, owner, thread, scope, after, through):
         page = self.store.read(owner, thread["id"], after=after, through=through, limit=50)
         page["scope"] = scope
         page["capabilities"] = {"notifications":True}
@@ -138,9 +195,9 @@ class BrowserAPI:
         return page
 
     def send(self, session, args):
-        if set(args) != {"workspace", "request", "body"}:
+        if set(args) not in ({"workspace", "request", "body"}, {"project", "request", "body"}):
             raise Rejected("Unexpected send argument")
-        owner, thread, scope = self.scope(session, args["workspace"])
+        owner, thread, scope = self.target(session, args)
         return self.store.append(owner, thread["id"], scope["workspace"], args["request"], args["body"])
 
 
@@ -148,13 +205,13 @@ class BrowserAPI:
         return self.store.notifications(Principal(session['owner'],'owner'),json.loads(session['projects']))
 
     def seen(self, session, args):
-        if set(args)!={'workspace','messages'}:raise Rejected('Unexpected read argument')
-        owner,thread,scope=self.scope(session,args['workspace'])
+        if set(args) not in ({'workspace','messages'}, {'project','messages'}):raise Rejected('Unexpected read argument')
+        owner,thread,scope=self.target(session,args)
         return self.store.seen_replies(owner,thread['id'],scope['workspace'],args['messages'])
 
     def attention(self, session, args):
-        if set(args)!={'workspace','message','action'}:raise Rejected('Unexpected attention argument')
-        owner,thread,scope=self.scope(session,args['workspace'])
+        if set(args) not in ({'workspace','message','action'}, {'project','message','action'}):raise Rejected('Unexpected attention argument')
+        owner,thread,scope=self.target(session,args)
         return self.store.set_sidechat_attention(owner,thread['id'],scope['workspace'],args['message'],args['action'])
 
 
@@ -244,11 +301,18 @@ def handler(api, origin):
                 return self.output(200,api.attention(session,args))
             if self.command == "POST" and route == "send":
                 return self.output(200, api.send(session, args))
+            if self.command == 'POST' and route == 'project-entry':
+                return self.output(200, api.project_write(session, args))
+            if self.command == 'GET' and route == 'project-plan':
+                query = urllib.parse.parse_qs(parsed.query, strict_parsing=True)
+                if set(query) != {'project'} or len(query['project']) != 1:
+                    raise Rejected('Exact project required')
+                return self.output(200, api.project_plan(session, query['project'][0]))
             if self.command == "GET" and route == "thread":
                 query = urllib.parse.parse_qs(parsed.query, strict_parsing=True)
-                if set(query) - {"workspace", "after", "through"} or "workspace" not in query or any(len(v) != 1 for v in query.values()):
+                if set(query) - {"workspace", "project", "after", "through"} or ("workspace" in query) == ("project" in query) or any(len(v) != 1 for v in query.values()):
                     raise Rejected("Invalid history query")
-                return self.output(200, api.page(session, query["workspace"][0],
+                return self.output(200, (api.project_page if "project" in query else api.page)(session, query.get("project", query.get("workspace"))[0],
                     int(query.get("after", ["0"])[0]),
                     int(query["through"][0]) if "through" in query else None))
             raise Rejected("Unsupported route")
@@ -256,6 +320,8 @@ def handler(api, origin):
         def do_GET(self):
             try:
                 self.dispatch()
+            except Conflict as exc:
+                self.output(409, {"error": str(exc)})
             except AuthRequired as exc:
                 self.output(401, {"error": str(exc)})
             except (Rejected, ValueError, TypeError, KeyError, AttributeError):

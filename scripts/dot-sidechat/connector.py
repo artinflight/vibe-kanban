@@ -26,6 +26,16 @@ def opened():
 def call(name,args):
     store=opened()
     try:
+        if name in ('read_project_collaboration', 'write_project_collaboration_entry'):
+            from browser_api import WorkspaceResolver
+            from project_collaboration import ProjectCollaboration
+            allowed = {'project'} if name == 'read_project_collaboration' else {'project', 'request', 'entry'}
+            if not isinstance(args, dict) or set(args) != allowed:
+                raise Rejected('Exact project tool arguments required')
+            resolver = WorkspaceResolver(os.environ.get('VK_SIDECHAT_VIBE_DB', '/home/mcp/.local/share/vibe-kanban-green-xdg/vibe-kanban/db.v2.sqlite'))
+            collaboration = ProjectCollaboration(store, resolver)
+            operation = collaboration.read if name == 'read_project_collaboration' else collaboration.write
+            return operation(Principal(owner(), 'dot'), **args)
         return store.tool(Principal(owner(),"dot"),name,args)
     finally:
         store.close()

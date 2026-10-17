@@ -132,6 +132,8 @@ interface AppBarProps {
 }
 
 export interface AppBarProject {
+  dotUnreadCount?: number;
+  dotNeedsAttentionCount?: number;
   id: string;
   name: string;
   color: string;
@@ -627,6 +629,26 @@ export function AppBar({
                         >
                           <Tooltip content={project.name} side="right">
                             <div className="relative h-10 w-10">
+                              {!!(
+                                project.dotUnreadCount ||
+                                project.dotNeedsAttentionCount
+                              ) && (
+                                <span
+                                  className="absolute -left-1 -bottom-1 z-10 rounded-full bg-secondary px-1 text-xs"
+                                  style={{
+                                    color:
+                                      'hsl(var(--dot-activity, 270 65% 43%))',
+                                  }}
+                                  title={
+                                    project.dotNeedsAttentionCount
+                                      ? 'Dot · Needs Attention'
+                                      : 'Unread Dot replies'
+                                  }
+                                  aria-label={`${project.name}: ${project.dotUnreadCount ?? 0} unread Dot replies, ${project.dotNeedsAttentionCount ?? 0} Dot Needs Attention`}
+                                >
+                                  {project.dotNeedsAttentionCount ? '◆' : '●'}
+                                </span>
+                              )}
                               {project.hasNeedsReview && (
                                 <span
                                   className="absolute -right-1 -top-1 z-10 h-3 w-3 rounded-full border border-secondary bg-brand"
@@ -848,6 +870,19 @@ export function AppBar({
                       {project.name}
                     </span>
                   </button>
+                  {!!(
+                    project.dotUnreadCount || project.dotNeedsAttentionCount
+                  ) && (
+                    <span
+                      className="text-xs"
+                      style={{ color: 'hsl(var(--dot-activity, 270 65% 43%))' }}
+                      aria-label={`${project.name} Dot activity`}
+                    >
+                      {project.dotNeedsAttentionCount
+                        ? '◆ Dot · Needs Attention'
+                        : `● Dot ${project.dotUnreadCount}`}
+                    </span>
+                  )}
                   {project.hasNeedsReview && (
                     <span
                       className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand"

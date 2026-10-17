@@ -2013,3 +2013,10 @@ Physical phone DevTools was rejected by automatic approval review for its shared
 authenticated-tab boundary; no retry/alternate route. Seamus's fresh paired-phone
 question/reply/notification confirmation remains. PR254 merged into staging28fdcfddf.
 See DOT_NOTIFICATION_ROLLOUT.md and the bounded live QA scripts for receipts.
+
+## 2026-10-17 — Project sidebar preparation
+
+Implemented private project Dot Chat/shared planning with canonical task links,
+revision/idempotency protection, separate project attention and responsive UI.
+Coordinated Preserve Dot/CU1.6 and Staging. No production adoption.
+See VK_PROJECT_COLLABORATION.md for validation and release requirements.

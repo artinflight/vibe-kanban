@@ -378,6 +378,22 @@ class PreparationTests(unittest.TestCase):
         self.assertIsNone(result["fix_ready_to_work_resumed_seconds"])
         self.assertFalse(result["ten_minute_target_met"])
 
+    def test_legacy_hash_only_manifest_measures_size_without_weakening_hash_pin(self):
+        import hashlib
+        candidate = self.root / 'legacy-candidate';candidate.write_bytes(b'accepted candidate')
+        rollback = self.root / 'legacy-rollback';rollback.write_bytes(b'accepted rollback')
+        manifest = {'source': {'combined_source_tree': 'reviewed-tree'}, 'artifacts': {
+            key: {'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+            for key, path in [('candidate', candidate), ('rollback', rollback)]}}
+        path = self.root / 'legacy-manifest.json';path.write_text(json.dumps(manifest))
+        pin = hashlib.sha256(path.read_bytes()).hexdigest()
+        result = verify_artifacts(path, pin, 'reviewed-tree')
+        self.assertEqual(result['artifacts']['candidate']['bytes'], len(b'accepted candidate'))
+        self.assertFalse(result['compiler_invoked'])
+        candidate.write_bytes(b'changed candidate')
+        with self.assertRaisesRegex(ValueError, 'artifact changed'):
+            verify_artifacts(path, pin, 'reviewed-tree')
+
     def test_resume_needs_bound_ids_and_valid_postpublication_timestamp(self):
         import hashlib
         path, receipt, _ = self.publication_fixture()

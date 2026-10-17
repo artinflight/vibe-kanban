@@ -188,12 +188,19 @@ def verify_artifacts(manifest_path, expected_sha256, expected_tree):
         if path.is_symlink() or not path.is_file():
             raise ValueError("Accepted artifact must be a direct regular file")
         before = path.stat()
+        declared_bytes = item.get("bytes")
+        if "bytes" in item and (type(declared_bytes) is not int or declared_bytes < 0):
+            raise ValueError("Accepted artifact byte count is invalid: " + name)
         actual = digest(path)
         after = path.stat()
         fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
         if (any(getattr(before, key) != getattr(after, key) for key in fields)
-                or actual != item["sha256"] or after.st_size != item["bytes"]):
+                or actual != item["sha256"]
+                or (declared_bytes is not None and after.st_size != declared_bytes)):
             raise ValueError("Accepted artifact changed: " + name)
+        # The existing accepted release manifest predates the optional byte
+        # count. Its fixed full-content SHA still pins every byte; report the
+        # measured size only AFTER hash and stable-identity verification.
         checked[name] = {"sha256": actual, "bytes": after.st_size}
     return {"passed": True, "source_tree": expected_tree,
             "manifest_sha256": expected_sha256, "artifacts": checked,

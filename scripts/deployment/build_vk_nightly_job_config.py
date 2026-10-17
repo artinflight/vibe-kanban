@@ -11,15 +11,16 @@ import subprocess
 from vk_candidate_direct_b import source_pins
 from vk_nightly_generation import MAX_INDEX
 from vk_nightly_job import checksum, validate_socket_exclusions
+from vk_nightly_schedule import block
 from vk_prep_common import identity, storage
 
 
-def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False):
+def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False,plan_path=None):
     if chunked_delta and not compressed_delta:
         raise ValueError('chunked storage requires the compressed content-delta composition')
     base=Path(__file__).parent;output=storage(output);output.mkdir(exist_ok=False)
     inventory=json.loads(Path(inventory_path).read_text())
-    plan_path=Path('/mnt/vk-storage/vk-runtime-backup-20261009/backup-plan.json')
+    plan_path=Path(plan_path) if plan_path else Path('/mnt/vk-storage/vk-runtime-backup-20261009/backup-plan.json')
     plan=json.loads(plan_path.read_text());historical_sha256=checksum(plan_path)
     if inventory['plan_identity']!=identity(plan):raise ValueError('inventory/plan binding changed')
     for raw,row in inventory['roots'].items():
@@ -30,15 +31,17 @@ def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False):
     # GNU tar cannot restore this process-owned socket. Existing Exclusions
     # accepts exact paths; the runtime type/owner guard prevents data omission
     # if an ordinary file/symlink is substituted at this reviewed name.
-    sockets=['/home/mcp/.codex/app-server-daemon/daemon-updater.sock']
+    sockets=plan.get('nightly_exact_socket_omission_proposal',
+                     ['/home/mcp/.codex/app-server-daemon/daemon-updater.sock'])
     validate_socket_exclusions(sockets)
-    plan={**plan,'excluded_rebuildable_directories':[*plan.get('excluded_rebuildable_directories',[]),*sockets],
+    plan={**plan,'excluded_rebuildable_directories':list(dict.fromkeys([*plan.get('excluded_rebuildable_directories',[]),*sockets])),
           'nightly_exact_socket_omission_proposal':sockets}
     plan_path=output/'nightly-source-plan.proposed.private.json'
     plan_path.write_text(json.dumps(plan,indent=2,sort_keys=True)+'\n');os.chmod(plan_path,0o600)
     from vk_change_journal import scope
     from vk_rolling_backup import Exclusions
-    modules=set();queue=['vk_nightly_job','vk_nightly_b_job','vk_nightly_lifecycle','vk_nightly_generation']
+    modules=set();queue=['vk_nightly_job','vk_nightly_b_job','vk_nightly_lifecycle','vk_nightly_generation',
+                         'vk_nightly_supervisor','vk_nightly_calendar','vk_nightly_schedule']
     while queue:
         module=queue.pop();file=base/(module+'.py')
         if module in modules or not file.exists():continue
@@ -74,6 +77,8 @@ def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False):
         'maximum_sqlite_bytes':inventory['maximum_DB_bytes'],'inventory_seconds':inventory['elapsed_seconds'],
         'full_production_transfer_and_runtime_accepted':False,
         'limits_basis':'read-only current census plus finite headroom; tiny fixtures do not predict whole-host throughput'}}
+    config['schedule']={'enabled':False,'timezone':'America/Toronto','hour':2,'minute':0,
+        'poll_minutes':15,'retry_minutes':30,'max_attempts_per_day':16,'window_end_hour':10}
     if compressed_delta:
         # Fresh store only: leave the failed raw-format attempt and all legacy
         # recovery/incident/fallback evidence in their existing namespaces.
@@ -93,10 +98,10 @@ def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False):
             config['measurement']['chunked_storage_whole_plan_accepted'] = False
     path=output/'nightly-production.disabled.private.json'
     path.write_text(json.dumps(config,indent=2)+'\n');os.chmod(path,0o600)
-    command='/usr/bin/timeout --verbose --signal=TERM --kill-after=30s 7200s /usr/bin/python3 -B -S '+str(output/'vk_nightly_job.py')
     def entry(path):
-        return '0 2 * * * '+command+' --config '+str(path)+' --config-sha256 '+checksum(path)+' 2>&1 | /usr/bin/logger -t vk-normal-nightly-v1\n'
-    (output/'cron.disabled').write_text('# PROPOSAL ONLY; not installed. Existing host cron timezone verified Etc/UTC.\n# '+entry(path))
+        return block(output,path,checksum(path),Path(config['staging'])/'calendar.log')
+    (output/'cron.disabled').write_text('# PROPOSAL ONLY; not installed. Fixed Toronto calendar remains disabled.\n' +
+                                       ''.join('# '+line+'\n' for line in entry(path).splitlines()))
     # This immutable proposal is NOT operational authorization. It exists so a
     # single final approval can name exact bytes without post-approval editing.
     proposed=output/'nightly-production.proposed-adoption.private.json'
@@ -118,5 +123,6 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--inventory',type=Path,required=True);parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--compressed-delta',action='store_true')
     parser.add_argument('--chunked-delta',action='store_true')
+    parser.add_argument('--plan',type=Path)
     args=parser.parse_args();print(json.dumps(build(args.inventory,args.output,compressed_delta=args.compressed_delta,
-                                                 chunked_delta=args.chunked_delta),indent=2))
+                                                 chunked_delta=args.chunked_delta,plan_path=args.plan),indent=2))

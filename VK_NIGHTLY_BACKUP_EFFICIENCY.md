@@ -1,5 +1,11 @@
 # Nightly backup efficiency integration
 
+October17: Seamus authorizes completion of production restore/integration checks,
+publication, deployment and the single nightly schedule. This workspace owns
+that package/schedule; restart preflight owns its shared consumer and Staging
+owns its backend release. Current production adoption evidence is tracked
+separately from the earlier source-only results below.
+
 Tracking: [local Vibe issue T40](https://vibe.local/projects/e2645d00-9bc6-4136-8d6e-0c2fcf032d77/issues/f394eccb-cbb6-4e6a-a0ba-87ba8d51f904), linked
 to workspace `604d90d0-0a23-4fde-bcf7-368486a6959b`.
 
@@ -75,11 +81,32 @@ workspaces, then stopped because this worktree has no Prettier executable.
 Frontend type/lint checks, full Rust tests, production services and the real B
 destination were not exercised by this Python-only integration validation.
 
-A failed publication never advances `current.json`. If an interrupted chunk
-write has not yet sealed its complete manifest, unknown chunk files are preserved
-and further attempts stop for exact reconciliation. No age-based or recursive
-cleanup is introduced. Once the exact complete manifest is sealed, its chunk
-closure supports the existing resumable failure/retention path.
+A failed publication never advances `current.json`. An append-only, identity-bound
+ledger records sealed chunk and layout bytes before linking each candidate name.
+Recorded chunks can therefore be reconciled after a guard abort or process death
+before the manifest exists. Changed, unknown or incompletely recorded evidence
+remains protected and blocks guessing. No age-based or recursive cleanup is
+introduced. Complete manifests retain the existing resumable retention path.
+
+The integration also includes preflight's `vk_backup_rebuild_proof.py` from
+`4b4ac9ce3`: a proposed exact dependency root must match an independently rebuilt
+inventory and actual byte readback, including local patches, additions, absences
+and symlink literals. This does not activate a live omission.
+
+Packaging accepts the actual reconciled plan and includes the complete
+supervisor/calendar/schedule source closure. The generated cron proposal uses
+the fixed 15-minute wake-up pulse and Toronto calendar; it no longer emits a
+conflicting UTC-only 02:00 producer. Runtime checks can bind the gateway's actual
+served frontend separately from the backend's retained fallback directory.
+
+The October17 real Desktop B fixture passes native Windows complete-file
+reconstruction and SQLite integrity/value checks. A post-retirement restore of
+all four fixture files succeeds with the preceding fixture generation absent;
+the 2,097,204-byte synthetic history adds 1,331 stored bytes. Its first failed
+harness run placed verified restore output inside the store; that output was
+byte-verified and moved outside the store before resuming the same fixture.
+No production recovery generation was retired. This is a bounded physical-device
+format check, not whole-plan acceptance, throughput prediction or a live schedule.
 
 Evidence lives outside Git at
 `/mnt/vk-storage/vk-nightly-efficiency-20261016/`. Fixture readback labels model

@@ -42,6 +42,25 @@ def host_admission(meminfo, coding_entries):
     return None
 
 
+def served_frontend(settings):
+    """Bind the actual gateway release separately from the backend fallback."""
+    if 'frontend_url' not in settings:
+        return
+    from urllib.parse import urlsplit
+    import hashlib
+    parsed=urlsplit(settings['frontend_url'])
+    if (parsed.scheme!='http' or parsed.hostname!='127.0.0.1' or parsed.path!='/'
+            or parsed.username or parsed.password or parsed.query or parsed.fragment
+            or not re.fullmatch('[0-9a-f]{64}',settings.get('frontend_index_sha256',''))):
+        raise ValueError('fixed loopback frontend and exact release hash required')
+    if checksum(Path(settings['frontend_root'])/'index.html')!=settings['frontend_index_sha256']:
+        raise ValueError('captured served frontend bytes changed')
+    with urllib.request.urlopen(settings['frontend_url'],timeout=3) as response:
+        data=response.read(1024**2+1)
+        if response.status!=200 or len(data)>1024**2 or hashlib.sha256(data).hexdigest()!=settings['frontend_index_sha256']:
+            raise ValueError('actual gateway frontend differs from captured release')
+
+
 def observe(config):
     settings = config['supervisor']
     mem = {k: int(v.split()[0]) * 1024 for k, v in
@@ -66,8 +85,9 @@ def observe(config):
         raise ValueError('live backend differs from captured release binding')
     env=Path('/proc',str(pid),'environ').read_bytes().split(b'\0')
     front=next((row.split(b'=',1)[1].decode() for row in env if row.startswith(b'VK_FRONTEND_DIST_DIR=')),None)
-    if front is None or str(Path(front).resolve())!=settings['frontend_root']:
+    if front is None or str(Path(front).resolve())!=settings.get('backend_frontend_root',settings['frontend_root']):
         raise ValueError('live frontend differs from captured release binding')
+    served_frontend(settings)
     result['current_runtime_pid']=pid
     url = settings['health_url']
     from urllib.parse import urlsplit

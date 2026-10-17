@@ -8,8 +8,10 @@ blocks a later result. The repair adds read-only workspace-to-existing-thread
 context to the cached status tool and explicitly scoped, duplicate-safe reply
 continuations without changing tool inputs or event schemas.
 
-72 Python regressions pass. Runtime adoption and actual registered acceptance
-must be recorded before claiming live. Keep private request/thread/receipt data
+72 Python regressions pass. Connector-only adoption completed at 23:04 UTC;
+actual cached lookup/history/write/retry/receipt acceptance passed. Exactly one
+new unread result is retained in the original AutoSwitch conversation; no new
+owner event or agent action. Functional source 831cd88d9, staging PR270. Keep private request/thread/receipt data
 out of GitHub. Preserve every CU/Stop pin and all current chat/access state.
 
 The voice warning is outside this connector; no target queue/execution evidence

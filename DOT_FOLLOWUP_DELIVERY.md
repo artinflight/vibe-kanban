@@ -85,3 +85,52 @@ Verify the actual cached status/read/write/receipt path after activation; a
 server-side tools listing is insufficient. No Vibe/backend/agent/frontend
 restart or model/permission/subscription change is needed. Code-only rollback
 retains all later database writes, including valid continuation messages.
+
+## Live acceptance — October 17, 23:04–23:07 UTC
+
+Functional source `831cd88d92aa6495362e9501a634ba4f7c9a73be` is deployed through
+connector-only adoption. [PR270](https://github.com/artinflight/vibe-kanban/pull/270)
+targets staging. The connector still advertises protocol/version 1.6; the added
+behavior is additive, with no new tool-input discovery requirement.
+
+Installed status SHA256:
+`f43e9aab0790d8ab735272f1744e7548961794ad4c549f1b7725014b4b7c1289`.
+Installed shim SHA256:
+`84f72d229b71ff00480c712e571aa593965f9cca3966e0810d1f366aaad5671b`.
+The adapter, all CU/report/budget helpers and Stop control retain their prior
+hashes. Only the connector process restarted; backend, agents, browser,
+publisher, notifier, static server, gateway and frontend retained their identity.
+Desktop B before/after backups passed readback; the before archive also passed
+isolated restoration and SQLite integrity checks. Private installed pins and
+registered-call receipts are retained in the owning Vibe issue handoff.
+
+**Actual cached tool acceptance passed:** workspace status recovered the existing
+answered conversation; thread history and original-owner delivery were read;
+one later report summary was posted into that exact conversation; receipt and
+history returned the same persisted update. Retrying the identical write returned
+the same message. Database comparison found exactly one new Dot reply and zero
+new owner events. The reply was unread at acceptance; human viewing is not proven.
+Original delivery/hold/receipt fields compared equal for three existing
+workspaces. CU reporting remained `cu.dot-report.v1`, and its separate stale
+credit-budget status and original `readback_fresh:false` were preserved.
+
+The first post-reload remote status read timed out, despite the tunnel recording
+one successful enqueue-to-response under 2.5 seconds and the handler returning
+to its input wait. A subsequent identical **read** succeeded in 0.467 seconds;
+other registered history/write/receipt calls succeeded. This is separate evidence
+of a remote read acknowledgment problem, not a correlation proving why the
+reported voice delegation failed. No voice action was retried or rerouted.
+
+For the original voice incident, the three target queues were empty and no new
+target execution was found in the reported window. Parent delivery versus lost
+acknowledgment is still unknown; the platform's original voice session/call and
+acceptance receipt are required. Device identity is also unconfirmed. No real
+voice-to-main-to-Vibe acknowledgment test has passed, and no unattended monitor
+completion trigger was established by this repair.
+
+Local `ops:check`, diff checks and all 72 Python tests passed. The exact functional
+source's sidechat, governance, policy, freshness and preservation CI checks
+passed; broad backend/frontend jobs were still pending at the handoff. Full
+`pnpm run format` ran Rust formatting successfully and then stopped because
+Prettier is absent from this checkout. No Cargo compilation or frontend build
+was run locally.

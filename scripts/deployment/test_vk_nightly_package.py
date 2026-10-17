@@ -25,11 +25,13 @@ class Package(unittest.TestCase):
                 'maximum_DB_bytes':0,'elapsed_seconds':0}
             inventory=root/'inventory.json';inventory.write_text(json.dumps(value))
             output=root/'package'
-            built=build(inventory,output,plan_path=plan,compressed_delta=True,chunked_delta=True)
+            transport=root/'fixture-sshfs';transport.write_bytes(b'fixture-only pinned binary; never executed')
+            built=build(inventory,output,plan_path=plan,compressed_delta=True,chunked_delta=True,sshfs_binary=transport)
             config=json.loads((output/'nightly-production.disabled.private.json').read_text())
             self.assertFalse(config['adoption_authorized']);self.assertFalse(config['schedule']['enabled'])
             self.assertEqual(json.loads(Path(config['plan_path']).read_text()),recipe)
             self.assertEqual(config['object_encoding'],'chunked-zlib-1-v1')
+            self.assertEqual(config['binary_sha256'][str(transport)],hashlib.sha256(transport.read_bytes()).hexdigest())
             for name in ('vk_nightly_supervisor.py','vk_nightly_calendar.py','vk_nightly_schedule.py'):
                 self.assertIn(name,config['source_sha256'])
                 self.assertEqual(hashlib.sha256((output/name).read_bytes()).hexdigest(),config['source_sha256'][name])

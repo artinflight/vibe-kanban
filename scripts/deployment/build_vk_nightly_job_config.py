@@ -15,10 +15,11 @@ from vk_nightly_schedule import block
 from vk_prep_common import identity, storage
 
 
-def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False,plan_path=None):
+def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False,plan_path=None,sshfs_binary=None):
     if chunked_delta and not compressed_delta:
         raise ValueError('chunked storage requires the compressed content-delta composition')
     base=Path(__file__).parent;output=storage(output);output.mkdir(exist_ok=False)
+    sshfs_binary=str(sshfs_binary or '/mnt/vk-storage/vk-runtime-backup-20261009/sshfs-tool/usr/bin/sshfs')
     inventory=json.loads(Path(inventory_path).read_text())
     plan_path=Path(plan_path) if plan_path else Path('/mnt/vk-storage/vk-runtime-backup-20261009/backup-plan.json')
     plan=json.loads(plan_path.read_text());historical_sha256=checksum(plan_path)
@@ -63,7 +64,7 @@ def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False,pla
       'source_prefix':'/','source_roots':inventory['roots'],'exclusion_targets':[str(p) for p in Exclusions(plan).roots],
       'inventoried_databases':sorted(inventory['databases']),'volume_device':2360624474,
       'wsl_root':'/mnt/b/vk-backups/vk-normal-nightly-v1','staging':'/mnt/vk-storage/vk-normal-nightly-control-v1',
-      'sshfs_binary':'/mnt/vk-storage/vk-runtime-backup-20261009/sshfs-tool/usr/bin/sshfs','fusermount_binary':'/usr/bin/fusermount',
+      'sshfs_binary':sshfs_binary,'fusermount_binary':'/usr/bin/fusermount',
       'capture_limit_bytes':capture,'initial_changed_limit_bytes':initial,'changed_limit_bytes':changed,
       'snapshot_limit_bytes':6*GiB,'initial_reserve_bytes':capture+initial+MAX_INDEX+floor,
       'reserve_bytes':capture+changed+MAX_INDEX+floor,'preserved_B_floor_bytes':floor,
@@ -71,7 +72,7 @@ def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False,pla
       'source_sha256':pins,'binary_sha256':{raw:checksum(raw) for raw in
         ('/usr/bin/python3','/usr/bin/zstd','/usr/bin/tar','/usr/bin/ssh','/usr/bin/fusermount','/usr/bin/findmnt',
          '/usr/bin/timeout','/usr/bin/logger','/usr/bin/crontab',
-         '/mnt/vk-storage/vk-runtime-backup-20261009/sshfs-tool/usr/bin/sshfs')},
+         sshfs_binary)},
       'measurement':{'inventory_files':inventory['files'],'inventory_paths':inventory['paths'],
         'logical_source_bytes':inventory['logical_file_bytes'],'sqlite_total_bytes':sum(inventory['databases'].values()),
         'maximum_sqlite_bytes':inventory['maximum_DB_bytes'],'inventory_seconds':inventory['elapsed_seconds'],
@@ -124,5 +125,7 @@ if __name__=='__main__':
     parser.add_argument('--compressed-delta',action='store_true')
     parser.add_argument('--chunked-delta',action='store_true')
     parser.add_argument('--plan',type=Path)
+    parser.add_argument('--sshfs-binary',type=Path)
     args=parser.parse_args();print(json.dumps(build(args.inventory,args.output,compressed_delta=args.compressed_delta,
-                                                 chunked_delta=args.chunked_delta,plan_path=args.plan),indent=2))
+                                                 chunked_delta=args.chunked_delta,plan_path=args.plan,
+                                                 sshfs_binary=args.sshfs_binary),indent=2))

@@ -71,3 +71,36 @@ The supported issue-link repair is live independently of guard deployment. The
 exact candidate and runtime adoption receipts must be checked before claiming
 the preventative guard is active. Operational identities and private transcripts
 remain only in the owning Vibe handoff/private receipts, not this document.
+
+## Live prevention adoption — October 17, 23:45 UTC
+
+Functional source `4a5674de321bdc7aa9c4fbdf5b43443a78226a3f` is installed.
+[PR271](https://github.com/artinflight/vibe-kanban/pull/271) preserves the guard,
+preparation helper, tests and handoff into staging. Protocol version remains 1.6.
+
+Installed adapter SHA256:
+`62081e895d2d5ae14abb06df1ab44076588a32f3f798f1c9d8ba63cb3b69d97f`.
+Guard module SHA256:
+`348a3cf7d8e2471714932258bcba76c8b8d312997ad7ce327ed1680d5b434691`.
+
+The first adoption attempt held without changing files because the idle gate
+was not satisfied. After fresh idle evidence, only the connector restarted;
+HTTP readiness recovered in 0.395 seconds. Current data and all existing access,
+subscriptions and messages were retained. Browser/publisher, Vibe, agents,
+frontend, gateway and notifier stayed running with the same PIDs. The live
+PR270 follow-up bundle/shim/status, CU/report/budget and Stop hashes are unchanged.
+Desktop B source/state backup passed download and isolated restore/integrity.
+
+Actual cached status and generic issue readback still pass after adoption. The
+new issue is nonterminal and its description contains no personal account
+details. A live negative `start_workspace` probe was rejected by automatic
+approval review: invoking a real start route could create a workspace/agent,
+and the user had not authorized a validation workspace. It was not retried via
+another route. No validation workspace or agent was created. The live negative
+start path remains unverified; candidate mocked dispatch, installed source/hash
+and read-only registered acceptance are the evidence actually available.
+
+The lightweight CI sidechat job also runs connector tests so this preflight is
+checked without waiting for backend compilation. Local governance/diff checks
+pass. Full formatting ran Rust formatting, then stopped at missing Prettier;
+no local Cargo/frontend build was run. Broad CI completion is separate.

@@ -12,6 +12,8 @@ lookup/history are verified. A real owner message arrived afterward. Do not
 answer or start another task merely to demonstrate the repair. Preserve private
 account details, sessions, grants, subscriptions, CU/Stop/follow-up pins and other
 owners' work. No Vibe/backend/agent/frontend restart or new worker is authorized
-by this source stream. A tested connector-only guard adoption is separate.
+by this source stream. The connector-only guard is live at source 4a5674de3;
+only its process restarted. The live negative start probe was rejected by review
+and was not retried; see the exact validation limits in the protocol handoff.
 
 Full prior notes remain in [STREAM history](STREAM_HISTORY_20261017.md).

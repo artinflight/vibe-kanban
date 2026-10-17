@@ -2020,3 +2020,11 @@ Implemented private project Dot Chat/shared planning with canonical task links,
 revision/idempotency protection, separate project attention and responsive UI.
 Coordinated Preserve Dot/CU1.6 and Staging. No production adoption.
 See VK_PROJECT_COLLABORATION.md for validation and release requirements.
+
+- 2026-10-17: PR271 repairs the supported issue-link workflow and requires verified
+  issue/project IDs before connector starts. Functional source 4a5674de3 is live;
+  existing workspace/branch/history and chat preserved, live HTTPS/cached reads
+  pass, and a real owner message/webhook arrived. Generic issue description only.
+  Connector-only guard reload preserved CU/Stop/follow-up and other services.
+  Live negative start probe was review-rejected; no retry, no validation agent.
+  See DOT_WORKSPACE_ISSUE_CONTEXT.md for hashes and exact acceptance limits.

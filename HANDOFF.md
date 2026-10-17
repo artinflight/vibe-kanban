@@ -11,7 +11,10 @@ pass; a real owner message and accepted webhook confirm the repaired path.
 The prevention guard requires and verifies both project/issue IDs before a
 connector workspace start. 20 public tests and 27 incumbent candidate controls
 plus the updated mocked start pass. Runtime guard adoption must be verified
-separately. No real agent start/stop, account-detail publication or pairing change.
+separately. It is now live at source 4a5674de3 after a 0.395s connector-only
+reload, with actual cached readbacks passing and all other pins preserved.
+Automatic review rejected the live negative start probe; no workaround/retry.
+No real agent start/stop, account-detail publication or pairing change.
 
 Preserve live sidechat follow-ups from PR270/source831cd88d9 and CU/report/Stop,
 sidebar/attention/mobile/frontend. Staging retains backend release ownership.

@@ -42,13 +42,21 @@ External readers remain untouched; the original START sequence/instance/scope
 and restart lease/fresh-SQLite/writer-fence requirements are unchanged. This
 prevents a long quiet-report interval from filling the finite kernel queue.
 
-Dot1.4's two dependency files are inside the existing connector source root;
-no new census or source exclusion is needed. The small owner addendum and actual
-adapter agree on78ad962b59738642168742f670b0740bf6bea96e811d917aa6e8bf1ca978cc60,
-while the relayed chat named9f60622a. The actual stop_control hash agrees with
-13c8eff8ccd9a67cc7c56e80c25e55be8daeb675493050dfc9b1cac2092c87f4.
-Pin the observed current files for measurement and reconcile adapter provenance
-with Staging/Dot before adoption. Keep the sealed main runtime packet intact.
+Current Dot1.5 adapter/stop_control/credit_budget dependencies are covered by the
+existing connector source root. Observed adapter78ad962b, stop_control13c8eff8
+and credit_budgetd8619d20 hashes match the owner-confirmed small Dot1.5 addendum;
+the old1.4 chat hash was superseded. The derived measurement profile d0434347
+binds all1974runtime files. No new census, source exclusion, sealed main packet
+edit or Staging adoption claim is needed for this binding update.
+
+The counted/discarded full production stream started02:40:41UTC. Measurement
+PythonPID3107838/start30914068, supervisor3107804/start30913909, own unit
+vk-nightly-capacity-6bfd27244.service; four-hour supervisor and existing resource
+limits. Its immutable source package6bfd27244 remains unchanged while the PR
+is normally refreshed with the merged PR262 shared consumer atc0ac5d081. The
+source refresh passes ops/diff and all hosted checks atc0ac5d081, including
+backend tests, frontend checks, branch freshness and isolated recovery.
+No archive/object payload is retained and no publication receipt is issued.
 
 Fresh02:31 capacity admission validates the frozen runtime/profile and unchanged
 B identity, SMART/attribute/PHY counters. B free34,347,749,376bytes; SSD free

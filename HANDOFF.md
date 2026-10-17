@@ -1,4 +1,4 @@
-# Nightly recovery completed — October 17, 02:40 UTC
+# Nightly recovery and admitted capacity verification — October 17
 
 PR263 remains the sole nightly package/schedule. The retained 1,219,860-row
 synthetic index lifecycle is now complete: recovery-r2 ran 02:30:20.200095 to
@@ -13,11 +13,20 @@ B two-copy WAL transport evidence are reused. No completed copy/restore repeated
 A private-watcher drain correction keeps capture events flowing during lengthy
 inventory/SQLite phases; the external consumer lifecycle remains owner-managed.
 
-The92-root census is retained. Dot1.4 adapter/stop_control files are covered by
-its existing connector root. Derived measurement/runtime pins must bind the
-current addendum bytes; observed adapter78ad962b differs from the relayed9f60622a
-chat hash, so adoption needs that provenance reconciled with the release owner.
-No sealed main packet or production component was changed.
+The92-root census is retained. Current Dot1.5 adapter78ad962b,
+stop_control13c8eff8 and credit_budgetd8619d20 are covered by its existing
+connector root and pinned in the validated1974-file derived profile d0434347.
+Staging/Dot confirmed the relayed1.4 chat hash was superseded. Attribution is
+retained in DOT15_BINDING_OBSERVATION.private.json; the sealed main packet and
+production components are unchanged.
+
+The counted/discarded production stream started02:40:41UTC under the existing
+four-hour supervisor, CPU25%, MemoryHigh2G/Max3G, Swap0 and Tasks32. Measurement
+PythonPID3107838/start30914068; supervisor3107804/start30913909. Source package
+6bfd27244 is sealed; PR263 is refreshed normally with merged PR262 atc0ac5d081.
+Normal registered consistent SQLite inputs are on B; archive/objects are counted
+without retaining payload or publishing a backup. No duplicate heavy owner work. Hosted checks atc0ac5d081 pass, including
+backend, frontend, branch freshness and isolated recovery.
 
 Actual full-stream capacity and whole-plan physical restore remain pending.
 Fresh02:31 admission passes: B34,347,749,376bytes free, health/counters unchanged;

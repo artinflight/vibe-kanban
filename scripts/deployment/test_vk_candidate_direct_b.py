@@ -30,7 +30,7 @@ from vk_change_journal import Journal, scope
 from vk_prep_common import identity
 
 
-PARENT = Path('/mnt/vk-storage/vk-safe-release-20261008/direct-b-contract-tests')
+PARENT = Path(os.environ['TMPDIR'])
 
 
 class TestOwner(BoundSupervisor):

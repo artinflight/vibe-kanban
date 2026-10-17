@@ -1,6 +1,7 @@
 """Fixture tests; actual physical-B acceptance is tested separately."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -13,7 +14,7 @@ from vk_b_disk_snapshot import checked_mount, snapshot, fenced_snapshot
 
 class SnapshotTests(unittest.TestCase):
     def setUp(self):
-        self.root = Path(tempfile.mkdtemp(dir='/mnt/vk-storage/vk-runtime-backup-20261009'))
+        self.root = Path(tempfile.mkdtemp(dir=os.environ['TMPDIR']))
         self.source = self.root / 'source.sqlite'
         self.writer = sqlite3.connect(self.source)
         self.writer.execute('PRAGMA journal_mode=WAL')

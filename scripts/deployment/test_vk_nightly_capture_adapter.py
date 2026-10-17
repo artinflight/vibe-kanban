@@ -37,7 +37,7 @@ class FakeResident:
 
 class AdapterTests(unittest.TestCase):
     def setUp(self):
-        self.root=Path(tempfile.mkdtemp(dir='/mnt/vk-storage/vk-restart-safeguards-20261009'))
+        self.root=Path(tempfile.mkdtemp(dir=os.environ['TMPDIR']))
         self.destination=self.root/'inputs';self.destination.mkdir()
         self.source=self.root/'source.sqlite';self.writer=sqlite3.connect(self.source)
         self.writer.execute('PRAGMA journal_mode=WAL');self.writer.execute('CREATE TABLE retained(value TEXT)')

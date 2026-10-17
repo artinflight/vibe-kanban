@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 import sqlite3
 import tempfile
+import threading
+import time
 import unittest
 from unittest.mock import patch
 
@@ -167,6 +169,41 @@ class BaselineTests(unittest.TestCase):
         with patch('vk_change_journal.Journal') as constructor:
             with self.assertRaises(ValueError), capture_journal(self.plan, lambda _: {'ready': False}):pass
             constructor.assert_not_called()
+
+    def test_private_watcher_drains_during_long_capture_without_reports(self):
+        source=self.base/'busy-source';source.mkdir();target=source/'fixture'
+        plan={'sources':[str(source)],'excluded_rebuildable_directories':[]}
+        threads_before={t.ident for t in threading.enumerate()}
+        with capture_journal(plan) as report:
+            # Alternate MODIFY/CLOSE_WRITE so the kernel cannot coalesce all
+            # writes into one event. This exceeds its usual 16384-event queue.
+            for i in range(20000):
+                with target.open('wb') as stream:stream.write(str(i).encode())
+            time.sleep(.1)
+            watched=report(0)
+            self.assertTrue(watched['ready'],watched['errors'])
+            self.assertIn(str(target),watched['changed'])
+            self.assertGreater(watched['sequence'],20000)
+        self.assertFalse(any(t.name=='nightly-private-journal' and t.ident not in threads_before
+                             for t in threading.enumerate()))
+
+    def test_private_drain_failure_invalidates_coverage(self):
+        from vk_change_journal import Journal
+        source=self.base/'reader-failure';source.mkdir()
+        plan={'sources':[str(source)],'excluded_rebuildable_directories':[]}
+        fail=threading.Event();original=Journal.read
+        def read(journal):
+            if fail.is_set() and threading.current_thread().name=='nightly-private-journal':
+                raise OSError('synthetic drain failure')
+            return original(journal)
+        with patch.object(Journal,'read',read),capture_journal(plan) as report:
+            fail.set();deadline=time.monotonic()+2
+            while True:
+                watched=report(0)
+                if not watched['ready'] or time.monotonic()>=deadline:break
+                time.sleep(.01)
+            self.assertFalse(watched['ready'])
+            self.assertIn({'private_reader_failed':'OSError'},watched['errors'])
 
 
 # Real existing direct-capture -> archive-index -> nightly -> restart contract.

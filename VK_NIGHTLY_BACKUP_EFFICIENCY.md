@@ -18,7 +18,44 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
-## October17 current phase evidence — 02:10 UTC
+## October17 recovered lifecycle and integration follow-up — 02:40 UTC
+
+Recovery-r2 finished successfully02:35:55.957881UTC after335.324s, from
+02:30:20.200095UTC. PythonPID2991720/start30851828 is quiescent. It loaded and
+independently verified all1,219,860 saved candidate rows at SHA256
+`a17e5cf1dc3c7e52233897fb689a311a2bdd5a4cd6a5e8251ef1b42a3f9a921c`,
+retired only its recorded synthetic predecessor and cleared the attempt.
+The current candidate remains. This completes the retained synthetic lifecycle;
+the initial1800s timeout remains recorded separately. Peak cgroup memory was
+2,147,745,792bytes; high983, hardmax/OOM0, cumulative stalls0.136s. Source pins
+for all five index handlers are unchanged. No production/B recovery changed.
+
+WAL fixture follow-up preserves and publishes the exact two sidecars at551e24c49.
+Prior in-memory reconstruction passed SQLite integrity and the expected single
+synthetic text row. Their hashes match committed bytes. Existing actual two-copy
+MCP-to-B receipts remain valid; no completed transport test is repeated.
+
+The owned private journal now drains during watch enrollment, inventory, SQLite
+copying and streaming, rather than waiting for capture checkpoints. Reader errors
+invalidate coverage, and shutdown joins the thread before capture completion.
+External readers remain untouched; the original START sequence/instance/scope
+and restart lease/fresh-SQLite/writer-fence requirements are unchanged. This
+prevents a long quiet-report interval from filling the finite kernel queue.
+
+Dot1.4's two dependency files are inside the existing connector source root;
+no new census or source exclusion is needed. The small owner addendum and actual
+adapter agree on78ad962b59738642168742f670b0740bf6bea96e811d917aa6e8bf1ca978cc60,
+while the relayed chat named9f60622a. The actual stop_control hash agrees with
+13c8eff8ccd9a67cc7c56e80c25e55be8daeb675493050dfc9b1cac2092c87f4.
+Pin the observed current files for measurement and reconcile adapter provenance
+with Staging/Dot before adoption. Keep the sealed main runtime packet intact.
+
+Fresh02:31 capacity admission validates the frozen runtime/profile and unchanged
+B identity, SMART/attribute/PHY counters. B free34,347,749,376bytes; SSD free
+8,356,765,696bytes. Full counted-stream evidence remains pending. No operational
+nightly deployment or schedule activation is claimed from synthetic acceptance.
+
+## Historical phase evidence — 02:10 UTC
 
 The original fixed30-minute index command ended02:05:38, exit124. Both synthetic
 1,219,860-row generations passed publication readback, but final lifecycle

@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import stat
+import threading
 
 from vk_change_journal import scope
 from vk_nightly_archive_index import validate_backup_entries
@@ -153,14 +154,33 @@ def capture_journal(plan, reader=None):
     backup-only default; it cannot promise cross-run incremental continuity.
     """
     owned = None
+    stop = threading.Event()
+    pump = None
     try:
         if reader is None:
             from vk_change_journal import Journal
             owned = Journal(plan)
+            # Drain throughout watch enrollment, inventory and SQLite copying.
+            # Waiting until capture checkpoints lets a busy source overflow the
+            # kernel queue during a long, otherwise valid online backup.
+            def drain():
+                while not stop.wait(.05):
+                    try:owned.read()
+                    except Exception as error:
+                        with owned.lock:
+                            owned.errors.append({'private_reader_failed': type(error).__name__})
+                        return
+            pump = threading.Thread(target=drain, name='nightly-private-journal', daemon=True)
+            pump.start()
             for raw in plan['sources']:owned.tree(raw)
             owned.ready = True
             reader = owned.report
         check_journal(reader(0), plan)
         yield reader
     finally:
-        if owned is not None:owned.close()
+        if owned is not None:
+            stop.set()
+            if pump is not None:pump.join(timeout=30)
+            owned.close()
+            if pump is not None and pump.is_alive():
+                raise ValueError('private backup journal did not quiesce; preserve capture')

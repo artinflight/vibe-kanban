@@ -1,3 +1,12 @@
+# Project collaboration sidebar — October 17 preparation
+
+The local Projects sidebar is prepared on its feature branch, not deployed.
+Private per-project Dot threads reuse existing sidechat delivery/unread/attention;
+shared plan entries link canonical Vibe tasks and assignees without copying their
+state. Adoption needs the separate Python sidechat/connector and combined frontend,
+not a Rust Vibe backend release. Preserve live CU1.6 modules and current
+Mobile/Steering/Dot/artifact behavior. See VK_PROJECT_COLLABORATION.md.
+
 # Generated report links — live October 16 follow-up
 
 The OP::3D Print Issues failure was a Markdown link to an unpublished local

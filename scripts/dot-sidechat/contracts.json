@@ -318,6 +318,111 @@
         ],
         "additionalProperties": false
       }
+    },
+    {
+      "name": "read_project_collaboration",
+      "description": "Read shared project checklists, milestones, decisions and open questions. issue_ids link to canonical Vibe tasks; read Vibe issue/workspace/assignee tools for current status and owners. Does not read private project chat or change task state.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "project"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "write_project_collaboration_entry",
+      "description": "Create or update one shared planning entry in an authorized Vibe project. Read first, use the current revision and a stable request UUID; stale revisions fail closed. Never duplicate task completion/owner state. Project chat uses read_sidechat_thread and exact append_dot_reply with its returned project:<uuid> context.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "request": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entry": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "checklist",
+                  "milestone",
+                  "decision",
+                  "question"
+                ]
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 240
+              },
+              "body": {
+                "type": "string",
+                "maxLength": 10000
+              },
+              "issue_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "maxItems": 50,
+                "uniqueItems": true
+              },
+              "resolved": {
+                "type": "boolean"
+              },
+              "target_date": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "revision",
+              "kind",
+              "title",
+              "body",
+              "issue_ids",
+              "resolved",
+              "target_date"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "project",
+          "request",
+          "entry"
+        ],
+        "additionalProperties": false
+      }
     }
   ]
 }

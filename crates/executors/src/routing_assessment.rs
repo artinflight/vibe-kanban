@@ -295,6 +295,7 @@ pub fn assess_with_context(prompt: &str, root: Option<&std::path::Path>) -> Asse
     let risk_text = risk_text(&text);
     let has_risk = |words: &[&str]| words.iter().any(|w| risk_text.contains(w));
     let (mut envelope, mut floor, mut evidence) = if has(&["auth"])
+        || crate::routing_context::storage_change_requested(prompt)
         || destructive_intent(&text)
         || has_risk(&[
             "security",

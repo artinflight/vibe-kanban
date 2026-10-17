@@ -370,12 +370,14 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
             "Do we have better recommendations?",
             "Any news on less expensive recommendations?",
             "Good, now, we need substantially more space free on SSD. Give me a report of large uses of space",
+            "Do you need me for the dial testing?",
+            "It's setup, will it run automatically now?",
         ] {
             let (progress, semantic) = routing_module::assess(
                 prompt,
                 Some("Validate the candidate without changing security settings"),
                 Some(
-                    "CI is blocked by the sandbox. Recommend mode and selected settings are unchanged.",
+                    "CI is blocked by the sandbox. Recommend mode is unchanged. Dial testing is prepared. Human Needed:: No. The monitoring plugin is linked; automatic pause still needs configuration.",
                 ),
                 Some("protected"),
                 Some(&root),

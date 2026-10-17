@@ -1835,3 +1835,22 @@ See VK_AUTOSWITCH_COST_EVIDENCE.md and PR244. Private receipts stay local.
 - 2026-10-15: Prepared focused ordinary-report corrections for observed output-status and storage-inventory misses, with zero-inference and protected-continuation regressions. Validation/publication pending; Recommend and selected models preserved.
 
 - 2026-10-15: Published report-scope-f8901e1e9-20261015 after exact-source 63 policy/37 accounting/195 executor and full-isolation reload tests, pinned validator and independent acceptance. Live process/configuration unchanged, Recommend preserved, rollback retained. Both missed reporting cases select Sol6/low without classifier inference in acceptance; real outcome/savings remain separate observations.
+
+## October 17: status-reference and capacity-intent correction prepared
+
+Current task questions about operator involvement or an established automation's
+configuration now use the existing zero-inference reporting path when completed
+context resolves the target. An unknown answer does not imply a complex task.
+Unresolved targets, extra operations, safety judgments, actual validation failure,
+current protected facts and explicit floors remain guarded. The surrounding
+assignment is retained for later continuation. Bare requests to free disk space
+now retain data-changing scope even if native classification calls them reporting;
+explicit inventory requests keep their narrow existing exception.
+
+Focused regressions cover positive/negative phrasing and the real module/core
+consumer and reload path. Accounting, qualification/catalog, selected execution
+settings and telemetry are unchanged. Recommend remains required. Exact-source
+hosted compilation, full existing sandbox acceptance, pinned-validator checks and
+independent acceptance still gate ordinary no-restart publication. No paid
+inference, local Cargo build, merge, restart or live update is performed by this
+source checkpoint. Private observed examples and receipts stay outside Git.

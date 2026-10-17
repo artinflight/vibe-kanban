@@ -132,21 +132,65 @@ fn bounded_record_kind(prompt: &str, reply: &str) -> Option<&'static str> {
     // may precede it, but no operation, arbitrary suffix or unresolved target.
     // Counting multiple directories is one inventory, not cross-system edits.
     // Failure evidence above and current/native repository risk still win.
-    static STORAGE_REPORT: LazyLock<Regex> = LazyLock::new(|| {
+    if storage_report(&text) {
+        return Some("storage_usage_report");
+    }
+    // A question about operator involvement is reporting, not authorization to
+    // run the pending test. Require an established involvement/target reference.
+    static INVOLVEMENT: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(concat!(
-            r"^(?:(?:good|okay|ok|all right),? (?:now,? )?)?",
-            r"(?:(?:we|i) (?:need|want) (?:substantially |much |some )?more ",
-            r"(?:space free|free space) on (?:the )?(?:ssd|disk|drive)[.!] )?",
-            r"(?:please )?(?:(?:give|show)(?: me)? (?:a |the )?report (?:of|on) |",
-            r"(?:report|list|show)(?: me)? (?:the )?)",
-            r"(?:large uses of space|(?:current )?(?:disk|ssd|storage) (?:usage|use)|",
-            r"(?:largest|biggest) (?:files|directories|folders)(?: on (?:the )?(?:ssd|disk|drive))?)",
-            r"[.!?]*$"
+            r"^(?:please )?(?:do you (?:still )?need me(?: for (?:the )?([a-z0-9-]+(?: [a-z0-9-]+){0,3}))?|",
+            r"is there anything (?:else )?you need from me(?: or is (?:all )?the work underway)?)[.!?]*$"
+        )).unwrap()
+    });
+    if let Some(question) = INVOLVEMENT.captures(&text) {
+        let involvement_known = [
+            "human needed::",
+            "manual test",
+            "operator input",
+            "need you",
+            "waiting for you",
+            "your help",
+            "your input",
+        ]
+        .iter()
+        .any(|term| prior.contains(term));
+        let target_known = question.get(1).is_none_or(|target| {
+            target
+                .as_str()
+                .split_whitespace()
+                .filter(|word| !["test", "tests", "testing", "work"].contains(word))
+                .all(|word| {
+                    prior
+                        .split(|c: char| !c.is_alphanumeric() && c != '-')
+                        .any(|known| known == word)
+                })
+        });
+        if involvement_known && target_known {
+            return Some("operator_involvement_status");
+        }
+    }
+    // Only report an established automation's configuration/status. This does
+    // not promise it works, approve starting it, or repair its remaining blockers.
+    static AUTOMATION_STATUS: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(concat!(
+            r"^(?:(?:it(?:'s| is)|that's|that is) (?:set ?up|linked|connected),? )?",
+            r"(?:will it (?:run|start) automatically(?: now)?|",
+            r"is it (?:set ?up|configured) to (?:run|start) automatically)[.!?]*$"
         ))
         .unwrap()
     });
-    if STORAGE_REPORT.is_match(&text) {
-        return Some("storage_usage_report");
+    if AUTOMATION_STATUS.is_match(&text)
+        && prior.contains("automatic")
+        && ["setup", "set up", "plugin", "service", "monitoring"]
+            .iter()
+            .any(|term| prior.contains(term))
+        && prior.matches("automatic").count() == 1
+        && !prior.split(|c: char| !c.is_alphanumeric()).any(|word| {
+            ["services", "systems", "plugins", "automations", "monitors"].contains(&word)
+        })
+    {
+        return Some("automation_configuration_status");
     }
     if prior.contains("blocked by") || prior.contains("cannot continue") {
         return None;
@@ -173,6 +217,37 @@ fn bounded_record_kind(prompt: &str, reply: &str) -> Option<&'static str> {
         return Some("documentation_record");
     }
     None
+}
+
+fn storage_report(text: &str) -> bool {
+    static STORAGE_REPORT: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(concat!(
+            r"^(?:(?:good|okay|ok|all right),? (?:now,? )?)?",
+            r"(?:(?:we|i) (?:need|want) (?:substantially |much |some )?more ",
+            r"(?:space free|free space) on (?:the )?(?:ssd|disk|drive)[.!] )?",
+            r"(?:please )?(?:(?:give|show)(?: me)? (?:a |the )?report (?:of|on) |",
+            r"(?:report|list|show)(?: me)? (?:the )?)",
+            r"(?:large uses of space|(?:current )?(?:disk|ssd|storage) (?:usage|use)|",
+            r"(?:largest|biggest) (?:files|directories|folders)(?: on (?:the )?(?:ssd|disk|drive))?)",
+            r"[.!?]*$"
+        ))
+        .unwrap()
+    });
+    STORAGE_REPORT.is_match(text)
+}
+
+/// A capacity outcome alone is not a read-only inventory request. Preserve the
+/// possible data-changing scope even if a semantic response calls it reporting.
+/// The closed inventory grammar is the only reporting exception here.
+pub(crate) fn storage_change_requested(prompt: &str) -> bool {
+    let text = prompt.trim().to_lowercase();
+    static CAPACITY: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(concat!(
+            r"\b(?:(?:we|i) (?:need|want) (?:substantially |much |some |more )*(?:free )?(?:space|room)(?: free)? on (?:the |our |my )?(?:os |system )?(?:drive|disk|ssd)|",
+            r"(?:free(?: up)?|reclaim|clear) (?:some |more |disk |storage )*(?:space|room))\b"
+        )).unwrap()
+    });
+    CAPACITY.is_match(&text) && !storage_report(&text)
 }
 
 fn mark_bounded(a: &mut Assessment, evidence: &str) {
@@ -369,6 +444,140 @@ mod tests {
                 retain_previous(a, prompt, Some("protected")).floor,
                 CapabilityFloor::Frontier
             );
+        }
+    }
+
+    #[test]
+    fn known_status_questions_do_not_require_operator_engineering_terms() {
+        let involvement =
+            "The controller responds. Dial polling still needs investigation. Human Needed:: No";
+        let automation = "The monitoring plugin is installed. After linking, automatic pause still needs configuration; the camera issue remains unresolved.";
+        for (prompt, reply) in [
+            ("Do you need me for the dial testing?", involvement),
+            ("Do you still need me?", involvement),
+            (
+                "Is there anything else you need from me or is all the work underway",
+                involvement,
+            ),
+            ("It's setup, will it run automatically now?", automation),
+            ("Is it configured to start automatically?", automation),
+        ] {
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, Some(reply));
+            assert_eq!(a.evidence, "completed_context_bounded_record", "{prompt}");
+            assert!(!crate::routing_semantic::needed(&a, false));
+            let a = retain_previous(a, prompt, Some("protected"));
+            assert_eq!(a.floor, CapabilityFloor::Routine, "{prompt}");
+            assert!(
+                a.triage
+                    .evidence
+                    .contains(&"surrounding_assignment:protected".into())
+            );
+            assert_eq!(
+                boundary_floor(&a, CapabilityFloor::Frontier, None),
+                CapabilityFloor::Frontier
+            );
+            assert_eq!(
+                retain_previous(assess("Proceed"), "Proceed", Some("protected")).floor,
+                CapabilityFloor::Frontier
+            );
+        }
+    }
+
+    #[test]
+    fn status_fast_path_rejects_unresolved_targets_actions_failures_and_current_risk() {
+        let reply = "The monitoring plugin and dial test are prepared; automatic start remains off. Human Needed:: No";
+        for (prompt, context) in [
+            ("Do you need me?", None),
+            ("Do you need me?", Some("The file is saved.")),
+            ("Do you need me for the camera testing?", Some(reply)),
+            ("Do you need me? Then run the tests", Some(reply)),
+            ("Do you need me to bypass approval?", Some(reply)),
+            ("It's setup, run it automatically now", Some(reply)),
+            ("Will it run automatically now? Also start it", Some(reply)),
+            ("Will it safely run automatically now?", Some(reply)),
+            ("Will it run automatically now?", None),
+            (
+                "Will it run automatically now?",
+                Some("The package is ready."),
+            ),
+            (
+                "Will it run automatically now?",
+                Some("Two services have automatic startup configured."),
+            ),
+            (
+                "Will it run automatically now?",
+                Some("The plugin has automatic start. Validation failed."),
+            ),
+            (
+                "Do you need me?",
+                Some("Human Needed:: Yes. Tests still fail."),
+            ),
+            ("Is it ready?", Some(reply)),
+            ("Proceed", Some(reply)),
+        ] {
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, context);
+            assert_ne!(
+                a.evidence, "completed_context_bounded_record",
+                "{prompt}: {context:?}"
+            );
+            assert_eq!(
+                retain_previous(a, prompt, Some("protected")).floor,
+                CapabilityFloor::Frontier
+            );
+        }
+        for prompt in ["Do you need me?", "Will it run automatically now?"] {
+            for failed in [false, true] {
+                let mut a = assess(prompt);
+                if failed {
+                    a.validation_failure = true;
+                } else {
+                    a.triage.risk.push("protected_repository_context".into());
+                }
+                apply_reference_context(&mut a, prompt, Some(reply));
+                assert_ne!(a.evidence, "completed_context_bounded_record");
+                assert_eq!(
+                    retain_previous(a, prompt, Some("protected")).floor,
+                    CapabilityFloor::Frontier
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn capacity_outcome_cannot_be_reinterpreted_as_a_report() {
+        let reply = "The earlier cleanup is complete. A disk-usage report is available.";
+        for prompt in [
+            "We need space on OS drive",
+            "I need more room on the system disk",
+            "We want substantially more free space on our SSD",
+            "Please free up some disk space",
+            "Reclaim storage space",
+            "Show me disk usage. Then free space",
+        ] {
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, Some(reply));
+            assert_eq!(a.floor, CapabilityFloor::Frontier, "{prompt}");
+            assert!(!a.triage.risk.is_empty());
+            // Replay the observed erroneous risk-free semantic result. A new
+            // or existing session must retain the capacity request's real scope.
+            let c: crate::routing_semantic::SemanticClass =
+                serde_json::from_value(serde_json::json!({
+                    "envelope":"bounded", "scope_relation":"bounded_step", "scope":"localized",
+                    "novelty":"established", "ambiguity":"low", "horizon":"short",
+                    "validation":"text_comparison", "risks":[], "uncertainty":"low",
+                    "inspection_needed":false, "reason":"A report of existing capacity."
+                }))
+                .unwrap();
+            crate::routing_semantic::apply_for_request(&mut a, &c, prompt);
+            assert_eq!(a.floor, CapabilityFloor::Frontier, "{prompt}");
+        }
+        for prompt in ["Show me disk usage", "Give me a report on storage usage"] {
+            assert!(!storage_change_requested(prompt));
+            let mut a = assess(prompt);
+            apply_reference_context(&mut a, prompt, Some(reply));
+            assert_eq!(a.floor, CapabilityFloor::Routine);
         }
     }
 

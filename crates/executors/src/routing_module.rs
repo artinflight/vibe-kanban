@@ -879,6 +879,14 @@ mod tests {
                 "Good, now, we need substantially more space free on SSD. Give me a report of large uses of space",
                 "The earlier storage cleanup is complete; further removal is blocked by retention policy.",
             ),
+            (
+                "Do you need me for the dial testing?",
+                "Dial polling still needs investigation. Human Needed:: No",
+            ),
+            (
+                "It's setup, will it run automatically now?",
+                "The monitoring plugin is linked; automatic pause still needs configuration.",
+            ),
         ] {
             let mut request = bounded_request();
             request.prompt = prompt.into();
@@ -922,6 +930,18 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn capacity_request_stays_protected_despite_captured_report_classification() {
+        let mut request = bounded_request();
+        request.prompt = "We need space on OS drive".into();
+        request.completed_reply =
+            Some("The prior cleanup is complete; recorded free-space totals are available.".into());
+        request.seed = (&crate::routing_assessment::assess(&request.prompt)).into();
+        let result = stages(request).unwrap();
+        assert_eq!(result.assessment.floor, CapabilityFloor::Frontier);
+        assert!(!result.assessment.triage.risk.is_empty());
     }
 
     #[test]

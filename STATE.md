@@ -1,3 +1,83 @@
+# Registered CU report adoption — October 17, 11:03 UTC
+
+The10:58:17 refresh reached the SAME unchanged connector1.6 and discovered tools
+and events. Both report names are now callable in this preservation execution.
+ACTUAL registered summary/fullreport and filtered two-page report calls PASS:
+pinned cutoff, matching model filter, distinct rows, stable account/selected
+values and fresh/covered observations. No restart, activation or access change.
+A separate retained main Dot conversation's catalog is still independently
+unverified/platform-managed; no repeated refresh or user test requested. The
+cached CU summary stays working. Prepared optional-cutoff fix remains uninstalled;
+Stop/release source stays frozen. See DOT_USAGE_REPORTING.md for scoped evidence.
+
+# Dot full CU reporting — live October 17, 10:47 UTC
+
+Connector1.6 source6ca6c443d / CU helper64e253b6 is live after connector-only
+reload0.363s. Actual cached CU status and independent root acceptance confirm
+usage_report recorded/fresh/covered,5rows, unchanged delivery/credit semantics
+and unrelated workspace. Native installed discovery/dispatch of both named tools
+pass. Main Dot's new named-tool catalog/registered calls remain unverified;
+root confirms names absent. Existing cached default summary works now.
+Optional custom cutoff correction is tested/prepared, NOT installed; live wrapper
+still requires explicit end for custom. Preserve sealed1.6 baseline for Staging's
+steering preparation; next connector-only adoption is independent of Stop/backend.
+No new workers, controls, permissions, CU/Vibe/backend restart or repeated refresh.
+[Exact live hashes, tests, protocol and remaining adoption](DOT_USAGE_REPORTING.md).
+
+# Dot full CU reporting — October 17 preparation
+
+The original CU owner owns the report/query/helper and accounting reconciliation.
+This connector stream adds read-only get_usage_report/get_usage_summary, bounded
+selectors and a small usage_report fallback only on original-CU existing status.
+Existing tool schemas, other workspaces, delivery/hold/receipt fields and routing
+are preserved.43 light tests plus28 installed-policy/read regressions pass.
+No reporting activation yet; final CU helper pin and registered acceptance pending.
+No backend Stop dependency, new worker, permission change or Vibe/CU restart.
+[Reporting contract, validation and deployment handoff](DOT_USAGE_REPORTING.md).
+
+# CU credit readback through existing status — October 17 compatibility
+
+LIVE actual registered compatibility verified03:08UTC: original CU status
+returns credit_budget.current/fresh with full exact/null contract. Every original
+CU field and unrelated workspace response remain unchanged. The owner clarified
+connector-only reload was already authorized; only connector reloaded0.406s.
+No repeat tests/CI/rebase, new worker, Stop, compiler/UI or other restart. Source
+c3a301881, moduleSHAeb6d1c3c; private receipts shared with existing CU owner.
+Standalone discovery still fails; this old-tool fallback has no remaining blocker.
+PR264/backend/release source untouched. PR265 carries current acceptance.
+
+Seamus confirms standalone get_credit_budget discovery FAILED in main Dot and a
+fresh worker. The requested compatibility adds credit_budget only to existing
+get_workspace_reconciliation_status for the privately bound original CU workspace.
+It reuses the installed fixed reader, preserving exact/null data and independent
+current/stale/unavailable freshness. All delivery/hold/receipt/readback_fresh
+fields and every other workspace stay unchanged.32 light Python tests pass.
+No new tool/schema, worker, restart, Cargo, browser, provider poll or routing.
+PR264/backend Stop/release files are frozen and untouched in this budget stream.
+Installed old-tool acceptance/source hashes are recorded in the PR/Vibe handoff.
+[Compatibility contract and current handoff](DOT_CREDIT_BUDGET.md).
+
+# Dot credit-budget readback — live October 17, 02:33 UTC
+
+Connector1.5 now publishes no-argument read-only `get_credit_budget` through
+CU's existing fixed loopback endpoint. Actual installed/native-upstream discovery
+and dispatch return fresh account-credit-budget-v1/CU v5 data. Exact strings/null,
+unknown bank/combined amounts and external-enforcement limits remain explicit.
+25 connector tests,28 installed policy/read regressions and14 future-steering
+policy tests pass. Budget/steering overlays compose without losing either.
+Only connector adapter/module/service changed; readiness0.409s. Desktop B rollback
+readback passed; chats, access/subscriptions, Stop source, queued input, Recommend,
+Mobile/Sent Steering, other pointers/services are preserved. No real Stop/new
+worker/provider refresh/permissions change. Main Dot tool adoption is unverified.
+
+PR264's green db6bbfcb checkpoint passed599 Cargo +13 scheduling-enabled tests,
+including10 Stop cases. Requested normal Staging-base merge7110930b6 yields
+new headbf96584b6534fc56f251450636580601227bd8dd with exact Stop bytes/notes
+preserved; fresh CI is tracked there. No local Cargo or activation for that merge.
+Combined private-reader rebuild/binding, rollback and acceptance remain Staging-
+owned; live guarded Stop is unsupported and aggregate enforcement is not armed.
+[Reader, activation and release handoff](DOT_CREDIT_BUDGET.md).
+
 # Generated report links — live October 16 follow-up
 
 The OP::3D Print Issues failure was a Markdown link to an unpublished local

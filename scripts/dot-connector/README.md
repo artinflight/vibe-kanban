@@ -1,3 +1,13 @@
+# Read-only usage reporting
+
+See [the supported full report, cached summary and adoption handoff](../../DOT_USAGE_REPORTING.md).
+CU owns recorded-data/accounting aggregation; this overlay owns only the
+connector schema, registration and bounded read-only dispatch.
+
+# Account-wide credit-budget readback
+
+See [the fixed read-only budget tool and deployment handoff](../../DOT_CREDIT_BUDGET.md).
+
 # Explicit Dot steering
 
 This overlay adds `steer_session_prompt` and `get_session_steering_receipt` to

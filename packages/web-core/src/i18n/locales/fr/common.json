@@ -350,6 +350,8 @@
     "noCommands": "Aucune commande disponible pour cet agent."
   },
   "kanban": {
+    "collapseIssue": "Réduire le ticket {{displayId}}",
+    "expandIssue": "Développer le ticket {{displayId}}",
     "noVisibleStatuses": "Tous les statuts sont masqués. Utilisez les paramètres d'affichage ou changez d'onglet pour voir les problèmes.",
     "noProjectFound": "Aucun projet trouvé",
     "unassigned": "Non assigné",

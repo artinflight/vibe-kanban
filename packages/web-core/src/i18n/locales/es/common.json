@@ -350,6 +350,8 @@
     "noCommands": "No hay comandos disponibles para este agente."
   },
   "kanban": {
+    "collapseIssue": "Contraer la incidencia {{displayId}}",
+    "expandIssue": "Expandir la incidencia {{displayId}}",
     "noVisibleStatuses": "Todos los estados están ocultos. Usa la configuración de visualización o cambia a otra pestaña para ver los problemas.",
     "noProjectFound": "No se encontró el proyecto",
     "unassigned": "Sin asignar",

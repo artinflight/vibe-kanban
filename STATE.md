@@ -1,3 +1,14 @@
+# Dot full CU reporting — October 17 preparation
+
+The original CU owner owns the report/query/helper and accounting reconciliation.
+This connector stream adds read-only get_usage_report/get_usage_summary, bounded
+selectors and a small usage_report fallback only on original-CU existing status.
+Existing tool schemas, other workspaces, delivery/hold/receipt fields and routing
+are preserved.43 light tests plus28 installed-policy/read regressions pass.
+No reporting activation yet; final CU helper pin and registered acceptance pending.
+No backend Stop dependency, new worker, permission change or Vibe/CU restart.
+[Reporting contract, validation and deployment handoff](DOT_USAGE_REPORTING.md).
+
 # CU credit readback through existing status — October 17 compatibility
 
 LIVE actual registered compatibility verified03:08UTC: original CU status

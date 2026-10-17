@@ -1,3 +1,13 @@
+# Project sidebar deployment — October 17
+
+Seamus's "deploy it" authorized scoped Dot service/connector and combined frontend
+activation. PR267 merged into staging 4ba47fe66; build 4ecaa2f81 has the identical
+full source tree and completely passing CI. Deployed and accepted against actual
+served UI/live API at 393/1440 px. No Rust backend restart or PR264 activation.
+See VK_PROJECT_COLLABORATION_ROLLOUT.md for exact assets, timing, preservation,
+Desktop recovery and remaining platform/physical-phone acceptance limits.
+Earlier feature-preparation boundaries below are superseded by this deployment.
+
 # Project collaboration sidebar — October 17
 
 Branch `vk/7db7-vk-project-dot-c` starts at fork/staging `7110930b6`.

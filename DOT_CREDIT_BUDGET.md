@@ -59,10 +59,22 @@ exact preservation, non-CU isolation, stale/unavailable independence, repeated
 fresh reads and unchanged argument/UUID validation. Installed old-tool route
 acceptance and the exact module hash are recorded in the PR/Vibe handoff.
 
-This path is adopted by an atomic module-file replacement at the existing
-request boundary. No service/agent restart, browser, actor, routing, ledger or
-backend change is authorized. Frozen PR264 remains untouched. Standalone tool
-catalog propagation is a separate unresolved platform issue.
+Atomic file adoption completed at 03:00:25 UTC from source
+`c3a301881a88571512ab55a9d72026d6deddaf6b`; installed module SHA256 is
+`eb6d1c3c24d50e2457e058d5fda71a17bbe4553bfab2fd39734ed9b944158e0a`.
+However, the **actual registered old-tool call still returns no credit_budget**.
+The same configured connector has a persistent Python handler started at 02:33,
+before adoption, and its main loop has no hot reload. A disk-loaded diagnostic
+returns fresh nested data, but that is not registered-route acceptance. The
+request-boundary assumption was incorrect for this retained stdio process.
+
+No restart was performed. The current no-restart constraint blocks loading the
+adopted code into that handler; a specific connector-only reload decision is
+pending. No new worker, browser, Cargo, routing, ledger or backend change is
+needed or authorized. Frozen PR264 remains untouched. Do not repeat adoption,
+32 tests, backup or user discovery checks. After an authorized load boundary,
+this owner can verify the already-cached old tool directly. Standalone tool
+catalog propagation remains a separate unresolved platform issue.
 
 ## Validation and installation boundary
 

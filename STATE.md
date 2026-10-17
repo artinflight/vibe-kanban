@@ -1,5 +1,11 @@
 # CU credit readback through existing status — October 17 compatibility
 
+Runtime reconciliation: module adoption03:00:25 completed atSHAeb6d1c3c;
+actual registered status still lacks credit_budget because persistent Python
+handler predates adoption and has no hot reload. Disk-only fresh data is not
+registered acceptance. Connector-only reload decision pending under no-restart
+constraint; none performed. PR265 records exact evidence. PR264 unchanged.
+
 Seamus confirms standalone get_credit_budget discovery FAILED in main Dot and a
 fresh worker. The requested compatibility adds credit_budget only to existing
 get_workspace_reconciliation_status for the privately bound original CU workspace.

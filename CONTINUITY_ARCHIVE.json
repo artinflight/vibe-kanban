@@ -1,0 +1,2323 @@
+{
+  "schema": 1,
+  "source_commit": "7110930b6d9d1fa3f403a963a1ded49140b3eec1",
+  "mandatory_budget_bytes": 16384,
+  "archives": [
+    {
+      "original": "STATE.md",
+      "archive": "STATE_HISTORY_20261017.md",
+      "bytes": 154237,
+      "sha256": "5d2a96b467069f26648ff826f3ad3ee8ad5cd468ac6f98e1a4b6d4abaa542959",
+      "sections": [
+        {
+          "line": 1,
+          "heading": "# Generated report links \u2014 live October 16 follow-up"
+        },
+        {
+          "line": 18,
+          "heading": "# Dot reply notifications \u2014 live October 16, 22:38 UTC"
+        },
+        {
+          "line": 34,
+          "heading": "# Dot unread and Needs Attention \u2014 October 16 implementation"
+        },
+        {
+          "line": 46,
+          "heading": "# Sent Steering staging reconciliation"
+        },
+        {
+          "line": 54,
+          "heading": "# Steering draft persistence correction \u2014 October 16"
+        },
+        {
+          "line": 62,
+          "heading": "# Root reply and complete notification registration \u2014 October 16 follow-up"
+        },
+        {
+          "line": 79,
+          "heading": "# Dot connector activation and complete project scope \u2014 October 16"
+        },
+        {
+          "line": 95,
+          "heading": "# Dot integration preservation \u2014 October 16"
+        },
+        {
+          "line": 113,
+          "heading": "# Summary web-link rendering \u2014 live October 16"
+        },
+        {
+          "line": 130,
+          "heading": "# Automatic sub-agent activity correction \u2014 October 16"
+        },
+        {
+          "line": 141,
+          "heading": "# Dot explicit steering source preparation \u2014 October 15"
+        },
+        {
+          "line": 151,
+          "heading": "# Dot session-control investigation \u2014 October 15"
+        },
+        {
+          "line": 162,
+          "heading": "# Combined reviewed release preparation \u2014 held before activation"
+        },
+        {
+          "line": 176,
+          "heading": "## Combined safe-idle release preparation"
+        },
+        {
+          "line": 189,
+          "heading": "## October13 automatic GitHub sync development"
+        },
+        {
+          "line": 203,
+          "heading": "## October11 startup provenance and executable monitor ordering"
+        },
+        {
+          "line": 245,
+          "heading": "## October11 approved one-restart bootstrap and receipt lifecycle"
+        },
+        {
+          "line": 264,
+          "heading": "## October11 remaining review corrections"
+        },
+        {
+          "line": 282,
+          "heading": "## October11 corrected feature review boundary"
+        },
+        {
+          "line": 303,
+          "heading": "## October11 independent review corrections in progress"
+        },
+        {
+          "line": 316,
+          "heading": "## October11 bounded continuation validation"
+        },
+        {
+          "line": 328,
+          "heading": "## October11: fixed original-worker continuation source preparation"
+        },
+        {
+          "line": 339,
+          "heading": "## October10: original-response recovery publication gate"
+        },
+        {
+          "line": 350,
+          "heading": "## October 8 authorized safe restart \u2014 preparing, not ready"
+        },
+        {
+          "line": 361,
+          "heading": "## October 8: Phone frontend deployed"
+        },
+        {
+          "line": 393,
+          "heading": "## October 8: Phone frontend work prepared"
+        },
+        {
+          "line": 401,
+          "heading": "## October7 historical-log and CI compatibility repair \u2014 isolated"
+        },
+        {
+          "line": 413,
+          "heading": "## October7 connector review repair \u2014 isolated, undeployed"
+        },
+        {
+          "line": 420,
+          "heading": "## October 7 Integration Is Not Deployment"
+        },
+        {
+          "line": 428,
+          "heading": "## October 6: Scheduled first-run development boundary"
+        },
+        {
+          "line": 437,
+          "heading": "## October 7: AutoSwitch reload boundary invariant"
+        },
+        {
+          "line": 451,
+          "heading": "## October 8 recovery evidence correction \u2014 sign-off withheld"
+        },
+        {
+          "line": 472,
+          "heading": "## October 8 incident prevention remains isolated and undeployed"
+        },
+        {
+          "line": 482,
+          "heading": "## October 8: Preservation P1 review corrections in development"
+        },
+        {
+          "line": 491,
+          "heading": "## October 8: Turn preservation development boundary"
+        },
+        {
+          "line": 499,
+          "heading": "## October 8: Codex MCP approval bridge development"
+        },
+        {
+          "line": 515,
+          "heading": "## October 1: AutoSwitch scope release preparation"
+        },
+        {
+          "line": 524,
+          "heading": "## October 1: Preparation Tooling Scope"
+        },
+        {
+          "line": 539,
+          "heading": "## September23: Ownership Handover Source Ready For Review"
+        },
+        {
+          "line": 550,
+          "heading": "## September23: Cutover Ownership Barrier"
+        },
+        {
+          "line": 560,
+          "heading": "## September 20: chat-scroll frontend live"
+        },
+        {
+          "line": 567,
+          "heading": "## September 20: chat resume behavior"
+        },
+        {
+          "line": 572,
+          "heading": "## September 15: capacity deployment configuration in VK staging"
+        },
+        {
+          "line": 581,
+          "heading": "## September 14 late runtime check and chat recovery"
+        },
+        {
+          "line": 596,
+          "heading": "## PR112 review repairs \u2014 September 14"
+        },
+        {
+          "line": 611,
+          "heading": "## September 14 Review Status"
+        },
+        {
+          "line": 619,
+          "heading": "## Current delivery continuation"
+        },
+        {
+          "line": 625,
+          "heading": "## Scheduled build directories \u2014 September 14"
+        },
+        {
+          "line": 650,
+          "heading": "## September 14 enforcement and reset acceptance"
+        },
+        {
+          "line": 697,
+          "heading": "## September 14 CU scheduler and HTTP acceptance checkpoint"
+        },
+        {
+          "line": 721,
+          "heading": "# STATE.md"
+        },
+        {
+          "line": 723,
+          "heading": "## Source work: unused daily capacity"
+        },
+        {
+          "line": 735,
+          "heading": "## Source compatibility: completed conversation paging"
+        },
+        {
+          "line": 742,
+          "heading": "## Current Objective"
+        },
+        {
+          "line": 746,
+          "heading": "## Confirmed Current State"
+        },
+        {
+          "line": 1263,
+          "heading": "## In Progress"
+        },
+        {
+          "line": 1283,
+          "heading": "## Proposed / Not Adopted"
+        },
+        {
+          "line": 1288,
+          "heading": "## Known Gaps / Blockers / Deferred"
+        },
+        {
+          "line": 1322,
+          "heading": "## Relevant Files / Modules"
+        },
+        {
+          "line": 1354,
+          "heading": "## Decisions Currently In Force"
+        },
+        {
+          "line": 1369,
+          "heading": "## Risks / Regression Traps"
+        },
+        {
+          "line": 1445,
+          "heading": "## Next Safe Steps"
+        },
+        {
+          "line": 2017,
+          "heading": "# September 11 V2 Recovery Supersedes Earlier Readiness"
+        },
+        {
+          "line": 2025,
+          "heading": "## September 21: scheduled resume wire-status correction"
+        },
+        {
+          "line": 2033,
+          "heading": "## Capacity workflow invariants \u2014 September 21"
+        }
+      ]
+    },
+    {
+      "original": "STREAM.md",
+      "archive": "STREAM_HISTORY_20261017.md",
+      "bytes": 151151,
+      "sha256": "98cfdd009da2892714abc42420d6da7829fab679e04e4fc65597ed90919d075c",
+      "sections": [
+        {
+          "line": 1,
+          "heading": "# First-response generated artifact delivery \u2014 October 16 follow-up"
+        },
+        {
+          "line": 18,
+          "heading": "## October 16 publication-admission recurrence correction"
+        },
+        {
+          "line": 42,
+          "heading": "## October 14 local reviewed-baseline link repair"
+        },
+        {
+          "line": 60,
+          "heading": "# Dot reply notifications \u2014 live October 16, 22:38 UTC"
+        },
+        {
+          "line": 76,
+          "heading": "# Dot unread and Needs Attention \u2014 October 16 implementation"
+        },
+        {
+          "line": 88,
+          "heading": "# Sent Steering staging reconciliation"
+        },
+        {
+          "line": 96,
+          "heading": "# Sent steering draft correction \u2014 October 16"
+        },
+        {
+          "line": 113,
+          "heading": "# Root reply and complete notification registration \u2014 October 16 follow-up"
+        },
+        {
+          "line": 130,
+          "heading": "# Dot connector activation and complete project scope \u2014 October 16"
+        },
+        {
+          "line": 146,
+          "heading": "# Dot integration preservation \u2014 October 16"
+        },
+        {
+          "line": 170,
+          "heading": "# Clickable summary links release \u2014 live October 16"
+        },
+        {
+          "line": 184,
+          "heading": "## Retained staging sub-agent stream"
+        },
+        {
+          "line": 186,
+          "heading": "## Stream Identifier"
+        },
+        {
+          "line": 192,
+          "heading": "## Objective"
+        },
+        {
+          "line": 197,
+          "heading": "## Scope"
+        },
+        {
+          "line": 205,
+          "heading": "## Validation and Rollout"
+        },
+        {
+          "line": 216,
+          "heading": "## Retained integration context"
+        },
+        {
+          "line": 218,
+          "heading": "# Dot explicit steering implementation \u2014 October 15"
+        },
+        {
+          "line": 239,
+          "heading": "## Retained investigation"
+        },
+        {
+          "line": 241,
+          "heading": "# Dot running-agent steering and queue investigation \u2014 October 15"
+        },
+        {
+          "line": 251,
+          "heading": "## Retained prior-stream context"
+        },
+        {
+          "line": 253,
+          "heading": "# Native review PR249 \u2014 verified implementation, release held"
+        },
+        {
+          "line": 271,
+          "heading": "# System-wide native Approve for me \u2014 October14 follow-up"
+        },
+        {
+          "line": 282,
+          "heading": "# Combined reviewed release preparation \u2014 held before activation"
+        },
+        {
+          "line": 296,
+          "heading": "## Retained combined preparation history"
+        },
+        {
+          "line": 298,
+          "heading": "## Combined safe-idle release preparation"
+        },
+        {
+          "line": 311,
+          "heading": "## October13 automatic GitHub sync after every completed turn"
+        },
+        {
+          "line": 335,
+          "heading": "## October 13 large native-history verification repair \u2014 validated draft"
+        },
+        {
+          "line": 360,
+          "heading": "## October11 startup provenance and executable monitor ordering"
+        },
+        {
+          "line": 402,
+          "heading": "## October11 approved one-restart bootstrap and receipt lifecycle"
+        },
+        {
+          "line": 421,
+          "heading": "## October11 remaining review corrections"
+        },
+        {
+          "line": 439,
+          "heading": "## October11 corrected feature review boundary"
+        },
+        {
+          "line": 460,
+          "heading": "## October11 independent review corrections in progress"
+        },
+        {
+          "line": 473,
+          "heading": "## October11 fixed-contract implementation"
+        },
+        {
+          "line": 482,
+          "heading": "## October11: fixed original-worker continuation"
+        },
+        {
+          "line": 495,
+          "heading": "## October10: tested same-UID recovery; matching publication required"
+        },
+        {
+          "line": 518,
+          "heading": "## October10: original conversation native-final recovery, isolated"
+        },
+        {
+          "line": 522,
+          "heading": "## October 10: bounded capture/consent pair \u2014 preparation only"
+        },
+        {
+          "line": 533,
+          "heading": "## October 8 authorized safe restart \u2014 preparing, not ready"
+        },
+        {
+          "line": 544,
+          "heading": "# October 8: Phone frontend deployed"
+        },
+        {
+          "line": 576,
+          "heading": "# October 8: Phone screen redesign"
+        },
+        {
+          "line": 594,
+          "heading": "## October7 historical-log and CI compatibility repair \u2014 isolated"
+        },
+        {
+          "line": 606,
+          "heading": "## October7 connector candidate repair"
+        },
+        {
+          "line": 613,
+          "heading": "# October 7 Combined Release Preparation"
+        },
+        {
+          "line": 628,
+          "heading": "# PR147 bounded stop-response reliability"
+        },
+        {
+          "line": 649,
+          "heading": "# October 6: Scheduled native first run"
+        },
+        {
+          "line": 675,
+          "heading": "# October 7: correct the incomplete no-restart boundary"
+        },
+        {
+          "line": 740,
+          "heading": "# October 7: AutoSwitch current-step risk correction"
+        },
+        {
+          "line": 775,
+          "heading": "# October 5: AutoSwitch reference-step and classifier startup correction"
+        },
+        {
+          "line": 794,
+          "heading": "## October 8 targeted recovery investigation \u2014 partial recovery verified"
+        },
+        {
+          "line": 814,
+          "heading": "## October 8 recovery evidence correction \u2014 sign-off withheld"
+        },
+        {
+          "line": 839,
+          "heading": "## Current repair acceptance"
+        },
+        {
+          "line": 847,
+          "heading": "## October 8 startup/recovery safety repair"
+        },
+        {
+          "line": 856,
+          "heading": "# October 8: PR223 P1 preservation review corrections"
+        },
+        {
+          "line": 897,
+          "heading": "# October 8: Automatic turn Git preservation \u2014 development only"
+        },
+        {
+          "line": 947,
+          "heading": "# October 8: MCP approval bridge"
+        },
+        {
+          "line": 960,
+          "heading": "# October 5: AutoSwitch reloadable module"
+        },
+        {
+          "line": 989,
+          "heading": "# October 4: AutoSwitch risk and diagnostic-phase correction"
+        },
+        {
+          "line": 1002,
+          "heading": "# October 3 Restart Candidate"
+        },
+        {
+          "line": 1009,
+          "heading": "## October 3: AutoSwitch staging integration"
+        },
+        {
+          "line": 1033,
+          "heading": "# Workspace Attention Preservation"
+        },
+        {
+          "line": 1041,
+          "heading": "## AutoSwitch release compatibility (2026-10-01)"
+        },
+        {
+          "line": 1061,
+          "heading": "## AutoSwitch scope and savings correction (2026-10-01)"
+        },
+        {
+          "line": 1080,
+          "heading": "## AutoSwitch no-restart testing workaround live (2026-10-01)"
+        },
+        {
+          "line": 1108,
+          "heading": "## TF::Build Shadow continuity repair (2026-10-01)"
+        },
+        {
+          "line": 1128,
+          "heading": "## AutoSwitch V2 staging integration (2026-10-01)"
+        },
+        {
+          "line": 1137,
+          "heading": "## Native child acceptance and capacity correction (2026-10-01)"
+        },
+        {
+          "line": 1163,
+          "heading": "## Semantic fallback continuation (2026-10-01)"
+        },
+        {
+          "line": 1182,
+          "heading": "## Natural-language triage continuation"
+        },
+        {
+          "line": 1190,
+          "heading": "## V2 resumed after V1 staging integration"
+        },
+        {
+          "line": 1198,
+          "heading": "# Automatic assessed router (V2)"
+        },
+        {
+          "line": 1209,
+          "heading": "## Accepted V1 history"
+        },
+        {
+          "line": 1211,
+          "heading": "## October 1: Pre-Cutover Preparation Performance"
+        },
+        {
+          "line": 1222,
+          "heading": "## AutoSwitch V1 staging-only release"
+        },
+        {
+          "line": 1231,
+          "heading": "# VK Model AutoSwitch V1"
+        },
+        {
+          "line": 1249,
+          "heading": "## Inherited integration context"
+        },
+        {
+          "line": 1253,
+          "heading": "## September 28 \u2014 two concurrent selected capacity goals"
+        },
+        {
+          "line": 1261,
+          "heading": "# Capacity Cutover Lock"
+        },
+        {
+          "line": 1275,
+          "heading": "## Integrated Codex Model Selector Regression"
+        },
+        {
+          "line": 1282,
+          "heading": "## Integrated Staging Context: VK::Weird Message"
+        },
+        {
+          "line": 1300,
+          "heading": "## September 30: scheduled resume history"
+        },
+        {
+          "line": 1308,
+          "heading": "## October 9 combined frontend preparation"
+        },
+        {
+          "line": 1322,
+          "heading": "## Retained feature-owner delivery history"
+        },
+        {
+          "line": 1324,
+          "heading": "## October 13 PR246 legacy rollback correction"
+        },
+        {
+          "line": 1338,
+          "heading": "## October 13 PR246 observation-loss correction"
+        },
+        {
+          "line": 1355,
+          "heading": "## October13 automatic GitHub sync after every completed turn"
+        },
+        {
+          "line": 1379,
+          "heading": "## October 13 large native-history verification repair \u2014 validated draft"
+        },
+        {
+          "line": 1404,
+          "heading": "## October11 startup provenance and executable monitor ordering"
+        },
+        {
+          "line": 1446,
+          "heading": "## October11 approved one-restart bootstrap and receipt lifecycle"
+        },
+        {
+          "line": 1465,
+          "heading": "## October11 remaining review corrections"
+        },
+        {
+          "line": 1483,
+          "heading": "## October11 corrected feature review boundary"
+        },
+        {
+          "line": 1504,
+          "heading": "## October11 independent review corrections in progress"
+        },
+        {
+          "line": 1517,
+          "heading": "## October11 fixed-contract implementation"
+        },
+        {
+          "line": 1526,
+          "heading": "## October11: fixed original-worker continuation"
+        },
+        {
+          "line": 1539,
+          "heading": "## October10: tested same-UID recovery; matching publication required"
+        },
+        {
+          "line": 1562,
+          "heading": "## October10: original conversation native-final recovery, isolated"
+        },
+        {
+          "line": 1566,
+          "heading": "## October 10: bounded capture/consent pair \u2014 preparation only"
+        },
+        {
+          "line": 1577,
+          "heading": "## October 8 authorized safe restart \u2014 preparing, not ready"
+        },
+        {
+          "line": 1588,
+          "heading": "# October 8: Phone frontend deployed"
+        },
+        {
+          "line": 1620,
+          "heading": "# October 8: Phone screen redesign"
+        },
+        {
+          "line": 1638,
+          "heading": "## October7 historical-log and CI compatibility repair \u2014 isolated"
+        },
+        {
+          "line": 1650,
+          "heading": "## October7 connector candidate repair"
+        },
+        {
+          "line": 1657,
+          "heading": "# October 7 Combined Release Preparation"
+        },
+        {
+          "line": 1672,
+          "heading": "# PR147 bounded stop-response reliability"
+        },
+        {
+          "line": 1693,
+          "heading": "# October 6: Scheduled native first run"
+        },
+        {
+          "line": 1719,
+          "heading": "# October 7: correct the incomplete no-restart boundary"
+        },
+        {
+          "line": 1784,
+          "heading": "# October 7: AutoSwitch current-step risk correction"
+        },
+        {
+          "line": 1819,
+          "heading": "# October 5: AutoSwitch reference-step and classifier startup correction"
+        },
+        {
+          "line": 1838,
+          "heading": "## October 8 targeted recovery investigation \u2014 partial recovery verified"
+        },
+        {
+          "line": 1858,
+          "heading": "## October 8 recovery evidence correction \u2014 sign-off withheld"
+        },
+        {
+          "line": 1883,
+          "heading": "## Current repair acceptance"
+        },
+        {
+          "line": 1891,
+          "heading": "## October 8 startup/recovery safety repair"
+        },
+        {
+          "line": 1900,
+          "heading": "# October 8: PR223 P1 preservation review corrections"
+        },
+        {
+          "line": 1941,
+          "heading": "# October 8: Automatic turn Git preservation \u2014 development only"
+        },
+        {
+          "line": 1991,
+          "heading": "# October 8: MCP approval bridge"
+        },
+        {
+          "line": 2004,
+          "heading": "# October 5: AutoSwitch reloadable module"
+        },
+        {
+          "line": 2033,
+          "heading": "# October 4: AutoSwitch risk and diagnostic-phase correction"
+        },
+        {
+          "line": 2046,
+          "heading": "# October 3 Restart Candidate"
+        },
+        {
+          "line": 2053,
+          "heading": "## October 3: AutoSwitch staging integration"
+        },
+        {
+          "line": 2077,
+          "heading": "# Workspace Attention Preservation"
+        },
+        {
+          "line": 2085,
+          "heading": "## AutoSwitch release compatibility (2026-10-01)"
+        },
+        {
+          "line": 2105,
+          "heading": "## AutoSwitch scope and savings correction (2026-10-01)"
+        },
+        {
+          "line": 2124,
+          "heading": "## AutoSwitch no-restart testing workaround live (2026-10-01)"
+        },
+        {
+          "line": 2152,
+          "heading": "## TF::Build Shadow continuity repair (2026-10-01)"
+        },
+        {
+          "line": 2172,
+          "heading": "## AutoSwitch V2 staging integration (2026-10-01)"
+        },
+        {
+          "line": 2181,
+          "heading": "## Native child acceptance and capacity correction (2026-10-01)"
+        },
+        {
+          "line": 2207,
+          "heading": "## Semantic fallback continuation (2026-10-01)"
+        },
+        {
+          "line": 2226,
+          "heading": "## Natural-language triage continuation"
+        },
+        {
+          "line": 2234,
+          "heading": "## V2 resumed after V1 staging integration"
+        },
+        {
+          "line": 2242,
+          "heading": "# Automatic assessed router (V2)"
+        },
+        {
+          "line": 2253,
+          "heading": "## Accepted V1 history"
+        },
+        {
+          "line": 2255,
+          "heading": "## October 1: Pre-Cutover Preparation Performance"
+        },
+        {
+          "line": 2266,
+          "heading": "## AutoSwitch V1 staging-only release"
+        },
+        {
+          "line": 2275,
+          "heading": "# VK Model AutoSwitch V1"
+        },
+        {
+          "line": 2293,
+          "heading": "## Inherited integration context"
+        },
+        {
+          "line": 2297,
+          "heading": "## September 28 \u2014 two concurrent selected capacity goals"
+        },
+        {
+          "line": 2305,
+          "heading": "# Capacity Cutover Lock"
+        },
+        {
+          "line": 2319,
+          "heading": "## Integrated Codex Model Selector Regression"
+        },
+        {
+          "line": 2326,
+          "heading": "## Integrated Staging Context: VK::Weird Message"
+        },
+        {
+          "line": 2344,
+          "heading": "## September 30: scheduled resume history"
+        },
+        {
+          "line": 2352,
+          "heading": "## October 9 combined frontend preparation"
+        },
+        {
+          "line": 2365,
+          "heading": "# Restart queue wakeup follow-up"
+        }
+      ]
+    },
+    {
+      "original": "HANDOFF.md",
+      "archive": "HANDOFF_HISTORY_20261017.md",
+      "bytes": 726781,
+      "sha256": "3c659ced2310fefe31e79bde266299a819496689f8c6f6c7d355c5a54e62e42d",
+      "sections": [
+        {
+          "line": 1,
+          "heading": "# Generated deliverable links \u2014 installed October 16 follow-up"
+        },
+        {
+          "line": 38,
+          "heading": "## October 16 publication-admission recurrence correction"
+        },
+        {
+          "line": 62,
+          "heading": "## October 14 local reviewed-baseline link repair"
+        },
+        {
+          "line": 80,
+          "heading": "# Dot reply notifications \u2014 live October 16, 22:38 UTC"
+        },
+        {
+          "line": 96,
+          "heading": "# Dot unread and Needs Attention \u2014 October 16 implementation"
+        },
+        {
+          "line": 108,
+          "heading": "# Sent Steering staging reconciliation"
+        },
+        {
+          "line": 116,
+          "heading": "# Sent steering fix publication \u2014 PR257"
+        },
+        {
+          "line": 134,
+          "heading": "# Sent steering draft correction pickup \u2014 October 16"
+        },
+        {
+          "line": 154,
+          "heading": "# Root reply and complete notification registration \u2014 October 16 follow-up"
+        },
+        {
+          "line": 171,
+          "heading": "# Dot connector activation and complete project scope \u2014 October 16"
+        },
+        {
+          "line": 187,
+          "heading": "# Dot integration preservation \u2014 October 16"
+        },
+        {
+          "line": 211,
+          "heading": "# Clickable summary links \u2014 activated October 16"
+        },
+        {
+          "line": 241,
+          "heading": "# Automatic sub-agent activity correction \u2014 October 16"
+        },
+        {
+          "line": 273,
+          "heading": "# Dot explicit steering review handoff \u2014 October 15"
+        },
+        {
+          "line": 306,
+          "heading": "## Retained investigation pickup"
+        },
+        {
+          "line": 308,
+          "heading": "# Dot steering/queue investigation pickup \u2014 October 15"
+        },
+        {
+          "line": 325,
+          "heading": "## Retained prior-stream context"
+        },
+        {
+          "line": 327,
+          "heading": "# Native review PR249 \u2014 verified implementation, release held"
+        },
+        {
+          "line": 345,
+          "heading": "# System-wide native Approve for me \u2014 October14 follow-up"
+        },
+        {
+          "line": 356,
+          "heading": "# Combined reviewed release preparation \u2014 held before activation"
+        },
+        {
+          "line": 370,
+          "heading": "## Retained combined preparation history"
+        },
+        {
+          "line": 372,
+          "heading": "## Combined safe-idle release preparation"
+        },
+        {
+          "line": 385,
+          "heading": "## October13 automatic-sync implementation pickup"
+        },
+        {
+          "line": 414,
+          "heading": "## October 13 large native-history verification repair \u2014 validated draft"
+        },
+        {
+          "line": 439,
+          "heading": "## October11 startup provenance and executable monitor ordering"
+        },
+        {
+          "line": 481,
+          "heading": "## October11 approved one-restart bootstrap and receipt lifecycle"
+        },
+        {
+          "line": 500,
+          "heading": "## October11 remaining review corrections"
+        },
+        {
+          "line": 518,
+          "heading": "## October11 corrected feature review boundary"
+        },
+        {
+          "line": 539,
+          "heading": "## October11 independent review corrections in progress"
+        },
+        {
+          "line": 552,
+          "heading": "## October11: tested original-worker capability awaits release ownership"
+        },
+        {
+          "line": 582,
+          "heading": "## October10: tested same-UID recovery; matching publication required"
+        },
+        {
+          "line": 605,
+          "heading": "## October10: original conversation native-final recovery, isolated"
+        },
+        {
+          "line": 609,
+          "heading": "## October 10: bounded capture/consent pair \u2014 preparation only"
+        },
+        {
+          "line": 620,
+          "heading": "## October 8 authorized safe restart \u2014 preparing, not ready"
+        },
+        {
+          "line": 631,
+          "heading": "# October 8: Phone frontend deployed"
+        },
+        {
+          "line": 663,
+          "heading": "# October 8: Revised phone UI for review"
+        },
+        {
+          "line": 688,
+          "heading": "## October7 historical-log and CI compatibility repair \u2014 isolated"
+        },
+        {
+          "line": 700,
+          "heading": "## October7 conditional review candidate repair"
+        },
+        {
+          "line": 708,
+          "heading": "# October 7 Combined Release Preparation"
+        },
+        {
+          "line": 718,
+          "heading": "# PR147 bounded stop-response reliability"
+        },
+        {
+          "line": 739,
+          "heading": "# October 6: Scheduled native first run \u2014 tested draft source"
+        },
+        {
+          "line": 765,
+          "heading": "# October 7: correct the incomplete no-restart boundary"
+        },
+        {
+          "line": 830,
+          "heading": "# October 7: AutoSwitch current-step risk correction"
+        },
+        {
+          "line": 865,
+          "heading": "# October 5: AutoSwitch reference-step and classifier startup correction"
+        },
+        {
+          "line": 884,
+          "heading": "## October 8 targeted recovery investigation \u2014 partial recovery verified"
+        },
+        {
+          "line": 904,
+          "heading": "## October 8 recovery evidence correction \u2014 sign-off withheld"
+        },
+        {
+          "line": 929,
+          "heading": "## Earlier repair acceptance (source review and later evidence review now recorded)"
+        },
+        {
+          "line": 939,
+          "heading": "## October 8 isolated prevention and recovery audit"
+        },
+        {
+          "line": 958,
+          "heading": "# October 8: PR223 P1 preservation review corrections"
+        },
+        {
+          "line": 999,
+          "heading": "# October 8: Automatic turn Git preservation \u2014 development only"
+        },
+        {
+          "line": 1049,
+          "heading": "# October 8: nested redaction-only context (PR225 P2)"
+        },
+        {
+          "line": 1074,
+          "heading": "# October 8: P1 consent review correction (PR225)"
+        },
+        {
+          "line": 1115,
+          "heading": "# October 8: MCP approval bridge development"
+        },
+        {
+          "line": 1165,
+          "heading": "# October 5: AutoSwitch reloadable module"
+        },
+        {
+          "line": 1194,
+          "heading": "# October 4: AutoSwitch risk and diagnostic-phase correction"
+        },
+        {
+          "line": 1207,
+          "heading": "# October 3 Restart Candidate"
+        },
+        {
+          "line": 1215,
+          "heading": "## October 3: AutoSwitch staging integration"
+        },
+        {
+          "line": 1239,
+          "heading": "## October 2: Workspace Attention Correction"
+        },
+        {
+          "line": 1253,
+          "heading": "## AutoSwitch release compatibility (2026-10-01)"
+        },
+        {
+          "line": 1273,
+          "heading": "## AutoSwitch scope and savings correction (2026-10-01)"
+        },
+        {
+          "line": 1292,
+          "heading": "## AutoSwitch no-restart testing workaround live (2026-10-01)"
+        },
+        {
+          "line": 1320,
+          "heading": "## TF::Build Shadow continuity repair (2026-10-01)"
+        },
+        {
+          "line": 1340,
+          "heading": "## AutoSwitch V2 staging integration (2026-10-01)"
+        },
+        {
+          "line": 1349,
+          "heading": "## Native child acceptance and capacity correction (2026-10-01)"
+        },
+        {
+          "line": 1375,
+          "heading": "## Semantic fallback continuation (2026-10-01)"
+        },
+        {
+          "line": 1394,
+          "heading": "## Natural-language triage continuation"
+        },
+        {
+          "line": 1405,
+          "heading": "## V2 resumed after V1 staging integration"
+        },
+        {
+          "line": 1413,
+          "heading": "## Automatic assessment / qualified-pair router"
+        },
+        {
+          "line": 1447,
+          "heading": "## Accepted V1 integration history (superseded gates retained below)"
+        },
+        {
+          "line": 1449,
+          "heading": "## October 1: Preparation Integration Accepted"
+        },
+        {
+          "line": 1467,
+          "heading": "## October 1: Faster Pre-Cutover Preparation"
+        },
+        {
+          "line": 1486,
+          "heading": "## AutoSwitch V1 staging-only release"
+        },
+        {
+          "line": 1500,
+          "heading": "## September 30: CU producer recovered and native acceptance passed"
+        },
+        {
+          "line": 1532,
+          "heading": "## September 28 \u2014 two concurrent selected capacity goals"
+        },
+        {
+          "line": 1540,
+          "heading": "## September23: Ownership Handover Implemented, Not Deployed"
+        },
+        {
+          "line": 1566,
+          "heading": "## September23: Capacity Lock Readiness Fix"
+        },
+        {
+          "line": 1585,
+          "heading": "## September 21: PR117 staging reconciliation"
+        },
+        {
+          "line": 1602,
+          "heading": "## September 15: model selector regression"
+        },
+        {
+          "line": 1612,
+          "heading": "# September 21: VK::Weird Message"
+        },
+        {
+          "line": 1652,
+          "heading": "## September 21: consolidated capacity repair \u2014 validated"
+        },
+        {
+          "line": 1659,
+          "heading": "## September 21: overnight start failure fix"
+        },
+        {
+          "line": 1678,
+          "heading": "## September 20: chat-scroll frontend deployed"
+        },
+        {
+          "line": 1689,
+          "heading": "## September 20: frontend deployment preparation"
+        },
+        {
+          "line": 1704,
+          "heading": "## September 20: VK::Chat Scroll Position"
+        },
+        {
+          "line": 1728,
+          "heading": "## September 15: capacity deployment configuration in VK staging"
+        },
+        {
+          "line": 1737,
+          "heading": "## September 14: VK Errors 2"
+        },
+        {
+          "line": 1746,
+          "heading": "## September 14: selected-only capacity fault isolation"
+        },
+        {
+          "line": 1763,
+          "heading": "## PR112 review repairs \u2014 September 14"
+        },
+        {
+          "line": 1778,
+          "heading": "## September 14 Review: Changes Required Before Merge And Deployment"
+        },
+        {
+          "line": 1786,
+          "heading": "## Completion audit \u2014 implementation and release handoff scope"
+        },
+        {
+          "line": 1804,
+          "heading": "## September 14 \u2014 final release acceptance"
+        },
+        {
+          "line": 1845,
+          "heading": "## Current delivery continuation"
+        },
+        {
+          "line": 1851,
+          "heading": "## Scheduled build directories \u2014 September 14"
+        },
+        {
+          "line": 1876,
+          "heading": "## September 14 enforcement and reset acceptance"
+        },
+        {
+          "line": 1923,
+          "heading": "## September 14 CU scheduler and HTTP acceptance checkpoint"
+        },
+        {
+          "line": 1947,
+          "heading": "# HANDOFF.md"
+        },
+        {
+          "line": 1949,
+          "heading": "## September 14: Durable controller and CU bridge progress"
+        },
+        {
+          "line": 1966,
+          "heading": "## September 14: Unused-capacity enforcement in progress"
+        },
+        {
+          "line": 1982,
+          "heading": "## September 13: Long-thread staging merge requested"
+        },
+        {
+          "line": 1996,
+          "heading": "## September 12: Long-thread pagination source preparation"
+        },
+        {
+          "line": 2021,
+          "heading": "## September 12: Blue Live, Original Green Paused"
+        },
+        {
+          "line": 2031,
+          "heading": "## September 12 Paused-Green Work In Progress"
+        },
+        {
+          "line": 2041,
+          "heading": "## Current Preparation: Running Standby And Recovery Query"
+        },
+        {
+          "line": 2053,
+          "heading": "## September 11 Online Readiness Evidence"
+        },
+        {
+          "line": 2067,
+          "heading": "## Latest Authority: Online Preparation Only"
+        },
+        {
+          "line": 2097,
+          "heading": "## Attachment Cleanup Cutover Guard"
+        },
+        {
+          "line": 2112,
+          "heading": "## Staging management deployment pickup"
+        },
+        {
+          "line": 2126,
+          "heading": "## Recovery-first revision validated"
+        },
+        {
+          "line": 2130,
+          "heading": "## 2026-09-11 Autonomous Codex Goals \u2014 Feature Prepared"
+        },
+        {
+          "line": 2176,
+          "heading": "## 2026-09-01 Active Codex Correction Regression"
+        },
+        {
+          "line": 2188,
+          "heading": "## 2026-08-31 Codex Resume Unknown Item Compatibility"
+        },
+        {
+          "line": 2200,
+          "heading": "## 2026-08-31 Older Message Reset Positioning"
+        },
+        {
+          "line": 2213,
+          "heading": "## 2026-08-31 Durable UI Preferences Prepared \u2014 Restart Agent Handoff"
+        },
+        {
+          "line": 2233,
+          "heading": "## 2026-08-31 Saved Messages Compatibility Live"
+        },
+        {
+          "line": 2260,
+          "heading": "## 2026-08-31 Workspace Color Refresh Persistence Live"
+        },
+        {
+          "line": 2279,
+          "heading": "## 2026-08-31 Left-Nav Project Reorder Follow-up"
+        },
+        {
+          "line": 2299,
+          "heading": "## 2026-08-31 Issue Attachment Routing Frontend Live"
+        },
+        {
+          "line": 2351,
+          "heading": "## 2026-08-31 Attachment and UI Preference Corrections"
+        },
+        {
+          "line": 2364,
+          "heading": "## 2026-08-30 Light-Theme Workspace Tint Follow-up"
+        },
+        {
+          "line": 2389,
+          "heading": "## 2026-08-29 Colored Kanban Workspaces Live"
+        },
+        {
+          "line": 2408,
+          "heading": "## 2026-08-29 Agent Preview Guide"
+        },
+        {
+          "line": 2421,
+          "heading": "## 2026-08-29 Local Kanban Tag Persistence Follow-up"
+        },
+        {
+          "line": 2438,
+          "heading": "## Current task"
+        },
+        {
+          "line": 2448,
+          "heading": "## 2026-08-28 Restart Lessons"
+        },
+        {
+          "line": 2480,
+          "heading": "## 2026-08-04 Compact Summary Metadata Preview"
+        },
+        {
+          "line": 2525,
+          "heading": "## 2026-08-26 Terminal Workspace Archive Fix Staged"
+        },
+        {
+          "line": 2578,
+          "heading": "## 2026-07-13 Staging Backfill Preview Updated"
+        },
+        {
+          "line": 2594,
+          "heading": "## 2026-06-26 Multi-Line Rich Clipboard Paste Hotfix Live"
+        },
+        {
+          "line": 2618,
+          "heading": "## 2026-06-21 Project Sidebar Flyout / Customization Prepared"
+        },
+        {
+          "line": 2643,
+          "heading": "## 2026-06-18 Branch Base Search Hotfix Live"
+        },
+        {
+          "line": 2668,
+          "heading": "## 2026-06-12 Restart Candidate Refreshed With Issue Flag"
+        },
+        {
+          "line": 2708,
+          "heading": "## 2026-06-12 Issue Needs-Review Flag Prepared"
+        },
+        {
+          "line": 2727,
+          "heading": "## 2026-06-11 Restart Candidate Built / Targeted Backup Complete"
+        },
+        {
+          "line": 2775,
+          "heading": "## 2026-06-11 Codex Capacity Queue Fix Prepared"
+        },
+        {
+          "line": 2801,
+          "heading": "## 2026-06-11 Kanban Card Reorder Fix Prepared"
+        },
+        {
+          "line": 2821,
+          "heading": "## 2026-06-08 Plan-to-Auto Mode Persistence Hotfix"
+        },
+        {
+          "line": 2857,
+          "heading": "## 2026-06-04 Multi-Line Paste Hotfix"
+        },
+        {
+          "line": 2885,
+          "heading": "## 2026-06-03 Mobile Archived-Projects Nav Hotfix"
+        },
+        {
+          "line": 2911,
+          "heading": "## 2026-06-03 Duplicate Project Cleanup / Pending Source Fix"
+        },
+        {
+          "line": 2943,
+          "heading": "## 2026-06-03 Restart Recovery / Queue / Backup Deployment"
+        },
+        {
+          "line": 3024,
+          "heading": "## 2026-06-02 Codex Active-Agent Limit Regression Repair"
+        },
+        {
+          "line": 3047,
+          "heading": "## 2026-06-01 FR::ORC::Generative Programming Codex Auth Repair"
+        },
+        {
+          "line": 3062,
+          "heading": "## 2026-05-30 Canonical Unread / Ntfy Redeploy Correction"
+        },
+        {
+          "line": 3088,
+          "heading": "## 2026-05-28 VK Agent Deployment Docs"
+        },
+        {
+          "line": 3102,
+          "heading": "## 2026-05-14 Workspace Unpin Repair"
+        },
+        {
+          "line": 3136,
+          "heading": "## 2026-05-13 Default Project Columns Repair"
+        },
+        {
+          "line": 3175,
+          "heading": "## 2026-05-13 Live Regression Smoke Script"
+        },
+        {
+          "line": 3189,
+          "heading": "## 2026-05-13 Agent Chat Image Sharing"
+        },
+        {
+          "line": 3222,
+          "heading": "## 2026-05-13 Queue Regression Repaired In Source"
+        },
+        {
+          "line": 3243,
+          "heading": "## 2026-05-13 Regression Prevention Gate"
+        },
+        {
+          "line": 3262,
+          "heading": "## 2026-05-13 Issue Workspace Archive + Project Repo Defaults"
+        },
+        {
+          "line": 3284,
+          "heading": "## 2026-05-13 Issue View Workspace Rename"
+        },
+        {
+          "line": 3295,
+          "heading": "## 2026-05-13 Scaleway CLI / SSH Setup"
+        },
+        {
+          "line": 3322,
+          "heading": "## 2026-05-11 Manual Workspace Unread Marker"
+        },
+        {
+          "line": 3344,
+          "heading": "## 2026-05-11 Mobile Workspace Chat Autofocus"
+        },
+        {
+          "line": 3352,
+          "heading": "## 2026-05-12 Workspace Actions / Spin-Off Repair"
+        },
+        {
+          "line": 3381,
+          "heading": "## 2026-05-12 Issue Status Selector Repair"
+        },
+        {
+          "line": 3402,
+          "heading": "## 2026-05-11 Regression Lockdown / Deployment Queue"
+        },
+        {
+          "line": 3427,
+          "heading": "## 2026-05-11 Collapsed Kanban Count Regression"
+        },
+        {
+          "line": 3437,
+          "heading": "## 2026-05-10 Android Parity Stale Sub-Agent Count Repair"
+        },
+        {
+          "line": 3474,
+          "heading": "## 2026-05-10 Mobile Collapsed Kanban Column Repair"
+        },
+        {
+          "line": 3489,
+          "heading": "## 2026-05-10 Sub-Agent Preservation Repair"
+        },
+        {
+          "line": 3511,
+          "heading": "## 2026-05-10 Left Nav Archive Button Hotfix"
+        },
+        {
+          "line": 3524,
+          "heading": "## 2026-05-10 Needs-Review vs Running Icon Repair"
+        },
+        {
+          "line": 3533,
+          "heading": "## 2026-05-09 Sub-Agent Sidebar Indicator Repair"
+        },
+        {
+          "line": 3553,
+          "heading": "## 2026-05-08 opNVLP VK Project Setup"
+        },
+        {
+          "line": 3561,
+          "heading": "## 2026-05-08 FL Needs-Review Bubble Repair"
+        },
+        {
+          "line": 3582,
+          "heading": "## 2026-05-07 Disk Space Regression"
+        },
+        {
+          "line": 3598,
+          "heading": "## 2026-05-07 Hyrox Column Repair"
+        },
+        {
+          "line": 3611,
+          "heading": "## 2026-05-06 Dysfunctional Feature Audit"
+        },
+        {
+          "line": 3638,
+          "heading": "## Repair Plan"
+        },
+        {
+          "line": 3647,
+          "heading": "## 2026-05-06 Attachment And Space Findings"
+        },
+        {
+          "line": 3699,
+          "heading": "## What Changed This Session"
+        },
+        {
+          "line": 3839,
+          "heading": "## Earlier Session Context"
+        },
+        {
+          "line": 3876,
+          "heading": "## Validation"
+        },
+        {
+          "line": 3927,
+          "heading": "## Validation Gaps / Failures"
+        },
+        {
+          "line": 3937,
+          "heading": "## Next Safe Steps"
+        },
+        {
+          "line": 3945,
+          "heading": "## What The Next Agent Should Do"
+        },
+        {
+          "line": 3971,
+          "heading": "## What The Next Agent Must Not Do"
+        },
+        {
+          "line": 3984,
+          "heading": "## Verification Required Before Further Changes"
+        },
+        {
+          "line": 4004,
+          "heading": "## Verification Status From This Session"
+        },
+        {
+          "line": 4013,
+          "heading": "## Session Metadata"
+        },
+        {
+          "line": 4056,
+          "heading": "## 2026-04-21 Current Handoff"
+        },
+        {
+          "line": 5215,
+          "heading": "# 2026-07-14 Default Codex agent selection"
+        },
+        {
+          "line": 5238,
+          "heading": "# 2026-07-15 Default Codex precedence correction"
+        },
+        {
+          "line": 5252,
+          "heading": "# Current Handoff"
+        },
+        {
+          "line": 5345,
+          "heading": "# 2026-08-13 Local workspace project-filter repair"
+        },
+        {
+          "line": 5381,
+          "heading": "# 2026-08-29 Disk Capacity Lifecycle Prepared"
+        },
+        {
+          "line": 5412,
+          "heading": "# 2026-08-29 Colored Kanban workspaces promotion"
+        },
+        {
+          "line": 5420,
+          "heading": "# Latest: V2 Returned To Green, Readiness Withdrawn"
+        },
+        {
+          "line": 5429,
+          "heading": "## Scheduled resume history \u2014 September 30"
+        },
+        {
+          "line": 5438,
+          "heading": "## October 9 frontend inclusion handoff"
+        },
+        {
+          "line": 5450,
+          "heading": "## Retained feature-owner delivery history"
+        },
+        {
+          "line": 5452,
+          "heading": "## October 13 PR246 legacy rollback correction"
+        },
+        {
+          "line": 5466,
+          "heading": "## October 13 PR246 observation-loss correction"
+        },
+        {
+          "line": 5483,
+          "heading": "## October13 automatic-sync implementation pickup"
+        },
+        {
+          "line": 5512,
+          "heading": "## October 13 large native-history verification repair \u2014 validated draft"
+        },
+        {
+          "line": 5537,
+          "heading": "## October11 startup provenance and executable monitor ordering"
+        },
+        {
+          "line": 5579,
+          "heading": "## October11 approved one-restart bootstrap and receipt lifecycle"
+        },
+        {
+          "line": 5598,
+          "heading": "## October11 remaining review corrections"
+        },
+        {
+          "line": 5616,
+          "heading": "## October11 corrected feature review boundary"
+        },
+        {
+          "line": 5637,
+          "heading": "## October11 independent review corrections in progress"
+        },
+        {
+          "line": 5650,
+          "heading": "## October11: tested original-worker capability awaits release ownership"
+        },
+        {
+          "line": 5680,
+          "heading": "## October10: tested same-UID recovery; matching publication required"
+        },
+        {
+          "line": 5703,
+          "heading": "## October10: original conversation native-final recovery, isolated"
+        },
+        {
+          "line": 5707,
+          "heading": "## October 10: bounded capture/consent pair \u2014 preparation only"
+        },
+        {
+          "line": 5718,
+          "heading": "## October 8 authorized safe restart \u2014 preparing, not ready"
+        },
+        {
+          "line": 5729,
+          "heading": "# October 8: Phone frontend deployed"
+        },
+        {
+          "line": 5761,
+          "heading": "# October 8: Revised phone UI for review"
+        },
+        {
+          "line": 5786,
+          "heading": "## October7 historical-log and CI compatibility repair \u2014 isolated"
+        },
+        {
+          "line": 5798,
+          "heading": "## October7 conditional review candidate repair"
+        },
+        {
+          "line": 5806,
+          "heading": "# October 7 Combined Release Preparation"
+        },
+        {
+          "line": 5816,
+          "heading": "# PR147 bounded stop-response reliability"
+        },
+        {
+          "line": 5837,
+          "heading": "# October 6: Scheduled native first run \u2014 tested draft source"
+        },
+        {
+          "line": 5863,
+          "heading": "# October 7: correct the incomplete no-restart boundary"
+        },
+        {
+          "line": 5928,
+          "heading": "# October 7: AutoSwitch current-step risk correction"
+        },
+        {
+          "line": 5963,
+          "heading": "# October 5: AutoSwitch reference-step and classifier startup correction"
+        },
+        {
+          "line": 5982,
+          "heading": "## October 8 targeted recovery investigation \u2014 partial recovery verified"
+        },
+        {
+          "line": 6002,
+          "heading": "## October 8 recovery evidence correction \u2014 sign-off withheld"
+        },
+        {
+          "line": 6027,
+          "heading": "## Earlier repair acceptance (source review and later evidence review now recorded)"
+        },
+        {
+          "line": 6037,
+          "heading": "## October 8 isolated prevention and recovery audit"
+        },
+        {
+          "line": 6056,
+          "heading": "# October 8: PR223 P1 preservation review corrections"
+        },
+        {
+          "line": 6097,
+          "heading": "# October 8: Automatic turn Git preservation \u2014 development only"
+        },
+        {
+          "line": 6147,
+          "heading": "# October 8: nested redaction-only context (PR225 P2)"
+        },
+        {
+          "line": 6172,
+          "heading": "# October 8: P1 consent review correction (PR225)"
+        },
+        {
+          "line": 6213,
+          "heading": "# October 8: MCP approval bridge development"
+        },
+        {
+          "line": 6263,
+          "heading": "# October 5: AutoSwitch reloadable module"
+        },
+        {
+          "line": 6292,
+          "heading": "# October 4: AutoSwitch risk and diagnostic-phase correction"
+        },
+        {
+          "line": 6305,
+          "heading": "# October 3 Restart Candidate"
+        },
+        {
+          "line": 6313,
+          "heading": "## October 3: AutoSwitch staging integration"
+        },
+        {
+          "line": 6337,
+          "heading": "## October 2: Workspace Attention Correction"
+        },
+        {
+          "line": 6351,
+          "heading": "## AutoSwitch release compatibility (2026-10-01)"
+        },
+        {
+          "line": 6371,
+          "heading": "## AutoSwitch scope and savings correction (2026-10-01)"
+        },
+        {
+          "line": 6390,
+          "heading": "## AutoSwitch no-restart testing workaround live (2026-10-01)"
+        },
+        {
+          "line": 6418,
+          "heading": "## TF::Build Shadow continuity repair (2026-10-01)"
+        },
+        {
+          "line": 6438,
+          "heading": "## AutoSwitch V2 staging integration (2026-10-01)"
+        },
+        {
+          "line": 6447,
+          "heading": "## Native child acceptance and capacity correction (2026-10-01)"
+        },
+        {
+          "line": 6473,
+          "heading": "## Semantic fallback continuation (2026-10-01)"
+        },
+        {
+          "line": 6492,
+          "heading": "## Natural-language triage continuation"
+        },
+        {
+          "line": 6503,
+          "heading": "## V2 resumed after V1 staging integration"
+        },
+        {
+          "line": 6511,
+          "heading": "## Automatic assessment / qualified-pair router"
+        },
+        {
+          "line": 6545,
+          "heading": "## Accepted V1 integration history (superseded gates retained below)"
+        },
+        {
+          "line": 6547,
+          "heading": "## October 1: Preparation Integration Accepted"
+        },
+        {
+          "line": 6565,
+          "heading": "## October 1: Faster Pre-Cutover Preparation"
+        },
+        {
+          "line": 6584,
+          "heading": "## AutoSwitch V1 staging-only release"
+        },
+        {
+          "line": 6598,
+          "heading": "## September 30: CU producer recovered and native acceptance passed"
+        },
+        {
+          "line": 6630,
+          "heading": "## September 28 \u2014 two concurrent selected capacity goals"
+        },
+        {
+          "line": 6638,
+          "heading": "## September23: Ownership Handover Implemented, Not Deployed"
+        },
+        {
+          "line": 6664,
+          "heading": "## September23: Capacity Lock Readiness Fix"
+        },
+        {
+          "line": 6683,
+          "heading": "## September 21: PR117 staging reconciliation"
+        },
+        {
+          "line": 6700,
+          "heading": "## September 15: model selector regression"
+        },
+        {
+          "line": 6710,
+          "heading": "# September 21: VK::Weird Message"
+        },
+        {
+          "line": 6750,
+          "heading": "## September 21: consolidated capacity repair \u2014 validated"
+        },
+        {
+          "line": 6757,
+          "heading": "## September 21: overnight start failure fix"
+        },
+        {
+          "line": 6776,
+          "heading": "## September 20: chat-scroll frontend deployed"
+        },
+        {
+          "line": 6787,
+          "heading": "## September 20: frontend deployment preparation"
+        },
+        {
+          "line": 6802,
+          "heading": "## September 20: VK::Chat Scroll Position"
+        },
+        {
+          "line": 6826,
+          "heading": "## September 15: capacity deployment configuration in VK staging"
+        },
+        {
+          "line": 6835,
+          "heading": "## September 14: VK Errors 2"
+        },
+        {
+          "line": 6844,
+          "heading": "## September 14: selected-only capacity fault isolation"
+        },
+        {
+          "line": 6861,
+          "heading": "## PR112 review repairs \u2014 September 14"
+        },
+        {
+          "line": 6876,
+          "heading": "## September 14 Review: Changes Required Before Merge And Deployment"
+        },
+        {
+          "line": 6884,
+          "heading": "## Completion audit \u2014 implementation and release handoff scope"
+        },
+        {
+          "line": 6902,
+          "heading": "## September 14 \u2014 final release acceptance"
+        },
+        {
+          "line": 6943,
+          "heading": "## Current delivery continuation"
+        },
+        {
+          "line": 6949,
+          "heading": "## Scheduled build directories \u2014 September 14"
+        },
+        {
+          "line": 6974,
+          "heading": "## September 14 enforcement and reset acceptance"
+        },
+        {
+          "line": 7021,
+          "heading": "## September 14 CU scheduler and HTTP acceptance checkpoint"
+        },
+        {
+          "line": 7045,
+          "heading": "# HANDOFF.md"
+        },
+        {
+          "line": 7047,
+          "heading": "## September 14: Durable controller and CU bridge progress"
+        },
+        {
+          "line": 7064,
+          "heading": "## September 14: Unused-capacity enforcement in progress"
+        },
+        {
+          "line": 7080,
+          "heading": "## September 13: Long-thread staging merge requested"
+        },
+        {
+          "line": 7094,
+          "heading": "## September 12: Long-thread pagination source preparation"
+        },
+        {
+          "line": 7119,
+          "heading": "## September 12: Blue Live, Original Green Paused"
+        },
+        {
+          "line": 7129,
+          "heading": "## September 12 Paused-Green Work In Progress"
+        },
+        {
+          "line": 7139,
+          "heading": "## Current Preparation: Running Standby And Recovery Query"
+        },
+        {
+          "line": 7151,
+          "heading": "## September 11 Online Readiness Evidence"
+        },
+        {
+          "line": 7165,
+          "heading": "## Latest Authority: Online Preparation Only"
+        },
+        {
+          "line": 7195,
+          "heading": "## Attachment Cleanup Cutover Guard"
+        },
+        {
+          "line": 7210,
+          "heading": "## Staging management deployment pickup"
+        },
+        {
+          "line": 7224,
+          "heading": "## Recovery-first revision validated"
+        },
+        {
+          "line": 7228,
+          "heading": "## 2026-09-11 Autonomous Codex Goals \u2014 Feature Prepared"
+        },
+        {
+          "line": 7274,
+          "heading": "## 2026-09-01 Active Codex Correction Regression"
+        },
+        {
+          "line": 7286,
+          "heading": "## 2026-08-31 Codex Resume Unknown Item Compatibility"
+        },
+        {
+          "line": 7298,
+          "heading": "## 2026-08-31 Older Message Reset Positioning"
+        },
+        {
+          "line": 7311,
+          "heading": "## 2026-08-31 Durable UI Preferences Prepared \u2014 Restart Agent Handoff"
+        },
+        {
+          "line": 7331,
+          "heading": "## 2026-08-31 Saved Messages Compatibility Live"
+        },
+        {
+          "line": 7358,
+          "heading": "## 2026-08-31 Workspace Color Refresh Persistence Live"
+        },
+        {
+          "line": 7377,
+          "heading": "## 2026-08-31 Left-Nav Project Reorder Follow-up"
+        },
+        {
+          "line": 7397,
+          "heading": "## 2026-08-31 Issue Attachment Routing Frontend Live"
+        },
+        {
+          "line": 7449,
+          "heading": "## 2026-08-31 Attachment and UI Preference Corrections"
+        },
+        {
+          "line": 7462,
+          "heading": "## 2026-08-30 Light-Theme Workspace Tint Follow-up"
+        },
+        {
+          "line": 7487,
+          "heading": "## 2026-08-29 Colored Kanban Workspaces Live"
+        },
+        {
+          "line": 7506,
+          "heading": "## 2026-08-29 Agent Preview Guide"
+        },
+        {
+          "line": 7519,
+          "heading": "## 2026-08-29 Local Kanban Tag Persistence Follow-up"
+        },
+        {
+          "line": 7536,
+          "heading": "## Current task"
+        },
+        {
+          "line": 7546,
+          "heading": "## 2026-08-28 Restart Lessons"
+        },
+        {
+          "line": 7578,
+          "heading": "## 2026-08-04 Compact Summary Metadata Preview"
+        },
+        {
+          "line": 7623,
+          "heading": "## 2026-08-26 Terminal Workspace Archive Fix Staged"
+        },
+        {
+          "line": 7676,
+          "heading": "## 2026-07-13 Staging Backfill Preview Updated"
+        },
+        {
+          "line": 7692,
+          "heading": "## 2026-06-26 Multi-Line Rich Clipboard Paste Hotfix Live"
+        },
+        {
+          "line": 7716,
+          "heading": "## 2026-06-21 Project Sidebar Flyout / Customization Prepared"
+        },
+        {
+          "line": 7741,
+          "heading": "## 2026-06-18 Branch Base Search Hotfix Live"
+        },
+        {
+          "line": 7766,
+          "heading": "## 2026-06-12 Restart Candidate Refreshed With Issue Flag"
+        },
+        {
+          "line": 7806,
+          "heading": "## 2026-06-12 Issue Needs-Review Flag Prepared"
+        },
+        {
+          "line": 7825,
+          "heading": "## 2026-06-11 Restart Candidate Built / Targeted Backup Complete"
+        },
+        {
+          "line": 7873,
+          "heading": "## 2026-06-11 Codex Capacity Queue Fix Prepared"
+        },
+        {
+          "line": 7899,
+          "heading": "## 2026-06-11 Kanban Card Reorder Fix Prepared"
+        },
+        {
+          "line": 7919,
+          "heading": "## 2026-06-08 Plan-to-Auto Mode Persistence Hotfix"
+        },
+        {
+          "line": 7955,
+          "heading": "## 2026-06-04 Multi-Line Paste Hotfix"
+        },
+        {
+          "line": 7983,
+          "heading": "## 2026-06-03 Mobile Archived-Projects Nav Hotfix"
+        },
+        {
+          "line": 8009,
+          "heading": "## 2026-06-03 Duplicate Project Cleanup / Pending Source Fix"
+        },
+        {
+          "line": 8041,
+          "heading": "## 2026-06-03 Restart Recovery / Queue / Backup Deployment"
+        },
+        {
+          "line": 8122,
+          "heading": "## 2026-06-02 Codex Active-Agent Limit Regression Repair"
+        },
+        {
+          "line": 8145,
+          "heading": "## 2026-06-01 FR::ORC::Generative Programming Codex Auth Repair"
+        },
+        {
+          "line": 8160,
+          "heading": "## 2026-05-30 Canonical Unread / Ntfy Redeploy Correction"
+        },
+        {
+          "line": 8186,
+          "heading": "## 2026-05-28 VK Agent Deployment Docs"
+        },
+        {
+          "line": 8200,
+          "heading": "## 2026-05-14 Workspace Unpin Repair"
+        },
+        {
+          "line": 8234,
+          "heading": "## 2026-05-13 Default Project Columns Repair"
+        },
+        {
+          "line": 8273,
+          "heading": "## 2026-05-13 Live Regression Smoke Script"
+        },
+        {
+          "line": 8287,
+          "heading": "## 2026-05-13 Agent Chat Image Sharing"
+        },
+        {
+          "line": 8320,
+          "heading": "## 2026-05-13 Queue Regression Repaired In Source"
+        },
+        {
+          "line": 8341,
+          "heading": "## 2026-05-13 Regression Prevention Gate"
+        },
+        {
+          "line": 8360,
+          "heading": "## 2026-05-13 Issue Workspace Archive + Project Repo Defaults"
+        },
+        {
+          "line": 8382,
+          "heading": "## 2026-05-13 Issue View Workspace Rename"
+        },
+        {
+          "line": 8393,
+          "heading": "## 2026-05-13 Scaleway CLI / SSH Setup"
+        },
+        {
+          "line": 8420,
+          "heading": "## 2026-05-11 Manual Workspace Unread Marker"
+        },
+        {
+          "line": 8442,
+          "heading": "## 2026-05-11 Mobile Workspace Chat Autofocus"
+        },
+        {
+          "line": 8450,
+          "heading": "## 2026-05-12 Workspace Actions / Spin-Off Repair"
+        },
+        {
+          "line": 8479,
+          "heading": "## 2026-05-12 Issue Status Selector Repair"
+        },
+        {
+          "line": 8500,
+          "heading": "## 2026-05-11 Regression Lockdown / Deployment Queue"
+        },
+        {
+          "line": 8525,
+          "heading": "## 2026-05-11 Collapsed Kanban Count Regression"
+        },
+        {
+          "line": 8535,
+          "heading": "## 2026-05-10 Android Parity Stale Sub-Agent Count Repair"
+        },
+        {
+          "line": 8572,
+          "heading": "## 2026-05-10 Mobile Collapsed Kanban Column Repair"
+        },
+        {
+          "line": 8587,
+          "heading": "## 2026-05-10 Sub-Agent Preservation Repair"
+        },
+        {
+          "line": 8609,
+          "heading": "## 2026-05-10 Left Nav Archive Button Hotfix"
+        },
+        {
+          "line": 8622,
+          "heading": "## 2026-05-10 Needs-Review vs Running Icon Repair"
+        },
+        {
+          "line": 8631,
+          "heading": "## 2026-05-09 Sub-Agent Sidebar Indicator Repair"
+        },
+        {
+          "line": 8651,
+          "heading": "## 2026-05-08 opNVLP VK Project Setup"
+        },
+        {
+          "line": 8659,
+          "heading": "## 2026-05-08 FL Needs-Review Bubble Repair"
+        },
+        {
+          "line": 8680,
+          "heading": "## 2026-05-07 Disk Space Regression"
+        },
+        {
+          "line": 8696,
+          "heading": "## 2026-05-07 Hyrox Column Repair"
+        },
+        {
+          "line": 8709,
+          "heading": "## 2026-05-06 Dysfunctional Feature Audit"
+        },
+        {
+          "line": 8736,
+          "heading": "## Repair Plan"
+        },
+        {
+          "line": 8745,
+          "heading": "## 2026-05-06 Attachment And Space Findings"
+        },
+        {
+          "line": 8797,
+          "heading": "## What Changed This Session"
+        },
+        {
+          "line": 8937,
+          "heading": "## Earlier Session Context"
+        },
+        {
+          "line": 8974,
+          "heading": "## Validation"
+        },
+        {
+          "line": 9025,
+          "heading": "## Validation Gaps / Failures"
+        },
+        {
+          "line": 9035,
+          "heading": "## Next Safe Steps"
+        },
+        {
+          "line": 9043,
+          "heading": "## What The Next Agent Should Do"
+        },
+        {
+          "line": 9069,
+          "heading": "## What The Next Agent Must Not Do"
+        },
+        {
+          "line": 9082,
+          "heading": "## Verification Required Before Further Changes"
+        },
+        {
+          "line": 9102,
+          "heading": "## Verification Status From This Session"
+        },
+        {
+          "line": 9111,
+          "heading": "## Session Metadata"
+        },
+        {
+          "line": 9154,
+          "heading": "## 2026-04-21 Current Handoff"
+        },
+        {
+          "line": 10313,
+          "heading": "# 2026-07-14 Default Codex agent selection"
+        },
+        {
+          "line": 10336,
+          "heading": "# 2026-07-15 Default Codex precedence correction"
+        },
+        {
+          "line": 10350,
+          "heading": "# Current Handoff"
+        },
+        {
+          "line": 10443,
+          "heading": "# 2026-08-13 Local workspace project-filter repair"
+        },
+        {
+          "line": 10479,
+          "heading": "# 2026-08-29 Disk Capacity Lifecycle Prepared"
+        },
+        {
+          "line": 10510,
+          "heading": "# 2026-08-29 Colored Kanban workspaces promotion"
+        },
+        {
+          "line": 10518,
+          "heading": "# Latest: V2 Returned To Green, Readiness Withdrawn"
+        },
+        {
+          "line": 10527,
+          "heading": "## Scheduled resume history \u2014 September 30"
+        },
+        {
+          "line": 10536,
+          "heading": "## October 9 frontend inclusion handoff"
+        },
+        {
+          "line": 10547,
+          "heading": "# Restart queue wakeup follow-up"
+        }
+      ]
+    }
+  ]
+}

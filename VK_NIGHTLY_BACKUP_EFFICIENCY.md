@@ -18,7 +18,30 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
-## October17 corrected r3 launch — 10:42UTC
+## October17 result collection and current storage blocker — 12:25UTC
+
+R3 ended10:50:10UTC, guard_aborted after466s: consecutive samples counted8
+coding entries against maximum7. Only245-byte descriptor sealed, no SQLite
+payload or full capacity result. Staging released the window10:43:39UTC;
+its12:04 readiness still has private build/acceptance pending and no heavy phase.
+
+Current lane count3 passes, but Sidebar activation11:39 changed the frontend
+and Dot-current target. A derived plan adds both canonical current release roots
+while preserving all old roots/exclusions;94 declared roots,2120 owner-manifest
+files verified and4109 runtime files pinned. Source/runtime/health validation
+passes; the sealed92-root census, old plans/packages and main packet remain.
+
+R4 briefly started12:24:16UTC then was stopped12:24:58UTC before meter/capture
+creation after SSD free was found below1GiB (942,870,528bytes). Full temporary
+index/ledger allocation is unverified; all old data remain. No heavy retry or
+restore is queued. Restoring previous8GiB working headroom needs7,647,064,064
+additional bytes; this is a planning allowance, not a measured minimum. Current
+B free15,338,422,272bytes is not proof of backup/restore fit. Coordinate safe
+working capacity with the storage owner, then fresh admission and Staging window.
+R3 terminal and r4 binding/storage receipts are retained; no completed fixture
+work needs repeating. Production deployment and schedule remain unverified.
+
+## Historical corrected r3 launch — 10:42UTC
 
 The10:09:40–10:39:40UTC hold elapsed. Staging's running turn received active
 window coordination (HTTP200/empty, no new execution); no explicit release ack

@@ -1,4 +1,14 @@
-# Nightly r3 capacity running — October17 10:42UTC
+# Nightly capacity storage blocker — October17 12:25UTC
+
+R3 guard-aborted10:50UTC because8 coding entries exceeded7; no complete capacity
+result. Lane count is now3. Current Sidebar/Dot activation has been reconciled
+into a verified derived94-root plan, preserving sealed originals. Only0.88GiB
+SSD workspace remains, so r4 was stopped before meter/capture creation. No heavy
+Nightly unit/auto retry remains; Staging's window is released. Restoring previous
+8GiB planning headroom needs7.12GiB more, not a measured minimum. Existing recovery
+data remain preserved; complete backup fit/restore/deployment/schedule are pending.
+
+# Historical Nightly r3 capacity launch — ended10:50UTC
 
 After the bounded Staging hold expired and fresh admission passed, the verified
 complete package launched one detached vk-nightly-capacity-r3-receipts.service,

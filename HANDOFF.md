@@ -1,4 +1,29 @@
-# Corrected r3 capacity RUNNING — October17 10:42UTC
+# Capacity progress collection — October17 12:25UTC
+
+R3 stopped10:50:10UTC after466s: two samples counted8 active coding entries,
+exceeding unchanged maximum7. Only245-byte descriptor sealed; no SQLite payload
+or complete size result. Its process is quiescent and all old evidence retained.
+Staging explicitly released10:43:39UTC; latest12:04 readiness confirms no active
+compiler/acceptance and private candidate/rollback acceptance remains pending.
+
+Fresh lane count3 passes, but Sidebar activation11:39 changed served frontend
+and Dot-current target. New capacity-r4-sidebar-binding derived plan retains old
+sources and adds both canonical current release roots (94 declared roots).
+All2120 owner-manifest files and4109 runtime pins validate; source/health admission
+passes. Original sealed plan/census/package/runtime packet are unchanged.
+
+Latest SSD free942,870,528bytes (0.88GiB). A short r4 start12:24:16UTC was stopped
+12:24:58UTC before meter/capture creation because full temporary index/ledger
+allocation is unverified. No heavy Nightly job or auto retry remains. Window
+released to Staging. To restore the prior8GiB working allowance requires
+7,647,064,064more bytes (7.12GiB); this is planning headroom, not a measured
+minimum. Ask storage owner for safe verified capacity or another working volume;
+no recovery deletion is approved. B last free15,338,422,272bytes; full backup fit,
+whole-plan restore, deployment and schedule remain unverified. Collect r3 terminal
+and r4 BINDING_PREFLIGHT.safe.json/STORAGE_BLOCKER.safe.json, then recheck fresh
+admission and Staging phase before resuming. Do not repeat completed fixtures.
+
+# Historical corrected r3 launch — guard-aborted10:50UTC
 
 The bounded Staging hold expired10:39:40UTC. At10:40–10:42 no heavy host
 compiler/acceptance unit was observed; fresh original admission passed.

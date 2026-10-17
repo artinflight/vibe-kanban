@@ -1,3 +1,4 @@
+pub mod checkpoint_admission;
 pub mod error_logging;
 pub mod model_loaders;
 pub mod origin;

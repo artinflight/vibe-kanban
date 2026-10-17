@@ -1,0 +1,61 @@
+{
+  "observations": [
+    {
+      "repository": "programming",
+      "original_roots_found": 0,
+      "original_graph_roots_verified": 0,
+      "reachable_objects": 0,
+      "hash_verified_objects": 2072,
+      "object_hash_failures": [],
+      "fsck_exit": 0,
+      "fsck_stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "fsck_stderr_sha256": "f578092eecac88b02f09898cd5a682c30f5e74357bd6af3b686da1977e9fe574"
+    },
+    {
+      "repository": "caspian-app",
+      "original_roots_found": 3,
+      "original_graph_roots_verified": 3,
+      "reachable_objects": 7234,
+      "hash_verified_objects": 7526,
+      "object_hash_failures": [],
+      "fsck_exit": 0,
+      "fsck_stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "fsck_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "repository": "opNVLP",
+      "original_roots_found": 24,
+      "original_graph_roots_verified": 24,
+      "reachable_objects": 8181,
+      "hash_verified_objects": 8465,
+      "object_hash_failures": [],
+      "fsck_exit": 0,
+      "fsck_stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "fsck_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "repository": "hyroxready-app",
+      "original_roots_found": 19,
+      "original_graph_roots_verified": 16,
+      "reachable_objects": 36933,
+      "hash_verified_objects": 43167,
+      "object_hash_failures": [],
+      "fsck_exit": 2,
+      "fsck_stdout_sha256": "d4d53f6dbf96c188c07dd17217b1931037e705f9809ef0cce6e5390cba31e5b7",
+      "fsck_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "repository": "vibe-kanban",
+      "original_roots_found": 86,
+      "original_graph_roots_verified": 86,
+      "reachable_objects": 6246,
+      "hash_verified_objects": 11591,
+      "object_hash_failures": [],
+      "fsck_exit": 0,
+      "fsck_stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "fsck_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "final_verification_private_directory": "B:\\vk-backups\\vk-targeted-recovery-investigation-20261008\\september-original-object-stores-20261008T174030Z\\verification-20261008T184018536500Z",
+  "scope": "VK traversals stop at authenticated original 20260911 shallow boundary. Other per-root walks include all reachable parents/trees/blobs. Global fsck may fail on additional incomplete objects and is never presented as globally passing."
+}

@@ -449,6 +449,7 @@ export const ConversationList = forwardRef<
     isLoadingHistory,
     hasMoreHistory,
     historyError,
+    historyErrorDetail,
     loadMoreHistory,
   } = useConversationHistory({
     attempt,
@@ -918,6 +919,7 @@ export const ConversationList = forwardRef<
     loadOlderHistory,
     loading,
     historyError,
+    historyErrorDetail,
   ]);
 
   return (
@@ -954,7 +956,8 @@ export const ConversationList = forwardRef<
                 <div className="flex flex-col items-center gap-2 px-double py-3">
                   {historyError && (
                     <span role="alert" className="text-sm text-error">
-                      {t('conversation.historyLoadFailed')}
+                      {historyErrorDetail ??
+                        t('conversation.historyLoadFailed')}
                     </span>
                   )}
                   <button

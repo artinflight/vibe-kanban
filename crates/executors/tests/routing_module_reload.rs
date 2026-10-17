@@ -57,7 +57,7 @@ fn release(root: &Path, name: &str, worker: &Path, script: Option<&str>) {
     fs::write(
         dir.join("manifest.json"),
         serde_json::to_vec(&routing_module::Manifest {
-            protocol: 1,
+            protocol: routing_module::PROTOCOL,
             version: name.into(),
             worker_sha256: hash("worker"),
             models_sha256: hash("models.json"),
@@ -118,6 +118,86 @@ fn routed(policy: &RoutingPolicy, prompt: &str) -> executors::actions::ExecutorA
     action
 }
 
+fn captured_step(
+    root: &Path,
+    policy: &RoutingPolicy,
+    prompt: &str,
+    class: serde_json::Value,
+) -> routing_module::Reply {
+    let mut request = routing_module::Request {
+        protocol: routing_module::PROTOCOL,
+        stage: "before".into(),
+        prompt: prompt.into(),
+        previous_envelope: Some("protected".into()),
+        completed_reply: Some("The design choice is settled; update the existing notes.".into()),
+        failed: false,
+        policy: policy.clone(),
+        seed: (&executors::routing_assessment::assess(prompt)).into(),
+        context: executors::routing_triage::repository_context(prompt, Some(root)),
+        semantic: None,
+    };
+    request.seed = routing_module::verify_active_case(&request)
+        .unwrap()
+        .assessment;
+    request.stage = "after".into();
+    request.semantic = Some(class);
+    routing_module::verify_active_case(&request).unwrap()
+}
+
+fn replay_completed_assessments(root: &Path, policy: &RoutingPolicy) {
+    let Some(path) = std::env::var_os("VK_ROUTING_REPLAY_FILE") else {
+        return;
+    };
+    let replay: serde_json::Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+    let availability: executors::routing::Availability =
+        serde_json::from_value(replay["availability"].clone()).unwrap();
+    let models: Vec<executors::routing::ModelPolicy> =
+        serde_json::from_value(replay["models"].clone()).unwrap();
+    for case in replay["cases"].as_array().unwrap() {
+        let prompt = case["prompt"].as_str().unwrap();
+        let mut request = routing_module::Request {
+            protocol: routing_module::PROTOCOL,
+            stage: "before".into(),
+            prompt: prompt.into(),
+            previous_envelope: case["previous_envelope"].as_str().map(str::to_owned),
+            completed_reply: case["completed_reply"].as_str().map(str::to_owned),
+            failed: false,
+            policy: policy.clone(),
+            seed: (&executors::routing_assessment::assess(prompt)).into(),
+            context: executors::routing_triage::repository_context(prompt, Some(root)),
+            semantic: None,
+        };
+        request.seed = routing_module::verify_active_case(&request)
+            .unwrap()
+            .assessment;
+        request.stage = "after".into();
+        request.semantic = case.get("semantic").filter(|c| !c.is_null()).cloned();
+        let result = routing_module::verify_active_case(&request)
+            .unwrap()
+            .assessment;
+        assert_eq!(result.envelope, case["expected_envelope"].as_str().unwrap());
+        let mut shadow = policy.clone();
+        shadow.mode = RoutingMode::Shadow;
+        let chosen = executors::routing::choose_assessed(
+            &shadow,
+            result.floor,
+            &result.envelope,
+            &models,
+            &availability,
+            availability.observed_at,
+        )
+        .unwrap();
+        assert_eq!(chosen.0, case["expected_shadow_model"].as_str().unwrap());
+        println!(
+            "captured execution {} -> {}; recommendation={:?}; same pid={}",
+            case["execution"],
+            result.envelope,
+            chosen,
+            std::process::id()
+        );
+    }
+}
+
 #[test]
 #[ignore = "requires mounted SSD, strip and permitted bubblewrap user namespaces; zero inference"]
 fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
@@ -166,13 +246,23 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
     .unwrap();
     let worker = Path::new(env!("CARGO_BIN_EXE_vk-routing-module"));
     release(&root, "a", worker, None);
+    // Reproduce the old biases in replaceable code, then load the corrected
+    // real Rust worker into the SAME running backend. No backend rebuild/restart.
+    release(
+        &root,
+        "legacy_bias",
+        worker,
+        Some(
+            "#!/usr/bin/python3\nimport json,sys\nr=json.load(sys.stdin)\na=r['seed']\nif 'production' in r['prompt'] or 'deploy' in r['prompt']:\n a['envelope']='protected';a['floor']='frontier';a['triage']['risk'].append('explicit_high_impact_intent')\nif r['stage']=='after' and r['previous_envelope']=='protected':\n a['envelope']='protected';a['floor']='frontier';a['evidence']='retained_session_qualification'\nprint(json.dumps({'protocol':2,'assessment':a,'needs_semantic':False}))\n",
+        ),
+    );
     // Different worker CODE, not only a changed prompt or preference rank.
     release(
         &root,
         "b",
         worker,
         Some(
-            "#!/usr/bin/python3\nimport json,sys\nr=json.load(sys.stdin)\na=r['seed']\nif a['envelope']=='mechanical':\n a['envelope']='bounded'\n a['evidence']='updated_classification'\nprint(json.dumps({'protocol':1,'assessment':a,'needs_semantic':False}))\n",
+            "#!/usr/bin/python3\nimport json,sys\nr=json.load(sys.stdin)\na=r['seed']\nif a['envelope']=='mechanical':\n a['envelope']='bounded'\n a['evidence']='updated_classification'\nprint(json.dumps({'protocol':2,'assessment':a,'needs_semantic':False}))\n",
         ),
     );
     release(
@@ -188,6 +278,20 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
         Some("#!/usr/bin/python3\nprint('x'*70000)\n"),
     );
     release(&root, "corrupt", worker, None);
+    release(&root, "legacy_protocol", worker, None);
+    let legacy_manifest = root.join("legacy_protocol/manifest.json");
+    let mut manifest: serde_json::Value =
+        serde_json::from_slice(&fs::read(&legacy_manifest).unwrap()).unwrap();
+    manifest["protocol"] = 1.into();
+    fs::write(legacy_manifest, serde_json::to_vec(&manifest).unwrap()).unwrap();
+    release(
+        &root,
+        "unsafe_policy",
+        worker,
+        Some(
+            "#!/usr/bin/python3\nimport json,sys\nr=json.load(sys.stdin)\na=r['seed']\na['envelope']='mechanical';a['floor']='routine';a['triage']['risk']=[]\nprint(json.dumps({'protocol':2,'assessment':a,'needs_semantic':False}))\n",
+        ),
+    );
     fs::write(root.join("corrupt/models.json"), "[]").unwrap();
     publish(&root, "a");
     let policy = RoutingPolicy {
@@ -199,6 +303,73 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
     let sentinel = root.join("dirty-working-state");
     fs::write(&sentinel, "preserve me").unwrap();
     let pid = std::process::id();
+    let caution = "Fix spelling typos in README.md. No production deployment.";
+    let prompt =
+        "Record the settled choice in the existing notes; do not redesign the architecture";
+    let class = serde_json::json!({"envelope":"bounded","scope_relation":"bounded_step","scope":"localized",
+        "novelty":"established","ambiguity":"low","horizon":"short","validation":"text_comparison",
+        "risks":[],"uncertainty":"low","inspection_needed":false,"reason":"Record a settled choice in existing notes."});
+    publish(&root, "legacy_bias");
+    let old_scope = Scope::for_path(&root.join("current"));
+    assert_eq!(assess(&policy, caution).floor, CapabilityFloor::Frontier);
+    assert_eq!(
+        captured_step(&root, &policy, prompt, class.clone())
+            .assessment
+            .floor,
+        CapabilityFloor::Frontier
+    );
+    let old_action = routed(&policy, caution);
+    assert_eq!(
+        old_action
+            .routing_decision
+            .unwrap()
+            .selected_model
+            .as_deref(),
+        Some("gpt-6-astra")
+    );
+    publish(&root, "a");
+    assert_eq!(assess(&policy, caution).floor, CapabilityFloor::Frontier); // admitted snapshot pinned
+    drop(old_scope);
+    {
+        let _scope = Scope::for_path(&root.join("current"));
+        assert_eq!(assess(&policy, caution).floor, CapabilityFloor::Routine);
+        let corrected = captured_step(&root, &policy, prompt, class);
+        assert_eq!(corrected.assessment.floor, CapabilityFloor::Routine);
+        assert!(
+            corrected
+                .assessment
+                .triage
+                .evidence
+                .contains(&"surrounding_assignment:protected".into())
+        );
+        let corrected_action = routed(&policy, caution);
+        assert_eq!(
+            corrected_action
+                .routing_decision
+                .unwrap()
+                .selected_model
+                .as_deref(),
+            Some("gpt-5.6-luna")
+        );
+        let continued = routing_module::assess(
+            "continue",
+            None,
+            Some("Notes updated."),
+            Some("protected"),
+            Some(&root),
+            false,
+            &policy,
+            false,
+            serde_json::Value::Null,
+        )
+        .0;
+        assert_eq!(continued.floor, CapabilityFloor::Frontier);
+        replay_completed_assessments(&root, &policy);
+    }
+    assert_eq!(std::process::id(), pid);
+    println!(
+        "same pid={pid}: negative deployment interpretation and protected-history policy changed through worker publication; cheap model selection reached admission; generic resume remains protected"
+    );
     let scope_a = Scope::for_path(&root.join("current"));
     let start = Instant::now();
     let first = assess(&policy, "Fix spelling typos in README.md");
@@ -298,8 +469,16 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
             CapabilityFloor::Frontier
         );
     }
-    for bad in ["timeout", "oversize", "corrupt", "missing"] {
+    for bad in [
+        "timeout",
+        "oversize",
+        "corrupt",
+        "legacy_protocol",
+        "unsafe_policy",
+        "missing",
+    ] {
         publish(&root, bad);
+        let update_start = Instant::now();
         let _scope = Scope::for_path(&root.join("current"));
         let a = assess(&policy, "Fix spelling typos in README.md");
         assert_eq!(a.envelope, "bounded");
@@ -309,6 +488,10 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
                 .iter()
                 .any(|e| e == "routing_module_warning:update_rejected")
         );
+        if bad == "timeout" {
+            // The ten-second helper must be terminated, without waiting for it.
+            assert!(update_start.elapsed().as_secs() < 5);
+        }
     }
     publish(&root, "a");
     {
@@ -412,7 +595,6 @@ fn same_process_adopts_code_and_settings_then_rolls_back_safely() {
     }
     assert_eq!(pid, std::process::id());
     assert_eq!(fs::read_to_string(&sentinel).unwrap(), "preserve me");
-    assert!(start.elapsed().as_secs() < 10);
     println!(
         "same pid={pid}; code/prompt reload, pinned in-flight snapshot, last-good timeout/oversize/missing fallback, rollback, hard risk and dirty sentinel passed; elapsed_ms={}",
         start.elapsed().as_millis()

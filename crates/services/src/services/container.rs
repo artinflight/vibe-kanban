@@ -24,6 +24,7 @@ use db::{
         repo::Repo,
         scratch::DraftFollowUpData,
         session::{CreateSession, Session, SessionError},
+        turn_github_sync::TurnGithubSync,
         workspace::{Workspace, WorkspaceError},
         workspace_repo::WorkspaceRepo,
     },
@@ -155,7 +156,7 @@ impl ContainerError {
 }
 
 #[async_trait]
-pub trait ContainerService {
+pub trait ContainerService: Send + Sync {
     fn msg_stores(&self) -> &Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>>;
 
     fn db(&self) -> &DBService;
@@ -180,6 +181,21 @@ pub trait ContainerService {
         &self,
         _session: &Session,
         _data: &DraftFollowUpData,
+    ) -> Result<bool, ContainerError> {
+        Ok(false)
+    }
+
+    /// Explicit steering never selects a replacement execution or starts work.
+    async fn steering_target(&self, _execution_id: Uuid) -> Option<(String, String)> {
+        None
+    }
+
+    async fn steer_bound_turn(
+        &self,
+        _execution_id: Uuid,
+        _thread_id: String,
+        _turn_id: String,
+        _message: String,
     ) -> Result<bool, ContainerError> {
         Ok(false)
     }
@@ -982,6 +998,14 @@ pub trait ContainerService {
             .await?
             .ok_or_else(|| ContainerError::Other(anyhow!("Workspace not found")))?;
 
+        // Keep this guard even with scheduling disabled: a retained obligation
+        // cannot be discarded by rollback, manual reset, or follow-up retry.
+        if TurnGithubSync::has_unobserved(pool, workspace.id).await? {
+            return Err(ContainerError::Other(anyhow!(
+                "Completed-turn observation is unproven; original obligation retained. Reset requires scoped reconciliation."
+            )));
+        }
+
         let repos = WorkspaceRepo::find_repos_for_workspace(pool, workspace.id).await?;
         let repo_states =
             ExecutionProcessRepoState::find_by_execution_process_id(pool, target_process_id)
@@ -1138,7 +1162,7 @@ pub trait ContainerService {
             if matches!(process_status, Some(ExecutionProcessStatus::Running)) {
                 return Some(
                     store
-                        .history_plus_stream_strict()
+                        .history_plus_stream_recoverable()
                         .filter(|msg| {
                             future::ready(matches!(
                                 msg,
@@ -1201,7 +1225,7 @@ pub trait ContainerService {
             if matches!(process_status, Some(ExecutionProcessStatus::Running)) {
                 return Some(
                     store
-                        .history_plus_stream_strict() // BoxStream<Result<LogMsg, io::Error>>
+                        .history_plus_stream_recoverable() // BoxStream<Result<LogMsg, io::Error>>
                         .filter(|msg| future::ready(matches!(msg, Ok(LogMsg::JsonPatch(..)))))
                         .chain(futures::stream::once(async {
                             Ok::<_, std::io::Error>(LogMsg::Finished)
@@ -1379,7 +1403,7 @@ pub trait ContainerService {
         });
 
         let stream = temp_store
-            .history_plus_stream_strict()
+            .history_plus_stream_recoverable()
             .scan(HashSet::<String>::new(), move |sent_paths, msg| {
                 let output_finished = output_finished.clone();
                 future::ready(match msg {
@@ -1504,6 +1528,25 @@ pub trait ContainerService {
         executor_action: &ExecutorAction,
         run_reason: &ExecutionProcessRunReason,
     ) -> Result<ExecutionProcess, ContainerError> {
+        super::admission::run(self.start_execution_admitted(
+            workspace,
+            session,
+            executor_action,
+            run_reason,
+        ))
+        .await
+    }
+
+    async fn start_execution_admitted(
+        &self,
+        workspace: &Workspace,
+        session: &Session,
+        executor_action: &ExecutorAction,
+        run_reason: &ExecutionProcessRunReason,
+    ) -> Result<ExecutionProcess, ContainerError> {
+        super::original_worker::before_start(session.id, executor_action)
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         if matches!(run_reason, ExecutionProcessRunReason::CodingAgent)
             && let Some(error) = codex_execution_limit_error_for_action(executor_action)
         {
@@ -1512,7 +1555,7 @@ pub trait ContainerService {
 
         // Route only here, after queue admission and before persisting the action.
         // A routing failure cannot reset Git or create another continuation loop.
-        let mut resolved_action = executor_action.clone();
+        let mut resolved_action = super::original_worker::routing_action(executor_action);
         if executors::routing::config(&resolved_action)
             .and_then(|c| c.routing.as_ref())
             .is_some_and(|p| p.mode != executors::routing::RoutingMode::Manual)
@@ -1560,6 +1603,8 @@ pub trait ContainerService {
         } else {
             resolved_action.routing_decision = None;
         }
+        super::original_worker::restore_raw_action(&mut resolved_action, executor_action)
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         let executor_action = &resolved_action;
 
         // Create new execution process record
@@ -1602,6 +1647,9 @@ pub trait ContainerService {
             &repo_states,
         )
         .await?;
+        super::original_worker::record_execution(execution_process.id)
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         if let Some(event) = executors::routing_telemetry::decision(
             executor_action,
             &execution_process.id.to_string(),
@@ -1767,12 +1815,6 @@ pub trait ContainerService {
             }
         }
 
-        execution_process::spawn_stream_raw_logs_to_storage(
-            self.msg_stores().clone(),
-            self.db().clone(),
-            execution_process.id,
-            session.id,
-        );
         Ok(execution_process)
     }
 

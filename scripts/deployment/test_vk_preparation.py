@@ -15,7 +15,7 @@ import unittest
 from unittest.mock import patch
 import uuid
 
-from vk_prepare import Preparation, default_plan, deployment_kind, read_only_queues
+from vk_prepare import Preparation, default_plan, deployment_kind, read_only_queues, pending_sessions, record_publication, verify_artifacts
 
 
 class PreparationTests(unittest.TestCase):
@@ -120,6 +120,54 @@ class PreparationTests(unittest.TestCase):
             self.run_plan()
         self.assertFalse(self.counter.exists())
 
+    def test_nested_empty_output_is_not_a_successful_artifact(self):
+        directory = self.root / "empty-output"
+        (directory / "empty-child").mkdir(parents=True)
+        self.plan["steps"][0]["outputs"] = [str(directory)]
+        with self.assertRaisesRegex(ValueError, "empty"):
+            self.run_plan()
+        self.assertFalse(json.loads((self.cache / "latest-result.json").read_text())["passed"])
+        self.assertEqual(list((self.cache / "cache/evidence").glob("*")), [])
+
+    def test_empty_late_command_refuses_all_launches(self):
+        self.plan["steps"].append({"id": "missing", "command": []})
+        with self.assertRaisesRegex(ValueError, "explicit nonempty"):
+            self.run_plan()
+        self.assertFalse(self.counter.exists())
+
+    def test_inherited_capture_pipe_drains_before_log_and_artifact_seal(self):
+        child = ("import time; from pathlib import Path; time.sleep(.1); "
+                 "Path(" + repr(str(self.artifact)) + ").write_text('complete'); print('producer drained')")
+        parent = "import subprocess,sys; subprocess.Popen([sys.executable,'-c'," + repr(child) + "])"
+        self.plan["steps"][0]["command"] = [sys.executable, "-c", parent]
+        result = self.run_plan()["steps"]["build"]
+        self.assertEqual(self.artifact.read_text(), "complete")
+        self.assertIn("producer drained", Path(result["log"]).read_text())
+        self.assertTrue(self.run_plan()["steps"]["build"]["reused"])
+
+    def test_owned_pipe_timeout_cannot_publish_or_leave_its_writer_running(self):
+        child_pid = self.root / "child-pid"
+        child = ("import os,time; from pathlib import Path; Path(" + repr(str(child_pid))
+                 + ").write_text(str(os.getpid())); time.sleep(10)")
+        parent = "import subprocess,sys; subprocess.Popen([sys.executable,'-c'," + repr(child) + "])"
+        self.plan["steps"][0].update(command=[sys.executable, "-c", parent], timeout_seconds=.5)
+        with self.assertRaises(subprocess.TimeoutExpired):
+            self.run_plan()
+        self.assertFalse(json.loads((self.cache / "latest-result.json").read_text())["passed"])
+        self.assertEqual(list((self.cache / "cache/evidence").glob("*")), [])
+        self.assertTrue(child_pid.exists())
+        status = Path("/proc") / child_pid.read_text() / "stat"
+        for _ in range(100):
+            try:
+                state = status.read_text().split(")", 1)[1].split()[0]
+            except FileNotFoundError:
+                break
+            if state == "Z":
+                break
+            time.sleep(.01)
+        else:
+            self.fail("Owned timeout writer remains running")
+
     def test_dirty_source_refuses_reuse(self):
         self.run_plan()
         (self.source / "source.txt").write_text("uncommitted")
@@ -217,6 +265,311 @@ class PreparationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "inputs changed"):
             self.run_plan()
 
+    def test_dependency_error_is_found_before_any_step_runs(self):
+        self.plan["steps"].append({"id": "late", "command": [sys.executable, "--version"],
+                                   "depends_on": ["unknown-step"]})
+        with self.assertRaisesRegex(ValueError, "dependencies must precede"):
+            self.run_plan()
+        self.assertFalse(self.counter.exists())
+        self.assertFalse(json.loads((self.cache / "latest-result.json").read_text())["passed"])
+
+    def test_missing_required_file_is_found_before_build(self):
+        self.plan["required_files"] = [{"path": str(self.root / "private-overlay"), "sha256": "0" * 64}]
+        with self.assertRaisesRegex(ValueError, "input missing or changed"):
+            self.run_plan()
+        self.assertFalse(self.counter.exists())
+
+    def test_changed_required_file_blocks_reuse_and_build(self):
+        import hashlib
+        path = self.root / "private-overlay"
+        path.write_bytes(b"reviewed")
+        self.plan["required_files"] = [{"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}]
+        self.run_plan()
+        path.write_bytes(b"changed")
+        with self.assertRaisesRegex(ValueError, "input missing or changed"):
+            self.run_plan()
+        self.assertEqual(self.counter.read_text(), "1")
+
+    def test_required_file_mutation_during_build_refuses_evidence(self):
+        import hashlib
+        path = self.root / "private-overlay"
+        path.write_bytes(b"reviewed")
+        self.plan["required_files"] = [{"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}]
+        self.plan["steps"][0]["command"] = [sys.executable, "-c", "from pathlib import Path; Path(" + repr(str(path)) + ").write_bytes(b'changed')"]
+        with self.assertRaisesRegex(ValueError, "input missing or changed"):
+            self.run_plan()
+
+    def test_bad_receipt_reruns_only_corrupt_step(self):
+        self.run_plan()
+        receipt = next((self.cache / "cache/evidence").glob("*.json"))
+        receipt.write_text("{truncated")
+        self.assertFalse(self.run_plan()["steps"]["build"]["reused"])
+        self.assertEqual(self.counter.read_text(), "2")
+
+    def test_active_cache_owner_refuses_duplicate_without_waiting(self):
+        import fcntl
+        plan = copy.deepcopy(self.plan)
+        plan["cache_directory"] = str(self.root / "persistent-cache")
+        owner = Preparation(self.source, self.cache, plan)
+        with (owner.cache / ".preparation.lock").open("a") as held:
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            with self.assertRaisesRegex(RuntimeError, "already has an owner"):
+                owner.run()
+        self.assertFalse(self.counter.exists())
+
+    def test_volatile_step_cannot_be_mislabelled_cacheable(self):
+        self.plan["steps"][0]["volatile"] = True
+        with self.assertRaisesRegex(ValueError, "Volatile acceptance cannot be cached"):
+            self.run_plan()
+        self.assertFalse(self.counter.exists())
+
+    def test_invalid_timeout_blocks_before_build(self):
+        self.plan["steps"].append({"id": "late", "command": [sys.executable, "--version"],
+                                  "timeout_seconds": float("inf")})
+        with self.assertRaisesRegex(ValueError, "finite positive timeouts"):
+            self.run_plan()
+        self.assertFalse(self.counter.exists())
+
+    def test_generic_backend_build_recipe_is_not_generated(self):
+        baseline = self.git("rev-parse", "HEAD").decode().strip()
+        (self.source / "Cargo.toml").write_text("backend change")
+        self.commit()
+        with self.assertRaisesRegex(ValueError, "explicit approved isolated build plan"):
+            default_plan(self.source, self.cache, baseline)
+
+    def test_frontend_scope_reuses_validation_after_backend_only_change(self):
+        frontend = self.source / "packages"
+        frontend.mkdir()
+        (frontend / "view.tsx").write_text("UI")
+        self.commit()
+        self.plan["steps"][0]["inputs"] = ["packages"]
+        self.run_plan()
+        (self.source / "backend.rs").write_text("backend change")
+        self.commit()
+        self.assertTrue(self.run_plan()["steps"]["build"]["reused"])
+        (frontend / "view.tsx").write_text("changed UI")
+        self.commit()
+        self.assertFalse(self.run_plan()["steps"]["build"]["reused"])
+
+    def test_missing_command_is_found_before_any_build(self):
+        self.plan["steps"].append({"id": "late", "command": ["vk-fixture-no-such-command"]})
+        with self.assertRaisesRegex(ValueError, "Missing preparation command"):
+            self.run_plan()
+        self.assertFalse(self.counter.exists())
+
+    def publication_fixture(self, basis="fix-ready", elapsed=610):
+        import datetime
+        import hashlib
+        prepared = self.run_plan()
+        clock = self.cache / "preparation-clock.json"
+        clock.write_text(json.dumps({"started_at": time.time() - elapsed, "basis": basis}))
+        artifact = next(iter(prepared["steps"]["build"]["outputs"].values()))["sha256"]
+        receipt = {"published_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                   "source_tree": prepared["source_tree"], "server_sha256": artifact,
+                   "current_data_reused": True, "exact18_once_only": True,
+                   "live": {"trusted_https": True},
+                   "statuses": [{"http": 200, "protocol": 1, "once_only": True}] * 18}
+        receipt["queued_work_resume"] = {"verified": True, "session_id": str(uuid.uuid4()),
+            "execution_id": str(uuid.uuid4()), "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+        path = self.root / "mock-publication.json"
+        path.write_text(json.dumps(receipt))
+        return path, receipt, hashlib.sha256(path.read_bytes()).hexdigest()
+
+    def test_pipeline_time_includes_prebuild_wait_and_build(self):
+        path, _, sha = self.publication_fixture(elapsed=610)
+        result = record_publication(self.cache, path, sha)
+        self.assertGreaterEqual(result["fix_ready_to_work_resumed_seconds"], 610)
+        self.assertFalse(result["ten_minute_target_met"])
+        self.assertFalse(result["live_reverified_by_this_tool"])
+
+    def test_preparation_clock_alone_cannot_prove_ten_minute_target(self):
+        path, _, sha = self.publication_fixture(basis="preparation-started", elapsed=10)
+        result = record_publication(self.cache, path, sha)
+        self.assertIsNone(result["fix_ready_to_work_resumed_seconds"])
+        self.assertFalse(result["ten_minute_target_met"])
+
+    def test_receipt_mismatch_does_not_create_completion(self):
+        path, _, _ = self.publication_fixture()
+        with self.assertRaisesRegex(ValueError, "receipt identity changed"):
+            record_publication(self.cache, path, "0" * 64)
+        self.assertFalse((self.cache / "pipeline-result.json").exists())
+
+    def test_wrong_artifact_does_not_create_completion(self):
+        import hashlib
+        path, receipt, _ = self.publication_fixture()
+        receipt["server_sha256"] = "0" * 64
+        path.write_text(json.dumps(receipt))
+        with self.assertRaisesRegex(ValueError, "artifact does not match"):
+            record_publication(self.cache, path, hashlib.sha256(path.read_bytes()).hexdigest())
+
+    def test_recovery_failure_does_not_create_completion(self):
+        import hashlib
+        path, receipt, _ = self.publication_fixture()
+        receipt["statuses"][-1] = {"http": 500, "protocol": 1, "once_only": False}
+        path.write_text(json.dumps(receipt))
+        with self.assertRaisesRegex(ValueError, "lacks required"):
+            record_publication(self.cache, path, hashlib.sha256(path.read_bytes()).hexdigest())
+
+    def test_existing_pipeline_completion_is_idempotent(self):
+        path, _, sha = self.publication_fixture(elapsed=10)
+        first = record_publication(self.cache, path, sha)
+        self.assertEqual(record_publication(self.cache, path, sha), first)
+        self.assertTrue(first["ten_minute_target_met"])
+
+    def test_publication_alone_cannot_claim_work_resumed_or_ten_minutes(self):
+        import hashlib
+        path, receipt, _ = self.publication_fixture(elapsed=10)
+        del receipt["queued_work_resume"]
+        path.write_text(json.dumps(receipt))
+        result = record_publication(self.cache, path, hashlib.sha256(path.read_bytes()).hexdigest())
+        self.assertGreaterEqual(result["fix_ready_to_publication_seconds"], 10)
+        self.assertIsNone(result["fix_ready_to_work_resumed_seconds"])
+        self.assertFalse(result["ten_minute_target_met"])
+
+    def test_legacy_hash_only_manifest_measures_size_without_weakening_hash_pin(self):
+        import hashlib
+        candidate = self.root / 'legacy-candidate';candidate.write_bytes(b'accepted candidate')
+        rollback = self.root / 'legacy-rollback';rollback.write_bytes(b'accepted rollback')
+        manifest = {'source': {'combined_source_tree': 'reviewed-tree'}, 'artifacts': {
+            key: {'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+            for key, path in [('candidate', candidate), ('rollback', rollback)]}}
+        path = self.root / 'legacy-manifest.json';path.write_text(json.dumps(manifest))
+        pin = hashlib.sha256(path.read_bytes()).hexdigest()
+        result = verify_artifacts(path, pin, 'reviewed-tree')
+        self.assertEqual(result['artifacts']['candidate']['bytes'], len(b'accepted candidate'))
+        self.assertFalse(result['compiler_invoked'])
+        candidate.write_bytes(b'changed candidate')
+        with self.assertRaisesRegex(ValueError, 'artifact changed'):
+            verify_artifacts(path, pin, 'reviewed-tree')
+
+    def test_resume_needs_bound_ids_and_valid_postpublication_timestamp(self):
+        import hashlib
+        path, receipt, _ = self.publication_fixture()
+        for changed in ({"verified": False}, {"session_id": "not-a-session"},
+                        {"started_at": "2000-01-01T00:00:00+00:00"},
+                        {"started_at": "2000-01-01T00:00:00"}):
+            bad = dict(receipt);bad["queued_work_resume"] = {**receipt["queued_work_resume"], **changed}
+            path.write_text(json.dumps(bad))
+            with self.subTest(changed=changed), self.assertRaises(ValueError):
+                record_publication(self.cache, path, hashlib.sha256(path.read_bytes()).hexdigest())
+            self.assertFalse((self.cache / "pipeline-result.json").exists())
+
+    def test_artifact_verification_avoids_rebuild_and_copy(self):
+        import hashlib
+        self.artifact.write_bytes(b"accepted binary")
+        manifest = {"source": {"combined_source_tree": "reviewed"}, "artifacts": {
+            name: {"path": str(self.artifact), "bytes": self.artifact.stat().st_size,
+                   "sha256": hashlib.sha256(self.artifact.read_bytes()).hexdigest()}
+            for name in ("candidate", "rollback")}}
+        path = self.root / "accepted-manifest.json"
+        path.write_text(json.dumps(manifest))
+        sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        result = verify_artifacts(path, sha, "reviewed")
+        self.assertFalse(result["compiler_invoked"])
+        self.assertEqual(result["copied_payload_bytes"], 0)
+        self.assertFalse(self.counter.exists())
+        self.artifact.write_bytes(b"corrupt artifact")
+        with self.assertRaisesRegex(ValueError, "artifact changed"):
+            verify_artifacts(path, sha, "reviewed")
+
+    def test_artifact_manifest_different_source_is_rejected(self):
+        import hashlib
+        path = self.root / "accepted-manifest.json"
+        path.write_text(json.dumps({"source": {"combined_source_tree": "other"}}))
+        with self.assertRaisesRegex(ValueError, "different source content"):
+            verify_artifacts(path, hashlib.sha256(path.read_bytes()).hexdigest(), "reviewed")
+
+    def test_accepted_artifacts_bind_without_cache_payload_copy(self):
+        import datetime
+        import hashlib
+        tree = self.git("rev-parse", "HEAD^{tree}").decode().strip()
+        self.artifact.write_bytes(b"accepted binary")
+        sha = hashlib.sha256(self.artifact.read_bytes()).hexdigest()
+        manifest = self.root / "accepted.json"
+        manifest.write_text(json.dumps({"source": {"combined_source_tree": tree}, "artifacts": {
+            name: {"path": str(self.artifact), "sha256": sha, "bytes": self.artifact.stat().st_size}
+            for name in ("candidate", "rollback")}}))
+        self.plan["accepted_artifact_manifest"] = {"path": str(manifest), "sha256": hashlib.sha256(manifest.read_bytes()).hexdigest()}
+        self.plan["steps"] = [{"id": "fresh", "command": [sys.executable, "--version"],
+                               "volatile": True, "cacheable": False}]
+        result = self.run_plan()
+        self.assertTrue(result["passed"])
+        self.assertFalse((self.cache / "cache/artifacts").exists())
+        published = self.root / "mock-publication.json"
+        published.write_text(json.dumps({"source_tree": tree, "server_sha256": sha,
+            "published_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "current_data_reused": True, "exact18_once_only": True,
+            "live": {"trusted_https": True},
+            "statuses": [{"http": 200, "protocol": 1, "once_only": True}] * 18}))
+        completion = record_publication(self.cache, published, hashlib.sha256(published.read_bytes()).hexdigest())
+        self.assertEqual(completion["server_sha256"], sha)
+        self.assertFalse(completion["live_reverified_by_this_tool"])
+        self.artifact.write_bytes(b"corrupt")
+        with self.assertRaisesRegex(ValueError, "artifact changed"):
+            self.run_plan()
+
+    def test_accepted_artifact_source_mismatch_blocks_before_build(self):
+        import hashlib
+        manifest = self.root / "accepted.json"
+        manifest.write_text(json.dumps({"source": {"combined_source_tree": "wrong"}}))
+        self.plan["accepted_artifact_manifest"] = {"path": str(manifest), "sha256": hashlib.sha256(manifest.read_bytes()).hexdigest()}
+        with self.assertRaisesRegex(ValueError, "different source content"):
+            self.run_plan()
+        self.assertFalse(self.counter.exists())
+
+    def test_missing_rollback_is_rejected_before_artifact_reads(self):
+        import hashlib
+        path = self.root / "accepted-manifest.json"
+        path.write_text(json.dumps({"source": {"combined_source_tree": "reviewed"}, "artifacts": {"candidate": {}}}))
+        with self.assertRaisesRegex(ValueError, "rollback are both required"):
+            verify_artifacts(path, hashlib.sha256(path.read_bytes()).hexdigest(), "reviewed")
+
+    def snapshot_fixture(self):
+        import hashlib
+        source = self.root / "sealed-source"
+        source.mkdir()
+        member = source / "unit.rs"
+        member.write_bytes(b"reviewed private source")
+        (source / "link.rs").symlink_to("unit.rs")
+        manifest = self.root / "source-manifest.json"
+        manifest.write_text(json.dumps({"source": "c" * 40, "tracked": {
+            "unit.rs": {"kind": "file", "sha256": hashlib.sha256(member.read_bytes()).hexdigest()},
+            "link.rs": {"kind": "symlink", "target": "unit.rs"}}}))
+        self.plan["source_snapshot"] = {"manifest": str(manifest),
+            "sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
+            "source_commit": "c" * 40, "source_tree": "f" * 40}
+        return source, member, manifest
+
+    def test_sealed_source_without_git_supports_verified_reuse(self):
+        source, _, _ = self.snapshot_fixture()
+        first = Preparation(source, self.cache, self.plan).run()
+        second = Preparation(source, self.cache, self.plan).run()
+        self.assertEqual(first["source_tree"], "f" * 40)
+        self.assertTrue(second["steps"]["build"]["reused"])
+        self.assertEqual(self.counter.read_text(), "1")
+
+    def test_sealed_member_mutation_blocks_cached_pass(self):
+        source, member, _ = self.snapshot_fixture()
+        Preparation(source, self.cache, self.plan).run()
+        member.write_bytes(b"changed private source")
+        with self.assertRaisesRegex(ValueError, "source content changed"):
+            Preparation(source, self.cache, self.plan).run()
+        self.assertEqual(self.counter.read_text(), "1")
+
+    def test_sealed_manifest_mutation_blocks_before_build(self):
+        source, _, manifest = self.snapshot_fixture()
+        manifest.write_text("{}")
+        with self.assertRaisesRegex(ValueError, "source manifest changed"):
+            Preparation(source, self.cache, self.plan).run()
+        self.assertFalse(self.counter.exists())
+
+    def test_sealed_source_credential_addition_blocks_before_build(self):
+        source, _, _ = self.snapshot_fixture()
+        (source / ".env").write_text("fixture only")
+        with self.assertRaisesRegex(ValueError, "must not acquire credentials"):
+            Preparation(source, self.cache, self.plan).run()
+        self.assertFalse(self.counter.exists())
+
 
 class QueueTests(unittest.TestCase):
     def setUp(self):
@@ -275,6 +628,22 @@ class QueueTests(unittest.TestCase):
                 read_only_queues(origin, self.sessions)
         with self.assertRaises(ValueError):
             read_only_queues(self.origin, self.sessions, workers=0)
+
+    def test_pending_summary_does_not_expose_or_clear_prompt(self):
+        self.queued.add(self.sessions[0])
+        result = pending_sessions(self.origin, self.sessions)
+        self.assertEqual(result["pending_sessions"], [self.sessions[0]])
+        self.assertNotIn("preserve me", json.dumps(result))
+        self.assertFalse(result["writer_fence_established"])
+        self.assertFalse(result["cutover_authorized"])
+        self.assertEqual(set(self.methods), {"GET"})
+
+    def test_failed_inventory_does_not_drain_thousands_of_future_gets(self):
+        self.sessions = [str(uuid.uuid4()) for _ in range(1139)]
+        self.fail.update(self.sessions)
+        with self.assertRaisesRegex(ValueError, "Queue check failed"):
+            read_only_queues(self.origin, self.sessions, workers=4)
+        self.assertLessEqual(len(self.methods), 4)
 
 
 if __name__ == "__main__":

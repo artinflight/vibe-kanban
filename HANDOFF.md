@@ -1,3 +1,15 @@
+# Registered CU report adoption — October 17, 11:03 UTC
+
+The10:58:17 refresh reached the SAME unchanged connector1.6 and discovered tools
+and events. Both report names are now callable in this preservation execution.
+ACTUAL registered summary/fullreport and filtered two-page report calls PASS:
+pinned cutoff, matching model filter, distinct rows, stable account/selected
+values and fresh/covered observations. No restart, activation or access change.
+A separate retained main Dot conversation's catalog is still independently
+unverified/platform-managed; no repeated refresh or user test requested. The
+cached CU summary stays working. Prepared optional-cutoff fix remains uninstalled;
+Stop/release source stays frozen. See DOT_USAGE_REPORTING.md for scoped evidence.
+
 # Dot full CU reporting — live October 17, 10:47 UTC
 
 Connector1.6 source6ca6c443d / CU helper64e253b6 is live after connector-only

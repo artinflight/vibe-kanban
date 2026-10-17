@@ -86,7 +86,7 @@ was attempted: Rust formatting passed; frontend formatting stopped because
 Prettier is absent. No UI dependencies or compiler work were added. Final helper pin, installed acceptance and catalog status follow below.
 
 
-## Live baseline and remaining catalog dependency
+## Live baseline and earlier catalog dependency
 
 Connector **1.6** was adopted at **2026-10-17 10:47:43 UTC** from connector
 source `6ca6c443dee0cda63fee1a271f91de25d3ae7624` and CU helper source
@@ -144,3 +144,45 @@ connector-only adoption/reload, independently of the backend Stop release.
 It does not affect the working cached summary or require CU/backend changes.
 Preserve the current 1.6 adapter/status/helper hashes when preparing that overlay;
 the old 1.5/steering-only pins are superseded.
+
+
+## Registered tool adoption verified after the 10:58 refresh
+
+The refresh reached the same updated connector at **2026-10-17 10:58:17 UTC**:
+its journal records `server/discover`, `tools/list` and `events/list`, without a
+request failure in that discovery window. Runtime 1.6 and all sealed source
+hashes remained unchanged; no restart, activation, credential or permission
+change was needed.
+
+By the next preservation execution, both report names were present in its
+**callable adopted catalog**. Actual registered connector calls succeeded for
+`get_usage_summary` and `get_usage_report`. This supersedes the earlier absence
+claim for this execution; it is more than a server-side discovery/dispatch test.
+
+The registered full-query acceptance used an explicit custom window pinned to
+CU's recorded cutoff, a model filter, workspace grouping and one row per page.
+Page two used the returned next offset and the same cutoff. Both calls returned
+recorded, fresh, covered data; distinct rows matched the filter; unfiltered
+account totals and filtered selected totals remained identical between pages;
+the filter reduced selected usage without changing the account denominator.
+Actual registered page calls completed at 11:03:05 and 11:03:16 UTC. Raw private
+responses and comparisons are retained outside GitHub. No account totals or
+private workspace/session/receipt identifiers are published here.
+
+This verifies named reporting through the registered connection in the
+preservation conversation. It does **not** prove an already-running separate
+main Dot conversation has adopted the new catalog. If that retained conversation
+still lacks the names, its per-conversation catalog is platform-managed; this
+connector owner cannot invalidate or replace it through the supported tools.
+The successful 10:58 discovery plus actual registered named calls support a
+catalog-propagation explanation, not a missing or inaccessible server tool.
+Do not ask Seamus to repeat the same refresh or replace credentials. The existing
+CU status summary remains available, and no backend Stop release is involved.
+
+For coordinated main Dot acceptance, use the named full tool with an explicit
+start/end, model or project filter, grouping and `limit:1`; then use the returned
+`pagination.nextOffset`, keeping every selector and cutoff unchanged. Compare
+rows, account/selected totals, coverage and independent credit freshness. Record
+that caller's actual results separately before claiming retained-main-conversation
+adoption. The optional omitted-custom-cutoff correction above remains prepared
+only and is not required for this explicit-cutoff acceptance.

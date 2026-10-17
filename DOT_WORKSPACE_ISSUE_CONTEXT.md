@@ -150,3 +150,30 @@ Read-only cached status acceptance is separate from the deliberately unperformed
 live negative-start probe. CI cannot exercise the private adapter unless the
 retained source is supplied; public fixture dispatch tests run in the lightweight
 connector CI job.
+
+### Explanation follow-up live receipt
+
+Functional source `a43a2180724a8986fb24920c7729b5f7a439980d` was adopted at
+2026-10-17 23:55:42 UTC. Installed adapter SHA256:
+`b3f062e16ae4bf3d6bfabdd233159da602f0f179717f4f9afc649667920be3a0`.
+Installed guard SHA256:
+`50056e974b9577a0d3d220331923f332d6cba0ef61beb4af03491ce8465b3c07`.
+
+The guarded connector-only reload recovered HTTP readiness in 0.405 seconds.
+Desktop B upload/download and isolated source/SQLite restore passed before
+adoption. Actual cached workspace status afterward compared equal to its
+pre-adoption result, including the available existing conversation. Repaired
+issue/branch/worktree and original session/four executions were retained. All
+other Python module hashes, original access rows/messages, sidechat/frontend
+pointers and nonconnector service PIDs remained unchanged. The rollback is
+code-only and retains the latest database; no voice/call route was modified.
+
+The 20 public tests, 28 full-adapter rejection vectors with exact payloads/zero
+POSTs, valid mocked creation and 27 incumbent controls passed for these exact
+functional bytes. No live negative-start request or validation workspace was
+used. The guarded reload and read-only acceptance prove installation and
+preservation, not a forbidden live start rejection. Public CI tests the source
+helper/dispatch fixture; the retained private adapter was tested offline locally.
+Broader GitHub/backend CI remained pending at this receipt. Local ops/diff checks
+pass; full formatting completed Rust formatting and stopped at missing Prettier.
+No local Rust compilation, frontend build, browser or new actor was started.

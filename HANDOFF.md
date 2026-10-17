@@ -11,7 +11,7 @@ pass; a real owner message and accepted webhook confirm the repaired path.
 The prevention guard requires and verifies both project/issue IDs before a
 connector workspace start. 20 public tests and 27 incumbent candidate controls
 plus the updated mocked start pass. Runtime guard adoption must be verified
-separately. It is now live at source 4a5674de3 after a 0.395s connector-only
+separately. Its initial source 4a5674de3 used a 0.395s connector-only
 reload, with actual cached readbacks passing and all other pins preserved.
 Automatic review rejected the live negative start probe; no workaround/retry.
 No real agent start/stop, account-detail publication or pairing change.
@@ -23,5 +23,7 @@ Full former pickup remains in [HANDOFF history](HANDOFF_HISTORY_20261017.md).
 PR271 explanation follow-up is now source-ready: typed MCP rejection details,
 28 mocked full-dispatch negative cases/zero POSTs, unchanged valid mocked start,
 20 public tests and 27 incumbent controls. Preserve existing repair and pins;
-follow-up candidate adoption/read-only acceptance must be recorded separately.
+follow-up adoption completed at 23:55:42 UTC, source a43a21807, with unchanged
+actual cached status, preserved original workspace/history and all other pins.
+See the protocol handoff for exact hashes and remaining CI limits.
 No live negative start probe, validation workspace or voice routing change.

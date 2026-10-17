@@ -2028,3 +2028,12 @@ See VK_PROJECT_COLLABORATION.md for validation and release requirements.
   Connector-only guard reload preserved CU/Stop/follow-up and other services.
   Live negative start probe was review-rejected; no retry, no validation agent.
   See DOT_WORKSPACE_ISSUE_CONTEXT.md for hashes and exact acceptance limits.
+
+- 2026-10-17: PR271's approved explanation follow-up/source a43a21807 is live.
+  Stable code/reason/next_step distinguish missing/invalid, scoped not-verified,
+  unavailable and malformed evidence; positive mismatches share the scoped
+  negative response to protect outside-project existence. 20 public tests,
+  28 full-adapter mocked rejections/zero POSTs, unchanged valid start and 27
+  incumbent controls pass. Connector-only reload/read-only acceptance preserved
+  all other modules/services, repaired workspace and chats. No live start probe
+  or voice routing change. See DOT_WORKSPACE_ISSUE_CONTEXT.md for pins/limits.

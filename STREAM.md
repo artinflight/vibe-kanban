@@ -12,7 +12,8 @@ lookup/history are verified. A real owner message arrived afterward. Do not
 answer or start another task merely to demonstrate the repair. Preserve private
 account details, sessions, grants, subscriptions, CU/Stop/follow-up pins and other
 owners' work. No Vibe/backend/agent/frontend restart or new worker is authorized
-by this source stream. The connector-only guard is live at source 4a5674de3;
+by this source stream. The initial connector guard was adopted at source 4a5674de3;
+its current explanation follow-up is source a43a21807, as recorded below;
 only its process restarted. The live negative start probe was rejected by review
 and was not retried; see the exact validation limits in the protocol handoff.
 
@@ -21,5 +22,5 @@ Full prior notes remain in [STREAM history](STREAM_HISTORY_20261017.md).
 Approved continuation: finish the explanation contract with stable code/reason/
 next_step, distinct unavailable/malformed evidence and scope-safe negative
 lookups. Twenty public tests and 28 full-adapter mocked rejection vectors pass;
-valid mocked start and 27 incumbent controls pass. Adoption is pending for this
-follow-up. Do not repeat the denied live probe or touch separate voice work.
+valid mocked start and 27 incumbent controls pass. The explanation follow-up is live at source a43a21807, adapter b3f062e1 /
+guard 50056e97, with unchanged cached Caspian readback and preserved pins. Do not repeat the denied live probe or touch separate voice work.

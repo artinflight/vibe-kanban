@@ -26,7 +26,9 @@ jobs:
         run: |
           command -v zstd || sudo apt-get install -y zstd
           sudo mkdir -p /mnt/vk-storage
-          sudo mount -t tmpfs -o size=1G tmpfs /mnt/vk-storage
+          # Admission now reserves 2 GiB for simultaneous bounded metadata.
+          # This is the disposable volume's ceiling; fixtures remain tiny.
+          sudo mount -t tmpfs -o size=3G tmpfs /mnt/vk-storage
           sudo chown "$(id -u):$(id -g)" /mnt/vk-storage
           mkdir /mnt/vk-storage/backup-fixtures
       - name: Verify complete backup and restart recovery

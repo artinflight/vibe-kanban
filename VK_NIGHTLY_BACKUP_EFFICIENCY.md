@@ -73,13 +73,13 @@ capacity, concurrent leases, journal loss, process death and exact retention.
 The rebuild fixture preserves dirty work, attachments, Git and runtime bytes
 while rebuilding a pinned offline dependency and generated file.
 
-Current integration validation: 340 tests ran, 339 passed and the opt-in
+Current integration validation: 359 tests ran, 358 passed and the opt-in
 disposable user-service timeout test was skipped. All eight historical
 direct-stream source pins still match; Python syntax, `git diff --check` and
 `pnpm run ops:check` pass. `pnpm run format` ran successfully through both Rust
 workspaces, then stopped because this worktree has no Prettier executable.
-Frontend type/lint checks, full Rust tests, production services and the real B
-destination were not exercised by this Python-only integration validation.
+Frontend type/lint checks and full Rust tests were not exercised by this
+Python-only integration validation. The separate physical B evidence follows.
 
 A failed publication never advances `current.json`. An append-only, identity-bound
 ledger records sealed chunk and layout bytes before linking each candidate name.
@@ -101,16 +101,21 @@ served frontend separately from the backend's retained fallback directory.
 
 The October17 real Desktop B fixture passes native Windows complete-file
 reconstruction and SQLite integrity/value checks. A post-retirement restore of
-all four fixture files succeeds with the preceding fixture generation absent;
-the 2,097,204-byte synthetic history adds 1,331 stored bytes. Its first failed
+all four fixture files succeeds with the preceding fixture generation absent.
+The 2,097,204-byte synthetic history adds 1,331 stored bytes. A second fresh
+physical fixture also injects an interruption after a real chunk link, reconciles
+that exact owned job, publishes a replacement and restores all four files again
+(the final complete history is 2,097,230 bytes). The fixture provider is explicitly
+synthetic; this does not exercise the whole production capture provider. Its first failed
 harness run placed verified restore output inside the store; that output was
 byte-verified and moved outside the store before resuming the same fixture.
 No production recovery generation was retired. This is a bounded physical-device
 format check, not whole-plan acceptance, throughput prediction or a live schedule.
 
 Evidence lives outside Git at
-`/mnt/vk-storage/vk-nightly-efficiency-20261016/`. Fixture readback labels model
-the physical B gate and must not be presented as a new real B acceptance. The
+`/mnt/vk-storage/vk-nightly-efficiency-20261016/` and
+`/mnt/vk-storage/vk-nightly-efficiency-20261017/`. Earlier modeled readback
+labels remain distinct from the October17 physical B fixture receipts. The
 incompressible-prefix fixture checks that an append to a history larger than
 2 MiB stores less than 8 KiB of new encoded objects/layout while retaining the
 entire original and appended versions logically. That is a fixture assertion,

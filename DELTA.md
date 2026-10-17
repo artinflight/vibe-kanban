@@ -2020,3 +2020,5 @@ Physical phone DevTools was rejected by automatic approval review for its shared
 authenticated-tab boundary; no retry/alternate route. Seamus's fresh paired-phone
 question/reply/notification confirmation remains. PR254 merged into staging28fdcfddf.
 See DOT_NOTIFICATION_ROLLOUT.md and the bounded live QA scripts for receipts.
+
+2026-10-17 nightly integration PR263: 359 backup tests (358 pass, one explicit skip), real B four-file/SQLite post-retirement restoration plus interrupted-job recovery pass. Whole-plan census/capacity acceptance still running; no production schedule activated and no historical recovery retired.

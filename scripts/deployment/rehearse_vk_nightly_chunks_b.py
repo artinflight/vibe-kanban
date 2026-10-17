@@ -34,10 +34,14 @@ print(json.dumps({'restored':True,'restored_files':sum(x['kind']=='file' for x i
 
 WSL = r'''
 import hashlib,io,json,os,pathlib,shutil,sqlite3,subprocess,sys,types
+from contextlib import contextmanager
 r=json.loads(sys.stdin.read());assert os.getuid()==1000
 assert hashlib.sha256(r['source'].encode()).hexdigest()==r['source_sha256']
 module=types.ModuleType('vk_nightly_generation');sys.modules[module.__name__]=module
 exec(compile(r['source'],'vk_nightly_generation.py','exec'),module.__dict__)
+assert hashlib.sha256(r['lifecycle'].encode()).hexdigest()==r['lifecycle_sha256']
+life=types.ModuleType('vk_nightly_lifecycle');sys.modules[life.__name__]=life
+exec(compile(r['lifecycle'],'vk_nightly_lifecycle.py','exec'),life.__dict__)
 root=pathlib.Path('/mnt/b/vk-backups/vk-nightly-efficiency-20261017')/r['fixture']
 assert root.name.startswith('fixture-') and len(root.name)==40
 mount=subprocess.check_output(['findmnt','-n','-T','/mnt/b','-o','SOURCE,FSTYPE'],text=True).split()
@@ -110,10 +114,42 @@ m=store.current();request={'folder':win(store_root/m['generation']),'volume_devi
  'manifest_sha256':hashlib.sha256(module.encoded(m)).hexdigest(),'scope':store.scope,'source_prefix':'/',
  'databases':['/fixture/state.sqlite'],'expected':'after'}
 last=windows(post,request)[-1];assert last['restored'] and second['stored_changed_bytes']<65536
+def verify_only(folder,manifest):
+ request={'folder':win(folder),'volume_device':r['volume_device'],'manifest_sha256':hashlib.sha256(module.encoded(manifest)).hexdigest(),
+          'scope':store.scope,'source_prefix':'/','databases':['/fixture/state.sqlite'],'expected':'after'}
+ return windows(r['verify'],request)[0]
+store.independent_readback=verify_only
+jobs=root/'jobs';jobs.mkdir();job=life.NightlyJob(jobs,store,capture_limit_bytes=1024**2,changed_limit_bytes=8*1024**2);job.enroll_empty()
+files['fixture/history.jsonl']+=b'\nnext complete job record\n'
+entries={key:row(data) for key,data in files.items()}
+class Provider:
+ records={'fixture':{'result':{'parent':None}}}
+ def verify(self,capture_id):return {'scope_sha256':store.scope,'full_current_state':True,'entries':entries,'nightly_database_integrity':dict(proofs)}
+ @contextmanager
+ def file_members(self,capture_id,selected):yield ((key,io.BytesIO(files[key])) for key in selected)
+def factory(folder,register,seal,*,parent):
+ target=folder/'fixture-input.json'
+ with target.open('xb') as f:register(target,f.fileno());f.write(b'owned fixture input');f.flush();os.fsync(f.fileno())
+ seal(target);return Provider(),'fixture',{'parent':None}
+link=os.link
+def interrupted(source,target,**kwargs):
+ link(source,target,**kwargs)
+ if pathlib.Path(target).name.startswith('chunk-'):raise OSError('deliberate owned B chunk interruption')
+try:
+ os.link=interrupted
+ failed=job.run(factory,retention_adopted=True,reserve_bytes=module.MAX_INDEX+16*1024**2)
+ assert not failed['passed'] and not (store_root/job.read()['candidate']/'manifest.json').exists()
+finally:os.link=link
+job.reconcile(retention_adopted=True,inputs_quiescent=True)
+completed=job.run(factory,retention_adopted=True,reserve_bytes=module.MAX_INDEX+16*1024**2);assert completed['passed']
+m=store.current();request.update(folder=win(store_root/m['generation']),manifest_sha256=hashlib.sha256(module.encoded(m)).hexdigest())
+last=windows(post,request)[-1];assert last['restored']
 print(json.dumps({'passed':True,'fixture_root':win(root),'source_sha256':r['source_sha256'],
- 'first_generation':first['generation'],'current_generation':second['generation'],
+ 'lifecycle_sha256':r['lifecycle_sha256'],'first_generation':first['generation'],'current_generation':m['generation'],
  'old_fixture_generation_removed':True,'post_retirement_restore':last,'stored_delta_bytes':second['stored_changed_bytes'],
- 'full_history_bytes':len(history),'production_plan_or_backups_changed':False,'whole_plan_accepted':False}))
+ 'full_history_bytes':len(files['fixture/history.jsonl']),'first_append_history_bytes':len(history),
+ 'real_B_interrupted_job_reconciled':True,'fixture_provider_only':True,
+ 'production_plan_or_backups_changed':False,'whole_plan_accepted':False}))
 '''
 
 
@@ -132,11 +168,13 @@ def main():
     if not 0<=age<=300 or health.get('SmartPassed') is not True or health.get('NativeExit')!=0:
         raise ValueError('fresh successful passive B health evidence required')
     source=Path(__file__).with_name('vk_nightly_generation.py').read_text()
+    lifecycle=Path(__file__).with_name('vk_nightly_lifecycle.py').read_text()
     if args.resume_fixture and not re.fullmatch('fixture-[0-9a-f]{32}',args.resume_fixture):
         raise ValueError('exact owned fixture selector required')
     payload={'source':source,'source_sha256':hashlib.sha256(source.encode()).hexdigest(),
              'fixture':args.resume_fixture or 'fixture-'+uuid.uuid4().hex,'resume':bool(args.resume_fixture),
-             'restore':RESTORE,'sqlite_input':WINDOWS_SQLITE_INPUT}
+             'restore':RESTORE,'verify':WINDOWS_READBACK,'sqlite_input':WINDOWS_SQLITE_INPUT,
+             'lifecycle':lifecycle,'lifecycle_sha256':hashlib.sha256(lifecycle.encode()).hexdigest()}
     save(root/'desktop-fixture-attempt.private.json',{'fixture':payload['fixture'],'source_sha256':payload['source_sha256'],
          'resume':payload['resume'],'status':'starting; reconcile exact fixture after any transport uncertainty'})
     # Existing Desktop identity and existing unprivileged WSL boundary; no new

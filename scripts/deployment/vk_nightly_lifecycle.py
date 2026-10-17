@@ -330,8 +330,13 @@ class NightlyJob:
             if pin(info) != value['object_ledger_identity'] or info.st_size > MAX_INDEX:
                 raise ValueError('object ledger substituted or oversized')
             while line := stream.readline(4097):
-                if len(line) > 4096 or not line.endswith(b'\n'):
+                if len(line) > 4096:
                     raise ValueError('object ledger is incomplete; preserve candidate')
+                if not line.endswith(b'\n'):
+                    # A link is created only after its complete record is
+                    # fsynced. Ignore a torn final append, while directory-set
+                    # validation still preserves every unrecorded file.
+                    break
                 row = json.loads(line)
                 if (row.get('candidate') != value['candidate']
                         or not re.fullmatch('(chunk-)?[0-9a-f]{64}', row.get('name', ''))

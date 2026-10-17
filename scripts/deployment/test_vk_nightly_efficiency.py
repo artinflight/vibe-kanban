@@ -195,6 +195,21 @@ class ChunkedLifecycle(lifecycle_tests.NightlyLifecycle):
         self.assertEqual(chunk.read_bytes(), b'unknown substituted evidence')
         self.assertEqual(self.latest_rows(), [('before',)])
 
+    def test_torn_unlinked_final_intent_does_not_block_owned_recovery(self):
+        self.assertTrue(self.run_nightly()['passed']);self.change();self.interrupt_chunk()
+        with (self.jobs/'object-ledger.jsonl').open('ab') as ledger:ledger.write(b'{"candidate":')
+        self.job.reconcile(retention_adopted=True,inputs_quiescent=True)
+        self.assertTrue(self.run_nightly()['passed'])
+        self.assertEqual(self.latest_rows(),[('before',),('second',)])
+
+    def test_missing_ownership_record_still_preserves_existing_chunk(self):
+        self.assertTrue(self.run_nightly()['passed']);self.change();self.interrupt_chunk()
+        ledger=self.jobs/'object-ledger.jsonl';ledger.write_bytes(b'{"candidate":')
+        candidate=self.nightly/self.job.read()['candidate']
+        with self.assertRaisesRegex(ValueError,'unexpected incomplete candidate evidence'):
+            self.job.reconcile(retention_adopted=True,inputs_quiescent=True)
+        self.assertTrue(list((candidate/'objects').glob('chunk-*')))
+
     def test_chunked_current_reconciliation_and_sqlite_restore(self):
         first = self.run_nightly()
         self.assertTrue(first['passed'], first)

@@ -1,3 +1,17 @@
+# Nightly production acceptance — October17 follow-up
+
+PR263 is the single nightly integration into staging, coordinated with restart
+preflight (consumer/PR262) and Staging (backend owner). The current suite runs
+359 tests: 358 pass, one explicit opt-in service fixture skips. Real Desktop B
+native Windows restoration of four complete files and SQLite integrity/value
+passes after older fixture retirement. A fresh B fixture additionally proves
+interrupted chunk publication reconciliation and subsequent full restoration.
+Unknown/unverified recovery data are preserved. The whole92-root production
+census and measured B capacity/restore acceptance remain pending; no production
+schedule or deployment is claimed from these bounded fixtures. Seamus authorizes
+completion, deployment and scheduling once those checks pass. Receipts are private
+under `/mnt/vk-storage/vk-nightly-efficiency-20261017/`.
+
 # Nightly backup efficiency pickup — October 16
 
 Local T40 (`f394eccb-cbb6-4e6a-a0ba-87ba8d51f904`) is created and linked to

@@ -18,6 +18,41 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
+## Nightly restart readiness — October17 23:24UTC
+
+Fresh read-only page-count audit passes all108 known databases, errors0:
+5,251,297,280bytes snapshot payload, largest2,325,147,648bytes. This is a
+known-set lower bound, not a coherent backup or fresh discovery. SSD free is
+5,203,628,032bytes; native B free4,387,418,112bytes. B is below Nightly's
+unchanged6GiB floor. With the prior shared8GiB assumption, metadata and descriptor,
+input-stage minimum is15,989,764,341bytes:11,602,346,229bytes additional BEFORE
+archive/objects/proof/growth/full restore. Actual full SSD peak remains unknown;
+8GiB was a total-free planning target, never a reservation. Even the unapproved
+single-archive retirement would leave only258,031,371bytes above this input-only
+minimum at this observation; it does not clear full recovery.
+
+The latest located full initial-restore verification is October9, started13:27:27UTC,
+1438.966s, with76 SQLite integrity checks and archived atime restored. Its later
+adoption failed with BrokenPipeError; historical recovery and operational activation
+were not accepted. October17's successful four-file native B fixture, WAL transport
+and large-index lifecycle do not establish full production-plan acceptance.
+
+Bounded preparation found two changed runtime dependency identities:
+report_reconciliation.py and sidechat_connector.py. Current identities/hashes are
+recorded as an unadopted addendum; old sealed packages remain. Original runtime/
+frontend observation passes through unchanged backend PID3927146, then fails B floor.
+No Nightly bulk job/timer is active or queued. Staging and Disk received the exact
+readiness receipt in their existing running sessions; shared Staging2GiB incremental/
+strict2GiB free floor and T18 inclusive2GiB cap remain. High memory pressure is being
+handled by Staging with the responsible owner; no guard is weakened or job stopped.
+
+Next: storage-owner capacity resolution and fresh separate admission; reconcile the
+two dependency pins into a new reviewed derived package, then complete the corrected
+stream measurement before sizing physical capture/restore coexistence. All prior
+captures and recovery remain. No production restart, Nightly deployment or schedule
+activation occurred. Private receipts: restart-readiness-20261017T2323 under the
+existing vk-nightly-efficiency-20261017 evidence area, with owner handoff copies.
+
 ## October17 current B lower bound — 13:03UTC
 
 SSD free9,161,347,072bytes meets8GiB individual planning headroom; full scratch

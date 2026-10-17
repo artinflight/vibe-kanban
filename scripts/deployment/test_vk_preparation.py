@@ -120,6 +120,54 @@ class PreparationTests(unittest.TestCase):
             self.run_plan()
         self.assertFalse(self.counter.exists())
 
+    def test_nested_empty_output_is_not_a_successful_artifact(self):
+        directory = self.root / "empty-output"
+        (directory / "empty-child").mkdir(parents=True)
+        self.plan["steps"][0]["outputs"] = [str(directory)]
+        with self.assertRaisesRegex(ValueError, "empty"):
+            self.run_plan()
+        self.assertFalse(json.loads((self.cache / "latest-result.json").read_text())["passed"])
+        self.assertEqual(list((self.cache / "cache/evidence").glob("*")), [])
+
+    def test_empty_late_command_refuses_all_launches(self):
+        self.plan["steps"].append({"id": "missing", "command": []})
+        with self.assertRaisesRegex(ValueError, "explicit nonempty"):
+            self.run_plan()
+        self.assertFalse(self.counter.exists())
+
+    def test_inherited_capture_pipe_drains_before_log_and_artifact_seal(self):
+        child = ("import time; from pathlib import Path; time.sleep(.1); "
+                 "Path(" + repr(str(self.artifact)) + ").write_text('complete'); print('producer drained')")
+        parent = "import subprocess,sys; subprocess.Popen([sys.executable,'-c'," + repr(child) + "])"
+        self.plan["steps"][0]["command"] = [sys.executable, "-c", parent]
+        result = self.run_plan()["steps"]["build"]
+        self.assertEqual(self.artifact.read_text(), "complete")
+        self.assertIn("producer drained", Path(result["log"]).read_text())
+        self.assertTrue(self.run_plan()["steps"]["build"]["reused"])
+
+    def test_owned_pipe_timeout_cannot_publish_or_leave_its_writer_running(self):
+        child_pid = self.root / "child-pid"
+        child = ("import os,time; from pathlib import Path; Path(" + repr(str(child_pid))
+                 + ").write_text(str(os.getpid())); time.sleep(10)")
+        parent = "import subprocess,sys; subprocess.Popen([sys.executable,'-c'," + repr(child) + "])"
+        self.plan["steps"][0].update(command=[sys.executable, "-c", parent], timeout_seconds=.5)
+        with self.assertRaises(subprocess.TimeoutExpired):
+            self.run_plan()
+        self.assertFalse(json.loads((self.cache / "latest-result.json").read_text())["passed"])
+        self.assertEqual(list((self.cache / "cache/evidence").glob("*")), [])
+        self.assertTrue(child_pid.exists())
+        status = Path("/proc") / child_pid.read_text() / "stat"
+        for _ in range(100):
+            try:
+                state = status.read_text().split(")", 1)[1].split()[0]
+            except FileNotFoundError:
+                break
+            if state == "Z":
+                break
+            time.sleep(.01)
+        else:
+            self.fail("Owned timeout writer remains running")
+
     def test_dirty_source_refuses_reuse(self):
         self.run_plan()
         (self.source / "source.txt").write_text("uncommitted")

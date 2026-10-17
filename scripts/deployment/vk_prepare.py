@@ -11,7 +11,9 @@ import math
 import os
 from pathlib import Path
 import re
+import selectors
 import shutil
+import signal
 import sqlite3
 import stat
 import subprocess
@@ -26,6 +28,41 @@ BUILD_ENVIRONMENT = ("PATH", "HOME", "LANG", "LC_ALL", "SSL_CERT_FILE", "RUSTUP_
                      "CARGO_HOME", "PNPM_HOME", "CC", "CXX", "RUSTC_WRAPPER", "RUSTFLAGS",
                      "CARGO_TARGET_DIR", "CARGO_INCREMENTAL", "SQLX_OFFLINE", "NODE_OPTIONS",
                      "NODE_ENV", "CI")
+
+
+def run_and_drain(command, output, *, cwd, env, timeout):
+    """Stream bounded chunks through EOF before sealing logs/artifacts.
+
+    Only this invocation gets a new process group. On timeout/failure, terminate
+    that owned group. EOF proves log drain, not arbitrary detached-producer
+    completion: asynchronous producers still need their owner's join/status gate.
+    """
+    deadline = time.monotonic() + timeout
+    process = subprocess.Popen(command, cwd=cwd, env=env, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, start_new_session=True)
+    try:
+        with selectors.DefaultSelector() as selector:
+            selector.register(process.stdout, selectors.EVENT_READ)
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0 or not selector.select(remaining):
+                    raise subprocess.TimeoutExpired(command, timeout)
+                block = os.read(process.stdout.fileno(), 65536)
+                if not block:
+                    break
+                output.write(block)
+        return process.wait(timeout=max(0, deadline - time.monotonic()))
+    except BaseException:
+        # The direct child is not reaped until wait, retaining its group identity
+        # throughout pipe drain. Never signal an unrelated pre-existing group.
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait()
+        raise
+    finally:
+        process.stdout.close()
 
 
 def git(source, *args):
@@ -64,11 +101,15 @@ def output_hashes(paths):
         files = sorted(root.rglob("*")) if root.is_dir() else [root]
         if root.is_dir() and not files:
             raise ValueError("Required output directory is empty: " + str(root))
+        regular_files = 0
         for path in files:
             if path.is_symlink():
                 raise ValueError("Release outputs must not depend on mutable external symlinks: " + str(path))
             if path.is_file():
                 result[str(path)] = {"sha256": digest(path), "mode": path.stat().st_mode & 0o777}
+                regular_files += 1
+        if root.is_dir() and regular_files == 0:
+            raise ValueError("Required output directory is empty of regular artifacts: " + str(root))
     return result
 
 
@@ -85,6 +126,8 @@ def default_plan(source, root, deployed):
                for name in (".env", ".env.local", ".env.production", ".env.production.local")]
     context.extend(str(Path(source) / name) for name in (".cargo/config", ".cargo/config.toml", ".npmrc"))
     steps = [
+        {"id": "continuity", "command": ["python3", "scripts/continuity/pickup.py", "check"],
+         "tools": [python], "cacheable": True},
         {"id": "preparation-tests", "command": ["python3", "-m", "unittest", "discover", "-s", "scripts/deployment", "-p", "test_vk_*.py"],
          "tools": [python], "cacheable": True},
         {"id": "ops", "command": ["pnpm", "run", "ops:check"], "tools": node, "cacheable": True},
@@ -498,10 +541,9 @@ class Preparation:
                     log = self.run_root / (name + ".log")
                     self.materialize(step.get("materialize_source_outputs", []), results)
                     with log.open("wb") as output:
-                        completed = subprocess.run(step["command"], cwd=self.source, env=self.environment,
-                                                   stdout=output, stderr=subprocess.STDOUT,
-                                                   timeout=step.get("timeout_seconds", 1800))
-                    if completed.returncode:
+                        returncode = run_and_drain(step["command"], output, cwd=self.source,
+                                                   env=self.environment, timeout=step.get("timeout_seconds", 1800))
+                    if returncode:
                         raise RuntimeError("Preparation step failed: " + name + " (see " + str(log) + ")")
                     if self.source_tree() != tree:
                         raise ValueError("Preparation changed candidate source; invalidate evidence")

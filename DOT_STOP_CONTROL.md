@@ -74,7 +74,7 @@ python3 -B scripts/dot-connector/verify_stop_connector.py \
   --source /home/mcp/code/vibe-dot-connector
 ```
 
-The first run passes 23 connector tests. The installed-source overlay passes
+The first run passes 24 connector tests. The installed-source overlay passes
 28 existing capacity/Recommend/read regressions, discovery/dispatch and continued
 rejection of broad Stop/shell/admin tools. No live calls or state writes occur.
 Backend tests cover exact identity, terminal/non-agent rejection, the atomic
@@ -98,6 +98,11 @@ backend capability and main Dot's actual tool inventory are separate evidence.
 An installed `tools/list` does not establish that the main Dot conversation has
 adopted the definitions. Do not ask for pairing, replace credentials or repeatedly
 refresh to conceal an inventory propagation problem.
+
+Live read-only preflight confirms the current backend lacks the guarded contract
+(it returns the legacy SPA fallback). The connector handles that as unsupported
+without a write. CU is actively reconciling the numeric envelope; verified banked
+rollover is still unrecovered, so no complete total or hard-budget arming is claimed.
 
 Current stream: source and Python tests prepared; backend CI, coordinated
 activation and main-Dot availability are not yet verified. Aggregate automatic

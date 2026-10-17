@@ -1,4 +1,5 @@
 import unittest
+import json
 import urllib.error
 import uuid
 from unittest.mock import Mock
@@ -49,6 +50,12 @@ class StopContracts(unittest.TestCase):
             self.assertEqual("unsupported", result["status"])
             self.assertFalse(result["stopped"])
             service.post_fixed.assert_not_called()
+
+    def test_legacy_spa_html_fallback_is_unsupported_without_writes(self):
+        service = api()
+        service.http_get.side_effect = json.JSONDecodeError("Legacy SPA response", "", 0)
+        self.assertEqual("unsupported", stop_control.stop(service, ARGS)["status"])
+        service.post_fixed.assert_not_called()
 
     def test_unknown_fields_nil_uuid_wrong_scope_and_contradictory_target_are_rejected(self):
         for changes in ({"workspace_id": str(uuid.uuid4())}, {"serialized_admission": False},

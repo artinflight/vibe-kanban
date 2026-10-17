@@ -1,4 +1,5 @@
 """Exact execution Stop. No workspace/process-shell/legacy Stop fallback."""
+import json
 import urllib.error
 
 UUID = {"type": "string", "format": "uuid"}
@@ -54,6 +55,10 @@ def target(api, values):
         if error.code in (404, 405):
             return None
         raise
+    except json.JSONDecodeError:
+        # Older Vibe serves the SPA HTML fallback for an unknown GET route.
+        # There is no validated guarded capability and no write is permitted.
+        return None
     if (not isinstance(result, dict) or result.get("version") != 1
             or any(result.get(k) != values[k] for k in IDENTITY)
             or result.get("status") not in ("ready", "not_running", "unsupported")

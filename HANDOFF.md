@@ -1,3 +1,18 @@
+# Exact Dot execution Stop — October 17 preparation
+
+Seamus explicitly authorized a safe exact-execution Stop/readback connector.
+The implementation uses exact workspace/session/execution/request identities,
+a guarded backend endpoint, serialized admission and durable uncertainty-aware
+receipts. The existing unsafe legacy Stop is never a fallback. Python connector
+and installed-source policy regressions pass; hosted backend tests and safe
+coordinated activation remain pending. No real agent has been stopped.
+CU retains tonight's verified aggregate accounting and T18 priority; the budget
+is remaining weekly allocation + verified rollover + next week, not an invented
+number. Cooperative checkpoints around8,000credits are interim, not a hard cap.
+CU/release issue handoffs are saved without adding lanes. The release owner
+retains its private-reader backend/compiler/restart window.
+[Contract, verification and deployment gates](DOT_STOP_CONTROL.md).
+
 # Generated deliverable links — installed October 16 follow-up
 
 The reported OP::3D Print Issues link was an unpublished filesystem target,

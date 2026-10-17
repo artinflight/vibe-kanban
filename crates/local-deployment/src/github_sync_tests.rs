@@ -276,6 +276,122 @@ async fn observation_container(pool: sqlx::SqlitePool, policy: &Path) -> LocalCo
 }
 
 #[cfg(target_os = "linux")]
+#[tokio::test]
+async fn idle_capacity_queue_wakes_without_completion_and_stops_on_shutdown() {
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+    sqlx::migrate!("../db/migrations").run(&pool).await.unwrap();
+    let mut container = observation_container(pool, Path::new("/unused-fixture-policy")).await;
+    container.automatic_sync_override = Some(false);
+    let queue = container.queued_message_service.clone();
+    let draft = || DraftFollowUpData {
+        message: "owned queue wakeup fixture; no agent launch".into(),
+        executor_config: ExecutorConfig::new(BaseCodingAgent::Codex),
+    };
+    let normal = Uuid::new_v4();
+    queue.queue_message(normal, draft());
+    let first = Uuid::new_v4();
+    queue.queue_for_capacity(first, draft());
+    let shutdown = CancellationToken::new();
+    let worker_shutdown = shutdown.clone();
+    let worker = tokio::spawn(async move {
+        container
+            .poll_pending_work(worker_shutdown, Duration::from_millis(20))
+            .await;
+    });
+    // Missing sessions are intentionally disposable fixture inputs: the actual
+    // consumer reads SQL and discards them without launching any executor. This
+    // tests autonomous wakeup, not a claim of successful agent continuation.
+    for session in [first, Uuid::new_v4()] {
+        if session != first {
+            queue.queue_for_capacity(session, draft());
+        }
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while queue.has_queued(session) {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .expect("idle queue must retry without another process completing");
+    }
+    assert!(
+        queue.has_queued(normal),
+        "ordinary queued input is not consumed"
+    );
+    shutdown.cancel();
+    tokio::time::timeout(Duration::from_secs(2), worker)
+        .await
+        .unwrap()
+        .unwrap();
+    let after_shutdown = Uuid::new_v4();
+    queue.queue_for_capacity(after_shutdown, draft());
+    tokio::time::sleep(Duration::from_millis(40)).await;
+    assert!(queue.has_queued(after_shutdown));
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn idle_capacity_queue_never_replays_uncertain_restored_batch() {
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+    sqlx::migrate!("../db/migrations").run(&pool).await.unwrap();
+    let mut container =
+        observation_container(pool.clone(), Path::new("/unused-fixture-policy")).await;
+    container.automatic_sync_override = Some(false);
+    let session = Uuid::new_v4();
+    let queued = container.queued_message_service.queue_for_capacity(
+        session,
+        DraftFollowUpData {
+            message: "uncertain dispatched input must survive".into(),
+            executor_config: ExecutorConfig::new(BaseCodingAgent::Codex),
+        },
+    );
+    let data = serde_json::to_string(&queued).unwrap();
+    sqlx::query("INSERT INTO turn_github_sync_user_queue VALUES (?, ?, ?, 'dispatching')")
+        .bind(session)
+        .bind(Uuid::new_v4())
+        .bind(&data)
+        .execute(&pool)
+        .await
+        .unwrap();
+    container.queued_message_service = QueuedMessageService::new();
+    container
+        .queued_message_service
+        .restore(&pool)
+        .await
+        .unwrap();
+    let queue = container.queued_message_service.clone();
+    let shutdown = CancellationToken::new();
+    let worker_shutdown = shutdown.clone();
+    let worker = tokio::spawn(async move {
+        container
+            .poll_pending_work(worker_shutdown, Duration::from_millis(10))
+            .await;
+    });
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    shutdown.cancel();
+    worker.await.unwrap();
+    assert_eq!(
+        serde_json::to_string(&queue.get_queued(session).unwrap()).unwrap(),
+        data
+    );
+    assert!(queue.take_oldest_capacity_queued().is_none());
+    let stored: (String, String) =
+        sqlx::query_as("SELECT data, state FROM turn_github_sync_user_queue WHERE session_id = ?")
+            .bind(session)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(stored, (data, "dispatching".into()));
+}
+
+#[cfg(target_os = "linux")]
 impl ObservationFixture {
     async fn new(scheduled: bool) -> Self {
         Self::with_publication_policy(scheduled, true).await

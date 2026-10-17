@@ -1,5 +1,8 @@
 # Pickup
 
+Current bounded follow-up: [compact durable job outcomes](USAGE_JOB_OUTCOMES.md).
+PR266 is merged; preserve its archives/reuse and the newer release coordination.
+
 1. Read [STATE](STATE.md) for active protections and the topic map, then
    [STREAM](STREAM.md) for this branch. Do not load historical archives by default.
 2. Read [USAGE_EFFICIENCY](USAGE_EFFICIENCY.md) for exact measured results,

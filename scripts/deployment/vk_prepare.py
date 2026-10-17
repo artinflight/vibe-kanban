@@ -23,6 +23,7 @@ import urllib.request
 import uuid
 
 from vk_prep_common import digest, identity, measured, save, storage
+from vk_job_outcome import outcome
 
 BUILD_ENVIRONMENT = ("PATH", "HOME", "LANG", "LC_ALL", "SSL_CERT_FILE", "RUSTUP_HOME",
                      "CARGO_HOME", "PNPM_HOME", "CC", "CXX", "RUSTC_WRAPPER", "RUSTFLAGS",
@@ -408,10 +409,13 @@ class Preparation:
                          "helpers_sha256": digest(Path(__file__).with_name("vk_prep_common.py"))})
 
     def run(self):
+        self.outcome = outcome(self.run_root, "running")
         with (self.cache / ".preparation.lock").open("a") as lock:
             try:
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as error:
+                self.outcome = outcome(self.run_root, "blocked", phase="cache-ownership",
+                                       error_type=type(error).__name__)
                 raise RuntimeError("Preparation cache already has an owner; do not launch duplicate work") from error
             return self.run_locked()
 
@@ -496,6 +500,7 @@ class Preparation:
 
     def run_locked(self):
         started = time.monotonic()
+        save(self.root / "latest-outcome.json", self.outcome)
         save(self.root / "latest-result.json", {"passed": False, "state": "running-or-interrupted",
                                                "cutover_authorized": False, "run": str(self.run_root)})
         clock = self.root / "preparation-clock.json"
@@ -505,19 +510,26 @@ class Preparation:
         tree = None
         results = {}
         passed = False
+        phase = "source"
+        failure = None
         try:
             tree = self.source_tree()
+            phase = "plan"
             self.validate_plan()
             accepted = self.plan.get("accepted_artifact_manifest")
             if accepted:
+                phase = "accepted-artifacts"
                 verify_artifacts(accepted["path"], accepted["sha256"], tree)
             # Discover missing prerequisites before a long build, not afterwards.
             with measured(self.timings, "prerequisites"):
+                phase = "prerequisites"
                 for step in steps:
-                    for command in step.get("tools", []):
+                    for index, command in enumerate(step.get("tools", [])):
+                        phase = "prerequisites:" + step["id"] + ":" + str(index)
                         self.tool(command)
             for step in steps:
                 name = step["id"]
+                phase = "step:" + name
                 dependencies = {key: {"fingerprint": results[key]["fingerprint"], "outputs": results[key]["outputs"]}
                                 for key in step.get("depends_on", [])}
                 fingerprint = self.fingerprint(step, dependencies)
@@ -561,17 +573,28 @@ class Preparation:
                     if reusable:
                         save(cached, result)
             if accepted:
+                phase = "accepted-artifacts"
                 verify_artifacts(accepted["path"], accepted["sha256"], tree)
             passed = True
+            phase = "completed"
+        except BaseException as error:
+            failure = {"phase": phase[:256], "type": type(error).__name__}
+            raise
         finally:
             report = {"schema": 1, "passed": passed, "source_tree": tree, "steps": results,
+                      "plan_sha256": identity(self.plan),
                       "accepted_artifact_manifest": self.plan.get("accepted_artifact_manifest"),
                       "timings": self.timings, "total_preparation_seconds": time.monotonic() - started,
                       "elapsed_since_preparation_started_seconds": time.time() - json.loads(clock.read_text())["started_at"],
                       "runner_service_actions": [], "cutover_authorized": False,
                       "functional_readiness": "Separate release QA, backups and volatile preflight remain required"}
+            if failure:
+                report["failure"] = failure
             save(self.run_root / "result.json", report)
             save(self.root / "latest-result.json", report)
+            self.outcome = outcome(self.run_root, "completed" if passed else "failed", report=report,
+                                   phase=phase, error_type=failure["type"] if failure else None)
+            save(self.root / "latest-outcome.json", self.outcome)
         return report
 
 
@@ -589,6 +612,8 @@ def main():
     run.add_argument("--source", required=True, type=Path)
     run.add_argument("--root", required=True, type=Path)
     run.add_argument("--plan", required=True, type=Path)
+    run.add_argument("--compact", action="store_true",
+                     help="Print the bounded durable outcome; preserve the full existing result on disk")
     kind = commands.add_parser("classify")
     kind.add_argument("--source", required=True, type=Path)
     kind.add_argument("--deployed", required=True)
@@ -627,7 +652,24 @@ def main():
             raise ValueError("Existing preparation plan must not be replaced")
         save(target, result)
     elif args.action == "run":
-        result = Preparation(args.source, args.root, json.loads(args.plan.read_text())).run()
+        preparation = Preparation(args.source, args.root, json.loads(args.plan.read_text()))
+        try:
+            result = preparation.run()
+        except Exception as error:
+            if not args.compact:
+                raise
+            # Failure/blocked remains nonzero. Do not substitute an older pass
+            # or claim that an external UI/message delivery was acknowledged.
+            receipt = getattr(preparation, "outcome", None)
+            if receipt is None or receipt["state"] not in ("failed", "blocked"):
+                receipt = {"kind": "preparation-outcome", "job_id": preparation.run_root.name,
+                           "state": "failed", "passed": False, "outcome_record_complete": False,
+                           "error_type": type(error).__name__, "cutover_authorized": False,
+                           "next_action": "Outcome recording failed; inspect this job and existing evidence."}
+            print(json.dumps(receipt, indent=2))
+            return 1
+        if args.compact:
+            result = preparation.outcome
     elif args.action == "classify":
         clean_tree(args.source)
         result = {"deployment_kind": deployment_kind(args.source, args.deployed), "cutover_authorized": False}
@@ -639,7 +681,8 @@ def main():
         result = pending_sessions(args.origin, database_sessions(args.database), args.workers)
         save(storage(args.out), result)
     print(json.dumps(result, indent=2))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

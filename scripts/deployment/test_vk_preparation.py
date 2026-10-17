@@ -56,6 +56,125 @@ class PreparationTests(unittest.TestCase):
         self.assertTrue(self.run_plan()["steps"]["build"]["reused"])
         self.assertEqual(self.counter.read_text(), "1")
 
+    def test_compact_outcome_binds_full_run_report_without_claiming_delivery(self):
+        import hashlib
+        preparation = Preparation(self.source, self.cache, self.plan)
+        result = preparation.run()
+        receipt = json.loads((preparation.run_root / "outcome.json").read_text())
+        raw = (preparation.run_root / "result.json").read_bytes()
+        self.assertTrue(result["passed"])
+        self.assertEqual(receipt["result"]["sha256"], hashlib.sha256(raw).hexdigest())
+        self.assertEqual(receipt["result"]["bytes"], len(raw))
+        self.assertEqual(receipt["job_id"], preparation.run_root.name)
+        self.assertEqual(receipt["delivery"], "not_attested")
+        self.assertEqual(receipt["task_completion"], "not_inferred")
+        self.assertFalse(receipt["cutover_authorized"])
+
+    def test_compact_cli_is_opt_in_and_failure_remains_nonzero(self):
+        plan = self.root / "plan.json"
+        plan.write_text(json.dumps(self.plan))
+        command = [sys.executable, str(Path(__file__).with_name("vk_prepare.py")), "run",
+                   "--source", str(self.source), "--root", str(self.cache), "--plan", str(plan)]
+        full = subprocess.run(command, capture_output=True, text=True, check=True)
+        self.assertIn("timings", json.loads(full.stdout))
+        compact = subprocess.run(command + ["--compact"], capture_output=True, text=True, check=True)
+        receipt = json.loads(compact.stdout)
+        self.assertEqual(receipt["state"], "completed")
+        self.assertEqual(receipt["steps"]["reused"], 1)
+        self.plan["required_files"] = [{"path": str(self.root / "missing"), "sha256": "0" * 64}]
+        plan.write_text(json.dumps(self.plan))
+        failed = subprocess.run(command + ["--compact"], capture_output=True, text=True)
+        receipt = json.loads(failed.stdout)
+        self.assertEqual(failed.returncode, 1)
+        self.assertEqual(receipt["state"], "failed")
+        self.assertEqual(receipt["phase"], "plan")
+        self.assertFalse(receipt["passed"])
+        self.assertNotIn("timings", receipt)
+
+    def test_failed_prerequisite_names_the_plan_slot_without_leaking_arguments(self):
+        self.plan["steps"][0]["tools"] = [["missing-fixture-tool", "private-argument-marker"]]
+        preparation = Preparation(self.source, self.cache, self.plan)
+        with self.assertRaises(ValueError):
+            preparation.run()
+        self.assertEqual(preparation.outcome["phase"], "prerequisites:build:0")
+        self.assertEqual(preparation.outcome["state"], "failed")
+        self.assertNotIn("private-argument-marker", json.dumps(preparation.outcome))
+        self.assertFalse(self.counter.exists())
+
+    def test_blocked_job_does_not_return_previous_success_or_clobber_owner(self):
+        import fcntl
+        self.run_plan()
+        previous = (self.cache / "latest-outcome.json").read_bytes()
+        preparation = Preparation(self.source, self.cache, self.plan)
+        with (preparation.cache / ".preparation.lock").open("a") as held:
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            with self.assertRaises(RuntimeError):
+                preparation.run()
+        self.assertEqual(preparation.outcome["state"], "blocked")
+        self.assertNotIn("result", preparation.outcome)
+        self.assertEqual((self.cache / "latest-outcome.json").read_bytes(), previous)
+
+    def test_terminal_outcome_requires_full_evidence(self):
+        from vk_job_outcome import outcome
+        with self.assertRaisesRegex(ValueError, "requires its full result"):
+            outcome(self.root, "completed")
+
+    def test_packaged_cli_includes_both_fixed_helpers(self):
+        package = self.root / "packaged-runner"
+        package.mkdir()
+        for name in ("vk_prepare.py", "vk_prep_common.py", "vk_job_outcome.py"):
+            shutil.copy2(Path(__file__).with_name(name), package / name)
+        run = subprocess.run([sys.executable, str(package / "vk_prepare.py"), "run", "--help"],
+                             capture_output=True, text=True, check=True)
+        self.assertIn("--compact", run.stdout)
+
+    def test_outcome_publication_failure_cannot_print_a_success(self):
+        import io
+        from contextlib import redirect_stdout
+        from vk_prepare import main, save
+        plan = self.root / "plan.json"
+        plan.write_text(json.dumps(self.plan))
+        def fail_alias(path, value):
+            if Path(path).name == "latest-outcome.json" and value["state"] == "completed":
+                raise OSError("private-error-marker")
+            return save(path, value)
+        args = ["vk_prepare.py", "run", "--source", str(self.source), "--root", str(self.cache),
+                "--plan", str(plan), "--compact"]
+        output = io.StringIO()
+        with patch("sys.argv", args), patch("vk_prepare.save", side_effect=fail_alias), redirect_stdout(output):
+            self.assertEqual(main(), 1)
+        receipt = json.loads(output.getvalue())
+        self.assertFalse(receipt["passed"])
+        self.assertFalse(receipt["outcome_record_complete"])
+        self.assertNotIn("private-error-marker", output.getvalue())
+        self.assertTrue(json.loads((self.cache / "latest-result.json").read_text())["passed"])
+
+    def test_parent_death_cannot_leave_new_outcome_claiming_completed(self):
+        self.run_plan()
+        marker = self.root / "job-started"
+        code = "from pathlib import Path; import time; Path(" + repr(str(marker)) + ").write_text('started'); time.sleep(.6)"
+        self.plan["steps"][0].update(cacheable=False, command=[sys.executable, "-c", code])
+        plan = self.root / "plan.json"
+        plan.write_text(json.dumps(self.plan))
+        child = subprocess.Popen([sys.executable, str(Path(__file__).with_name("vk_prepare.py")), "run",
+                                  "--source", str(self.source), "--root", str(self.cache), "--plan", str(plan), "--compact"],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            for _ in range(200):
+                current = json.loads((self.cache / "latest-outcome.json").read_text())
+                if current["state"] == "running" and marker.exists():
+                    break
+                time.sleep(.005)
+            else:
+                self.fail("Fresh running outcome was not published")
+            child.kill();child.wait(timeout=5)
+            self.assertFalse(json.loads((self.cache / "latest-outcome.json").read_text())["passed"])
+        finally:
+            if child.poll() is None:
+                child.kill();child.wait()
+            # The tiny owned command finishes naturally; do not overlap fixture cleanup.
+            time.sleep(.7)
+
     def test_identical_tree_new_commit_reuses_evidence(self):
         self.run_plan()
         self.git("commit", "--allow-empty", "-qm", "promotion metadata")

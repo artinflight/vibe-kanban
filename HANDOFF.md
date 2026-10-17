@@ -1,22 +1,27 @@
-# Nightly index and capacity correction — October 17, 01:35 UTC
+# Nightly index and capacity follow-up — October17, 02:10 UTC
 
-The nightly-only index ceiling is now 1,500,000 entries / 512 MiB; historical
-candidate bounds remain unchanged. Canonical encoding, baseline hashing and
-index loading stream in bounded windows, reusing only fixed schema strings.
-The counted/discarded full-stream measurement tool compares actual compression,
-unique chunk/layout storage and 4 KiB allocation costs without publishing a
-backup. Shared allocation reserves simultaneous metadata and preserves the
-configured free-space floor. Its cold envelope is a ceiling, not a minimum.
+PR263 remains the sole nightly package/schedule. Its 1,219,860-row synthetic
+fixture published both independent generations under CPU25%, MemoryHigh2G /
+Max3G, Swap0. The fixed 1800s command ended02:05:38 with exit124 before final
+recovery/retirement completed. There was no hard-memory event or OOM; this is
+not a complete rehearsal pass. Both generations and the attempt are preserved.
+A separate600s reconciliation started02:08:36 and was stopped02:09:50 to honor
+Staging's newly announced r5 compiler/acceptance window. All further heavy index
+and counted production-stream work is held until that owner reports its end.
 
-The deployment Python suite passes 391 cases with one explicit skip. Small real
-B restores and crash recovery pass; the new full-size index rehearsal is waiting
-for Staging's final guarded compiler window. Full production stream capacity,
-whole-plan restore, operational deployment and schedule activation remain
-unverified. All original recovery archives remain preserved; the reviewed
-34-archive consolidation has no deletion approval. PR263/T40 remain the single
-nightly integration. See [current evidence](VK_NIGHTLY_BACKUP_EFFICIENCY.md).
+The actual MCP read-only SQLite backup API -> registered B SSHFS path passes
+with two tiny committed-WAL images, native Windows hash/integrity/value checks
+and13.99s runtime. The opt-in disposable service timeout also passes separately.
+The broader deployment suite passed391 cases plus one then-skipped timeout;
+that skipped case now has its own passing evidence. Hosted3c422d808 checks pass.
 
-# Nightly production acceptance — October 17
+The nightly-only bound is1,500,000 entries /512MiB; actual full-stream capacity,
+whole-plan physical restore, operational deployment and active scheduling remain
+unverified. B's reviewed34 originals and all18 Staging finals remain preserved;
+deletion is unapproved. The cold envelope is not a measured minimum. See
+[current evidence and remaining work](VK_NIGHTLY_BACKUP_EFFICIENCY.md).
+
+# Historical nightly admission — October 17, superseded above
 
 PR263 remains the sole nightly integration. Its 92-root census is complete:
 1,219,860 paths, 1,090,388 files, 145.75 GiB logical data, and 108 SQLite

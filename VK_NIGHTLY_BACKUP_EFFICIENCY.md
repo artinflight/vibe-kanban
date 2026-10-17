@@ -18,6 +18,37 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
+## October17 current phase evidence — 02:10 UTC
+
+The original fixed30-minute index command ended02:05:38, exit124. Both synthetic
+1,219,860-row generations passed publication readback, but final lifecycle
+recovery/retirement was unfinished. The last cgroup snapshot records a2.000GiB
+peak, zero hard-limit/OOM events and1.877s cumulative memory stalls over the
+whole30-minute phase. This demonstrates the bounded index path reached both
+publications, not a complete two-generation lifecycle pass. Both generations
+and the recorded attempt remain intact. No production/B payload was involved.
+
+A separate600s reconciliation using the exact unchanged source started02:08:36
+and was stopped02:09:50 when Staging announced r5. It had zero memory stalls or
+limit events. Finish that recorded recovery after Staging's compiler/acceptance
+window; do not repeat construction of both large tables. The counted/discarded
+production stream remains unstarted and is bounded to four hours with the
+existing supervisor. No production restore window or cron activation is armed.
+
+The exact registered-input adapter also passed two actual MCP-to-B copies from
+a tiny committed-WAL source. Normal SQLite backup API, resident registration,
+SSHFS transfer and native Windows full hash/integrity all pass; separate native
+queries recover both expected WAL values. Runtime13.99s. Diagnostic admission
+now includes the real metadata allowance and preserved B floor, with explicit
+512MiB input and450s initial timeout caps. All diagnostic files on B remain.
+This tests the actual transport, not the production plan.
+
+The previously skipped disposable service timeout passed separately in2.483s,
+including forced termination after its finite grace. All392 local deployment
+cases therefore have passing evidence across the main run and this opt-in run.
+Hosted checks pass at3c422d808. Full production capacity, restore, deployment
+and schedule remain pending; source publication is not operational adoption.
+
 ## October17 index-scale and capacity follow-up
 
 The sealed census has 1,219,860 paths. The nightly producer now has an explicit
@@ -50,8 +81,8 @@ opt-in skip. Ops governance, Python syntax and diff checks pass. Rust formatting
 passes; aggregate formatting stops at missing Prettier. No new Rust compile is
 started alongside Staging. The previous large synthetic attempt was stopped at
 01:25:57 after its whole-file reload hit the unchanged 2 GiB soft limit, without
-OOM; it is not acceptance evidence. The bounded streaming replacement awaits
-Staging's final compiler window before its next two-generation rehearsal.
+OOM; it is not acceptance evidence. The bounded streaming replacement reached both publications in index-scale-4;
+its remaining reconciliation is paused for Staging r5, as recorded above.
 No production capture, restore, activation or cron installation is claimed.
 
 B coordination confirms all 34 reviewed originals remain intact and deletion is

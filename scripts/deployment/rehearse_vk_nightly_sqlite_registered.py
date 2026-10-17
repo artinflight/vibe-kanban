@@ -18,6 +18,7 @@ from unittest.mock import patch
 from vk_archive_store import SSH
 from vk_nightly_capture_adapter import Resident, RegisteredWorkspace, disk_snapshot, mcp_lease, allowed_sqlite
 from vk_nightly_job import validate
+from vk_nightly_lifecycle import METADATA_RESERVE
 from vk_prep_common import storage
 
 
@@ -45,7 +46,9 @@ def run(package, source, output, repeat, *, native_after=False, inject_failure=F
     config = {**config, 'wsl_root':'/mnt/b/vk-backups/vk-nightly-registered-diagnostic-'+token,
               'scope_sha256':hashlib.sha256(('diagnostic:'+str(source)+':'+token).encode()).hexdigest(),
               'capture_limit_bytes':512*1024**2, 'initial_changed_limit_bytes':512*1024**2,
-              'initial_reserve_bytes':2*1024**3, 'snapshot_timeout_seconds':90, 'job_timeout_seconds':450,
+              'initial_capture_limit_bytes':512*1024**2,
+              'initial_reserve_bytes':config.get('preserved_B_floor_bytes',0)+METADATA_RESERVE+1024**3,
+              'snapshot_timeout_seconds':90, 'job_timeout_seconds':450,'initial_job_timeout_seconds':450,
               'enroll_fresh':True, 'recover_only':False, 'mcp_producer_lease_held':True}
     events=[];report={'source':str(source),'allocations':[], 'production_changed':False,'schedule_enabled':False,
                      'async_writes':async_writes}

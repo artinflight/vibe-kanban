@@ -59,22 +59,36 @@ exact preservation, non-CU isolation, stale/unavailable independence, repeated
 fresh reads and unchanged argument/UUID validation. Installed old-tool route
 acceptance and the exact module hash are recorded in the PR/Vibe handoff.
 
-Atomic file adoption completed at 03:00:25 UTC from source
+Atomic file adoption completed at 03:00:25 UTC from runtime source
 `c3a301881a88571512ab55a9d72026d6deddaf6b`; installed module SHA256 is
 `eb6d1c3c24d50e2457e058d5fda71a17bbe4553bfab2fd39734ed9b944158e0a`.
-However, the **actual registered old-tool call still returns no credit_budget**.
-The same configured connector has a persistent Python handler started at 02:33,
-before adoption, and its main loop has no hot reload. A disk-loaded diagnostic
-returns fresh nested data, but that is not registered-route acceptance. The
-request-boundary assumption was incorrect for this retained stdio process.
+The retained Python handler had imported the earlier module, so file replacement
+alone did not update actual registered calls. The coordinating owner clarified
+that connector-only reload was already authorized; the earlier broader restart
+restriction was this task's mistaken interpretation.
 
-No restart was performed. The current no-restart constraint blocks loading the
-adopted code into that handler; a specific connector-only reload decision is
-pending. No new worker, browser, Cargo, routing, ledger or backend change is
-needed or authorized. Frozen PR264 remains untouched. Do not repeat adoption,
-32 tests, backup or user discovery checks. After an authorized load boundary,
-this owner can verify the already-cached old tool directly. Standalone tool
-catalog propagation remains a separate unresolved platform issue.
+Only `vibe-dot-connector.service` reloaded at 03:08:04 UTC, with HTTP readiness
+in **0.406 seconds**. No other service/agent, new coding worker, Stop, credentials,
+network, routing, model, permissions, queued text, browser, compiler or UI work
+was involved. All other source hashes/service PIDs and protected ledger/access/
+subscription rows were verified unchanged. The retained 32-test candidate and
+Desktop B backup were reused; no suite, CI or rebase was repeated.
+
+**Actual registered cached-tool acceptance passed.** Calling the unchanged
+`get_workspace_reconciliation_status` through its existing connection returned
+nested `credit_budget.status=current, fresh=true`, observed at
+03:08:16.960 UTC with a 60-second expiry. The complete exact/null contract was
+retained. Every original CU field matched the pre-adoption response, including
+`readback_fresh:false`. An unrelated workspace matched the original module's
+response against the verified receipt snapshot and had no budget field. Raw
+responses and comparisons are retained privately; no real workspace, account or
+receipt identifiers are published here.
+
+This existing-tool route has no remaining implementation/activation blocker.
+CU can use its cached old tool immediately; no Seamus test, refresh or coding
+turn is needed. Standalone `get_credit_budget` discovery remains confirmed failed
+in main Dot and a fresh worker, a separate platform limitation. Frozen PR264 and
+backend/release source remain untouched by this compatibility change.
 
 ## Validation and installation boundary
 

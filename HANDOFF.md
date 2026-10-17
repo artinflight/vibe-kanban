@@ -1,10 +1,13 @@
 # CU credit readback through existing status — October 17 compatibility
 
-Runtime reconciliation: module adoption03:00:25 completed atSHAeb6d1c3c;
-actual registered status still lacks credit_budget because persistent Python
-handler predates adoption and has no hot reload. Disk-only fresh data is not
-registered acceptance. Connector-only reload decision pending under no-restart
-constraint; none performed. PR265 records exact evidence. PR264 unchanged.
+LIVE actual registered compatibility verified03:08UTC: original CU status
+returns credit_budget.current/fresh with full exact/null contract. Every original
+CU field and unrelated workspace response remain unchanged. The owner clarified
+connector-only reload was already authorized; only connector reloaded0.406s.
+No repeat tests/CI/rebase, new worker, Stop, compiler/UI or other restart. Source
+c3a301881, moduleSHAeb6d1c3c; private receipts shared with existing CU owner.
+Standalone discovery still fails; this old-tool fallback has no remaining blocker.
+PR264/backend/release source untouched. PR265 carries current acceptance.
 
 Seamus confirms standalone get_credit_budget discovery FAILED in main Dot and a
 fresh worker. The requested compatibility adds credit_budget only to existing

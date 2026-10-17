@@ -84,6 +84,7 @@ class Capacity(unittest.TestCase):
             self.assertEqual(result['cluster_rounded_object_payload_upper_bound'],sum(meter.allocated(p.stat().st_size) for p in actual))
             self.assertEqual(result['regular_files'],2);self.assertEqual(result['hardlinks'],1)
             self.assertEqual(result['full_tree_regular_payload_allocation'],2*meter.allocated(len(payload)))
+            self.assertEqual(result['maximum_regular_file_bytes'],len(payload))
 
 
 if __name__=='__main__':unittest.main()

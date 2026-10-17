@@ -118,10 +118,12 @@ class StreamMeter:
         entries_bytes=2+row_bytes-(1 if self.count else 0)
         if entries_bytes>MAX_INDEX:raise ValueError('measured index exceeds metadata ceiling')
         objects,encoded_bytes,allocated=self.db.execute('SELECT count(*),coalesce(sum(encoded),0),coalesce(sum(allocated),0) FROM objects').fetchone()
-        files=logical=restore=directories=hardlinks=0
+        files=logical=restore=directories=hardlinks=maximum_file=0
         for raw, in self.db.execute('SELECT row FROM entries'):
             row=json.loads(raw)
-            if row['kind']=='file':files+=1;logical+=row['bytes'];restore+=self.allocated(row['bytes'])
+            if row['kind']=='file':
+                files+=1;logical+=row['bytes'];restore+=self.allocated(row['bytes'])
+                maximum_file=max(maximum_file,row['bytes'])
             elif row['kind']=='directory':directories+=1
             elif row['kind']=='hardlink':hardlinks+=1
         return {'entries':self.count,'regular_files':files,'directories':directories,'hardlinks':hardlinks,
@@ -129,6 +131,7 @@ class StreamMeter:
                 'unique_objects':objects,'encoded_object_bytes':encoded_bytes,
                 'cluster_rounded_object_payload_upper_bound':allocated,
                 'full_tree_regular_payload_allocation':restore,'allocation_unit':self.unit,
+                'maximum_regular_file_bytes':maximum_file,
                 'filesystem_metadata_and_growth_not_included':True,'backup_created':False}
 
     def measure(self,source):

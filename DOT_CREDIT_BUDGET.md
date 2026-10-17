@@ -62,17 +62,56 @@ the new installed baseline before any later adoption, preserving Budget, Stop,
 sidechat, capacity and Recommend. The preparation helpers retain their anchors;
 an old pinned adapter must not overwrite a newer installed version.
 
-## Frozen backend Stop dependency
+## Live connector 1.5 — October 17, 02:33 UTC
 
-[PR264](https://github.com/artinflight/vibe-kanban/pull/264) is frozen at
+The requested connector-only activation completed at 02:33:05–02:33:06 UTC
+from source `3aea2eabd223d1b316f00907be19d54b1615b18e`.
+Only `adapter.py` and `credit_budget.py` changed. Connector restart/HTTP readiness
+took **0.409 seconds**; Vibe, CU, frontend, agents and other services were not
+restarted. The current adapter hash is the 1.5 hash above; budget module SHA256
+is `d8619d2038a7d547c3cf5f60058e9283a262f2be82d71d7b7e91c4446c20bdc4`.
+Desktop B backup upload, hash, download, offline file checks and SQLite integrity
+passed. All prior chats, protected access/subscriptions, other source modules,
+frontend/sidechat pointers and unaffected service PIDs were preserved.
+
+Installed facade discovery using the real native Vibe MCP upstream publishes
+exactly one `get_credit_budget`, both Stop controls and all five sidechat tools.
+Actual no-argument dispatch returns `status=current, fresh=true` from CU
+`credit-weekly-advance-t24-v5` under `account-credit-budget-v1`. Both schema and
+annotations are verified: empty object, no additional properties, read-only,
+non-destructive, idempotent and closed-world. All backend writes were disabled
+in this acceptance. No agent/provider refresh, real Stop, new turn, queued-text,
+permission or Recommend change was performed.
+
+**Main Dot catalog adoption remains unverified.** This coding execution still
+has no budget/Stop controls in its supplied inventory; it is not the separate
+main conversation. Installed discovery/readback does not establish platform
+catalog propagation. No repeated refresh or credential replacement is requested.
+
+Staging's steering-over-1.4 hash was reproduced exactly. Applying Budget then
+Steering or Steering then Budget yields identical combined 1.5 source SHA256
+`2b7dca9f5a41b53f29bce97d1a93fee0fa1503b1cbb79d53dd78ee86446db156`.
+That combined steering candidate is **not installed**. Its fourteen current
+policy tests plus fourteen steering tests and mocked discovery/dispatch checks
+pass. Staging must prepare from current 1.5, preserve the new tool, and retain
+its independent release gates.
+
+## Backend Stop dependency and Staging freshness
+
+[PR264](https://github.com/artinflight/vibe-kanban/pull/264) had its completed checkpoint at
 `db6bbfcbcf81516b1bbee901fa2cc323bbfdf3e6`. Its final Test workflow passed 599
 Cargo tests including all ten Stop tests, plus thirteen scheduling-enabled
 persistence tests. Both special acceptance workflows also passed. The PR records
-exact CI links and the installed connector 1.4 baseline. This budget-reader
-stream does not amend, merge or activate that backend source.
+exact CI links and the installed connector 1.4 baseline. At the release owner's later request, a conflict-free normal Staging merge
+of `7110930b6d9d1fa3f403a963a1ded49140b3eec1` produced PR264 head
+`bf96584b6534fc56f251450636580601227bd8dd`. All four backend Stop files and
+Python Stop module are byte-identical to the green checkpoint; newer notes
+were preserved. Fresh exact-head CI is tracked on PR264. No local Cargo or
+activation was performed for that integration during Nightly's reserved window.
+The budget-reader branch remains separate from the Stop backend change.
 
-PR264 is still a release dependency outside the prepared PR262/four-private-
-bindings baseline. The release owner retains source review, the combined
+PR264 is still a release dependency outside the earlier tested PR262/four-private-
+bindings baseline. PR262 is now merged into Staging, without live deployment. The release owner retains source review, the combined
 rebuild/private binding, all eighteen readers, compatible rollback and backend
 acceptance/activation. Installed Stop tools fail closed while the live guarded
 backend is unsupported. CU does not claim automatic aggregate Stop enforcement.

@@ -1,20 +1,23 @@
-# Dot credit-budget readback — October 17
+# Dot credit-budget readback — live October 17, 02:33 UTC
 
-Separate connector-only stream adds no-argument read-only `get_credit_budget`
-from CU's fixed existing account-wide endpoint, preserving exact decimal/null,
-freshness, unknown bank/settlement and shared-ledger/external-enforcement limits.
-25 connector tests and28 installed-source policy/read regressions pass; the
-candidate reads fresh CU v5 data without provider refresh, launches or writes.
-Installation/main Dot inventory are separate evidence recorded in the PR.
-Do not overwrite this tool with Staging's uninstalled steering-over1.4 overlay.
+Connector1.5 now publishes no-argument read-only `get_credit_budget` through
+CU's existing fixed loopback endpoint. Actual installed/native-upstream discovery
+and dispatch return fresh account-credit-budget-v1/CU v5 data. Exact strings/null,
+unknown bank/combined amounts and external-enforcement limits remain explicit.
+25 connector tests,28 installed policy/read regressions and14 future-steering
+policy tests pass. Budget/steering overlays compose without losing either.
+Only connector adapter/module/service changed; readiness0.409s. Desktop B rollback
+readback passed; chats, access/subscriptions, Stop source, queued input, Recommend,
+Mobile/Sent Steering, other pointers/services are preserved. No real Stop/new
+worker/provider refresh/permissions change. Main Dot tool adoption is unverified.
 
-PR264 remains frozen atdb6bbfcb: final CI passed599 Cargo tests including10 Stop
-cases plus13 scheduling-enabled cases and both special workflows. It is a
-release dependency outside the PR262/four-private-bindings baseline, awaiting
-combined private-reader acceptance. No real Stop, backend restart, migration,
-new worker or model/routing change occurs in this stream. CU owns the budget;
-readback grants no permission or aggregate Stop enforcement.
-[Reader, validation and release handoff](DOT_CREDIT_BUDGET.md).
+PR264's green db6bbfcb checkpoint passed599 Cargo +13 scheduling-enabled tests,
+including10 Stop cases. Requested normal Staging-base merge7110930b6 yields
+new headbf96584b6534fc56f251450636580601227bd8dd with exact Stop bytes/notes
+preserved; fresh CI is tracked there. No local Cargo or activation for that merge.
+Combined private-reader rebuild/binding, rollback and acceptance remain Staging-
+owned; live guarded Stop is unsupported and aggregate enforcement is not armed.
+[Reader, activation and release handoff](DOT_CREDIT_BUDGET.md).
 
 # First-response generated artifact delivery — October 16 follow-up
 

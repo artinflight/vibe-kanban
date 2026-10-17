@@ -5,6 +5,17 @@ description: "Create a real, restorable backup of a local Vibe Kanban install be
 
 This runbook is for the **local desktop/local server install** of Vibe Kanban.
 
+<Info>
+The October 16 nightly-efficiency source integration is documented in the
+repository's `VK_NIGHTLY_BACKUP_EFFICIENCY.md`. It supports independent
+generations, lossless history chunks and verified restart-baseline reads.
+Production adoption and whole-plan restore acceptance remain pending. On the
+managed MCP host, use mounted `/mnt/vk-storage` for staging and Desktop
+`B:/vk-backups/` for retention; historical system-disk paths and the hourly cron
+example below are not current deployment instructions. The old cron row is
+disabled.
+</Info>
+
 Use it **before**:
 
 - rebuilding the desktop or local server binary

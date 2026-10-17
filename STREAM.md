@@ -1,3 +1,22 @@
+# Nightly production completion — October 17
+
+Seamus authorizes finishing restore/integration acceptance, publication, deployment
+and activation of the one production nightly schedule. This workspace owns that
+package and schedule; restart preflight owns its consumer/queue path and Staging
+owns its backend release. No production activation is claimed before verification.
+Unverified recovery data remain preserved. Prior source-only scope below is
+retained history, superseded by this authorization.
+
+# Nightly backup efficiency integration — October 16
+
+Branch `vk/604d-vk-nightly-backu` integrates PR235's backup-only source at
+`240a7b2c7`, plus lossless chunk storage in independent nightly generations.
+Local issue T40 is linked to this workspace. Read
+[VK_NIGHTLY_BACKUP_EFFICIENCY.md](VK_NIGHTLY_BACKUP_EFFICIENCY.md) for scope,
+restoration evidence and operational boundaries. Routine restart automation,
+production scheduling and existing recovery retirement are outside this source
+change. The former stream notes below remain retained release context.
+
 # First-response generated artifact delivery — October 16 follow-up
 
 Based on staging `805aa7741`; this follow-up adds the

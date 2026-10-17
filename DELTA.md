@@ -1884,6 +1884,13 @@ the paid harness was not rerun. No live connector edit, restart or deployment.
 - Regression coverage includes AutoSwitch's resumed-parent failure and child
   reuse. This source merge is for the next backend restart, not live activation.
 
+## 2026-10-16 Nightly backup efficiency integration
+
+- Created local Vibe T40 and linked workspace604d90d0. Imported the PR235 backup-only dependency closure at240a7b2c7; routine restart automation remains separate.
+- Added opt-in independent chunked nightly storage, prefix reuse, complete-byte decoding, native readback and leased restart-baseline support. Exact rebuild proposals retain protected work and enable no live exclusion.
+- Unified isolated fixture validation:339 passed/1 opt-in skip; ops, Python syntax, historical source pins and whitespace checks pass. Full format reaches Rust then stops at missing Prettier.
+- No live schedule, production backup/restart, source retirement or whole-plan B restore acceptance. See VK_NIGHTLY_BACKUP_EFFICIENCY.md for adoption requirements and private evidence location.
+
 
 ## 2026-10-16 — Preserve existing Dot sidechat integration
 
@@ -2013,3 +2020,7 @@ Physical phone DevTools was rejected by automatic approval review for its shared
 authenticated-tab boundary; no retry/alternate route. Seamus's fresh paired-phone
 question/reply/notification confirmation remains. PR254 merged into staging28fdcfddf.
 See DOT_NOTIFICATION_ROLLOUT.md and the bounded live QA scripts for receipts.
+
+2026-10-17 nightly integration PR263: 359 backup tests (358 pass, one explicit skip), real B four-file/SQLite post-retirement restoration plus interrupted-job recovery pass. Whole-plan census/capacity acceptance still running; no production schedule activated and no historical recovery retired.
+
+2026-10-17 00:56UTC nightly production admission: complete92-root census sealed SHAe026c85c,1,219,860paths/1,090,388files/156,501,564,345bytes/108SQLite including72required. Exact disabled package/runtime bindings validate. Admission blocked by1M-entry bound and36.2GiB Bfree versus98.25GiB configured cold envelope; no full production restore or schedule activation. Shared Staging handoff sent; unverified recovery and all18finals retained.

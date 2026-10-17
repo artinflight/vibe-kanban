@@ -1,3 +1,120 @@
+# Nightly r3 capacity running — October17 10:42UTC
+
+After the bounded Staging hold expired and fresh admission passed, the verified
+complete package launched one detached vk-nightly-capacity-r3-receipts.service,
+PID3690479/start33804395,10:42:25UTC, four-hour limit. Existing guards/data are
+preserved; Staging's active turn was notified without a new execution. Full
+capacity/restore and schedule remain unverified. HANDOFF.md names the current
+receipts. No agent wait loop or additional provider generation is running.
+
+# Historical Nightly retry hold — expired10:39:40UTC
+
+No heavy Nightly job is running. R2 failed07:04:41UTC before payload because
+the derived package omitted its provenance receipt directory. A new complete
+r3 package passes8 source pins and26 targeted tests; fail-fast provenance
+validation is added before B work. Retry is unlaunched for Staging's requested
+10:09:40–10:39:40UTC compiler/acceptance window, with no automatic launch. Fresh
+coordination/admission is required afterward. Complete backup fit/restore,
+deployment and schedule remain unverified; all recovery data are preserved.
+Included weekly0% does not expand the operator's separate~246-credit ceiling.
+
+# Historical nightly capacity check — failed07:04UTC
+
+One user-authorized detached capacity continuation started07:00:49UTC,
+measurementPID1455995/start32474761, unitvk-nightly-capacity-r2-45a7799cf.service.
+Four-hour supervisor and original guards remain; all previous recovery data
+are preserved. The agent returns without waiting. HANDOFF.md names exact
+terminal/failure receipts to collect; do not launch a replacement. Complete
+backup fit and whole-plan physical restore remain unknown. No deployment or
+schedule activation is claimed; the bounded two-copy result below is reused.
+
+# Nightly bounded source capture — October 17
+
+The likely failed source now passes two independent actual registered-B copies,
+native full hashes and SQLite integrity checks. Both32,395,264-byte images have
+SHA256 bef198d1c0b41361d97d2f76fde67cdc2545559e7db5565e4d4c315a3ef6402f.
+The06:54:36–06:56:10UTC bounded phase exited0 with all resource samples passing;
+old verified captures and failed input remain intact. The original failure did
+not reproduce and its discarded exception remains unrecoverable. Full measured
+capacity, whole-plan restore, deployment and scheduling remain pending. Handoff
+has exact receipts; the following request for a source probe is historical.
+
+# Nightly producer failure follow-up — October 17
+
+The production measurement failed04:36:15UTC, exit1, before a complete manifest.
+The original producer exception was masked and not durably saved; its actual
+SQLite/transport cause remains unknown. Thirty verified B SQLite images and the
+empty unsealed input are preserved. A narrow source correction now preserves
+original errors/source-stage diagnostics; no replacement measurement or live
+deployment was started. Required next check is the single affected-source B
+probe described in HANDOFF.md. Production capacity/restore and schedule remain
+unverified; the following running status is historical.
+
+# Nightly recovery and admitted capacity verification — October 17
+
+PR263 remains the sole nightly package/schedule. The retained 1,219,860-row
+synthetic index lifecycle is now complete: recovery-r2 ran 02:30:20.200095 to
+02:35:55.957881 UTC, exit0, with fresh full saved-index readback and recorded
+predecessor retirement. Its attempt is cleared. The original fixed1800s command
+still records exit124; this separate335.3s recovery does not rewrite that result.
+CPU25%, MemoryHigh2G/Max3G, Swap0 and Tasks32 stayed fixed; no hard-limit/OOM event.
+
+The two synthetic WAL sidecars are preserved byte-for-byte and pushed551e24c49;
+earlier in-memory SQLite integrity/value verification and actual MCP->registered
+B two-copy WAL transport evidence are reused. No completed copy/restore repeated.
+A private-watcher drain correction keeps capture events flowing during lengthy
+inventory/SQLite phases; the external consumer lifecycle remains owner-managed.
+
+The92-root census is retained. Current Dot1.5 adapter78ad962b,
+stop_control13c8eff8 and credit_budgetd8619d20 are covered by its existing
+connector root and pinned in the validated1974-file derived profile d0434347.
+Staging/Dot confirmed the relayed1.4 chat hash was superseded. Attribution is
+retained in DOT15_BINDING_OBSERVATION.private.json; the sealed main packet and
+production components are unchanged.
+
+The counted/discarded production stream started02:40:41UTC under the existing
+four-hour supervisor, CPU25%, MemoryHigh2G/Max3G, Swap0 and Tasks32. Measurement
+PythonPID3107838/start30914068; supervisor3107804/start30913909. Source package
+6bfd27244 is sealed; PR263 is refreshed normally with merged PR262 atc0ac5d081.
+Normal registered consistent SQLite inputs are on B; archive/objects are counted
+without retaining payload or publishing a backup. No duplicate heavy owner work. Hosted checks atc0ac5d081 pass, including
+backend, frontend, branch freshness and isolated recovery.
+
+Actual full-stream capacity and whole-plan physical restore remain pending.
+Fresh02:31 admission passes: B34,347,749,376bytes free, health/counters unchanged;
+SSD8,356,765,696bytes free. These are observations, not a measured cold minimum.
+No operational nightly deployment or active schedule is claimed. Preserve all34
+reviewed originals (deletionunapproved), all18 Staging finals and old invalid
+journal evidence. See [current evidence](VK_NIGHTLY_BACKUP_EFFICIENCY.md).
+
+# Historical nightly admission — October 17, superseded above
+
+PR263 remains the sole nightly integration. Its 92-root census is complete:
+1,219,860 paths, 1,090,388 files, 145.75 GiB logical data, and 108 SQLite
+databases including all 72 required databases. No members vanished.
+The exact disabled package and current runtime/frontend bindings validate.
+
+Production admission fails: the producer allows 1,000,000 entries, and B has
+36.2 GiB free against the configured 98.25 GiB cold reservation. That envelope
+is not a measured minimum. Full production capture/restore remains unverified;
+no nightly schedule is active and no heavy restore window is queued. Preserve
+all original recovery data. The old journal still needs full reconciliation.
+
+The 359-test suite passes 358 cases with one explicit skip. Actual B fixtures
+restore complete histories and SQLite after predecessor retirement, including
+interrupted-job recovery. These use a synthetic provider, not the full plan.
+See [exact evidence and remaining work](VK_NIGHTLY_BACKUP_EFFICIENCY.md).
+Staging received the sealed inventory and retains backend/build ownership;
+restart preflight retains the shared consumer. Production activation is pending.
+
+# Nightly backup source integration — October 16
+
+The nightly efficiency stream prepares PR235's independent backup and restart
+baseline contracts with lossless chunk storage. It does not activate scheduling,
+change the live plan or authorize a restart/retirement. See
+[VK_NIGHTLY_BACKUP_EFFICIENCY.md](VK_NIGHTLY_BACKUP_EFFICIENCY.md) and local T40.
+Production whole-plan recovery acceptance remains separate from fixture evidence.
+
 # Generated report links — live October 16 follow-up
 
 The OP::3D Print Issues failure was a Markdown link to an unpublished local

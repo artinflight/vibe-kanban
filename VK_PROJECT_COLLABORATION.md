@@ -3,6 +3,12 @@
 Prepared on `vk/7db7-vk-project-dot-c` from fork `staging` at `7110930b6`.
 Not deployed. The release owner is VK::Staging Check.
 
+[Draft staging PR267](https://github.com/artinflight/vibe-kanban/pull/267) · implementation `f60c8d1d6b2c`.
+[Open sidebar preview](https://vibe.local/vk-artifact-viewer.html?id=15bb5759-3ce8-4234-9081-7c524f4ac8e5&name=project-sidebar-review.html&v=1).
+The published viewer, all four embedded images and its tab controls passed
+a fresh isolated browser check. Publication SHA256:
+`d7c30108599400ea559184d3f15c0e96fa90c07dcafea97cc5a12b38802d10e6`.
+
 Tracking: [VK Dev issue](https://vibe.local/projects/1cf19067-4055-4432-bbc1-581919f9185d/issues/1900eb48-bf48-4500-97fd-56eb5ae01a3e),
 linked workspace `7db73dbd-3b5d-4c21-87f1-4924be648284`.
 GitHub Issues are disabled on the fork; the staging PR is the GitHub work item.

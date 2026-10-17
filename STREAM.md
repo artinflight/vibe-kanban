@@ -9,6 +9,9 @@ VK Dev issue `1900eb48-bf48-4500-97fd-56eb5ae01a3e` is linked to this workspace.
 Preserve Dot and Staging received contract/release handoffs. The separate Dot
 service/connector release is required; no Rust backend source changed. Read
 VK_PROJECT_COLLABORATION.md for validation, preview and integration limits.
+[Draft PR267](https://github.com/artinflight/vibe-kanban/pull/267) is pushed, with implementation `f60c8d1d6b2c`.
+Both real sidechat/branch UI browser cases pass; the published screenshot/status
+report is linked in VK_PROJECT_COLLABORATION.md. Full CI remains running.
 Older entries below describe other streams and do not define this branch.
 
 # First-response generated artifact delivery — October 16 follow-up

@@ -25,6 +25,15 @@ pub fn verified(report: &Value) -> bool {
         && report.get("state").and_then(Value::as_str) == Some("verified")
 }
 
+/// Captured originals awaiting a grant are pending, never verified coverage.
+pub fn awaiting_policy(report: &Value) -> bool {
+    report["version"] == 2
+        && report["state"] == "pending"
+        && report["observation_complete"] == true
+        && report["publication_pending"] == true
+        && report["admission_failure"] == "repository has no approved publication policy"
+}
+
 pub fn observed(report: &Value) -> bool {
     report["version"] == 2
         && report["observation_complete"] == true
@@ -184,6 +193,7 @@ pub(crate) async fn invoke_with_config(action: &str, request: Value, config: &Pa
                         && report["workspace"] == request["workspace"]
                         && report["turn"] == request["turn"]
                         && (!verified(&report) || output.status.success())
+                        && (!awaiting_policy(&report) || output.status.success())
                         && (action != "observe-finished"
                             || !observed(&report)
                             || output.status.success()) =>
@@ -213,6 +223,25 @@ mod tests {
             assert!(!verified(&report));
         }
         assert!(verified(&json!({"version": 2, "state": "verified"})));
+    }
+
+    #[test]
+    fn awaiting_publication_policy_is_explicit_and_never_green() {
+        let pending = json!({"version":2,"state":"pending","observation_complete":true,
+            "publication_pending":true,"admission_failure":"repository has no approved publication policy"});
+        assert!(awaiting_policy(&pending));
+        assert!(!verified(&pending));
+        for field in [
+            "version",
+            "state",
+            "observation_complete",
+            "publication_pending",
+            "admission_failure",
+        ] {
+            let mut missing = pending.clone();
+            missing.as_object_mut().unwrap().remove(field);
+            assert!(!awaiting_policy(&missing));
+        }
     }
 
     #[test]

@@ -99,20 +99,104 @@ def read_json(path):
         raise Blocked('missing or malformed preservation state') from None
 
 
-def file_state(path, algorithm):
+def file_state(path, algorithm, reviewed_link=None):
     try:
         info = path.lstat()
     except FileNotFoundError:
         return None
-    require(stat.S_ISREG(info.st_mode), 'symlink, submodule or special file requires review')
-    require(info.st_size <= 5 * 1024 * 1024, 'large file requires separate review')
-    content = path.read_bytes()
+    if stat.S_ISLNK(info.st_mode):
+        require(reviewed_link is not None, 'symlink, submodule or special file requires review')
+        content = os.fsencode(os.readlink(path))
+        mode = '120000'
+    else:
+        require(stat.S_ISREG(info.st_mode), 'symlink, submodule or special file requires review')
+        require(info.st_size <= 5 * 1024 * 1024, 'large file requires separate review')
+        with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW), 'rb') as source:
+            content = source.read()
+        mode = '100755' if info.st_mode & 0o111 else '100644'
     blob = hashlib.new(algorithm, b'blob ' + str(len(content)).encode() + b'\0' + content).hexdigest()
-    return [hashlib.sha256(content).hexdigest(),
-            '100755' if info.st_mode & 0o111 else '100644', blob]
+    value = [hashlib.sha256(content).hexdigest(), mode, blob]
+    require(reviewed_link is None or value == reviewed_link,
+            'reviewed baseline symlink changed')
+    return value
 
 
-def snapshot(repo):
+def source_literal(name):
+    require(isinstance(name, str) and name and
+            all(part not in ['', '.', '..'] for part in name.split('/')) and
+            not any(c in name for c in '*?[]\\') and all(ord(c) >= 32 for c in name) and
+            not DENIED.search(name), 'reviewed symlink path or target is unsafe')
+
+
+def require_source_parents(repo, name, allow_missing=False):
+    parent = repo
+    for part in Path(name).parts[:-1]:
+        parent = parent / part
+        try:
+            info = parent.lstat()
+        except FileNotFoundError:
+            require(allow_missing, 'reviewed symlink parent is missing')
+            return
+        require(stat.S_ISDIR(info.st_mode),
+                'source parent symlink or special directory requires review')
+
+
+def reviewed_symlinks(repo, policy):
+    """Only unchanged literal links/regular targets already in the reviewed base.
+
+    This is snapshot authority, never permission to publish changed link history.
+    The index must retain both entries; worktree bytes/modes are checked by snapshot.
+    """
+    pins = (policy or {}).get('reviewed_symlinks', [])
+    require(isinstance(pins, list), 'invalid reviewed baseline symlink inventory')
+    expected = {}
+    if not pins:
+        return expected
+    base = policy['base_commit']
+    require(isinstance(base, str) and re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', base),
+            'reviewed symlink base must be a full commit ID')
+    git(repo, 'merge-base', '--is-ancestor', base, 'HEAD')
+    seen = set()
+    for pin in pins:
+        require(isinstance(pin, dict) and set(pin) == {
+                    'path', 'target', 'blob', 'mode', 'target_blob', 'target_mode', 'target_sha256'} and
+                all(isinstance(value, str) for value in pin.values()),
+                'invalid reviewed baseline symlink pin contract')
+        name, target = pin['path'], pin['target']
+        source_literal(name)
+        source_literal(target)
+        resolved = str(Path(name).parent / target)
+        source_literal(resolved)
+        require(name != resolved and name not in seen and pin['mode'] == '120000' and
+                pin['target_mode'] in ['100644', '100755'],
+                'invalid or duplicate reviewed baseline symlink')
+        seen.add(name)
+        algorithm = line(repo, 'rev-parse', '--show-object-format')
+        link_bytes = os.fsencode(target)
+        link_blob = hashlib.new(algorithm, b'blob ' + str(len(link_bytes)).encode() +
+                                b'\0' + link_bytes).hexdigest()
+        require(pin['blob'] == link_blob and
+                re.fullmatch(r'[0-9a-f]{64}', pin['target_sha256']) and
+                re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', pin['target_blob']),
+                'invalid reviewed baseline symlink integrity pins')
+        values = {name: [hashlib.sha256(link_bytes).hexdigest(), '120000', pin['blob']],
+                  resolved: [pin['target_sha256'], pin['target_mode'], pin['target_blob']]}
+        for path, value in values.items():
+            require_source_parents(repo, path)
+            for commit in [base, 'HEAD']:
+                require(git(repo, 'ls-tree', '-z', commit, '--', path) ==
+                        f'{value[1]} blob {value[2]}\t{path}\0'.encode(),
+                        'reviewed baseline symlink or target tree changed')
+            require(git(repo, 'ls-files', '--stage', '-z', '--', path) ==
+                    f'{value[1]} {value[2]} 0\t{path}\0'.encode(),
+                    'reviewed baseline symlink or target index changed')
+            require(path not in expected or expected[path] == value,
+                    'conflicting reviewed baseline symlink pins')
+            expected[path] = value
+    return expected
+
+
+def snapshot(repo, policy=None):
     require(Path(line(repo, 'rev-parse', '--show-toplevel')).resolve() == repo,
             'repository root mismatch')
     require(line(repo, 'rev-parse', '--is-shallow-repository') == 'false',
@@ -126,7 +210,27 @@ def snapshot(repo):
     paths = sorted(set(os.fsdecode(p) for p in (tracked + untracked).split(b'\0') if p))
     algorithm = line(repo, 'rev-parse', '--show-object-format')
     require(algorithm in ['sha1', 'sha256'], 'unsupported repository object format')
-    files = {p: file_state(repo / p, algorithm) for p in paths}
+    expected = reviewed_symlinks(repo, policy)
+    # Reject even absent/deleted Gitlinks or unreviewed links in HEAD/index. A
+    # missing worktree path must not silently turn their removal into source work.
+    for inventory, is_tree in [(git(repo, 'ls-tree', '-r', '-z', 'HEAD'), True),
+                               (git(repo, 'ls-files', '--stage', '-z'), False)]:
+        for raw in inventory.split(b'\0'):
+            if not raw:
+                continue
+            meta, name = raw.split(b'\t', 1)
+            fields = meta.decode().split()
+            mode, oid = fields[0], fields[2] if is_tree else fields[1]
+            require(mode in ['100644', '100755'] or
+                    (mode == '120000' and expected.get(os.fsdecode(name), [None, None, None])[1:] == [mode, oid]),
+                    'symlink, submodule or special file requires review')
+    files = {}
+    for p in paths:
+        require_source_parents(repo, p, allow_missing=True)
+        link = expected.get(p)
+        files[p] = file_state(repo / p, algorithm, link if link and link[1] == '120000' else None)
+    require(all(files.get(p) == value for p, value in expected.items()),
+            'reviewed baseline symlink target bytes or mode changed')
     ignored = {}
     for raw in git(repo, 'ls-files', '--others', '--ignored', '--exclude-standard', '-z').split(b'\0'):
         if raw:
@@ -142,15 +246,17 @@ def snapshot(repo):
                 index=hashlib.sha256(index.read_bytes()).hexdigest() if index.exists() else None)
 
 
-def require_tree_bytes(repo, snap):
+def require_tree_bytes(repo, snap, policy=None):
     # Clean porcelain is insufficient: clean filters, CRLF conversion and disabled
     # filemode can hide worktree bytes/modes that differ from the original tree.
     tree = {}
+    reviewed = reviewed_symlinks(repo, policy)
     for raw in git(repo, 'ls-tree', '-r', '-z', snap['head']).split(b'\0'):
         if raw:
             meta, path = raw.split(b'\t', 1)
             mode, kind, oid = meta.decode().split()
-            require(kind == 'blob' and mode in ['100644', '100755'],
+            require(kind == 'blob' and (mode in ['100644', '100755'] or
+                    (mode == '120000' and reviewed.get(os.fsdecode(path), [None, None, None])[1:] == [mode, oid])),
                     'non-source tree requires review')
             tree[os.fsdecode(path)] = [mode, oid]
     actual = {p: value[1:] for p, value in snap['files'].items() if value is not None}
@@ -265,6 +371,13 @@ class Engine:
             require(bool(request['repositories']), 'empty affected repository inventory')
             require(len({i['id'] for i in request['repositories']}) == len(request['repositories']),
                     'duplicate repository inventory')
+            # Capture authority is the exact requested inventory, not the subset
+            # admitted for publication. A policy/snapshot failure must not hide B
+            # from the real completion callback after begin captured only A.
+            record['observation_inventory'] = [
+                dict(id=i['id'], path=str(Path(i['path']).resolve()))
+                for i in request['repositories']]
+            atomic_json(path, record)
             # Observe every affected original before admitting any repository. Continue
             # capture after an error so a failed multi-repository admission loses no heads.
             errors = []
@@ -277,9 +390,9 @@ class Engine:
                     atomic_json(path, record)
             require(not errors, errors[0] if errors else '')
             for item in request['repositories']:
-                repo, _ = self.policy(item)
+                repo, policy = self.policy(item)
                 with repo_lock(repo):
-                    before = snapshot(repo)
+                    before = snapshot(repo, policy)
                     originals = self.observe(record, item)
                     require(before['head'] in originals, 'head changed during admission')
                     record['repositories'].append(dict(id=item['id'], path=str(repo),
@@ -291,6 +404,7 @@ class Engine:
         except (Blocked, OSError, KeyError, ValueError) as error:
             record.update(state='blocked', reason=str(error) if isinstance(error, Blocked)
                           else 'preservation IO or contract failure')
+            record['admission_failure'] = record['reason']
             atomic_json(path, record)
         return record
 
@@ -407,10 +521,23 @@ class Engine:
             with os.fdopen(fd, 'wb') as output, tempfile.TemporaryDirectory(dir=self.root) as folder:
                 env = {'GIT_INDEX_FILE': str(Path(folder) / 'index')}
                 git(repo, 'read-tree', snap['head'], env=env)
+                original = {}
+                for raw in git(repo, 'ls-tree', '-r', '-z', snap['head']).split(b'\0'):
+                    if raw:
+                        meta, name = raw.split(b'\t', 1)
+                        mode, kind, oid = meta.decode().split()
+                        original[os.fsdecode(name)] = [mode, oid]
                 for p, value in snap['files'].items():
+                    # read-tree already retains exact unchanged baseline objects,
+                    # including reviewed literal links. Never dereference those
+                    # links or rewrite unchanged baseline assets as new source.
+                    if value is not None and value[1:] == original.get(p):
+                        continue
                     if value is None:
                         git(repo, 'update-index', '--force-remove', '--', p, env=env)
                     else:
+                        require(value[1] in ['100644', '100755'],
+                                'changed symlink or special source requires review')
                         content = (repo / p).read_bytes()
                         require(hashlib.sha256(content).hexdigest() == value[0],
                                 'concurrent writer changed file bytes during snapshot')
@@ -428,7 +555,7 @@ class Engine:
                 head = git(repo, 'commit-tree', tree, '-p', snap['head'],
                            data=f'Preserve agent turn {turn}\n'.encode()).decode().strip()
                 self.scan(repo, policy, head)
-                require(snapshot(repo) == snap, 'concurrent writer changed snapshot during commit')
+                require(snapshot(repo, policy) == snap, 'concurrent writer changed snapshot during commit')
                 # Write-ahead original obligation precedes exposing the new branch head.
                 remember(head)
                 output.write(Path(env['GIT_INDEX_FILE']).read_bytes())
@@ -471,6 +598,8 @@ class Engine:
         eligible(changes, policy)
         marker = '<!-- vk-github-sync ' + turn + ' ' + digest(changes) + ' -->'
         require(name not in snap['ignored'], 'handoff destination is ignored; excluded files are not Git-protected')
+        require(not snap['files'].get(name) or snap['files'][name][1] in ['100644', '100755'],
+                'handoff destination must be a regular file')
         target = repo / name
         # Parent traversal and symlinks cannot redirect this write outside the owner.
         require(target.parent.resolve().is_relative_to(repo) and target.parent.is_dir(),
@@ -489,7 +618,7 @@ class Engine:
         lines += ['', 'Excluded files are not Git-protected. Merge requires explicit approval.', '']
         addition = ('\n\n' + '\n'.join(lines)).encode()
         require(len(old) + len(addition) <= 5 * 1024 * 1024, 'handoff exceeds bounded text limit')
-        require(snapshot(repo) == snap, 'workspace changed before handoff update')
+        require(snapshot(repo, policy) == snap, 'workspace changed before handoff update')
         flags = os.O_WRONLY | os.O_APPEND | os.O_NOFOLLOW
         if not old and not target.exists():
             flags |= os.O_CREAT | os.O_EXCL
@@ -497,7 +626,7 @@ class Engine:
             document.write(addition)
             document.flush()
             os.fsync(document.fileno())
-        current = snapshot(repo)
+        current = snapshot(repo, policy)
         require({k: v for k, v in current['files'].items() if k != name} ==
                 {k: v for k, v in snap['files'].items() if k != name} and
                 all(current[k] == snap[k] for k in ['head', 'branch', 'ignored', 'index']) and
@@ -508,7 +637,7 @@ class Engine:
     def preserve_repo(self, entry, policy, request, remember):
         repo = Path(entry['path'])
         before = entry['before']
-        snap = snapshot(repo)
+        snap = snapshot(repo, policy)
         require(snap['branch'] == before['branch'], 'branch changed during turn')
         require(snap['branch'] not in ['main', 'staging'] and
                 snap['branch'] not in policy.get('protected_branches', []),
@@ -557,13 +686,13 @@ class Engine:
         else:
             head = snap['head']
             self.scan(repo, policy, head)
-        stable = snapshot(repo)
+        stable = snapshot(repo, policy)
         index_path = Path(line(repo, 'rev-parse', '--path-format=absolute', '--git-path', 'index'))
         require(not index_path.with_name(index_path.name + '.lock').exists(),
                 'Git index became locked by another writer; checkpoint remains pending')
         require(not stable['status'], 'worktree or index remains dirty after commit')
         require(stable['head'] == head, 'original head changed during preservation')
-        require_tree_bytes(repo, stable)
+        require_tree_bytes(repo, stable, policy)
         prs = self.prs(policy, stable['branch'])
         require(len(prs) <= 1, 'ambiguous existing pull requests')
         if prs:
@@ -576,7 +705,7 @@ class Engine:
                 require(git(repo, 'ls-remote', '--exit-code', remote,
                             'refs/heads/' + branch).decode().split() == [reviewed, 'refs/heads/' + branch],
                         'reviewed automation or integration ref moved before push')
-            require(snapshot(repo) == stable, 'workspace changed before publication')
+            require(snapshot(repo, policy) == stable, 'workspace changed before publication')
             # Normal push only. Uncertain failure stays blocked and retry rechecks remote state.
             git(repo, 'push', '--porcelain', '--no-follow-tags', '--no-mirror',
                 '--recurse-submodules=no', remote, f'{head}:refs/heads/{stable["branch"]}')
@@ -596,7 +725,7 @@ class Engine:
             witness['pr'] = self.verify_pr(policy, stable['branch'], head, prs[0]['number'])
         elif changed:
             raise Blocked('changed work has no covering PR')
-        require(snapshot(repo) == stable, 'workspace changed after remote verification')
+        require(snapshot(repo, policy) == stable, 'workspace changed after remote verification')
         return dict(**witness, after=stable, changed=changed,
                     ignored_not_git_protected=sorted(stable['ignored']))
 
@@ -607,22 +736,41 @@ class Engine:
         """
         path = self.state_path(request)
         record = read_json(path)
-        require(record['config'] == digest(self.config), 'policy changed after turn admission')
-        require([(e['id'], e['path']) for e in record['repositories']] ==
+        require(record['version'] == VERSION and record['workspace'] == request['workspace'] and
+                record['turn'] == request['turn'], 'completion observation owner differs from admitted turn')
+        inventory = record.get('observation_inventory', record['repositories'])
+        require(inventory and [(e['id'], e['path']) for e in inventory] ==
                 [(i['id'], str(Path(i['path']).resolve())) for i in request['repositories']],
                 'affected repository inventory differs from admitted turn')
+        # Publication review/config changes still block end/check, but cannot
+        # prevent original capture for this already registered exact inventory.
+        for entry in inventory:
+            require(entry['id'] in record['obligations'] and
+                    record['obligations'][entry['id']]['path'] == entry['path'],
+                    'completion observation has no matching original obligation')
         record['observation_complete'] = False
         try:
-            for entry in record['repositories']:
-                entry['original_commits'] = list(self.observe(record, entry))
+            for entry in inventory:
+                originals = self.observe(record, entry)
+                for admitted in record['repositories']:
+                    if admitted['id'] == entry['id']:
+                        admitted['original_commits'] = list(originals)
                 atomic_json(path, record)
-            self.require_obligations(record)
+            require(all(not record['obligations'][e['id']].get('unverifiable') for e in inventory),
+                    'completed original history observation was unverifiable')
             record['observation_complete'] = True
         except (Blocked, OSError, KeyError, ValueError):
-            for entry in record['repositories']:
+            for entry in inventory:
                 record['obligations'][entry['id']]['unverifiable'] = True
             record.update(state='blocked', reason='completed original history observation failed')
         atomic_json(path, record)
+        if record['observation_complete'] and record.get('admission_failure'):
+            # ACK only durable head capture. The stored admission remains blocked;
+            # no snapshot, remote proof, policy grant or green receipt is invented.
+            return dict(version=VERSION, workspace=record['workspace'], turn=record['turn'],
+                        state='pending', observation_complete=True,
+                        reason='completed original heads durably observed; publication admission remains blocked',
+                        admission_failure=record['admission_failure'])
         return record
 
     def checkpoint(self, request):
@@ -638,6 +786,18 @@ class Engine:
     def end(self, request, checkpoint=False):
         path = self.state_path(request)
         record = read_json(path)
+        if record.get('admission_failure') == 'repository has no approved publication policy' and record.get('observation_complete') is True:
+            capture = record.get('observation_inventory') or record.get('reconciled_observation_inventory')
+            require(record['version'] == VERSION and record['workspace'] == request['workspace'] and
+                    record['turn'] == request['turn'] and capture and capture ==
+                    [dict(id=i['id'], path=str(Path(i['path']).resolve())) for i in request['repositories']],
+                    'awaiting-policy owner or inventory differs from registered capture')
+            return dict(version=VERSION, workspace=record['workspace'], turn=record['turn'],
+                        state='pending', observation_complete=True, publication_pending=True,
+                        admission_failure=record['admission_failure'],
+                        reason='original heads retained; publication awaits a reviewed repository policy')
+        require(not record.get('admission_failure'),
+                'turn admission blocked: ' + str(record.get('admission_failure')))
         self.require_obligations(record)
         require(bool(request['repositories']) and bool(record['repositories']),
                 'empty affected repository inventory')
@@ -669,7 +829,7 @@ class Engine:
                         atomic_json(path, record)
 
                     # Verify prior success first on retry; no duplicate commits or PR creation.
-                    if checkpoint and entry.get('receipt') and snapshot(repo) != entry['receipt']['after']:
+                    if checkpoint and entry.get('receipt') and snapshot(repo, policy) != entry['receipt']['after']:
                         # Retain the prior proof. preserve_repo still requires every
                         # observed original as ancestry before refreshing coverage.
                         entry.setdefault('receipt_history', []).append(entry.pop('receipt'))
@@ -682,7 +842,7 @@ class Engine:
                     atomic_json(path, record)
             self.require_obligations(record)
             for entry in record['repositories']:
-                require(snapshot(Path(entry['path'])) == entry['receipt']['after'],
+                require(snapshot(*self.policy(entry)) == entry['receipt']['after'],
                         'earlier repository changed while another repository was preserved')
             require(checkpoint or read_json(path.parent / 'latest.json')['turn'] == request['turn'],
                     'newer turn admitted during preservation')
@@ -710,8 +870,8 @@ class Engine:
         require(all(p in receipt['after']['files'] and receipt['after']['files'][p] is not None
                     for p in entry.get('required_files', [])),
                 'required affected file is missing, ignored or unverifiable')
-        require(snapshot(repo) == receipt['after'], 'workspace changed after earlier receipt')
-        require_tree_bytes(repo, receipt['after'])
+        require(snapshot(repo, policy) == receipt['after'], 'workspace changed after earlier receipt')
+        require_tree_bytes(repo, receipt['after'], policy)
         require(receipt.get('proof') == 'exact-history-fresh-fetch',
                 'source-only checkpoint is not an exact-history preservation receipt')
         for required in entry['original_commits']:
@@ -722,7 +882,7 @@ class Engine:
         self.witness(repo, remote, receipt['ref'].removeprefix('refs/heads/'), receipt['commit'])
         if 'pr' in receipt:
             self.verify_pr(policy, receipt['after']['branch'], receipt['commit'], receipt['pr']['number'])
-        require(snapshot(repo) == receipt['after'], 'workspace changed during fresh verification')
+        require(snapshot(repo, policy) == receipt['after'], 'workspace changed during fresh verification')
 
     def check(self, request):
         # Never repairs or publishes. Caller supplies the full expected affected-work inventory.
@@ -748,7 +908,7 @@ class Engine:
                 except Blocked as error:
                     raise Blocked(f"workspace {request['workspace']}, repository {repo}: {error}") from None
         for entry in record['repositories']:
-            require(snapshot(Path(entry['path'])) == entry['receipt']['after'],
+            require(snapshot(*self.policy(entry)) == entry['receipt']['after'],
                     'earlier repository changed while another repository was checked')
         require(read_json(path.parent / 'latest.json')['turn'] == request['turn'],
                 'newer turn admitted during verification')
@@ -782,7 +942,7 @@ class Engine:
                     current['state'] == 'verified' and digest(current) == result['receipt_digest'],
                     f"workspace {result['workspace']} preservation changed during batch check")
             for entry in result['repositories']:
-                require(snapshot(Path(entry['path'])) == entry['receipt']['after'],
+                require(snapshot(*self.policy(entry)) == entry['receipt']['after'],
                         'affected workspace changed during controller batch check')
         return dict(version=VERSION, state='verified', scope='eligible-repository-work-only',
                     checked_at=time.time(), turns=results)
@@ -809,6 +969,7 @@ def main():
     print(json.dumps(result, sort_keys=True))
     return 0 if ((args.action == 'observe-finished' and result.get('observation_complete') is True)
                  or (result['state'] in ['verified', 'pending'] and args.action == 'begin')
+                 or (result['state'] == 'pending' and result.get('publication_pending') is True)
                  or result['state'] == 'verified') else 2
 
 

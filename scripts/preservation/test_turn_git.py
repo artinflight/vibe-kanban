@@ -125,6 +125,294 @@ else: sys.exit(1)
         self.request['turn'] = 'handoff-owner'
         self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
 
+    def admit_reviewed_links(self, actual_source=None):
+        # All mutations are confined to disposable fixture repositories.
+        if actual_source:
+            previous_remote = self.remote
+            self.repo = self.root / 'accepted-source'
+            subprocess.run(['git', 'clone', '-q', '--shared', '--no-checkout',
+                            str(actual_source), str(self.repo)], check=True)
+            git(self.repo, 'switch', '-qc', 'feat/fixture',
+                '962d2673f896d4f25817077d6dfbb4d4fab12141')
+            git(self.repo, 'config', 'user.name', 'Fixture')
+            git(self.repo, 'config', 'user.email', 'fixture@example.invalid')
+            self.remote = self.root / 'accepted-remote.git'
+            subprocess.run(['git', 'init', '-q', '--bare', str(self.remote)], check=True)
+            git(self.repo, 'remote', 'set-url', 'origin', str(self.remote))
+            self.gh.write_text(self.gh.read_text().replace(str(previous_remote), str(self.remote)))
+        else:
+            (self.repo / 'docs').mkdir()
+            (self.repo / 'AGENTS.md').write_text('Reviewed public source guidance.\n')
+            (self.repo / 'docs/AGENTS.md').write_text('Reviewed public documentation guidance.\n')
+            (self.repo / 'CLAUDE.md').symlink_to('AGENTS.md')
+            (self.repo / 'docs/CLAUDE.md').symlink_to('AGENTS.md')
+            git(self.repo, 'add', '.')
+            git(self.repo, 'commit', '-qm', 'reviewed baseline source links')
+        self.base = git(self.repo, 'rev-parse', 'HEAD')
+        git(self.repo, 'push', '-q', 'origin', 'HEAD:staging', 'feat/fixture')
+        policy = self.config['repositories']['repo']
+        policy.update(common_dir=str(self.repo / '.git'), url=str(self.remote),
+                      base_commit=self.base, workflow_digest=m.workflows(self.repo, self.base),
+                      automation_commit=self.base,
+                      automation_workflow_digest=m.workflows(self.repo, self.base))
+        pins = []
+        for name in ['CLAUDE.md', 'docs/CLAUDE.md']:
+            target = os.readlink(self.repo / name)
+            resolved = str(Path(name).parent / target)
+            mode, kind, blob = git(self.repo, 'ls-tree', self.base, '--', name).split('\t')[0].split()
+            target_mode, target_kind, target_blob = git(
+                self.repo, 'ls-tree', self.base, '--', resolved).split('\t')[0].split()
+            self.assertEqual((mode, kind, target_kind), ('120000', 'blob', 'blob'))
+            pins.append(dict(path=name, target=target, blob=blob, mode=mode,
+                             target_blob=target_blob, target_mode=target_mode,
+                             target_sha256=hashlib.sha256((self.repo / resolved).read_bytes()).hexdigest()))
+        policy['reviewed_symlinks'] = pins
+        policy['handoff_file'] = 'HANDOFF.md'
+        policy['allowed'].extend(['HANDOFF.md', 'CLAUDE.md', 'docs/CLAUDE.md',
+                                  'AGENTS.md', 'docs/AGENTS.md'])
+        self.engine = FixtureEngine(self.config, str(self.gh))
+        self.request.update(turn='reviewed-links', handoff_required=True)
+        if actual_source:
+            self.request['repositories'][0]['path'] = str(self.repo)
+            self.request['workspace'] = 'accepted-source-workspace'
+            policy['allowed'].append('scripts/preservation/turn_git.py')
+        self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
+        return policy
+
+    def test_reviewed_baseline_links_clean_changed_handoff_retry_and_check_all(self):
+        self.admit_reviewed_links()
+        self.assertEqual(self.end()['state'], 'verified')
+        self.assertFalse(self.prfile.exists())
+        self.engine.check_all(dict(writers_fenced=True, turns=[self.request]))
+        self.request['turn'] = 'reviewed-links-changed'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
+        self.changed(value='Ordinary reviewed source change\n')
+        self.assertEqual(self.end()['state'], 'verified')
+        head = git(self.repo, 'rev-parse', 'HEAD')
+        for pin in self.config['repositories']['repo']['reviewed_symlinks']:
+            self.assertEqual(git(self.repo, 'ls-tree', head, '--', pin['path']).split('\t')[0],
+                             '120000 blob ' + pin['blob'])
+            self.assertEqual(os.readlink(self.repo / pin['path']), pin['target'])
+        doc = (self.repo / 'HANDOFF.md').read_text()
+        self.assertIn('"src/main.txt": modified; SHA-256', doc)
+        self.assertNotIn('Ordinary reviewed source change', doc)
+        self.assertEqual(self.end()['state'], 'verified')
+        self.assertEqual((self.repo / 'HANDOFF.md').read_text(), doc)
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), head)
+        self.engine.check_all(dict(writers_fenced=True, turns=[self.request]))
+
+    def test_reviewed_baseline_link_and_target_mutations_block_without_publication(self):
+        self.admit_reviewed_links()
+        link = self.repo / 'CLAUDE.md'
+        target = self.repo / 'AGENTS.md'
+        original_target = target.read_bytes()
+        mutations = ['link-bytes', 'link-deleted', 'link-regular', 'target-bytes',
+                     'target-mode', 'target-deleted', 'target-link', 'link-absolute',
+                     'link-escape', 'link-private', 'parent-link', 'index-link', 'index-target']
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                if mutation.startswith('link-'):
+                    link.unlink()
+                    if mutation == 'link-regular':
+                        link.write_text('AGENTS.md')
+                    elif mutation != 'link-deleted':
+                        link.symlink_to({'link-bytes': 'docs/AGENTS.md', 'link-absolute': str(target),
+                                         'link-escape': '../AGENTS.md',
+                                         'link-private': 'runtime/private.txt'}[mutation])
+                elif mutation == 'target-bytes':
+                    target.write_bytes(original_target + b'changed')
+                elif mutation == 'target-mode':
+                    target.chmod(0o755)
+                elif mutation == 'target-deleted':
+                    target.unlink()
+                elif mutation == 'target-link':
+                    target.unlink()
+                    target.symlink_to('docs/AGENTS.md')
+                elif mutation == 'parent-link':
+                    (self.repo / 'docs').rename(self.repo / 'original-docs')
+                    (self.repo / 'docs').symlink_to('original-docs')
+                elif mutation == 'index-link':
+                    blob = git(self.repo, 'rev-parse', 'HEAD:AGENTS.md')
+                    git(self.repo, 'update-index', '--cacheinfo', '100644', blob, 'CLAUDE.md')
+                else:
+                    blob = git(self.repo, 'rev-parse', 'HEAD:docs/AGENTS.md')
+                    git(self.repo, 'update-index', '--cacheinfo', '100644', blob, 'AGENTS.md')
+                result = self.end()
+                self.assertEqual(result['state'], 'blocked', result)
+                self.assertFalse(self.prfile.exists())
+                self.assertEqual(git(self.repo, 'rev-parse', 'HEAD'), self.base)
+                self.assertEqual(git(self.repo, '--git-dir', str(self.remote), 'rev-parse', 'staging'), self.base)
+                # Restore only our disposable fixture, never the supplied real VK tree.
+                if mutation == 'parent-link':
+                    (self.repo / 'docs').unlink()
+                    (self.repo / 'original-docs').rename(self.repo / 'docs')
+                if target.is_symlink():
+                    target.unlink()
+                git(self.repo, 'restore', '--source=HEAD', '--staged', '--worktree',
+                    'CLAUDE.md', 'AGENTS.md')
+                target.chmod(0o644)
+
+    def test_reviewed_baseline_pin_authority_is_literal_and_bound_to_base(self):
+        policy = self.admit_reviewed_links()
+        original = copy.deepcopy(policy['reviewed_symlinks'])
+        changes = [('path', '/CLAUDE.md'), ('path', 'docs/../CLAUDE.md'),
+                   ('path', 'private/CLAUDE.md'), ('target', '../AGENTS.md'),
+                   ('target', '/AGENTS.md'), ('target', 'runtime/AGENTS.md'),
+                   ('blob', '0' * 40), ('target_blob', '0' * 40),
+                   ('target_sha256', '0' * 64), ('mode', '100644'),
+                   ('target_mode', '120000'), ('path', None), ('target_sha256', None)]
+        for field, value in changes:
+            with self.subTest(field=field, value=value):
+                policy['reviewed_symlinks'] = copy.deepcopy(original)
+                policy['reviewed_symlinks'][0][field] = value
+                self.request['turn'] = 'invalid-pin-' + str(changes.index((field, value)))
+                result = self.engine.begin(self.request)
+                self.assertEqual(result['state'], 'blocked', result)
+                self.assertIn(self.base, result['obligations']['repo']['commits'])
+        policy['reviewed_symlinks'] = original + [original[0]]
+        self.request['turn'] = 'duplicate-pin'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'blocked')
+
+    def test_reviewed_baseline_does_not_admit_unknown_links_or_gitlinks(self):
+        self.admit_reviewed_links()
+        (self.repo / 'src/link').symlink_to('../AGENTS.md')
+        self.assertBlocked('symlink')
+        (self.repo / 'src/link').unlink()
+        git(self.repo, 'update-index', '--add', '--cacheinfo', '160000', self.base, 'src/submodule')
+        self.assertBlocked('symlink, submodule or special file requires review')
+
+    def test_reviewed_baseline_changed_intermediate_link_history_still_blocks(self):
+        self.admit_reviewed_links()
+        link = self.repo / 'CLAUDE.md'
+        link.unlink()
+        link.symlink_to('docs/AGENTS.md')
+        git(self.repo, 'add', 'CLAUDE.md')
+        git(self.repo, 'commit', '-qm', 'changed link history')
+        withheld = git(self.repo, 'rev-parse', 'HEAD')
+        link.unlink()
+        link.symlink_to('AGENTS.md')
+        git(self.repo, 'add', 'CLAUDE.md')
+        git(self.repo, 'commit', '-qm', 'restore baseline link')
+        self.changed()
+        self.assertBlocked('outgoing symlink')
+        self.assertFalse(self.prfile.exists())
+        self.assertIn(withheld, git(self.repo, 'rev-list', 'HEAD'))
+
+    def test_reviewed_baseline_scanner_and_automation_gates_stay_closed(self):
+        self.admit_reviewed_links()
+        self.changed(value='FIXTURE_SECRET')
+        self.assertBlocked('scanner stdin failed')
+        self.assertFalse(self.prfile.exists())
+        self.changed()
+        (self.repo / '.github').mkdir()
+        (self.repo / '.github/workflow.yml').write_text('changed automation')
+        self.config['repositories']['repo']['allowed'].append('.github/workflow.yml')
+        self.request['turn'] = 'automation-change'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
+        self.assertBlocked('automation changed')
+
+    def test_unchanged_baseline_binary_is_retained_but_changed_binary_still_blocks(self):
+        (self.repo / 'baseline.png').write_bytes(b'baseline\0asset')
+        git(self.repo, 'add', 'baseline.png')
+        git(self.repo, 'commit', '-qm', 'reviewed baseline asset')
+        self.admit_reviewed_links()
+        baseline_blob = git(self.repo, 'rev-parse', 'HEAD:baseline.png')
+        self.changed()
+        self.assertEqual(self.end()['state'], 'verified')
+        self.assertEqual(git(self.repo, 'rev-parse', 'HEAD:baseline.png'), baseline_blob)
+        self.config['repositories']['repo']['allowed'].append('baseline.png')
+        self.request['turn'] = 'changed-binary'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
+        (self.repo / 'baseline.png').write_bytes(b'changed\0asset')
+        self.assertBlocked('binary source requires separate review')
+
+    def test_reviewed_baseline_handoff_cannot_target_link(self):
+        policy = self.admit_reviewed_links()
+        policy['handoff_file'] = 'CLAUDE.md'
+        self.request['turn'] = 'link-handoff'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
+        self.changed()
+        self.assertBlocked('handoff destination must be a regular file')
+        self.assertEqual(os.readlink(self.repo / 'CLAUDE.md'), 'AGENTS.md')
+
+    def test_reviewed_baseline_policy_rollback_and_restart_retain_original_uncertainty(self):
+        policy = self.admit_reviewed_links()
+        self.changed(value='Completed original B\n')
+        git(self.repo, 'add', 'src/main.txt')
+        git(self.repo, 'commit', '-qm', 'completed original B')
+        withheld = git(self.repo, 'rev-parse', 'HEAD')
+        pins = policy.pop('reviewed_symlinks')
+        self.engine = FixtureEngine(self.config, str(self.gh))  # Process/policy rollback.
+        self.request['turn'] = 'rollback-new-owner'
+        result = self.engine.begin(self.request)
+        self.assertEqual(result['state'], 'blocked', result)
+        self.assertIn(withheld, result['obligations']['repo']['commits'])
+        with self.assertRaises(m.Blocked):
+            self.engine.end(self.request)
+        with self.assertRaises(m.Blocked):
+            self.engine.check(self.request)
+        # Model a later reset in this disposable fixture. Restoring snapshot
+        # authority cannot reconstruct missing original history or clear its ledger.
+        self.fixture_return_to_base()
+        policy['reviewed_symlinks'] = pins
+        self.engine = FixtureEngine(self.config, str(self.gh))
+        self.request['turn'] = 'restored-policy-owner'
+        result = self.engine.begin(self.request)
+        self.assertEqual(result['state'], 'pending', result)
+        self.assertIn(withheld, result['obligations']['repo']['commits'])
+        self.assertBlocked('merge-base failed')
+        self.assertFalse(self.prfile.exists())
+
+    def test_reviewed_baseline_fresh_coverage_rejects_target_mutation_and_shallow_history(self):
+        self.admit_reviewed_links()
+        self.assertEqual(self.end()['state'], 'verified')
+        (self.repo / 'docs/AGENTS.md').write_text('Unreviewed target mutation\n')
+        with self.assertRaisesRegex(m.Blocked, 'target bytes or mode changed'):
+            self.engine.check_all(dict(writers_fenced=True, turns=[self.request]))
+        git(self.repo, 'restore', 'docs/AGENTS.md')
+        (self.repo / '.git/shallow').write_text(self.base + '\n')
+        with self.assertRaisesRegex(m.Blocked, 'shallow history'):
+            self.engine.check(self.request)
+
+    def test_actual_accepted_vk_tree_begin_handoff_and_remote_checks(self):
+        source = os.environ.get('VK_REVIEWED_SYMLINK_SOURCE')
+        if not source:
+            self.skipTest('set VK_REVIEWED_SYMLINK_SOURCE to accepted local VK source')
+        scanner = os.environ.get('VK_TEST_GITLEAKS')
+        if scanner:
+            self.config.update(scanner=scanner,
+                               scanner_sha256=hashlib.sha256(Path(scanner).read_bytes()).hexdigest())
+        self.admit_reviewed_links(Path(source))
+        self.assertEqual(self.base, '962d2673f896d4f25817077d6dfbb4d4fab12141')
+        result = self.end()
+        self.assertEqual(result['state'], 'verified', result)
+        self.assertFalse(self.prfile.exists())
+        # Mutate only the disposable exact-tree clone, not Staging's source copy.
+        link = self.repo / 'docs/CLAUDE.md'
+        link.unlink()
+        link.symlink_to('../AGENTS.md')
+        with self.assertRaisesRegex(m.Blocked, 'symlink changed'):
+            self.engine.check(self.request)
+        link.unlink()
+        link.symlink_to('AGENTS.md')
+        target = self.repo / 'docs/AGENTS.md'
+        original_target = target.read_bytes()
+        target.write_bytes(original_target + b'\nChanged target.\n')
+        with self.assertRaisesRegex(m.Blocked, 'target bytes or mode changed'):
+            self.engine.check_all(dict(writers_fenced=True, turns=[self.request]))
+        target.write_bytes(original_target)
+        self.request['turn'] = 'accepted-vk-source-change'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
+        path = self.repo / 'scripts/preservation/turn_git.py'
+        path.write_bytes(path.read_bytes() + b'\n# Public source fixture change.\n')
+        result = self.end()
+        self.assertEqual(result['state'], 'verified', result)
+        self.engine.check_all(dict(writers_fenced=True, turns=[self.request]))
+        for pin in self.config['repositories']['repo']['reviewed_symlinks']:
+            self.assertEqual(git(self.repo, 'rev-parse', 'HEAD:' + pin['path']), pin['blob'])
+        self.assertIn('"scripts/preservation/turn_git.py": modified; SHA-256',
+                      (self.repo / 'HANDOFF.md').read_text())
+
     def test_changed_content_handoff_retains_user_docs_reuses_pr_and_is_idempotent(self):
         document = self.repo / 'SYNC_HANDOFF.md'
         document.write_text('Existing operator handoff.\n')
@@ -207,6 +495,75 @@ else: sys.exit(1)
         self.assertIn(b, m.read_json(self.engine.state_path(self.request))['obligations']['repo']['commits'])
         git(self.repo, 'reset', '--hard', self.base)
         self.assertEqual(self.engine.checkpoint(self.request)['state'], 'blocked')
+
+    def test_failed_publication_admission_still_captures_completed_original(self):
+        policy = self.config['repositories'].pop('repo')
+        self.request['turn'] = 'no-publication-policy'
+        begun = self.engine.begin(self.request)
+        self.assertEqual(begun['state'], 'blocked')
+        self.assertEqual(begun['repositories'], [])
+        self.changed(value='Completed B without publication authority\n')
+        git(self.repo, 'add', '.')
+        git(self.repo, 'commit', '-qm', 'Completed B')
+        b = git(self.repo, 'rev-parse', 'HEAD')
+        ack = self.engine.observe_finished(self.request)
+        self.assertIs(ack['observation_complete'], True)
+        self.assertEqual(ack['state'], 'pending')
+        self.assertEqual(ack['admission_failure'], 'repository has no approved publication policy')
+        record = m.read_json(self.engine.state_path(self.request))
+        self.assertEqual(record['state'], 'blocked')
+        self.assertIn(b, record['obligations']['repo']['commits'])
+        pending = self.engine.checkpoint(self.request)
+        self.assertEqual(pending['state'], 'pending')
+        self.assertIs(pending['publication_pending'], True)
+        self.assertFalse(self.prfile.exists())
+        self.engine.block(dict(self.request, reason='later generic worker error'))
+        self.assertEqual(m.read_json(self.engine.state_path(self.request))['admission_failure'],
+                         'repository has no approved publication policy')
+        self.config['repositories']['repo'] = policy
+        git(self.repo, 'reset', '--hard', self.base)
+        self.engine = FixtureEngine(self.config, str(self.gh))  # Process restart.
+        self.request['turn'] = 'new-owner-after-policy-restore'
+        self.assertEqual(self.engine.begin(self.request)['state'], 'pending')
+        self.assertBlocked('merge-base failed')
+        self.assertFalse(self.prfile.exists())
+
+    def test_failed_admission_observation_refuses_wrong_inventory_and_owner(self):
+        self.config['repositories'].clear()
+        self.request['turn'] = 'failed-admission-identity'
+        self.engine.begin(self.request)
+        for inventory in [[], [dict(id='other', path=str(self.repo))],
+                          [dict(id='repo', path=str(self.root))]]:
+            with self.assertRaisesRegex(m.Blocked, 'inventory differs'):
+                self.engine.observe_finished(dict(self.request, repositories=inventory))
+        path = self.engine.state_path(self.request)
+        record = m.read_json(path)
+        record['workspace'] = 'forged-workspace'
+        m.atomic_json(path, record)
+        with self.assertRaisesRegex(m.Blocked, 'owner differs'):
+            self.engine.observe_finished(self.request)
+
+    def test_completion_capture_survives_publication_policy_change_without_grant(self):
+        self.config['repositories'].clear()
+        self.changed()
+        git(self.repo, 'add', '.')
+        git(self.repo, 'commit', '-qm', 'B')
+        b = git(self.repo, 'rev-parse', 'HEAD')
+        self.assertTrue(self.engine.observe_finished(self.request)['observation_complete'])
+        self.assertIn(b, m.read_json(self.engine.state_path(self.request))['obligations']['repo']['commits'])
+        with self.assertRaisesRegex(m.Blocked, 'policy changed'):
+            self.engine.checkpoint(self.request)
+
+    def test_legacy_empty_admission_cannot_be_retroactively_observed(self):
+        self.config['repositories'].clear()
+        self.request['turn'] = 'legacy-failed-admission'
+        self.engine.begin(self.request)
+        path = self.engine.state_path(self.request)
+        record = m.read_json(path)
+        del record['observation_inventory']
+        m.atomic_json(path, record)
+        with self.assertRaisesRegex(m.Blocked, 'inventory differs'):
+            self.engine.observe_finished(self.request)
 
     def test_changed_tracked_and_untracked_exact_history_and_draft(self):
         self.changed()

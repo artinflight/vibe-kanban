@@ -260,7 +260,7 @@ jobs:
         env:
           VK_PRESERVATION_TEST_ROOT: ${{ runner.temp }}
           VK_TEST_GITLEAKS: ${{ runner.temp }}/vk-release-scanner/gitleaks
-        run: python3 scripts/preservation/test_turn_git.py
+        run: python3 -m unittest discover -s scripts/preservation -p 'test_*.py' -v
 
   ops-governance:
     runs-on: *runner_label
@@ -509,7 +509,7 @@ jobs:
           VK_AUTOMATIC_GITHUB_SYNC: "1"
         run: >-
           cargo nextest run -p db -p local-deployment -p services
-          -E 'test(legacy_observation_) | test(observation_) | test(owner_identity_retry) | test(idle_worker_preserves) | test(restored_batches) | test(incoming_input_survives)'
+          -E 'test(missing_publication_policy_) | test(legacy_observation_) | test(observation_) | test(owner_identity_retry) | test(idle_worker_preserves) | test(restored_batches) | test(incoming_input_survives)'
 
       - name: Build source-bound combined checkpoint candidate
         if: github.event_name == 'workflow_dispatch' && inputs.github_sync_candidate

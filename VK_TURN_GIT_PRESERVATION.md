@@ -95,6 +95,33 @@ textconv. Binary/non-UTF-8 blobs still block; they are never scanner exclusions.
 Scanner/subprocess output is never copied into errors.
 Receipts contain hashes/metadata, never source contents, and are mode 0600.
 
+### Reviewed unchanged baseline links
+
+The optional per-repository `reviewed_symlinks` inventory permits only unchanged
+links already present in `base_commit`. Each entry must contain exactly the
+literal `path`, literal relative `target`, link Git `blob` and `mode` (`120000`),
+plus the resolved regular target's `target_blob`, `target_mode` (`100644` or
+`100755`) and `target_sha256`. These are explicit external policy review pins,
+not values automatically inferred and approved by the helper. Omitting the
+inventory retains rejection of all links.
+
+Admission, preservation and every fresh coverage check require both entries to
+match the reviewed base, HEAD, index and raw working bytes/modes. Targets must be
+regular files under ordinary repository directories. Absolute paths, parent
+traversal, private/denied paths, link chains, directory links, missing targets,
+changed targets and unreviewed links remain blocked. Gitlinks remain blocked,
+including absent worktree entries. A link or target change requires fresh review;
+this inventory grants no changed-link publication authority. Intermediate outgoing
+link history is still rejected by the existing history scanner.
+
+The private index starts from HEAD and retains exact unchanged objects, including
+these links and baseline image assets; it never reads through a reviewed link.
+Changed objects still require eligible paths, bounded text and the original
+scanner/automation checks. Handoff destinations must remain regular reviewed
+files. Snapshot equality, index lock ownership, branch compare-and-swap and fresh
+remote/PR verification remain required. Changing the policy cannot clear original
+history obligations or retained runtime observation uncertainty.
+
 Ignored files are never staged or uploaded. A changed ignored-file inventory
 blocks the turn and states that it is outside Git protection. Unchanged ignored
 files are listed as `ignored_not_git_protected`; their metadata is not an exact

@@ -35,6 +35,48 @@ operator's physical phone was tested. No restart, new public route or broad
 filesystem endpoint was introduced. The durable installation receipt binds the exact installed code; use the current
 artifact-delivery PR, including its shared-public packaging and frame policy.
 
+## October 16 publication-admission recurrence correction
+
+PR246 merged at64c3; its running helper still compares an empty publication
+admission against the completed owner's requested repository inventory. This
+follow-up ports the retained local corrections onto current staging. Capture
+inventory is durable before admission, original terminal heads survive failed
+publication admission, and missing publication policy stays pending rather than
+claiming remote coverage. The reviewed baseline-link correction is included so
+unchanged accepted VK source remains admissible without weakening deny rules.
+
+The real callback/reset/database-reopen/idle-worker regression runs in normal
+and scheduling-enabled CI, including repeated-pending report deduplication.
+Historical observation reconciliation is separate and requires exact native
+provenance at genuine idle. No unrelated workspace gates are cleared. A local
+commit or merged PR alone cannot certify newer unpublished commits or private
+runtime data. Details and operating boundaries: VK_AUTOMATIC_GITHUB_SYNC.md.
+
+Publication is authorized for this source correction; deployment is not.
+The release owner must integrate this exact source, rebuild the backend (which
+embeds the helper), obtain exact-head review, and run combined acceptance before
+a separately authorized safe-idle restart. Existing live settings, Recommend,
+permissions, inputs and active owners remain untouched. Earlier local-only
+publication restrictions below describe the historical preparation stage.
+
+## October 14 local reviewed-baseline link repair
+
+Staging's accepted 962d2673 source copy failed begin with reviewed 64c3 because
+CLAUDE.md and docs/CLAUDE.md are tracked links. A local-only correction adds explicit
+reviewed base/link/regular-target integrity pins and uses them in admission and all
+snapshot/coverage paths. Changed/unreviewed links, escapes, private paths, Gitlinks
+and changed targets stay blocked. The private index retains exact unchanged HEAD
+objects; changed objects keep source/scanner checks. This also permits ordinary
+source handoff in the actual VK tree without rewriting unchanged image assets.
+
+Tests and a sealed patch/source receipt are prepared locally for Staging. No
+GitHub/PR publication, live configuration, deployment, restart, agent retask or
+heavy MCP build is authorized in this repair. Recommend and model/effort remain.
+The helper is embedded: Staging must integrate the local patch and two literal
+policy pins, rebuild and run its combined acceptance before release. Exact-head
+review/build acceptance remains pending; 64c3 alone does not include this repair.
+See VK_TURN_GIT_PRESERVATION.md for the strict optional policy contract.
+
 # Dot reply notifications — live October 16, 22:38 UTC
 
 Seamus's approved Dot service/connector and combined frontend rollout is live.

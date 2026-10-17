@@ -94,6 +94,70 @@ class Store:
         if "expires" not in {r[1] for r in self.db.execute("PRAGMA table_info(bindings)")} :
             self.db.execute("ALTER TABLE bindings ADD COLUMN expires REAL NOT NULL DEFAULT 0")
 
+    @classmethod
+    def reader(cls, path):
+        """Open existing private state without creating, migrating or acknowledging it."""
+        path = Path(path)
+        if path.is_symlink() or path.stat().st_mode & 0o077:
+            raise Rejected("Private database must be owner-readable only")
+        store = cls.__new__(cls)
+        store.clock = time.time
+        store.db = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=2)
+        store.db.row_factory = sqlite3.Row
+        store.db.execute("PRAGMA query_only=ON")
+        return store
+
+    def workspace_context(self, principal, workspace):
+        """Existing authorized history only; pending is deliberately not a directory."""
+        self._principal(principal, ("dot",))
+        row = self.db.execute("""SELECT t.id,t.project,t.issue FROM scopes s
+            JOIN threads t ON t.owner=s.owner AND t.project=s.project AND t.issue=s.issue
+            WHERE s.owner=? AND s.workspace=?""", (principal.owner, workspace)).fetchone()
+        if not row:
+            return {"status": "not_found", "workspace_id": workspace}
+        return {"status": "available", "workspace_id": workspace,
+                "thread_id": row["id"], "project_id": row["project"], "issue_id": row["issue"],
+                "next": "Read read_sidechat_thread(thread=thread_id), then check the exact owner delivery. "
+                        "Pending lists unanswered messages only. No monitoring is scheduled by reading."}
+
+    def _reply_origin(self, thread, message, workspace):
+        """Bounded ancestry; continuations must retain the original owner event."""
+        upper = None
+        for _ in range(100):
+            row = self.db.execute("SELECT * FROM messages WHERE thread=? AND id=?",
+                                  (thread, message)).fetchone()
+            if not row or row["workspace"] != workspace or (upper is not None and row["seq"] >= upper):
+                raise Rejected("Reply ancestry does not match this thread/workspace")
+            if row["role"] == "owner":
+                event = self.db.execute("SELECT event FROM outbox WHERE message=? AND thread=?",
+                                        (row["id"], thread)).fetchone()
+                if not event:
+                    raise Rejected("Owner event unavailable")
+                return row, event["event"]
+            if row["role"] != "dot" or not row["reply_to"]:
+                break
+            message, upper = row["reply_to"], row["seq"]
+        raise Rejected("Reply ancestry unavailable or exceeds safe bound")
+
+    def _reply_context(self, thread, origin, event, through):
+        tip, count = origin, 0
+        for _ in range(99):
+            child = self.db.execute("SELECT * FROM messages WHERE thread=? AND reply_to=? AND seq<=?",
+                                    (thread, tip["id"], through)).fetchone()
+            if not child:
+                return {"owner_message_id": origin["id"], "event_id": event,
+                        "workspace": origin["workspace"], "reply_to": tip["id"],
+                        "reply_count": count,
+                        "reply_request": str(uuid.uuid5(uuid.NAMESPACE_URL, "vibe-sidechat-next:" + thread + ":" + tip["id"])),
+                        "latest_reply": {k: tip[k] for k in ("id", "seq", "hash")} if count else None,
+                        "instructions": "For an explicitly requested later update, target this chain tip with the original event. "
+                                        "Read history first. Reuse reply_request and identical content after an uncertain write. "
+                                        "A stale tip rejects competing updates; this context does not schedule monitoring."}
+            if child["role"] != "dot" or child["workspace"] != origin["workspace"] or child["seq"] <= tip["seq"]:
+                raise Rejected("Invalid continuation")
+            tip, count = child, count + 1
+        raise Rejected("Continuation exceeds safe bound")
+
     @contextmanager
     def transaction(self):
         self.db.execute("BEGIN IMMEDIATE")
@@ -164,9 +228,8 @@ class Store:
             if principal.role == "owner" and (reply_to is not None or event_id is not None):
                 raise Rejected("Owner messages cannot impersonate replies")
             if principal.role == "dot":
-                target = self.db.execute("SELECT m.*,o.event FROM messages m JOIN outbox o ON o.message=m.id WHERE m.id=? AND m.thread=? AND m.role='owner'",
-                                         (reply_to, thread)).fetchone()
-                if not target or target["event"] != event_id or target["workspace"] != workspace:
+                target, original_event = self._reply_origin(thread, reply_to, workspace)
+                if original_event != event_id:
                     raise Rejected("Reply must match the exact owner message/event/workspace")
             digest = hashlib.sha256(body.encode()).hexdigest()
             old = self.db.execute("SELECT * FROM messages WHERE thread=? AND role=? AND request=?",
@@ -181,7 +244,7 @@ class Store:
                     raise Rejected('Idempotency key conflict')
                 return dict(old)
             if reply_to and self.db.execute("SELECT 1 FROM messages WHERE reply_to=?", (reply_to,)).fetchone():
-                raise Rejected("Owner message already has a final reply")
+                raise Rejected("Reply target already has a successor; read history before another update")
             seq = self.db.execute("SELECT COALESCE(MAX(seq),0)+1 FROM messages WHERE thread=?", (thread,)).fetchone()[0]
             mid, now = str(uuid.uuid4()), self.clock()
             self.db.execute("INSERT INTO messages VALUES (?,?,?,?,?,?,?,?,?,?)",
@@ -222,6 +285,8 @@ class Store:
                 message['seen']=bool(state and state['seen'])
                 message['attention']={'kind':state['attention_kind'],'resolved':bool(state['resolved'])} if state and state['attention_kind'] else None
             if message["role"] == "owner":
+                origin, event = self._reply_origin(thread, message["id"], message["workspace"])
+                message["reply_context"] = self._reply_context(thread, origin, event, through)
                 message["owner_intent"] = {
                     "intent": "sidechat_reply_requested",
                     "reply_scope": "same_thread_only",
@@ -383,8 +448,12 @@ class Store:
         if not row:
             raise Rejected("Receipt unavailable")
         reply = self.db.execute("SELECT id,seq,hash FROM messages WHERE reply_to=? AND thread=?", (message, thread)).fetchone()
+        origin, event = self._reply_origin(thread, message,
+            self.db.execute("SELECT workspace FROM messages WHERE id=? AND thread=?", (message, thread)).fetchone()[0])
+        high = self.db.execute("SELECT MAX(seq) FROM messages WHERE thread=?", (thread,)).fetchone()[0]
         return {**dict(row), "reply_persisted": reply is not None,
-                "reply": dict(reply) if reply else None, "seen": None}
+                "reply": dict(reply) if reply else None, "seen": None,
+                "continuation": self._reply_context(thread, origin, event, high)}
 
     def tool(self, principal, name, args):
         """Minimal allowlisted adapter contract: no owner/role argument accepted."""

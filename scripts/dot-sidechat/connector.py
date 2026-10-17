@@ -60,3 +60,19 @@ def event_call(message, approval_handler):
         return {"jsonrpc":"2.0","id":message.get("id"),"result":result}
     finally:
         store.close()
+
+
+def workspace_context(workspace):
+    """Fixed authenticated read-only lookup for the existing status tool."""
+    import uuid
+    if str(uuid.UUID(workspace)) != workspace:
+        raise Rejected("Canonical workspace UUID required")
+    principal = Principal(owner(), "dot")
+    try:
+        store = Store.reader(ROOT / "threads.sqlite")
+    except (FileNotFoundError, OSError):
+        return {"status": "unavailable", "workspace_id": workspace}
+    try:
+        return store.workspace_context(principal, workspace)
+    finally:
+        store.close()

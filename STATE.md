@@ -55,3 +55,7 @@ line range, widening it when the task needs surrounding constraints.
 
 Current release coordination, newer Sidebar adoption and remaining private gates:
 [October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
+
+Issue-less connector starts can leave Dot Chat unavailable despite valid pairing.
+[Supported association repair and connector preflight](DOT_WORKSPACE_ISSUE_CONTEXT.md)
+records the scoped fix; preserve its live associations and current private chat.

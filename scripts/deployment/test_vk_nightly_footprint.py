@@ -4,6 +4,9 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
+import threading
+import time
 
 from vk_nightly_footprint import Samples, compression_samples, inventory, walk
 from vk_rolling_backup import scan
@@ -52,6 +55,26 @@ class Footprint(unittest.TestCase):
         self.assertEqual(list(result['databases']), [str(dbfile)])
         self.plan['critical_sqlite'].append(str(self.data/'missing'))
         with self.assertRaises(ValueError): inventory(self.plan)
+
+    def test_parallel_headers_preserve_exact_census_and_thread_bound(self):
+        import vk_nightly_footprint as module
+        for index in range(96):(self.data/str(index)).write_bytes(b'original bytes'*index)
+        dbfile=self.data/'unusual-provider-state'
+        with sqlite3.connect(dbfile) as db:db.execute('CREATE TABLE preserved(value TEXT)')
+        self.plan['critical_sqlite']=[str(dbfile)]
+        before=inventory(self.plan)
+        active=peak=0;lock=threading.Lock();read=module.regular_header
+        def observed(*args,**kwargs):
+            nonlocal active,peak
+            with lock:active+=1;peak=max(peak,active)
+            try:time.sleep(.001);return read(*args,**kwargs)
+            finally:
+                with lock:active-=1
+        with patch.object(module,'regular_header',side_effect=observed):after=inventory(self.plan,workers=8)
+        for key in ('paths','files','logical_bytes','allocated_bytes','databases','maximum_database_bytes'):
+            self.assertEqual(after[key],before[key])
+        self.assertGreater(peak,1);self.assertLessEqual(peak,8)
+        with self.assertRaises(ValueError):inventory(self.plan,workers=9)
 
     def test_existing_controller_inventory_contract_remains_read_only(self):
         dbfile = self.data/'state.sqlite'

@@ -13,6 +13,8 @@ from pathlib import Path
 import stat
 import time
 import zlib
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 
 from vk_rolling_backup import Exclusions
 
@@ -131,7 +133,41 @@ class Samples:
         return [(raw, size, max(size, threshold)) for _, raw, size in ordered[:self.maximum]]
 
 
-def inventory(plan, *, socket_exclusions=(), progress=None):
+def header_records(plan, workers):
+    if type(workers) is not int or not 1 <= workers <= 8:
+        raise ValueError('inventory header worker bound is one to eight')
+    if workers == 1:
+        for raw, info, parent, name in _walk_records(plan):
+            try:
+                header=regular_header(raw,info,parent_fd=parent,name=name) if info and stat.S_ISREG(info.st_mode) else None
+            except FileNotFoundError:info=None;header=None
+            yield raw,info,header
+        return
+    def read(raw,info,parent,name):
+        try:
+            return regular_header(raw,info,parent_fd=parent,name=name)
+        finally:
+            if parent is not None:os.close(parent)
+    def complete(item):
+        raw,info,future=item
+        try:return raw,info,future.result()
+        except FileNotFoundError:return raw,None,None
+    pending=deque()
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for raw,info,parent,name in _walk_records(plan):
+            if info and stat.S_ISREG(info.st_mode):
+                duplicate=os.dup(parent) if parent is not None else None
+                try:future=pool.submit(read,raw,info,duplicate,name)
+                except BaseException:
+                    if duplicate is not None:os.close(duplicate)
+                    raise
+                pending.append((raw,info,future))
+                if len(pending)>=64:yield complete(pending.popleft())
+            else:yield raw,info,None
+        while pending:yield complete(pending.popleft())
+
+
+def inventory(plan, *, socket_exclusions=(), progress=None, workers=1):
     started = time.monotonic()
     required = set(plan.get('sqlite_snapshots', ())) | set(plan.get('critical_sqlite', ()))
     databases = {}
@@ -140,7 +176,7 @@ def inventory(plan, *, socket_exclusions=(), progress=None):
               'directories': 0, 'symlinks': 0, 'vanished': 0, 'socket_omissions': 0,
               'JSONL_bytes': 0, 'read_only': True, 'content_hashed': False}
     allowed_sockets = set(socket_exclusions)
-    for raw, info, parent_fd, name in _walk_records(plan):
+    for raw, info, header in header_records(plan,workers):
         result['paths'] += 1
         if info is None:
             if raw in required:
@@ -149,13 +185,6 @@ def inventory(plan, *, socket_exclusions=(), progress=None):
             continue
         mode = info.st_mode
         if stat.S_ISREG(mode):
-            try:
-                header = regular_header(raw, info, parent_fd=parent_fd, name=name)
-            except FileNotFoundError:
-                if raw in required:
-                    raise ValueError('required database disappeared')
-                result['vanished'] += 1
-                continue
             result['files'] += 1
             result['logical_bytes'] += info.st_size
             result['allocated_bytes'] += info.st_blocks * 512

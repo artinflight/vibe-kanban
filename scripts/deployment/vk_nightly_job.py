@@ -26,11 +26,11 @@ def checksum(path):
     with Path(path).open('rb') as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
 
 
-def inventory(plan, *, socket_exclusions=()):
+def inventory(plan, *, socket_exclusions=(), progress=None, workers=1):
     started=time.monotonic();exclusions=Exclusions(plan)
     missing=[raw for raw in plan['sources'] if not os.path.lexists(raw)]
     if missing:raise ValueError('missing source roots require reconciled scope review')
-    value=streaming_inventory(plan,socket_exclusions=socket_exclusions)
+    value=streaming_inventory(plan,socket_exclusions=socket_exclusions,progress=progress,workers=workers)
     databases={raw:row['bytes'] for raw,row in value['databases'].items()}
     exclusions.validate()
     return {'plan_identity':identity(plan),'source_scope_sha256':identity(scope(plan)),
@@ -95,11 +95,13 @@ def main():
     parser.add_argument('--check-config',action='store_true')
     parser.add_argument('--inventory-plan',type=Path)
     parser.add_argument('--inventory-output',type=Path)
+    parser.add_argument('--inventory-workers',type=int,default=1)
     parser.add_argument('--enroll-fresh',action='store_true')
     parser.add_argument('--recover-only',action='store_true')
     args=parser.parse_args()
     if args.inventory_plan:
-        plan=json.loads(args.inventory_plan.read_text());sockets=()
+        plan=json.loads(args.inventory_plan.read_text());sockets=plan.get('nightly_exact_socket_omission_proposal',())
+        validate_socket_exclusions(sockets)
         if args.config:
             if not args.config_sha256 or checksum(args.config)!=args.config_sha256:
                 raise ValueError('inventory configuration hash changed or missing')
@@ -108,7 +110,12 @@ def main():
                 raise ValueError('inventory plan differs from bound configuration')
             validate_socket_exclusions(config.get('socket_exclusions',[]))
             sockets=config.get('socket_exclusions',[])
-        value=inventory(plan,socket_exclusions=sockets)
+        progress=None
+        if args.inventory_output:
+            from vk_prep_common import save
+            progress_path=storage(args.inventory_output.with_suffix('.progress.json'))
+            progress=lambda value:save(progress_path,value)
+        value=inventory(plan,socket_exclusions=sockets,progress=progress,workers=args.inventory_workers)
         if args.inventory_output:
             with storage(args.inventory_output).open('x') as stream:json.dump(value,stream,indent=2);stream.write('\n')
         print(json.dumps({key:value[key] for key in ('files','paths','logical_file_bytes','allocated_file_bytes','maximum_DB_bytes','elapsed_seconds','read_only')}))

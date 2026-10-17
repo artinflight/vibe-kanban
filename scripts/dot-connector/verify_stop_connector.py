@@ -35,6 +35,9 @@ def main():
     upstream = Mock()
     upstream.request.return_value = {"result": {"tools": []}}
     facade = module.Adapter(upstream)
+    initialized = facade.handle({"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {}})
+    assert initialized["result"]["serverInfo"]["version"] == "1.4"
+    assert "stop_agent_execution" in initialized["result"]["instructions"]
     tools = facade.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})["result"]["tools"]
     names = {tool["name"] for tool in tools}
     assert set(stop_control.HANDLERS) <= names

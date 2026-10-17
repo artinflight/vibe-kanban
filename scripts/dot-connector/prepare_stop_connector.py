@@ -11,6 +11,8 @@ def patched(source):
     if '"connector_queued_for_capacity"' not in source or "sidechat_connector.TOOLS" not in source:
         raise ValueError("Required capacity and sidechat integrations are missing")
     replacements = [
+        ('"serverInfo":{"name":"vibe-dot-connector","version":"1.3"}',
+         '"serverInfo":{"name":"vibe-dot-connector","version":"1.4"}'),
         ("import sidechat_connector\n", "import sidechat_connector\nimport stop_control\n"),
         (" + sidechat_connector.TOOLS", " + stop_control.TOOLS + sidechat_connector.TOOLS"),
         ('            if name in sidechat_connector.NAMES:',

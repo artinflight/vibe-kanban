@@ -1,3 +1,23 @@
+# Nightly production acceptance — October 17
+
+PR263 remains the sole nightly integration. Its 92-root census is complete:
+1,219,860 paths, 1,090,388 files, 145.75 GiB logical data, and 108 SQLite
+databases including all 72 required databases. No members vanished.
+The exact disabled package and current runtime/frontend bindings validate.
+
+Production admission fails: the producer allows 1,000,000 entries, and B has
+36.2 GiB free against the configured 98.25 GiB cold reservation. That envelope
+is not a measured minimum. Full production capture/restore remains unverified;
+no nightly schedule is active and no heavy restore window is queued. Preserve
+all original recovery data. The old journal still needs full reconciliation.
+
+The 359-test suite passes 358 cases with one explicit skip. Actual B fixtures
+restore complete histories and SQLite after predecessor retirement, including
+interrupted-job recovery. These use a synthetic provider, not the full plan.
+See [exact evidence and remaining work](VK_NIGHTLY_BACKUP_EFFICIENCY.md).
+Staging received the sealed inventory and retains backend/build ownership;
+restart preflight retains the shared consumer. Production activation is pending.
+
 # Nightly production acceptance — October17 follow-up
 
 PR263 is the single nightly integration into staging, coordinated with restart

@@ -122,6 +122,32 @@ entire original and appended versions logically. That is a fixture assertion,
 not a production corpus estimate or a transfer-bandwidth measurement. Changed
 files still cross the existing capture transport in full.
 
+## October 17 production admission result
+
+The read-only census completed in 942.5 seconds under 25% CPU, 1 GiB RAM and
+idle-I/O limits: 92 roots, 1,219,860 paths, 1,090,388 files and 156,501,564,345
+logical bytes. It found 108 SQLite databases (5,135,511,552 bytes), including all
+72 declared databases, with no vanished members. Inventory SHA256:
+`e026c85cac5d22cb6109b8738a9565f4b9a268d1ec084ec8afc74c92bcda0016`.
+This is a complete online metadata census, not a coherent application backup.
+
+The exact source/config package is staged, disabled, outside the worktree. Its
+current backend and 1,971 immutable runtime/frontend files were hash-verified;
+the gateway frontend matches the selected local index. This establishes package
+and runtime binding, not production backup adoption. Full-plan admission fails:
+the file count exceeds the existing 1,000,000 generation-entry limit, and B has
+36.2 GiB free against the configured 98.25 GiB cold reservation. The reservation
+is not a measured minimum; lowering it requires guarded whole-plan evidence.
+No source was omitted to force these checks through.
+
+No heavy restore window is admitted, running or queued. The census exited zero;
+Staging received its exact seal/hash and can sequence its guarded build. The
+private shared packet is `PRODUCTION_NIGHTLY_HANDOFF.private.json` under the
+October 17 evidence directory. Address index scale within bounded resources and
+B capacity before complete capture/independent restoration and activation of
+the single 02:00 Toronto schedule. No production generation, schedule or backend
+change is claimed.
+
 ## Production boundary
 
 Fresh read-only schedule inspection found no enabled VK nightly user timer;

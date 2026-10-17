@@ -2022,3 +2022,5 @@ question/reply/notification confirmation remains. PR254 merged into staging28fdc
 See DOT_NOTIFICATION_ROLLOUT.md and the bounded live QA scripts for receipts.
 
 2026-10-17 nightly integration PR263: 359 backup tests (358 pass, one explicit skip), real B four-file/SQLite post-retirement restoration plus interrupted-job recovery pass. Whole-plan census/capacity acceptance still running; no production schedule activated and no historical recovery retired.
+
+2026-10-17 00:56UTC nightly production admission: complete92-root census sealed SHAe026c85c,1,219,860paths/1,090,388files/156,501,564,345bytes/108SQLite including72required. Exact disabled package/runtime bindings validate. Admission blocked by1M-entry bound and36.2GiB Bfree versus98.25GiB configured cold envelope; no full production restore or schedule activation. Shared Staging handoff sent; unverified recovery and all18finals retained.

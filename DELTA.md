@@ -1854,3 +1854,40 @@ hosted compilation, full existing sandbox acceptance, pinned-validator checks an
 independent acceptance still gate ordinary no-restart publication. No paid
 inference, local Cargo build, merge, restart or live update is performed by this
 source checkpoint. Private observed examples and receipts stay outside Git.
+
+## October 17: status-scope correction tested; independent acceptance pending
+
+Runtime source `8544d46d3ea8ac276a1dc5faed5fc097567f6645` is committed and
+pushed to PR244. Candidate `status-scope-8544d46d3-20261017` passed the unchanged
+protocol-2 pinned validator and full sandbox reload/rollback acceptance. Its
+manifest SHA-256 is `3566e2aff807da66230146ebda7a2c5af3376d11eb7d691d11dd759698ad9859`.
+The five private recorded-case replays select Sol6/low for the two observed status
+questions, preserve Sol6/low for the small UI change, and require Astra/high for
+the capacity request and actual firmware continuation. The status fast paths
+skip semantic inference; missing facts do not authorize fixing anything.
+
+Exact-source validation: hosted run39028768022 policy job117384871336 passed
+67 policy regressions plus37 accounting/workflow regressions. Exported binaries
+passed199 executor tests (eight opt-in tests ignored) and one full-isolation
+same-process reload/rollback test including five recorded cases. Executor peak RSS
+was52,608KiB. Candidate worker SHA-256:
+`f3a0a00d240170beb580524256037987cde08500306bf113b7845fbcdd7b5a2e`.
+Models/qualification registry and classifier model/effort are unchanged.
+
+The hosted sandbox job117384871503 failed at its unchanged namespace probe; it
+is NOT accepted test evidence. Its security audit is byte-identical before/after
+Ubuntu's approved Bubblewrap package installation. Full sandbox acceptance used
+the existing supported host and exact exported binaries, with no local Cargo
+build, paid inference, security change, permission bypass or backend restart.
+Rust formatting, governance and whitespace checks pass; full format remains
+blocked by the pre-existing missing frontend Prettier. No frontend/types changed.
+
+NOT PUBLISHED: the report-scope-f8901e1e9-20261015 module remains live, and health,
+backend PID, config/executor digests, Recommend and selected settings were read
+back unchanged. Independent exact-source/artifact acceptance is still required
+by the operator before publication. The controlled vk_delegate tool is absent
+and native delegation is disabled in this execution; no alternate worker route
+was used. The private review packet/package is ready for that gate, followed by
+the established prepare/publish/check route with a fresh identity/settings check.
+PR244 stays open/unmerged. No actual savings or cheap-model quality acceptance
+is claimed from replay. Operational inputs/receipts remain outside Git.

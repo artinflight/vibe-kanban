@@ -1,17 +1,19 @@
-# Exact Dot execution Stop — October 17 preparation
+# Exact Dot execution Stop — connector initialized October 17
 
-Seamus explicitly authorized a safe exact-execution Stop/readback connector.
-The implementation uses exact workspace/session/execution/request identities,
-a guarded backend endpoint, serialized admission and durable uncertainty-aware
-receipts. The existing unsafe legacy Stop is never a fallback. Python connector
-and installed-source policy regressions pass; hosted backend tests and safe
-coordinated activation remain pending. No real agent has been stopped.
-CU retains tonight's verified aggregate accounting and T18 priority; the budget
-is remaining weekly allocation + verified rollover + next week, not an invented
-number. Cooperative checkpoints around8,000credits are interim, not a hard cap.
-CU/release issue handoffs are saved without adding lanes. The release owner
-retains its private-reader backend/compiler/restart window.
-[Contract, verification and deployment gates](DOT_STOP_CONTROL.md).
+Seamus's approved connector-only initialization is live as version1.4 at01:57UTC.
+Installed discovery and read-only dispatch pass; guarded backend capability is
+absent, so real stopping remains unsupported with no legacy/workspace fallback.
+Only connector source/service changed; other services, chats, access/subscriptions,
+Mobile and Sent Steering are preserved. No real agent was stopped for testing.
+24 Python control tests and28 installed-source policy/read regressions pass.
+Backend race/receipt/process fixtures and CI are tracked in PR264. Local Rust
+builds do not compete for the release owner's reserved compiler window.
+CU owns the verified aggregate budget/T18 priority and has pinned the retained
+overnight baseline; banked rollover is still unrecovered. Around8,000credits is
+an interim cooperative checkpoint, not an added allowance or a hard mid-turn cap.
+The release owner retains guarded backend deployment; main Dot's actual new-tool
+inventory and automatic all-agent exhaustion enforcement remain unverified.
+[Control, activation, acceptance and ownership handoff](DOT_STOP_CONTROL.md).
 
 # Generated report links — live October 16 follow-up
 

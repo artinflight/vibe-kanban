@@ -1,4 +1,4 @@
-# Exact Dot execution Stop — preparation and acceptance
+# Exact Dot execution Stop — connector initialized, backend release pending
 
 Seamus explicitly authorized building and initializing Dot's Stop controls on
 October 17. This stream adds a guarded backend contract and two additive MCP
@@ -79,8 +79,8 @@ The first run passes 24 connector tests. The installed-source overlay passes
 rejection of broad Stop/shell/admin tools. No live calls or state writes occur.
 Backend tests cover exact identity, terminal/non-agent rejection, the atomic
 completion race, concurrent requests, durable replay/uncertainty, cancellation,
-and a disposable `sleep` process. Their execution is pending hosted CI until
-the PR result is recorded; no user agent is used for testing.
+and a disposable `sleep` process. Their hosted execution results are tracked on
+[PR264](https://github.com/artinflight/vibe-kanban/pull/264); no user agent is used for testing. Local builds do not take the release owner's compiler window.
 
 Prepare only against the reviewed installed-adapter SHA using
 `prepare_stop_connector.py`. Back up and verify the current adapter/shim and
@@ -104,7 +104,46 @@ Live read-only preflight confirms the current backend lacks the guarded contract
 without a write. CU is actively reconciling the numeric envelope; verified banked
 rollover is still unrecovered, so no complete total or hard-budget arming is claimed.
 
-Current stream: source and Python tests prepared; backend CI, coordinated
-activation and main-Dot availability are not yet verified. Aggregate automatic
-budget enforcement is not claimed. This document will be reconciled with the
-actual publication, deployment and CU readbacks.
+## Verified connector initialization — October 17, 01:57 UTC
+
+Connector **1.4** activated at 01:57:49–01:57:50 UTC from source `70d346699`.
+Only `adapter.py` and `stop_control.py` changed, and only
+`vibe-dot-connector.service` restarted. Restart/HTTP readiness took **0.774s**;
+this is not platform metadata propagation time. The exact installed adapter SHA
+is `9f60622a778ec44e5d5e4078561d004905b86057c6f5dc48514e3859bf6b2bf0`;
+control SHA is `13c8eff8ccd9a67cc7c56e80c25e55be8daeb675493050dfc9b1cac2092c87f4`.
+
+Source/unit/consistent sidechat backup uploaded to Desktop B, its hash matched,
+and download/full offline readback including SQLite integrity passed. These are
+private recovery data, excluded from GitHub. Never restore that snapshot over
+new conversations. Roll back only the adapter/module after pinning current hashes.
+
+Installed discovery through the real native Vibe MCP upstream advertises both
+new controls plus all five sidechat tools. Actual installed readback dispatch to
+the live backend returns capability unavailable without a write. Session/access
+and subscription hashes, every prior chat message, frontend and sidechat source
+pointers and every unaffected service PID remain unchanged. Mobile and Sent
+Steering are preserved. No real agent was stopped or launched for testing.
+
+**Real stopping is unavailable until the coordinated backend route/migration
+release is accepted.** This is a Vibe backend deployment dependency, not an MCP
+cache workaround. The shared admission flag is already enabled; no setting was
+changed to bypass the capability gate. A future backend must pass its acceptance
+checks before activation; this connector never falls back if it is absent.
+
+**Main Dot availability remains unverified.** The server advertises the controls,
+but this coding execution's supplied inventory still lacks them. That inventory
+is not an observation of the separate main conversation. Main Dot must expose
+both tools and exercise only `get_agent_execution_stop` for a selected target;
+no real stop demonstration is authorized. If its catalog is still old, refresh
+metadata for this existing connection/version using the supported platform flow
+and compare the registered-service discovery requests. Do not replace
+credentials, broaden permissions or repeat identical refreshes without evidence.
+
+CU's current turn has pinned a real retained overnight baseline and counts use
+already incurred against the interim checkpoint. It reports no verified banked
+rollover yet. No complete authorized numeric aggregate or automatic global stop
+is claimed here; CU retains that reconciliation and new-admission/lease policy.
+Source, test and handoff publication: [PR264](https://github.com/artinflight/vibe-kanban/pull/264).
+Current CI conclusions are recorded on that PR without representing preparation
+or an installed tool catalog as live/backend/main-conversation acceptance.

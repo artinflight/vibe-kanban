@@ -680,25 +680,39 @@ impl LocalContainerService {
     }
 
     /// Started once after startup identity/adoption, alongside existing background services.
-    /// This is a backend checkpoint, never a coding-agent prompt or a new owner turn.
+    /// Reuses one backend poller for checkpoints and capacity-queue wakeups.
+    /// No new owner turn or service is created. Restored recovery holds and all
+    /// existing start/admission/preservation gates remain authoritative.
     pub fn spawn_github_sync_worker(&self, shutdown: CancellationToken) {
-        if !self.automatic_sync_enabled() {
-            return;
-        }
         let container = self.clone();
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_secs(5));
-            loop {
-                tokio::select! {
-                    _ = shutdown.cancelled() => break,
-                    _ = interval.tick() => {
-                        // Hold the same admission lock as input and process starts through
-                        // verification/receipt persistence. No active child is stopped.
-                        services::services::admission::locked(container.sync_one_idle_turn()).await;
-                    }
-                }
-            }
+            container
+                .poll_pending_work(shutdown, Duration::from_secs(5))
+                .await;
         });
+    }
+
+    async fn poll_pending_work(&self, shutdown: CancellationToken, period: Duration) {
+        let mut interval = tokio::time::interval(period);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            tokio::select! {
+                biased;
+                _ = shutdown.cancelled() => break,
+                _ = interval.tick() => {}
+            }
+            if self.automatic_sync_enabled() {
+                // Keep the existing bounded checkpoint and its admission lock.
+                services::services::admission::locked(self.sync_one_idle_turn()).await;
+            }
+            if shutdown.is_cancelled() {
+                break;
+            }
+            // A capacity lease can expire without a local execution finishing;
+            // restored work also has no old exit monitor to wake it. Retry one
+            // batch through the unchanged consumer, not a direct executor call.
+            let _ = self.consume_capacity_queued_follow_up().await;
+        }
     }
 
     fn automatic_sync_enabled(&self) -> bool {

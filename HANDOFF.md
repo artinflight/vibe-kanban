@@ -10562,3 +10562,16 @@ newer consent repairs. Its private manifest is at
 The original server/guard/module package is c3c48e63, unchanged. Browser sandbox
 startup exited SIGTRAP; no sandbox was disabled. Actual candidate/cutback binding
 and routed/phone acceptance remain pending. Do not deploy from a source/CI claim.
+# Restart queue wakeup follow-up
+
+Read VK_RESTART_QUEUE_WAKEUP.md. The existing backend worker retries one
+capacity-queued batch per five-second cadence through the unchanged consumer.
+No completion event is required. Normal queued messages and restored ambiguous
+dispatches remain protected. Hosted compiled checks and exact-binary successful
+dispatch acceptance are still required; tiny loop/SQLite tests do not prove a
+real model continuation. Do not alter the active Staging or nightly owners.
+The audited preparation runner now includes source/artifact reuse, bounded queue
+inventory and receipt timing in this branch. A verified publication alone cannot
+claim queued work resumed; the actor must supply real queued-work-start evidence.
+Original FIX READY includes build and validation. Nightly journal continuity and
+the actual release/queue acceptance remain separate operational gates.

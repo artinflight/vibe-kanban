@@ -1,3 +1,14 @@
+# Nightly producer failure follow-up — October 17
+
+The production measurement failed04:36:15UTC, exit1, before a complete manifest.
+The original producer exception was masked and not durably saved; its actual
+SQLite/transport cause remains unknown. Thirty verified B SQLite images and the
+empty unsealed input are preserved. A narrow source correction now preserves
+original errors/source-stage diagnostics; no replacement measurement or live
+deployment was started. Required next check is the single affected-source B
+probe described in HANDOFF.md. Production capacity/restore and schedule remain
+unverified; the following running status is historical.
+
 # Nightly recovery and admitted capacity verification — October 17
 
 PR263 remains the sole nightly package/schedule. The retained 1,219,860-row

@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sqlite3
 import tarfile
 import tempfile
 import unittest
@@ -49,6 +50,30 @@ class CapacityTransport(unittest.TestCase):
 
 
 class Capacity(unittest.TestCase):
+    def test_producer_failure_survives_missing_or_truncated_manifest(self):
+        for partial in (b'\0'*10240, b'x'*512):
+            with self.subTest(partial=partial[:1]),tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as raw:
+                root=Path(raw);meter=StreamMeter(root/'meter');self.addCleanup(meter.db.close)
+                error=sqlite3.OperationalError('fixture source backup failed')
+                error.nightly_sqlite_diagnostic={'source':'fixture.sqlite','stage':'source.backup(destination)',
+                                                'sqlite_errorname':'FIXTURE_ONLY'}
+                def produce(out):out.write(partial);raise error
+                with self.assertRaises(sqlite3.OperationalError) as caught:
+                    meter.measure(StreamingArchive(root,'fixture.tar.zst',produce))
+                self.assertIs(caught.exception,error)
+                receipt=json.loads((meter.root/'stream-failure.private.json').read_text())
+                self.assertEqual(receipt['sqlite_diagnostic'],error.nightly_sqlite_diagnostic)
+                self.assertIn('fixture source backup failed',receipt['traceback'])
+                self.assertFalse((meter.root/'stream-measurement.private.json').exists())
+
+    def test_parser_failure_is_not_replaced_by_cleanup_broken_pipe(self):
+        with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as raw:
+            root=Path(raw);meter=StreamMeter(root/'meter');self.addCleanup(meter.db.close)
+            with self.assertRaises(tarfile.ReadError):
+                meter.measure(StreamingArchive(root,'fixture.tar.zst',lambda out:out.write(b'x'*512)))
+            receipt=json.loads((meter.root/'stream-failure.private.json').read_text())
+            self.assertEqual(receipt['error_type'],'ReadError')
+
     def test_entire_compressed_stream_and_unique_objects_match_actual_store(self):
         with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as raw:
             root=Path(raw);payload=b'x'*(1024**2)+b'\x00unclosed history tail\xff'

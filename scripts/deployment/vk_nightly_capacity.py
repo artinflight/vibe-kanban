@@ -15,6 +15,7 @@ import subprocess
 import tarfile
 import threading
 import time
+import traceback
 import zlib
 
 from vk_archive_stream import StreamingArchive
@@ -160,14 +161,33 @@ class StreamMeter:
         producer=threading.Thread(target=produce,daemon=True);counter=threading.Thread(target=count,daemon=True)
         producer.start();counter.start()
         try:
-            self.consume(reader);producer.join(timeout=30);counter.join(timeout=30)
+            try:self.consume(reader)
+            except BaseException:
+                # A failed producer records its exception BEFORE closing the
+                # pipe. EOF can otherwise hide it behind a missing manifest or
+                # truncated TAR error. Do not replace a parser error with a
+                # broken pipe caused later by our own reader cleanup.
+                if errors:raise errors[0]
+                raise
+            producer.join(timeout=30);counter.join(timeout=30)
             if producer.is_alive() or counter.is_alive():raise ValueError('capacity producer did not finish')
-            if compressor.wait(timeout=30)!=0:raise ValueError('capacity compressor failed')
             if errors:raise errors[0]
+            if compressor.wait(timeout=30)!=0:raise ValueError('capacity compressor failed')
             value={**self.summary(),'compressed_archive_bytes':compressed['bytes'],
                    'compressed_archive_sha256':compressed['sha256'],'seconds':time.monotonic()-self.started,
                    'full_tar_stream_counted':True,'stream_retained':False}
             save(self.root/'stream-measurement.private.json',value);return value
+        except BaseException as error:
+            # Preserve private source/stage diagnostics even when the producer
+            # never reaches the transport manifest. This is not a result seal.
+            failure={'passed':False,'error_type':type(error).__name__,'error':str(error),
+                     'traceback':traceback.format_exc(),'entries_observed':self.count,
+                     'compressed_bytes_observed':compressed['bytes'],
+                     'sqlite_diagnostic':getattr(error,'nightly_sqlite_diagnostic',None)}
+            try:save(self.root/'stream-failure.private.json',failure)
+            except Exception as secondary:
+                error.add_note('Failure receipt could not be saved: '+type(secondary).__name__)
+            raise
         finally:
             if compressor.poll() is None:compressor.kill()
             reader.close()

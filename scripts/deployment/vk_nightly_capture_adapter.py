@@ -316,7 +316,7 @@ def disk_snapshot(source,workspace,allowed_sources,*,maximum_bytes,timeout_secon
                 'sha256':row['sha256'],'source_metadata_before':before,'backup_api_consistent_image':True,
                 'physical_b_verified':True,'integrity':'ok','online_preparation_only':True,'writer_fenced':False,
                 'local_snapshot_payload_bytes':0,'seconds':time.monotonic()-started}
-    except sqlite3.Error as error:
+    except Exception as error:
         # Failure-only, metadata-only diagnostics. Preserve the ORIGINAL error,
         # transaction/backup semantics and unaccepted partial; never retry/seal.
         value={'source':str(source),'destination':str(target),'parent':str(target.parent),

@@ -62,7 +62,10 @@ class AdapterTests(unittest.TestCase):
         self.assertTrue(any('immutable=1' in path for path in uris))
         self.assertNotIn('immutable=1',uris[0]);self.assertEqual(result['local_snapshot_payload_bytes'],0)
     def test_snapshot_bound_failure_retains_registered_unaccepted_image(self):
-        with self.assertRaisesRegex(ValueError,'SQLite image exceeds'):self.snapshot(maximum=1)
+        with patch.object(self.workspace,'inspect_failure',return_value={'metadata_only':True}):
+            with self.assertRaisesRegex(ValueError,'SQLite image exceeds') as caught:self.snapshot(maximum=1)
+        self.assertEqual(caught.exception.nightly_sqlite_diagnostic['source'],str(self.source))
+        self.assertEqual(caught.exception.nightly_sqlite_diagnostic['stage'],'source.page_count')
         self.assertEqual(len(list(self.destination.iterdir())),1)
         self.assertEqual([event[0] for event in self.resident.events],['allocate'])
     def test_sqlite_failure_preserves_exact_error_and_stage_without_seal_or_retry(self):

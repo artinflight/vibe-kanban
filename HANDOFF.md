@@ -1,3 +1,23 @@
+# Producer failure diagnosis — October 17, supersedes running status below
+
+The counted stream ended04:36:15UTC, exit1, not its four-hour timeout. The
+capacity parser masked the original producer exception with missing manifest;
+the original exception/stage was not saved and cannot be recovered from these
+logs. Native read-only inspection finds the registered unsealed input d801ab35
+is zero bytes. All30 previously sealed SQLite images (4,024,520,704bytes) remain
+preserved. Their creation order/sizes match the first30 census sources; next is
+the July14T161515Z ui-pref-critical-restore snapshot. Its current read-only
+integrity_check passes in1.23s. This does not establish the original B-side cause.
+
+The targeted correction propagates the producer's original exception before
+secondary parser/compressor errors and saves a private failure receipt. SQLite
+snapshot bounds/timeouts also retain source/stage diagnostics. No new production
+run or B write was started. Next: one bounded registered-B copy of that candidate
+source with the corrected diagnostic path, preserving the old empty input and
+all verified images. Only then decide whether a source/transport correction or
+full measurement retry is justified. Full capacity/restore, package adoption and
+schedule activation remain unverified. See VK_NIGHTLY_BACKUP_EFFICIENCY.md.
+
 # Nightly recovery and admitted capacity verification — October 17
 
 PR263 remains the sole nightly package/schedule. The retained 1,219,860-row

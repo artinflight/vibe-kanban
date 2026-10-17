@@ -18,6 +18,37 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
+## October17 producer failure diagnosis
+
+The original capacity run exited1 at04:36:15UTC, after6,934s, rather than timing
+out. Its original producer exception was lost: the meter raised a missing
+manifest at EOF before checking the producer thread's errors. This proves an
+error-reporting defect, not the original SQLite/transport failure's cause.
+
+Read-only native B inspection confirms the retained unsealed d801ab35 input is
+zero bytes. Creation order and sealed image sizes align with the first30 sorted
+census databases. The next candidate is the historical July14T161515Z
+ui-pref-critical-restore snapshot (32,395,264bytes); its current source schema,
+page count and read-only integrity_check pass (1.23s). No content was copied,
+no old input changed, and no new production measurement started. The30 sealed
+SQLite images total4,024,520,704bytes; reuse their prior independent verification.
+
+The minimal correction raises the original producer error before secondary TAR
+or compressor errors, saves its private traceback and attached SQLite diagnostic,
+and attaches source/stage diagnostics to bounds/timeouts as well as SQLite errors.
+Regression tests cover missing/truncated manifests and independent parser errors;
+the successful full-stream counting fixture is retained. A private failure
+receipt never constitutes a successful measurement or backup.
+
+Validation:26 capacity/adapter tests pass, including real compression/counting
+and committed-WAL snapshot fixtures; ops and diff checks pass. Rust formatting
+passes; the repository format command stops because Prettier is unavailable.
+
+Next action: a bounded single-source registered-B snapshot probe of the inferred
+candidate with corrected diagnostics, leaving old inputs untouched. Current
+evidence cannot guarantee the next complete measurement will succeed. Full cold
+space, whole-plan restore, operational adoption and schedule remain pending.
+
 ## October17 recovered lifecycle and integration follow-up — 02:40 UTC
 
 Recovery-r2 finished successfully02:35:55.957881UTC after335.324s, from

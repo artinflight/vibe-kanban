@@ -1,3 +1,14 @@
+# Nightly bounded source capture — October 17
+
+The likely failed source now passes two independent actual registered-B copies,
+native full hashes and SQLite integrity checks. Both32,395,264-byte images have
+SHA256 bef198d1c0b41361d97d2f76fde67cdc2545559e7db5565e4d4c315a3ef6402f.
+The06:54:36–06:56:10UTC bounded phase exited0 with all resource samples passing;
+old verified captures and failed input remain intact. The original failure did
+not reproduce and its discarded exception remains unrecoverable. Full measured
+capacity, whole-plan restore, deployment and scheduling remain pending. Handoff
+has exact receipts; the following request for a source probe is historical.
+
 # Nightly producer failure follow-up — October 17
 
 The production measurement failed04:36:15UTC, exit1, before a complete manifest.

@@ -1,3 +1,23 @@
+# Single-source B capture result — October 17
+
+The requested bounded probe completed06:54:36.034402–06:56:10.523929UTC,
+PID1395618/start32437411, exit0. Two independent copies of the inferred source
+both pass native B full SHA/integrity checks:32,395,264bytes each, SHA256
+bef198d1c0b41361d97d2f76fde67cdc2545559e7db5565e4d4c315a3ef6402f.
+Snapshot times14.859s and13.351s; adapter38.501s, supervised phase95.555s.
+All9 admission/resource samples pass; unchanged CPU25%,High2G/Max3G,Swap0,
+Tasks32. Unit peak482.5MiB, no swap. Mount reaped and child terminal.
+
+Original32 registered inputs remain:31 sealed (30SQLite plus descriptor),
+sizes match, failed input still0bytes, no current pointer. Both new probe images
+are retained in a distinct fresh B root; private receipts are under
+single-source-45a7799cf in the existing October17 evidence directory. No full
+measurement or operational adoption occurred. The old failure did not reproduce;
+its lost original exception means the underlying cause remains unknown. No
+additional source/transport change is justified by these two passing trials.
+Next production measurement must use corrected error diagnostics and unchanged
+guards; whole-plan space/restore and schedule remain unverified.
+
 # Producer failure diagnosis — October 17, supersedes running status below
 
 The counted stream ended04:36:15UTC, exit1, not its four-hour timeout. The

@@ -18,6 +18,36 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
+## October17 bounded affected-source copy — complete
+
+The corrected diagnostic package, derived from sealed6bfd27244 with the two
+45a7799cf source corrections and refreshed exact source pins, completed the
+authorized single-source probe06:54:36.034402–06:56:10.523929UTC. PID1395618,
+start32437411, exit0; no replacement production measurement was launched.
+Two independent registered B SQLite images each contain32,395,264bytes and
+pass native Windows full hash/integrity verification. Both SHA256 values are
+`bef198d1c0b41361d97d2f76fde67cdc2545559e7db5565e4d4c315a3ef6402f`.
+Per-copy times14.859s and13.351s; adapter38.501s, supervised phase95.555s.
+The source's data identity/mtime matches across both copies. This demonstrates
+two successful captures of the inferred source, not universal reliability or
+whole-plan acceptance. The original producer failure did not reproduce; its
+exact cause cannot be established from the discarded exception.
+
+The six-minute supervisor bound,90s per-copy deadline, CPU25%,High2G/Max3G,
+Swap0,Tasks32 and original host/B/live-health admission were retained. All9
+samples pass, unit peak482.5MiB with no swap. Source/runtime bindings validate;
+no Staging compiler unit was observed. The owned mount was reaped at completion.
+Native read-only inspection confirms all31 original seals still have their
+registered lengths, the original unsealed input remains empty and no current
+pointer exists. Both new images are retained in their separate fresh B root.
+
+Receipts:single-source-45a7799cf/{phase.safe.json,terminal.safe.json,
+supervisor.private.json,original-input-preservation.safe.json,
+result/registered-adapter.private.json} under the existing private evidence root.
+No further source/transport change is supported by these passing trials. A later
+full measurement must retain corrected producer diagnostics and original guards;
+total cold space, whole-plan restore, deployment and schedule remain unverified.
+
 ## October17 producer failure diagnosis
 
 The original capacity run exited1 at04:36:15UTC, after6,934s, rather than timing

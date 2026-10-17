@@ -1,8 +1,9 @@
-# Usage-efficiency implementation stream
+# Release preparation / efficiency integration
 
 Base: staging `7110930b6d9d1fa3f403a963a1ded49140b3eec1` (PR262 merged).
-Branch: `perf/usage-efficiency-20261017`. Owner: existing Automatic Restart
-Preflight workspace; no new execution owner or nightly job.
+PR266: `perf/usage-efficiency-20261017`. Source implementation stays with existing
+Automatic Restart Preflight; Staging owns this integration and release acceptance.
+No new execution owner or nightly job.
 
 Seamus authorized reducing repeated pickup input and redundant work while
 keeping models, effort, AutoSwitch, full history and acceptance unchanged.
@@ -27,3 +28,6 @@ Read [the efficiency evidence/contract](USAGE_EFFICIENCY.md) for current results
 and unresolved acceptance. The full prior branch histories, constraints,
 identities and receipts remain in [STREAM history](STREAM_HISTORY_20261017.md),
 indexed and hash-bound by [the archive manifest](CONTINUITY_ARCHIVE.json).
+
+Current release coordination, newer Sidebar adoption and remaining private gates:
+[October 17 release status](VK_RELEASE_COORDINATION_20261017.md).

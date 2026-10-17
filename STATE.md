@@ -52,3 +52,6 @@ pickup files. Keep their combined UTF-8 size below 16 KiB. Historical archives
 are immutable evidence, not mandatory reading on every turn. Find a specific
 section with `python3 scripts/continuity/pickup.py find QUERY`; read its reported
 line range, widening it when the task needs surrounding constraints.
+
+Current release coordination, newer Sidebar adoption and remaining private gates:
+[October 17 release status](VK_RELEASE_COORDINATION_20261017.md).

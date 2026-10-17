@@ -230,7 +230,7 @@ class Store:
                     "coding_agent_action_authorized": False,
                     "platform_review_bypass": False,
                 }
-        return {"thread": dict(scope), "messages": rows, "through": through,
+        return {"thread": dict(dict(scope), scope_kind="project" if scope["issue"] == "project:" + scope["project"] else "issue"), "messages": rows, "through": through,
                 "next_after": rows[-1]["seq"] if more else None, "complete": not more}
 
     def notifications(self, principal, projects):
@@ -245,7 +245,9 @@ class Store:
           GROUP BY t.project,t.issue""",(principal.owner,)).fetchall()
         return {'issues':[{'project_id':r['project'],'issue_id':r['issue'],
           'unread_count':r['unread_count'],'needs_attention_count':r['needs_attention_count']}
-          for r in rows if r['project'] in allowed and (r['unread_count'] or r['needs_attention_count'])]}
+          for r in rows if r['project'] in allowed and not r['issue'].startswith('project:') and (r['unread_count'] or r['needs_attention_count'])],
+          'projects':[{'project_id':r['project'],'unread_count':r['unread_count'],'needs_attention_count':r['needs_attention_count']}
+          for r in rows if r['project'] in allowed and r['issue']=='project:'+r['project'] and (r['unread_count'] or r['needs_attention_count'])]}
 
     def seen_replies(self, principal, thread, workspace, messages):
         self._principal(principal,('owner',))

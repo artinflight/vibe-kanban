@@ -21,3 +21,6 @@ whole archive. The [archive manifest](CONTINUITY_ARCHIVE.json) records the
 original source commit, byte counts, hashes and every heading/line locator.
 Archives contain historical contradictory checkpoints: use current validated
 owner evidence, never a stale heading that says "current".
+
+Current release coordination, newer Sidebar adoption and remaining private gates:
+[October 17 release status](VK_RELEASE_COORDINATION_20261017.md).

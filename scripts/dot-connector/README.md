@@ -1,3 +1,7 @@
+# Account-wide credit-budget readback
+
+See [the fixed read-only budget tool and deployment handoff](../../DOT_CREDIT_BUDGET.md).
+
 # Explicit Dot steering
 
 This overlay adds `steer_session_prompt` and `get_session_steering_receipt` to

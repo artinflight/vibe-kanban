@@ -1,3 +1,21 @@
+# Dot credit-budget readback — October 17
+
+Separate connector-only stream adds no-argument read-only `get_credit_budget`
+from CU's fixed existing account-wide endpoint, preserving exact decimal/null,
+freshness, unknown bank/settlement and shared-ledger/external-enforcement limits.
+25 connector tests and28 installed-source policy/read regressions pass; the
+candidate reads fresh CU v5 data without provider refresh, launches or writes.
+Installation/main Dot inventory are separate evidence recorded in the PR.
+Do not overwrite this tool with Staging's uninstalled steering-over1.4 overlay.
+
+PR264 remains frozen atdb6bbfcb: final CI passed599 Cargo tests including10 Stop
+cases plus13 scheduling-enabled cases and both special workflows. It is a
+release dependency outside the PR262/four-private-bindings baseline, awaiting
+combined private-reader acceptance. No real Stop, backend restart, migration,
+new worker or model/routing change occurs in this stream. CU owns the budget;
+readback grants no permission or aggregate Stop enforcement.
+[Reader, validation and release handoff](DOT_CREDIT_BUDGET.md).
+
 # Generated report links — live October 16 follow-up
 
 The OP::3D Print Issues failure was a Markdown link to an unpublished local

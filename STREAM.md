@@ -2369,3 +2369,7 @@ It reuses the existing background worker to retry capacity-queued input when no
 local execution exits, preserving admission and uncertain-dispatch holds. Read
 VK_RESTART_QUEUE_WAKEUP.md. Staging owns the active release; the nightly workspace
 owns the only backup package/store/schedule. No live change or duplicate job.
+The existing developed preparation-runner repairs are imported into current
+staging source rather than left only in the release workspace. Timing now keeps
+publication separate from evidenced queued-work start. Tiny local preparation
+fixtures and hosted compiled queue checks cover these source contracts.

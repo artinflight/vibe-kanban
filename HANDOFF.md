@@ -10552,3 +10552,8 @@ No completion event is required. Normal queued messages and restored ambiguous
 dispatches remain protected. Hosted compiled checks and exact-binary successful
 dispatch acceptance are still required; tiny loop/SQLite tests do not prove a
 real model continuation. Do not alter the active Staging or nightly owners.
+The audited preparation runner now includes source/artifact reuse, bounded queue
+inventory and receipt timing in this branch. A verified publication alone cannot
+claim queued work resumed; the actor must supply real queued-work-start evidence.
+Original FIX READY includes build and validation. Nightly journal continuity and
+the actual release/queue acceptance remain separate operational gates.

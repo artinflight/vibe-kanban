@@ -17,3 +17,9 @@ only its process restarted. The live negative start probe was rejected by review
 and was not retried; see the exact validation limits in the protocol handoff.
 
 Full prior notes remain in [STREAM history](STREAM_HISTORY_20261017.md).
+
+Approved continuation: finish the explanation contract with stable code/reason/
+next_step, distinct unavailable/malformed evidence and scope-safe negative
+lookups. Twenty public tests and 28 full-adapter mocked rejection vectors pass;
+valid mocked start and 27 incumbent controls pass. Adoption is pending for this
+follow-up. Do not repeat the denied live probe or touch separate voice work.

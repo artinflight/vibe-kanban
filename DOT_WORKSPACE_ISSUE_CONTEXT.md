@@ -104,3 +104,49 @@ The lightweight CI sidechat job also runs connector tests so this preflight is
 checked without waiting for backend compilation. Local governance/diff checks
 pass. Full formatting ran Rust formatting, then stopped at missing Prettier;
 no local Cargo/frontend build was run. Broad CI completion is separate.
+
+## Stable explanation contract — approved PR271 follow-up
+
+A known issue-context rejection is an MCP tool result with `isError:true`, a
+`structuredContent` object and a JSON text content block containing the same
+three fields: `code`, `reason`, `next_step`. These fields require no new tool,
+input argument or catalog refresh. Only the typed preflight rejection is caught;
+valid creation results and errors/uncertainty after a start POST retain their
+previous behavior. The guard still runs before any workspace/agent side effect.
+
+| Stable code | Plain-English reason | Actionable next step |
+| --- | --- | --- |
+| `workspace_issue_ids_missing` | Workspace creation was blocked because both project_id and issue_id are required. | Create or select an issue in Vibe, then provide its project_id and issue_id. |
+| `workspace_issue_ids_invalid` | Workspace creation was blocked because project_id or issue_id is not a valid UUID. | Copy the project and issue UUIDs from Vibe, then submit the matching IDs again. |
+| `workspace_issue_not_verified` | The issue could not be verified in the selected project. | List issues in the selected project and select one, or create a dedicated issue there; then provide its project_id and issue_id. |
+| `workspace_issue_lookup_unavailable` | Vibe could not complete the selected project issue lookup. | Retry the read-only project issue lookup when Vibe is available; start the workspace only after issue verification succeeds. |
+| `workspace_issue_lookup_malformed` | Vibe returned incomplete or malformed project issue evidence. | Check the project issue service response and retry the read-only lookup; start the workspace only after complete, valid evidence is available. |
+
+A complete scoped negative result and positively mismatched project evidence
+intentionally produce the **same public not-verified result**. The response must
+not reveal whether an issue exists elsewhere, nor echo other-project IDs, names
+or evidence. The guard makes only the selected-project lookup; it never searches
+other projects. It does not describe a failed/unavailable lookup as absence.
+Malformed rows, duplicate identities and partial/paginated evidence fail closed.
+Network/service failures and malformed evidence remain distinguishable from a
+valid empty lookup. Returned messages never include request IDs/prompts, raw
+service errors, response bodies or credentials.
+
+Validation: 20 public connector tests pass, with exact explanation and MCP text/
+structured-field assertions. The offline full private-adapter dispatch harness
+passes 28 rejection vectors with zero start POSTs, one valid issue-linked mocked
+start with unchanged full payload/response, post-timeout uncertainty preservation,
+and 27 incumbent control tests. All reads/starts in that harness are mocked; it
+never starts the adapter's main loop, an upstream process, a live tool request,
+a workspace or an agent. The previous denied live negative-start probe remains
+out of scope and is not repeated. No voice or call routing is changed.
+
+Preparation uses the installed `62081e89…` adapter as the exact baseline. For this
+follow-up only the start dispatch branch changes in that adapter; existing
+preflight placement, other methods, tools, access, CU/Stop and private chat
+modules retain their original bytes. Installation still requires verified
+Desktop B backup/restore, fresh pins/idle evidence and connector-only adoption.
+Read-only cached status acceptance is separate from the deliberately unperformed
+live negative-start probe. CI cannot exercise the private adapter unless the
+retained source is supplied; public fixture dispatch tests run in the lightweight
+connector CI job.

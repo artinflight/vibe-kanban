@@ -18,6 +18,15 @@ def prepare(source, expected_sha256):
         ('When linking issue_id, project_id is required.',
          'Both project_id and issue_id are required and verified before starting. Create/select the issue in Vibe first so Dot Chat is available.'),
     ]
+    # An existing PR271 preflight needs only the typed-error dispatch wrapper.
+    # Original adoption is still reproducible from the pre-guard baseline.
+    if '    require_issue_context(args, http_get)' in text:
+        anchors = []
+    anchors.append((
+        '            if name == "start_workspace": return {"jsonrpc":"2.0","id":msg["id"],"result":local_start(args)}',
+        '            if name == "start_workspace":\n'
+        '                from workspace_issue_context import dispatch_start\n'
+        '                return {"jsonrpc":"2.0","id":msg["id"],"result":dispatch_start(local_start,args)}'))
     for old, new in anchors:
         if text.count(old) != 1:
             raise ValueError('Connector start/schema anchor changed')

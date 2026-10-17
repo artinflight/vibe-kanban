@@ -1,3 +1,20 @@
+# Exact Dot execution Stop — connector initialized October 17
+
+Seamus's approved connector-only initialization is live as version1.4 at01:57UTC.
+Installed discovery and read-only dispatch pass; guarded backend capability is
+absent, so real stopping remains unsupported with no legacy/workspace fallback.
+Only connector source/service changed; other services, chats, access/subscriptions,
+Mobile and Sent Steering are preserved. No real agent was stopped for testing.
+24 Python control tests and28 installed-source policy/read regressions pass.
+Backend race/receipt/process fixtures and CI are tracked in PR264. Local Rust
+builds do not compete for the release owner's reserved compiler window.
+CU owns the verified aggregate budget/T18 priority and has pinned the retained
+overnight baseline; banked rollover is still unrecovered. Around8,000credits is
+an interim cooperative checkpoint, not an added allowance or a hard mid-turn cap.
+The release owner retains guarded backend deployment; main Dot's actual new-tool
+inventory and automatic all-agent exhaustion enforcement remain unverified.
+[Control, activation, acceptance and ownership handoff](DOT_STOP_CONTROL.md).
+
 # Generated report links — live October 16 follow-up
 
 The OP::3D Print Issues failure was a Markdown link to an unpublished local

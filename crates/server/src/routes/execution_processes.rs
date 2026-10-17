@@ -2,6 +2,7 @@
 
 pub(crate) mod historical_response;
 pub(crate) mod log_history;
+pub(crate) mod stop_control;
 
 use std::pin::Pin;
 
@@ -436,6 +437,13 @@ pub(super) fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let workspace_id_router = Router::new()
         .route("/", get(get_execution_process_by_id))
         .route("/stop", post(stop_execution_process))
+        .route(
+            "/stop-exact",
+            get(stop_control::inspect)
+                .post(stop_control::stop)
+                .layer(axum::extract::DefaultBodyLimit::max(4096)),
+        )
+        .route("/stop-requests", get(stop_control::read_receipt))
         .route("/repo-states", get(get_execution_process_repo_states))
         .route("/log-history", get(log_history::get_log_history))
         .route(

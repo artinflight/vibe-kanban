@@ -17,8 +17,9 @@ import sys
 import tarfile
 import time
 
-from vk_nightly_generation import MAX_INDEX, NightlyStore, encoded, regular, digest_stream
+from vk_nightly_generation import MAX_INDEX, NightlyStore, encoded, encoding_summary, regular, digest_stream
 from vk_nightly_lifecycle import NightlyJob, sync_directory
+import vk_nightly_json as index_json
 
 
 MAX_CONTROL = 16384
@@ -33,12 +34,15 @@ def row(p):
 assert stat.S_ISREG(p.lstat().st_mode)
 print(json.dumps({'file':row(p),'parent':row(p.parent),'metadata_only':True}))
 '''
-WINDOWS_READBACK = r'''
+JSON_READER_SOURCE = index_json.__source__ if hasattr(index_json,'__source__') else Path(index_json.__file__).read_text()
+WINDOWS_READBACK = JSON_READER_SOURCE + r'''
 import hashlib,json,os,pathlib,sqlite3,sys,zlib
 r=json.load(sys.stdin)
 assert os.stat('B:/').st_dev==r['volume_device'],'B volume changed'
-p=pathlib.Path(r['folder']);manifest_bytes=(p/'manifest.json').read_bytes();m=json.loads(manifest_bytes)
-assert hashlib.sha256(manifest_bytes).hexdigest()==r['manifest_sha256']
+p=pathlib.Path(r['folder'])
+with (p/'manifest.json').open('rb') as f:m,manifest_sha256=load_index(f)
+assert manifest_sha256==r['manifest_sha256']
+assert len(m['entries'])<=1500000
 assert m['scope_sha256']==r['scope'] and m['generation']==p.name
 encoding=m.get('object_encoding');assert encoding in (None,'zlib-1-v1','chunked-zlib-1-v1')
 sizes={x['sha256']:x['bytes'] for x in m['entries'].values() if x['kind']=='file'}
@@ -86,7 +90,7 @@ for raw in r['databases']:
  with sqlite3.connect(f.as_uri()+'?mode=ro&immutable=1',uri=True) as db:
   assert db.execute('PRAGMA integrity_check').fetchall()==[('ok',)]
 print(json.dumps({'physical_b_verified':True,'generation':m['generation'],
- 'scope_sha256':m['scope_sha256'],'manifest_sha256':hashlib.sha256(manifest_bytes).hexdigest()}))
+ 'scope_sha256':m['scope_sha256'],'manifest_sha256':manifest_sha256}))
 '''
 
 
@@ -180,6 +184,7 @@ class LocalVerifiedProvider:
                 seen=set()
                 with tarfile.open(fileobj=process.stdout,mode='r|') as archive:
                     for member in archive:
+                        archive.members.clear()
                         key=selected_key(member)
                         if key is not None:
                             if key in seen or not member.isfile():raise ValueError('local replay member changed')
@@ -211,7 +216,7 @@ def run(config):
     def readback(folder,manifest):
         databases=manifest.get('capture_context',{}).get('nightly_databases',[])
         request={'folder':'B:/'+str(folder.relative_to('/mnt/b')),'volume_device':config['volume_device'],
-                 'manifest_sha256':hashlib.sha256(encoded(manifest)).hexdigest(),
+                 'manifest_sha256':encoding_summary(manifest)[0],
                  'scope':config['scope_sha256'],'databases':databases,'source_prefix':config['source_prefix']}
         process=subprocess.run(['/mnt/c/Python310/python.exe','-B','-c',WINDOWS_READBACK],input=json.dumps(request),
                                capture_output=True,text=True,timeout=config['readback_timeout_seconds'])
@@ -236,13 +241,20 @@ def run(config):
         attempt=job.read();binding={key:attempt[key] for key in ('candidate','input_name')}
         binding['scope_sha256']=store.scope
         baseline=None;native_sqlite_seals={}
-        if config.get('transport')=='content-delta-v1' and store.current() is not None:
-            path=folder/'baseline.json';data=encoded(store.current())
+        previous=store.current() if config.get('transport')=='content-delta-v1' else None
+        if previous is not None:
+            path=folder/'baseline.json';checksum=hashlib.sha256();size=0
             with path.open('xb') as stream:
-                register(path,stream.fileno());stream.write(data);stream.flush();os.fsync(stream.fileno())
-            seal(path);baseline={'name':path.name,'sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)}
+                register(path,stream.fileno())
+                for block in index_json.bounded_json_blocks(previous):
+                    size+=len(block)
+                    if size>=attempt['capture_budget_bytes']:raise ValueError('held baseline exhausts capture capacity')
+                    checksum.update(block);stream.write(block)
+                stream.flush();os.fsync(stream.fileno())
+            seal(path);baseline={'name':path.name,'sha256':checksum.hexdigest(),'bytes':size}
+        del previous
         emit({'event':'capture_ready','binding':binding,'directory':'B:/'+str(folder.relative_to('/mnt/b')),
-              'baseline':baseline,'capture_budget_bytes':attempt['capture_budget_bytes']})
+              'baseline':baseline,'capture_budget_bytes':attempt['capture_budget_bytes']-(baseline['bytes'] if baseline else 0)})
         while True:
             command=receive(sys.stdin.buffer)
             if command.get('binding')!=binding:raise ValueError('stale/wrong live producer binding')
@@ -293,10 +305,10 @@ def run(config):
                 proof_name=command.get('proof_name')
                 if proof_name!='nightly-proof.json':raise ValueError('unknown proof selector')
                 with regular(folder/proof_name) as stream:
-                    raw=stream.read(MAX_INDEX+1)
-                if len(raw)>MAX_INDEX or hashlib.sha256(raw).hexdigest()!=command.get('proof_sha256'):
+                    value,proof_sha256=index_json.load_index(stream)
+                if proof_sha256!=command.get('proof_sha256'):
                     raise ValueError('proof size/digest mismatch')
-                value=json.loads(raw);provider=LocalVerifiedProvider(folder,value,config)
+                provider=LocalVerifiedProvider(folder,value,config)
                 if baseline is not None and value['proof'].get('baseline_manifest_sha256')!=baseline['sha256']:
                     raise ValueError('delta does not match held current manifest')
                 provider.value['proof']['nightly_databases']=value['result']['databases']

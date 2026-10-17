@@ -14,12 +14,15 @@ import re
 import stat
 import uuid
 
-from vk_nightly_generation import (MAX_INDEX, PRODUCER as STORE_PRODUCER, advance_verified_capture, digest_stream,
+from vk_nightly_generation import (MAX_INDEX, PRODUCER as STORE_PRODUCER, advance_verified_capture, digest_stream, encoding_summary,
                                   encoded, regular, write_new, object_blocks)
 
 
 PRODUCER = 'vk-normal-nightly-job-v1'
-MAX_INPUT_FILES = 1024  # Includes serial DB snapshots; actual plan declares 71 DBs.
+MAX_INPUT_FILES = 1024  # Includes serial DB snapshots and registered metadata.
+# Candidate manifest, object ledger, and both sides of the atomic intent save.
+# Registered proof/baseline metadata are charged separately as capture inputs.
+METADATA_RESERVE = 4 * MAX_INDEX + 1024**2
 
 
 def pin(info):
@@ -215,7 +218,7 @@ class NightlyJob:
             path, info = detail
             value['partial'] = {'name': path.name, 'identity': pin(info)}
         elif event == 'manifest':
-            if value['candidate_manifest_sha256'] != hashlib.sha256(encoded(detail)).hexdigest():
+            if value['candidate_manifest_sha256'] != encoding_summary(detail)[0]:
                 raise ValueError('materialized candidate differs from authenticated full capture')
             return
         elif event == 'pointer':
@@ -250,9 +253,9 @@ class NightlyJob:
             else:
                 if type(capacity_floor_bytes) is not int or capacity_floor_bytes < 0:
                     raise ValueError('finite nonnegative B free-space floor required')
-                minimum = capacity_floor_bytes + MAX_INDEX + 1
+                minimum = capacity_floor_bytes + METADATA_RESERVE + 1
                 allocation_reserve=min(reserve_bytes,free_bytes) if type(reserve_bytes) is int else 0
-                capture_budget = min(self.capture_limit, allocation_reserve - capacity_floor_bytes - MAX_INDEX) \
+                capture_budget = min(self.capture_limit, allocation_reserve - capacity_floor_bytes - METADATA_RESERVE) \
                     if type(reserve_bytes) is int else 0
             if type(reserve_bytes) is not int or allocation_reserve < minimum \
                     or (capacity_floor_bytes is None and free_bytes < reserve_bytes):
@@ -264,6 +267,8 @@ class NightlyJob:
                      'previous': self.snapshot(previous) if previous else None,
                      'expected_objects': {}, 'candidate_directories': None, 'partial': None, 'pointer': None,
                      'capture_budget_bytes': capture_budget,'allocation_reserve_bytes':allocation_reserve}
+            had_previous = previous is not None
+            del previous
             self.save(value)
             folder = self.root / value['input_name'];folder.mkdir()
             value['input_identity'] = directory_pin(folder);self.save(value)
@@ -288,8 +293,8 @@ class NightlyJob:
                     # Inputs remain until verified publication. Charge their
                     # actual sealed size once, retaining both independent hard
                     # ceilings and the metadata/free-space allowance.
-                    object_budget = min(object_budget, allocation_reserve - MAX_INDEX - capacity_floor_bytes - capture_bytes,
-                                        shutil.disk_usage(self.store.root).free - MAX_INDEX - capacity_floor_bytes)
+                    object_budget = min(object_budget, allocation_reserve - METADATA_RESERVE - capacity_floor_bytes - capture_bytes,
+                                        shutil.disk_usage(self.store.root).free - METADATA_RESERVE - capacity_floor_bytes)
                     if object_budget <= 0:
                         raise ValueError('insufficient remaining B capacity after sealed capture')
                 proof = provider.verify(capture_id)
@@ -300,19 +305,21 @@ class NightlyJob:
                     'capture_context': {key: item for key,item in proof.items() if key != 'entries'}}
                 if self.store.object_encoding:
                     candidate_manifest['object_encoding'] = self.store.object_encoding
-                value['candidate_manifest_sha256'] = hashlib.sha256(encoded(candidate_manifest)).hexdigest()
+                value['candidate_manifest_sha256'] = encoding_summary(candidate_manifest)[0]
                 self.save(value)
                 self._active_intent = value
                 result = advance_verified_capture(self.store, provider, capture_id,
                     reserve_bytes=object_budget, retention_adopted=False,
                     generation=value['candidate'], observe=self.observe, verified_proof=proof)
+                raw_transfer = proof.get('transport','full independent capture')
+                del proof, candidate_manifest, provider
                 # Independent clearance/readback has completed. Retention uses
                 # the same resumable recorded identities on normal and crash paths.
                 self._reconcile_held()
                 return {**result, 'passed': True, 'status': 'current_verified', 'capture_parent': None,
                         'transient_inputs_retained': False,
-                        'raw_transfer': proof.get('transport','full independent capture'),
-                        'old_generation_retained': False, 'cleanup_performed': previous is not None,
+                        'raw_transfer': raw_transfer,
+                        'old_generation_retained': False, 'cleanup_performed': had_previous,
                         'retention_blocker': None}
             except Exception as error:
                 return {'passed': False, 'status': 'reconciliation_required', 'reason': str(error),
@@ -434,10 +441,10 @@ class NightlyJob:
             if self.store.independent_readback is None or self.store.independent_readback(
                     self.store.root / current['generation'], current) != {
                     'physical_b_verified': True, 'generation': current['generation'],
-                    'scope_sha256': self.store.scope, 'manifest_sha256': hashlib.sha256(encoded(current)).hexdigest()}:
+                    'scope_sha256': self.store.scope, 'manifest_sha256': encoding_summary(current)[0]}:
                 raise ValueError('independent current readback failed; preserve all attempts')
         if published:
-            if hashlib.sha256(encoded(current)).hexdigest() != value.get('candidate_manifest_sha256'):
+            if encoding_summary(current)[0] != value.get('candidate_manifest_sha256'):
                 raise ValueError('published candidate differs from recorded job')
             # A crash may have followed current.json rename but preceded its
             # store-directory fsync. Make publication durable before retention.

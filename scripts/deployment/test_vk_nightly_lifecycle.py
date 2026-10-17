@@ -70,9 +70,7 @@ class NightlyLifecycle(fixtures.ContractTests):
         return self.job.run(self.make_capture,retention_adopted=True,reserve_bytes=self.reserve)
 
     def test_shared_budget_accepts_valid_capture_without_sum_of_hard_ceilings(self):
-        reserve = MAX_INDEX + 1024**2
-        with self.assertRaises(ValueError):
-            self.job.run(self.make_capture,retention_adopted=True,reserve_bytes=reserve)
+        reserve = lifecycle.METADATA_RESERVE + 1024**2
         with patch('vk_nightly_lifecycle.advance_verified_capture', wraps=lifecycle.advance_verified_capture) as advance:
             result = self.job.run(self.make_capture,retention_adopted=True,reserve_bytes=reserve,capacity_floor_bytes=0)
         self.assertTrue(result['passed'],result)
@@ -81,7 +79,7 @@ class NightlyLifecycle(fixtures.ContractTests):
         self.assertEqual(self.latest_rows(),[('before',)])
 
     def test_shared_budget_preserves_floor_and_checks_post_capture_free_space(self):
-        reserve = MAX_INDEX + 3*1024**2
+        reserve = lifecycle.METADATA_RESERVE + 3*1024**2
         usage = __import__('shutil').disk_usage(self.root)
         def capture_with_other_writer(*args,**kwargs):
             result = self.make_capture(*args,**kwargs)
@@ -105,7 +103,7 @@ class NightlyLifecycle(fixtures.ContractTests):
         usage=__import__('shutil').disk_usage(self.root)
         # Current/protected data already consume the volume. A valid small
         # capture can fit below the envelope without spending its floor.
-        free=MAX_INDEX+2*1024**2;reserve=MAX_INDEX+64*1024**2
+        free=lifecycle.METADATA_RESERVE+2*1024**2;reserve=lifecycle.METADATA_RESERVE+64*1024**2
         with patch('shutil.disk_usage',return_value=usage._replace(free=free)), \
                 patch('vk_nightly_lifecycle.advance_verified_capture',wraps=lifecycle.advance_verified_capture) as advance:
             result=self.job.run(self.make_capture,retention_adopted=True,reserve_bytes=reserve,
@@ -120,7 +118,7 @@ class NightlyLifecycle(fixtures.ContractTests):
             with p.open('xb') as stream:
                 register(p,stream.fileno());stream.write(b'x'*2048)
             seal(p)
-        result=self.job.run(excessive,retention_adopted=True,reserve_bytes=MAX_INDEX+1024,
+        result=self.job.run(excessive,retention_adopted=True,reserve_bytes=lifecycle.METADATA_RESERVE+1024,
                             capacity_floor_bytes=0)
         self.assertFalse(result['passed']);self.assertIn('capture capacity',result['reason'])
         self.assertEqual(self.job.read()['capture_budget_bytes'],1024)

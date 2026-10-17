@@ -4,6 +4,7 @@ Consumes reviewed archive entries; never reads arbitrary source paths. Stores
 Linux metadata as manifest data because B does not reproduce Linux metadata.
 No CLI, scheduler installation, live cleanup, source deletion or root access.
 """
+import fcntl
 import hashlib
 import json
 import os
@@ -11,12 +12,12 @@ from pathlib import Path
 import re
 import stat
 import uuid
-import fcntl
 import zlib
 
+import vk_nightly_json as index_json
+from vk_nightly_json import MAX_INDEX, MAX_ENTRIES
 
-MAX_INDEX = 256 * 1024**2
-MAX_ENTRIES = 1_000_000
+
 PRODUCER = 'vk-nightly-generation-v1'
 COMPRESSED = 'zlib-1-v1'
 CHUNKED = 'chunked-zlib-1-v1'
@@ -111,11 +112,12 @@ def name(value):
     return value
 
 
+def encoding_summary(value):
+    return index_json.encoding_summary(value,MAX_INDEX)
+
+
 def encoded(value):
-    data = json.dumps(value, sort_keys=True, separators=(',', ':')).encode()
-    if len(data) > MAX_INDEX:
-        raise ValueError('nightly manifest exceeds explicit 256MiB bound')
-    return data
+    return index_json.encoded(value,MAX_INDEX)
 
 
 def write_new(path, data):
@@ -189,10 +191,7 @@ class NightlyStore:
         if not stat.S_ISDIR(folder.lstat().st_mode):
             raise ValueError('substituted generation')
         with regular(folder / 'manifest.json') as stream:
-            data = stream.read(MAX_INDEX + 1)
-        if len(data) > MAX_INDEX:
-            raise ValueError('oversized nightly manifest')
-        value = json.loads(data)
+            value,checksum = index_json.load_index(stream,MAX_INDEX,MAX_ENTRIES)
         if value.get('producer') != PRODUCER or value.get('scope_sha256') != self.scope or value.get('generation') != generation:
             raise ValueError('nightly manifest identity mismatch')
         if value.get('object_encoding') != self.object_encoding:
@@ -203,7 +202,7 @@ class NightlyStore:
             name(key)
             if row['kind'] == 'file' and not re.fullmatch('[0-9a-f]{64}', row['sha256']):
                 raise ValueError('unsafe nightly object selector')
-        return value, hashlib.sha256(data).hexdigest()
+        return value, checksum
 
     def current(self):
         path = self.root / 'current.json'
@@ -238,6 +237,10 @@ class NightlyStore:
         result = {}
         for row in manifest['entries'].values():
             if row['kind'] != 'file':
+                continue
+            if row['sha256'] in result:
+                if result[row['sha256']] != row['bytes']:
+                    raise ValueError('conflicting object sizes')
                 continue
             result[row['sha256']] = row['bytes']
             if manifest.get('object_encoding') == CHUNKED:
@@ -312,7 +315,7 @@ class NightlyStore:
             observe('object', (target, info, checksum))
 
     def advance(self, changes, absent, *, expected_previous, reserve_bytes, retention_adopted=False,
-                capture_context=None, generation=None, observe=None):
+                capture_context=None, generation=None, observe=None, verified_entries=None):
         """changes yields (safe archive name, metadata, stream or None).
 
         Database entries MUST come from consistent SQLite snapshots in the
@@ -353,10 +356,13 @@ class NightlyStore:
             objects.mkdir(mode=0o700)
             if observe:
                 observe('directories', (folder, objects))
-            entries = dict(previous['entries']) if previous else {}
+            if verified_entries is not None and (not isinstance(verified_entries,dict) or len(verified_entries)>MAX_ENTRIES):
+                raise ValueError('invalid complete verified nightly table')
+            entries = verified_entries if verified_entries is not None else dict(previous['entries']) if previous else {}
             removed = {name(raw) for raw in absent}
-            entries = {key: row for key, row in entries.items() if key not in removed and not any(
-                '/'.join(key.split('/')[:index]) in removed for index in range(1, key.count('/') + 1))}
+            if verified_entries is None:
+                entries = {key: row for key, row in entries.items() if key not in removed and not any(
+                    '/'.join(key.split('/')[:index]) in removed for index in range(1, key.count('/') + 1))}
             seen = set()
             changed_bytes = 0
             stored_bytes = 0
@@ -366,7 +372,9 @@ class NightlyStore:
                 if raw in seen or metadata.get('kind') not in ('file', 'directory', 'symlink', 'hardlink'):
                     raise ValueError('duplicate or unsupported nightly member')
                 seen.add(raw)
-                row = dict(metadata)
+                if verified_entries is not None and verified_entries.get(raw) is not metadata:
+                    raise ValueError('change differs from complete verified nightly table')
+                row = metadata if verified_entries is not None else dict(metadata)
                 if row['kind'] != 'directory' and entries.get(raw, {}).get('kind') == 'directory':
                     entries = {key: value for key, value in entries.items() if not key.startswith(raw + '/')}
                 if row['kind'] == 'file':
@@ -447,9 +455,13 @@ class NightlyStore:
                     raise ValueError('nightly entry bound exceeded')
             # New generation owns an independent link to every retained object:
             # it never needs the previous directory to restore unchanged files.
+            linked = set()
             for row in entries.values():
                 if row['kind'] == 'hardlink' and (row.get('target') not in entries or entries[row['target']]['kind'] != 'file'):
                     raise ValueError('unresolved nightly hardlink')
+                if row['kind'] != 'file' or row['sha256'] in linked:
+                    continue
+                linked.add(row['sha256'])
                 if row['kind'] == 'file' and not (objects / row['sha256']).exists():
                     self.record_link(self.root / previous['generation'] / 'objects' / row['sha256'],
                                      objects / row['sha256'], observe)
@@ -463,21 +475,28 @@ class NightlyStore:
                                              target, observe)
                             os.link(self.root / previous['generation'] / 'objects' / target.name,
                                     target, follow_symlinks=False)
+            # All previous content is now linked into this generation. Keep
+            # only its identity while the independent reader parses the new
+            # index; no second host-sized old table is needed after this point.
+            had_previous = previous is not None
+            del previous, previous_sizes, retained_hashes
             manifest = {'producer': PRODUCER, 'generation': generation, 'scope_sha256': self.scope,
                         'parent': None, 'entries': entries, 'capture_context': capture_context}
             if self.object_encoding: manifest['object_encoding'] = self.object_encoding
             data = encoded(manifest)
+            manifest_checksum = hashlib.sha256(data).hexdigest()
             write_new(folder / 'manifest.json', data)
+            del data  # Release the serialized index before independent parsing.
             if observe:
                 observe('manifest', manifest)
             self.verify(manifest)
             if self.independent_readback is None or self.independent_readback(folder, manifest) != {
                     'physical_b_verified': True, 'generation': generation, 'scope_sha256': self.scope,
-                    'manifest_sha256': hashlib.sha256(data).hexdigest()}:
+                    'manifest_sha256': manifest_checksum}:
                 raise ValueError('independent physical B generation readback missing or mismatched')
             self.check()
             # Publication is last. No failed preparation advances current.
-            pointer = encoded({'generation': generation, 'manifest_sha256': hashlib.sha256(data).hexdigest()})
+            pointer = encoded({'generation': generation, 'manifest_sha256': manifest_checksum})
             stage = self.root / ('current-' + uuid.uuid4().hex + '.json')
             for directory in (objects, folder):
                 durable_fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
@@ -495,13 +514,13 @@ class NightlyStore:
             finally:
                 os.close(parent_fd)
             retired = False
-            if previous and retention_adopted:
-                self._retire_previous_held(previous['generation'])
+            if had_previous and retention_adopted:
+                self._retire_previous_held(expected_previous)
                 retired = True
             return {'passed': True, 'generation': generation, 'previous': expected_previous,
                     'changed_bytes': changed_bytes, 'self_contained': True,
                     'stored_changed_bytes': stored_bytes,
-                    'old_generation_retained': previous is not None and not retired,
+                    'old_generation_retained': had_previous and not retired,
                     'cleanup_performed': retired, 'local_payload_bytes': 0,
                     'retention_blocker': None if retention_adopted else 'Separately approved nightly-only retention adoption pending'}
 
@@ -607,6 +626,9 @@ def advance_verified_capture(store, provider, capture_id, *, reserve_bytes, rete
     changed = {key: row for key, row in entries.items() if before.get(key) != row}
     retained = {row['sha256'] for row in before.values() if row['kind'] == 'file'}
     selected = {key for key, row in changed.items() if row['kind'] == 'file' and row['sha256'] not in retained}
+    previous_generation = previous['generation'] if previous else None
+    absent = set(before) - set(entries)
+    del previous, before, retained
     with provider.file_members(capture_id, selected) as streams:
         def changes():
             for key, row in changed.items():
@@ -614,8 +636,9 @@ def advance_verified_capture(store, provider, capture_id, *, reserve_bytes, rete
                     yield key, row, None
             for key, stream in streams:
                 yield key, changed[key], stream
-        return store.advance(changes(), set(before) - set(entries),
-                             expected_previous=previous['generation'] if previous else None,
+        return store.advance(changes(), absent,
+                             expected_previous=previous_generation,
                              reserve_bytes=reserve_bytes, retention_adopted=retention_adopted,
                              generation=generation, observe=observe,
-                             capture_context={key: value for key, value in proof.items() if key != 'entries'})
+                             capture_context={key: value for key, value in proof.items() if key != 'entries'},
+                             verified_entries=entries)

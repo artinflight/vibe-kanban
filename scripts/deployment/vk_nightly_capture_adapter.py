@@ -28,8 +28,10 @@ from vk_candidate_direct_b import DirectBProvider
 from vk_change_journal import scope
 from vk_nightly_restart_baseline import capture_binding, capture_journal
 from vk_nightly_generation import MAX_INDEX
+from vk_nightly_json import load_index
 from vk_nightly_delta import DeltaSelection, DeltaProvider
-from vk_prep_common import identity, storage
+from vk_nightly_archive_index import NightlyArchiveProvider
+from vk_prep_common import identity, storage, save
 
 
 # Windows bridge streams existing SSH stdio into the existing UID1000 WSL
@@ -44,9 +46,9 @@ b=s.read(n)
 if len(b)!=n:raise ValueError('bootstrap truncated')
 v=json.loads(b)
 for name,source,expected in v['sources']:
- if name not in ('vk_nightly_generation','vk_nightly_lifecycle','vk_nightly_b_job'):raise ValueError('unknown fixed handler')
+ if name not in ('vk_nightly_json','vk_nightly_generation','vk_nightly_lifecycle','vk_nightly_b_job'):raise ValueError('unknown fixed handler')
  if hashlib.sha256(source.encode()).hexdigest()!=expected:raise ValueError('handler hash mismatch')
- m=types.ModuleType(name);sys.modules[name]=m;exec(compile(source,name+'.py','exec'),m.__dict__)
+ m=types.ModuleType(name);m.__source__=source;sys.modules[name]=m;exec(compile(source,name+'.py','exec'),m.__dict__)
 raise SystemExit(sys.modules['vk_nightly_b_job'].run(v['config']))
 '''
 
@@ -81,7 +83,7 @@ class Resident:
         self.process=subprocess.Popen(remote_command(),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
         self.lock=threading.Lock();self.timeout=config['job_timeout_seconds'];self.config=config
         sources=[]
-        for name in ('vk_nightly_generation','vk_nightly_lifecycle','vk_nightly_b_job'):
+        for name in ('vk_nightly_json','vk_nightly_generation','vk_nightly_lifecycle','vk_nightly_b_job'):
             source=Path(__file__).with_name(name+'.py').read_text()
             sources.append((name,source,hashlib.sha256(source.encode()).hexdigest()))
         raw=json.dumps({'config':config,'sources':sources}).encode()
@@ -124,6 +126,12 @@ class RegisteredWorkspace:
         self.lease_fd=lease_fd
         self.limit=resident.config['capture_limit_bytes'];self.deadline=time.monotonic()+resident.timeout
         self.sealed={};self.reservations={};self.capacity_lock=threading.Lock();self.checked_root(root)
+    def progress(self,phase,**values):
+        if 'staging' not in self.resident.config:return
+        save(Path(self.resident.config['staging'])/'capture-progress.private.json',
+             {'phase':phase,'at':time.time(),'sealed_input_bytes':sum(x['bytes'] for x in self.sealed.values()),
+              'sealed_input_files':len(self.sealed),'capture_budget_bytes':self.limit,
+              'remaining_seconds':max(0,self.deadline-time.monotonic()),**values})
     def producer(self,command,**kwargs):
         # Share the LOCKED open-file description, never unlock it explicitly.
         # Parent SIGKILL cannot release the lease while an owned child lives.
@@ -170,6 +178,7 @@ class RegisteredWorkspace:
         if value.get('sealed')!=Path(path).name:raise ValueError('B input seal failed')
         self.sealed[Path(path).name]=value
         self.remaining()
+        self.progress('input sealed',last_input=Path(path).name)
         return value
     def inspect_failure(self,path):
         path=Path(path);self.checked_root(path.parent)
@@ -222,6 +231,8 @@ class RegisteredWorkspace:
                             f'archive attempted {size} bytes; archive allowance {allowance}; '
                             f'capture limit {self.limit}; sealed input bytes {self.limit-allowance}')
                     out.write(block);checksum.update(block)
+                    if size//(128*1024**2)!=(size-len(block))//(128*1024**2):
+                        self.progress('streaming archive',archive_bytes=size,archive_allowance_bytes=allowance)
                 producer.join(timeout=30)
                 if producer.is_alive():raise ValueError('owned capture producer has not completed')
                 if errors:raise errors[0]
@@ -343,7 +354,7 @@ def mcp_lease(path):
         yield stream.fileno()
 
 
-def run_capture(config,plan,*,enroll_fresh=False,recover_only=False,journal_reader=None):
+def run_capture(config,plan,*,enroll_fresh=False,recover_only=False,journal_reader=None,workspace_factory=RegisteredWorkspace):
     validate_socket_exclusions(config.get('socket_exclusions',[]))
     staging=storage(config['staging']);staging.mkdir(parents=True,exist_ok=True)
     with mcp_lease(staging/'producer.lock') as lease_fd:
@@ -361,7 +372,7 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False,journal_read
             while True:
                 if mount_process.poll() is not None:raise ValueError('owned B mount process failed')
                 try:
-                    workspace=RegisteredWorkspace(mount,resident,lease_fd=lease_fd);mounted=True;break
+                    workspace=workspace_factory(mount,resident,lease_fd=lease_fd);mounted=True;break
                 except ValueError:
                     if time.monotonic()>ready_deadline:raise TimeoutError('owned B mount readiness timed out')
                     time.sleep(.1)
@@ -370,17 +381,18 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False,journal_read
                 row=resident.ready['baseline']
                 if row['name']!='baseline.json':raise ValueError('unknown held baseline selector')
                 fd=os.open(mount/row['name'],os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
-                with os.fdopen(fd,'rb') as stream:raw=stream.read(MAX_INDEX+1)
-                if len(raw)!=row['bytes'] or len(raw)>MAX_INDEX or hashlib.sha256(raw).hexdigest()!=row['sha256']:
+                with os.fdopen(fd,'rb') as stream:
+                    baseline,checksum=load_index(stream)
+                    size=stream.tell()
+                if size!=row['bytes'] or checksum!=row['sha256']:
                     raise ValueError('held baseline digest mismatch')
-                baseline=json.loads(raw)
             selection=DeltaSelection(baseline,config['source_prefix'],config['scope_sha256']) if config.get('transport')=='content-delta-v1' else None
             with capture_journal(plan,journal_reader) as journal:
                 result=capture(plan,mount,journal,workspace.mirror,parent=None,publish=workspace.mirror,
                     max_snapshot_bytes=1,disk_snapshot=lambda raw:disk_snapshot(raw,workspace,allowed_sqlite(plan,raw),
                         maximum_bytes=config['snapshot_limit_bytes'],timeout_seconds=config['snapshot_timeout_seconds']),
                     disk_inventory_root=mount,workspace=workspace,nightly_selection=selection)
-            provider_class=DirectBProvider if selection is None else DeltaProvider
+            provider_class=NightlyArchiveProvider if selection is None else DeltaProvider
             provider=provider_class(config['scope_sha256'],[str(Path(raw).relative_to(config['source_prefix'])) for raw in result['databases']],
                                      metadata_budget_bytes=MAX_INDEX,**({} if selection is None else {'selection':selection}))
             capture_id=resident.binding['candidate']
@@ -394,6 +406,12 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False,journal_read
             descriptor={**result,'nightly_source_prefix':config['source_prefix']}
             payload={'result':descriptor,'proof':proof,'capture_id':capture_id}
             sealed=workspace.save_proof(mount/'nightly-proof.json',payload)
+            save(staging/('capture-size-'+resident.binding['candidate']+'.private.json'),
+                 {'scope_sha256':config['scope_sha256'],'plan_identity':config['plan_identity'],
+                  'sealed_inputs':workspace.sealed,'total_input_bytes':sum(x['bytes'] for x in workspace.sealed.values()),
+                  'archive_bytes':result['receipt']['bytes'],'proof_bytes':sealed['bytes'],
+                  'SQLite_image_bytes':sum(x['bytes'] for x in result.get('large_b_disk_snapshots',{}).values()),
+                  'complete_capture_verified':True,'generation_not_yet_published':True})
             # All SQLite readers, tar/zstd children and verification channels have
             # finished. Unmount the input before the B resident can publish/retire.
             subprocess.run([config['fusermount_binary'],'-u',str(mount)],check=True,timeout=30);mounted=False

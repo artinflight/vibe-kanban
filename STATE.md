@@ -1,3 +1,21 @@
+# Nightly index and capacity correction — October 17, 01:35 UTC
+
+The nightly-only index ceiling is now 1,500,000 entries / 512 MiB; historical
+candidate bounds remain unchanged. Canonical encoding, baseline hashing and
+index loading stream in bounded windows, reusing only fixed schema strings.
+The counted/discarded full-stream measurement tool compares actual compression,
+unique chunk/layout storage and 4 KiB allocation costs without publishing a
+backup. Shared allocation reserves simultaneous metadata and preserves the
+configured free-space floor. Its cold envelope is a ceiling, not a minimum.
+
+The deployment Python suite passes 391 cases with one explicit skip. Small real
+B restores and crash recovery pass; the new full-size index rehearsal is waiting
+for Staging's final guarded compiler window. Full production stream capacity,
+whole-plan restore, operational deployment and schedule activation remain
+unverified. All original recovery archives remain preserved; the reviewed
+34-archive consolidation has no deletion approval. PR263/T40 remain the single
+nightly integration. See [current evidence](VK_NIGHTLY_BACKUP_EFFICIENCY.md).
+
 # Nightly production acceptance — October 17
 
 PR263 remains the sole nightly integration. Its 92-root census is complete:

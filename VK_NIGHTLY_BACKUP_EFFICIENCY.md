@@ -18,6 +18,48 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
+## October17 index-scale and capacity follow-up
+
+The sealed census has 1,219,860 paths. The nightly producer now has an explicit
+1,500,000-entry / 512 MiB index bound, leaving the historical candidate provider
+at 256 MiB. Encoding hashes canonical blocks without a whole-index Unicode copy.
+Windows/POSIX readback loads entry rows through a bounded reader and shares only
+the fixed schema vocabulary. The complete authenticated table is reused within
+a producer, rather than deeply copied. Baseline transfer, hashing and loading
+also stream; its actual input bytes reduce the remaining capture budget.
+
+The shared B allocation reserves four bounded metadata files plus 1 MiB: the
+candidate manifest, object ledger, old job record and atomic replacement. The
+registered proof/baseline are charged as capture inputs. Actual sealed input and
+new object sizes share the remaining allocation while preserving the 6 GiB floor.
+The old 98.25 GiB envelope was not a measured minimum; summing independent hard
+ceilings does not establish what the current cold backup actually needs.
+
+`vk_nightly_capacity.py` measures a full real production tar stream without
+retaining its archive or object payload. It uses ordinary registered consistent
+B SQLite snapshots and the normal source/journal/tar paths. SSD SQLite counts
+exact compressed stream bytes, deduplicated chunk/layout encoded sizes and
+cluster-rounded object costs, plus full-tree regular-file allocation with
+hardlinks represented once. Filesystem metadata and growth remain explicit
+additional costs. This tool intentionally issues no backup publication receipt.
+Its small independent fixture matches an actual chunk store and whole-stream
+zstd output. Production measurement is still pending.
+
+Current regression evidence: 392 deployment tests, 391 passing and one explicit
+opt-in skip. Ops governance, Python syntax and diff checks pass. Rust formatting
+passes; aggregate formatting stops at missing Prettier. No new Rust compile is
+started alongside Staging. The previous large synthetic attempt was stopped at
+01:25:57 after its whole-file reload hit the unchanged 2 GiB soft limit, without
+OOM; it is not acceptance evidence. The bounded streaming replacement awaits
+Staging's final compiler window before its next two-generation rehearsal.
+No production capture, restore, activation or cron installation is claimed.
+
+B coordination confirms all 34 reviewed originals remain intact and deletion is
+unapproved. Their allocated 172,649,721,856 bytes are potential capacity only.
+The latest observed B free space is 35,676,405,760 bytes; NTFS allocation unit is
+4,096 bytes. Fresh checks must precede any actual production run. All 18 Staging
+original finals and the invalid old journal evidence remain preserved.
+
 ## Integrated behaviour
 
 - Each published nightly has one complete manifest and owns every required

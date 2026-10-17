@@ -9,7 +9,7 @@ import shutil
 import subprocess
 
 from vk_candidate_direct_b import source_pins
-from vk_nightly_generation import MAX_INDEX
+from vk_nightly_lifecycle import METADATA_RESERVE
 from vk_nightly_job import checksum, validate_socket_exclusions
 from vk_nightly_schedule import block
 from vk_prep_common import identity, storage
@@ -42,7 +42,7 @@ def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False,pla
     from vk_change_journal import scope
     from vk_rolling_backup import Exclusions
     modules=set();queue=['vk_nightly_job','vk_nightly_b_job','vk_nightly_lifecycle','vk_nightly_generation',
-                         'vk_nightly_supervisor','vk_nightly_calendar','vk_nightly_schedule']
+                         'vk_nightly_supervisor','vk_nightly_calendar','vk_nightly_schedule','vk_nightly_capacity']
     while queue:
         module=queue.pop();file=base/(module+'.py')
         if module in modules or not file.exists():continue
@@ -66,8 +66,8 @@ def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False,pla
       'wsl_root':'/mnt/b/vk-backups/vk-normal-nightly-v1','staging':'/mnt/vk-storage/vk-normal-nightly-control-v1',
       'sshfs_binary':sshfs_binary,'fusermount_binary':'/usr/bin/fusermount',
       'capture_limit_bytes':capture,'initial_changed_limit_bytes':initial,'changed_limit_bytes':changed,
-      'snapshot_limit_bytes':6*GiB,'initial_reserve_bytes':capture+initial+MAX_INDEX+floor,
-      'reserve_bytes':capture+changed+MAX_INDEX+floor,'preserved_B_floor_bytes':floor,
+      'snapshot_limit_bytes':6*GiB,'initial_reserve_bytes':capture+initial+METADATA_RESERVE+floor,
+      'reserve_bytes':capture+changed+METADATA_RESERVE+floor,'preserved_B_floor_bytes':floor,
       'snapshot_timeout_seconds':1800,'readback_timeout_seconds':3600,'job_timeout_seconds':7200,
       'source_sha256':pins,'binary_sha256':{raw:checksum(raw) for raw in
         ('/usr/bin/python3','/usr/bin/zstd','/usr/bin/tar','/usr/bin/ssh','/usr/bin/fusermount','/usr/bin/findmnt',
@@ -88,10 +88,10 @@ def build(inventory_path,output,*,compressed_delta=False,chunked_delta=False,pla
             wsl_root='/mnt/b/vk-backups/vk-normal-nightly-compressed-v1',
             staging='/mnt/vk-storage/vk-normal-nightly-compressed-control-v1',
             capture_limit_bytes=12*GiB,initial_capture_limit_bytes=capture,initial_changed_limit_bytes=initial,
-            initial_reserve_bytes=capture+initial+MAX_INDEX+floor,
-            reserve_bytes=12*GiB+changed+MAX_INDEX+floor,preserved_B_floor_bytes=floor,
+            initial_reserve_bytes=capture+initial+METADATA_RESERVE+floor,
+            reserve_bytes=12*GiB+changed+METADATA_RESERVE+floor,preserved_B_floor_bytes=floor,
             initial_job_timeout_seconds=14400)
-        config['measurement']['limits_basis']='Cold: 48GiB registered input + 44GiB encoded objects + 256MiB index + 6GiB allocation/growth floor. Sample ratios are estimates; runtime/byte caps and health abort stay enforced. Nightly: content-hashed delta, no archive parent.'
+        config['measurement']['limits_basis']='Cold: 48GiB registered input + 44GiB encoded objects + 2GiB+1MiB metadata allowance + 6GiB allocation/growth floor. These are independent ceilings, not a measured minimum; shared admission charges actual inputs/objects. Sample ratios are estimates; runtime/byte caps and health abort stay enforced. Nightly: content-hashed delta, no archive parent.'
         if chunked_delta:
             config.update(object_encoding='chunked-zlib-1-v1',
                 wsl_root='/mnt/b/vk-backups/vk-normal-nightly-chunked-v1',

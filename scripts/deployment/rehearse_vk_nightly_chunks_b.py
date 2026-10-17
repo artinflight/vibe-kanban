@@ -36,6 +36,9 @@ WSL = r'''
 import hashlib,io,json,os,pathlib,shutil,sqlite3,subprocess,sys,types
 from contextlib import contextmanager
 r=json.loads(sys.stdin.read());assert os.getuid()==1000
+assert hashlib.sha256(r['json_reader'].encode()).hexdigest()==r['json_reader_sha256']
+reader=types.ModuleType('vk_nightly_json');reader.__source__=r['json_reader'];sys.modules[reader.__name__]=reader
+exec(compile(r['json_reader'],'vk_nightly_json.py','exec'),reader.__dict__)
 assert hashlib.sha256(r['source'].encode()).hexdigest()==r['source_sha256']
 module=types.ModuleType('vk_nightly_generation');sys.modules[module.__name__]=module
 exec(compile(r['source'],'vk_nightly_generation.py','exec'),module.__dict__)
@@ -169,12 +172,14 @@ def main():
         raise ValueError('fresh successful passive B health evidence required')
     source=Path(__file__).with_name('vk_nightly_generation.py').read_text()
     lifecycle=Path(__file__).with_name('vk_nightly_lifecycle.py').read_text()
+    json_reader=Path(__file__).with_name('vk_nightly_json.py').read_text()
     if args.resume_fixture and not re.fullmatch('fixture-[0-9a-f]{32}',args.resume_fixture):
         raise ValueError('exact owned fixture selector required')
     payload={'source':source,'source_sha256':hashlib.sha256(source.encode()).hexdigest(),
              'fixture':args.resume_fixture or 'fixture-'+uuid.uuid4().hex,'resume':bool(args.resume_fixture),
              'restore':RESTORE,'verify':WINDOWS_READBACK,'sqlite_input':WINDOWS_SQLITE_INPUT,
-             'lifecycle':lifecycle,'lifecycle_sha256':hashlib.sha256(lifecycle.encode()).hexdigest()}
+             'lifecycle':lifecycle,'lifecycle_sha256':hashlib.sha256(lifecycle.encode()).hexdigest(),
+             'json_reader':json_reader,'json_reader_sha256':hashlib.sha256(json_reader.encode()).hexdigest()}
     save(root/'desktop-fixture-attempt.private.json',{'fixture':payload['fixture'],'source_sha256':payload['source_sha256'],
          'resume':payload['resume'],'status':'starting; reconcile exact fixture after any transport uncertainty'})
     # Existing Desktop identity and existing unprivileged WSL boundary; no new

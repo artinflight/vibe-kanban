@@ -11,8 +11,7 @@ from pathlib import Path
 import stat
 
 from vk_nightly_archive_index import NightlyArchiveProvider, validate_backup_entries
-from vk_candidate_generation import digest
-from vk_nightly_generation import MAX_INDEX, encoded
+from vk_nightly_generation import MAX_INDEX, encoded, encoding_summary
 
 
 def fingerprint(info):
@@ -80,10 +79,10 @@ class DeltaSelection:
             raise ValueError('delta omission is not exactly the content-verified reuse set')
         entries.update(proof['entries']);validate_backup_entries(entries)
         # Validate the complete index budget, not only the small delta archive.
-        encoded(entries)
-        return {**proof,'entries':entries,'manifest_sha256':digest(entries),
+        checksum,_=encoding_summary(entries)
+        return {**proof,'entries':entries,'manifest_sha256':checksum,
                 'transport':'content-verified nightly delta','baseline_generation':self.baseline['generation'],
-                'baseline_manifest_sha256':hashlib.sha256(encoded(self.baseline)).hexdigest(),
+                'baseline_manifest_sha256':encoding_summary(self.baseline)[0],
                 'reused_files':len(reused_keys),'reused_content_bytes':sum(entries[k]['bytes'] for k in reused_keys)}
 
 

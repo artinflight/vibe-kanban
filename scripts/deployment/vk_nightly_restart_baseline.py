@@ -7,7 +7,6 @@ The object-store format is explicit; it is never disguised as a tar receipt.
 """
 from contextlib import contextmanager
 import fcntl
-import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -15,7 +14,7 @@ import stat
 
 from vk_change_journal import scope
 from vk_nightly_archive_index import validate_backup_entries
-from vk_nightly_generation import PRODUCER, encoded, object_blocks, name, regular
+from vk_nightly_generation import PRODUCER, encoding_summary, object_blocks, name, regular
 from vk_prep_common import identity
 from vk_rolling_backup import check_journal
 
@@ -113,7 +112,7 @@ def held_baseline(store, plan, *, generation, manifest_sha256, physical_readback
         store.check();manifest = store.current()
         if (manifest is None or manifest.get('producer') != PRODUCER or manifest.get('parent') is not None
                 or manifest.get('generation') != generation
-                or hashlib.sha256(encoded(manifest)).hexdigest() != manifest_sha256):
+                or encoding_summary(manifest)[0] != manifest_sha256):
             raise ValueError('pinned independent current baseline differs')
         binding = manifest.get('capture_context', {}).get('restart_capture')
         if (not isinstance(binding, dict) or binding.get('schema') != 1

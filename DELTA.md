@@ -2020,3 +2020,10 @@ Implemented private project Dot Chat/shared planning with canonical task links,
 revision/idempotency protection, separate project attention and responsive UI.
 Coordinated Preserve Dot/CU1.6 and Staging. No production adoption.
 See VK_PROJECT_COLLABORATION.md for validation and release requirements.
+
+## 2026-10-17 — Project sidebar live
+
+Seamus-authorized Dot+frontend rollout completed. Exact-source CI, live project
+and legacy Dot 393/1440 acceptance and installed new-tool dispatch pass. Dot-only
+readiness 1.012 s; all non-Dot processes and CU pins unchanged. Before/boundary/after
+Desktop recovery verified, QA fully removed. See VK_PROJECT_COLLABORATION_ROLLOUT.md.

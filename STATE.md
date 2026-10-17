@@ -1,3 +1,14 @@
+# Project sidebar — live October 17
+
+Seamus-authorized project collaboration is live: Dot 11:38:35 UTC, frontend 11:39:12 UTC.
+Read VK_PROJECT_COLLABORATION_ROLLOUT.md. Source 4ecaa2f81 is tree-equivalent to
+staging merge 4ba47fe66; exact-source CI is fully green. Actual served project
+and legacy Dot UI/API acceptance passes at 393/1440 px, with QA cleanup and zero
+wake attempts. All real messages/access/subscriptions and live CU1.6 pins are
+preserved. Dot-only readiness 1.012 s; Vibe/backend/agents/static/gateway unchanged.
+App version remains 0.1.42. Both Desktop backup/restore chains are verified.
+Earlier preparation notes below are historical and do not describe current status.
+
 # Project collaboration sidebar — October 17 preparation
 
 The local Projects sidebar is prepared on its feature branch, not deployed.

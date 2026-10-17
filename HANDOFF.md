@@ -1,4 +1,19 @@
-# Project sidebar pickup — October 17
+# Project sidebar deployed — October 17
+
+Project collaboration is LIVE. Read VK_PROJECT_COLLABORATION_ROLLOUT.md.
+Dot readiness 1.012 s at 11:38:35 UTC; frontend 11:39:12 UTC. New entry index-DpbIoqaC.js,
+CSS index-C9c5vx_3.css, API 0.1.42. Runtime root:
+`/mnt/vk-storage/vk-project-sidebar-rollout-20261017`.
+[PR267](https://github.com/artinflight/vibe-kanban/pull/267) is merged; build 4ecaa2f81
+is tree-equivalent to staging 4ba47fe66; CI is fully green. Both actual served
+project/legacy Dot phone+desktop suites pass. CU/Stop pins, real pairing,
+subscriptions and messages retained; QA owners/data cleaned, zero wake attempts.
+Vibe PID 3927146 and all non-Dot services/agents unchanged. Verified Desktop before,
+boundary and after recovery material is under B:/vk-backups/vk-project-sidebar-rollout-20261017/.
+Future Staging frontend candidates must retain this sidebar with Mobile, Steering,
+Dot attention and artifact viewer. No real-owner browser session was inspected.
+
+# Historical project sidebar preparation — October 17
 
 [Draft PR267](https://github.com/artinflight/vibe-kanban/pull/267) is pushed; implementation `f60c8d1d6b2c`.
 [Open sidebar preview](https://vibe.local/vk-artifact-viewer.html?id=15bb5759-3ce8-4234-9081-7c524f4ac8e5&name=project-sidebar-review.html&v=1). Both viewport cases and the

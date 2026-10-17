@@ -88,6 +88,7 @@ jobs:
         with:
           filters: |
             frontend:
+              - 'packages/public/**'
               - 'packages/local-web/**'
               - 'packages/web-core/**'
               - 'packages/remote-web/**'
@@ -96,6 +97,9 @@ jobs:
               - 'scripts/testing/kanban-issue-panel*'
               - 'scripts/testing/run-kanban-issue-panel-tests.mjs'
               - 'scripts/testing/*read-only-web-links*'
+              - 'scripts/vk-publish-artifact.py'
+              - 'scripts/testing/*publish-artifact*'
+              - 'scripts/testing/artifact-viewer-browser.mjs'
               - 'scripts/testing/*long-thread-history*'
               - 'scripts/check-i18n.sh'
               - 'scripts/check-unused-i18n-keys.mjs'
@@ -256,7 +260,7 @@ jobs:
         env:
           VK_PRESERVATION_TEST_ROOT: ${{ runner.temp }}
           VK_TEST_GITLEAKS: ${{ runner.temp }}/vk-release-scanner/gitleaks
-        run: python3 scripts/preservation/test_turn_git.py
+        run: python3 -m unittest discover -s scripts/preservation -p 'test_*.py' -v
 
   ops-governance:
     runs-on: *runner_label
@@ -268,6 +272,13 @@ jobs:
 
       - name: Run ops governance checks
         run: pnpm run ops:check
+
+  dot-sidechat-contracts:
+    runs-on: *runner_label
+    steps:
+      - uses: actions/checkout@v6
+      - name: Test sidechat recovery, delivery and project-scope rollout
+        run: python3 -B -m unittest discover -s scripts/dot-sidechat -v
 
   frontend-checks:
     needs: [branch-policy, branch-freshness, changes]
@@ -304,6 +315,9 @@ jobs:
             "node scripts/check-unused-i18n-keys.mjs" \
             "./scripts/check-legacy-frontend-paths.sh"
 
+      - name: Test independent Dot unread and Needs Attention notifications
+        run: node scripts/dot-sidechat/test-notifications-ui.mjs && node scripts/dot-sidechat/test-live-ui.mjs
+
       - name: Check issue creation persistence, local assignments and workspace pagination
         run: node --experimental-strip-types --test packages/web-core/src/shared/lib/issueCreation.test.ts packages/web-core/src/pages/workspaces/workspaceAssignmentFilter.test.ts packages/web-core/src/pages/workspaces/workspaceSidebarPagination.test.ts
 
@@ -327,6 +341,12 @@ jobs:
         env:
           VK_TEST_OUTPUT: ${{ runner.temp }}/vk-web-link-tests
         run: node scripts/testing/run-read-only-web-links-tests.mjs
+
+      - name: Test verified artifact publication
+        run: |
+          python3 scripts/testing/test-publish-artifact.py
+          cmp packages/public/vk-artifact-viewer.html packages/local-web/dist/vk-artifact-viewer.html
+          cmp packages/public/vk-artifact-viewer.html packages/remote-web/dist/vk-artifact-viewer.html
 
       - name: Test offline MCP approval UI contract
         env:
@@ -489,7 +509,7 @@ jobs:
           VK_AUTOMATIC_GITHUB_SYNC: "1"
         run: >-
           cargo nextest run -p db -p local-deployment -p services
-          -E 'test(legacy_observation_) | test(observation_) | test(owner_identity_retry) | test(idle_worker_preserves) | test(restored_batches) | test(incoming_input_survives)'
+          -E 'test(missing_publication_policy_) | test(legacy_observation_) | test(observation_) | test(owner_identity_retry) | test(idle_worker_preserves) | test(restored_batches) | test(incoming_input_survives)'
 
       - name: Build source-bound combined checkpoint candidate
         if: github.event_name == 'workflow_dispatch' && inputs.github_sync_candidate

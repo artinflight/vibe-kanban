@@ -19,6 +19,7 @@ export type LayoutMode = 'workspaces' | 'kanban';
 export type MobileTab =
   | 'workspaces'
   | 'chat'
+  | 'dot'
   | 'changes'
   | 'logs'
   | 'preview'

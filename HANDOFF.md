@@ -13,6 +13,216 @@ The unified fixture runner reports 340 tests: 339 passed, one explicit opt-in
 service test skipped. Ops, syntax, historical source pins and diff checks pass.
 Full format stops after Rust formatting because Prettier is unavailable.
 
+# Generated deliverable links — installed October 16 follow-up
+
+The reported OP::3D Print Issues link was an unpublished filesystem target,
+not a regression of the HTTP(S) renderer. Read
+[VK_ARTIFACT_LINKS.md](VK_ARTIFACT_LINKS.md). Before offering a generated file,
+use `/home/mcp/.local/bin/vk-publish-artifact FILE --label "Open report"` and
+paste its verified Markdown. The shared Codex-home instruction is installed.
+The helper uses the existing workspace/session environment and native upload
+API, verifies both operator-facing and native bytes, reuses acknowledged uploads
+and stops on uncertain uploads. HTML reports require embedded resources.
+
+The standalone viewer is now in the existing Dot release under
+`/mnt/vk-storage/vk-dot-notification-rollout-20261016/release/vk-artifact-viewer.html`,
+SHA256 `608ff558710727d459ec5cb9479e4a6692aac830eedb85a0451e1947d5af0dfd`.
+App/API version remains 0.1.42; index SHA256
+`f842a0df7e2c6d30ac8fa2fd1afebf0bb29631a603f33d95e7bca96274c0a5bd`
+and all existing app assets, frontend pointer and service PIDs are unchanged.
+The public source file ships automatically in subsequent frontend builds.
+
+Seven HTTP tests and sandboxed Chromium controls/isolation/error tests pass.
+The actual original report also passes desktop/phone first-response Markdown
+clicks, embedded-image loading and next/previous controls. Browser QA sent
+only GET requests. Source report and historical reply were not edited.
+Durable helper versions/receipts are in `/mnt/vk-storage/vk-published-artifacts/`;
+activation and exact-report private acceptance are in
+`/mnt/vk-storage/vk-artifact-links-20261016/`. Shared instruction rollback is
+hash-verified at `desktop:B:/vk-backups/vk-artifact-links-20261016/AGENTS.before.md`.
+Rollback removes only this added viewer/helper and restores the exact shared
+instruction backup; it does not restore application data or restart services.
+
+Filesystem hrefs remain disabled. This is a verified publish-before-reply tool
+and shared instruction, not automatic rewriting of every historical/local path.
+Do not assume an already running turn adopted new instructions, or claim the
+operator's physical phone was tested. No restart, new public route or broad
+filesystem endpoint was introduced. The durable installation receipt binds the exact installed code; use the current
+artifact-delivery PR, including its shared-public packaging and frame policy.
+
+## October 16 publication-admission recurrence correction
+
+PR246 merged at64c3; its running helper still compares an empty publication
+admission against the completed owner's requested repository inventory. This
+follow-up ports the retained local corrections onto current staging. Capture
+inventory is durable before admission, original terminal heads survive failed
+publication admission, and missing publication policy stays pending rather than
+claiming remote coverage. The reviewed baseline-link correction is included so
+unchanged accepted VK source remains admissible without weakening deny rules.
+
+The real callback/reset/database-reopen/idle-worker regression runs in normal
+and scheduling-enabled CI, including repeated-pending report deduplication.
+Historical observation reconciliation is separate and requires exact native
+provenance at genuine idle. No unrelated workspace gates are cleared. A local
+commit or merged PR alone cannot certify newer unpublished commits or private
+runtime data. Details and operating boundaries: VK_AUTOMATIC_GITHUB_SYNC.md.
+
+Publication is authorized for this source correction; deployment is not.
+The release owner must integrate this exact source, rebuild the backend (which
+embeds the helper), obtain exact-head review, and run combined acceptance before
+a separately authorized safe-idle restart. Existing live settings, Recommend,
+permissions, inputs and active owners remain untouched. Earlier local-only
+publication restrictions below describe the historical preparation stage.
+
+## October 14 local reviewed-baseline link repair
+
+Staging's accepted 962d2673 source copy failed begin with reviewed 64c3 because
+CLAUDE.md and docs/CLAUDE.md are tracked links. A local-only correction adds explicit
+reviewed base/link/regular-target integrity pins and uses them in admission and all
+snapshot/coverage paths. Changed/unreviewed links, escapes, private paths, Gitlinks
+and changed targets stay blocked. The private index retains exact unchanged HEAD
+objects; changed objects keep source/scanner checks. This also permits ordinary
+source handoff in the actual VK tree without rewriting unchanged image assets.
+
+Tests and a sealed patch/source receipt are prepared locally for Staging. No
+GitHub/PR publication, live configuration, deployment, restart, agent retask or
+heavy MCP build is authorized in this repair. Recommend and model/effort remain.
+The helper is embedded: Staging must integrate the local patch and two literal
+policy pins, rebuild and run its combined acceptance before release. Exact-head
+review/build acceptance remains pending; 64c3 alone does not include this repair.
+See VK_TURN_GIT_PRESERVATION.md for the strict optional policy contract.
+
+# Dot reply notifications — live October 16, 22:38 UTC
+
+Seamus's approved Dot service/connector and combined frontend rollout is live.
+App/API version remains **0.1.42**; entry is `index-CrPmgoRY.js`, frontend source
+`aebe6a442`, complete public source `7222b127c`, merged PR254 at `28fdcfddf`.
+Real served UI/live API checks pass at desktop and mobile viewport sizes:
+separate violet badges, visible reply read, durable attention, Resolve/Reopen,
+and unchanged coding-agent flags. Nine served Steering cases also pass.
+Dot-only service restart/readiness took 1.38 seconds; Vibe and agents were not restarted.
+All 43 current projects including 26 archived and automatic future scope remain.
+Paired sessions/subscriptions/credentials and prior messages are preserved.
+[Current deployment, tests, rollback and phone acceptance](DOT_NOTIFICATION_ROLLOUT.md).
+Physical phone automation was blocked by auto-review's shared authenticated-tab
+boundary; only Seamus's fresh paired-phone reply/visible receipt remains to test.
+Older prepared/not-deployed and pending-PR notes below are historical.
+
+# Dot unread and Needs Attention — October 16 implementation
+
+Separate violet Dot indicators and durable independent read/attention state are
+implemented in PR254 for desktop, phone and issue-linked workspaces. Visible
+focused replies clear only Dot unread; explicit Resolve clears attention.
+Coding-agent notification state is untouched. This source is not activated.
+Read [the notification implementation and coordinated release handoff](DOT_NOTIFICATION_HANDOFF.md).
+Sent Steering's pinned Mobile+Steering candidate excludes this feature; preserve
+both features in a later combined frontend, after the new sidechat API is live.
+No mobile-owner files/browser, live services, permissions or subscriptions changed.
+The earlier root reply/subscription reconciliation below remains applicable.
+
+# Sent Steering staging reconciliation
+
+PR257 is now merged at `9301e6a46`; the prepared release source is
+`1d074941d`, with its newer packaging evidence owned by the Sent Steering agent.
+The original publication notes below are retained as history; their pending-PR
+and packaging statements are superseded. Mobile+Steering and notification source
+must be combined without replacing either feature.
+
+# Sent steering fix publication — PR257
+
+[PR #257](https://github.com/artinflight/vibe-kanban/pull/257) is open into
+`staging`; source fix `ca9911225` was pushed and verified on GitHub. The matching
+local issue remains In review and linked to this workspace.
+
+Fresh publication checks: formatting, ops, all four frontend type checks and
+local-web/UI lint pass. `pnpm run check`, `pnpm run lint` and
+`cargo test --workspace` were attempted sequentially using the shared SSD Cargo
+target with incremental compilation disabled. All stop in desktop native build
+dependencies because GLib/GObject development libraries are absent; Rust tests
+were not executed. Exact command/exit receipts are under
+`.vk-preview/steering-test/pr-validation/`.
+
+Remaining: passing applicable CI and review, staging acceptance, frontend package
+build and human UI QA, then separately authorized rollout. Earlier synthetic
+390/412/1440 regression evidence remains valid. No production mutation/restart.
+
+# Sent steering draft correction pickup — October 16
+
+[Issue](https://vibe.local/projects/e2645d00-9bc6-4136-8d6e-0c2fcf032d77/issues/e662a94d-0fff-428b-9f43-9d771ebcc8e1) was created in the local vibe-kanban project and its workspace link
+was verified through the live API. GitHub issues are disabled in this fork.
+
+`SessionChatBoxContainer.handleSendFollowUp` saved a recovery scratch before
+sending and never deleted it after immediate delivery. The queue hook now returns
+the API status; the composer awaits `clearDraft()` only for an empty queue result,
+under the existing submission guard. Failed and queued drafts remain recoverable.
+Backend queue consumption owns cleanup after a queued run actually starts.
+
+Final synthetic steering browser tests pass at 390/412/1440 pixels, including
+navigation/reload, failed draft recovery, retry and queued-draft preservation.
+Web-core/local-web type checks, frontend/shared-file lint, formatting and ops pass.
+Production bundling is unverified: the default heap failed and the larger build
+was stopped during swap-heavy packaging. The later full Rust workspace command
+was attempted but blocked by missing native desktop libraries.
+Read [VK_SENT_STEERING_DRAFT.md](VK_SENT_STEERING_DRAFT.md) for commands and evidence.
+Source-only task; production is unchanged.
+
+# Root reply and complete notification registration — October 16 follow-up
+
+Root's view caught up at 18:07 UTC without another refresh. Root directly read
+and replied to the retained phone test and verified reply persistence. Root also
+updated the existing enabled Reply to Vibe chats automation through the supported
+flow. Independent server readback confirms two active, unexpired, non-overlapping
+subscriptions: original VK Dev plus all projects excluding exactly VK Dev. Each
+of all 43 current projects, including 26 archived, matches one destination;
+the future-project policy is enabled. The original subscription is preserved.
+
+The previous root reply/registration blockers are superseded. Root still lacks
+list_pending_sidechat_messages. A fresh automatic message-to-reply roundtrip
+without a manual workspace hint and Seamus's user-visible receipt remain open.
+Seamus has already been asked for a fresh message; no additional refresh, pairing,
+activation or mobile UI investigation is needed. See [current evidence and acceptance](DOT_RELIABILITY_ROLLOUT.md).
+This reconciliation changes documentation only; no runtime state or mobile work.
+
+# Dot connector activation and complete project scope — October 16
+
+Seamus approved connector-only activation and all current, archived and future
+projects. The once-retried activation succeeded. Installed source `d2c79543e`
+expands both existing paired sessions from VK Dev-only to all 43 projects,
+including 26 archived, with automatic future-project reconciliation every five
+seconds. Existing subscriptions, credentials, expiration and revocation were
+preserved. Only the connector/publisher restarted; mobile owner work is untouched.
+
+Read [the exact activation and rollout handoff](DOT_RELIABILITY_ROLLOUT.md).
+All-project browser access and both notification registrations are live. Root
+replied directly to the retained phone message; the earlier desktop result was
+a manual integration-task relay. Fresh automatic routing and human viewing
+remain unverified, and root still lacks pending-message recovery. No more
+phone pairing/UI debugging or owner scope/activation decision is pending.
+
+# Dot integration preservation — October 16
+
+[PR #254](https://github.com/artinflight/vibe-kanban/pull/254) publishes this preserved source into a draft review
+against `staging`. Vibe issue T61 links the publication and separate mobile owner.
+
+Vibe issue T61 tracks preservation separately from mobile T60. Formatting,
+governance, 31 Python cases, both DOM suites and frontend types/lint pass;
+full Rust checks stop at this host's missing GLib development dependencies.
+Full-history secret scanning and source inventory pass. See the linked handoff
+for exact limits and draft PR #254.
+
+The original eight API and three UI commits are preserved as sanitized public
+copies on `vk/de2d-vk-preserve-dot`, based on current `fork/staging`. Read
+[the reconciled source/deployment handoff](DOT_INTEGRATION_HANDOFF.md) and
+[commit provenance](DOT_PRESERVATION_COMMITS.json). The reported live browser
+test uses frontend `975f62c7c`; the prepared mobile correction is not selected by
+the observed live pointer. Seamus confirmed the first desktop roundtrip:
+the webhook reached Dot, its exact reply persisted through the integration task's
+available paired connector, and his screenshot showed the reply. Direct root dot
+connector access remains unresolved; the real phone roundtrip and mobile acceptance
+remain separate and unverified here. Private chat and receipt identifiers are not
+published. The mobile owner retains its active workspace and changes.
+The initial preservation phase made no runtime changes; the authorized connector-only activation and scope expansion above supersede that earlier boundary.
+
 # Clickable summary links — activated October 16
 
 [PR #251](https://github.com/artinflight/vibe-kanban/pull/251) merged into staging

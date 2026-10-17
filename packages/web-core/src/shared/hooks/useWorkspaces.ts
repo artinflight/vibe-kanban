@@ -7,6 +7,10 @@ import {
 import { useJsonPatchWsStream } from '@/shared/hooks/useJsonPatchWsStream';
 import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
 import { makeLocalApiRequest } from '@/shared/lib/localApiTransport';
+import {
+  useDotNotifications,
+  type DotNotification,
+} from '@/shared/hooks/useDotNotifications';
 import { useHostId } from '@/shared/providers/HostIdProvider';
 import type {
   WorkspaceWithStatus,
@@ -32,6 +36,8 @@ export interface SidebarWorkspace {
   hasPendingApproval?: boolean;
   hasRunningDevServer?: boolean;
   hasUnseenActivity?: boolean;
+  dotUnreadCount?: number;
+  dotNeedsAttentionCount?: number;
   activeSubagentCount?: number;
   unresolvedSubagentCount?: number;
   latestSessionId?: string;
@@ -61,7 +67,8 @@ type WorkspacesState = {
 // Transform WorkspaceWithStatus to SidebarWorkspace, optionally merging summary data
 function toSidebarWorkspace(
   ws: WorkspaceWithStatus,
-  summary?: WorkspaceSummary
+  summary?: WorkspaceSummary,
+  dot?: DotNotification
 ): SidebarWorkspace {
   const latestProcessStatus = summary?.latest_process_status ?? undefined;
   const isRunning =
@@ -88,6 +95,8 @@ function toSidebarWorkspace(
     hasPendingApproval: summary?.has_pending_approval,
     hasRunningDevServer: summary?.has_running_dev_server,
     hasUnseenActivity: summary?.has_unseen_turns,
+    dotUnreadCount: dot?.unread_count ?? 0,
+    dotNeedsAttentionCount: dot?.needs_attention_count ?? 0,
     activeSubagentCount: summary?.active_subagent_count ?? 0,
     unresolvedSubagentCount: summary?.unresolved_subagent_count ?? 0,
     latestSessionId: summary?.latest_session_id ?? undefined,
@@ -147,6 +156,11 @@ async function fetchWorkspaceSummariesByArchived(
 
 export function useWorkspaces(): UseWorkspacesResult {
   const hostId = useHostId();
+  const dotNotifications = useDotNotifications();
+  const dotByIssue = useMemo(
+    () => new Map(dotNotifications.map((n) => [n.issue_id, n])),
+    [dotNotifications]
+  );
   const queryClient = useQueryClient();
 
   // Two separate WebSocket connections: one for active, one for archived
@@ -281,8 +295,14 @@ export function useWorkspaces(): UseWorkspacesResult {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
       })
-      .map((ws) => toSidebarWorkspace(ws, activeSummaries.get(ws.id)));
-  }, [activeData, activeSummaries]);
+      .map((ws) =>
+        toSidebarWorkspace(
+          ws,
+          activeSummaries.get(ws.id),
+          ws.task_id ? dotByIssue.get(ws.task_id) : undefined
+        )
+      );
+  }, [activeData, activeSummaries, dotByIssue]);
 
   const archivedWorkspaces = useMemo(() => {
     if (!archivedData?.workspaces) return [];
@@ -297,8 +317,14 @@ export function useWorkspaces(): UseWorkspacesResult {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
       })
-      .map((ws) => toSidebarWorkspace(ws, archivedSummaries.get(ws.id)));
-  }, [archivedData, archivedSummaries]);
+      .map((ws) =>
+        toSidebarWorkspace(
+          ws,
+          archivedSummaries.get(ws.id),
+          ws.task_id ? dotByIssue.get(ws.task_id) : undefined
+        )
+      );
+  }, [archivedData, archivedSummaries, dotByIssue]);
 
   // The primary workspace list must not be blocked by archived workspace
   // initialization. Archived snapshots can be slow under load and are not

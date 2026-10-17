@@ -90,6 +90,58 @@ invent a delivery/handling claim from silence, idle state or executor success.
 
 ## Legacy operation and rollback cannot bypass uncertainty
 
+### Failed publication admission and scoped observation repair
+
+Publication admission and original-head capture have separate inventories. Begin
+durably registers the exact requested repository IDs/canonical paths before policy
+or snapshot admission. The real completion callback captures all registered heads
+even if no repository was admitted for publication. Publication policy changes
+cannot suppress that capture; end/check still require their original review and
+snapshot evidence. The first admission failure is retained separately from later
+worker reports. A missing-policy observation ACK is pending, never verified.
+
+After durable completion capture, a repository without a reviewed publication
+policy waits for that policy. Its status is pending/informational, with a durable
+`waiting` job; identical pending worker reports are deduplicated. No permission,
+baseline, source publication or green remote receipt is inferred. Other admission
+failures and unknown observations remain blocked. The status endpoint exposes the
+separate admission reason when available.
+
+`scripts/preservation/reconcile_observation.py` provides a narrowly scoped repair
+for legacy completed owners whose observation failed specifically because an empty
+publication admission was compared with a nonempty requested inventory. Default
+operation is plan-only. `--turn <execution UUID>` restricts a plan to one exact
+owner; all other workspace observation gates remain unchanged, including killed
+or otherwise unproven owners. The plan still binds the complete workspace owner
+inventory and refuses newly arriving work at apply time. Omitting `--turn` retains
+the original whole-workspace behavior. Apply requires the exact plan SHA-256 and a genuine idle
+boundary with no queued/incoming user work and sufficient *natural* worker backoff.
+It never creates an idle gap or retimes a checkpoint.
+
+The tool requires exact immutable requests, unchanged policy and helper-ledger
+bindings, and matching native `execution_process_repo_states` for every affected
+repository. Before/after commit IDs must exist, and terminal capture timestamps
+must lie within five seconds after persisted completion, with no overlapping owner
+through that capture. Missing, later recaptured, changed, dropped or running owners
+are refused. Today's HEAD is never substituted.
+It unions all retained originals and native terminal heads into private ledgers,
+then compare-and-swaps only the proven observation fault. Original evidence and the
+exact repair plan remain in a private write-ahead audit. Interruption retains the
+DB uncertainty gate; the identical plan can resume without discarding originals.
+
+This operation cannot mark Git coverage verified, publish, alter source/index/refs,
+change permissions, deliver user input or clear unrelated failures. Native summary
+and source outcome remain separate. Merged-work verification is separate remote
+evidence: a merged PR alone does not prove every disconnected original's history.
+Keep such originals in an explicitly private source checkpoint rather than silently
+dropping them or publishing them to satisfy a status badge. Excluded files, invoices,
+client payloads and runtime backups remain outside committed-source coverage.
+
+Both normal and CI preservation test commands include the real Git/SQLite repair
+fixtures. The helper remains embedded in the backend; source changes require a
+reviewed matching package. A standalone scoped historical repair does not install
+the prevention fix or authorize a restart.
+
 The observation gate applies to the whole affected workspace, including new
 executions without a scheduled checkpoint row. Legacy `begin` admission, `end`
 completion and all backend `check`/`check-all`/`checkpoint` coverage calls check
@@ -203,3 +255,20 @@ binary is not a proven rollback: its migration set may reject the new schema and
 it cannot reconcile these queues. Prove compatibility before nominating one; never
 restore an old database over newer user work. Follow the established latest-data
 release rollback protocol. Disabling publication does not permit cleanup.
+
+## Deploying the publication-admission correction
+
+The helper is compiled into `local-deployment::turn_preservation` with
+`include_str!`. Updating a Python source file, pushing a branch or merging a PR
+does not update the running completion callback or worker. The release owner must
+integrate the source into the accepted combined candidate, rebuild that backend,
+validate its exact source/hash and perform the separately approved safe-idle
+restart. Preserve all live settings and existing reviewed policy boundaries.
+
+A successful corrected callback records `observation_state=observed`, retains
+original and terminal commits, and leaves missing-policy publication `waiting`
+with an informational pending status. Repeated idle attempts do not duplicate
+that report. No remote receipt is inferred. Historical failed observations stay
+failed until separately reconciled from contemporaneous native records; merely
+installing this correction does not clear them. Unpublished source still needs
+normal reviewed publication, and ignored/private runtime data remains excluded.

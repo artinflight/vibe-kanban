@@ -663,8 +663,10 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         setFollowUpError(null);
         cancelDebouncedSave();
         await saveToScratch(localMessage, executorConfig);
+        let delivered = false;
         try {
-          await sendFollowUp(prompt, executorConfig);
+          const status = await sendFollowUp(prompt, executorConfig);
+          delivered = status?.status === 'empty';
         } catch (error) {
           setFollowUpError(
             `Failed to send: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -676,6 +678,8 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         setLocalMessage('');
         clearUploadedAttachments();
         reviewContext?.clearComments();
+        // Queued drafts remain recoverable until the queued run starts.
+        if (delivered) await clearDraft();
       }),
     [
       submit,
@@ -685,6 +689,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
       sendFollowUp,
       cancelDebouncedSave,
       saveToScratch,
+      clearDraft,
       setLocalMessage,
       clearUploadedAttachments,
       reviewContext,

@@ -1241,3 +1241,12 @@ html {
       linear-gradient(hsl(var(--brand) / 0.18), hsl(var(--brand) / 0.18));
   }
 }
+
+/* Dot chat state remains visually distinct from orange workspace notifications. */
+.new-design {
+  --dot-activity: 270 65% 43%;
+}
+.dark .new-design,
+.new-design.dark {
+  --dot-activity: 270 85% 80%;
+}

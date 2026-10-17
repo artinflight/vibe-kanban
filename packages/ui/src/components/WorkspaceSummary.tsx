@@ -1,4 +1,8 @@
 import {
+  DotActivityIndicators,
+  type DotActivityState,
+} from './DotActivityIndicators';
+import {
   PushPinIcon,
   HandIcon,
   TriangleIcon,
@@ -29,7 +33,7 @@ const formatRelativeElapsed = (dateString: string): string => {
   return `${diffDays}d ago`;
 };
 
-export interface WorkspaceSummaryProps {
+export interface WorkspaceSummaryProps extends DotActivityState {
   name: string;
   workspaceId?: string;
   filesChanged?: number;
@@ -66,6 +70,8 @@ export function WorkspaceSummary({
   hasPendingApproval = false,
   hasRunningDevServer = false,
   hasUnseenActivity = false,
+  dotUnreadCount = 0,
+  dotNeedsAttentionCount = 0,
   activeSubagentCount = 0,
   unresolvedSubagentCount = 0,
   latestProcessCompletedAt,
@@ -80,6 +86,7 @@ export function WorkspaceSummary({
   const { t } = useTranslation('common');
   const phone = usePhoneLayout();
   const hasChanges = filesChanged !== undefined && filesChanged > 0;
+  const hasDotActivity = dotUnreadCount > 0 || dotNeedsAttentionCount > 0;
   const isFailed =
     latestProcessStatus === 'failed' || latestProcessStatus === 'killed';
   const subagentCount = activeSubagentCount + unresolvedSubagentCount;
@@ -140,7 +147,11 @@ export function WorkspaceSummary({
               {name}
             </span>
             <span className="phone-workspace-caption">
-              {state}
+              <span>{state}</span>
+              <DotActivityIndicators
+                dotUnreadCount={dotUnreadCount}
+                dotNeedsAttentionCount={dotNeedsAttentionCount}
+              />
               {latestProcessCompletedAt && !isRunning && (
                 <> · {formatRelativeElapsed(latestProcessCompletedAt)}</>
               )}
@@ -185,7 +196,7 @@ export function WorkspaceSummary({
         onClick={onClick}
         className={cn(
           'flex w-full cursor-pointer flex-col text-left px-base py-half transition-all duration-150',
-          isActive
+          isActive || hasDotActivity
             ? 'text-normal'
             : 'text-low sm:opacity-60 sm:hover:opacity-100 sm:hover:text-normal'
         )}
@@ -204,8 +215,13 @@ export function WorkspaceSummary({
         >
           {name}
         </div>
-        {(!summary || isActive) && (
-          <div className="flex w-full items-center gap-base text-sm h-5">
+        {(!summary || isActive || hasDotActivity) && (
+          <div
+            className={cn(
+              'flex w-full items-center gap-base text-sm',
+              hasDotActivity ? 'flex-wrap min-h-5' : 'h-5'
+            )}
+          >
             {/* Dev server running - leftmost */}
             {hasRunningDevServer && (
               <PlayIcon
@@ -244,6 +260,10 @@ export function WorkspaceSummary({
                 />
               )}
 
+            <DotActivityIndicators
+              dotUnreadCount={dotUnreadCount}
+              dotNeedsAttentionCount={dotNeedsAttentionCount}
+            />
             {/* Sub-agent activity from the Codex thread graph */}
             {hasSubagentActivity && (
               <span

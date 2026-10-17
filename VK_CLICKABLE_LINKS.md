@@ -1,5 +1,12 @@
 # Clickable links in agent summaries
 
+October 16 follow-up: the OP::3D Print Issues counterexample was an unpublished
+filesystem link. The newer live frontend retained this web-link repair.
+[VK_ARTIFACT_LINKS.md](VK_ARTIFACT_LINKS.md) documents the installed native
+publisher, shared first-response instruction and sandboxed HTML report viewer
+that address generated-file delivery. Earlier web-only rollout evidence below
+does not establish filesystem-link support.
+
 The chat renderer can reproduce the reported first-response failure without any
 agent or network call. Assistant messages in `DisplayConversationEntry` use the
 read-only `WYSIWYGEditor`, backed by Lexical's Markdown transformers. Those

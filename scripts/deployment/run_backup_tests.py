@@ -14,7 +14,7 @@ def main():
     base = str(Path(__file__).parent)
     loader = unittest.TestLoader()
     suites = [loader.discover(base, pattern=pattern) for pattern in (
-        'test_vk_nightly*.py', 'test_vk_history*.py', 'test_vk_backup_content_audit.py')]
+        'test_vk_nightly*.py', 'test_vk_history*.py', 'test_vk_backup*.py')]
     suites += [loader.loadTestsFromName(module) for module in (
         'test_vk_rolling_backup', 'test_vk_desktop_backups', 'test_vk_archive_stream',
         'test_vk_b_disk_capture', 'test_vk_b_disk_snapshot',

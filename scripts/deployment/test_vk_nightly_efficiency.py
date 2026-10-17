@@ -7,8 +7,10 @@ from pathlib import Path
 import sqlite3
 import subprocess
 import sys
+import time
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from nightly_test_support import fixture_readback
 from vk_nightly_generation import (CHUNKED, CHUNK_BYTES, NightlyStore,
@@ -137,6 +139,61 @@ class ChunkedLifecycle(lifecycle_tests.NightlyLifecycle):
             db.deserialize(data)
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone(), ('ok',))
             return db.execute('SELECT value FROM retained ORDER BY rowid').fetchall()
+
+    def interrupt_chunk(self, *, die=False):
+        link = os.link
+        def after_link(source, target, **kwargs):
+            link(source, target, **kwargs)
+            if Path(target).name.startswith('chunk-'):
+                if die:os._exit(77)
+                raise OSError('owned producer interrupted after sealed chunk')
+        with patch('vk_nightly_generation.os.link', after_link):
+            return self.run_nightly()
+
+    def test_guard_abort_before_manifest_reconciles_exact_chunks_and_retries(self):
+        self.assertTrue(self.run_nightly()['passed']);self.change()
+        before = (self.nightly/'current.json').read_bytes()
+        failed = self.interrupt_chunk()
+        self.assertFalse(failed['passed'])
+        candidate = self.nightly/self.job.read()['candidate']
+        self.assertFalse((candidate/'manifest.json').exists())
+        self.assertTrue(list((candidate/'objects').glob('chunk-*')))
+        self.assertEqual((self.nightly/'current.json').read_bytes(), before)
+        self.job.reconcile(retention_adopted=True, inputs_quiescent=True)
+        self.assertFalse(candidate.exists())
+        self.assertEqual(self.latest_rows(), [('before',)])
+        self.assertTrue(self.run_nightly()['passed'])
+        self.assertEqual(self.latest_rows(), [('before',), ('second',)])
+
+    def test_parent_death_during_unsealed_chunk_candidate_recovers(self):
+        self.assertTrue(self.run_nightly()['passed']);self.change()
+        child = os.fork()
+        if child == 0:
+            self.interrupt_chunk(die=True);os._exit(90)
+        deadline = time.monotonic()+15
+        pid = 0
+        try:
+            while not pid and time.monotonic() < deadline:
+                pid, status = os.waitpid(child, os.WNOHANG)
+                if not pid:time.sleep(.05)
+            self.assertTrue(pid, 'owned fixture child exceeded deadline')
+            self.assertEqual(os.waitstatus_to_exitcode(status), 77)
+        finally:
+            if not pid:os.kill(child, 9);os.waitpid(child, 0)
+        self.job.reconcile(retention_adopted=True, inputs_quiescent=True)
+        self.assertTrue(self.run_nightly()['passed'])
+        self.assertEqual(self.latest_rows(), [('before',), ('second',)])
+
+    def test_changed_sealed_chunk_is_preserved_on_reconciliation(self):
+        self.assertTrue(self.run_nightly()['passed']);self.change()
+        self.interrupt_chunk()
+        candidate = self.nightly/self.job.read()['candidate']
+        chunk = next((candidate/'objects').glob('chunk-*'))
+        chunk.write_bytes(b'unknown substituted evidence')
+        with self.assertRaisesRegex(ValueError, 'substituted'):
+            self.job.reconcile(retention_adopted=True, inputs_quiescent=True)
+        self.assertEqual(chunk.read_bytes(), b'unknown substituted evidence')
+        self.assertEqual(self.latest_rows(), [('before',)])
 
     def test_chunked_current_reconciliation_and_sqlite_restore(self):
         first = self.run_nightly()

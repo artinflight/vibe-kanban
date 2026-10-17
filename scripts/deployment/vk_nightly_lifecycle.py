@@ -91,7 +91,10 @@ class NightlyJob:
                 raise ValueError('job scope binding changed')
         allowed = {'job-scope.json', 'job.lock', 'attempt.json', 'attempt.new', 'progress.json', 'progress.new'}
         if (self.root / 'attempt.json').exists():
-            allowed.add(self.read()['input_name'])
+            attempt = self.read()
+            allowed.add(attempt['input_name'])
+            if attempt.get('object_ledger_identity'):
+                allowed.add('object-ledger.jsonl')
         if {p.name for p in self.root.iterdir()} - allowed:
             raise ValueError('unexpected job evidence; preserve and reconcile')
 
@@ -191,6 +194,21 @@ class NightlyJob:
 
     def observe(self, event, detail):
         value = self._active_intent if self._active_intent is not None else self.read()
+        if event == 'object':
+            path, info, checksum = detail
+            if (path.parent != self.store.root / value['candidate'] / 'objects'
+                    or not re.fullmatch('(chunk-)?[0-9a-f]{64}', path.name)
+                    or not stat.S_ISREG(info.st_mode)):
+                raise ValueError('object registration outside exact candidate')
+            record = encoded({'candidate': value['candidate'], 'name': path.name,
+                              'identity': pin(info), 'sha256': checksum}) + b'\n'
+            fd = os.open(self.root / 'object-ledger.jsonl', os.O_WRONLY | os.O_APPEND | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(fd, 'ab') as ledger:
+                if (pin(os.fstat(ledger.fileno())) != value['object_ledger_identity']
+                        or os.fstat(ledger.fileno()).st_size + len(record) > MAX_INDEX):
+                    raise ValueError('object ledger substituted or exceeds metadata bound')
+                ledger.write(record); ledger.flush(); os.fsync(ledger.fileno())
+            return
         if event == 'directories':
             value['candidate_directories'] = [directory_pin(path) for path in detail]
         elif event == 'partial':
@@ -250,6 +268,11 @@ class NightlyJob:
             folder = self.root / value['input_name'];folder.mkdir()
             value['input_identity'] = directory_pin(folder);self.save(value)
             try:
+                if self.store.object_encoding == 'chunked-zlib-1-v1':
+                    ledger = self.root / 'object-ledger.jsonl'
+                    write_new(ledger, b'')
+                    value['object_ledger_identity'] = pin(ledger.stat())
+                    self.save(value)
                 provider, capture_id, descriptor = capture_factory(folder, self.register_input, self.seal_input, parent=None)
                 registered = provider.records[capture_id]['result']
                 if descriptor.get('parent') is not None or registered.get('parent') is not None:
@@ -294,6 +317,33 @@ class NightlyJob:
             except Exception as error:
                 return {'passed': False, 'status': 'reconciliation_required', 'reason': str(error),
                         'next': 'reconcile the recorded attempt; preserve current and unknown artifacts'}
+
+    def object_ledger(self, value, *, allow_missing=False):
+        """Exact sealed-byte intents recorded before each candidate link."""
+        result = {}
+        if not value.get('object_ledger_identity'):
+            return result
+        if allow_missing and not os.path.lexists(self.root / 'object-ledger.jsonl'):
+            return result
+        with regular(self.root / 'object-ledger.jsonl') as stream:
+            info = os.fstat(stream.fileno())
+            if pin(info) != value['object_ledger_identity'] or info.st_size > MAX_INDEX:
+                raise ValueError('object ledger substituted or oversized')
+            while line := stream.readline(4097):
+                if len(line) > 4096 or not line.endswith(b'\n'):
+                    raise ValueError('object ledger is incomplete; preserve candidate')
+                row = json.loads(line)
+                if (row.get('candidate') != value['candidate']
+                        or not re.fullmatch('(chunk-)?[0-9a-f]{64}', row.get('name', ''))
+                        or not re.fullmatch('[0-9a-f]{64}', row.get('sha256', ''))
+                        or not isinstance(row.get('identity'), list) or len(row['identity']) != 2
+                        or any(type(x) is not int for x in row['identity'])):
+                    raise ValueError('object ledger binding differs; preserve candidate')
+                name = row.pop('name');row.pop('candidate')
+                if name in result and result[name] != row:
+                    raise ValueError('conflicting object ownership')
+                result[name] = row
+        return result
 
     def reconcile(self, *, retention_adopted=False, inputs_quiescent=False):
         if retention_adopted is not True or inputs_quiescent is not True:
@@ -352,6 +402,9 @@ class NightlyJob:
 
     def _reconcile_held(self):
         value = self.read();current = self.store.current()
+        published = current is not None and current['generation'] == value['candidate']
+        object_records = self.object_ledger(value, allow_missing=published or
+            not os.path.lexists(self.store.root / value['candidate']))
         allowed = {'store.json','lease','current.json',value['candidate']}
         if value['previous']: allowed.add(value['previous']['generation'])
         if value['pointer']: allowed.add(value['pointer']['name'])
@@ -378,7 +431,6 @@ class NightlyJob:
                     'physical_b_verified': True, 'generation': current['generation'],
                     'scope_sha256': self.store.scope, 'manifest_sha256': hashlib.sha256(encoded(current)).hexdigest()}:
                 raise ValueError('independent current readback failed; preserve all attempts')
-        published = current is not None and current['generation'] == value['candidate']
         if published:
             if hashlib.sha256(encoded(current)).hexdigest() != value.get('candidate_manifest_sha256'):
                 raise ValueError('published candidate differs from recorded job')
@@ -415,7 +467,7 @@ class NightlyJob:
                         if checksum != value.get('candidate_manifest_sha256'):
                             raise ValueError('candidate manifest changed')
                         expected_objects = self.store.object_inventory(candidate)
-                    expected = set(expected_objects)
+                    expected = set(expected_objects) | set(object_records)
                     partial = value['partial']
                     if partial: expected.add(partial['name'])
                     if {p.name for p in folder.iterdir()} - {'objects','manifest.json'} \
@@ -427,6 +479,10 @@ class NightlyJob:
                         if path.parent == objects:
                             if partial and path.name == partial['name']:
                                 if pin(info) != partial['identity']: raise ValueError('partial substituted')
+                            elif path.name in object_records:
+                                recorded = object_records[path.name]
+                                if pin(info) != recorded['identity'] or checksum != recorded['sha256']:
+                                    raise ValueError('sealed candidate object substituted; preserve')
                             else:
                                 chunk = path.name.startswith('chunk-')
                                 for _ in object_blocks(path, path.name[6:] if chunk else path.name,
@@ -449,6 +505,8 @@ class NightlyJob:
                 unlink_pinned(inputs/raw,row['identity'],parent_identity=value['input_identity'])
             if directory_pin(inputs)!=value['input_identity']:raise ValueError('input directory changed before rmdir')
             inputs.rmdir();sync_directory(self.root)
+        if value.get('object_ledger_identity'):
+            unlink_pinned(self.root / 'object-ledger.jsonl', value['object_ledger_identity'])
         if os.path.lexists(self.root/'progress.json'):
             with regular(self.root/'progress.json') as stream: identity = pin(os.fstat(stream.fileno()))
             unlink_pinned(self.root/'progress.json',identity)

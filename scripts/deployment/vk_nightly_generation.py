@@ -264,6 +264,8 @@ class NightlyStore:
                 if observe:
                     observe('partial', (temporary, os.fstat(sink.fileno())))
                 sink.write(data); sink.flush(); os.fsync(sink.fileno())
+                if observe:
+                    observe('object', (target, os.fstat(sink.fileno()), hashlib.sha256(data).hexdigest()))
             os.link(temporary, target, follow_symlinks=False)
             temporary.unlink()
 
@@ -289,6 +291,7 @@ class NightlyStore:
                     # Recheck the individual sealed prefix before creating the
                     # new generation's independently owned link.
                     for _ in object_blocks(old, chunk_hash, length, COMPRESSED): pass
+                    self.record_link(old, target, observe)
                     os.link(old, target, follow_symlinks=False)
                 else:
                     create(target, zlib.compress(data, 1))
@@ -300,6 +303,13 @@ class NightlyStore:
         layout = encoded({'encoding': CHUNKED, 'sha256': row['sha256'], 'bytes': size, 'chunks': refs})
         create(objects / row['sha256'], layout)
         return size, stored
+
+    def record_link(self, old, target, observe):
+        if observe and self.object_encoding == CHUNKED:
+            with regular(old) as stream:
+                info = os.fstat(stream.fileno())
+                checksum = digest_stream(stream)
+            observe('object', (target, info, checksum))
 
     def advance(self, changes, absent, *, expected_previous, reserve_bytes, retention_adopted=False,
                 capture_context=None, generation=None, observe=None):
@@ -441,12 +451,16 @@ class NightlyStore:
                 if row['kind'] == 'hardlink' and (row.get('target') not in entries or entries[row['target']]['kind'] != 'file'):
                     raise ValueError('unresolved nightly hardlink')
                 if row['kind'] == 'file' and not (objects / row['sha256']).exists():
+                    self.record_link(self.root / previous['generation'] / 'objects' / row['sha256'],
+                                     objects / row['sha256'], observe)
                     os.link(self.root / previous['generation'] / 'objects' / row['sha256'],
                             objects / row['sha256'], follow_symlinks=False)
                 if row['kind'] == 'file' and self.object_encoding == CHUNKED:
                     for chunk in chunk_layout(objects / row['sha256'], row['sha256'], row['bytes']):
                         target = objects / ('chunk-' + chunk['sha256'])
                         if not os.path.lexists(target):
+                            self.record_link(self.root / previous['generation'] / 'objects' / target.name,
+                                             target, observe)
                             os.link(self.root / previous['generation'] / 'objects' / target.name,
                                     target, follow_symlinks=False)
             manifest = {'producer': PRODUCER, 'generation': generation, 'scope_sha256': self.scope,

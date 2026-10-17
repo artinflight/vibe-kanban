@@ -13,7 +13,7 @@ reserve credits, change settings or trigger provider/model calls.
 | Argument | Supported values |
 | --- | --- |
 | `window` | `since_reset` (default), `day`, `week`, `custom` |
-| `from_time`, `to_time` | RFC3339; both required for `custom`; `to_time` can pin any window |
+| `from_time`, `to_time` | RFC3339; `custom` requires `from_time`; optional `to_time` pins any window |
 | `group_by` | `workspace` (default), `project`, `session`, `execution`, `model` |
 | Entity filters | `project_id`, `workspace_id`, `session_id`, `execution_id`: UUIDs |
 | `model` | Exact model name, at most 128 characters |
@@ -79,9 +79,68 @@ frontend and workspace agents remain running. Rollback restores only the prior
 connector source and reloads the same unit; never restore old chat/receipt data
 over new writes. Existing subscriptions and paired access stay untouched.
 
-Current candidate: 44 light Python tests and 28 installed-policy/read regressions
+Current candidate: 45 light Python tests and 28 installed-policy/read regressions
 pass, including unchanged schemas, CU-only isolation, independent stale state,
 null/exact-value preservation, input bounds and denied controls. `pnpm run format`
 was attempted: Rust formatting passed; frontend formatting stopped because
-Prettier is absent. No UI dependencies or compiler work were added. Final helper
-pin, installed acceptance and catalog status are recorded below when verified.
+Prettier is absent. No UI dependencies or compiler work were added. Final helper pin, installed acceptance and catalog status follow below.
+
+
+## Live baseline and remaining catalog dependency
+
+Connector **1.6** was adopted at **2026-10-17 10:47:43 UTC** from connector
+source `6ca6c443dee0cda63fee1a271f91de25d3ae7624` and CU helper source
+`64e253b6e863b7c3720aaf052270298fa596df67`. Only the connector service
+reloaded; readiness took **0.363 seconds**. Other tracked services, existing
+source modules, protected receipt/hold/access/pairing/subscription rows and the
+frozen Stop branch were verified unchanged. The private Desktop B source/data
+rollback was retrieved and checked byte for byte, with SQLite integrity passing.
+
+| Installed module | SHA256 |
+| --- | --- |
+| `adapter.py` | `3a590169b3b84ddfabf31be2d0fa29729752be0deabcec1c00ce4f6df593d1fb` |
+| `report_reconciliation.py` | `48e63ee6ff5cd67f225557f1b0267b01ad5fb97d58c46743b0331165bb5df4df` |
+| `usage_reporting.py` | `a47ee6225a6a4b1237e8f5d861ff5b502df48572b0059eb290cb7d0148f587cd` |
+| `dot_usage_report.py` | `92b2b3b7d869064f1d60ad601194273da62ebb10690f7f2a0b2c2880cb9db465` |
+| `dot_credit_budget.py` | `2b67e251f87a35ee59420b74e919544143e30ae746b52192ff166fcff07b319c` |
+
+The actual cached registered status tool returned `usage_report` with
+`cu.dot-report.v1`, `status:recorded`, token freshness true, requested-window
+coverage true, and five bounded rows. The original delivery fields matched the
+pre-adoption response exactly, including `readback_fresh:false`. The original
+credit field kept its own stale state. The unrelated workspace response was
+unchanged and had no reporting field. Root independently confirmed this same
+cached path. Observations are dated evidence; callers must read anew for advice.
+
+Real installed discovery and dispatch through the native MCP upstream passed
+for both `get_usage_report` and `get_usage_summary`, with recorded, fresh,
+covered data. This is separate from actual main Dot adoption of the new names.
+Both this execution and root's independent check still lacked those names in
+`ALL_TOOLS`. Registered calls reached the new service, but its recent journal
+showed calls and **no `tools/list`, `events/list` or external `initialize`** since
+activation. This supports a platform catalog discovery/adoption dependency.
+Main Dot's selectable named-tool dispatch is therefore **unverified**. No user
+refresh/testing, credential replacement, invented forwarding route or new worker
+is requested. The existing cached summary works now. Full selectable reporting
+still needs supported platform catalog propagation and a named registered call.
+
+## Prepared optional-cutoff compatibility correction
+
+CU's final contract allows `custom` with `from_time` alone: the helper uses its
+latest existing scan cutoff. The wrapper correction accepts that shape without
+inventing an end time. Explicit cutoffs remain ordered and capped at 31 days;
+when omitted, CU validates those bounds against the actual recorded cutoff.
+The focused regression passes, for 13 reporting tests / 45 connector tests in
+scope. The pinned CU helper's 24 report tests also passed independently here;
+CU reports 32 including its eight incumbent credit tests.
+
+The corrected wrapper SHA256 is
+`ef7dfaa869377f833e7fa95a915a70f702085b6147794646cc80393db88d8472`.
+It is **prepared and not installed**: the live wrapper remains `a47ee622...` and
+currently requires an explicit end for `custom`. Staging requested the newly
+verified baseline be sealed without another reload while it reconciles the
+prepared steering overlay. This narrow correction needs only its next coordinated
+connector-only adoption/reload, independently of the backend Stop release.
+It does not affect the working cached summary or require CU/backend changes.
+Preserve the current 1.6 adapter/status/helper hashes when preparing that overlay;
+the old 1.5/steering-only pins are superseded.

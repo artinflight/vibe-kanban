@@ -1,3 +1,8 @@
+Current connector is 1.6 with additional read-only usage reporting; the budget
+module and cached credit fallback retain their exact prior implementation.
+See [current reporting baseline and adoption limits](DOT_USAGE_REPORTING.md).
+The older 1.5 activation notes below are historical.
+
 # Dot account-wide credit-budget readback
 
 `get_credit_budget` is a no-argument, read-only connector tool. It reads the

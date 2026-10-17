@@ -1,3 +1,17 @@
+# Dot full CU reporting — live October 17, 10:47 UTC
+
+Connector1.6 source6ca6c443d / CU helper64e253b6 is live after connector-only
+reload0.363s. Actual cached CU status and independent root acceptance confirm
+usage_report recorded/fresh/covered,5rows, unchanged delivery/credit semantics
+and unrelated workspace. Native installed discovery/dispatch of both named tools
+pass. Main Dot's new named-tool catalog/registered calls remain unverified;
+root confirms names absent. Existing cached default summary works now.
+Optional custom cutoff correction is tested/prepared, NOT installed; live wrapper
+still requires explicit end for custom. Preserve sealed1.6 baseline for Staging's
+steering preparation; next connector-only adoption is independent of Stop/backend.
+No new workers, controls, permissions, CU/Vibe/backend restart or repeated refresh.
+[Exact live hashes, tests, protocol and remaining adoption](DOT_USAGE_REPORTING.md).
+
 # Dot full CU reporting — October 17 preparation
 
 The original CU owner owns the report/query/helper and accounting reconciliation.

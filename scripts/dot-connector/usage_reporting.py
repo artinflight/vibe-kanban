@@ -30,8 +30,9 @@ TOOLS = [{
     'name': 'get_usage_report',
     'description': 'Read CU account totals and paginated project/workspace/session/execution/model '
         'breakdowns with input, cached, output tokens and available sourced cost/credit metrics. '
-        'Default is since the account reset. Custom RFC3339 intervals are half-open [from,to), '
-        'at most 31 days. Coverage, freshness, null attribution and estimates remain explicit; '
+        'Default is since the account reset. Custom requires RFC3339 from_time; omitted to_time '
+        'uses the latest recorded cutoff. Half-open [from,to) intervals are at most 31 days. '
+        'Coverage, freshness, null attribution and estimates remain explicit; '
         'account totals differ from filtered rows. No prompts/logs, provider refresh, agent turn, '
         'budget permission or control. Credits are never inferred from tokens.',
     'inputSchema': {'type': 'object', 'properties': PROPERTIES,
@@ -63,9 +64,13 @@ def arguments(args):
     if window not in WINDOWS or group not in GROUPS:
         raise ValueError('Invalid reporting window or grouping')
     if window == 'custom':
-        start, end = (_timestamp(result.get(key)) for key in ('from_time', 'to_time'))
-        if not dt.timedelta(0) < end - start <= dt.timedelta(days=31):
-            raise ValueError('Custom interval must be positive and at most 31 days')
+        start = _timestamp(result.get('from_time'))
+        if 'to_time' in result:
+            end = _timestamp(result['to_time'])
+            if not dt.timedelta(0) < end - start <= dt.timedelta(days=31):
+                raise ValueError('Custom interval must be positive and at most 31 days')
+        # CU validates ordering and the 31-day bound against its recorded cutoff
+        # when to_time is omitted; the connector must not substitute wall time.
     elif 'from_time' in result:
         raise ValueError('Explicit from_time requires window=custom')
     if 'to_time' in result:

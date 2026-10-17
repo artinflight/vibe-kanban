@@ -68,6 +68,14 @@ class Reporting(unittest.TestCase):
             m.call(self.api, 'get_usage_report', args)
             self.assertEqual(self.helper.read_usage_report.call_args.kwargs['to_time'], args['to_time'])
 
+    def test_custom_can_use_latest_recorded_cutoff_without_inventing_to_time(self):
+        args = {'window': 'custom', 'from_time': '2026-10-17T10:02:00Z'}
+        m.call(self.api, 'get_usage_report', args)
+        got = self.helper.read_usage_report.call_args.kwargs
+        self.assertEqual(got['from_time'], args['from_time'])
+        self.assertNotIn('to_time', got)
+        self.helper.read_usage_report.assert_called_once()
+
     def test_invalid_inputs_fail_before_any_read(self):
         invalid = [[], None, False, {'path': '/private'}, {'url': 'http://host'},
             {'refresh': True}, {'window': 'all'}, {'window': None}, {'group_by': 'prompt'},

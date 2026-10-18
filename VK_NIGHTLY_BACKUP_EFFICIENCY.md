@@ -1,5 +1,41 @@
 # Nightly backup efficiency integration
 
+October18 continuation: resource preparation and separately admitted proof only.
+Deployment, schedule activation, cutover and original retirement remain excluded.
+The older production-completion authorization below is retained history.
+
+## Shared-host validation and cold code pages
+
+Pressure admission must cover the entire validation phase. Small anonymous
+memory use does not establish a quiet environment: file-backed major faults can
+produce memory stalls. One instrumented trial isolated 471 ms of stalls and
+333 major faults in the validation unit while its limit/OOM counters stayed
+zero. This is evidence for that reproduced mechanism, not attribution of every
+earlier stop to a single peer service. Aggressive cache eviction worsened the
+faults and was rejected; it is not part of the Nightly implementation.
+
+Use ordinary buffered fingerprint reads of the exact trusted runtime binaries
+and resolved libraries before executing them. The existing `binary_sha256`
+validation can carry these inputs; the shared Preparation runner's tool/context
+fingerprints remain the evidence model. Keep warmup and validation in the same
+bounded unit so their memory and CPU remain charged together. Page residency is
+volatile; a cached static result does not certify that pages remain resident.
+
+Keep Nightly's reviewed CPU, memory high/max, zero-swap, task, PSI, storage,
+health/security and whole-job bounds. Run stages directly and serially within
+the task cap, without nesting extra package-manager processes. In the retained
+comparison, buffered tool warmup completed Rust formatting at PSI0; the three
+remaining direct frontend stages also passed at PSI0 and peaked at12 sampled
+tasks under the unchanged32 cap. The earlier aggregate-wrapper abort remains
+a failed receipt. Reuse accepted build/runtime results; do not rebuild to warm
+their code pages or transplant the compiler-freeze policy into online capture.
+
+These checks establish a supported resource preparation path. They do not
+measure full backup/restore coexistence or establish independent full restore
+acceptance. Reconcile fresh single-validation admission before the next full
+stream. No timer, adoption, deployment, service change or archive retirement is
+authorized by this preparation.
+
 October17: Seamus authorizes completion of production restore/integration checks,
 publication, deployment and the single nightly schedule. This workspace owns
 that package/schedule; restart preflight owns its shared consumer and Staging

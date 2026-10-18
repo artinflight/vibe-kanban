@@ -1,3 +1,31 @@
+# Nightly guarded validation path — October18
+
+Resource diagnosis now has more than a transient admission sample. An isolated
+8599-pin/2,348,380,620-byte validation passed in265.984s at fullPSIavg10=0,
+with sampled anonymous peak45.9MB and file-cache peak1.24GB. A controlled trial
+then isolated470943us of memory stalls and333 major file faults in its own unit,
+with no high/max/OOM event, swap-out, global reclaim or compaction in that event
+interval. This explains a reproduced cold-page-fault mechanism; it does not
+attribute every older Nightly/CU/Staging stop to one service.
+
+Aggressive cache eviction made code faults worse and was withdrawn. Its source,
+fixtures and failed receipts remain privately retained; public runtime source
+was restored unchanged. Buffered warmup of532,694,176bytes across15 fingerprinted
+tool/dependency files then completed Rust formatting at PSI0. The aggregate pnpm
+chain later aborted134, retained as failed. Only unfinished frontend stages were
+run directly/serially: all three passed at PSI0, sampled tasks peak12 under the
+unchanged32 cap and pids-limit events0. Ops check passed. All owned units terminal.
+No peer service, setting, routing/model, recovery or archive was changed.
+
+One cache-free r8 packet is prepared, unlaunched and not admitted. It adds39
+runtime tool/library byte fingerprints (27,929,184bytes) to the existing buffered
+binary validation, retains97 roots/8599 runtime pins, original resource guards
+and same2GiB SSD allowance including retained diagnostics. All-cgroup and VM
+attribution accompany the next original guarded stream. Fresh separate owner/
+resource/security admission remains false; no automatic retry or reserve reset.
+Full capture/restore working-space demand and independent current-plan restore
+remain unverified. No deployment, schedule, cutover, restart or retirement.
+
 # Nightly actual R7 terminal — October18 03:25UTC
 
 R7 PID1315986/start39765267 started03:15:54.600113UTC and guard-aborted

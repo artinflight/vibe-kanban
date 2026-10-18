@@ -1,3 +1,32 @@
+# Nightly resource diagnosis and next packet — October18
+
+No owned validation/capture unit remains active or automatically armed. R7 is
+still guard-aborted/preserved, not a complete measurement. Private evidence is
+in pressure-root-cause-20261018T0330 under the existing Nightly evidence area.
+The pin-read-only phase passes8599 pins/2.35GB in266s at PSI0. Its file cache
+reaches1.24GB while anonymous memory remains46MB; MemAvailable alone is not an
+exclusive working-space reservation. The instrumented cache-eviction trial
+caused its own cold-code faults and is rejected, with exact source retained.
+Do not revive the withdrawn capacity-r8-own-cache-budget proposal.
+
+Chosen path uses buffered fingerprint reads of trusted runtime code/dependencies
+and serial direct validation within the ORIGINAL Nightly CPU25%,High2GiB,
+Max3GiB,Swap0,Tasks32 envelope. Rust formatting and all3 frontend stages passed
+with PSI0; keep the earlier pnpm134 abort failed. Direct stages peak12 sampled
+tasks and pids-limit events0. No compiler, peer-service control or guard exemption.
+Prior accepted builds/465 runtime checks/144 timing reads remain with Staging;
+they were not repeated. Current root cause is qualified, not blame by RSS size.
+
+capacity-r8-buffered-runtime/PREPARED.safe.json is the sole new candidate:
+configSHA a4898b64e94590f395510e114ce3b9cd8e861b9930172aeea3474f36a5b766d7.
+It is UNLAUNCHED with separate admission explicitly false. Existing binary-byte
+validation warms39 runtime/tool/library files totaling27.9MB in the same guarded
+unit; same97 roots/8599 pins, all-cgroup/VM deltas and original caps/floors remain.
+Dynamic accounting includes every retained diagnostic and the withdrawn packet;
+same2GiB allowance, no reset. Reconcile fresh owner admission/single-validation
+window, then measure the full stream before separate cold/restore coexistence
+admission. No full restore, deployment, schedule or original retirement accepted.
+
 # Nightly R7 stopped; preserve evidence — October18 03:25UTC
 
 Existing r7 ended03:22:38.153339UTC, guard-aborted after404.639s, host fullPSI

@@ -36,3 +36,11 @@ It requires matching Dot Python/API plus frontend release; **not activated here*
 Staging owns its current timestamp execution5ab782bd and subsequent integration.
 Apply only the feature diff onto its newer frontend/current Python baseline;
 retain timestamps, collapsible UI, continuations, CU/Stop and latest-data rollback.
+
+[Jump to Needs Attention](VK_DOT_ATTENTION_NAVIGATION.md) is the newest UI-only
+follow-up: all-page unresolved-flag navigation, stable selection and no flag
+mutation. Its handoff supersedes the timestamp-in-progress status above:
+timestamps are verified live07:12:15 EDT Oct18; Reply to plus navigation still
+await Staging's next integration. Current frontend/rollback pins and old r1
+inputs are retained in the derived private baseline record; no new capture.
+Preserve execution88a68ab1 retains exact-message acknowledgement ownership.

@@ -46,3 +46,10 @@ Minimal UI plus additive owner-link storage/API/event context, independent of
 Dot's existing delivery/continuation reply_to. Local issue/project desktop/mobile
 and current Python/connector compatibility checks pass. No frontend build or
 activation here; Staging retains timestamp execution5ab782bd and release ownership.
+
+Newest related follow-up: [Jump to Needs Attention](VK_DOT_ATTENTION_NAVIGATION.md)
+adds pane-local navigation across all paginated unresolved flags. Reply to2a29ae93
+is preserved; Staging's timestamp release is now verified live. The derived
+handoff binds its current frontend/rollback pins without editing prior inputs or
+starting a capture. Staging owns the next combined release; Preserve execution88a68ab1
+owns exact-message acknowledgements. No activation or shared API changes here.

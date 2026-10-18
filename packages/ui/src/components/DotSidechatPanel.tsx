@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 export interface SidechatReplyReference {
   id: string;
@@ -94,7 +94,60 @@ function MessageTimestamp({ created }: { created: number }) {
 export function DotSidechatPanel(props: DotSidechatPanelProps) {
   const history = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
+  const attentionNavigationThread = useRef<string | null>(null);
   const [followLatest, setFollowLatest] = useState(true);
+  const attentionStatusId = useId();
+  const [attentionCursor, setAttentionCursor] = useState<{
+    thread: string;
+    id: string;
+    seq: number;
+  } | null>(null);
+  const flagged = props.messages
+    .filter(
+      (message) =>
+        message.role === 'dot' &&
+        message.attention &&
+        !message.attention.resolved
+    )
+    .sort((a, b) => a.seq - b.seq);
+  const cursor =
+    attentionCursor?.thread === props.threadId ? attentionCursor : null;
+  const attentionIndex = flagged.findIndex(
+    (message) => message.id === cursor?.id
+  );
+  function jumpAttention(direction: -1 | 0 | 1) {
+    const root = history.current;
+    if (!root || props.loading || !flagged.length) return;
+    const target =
+      direction === 0
+        ? flagged[0]
+        : attentionIndex >= 0
+          ? flagged[
+              (attentionIndex + direction + flagged.length) % flagged.length
+            ]
+          : direction > 0
+            ? (flagged.find((message) => message.seq > (cursor?.seq ?? -1)) ??
+              flagged[0])
+            : ([...flagged]
+                .reverse()
+                .find((message) => message.seq < (cursor?.seq ?? Infinity)) ??
+              flagged[flagged.length - 1]);
+    const node = root.querySelector<HTMLElement>(
+      '#message-' + CSS.escape(target.id)
+    );
+    if (!node) return;
+    setFollowLatest(false);
+    attentionNavigationThread.current = props.threadId;
+    setAttentionCursor({
+      thread: props.threadId,
+      id: target.id,
+      seq: target.seq,
+    });
+    // Scroll only this history pane, not another mounted chat or the phone page.
+    root.scrollTop +=
+      node.getBoundingClientRect().top - root.getBoundingClientRect().top - 12;
+    node.focus({ preventScroll: true });
+  }
   const [readStateBusy, setReadStateBusy] = useState(new Set<string>());
   const readStateInFlight = useRef(new Set<string>());
   const readsInFlight = useRef(new Set<string>());
@@ -203,11 +256,14 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
       if (!message || !props.messages.some((item) => item.id === message))
         return;
       setFollowLatest(false);
+      setAttentionCursor(null);
+      attentionNavigationThread.current = null;
       document
         .getElementById('message-' + message)
         ?.scrollIntoView({ block: 'center' });
     };
-    reveal();
+    // Polling must not pull attention navigation back to an older quoted link.
+    if (attentionNavigationThread.current !== props.threadId) reveal();
     window.addEventListener('hashchange', reveal);
     return () => window.removeEventListener('hashchange', reveal);
   }, [props.threadId, props.messages]);
@@ -238,6 +294,46 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           {props.workspaceLabel}
         </span>
       </div>
+      <nav
+        className="dot-attention-nav"
+        aria-label="Needs Attention navigation"
+      >
+        <button
+          type="button"
+          disabled={props.loading || !flagged.length}
+          aria-describedby={attentionStatusId}
+          onClick={() => jumpAttention(0)}
+        >
+          Jump to Needs Attention
+        </button>
+        <button
+          type="button"
+          aria-label="Previous flagged message"
+          disabled={props.loading || !flagged.length}
+          onClick={() => jumpAttention(-1)}
+        >
+          ←
+        </button>
+        <button
+          type="button"
+          aria-label="Next flagged message"
+          disabled={props.loading || !flagged.length}
+          onClick={() => jumpAttention(1)}
+        >
+          →
+        </button>
+        <span id={attentionStatusId} role="status">
+          {props.loading
+            ? 'Loading conversation…'
+            : props.error && !props.messages.length
+              ? 'Could not check flags. Refresh conversation.'
+              : !flagged.length
+                ? 'No unresolved flagged messages'
+                : attentionIndex >= 0
+                  ? `${attentionIndex + 1} of ${flagged.length}`
+                  : `${cursor ? 'Flag changed · ' : ''}${flagged.length} unresolved`}
+        </span>
+      </nav>
       {!props.live && (
         <div className="dot-fixture">
           Isolated prototype · fixture replies only
@@ -252,7 +348,8 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           const node = history.current;
           if (node)
             setFollowLatest(
-              node.scrollHeight - node.scrollTop - node.clientHeight < 48
+              !cursor &&
+                node.scrollHeight - node.scrollTop - node.clientHeight < 48
             );
         }}
       >
@@ -278,6 +375,12 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           <article
             key={message.id}
             id={'message-' + message.id}
+            tabIndex={-1}
+            data-dot-attention-current={
+              attentionIndex >= 0 && flagged[attentionIndex].id === message.id
+                ? ''
+                : undefined
+            }
             className={'dot-message dot-message-' + message.role}
           >
             <div className="dot-byline">
@@ -429,7 +532,10 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
         <button
           type="button"
           className="dot-latest"
-          onClick={() => setFollowLatest(true)}
+          onClick={() => {
+            setAttentionCursor(null);
+            setFollowLatest(true);
+          }}
         >
           Jump to latest ↓
         </button>

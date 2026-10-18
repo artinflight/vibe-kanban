@@ -420,3 +420,37 @@
     min-height: 44px;
   }
 }
+
+.dot-attention-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 10px;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.dot-attention-nav button {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid #8884;
+  border-radius: 6px;
+  color: inherit;
+  background: none;
+  cursor: pointer;
+}
+.dot-attention-nav button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.dot-message[data-dot-attention-current] {
+  outline: 2px solid #bc926b;
+  outline-offset: 2px;
+}
+@media (max-width: 767px) {
+  .dot-attention-nav button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

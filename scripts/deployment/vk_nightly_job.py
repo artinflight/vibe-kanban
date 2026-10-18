@@ -71,9 +71,10 @@ def validate(config,plan):
         if stat.S_ISDIR(info.st_mode) and [info.st_dev,info.st_ino]!=[row['device'],row['inode']]:
             raise ValueError('source directory substituted; review scope binding')
     if [str(p) for p in Exclusions(plan).roots]!=config['exclusion_targets']:raise ValueError('exclusion target changed')
+    source_roots=tuple(Path(root) for root in plan['sources'])
     for raw, row in config.get('immutable_source_files', {}).items():
         p=Path(raw)
-        if (str(p.resolve()) != raw or not any(p == Path(root) or p.is_relative_to(Path(root)) for root in plan['sources'])):
+        if (str(p.resolve()) != raw or not any(p == root or p.is_relative_to(root) for root in source_roots)):
             raise ValueError('immutable runtime artifact outside bound source scope')
         fd=os.open(p,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
         with os.fdopen(fd,'rb') as stream:

@@ -18,6 +18,38 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
+## Nightly bounded recovery — October18 03:09UTC
+
+Corrected r6 started03:04:56.725347UTC PID1205519/start39699480 and guard-aborted
+03:06:43.457456UTC after107.644s, before source capture. Two consecutive host
+full-PSI samples0.14/0.19 exceeded unchanged0.1; RAM16.40/16.13GB, swap14.54/14.46GB,
+SSD9.29GB and B252.87/252.84GB were available. No capacity/restore result exists.
+R6 and all earlier data remain preserved; do not report an earlier live sample
+as completion. Current quiet pressure alone does not identify the past culprit.
+
+The underlying r5 bootstrap defect is fixed inab65e408f. A real native B rehearsal
+completed03:02:56UTC:98,442-byte packet accepted,18-byte registered fixture sealed
+with independent native SHA87a317c79bfd1ece6736e62f119c5ae2e8b071270ff910f3e78d5907890cfb66.
+No generation published; intentional channel close retained its isolated attempt.
+Fresh B SMART/native identity/PHY matched baseline, COMRESET2 unchanged. This
+proves the repaired transport boundary, not whole-plan backup/restore.
+
+Pin validation now precomputes source-root Paths instead of recreating them for
+each pin/root pair; all identity and content-hash guards remain.42 focused tests
+pass. Next guarded attempt should record its own memory events and pressure
+alongside other groups' stall deltas, so renewed pressure can be attributed with
+contemporaneous evidence; no foreign process is interrupted or limit changed.
+
+Read-only discovery found existing VK-Candidate-20261009 Linux backing storage
+at B:/vk-backups/vk-safe-release-20261009/linux-candidate/distribution. Its virtual
+ext4 free993,157,656,576bytes is NOT physical reserve; physical B was252,838,756,352.
+A fresh private Linux restore tree there may avoid large MCP SSD scratch, but
+requires measured full payload/metadata/ownership, B/VHD growth/coexistence budget
+and separate admission. No tools, mounts, settings or restore tree were created.
+CU released02:58:34 and Staging's small adapter check ended03:03:52; no heavy
+window remains there. Their same caps/guards and Nightly's same2GiB allocation
+remain. Do not deploy, schedule, cut over or retire old originals.
+
 ## Nightly terminal reconciliation and bootstrap fix — October18 03:00UTC
 
 R5 ended02:49:56.901223UTC, child exit1 after254.799s. The prior final report

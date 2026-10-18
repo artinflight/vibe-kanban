@@ -1,3 +1,13 @@
+# Sole retained-r2 ACTIVE — October18 11:02:35UTC
+
+Fresh separate admission passed; only producer1889756/start42565325 is running.
+The98-root/10988-pin current immutable epoch is bound, with strict initial live
+matching. Same5GiB TOTAL SSD allocation and memory/native-health/storage/access
+protections remain. Exact config, bounded19:02:35UTC deadline, unit and collector
+are in HANDOFF/current private coordination. All earlier attempts are terminal
+and preserved. Full measurement/generation/independent restore remain pending;
+no operational adoption, deployment, schedule, cutover or original cleanup.
+
 # Private captured-epoch validation — October18 follow-up
 
 25 supervisor/frontend/recovery tests now pass. Initial capture admission and all

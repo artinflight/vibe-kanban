@@ -1,3 +1,24 @@
+# Sole retained-r2 ACTIVE — October18 11:02:35UTC
+
+Producer1889756/start42565325, supervisor1877794,
+vk-nightly-retained-capture-r2-20261018.service. ConfigSHA
+30e8d59529510348ddf301905f76e915a16ee02a930f5f3d01e1c95b8bc98805.
+Code snapshotcb3b659939a33e53143e1304bdbddde836f0b83c. Exact phase and current
+shared receipts are in cold-r2-frontend-epoch-measured. Passive collector exec
+session22043 owns this result; supported collect-result.private.py starts no job.
+Initial-only8h deadline19:02:35UTC allows serial upload/full archive replay at
+observed transport speed; all old windows are terminal, unchanged and preserved.
+Same one CPU/High2GiB/Max3GiB/Swap0/Tasks32, aggregate B writes8MiB/s, TOTAL
+Nightly5GiB SSD cap, strict2GiB SSD floor/other-owner balances, B8GiB floor/T18
+balance. Initial strict current-frontend/native-health/resources passed. No
+exclusive window or Staging hold. Later frontend-only publication is recorded
+for this captured epoch; exact live release adoption stays unready. Pinned
+material/backend/health/access/resource failures remain fatal. No full restore
+admission, generation adoption, deployment, timer, cutover or original cleanup.
+Do not duplicate, restart or replace this active producer. R9 and retained-r1
+actual terminal/leases/mounts are already collected below. Follow r2 to actual
+terminal, then fresh-measure simultaneous generation+independent restore demand.
+
 # Private captured-epoch validation — October18 follow-up
 
 25 supervisor/frontend/recovery tests now pass. Initial capture admission and all

@@ -1,3 +1,45 @@
+# Retained capture r1 actual terminal — October18 10:34UTC
+
+Sole retained capture producer702273/start41932456 ended10:34:18.985UTC,
+child1, guard_aborted after two valid coding-count8 observations exceeded the
+wrapper's7 cutoff. Unit MainPID0/failed, PID/start absent, FUSE mount absent;
+MCP and exact B job leases acquired. NO active/admitted Nightly bulk or retry.
+Supported collector r2 fixes missing B fields at guard stop; original collector,
+original guard/config/source and every partial input remain preserved.
+
+111 consistent SQLite images all have native B integrity seals. The original
+R9 failing274432-byte seed source now passes in1.592s with exact original SHA
+91a2613fdd95d82dacbbd685972c216b28a043d3679fab79c8e6ac96391d0bbb.
+Sealed inputs5472200254B include178203932B source list and149549B manifest.
+The UNSEALED partial archive is1332740096B; partial meter has760 entries.
+This is not complete demand, a generation, or independent full restore.
+Sampled whole-task SSD peak3472031744B against5368709120B cap; minimum observed
+SSD6743511040B/B240697958400B. Two stop samples had no B observation; never
+substitute zero. Largest local SQLite cache2356060160B. All originals retained.
+
+The7 cutoff originated in this agent's wrapper commit9f4b01d75; no user quote
+or configured capacity-controller limit was found. Stop samples still had
+10.6GB available RAM,11.8GB swapfree and no own OOM. Coding count is now telemetry,
+with invalid inventory rejected.18 supervisor/restore regressions pass, including
+actual own-group stopping for real resource failure and healthy-count8 completion.
+No scheduler/controller/executor/security setting changed. Actual memory/swap,
+cgroup limits, health, access, ownership, storage balances/floors and deadlines stay.
+
+Staging is preparing the authorized T63 frontend from a hosted artifact. Its
+compact packaging/readback has no Nightly conflict or hold. Next Nightly input
+admission is not armed: reconcile the actual served frontend binding when that
+change completes, then fresh-admit one capture. Staging's and T18's allocations
+are not reset. Shared NIGHTLY_PHASE_COORDINATION and retained-phase receipts now
+record this terminal result. run_session_prompt rejected because Staging is
+already running; shared receipt updated, no message delivery claimed.
+Independent-restore-preparation contains pinned, unlaunched proof controller,
+worker and read-only collector. Six restore fixtures plus native metadata/memory
+API checks pass; full current restore still pending. No deployment, timer,
+cutover or original/archive retirement. Last historical full materialization was
+October9/76 SQLite checks; not current-plan acceptance.
+
+# Historical retained-capture startup and R9 evidence
+
 # Sole retained measurement active — October18 09:17UTC
 
 The original R9 terminal below remains failed/preserved. Corrected producer

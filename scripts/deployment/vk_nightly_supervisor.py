@@ -24,7 +24,6 @@ from vk_prep_common import save, storage
 
 MEMORY_FLOOR = 5 * 1024**3 // 2
 SWAP_FLOOR = 512 * 1024**2
-MAX_CODING_ENTRIES = 7
 
 
 def exit_code(result):
@@ -37,8 +36,11 @@ def exit_code(result):
 def host_admission(meminfo, coding_entries):
     if meminfo['MemAvailable'] < MEMORY_FLOOR or meminfo['SwapFree'] < SWAP_FLOOR:
         return 'host memory/swap floor'
-    if type(coding_entries) is not int or not 0 <= coding_entries <= MAX_CODING_ENTRIES:
-        return 'tracked coding lane limit or unverifiable inventory'
+    # Agent count is telemetry, not a memory reservation or permission to
+    # cancel an already bounded backup. Actual executor/controller admission
+    # remains authoritative; this helper never changes its configuration.
+    if type(coding_entries) is not int or coding_entries < 0:
+        return 'unverifiable coding inventory'
     return None
 
 

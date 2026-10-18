@@ -1,3 +1,30 @@
+# October18 actual retained-r1 result and count-policy correction
+
+Retained-r1 ended10:34:18UTC by its count-only7 cutoff when valid inventory
+became8. The supported collector and both leases/mount/PID are reconciled;
+no active/admitted Nightly bulk remains.111 SQLite images pass native B sealing,
+including the original R9 failing seed. Inputs5,472,200,254B and partial unsealed
+archive1,332,740,096B are preserved; the full stream/760-row partial index is
+unaccepted. Sampled TOTAL task SSD peak3,472,031,744B fits its5GiB allocation;
+this does not establish full capture/restore peak or space requirements.
+
+Git provenance identifies7 as our wrapper heuristic, not a user limit or a
+capacity-controller setting. It caused an abort with10.6GB RAM/11.8GB swapfree
+and no own OOM. Count is now telemetry with invalid inventory rejected. Actual
+memory/swap, process/cgroup containment, runtime/native B health, access, ownership,
+deadline and shared storage protections remain; controller settings unchanged.
+18 supervisor/recovery tests pass, including actual group-stop and healthy8
+cases. New unprivileged restore helper reopens/hashes all destination bytes,
+checks bound SQLite databases, then recorded numeric metadata/xattrs/links.
+Completed content evidence survives a later metadata permission failure.
+Six of those18 tests exercise this helper; they are fixtures, not full acceptance.
+
+Staging's hosted T63 frontend packaging/readback has no Nightly overlap/hold.
+Bind its actual served result before the next separate capture admission. The
+prepared independent generation/restore worker remains unlaunched pending a
+complete current capture and measured simultaneous B demand. No production
+Nightly installation, schedule activation, cutover or recovery-original cleanup.
+
 # Nightly backup efficiency integration
 
 October18 continuation: resource preparation and separately admitted proof only.

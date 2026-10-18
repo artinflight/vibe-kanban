@@ -23,8 +23,14 @@ class Supervisor(unittest.TestCase):
         self.assertIsNotNone(host_admission({'MemAvailable': 8*1024**3, 'SwapFree': 76*1024**2}, 3))
         self.assertIsNone(host_admission({'MemAvailable': MEMORY_FLOOR, 'SwapFree': SWAP_FLOOR}, 7))
 
-    def test_interactive_lane_is_reserved(self):
-        for count in (8, True, -1, None):
+    def test_agent_count_does_not_substitute_for_measured_resource_health(self):
+        for count in (7, 8, 16):
+            self.assertIsNone(host_admission({'MemAvailable': MEMORY_FLOOR, 'SwapFree': SWAP_FLOOR}, count))
+            self.assertIsNotNone(host_admission({'MemAvailable': MEMORY_FLOOR-1, 'SwapFree': SWAP_FLOOR}, count))
+            self.assertIsNotNone(host_admission({'MemAvailable': MEMORY_FLOOR, 'SwapFree': SWAP_FLOOR-1}, count))
+
+    def test_unverifiable_inventory_is_not_treated_as_healthy(self):
+        for count in (True, -1, None, '8'):
             self.assertIsNotNone(host_admission({'MemAvailable': MEMORY_FLOOR, 'SwapFree': SWAP_FLOOR}, count))
 
     def test_failed_preflight_never_launches(self):
@@ -63,7 +69,7 @@ class Supervisor(unittest.TestCase):
             self.assertEqual(main(),75);validation.assert_not_called();launch.assert_not_called()
 
     def test_two_bad_lifetime_samples_stop_only_actual_owned_process_group(self):
-        with tempfile.TemporaryDirectory(dir='/mnt/vk-storage',prefix='nightly-guard-fixture-') as raw:
+        with tempfile.TemporaryDirectory(dir=os.environ.get('TMPDIR','/mnt/vk-storage'),prefix='nightly-guard-fixture-') as raw:
             marker=Path(raw)/'child.pid'
             source="import subprocess,sys,time,pathlib\np=subprocess.Popen([sys.executable,'-c','import time;time.sleep(60)']);pathlib.Path(sys.argv[1]).write_text(str(p.pid));time.sleep(60)"
             child=None;records=[]
@@ -100,6 +106,18 @@ class Supervisor(unittest.TestCase):
             return process
         result=supervise(launch,lambda:{'reason':None},lambda value:None,timeout_seconds=.04,interval=.01)
         self.assertEqual(result['status'],'job_timeout');self.assertIsNotNone(process.poll())
+
+    def test_eighth_agent_does_not_cancel_healthy_owned_job(self):
+        child=None
+        def launch():
+            nonlocal child
+            child=subprocess.Popen([sys.executable,'-c','import time;time.sleep(.04)'],start_new_session=True)
+            return child
+        def sample():
+            return {'reason':host_admission({'MemAvailable':MEMORY_FLOOR,'SwapFree':SWAP_FLOOR},8),
+                    'tracked_coding_entries':8}
+        result=supervise(launch,sample,lambda value:None,timeout_seconds=2,interval=.01)
+        self.assertTrue(result['passed']);self.assertEqual(child.returncode,0)
 
     def test_one_transient_bad_sample_does_not_waive_later_failure(self):
         process=None;samples=iter([None,'floor',None,'floor','floor'])

@@ -1,17 +1,23 @@
 # Storage admission pickup
 
-Current source-only task is on `vk/c205-vk-storage-respo`, based on staging
-`5b43524ea35b2eb5dd80d0881dc8445489f4442f`. Read
-[the native contract](VK_STORAGE_ALERT_ADMISSION.md),
+Source-only draft [PR277](https://github.com/artinflight/vibe-kanban/pull/277)
+continues from `af7b35ddd2cb48d6a276f6fd410820971d21a59b` on verified staging
+`5b43524ea35b2eb5dd80d0881dc8445489f4442f`. Read the
+[native v2 contract](VK_STORAGE_ALERT_ADMISSION.md),
 [validation checkpoint](STORAGE_ADMISSION_VALIDATION.md) and [stream](STREAM.md).
-Protocol `storage-admission-v2` is implemented with durable execution binding
-and explicit unbound cancellation fencing. Joint client review, exact native
-route tests and combined release acceptance must be distinguished from source.
-The original service test exited with 13 passed and one restart-fixture open
-failure. No owned compiler remains. Further compiler jobs are held for bounded
-Disk-owner capacity coordination; retain all source/build state and evidence.
-No live agent was dispatched and no activation is authorized. Staging owns
-adoption/combined build/rollback; never overlay its current Dot release.
+The publication hold is lifted for sanitized code/tests on the existing PRs;
+the host-heavy build/shared-target growth hold remains. No host Cargo, compiler,
+linker or aggregate build. Use the existing hosted PR checks.
+
+Prior native CI: 474 passed, one race assertion failed, 14 skipped and 157 not
+run. This correction asserts normal recovered queued input, adds ordinary
+interrupted-user-turn recovery to alert launch and tests persistence/replay.
+Hosted nextest disables fail-fast to exercise the complete suite. Results on
+this correction are pending. Joint T90 adapter review/integration and Staging
+combined release/rollback acceptance remain distinct from native source tests.
+No live dispatch, binding installation, live migration, timer, access change,
+merge, deploy or restart is authorized. Preserve saved model/effort/Recommend,
+genuine approval boundaries and all source/build outputs.
 
 The following prior pickup is retained as release context.
 

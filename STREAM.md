@@ -12,12 +12,14 @@ Preserve saved CODEX DEFAULT, Recommend-only, actual resource/budget/approval
 holds, queued user work and the existing cleanup owner. Staging retains its
 evolving Dot release, combined build, compatible rollback and activation.
 No merge, deploy, restart, timer, persistent access or live dispatch is included.
-Unrelated Nightly activity is context; shared capacity reconciliation controls
-additional build growth. The original isolated service test has exited (13 passed, restart fixture
-failed); no owned compiler remains. All further native/aggregate compiler jobs
-are held for the existing Disk owner’s bounded storage/resource remedy. Exact validation evidence and outstanding checks belong in the
-source-bound report/private handoff. Do not infer a passing backend route from
-prepared tests or the Operations fixtures.
+Unrelated Nightly activity is context; actual native admission gates remain.
+Sanitized source/test publication to the existing PRs is authorized. The host
+Cargo/compiler/linker/aggregate-build hold remains; normal GitHub-hosted PR CI
+is the source-validation path. Prior CI found a continuity-aware queue assertion
+error; this correction retains ordinary recovery, applies it to alert launch,
+and runs the complete native suite without fail-fast. Read the
+[validation checkpoint](STORAGE_ADMISSION_VALIDATION.md) for exact evidence and
+remaining client/release acceptance gaps. All original host outputs survive.
 
 Previous accepted release and efficiency context remains in
 [release coordination](VK_RELEASE_COORDINATION_20261017.md),

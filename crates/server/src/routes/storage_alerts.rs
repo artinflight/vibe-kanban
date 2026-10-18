@@ -124,10 +124,23 @@ pub(crate) async fn submit_bound<D: Deployment>(
             let repos =
                 WorkspaceRepo::find_repos_for_workspace(&deployment.db().pool, workspace.id)
                     .await?;
+            // Recover ordinary interrupted instructions exactly as native user
+            // follow-up does. The immutable submitted intent stays unchanged;
+            // the effective prompt is persisted with this execution's action.
+            let interrupted_context =
+                CodingAgentTurn::find_interrupted_context_since_latest_success(
+                    &deployment.db().pool,
+                    session.id,
+                )
+                .await?;
+            let prompt = CodingAgentTurn::prompt_with_interrupted_context(
+                request.intent.prompt.clone(),
+                &interrupted_context,
+            );
             let action = ExecutorAction::new(
                 ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
                     capacity: None,
-                    prompt: request.intent.prompt.clone(),
+                    prompt,
                     session_id: info.session_id,
                     reset_to_message_id: None,
                     executor_config: config,

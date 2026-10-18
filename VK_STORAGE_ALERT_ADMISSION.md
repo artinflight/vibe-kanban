@@ -155,7 +155,11 @@ selected owner under the same lock. No general queue policy is replaced.
 
 Launch continues the existing native thread using `ContainerService`'s normal
 capacity checks, routing, persisted action/coding turn, repository preservation,
-LocalContainerService resource checks and interactive approval bridge. It does
+LocalContainerService resource checks and interactive approval bridge. It uses the same interrupted-turn recovery query/formatter as ordinary user
+follow-up, retaining failed/killed user instructions and partial text in the
+persisted native action and coding turn. Recovery augments the effective prompt;
+it does not mutate the submitted intent/fingerprint or permit another launch
+on accepted replay. The route does
 not initialize an agent, reset Git or create/resume a native goal. Own native
 unfinished goal records (including budget-limited/paused/first-run) are deferred
 for explicit owner-controlled admission. Read errors also defer. Unrelated

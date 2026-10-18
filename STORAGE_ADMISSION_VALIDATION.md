@@ -50,7 +50,33 @@ test into its existing fixture module and return a small parser error mapped at
 the HTTP boundary. The wire contract is unchanged. Successor CI is required;
 these diagnostics are not represented as passing native tests.
 
-## Prepared native tests, not yet accepted
+## Hosted checkpoint and continuity correction
+
+The corrected-source Test run [39132942845](https://github.com/artinflight/vibe-kanban/actions/runs/39132942845)
+at `af7b35ddd2cb48d6a276f6fd410820971d21a59b` completed with **474 passed,
+1 failed, 14 skipped; 157 not run after fail-fast**. Backend Clippy, schema,
+remote, frontend and Tauri checks passed. The existing source-artifact run
+[39132942866](https://github.com/artinflight/vibe-kanban/actions/runs/39132942866)
+also succeeded; artifact production does not establish runtime acceptance.
+
+The failing native user/alert race assertion expected the raw queued user
+prompt. Native ordinary follow-up correctly included the interrupted alert
+context. The assertion now requires the exact normal recovered prompt, the
+interrupted alert instruction, the current user instruction and saved config.
+The alert route additionally uses that same ordinary recovery query/formatter
+for failed/killed user turns. A new native test checks ordered prompts, partial
+summary, persisted execution action/coding turn, immutable intent and replay
+without a second launch. Neither continuity behavior nor approvals are weakened.
+The main hosted nextest run now uses `--no-fail-fast` so previously unrun service/
+restart/queue tests execute even if another test fails. This source correction
+awaits its own hosted results; no host native build is authorized.
+
+Direct pinned rustfmt, ops governance and whitespace checks passed for this
+correction. `pnpm run format` invokes host Cargo and is held by the explicit
+no-host-Cargo instruction; hosted format checks remain required. Aggregate
+builds/tests are hosted only.
+
+## Native tests and acceptance boundaries
 
 The server suite uses the actual HTTP router/handler, default native
 `ContainerService::start_execution`, migrated on-disk SQLite, native queue and
@@ -60,7 +86,9 @@ and disables model execution there. It includes normal user-follow-up contention
 actual native capacity-gate outcomes, own native budget/paused-goal holds,
 unrelated Nightly context, approval waiting/denial, saved configuration drift,
 post-binding spawn failure, HTTP replay/GET/cancellation and missing receipts.
-These tests are source, not executed acceptance at this checkpoint.
+At the prior hosted checkpoint five route cases and both executor hold cases
+passed; the race case failed its assertion and the remaining new cases were not
+run after fail-fast. The corrected source requires a complete hosted result.
 
 Executor tests additionally exercise the real controller's no-takeover check
 and read-only native goal database hold, without changing unrelated grants.

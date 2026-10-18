@@ -790,7 +790,29 @@ async fn native_ordinary_user_followup_races_alert_and_is_preserved_by_normal_ca
             .queue
             .get_queued(b.session_id)
             .expect("User input was retained");
-        assert_eq!(queued.data.message, "Existing user's next instruction");
+        let interrupted = CodingAgentTurn::find_interrupted_context_since_latest_success(
+            &d.db().pool,
+            b.session_id,
+        )
+        .await
+        .unwrap();
+        assert_eq!(interrupted.len(), 1);
+        assert_eq!(
+            interrupted[0].prompt.as_deref(),
+            Some(r.intent.prompt.as_str())
+        );
+        let expected = CodingAgentTurn::prompt_with_interrupted_context(
+            "Existing user's next instruction".into(),
+            &interrupted,
+        );
+        assert_eq!(queued.data.message, expected);
+        assert!(queued.data.message.starts_with("Context recovery:"));
+        assert!(
+            queued
+                .data
+                .message
+                .ends_with("Current user prompt:\nExisting user's next instruction")
+        );
         assert_eq!(queued.data.executor_config, b.executor_config);
     } else {
         assert_eq!(alert.outcome, "deferred");
@@ -802,4 +824,130 @@ async fn native_ordinary_user_followup_races_alert_and_is_preserved_by_normal_ca
         1,
         "Only one owner run"
     );
+}
+
+#[tokio::test]
+async fn native_alert_recovers_interrupted_user_prompts_without_changing_intent_or_replay() {
+    if !isolated(
+        "native_alert_recovers_interrupted_user_prompts_without_changing_intent_or_replay",
+        false,
+    ) {
+        return;
+    }
+    let (_dir, d, b, r) = fixture().await;
+    let now = chrono::Utc::now();
+    // Make ordering deterministic even on a coarse SQLite clock.
+    sqlx::query("UPDATE execution_processes SET created_at=? WHERE session_id=?")
+        .bind(now - chrono::Duration::minutes(3))
+        .bind(b.session_id)
+        .execute(&d.db().pool)
+        .await
+        .unwrap();
+    for (index, status, prompt, summary) in [
+        (
+            0,
+            ExecutionProcessStatus::Failed,
+            "Preserve the user's earlier work",
+            Some("Partial verification evidence"),
+        ),
+        (
+            1,
+            ExecutionProcessStatus::Killed,
+            "Continue the user's pending inspection",
+            None,
+        ),
+    ] {
+        let process = ExecutionProcess::create(
+            &d.db().pool,
+            &CreateExecutionProcess {
+                session_id: b.session_id,
+                executor_action: ExecutorAction::new(
+                    ExecutorActionType::CodingAgentFollowUpRequest(CodingAgentFollowUpRequest {
+                        capacity: None,
+                        prompt: prompt.into(),
+                        session_id: "synthetic-existing-thread".into(),
+                        reset_to_message_id: None,
+                        executor_config: b.executor_config.clone(),
+                        working_dir: None,
+                    }),
+                    None,
+                ),
+                run_reason: ExecutionProcessRunReason::CodingAgent,
+            },
+            Uuid::new_v4(),
+            &[],
+        )
+        .await
+        .unwrap();
+        ExecutionProcess::update_completion(&d.db().pool, process.id, status, Some(1))
+            .await
+            .unwrap();
+        sqlx::query("UPDATE execution_processes SET created_at=? WHERE id=?")
+            .bind(now - chrono::Duration::minutes(2 - index))
+            .bind(process.id)
+            .execute(&d.db().pool)
+            .await
+            .unwrap();
+        let turn = CodingAgentTurn::create(
+            &d.db().pool,
+            &CreateCodingAgentTurn {
+                execution_process_id: process.id,
+                prompt: Some(prompt.into()),
+            },
+            Uuid::new_v4(),
+        )
+        .await
+        .unwrap();
+        sqlx::query("UPDATE coding_agent_turns SET summary=? WHERE id=?")
+            .bind(summary)
+            .bind(turn.id)
+            .execute(&d.db().pool)
+            .await
+            .unwrap();
+    }
+    let interrupted =
+        CodingAgentTurn::find_interrupted_context_since_latest_success(&d.db().pool, b.session_id)
+            .await
+            .unwrap();
+    assert_eq!(interrupted.len(), 2);
+    let expected =
+        CodingAgentTurn::prompt_with_interrupted_context(r.intent.prompt.clone(), &interrupted);
+    let admitted = submit_bound(&d, &b, &r).await.unwrap();
+    assert_eq!(admitted.outcome, "accepted");
+    let receipt = admitted.receipt.unwrap();
+    assert_eq!(receipt.intent_sha256, admission::fingerprint(&r.intent));
+    let process = ExecutionProcess::find_by_id(&d.db().pool, receipt.execution_id.unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+    let ExecutorActionType::CodingAgentFollowUpRequest(action) =
+        process.executor_action().unwrap().typ()
+    else {
+        panic!("Must persist the ordinary native continuation");
+    };
+    assert_eq!(action.prompt, expected);
+    assert!(action.prompt.contains("Preserve the user's earlier work"));
+    assert!(action.prompt.contains("Partial verification evidence"));
+    assert!(
+        action
+            .prompt
+            .contains("Continue the user's pending inspection")
+    );
+    assert!(
+        action
+            .prompt
+            .ends_with(&format!("Current user prompt:\n{}", r.intent.prompt))
+    );
+    assert!(!action.prompt.contains("Existing synthetic owner"));
+    assert_eq!(action.executor_config, b.executor_config);
+    let turn = CodingAgentTurn::find_by_execution_process_id(&d.db().pool, process.id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(turn.prompt.as_deref(), Some(expected.as_str()));
+    let replay = submit_bound(&d, &b, &r).await.unwrap();
+    assert!(replay.replay);
+    assert_eq!(replay.receipt.unwrap().execution_id, Some(process.id));
+    assert_eq!(d.container.launches.load(Ordering::SeqCst), 1);
+    assert!(!d.queue.has_queued(b.session_id));
 }

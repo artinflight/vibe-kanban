@@ -2031,3 +2031,14 @@ from becoming unsafe retries. No live dispatch, release or activation.
 Validation/compatibility remains explicitly source-bound; shared capacity
 coordination holds additional compiler jobs while the original service test
 reaches its natural terminal checkpoint. See VK_STORAGE_ALERT_ADMISSION.md.
+
+
+## Storage admission continuity correction (2026-10-18)
+
+Resume source/tests from af7b35d with sanitized publication authorized; host
+Cargo/build growth remains held. Correct the queued-user race assertion to
+require normal recovery context; apply the same native recovery to alert turns
+and test ordered failed/killed instructions, partial text, persisted action and
+immutable-intent replay. Hosted nextest uses no-fail-fast for complete evidence.
+See STORAGE_ADMISSION_VALIDATION.md for exact prior CI failure and new results.
+No activation or live dispatch is included.

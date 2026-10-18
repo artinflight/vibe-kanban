@@ -499,7 +499,7 @@ jobs:
         run: python3 -B -m unittest discover -s scripts/testing/startup-recovery-safety -v
 
       - name: Run Cargo tests
-        run: cargo nextest run --workspace --exclude vibe-kanban-tauri
+        run: cargo nextest run --workspace --exclude vibe-kanban-tauri --no-fail-fast
 
       - name: Test explicit Dot steering connector
         run: python3 -B -m unittest discover -s scripts/dot-connector -p 'test_*.py' -v

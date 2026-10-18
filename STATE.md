@@ -1,3 +1,35 @@
+# October18 — smaller B-only retained-recovery preparation
+
+Retained-input recovery is committed and published on the existing Nightly PR.
+It authenticates the original sealed database images and uses native same-file
+aliases, with no live SQL recapture or local snapshot payload. The original
+SQLite epochs remain explicit; this private recovery cannot be adopted as a
+current operational restart baseline. Focused regressions and native alias
+readback pass; earlier full-index and independent tiny-restore results are reused.
+
+The optional local measurement index is no longer required for the next recovery
+phase. A separately prepared B-only route bounds additional SSD use to small
+control metadata, retains the existing total task ceiling and other-owner/floor
+protections, and defers actual unique-object measurement to B-backed generation
+and independent restore. The earlier local-index planning shortfall is therefore
+not a mandatory minimum or a permanent prohibition. Guard boundary and capacity
+planner fixtures pass. Preparation itself grants no bulk admission or acceptance.
+
+Staging's actual expanded frontend/Python publication is verified by its owner
+receipt and bound in the derived preparation. The unreachable old three-row
+checkpoint was replaced by terminal lease evidence plus exact old-runtime B
+readback, preserving all old roots. Authorized inactive-tool offload is recorded
+with its retained restore breadcrumb and verified recovery route; the next source
+view must reflect actual non-SQL content rather than silently reuse stale paths.
+
+No bulk recovery or full restore has been launched by this preparation. Disk's
+existing transfer/readback window is being coordinated before fresh separate
+health, resource, access, integrity and space admission. Complete measurement,
+independent full restore, and current operational baseline/journal integration
+remain open. Nothing deployed, scheduled, restarted or retired by Nightly.
+Ops governance/diff checks pass; aggregate formatting remains uncompleted.
+Earlier snapshots below are historical, with this preparation taking precedence.
+
 # October18 9:34a.m. EDT — retained-image recovery tested; SSD admission pending
 
 The terminal R2 result remains child1 at8:24:10a.m. EDT, not a completed backup.

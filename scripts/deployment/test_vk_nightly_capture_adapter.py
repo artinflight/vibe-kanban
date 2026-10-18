@@ -9,10 +9,12 @@ import tempfile
 import subprocess
 import sys
 import socket
+import threading
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from vk_nightly_capture_adapter import RegisteredWorkspace, disk_snapshot, mcp_lease, allowed_sqlite
+from vk_nightly_capture_adapter import RegisteredWorkspace, Resident, ResidentFailure, disk_snapshot, mcp_lease, allowed_sqlite
 from vk_nightly_b_job import LocalVerifiedProvider, receive
 from vk_nightly_job import inventory, validate_socket_exclusions
 from vk_archive_stream import StreamingArchive
@@ -33,6 +35,27 @@ class FakeResident:
                 assert db.execute('PRAGMA integrity_check').fetchall()==[('ok',)]
             value['integrity']='ok'
         return value
+
+
+class ResidentProtocolTests(unittest.TestCase):
+    def resident(self,response):
+        value=Resident.__new__(Resident)
+        value.lock=threading.Lock();value.process=SimpleNamespace(stdin=io.BytesIO())
+        value.binding={'candidate':'owned fixture'}
+        value.response=lambda **kwargs:response
+        return value
+    def test_failed_terminal_response_preserves_original_resident_reason(self):
+        response={'event':'complete','result':{'passed':False,'status':'reconciliation_required',
+                                             'reason':'transient input substituted'}}
+        resident=self.resident(response)
+        with self.assertRaisesRegex(ResidentFailure,'seal: transient input substituted') as caught:
+            resident.call('seal',name='owned.sqlite',sqlite_integrity=True)
+        self.assertIs(caught.exception.resident_response,response)
+        self.assertEqual(receive(io.BytesIO(resident.process.stdin.getvalue()))['action'],'seal')
+    def test_successful_seal_and_completion_are_unchanged(self):
+        for action,response in [('seal',{'sealed':'owned.sqlite','integrity':'ok'}),
+                                ('finish',{'event':'complete','result':{'passed':True}})]:
+            self.assertIs(self.resident(response).call(action),response)
 
 
 class AdapterTests(unittest.TestCase):
@@ -93,6 +116,20 @@ class AdapterTests(unittest.TestCase):
             with self.assertRaises(sqlite3.OperationalError) as caught:self.snapshot()
         self.assertIs(caught.exception,error)
         self.assertEqual(error.nightly_sqlite_diagnostic['diagnostic_errors'],[{'operation':'registered_destination','type':'TimeoutError'}])
+    def test_resident_failure_is_retained_in_snapshot_diagnostic_without_retry(self):
+        response={'event':'complete','result':{'passed':False,'reason':'transient input substituted'}}
+        original=self.resident.call;calls=[]
+        def fail_seal(action,**kwargs):
+            calls.append(action)
+            if action=='seal':raise ResidentFailure(action,response)
+            return original(action,**kwargs)
+        with patch.object(self.resident,'call',side_effect=fail_seal), \
+                patch.object(self.workspace,'inspect_failure',side_effect=ValueError('closed resident')):
+            with self.assertRaises(ResidentFailure) as caught:self.snapshot()
+        self.assertEqual(calls,['allocate','seal'])
+        self.assertEqual(caught.exception.nightly_sqlite_diagnostic['stage'],'native.seal')
+        self.assertIs(caught.exception.nightly_sqlite_diagnostic['resident_response'],response)
+        self.assertEqual(self.workspace.sealed,{})
     def test_successful_snapshot_adds_no_diagnostic_sqlite_queries_or_inspection(self):
         connect=sqlite3.connect;commands=[]
         class Observed(sqlite3.Connection):
@@ -102,6 +139,23 @@ class AdapterTests(unittest.TestCase):
         inspect.assert_not_called()
         self.assertNotIn('PRAGMA journal_mode',commands)
         self.assertEqual(commands.count('PRAGMA journal_mode=OFF'),1)
+    def test_private_writer_flush_precedes_independent_B_seal(self):
+        events=[];fsync=os.fsync;call=self.resident.call
+        def flush(fd):events.append('writer flush');return fsync(fd)
+        def observed(action,**kwargs):events.append(action);return call(action,**kwargs)
+        with patch('vk_nightly_capture_adapter.os.fsync',side_effect=flush), \
+                patch.object(self.resident,'call',side_effect=observed):
+            self.snapshot()
+        self.assertEqual(events,['allocate','writer flush','seal'])
+    def test_writer_flush_failure_preserves_image_without_native_seal(self):
+        error=OSError(5,'fixture flush failure')
+        with patch('vk_nightly_capture_adapter.os.fsync',side_effect=error), \
+                patch.object(self.workspace,'inspect_failure',return_value={'metadata_only':True}):
+            with self.assertRaises(OSError) as caught:self.snapshot()
+        self.assertIs(caught.exception,error)
+        self.assertEqual(error.nightly_sqlite_diagnostic['stage'],'destination.flush')
+        self.assertEqual([x[0] for x in self.resident.events],['allocate'])
+        self.assertEqual(len(list(self.destination.iterdir())),1)
     def test_capacity_reservation_accepts_host_sized_image_without_allocating_payload(self):
         size=4_734_447_616;self.workspace.limit=size+1024
         self.workspace.reserve_file(self.destination/'sqlite-consistent-host.sqlite',size)

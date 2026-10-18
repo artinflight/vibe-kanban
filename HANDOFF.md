@@ -1,4 +1,29 @@
-# Await same R9 under corrected guard — October18 06:00UTC
+# R9 terminal reconciled; bounded producer follow-up — October18 07:34UTC
+
+R9 is TERMINAL, not awaiting: producer exit1 at07:34:14UTC,8368.719s.
+Both original/replacement guard units inactive/MainPID0, producer identity gone,
+mount absent and MCP/B leases acquired. Collector session99540 finished with
+actual result; do not restart it or resume the old supervisor. All inputs kept.
+Private capacity-r9-evidence-guards/{COLLECTED_CORRECTED_WORKING_SPACE,
+TERMINAL_RECONCILIATION,FAILED_INPUT_DIAGNOSIS}.private.json retain evidence.
+5280248053bytes sealed, but full archive measurement/restore not accepted.
+
+Failed274432-byte seed image has identical WSL/Windows SHA and both integrity
+checks pass. Two fresh targeted copies passed before writer-flush hardening.
+Original remote failure reason was discarded; do not invent a historical cause.
+Current patch propagates bounded resident failure details into snapshot diagnostics
+and completes the MCP writer flush before B sealing.31 prior and five focused
+regressions pass. A new native flush-path check was deferred before payload by
+the optional-offload busy heuristic; original Disk owner is reconciling B I/O.
+
+Disk receipt T26_NIGHTLY_TOTAL_5G_ALLOCATION_20261018T0742.private.json confirms
+TOTAL5GiB including the whole Nightly root (1080328192bytes at07:41), replacing
+the prior2GiB cap. The old130MB peak is a smaller tracked subset. Do not add or
+reset allowances. A3GiB cache plus1.5GiB meter does not fit with existing files;
+use a measured combined budget and fresh original admission. No originals deleted,
+bulk retry, deployment, schedule or cutover. Existing private handoffs updated.
+
+# Historical: await same R9 under corrected guard — October18 06:00UTC
 
 DO NOT replace the live measurement. Producer2493667/start40478467 remains the
 same R9 started05:14:46UTC; configSHA

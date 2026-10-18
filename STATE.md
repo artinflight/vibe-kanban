@@ -1,4 +1,28 @@
-# Same Nightly R9 retained under corrected guard — October18 06:00UTC
+# Nightly R9 actual terminal collected — October18 07:34UTC
+
+R9 ended07:34:14UTC with producer exit1 after8368.719s. Supported collector
+and corrected accounting collected; both units inactive/MainPID0, exact producer
+absent, mount gone, MCP/B leases free. No replacement or automatic retry.
+The producer received no independent integrity seal for one274432-byte seed DB.
+Its original remote failure response was discarded; historical root cause is
+not established. The preserved image passes WSL/native Windows integrity and
+identical SHA; two new targeted copies also passed. Never call this full restore.
+
+Retained sealed inputs total5280248053bytes. Corrected sampled130183168-byte
+SSD peak covers the tracked R9/preparation subset, not the entire Nightly task.
+Disk measured the whole task at1080328192bytes and confirmed a TOTAL5GiB cap
+replacing the prior2GiB allowance; existing files remain charged. Component
+maxima are not additive: one3GiB image plus1.5GiB index would exceed that cap.
+Shared floors and other-owner allowances remain protected; no launch admission.
+
+Producer hardening retains bounded resident failure details and explicitly
+flushes the MCP writer before independent B sealing.31 narrow regressions and
+five focused error/flush regressions pass. New real flush-path validation was
+deferred before B allocation by the copied optional-offload busy heuristic;
+Disk is reconciling actual B activity. No full stream, backup/restore acceptance,
+deployment, schedule, cutover or cleanup. All R9 and earlier inputs preserved.
+
+# Historical: same Nightly R9 retained under corrected guard — October18 06:00UTC
 
 R9 producer2493667/start40478467 is still the sole measurement. Eight policy
 checks and a synthetic guard-handover/identity/accounting test pass. The wrapper

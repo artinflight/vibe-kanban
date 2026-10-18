@@ -101,6 +101,14 @@ def resident_bundle(config):
     return raw
 
 
+class ResidentFailure(ValueError):
+    """Keep the resident's bounded terminal failure instead of a missing seal."""
+    def __init__(self, action, response):
+        self.resident_response=response
+        result=response.get('result',{})
+        super().__init__('B resident failed during '+action+': '+str(result.get('reason','terminal failure'))[:1000])
+
+
 class Resident:
     def __init__(self,config):
         # Fail locally before opening SSH when even the bounded projection fails.
@@ -130,7 +138,10 @@ class Resident:
     def call(self,action,*,response_timeout=None,**kwargs):
         with self.lock:
             packet(self.process.stdin,{'action':action,'binding':self.binding,**kwargs})
-            return self.response(timeout=response_timeout)
+            value=self.response(timeout=response_timeout)
+            if value.get('event')=='complete' and value.get('result',{}).get('passed') is False:
+                raise ResidentFailure(action,value)
+            return value
     def close(self):
         if not self.process.stdin.closed:self.process.stdin.close()
         try:self.process.wait(timeout=30)
@@ -328,6 +339,15 @@ def disk_snapshot(source,workspace,allowed_sources,*,maximum_bytes,timeout_secon
         src.backup(dst,pages=1024,progress=progress)
         stage='destination.close/source.rollback'
         dst.close();dst=None;src.rollback();src.close();src=None
+        # Explicitly complete the MCP FUSE writer before a separate WSL/native
+        # reader seals the image. Its flush cannot substitute for completion
+        # of this client's pending writes.
+        stage='destination.flush'
+        fd=os.open(target,os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK)
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):raise ValueError('snapshot flush target is not regular')
+            os.fsync(fd)
+        finally:os.close(fd)
         # Private-image integrity/full hash are independently checked by the
         # native B reader after SQLite destination close; no FUSE SQLite reopen.
         stage='native.seal';row=workspace.seal(target,sqlite=True)
@@ -342,6 +362,7 @@ def disk_snapshot(source,workspace,allowed_sources,*,maximum_bytes,timeout_secon
                'stage':stage,'sqlite_errorcode':getattr(error,'sqlite_errorcode',None),
                'sqlite_errorname':getattr(error,'sqlite_errorname',None),'traceback':traceback.format_exc(),
                'source_page_size':page_size,'source_journal_mode':None,'diagnostic_errors':[]}
+        if isinstance(error,ResidentFailure):value['resident_response']=error.resident_response
         for name,path in [('source_identity',source),('destination_identity',target),('parent_identity',target.parent)]:
             try:
                 info=path.lstat();value[name]={'device':info.st_dev,'inode':info.st_ino,'bytes':info.st_size,

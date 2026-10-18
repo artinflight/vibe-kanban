@@ -1,3 +1,22 @@
+# October18 — one retained-input recovery admitted and active
+
+The prepared B-only retained-input recovery passed fresh separate native-health,
+access, runtime, memory/swap and shared-space admission after Staging and Disk
+released their own windows. It is the sole current Nightly producer, with a
+separate durable read-only result collector. Exact identity, deadline, scope and
+resource samples are in the existing shared private phase coordination. Preserve
+that job and collect its actual result; do not launch a replacement or retry.
+The original failed producer and all its sealed images/partials remain preserved.
+The resident accepted original manifest/ledger identities; actual SQL consumption
+must be read from progress rather than inferred from configuration intent.
+
+The active phase avoids the optional local capacity index and snapshot cache.
+It prepares complete authenticated input dimensions; actual unique-object space
+and independent full restoration still require the separate B-backed proof.
+That proof is versioned preparation only, with no request, admission or launch.
+No current operational baseline adoption, deployment, schedule, restart or
+original retirement is claimed. Earlier preparation-only snapshots are history.
+
 # October18 — smaller B-only retained-recovery preparation
 
 Retained-input recovery is committed and published on the existing Nightly PR.

@@ -61,5 +61,6 @@ The dated preparation status above is superseded by that receipt. Local pickup
 additions/edits survive in [T63 pickup preservation](T63_DEPLOYMENT_PICKUP_20261017.md).
 
 Current T63 source follow-up: [Running and dispatch attribution](VK_DOT_ACTIVITY_ATTRIBUTION.md),
-preserving manual unread. Source review only; live correction needs a separately
-approved combined Python sidechat/frontend release.
+preserving manual unread. The exact owner-approved combined release is active;
+[October18 activation/acceptance receipt](VK_T63_ACTIVITY_ROLLOUT.md) supersedes
+its earlier preparation-only status. Source merge remains separate.

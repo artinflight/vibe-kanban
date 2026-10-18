@@ -1,18 +1,18 @@
 # T63 pickup
 
-Read [STATE](STATE.md), [STREAM](STREAM.md), then
-[combined Dot activity/attribution handoff](VK_DOT_ACTIVITY_ATTRIBUTION.md).
-This follow-up is source/test work, not a live release. Reuse existing T63/PR268;
-no duplicate issue, agent or service. Models/effort and Recommend remain unchanged.
+Read [STATE](STATE.md), [STREAM](STREAM.md), then the
+[October 18 live combined release receipt](VK_T63_ACTIVITY_ROLLOUT.md).
+The exact owner-approved T63 package is active: Mark unread, independent Running
+membership and workspace-specific dispatch attribution. Live API/UI acceptance
+and latest-data backup/preservation checks passed. Vibe/backend and agents were
+not restarted. Reuse existing T63/PR268; no duplicate issue, agent or service.
+Models/effort and Recommend remain unchanged. Source remains unmerged.
 
-Mark unread is preserved. Running remains visible with alerts; explicit actions
-also remain in Attention. Verified dispatch notes/read actions are target-only,
-while genuine issue conversation stays shared. The nominated T18 note remains
-unseen and unchanged; no live clearing was performed. Tests are in the guide;
-full local Rust baseline is blocked by missing glib-2.0 development metadata.
-Preserve the current live dispatch-notes package; integrate only the compatible
-read-state changes with Staging/Preserve Dot ownership before any authorized
-release. CI/publication does not authorize merge or deployment.
+All affected issues/siblings were checked; genuine conversation/unread and
+explicit attention are preserved. Keep the latest SQLite for any cutback and use
+the prepared manual-unread-aware fallback, not the original October17 Python.
+Existing browser tabs need refresh for the new frontend. Earlier implementation
+and preparation details remain in [the source guide](VK_DOT_ACTIVITY_ATTRIBUTION.md).
 
 The October 17 deployed sidebar receipt is
 [here](VK_PROJECT_COLLABORATION_ROLLOUT.md). All older pickup text remains in

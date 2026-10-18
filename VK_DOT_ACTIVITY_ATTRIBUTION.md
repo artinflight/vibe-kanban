@@ -1,5 +1,9 @@
 # T63: Running and workspace-specific Dot dispatch activity
 
+**Activation update:** the exact combined package is now owner-approved and live.
+[October18 rollout and live acceptance](VK_T63_ACTIVITY_ROLLOUT.md) supersedes the
+preparation-only status below; source merge remains separate.
+
 [Open source review](https://vibe.local/vk-artifact-viewer.html?id=15ab9428-4241-426e-a27c-95bc5dacacd9&name=t63-attention-review.html&v=1).
 This extends the completed [manual unread implementation](VK_DOT_MANUAL_UNREAD.md)
 in the same T63 workspace and draft PR268. It authorizes no merge or rollout.

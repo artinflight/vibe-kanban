@@ -7,10 +7,10 @@ independent explicit action/approval visibility; attribute verified dispatch not
 only to their target workspace while retaining genuine shared conversation.
 [Combined implementation/release handoff](VK_DOT_ACTIVITY_ATTRIBUTION.md).
 
-Implementation/testing/publication are authorized. Merge, deployment, live
-service changes and model/effort/routing changes are not. Staging retains release
-ownership; preserve newer live CU/Stop/context/continuation/dispatch changes.
-The October 17 sidebar deployment is historical, not new activation authority.
+The exact combined package was explicitly approved and activated October18;
+[the live receipt](VK_T63_ACTIVITY_ROLLOUT.md) records meaningful API/UI acceptance
+and latest-data cutback. No merge or unrelated service/model/effort/routing change
+is authorized. Staging/Preserve retain subsequent integration ownership.
 
 Current protections/topic map: [STATE](STATE.md). Earlier branch histories are
 retained in [STREAM history](STREAM_HISTORY_20261017.md), its archive manifest,

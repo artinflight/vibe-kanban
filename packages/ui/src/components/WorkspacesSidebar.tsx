@@ -15,6 +15,7 @@ import { usePhoneLayout } from '../lib/usePhoneLayout';
 import { cn } from '../lib/cn';
 import { InputField } from './InputField';
 import { WorkspaceSummary } from './WorkspaceSummary';
+import { ProjectDotNotices, type ProjectDotNotice } from './ProjectDotNotices';
 import type { AppBarHostStatus } from './AppBar';
 import {
   CollapsibleSectionHeader,
@@ -55,6 +56,8 @@ const DEFAULT_PERSIST_KEYS: WorkspacesSidebarPersistKeys = {
 };
 
 export interface WorkspacesSidebarProps {
+  projectDotNotices?: ProjectDotNotice[];
+  onOpenProjectChat?: (projectId: string) => void;
   workspaces: WorkspacesSidebarWorkspace[];
   /** Complete filtered collection for phone activity counts before pagination. */
   activityWorkspaces?: WorkspacesSidebarWorkspace[];
@@ -182,6 +185,8 @@ function WorkspaceList({
 }
 
 export function WorkspacesSidebar({
+  projectDotNotices = [],
+  onOpenProjectChat,
   workspaces,
   activityWorkspaces,
   totalWorkspacesCount,
@@ -213,6 +218,12 @@ export function WorkspacesSidebar({
   const [phoneCategory, setPhoneCategory] = useState('all');
   const [listOptionsOpen, setListOptionsOpen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const projectNotices = onOpenProjectChat
+    ? projectDotNotices.filter((item) => item.unreadCount > 0)
+    : [];
+  const projectRows = (
+    <ProjectDotNotices notices={projectNotices} onOpen={onOpenProjectChat} />
+  );
   const handleOpenWorkspaceActions = useCallback(
     (workspaceId: string) => {
       onOpenWorkspaceActions?.(workspaceId);
@@ -344,7 +355,11 @@ export function WorkspacesSidebar({
           >
             {[
               ['all', 'All', (activityWorkspaces ?? workspaces).length],
-              ['attention', 'Attention', raisedHandWorkspaces.length],
+              [
+                'attention',
+                'Attention',
+                raisedHandWorkspaces.length + projectNotices.length,
+              ],
               ['running', 'Running', runningWorkspaces.length],
               ['ready', 'Ready', idleWorkspaces.length],
             ].map(([id, label, count]) => (
@@ -377,38 +392,44 @@ export function WorkspacesSidebar({
                   onClick={onSelectCreate}
                 />
               )}
+              {!showArchive && phoneCategory === 'attention' && projectRows}
               <WorkspaceList
                 workspaces={rows}
                 selectedWorkspaceId={selectedWorkspaceId}
                 onSelectWorkspace={onSelectWorkspace}
                 onOpenWorkspaceActions={handleOpenWorkspaceActions}
               />
-              {!rows.length && (
-                <div className="phone-empty-state">
-                  <StackIcon size={32} />
-                  <h3>
-                    {searchQuery
-                      ? 'No matching workspaces'
-                      : showArchive
-                        ? 'Your archive is empty'
-                        : phoneCategory === 'attention'
-                          ? 'You’re all caught up'
-                          : phoneCategory === 'running'
-                            ? 'No agents running'
-                            : 'No workspaces here yet'}
-                  </h3>
-                  <p>
-                    {searchQuery
-                      ? 'Try a different name or clear your search.'
-                      : 'Conversations and agent activity appear here.'}
-                  </p>
-                  {searchQuery && (
-                    <button type="button" onClick={() => onSearchChange('')}>
-                      Clear search
-                    </button>
-                  )}
-                </div>
-              )}
+              {!rows.length &&
+                !(
+                  phoneCategory === 'attention' &&
+                  !showArchive &&
+                  projectNotices.length
+                ) && (
+                  <div className="phone-empty-state">
+                    <StackIcon size={32} />
+                    <h3>
+                      {searchQuery
+                        ? 'No matching workspaces'
+                        : showArchive
+                          ? 'Your archive is empty'
+                          : phoneCategory === 'attention'
+                            ? 'You’re all caught up'
+                            : phoneCategory === 'running'
+                              ? 'No agents running'
+                              : 'No workspaces here yet'}
+                    </h3>
+                    <p>
+                      {searchQuery
+                        ? 'Try a different name or clear your search.'
+                        : 'Conversations and agent activity appear here.'}
+                    </p>
+                    {searchQuery && (
+                      <button type="button" onClick={() => onSearchChange('')}>
+                        Clear search
+                      </button>
+                    )}
+                  </div>
+                )}
             </>
           )}
         </div>
@@ -560,6 +581,7 @@ export function WorkspacesSidebar({
               defaultExpanded={true}
             >
               <div className="flex flex-col gap-base py-half">
+                {projectRows}
                 {draftTitle && (
                   <WorkspaceSummary
                     name={draftTitle}
@@ -568,7 +590,9 @@ export function WorkspacesSidebar({
                     onClick={onSelectCreate}
                   />
                 )}
-                {raisedHandWorkspaces.length === 0 && !draftTitle ? (
+                {raisedHandWorkspaces.length === 0 &&
+                !draftTitle &&
+                !projectNotices.length ? (
                   <span className="text-sm text-low opacity-60 pl-base">
                     {t('common:workspaces.noWorkspaces')}
                   </span>
@@ -630,6 +654,14 @@ export function WorkspacesSidebar({
         ) : (
           /* Active workspaces flat view */
           <div className="flex flex-col gap-base">
+            {projectNotices.length > 0 && (
+              <CollapsibleSectionHeader
+                title={t('common:workspaces.needsAttention')}
+                defaultExpanded
+              >
+                <div className="py-half">{projectRows}</div>
+              </CollapsibleSectionHeader>
+            )}
             <div className="flex items-center justify-between px-base">
               <span className="text-sm font-medium text-low">
                 {t('common:workspaces.active')}

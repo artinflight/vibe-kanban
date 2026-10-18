@@ -5,6 +5,10 @@ Jump to Needs Attention, persistent explicit Dot management, selective dispatch-
 acknowledgement and neutral caller attribution. Preserve the published Eastern
 timestamps, collapsible issues, current private continuation support and CU/Stop.
 
+The final expanded scope also includes destination-safe project/workspace routing,
+sidebar drag/full-width, and blue project-scoped unread notices specifically in
+Workspaces Needs Attention. Preserve destination drafts, flags and sibling isolation.
+
 ## Source and boundaries
 
 - [Reply contract](VK_DOT_MESSAGE_REPLIES.md): immutable owner quote links are
@@ -35,10 +39,4 @@ boundaries unchanged. Exact private associations and receipts stay private.
 
 ## Continuity
 
-The complete pre-compaction stream is preserved in Git at
-`0577ee3d8226fe910bb2cb8590f3bfaebbf136c4:STREAM.md`; its parents preserve both
-source-owner histories. Older continuity is indexed in
-[the archive manifest](CONTINUITY_ARCHIVE.json) and [stream history](STREAM_HISTORY_20261017.md).
-Read [STATE](STATE.md), [HANDOFF](HANDOFF.md), then the relevant topic rather than
-repeating historical pickup text. [Release coordination](VK_RELEASE_COORDINATION_20261017.md)
-retains broader restart work, whose backend and Nightly gates are independent.
+Complete prior notes remain at both merge parents. Read STATE, HANDOFF and the linked contracts; private evidence stays local/B. Full Nightly restore is separate from this component release.

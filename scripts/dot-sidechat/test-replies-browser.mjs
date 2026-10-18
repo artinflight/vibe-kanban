@@ -317,7 +317,8 @@ try {
         await page
           .getByRole('button', { name: 'Reply to message 2', exact: true })
           .waitFor();
-        // Sibling navigation resets an unsent selection; durable shared history remains.
+        // A different workspace has a separate selection; remounting the same project
+        // restores its own retained draft/target. Durable shared history remains.
         await page
           .getByRole('button', { name: 'Reply to message 2', exact: true })
           .click();
@@ -325,7 +326,7 @@ try {
         await page
           .getByRole('button', { name: 'Reply to message 2', exact: true })
           .waitFor();
-        assert.equal(await banner.count(), 0);
+        assert.equal(await banner.count(), project ? 1 : 0);
         assert.equal(
           await page.locator('.dot-message-owner .dot-reply-reference').count(),
           2

@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 
+export interface SidechatReplyReference {
+  id: string;
+  seq: number;
+  role: 'owner' | 'dot';
+  created: number;
+  excerpt: string;
+  truncated?: boolean;
+  unavailable?: boolean;
+}
+
 export interface SidechatMessage {
   id: string;
   seq: number;
@@ -9,6 +19,8 @@ export interface SidechatMessage {
   created: number;
   seen?: boolean;
   manual_unread?: boolean;
+  in_reply_to?: string;
+  reply_reference?: SidechatReplyReference;
   dispatch_note?: { workspace_id: string; execution_id: string };
   attention?: { kind: 'question' | 'action'; resolved: boolean } | null;
 }
@@ -29,6 +41,9 @@ export interface DotSidechatPanelProps {
   ) => void;
   onReadState?: (message: string, action: 'read' | 'unread') => Promise<void>;
   draftLocked?: boolean;
+  replyTarget?: SidechatReplyReference | null;
+  replyEnabled?: boolean;
+  onReplyTarget?: (message: string | null) => void;
   messages: SidechatMessage[];
   receipts: Record<string, SidechatReceipt>;
   issueLabel: string;
@@ -78,6 +93,7 @@ function MessageTimestamp({ created }: { created: number }) {
 
 export function DotSidechatPanel(props: DotSidechatPanelProps) {
   const history = useRef<HTMLDivElement>(null);
+  const composer = useRef<HTMLTextAreaElement>(null);
   const [followLatest, setFollowLatest] = useState(true);
   const [readStateBusy, setReadStateBusy] = useState(new Set<string>());
   const readStateInFlight = useRef(new Set<string>());
@@ -273,6 +289,20 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
                     : 'Dot · fixture'}
               </strong>
               <MessageTimestamp created={message.created} />
+              {props.onReplyTarget && props.replyEnabled && (
+                <button
+                  type="button"
+                  className="dot-reply-button"
+                  aria-label={'Reply to message ' + message.seq}
+                  disabled={props.sending || props.draftLocked || props.loading}
+                  onClick={() => {
+                    props.onReplyTarget?.(message.id);
+                    composer.current?.focus();
+                  }}
+                >
+                  Reply to
+                </button>
+              )}
               {message.dispatch_note && (
                 <span className="dot-private">Agent dispatch note</span>
               )}
@@ -283,6 +313,35 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
                 #{message.seq}
               </a>
             </div>
+            {message.reply_reference && (
+              <blockquote className="dot-reply-reference">
+                {message.reply_reference.unavailable ? (
+                  <span>
+                    Reply to #{message.reply_reference.seq} · context in another
+                    workspace
+                  </span>
+                ) : (
+                  <>
+                    <a
+                      href={
+                        '#thread=' +
+                        props.threadId +
+                        '&message=' +
+                        message.reply_reference.id
+                      }
+                    >
+                      Reply to{' '}
+                      {message.reply_reference.role === 'owner' ? 'you' : 'Dot'}{' '}
+                      · #{message.reply_reference.seq}
+                    </a>
+                    <p>
+                      {message.reply_reference.excerpt}
+                      {message.reply_reference.truncated ? '…' : ''}
+                    </p>
+                  </>
+                )}
+              </blockquote>
+            )}
             <p>{message.body}</p>
             {message.role === 'dot' &&
               props.live &&
@@ -390,10 +449,42 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           props.onSend();
         }}
       >
+        {props.replyTarget && (
+          <div
+            className="dot-reply-target"
+            role="group"
+            aria-label="Reply target"
+          >
+            <div>
+              <strong>
+                Replying to {props.replyTarget.role === 'owner' ? 'you' : 'Dot'}{' '}
+                · #{props.replyTarget.seq}
+              </strong>
+              <MessageTimestamp created={props.replyTarget.created} />
+              <p>
+                {props.replyTarget.excerpt}
+                {props.replyTarget.truncated ? '…' : ''}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="dot-reply-button"
+              aria-label="Cancel reply"
+              disabled={props.sending || props.draftLocked}
+              onClick={() => {
+                props.onReplyTarget?.(null);
+                composer.current?.focus();
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
         <label className="dot-sr-only" htmlFor="dot-draft">
           Message Dot
         </label>
         <textarea
+          ref={composer}
           id="dot-draft"
           readOnly={props.draftLocked}
           value={props.draft}

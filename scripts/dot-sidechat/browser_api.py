@@ -189,16 +189,18 @@ class BrowserAPI:
     def snapshot(self, owner, thread, scope, after, through):
         page = self.store.read(owner, thread["id"], after=after, through=through, limit=50, display_workspace=scope["workspace"])
         page["scope"] = scope
-        page["capabilities"] = {"notifications":True,"manual_unread":True}
+        page["capabilities"] = {"notifications":True,"manual_unread":True,"message_replies":True}
         page["receipts"] = {m["id"]: self.store.receipt(owner, thread["id"], m["id"])
                             for m in page["messages"] if m["role"] == "owner"}
         return page
 
     def send(self, session, args):
-        if set(args) not in ({"workspace", "request", "body"}, {"project", "request", "body"}):
+        if set(args) - {'in_reply_to'} not in ({"workspace", "request", "body"}, {"project", "request", "body"}):
             raise Rejected("Unexpected send argument")
+        if 'in_reply_to' in args and not isinstance(args['in_reply_to'], str):
+            raise Rejected('Exact reply message ID required')
         owner, thread, scope = self.target(session, args)
-        return self.store.append(owner, thread["id"], scope["workspace"], args["request"], args["body"])
+        return self.store.append(owner, thread["id"], scope["workspace"], args["request"], args["body"], in_reply_to=args.get('in_reply_to'))
 
 
     def notifications(self, session):

@@ -29,3 +29,10 @@ Current release coordination, newer Sidebar adoption and remaining private gates
 [October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
 
 Collapsible issue behavior and approved frontend release: [topic evidence](VK_COLLAPSIBLE_ISSUES.md).
+
+Newest follow-up: [exact-message Reply to](VK_DOT_MESSAGE_REPLIES.md) is implemented
+and tested for issue/project chats, including durable links and uncertain retries.
+It requires matching Dot Python/API plus frontend release; **not activated here**.
+Staging owns its current timestamp execution5ab782bd and subsequent integration.
+Apply only the feature diff onto its newer frontend/current Python baseline;
+retain timestamps, collapsible UI, continuations, CU/Stop and latest-data rollback.

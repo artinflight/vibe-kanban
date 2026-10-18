@@ -40,3 +40,9 @@ indexed and hash-bound by [the archive manifest](CONTINUITY_ARCHIVE.json).
 
 Current release coordination, newer Sidebar adoption and remaining private gates:
 [October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
+
+Current owner follow-up: [Reply to exact messages](VK_DOT_MESSAGE_REPLIES.md).
+Minimal UI plus additive owner-link storage/API/event context, independent of
+Dot's existing delivery/continuation reply_to. Local issue/project desktop/mobile
+and current Python/connector compatibility checks pass. No frontend build or
+activation here; Staging retains timestamp execution5ab782bd and release ownership.

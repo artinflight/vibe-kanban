@@ -366,3 +366,57 @@
     min-height: 44px;
   }
 }
+
+.dot-reply-reference,
+.dot-reply-target {
+  border-left: 2px solid currentColor;
+  padding: 8px 10px;
+  margin: 8px 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.dot-reply-reference a {
+  color: inherit;
+  text-decoration: underline;
+}
+.dot-reply-reference p,
+.dot-reply-target p {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+  margin: 4px 0 0;
+}
+.dot-reply-target {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.dot-reply-target > div {
+  min-width: 0;
+}
+.dot-reply-target time {
+  display: block;
+  font-size: 11px;
+}
+.dot-reply-button {
+  min-height: 36px;
+  padding: 6px 10px;
+  color: inherit;
+  background: none;
+  border: 1px solid #8884;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.dot-reply-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+@media (max-width: 767px) {
+  .dot-reply-button {
+    min-height: 44px;
+  }
+}

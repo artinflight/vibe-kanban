@@ -69,6 +69,9 @@ class Store:
           workspace TEXT NOT NULL, request TEXT NOT NULL, reply_to TEXT,
           hash TEXT NOT NULL, created REAL NOT NULL,
           UNIQUE(thread,seq), UNIQUE(thread,role,request), UNIQUE(reply_to));
+        CREATE TABLE IF NOT EXISTS owner_reply_targets(
+          message TEXT PRIMARY KEY REFERENCES messages(id),
+          target TEXT NOT NULL REFERENCES messages(id));
         CREATE TABLE IF NOT EXISTS dot_reply_state(
           message TEXT PRIMARY KEY REFERENCES messages(id),
           seen INTEGER NOT NULL DEFAULT 0,
@@ -157,7 +160,37 @@ class Store:
                                (principal.owner, row["project"], row["issue"], workspace)).fetchone():
             raise Rejected("Workspace is not authorized for this thread")
 
-    def append(self, principal, thread, workspace, request, body, reply_to=None, event_id=None, attention=None):
+    def _owner_reply_target(self, principal, thread, workspace, target):
+        if target is None:
+            return None
+        if principal.role != 'owner' or not isinstance(target, str) or not target or len(target) > 200:
+            raise Rejected('Invalid owner reply target')
+        # Conversation is shared across issue workspaces; dispatch notes are not.
+        row = self.db.execute("""SELECT m.id FROM messages m LEFT JOIN dispatch_notes d
+          ON d.message=m.id AND d.thread=m.thread AND d.owner=? AND d.workspace=m.workspace
+          WHERE m.id=? AND m.thread=? AND (d.message IS NULL OR d.workspace=?)""",
+          (principal.owner, target, thread, workspace)).fetchone()
+        if not row:
+            raise Rejected('Reply target is unavailable in this conversation')
+        return row['id']
+
+    def _owner_reply_reference(self, thread, message, display_workspace=None):
+        # The live connector also has read-only readers of pre-upgrade snapshots.
+        if not self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='owner_reply_targets'").fetchone():
+            return None
+        row = self.db.execute("""SELECT t.id,t.seq,t.role,t.body,t.created,d.workspace AS dispatch_workspace
+          FROM owner_reply_targets r JOIN messages t ON t.id=r.target JOIN messages m ON m.id=r.message
+          LEFT JOIN dispatch_notes d ON d.message=t.id AND d.thread=t.thread AND d.workspace=t.workspace
+            AND d.owner=(SELECT owner FROM threads WHERE id=t.thread)
+          WHERE r.message=? AND m.thread=? AND t.thread=m.thread""", (message, thread)).fetchone()
+        if not row:
+            return None
+        unavailable = display_workspace is not None and row['dispatch_workspace'] is not None and row['dispatch_workspace'] != display_workspace
+        return {'id':row['id'], 'seq':row['seq'], 'role':row['role'], 'created':row['created'],
+                'excerpt':'' if unavailable else row['body'][:1000], 'truncated':len(row['body']) > 1000,
+                'unavailable':unavailable}
+
+    def append(self, principal, thread, workspace, request, body, reply_to=None, event_id=None, attention=None, in_reply_to=None):
         self._principal(principal, ("owner", "dot"))
         if not isinstance(body, str) or not body.strip() or len(body.encode()) > 60000:
             raise Rejected("Message must contain 1..60000 UTF-8 bytes")
@@ -177,11 +210,13 @@ class Store:
                                          (reply_to, thread)).fetchone()
                 if not target or target["event"] != event_id or target["workspace"] != workspace:
                     raise Rejected("Reply must match the exact owner message/event/workspace")
+            target_id = self._owner_reply_target(principal, thread, workspace, in_reply_to)
             digest = hashlib.sha256(body.encode()).hexdigest()
             old = self.db.execute("SELECT * FROM messages WHERE thread=? AND role=? AND request=?",
                                   (thread, principal.role, request)).fetchone()
             if old:
-                if (old["hash"], old["workspace"], old["reply_to"]) != (digest, workspace, reply_to):
+                old_target = self.db.execute('SELECT target FROM owner_reply_targets WHERE message=?', (old['id'],)).fetchone()
+                if (old["hash"], old["workspace"], old["reply_to"], old_target['target'] if old_target else None) != (digest, workspace, reply_to, target_id):
                     raise Rejected("Idempotency key conflict")
                 # Idempotency compares the original annotation, not subsequently
                 # resolved state. A retry cannot reopen an action or mark it unread.
@@ -195,6 +230,8 @@ class Store:
             mid, now = str(uuid.uuid4()), self.clock()
             self.db.execute("INSERT INTO messages VALUES (?,?,?,?,?,?,?,?,?,?)",
                             (mid, thread, seq, principal.role, body, workspace, request, reply_to, digest, now))
+            if target_id is not None:
+                self.db.execute('INSERT INTO owner_reply_targets VALUES (?,?)', (mid, target_id))
             if principal.role=='dot':
                 self.db.execute('INSERT INTO dot_reply_state(message,attention_kind,initial_attention_kind,updated) VALUES (?,?,?,?)',(mid,attention,attention,now))
             if principal.role == "owner":
@@ -207,6 +244,8 @@ class Store:
                                     "intent": "sidechat_reply_requested",
                                     "reply_scope": "same_thread_only",
                                     "message_sha256": digest}, "cursor": None}
+                if target_id is not None:
+                    payload['data']['in_reply_to'] = target_id
                 self.db.execute("INSERT INTO outbox(event,message,thread,payload,updated) VALUES (?,?,?,?,?)",
                                 (eid, mid, thread, canonical(payload), now))
             return dict(self.db.execute("SELECT * FROM messages WHERE id=?", (mid,)).fetchone())
@@ -233,6 +272,11 @@ class Store:
         more = len(rows) > limit
         rows = rows[:limit]
         for message in rows:
+            if message['role'] == 'owner':
+                reference = self._owner_reply_reference(thread, message['id'], display_workspace)
+                if reference:
+                    message['in_reply_to'] = reference['id']
+                    message['reply_reference'] = reference
             dispatch_workspace=message.pop('dispatch_workspace')
             dispatch_execution=message.pop('dispatch_execution')
             if dispatch_workspace:
@@ -371,6 +415,9 @@ class Store:
                         "message_id":row["id"],"sequence":row["seq"],
                         "message_sha256":row["hash"],"author_type":"authenticated_owner",
                         "intent":"sidechat_reply_requested","reply_scope":"same_thread_only"}
+            reference = self._owner_reply_reference(row['thread'], row['id'])
+            if reference:
+                expected['in_reply_to'] = reference['id']
             if event.get("eventId")!=row["event"] or event.get("name")!=EVENT or event.get("data")!=expected:
                 raise Rejected("Stored event context is inconsistent; do not guess a reply target")
             items.append({"event":event,

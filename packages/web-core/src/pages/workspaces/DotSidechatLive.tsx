@@ -16,6 +16,7 @@ type Pending = {
   project?: string;
   request: string;
   body: string;
+  in_reply_to?: string;
 };
 type Snapshot = {
   thread: { id: string };
@@ -24,7 +25,11 @@ type Snapshot = {
   receipts: Record<string, SidechatReceipt>;
   through: number;
   next_after: number | null;
-  capabilities?: { notifications: boolean; manual_unread?: boolean };
+  capabilities?: {
+    notifications: boolean;
+    manual_unread?: boolean;
+    message_replies?: boolean;
+  };
 };
 export class PairingRequired extends Error {}
 
@@ -86,6 +91,7 @@ export function DotSidechatLive({
   const [code, setCode] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [draft, setDraft] = useState('');
+  const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +131,7 @@ export function DotSidechatLive({
   useEffect(() => {
     pending.current = null;
     setDraft('');
+    setReplyTargetId(null);
     if (!storageKey) return;
     try {
       const saved = sessionStorage.getItem(storageKey);
@@ -135,10 +142,14 @@ export function DotSidechatLive({
             ? value.project === projectId && !value.workspace
             : value.workspace === workspaceId && !value.project) &&
           typeof value.body === 'string' &&
-          typeof value.request === 'string'
+          typeof value.request === 'string' &&
+          (value.in_reply_to === undefined ||
+            (typeof value.in_reply_to === 'string' &&
+              value.in_reply_to.length > 0))
         ) {
           pending.current = value;
           setDraft(value.body);
+          setReplyTargetId(value.in_reply_to ?? null);
         }
       }
     } catch {
@@ -313,10 +324,18 @@ export function DotSidechatLive({
     busy.current = true;
     setSending(true);
     try {
+      if (
+        (replyTargetId || pending.current?.in_reply_to) &&
+        !snapshot?.capabilities?.message_replies
+      )
+        throw new Error(
+          'Reply targeting is unavailable. Your reply is retained; refresh after the Dot service release.'
+        );
       const outgoing = pending.current ?? {
         ...target,
         request: crypto.randomUUID(),
         body: draft,
+        ...(replyTargetId ? { in_reply_to: replyTargetId } : {}),
       };
       // Persist BEFORE submitting; retries after a lost response reuse the exact key/body.
       sessionStorage.setItem(storageKey, JSON.stringify(outgoing));
@@ -325,6 +344,7 @@ export function DotSidechatLive({
       sessionStorage.removeItem(storageKey);
       pending.current = null;
       setDraft('');
+      setReplyTargetId(null);
       await refresh();
     } catch (failure) {
       setError((failure as Error).message);
@@ -348,6 +368,7 @@ export function DotSidechatLive({
       if (storageKey) sessionStorage.removeItem(storageKey);
       pending.current = null;
       setDraft('');
+      setReplyTargetId(null);
       setSnapshot(null);
       setSession(null);
       window.dispatchEvent(
@@ -416,6 +437,25 @@ export function DotSidechatLive({
           onReadState={
             snapshot?.capabilities?.manual_unread ? changeReadState : undefined
           }
+          onReplyTarget={(message) => {
+            if (!busy.current && !pending.current) setReplyTargetId(message);
+          }}
+          replyEnabled={snapshot?.capabilities?.message_replies ?? false}
+          replyTarget={(() => {
+            const message = snapshot?.messages.find(
+              (m) => m.id === replyTargetId
+            );
+            return message
+              ? {
+                  id: message.id,
+                  seq: message.seq,
+                  role: message.role,
+                  created: message.created,
+                  excerpt: message.body.slice(0, 1000),
+                  truncated: message.body.length > 1000,
+                }
+              : null;
+          })()}
           onAttention={(message, action) => void attention(message, action)}
           messages={snapshot?.messages ?? []}
           receipts={snapshot?.receipts ?? {}}

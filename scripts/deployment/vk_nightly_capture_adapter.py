@@ -327,20 +327,26 @@ class RegisteredWorkspace:
         data=(json.dumps(value,indent=2,sort_keys=True)+'\n').encode()
         if len(data)>MAX_INDEX or len(data)>self.remaining():raise ValueError('bounded B metadata limit exceeded')
         with self.open_new(path) as stream:stream.write(data);stream.flush();os.fsync(stream.fileno())
-        return self.seal(path)
+        sealed=self.seal(path)
+        if (sealed['bytes'],sealed['sha256'])!=(len(data),hashlib.sha256(data).hexdigest()):
+            raise ValueError('B metadata readback differs from produced bytes')
+        return sealed
     def save_proof(self,path,value):
         # Compact streaming JSON avoids duplicating a host-scale encoded buffer.
-        total=0;buffer=bytearray()
+        total=0;buffer=bytearray();checksum=hashlib.sha256()
         with self.open_new(path) as stream:
             for piece in json.JSONEncoder(separators=(',',':')).iterencode(value):
-                data=piece.encode();total+=len(data)
+                data=piece.encode();total+=len(data);checksum.update(data)
                 if total>MAX_INDEX:raise ValueError('bounded proof metadata exceeded')
                 buffer.extend(data)
                 if len(buffer)>=1024**2:
                     stream.write(buffer);buffer.clear()
             if buffer:stream.write(buffer)
             stream.flush();os.fsync(stream.fileno())
-        return self.seal(path)
+        sealed=self.seal(path)
+        if (sealed['bytes'],sealed['sha256'])!=(total,checksum.hexdigest()):
+            raise ValueError('B proof readback differs from produced bytes')
+        return sealed
     def mirror(self,source):
         if not isinstance(source,StreamingArchive):
             # Capture has already registered and sealed its recovery descriptor.

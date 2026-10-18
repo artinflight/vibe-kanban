@@ -285,6 +285,17 @@ class AdapterTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'proof metadata'):
                 self.workspace.save_proof(self.destination/'oversized-proof.json',value)
         self.assertNotIn('oversized-proof.json',self.workspace.sealed)
+    def test_proof_and_metadata_require_end_to_end_digest_not_just_a_seal(self):
+        call=self.resident.call
+        def altered(action,**kwargs):
+            value=call(action,**kwargs)
+            if action=='seal':value['sha256']='f'*64
+            return value
+        with patch.object(self.resident,'call',side_effect=altered):
+            for name,write in [('proof.json',self.workspace.save_proof),('metadata.json',self.workspace.save_json)]:
+                with self.subTest(name=name),self.assertRaisesRegex(ValueError,'readback differs from produced'):
+                    write(self.destination/name,{'preserved':'fixture original'})
+        self.assertEqual(len(list(self.destination.iterdir())),2)
     def test_host_scale_proof_coalesces_capacity_accounting_writes(self):
         value={'entries':{'path-'+str(i):{'bytes':i,'sha256':'a'*64} for i in range(10000)}}
         calls=[];reserve=self.workspace.reserve_file

@@ -19,3 +19,10 @@ The October 17 deployed sidebar receipt is
 [here](VK_PROJECT_COLLABORATION_ROLLOUT.md). All older pickup text remains in
 [history](HANDOFF_HISTORY_20261017.md), the sidebar pickup and exact
 [T63 deployment additions](T63_DEPLOYMENT_PICKUP_20261017.md).
+
+Latest owner timestamp request: source `fe8b50194` is tested/pushed; **not live**.
+Two bounded frontend builds timed out under existing execution limits. Current
+readability release remains intact; no service/auth/chat/routing changes. Use
+[the timestamp status](VK_T63_ACTIVITY_ROLLOUT.md#eastern-message-timestamps--source-ready-activation-blocked)
+for the existing release owner's admitted-build/activation handoff; do not infer
+a sealed package from passing fixture tests or retry outside admission caps.

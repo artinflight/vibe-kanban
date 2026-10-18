@@ -106,3 +106,42 @@ Python/module pointers stayed unchanged. No service/agent restart or reload,
 SQLite write, real conversation action, model/effort or routing change occurred.
 Refresh existing browser tabs. Private receipts are in the new preparation root;
 subsequent documentation publication does not change this installed source.
+
+## Eastern message timestamps — source ready, activation blocked
+
+Owner-requested source `fe8b50194f382a7b6d4f23347da3c960f8deeb93` is pushed to
+existing PR268. Every message byline renders its stored creation timestamp using
+`America/Toronto`, full date/year and EST/EDT; narrow bylines wrap. The only
+production changes are this renderer and message-byline wrapping styles.
+Unread/attention handlers, dispatch attribution, workspace grouping/readability,
+Python, model/effort and Recommend routing are unchanged.
+
+Synthetic Chromium acceptance passes issue/project chats at390/1440, with the
+browser set to Asia/Tokyo: existing history, newly appended/updated messages,
+reloads, Eastern date/year boundaries, spring DST and both fall repeated-hour
+instants. Existing notification/manual-unread/attention DOM and Chromium tests,
+Running/attention/approval/subagent/target-sibling/readability regressions, UI and
+all frontend type checks, focused ESLint, format and ops checks pass. The first
+sandbox app type check exhausted its default heap; the established bounded4GiB
+compiler-heap retry passed. No Rust or physical-phone acceptance is claimed.
+
+No new frontend is sealed or activated. Both the normal source-bound build and
+one retry omitting newly generated debug source maps exceeded their original
+900-second timeouts under unchanged execution resource limits. Failed outcomes
+are retained privately; a timeout is not a successful build. No third retry,
+resource-limit change, service action, credential creation or real chat action
+occurred. The previously activated row-readability frontend remains live.
+Read-only served index/JS/CSS hashes, all seven service identities/definitions,
+Python pointers and external CU/Stop module hashes remain unchanged.
+
+[Exact application-head CI39117319509](https://github.com/artinflight/vibe-kanban/actions/runs/39117319509)
+failed branch freshness against newer Staging; the frontend job was skipped.
+Branch policy, sidechat contracts, preservation contracts and ops passed. CI is
+not fully green, and no merge occurred. Staging/Preserve retain integration and
+release ownership. Next: an admitted build window for this exact source, then
+immutable packaging/verified incumbent rollback/backup and fresh drift gates,
+owner-authorized frontend pointer-only activation, and served desktop/mobile
+issue/project timestamp verification without real conversation writes. The
+prepared acceptance uses fresh unpaired browsers, mocked Dot transport and
+read-only real creation-time metadata; no temporary authentication is needed.
+No backend release or service restart is required by this feature.

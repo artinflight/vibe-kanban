@@ -22,3 +22,7 @@ and `America/Toronto` with full date/year and EST/EDT. This is a minimal UI-only
 change with desktop/mobile history/update/DST tests; retain the current frontend
 baseline and all unread, attention, attribution, Running and readability behavior.
 Activation is authorized via the established pointer-only release; no restarts.
+Timestamp source `fe8b50194` passed desktop/mobile issue/project DST/history/update
+and state regressions; two bounded builds timed out. No timestamp activation or
+sealed package exists. Existing readability baseline stays live; the release
+owner needs an admitted build window. Exact CI is blocked by Staging freshness.

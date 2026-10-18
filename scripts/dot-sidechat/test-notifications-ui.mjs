@@ -197,7 +197,9 @@ for (const project of [false, true])
     await wait(() => s.reads.length === 1);
     await settle();
     s.holdThread = true;
-    dom.window.document.querySelector('[aria-label="Refresh conversation"]').click();
+    dom.window.document
+      .querySelector('[aria-label="Refresh conversation"]')
+      .click();
     await wait(() => s.releaseThread);
     button('Mark Dot reply as unread').click();
     button('Mark Dot reply as unread').click();
@@ -214,7 +216,10 @@ for (const project of [false, true])
     s.holdThread = false;
     s.releaseThread();
     await settle();
-    assert.ok(button('Mark Dot reply as read'), 'Stale refresh cannot replace manual unread');
+    assert.ok(
+      button('Mark Dot reply as read'),
+      'Stale refresh cannot replace manual unread'
+    );
     assert.equal(s.seen, false);
     assert.equal(s.attention, false);
     assert.equal(
@@ -288,7 +293,8 @@ for (const project of [false, true])
     dom.window.close();
     // A new frontend remains usable with the incumbent API until service adoption.
     s.supportsManualUnread = false;
-    dom = load(); dom.window.eval(bundle.js);
+    dom = load();
+    dom.window.eval(bundle.js);
     await wait(() => button('Resolve Dot question'));
     assert.equal(button('Mark Dot reply as unread'), null);
     assert.equal(button('Mark Dot reply as read'), null);

@@ -110,9 +110,15 @@ export function transport(s) {
         receipts: {},
         through: 2,
         next_after: null,
-        capabilities: { notifications: true, manual_unread: s.supportsManualUnread !== false },
+        capabilities: {
+          notifications: true,
+          manual_unread: s.supportsManualUnread !== false,
+        },
       };
-      if (s.holdThread) await new Promise((resolve) => { s.releaseThread = resolve; });
+      if (s.holdThread)
+        await new Promise((resolve) => {
+          s.releaseThread = resolve;
+        });
       return result(page);
     }
     const body = JSON.parse(options.body ?? '{}');

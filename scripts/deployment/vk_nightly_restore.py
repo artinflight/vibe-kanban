@@ -113,6 +113,7 @@ def restore_generation(folder, manifest, destination, *, checkpoint=lambda value
 
     # Apply only recorded metadata, children before directories. Inaccessible
     # numeric ownership/xattrs fail honestly; the helper never invokes sudo.
+    restored_regular_allocation = selected_directory_allocation = 0
     for key in sorted(entries, key=lambda k: k.count('/'), reverse=True):
         row = entries[key]
         path = destination / key
@@ -140,8 +141,15 @@ def restore_generation(folder, manifest, destination, *, checkpoint=lambda value
         for field, value in row['xattrs'].items():
             if os.getxattr(path, field, follow_symlinks=False) != base64.b64decode(value, validate=True):
                 raise ValueError('restored xattr differs: ' + key)
+        if row['kind'] == 'file':
+            restored_regular_allocation += info.st_blocks * 512
+        elif row['kind'] == 'directory':
+            selected_directory_allocation += info.st_blocks * 512
     report('complete', len(entries))
     return {'passed': True, 'independent_restore_verified': True, 'entries': len(entries),
             'kinds': counts, 'regular_bytes_written': logical, 'sqlite_integrity_checks': sqlite_checked,
+            'restored_regular_allocated_bytes': restored_regular_allocation,
+            'selected_directory_allocated_bytes': selected_directory_allocation,
+            'filesystem_inode_and_unselected_scaffold_overhead_included': False,
             'recorded_metadata_verified': True, 'unselected_parent_metadata_specified': False,
             'deployment_or_journal_adoption': False}

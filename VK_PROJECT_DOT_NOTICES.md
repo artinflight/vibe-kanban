@@ -55,7 +55,6 @@ notified before preparation; no competing combined activation or service restart
 
 Staging subsequently verified the combined source366cfd243 live at09:35 EDT.
 The owner's visual correction is based on that exact current entry and changes
-only this presentation component. A source-derived component drop-in preserves
-all other compiled bytes and incumbent assets, with the previous immutable root
-retained for rollback. Fresh drift checks and actual served390/1440 acceptance
+only this presentation component. The existing hosted frontend-only route preserves the complete chunk graph;
+incumbent assets and the previous immutable root remain available for rollback. Fresh drift checks and actual served390/1440 acceptance
 are required; no Python, service, database or running-agent change is needed.

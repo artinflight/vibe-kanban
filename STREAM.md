@@ -1,28 +1,42 @@
-# T63 Dot activity and dispatch attribution
+# Collapsible Issues release stream
 
-Continue workspace `7db73dbd-3b5d-4c21-87f1-4924be648284` on
-`vk/7db7-vk-project-dot-c`, reconciled with staging `85af54d3c`.
-Scope: preserve completed Mark unread; retain active agents in Running with
-independent explicit action/approval visibility; attribute verified dispatch notes
-only to their target workspace while retaining genuine shared conversation.
-[Combined implementation/release handoff](VK_DOT_ACTIVITY_ATTRIBUTION.md).
+Current branch prepares the accepted collapsible issue UI for rebase-merge
+into staging and a frontend-only live release. See
+[feature, validation and release evidence](VK_COLLAPSIBLE_ISSUES.md).
+Preserve the compact indexes and all existing release protections below.
 
-The exact combined package was explicitly approved and activated October18;
-[the live receipt](VK_T63_ACTIVITY_ROLLOUT.md) records meaningful API/UI acceptance
-and latest-data cutback. No merge or unrelated service/model/effort/routing change
-is authorized. Staging/Preserve retain subsequent integration ownership.
+# Usage-efficiency follow-up: compact job outcomes
 
-Current protections/topic map: [STATE](STATE.md). Earlier branch histories are
-retained in [STREAM history](STREAM_HISTORY_20261017.md), its archive manifest,
-[sidebar preparation pickup](PROJECT_SIDEBAR_PICKUP_20261017.md) and
-[deployment additions](T63_DEPLOYMENT_PICKUP_20261017.md).
+Base: staging `d0b0bb298` (PR266 merged). Branch:
+`fix/compact-job-outcomes-20261017`, existing Automatic Restart Preflight owner.
+This follow-up adds bounded durable outcomes to the existing runner and measures
+actual JSON payload reduction. Approval-review share is not evidence of waste;
+models, AutoSwitch, all approval checks and QA remain unchanged. Staging retains
+release ownership; no new execution owner or nightly job.
 
-Owner-requested follow-up: visible per-message timestamps use stored Unix seconds
-and `America/Toronto` with full date/year and EST/EDT. This is a minimal UI-only
-change with desktop/mobile history/update/DST tests; retain the current frontend
-baseline and all unread, attention, attribution, Running and readability behavior.
-Activation is authorized via the established pointer-only release; no restarts.
-Timestamp source `fe8b50194` passed desktop/mobile issue/project DST/history/update
-and state regressions; two bounded builds timed out. No timestamp activation or
-sealed package exists. Existing readability baseline stays live; the release
-owner needs an admitted build window. Exact CI is blocked by Staging freshness.
+Seamus authorized reducing repeated pickup input and redundant work while
+keeping models, effort, AutoSwitch, full history and acceptance unchanged.
+Scope: lossless continuity archives and concise current indexes, adoption of
+the existing fingerprinted `scripts/deployment/vk_prepare.py` result reuse,
+and narrow shared-job correctness fixes coordinated with their existing owners.
+
+Staging owns combined release/native queue recorder-drain acceptance. Nightly
+workspace604d/PR263 owns producer completion, capture reconciliation, B package,
+whole-plan recovery and schedule activation. Do not edit their workspaces,
+duplicate jobs/stores, compile another candidate or claim their pending checks.
+All runtime, admission, data, security and human-QA constraints in [STATE](STATE.md)
+remain active. No production change is part of this stream.
+
+Validation must show exact archival preservation and bounded pickup input,
+then exercise the existing Preparation runner with identical commands and
+acceptance before/after reuse. Count actual command launches and repeated
+input bytes; do not infer tokens, money or model-call savings from byte counts.
+Any model-workflow claim needs actual same-model provider evidence.
+
+Read [the efficiency evidence/contract](USAGE_EFFICIENCY.md) for current results
+and unresolved acceptance. The full prior branch histories, constraints,
+identities and receipts remain in [STREAM history](STREAM_HISTORY_20261017.md),
+indexed and hash-bound by [the archive manifest](CONTINUITY_ARCHIVE.json).
+
+Current release coordination, newer Sidebar adoption and remaining private gates:
+[October 17 release status](VK_RELEASE_COORDINATION_20261017.md).

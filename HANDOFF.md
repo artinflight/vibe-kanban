@@ -1,28 +1,31 @@
-# T63 pickup
+# Pickup
 
-Read [STATE](STATE.md), [STREAM](STREAM.md), then the
-[October 18 live combined release receipt](VK_T63_ACTIVITY_ROLLOUT.md).
-The exact owner-approved T63 package is active: Mark unread, independent Running
-membership and workspace-specific dispatch attribution. Live API/UI acceptance
-and latest-data backup/preservation checks passed. Vibe/backend and agents were
-not restarted. Reuse existing T63/PR268; no duplicate issue, agent or service.
-Models/effort and Recommend remain unchanged. Source remains unmerged.
+Current bounded follow-up: [compact durable job outcomes](USAGE_JOB_OUTCOMES.md).
+PR266 is merged; preserve its archives/reuse and the newer release coordination.
 
-All affected issues/siblings were checked; genuine conversation/unread and
-explicit attention are preserved. Keep the latest SQLite for any cutback and use
-the prepared manual-unread-aware fallback, not the original October17 Python.
-The owner-requested frontend-only row readability correction is also live;
-all seven service PIDs stayed unchanged. Existing tabs need refresh. Earlier implementation
-and preparation details remain in [the source guide](VK_DOT_ACTIVITY_ATTRIBUTION.md).
+1. Read [STATE](STATE.md) for active protections and the topic map, then
+   [STREAM](STREAM.md) for this branch. Do not load historical archives by default.
+2. Read [USAGE_EFFICIENCY](USAGE_EFFICIENCY.md) for exact measured results,
+   commands and outstanding integration. Preserve owners' existing changes.
+3. Reuse the existing fingerprinted Preparation runner: prerequisites before
+   build, immutable source/tool/config/artifact identity, one cache owner,
+   and fresh volatile acceptance on every run. A cache hit never authorizes
+   deployment or skips current owner/data/queue/QA checks.
+4. Staging owns release and actual native queue start/drain readback. Nightly
+   workspace604d owns the sole B backup/package/schedule; its counted capacity
+   phase is not a backup. Neither is replaced by this efficiency branch.
+5. No restart, schedule activation, cleanup, privilege change or extra worker
+   is authorized here. Observe fresh resource admission and leave a user lane.
 
-The October 17 deployed sidebar receipt is
-[here](VK_PROJECT_COLLABORATION_ROLLOUT.md). All older pickup text remains in
-[history](HANDOFF_HISTORY_20261017.md), the sidebar pickup and exact
-[T63 deployment additions](T63_DEPLOYMENT_PICKUP_20261017.md).
+All former pickup text is preserved exactly in
+[HANDOFF history](HANDOFF_HISTORY_20261017.md). Locate relevant dated sections
+with `python3 scripts/continuity/pickup.py find QUERY` rather than reading the
+whole archive. The [archive manifest](CONTINUITY_ARCHIVE.json) records the
+original source commit, byte counts, hashes and every heading/line locator.
+Archives contain historical contradictory checkpoints: use current validated
+owner evidence, never a stale heading that says "current".
 
-Latest owner timestamp request: source `fe8b50194` is tested/pushed; **not live**.
-Two bounded frontend builds timed out under existing execution limits. Current
-readability release remains intact; no service/auth/chat/routing changes. Use
-[the timestamp status](VK_T63_ACTIVITY_ROLLOUT.md#eastern-message-timestamps--source-ready-activation-blocked)
-for the existing release owner's admitted-build/activation handoff; do not infer
-a sealed package from passing fixture tests or retry outside admission caps.
+Current release coordination, newer Sidebar adoption and remaining private gates:
+[October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
+
+Collapsible issue behavior and approved frontend release: [topic evidence](VK_COLLAPSIBLE_ISSUES.md).

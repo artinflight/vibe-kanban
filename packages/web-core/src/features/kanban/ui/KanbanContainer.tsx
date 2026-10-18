@@ -34,7 +34,9 @@ import {
   PRIORITY_ORDER,
 } from '../model/hooks/useKanbanFilters';
 import {
+  CaretDownIcon,
   CaretLeftIcon,
+  CaretRightIcon,
   DotsThreeIcon,
   PlusIcon,
   XIcon,
@@ -692,6 +694,8 @@ export function KanbanContainer() {
   );
   const workspaceColors = useUiPreferencesStore((s) => s.workspaceColors);
   const setWorkspaceColor = useUiPreferencesStore((s) => s.setWorkspaceColor);
+  const expanded = useUiPreferencesStore((s) => s.expanded);
+  const toggleExpanded = useUiPreferencesStore((s) => s.toggleExpanded);
   const { t } = useTranslation('common');
   const appNavigation = useAppNavigation();
   const routeState = useCurrentKanbanRouteState();
@@ -1855,15 +1859,41 @@ export function KanbanContainer() {
                     (ws) => ws.localWorkspaceId
                   );
                   const attentionLabel = getIssueAttentionLabel(id);
+                  const isExpanded = expanded[`kanban-issue:${id}`] ?? true;
                   return (
                     <article
                       key={id}
                       className={cn(
                         'mobile-task-card phone-task-row',
+                        !isExpanded && 'pb-6 kanban-issue-collapsed',
                         attentionLabel && 'kanban-attention-card'
                       )}
                     >
                       <div className="phone-task-main">
+                        <button
+                          type="button"
+                          className="phone-row-more text-low focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand"
+                          aria-expanded={isExpanded}
+                          aria-label={t(
+                            isExpanded
+                              ? 'kanban.collapseIssue'
+                              : 'kanban.expandIssue',
+                            { displayId: issue.simple_id }
+                          )}
+                          onClick={() => toggleExpanded(`kanban-issue:${id}`)}
+                        >
+                          {isExpanded ? (
+                            <CaretDownIcon
+                              className="size-icon-sm"
+                              weight="bold"
+                            />
+                          ) : (
+                            <CaretRightIcon
+                              className="size-icon-sm"
+                              weight="bold"
+                            />
+                          )}
+                        </button>
                         <button
                           type="button"
                           className="mobile-task-metadata phone-task-open"
@@ -1879,7 +1909,9 @@ export function KanbanContainer() {
                             </span>
                           </span>
                           <span className="phone-task-title">
-                            {issue.title}
+                            {isExpanded && workspace
+                              ? workspace.name
+                              : issue.title}
                           </span>
                           <DotActivityIndicators
                             dotUnreadCount={
@@ -1906,7 +1938,7 @@ export function KanbanContainer() {
                           <DotsThreeIcon size={22} weight="bold" />
                         </button>
                       </div>
-                      {showWorkspaces && workspace && (
+                      {isExpanded && showWorkspaces && workspace && (
                         <button
                           type="button"
                           className="phone-task-workspace"
@@ -2067,7 +2099,11 @@ export function KanbanContainer() {
                                 id={issue.id}
                                 name={issue.title}
                                 index={index}
-                                className="group"
+                                className={cn(
+                                  'group',
+                                  expanded[`kanban-issue:${issue.id}`] ===
+                                    false && 'kanban-issue-collapsed'
+                                )}
                                 onClick={(e) => handleCardClick(issue.id, e)}
                                 isOpen={selectedKanbanIssueId === issue.id}
                                 isMobile={isMobile}
@@ -2077,6 +2113,12 @@ export function KanbanContainer() {
                                 <KanbanCardContent
                                   displayId={issue.simple_id}
                                   title={issue.title}
+                                  isExpanded={
+                                    expanded[`kanban-issue:${issue.id}`] ?? true
+                                  }
+                                  onToggleExpanded={() =>
+                                    toggleExpanded(`kanban-issue:${issue.id}`)
+                                  }
                                   primaryContent={
                                     issueWorkspaces.length > 0 ? (
                                       <div className="flex flex-col gap-half">

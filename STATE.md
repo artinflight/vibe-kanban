@@ -56,11 +56,4 @@ line range, widening it when the task needs surrounding constraints.
 Current release coordination, newer Sidebar adoption and remaining private gates:
 [October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
 
-T63 sidebar deployment is recorded in [the live rollout](VK_PROJECT_COLLABORATION_ROLLOUT.md).
-The dated preparation status above is superseded by that receipt. Local pickup
-additions/edits survive in [T63 pickup preservation](T63_DEPLOYMENT_PICKUP_20261017.md).
-
-Current T63 source follow-up: [Running and dispatch attribution](VK_DOT_ACTIVITY_ATTRIBUTION.md),
-preserving manual unread. The exact owner-approved combined release is active;
-[October18 activation/acceptance receipt](VK_T63_ACTIVITY_ROLLOUT.md) supersedes
-its earlier preparation-only status. Source merge remains separate.
+Collapsible issue behavior and approved frontend release: [topic evidence](VK_COLLAPSIBLE_ISSUES.md).

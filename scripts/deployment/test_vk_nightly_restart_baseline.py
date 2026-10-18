@@ -104,6 +104,13 @@ class BaselineTests(unittest.TestCase):
             self.assertEqual(db.execute('SELECT value FROM work').fetchall(), [('latest',)])
         self.assertEqual(len(list(self.root.glob('generation-*'))), 1)
 
+    def test_retained_SQL_proof_cannot_be_adopted_as_current_restart_baseline(self):
+        self.result['retained_SQLite_recovery']={'/fixture/db.sqlite':{'candidate':'retained'}}
+        self.advance()
+        binding=self.store.current()['capture_context']['restart_capture']
+        self.assertFalse(binding['operational_adoption_eligible'])
+        with self.assertRaisesRegex(ValueError,'restart capture contract'),self.open():pass
+
     def test_new_instance_overflow_wrong_scope_and_backwards_sequence_fail(self):
         self.advance()
         changes = [{'instance': 'new'}, {'errors': [{'overflow': 16384}]}, {'scope_sha256': '0'*64},

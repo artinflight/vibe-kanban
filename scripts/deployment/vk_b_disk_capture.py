@@ -5,6 +5,7 @@ verified B snapshot factory; all parent, journal, stream and fence checks remain
 Explicit fenced B-disk factories require stopped writers and the unchanged held
 lease; otherwise the original guarded memory path remains unchanged.
 """
+import base64
 import hashlib
 import io
 import json
@@ -134,7 +135,7 @@ def verify_remote_snapshots(result, snapshots, manifest):
 
 def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fence=None,
             max_snapshot_bytes=MAX_SNAPSHOT_BYTES, disk_snapshot=None, disk_inventory_root=None, fenced_disk_snapshot=None, workspace=None,
-            nightly_selection=None):
+            nightly_selection=None, retained_snapshot=None):
     # Import the authoritative journal/scope rules without duplicating them.
     from vk_rolling_backup import (Exclusions, check_journal, content_event, generation,
                                    scan, validate_archive_warnings, verified_parent)
@@ -219,6 +220,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
     peak_snapshot = 0
     peak_snapshot_cache = 0
     disk_proofs = {}
+    retained_sources = {}
     disk_inventory = None
     disk_root = None
     if disk_inventory_root is not None:
@@ -265,86 +267,109 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                         continue
                     # Never immutable=1 on live data. A normal read transaction
                     # plus SQLite backup API includes WAL state consistently.
-                    private = verify_fence is not None and not any(
-                        os.path.lexists(raw + suffix) for suffix in ("-wal", "-journal"))
-                    disk_image = None
-                    if verify_fence is not None and fenced_disk_snapshot is not None and not private:
-                        raise ValueError('Final B-disk source requires checkpointed, stopped databases')
-                    if private and fenced_disk_snapshot is not None:
-                        disk_image = fenced_disk_snapshot(raw)
-                        if (disk_image.get('source') != raw
-                                or disk_image.get('writer_fenced') is not True
-                                or disk_image.get('consistent_held_fence_raw_image') is not True
-                                or disk_image.get('writer_fence') != fence_before
-                                or disk_image.get('physical_b_verified') is not True
-                                or disk_image.get('integrity') != 'ok'
-                                or disk_image.get('local_snapshot_payload_bytes') != 0):
-                            raise ValueError('Fenced disk image lacks actual bound writer/readback proof')
-                        disk_proofs[raw] = {k: v for k, v in disk_image.items() if k != 'mount_root'}
-                        image = None
-                        connection = None
+                    private = False
+                    recovered = retained_snapshot(raw) if retained_snapshot is not None else None
+                    if recovered is not None:
+                        if (verify_fence is not None or parent is not None
+                                or recovered.get('source') != raw
+                                or recovered.get('new_SQLite_backup_api_capture') is not False
+                                or not recovered.get('retained_from')
+                                or recovered.get('physical_b_verified') is not True
+                                or recovered.get('integrity') != 'ok'
+                                or recovered.get('backup_api_consistent_image') is not True
+                                or recovered.get('writer_fenced') is not False):
+                            raise ValueError('Retained image lacks authenticated private recovery binding')
+                        disk_image, image, connection = recovered, None, None
+                        disk_proofs[raw] = {k:v for k,v in recovered.items() if k != 'mount_root'}
+                        retained_sources[raw] = recovered['retained_from']
                     else:
-                        if private:
-                            # Fenced/checkpointed files may be copied into RAM without
-                            # opening live SQLite bookkeeping files. Never immutable
-                            # live reads or a raw online copy of a WAL database.
-                            if path.stat().st_size > max_snapshot_bytes:
-                                raise ValueError("SQLite snapshot exceeds the configured memory bound")
-                            image = path.read_bytes()
-                            if (len(image) > max_snapshot_bytes or generation(raw) != signatures[raw]
-                                    or any(os.path.lexists(raw + s) for s in ("-wal", "-journal"))):
-                                raise ValueError("Fenced database changed while copying: " + raw)
-                            connection = sqlite3.connect(":memory:", check_same_thread=False)
-                            # deserialize cannot open a WAL-mode image in RAM. For
-                            # integrity validation ONLY, switch the private header
-                            # to rollback mode. Archive the unchanged fenced bytes.
-                            validation = image
-                            if image[:16] == b"SQLite format 3\0" and image[18:20] == b"\x02\x02":
-                                validation = image[:18] + b"\x01\x01" + image[20:]
-                            connection.deserialize(validation)
-                            del validation
+                        private = verify_fence is not None and not any(
+                            os.path.lexists(raw + suffix) for suffix in ("-wal", "-journal"))
+                        disk_image = None
+                        if verify_fence is not None and fenced_disk_snapshot is not None and not private:
+                            raise ValueError('Final B-disk source requires checkpointed, stopped databases')
+                        if private and fenced_disk_snapshot is not None:
+                            disk_image = fenced_disk_snapshot(raw)
+                            if (disk_image.get('source') != raw
+                                    or disk_image.get('writer_fenced') is not True
+                                    or disk_image.get('consistent_held_fence_raw_image') is not True
+                                    or disk_image.get('writer_fence') != fence_before
+                                    or disk_image.get('physical_b_verified') is not True
+                                    or disk_image.get('integrity') != 'ok'
+                                    or disk_image.get('local_snapshot_payload_bytes') != 0):
+                                raise ValueError('Fenced disk image lacks actual bound writer/readback proof')
+                            disk_proofs[raw] = {k: v for k, v in disk_image.items() if k != 'mount_root'}
+                            image = None
+                            connection = None
                         else:
-                            connection = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, check_same_thread=False)
-                        readers[raw] = connection
-                        versions[raw] = connection.execute("PRAGMA data_version").fetchone()[0]
-                        connection.execute("BEGIN")
-                        connection.execute("SELECT name FROM sqlite_master LIMIT 1").fetchone()
-                        if private:
-                            if connection.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
-                                raise ValueError("SQLite snapshot integrity failed")
-                        else:
-                            page_bytes = (connection.execute("PRAGMA page_count").fetchone()[0]
-                                          * connection.execute("PRAGMA page_size").fetchone()[0])
-                            if page_bytes > max_snapshot_bytes and disk_snapshot is not None:
-                                if verify_fence is not None:
-                                    raise ValueError("Large fenced B-disk images require a reviewed final-boundary adapter")
-                                # The factory owns an independent normal SQLite read
-                                # transaction and verifies physical B, not local SSD.
-                                connection.rollback()
-                                disk_image = disk_snapshot(raw)
-                                if (disk_image.get('source') != raw
-                                        or disk_image.get('backup_api_consistent_image') is not True
-                                        or disk_image.get('online_preparation_only') is not True
-                                        or disk_image.get('writer_fenced') is not False
-                                        or disk_image.get('physical_b_verified') is not True
-                                        or disk_image.get('integrity') != 'ok'
-                                        or (disk_image.get('local_snapshot_payload_bytes') != 0
-                                            and not (workspace is not None and getattr(workspace,'snapshot_cache',None)
-                                                     and workspace.snapshot_cache.valid(disk_image)))):
-                                    raise ValueError('B-disk snapshot factory returned unverified evidence')
-                                disk_proofs[raw] = {k: v for k, v in disk_image.items() if k != 'mount_root'}
-                                image = None
+                            if private:
+                                # Fenced/checkpointed files may be copied into RAM without
+                                # opening live SQLite bookkeeping files. Never immutable
+                                # live reads or a raw online copy of a WAL database.
+                                if path.stat().st_size > max_snapshot_bytes:
+                                    raise ValueError("SQLite snapshot exceeds the configured memory bound")
+                                image = path.read_bytes()
+                                if (len(image) > max_snapshot_bytes or generation(raw) != signatures[raw]
+                                        or any(os.path.lexists(raw + s) for s in ("-wal", "-journal"))):
+                                    raise ValueError("Fenced database changed while copying: " + raw)
+                                connection = sqlite3.connect(":memory:", check_same_thread=False)
+                                # deserialize cannot open a WAL-mode image in RAM. For
+                                # integrity validation ONLY, switch the private header
+                                # to rollback mode. Archive the unchanged fenced bytes.
+                                validation = image
+                                if image[:16] == b"SQLite format 3\0" and image[18:20] == b"\x02\x02":
+                                    validation = image[:18] + b"\x01\x01" + image[20:]
+                                connection.deserialize(validation)
+                                del validation
                             else:
-                                image = memory_snapshot(connection, max_snapshot_bytes)
-                        connection.rollback()
+                                connection = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, check_same_thread=False)
+                            readers[raw] = connection
+                            versions[raw] = connection.execute("PRAGMA data_version").fetchone()[0]
+                            connection.execute("BEGIN")
+                            connection.execute("SELECT name FROM sqlite_master LIMIT 1").fetchone()
+                            if private:
+                                if connection.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                                    raise ValueError("SQLite snapshot integrity failed")
+                            else:
+                                page_bytes = (connection.execute("PRAGMA page_count").fetchone()[0]
+                                              * connection.execute("PRAGMA page_size").fetchone()[0])
+                                if page_bytes > max_snapshot_bytes and disk_snapshot is not None:
+                                    if verify_fence is not None:
+                                        raise ValueError("Large fenced B-disk images require a reviewed final-boundary adapter")
+                                    # The factory owns an independent normal SQLite read
+                                    # transaction and verifies physical B, not local SSD.
+                                    connection.rollback()
+                                    disk_image = disk_snapshot(raw)
+                                    if (disk_image.get('source') != raw
+                                            or disk_image.get('backup_api_consistent_image') is not True
+                                            or disk_image.get('online_preparation_only') is not True
+                                            or disk_image.get('writer_fenced') is not False
+                                            or disk_image.get('physical_b_verified') is not True
+                                            or disk_image.get('integrity') != 'ok'
+                                            or (disk_image.get('local_snapshot_payload_bytes') != 0
+                                                and not (workspace is not None and getattr(workspace,'snapshot_cache',None)
+                                                         and workspace.snapshot_cache.valid(disk_image)))):
+                                        raise ValueError('B-disk snapshot factory returned unverified evidence')
+                                    disk_proofs[raw] = {k: v for k, v in disk_image.items() if k != 'mount_root'}
+                                    image = None
+                                else:
+                                    image = memory_snapshot(connection, max_snapshot_bytes)
+                            connection.rollback()
                     image_bytes = disk_image['bytes'] if disk_image else len(image)
                     if disk_image:peak_snapshot_cache=max(peak_snapshot_cache,disk_image.get('local_snapshot_cache_allocated_bytes',0))
                     peak_snapshot = max(peak_snapshot, 0 if disk_image else image_bytes)
                     relative = "sqlite/" + hashlib.sha256(raw.encode()).hexdigest() + ".sqlite"
                     member = archive.gettarinfo(raw, "payload/" + relative)
                     member.type, member.linkname, member.size = tarfile.REGTYPE, "", image_bytes
-                    for name in os.listxattr(raw):
-                        member.pax_headers["SCHILY.xattr." + name] = os.getxattr(raw, name).decode("utf-8", "surrogateescape")
+                    if recovered is not None:
+                        old_meta = recovered['source_metadata_before']
+                        member.uid, member.gid, member.mode = old_meta['uid'], old_meta['gid'], old_meta['mode']
+                        member.uname = member.gname = ''
+                        for name,value in old_meta['xattrs'].items():
+                            member.pax_headers['SCHILY.xattr.'+name] = base64.b64decode(value,validate=True).decode('utf-8','surrogateescape')
+                    else:
+                        for name in os.listxattr(raw):
+                            member.pax_headers["SCHILY.xattr." + name] = os.getxattr(raw, name).decode("utf-8", "surrogateescape")
                     # Bind integer nanosecond source times, not float rounding.
                     st = path.stat()
                     times = disk_image.get("source_metadata_before", {}) if disk_image else {}
@@ -371,7 +396,8 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                             archive.addfile(member, payload)
                     del image
                     snapshots[raw] = {"path": relative, "sha256": checksum}
-                    proofs[raw] = {"generation": signatures[raw], "snapshot_sha256": checksum}
+                    if recovered is not None:proofs.pop(raw,None)  # Never claim a fresh live DB signature.
+                    else:proofs[raw] = {"generation": signatures[raw], "snapshot_sha256": checksum}
                     if private and connection is not None:
                         # Do not retain every in-memory database until EOF.
                         connection.close()
@@ -409,6 +435,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
             from vk_change_journal import scope
             manifest = {"schema": 1, "at": time.time(), "capture_driver": driver,
                         "large_b_disk_snapshots": disk_proofs, "b_path_inventory": disk_inventory,
+                        "retained_SQLite_recovery": retained_sources,
                         "peak_local_snapshot_cache_allocated_bytes": peak_snapshot_cache, "scope_sha256": identity(scope(plan)),
                         "plan_sha256": identity(plan), "exclusion_targets": list(map(str, exclusions.roots)),
                         "journal_instance": before["instance"], "journal_sequence": before["sequence"],

@@ -180,6 +180,31 @@ class NightlyJob:
             raise ValueError('transient capture capacity exceeded')
         self.save(value)
 
+    def seal_retained_alias(self, path, source, sealed, origin):
+        """Transfer an existing seal only across proven same-inode new names.
+
+        The fixed resident holds the original job lease and authenticated seal.
+        Full archive, native generation and restored-content checks still follow.
+        """
+        value=self.read();path,source=Path(path),Path(source)
+        if path.parent!=self.root/value['input_name'] or path.name not in value['inputs']:
+            raise ValueError('unknown retained alias registration')
+        if (not sealed.get('sealed') or not re.fullmatch('[0-9a-f]{64}',sealed.get('sha256',''))
+                or type(sealed.get('bytes')) is not int or sealed['bytes']<0):
+            raise ValueError('invalid original retained seal')
+        with regular(source) as old,regular(path) as new:
+            before,after=os.fstat(old.fileno()),os.fstat(new.fileno())
+            row=value['inputs'][path.name]
+            if (pin(before)!=sealed['identity'] or pin(after)!=sealed['identity']
+                    or row['identity']!=sealed['identity'] or row['sealed']
+                    or before.st_size!=sealed['bytes'] or after.st_size!=sealed['bytes']):
+                raise ValueError('retained alias is not the sealed original inode')
+        row.update(sealed=True,bytes=sealed['bytes'],sha256=sealed['sha256'],retained_from=origin)
+        if sum(x.get('bytes',0)for x in value['inputs'].values())>min(self.capture_limit,value.get('capture_budget_bytes',self.capture_limit)):
+            raise ValueError('retained input capacity exceeded')
+        self.save(value)
+        return {'sealed':path.name,'bytes':row['bytes'],'sha256':row['sha256']}
+
     def snapshot(self, manifest):
         folder = self.store.root / manifest['generation']
         expected = set(self.store.object_inventory(manifest))

@@ -29,7 +29,7 @@ class MeasurementComplete(ValueError):
     pass
 
 
-def measure_retained(source,deliver,output,*,allocation_unit=4096,timeout_seconds=3600):
+def measure_retained(source,deliver,output,*,allocation_unit=4096,timeout_seconds=3600,max_index_bytes=None):
     """Meter the SAME TAR delivered by a trusted registered-workspace callback.
 
     Compression, B allocation, flush, hash/readback and failure preservation
@@ -38,7 +38,7 @@ def measure_retained(source,deliver,output,*,allocation_unit=4096,timeout_second
     """
     if not isinstance(source,StreamingArchive):raise ValueError('fixed streaming archive required')
     if type(timeout_seconds) is not int or timeout_seconds<=0:raise ValueError('finite positive delivery wait required')
-    meter=StreamMeter(output,allocation_unit=allocation_unit)
+    meter=StreamMeter(output,allocation_unit=allocation_unit,max_index_bytes=max_index_bytes)
     read_fd,write_fd=os.pipe();reader=os.fdopen(read_fd,'rb');writer=os.fdopen(write_fd,'wb')
     producer_errors=[];delivery_errors=[];receipts=[]
     class Tee:
@@ -93,13 +93,20 @@ def measure_retained(source,deliver,output,*,allocation_unit=4096,timeout_second
 
 
 class StreamMeter:
-    def __init__(self, root, *, allocation_unit=4096):
+    def __init__(self, root, *, allocation_unit=4096, max_index_bytes=None):
+        if max_index_bytes is not None and (type(max_index_bytes) is not int or max_index_bytes<16384):
+            raise ValueError('finite SQLite index budget of at least 16384 bytes required')
         self.root=storage(root);self.root.mkdir(mode=0o700,exist_ok=False)
         if type(allocation_unit) is not int or not 512<=allocation_unit<=65536 or allocation_unit&(allocation_unit-1):
             raise ValueError('observed finite power-of-two allocation unit required')
         self.unit=allocation_unit;self.started=time.monotonic();self.count=0
         self.db=sqlite3.connect(self.root/'capacity-index.sqlite')
         self.db.execute('PRAGMA journal_mode=DELETE');self.db.execute('PRAGMA cache_size=-32768')
+        if max_index_bytes is not None:
+            page_size=self.db.execute('PRAGMA page_size').fetchone()[0]
+            # A private phase budget, not a new supported-workload ceiling.
+            # DELETE rollback journaling can additionally occupy about one DB.
+            self.db.execute('PRAGMA max_page_count='+str(max_index_bytes//page_size))
         self.db.execute('CREATE TABLE objects(name TEXT PRIMARY KEY,logical INTEGER,encoded INTEGER,allocated INTEGER) WITHOUT ROWID')
         self.db.execute('CREATE TABLE entries(name TEXT PRIMARY KEY,row TEXT,key_bytes INTEGER,row_bytes INTEGER) WITHOUT ROWID')
         self.manifest=None

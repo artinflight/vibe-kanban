@@ -47,7 +47,7 @@ b=s.read(n)
 if len(b)!=n:raise ValueError('bootstrap truncated')
 v=json.loads(b)
 for name,source,expected in v['sources']:
- if name not in ('vk_nightly_json','vk_nightly_generation','vk_nightly_lifecycle','vk_nightly_b_job'):raise ValueError('unknown fixed handler')
+ if name not in ('vk_nightly_json','vk_nightly_generation','vk_nightly_lifecycle','vk_nightly_retained','vk_nightly_b_job'):raise ValueError('unknown fixed handler')
  if hashlib.sha256(source.encode()).hexdigest()!=expected:raise ValueError('handler hash mismatch')
  m=types.ModuleType(name);m.__source__=source;sys.modules[name]=m;exec(compile(source,name+'.py','exec'),m.__dict__)
 raise SystemExit(sys.modules['vk_nightly_b_job'].run(v['config']))
@@ -85,7 +85,7 @@ RESIDENT_CONFIG_KEYS = frozenset((
     'transport','object_encoding','changed_limit_bytes','initial_changed_limit_bytes',
     'initial_reserve_bytes','reserve_bytes','initial_capture_limit_bytes','capture_limit_bytes',
     'enroll_fresh','recover_only','mcp_producer_lease_held','plan_identity',
-    'source_scope_sha256','preserved_B_floor_bytes',
+    'source_scope_sha256','preserved_B_floor_bytes','retained_recovery',
 ))
 
 
@@ -93,7 +93,7 @@ def resident_bundle(config):
     # Runtime pins, source roots and supervisor settings are validated on MCP.
     # They must not grow the fixed resident bootstrap with the source census.
     sources=[]
-    for name in ('vk_nightly_json','vk_nightly_generation','vk_nightly_lifecycle','vk_nightly_b_job'):
+    for name in ('vk_nightly_json','vk_nightly_generation','vk_nightly_lifecycle','vk_nightly_retained','vk_nightly_b_job'):
         source=Path(__file__).with_name(name+'.py').read_text()
         sources.append((name,source,hashlib.sha256(source.encode()).hexdigest()))
     remote={key:value for key,value in config.items() if key in RESIDENT_CONFIG_KEYS}
@@ -323,6 +323,18 @@ class RegisteredWorkspace:
         if value.get('name')!=path.name or value.get('native',{}).get('metadata_only') is not True:
             raise ValueError('registered input metadata response missing; original failure preserved')
         return value
+    def retained_snapshot(self, raw):
+        if not self.resident.config.get('retained_recovery'):return None
+        value=self.resident.call('reuse_snapshot',source=raw)
+        if value=={'not_retained':raw}:return None
+        image=value['image'];receipt=value['receipt'];name=image['snapshot']
+        if (image['source']!=raw or image.get('new_SQLite_backup_api_capture') is not False
+                or not image.get('retained_from') or receipt.get('integrity')!='ok'
+                or (receipt['sealed'],receipt['sha256'],receipt['bytes'])!=(name,image['sha256'],image['bytes'])):
+            raise ValueError('retained snapshot response differs')
+        self.names.add(name);self.sealed[name]=receipt
+        self.remaining();self.progress('retained SQL seal reused',last_input=name)
+        return image
     def save_json(self,path,value):
         data=(json.dumps(value,indent=2,sort_keys=True)+'\n').encode()
         if len(data)>MAX_INDEX or len(data)>self.remaining():raise ValueError('bounded B metadata limit exceeded')
@@ -555,7 +567,8 @@ def run_capture(config,plan,*,enroll_fresh=False,recover_only=False,journal_read
                 result=capture(plan,mount,journal,workspace.mirror,parent=None,publish=workspace.mirror,
                     max_snapshot_bytes=1,disk_snapshot=lambda raw:disk_snapshot(raw,workspace,allowed_sqlite(plan,raw),
                         maximum_bytes=config['snapshot_limit_bytes'],timeout_seconds=config['snapshot_timeout_seconds']),
-                    disk_inventory_root=mount,workspace=workspace,nightly_selection=selection)
+                    disk_inventory_root=mount,workspace=workspace,nightly_selection=selection,
+                    retained_snapshot=workspace.retained_snapshot if config.get('retained_recovery') else None)
             provider_class=NightlyArchiveProvider if selection is None else DeltaProvider
             provider=provider_class(config['scope_sha256'],[str(Path(raw).relative_to(config['source_prefix'])) for raw in result['databases']],
                                      metadata_budget_bytes=MAX_INDEX,**({} if selection is None else {'selection':selection}))

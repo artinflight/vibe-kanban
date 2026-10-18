@@ -45,6 +45,9 @@ def inventory(plan, *, socket_exclusions=(), progress=None, workers=1):
 
 
 def validate(config,plan):
+    if config.get('retained_recovery') and (config.get('capacity_measurement_only') is not True
+            or config.get('adoption_authorized') is True or config.get('retention_adopted') is True):
+        raise ValueError('retained SQL recovery is private proof only, not operational adoption')
     if 'preserved_B_floor_bytes' in config and (type(config['preserved_B_floor_bytes']) is not int
                                               or config['preserved_B_floor_bytes'] < 0):
         raise ValueError('finite nonnegative B free-space floor required')
@@ -59,6 +62,7 @@ def validate(config,plan):
     if identity(scope(plan))!=config['source_scope_sha256']:raise ValueError('source scope changed')
     if set(config['source_roots'])!=set(plan['sources']):raise ValueError('source root inventory incomplete')
     required={'vk_nightly_job.py','vk_nightly_restart_baseline.py','vk_nightly_footprint.py','vk_nightly_capture_adapter.py','vk_nightly_b_job.py','vk_nightly_generation.py','vk_nightly_lifecycle.py','vk_b_disk_capture.py'}
+    required.add('vk_nightly_retained.py')
     if not required<=config['source_sha256'].keys():raise ValueError('fixed handler pins incomplete')
     for raw,expected in config['source_sha256'].items():
         if checksum(Path(__file__).with_name(raw))!=expected:raise ValueError('fixed nightly source changed: '+raw)

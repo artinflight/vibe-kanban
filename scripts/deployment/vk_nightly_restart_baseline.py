@@ -50,7 +50,9 @@ def capture_binding(result, plan, prefix, proof):
     return {'schema': 1, 'plan_sha256': identity(plan), 'scope_sha256': identity(scope(plan)),
             'source_prefix': str(prefix), 'journal_instance': result['journal_instance'],
             'journal_sequence': sequence, 'databases': databases,
-            'capture_result_sha256': identity(result), 'snapshot_reuse_allowed': False}
+            'capture_result_sha256': identity(result), 'snapshot_reuse_allowed': False,
+            **({'retained_snapshot_recovery': result['retained_SQLite_recovery'],
+                'operational_adoption_eligible': False} if result.get('retained_SQLite_recovery') else {})}
 
 
 class HeldBaseline:
@@ -119,6 +121,7 @@ def held_baseline(store, plan, *, generation, manifest_sha256, physical_readback
         if (not isinstance(binding, dict) or binding.get('schema') != 1
                 or binding.get('plan_sha256') != identity(plan)
                 or binding.get('scope_sha256') != identity(scope(plan))
+                or binding.get('retained_snapshot_recovery')
                 or binding.get('snapshot_reuse_allowed') is not False
                 or type(binding.get('journal_sequence')) is not int or binding['journal_sequence'] < 0
                 or not binding.get('journal_instance')):

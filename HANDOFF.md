@@ -1,3 +1,48 @@
+# October18 9:34a.m. EDT — retained-image recovery tested; SSD admission pending
+
+The terminal R2 result remains child1 at8:24:10a.m. EDT, not a completed backup.
+Its111 native-sealed SQLite images5317406720B and original partial archive remain
+preserved. A new private recovery path authenticates the old manifest/ledger and
+kernel lease, then registers new B hardlink names for those exact sealed inodes.
+It avoids live SQLite recapture and SSD snapshot scratch. Different-inode copies,
+changed seals, competing leases and operational restart-baseline adoption fail
+closed. Reused images explicitly carry their original epoch, not fresh DB proof.
+
+The real native NTFS/WSL alias fixture passed9:20:07a.m. EDT:8192bytes, native
+hash/integrity/content readback, original ledger unchanged, WSL peakRSS20136KiB.
+51 distinct adapter/capacity/baseline cases have passing evidence across49 plus
+2 short-path reruns; five retained-input tests pass. A further six-test run passes
+those five plus the new SQLite size-budget regression: SQLITE_FULL preserves
+committed rows, with no completed measurement seal. None is full-workload proof.
+
+The old three-row publication wait is superseded by the supported terminal/lease
+boundary and exact old-runtime capsule: native B readback passed9:08:38a.m. EDT.
+Staging acknowledged it and owns the expanded Dot UI/Python activation and actual
+transition receipt. All old roots remain retained. This does not accept Nightly's
+full restore or adopt an operational current restart baseline.
+
+At9:33:41a.m. EDT SSD free3559006208B. Protected Staging53936128B plusT18
+419356672B plusfloor2147483648B leave938229760B additional Nightly room.
+A proposed bounded2GiB incremental recovery phase therefore needs1209253888B
+more free, requiring4768260096B free at admission before new background growth.
+Its planned960MiB SQLite DB ceiling plus rollback journal/metadata is an execution
+budget, not a measured minimum or user-imposed lifetime quota. It remains inside
+the same TOTAL5GiB Nightly ceiling; reserving that whole unused ceiling is not
+required. No bulk phase is admitted. Cargo owner reports natural terminal and
+no further builds; do not count retained Cargo space as reclaimed. B's latest
+232175362048B free supports the known-input phase with existing reserves, not
+unmeasured full generation-plus-restore coexistence. BB future balance is zero.
+
+Ops governance and diff checks pass. Required aggregate formatting was attempted
+with bounded resources; the first child ceiling prevented a fork and the corrected
+one-minute attempt did not complete. No formatting pass or frontend install is
+claimed. No Rust/frontend source changed.
+
+Next: reconcile actual Dot transition pins and fresh adequate bounded SSD space,
+then run one retained-input recovery stream and measure full B coexistence before
+independent restore. No deployment, schedule, restart, original retirement or
+PSI-only numeric veto. Earlier entries below are historical and superseded here.
+
 # October18 8:24a.m. EDT — R2 terminal, do not relaunch ordinary capture
 
 Read cold-r2-frontend-epoch-measured/ACTUAL_TERMINAL_COORDINATION.private.json,

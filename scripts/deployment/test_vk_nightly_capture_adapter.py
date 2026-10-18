@@ -172,6 +172,29 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(self.resident.events,[('allocate',target.name),('seal',target.name)])
         self.assertTrue(any('immutable=1' in path for path in uris))
         self.assertNotIn('immutable=1',uris[0]);self.assertEqual(result['local_snapshot_payload_bytes'],0)
+
+    def test_retained_image_is_archived_without_opening_or_recapturing_live_SQLite(self):
+        import vk_b_disk_capture
+        from vk_nightly_delta import DeltaSelection
+        from vk_nightly_restart_baseline import capture_journal
+        from vk_archive_store import Archive
+        image=self.snapshot();old_metadata=dict(image['source_metadata_before'])
+        self.writer.execute("INSERT INTO retained VALUES('newer live value')");self.writer.commit()
+        image.update(retained_from={'candidate':'old'},new_SQLite_backup_api_capture=False)
+        plan={'sources':[str(self.source)],'sqlite_snapshots':[str(self.source)],'excluded_rebuildable_directories':[]}
+        def factory(ref,**kwargs):return Archive(ref,archive_directory=self.destination,desktop_only=False)
+        with capture_journal(plan)as journal,patch.object(vk_b_disk_capture,'Archive',factory), \
+                patch('sqlite3.connect',side_effect=AssertionError('must not open live DB')), \
+                patch('vk_b_disk_capture.memory_snapshot',side_effect=AssertionError('must not recapture')):
+            result=vk_b_disk_capture.capture(plan,self.destination,journal,self.workspace.mirror,
+                publish=self.workspace.mirror,max_snapshot_bytes=1,disk_inventory_root=self.destination,
+                workspace=self.workspace,nightly_selection=DeltaSelection(None,str(self.root),'a'*64),
+                retained_snapshot=lambda raw:image)
+        self.assertTrue(result['passed']);self.assertEqual(result['retained_SQLite_recovery'],{str(self.source):{'candidate':'old'}})
+        self.assertNotIn(str(self.source),result['database_proofs'])
+        self.assertEqual(result['large_b_disk_snapshots'][str(self.source)]['source_metadata_before'],old_metadata)
+        with sqlite3.connect((self.destination/image['snapshot']).as_uri()+'?mode=ro&immutable=1',uri=True)as db:
+            self.assertEqual(db.execute('SELECT value FROM retained').fetchall(),[('live WAL',)])
     def test_snapshot_bound_failure_retains_registered_unaccepted_image(self):
         with patch.object(self.workspace,'inspect_failure',return_value={'metadata_only':True}):
             with self.assertRaisesRegex(ValueError,'SQLite image exceeds') as caught:self.snapshot(maximum=1)

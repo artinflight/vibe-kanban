@@ -90,6 +90,19 @@ class CapacityTransport(unittest.TestCase):
 
 
 class Capacity(unittest.TestCase):
+    def test_optional_index_budget_preserves_committed_rows_on_disk_full(self):
+        with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as raw:
+            root=Path(raw)/'meter';meter=StreamMeter(root,max_index_bytes=64*1024)
+            meter.row('kept',{'kind':'directory'});meter.db.commit()
+            with self.assertRaises(sqlite3.OperationalError) as caught:
+                for i in range(100):
+                    meter.row('entry-'+str(i),{'kind':'symlink','target':'x'*8192})
+            self.assertEqual(caught.exception.sqlite_errorcode,sqlite3.SQLITE_FULL)
+            self.assertLessEqual((root/'capacity-index.sqlite').stat().st_size,64*1024)
+            self.assertIsNotNone(meter.db.execute("SELECT row FROM entries WHERE name='kept'").fetchone())
+            self.assertFalse((root/'retained-stream-measurement.private.json').exists())
+            meter.db.close()
+
     def retained_workspace(self,root):
         from test_vk_nightly_capture_adapter import FakeResident
         from vk_nightly_capture_adapter import RegisteredWorkspace

@@ -210,6 +210,8 @@ def resident_scope(config):
     root=Path(config['wsl_root'])
     if not str(root).startswith('/mnt/b/vk-backups/vk-') or '..' in root.parts:
         raise ValueError('explicit fresh operational scope/adoption required')
+    if config.get('retained_recovery') and config.get('capacity_measurement_only') is not True:
+        raise ValueError('retained SQL recovery is private proof only, not operational adoption')
     if config.get('capacity_measurement_only') is True:
         if (not re.fullmatch('/mnt/b/vk-backups/vk-nightly-capacity-[0-9a-f]{32}',str(root))
                 or config.get('enroll_fresh') is not True or config.get('recover_only')):
@@ -262,6 +264,10 @@ def run(config):
         attempt=job.read();binding={key:attempt[key] for key in ('candidate','input_name')}
         binding['scope_sha256']=store.scope
         baseline=None;native_sqlite_seals={}
+        retained=None
+        if config.get('retained_recovery'):
+            from vk_nightly_retained import RetainedSnapshots
+            retained=RetainedSnapshots(config['retained_recovery'])
         previous=store.current() if config.get('transport')=='content-delta-v1' else None
         if previous is not None:
             path=folder/'baseline.json';checksum=hashlib.sha256();size=0
@@ -281,7 +287,14 @@ def run(config):
             if command.get('binding')!=binding:raise ValueError('stale/wrong live producer binding')
             action=command.get('action');raw=command.get('name')
             resident_action(config,action)
-            if action in ('allocate','seal','inspect'):
+            if action=='reuse_snapshot':
+                if retained is None:raise ValueError('no authenticated retained recovery source')
+                reused=retained.alias(command.get('source'),folder,job,register)
+                if reused is None:emit({'not_retained':command.get('source')})
+                else:
+                    image,receipt=reused;native_sqlite_seals[image['snapshot']]=receipt
+                    emit({'image':image,'receipt':receipt})
+            elif action in ('allocate','seal','inspect'):
                 if not isinstance(raw,str) or not re.fullmatch('[A-Za-z0-9_.-]+',raw) or raw in ('.','..'):
                     raise ValueError('unsafe registered input name')
                 path=folder/raw

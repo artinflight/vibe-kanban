@@ -1865,7 +1865,7 @@ export function KanbanContainer() {
                       key={id}
                       className={cn(
                         'mobile-task-card phone-task-row',
-                        !isExpanded && 'pb-6',
+                        !isExpanded && 'pb-6 kanban-issue-collapsed',
                         attentionLabel && 'kanban-attention-card'
                       )}
                     >
@@ -2099,7 +2099,11 @@ export function KanbanContainer() {
                                 id={issue.id}
                                 name={issue.title}
                                 index={index}
-                                className="group"
+                                className={cn(
+                                  'group',
+                                  expanded[`kanban-issue:${issue.id}`] ===
+                                    false && 'kanban-issue-collapsed'
+                                )}
                                 onClick={(e) => handleCardClick(issue.id, e)}
                                 isOpen={selectedKanbanIssueId === issue.id}
                                 isMobile={isMobile}

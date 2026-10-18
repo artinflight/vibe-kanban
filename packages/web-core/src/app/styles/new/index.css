@@ -1222,6 +1222,16 @@ html {
   }
 }
 
+.mobile-task-card.kanban-issue-collapsed:not(.kanban-attention-card) {
+  background-image:
+    linear-gradient(hsl(var(--info) / 0.6), hsl(var(--info) / 0.6)),
+    linear-gradient(hsl(var(--info) / 0.08), hsl(var(--info) / 0.08));
+  background-size:
+    3px 100%,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
 /* Phone attention treatment. Desktop keeps its existing compact indicators.
    Background layers preserve custom workspace colors and selection rings. */
 @media (max-width: 767px) {

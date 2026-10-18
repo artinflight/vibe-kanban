@@ -471,7 +471,13 @@ function WorkspaceSessionPanel({
   );
 }
 
-export function ProjectRightSidebarContainer() {
+export function ProjectRightSidebarContainer({
+  expectedIssueId,
+  onExpectIssueOpen,
+}: {
+  expectedIssueId: string | null;
+  onExpectIssueOpen: (issueId: string) => void;
+}) {
   const appNavigation = useAppNavigation();
   const {
     projectId,
@@ -530,28 +536,6 @@ export function ProjectRightSidebarContainer() {
 
     appNavigation.goToProject(projectId);
   }, [projectId, isCreateMode, issueComposerKey, appNavigation]);
-  const [expectedIssueId, setExpectedIssueId] = useState<string | null>(null);
-
-  const markExpectedIssue = useCallback((nextIssueId: string) => {
-    setExpectedIssueId(nextIssueId);
-  }, []);
-
-  // Keep transient create expectations scoped to the current issue route only.
-  useEffect(() => {
-    if (!expectedIssueId) {
-      return;
-    }
-
-    if (!issueId || issueId !== expectedIssueId) {
-      setExpectedIssueId(null);
-      return;
-    }
-
-    if (issuesById.has(expectedIssueId)) {
-      setExpectedIssueId(null);
-    }
-  }, [expectedIssueId, issueId, issuesById]);
-
   const issuePanelResolution = useMemo<IssuePanelResolution | null>(() => {
     if (!issueId || isCreateMode || workspaceId || isWorkspaceCreateMode) {
       return null;
@@ -693,7 +677,7 @@ export function ProjectRightSidebarContainer() {
       issueResolution={
         rightPanelState.kind === 'issue' ? rightPanelState.resolution : null
       }
-      onExpectIssueOpen={markExpectedIssue}
+      onExpectIssueOpen={onExpectIssueOpen}
     />
   );
 }

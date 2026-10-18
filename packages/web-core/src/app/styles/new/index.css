@@ -806,8 +806,9 @@ html {
     flex-shrink: 0;
   }
   .phone-task-review {
-    color: hsl(var(--brand));
+    color: hsl(var(--text-high));
     font-size: 12px;
+    font-weight: 500;
   }
   .phone-task-workspace {
     display: flex;
@@ -1219,4 +1220,43 @@ html {
     margin-bottom: 16px;
     text-align: left;
   }
+}
+
+.mobile-task-card.kanban-issue-collapsed:not(.kanban-attention-card) {
+  background-image:
+    linear-gradient(hsl(var(--info) / 0.6), hsl(var(--info) / 0.6)),
+    linear-gradient(hsl(var(--info) / 0.08), hsl(var(--info) / 0.08));
+  background-size:
+    3px 100%,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* Phone attention treatment. Desktop keeps its existing compact indicators.
+   Background layers preserve custom workspace colors and selection rings. */
+@media (max-width: 767px) {
+  .kanban-attention-card {
+    border-color: hsl(var(--brand) / 0.5);
+    background-image:
+      linear-gradient(hsl(var(--brand)), hsl(var(--brand))),
+      linear-gradient(hsl(var(--brand) / 0.12), hsl(var(--brand) / 0.12));
+    background-size:
+      3px 100%,
+      100% 100%;
+    background-repeat: no-repeat;
+  }
+  .kanban-attention-card:hover {
+    background-image:
+      linear-gradient(hsl(var(--brand)), hsl(var(--brand))),
+      linear-gradient(hsl(var(--brand) / 0.18), hsl(var(--brand) / 0.18));
+  }
+}
+
+/* Dot chat state remains visually distinct from orange workspace notifications. */
+.new-design {
+  --dot-activity: 270 65% 43%;
+}
+.dark .new-design,
+.new-design.dark {
+  --dot-activity: 270 85% 80%;
 }

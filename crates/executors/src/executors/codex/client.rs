@@ -72,18 +72,68 @@ fn active_codex_clients() -> &'static StdMutex<HashMap<Uuid, Weak<AppServerClien
     ACTIVE_CODEX_CLIENTS.get_or_init(|| StdMutex::new(HashMap::new()))
 }
 
+/// Owned live-client registry, never request metadata or a caller-provided item ID.
+pub async fn original_worker_attestation(
+    id: Uuid,
+) -> io::Result<(String, String, String, String, String)> {
+    let client = active_codex_clients()
+        .lock()
+        .map_err(|_| io::Error::other("Native registry unavailable"))?
+        .get(&id)
+        .and_then(Weak::upgrade)
+        .ok_or_else(|| io::Error::other("Native caller is not registered"))?;
+    if client.cancel.is_cancelled() {
+        return Err(io::Error::other("Native caller stopped"));
+    }
+    let thread = client
+        .thread_id
+        .lock()
+        .await
+        .clone()
+        .ok_or_else(|| io::Error::other("Native thread unavailable"))?;
+    let turn = client
+        .current_turn_id
+        .lock()
+        .await
+        .clone()
+        .ok_or_else(|| io::Error::other("Native turn unavailable"))?;
+    let model = client
+        .resolved_model
+        .get()
+        .cloned()
+        .ok_or_else(|| io::Error::other("Native model unavailable"))?;
+    let effort = serde_json::to_value(client.routed_effort.get()).map_err(io::Error::other)?;
+    Ok((
+        thread,
+        turn,
+        model,
+        effort.as_str().unwrap_or_default().to_string(),
+        client
+            .continuation_runtime
+            .get()
+            .cloned()
+            .unwrap_or_default(),
+    ))
+}
+
 pub struct AppServerClient {
     rpc: OnceLock<JsonRpcPeer>,
     delegation: OnceLock<Arc<super::delegation::Delegation>>,
     delegation_requests: Mutex<HashSet<RequestId>>,
+    elicitation_seen: Mutex<HashSet<RequestId>>,
+    elicitations: Mutex<HashMap<RequestId, CancellationToken>>,
     log_writer: LogWriter,
     approvals: Option<Arc<dyn ExecutorApprovalService>>,
     thread_id: Mutex<Option<String>>,
     current_turn_id: Mutex<Option<String>>,
     pending_feedback: Mutex<VecDeque<String>>,
     auto_approve: bool,
+    native_review_enabled: AtomicBool,
+    native_review_private_responses: Mutex<HashSet<RequestId>>,
     plan_mode: bool,
     resolved_model: OnceLock<String>,
+    continuation_runtime: OnceLock<String>,
+    original_worker: OnceLock<Arc<dyn crate::original_worker::LaunchGuard>>,
     routing_locked: AtomicBool,
     routing_telemetry: OnceLock<crate::routing_telemetry::NativeBinding>,
     routed_effort: OnceLock<codex_protocol::openai_models::ReasoningEffort>,
@@ -99,6 +149,7 @@ pub struct AppServerClient {
     goal_pausing: AtomicBool,
     completion_reconciliation_sent: AtomicBool,
     capacity_stopped: AtomicBool,
+    scheduled_capacity: OnceLock<crate::capacity::PreparedCapacity>,
     execution_id: OnceLock<Uuid>,
 }
 
@@ -113,6 +164,151 @@ impl Drop for AppServerClient {
 }
 
 impl AppServerClient {
+    async fn hold_pending_initialization(&self, reason: &str) -> Result<(), ExecutorError> {
+        if self
+            .scheduled_capacity
+            .get()
+            .is_none_or(|c| c.first_run.is_none())
+        {
+            return Ok(());
+        }
+        let Some(execution) = self.execution_id.get() else {
+            return Ok(());
+        };
+        let Some(controller) = crate::capacity::controller::configured()? else {
+            return Ok(());
+        };
+        let mut c = controller.lock().await;
+        let session = c
+            .state
+            .goals
+            .values()
+            .find(|g| {
+                g.initialization_state == crate::capacity::first_run::InitializationState::Pending
+                    && g.initialization_receipt
+                        .as_ref()
+                        .is_some_and(|r| r.execution_id == Some(*execution))
+            })
+            .map(|g| g.session_id);
+        if let Some(session) = session {
+            c.revoke_session(session, reason)?;
+            self.pause_goal(reason.into(), true);
+        }
+        Ok(())
+    }
+    /// Final supervised boundary, after native permission verification and
+    /// bootstrap loading, immediately before activating the existing objective.
+    pub async fn activate_capacity_goal(
+        &self,
+        capacity: &crate::capacity::PreparedCapacity,
+        thread: &str,
+    ) -> Result<(), ExecutorError> {
+        let c = crate::capacity::controller::configured()?
+            .ok_or_else(|| io::Error::other("Missing scheduled controller"))?;
+        let c = c.lock().await;
+        c.ensure_owner()?;
+        let goal = c
+            .state
+            .goals
+            .values()
+            .find(|g| {
+                g.grant.as_ref().is_some_and(|grant| {
+                    grant.id.to_string() == capacity.lease.id
+                        && !grant.stopping
+                        && grant.execution_id.map(|id| id.to_string()).as_deref()
+                            == Some(&capacity.lease.execution_id)
+                })
+            })
+            .ok_or_else(|| io::Error::other("Activation authority changed"))?;
+        let lease = capacity_guard::read_lease(&capacity.file)?;
+        lease
+            .validate(crate::capacity::wall_ms())
+            .map_err(io::Error::other)?;
+        if lease.revoked
+            || lease.id != capacity.lease.id
+            || lease.allocation_id != capacity.lease.allocation_id
+            || lease.execution_id != capacity.lease.execution_id
+            || lease.stop_at_ms != capacity.lease.stop_at_ms
+            || goal.pending_identity().as_ref() != capacity.first_run.as_ref()
+            || goal.thread_id != thread
+            || c.state.foreground_until_ms > crate::capacity::wall_ms()
+        {
+            return Err(ExecutorError::Io(io::Error::other(
+                "Native activation permission was revoked or changed",
+            )));
+        }
+        goal.revalidate(self.execution_id.get().copied(), true)
+            .await?;
+        let snapshot = self
+            .goal_request("thread/goal/get", serde_json::json!({"threadId":thread}))
+            .await?;
+        let native: NativeGoal =
+            serde_json::from_value(snapshot["goal"].clone()).map_err(io::Error::other)?;
+        let native = crate::capacity::first_run::resolve_wire(native).await?;
+        if native.thread_id != goal.thread_id
+            || native.objective != goal.objective
+            || native.created_at != goal.created_at
+            || (!goal.goal_id.is_empty() && native.goal_id != goal.goal_id)
+        {
+            return Err(ExecutorError::Io(io::Error::other(
+                "Native identity changed at activation",
+            )));
+        }
+        self.goal_request(
+            "thread/goal/set",
+            serde_json::json!({"threadId":thread,"status":"active"}),
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn attest_initialization_checkpoint(
+        &self,
+        native: &NativeGoal,
+        progress: &Progress,
+        turn: &str,
+        valid: bool,
+    ) -> Result<(), ExecutorError> {
+        if self
+            .scheduled_capacity
+            .get()
+            .is_none_or(|c| c.first_run.is_none())
+        {
+            return Ok(());
+        }
+        let execution = *self
+            .execution_id
+            .get()
+            .ok_or_else(|| io::Error::other("First run missing execution identity"))?;
+        let controller = crate::capacity::controller::configured()?
+            .ok_or_else(|| io::Error::other("Missing first-run controller"))?;
+        let mut c = controller.lock().await;
+        // Empty read calls are permitted, but cannot attest initialization.
+        let result = if !valid {
+            Err(io::Error::other("Invalid first native checkpoint"))
+        } else if progress.requirements.is_empty() && progress.pause_reason.is_none() {
+            return Ok(());
+        } else {
+            c.initialization_checkpoint(execution, native, progress, turn)
+        };
+        if let Err(error) = result {
+            let session = c
+                .state
+                .goals
+                .values()
+                .find(|g| {
+                    g.initialization_receipt
+                        .as_ref()
+                        .is_some_and(|r| r.execution_id == Some(execution))
+                })
+                .map(|g| g.session_id);
+            if let Some(session) = session {
+                c.revoke_session(session, &error.to_string())?;
+            }
+            self.pause_goal(error.to_string(), true);
+        }
+        Ok(())
+    }
     /// Public control-plane pause for the owning execution, never prompt steering.
     /// The caller must separately verify process termination; RPC success is not
     /// evidence that model work or descendants have stopped.
@@ -121,8 +317,12 @@ impl AppServerClient {
         reason: String,
     ) -> Result<(), ExecutorError> {
         let client = active_codex_clients()
-            .lock()
-            .expect("active client registry")
+            .try_lock()
+            .map_err(|_| {
+                ExecutorError::Io(io::Error::other(
+                    "Codex client registry busy; stop remains unconfirmed",
+                ))
+            })?
             .get(&execution_id)
             .and_then(Weak::upgrade)
             .ok_or_else(|| {
@@ -130,15 +330,28 @@ impl AppServerClient {
                     "No owning Codex client; reconcile execution state",
                 ))
             })?;
-        client.suspend_capacity(reason).await;
+        client.suspend_capacity(reason).await
+    }
+
+    async fn suspend_capacity(&self, reason: String) -> Result<(), ExecutorError> {
+        if self.capacity_stopped.swap(true, Ordering::SeqCst) {
+            return Ok(());
+        }
+        self.goal_pausing.store(true, Ordering::SeqCst);
+        // Bound the entire attempt: mutex acquisition, RPCs, log I/O and the
+        // exit signal. Cancellation leaves the stop/pausing latches set; no
+        // delayed pause or initialization may be replayed by this execution.
+        tokio::time::timeout(Duration::from_secs(2), self.graceful_capacity_stop(reason))
+            .await
+            .map_err(|_| {
+                ExecutorError::Io(io::Error::other(
+                    "Graceful capacity stop timed out; native goal pause unconfirmed",
+                ))
+            })?;
         Ok(())
     }
 
-    async fn suspend_capacity(&self, reason: String) {
-        if self.capacity_stopped.swap(true, Ordering::SeqCst) {
-            return;
-        }
-        self.goal_pausing.store(true, Ordering::SeqCst);
+    async fn graceful_capacity_stop(&self, reason: String) {
         let thread_id = self.thread_id.lock().await.clone();
         if let Some(thread_id) = thread_id {
             // Bound each call independently. The OS guard remains armed even
@@ -170,7 +383,9 @@ impl AppServerClient {
         }
         let _ = super::slash_commands::log_event_raw(
             self.log_writer(),
-            format!("Scheduled goal paused: {reason}"),
+            format!(
+                "Scheduled goal stop requested: {reason}; reconcile native status before resuming"
+            ),
         )
         .await;
         if let Some(signal) = self.exit_signal.get() {
@@ -183,6 +398,7 @@ impl AppServerClient {
     }
 
     pub fn watch_capacity(self: &Arc<Self>, capacity: crate::capacity::PreparedCapacity) {
+        let _ = self.scheduled_capacity.set(capacity.clone());
         let weak = Arc::downgrade(self);
         tokio::spawn(async move {
             let start = std::time::Instant::now();
@@ -194,7 +410,7 @@ impl AppServerClient {
                 Ok(fence) => fence,
                 Err(reason) => {
                     if let Some(client) = weak.upgrade() {
-                        client.suspend_capacity(reason.into()).await;
+                        let _ = client.suspend_capacity(reason.into()).await;
                     }
                     return;
                 }
@@ -224,8 +440,12 @@ impl AppServerClient {
                         }
                     }
                 };
+                let reason = reason.or_else(|| {
+                    (capacity.first_run.is_some() && !crate::capacity::first_run::enabled())
+                        .then_some("Scheduled initialization capability withdrawn")
+                });
                 if let Some(reason) = reason {
-                    client.suspend_capacity(reason.into()).await;
+                    let _ = client.suspend_capacity(reason.into()).await;
                     return;
                 }
             }
@@ -247,11 +467,17 @@ impl AppServerClient {
             rpc: OnceLock::new(),
             delegation: OnceLock::new(),
             delegation_requests: Mutex::new(HashSet::new()),
+            elicitation_seen: Mutex::new(HashSet::new()),
+            elicitations: Mutex::new(HashMap::new()),
             log_writer,
             approvals,
             auto_approve,
+            native_review_enabled: AtomicBool::new(false),
+            native_review_private_responses: Mutex::new(HashSet::new()),
             plan_mode,
             resolved_model: OnceLock::new(),
+            continuation_runtime: OnceLock::new(),
+            original_worker: OnceLock::new(),
             routing_locked: AtomicBool::new(false),
             routing_telemetry: OnceLock::new(),
             routed_effort: OnceLock::new(),
@@ -270,6 +496,7 @@ impl AppServerClient {
             goal_pausing: AtomicBool::new(false),
             completion_reconciliation_sent: AtomicBool::new(false),
             capacity_stopped: AtomicBool::new(false),
+            scheduled_capacity: OnceLock::new(),
             execution_id: OnceLock::new(),
         });
         let _ = client.self_ref.set(Arc::downgrade(&client));
@@ -341,13 +568,15 @@ impl AppServerClient {
         }
         let id = self.next_request_id();
         let request = serde_json::json!({"id": id, "method": method, "params": params});
-        tokio::time::timeout(
-            Duration::from_secs(10),
-            self.rpc()
-                .request(id, &request, method, self.cancel.clone()),
-        )
-        .await
-        .map_err(|_| ExecutorError::Io(io::Error::other("Goal API timed out")))?
+        self.rpc()
+            .request_with_deadline(
+                id,
+                &request,
+                method,
+                self.cancel.clone(),
+                Duration::from_secs(10),
+            )
+            .await
     }
 
     pub async fn refresh_goal(&self) -> Result<(), ExecutorError> {
@@ -388,6 +617,19 @@ impl AppServerClient {
         }
         let goal: NativeGoal =
             serde_json::from_value(value).map_err(|e| ExecutorError::Io(io::Error::other(e)))?;
+        let goal = if self.scheduled_capacity.get().is_some() {
+            crate::capacity::first_run::resolve_wire(goal).await?
+        } else {
+            goal
+        };
+        if let Some(capacity) = self.scheduled_capacity.get()
+            && let Some(identity) = &capacity.first_run
+            && *identity != crate::capacity::first_run::FirstRun::from_native(&goal)
+        {
+            return Err(ExecutorError::Io(io::Error::other(
+                "Scheduled native goal identity changed",
+            )));
+        }
         if self.thread_id.lock().await.as_deref() != Some(goal.thread_id.as_str()) {
             return Ok(()); // Descendant agents never own the root goal.
         }
@@ -411,7 +653,23 @@ impl AppServerClient {
         } else {
             self.completion_reconciliation_sent
                 .store(false, Ordering::SeqCst);
-            let progress = goals::load(&goal).await?;
+            let progress = if let Some(capacity) = self.scheduled_capacity.get() {
+                match crate::capacity::first_run::read_progress(&goal)? {
+                    Some(progress) => progress,
+                    None if capacity.first_run.is_some() => Progress {
+                        objective: goal.objective.clone(),
+                        created_at: goal.created_at,
+                        ..Default::default()
+                    },
+                    None => {
+                        return Err(ExecutorError::Io(io::Error::other(
+                            "Checkpointed scheduled goal lost its progress",
+                        )));
+                    }
+                }
+            } else {
+                goals::load(&goal).await?
+            };
             *guard = Some((goal, progress));
         }
         Ok(())
@@ -600,6 +858,46 @@ impl AppServerClient {
         let Some((goal, progress)) = guard.as_mut() else {
             return Ok(false);
         };
+        if self
+            .scheduled_capacity
+            .get()
+            .is_some_and(|c| c.first_run.is_some())
+        {
+            if self.plan_mode {
+                self.hold_pending_initialization("Plan mode requires user review before first native initialization can be promoted").await?;
+                return Ok(true);
+            }
+            progress.finish_turn(turn_id);
+            goals::save(&goal.thread_id, progress).await?;
+            if let Some(execution) = self.execution_id.get()
+                && let Some(c) = crate::capacity::controller::configured()?
+            {
+                let mut c = c.lock().await;
+                if let Err(error) = c.promote_initialization(
+                    *execution,
+                    goal,
+                    progress,
+                    turn_id,
+                    crate::capacity::wall_ms(),
+                ) {
+                    let session = c
+                        .state
+                        .goals
+                        .values()
+                        .find(|g| {
+                            g.initialization_receipt
+                                .as_ref()
+                                .is_some_and(|r| r.execution_id == Some(*execution))
+                        })
+                        .map(|g| g.session_id);
+                    if let Some(session) = session {
+                        c.revoke_session(session, &error.to_string())?;
+                    }
+                    self.pause_goal(error.to_string(), true);
+                    return Ok(true);
+                }
+            }
+        }
         if goal.status != "active" {
             if goal.status == "complete" {
                 self.log_writer
@@ -653,6 +951,10 @@ impl AppServerClient {
         let _ = self.rpc.set(peer);
     }
 
+    pub fn set_original_worker_guard(&self, guard: Arc<dyn crate::original_worker::LaunchGuard>) {
+        let _ = self.original_worker.set(guard);
+    }
+
     pub fn register_active_execution(execution_process_id: Uuid, client: &Arc<Self>) {
         let _ = client.execution_id.set(execution_process_id);
         active_codex_clients()
@@ -666,6 +968,63 @@ impl AppServerClient {
             .lock()
             .expect("active Codex client registry poisoned")
             .remove(&execution_process_id);
+    }
+
+    pub async fn steering_target(execution_id: Uuid) -> Option<(String, String)> {
+        let client = active_codex_clients()
+            .lock()
+            .expect("active Codex client registry poisoned")
+            .get(&execution_id)
+            .and_then(Weak::upgrade)?;
+        if client.cancel.is_cancelled() || client.capacity_stopped.load(Ordering::SeqCst) {
+            return None;
+        }
+        let thread = client.thread_id.lock().await.clone()?;
+        let turn = client.current_turn_id.lock().await.clone()?;
+        Some((thread, turn))
+    }
+
+    /// One native request, fenced to the caller's observed execution and turn.
+    /// A changed target is never retried against a newer turn.
+    pub async fn steer_bound_turn(
+        execution_id: Uuid,
+        thread_id: String,
+        turn_id: String,
+        message: String,
+    ) -> Result<bool, ExecutorError> {
+        let client = active_codex_clients()
+            .lock()
+            .expect("active Codex client registry poisoned")
+            .get(&execution_id)
+            .and_then(Weak::upgrade);
+        let Some(client) = client else {
+            return Ok(false);
+        };
+        if client.cancel.is_cancelled()
+            || client.capacity_stopped.load(Ordering::SeqCst)
+            || client.thread_id.lock().await.as_ref() != Some(&thread_id)
+            || client.current_turn_id.lock().await.as_ref() != Some(&turn_id)
+        {
+            return Ok(false);
+        }
+        let expected_turn = turn_id.clone();
+        let response = tokio::time::timeout(
+            Duration::from_secs(10),
+            client.turn_steer(
+                thread_id,
+                turn_id,
+                vec![UserInput::Text {
+                    text: message,
+                    text_elements: vec![],
+                }],
+            ),
+        )
+        .await
+        .map_err(|_| ExecutorError::Io(io::Error::other("Steering response uncertain")))??;
+        if response.turn_id != expected_turn {
+            return Err(ExecutorError::NativeReceiptUnknown);
+        }
+        Ok(true)
     }
 
     pub async fn steer_execution(
@@ -742,15 +1101,67 @@ impl AppServerClient {
             },
         };
 
-        self.send_request::<InitializeResponse>(request, "initialize")
+        let response = self
+            .send_request::<InitializeResponse>(request, "initialize")
             .await?;
+        let response = serde_json::to_value(response)?;
+        let _ = self
+            .continuation_runtime
+            .set(response["userAgent"].as_str().unwrap_or_default().into());
         self.send_message(&ClientNotification::Initialized).await
+    }
+
+    /// Every production Codex executor enables this; no profile/project opt-in.
+    pub fn enable_native_review(&self) {
+        self.native_review_enabled.store(true, Ordering::SeqCst);
+    }
+
+    async fn native_review_config(
+        &self,
+        cwd: Option<String>,
+        config: &mut Option<HashMap<String, Value>>,
+    ) -> Result<(), ExecutorError> {
+        if !self.native_review_enabled.load(Ordering::SeqCst) {
+            return Ok(());
+        }
+        let id = self.next_request_id();
+        // Config layers can contain MCP credentials. Suppress this specific raw
+        // response before it reaches process logs; retain late-response privacy.
+        self.native_review_private_responses
+            .lock()
+            .await
+            .insert(id.clone());
+        let request = serde_json::json!({"id":id,"method":"config/read","params":{"cwd":cwd,"includeLayers":false}});
+        let response: Value = self
+            .rpc()
+            .request_with_deadline(
+                id,
+                &request,
+                "native review config/read",
+                self.cancel.clone(),
+                Duration::from_secs(30),
+            )
+            .await
+            .map_err(|_| {
+                ExecutorError::Io(io::Error::other(
+                    "Native review configuration could not be verified",
+                ))
+            })?;
+        super::native_review::config_overrides(&response, config)
     }
 
     pub async fn thread_start(
         &self,
-        params: ThreadStartParams,
+        mut params: ThreadStartParams,
     ) -> Result<ThreadStartResponse, ExecutorError> {
+        if self.native_review_enabled.load(Ordering::SeqCst) {
+            params.approval_policy = Some(codex_app_server_protocol::AskForApproval::OnRequest);
+            if params.sandbox != Some(codex_app_server_protocol::SandboxMode::ReadOnly) {
+                params.sandbox = Some(codex_app_server_protocol::SandboxMode::WorkspaceWrite);
+            }
+        }
+        self.native_review_config(params.cwd.clone(), &mut params.config)
+            .await?;
         let request = ClientRequest::ThreadStart {
             request_id: self.next_request_id(),
             params,
@@ -760,8 +1171,16 @@ impl AppServerClient {
 
     pub async fn thread_fork(
         &self,
-        params: ThreadForkParams,
+        mut params: ThreadForkParams,
     ) -> Result<ThreadForkResponse, ExecutorError> {
+        if self.native_review_enabled.load(Ordering::SeqCst) {
+            params.approval_policy = Some(codex_app_server_protocol::AskForApproval::OnRequest);
+            if params.sandbox != Some(codex_app_server_protocol::SandboxMode::ReadOnly) {
+                params.sandbox = Some(codex_app_server_protocol::SandboxMode::WorkspaceWrite);
+            }
+        }
+        self.native_review_config(params.cwd.clone(), &mut params.config)
+            .await?;
         let request = ClientRequest::ThreadFork {
             request_id: self.next_request_id(),
             params,
@@ -771,8 +1190,40 @@ impl AppServerClient {
 
     pub async fn thread_resume(
         &self,
-        params: ThreadResumeParams,
+        mut params: ThreadResumeParams,
     ) -> Result<ThreadResumeResponse, ExecutorError> {
+        if self.native_review_enabled.load(Ordering::SeqCst) {
+            params.approval_policy = Some(codex_app_server_protocol::AskForApproval::OnRequest);
+            if params.sandbox != Some(codex_app_server_protocol::SandboxMode::ReadOnly) {
+                params.sandbox = Some(codex_app_server_protocol::SandboxMode::WorkspaceWrite);
+            }
+        }
+        self.native_review_config(params.cwd.clone(), &mut params.config)
+            .await?;
+        let _load_fence = if let Some(guard) = self.original_worker.get().filter(|g| g.worker()) {
+            let fence = guard.activation(&params.thread_id, None).await?;
+            let snapshot = match self
+                .goal_request(
+                    "thread/goal/get",
+                    serde_json::json!({"threadId":params.thread_id}),
+                )
+                .await
+            {
+                Ok(snapshot) => snapshot,
+                Err(_) => {
+                    if guard.receipt_uncertain().await.is_err() {
+                        tracing::warn!(
+                            "Bounded native uncertainty could not be recorded; no replay permitted"
+                        );
+                    }
+                    return Err(ExecutorError::NativeReceiptUnknown);
+                }
+            };
+            crate::original_worker::worker_goal_load_allowed(&snapshot)?;
+            Some(fence)
+        } else {
+            None
+        };
         let request = ClientRequest::ThreadResume {
             request_id: self.next_request_id(),
             params,
@@ -797,9 +1248,36 @@ impl AppServerClient {
                 thread_id: thread_id.clone(),
                 input,
                 collaboration_mode,
+                approval_policy: self
+                    .native_review_enabled
+                    .load(Ordering::SeqCst)
+                    .then_some(codex_app_server_protocol::AskForApproval::OnRequest),
+                approvals_reviewer: self
+                    .native_review_enabled
+                    .load(Ordering::SeqCst)
+                    .then_some(codex_app_server_protocol::ApprovalsReviewer::GuardianSubagent),
                 ..Default::default()
             },
         };
+        let _activation_fence =
+            if let Some(guard) = self.original_worker.get().filter(|g| g.worker()) {
+                // Every native start, including feedback paths, passes the same
+                // one-shot activation boundary. Setup above this point is not proof.
+                let text = match &request {
+                    ClientRequest::TurnStart { params, .. } => match params.input.as_slice() {
+                        [UserInput::Text { text, .. }] => text.as_str(),
+                        _ => {
+                            return Err(ExecutorError::Io(io::Error::other(
+                                "Bounded native input changed",
+                            )));
+                        }
+                    },
+                    _ => unreachable!(),
+                };
+                Some(guard.activation(&thread_id, Some(text)).await?)
+            } else {
+                None
+            };
         let response: TurnStartResponse = self.send_request(request, "turn/start").await?;
         if let Some(binding) = self.routing_telemetry.get() {
             binding.turn(&thread_id, &response.turn.id).await;
@@ -1159,6 +1637,7 @@ impl AppServerClient {
                                     self.pause_goal(reason, false);
                                 }
                             }
+                            self.attest_initialization_checkpoint(goal, progress, &params.turn_id, result.is_ok()).await?;
                             result
                         }
                         _ => Err("No active or completed native goal to checkpoint. Do not create a goal without user authorization.".into()),
@@ -1198,9 +1677,47 @@ impl AppServerClient {
                 send_server_response(peer, request_id, response).await?;
                 Ok(())
             }
-            ServerRequest::ChatgptAuthTokensRefresh { .. }
-            | ServerRequest::McpServerElicitationRequest { .. }
-            | ServerRequest::PermissionsRequestApproval { .. } => {
+            ServerRequest::McpServerElicitationRequest { request_id, params } => {
+                self.start_elicitation(peer, request_id, params).await
+            }
+            ServerRequest::PermissionsRequestApproval { request_id, params } => {
+                let context = format!(
+                    "Native permission request: {}\n{}",
+                    params.reason.as_deref().unwrap_or(""),
+                    serde_json::to_string(&params.permissions)?
+                );
+                let status = self
+                    .request_tool_approval("permissions", &context, &params.item_id)
+                    .await?;
+                self.log_writer
+                    .log_raw(
+                        &Approval::approval_response(
+                            params.item_id.clone(),
+                            context,
+                            status.clone(),
+                        )
+                        .raw(),
+                    )
+                    .await?;
+                let permissions = if matches!(status, ApprovalStatus::Approved) {
+                    codex_app_server_protocol::GrantedPermissionProfile {
+                        network: params.permissions.network,
+                        file_system: params.permissions.file_system,
+                    }
+                } else {
+                    Default::default()
+                };
+                send_server_response(
+                    peer,
+                    request_id,
+                    codex_app_server_protocol::PermissionsRequestApprovalResponse {
+                        permissions,
+                        scope: codex_app_server_protocol::PermissionGrantScope::Turn,
+                    },
+                )
+                .await
+            }
+            ServerRequest::ChatgptAuthTokensRefresh { .. } => {
                 tracing::warn!("received unhandled v2 server request: {:?}", request);
                 let response = JSONRPCResponse {
                     id: request.id().clone(),
@@ -1222,13 +1739,197 @@ impl AppServerClient {
         }
     }
 
+    async fn elicitation_diagnostic(&self, id: &RequestId, origin: &str) {
+        tracing::info!(request_id = ?id, origin, "MCP approval bridge result");
+        let _ = self
+            .log_writer
+            .log_raw(
+                &serde_json::json!({
+                    "McpApprovalDiagnostic": {"request_id": id, "origin": origin}
+                })
+                .to_string(),
+            )
+            .await;
+    }
+
+    async fn elicitation_validation_failure(
+        &self,
+        peer: &JsonRpcPeer,
+        id: RequestId,
+        error: super::elicitation::ConsentValidationError,
+    ) -> Result<(), ExecutorError> {
+        // Fixed reason/messages and numeric limits only, never invocation values.
+        tracing::info!(request_id = ?id, reason = error.reason, "MCP consent validation failed; no review requested");
+        self.log_writer
+            .log_raw(
+                &serde_json::json!({
+                    "McpApprovalDiagnostic": {"request_id":id, "origin":"consent_validation_failed",
+                        "validation":error, "review_requested":false, "dispatch_allowed":false}
+                })
+                .to_string(),
+            )
+            .await?;
+        send_server_response(peer, id, super::elicitation::validation_response(&error)).await
+    }
+
+    async fn elicitation_context_valid(
+        &self,
+        params: &codex_app_server_protocol::McpServerElicitationRequestParams,
+    ) -> bool {
+        self.thread_id.lock().await.as_deref() == Some(params.thread_id.as_str())
+            && self
+                .current_turn_id
+                .lock()
+                .await
+                .as_ref()
+                .is_some_and(|turn| {
+                    params
+                        .turn_id
+                        .as_ref()
+                        .is_none_or(|requested| requested == turn)
+                })
+    }
+
+    async fn start_elicitation(
+        &self,
+        peer: &JsonRpcPeer,
+        id: RequestId,
+        mut params: codex_app_server_protocol::McpServerElicitationRequestParams,
+    ) -> Result<(), ExecutorError> {
+        use codex_app_server_protocol::McpServerElicitationAction::Cancel;
+
+        use super::elicitation;
+        // IDs are scoped to this client/connection. Replayed IDs cannot create
+        // another approval, reuse consent, or send a second conflicting response.
+        if !self.elicitation_seen.lock().await.insert(id.clone()) {
+            if let Some(cancel) = self.elicitations.lock().await.get(&id) {
+                cancel.cancel();
+            }
+            self.elicitation_diagnostic(&id, "duplicate_request").await;
+            return Ok(());
+        }
+        let origin = if self.cancel.is_cancelled() || peer.disconnected().is_cancelled() {
+            Some("process_stopped_or_disconnected")
+        } else if !self.elicitation_context_valid(&params).await {
+            Some("stale_context")
+        } else {
+            None
+        };
+        if let Some(origin) = origin {
+            self.elicitation_diagnostic(&id, origin).await;
+            return send_server_response(peer, id, elicitation::response(Cancel)).await;
+        }
+        let consent_summary = match elicitation::validate_consent(&params) {
+            Ok(summary) => summary,
+            Err(error) => {
+                return self.elicitation_validation_failure(peer, id, error).await;
+            }
+        };
+        // A nullable provider turn is best-effort correlation, not permission
+        // to carry consent into a later turn.
+        if params.turn_id.is_none() {
+            params.turn_id = self.current_turn_id.lock().await.clone();
+        }
+        let client = self
+            .self_ref
+            .get()
+            .and_then(Weak::upgrade)
+            .expect("live client");
+        let peer = peer.clone();
+        let cancelled = self.cancel.child_token();
+        self.elicitations
+            .lock()
+            .await
+            .insert(id.clone(), cancelled.clone());
+        // Keep reading lifecycle/stop messages and concurrent requests while
+        // the operator decides. This is independent of command auto_approve.
+        tokio::spawn(async move {
+            let disconnected = peer.disconnected();
+            let watcher_cancel = cancelled.clone();
+            let watcher = tokio::spawn(async move {
+                disconnected.cancelled().await;
+                watcher_cancel.cancel();
+            });
+            let call_id = format!("vk-mcp-{}", Uuid::new_v4());
+            let result = async {
+                if cancelled.is_cancelled() {
+                    return Err(ExecutorApprovalError::Cancelled);
+                }
+                let service = client
+                    .approvals
+                    .as_ref()
+                    .ok_or(ExecutorApprovalError::ServiceUnavailable)?;
+                let approval_id = service.create_mcp_tool_approval(&consent_summary).await?;
+                if client
+                    .log_writer
+                    .log_raw(
+                        &Approval::McpApprovalRequested {
+                            call_id: call_id.clone(),
+                            approval_id: approval_id.clone(),
+                            message: consent_summary,
+                            server_name: params.server_name.clone(),
+                        }
+                        .raw(),
+                    )
+                    .await
+                    .is_err()
+                {
+                    cancelled.cancel();
+                }
+                // The normal bridge cancels/removes pending UI state when this
+                // token fires, including disconnect, resolved request and stop.
+                service
+                    .wait_tool_approval(&approval_id, cancelled.clone())
+                    .await
+            }
+            .await;
+            watcher.abort();
+            let (mut action, mut origin) = elicitation::outcome(result);
+            if peer.disconnected().is_cancelled() {
+                action = Cancel;
+                origin = "disconnected";
+            } else if client.cancel.is_cancelled() {
+                action = Cancel;
+                origin = "process_stopped";
+            } else if cancelled.is_cancelled() {
+                action = Cancel;
+                origin = "request_cancelled";
+            } else if !client.elicitation_context_valid(&params).await {
+                action = Cancel;
+                origin = "stale_context";
+            }
+            client.elicitations.lock().await.remove(&id);
+            let _ = client
+                .log_writer
+                .log_raw(
+                    &Approval::McpApprovalResolved {
+                        call_id,
+                        action,
+                        origin: origin.to_owned(),
+                    }
+                    .raw(),
+                )
+                .await;
+            client.elicitation_diagnostic(&id, origin).await;
+            if send_server_response(&peer, id.clone(), elicitation::response(action))
+                .await
+                .is_err()
+            {
+                client
+                    .elicitation_diagnostic(&id, "response_disconnected")
+                    .await;
+            }
+        });
+        Ok(())
+    }
+
     async fn request_tool_approval(
         &self,
         tool_name: &str,
         display_tool_name: &str,
         tool_call_id: &str,
     ) -> Result<ApprovalStatus, ExecutorError> {
-        if self.auto_approve {
+        if self.auto_approve && !self.native_review_enabled.load(Ordering::SeqCst) {
             return Ok(ApprovalStatus::Approved);
         }
         let approval_service = self
@@ -1236,6 +1937,11 @@ impl AppServerClient {
             .as_ref()
             .ok_or(ExecutorApprovalError::ServiceUnavailable)?;
 
+        if self.native_review_enabled.load(Ordering::SeqCst)
+            && !approval_service.supports_interactive_approvals()
+        {
+            return Err(ExecutorApprovalError::ServiceUnavailable.into());
+        }
         let approval_id = approval_service
             .create_tool_approval(tool_name)
             .or_else(|err| async {
@@ -1435,9 +2141,33 @@ impl AppServerClient {
         R: DeserializeOwned + std::fmt::Debug,
     {
         let request_id = request_id(&request);
-        self.rpc()
-            .request(request_id, &request, label, self.cancel.clone())
-            .await
+        if let Some(guard) = self.original_worker.get().filter(|g| g.worker())
+            && matches!(label, "thread/resume" | "turn/start")
+        {
+            let result = self
+                .rpc()
+                .request_with_deadline(
+                    request_id,
+                    &request,
+                    label,
+                    self.cancel.clone(),
+                    Duration::from_secs(10),
+                )
+                .await;
+            if result.is_err() {
+                if guard.receipt_uncertain().await.is_err() {
+                    tracing::warn!(
+                        "Bounded native uncertainty could not be recorded; no replay permitted"
+                    );
+                }
+                return Err(ExecutorError::NativeReceiptUnknown);
+            }
+            result
+        } else {
+            self.rpc()
+                .request(request_id, &request, label, self.cancel.clone())
+                .await
+        }
     }
 
     fn next_request_id(&self) -> RequestId {
@@ -1448,7 +2178,7 @@ impl AppServerClient {
         &self,
         status: &ApprovalStatus,
     ) -> (CommandExecutionApprovalDecision, Option<String>) {
-        if self.auto_approve {
+        if self.auto_approve && !self.native_review_enabled.load(Ordering::SeqCst) {
             return (CommandExecutionApprovalDecision::AcceptForSession, None);
         }
 
@@ -1475,7 +2205,7 @@ impl AppServerClient {
         &self,
         status: &ApprovalStatus,
     ) -> (FileChangeApprovalDecision, Option<String>) {
-        if self.auto_approve {
+        if self.auto_approve && !self.native_review_enabled.load(Ordering::SeqCst) {
             return (FileChangeApprovalDecision::AcceptForSession, None);
         }
 
@@ -1599,6 +2329,9 @@ impl AppServerClient {
     ) {
         let peer = self.rpc().clone();
         let cancel = self.cancel.clone();
+        let bounded = self.original_worker.get().filter(|g| g.worker()).cloned();
+        let activation_input = message.clone();
+        let activation_thread = thread_id.clone();
         let request = ClientRequest::TurnStart {
             request_id: peer.next_request_id(),
             params: TurnStartParams {
@@ -1608,20 +2341,58 @@ impl AppServerClient {
                     text_elements: vec![],
                 }],
                 collaboration_mode,
+                approval_policy: self
+                    .native_review_enabled
+                    .load(Ordering::SeqCst)
+                    .then_some(codex_app_server_protocol::AskForApproval::OnRequest),
+                approvals_reviewer: self
+                    .native_review_enabled
+                    .load(Ordering::SeqCst)
+                    .then_some(codex_app_server_protocol::ApprovalsReviewer::GuardianSubagent),
                 ..Default::default()
             },
         };
         tokio::spawn(async move {
-            if let Err(err) = peer
-                .request::<TurnStartResponse, _>(
+            let _activation_fence = match &bounded {
+                Some(guard) => match guard
+                    .activation(&activation_thread, Some(&activation_input))
+                    .await
+                {
+                    Ok(fence) => Some(fence),
+                    Err(_) => {
+                        tracing::warn!("Bounded feedback activation refused; no native turn sent");
+                        return;
+                    }
+                },
+                None => None,
+            };
+            let result = if bounded.is_some() {
+                peer.request_with_deadline::<TurnStartResponse, _>(
+                    request_id(&request),
+                    &request,
+                    "turn/start",
+                    cancel,
+                    Duration::from_secs(10),
+                )
+                .await
+            } else {
+                peer.request::<TurnStartResponse, _>(
                     request_id(&request),
                     &request,
                     "turn/start",
                     cancel,
                 )
                 .await
-            {
-                tracing::error!("failed to send user message: {err}");
+            };
+            if result.is_err() {
+                if let Some(guard) = bounded
+                    && guard.receipt_uncertain().await.is_err()
+                {
+                    tracing::warn!(
+                        "Bounded native uncertainty could not be recorded; no replay permitted"
+                    );
+                }
+                tracing::warn!("Native user-message receipt unavailable; outcome unknown");
             }
         });
     }
@@ -1639,6 +2410,36 @@ impl JsonRpcCallbacks for AppServerClient {
         raw: &str,
         request: JSONRPCRequest,
     ) -> Result<(), ExecutorError> {
+        // Elicitation metadata may contain credentials, form values or tool prompts.
+        // Only validated, redacted invocation context is retained for consent.
+        if request.method == "mcpServer/elicitation/request" {
+            return match ServerRequest::try_from(request.clone()) {
+                Ok(ServerRequest::McpServerElicitationRequest { request_id, params }) => {
+                    self.start_elicitation(peer, request_id, params).await
+                }
+                _ => {
+                    if !self
+                        .elicitation_seen
+                        .lock()
+                        .await
+                        .insert(request.id.clone())
+                    {
+                        if let Some(cancel) = self.elicitations.lock().await.get(&request.id) {
+                            cancel.cancel();
+                        }
+                        self.elicitation_diagnostic(&request.id, "duplicate_request")
+                            .await;
+                        return Ok(());
+                    }
+                    self.elicitation_validation_failure(peer, request.id, super::elicitation::ConsentValidationError {
+                        reason: "malformed_or_unsupported",
+                        message: "This approval request is malformed or unsupported. No approval was requested or granted.",
+                        observed: None,
+                        limit: None,
+                    }).await
+                }
+            };
+        }
         self.log_writer.log_raw(raw).await?;
         match ServerRequest::try_from(request.clone()) {
             Ok(server_request) => self.handle_server_request(peer, server_request).await,
@@ -1659,6 +2460,14 @@ impl JsonRpcCallbacks for AppServerClient {
         raw: &str,
         response: &JSONRPCResponse,
     ) -> Result<(), ExecutorError> {
+        if self
+            .native_review_private_responses
+            .lock()
+            .await
+            .remove(&response.id)
+        {
+            return Ok(());
+        }
         if self.delegation_requests.lock().await.remove(&response.id) {
             return self.log_writer.log_raw(&serde_json::json!({"method":"vk/delegation/native","params":{"response":response}}).to_string()).await;
         }
@@ -1671,6 +2480,14 @@ impl JsonRpcCallbacks for AppServerClient {
         raw: &str,
         error: &JSONRPCError,
     ) -> Result<(), ExecutorError> {
+        if self
+            .native_review_private_responses
+            .lock()
+            .await
+            .remove(&error.id)
+        {
+            return Ok(());
+        }
         if self.delegation_requests.lock().await.remove(&error.id) {
             return self
                 .log_writer
@@ -1689,7 +2506,44 @@ impl JsonRpcCallbacks for AppServerClient {
         raw: &str,
         notification: JSONRPCNotification,
     ) -> Result<bool, ExecutorError> {
+        if matches!(
+            notification.method.as_str(),
+            "turn/started" | "turn/completed"
+        ) && notification
+            .params
+            .as_ref()
+            .and_then(|p| p.get("threadId"))
+            .and_then(Value::as_str)
+            == self.thread_id.lock().await.as_deref()
+        {
+            for cancel in self.elicitations.lock().await.values() {
+                cancel.cancel();
+            }
+        }
+        if notification.method == "serverRequest/resolved"
+            && let Some(params) = &notification.params
+            && let Some(id) = params.get("requestId")
+            && let Ok(id) = serde_json::from_value::<RequestId>(id.clone())
+            && let Some(cancel) = self.elicitations.lock().await.get(&id)
+        {
+            cancel.cancel();
+        }
         let method = notification.method.as_str();
+        // A provider error/retry is ambiguous first-run work. Revoke before
+        // the native engine can turn a retry into another initialization.
+        if method == "error"
+            && notification
+                .params
+                .as_ref()
+                .and_then(|p| p.get("threadId"))
+                .and_then(Value::as_str)
+                == self.thread_id.lock().await.as_deref()
+        {
+            self.hold_pending_initialization(
+                "First native provider turn failed or may retry; inspect before any further work",
+            )
+            .await?;
+        }
         if let Some(control) = self.delegation.get() {
             match control
                 .observe(
@@ -1731,6 +2585,8 @@ impl JsonRpcCallbacks for AppServerClient {
             && params.get("threadId").and_then(Value::as_str)
                 == self.thread_id.lock().await.as_deref()
         {
+            self.hold_pending_initialization("Native goal removed during first run")
+                .await?;
             *self.goal.lock().await = None;
         }
         // Existing threads cannot retrofit dynamic tools in Codex 0.153.4.
@@ -1752,6 +2608,13 @@ impl JsonRpcCallbacks for AppServerClient {
                 match progress.checkpoint(args) {
                     Ok(_) => {
                         goals::save(&goal.thread_id, progress).await?;
+                        self.attest_initialization_checkpoint(
+                            goal,
+                            progress,
+                            params.get("turnId").and_then(Value::as_str).unwrap_or(""),
+                            true,
+                        )
+                        .await?;
                         if goal.status == "active"
                             && let Some(reason) = progress.pause_reason.clone()
                         {
@@ -1759,6 +2622,13 @@ impl JsonRpcCallbacks for AppServerClient {
                         }
                     }
                     Err(error) => {
+                        self.attest_initialization_checkpoint(
+                            goal,
+                            progress,
+                            params.get("turnId").and_then(Value::as_str).unwrap_or(""),
+                            false,
+                        )
+                        .await?;
                         if goal.status == "active" {
                             self.pause_goal(format!("Invalid goal checkpoint: {error}"), false);
                         } else {
@@ -1836,11 +2706,15 @@ impl JsonRpcCallbacks for AppServerClient {
                     return Ok(false);
                 }
                 if completed.turn.status == TurnStatus::Failed {
+                    self.hold_pending_initialization("First native turn failed")
+                        .await?;
                     return Err(ExecutorError::Io(io::Error::other(
                         "Codex native turn failed",
                     )));
                 }
                 if completed.turn.status == TurnStatus::Interrupted {
+                    self.hold_pending_initialization("First native turn interrupted")
+                        .await?;
                     tracing::debug!("codex turn interrupted; flushing feedback queue");
                     if self.flush_pending_feedback().await {
                         keep_alive = true;
@@ -2022,6 +2896,318 @@ mod goal_integration_tests {
 
     use super::*;
 
+    async fn steering_completion_events(reader: impl tokio::io::AsyncRead + Unpin) -> Vec<Value> {
+        use tokio::io::{AsyncBufReadExt, BufReader};
+        let mut lines = BufReader::new(reader).lines();
+        let mut events = Vec::new();
+        while let Some(line) = lines.next_line().await.unwrap() {
+            let Ok(value) = serde_json::from_str::<Value>(&line) else {
+                continue;
+            };
+            let method = value["method"].as_str().unwrap_or("");
+            if matches!(method, "turn/started" | "item/completed" | "turn/completed") {
+                let complete = method == "turn/completed";
+                events.push(value);
+                if complete {
+                    return events;
+                }
+            }
+        }
+        panic!("native completion notification missing");
+    }
+
+    fn steering_completion_matches(
+        events: &[Value],
+        thread: &str,
+        turn: &str,
+        marker: &str,
+    ) -> bool {
+        let own: Vec<_> = events
+            .iter()
+            .filter(|event| event["params"]["threadId"] == thread)
+            .collect();
+        let starts: Vec<_> = own
+            .iter()
+            .filter(|event| event["method"] == "turn/started")
+            .collect();
+        let last_agent = own.iter().rfind(|event| {
+            event["method"] == "item/completed"
+                && event["params"]["turnId"] == turn
+                && event["params"]["item"]["type"] == "agentMessage"
+        });
+        starts.len() == 1
+            && starts[0]["params"]["turn"]["id"] == turn
+            && last_agent.is_some_and(|event| {
+                event["params"]["item"]["text"]
+                    .as_str()
+                    .is_some_and(|text| text.trim() == marker)
+            })
+            && own.last().is_some_and(|event| {
+                event["method"] == "turn/completed"
+                    && event["params"]["turn"]["id"] == turn
+                    && event["params"]["turn"]["status"] == "completed"
+            })
+    }
+
+    #[tokio::test]
+    async fn steering_evidence_completes_on_terminal_notification_without_follow_up_rpc() {
+        let events = vec![
+            serde_json::json!({"method":"turn/started","params":{"threadId":"own","turn":{"id":"turn"}}}),
+            serde_json::json!({"method":"item/completed","params":{"threadId":"own","turnId":"turn","item":{"type":"agentMessage","text":"marker"}}}),
+            serde_json::json!({"method":"turn/completed","params":{"threadId":"own","turn":{"id":"turn","status":"completed"}}}),
+        ];
+        let (mut writer, reader) = tokio::io::duplex(8192);
+        for event in &events {
+            writer
+                .write_all(format!("{event}\n").as_bytes())
+                .await
+                .unwrap();
+        }
+        // Keep the stream open: ordinary completion ends the peer's reader, not
+        // the native process. Evidence collection must not wait for EOF or RPC.
+        let read = tokio::time::timeout(Duration::from_secs(1), steering_completion_events(reader))
+            .await
+            .unwrap();
+        assert!(steering_completion_matches(&read, "own", "turn", "marker"));
+        assert!(!steering_completion_matches(
+            &read, "other", "turn", "marker"
+        ));
+        assert!(!steering_completion_matches(
+            &read, "own", "other", "marker"
+        ));
+        let mut changed = read.clone();
+        changed[1]["params"]["item"]["text"] = serde_json::json!("wrong final answer");
+        assert!(!steering_completion_matches(
+            &changed, "own", "turn", "marker"
+        ));
+        let mut duplicate = read.clone();
+        duplicate.insert(0, events[0].clone());
+        assert!(!steering_completion_matches(
+            &duplicate, "own", "turn", "marker"
+        ));
+    }
+
+    #[tokio::test]
+    #[ignore = "one account-backed isolated Codex turn; requires VK_DOT_STEERING_REAL=1 and a dedicated SSD home"]
+    async fn explicit_steering_real_isolated_native_session() {
+        use std::{path::PathBuf, process::Stdio};
+        assert_eq!(std::env::var("VK_DOT_STEERING_REAL").as_deref(), Ok("1"));
+        let home = PathBuf::from(std::env::var("CODEX_HOME").expect("dedicated CODEX_HOME"))
+            .canonicalize()
+            .unwrap();
+        assert!(
+            home.starts_with("/mnt/vk-storage/")
+                && home
+                    .components()
+                    .any(|part| part.as_os_str() == "vk-dot-steering"),
+            "Never use a production native home"
+        );
+        assert!(
+            !home.join("sessions").exists(),
+            "Use a fresh isolated native home"
+        );
+        let work = home.join("work");
+        tokio::fs::create_dir(&work).await.unwrap();
+        let binary = std::env::var("VK_DOT_STEERING_NATIVE_BIN").expect("exact native binary");
+        let mut command = Command::new(binary);
+        command.arg("app-server").current_dir(&work).env_clear();
+        for key in ["HOME", "PATH", "LANG", "CODEX_HOME"] {
+            if let Some(value) = std::env::var_os(key) {
+                command.env(key, value);
+            }
+        }
+        let mut child = command
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let cancel = CancellationToken::new();
+        let (log_writer, log_reader) = tokio::io::duplex(64 * 1024);
+        let evidence = tokio::spawn(steering_completion_events(log_reader));
+        let client = AppServerClient::new(
+            LogWriter::new(log_writer),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        let (exit_tx, _exit_rx) = tokio::sync::oneshot::channel();
+        client.connect(JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(exit_tx),
+            cancel.clone(),
+        ));
+        client.initialize().await.unwrap();
+        let thread=client.thread_start(serde_json::from_value(serde_json::json!({
+            "model":"gpt-6.1-sol","cwd":work,"approvalPolicy":"on-request","sandbox":"read-only","ephemeral":false
+        })).unwrap()).await.unwrap().thread.id;
+        let execution = Uuid::new_v4();
+        client.register_session(&thread).await.unwrap();
+        AppServerClient::register_active_execution(execution, &client);
+        let marker = format!("STEERING_VERIFIED_{}", Uuid::new_v4().simple());
+        let initial = "This is an isolated steering acceptance test. Run only `sleep 20` once, then answer ORIGINAL_ONLY. Do not read or write files, access network, or run other commands. A correction may arrive during this same turn.";
+        client
+            .turn_start_with_mode(
+                thread.clone(),
+                vec![UserInput::Text {
+                    text: initial.into(),
+                    text_elements: vec![],
+                }],
+                None,
+            )
+            .await
+            .unwrap();
+        // Native turn/start can answer before its turn/started notification.
+        // Poll readiness only; never retry a steering request or create a turn.
+        let (bound_thread, bound_turn) = tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if let Some(target) = AppServerClient::steering_target(execution).await {
+                    break target;
+                }
+                sleep(Duration::from_millis(25)).await;
+            }
+        })
+        .await
+        .expect("native turn did not become ready");
+        assert_eq!(bound_thread, thread);
+        assert!(AppServerClient::steer_bound_turn(execution,bound_thread,bound_turn.clone(),format!("Correction for this same turn: replace the final answer with exactly {marker}. Do not start another turn or run any additional command.")).await.unwrap());
+        // Ordinary completion closes JsonRpcPeer's reader. Consume the already
+        // logged completion event instead of issuing thread/read on that peer.
+        let events = tokio::time::timeout(Duration::from_secs(90), evidence)
+            .await
+            .expect("dedicated test turn did not complete")
+            .unwrap();
+        assert!(
+            steering_completion_matches(&events, &thread, &bound_turn, &marker),
+            "one native turn with the same-turn final correction required"
+        );
+        AppServerClient::unregister_active_execution(execution);
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+        println!(
+            "PASS: one real native turn, one identity-bound correction, same-turn final answer verified"
+        );
+    }
+
+    #[tokio::test]
+    async fn explicit_steering_binds_execution_thread_turn_without_start_interrupt_or_fallback() {
+        use std::process::Stdio;
+
+        use tokio::io::{AsyncBufReadExt, BufReader};
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        let execution = Uuid::new_v4();
+        AppServerClient::register_active_execution(execution, &client);
+        assert!(AppServerClient::steering_target(execution).await.is_none());
+        *client.thread_id.lock().await = Some("isolated-thread".into());
+        *client.current_turn_id.lock().await = Some("isolated-turn".into());
+        let mut child = Command::new("python3").args(["-u", "-c", r#"
+import json, sys
+for line in sys.stdin:
+    request=json.loads(line)
+    print(line.strip(),file=sys.stderr,flush=True)
+    if request['params']['input'][0]['text']=='simulate lost/error response':
+        print(json.dumps({'id':request['id'],'error':{'code':-32000,'message':'uncertain'}}),flush=True)
+    else:
+        print(json.dumps({'id':request['id'],'result':{'turnId':'isolated-turn'}}),flush=True)
+"#]).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true).spawn().unwrap();
+        let mut requests = BufReader::new(child.stderr.take().unwrap()).lines();
+        let (exit_tx, _exit_rx) = tokio::sync::oneshot::channel();
+        let peer = JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(exit_tx),
+            cancel.clone(),
+        );
+        assert!(client.rpc.set(peer).is_ok());
+        for (id, thread, turn) in [
+            (Uuid::new_v4(), "isolated-thread", "isolated-turn"),
+            (execution, "other-thread", "isolated-turn"),
+            (execution, "isolated-thread", "other-turn"),
+        ] {
+            assert!(
+                !AppServerClient::steer_bound_turn(
+                    id,
+                    thread.into(),
+                    turn.into(),
+                    "not sent".into()
+                )
+                .await
+                .unwrap()
+            );
+        }
+        assert!(
+            AppServerClient::steer_bound_turn(
+                execution,
+                "isolated-thread".into(),
+                "isolated-turn".into(),
+                "verified correction".into()
+            )
+            .await
+            .unwrap()
+        );
+        let line = tokio::time::timeout(Duration::from_secs(5), requests.next_line())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        let value: Value = serde_json::from_str(&line).unwrap();
+        assert_eq!(value["method"], "turn/steer");
+        assert_eq!(value["params"]["threadId"], "isolated-thread");
+        assert_eq!(value["params"]["expectedTurnId"], "isolated-turn");
+        assert!(
+            AppServerClient::steer_bound_turn(
+                execution,
+                "isolated-thread".into(),
+                "isolated-turn".into(),
+                "simulate lost/error response".into()
+            )
+            .await
+            .is_err()
+        );
+        assert!(requests.next_line().await.unwrap().is_some());
+        *client.current_turn_id.lock().await = Some("next-turn".into());
+        assert!(
+            !AppServerClient::steer_bound_turn(
+                execution,
+                "isolated-thread".into(),
+                "isolated-turn".into(),
+                "no retarget".into()
+            )
+            .await
+            .unwrap()
+        );
+        client.capacity_stopped.store(true, Ordering::SeqCst);
+        assert!(AppServerClient::steering_target(execution).await.is_none());
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), requests.next_line())
+                .await
+                .is_err()
+        );
+        AppServerClient::unregister_active_execution(execution);
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+    }
+
     #[tokio::test]
     async fn completion_reconciliation_steers_once_without_starting_a_turn() {
         use std::process::Stdio;
@@ -2042,6 +3228,7 @@ mod goal_integration_tests {
         *client.current_turn_id.lock().await = Some("finishing".into());
         *client.goal.lock().await = Some((
             NativeGoal {
+                goal_id: String::new(),
                 thread_id: "root".into(),
                 objective: "Deliver feature".into(),
                 status: "complete".into(),
@@ -2123,6 +3310,7 @@ for line in sys.stdin:
             .insert("delivery".into(), "Verify deployment".into());
         *client.goal.lock().await = Some((
             NativeGoal {
+                goal_id: String::new(),
                 thread_id: "root".into(),
                 objective: "Deliver feature".into(),
                 status: "complete".into(),
@@ -2184,6 +3372,820 @@ for line in sys.stdin:
     }
 
     #[tokio::test]
+    async fn capacity_graceful_attempt_bounds_mutex_log_and_exit_signal() {
+        for stall in ["thread", "log", "exit"] {
+            let client = AppServerClient::new(
+                LogWriter::new(tokio::io::sink()),
+                None,
+                false,
+                false,
+                RepoContext::default(),
+                false,
+                String::new(),
+                CancellationToken::new(),
+            );
+            let (tx, mut rx) = tokio::sync::oneshot::channel();
+            let signal = ExitSignalSender::new(tx);
+            client.set_exit_signal(signal.clone());
+            let thread = if stall == "thread" {
+                Some(client.thread_id.lock().await)
+            } else {
+                None
+            };
+            let log = if stall == "log" {
+                Some(client.log_writer.writer.lock().await)
+            } else {
+                None
+            };
+            let exit = if stall == "exit" {
+                Some(signal.hold_for_stop_test().await)
+            } else {
+                None
+            };
+            let started = std::time::Instant::now();
+            assert!(
+                tokio::time::timeout(
+                    Duration::from_millis(2300),
+                    client.suspend_capacity("Synthetic stalled attempt".into())
+                )
+                .await
+                .unwrap()
+                .is_err()
+            );
+            assert!(started.elapsed() < Duration::from_millis(2300));
+            assert!(client.capacity_stopped.load(Ordering::SeqCst));
+            assert!(client.goal_pausing.load(Ordering::SeqCst));
+            drop(thread);
+            drop(log);
+            drop(exit);
+            sleep(Duration::from_millis(20)).await;
+            assert!(
+                matches!(
+                    rx.try_recv(),
+                    Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+                ),
+                "Timed out graceful attempt cannot send a late success"
+            );
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires the reviewed scheduled-first-run-validation.py offline boundary"]
+    async fn scheduled_first_run_runtime() {
+        let workers =
+            if std::env::var("VK_SCHEDULED_FIRST_RUN_VARIANT").as_deref() == Ok("stalled-two") {
+                2
+            } else {
+                1
+            };
+        let ready = Arc::new(tokio::sync::Barrier::new(workers));
+        let finished = Arc::new(tokio::sync::Barrier::new(workers));
+        let seed = Arc::new(tokio::sync::Mutex::new(()));
+        futures::future::join_all((0..workers).map(|index| {
+            scheduled_first_run_worker(index, ready.clone(), finished.clone(), seed.clone())
+        }))
+        .await;
+    }
+
+    async fn scheduled_first_run_worker(
+        index: usize,
+        ready: Arc<tokio::sync::Barrier>,
+        finished: Arc<tokio::sync::Barrier>,
+        seed: Arc<tokio::sync::Mutex<()>>,
+    ) {
+        use sqlx::{Connection, sqlite::SqliteConnectOptions};
+
+        use crate::{
+            capacity::{
+                controller::ManagedGoal,
+                first_run::{self, InitializationState},
+            },
+            env::ExecutionEnv,
+            executors::{ExecutorExitResult, StandardCodingAgentExecutor, codex::Codex},
+        };
+        assert_eq!(
+            std::env::var("VK_SCHEDULED_FIRST_RUN_OFFLINE").as_deref(),
+            Ok("1")
+        );
+        let home = std::path::PathBuf::from(std::env::var("CODEX_HOME").unwrap());
+        assert!(
+            home.to_string_lossy()
+                .contains("vk-continuation-first-run-")
+        );
+        let work = home.join(format!("work-{index}"));
+        tokio::fs::create_dir_all(&work).await.unwrap();
+        // Native paused goal plus one real, ordinary offline seed turn. The
+        // provider's seed reply has no checkpoint, and the goal never runs here.
+        // The reviewed driver supplies the local approved provider path. This
+        // permits a source-verified CI-built test binary without assuming the
+        // builder's absolute source path exists on the acceptance host.
+        // Serialize fixture seed/bootstrap migrations in this shared native
+        // home. Actual guarded first-run workers below still run concurrently.
+        let seed_guard = seed.lock().await;
+        let approved = std::env::var("VK_CODEX_BASE_COMMAND").unwrap();
+        let launcher = shlex::split(&approved).unwrap();
+        assert_eq!(launcher.first().map(String::as_str), Some("python3"));
+        let mut command = Command::new(&launcher[0]);
+        command.args(&launcher[1..]);
+        use workspace_utils::command_ext::GroupSpawnNoWindowExt;
+        let mut child = command
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::fs::File::create(home.join(format!("seed-stderr-{index}.log"))).unwrap())
+            .kill_on_drop(true)
+            .group_spawn_no_window()
+            .unwrap();
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let signal = ExitSignalSender::new(tx);
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(
+                tokio::fs::File::create(home.join(format!("seed-protocol-{index}.jsonl")))
+                    .await
+                    .unwrap(),
+            ),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        client.set_exit_signal(signal.clone());
+        let peer = JsonRpcPeer::spawn(
+            child.inner().stdin.take().unwrap(),
+            child.inner().stdout.take().unwrap(),
+            client.clone(),
+            signal,
+            cancel.clone(),
+        );
+        client.connect(peer);
+        client.initialize().await.unwrap();
+        let params = ThreadStartParams {
+            model: Some("fixture".into()),
+            model_provider: Some("fixture".into()),
+            cwd: Some(work.to_string_lossy().into_owned()),
+            approval_policy: Some(codex_app_server_protocol::AskForApproval::Never),
+            sandbox: Some(codex_app_server_protocol::SandboxMode::DangerFullAccess),
+            developer_instructions: Some(goals::INSTRUCTIONS.into()),
+            dynamic_tools: Some(vec![goals::tool_spec()]),
+            ..Default::default()
+        };
+        let thread = client.thread_start(params).await.unwrap().thread.id;
+        client.register_session(&thread).await.unwrap();
+        client.goal_request("thread/goal/set", serde_json::json!({"threadId":thread,
+            "objective":"Verify synthetic overnight first native turn and preserve its identity", "status":"paused"})).await.unwrap();
+        let started = client
+            .turn_start_with_mode(
+                thread.clone(),
+                vec![UserInput::Text {
+                    text: "Record the existing synthetic seed anchor.".into(),
+                    text_elements: vec![],
+                }],
+                None,
+            )
+            .await
+            .unwrap();
+        assert!(matches!(
+            tokio::time::timeout(Duration::from_secs(15), rx)
+                .await
+                .unwrap()
+                .unwrap(),
+            ExecutorExitResult::Success
+        ));
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+        drop(client);
+        drop(seed_guard);
+        let native = first_run::native(&thread).await.unwrap();
+        assert_eq!(native.status, "paused");
+        let path = goals::progress_path(&thread).unwrap();
+        assert!(!path.exists());
+        let session = Uuid::new_v4();
+        let workspace = Uuid::new_v4();
+        let seed_execution = Uuid::new_v4();
+        let seed_turn = Uuid::new_v4();
+        let database = home.join(format!("fixture-vk-{index}.sqlite"));
+        let mut db = sqlx::SqliteConnection::connect_with(
+            &SqliteConnectOptions::new()
+                .filename(&database)
+                .create_if_missing(true),
+        )
+        .await
+        .unwrap();
+        for ddl in [
+            "CREATE TABLE workspaces(id BLOB PRIMARY KEY,container_ref TEXT,archived INTEGER,worktree_deleted INTEGER)",
+            "CREATE TABLE sessions(id BLOB PRIMARY KEY,workspace_id BLOB,executor TEXT,agent_working_dir TEXT)",
+            "CREATE TABLE execution_processes(id BLOB PRIMARY KEY,session_id BLOB,run_reason TEXT,dropped INTEGER,status TEXT,exit_code INTEGER,created_at INTEGER)",
+            "CREATE TABLE coding_agent_turns(id BLOB PRIMARY KEY,execution_process_id BLOB,agent_session_id TEXT,agent_message_id TEXT,summary TEXT)",
+        ] {
+            sqlx::query(ddl).execute(&mut db).await.unwrap();
+        }
+        sqlx::query("INSERT INTO workspaces VALUES(?,?,0,0)")
+            .bind(workspace)
+            .bind(work.to_string_lossy().as_ref())
+            .execute(&mut db)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO sessions VALUES(?,?,'codex',NULL)")
+            .bind(session)
+            .bind(workspace)
+            .execute(&mut db)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO execution_processes VALUES(?,?,'codingagent',0,'completed',0,1)")
+            .bind(seed_execution)
+            .bind(session)
+            .execute(&mut db)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO coding_agent_turns VALUES(?,?,?,?,'Existing synthetic paused goal seed anchor.')").bind(seed_turn).bind(seed_execution).bind(&thread).bind(&started.turn.id).execute(&mut db).await.unwrap();
+        let binding = first_run::binding(&database, session, &thread, None)
+            .await
+            .unwrap();
+        let controller = crate::capacity::controller::configured().unwrap().unwrap();
+        let selected = ManagedGoal {
+            goal_id: native.goal_id.clone(),
+            initialization_state: InitializationState::Pending,
+            binding: Some(binding),
+            initialization_receipt: None,
+            session_id: session,
+            thread_id: thread.clone(),
+            objective: native.objective.clone(),
+            created_at: native.created_at,
+            eligible: true,
+            reason: String::new(),
+            grant: None,
+        };
+        selected.revalidate(None, false).await.unwrap();
+        controller.lock().await.enroll(selected).unwrap();
+        assert!(!path.exists());
+        assert_eq!(first_run::native(&thread).await.unwrap().status, "paused");
+        // A late changed objective/anchor is rejected before the provider starts.
+        sqlx::query("UPDATE coding_agent_turns SET agent_message_id='changed'")
+            .execute(&mut db)
+            .await
+            .unwrap();
+        assert!(
+            controller.lock().await.state.goals[&session]
+                .revalidate(None, false)
+                .await
+                .is_err()
+        );
+        sqlx::query("UPDATE coding_agent_turns SET agent_message_id=?")
+            .bind(&started.turn.id)
+            .execute(&mut db)
+            .await
+            .unwrap();
+        let variant = std::env::var("VK_SCHEDULED_FIRST_RUN_VARIANT").unwrap();
+        let stalled = variant.starts_with("stalled-");
+        let codex: Codex = serde_json::from_value(
+            serde_json::json!({"model":"fixture","model_provider":"fixture",
+            "sandbox":"danger-full-access","ask_for_approval":"never","plan":variant == "plan",
+            "base_command_override":std::env::var("VK_CODEX_BASE_COMMAND").unwrap()}),
+        )
+        .unwrap();
+        let runs = if variant == "success" {
+            vec![true, false]
+        } else {
+            vec![true]
+        };
+        for first in runs {
+            let execution = Uuid::new_v4();
+            let now = crate::capacity::wall_ms();
+            let (request, prepared) = {
+                let mut c = controller.lock().await;
+                // Concurrent grants share the actual scheduled window cutoff;
+                // admission deliberately rejects differing hard deadlines.
+                let stop_at = c
+                    .state
+                    .goals
+                    .values()
+                    .find_map(|g| g.grant.as_ref().map(|grant| grant.stop_at_ms))
+                    .unwrap_or(now + 12000);
+                let request = c
+                    .issue_with_first_run(
+                        session,
+                        Uuid::new_v4(),
+                        "synthetic-included-night".into(),
+                        now + if variant == "stalled-expiry" {
+                            7000
+                        } else {
+                            9000
+                        },
+                        stop_at,
+                        now,
+                        first.then(|| first_run::FirstRun::from_native(&native)),
+                        None,
+                    )
+                    .unwrap();
+                sqlx::query(
+                    "INSERT INTO execution_processes VALUES(?,?,'codingagent',0,'running',NULL,2)",
+                )
+                .bind(execution)
+                .bind(session)
+                .execute(&mut db)
+                .await
+                .unwrap();
+                c.state.goals[&session]
+                    .revalidate(Some(execution), false)
+                    .await
+                    .unwrap();
+                c.bind(&request, &thread, execution, crate::capacity::wall_ms())
+                    .unwrap();
+                let prepared = request.prepare(&execution.to_string()).unwrap();
+                (request, prepared)
+            };
+            if variant == "race" {
+                let mut native_db = sqlx::SqliteConnection::connect_with(
+                    &SqliteConnectOptions::new().filename(home.join("goals_1.sqlite")),
+                )
+                .await
+                .unwrap();
+                sqlx::query("UPDATE thread_goals SET objective=? WHERE thread_id=?")
+                    .bind(format!("{} (raced)", native.objective))
+                    .bind(&thread)
+                    .execute(&mut native_db)
+                    .await
+                    .unwrap();
+            }
+            let mut env =
+                ExecutionEnv::new(RepoContext::new(work.clone(), vec![]), false, String::new());
+            env.insert("VK_EXECUTION_PROCESS_ID", execution.to_string());
+            env.insert("CODEX_HOME", home.to_string_lossy().into_owned());
+            env.insert("VK_SESSION_ID", session.to_string());
+            env.insert("VK_WORKSPACE_ID", workspace.to_string());
+            env.insert(
+                "VK_GOAL_TEST_SCENARIO",
+                if variant == "success" || variant == "race" || variant == "plan" {
+                    "capacity-first-run"
+                } else if stalled {
+                    "capacity-first-run-stalled"
+                } else if variant == "empty" {
+                    "capacity-first-run-empty"
+                } else if variant == "input" {
+                    "capacity-first-run-input"
+                } else {
+                    "capacity-first-run-failure"
+                },
+            );
+            env.insert(
+                "VK_STALLED_TIMELINE",
+                format!("stalled-provider-timeline-{index}.jsonl"),
+            );
+            env.capacity = Some(prepared);
+            let mut spawned = codex
+                .spawn_follow_up(&work, "/goal resume", &thread, None, &env)
+                .await
+                .unwrap();
+            let stdout = spawned.child.inner().stdout.take().unwrap();
+            let log = home.join(format!("first-run-{execution}.jsonl"));
+            let drain = tokio::spawn(async move {
+                let mut stdout = stdout;
+                let mut out = tokio::fs::File::create(log).await.unwrap();
+                tokio::io::copy(&mut stdout, &mut out).await.unwrap();
+            });
+            if stalled {
+                let timeline = home.join(format!("stalled-provider-timeline-{index}.jsonl"));
+                tokio::time::timeout(Duration::from_secs(4), async {
+                    while !timeline.exists() {
+                        sleep(Duration::from_millis(10)).await;
+                    }
+                })
+                .await
+                .unwrap();
+                let client = active_codex_clients()
+                    .lock()
+                    .unwrap()
+                    .get(&execution)
+                    .and_then(Weak::upgrade)
+                    .unwrap();
+                // Stall the actual first graceful-stop mutex await. The
+                // controller runtime still runs; its OS worker is independent.
+                let held_thread = client.thread_id.lock().await;
+                let lease =
+                    capacity_guard::read_lease(std::path::Path::new(&request.lease_file)).unwrap();
+                let held_at_ms = crate::capacity::wall_ms();
+                let observed_exit = tokio::spawn(async move {
+                    let unit = crate::capacity::unit_name(execution);
+                    let shutdown = tokio::time::timeout(Duration::from_secs(12), async {
+                        loop {
+                            let output = Command::new("systemctl")
+                                .args([
+                                    "--user",
+                                    "show",
+                                    &unit,
+                                    "--property=LoadState",
+                                    "--property=ActiveState",
+                                    "--property=ControlGroup",
+                                ])
+                                .kill_on_drop(true)
+                                .output()
+                                .await
+                                .unwrap();
+                            let text = String::from_utf8(output.stdout).unwrap();
+                            let fields: std::collections::HashMap<_, _> = text
+                                .lines()
+                                .filter_map(|line| line.split_once('='))
+                                .collect();
+                            if fields.get("LoadState") == Some(&"not-found") {
+                                break text;
+                            }
+                            assert!(output.status.success());
+                            if matches!(fields.get("ActiveState"), Some(&"inactive" | &"failed")) {
+                                let group = fields.get("ControlGroup").unwrap();
+                                assert!(
+                                    group.is_empty()
+                                        || (group.starts_with('/') && !group.contains(".."))
+                                );
+                                if group.is_empty() {
+                                    break text;
+                                }
+                                match tokio::fs::read_to_string(format!(
+                                    "/sys/fs/cgroup{group}/cgroup.events"
+                                ))
+                                .await
+                                {
+                                    Ok(events)
+                                        if events.lines().any(|line| line == "populated 0") =>
+                                    {
+                                        break text;
+                                    }
+                                    Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                                        break text;
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            sleep(Duration::from_millis(10)).await;
+                        }
+                    })
+                    .await
+                    .unwrap();
+                    (crate::capacity::wall_ms(), shutdown)
+                });
+                ready.wait().await;
+                let response_started = std::time::Instant::now();
+                let revocation = if variant != "stalled-expiry" {
+                    if index == 0 {
+                        let before = crate::capacity::wall_ms();
+                        controller
+                            .lock()
+                            .await
+                            .revoke_all("Synthetic stalled graceful stop", None)
+                            .unwrap();
+                        let after = crate::capacity::wall_ms();
+                        assert!(
+                            capacity_guard::read_lease(std::path::Path::new(&request.lease_file))
+                                .unwrap()
+                                .revoked
+                        );
+                        std::fs::write(
+                            home.join("stop-revocation.json"),
+                            serde_json::to_vec(&(before, after)).unwrap(),
+                        )
+                        .unwrap();
+                        let grants: Vec<_> = controller
+                            .lock()
+                            .await
+                            .state
+                            .goals
+                            .values()
+                            .filter_map(|g| g.grant.clone().map(|grant| (g.session_id, grant)))
+                            .collect();
+                        let state = crate::capacity::controller::stop_revoked_grants(
+                            controller,
+                            grants,
+                            "Synthetic stalled graceful stop".into(),
+                        )
+                        .await
+                        .unwrap();
+                        assert!(state.goals.values().all(|g| g.grant.is_none()));
+                        let elapsed = response_started.elapsed().as_millis() as u64;
+                        assert!(
+                            elapsed < 8000,
+                            "Stop/reconciliation must fit CU's 10s request budget"
+                        );
+                        std::fs::write(home.join("stop-response.json"), serde_json::to_vec(&serde_json::json!({"workers": if variant == "stalled-two" { 2 } else { 1 }, "responseElapsedMs": elapsed, "verified": true})).unwrap()).unwrap();
+                    }
+                    finished.wait().await;
+                    Some(
+                        serde_json::from_slice::<(u64, u64)>(
+                            &std::fs::read(home.join("stop-revocation.json")).unwrap(),
+                        )
+                        .unwrap(),
+                    )
+                } else {
+                    None
+                };
+                let graceful = if revocation.is_none() {
+                    Some(tokio::spawn(async move {
+                        let result = AppServerClient::suspend_capacity_execution(
+                            execution,
+                            "Synthetic stalled graceful stop".into(),
+                        )
+                        .await;
+                        (crate::capacity::wall_ms(), result)
+                    }))
+                } else {
+                    None
+                };
+                // The expiry case uses no explicit OS stop or cancellation.
+                // Revocation cases use the same bounded helper as HTTP stop.
+                tokio::time::timeout(Duration::from_secs(10), spawned.child.wait())
+                    .await
+                    .unwrap()
+                    .unwrap();
+                let proxy_exit_ms = crate::capacity::wall_ms();
+                let (worker_exit_ms, shutdown) = observed_exit.await.unwrap();
+                // Expiry still proves independent guard containment without
+                // explicit OS stop. The graceful future must now terminate even
+                // while its thread mutex remains held.
+                let graceful_completed_ms = if let Some(graceful) = graceful {
+                    let (completed, result) =
+                        tokio::time::timeout(Duration::from_millis(2100), graceful)
+                            .await
+                            .unwrap()
+                            .unwrap();
+                    result.unwrap_err();
+                    assert!(completed <= held_at_ms + 2300);
+                    Some(completed)
+                } else {
+                    None
+                };
+                let events_before = std::fs::read(&timeline).unwrap();
+                sleep(Duration::from_millis(300)).await;
+                assert_eq!(
+                    std::fs::read(&timeline).unwrap(),
+                    events_before,
+                    "Provider activity must stop with its worker"
+                );
+                let events: Vec<serde_json::Value> = std::str::from_utf8(&events_before)
+                    .unwrap()
+                    .lines()
+                    .map(|line| serde_json::from_str(line).unwrap())
+                    .collect();
+                let requests: Vec<_> = events
+                    .iter()
+                    .filter(|event| event["event"] == "providerRequest")
+                    .collect();
+                assert_eq!(requests.len(), 1, "No additional provider request or retry");
+                let last_request_ms = requests[0]["wallMs"].as_u64().unwrap();
+                let last_activity_ms = events
+                    .iter()
+                    .filter(|event| event["event"] == "providerActive")
+                    .map(|event| event["wallMs"].as_u64().unwrap())
+                    .max()
+                    .unwrap();
+                let termination_ms = events
+                    .iter()
+                    .find(|event| event["event"] == "providerTerminating")
+                    .unwrap()["wallMs"]
+                    .as_u64()
+                    .unwrap();
+                let boundary_ms = revocation.map_or(lease.expires_at_ms, |(_, after)| after);
+                // 100ms guard poll + 250ms group kill + 1s cgroup stop;
+                // retain 150ms observation tolerance, never extend hard stop.
+                // Response may include the full 2s graceful budget after the
+                // independently revoked worker already exited. Use the provider
+                // termination timestamp for containment, and cgroup verification
+                // as observed independently by the stop helper.
+                assert!(termination_ms <= boundary_ms + 1500);
+                assert!(worker_exit_ms <= boundary_ms + 1500);
+                assert!(worker_exit_ms < lease.stop_at_ms);
+                assert!(last_request_ms < boundary_ms);
+                assert!(last_activity_ms <= boundary_ms + 1500);
+                assert!(termination_ms <= worker_exit_ms);
+                if revocation.is_none() {
+                    assert!(
+                        termination_ms >= lease.expires_at_ms,
+                        "Expiry case must reach the independent lease fence"
+                    );
+                }
+                let reconciled_at_ms = crate::capacity::wall_ms();
+                let mut c = controller.lock().await;
+                c.revoke_session(
+                    session,
+                    "Verified independent worker exit; retain first-run hold",
+                )
+                .unwrap();
+                let held = &c.state.goals[&session];
+                assert_eq!(held.initialization_state, InitializationState::Held);
+                assert!(!held.eligible);
+                assert_eq!(held.identity(), first_run::FirstRun::from_native(&native));
+                assert!(
+                    held.initialization_receipt
+                        .as_ref()
+                        .unwrap()
+                        .checkpoint_turn_id
+                        .is_none()
+                );
+                let retained_receipt = held.initialization_receipt.clone();
+                if revocation.is_none() {
+                    let mut unknown = c.state.goals[&session].grant.clone().unwrap();
+                    unknown.execution_id = Some(Uuid::new_v4());
+                    drop(c);
+                    // The private broker denies unregistered unit inspection.
+                    // No exit verification means no reconciliation, even when
+                    // the native row is active and a worker previously exited.
+                    let unconfirmed = crate::capacity::controller::stop_revoked_grants(
+                        controller,
+                        vec![(session, unknown)],
+                        "Synthetic unverifiable exit".into(),
+                    )
+                    .await
+                    .unwrap();
+                    let held = &unconfirmed.goals[&session];
+                    assert!(held.grant.as_ref().unwrap().stopping);
+                    assert_eq!(held.initialization_state, InitializationState::Held);
+                    assert!(!held.eligible);
+                    assert_eq!(
+                        serde_json::to_value(&held.initialization_receipt).unwrap(),
+                        serde_json::to_value(&retained_receipt).unwrap()
+                    );
+                    c = controller.lock().await;
+
+                    c.stopped(
+                        session,
+                        Uuid::parse_str(&request.id).unwrap(),
+                        "Independent guarded exit verified".into(),
+                    )
+                    .unwrap();
+                }
+                assert!(c.state.goals[&session].grant.is_none());
+                assert_eq!(
+                    serde_json::to_value(&c.state.goals[&session].initialization_receipt).unwrap(),
+                    serde_json::to_value(&retained_receipt).unwrap()
+                );
+                assert!(
+                    c.issue_with_first_run(
+                        session,
+                        Uuid::new_v4(),
+                        "synthetic-included-night".into(),
+                        now + 20000,
+                        now + 30000,
+                        crate::capacity::wall_ms(),
+                        Some(first_run::FirstRun::from_native(&native)),
+                        None
+                    )
+                    .is_err()
+                );
+                drop(c);
+                let preserved_native = first_run::native(&thread).await.unwrap();
+                assert_eq!(
+                    preserved_native.status, "active",
+                    "A blocked pause RPC must not fabricate persisted paused state"
+                );
+                assert_eq!(
+                    first_run::FirstRun::from_native(&preserved_native),
+                    first_run::FirstRun::from_native(&native)
+                );
+                std::fs::write(home.join(format!("stalled-stop-measurements-{index}.json")), serde_json::to_vec_pretty(&serde_json::json!({
+                    "variant": variant, "executionId": execution, "grantId": request.id,
+                    "lastLeaseExpiryMs": lease.expires_at_ms, "hardStopMs": lease.stop_at_ms,
+                    "gracefulLockHeldMs": held_at_ms, "gracefulAttemptCompletedMs": graceful_completed_ms,
+                    "revocationBeforeMs": revocation.map(|(before, _)| before),
+                    "revocationConfirmedMs": revocation.map(|(_, after)| after),
+                    "lastProviderRequestMs": last_request_ms, "providerRequestCount": requests.len(),
+                    "lastProviderActivityMs": last_activity_ms, "providerTerminatingMs": termination_ms,
+                    "proxyExitObservedMs": proxy_exit_ms, "workerExitObservedMs": worker_exit_ms,
+                    "workerState": shutdown, "gracefulAttemptBounded": true,
+                    "containmentObservationAllowanceMs": 1500, "reconciledAtMs": reconciled_at_ms,
+                    "firstRunHeld": true, "identityAndReceiptRetained": true, "nativeStatus": preserved_native.status,
+                    "explicitOsStopRequested": revocation.is_some(),
+                })).unwrap()).unwrap();
+                // Test-owned stalled task only. Do not turn delayed native RPC
+                // into a success receipt or discard the retained goal/hold.
+                drop(held_thread);
+                if let Some(cancel) = spawned.cancel {
+                    cancel.cancel();
+                }
+                drop(client); // Release the test-owned log writer before EOF.
+                tokio::time::timeout(Duration::from_secs(4), drain)
+                    .await
+                    .unwrap()
+                    .unwrap();
+                continue;
+            }
+            let outcome =
+                tokio::time::timeout(Duration::from_secs(14), spawned.exit_signal.take().unwrap())
+                    .await
+                    .unwrap()
+                    .unwrap();
+            if variant == "success" {
+                assert!(matches!(outcome, ExecutorExitResult::Success));
+            }
+            tokio::time::timeout(Duration::from_secs(5), spawned.child.wait())
+                .await
+                .unwrap()
+                .unwrap();
+            if let Some(cancel) = spawned.cancel {
+                cancel.cancel();
+            }
+            drain.await.unwrap();
+            if variant != "success" {
+                let c = controller.lock().await;
+                assert_eq!(
+                    c.state.goals[&session].initialization_state,
+                    InitializationState::Held
+                );
+                assert!(!c.state.goals[&session].eligible);
+                let root_checkpoint = c.state.goals[&session]
+                    .initialization_receipt
+                    .as_ref()
+                    .unwrap()
+                    .checkpoint_turn_id
+                    .is_some();
+                // Plan admission stops before model work, as do the other holds.
+                assert!(!root_checkpoint);
+                drop(c);
+                if variant == "failure" {
+                    assert_eq!(
+                        std::fs::read_to_string(home.join("first-run-provider-count")).unwrap(),
+                        "1"
+                    );
+                }
+                let preserved = first_run::native(&thread).await.unwrap();
+                if variant == "race" {
+                    assert!(preserved.objective.ends_with(" (raced)"));
+                    assert_eq!(preserved.goal_id, native.goal_id);
+                    assert!(!path.exists());
+                    assert!(!home.join("capacity-tools.json").exists());
+                } else {
+                    assert_eq!(
+                        first_run::FirstRun::from_native(&preserved),
+                        first_run::FirstRun::from_native(&native)
+                    );
+                }
+                controller
+                    .lock()
+                    .await
+                    .stopped(
+                        session,
+                        Uuid::parse_str(&request.id).unwrap(),
+                        "Verified held first-run process exit".into(),
+                    )
+                    .unwrap();
+                assert!(
+                    controller
+                        .lock()
+                        .await
+                        .issue(
+                            session,
+                            Uuid::new_v4(),
+                            "synthetic-included-night".into(),
+                            now + 20000,
+                            now + 30000,
+                            now
+                        )
+                        .is_err()
+                );
+                continue;
+            }
+            let c = controller.lock().await;
+            assert_eq!(
+                c.state.goals[&session].initialization_state,
+                InitializationState::Checkpointed
+            );
+            assert!(
+                c.state.goals[&session]
+                    .initialization_receipt
+                    .as_ref()
+                    .unwrap()
+                    .checkpoint_turn_id
+                    .is_some()
+            );
+            drop(c);
+            let progress = first_run::read_progress(&native).unwrap().unwrap();
+            first_run::valid_checklist(&progress).unwrap();
+            assert!(progress.turns >= 1);
+            assert!(progress.pause_reason.is_none());
+            let after = first_run::native(&thread).await.unwrap();
+            assert_eq!(after.status, "paused");
+            assert_eq!(
+                first_run::FirstRun::from_native(&after),
+                first_run::FirstRun::from_native(&native)
+            );
+            sqlx::query("UPDATE execution_processes SET status='completed',exit_code=0 WHERE id=?")
+                .bind(execution)
+                .execute(&mut db)
+                .await
+                .unwrap();
+            controller
+                .lock()
+                .await
+                .stopped(
+                    session,
+                    Uuid::parse_str(&request.id).unwrap(),
+                    "Verified isolated process exit".into(),
+                )
+                .unwrap();
+        }
+    }
+
+    #[tokio::test]
     #[ignore = "requires isolated CODEX_HOME; offline unless VK_GOAL_TEST_SCENARIO=real explicitly opts into model usage"]
     async fn native_goal_runtime() {
         let home = std::env::var("CODEX_HOME").expect("isolated CODEX_HOME");
@@ -2212,6 +4214,8 @@ for line in sys.stdin:
             assert_eq!(scenario, "capacity-expiry");
             let now = crate::capacity::wall_ms();
             crate::capacity::CapacityExecution {
+                first_run: None,
+                controller_revision: 0,
                 issuer_epoch: crate::capacity::issuer_epoch().into(),
                 id: Uuid::new_v4().to_string(),
                 allocation_id: "old-week:day".into(),
@@ -2392,6 +4396,7 @@ for line in sys.stdin:
                 std::fs::write(&file, serde_json::to_vec(&lease).unwrap()).unwrap();
                 std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o600)).unwrap();
                 client.watch_capacity(crate::capacity::PreparedCapacity {
+                    first_run: None,
                     file,
                     guard: std::path::PathBuf::new(),
                     lease,
@@ -2768,5 +4773,285 @@ mod delegation_tests {
         .unwrap();
         cancel.cancel();
         process.kill().await.unwrap();
+    }
+    #[tokio::test]
+    async fn bounded_feedback_start_cannot_bypass_final_activation() {
+        use std::process::Stdio;
+
+        use tokio::{
+            io::{AsyncBufReadExt, BufReader},
+            process::Command,
+        };
+        #[derive(Debug)]
+        struct Refused(tokio::sync::Notify);
+        #[crate::original_worker::async_trait]
+        impl crate::original_worker::LaunchGuard for Refused {
+            fn worker(&self) -> bool {
+                true
+            }
+            async fn resolved(
+                &self,
+                _: &crate::executors::CodingAgent,
+                _: &crate::profile::ExecutorConfig,
+            ) -> io::Result<()> {
+                Ok(())
+            }
+            async fn activation(
+                &self,
+                _: &str,
+                _: Option<&str>,
+            ) -> io::Result<crate::original_worker::ActivationFence> {
+                self.0.notify_one();
+                Err(io::Error::other("Synthetic terminal grant"))
+            }
+        }
+        let mut child = Command::new("python3").args(["-u","-c", "import sys; [print('unexpected-native-start',file=sys.stderr,flush=True) for line in sys.stdin]"])
+            .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true).spawn().unwrap();
+        let mut calls = BufReader::new(child.stderr.take().unwrap()).lines();
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            None,
+            false,
+            false,
+            RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        let guard = Arc::new(Refused(tokio::sync::Notify::new()));
+        client.set_original_worker_guard(guard.clone());
+        let (tx, _rx) = tokio::sync::oneshot::channel();
+        client.connect(JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(tx),
+            cancel.clone(),
+        ));
+        client.spawn_user_message(
+            "synthetic-thread".into(),
+            "Synthetic approval feedback".into(),
+        );
+        tokio::time::timeout(Duration::from_secs(2), guard.0.notified())
+            .await
+            .unwrap();
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), calls.next_line())
+                .await
+                .is_err(),
+            "feedback never reached native turn/start"
+        );
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+    }
+    #[tokio::test]
+    async fn native_review_real_requests_reconcile_apps_and_do_not_log_private_config() {
+        use std::process::Stdio;
+        let log = tempfile::NamedTempFile::new().unwrap();
+        let fixture: Value =
+            serde_json::from_str(include_str!("fixtures/new-error-resume.json")).unwrap();
+        let mut fixture = fixture;
+        fixture["approvalsReviewer"] = serde_json::json!("auto_review");
+        fixture["thread"]["turns"] = serde_json::json!([]);
+        let mut child = tokio::process::Command::new("python3").args(["-u", "-c", r#"
+import json,sys
+fixture=json.loads(sys.argv[1])
+for line in sys.stdin:
+ r=json.loads(line)
+ if r['method']=='config/read':
+  result={'config':{'apps':{'example':{'enabled':False,'approvals_reviewer':'user','links':{'account':{'approvals_reviewer':'user'}}}},'synthetic_secret':'fixture-private-config-marker'}}
+ else:
+  config=r['params']['config']
+  assert config['approvals_reviewer']=='auto_review'
+  assert config['features.write_stdin_approval'] is True
+  assert config['apps']['example']['approvals_reviewer']=='auto_review'
+  assert config['apps']['example']['links']['account']['approvals_reviewer']=='auto_review'
+  assert config['apps']['example']['enabled'] is False
+  result=fixture
+ print(json.dumps({'id':r['id'],'result':result}),flush=True)
+"#]).arg(fixture.to_string()).stdin(Stdio::piped()).stdout(Stdio::piped()).kill_on_drop(true).spawn().unwrap();
+        let cancel = CancellationToken::new();
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::fs::File::create(log.path()).await.unwrap()),
+            None,
+            false,
+            false,
+            crate::env::RepoContext::default(),
+            false,
+            String::new(),
+            cancel.clone(),
+        );
+        client.enable_native_review();
+        let (tx, _rx) = tokio::sync::oneshot::channel();
+        let peer = JsonRpcPeer::spawn(
+            child.stdin.take().unwrap(),
+            child.stdout.take().unwrap(),
+            client.clone(),
+            ExitSignalSender::new(tx),
+            cancel.clone(),
+        );
+        client.connect(peer);
+        let params = ThreadStartParams {
+            cwd: Some("/workspace".into()),
+            ..Default::default()
+        };
+        client.thread_start(params.clone()).await.unwrap();
+        client
+            .thread_resume(super::super::resume_params_from(
+                "fixture".into(),
+                params.clone(),
+            ))
+            .await
+            .unwrap();
+        client
+            .thread_fork(super::super::fork_params_from("fixture".into(), params))
+            .await
+            .unwrap();
+        let raw = tokio::fs::read_to_string(log.path()).await.unwrap();
+        assert!(raw.contains("auto_review"));
+        assert!(!raw.contains("fixture-private-config-marker"));
+        assert!(!raw.contains("synthetic_secret"));
+        assert!(
+            client
+                .native_review_private_responses
+                .lock()
+                .await
+                .is_empty()
+        );
+        cancel.cancel();
+        child.kill().await.unwrap();
+        child.wait().await.unwrap();
+    }
+    #[tokio::test]
+    async fn native_review_human_fallback_cannot_use_noop_or_auto_approve() {
+        let client = AppServerClient::new(
+            LogWriter::new(tokio::io::sink()),
+            Some(Arc::new(crate::approvals::NoopExecutorApprovalService)),
+            true,
+            false,
+            crate::env::RepoContext::default(),
+            false,
+            String::new(),
+            CancellationToken::new(),
+        );
+        client.enable_native_review();
+        assert!(
+            client
+                .request_tool_approval("bash", "codex.exec_command", "item")
+                .await
+                .is_err()
+        );
+        let (decision, _) =
+            client.command_execution_decision(&ApprovalStatus::Denied { reason: None });
+        assert_eq!(decision, CommandExecutionApprovalDecision::Decline);
+        let (decision, _) = client.file_change_decision(&ApprovalStatus::Denied { reason: None });
+        assert_eq!(decision, FileChangeApprovalDecision::Decline);
+    }
+    #[tokio::test]
+    async fn native_review_permission_fallback_requires_human_and_grants_only_the_turn() {
+        use std::process::Stdio;
+        struct Human(ApprovalStatus);
+        #[async_trait]
+        impl ExecutorApprovalService for Human {
+            fn supports_interactive_approvals(&self) -> bool {
+                true
+            }
+            async fn create_tool_approval(
+                &self,
+                _tool: &str,
+            ) -> Result<String, ExecutorApprovalError> {
+                Ok("explicit-human-fixture".into())
+            }
+            async fn create_question_approval(
+                &self,
+                _tool: &str,
+                _count: usize,
+            ) -> Result<String, ExecutorApprovalError> {
+                Err(ExecutorApprovalError::ServiceUnavailable)
+            }
+            async fn wait_tool_approval(
+                &self,
+                _id: &str,
+                _cancel: CancellationToken,
+            ) -> Result<ApprovalStatus, ExecutorApprovalError> {
+                Ok(self.0.clone())
+            }
+            async fn wait_question_answer(
+                &self,
+                _id: &str,
+                _cancel: CancellationToken,
+            ) -> Result<QuestionStatus, ExecutorApprovalError> {
+                Err(ExecutorApprovalError::ServiceUnavailable)
+            }
+        }
+        for status in [
+            ApprovalStatus::Approved,
+            ApprovalStatus::Denied { reason: None },
+            ApprovalStatus::TimedOut,
+        ] {
+            let mut child = tokio::process::Command::new("python3")
+                .args([
+                    "-u",
+                    "-c",
+                    "import sys
+for line in sys.stdin: print(line.strip(),file=sys.stderr,flush=True)",
+                ])
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .kill_on_drop(true)
+                .spawn()
+                .unwrap();
+            let cancel = CancellationToken::new();
+            let client = AppServerClient::new(
+                LogWriter::new(tokio::io::sink()),
+                Some(Arc::new(Human(status.clone()))),
+                false,
+                false,
+                crate::env::RepoContext::default(),
+                false,
+                String::new(),
+                cancel.clone(),
+            );
+            client.enable_native_review();
+            let (tx, _rx) = tokio::sync::oneshot::channel();
+            let peer = JsonRpcPeer::spawn(
+                child.stdin.take().unwrap(),
+                child.stdout.take().unwrap(),
+                client.clone(),
+                ExitSignalSender::new(tx),
+                cancel.clone(),
+            );
+            client.connect(peer.clone());
+            let request=ServerRequest::try_from(serde_json::from_value::<JSONRPCRequest>(serde_json::json!({
+                "id":"permission-human-fixture","method":"item/permissions/requestApproval","params":{
+                    "threadId":"root","turnId":"turn","itemId":"permission-item","reason":"fixture",
+                    "permissions":{"network":{"enabled":true},"fileSystem":null}
+                }})).unwrap()).unwrap();
+            client.handle_server_request(&peer, request).await.unwrap();
+            use tokio::io::AsyncBufReadExt;
+            let mut lines = tokio::io::BufReader::new(child.stderr.take().unwrap()).lines();
+            let raw = tokio::time::timeout(Duration::from_secs(3), lines.next_line())
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            let response: Value = serde_json::from_str(&raw).unwrap();
+            assert_eq!(response["id"], "permission-human-fixture");
+            assert_eq!(response["result"]["scope"], "turn");
+            if matches!(status, ApprovalStatus::Approved) {
+                assert_eq!(
+                    response["result"]["permissions"]["network"]["enabled"],
+                    true
+                );
+            } else {
+                assert_eq!(response["result"]["permissions"], serde_json::json!({}));
+            }
+            cancel.cancel();
+            child.kill().await.unwrap();
+            child.wait().await.unwrap();
+        }
     }
 }

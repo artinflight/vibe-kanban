@@ -27,6 +27,11 @@ fn main() {
     println!("cargo:rerun-if-env-changed=POSTHOG_API_ENDPOINT");
     println!("cargo:rerun-if-env-changed=VK_SHARED_API_BASE");
     println!("cargo:rerun-if-env-changed=SENTRY_DSN");
+    println!("cargo:rerun-if-env-changed=VK_BUILD_SOURCE_COMMIT");
+    if let Ok(commit) = std::env::var("VK_BUILD_SOURCE_COMMIT") {
+        assert!(commit.len() == 40 && commit.bytes().all(|b| b.is_ascii_hexdigit()));
+        println!("cargo:rustc-env=VK_BUILD_SOURCE_COMMIT={commit}");
+    }
     if env_file.exists() {
         println!("cargo:rerun-if-changed={}", env_file.display());
     }

@@ -20,11 +20,11 @@ use db::{
         repo::Repo,
         scratch::{DraftFollowUpData, Scratch, ScratchType},
         session::{Session, SessionError},
+        turn_github_sync::TurnGithubSync,
         workspace::Workspace,
         workspace_repo::WorkspaceRepo,
     },
 };
-use deployment::DeploymentError;
 use executors::{
     actions::{
         Executable, ExecutorAction, ExecutorActionType,
@@ -34,7 +34,13 @@ use executors::{
     approvals::{ExecutorApprovalService, NoopExecutorApprovalService},
     env::{ExecutionEnv, RepoContext},
     executors::{BaseCodingAgent, CancellationToken, ExecutorExitResult, ExecutorExitSignal},
-    logs::{NormalizedEntryType, utils::patch::extract_normalized_entry_from_patch},
+    logs::{
+        NormalizedEntry, NormalizedEntryError, NormalizedEntryType,
+        utils::{
+            EntryIndexProvider,
+            patch::{ConversationPatch, extract_normalized_entry_from_patch},
+        },
+    },
 };
 use futures::{FutureExt, StreamExt, TryStreamExt, stream::select};
 use git::GitService;
@@ -105,7 +111,6 @@ Create `.vibe-attachments/` if needed. Use a relative `.vibe-attachments/...` pa
 #[derive(Clone)]
 pub struct LocalContainerService {
     db: DBService,
-    workspace_manager: WorkspaceManager,
     child_store: Arc<RwLock<HashMap<Uuid, Arc<RwLock<AsyncGroupChild>>>>>,
     transient_unit_store: Arc<RwLock<HashMap<Uuid, String>>>,
     cancellation_tokens: Arc<RwLock<HashMap<Uuid, CancellationToken>>>,
@@ -123,6 +128,12 @@ pub struct LocalContainerService {
     queued_message_service: QueuedMessageService,
     notification_service: NotificationService,
     remote_client: Option<RemoteClient>,
+    #[cfg(test)]
+    preservation_config: Option<std::path::PathBuf>,
+    #[cfg(test)]
+    automatic_sync_override: Option<bool>,
+    #[cfg(test)]
+    preservation_fixture: Option<(serde_json::Value, Arc<RwLock<Vec<String>>>)>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -143,7 +154,6 @@ impl LocalContainerService {
     #[allow(clippy::too_many_arguments)]
     pub async fn new(
         db: DBService,
-        workspace_manager: WorkspaceManager,
         msg_stores: Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>>,
         config: Arc<RwLock<Config>>,
         git: GitService,
@@ -161,9 +171,10 @@ impl LocalContainerService {
         let workspace_touch_times = Arc::new(RwLock::new(HashMap::new()));
         let notification_service = NotificationService::new(config.clone());
 
-        let container = LocalContainerService {
+        // No startup/periodic filesystem deletion. A database row (or its absence)
+        // does not establish ownership of a shared workspace after recovery.
+        LocalContainerService {
             db,
-            workspace_manager,
             child_store,
             transient_unit_store,
             cancellation_tokens,
@@ -179,11 +190,13 @@ impl LocalContainerService {
             queued_message_service,
             notification_service,
             remote_client,
-        };
-
-        container.spawn_workspace_cleanup();
-
-        container
+            #[cfg(test)]
+            preservation_config: None,
+            #[cfg(test)]
+            automatic_sync_override: None,
+            #[cfg(test)]
+            preservation_fixture: None,
+        }
     }
 
     fn map_workspace_manager_error(err: WorkspaceError) -> ContainerError {
@@ -338,122 +351,6 @@ impl LocalContainerService {
 
         Workspace::mark_worktree_deleted(&self.db.pool, workspace.id).await?;
         Ok(())
-    }
-
-    async fn cleanup_expired_workspaces(&self) -> Result<(), DeploymentError> {
-        if std::env::var("DISABLE_WORKTREE_CLEANUP").is_ok() {
-            tracing::info!(
-                "Expired workspace cleanup is disabled via DISABLE_WORKTREE_CLEANUP environment variable"
-            );
-            return Ok(());
-        }
-
-        let expired_workspaces = Workspace::find_expired_for_cleanup(&self.db.pool).await?;
-        if expired_workspaces.is_empty() {
-            tracing::debug!("No expired workspaces found");
-            return Ok(());
-        }
-        tracing::info!(
-            "Found {} expired workspaces to clean up",
-            expired_workspaces.len()
-        );
-        for workspace in &expired_workspaces {
-            if workspace.pinned {
-                tracing::info!(
-                    "Preserving expired workspace {} because it is pinned",
-                    workspace.id
-                );
-                continue;
-            }
-            if self.workspace_has_external_processes(workspace).await {
-                tracing::info!(
-                    "Deferring expired workspace cleanup for {} because a host process is using its path",
-                    workspace.id
-                );
-                continue;
-            }
-            match self.is_container_clean(workspace).await {
-                Ok(true) => {}
-                Ok(false) => {
-                    tracing::warn!(
-                        "Preserving expired workspace {} because it contains uncommitted or untracked files",
-                        workspace.id
-                    );
-                    continue;
-                }
-                Err(error) => {
-                    tracing::error!(
-                        "Unable to verify whether expired workspace {} is clean; preserving it: {}",
-                        workspace.id,
-                        error
-                    );
-                    continue;
-                }
-            }
-            if let Err(error) = self.cleanup_workspace(workspace).await {
-                tracing::error!(
-                    "Failed to clean up expired workspace {}; it remains eligible for retry: {}",
-                    workspace.id,
-                    error
-                );
-            }
-        }
-        Ok(())
-    }
-
-    async fn reconcile_requested_workspace_cleanups(&self) {
-        if !self.status_worktree_cleanup_enabled() {
-            tracing::info!("Status-triggered worktree cleanup is disabled for this VK instance");
-            return;
-        }
-
-        let workspace_ids = match Workspace::find_worktree_cleanup_requests(&self.db.pool).await {
-            Ok(workspace_ids) => workspace_ids,
-            Err(error) => {
-                tracing::error!("Failed to list requested workspace cleanups: {}", error);
-                return;
-            }
-        };
-
-        for workspace_id in workspace_ids {
-            if let Err(error) = self
-                .retry_archived_workspace_cleanup_after_execution(
-                    workspace_id,
-                    &ExecutionProcessRunReason::CleanupScript,
-                )
-                .await
-            {
-                tracing::error!(
-                    "Failed to reconcile requested cleanup for workspace {}: {}",
-                    workspace_id,
-                    error
-                );
-            }
-        }
-    }
-
-    fn spawn_workspace_cleanup(&self) {
-        let container = self.clone();
-        tokio::spawn(async move {
-            container
-                .workspace_manager
-                .cleanup_orphan_workspaces()
-                .await;
-
-            let mut cleanup_interval =
-                tokio::time::interval(tokio::time::Duration::from_secs(1800)); // 30 minutes
-            loop {
-                cleanup_interval.tick().await;
-                tracing::info!("Starting periodic workspace cleanup...");
-                container.reconcile_requested_workspace_cleanups().await;
-                container
-                    .cleanup_expired_workspaces()
-                    .await
-                    .unwrap_or_else(|e| {
-                        tracing::error!("Failed to clean up expired workspaces: {}", e)
-                    });
-            }
-        });
     }
 
     /// Record the current HEAD commit for each repository as the "after" state.
@@ -612,12 +509,505 @@ impl LocalContainerService {
         any_committed
     }
 
+    fn preservation_request(
+        workspace: &Workspace,
+        process: &ExecutionProcess,
+        repos: &[Repo],
+        writers_fenced: bool,
+    ) -> serde_json::Value {
+        let root = PathBuf::from(workspace.container_ref.as_deref().unwrap_or(""));
+        json!({
+            "workspace": workspace.id.to_string(), "turn": process.id.to_string(),
+            "outcome": process.status, "writers_fenced": writers_fenced,
+            "repositories": repos.iter().map(|repo| json!({
+                "id": repo.id.to_string(), "path": root.join(&repo.name)
+            })).collect::<Vec<_>>()
+        })
+    }
+
+    async fn preservation_writers_fenced(&self, ctx: &ExecutionContext) -> bool {
+        // Check all known executions sharing these repositories, including setup/dev scripts.
+        // Unknown host writers are detected by the helper's repeated snapshot checks.
+        // A cutover controller must independently hold its complete writer fence.
+        let Ok(running) = ExecutionProcess::find_running(&self.db.pool).await else {
+            return false;
+        };
+        for process in running {
+            if process.id == ctx.execution_process.id {
+                continue;
+            }
+            let Ok(other) = ExecutionProcess::load_context(&self.db.pool, process.id).await else {
+                return false;
+            };
+            if other
+                .repos
+                .iter()
+                .any(|other| ctx.repos.iter().any(|repo| repo.id == other.id))
+            {
+                return false;
+            }
+        }
+        true
+    }
+
+    async fn preserve_finished_turn(
+        &self,
+        ctx: &ExecutionContext,
+        group_id: Option<u32>,
+    ) -> serde_json::Value {
+        if let Some(report) = self
+            .workspace_observation_gate(ctx.workspace.id, ctx.execution_process.id)
+            .await
+        {
+            let request = Self::preservation_request(
+                &ctx.workspace,
+                &ctx.execution_process,
+                &ctx.repos,
+                false,
+            );
+            return self.record_preservation_report(ctx, request, report).await;
+        }
+        let mut fenced = self.preservation_writers_fenced(ctx).await;
+        // Fence residual process-group writers before reading source bytes.
+        if let Some(child) = self
+            .child_store
+            .read()
+            .await
+            .get(&ctx.execution_process.id)
+            .cloned()
+            && command::kill_process_group(&mut *child.write().await)
+                .await
+                .is_err()
+        {
+            fenced = false;
+        }
+        fenced &= group_id.is_some_and(crate::turn_preservation::group_quiescent);
+        self.emit_preservation_message(ctx.execution_process.id, &json!({
+            "state": "pending", "workspace": ctx.workspace.id.to_string(),
+            "turn": ctx.execution_process.id.to_string(), "reason": "remote preservation is in progress",
+        })).await;
+        let request =
+            Self::preservation_request(&ctx.workspace, &ctx.execution_process, &ctx.repos, fenced);
+        let report = self.invoke_preservation("end", request.clone()).await;
+        self.record_preservation_report(ctx, request, report).await
+    }
+
+    async fn record_preservation_report(
+        &self,
+        ctx: &ExecutionContext,
+        request: serde_json::Value,
+        report: serde_json::Value,
+    ) -> serde_json::Value {
+        // Recheck before accepting a green helper receipt, including uncertainty
+        // retained/created while a legacy helper was in flight.
+        let report = if crate::turn_preservation::verified(&report) {
+            self.workspace_observation_gate(ctx.workspace.id, ctx.execution_process.id)
+                .await
+                .unwrap_or(report)
+        } else {
+            report
+        };
+        let message = crate::turn_preservation::message(&report);
+        // Preserve the executor outcome separately. A successful agent may still have blocked Git preservation.
+        let turn =
+            CodingAgentTurn::find_by_execution_process_id(&self.db.pool, ctx.execution_process.id)
+                .await;
+        let report = if let Ok(Some(turn)) = turn {
+            let marker = "\n\n[Automatic GitHub checkpoint]\n";
+            let original = turn.summary.as_deref().unwrap_or("");
+            let suffix = format!("{marker}{message}");
+            let summary = if original.ends_with(&suffix) {
+                original.to_string()
+            } else {
+                format!("{original}{suffix}")
+            };
+            if CodingAgentTurn::update_summary(&self.db.pool, turn.execution_process_id, &summary)
+                .await
+                .is_err()
+            {
+                crate::turn_preservation::blocked(
+                    &ctx.workspace.id.to_string(),
+                    &ctx.execution_process.id.to_string(),
+                    "could not persist preservation status in turn summary",
+                )
+            } else {
+                let _ = CodingAgentTurn::mark_completed_unseen_by_execution_process_id(
+                    &self.db.pool,
+                    turn.execution_process_id,
+                )
+                .await;
+                report
+            }
+        } else {
+            crate::turn_preservation::blocked(
+                &ctx.workspace.id.to_string(),
+                &ctx.execution_process.id.to_string(),
+                "missing or unreadable coding turn summary",
+            )
+        };
+        if !crate::turn_preservation::verified(&report)
+            && !crate::turn_preservation::awaiting_policy(&report)
+        {
+            let mut blocked_request = request;
+            blocked_request["reason"] = report["reason"].clone();
+            let _ = self.invoke_preservation("block", blocked_request).await;
+        }
+        self.emit_preservation_message(ctx.execution_process.id, &report)
+            .await;
+        report
+    }
+
+    async fn emit_preservation_message(&self, execution: Uuid, report: &serde_json::Value) {
+        if let Some(store) = self.msg_stores.read().await.get(&execution) {
+            let entry_type =
+                if report["state"] == "pending" || crate::turn_preservation::verified(report) {
+                    NormalizedEntryType::SystemMessage
+                } else {
+                    NormalizedEntryType::ErrorMessage {
+                        error_type: NormalizedEntryError::Other,
+                    }
+                };
+            store.push_patch(ConversationPatch::add_normalized_entry(
+                EntryIndexProvider::start_from(store).next(),
+                NormalizedEntry {
+                    timestamp: None,
+                    entry_type,
+                    content: crate::turn_preservation::message(report),
+                    metadata: None,
+                },
+            ));
+        }
+    }
+
+    /// Started once after startup identity/adoption, alongside existing background services.
+    /// Reuses one backend poller for checkpoints and capacity-queue wakeups.
+    /// No new owner turn or service is created. Restored recovery holds and all
+    /// existing start/admission/preservation gates remain authoritative.
+    pub fn spawn_github_sync_worker(&self, shutdown: CancellationToken) {
+        let container = self.clone();
+        tokio::spawn(async move {
+            container
+                .poll_pending_work(shutdown, Duration::from_secs(5))
+                .await;
+        });
+    }
+
+    async fn poll_pending_work(&self, shutdown: CancellationToken, period: Duration) {
+        let mut interval = tokio::time::interval(period);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            tokio::select! {
+                biased;
+                _ = shutdown.cancelled() => break,
+                _ = interval.tick() => {}
+            }
+            if self.automatic_sync_enabled() {
+                // Keep the existing bounded checkpoint and its admission lock.
+                services::services::admission::locked(self.sync_one_idle_turn()).await;
+            }
+            if shutdown.is_cancelled() {
+                break;
+            }
+            // A capacity lease can expire without a local execution finishing;
+            // restored work also has no old exit monitor to wake it. Retry one
+            // batch through the unchanged consumer, not a direct executor call.
+            let _ = self.consume_capacity_queued_follow_up().await;
+        }
+    }
+
+    fn automatic_sync_enabled(&self) -> bool {
+        #[cfg(test)]
+        if let Some(enabled) = self.automatic_sync_override {
+            return enabled;
+        }
+        services::services::admission::automatic_git_sync()
+    }
+
+    fn preservation_enabled(&self) -> bool {
+        #[cfg(test)]
+        if self.preservation_config.is_some() {
+            return true;
+        }
+        crate::turn_preservation::enabled()
+    }
+
+    /// Retained uncertainty is workspace authority, independent of today's mode/policy.
+    async fn workspace_observation_gate(
+        &self,
+        workspace: Uuid,
+        execution: Uuid,
+    ) -> Option<serde_json::Value> {
+        match TurnGithubSync::has_unobserved(&self.db.pool, workspace).await {
+            Ok(false) => None,
+            _ => Some(crate::turn_preservation::blocked(
+                &workspace.to_string(),
+                &execution.to_string(),
+                "completed-turn observation is unproven; original obligation retained; scoped reconciliation required",
+            )),
+        }
+    }
+
+    async fn invoke_preservation(
+        &self,
+        action: &str,
+        request: serde_json::Value,
+    ) -> serde_json::Value {
+        if matches!(
+            action,
+            "begin" | "end" | "checkpoint" | "check" | "check-all"
+        ) {
+            let owners = if action == "check-all" {
+                request["turns"].as_array().cloned().unwrap_or_default()
+            } else {
+                vec![request.clone()]
+            };
+            if owners.is_empty() {
+                return crate::turn_preservation::blocked(
+                    "unknown",
+                    "unknown",
+                    "missing preservation owner inventory",
+                );
+            }
+            for owner in owners {
+                let binding = owner["workspace"]
+                    .as_str()
+                    .and_then(|s| Uuid::parse_str(s).ok())
+                    .zip(owner["turn"].as_str().and_then(|s| Uuid::parse_str(s).ok()));
+                let Some((workspace, execution)) = binding else {
+                    return crate::turn_preservation::blocked(
+                        "unknown",
+                        "unknown",
+                        "invalid preservation owner binding",
+                    );
+                };
+                if let Some(report) = self.workspace_observation_gate(workspace, execution).await {
+                    return report;
+                }
+            }
+        }
+        self.invoke_preservation_helper(action, request).await
+    }
+
+    // Only scheduled begin (original capture), observation, and block bypass the
+    // publication/admission gate. They cannot certify coverage or clear DB uncertainty.
+    async fn invoke_preservation_helper(
+        &self,
+        action: &str,
+        request: serde_json::Value,
+    ) -> serde_json::Value {
+        #[cfg(test)]
+        if let Some((receipt, calls)) = &self.preservation_fixture {
+            calls.write().await.push(action.to_owned());
+            let mut report = receipt.clone();
+            report["workspace"] = request["workspace"].clone();
+            report["turn"] = request["turn"].clone();
+            report["state"] = json!(match action {
+                "begin" => "pending",
+                "block" => "blocked",
+                _ => "verified",
+            });
+            if action == "block" {
+                report["reason"] = request["reason"].clone();
+            }
+            return report;
+        }
+        #[cfg(test)]
+        if let Some(config) = &self.preservation_config {
+            return crate::turn_preservation::invoke_with_config(action, request, config).await;
+        }
+        crate::turn_preservation::invoke(action, request).await
+    }
+
+    /// Called under admission, before exposing terminal status to resets/worker.
+    /// The pre-launch pending row remains authoritative if any step cannot persist.
+    async fn observe_completed_turn(&self, execution: Uuid) {
+        // An observation belongs to the actual tracked completion callback,
+        // never a retroactive read of today's source after restart/reset.
+        if !self.child_store.read().await.contains_key(&execution) {
+            return;
+        }
+        match TurnGithubSync::claim_observation(&self.db.pool, execution).await {
+            Ok(false) => return,
+            Err(error) => {
+                tracing::error!(%execution, %error, "Cannot claim completion observation; pending gate retained");
+                return;
+            }
+            Ok(true) => {}
+        }
+        let report = match ExecutionProcess::load_context(&self.db.pool, execution).await {
+            Ok(ctx) => {
+                let request = Self::preservation_request(
+                    &ctx.workspace,
+                    &ctx.execution_process,
+                    &ctx.repos,
+                    false,
+                );
+                self.invoke_preservation("observe-finished", request).await
+            }
+            Err(_) => {
+                json!({"version": 2, "state": "blocked", "reason": "owner context unavailable during completion; original obligation retained"})
+            }
+        };
+        if let Err(error) = TurnGithubSync::record_observation(
+            &self.db.pool,
+            execution,
+            crate::turn_preservation::observed(&report),
+            &report.to_string(),
+        )
+        .await
+        {
+            tracing::error!(%execution, %error, "Cannot persist completion observation; write-ahead gate retained");
+        }
+        self.emit_preservation_message(execution, &report).await;
+    }
+
+    async fn sync_one_idle_turn(&self) {
+        let Ok(jobs) = TurnGithubSync::ready(&self.db.pool).await else {
+            tracing::error!("Cannot read durable GitHub checkpoint queue");
+            return;
+        };
+        for job in jobs {
+            let Ok(ctx) =
+                ExecutionProcess::load_context(&self.db.pool, job.execution_process_id).await
+            else {
+                let _ = job.record(&self.db.pool, "blocked", &json!({"reason": "owner context unavailable; original obligation retained"}).to_string()).await;
+                continue;
+            };
+            // User work always has priority, including another session in this workspace.
+            let Ok(running) = ExecutionProcess::find_running(&self.db.pool).await else {
+                return;
+            };
+            let mut busy = self
+                .child_store
+                .read()
+                .await
+                .contains_key(&job.execution_process_id);
+            for process in running {
+                let Ok(other) = ExecutionProcess::load_context(&self.db.pool, process.id).await
+                else {
+                    return;
+                };
+                let roots = other
+                    .workspace
+                    .container_ref
+                    .as_ref()
+                    .zip(ctx.workspace.container_ref.as_ref())
+                    .and_then(|(other, owner)| {
+                        Path::new(other)
+                            .canonicalize()
+                            .ok()
+                            .zip(Path::new(owner).canonicalize().ok())
+                    });
+                if roots.is_none_or(|(other, owner)| {
+                    other.starts_with(&owner) || owner.starts_with(&other)
+                }) {
+                    busy = true;
+                }
+            }
+            for session_id in self.queued_message_service.session_ids() {
+                let session = match Session::find_by_id(&self.db.pool, session_id).await {
+                    Ok(Some(session)) => session,
+                    Ok(None) => continue, // retained private queue; no invented current owner
+                    Err(_) => return,
+                };
+                if session.workspace_id == ctx.workspace.id {
+                    busy = true;
+                }
+            }
+            // Input is durable before waiting on this lock; shutdown cannot
+            // silently discard it behind a green checkpoint.
+            match QueuedMessageService::pending_incoming(&self.db.pool, ctx.workspace.id).await {
+                Ok(incoming) if !incoming.is_empty() => busy = true,
+                Err(_) => return,
+                _ => {}
+            }
+            match QueuedMessageService::pending_user_queue(&self.db.pool, ctx.workspace.id).await {
+                Ok(queued) if !queued.is_empty() => busy = true,
+                Err(_) => return,
+                _ => {}
+            }
+            if busy || self.workspace_has_external_processes(&ctx.workspace).await {
+                let _ = job.defer(&self.db.pool).await;
+                continue;
+            }
+            if !job
+                .writer_group
+                .and_then(|group| u32::try_from(group).ok())
+                .is_some_and(crate::turn_preservation::group_quiescent)
+            {
+                if job.writer_group.is_none() {
+                    let _ = job.record(&self.db.pool, "blocked", &json!({"reason": "writer group was not bound; publication requires reconciliation"}).to_string()).await;
+                } else {
+                    let _ = job.defer(&self.db.pool).await;
+                }
+                continue;
+            }
+            let Ok(mut request) = serde_json::from_str::<serde_json::Value>(&job.request) else {
+                return;
+            };
+            // Bind the durable request to today's exact owner/repository paths. Missing
+            // or moved worktrees stay blocked; never reconstruct a baseline after work.
+            let current = Self::preservation_request(
+                &ctx.workspace,
+                &ctx.execution_process,
+                &ctx.repos,
+                true,
+            );
+            let report = if request["workspace"] != current["workspace"]
+                || request["turn"] != current["turn"]
+                || request["repositories"] != current["repositories"]
+            {
+                crate::turn_preservation::blocked(
+                    &ctx.workspace.id.to_string(),
+                    &job.execution_process_id.to_string(),
+                    "owner repository binding changed",
+                )
+            } else {
+                request["writers_fenced"] = json!(true);
+                request["outcome"] = json!(ctx.execution_process.status);
+                request["handoff_required"] = json!(true);
+                self.invoke_preservation("checkpoint", request.clone())
+                    .await
+            };
+            let previous = job
+                .report
+                .as_ref()
+                .and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok());
+            let same_status = matches!(report["state"].as_str(), Some("blocked" | "pending"))
+                && previous.as_ref().is_some_and(|old| {
+                    old["state"] == report["state"] && old["reason"] == report["reason"]
+                });
+            let report = if same_status {
+                report
+            } else {
+                self.record_preservation_report(&ctx, request, report).await
+            };
+            let state = if crate::turn_preservation::verified(&report) {
+                "verified"
+            } else if crate::turn_preservation::awaiting_policy(&report) {
+                "waiting"
+            } else {
+                "blocked"
+            };
+            if job
+                .record(&self.db.pool, state, &report.to_string())
+                .await
+                .is_err()
+            {
+                tracing::error!(execution = %job.execution_process_id, "Checkpoint receipt persistence failed; retry remains pending");
+            }
+            // One bounded attempt per tick. Other owners and input get the lock next.
+            break;
+        }
+    }
+
     /// Spawn a background task that polls the child process for completion and
     /// cleans up the execution entry when it exits.
     fn spawn_exit_monitor(
         &self,
         exec_id: &Uuid,
         exit_signal: Option<ExecutorExitSignal>,
+        group_id: Option<u32>,
     ) -> JoinHandle<()> {
         let exec_id = *exec_id;
         let child_store = self.child_store.clone();
@@ -664,7 +1054,8 @@ impl LocalContainerService {
                     status_result = match exit_result {
                         Ok(ExecutorExitResult::Success) => Ok(success_exit_status()),
                         Ok(ExecutorExitResult::Failure) => Ok(failure_exit_status()),
-                        Err(_) => Ok(success_exit_status()), // Channel closed, assume success
+                        Err(_) if crate::turn_preservation::enabled() || services::services::admission::automatic_git_sync() => Ok(failure_exit_status()),
+                        Err(_) => Ok(success_exit_status()), // Legacy behavior when preservation is disabled
                     };
                 }
                 // Process exit
@@ -691,19 +1082,79 @@ impl LocalContainerService {
                 Err(_) => (None, ExecutionProcessStatus::Failed),
             };
 
-            if !ExecutionProcess::was_stopped(&db.pool, exec_id).await
-                && let Err(e) =
-                    ExecutionProcess::update_completion(&db.pool, exec_id, status, exit_code).await
-            {
-                tracing::error!("Failed to update execution process completion: {}", e);
-            }
+            services::services::admission::run(async {
+                // Durable admission, rather than the current flag, determines whether
+                // this owner needs observation (also covers flags changed mid-turn).
+                container.observe_completed_turn(exec_id).await;
+                if !ExecutionProcess::was_stopped(&db.pool, exec_id).await
+                    && let Err(e) =
+                        ExecutionProcess::update_completion(&db.pool, exec_id, status, exit_code)
+                            .await
+                {
+                    tracing::error!("Failed to update execution process completion: {}", e);
+                }
+            })
+            .await;
 
             if let Ok(ctx) = ExecutionProcess::load_context(&db.pool, exec_id).await {
                 // Update executor session summary if available
                 if let Err(e) = container.update_executor_session_summary(&exec_id).await {
                     tracing::warn!("Failed to update executor session summary: {}", e);
                 }
-                container.notify_agent_turn_completion(&ctx).await;
+                // A retained scheduled owner cannot fall back to the legacy end/commit
+                // hook when scheduling is disabled during its execution or rollback.
+                let scheduled_sync = ctx.execution_process.run_reason
+                    == ExecutionProcessRunReason::CodingAgent
+                    && (container.automatic_sync_enabled()
+                        || TurnGithubSync::is_scheduled(&db.pool, exec_id)
+                            .await
+                            .unwrap_or(true));
+                let preservation = if let Some(report) = container
+                    .workspace_observation_gate(ctx.workspace.id, exec_id)
+                    .await
+                {
+                    let request = Self::preservation_request(
+                        &ctx.workspace,
+                        &ctx.execution_process,
+                        &ctx.repos,
+                        false,
+                    );
+                    Some(
+                        container
+                            .record_preservation_report(&ctx, request, report)
+                            .await,
+                    )
+                } else if scheduled_sync {
+                    Some(crate::turn_preservation::blocked(
+                        &ctx.workspace.id.to_string(),
+                        &ctx.execution_process.id.to_string(),
+                        "GitHub checkpoint queued for the next safe idle boundary",
+                    ))
+                } else if container.preservation_enabled()
+                    && matches!(
+                        ctx.execution_process.run_reason,
+                        ExecutionProcessRunReason::CodingAgent
+                            | ExecutionProcessRunReason::CleanupScript
+                    )
+                {
+                    Some(container.preserve_finished_turn(&ctx, group_id).await)
+                } else {
+                    None
+                };
+                let preservation_blocked = preservation
+                    .as_ref()
+                    .is_some_and(|report| !crate::turn_preservation::verified(report));
+                if preservation_blocked {
+                    tracing::warn!(workspace = %ctx.workspace.id,
+                        "Turn remains blocked on Git preservation; chained actions and cleanup withheld");
+                    let _ = CodingAgentTurn::mark_completed_unseen_by_execution_process_id(
+                        &db.pool,
+                        ctx.execution_process.id,
+                    )
+                    .await;
+                } else {
+                    container.notify_agent_turn_completion(&ctx).await;
+                }
 
                 let success = matches!(
                     ctx.execution_process.status,
@@ -720,15 +1171,18 @@ impl LocalContainerService {
 
                 let mut already_finalized = false;
 
-                if success || cleanup_done {
+                if !preservation_blocked && (success || cleanup_done) {
                     // Commit changes (if any) and get feedback about whether changes were made
-                    let changes_committed = match container.try_commit_changes(&ctx).await {
-                        Ok(committed) => committed,
-                        Err(e) => {
-                            tracing::error!("Failed to commit changes after execution: {}", e);
-                            // Treat commit failures as if changes were made to be safe
-                            true
-                        }
+                    let changes_committed = match preservation.as_ref() {
+                        Some(report) => crate::turn_preservation::changed(report),
+                        None => match container.try_commit_changes(&ctx).await {
+                            Ok(committed) => committed,
+                            Err(e) => {
+                                tracing::error!("Failed to commit changes after execution: {}", e);
+                                // Treat commit failures as if changes were made to be safe
+                                true
+                            }
+                        },
                     };
 
                     let should_start_next = if matches!(
@@ -781,7 +1235,7 @@ impl LocalContainerService {
                     }
                 }
 
-                if !already_finalized && container.should_finalize(&ctx) {
+                if !preservation_blocked && !already_finalized && container.should_finalize(&ctx) {
                     let has_chained_follow_up = ctx
                         .execution_process
                         .executor_action()
@@ -815,6 +1269,15 @@ impl LocalContainerService {
                     }
                 }
 
+                if scheduled_sync {
+                    // Owner completion and remote coverage are separate events.
+                    // A missing publication policy must not suppress the actual
+                    // completion signal used by interim preservation observers.
+                    container.notify_agent_turn_completion(&ctx).await;
+                    container.consume_queued_follow_up(&ctx).await;
+                    container.consume_capacity_queued_follow_up().await;
+                }
+
                 // When a parallel setup script finishes and no coding agent is running,
                 // consume any queued message that was stuck waiting
                 if matches!(
@@ -843,15 +1306,17 @@ impl LocalContainerService {
                     }
                 }
 
-                if !matches!(
-                    ctx.execution_process.run_reason,
-                    ExecutionProcessRunReason::DevServer
-                ) && let Err(e) = container
-                    .retry_archived_workspace_cleanup_after_execution(
-                        ctx.workspace.id,
-                        &ctx.execution_process.run_reason,
+                if !preservation_blocked
+                    && !matches!(
+                        ctx.execution_process.run_reason,
+                        ExecutionProcessRunReason::DevServer
                     )
-                    .await
+                    && let Err(e) = container
+                        .retry_archived_workspace_cleanup_after_execution(
+                            ctx.workspace.id,
+                            &ctx.execution_process.run_reason,
+                        )
+                        .await
                 {
                     tracing::error!(
                         "Failed to resume archived workspace cleanup after {:?} execution for workspace {}: {}",
@@ -877,7 +1342,9 @@ impl LocalContainerService {
                     })));
                 }
 
-                let _ = container.consume_capacity_queued_follow_up().await;
+                if !preservation_blocked {
+                    let _ = container.consume_capacity_queued_follow_up().await;
+                }
 
                 // Sync workspace to remote after CodingAgent execution
                 if matches!(
@@ -1055,18 +1522,23 @@ impl LocalContainerService {
         Ok(desired_dir.to_path_buf())
     }
 
-    async fn track_child_msgs_in_store(&self, id: Uuid, child: &mut AsyncGroupChild) {
-        let store = Arc::new(MsgStore::with_limits(
+    async fn track_child_msgs_in_store(
+        &self,
+        id: Uuid,
+        session_id: Uuid,
+        child: &mut AsyncGroupChild,
+    ) {
+        let store = Arc::new(MsgStore::with_durable_capture(
             LIVE_EXECUTION_HISTORY_BYTES,
             LIVE_EXECUTION_CHANNEL_CAPACITY,
+            128,
         ));
 
         let out = child.inner().stdout.take().expect("no stdout");
         let err = child.inner().stderr.take().expect("no stderr");
 
         // Map stdout bytes -> LogMsg::Stdout
-        let out = ReaderStream::new(out)
-            .map_ok(|chunk| LogMsg::Stdout(String::from_utf8_lossy(&chunk).into_owned()));
+        let out = utils::execution_logs::decode_stdout(ReaderStream::new(out));
 
         // Map stderr bytes -> LogMsg::Stderr
         let err = ReaderStream::new(err)
@@ -1079,7 +1551,17 @@ impl LocalContainerService {
         store.clone().spawn_forwarder(merged);
 
         let mut map = self.msg_stores().write().await;
-        map.insert(id, store);
+        map.insert(id, store.clone());
+        drop(map);
+        // Claim/register the single writer before the exit monitor can remove
+        // the store, including a very short child or Stop during startup.
+        let capture = services::services::execution_process::spawn_stream_raw_logs_to_storage(
+            store,
+            self.db().clone(),
+            id,
+            session_id,
+        );
+        self.add_db_stream_handle(id, capture).await;
     }
 
     /// Create a live diff log stream for ongoing attempts for WebSocket
@@ -1303,43 +1785,54 @@ impl LocalContainerService {
 
     /// Consume a queued follow-up and start it when the completed process allows it.
     async fn consume_queued_follow_up(&self, ctx: &ExecutionContext) -> QueuedFollowUpOutcome {
+        services::services::admission::run(self.consume_queued_follow_up_admitted(ctx)).await
+    }
+
+    async fn consume_queued_follow_up_admitted(
+        &self,
+        ctx: &ExecutionContext,
+    ) -> QueuedFollowUpOutcome {
+        let automatic = services::services::admission::automatic_git_sync();
+        if automatic
+            && ExecutionProcess::has_running_queue_consumer_for_session(
+                &self.db.pool,
+                ctx.session.id,
+            )
+            .await
+            .unwrap_or(true)
+        {
+            return QueuedFollowUpOutcome::NoQueuedMessage;
+        }
         let Some(queued_msg) = self.queued_message_service.take_queued(ctx.session.id) else {
             return QueuedFollowUpOutcome::NoQueuedMessage;
         };
-
-        if matches!(
-            ctx.execution_process.status,
-            ExecutionProcessStatus::Failed | ExecutionProcessStatus::Killed
-        ) {
-            tracing::info!(
-                "Discarding queued message for session {} due to execution status {:?}",
-                ctx.session.id,
-                ctx.execution_process.status
-            );
+        if !automatic
+            && matches!(
+                ctx.execution_process.status,
+                ExecutionProcessStatus::Failed | ExecutionProcessStatus::Killed
+            )
+        {
             return QueuedFollowUpOutcome::Discarded;
         }
-
-        tracing::info!(
-            "Found queued message for session {}, starting follow-up execution",
-            ctx.session.id
-        );
-
-        if let Err(e) =
-            Scratch::delete(&self.db.pool, ctx.session.id, &ScratchType::DraftFollowUp).await
-        {
-            tracing::warn!(
-                "Failed to delete scratch after consuming queued message: {}",
-                e
-            );
-        }
-
-        let queued_data = queued_msg.into_follow_up_data();
+        let queued_data = queued_msg.clone().into_follow_up_data();
         if let Err(e) = self
             .start_queued_follow_up_for_session(&ctx.workspace, &ctx.session, &queued_data)
             .await
         {
+            if automatic {
+                self.queued_message_service.restore_message(queued_msg);
+                let _ = self
+                    .queued_message_service
+                    .persist(&self.db.pool, ctx.session.id)
+                    .await;
+            }
             tracing::error!("Failed to start queued follow-up: {}", e);
             return QueuedFollowUpOutcome::FailedToStart;
+        }
+        if let Err(e) =
+            Scratch::delete(&self.db.pool, ctx.session.id, &ScratchType::DraftFollowUp).await
+        {
+            tracing::warn!("Failed to delete consumed scratch: {}", e);
         }
 
         QueuedFollowUpOutcome::Started
@@ -1347,6 +1840,10 @@ impl LocalContainerService {
 
     /// Start the oldest message that is waiting for global executor capacity.
     async fn consume_capacity_queued_follow_up(&self) -> QueuedFollowUpOutcome {
+        services::services::admission::run(self.consume_capacity_queued_follow_up_admitted()).await
+    }
+
+    async fn consume_capacity_queued_follow_up_admitted(&self) -> QueuedFollowUpOutcome {
         let Some(queued_msg) = self.queued_message_service.take_oldest_capacity_queued() else {
             return QueuedFollowUpOutcome::NoQueuedMessage;
         };
@@ -1367,7 +1864,7 @@ impl LocalContainerService {
                     "Failed to load capacity-queued session; requeueing"
                 );
                 self.queued_message_service
-                    .queue_for_capacity(queued_msg.session_id, queued_msg.data);
+                    .restore_message(queued_msg.clone());
                 return QueuedFollowUpOutcome::FailedToStart;
             }
         };
@@ -1389,7 +1886,7 @@ impl LocalContainerService {
                     "Failed to load capacity-queued workspace; requeueing"
                 );
                 self.queued_message_service
-                    .queue_for_capacity(session.id, queued_msg.data);
+                    .restore_message(queued_msg.clone());
                 return QueuedFollowUpOutcome::FailedToStart;
             }
         };
@@ -1399,21 +1896,8 @@ impl LocalContainerService {
             .unwrap_or(true)
         {
             self.queued_message_service
-                .queue_for_capacity(session.id, queued_msg.data);
+                .restore_message(queued_msg.clone());
             return QueuedFollowUpOutcome::NoQueuedMessage;
-        }
-
-        if let Err(error) = Scratch::delete(
-            &self.db.pool,
-            queued_msg.session_id,
-            &ScratchType::DraftFollowUp,
-        )
-        .await
-        {
-            tracing::warn!(
-                "Failed to delete scratch after consuming capacity-queued message: {}",
-                error
-            );
         }
 
         let queued_data = queued_msg.clone().into_follow_up_data();
@@ -1421,10 +1905,26 @@ impl LocalContainerService {
             .start_queued_follow_up_for_session(&workspace, &session, &queued_data)
             .await
         {
-            Ok(_) => QueuedFollowUpOutcome::Started,
-            Err(error) if error.is_execution_limit_reached() => {
+            Ok(_) => {
+                if let Err(error) =
+                    Scratch::delete(&self.db.pool, session.id, &ScratchType::DraftFollowUp).await
+                {
+                    tracing::warn!(%error, "Failed to delete consumed capacity scratch");
+                }
+                QueuedFollowUpOutcome::Started
+            }
+            Err(error)
+                if error.is_execution_limit_reached()
+                    || services::services::admission::automatic_git_sync() =>
+            {
                 self.queued_message_service
-                    .queue_for_capacity(session.id, queued_msg.data);
+                    .restore_message(queued_msg.clone());
+                if services::services::admission::automatic_git_sync() {
+                    let _ = self
+                        .queued_message_service
+                        .persist(&self.db.pool, session.id)
+                        .await;
+                }
                 QueuedFollowUpOutcome::NoQueuedMessage
             }
             Err(error) => {
@@ -1503,13 +2003,32 @@ impl LocalContainerService {
 
         let action = ExecutorAction::new(action_type, cleanup_action.map(Box::new));
 
-        self.start_execution(
-            workspace,
-            session,
-            &action,
-            &ExecutionProcessRunReason::CodingAgent,
-        )
-        .await
+        let automatic = services::services::admission::automatic_git_sync();
+        if automatic {
+            self.queued_message_service
+                .begin_dispatch(&self.db.pool, session.id)
+                .await?;
+        }
+        let execution = self
+            .start_execution(
+                workspace,
+                session,
+                &action,
+                &ExecutionProcessRunReason::CodingAgent,
+            )
+            .await?;
+        if automatic
+            && self
+                .queued_message_service
+                .persist(&self.db.pool, session.id)
+                .await
+                .is_err()
+        {
+            // Execution already exists: retain the dispatching row for recovery,
+            // never tell the caller to requeue and replay it automatically.
+            tracing::error!(session = %session.id, "User queue acknowledgement failed; uncertain dispatch retained");
+        }
+        Ok(execution)
     }
 }
 
@@ -1600,7 +2119,9 @@ impl ContainerService for LocalContainerService {
     }
 
     fn status_worktree_cleanup_enabled(&self) -> bool {
-        std::env::var("DISABLE_STATUS_WORKTREE_CLEANUP").is_err()
+        // Status changes and restart reconciliation cannot authorize shared-path
+        // deletion. Explicit workspace deletion remains a separate user action.
+        false
     }
 
     async fn store_db_stream_handle(&self, id: Uuid, handle: JoinHandle<()>) {
@@ -1617,6 +2138,27 @@ impl ContainerService for LocalContainerService {
 
     fn workspace_to_current_dir(&self, workspace: &Workspace) -> PathBuf {
         PathBuf::from(workspace.container_ref.clone().unwrap_or_default())
+    }
+
+    async fn steering_target(&self, execution_id: Uuid) -> Option<(String, String)> {
+        executors::executors::codex::client::AppServerClient::steering_target(execution_id).await
+    }
+
+    async fn steer_bound_turn(
+        &self,
+        execution_id: Uuid,
+        thread_id: String,
+        turn_id: String,
+        message: String,
+    ) -> Result<bool, ContainerError> {
+        executors::executors::codex::client::AppServerClient::steer_bound_turn(
+            execution_id,
+            thread_id,
+            turn_id,
+            message,
+        )
+        .await
+        .map_err(ContainerError::ExecutorError)
     }
 
     async fn try_steer_active_turn(
@@ -1771,11 +2313,15 @@ impl ContainerService for LocalContainerService {
     ) -> Result<(), ContainerError> {
         if executor_action.base_executor().is_some() {
             let background = matches!(executor_action.typ(), ExecutorActionType::CodingAgentFollowUpRequest(request) if request.capacity.is_some());
-            executors::capacity::controller::before_launch(
-                execution_process.session_id,
-                background,
-            )
-            .await
+            if services::services::original_worker::in_dispatch() {
+                executors::capacity::controller::before_bounded_worker_launch().await
+            } else {
+                executors::capacity::controller::before_launch(
+                    execution_process.session_id,
+                    background,
+                )
+                .await
+            }
             .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         }
         // Get the worktree path
@@ -1804,7 +2350,62 @@ impl ContainerService for LocalContainerService {
                 _ => Arc::new(NoopExecutorApprovalService {}),
             };
 
+        if matches!(
+            execution_process.run_reason,
+            ExecutionProcessRunReason::CleanupScript
+        ) {
+            return Err(ContainerError::Other(anyhow!(
+                "Cleanup scripts are unavailable pending recovery QA."
+            )));
+        }
         let repos = WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id).await?;
+        if self.automatic_sync_enabled()
+            && execution_process.run_reason == ExecutionProcessRunReason::CodingAgent
+        {
+            let request = Self::preservation_request(workspace, execution_process, &repos, false);
+            TurnGithubSync::enqueue(
+                &self.db.pool,
+                execution_process.id,
+                workspace.id,
+                &request.to_string(),
+            )
+            .await?;
+            let report = self.invoke_preservation_helper("begin", request).await;
+            self.emit_preservation_message(execution_process.id, &report)
+                .await;
+        }
+        if !self.automatic_sync_enabled()
+            && matches!(
+                execution_process.run_reason,
+                ExecutionProcessRunReason::CodingAgent | ExecutionProcessRunReason::CleanupScript
+            )
+            && let Some(report) = self
+                .workspace_observation_gate(workspace.id, execution_process.id)
+                .await
+        {
+            return Err(ContainerError::Other(anyhow!(
+                crate::turn_preservation::message(&report)
+            )));
+        }
+        if !self.automatic_sync_enabled()
+            && self.preservation_enabled()
+            && matches!(
+                execution_process.run_reason,
+                ExecutionProcessRunReason::CodingAgent | ExecutionProcessRunReason::CleanupScript
+            )
+        {
+            let report = self
+                .invoke_preservation(
+                    "begin",
+                    Self::preservation_request(workspace, execution_process, &repos, false),
+                )
+                .await;
+            if report["state"] != "pending" {
+                return Err(ContainerError::Other(anyhow!(
+                    crate::turn_preservation::message(&report)
+                )));
+            }
+        }
         let repo_names: Vec<String> = repos.iter().map(|r| r.name.clone()).collect();
         let repo_context = RepoContext::new(current_dir.clone(), repo_names);
 
@@ -1826,6 +2427,7 @@ impl ContainerService for LocalContainerService {
         env.insert("VK_SESSION_ID", execution_process.session_id.to_string());
         env.insert("VK_EXECUTION_PROCESS_ID", execution_process.id.to_string());
         env.insert("VK_WORKSPACE_BRANCH", &workspace.branch);
+        env.original_worker = executors::original_worker::attach(&env).await?;
 
         // Create the child and stream, add to execution tracker with timeout
         let mut spawned = tokio::time::timeout(
@@ -1839,14 +2441,28 @@ impl ContainerService for LocalContainerService {
             ))
         })??;
 
-        self.track_child_msgs_in_store(execution_process.id, &mut spawned.child)
-            .await;
+        self.track_child_msgs_in_store(
+            execution_process.id,
+            execution_process.session_id,
+            &mut spawned.child,
+        )
+        .await;
 
         if let Some(unit_name) = spawned.transient_unit_name.take() {
             self.add_transient_unit_name(execution_process.id, unit_name)
                 .await;
         }
 
+        let group_id = spawned.child.id();
+        if self.automatic_sync_enabled()
+            && let Some(group) = group_id
+            && let Err(error) =
+                TurnGithubSync::bind_group(&self.db.pool, execution_process.id, group).await
+        {
+            // The already spawned turn remains owned and tracked; an unbound job
+            // cannot publish. Do not return here and orphan the active child.
+            tracing::error!(%error, "Cannot bind checkpoint writer group; publication remains blocked");
+        }
         self.add_child_to_store(execution_process.id, spawned.child)
             .await;
 
@@ -1857,7 +2473,7 @@ impl ContainerService for LocalContainerService {
         }
 
         // Spawn unified exit monitor: watches OS exit and optional executor signal
-        let hn = self.spawn_exit_monitor(&execution_process.id, spawned.exit_signal);
+        let hn = self.spawn_exit_monitor(&execution_process.id, spawned.exit_signal, group_id);
         self.add_exit_monitor_handle(execution_process.id, hn).await;
 
         Ok(())
@@ -2131,6 +2747,10 @@ fn success_exit_status() -> std::process::ExitStatus {
         ExitStatusExt::from_raw(0)
     }
 }
+
+#[cfg(test)]
+#[path = "github_sync_tests.rs"]
+mod github_sync_tests;
 
 #[cfg(test)]
 mod tests {

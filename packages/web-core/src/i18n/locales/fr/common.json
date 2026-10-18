@@ -350,6 +350,8 @@
     "noCommands": "Aucune commande disponible pour cet agent."
   },
   "kanban": {
+    "collapseIssue": "Réduire le ticket {{displayId}}",
+    "expandIssue": "Développer le ticket {{displayId}}",
     "noVisibleStatuses": "Tous les statuts sont masqués. Utilisez les paramètres d'affichage ou changez d'onglet pour voir les problèmes.",
     "noProjectFound": "Aucun projet trouvé",
     "unassigned": "Non assigné",
@@ -377,6 +379,9 @@
     "issueDescriptionPlaceholder": "Entrez la description de la tâche...",
     "createDraftWorkspaceImmediately": "Créer immédiatement un espace de travail brouillon",
     "createDraftWorkspaceDescription": "Après la création de l'issue, ouvrir le formulaire de création de workspace pré-rempli avec les détails de l'issue",
+    "createdIssueSetupFailed": "Le ticket {{issueId}} a été créé, mais sa configuration a échoué. Réessayer termine ce ticket sans en créer un autre.",
+    "unsavedAssignments": "Assignations non enregistrées : {{assignees}}.",
+    "retryIssueSetup": "Réessayer l’enregistrement",
     "createIssue": "Créer la tâche",
     "newIssue": "Nouveau ticket",
     "previewCodeBlock": "[Bloc de code]",
@@ -416,6 +421,9 @@
     "tags": "Tags",
     "sortBy": "Sort",
     "workspaceSidebar": {
+      "assignmentMine": "À moi",
+      "assignmentAll": "Tout",
+      "assignmentsUnavailable": "Affectations indisponibles. Utilisez Tout pour retrouver le travail.",
       "sortDialogTitle": "Sort workspaces",
       "sortDialogDescription": "Choose how workspaces are ordered in the sidebar.",
       "sortByLabel": "Sort by",

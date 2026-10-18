@@ -27,7 +27,7 @@ await build({
 });
 const result = spawnSync(
   process.execPath,
-  ["--test", "--test-force-exit", outfile],
+  ["--test", "--experimental-test-isolation=none", "--test-force-exit", outfile],
   { stdio: "inherit" },
 );
 process.exitCode = result.status ?? 1;

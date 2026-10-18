@@ -91,6 +91,8 @@ pub enum ExecutorError {
     ExecutableNotFound { program: String },
     #[error("Setup helper not supported")]
     SetupHelperNotSupported,
+    #[error("Bounded native receipt unavailable; outcome unknown, no replay or automatic stop")]
+    NativeReceiptUnknown,
     #[error("Auth required: {0}")]
     AuthRequired(String),
 }

@@ -36,6 +36,21 @@ pub fn verify_launcher(profile: Option<&str>, approved: &str) -> Result<(), Exec
     Ok(())
 }
 
+pub fn first_run_retry_keys() -> Result<[String; 2], ExecutorError> {
+    let provider = std::env::var("VK_CAPACITY_MODEL_PROVIDER").unwrap_or_else(|_| "openai".into());
+    if provider.is_empty()
+        || !provider
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'-')
+    {
+        return Err(invalid("Invalid supervised first-run provider"));
+    }
+    Ok([
+        format!("model_providers.{provider}.request_max_retries"),
+        format!("model_providers.{provider}.stream_max_retries"),
+    ])
+}
+
 fn verify_scope(workspace: &std::path::Path, protected: &[&std::path::Path]) -> io::Result<()> {
     let workspace = std::fs::canonicalize(workspace)?;
     for path in protected {
@@ -133,6 +148,16 @@ pub async fn resume(
         .get("config")
         .and_then(Value::as_object)
         .ok_or_else(|| invalid("Cannot verify scheduled configuration"))?;
+    if capacity.first_run.is_some() {
+        for key in first_run_retry_keys()? {
+            let path = format!("/{}", key.replace('.', "/"));
+            if resolved["config"].pointer(&path).and_then(Value::as_u64) != Some(0) {
+                return Err(invalid(
+                    "Cannot verify zero retries for first native initialization",
+                ));
+            }
+        }
+    }
     if effective
         .get("hooks")
         .is_some_and(|hooks| !hooks.is_null() && hooks != &json!({}))

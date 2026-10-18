@@ -1,3 +1,4 @@
+import type { DotActivityState } from './DotActivityIndicators';
 import type { ReactNode } from 'react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
@@ -22,7 +23,7 @@ import {
 
 export type WorkspaceLayoutMode = 'flat' | 'accordion';
 
-export interface WorkspacesSidebarWorkspace {
+export interface WorkspacesSidebarWorkspace extends DotActivityState {
   id: string;
   name: string;
   filesChanged?: number;
@@ -84,6 +85,7 @@ export interface WorkspacesSidebarProps {
   hasMoreWorkspaces?: boolean;
   /** Controls rendered beside the search input */
   searchControls?: ReactNode;
+  assignmentControls?: ReactNode;
   /** Callback for opening workspace actions */
   onOpenWorkspaceActions?: (workspaceId: string) => void;
   /** Persist keys for collapsible sections */
@@ -162,6 +164,8 @@ function WorkspaceList({
           hasPendingApproval={workspace.hasPendingApproval}
           hasRunningDevServer={workspace.hasRunningDevServer}
           hasUnseenActivity={workspace.hasUnseenActivity}
+          dotUnreadCount={workspace.dotUnreadCount}
+          dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
           activeSubagentCount={workspace.activeSubagentCount}
           unresolvedSubagentCount={workspace.unresolvedSubagentCount}
           latestProcessCompletedAt={workspace.latestProcessCompletedAt}
@@ -196,6 +200,7 @@ export function WorkspacesSidebar({
   onLoadMore,
   hasMoreWorkspaces = false,
   searchControls,
+  assignmentControls,
   onOpenWorkspaceActions,
   persistKeys = DEFAULT_PERSIST_KEYS,
   activeRemoteHost = null,
@@ -237,6 +242,8 @@ export function WorkspacesSidebar({
       const hasSubagentActivity = (ws: WorkspacesSidebarWorkspace) =>
         (ws.activeSubagentCount ?? 0) + (ws.unresolvedSubagentCount ?? 0) > 0;
       const needsAttention = (ws: WorkspacesSidebarWorkspace) =>
+        (ws.dotNeedsAttentionCount ?? 0) > 0 ||
+        (ws.dotUnreadCount ?? 0) > 0 ||
         ws.hasPendingApproval ||
         (ws.hasUnseenActivity && !ws.isRunning && !hasSubagentActivity(ws));
 
@@ -326,6 +333,9 @@ export function WorkspacesSidebar({
           >
             {activeRemoteHost.name} · {activeRemoteHost.status}
           </button>
+        )}
+        {assignmentControls && (
+          <div className="px-base pb-half">{assignmentControls}</div>
         )}
         {!showArchive && (
           <div
@@ -430,11 +440,15 @@ export function WorkspacesSidebar({
           actions={headerActions}
           className="border-b"
         />
+        {assignmentControls && (
+          <div className="px-base">{assignmentControls}</div>
+        )}
         {!isLoading && (
           <div className="px-base flex items-stretch gap-half">
             <div className="flex-1 min-w-0">
               <InputField
                 variant="search"
+                ariaLabel="Search workspaces"
                 value={searchQuery}
                 onChange={onSearchChange}
                 placeholder={t('common:workspaces.searchPlaceholder')}
@@ -524,6 +538,8 @@ export function WorkspacesSidebar({
                   hasPendingApproval={workspace.hasPendingApproval}
                   hasRunningDevServer={workspace.hasRunningDevServer}
                   hasUnseenActivity={workspace.hasUnseenActivity}
+                  dotUnreadCount={workspace.dotUnreadCount}
+                  dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
                   latestProcessCompletedAt={workspace.latestProcessCompletedAt}
                   latestProcessStatus={workspace.latestProcessStatus}
                   prStatus={workspace.prStatus}
@@ -641,6 +657,8 @@ export function WorkspacesSidebar({
                 hasPendingApproval={workspace.hasPendingApproval}
                 hasRunningDevServer={workspace.hasRunningDevServer}
                 hasUnseenActivity={workspace.hasUnseenActivity}
+                dotUnreadCount={workspace.dotUnreadCount}
+                dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
                 latestProcessCompletedAt={workspace.latestProcessCompletedAt}
                 latestProcessStatus={workspace.latestProcessStatus}
                 prStatus={workspace.prStatus}

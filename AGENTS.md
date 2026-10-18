@@ -139,6 +139,7 @@ For remote and cloud types, regenerate with `pnpm run remote:generate-types`. Do
 - Use `Commit/Push::` on one line and include both states, for example `Commit/Push:: Committed and Pushed`.
 - If a PR does not exist yet, use `PR:: Not opened yet`.
 - When `PR::` or `Preview URL::` include a URL, format it as a clickable Markdown link.
+- Deliver generated local files through `vk-publish-artifact` before the first reply that offers them; follow [VK_ARTIFACT_LINKS.md](VK_ARTIFACT_LINKS.md). Paste its verified Markdown link. An absolute filesystem path is not browser delivery.
 - Use one of:
   - `Preview URL:: Not Generated`
   - `Preview URL:: Updated [Open preview](https://...)`

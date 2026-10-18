@@ -1,10 +1,20 @@
+## October 8 startup safety adoption gate
+
+Read VK_STARTUP_RECOVERY_SAFETY.md before consuming this repair. Startup requires
+an explicitly reviewed Unix database/root identity receipt; automatic workspace
+deletion is disabled. Do not generate a receipt from guessed/default paths or
+bypass the isolated executable boundary. Real isolated acceptance and independent
+review are still required; this branch authorizes no deployment or restart.
+
 # VK Agent Deployment Runbook
 
 ## AutoSwitch next-candidate requirement
 
 For this AutoSwitch release, follow [VK_AUTOSWITCH_RELOAD.md](VK_AUTOSWITCH_RELOAD.md).
-The candidate must include the new backend hook, backend-matched validator,
-verified published module and VK_CODEX_ROUTING_MODULE setting. Run the module
+The candidate must include the corrected protocol-2 backend boundary, its
+backend-matched protocol-2 validator, verified published module and
+VK_CODEX_ROUTING_MODULE setting. Prepare a separate root; do not replace the live
+protocol-1 validator in place. The old current-step-665d836db package is superseded. Run the module
 check against the nominated unit before adoption and the live environment check
 after separately authorized cutover; then inspect a genuine Recommend decision
 for the release hash. Backend-only merge or an environment setting on an old

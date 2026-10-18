@@ -12,6 +12,7 @@ import {
 import { SyncErrorProvider } from '@/shared/providers/SyncErrorProvider';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
 import { useMobileViewport } from '@/shared/hooks/useMobileViewport';
+import { useDotProjectNotifications } from '@/shared/hooks/useDotNotifications';
 import { useMobileSheet } from '@/shared/hooks/useMobileSheet';
 import { useUiPreferencesStore } from '@/shared/stores/useUiPreferencesStore';
 import { cn } from '@/shared/lib/utils';
@@ -287,6 +288,7 @@ export function SharedAppLayout() {
     needsReviewWorkspaceIds,
     userWorkspaces,
   ]);
+  const dotProjectNotifications = useDotProjectNotifications();
   const allAppBarProjects = useMemo(
     () =>
       (isLocalAuthBypassed ? localAppBarProjects : sortedProjects).map(
@@ -295,6 +297,14 @@ export function SharedAppLayout() {
           abbreviation: localProjectCustomizations[project.id]?.abbreviation,
           color: localProjectCustomizations[project.id]?.color ?? project.color,
           hasNeedsReview: needsReviewProjectIds.has(project.id),
+          dotUnreadCount:
+            dotProjectNotifications.find(
+              (item) => item.project_id === project.id
+            )?.unread_count ?? 0,
+          dotNeedsAttentionCount:
+            dotProjectNotifications.find(
+              (item) => item.project_id === project.id
+            )?.needs_attention_count ?? 0,
         })
       ),
     [
@@ -302,6 +312,7 @@ export function SharedAppLayout() {
       localAppBarProjects,
       localProjectCustomizations,
       needsReviewProjectIds,
+      dotProjectNotifications,
       sortedProjects,
     ]
   );

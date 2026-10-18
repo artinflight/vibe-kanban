@@ -24,6 +24,7 @@ use db::{
         repo::Repo,
         scratch::DraftFollowUpData,
         session::{CreateSession, Session, SessionError},
+        turn_github_sync::TurnGithubSync,
         workspace::{Workspace, WorkspaceError},
         workspace_repo::WorkspaceRepo,
     },
@@ -70,6 +71,35 @@ pub type ContainerRef = String;
 const IMMEDIATE_PR_MERGE_CLEANUP_TARGET_BRANCH: &str = "staging";
 const HISTORICAL_REPLAY_HISTORY_BYTES: usize = 4 * 1024 * 1024;
 const HISTORICAL_REPLAY_CHANNEL_CAPACITY: usize = 1024;
+
+// Raw EOF ends the normalizers, not the derived patch stream. The latter
+// closes only after the feeder and every normalizer release their store owner.
+// Never interpret an old EOF using a later global completion flag.
+fn historical_normalized_output(
+    store: &Arc<MsgStore>,
+) -> BoxStream<'static, Result<LogMsg, std::io::Error>> {
+    store
+        .history_plus_stream_recoverable()
+        .scan(HashSet::<String>::new(), move |sent_paths, msg| {
+            future::ready(match msg {
+                Ok(LogMsg::JsonPatch(patch)) => {
+                    let patch = match patch_entry_path(&patch) {
+                        Some(_) if is_add_or_replace(&patch) => fix_patch_ops(patch, sent_paths),
+                        _ => patch,
+                    };
+                    Some(Some(Ok(LogMsg::JsonPatch(patch))))
+                }
+                Ok(LogMsg::Finished) => Some(None),
+                Ok(_) => Some(None),
+                Err(e) => Some(Some(Err(e))),
+            })
+        })
+        .filter_map(future::ready)
+        .chain(futures::stream::once(async {
+            Ok::<_, std::io::Error>(LogMsg::Finished)
+        }))
+        .boxed()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArchiveScriptStartOutcome {
@@ -155,7 +185,7 @@ impl ContainerError {
 }
 
 #[async_trait]
-pub trait ContainerService {
+pub trait ContainerService: Send + Sync {
     fn msg_stores(&self) -> &Arc<RwLock<HashMap<Uuid, Arc<MsgStore>>>>;
 
     fn db(&self) -> &DBService;
@@ -180,6 +210,21 @@ pub trait ContainerService {
         &self,
         _session: &Session,
         _data: &DraftFollowUpData,
+    ) -> Result<bool, ContainerError> {
+        Ok(false)
+    }
+
+    /// Explicit steering never selects a replacement execution or starts work.
+    async fn steering_target(&self, _execution_id: Uuid) -> Option<(String, String)> {
+        None
+    }
+
+    async fn steer_bound_turn(
+        &self,
+        _execution_id: Uuid,
+        _thread_id: String,
+        _turn_id: String,
+        _message: String,
     ) -> Result<bool, ContainerError> {
         Ok(false)
     }
@@ -982,6 +1027,14 @@ pub trait ContainerService {
             .await?
             .ok_or_else(|| ContainerError::Other(anyhow!("Workspace not found")))?;
 
+        // Keep this guard even with scheduling disabled: a retained obligation
+        // cannot be discarded by rollback, manual reset, or follow-up retry.
+        if TurnGithubSync::has_unobserved(pool, workspace.id).await? {
+            return Err(ContainerError::Other(anyhow!(
+                "Completed-turn observation is unproven; original obligation retained. Reset requires scoped reconciliation."
+            )));
+        }
+
         let repos = WorkspaceRepo::find_repos_for_workspace(pool, workspace.id).await?;
         let repo_states =
             ExecutionProcessRepoState::find_by_execution_process_id(pool, target_process_id)
@@ -1138,7 +1191,7 @@ pub trait ContainerService {
             if matches!(process_status, Some(ExecutionProcessStatus::Running)) {
                 return Some(
                     store
-                        .history_plus_stream_strict()
+                        .history_plus_stream_recoverable()
                         .filter(|msg| {
                             future::ready(matches!(
                                 msg,
@@ -1201,7 +1254,7 @@ pub trait ContainerService {
             if matches!(process_status, Some(ExecutionProcessStatus::Running)) {
                 return Some(
                     store
-                        .history_plus_stream_strict() // BoxStream<Result<LogMsg, io::Error>>
+                        .history_plus_stream_recoverable() // BoxStream<Result<LogMsg, io::Error>>
                         .filter(|msg| future::ready(matches!(msg, Ok(LogMsg::JsonPatch(..)))))
                         .chain(futures::stream::once(async {
                             Ok::<_, std::io::Error>(LogMsg::Finished)
@@ -1283,6 +1336,8 @@ pub trait ContainerService {
             HISTORICAL_REPLAY_CHANNEL_CAPACITY,
         ));
         let (cancel_tx, mut cancel_rx) = oneshot::channel::<()>();
+        // Subscribe before either producer can publish or evict a patch.
+        let stream = historical_normalized_output(&temp_store);
 
         // Spawn normalizer on populated store and collect JoinHandles
         let handles = match executor_action.typ() {
@@ -1336,15 +1391,14 @@ pub trait ContainerService {
             }
         };
 
-        let output_finished = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let output_finished_task = output_finished.clone();
-        let temp_store_for_finish = temp_store.clone();
+        let normalizer_owner = temp_store.clone();
         tokio::spawn(async move {
             for handle in handles {
                 let _ = handle.await;
             }
-            output_finished_task.store(true, std::sync::atomic::Ordering::SeqCst);
-            temp_store_for_finish.push_finished();
+            // Keep the broadcast sender alive until all derived patches exist.
+            // Receiver closure then drains queued patches before terminating.
+            drop(normalizer_owner);
         });
 
         let temp_store_for_feed = temp_store.clone();
@@ -1377,36 +1431,6 @@ pub trait ContainerService {
 
             temp_store_for_feed.push_finished();
         });
-
-        let stream = temp_store
-            .history_plus_stream_strict()
-            .scan(HashSet::<String>::new(), move |sent_paths, msg| {
-                let output_finished = output_finished.clone();
-                future::ready(match msg {
-                    Ok(LogMsg::JsonPatch(patch)) => {
-                        let patch = match patch_entry_path(&patch) {
-                            Some(_) if is_add_or_replace(&patch) => {
-                                fix_patch_ops(patch, sent_paths)
-                            }
-                            _ => patch,
-                        };
-                        Some(Some(Ok(LogMsg::JsonPatch(patch))))
-                    }
-                    Ok(LogMsg::Finished)
-                        if output_finished.load(std::sync::atomic::Ordering::SeqCst) =>
-                    {
-                        None
-                    }
-                    Ok(LogMsg::Finished) => Some(None),
-                    Ok(_) => Some(None),
-                    Err(e) => Some(Some(Err(e))),
-                })
-            })
-            .filter_map(future::ready)
-            .chain(futures::stream::once(async {
-                Ok::<_, std::io::Error>(LogMsg::Finished)
-            }))
-            .boxed();
 
         Some(Box::pin(CancelOnDropStream::new(stream, cancel_tx)))
     }
@@ -1504,6 +1528,25 @@ pub trait ContainerService {
         executor_action: &ExecutorAction,
         run_reason: &ExecutionProcessRunReason,
     ) -> Result<ExecutionProcess, ContainerError> {
+        super::admission::run(self.start_execution_admitted(
+            workspace,
+            session,
+            executor_action,
+            run_reason,
+        ))
+        .await
+    }
+
+    async fn start_execution_admitted(
+        &self,
+        workspace: &Workspace,
+        session: &Session,
+        executor_action: &ExecutorAction,
+        run_reason: &ExecutionProcessRunReason,
+    ) -> Result<ExecutionProcess, ContainerError> {
+        super::original_worker::before_start(session.id, executor_action)
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         if matches!(run_reason, ExecutionProcessRunReason::CodingAgent)
             && let Some(error) = codex_execution_limit_error_for_action(executor_action)
         {
@@ -1512,7 +1555,7 @@ pub trait ContainerService {
 
         // Route only here, after queue admission and before persisting the action.
         // A routing failure cannot reset Git or create another continuation loop.
-        let mut resolved_action = executor_action.clone();
+        let mut resolved_action = super::original_worker::routing_action(executor_action);
         if executors::routing::config(&resolved_action)
             .and_then(|c| c.routing.as_ref())
             .is_some_and(|p| p.mode != executors::routing::RoutingMode::Manual)
@@ -1560,6 +1603,8 @@ pub trait ContainerService {
         } else {
             resolved_action.routing_decision = None;
         }
+        super::original_worker::restore_raw_action(&mut resolved_action, executor_action)
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         let executor_action = &resolved_action;
 
         // Create new execution process record
@@ -1602,6 +1647,9 @@ pub trait ContainerService {
             &repo_states,
         )
         .await?;
+        super::original_worker::record_execution(execution_process.id)
+            .await
+            .map_err(|e| ContainerError::Other(anyhow!(e)))?;
         if let Some(event) = executors::routing_telemetry::decision(
             executor_action,
             &execution_process.id.to_string(),
@@ -1767,12 +1815,6 @@ pub trait ContainerService {
             }
         }
 
-        execution_process::spawn_stream_raw_logs_to_storage(
-            self.msg_stores().clone(),
-            self.db().clone(),
-            execution_process.id,
-            session.id,
-        );
         Ok(execution_process)
     }
 
@@ -1871,5 +1913,189 @@ mod tests {
         ];
 
         assert!(!has_merged_pr_to_target_branch(&pull_requests, "staging"));
+    }
+}
+
+#[cfg(test)]
+mod historical_replay_output_tests {
+    use std::{sync::atomic::AtomicBool, time::Duration};
+
+    use super::*;
+    fn original_output(
+        store: &Arc<MsgStore>,
+        output_finished: Arc<AtomicBool>,
+    ) -> BoxStream<'static, Result<LogMsg, std::io::Error>> {
+        store
+            .history_plus_stream_recoverable()
+            .scan(HashSet::<String>::new(), move |sent_paths, msg| {
+                let output_finished = output_finished.clone();
+                future::ready(match msg {
+                    Ok(LogMsg::JsonPatch(patch)) => {
+                        let patch = match patch_entry_path(&patch) {
+                            Some(_) if is_add_or_replace(&patch) => {
+                                fix_patch_ops(patch, sent_paths)
+                            }
+                            _ => patch,
+                        };
+                        Some(Some(Ok(LogMsg::JsonPatch(patch))))
+                    }
+                    Ok(LogMsg::Finished)
+                        if output_finished.load(std::sync::atomic::Ordering::SeqCst) =>
+                    {
+                        None
+                    }
+                    Ok(LogMsg::Finished) => Some(None),
+                    Ok(_) => Some(None),
+                    Err(e) => Some(Some(Err(e))),
+                })
+            })
+            .filter_map(future::ready)
+            .chain(futures::stream::once(async {
+                Ok::<_, std::io::Error>(LogMsg::Finished)
+            }))
+            .boxed()
+    }
+
+    fn patch(n: usize) -> LogMsg {
+        LogMsg::JsonPatch(ConversationPatch::add_normalized_entry(
+            n,
+            NormalizedEntry {
+                timestamp: None,
+                entry_type: NormalizedEntryType::AssistantMessage,
+                content: format!("preserved synthetic final {n}"),
+                metadata: None,
+            },
+        ))
+    }
+    fn count(v: &[Result<LogMsg, std::io::Error>]) -> usize {
+        v.iter()
+            .filter(|x| matches!(x, Ok(LogMsg::JsonPatch(_))))
+            .count()
+    }
+    fn run(f: impl std::future::Future<Output = ()>) {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap()
+            .block_on(f)
+    }
+    #[test]
+    fn original_late_completion_flag_reproduces_dropped_final() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            s.push_finished();
+            s.push(patch(0));
+            s.push_finished();
+            let out = original_output(&s, Arc::new(AtomicBool::new(true)));
+            drop(s);
+            let rows = out.collect::<Vec<_>>().await;
+            assert_eq!(
+                count(&rows),
+                0,
+                "original must reproduce the demonstrated ordering defect"
+            );
+        })
+    }
+    #[test]
+    fn completed_producer_is_drained_before_eof() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            s.push_finished();
+            s.push(patch(0));
+            s.push_finished();
+            let out = historical_normalized_output(&s);
+            drop(s);
+            let rows = tokio::time::timeout(Duration::from_secs(1), out.collect::<Vec<_>>())
+                .await
+                .unwrap();
+            assert_eq!(count(&rows), 1);
+            assert!(format!("{:?}", rows).contains("preserved synthetic final 0"));
+            assert_eq!(
+                rows.iter()
+                    .filter(|x| matches!(x, Ok(LogMsg::Finished)))
+                    .count(),
+                1
+            );
+        })
+    }
+    #[test]
+    fn raw_eof_does_not_end_delayed_normalization() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            let out = historical_normalized_output(&s);
+            s.push_finished();
+            let owner = s.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                owner.push(patch(0));
+                drop(owner);
+            });
+            drop(s);
+            let rows = tokio::time::timeout(Duration::from_secs(1), out.collect::<Vec<_>>())
+                .await
+                .unwrap();
+            assert_eq!(count(&rows), 1);
+        })
+    }
+    #[test]
+    fn slow_output_consumer_preserves_late_final_order() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            let out = historical_normalized_output(&s);
+            s.push_finished();
+            s.push(patch(0));
+            s.push(patch(1));
+            drop(s);
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            let rows = out.collect::<Vec<_>>().await;
+            assert_eq!(count(&rows), 2);
+            let a = format!("{:?}", rows);
+            assert!(a.find("final 0").unwrap() < a.find("final 1").unwrap());
+        })
+    }
+    #[test]
+    fn evicted_raw_marker_does_not_hang_output() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(4096, 32));
+            s.push_finished();
+            s.push_stdout("x".repeat(8192));
+            s.push(patch(0));
+            let out = historical_normalized_output(&s);
+            drop(s);
+            let rows = tokio::time::timeout(Duration::from_secs(1), out.collect::<Vec<_>>())
+                .await
+                .unwrap();
+            assert_eq!(count(&rows), 1);
+        })
+    }
+    #[test]
+    fn receiver_lag_still_reports_error() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 2));
+            let out = historical_normalized_output(&s);
+            for i in 0..16 {
+                s.push(patch(i));
+            }
+            drop(s);
+            let rows = out.collect::<Vec<_>>().await;
+            assert!(rows.iter().any(Result::is_err), "loss must remain explicit");
+        })
+    }
+    #[test]
+    fn empty_replay_finishes_once_without_invented_final() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            let out = historical_normalized_output(&s);
+            s.push_finished();
+            drop(s);
+            let rows = out.collect::<Vec<_>>().await;
+            assert_eq!(count(&rows), 0);
+            assert_eq!(
+                rows.iter()
+                    .filter(|x| matches!(x, Ok(LogMsg::Finished)))
+                    .count(),
+                1
+            );
+        })
     }
 }

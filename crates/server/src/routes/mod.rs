@@ -19,6 +19,7 @@ pub mod execution_processes;
 pub mod frontend;
 pub mod health;
 pub mod host_relay;
+pub mod local_assignments;
 pub mod local_compat;
 pub mod oauth;
 pub mod organizations;

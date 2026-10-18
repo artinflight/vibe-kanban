@@ -1,3 +1,4 @@
+pub mod admission;
 pub mod analytics;
 pub mod approvals;
 pub mod auth;
@@ -13,6 +14,7 @@ pub mod filesystem;
 pub mod filesystem_watcher;
 pub mod notification;
 pub mod oauth_credentials;
+pub mod original_worker;
 pub mod pr_monitor;
 
 #[cfg(feature = "qa-mode")]
@@ -21,3 +23,4 @@ pub mod queued_message;
 pub mod remote_client;
 pub mod remote_sync;
 pub mod repo;
+pub mod report_review;

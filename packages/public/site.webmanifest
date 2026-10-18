@@ -1,6 +1,7 @@
 {
   "name": "Vibe Kanban",
   "short_name": "VK",
+  "start_url": "/",
   "icons": [
     {
       "src": "/favicon-vk-light.svg",

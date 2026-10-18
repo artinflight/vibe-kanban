@@ -16,7 +16,19 @@ function readStoredComposerState(): Record<
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
-    return parsed as Record<string, KanbanIssueComposerEntry | undefined>;
+    const restored: Record<string, KanbanIssueComposerEntry> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      const entry = value as KanbanIssueComposerEntry | undefined;
+      if (!entry?.initial || !entry.draft) continue;
+      restored[key] = {
+        ...entry,
+        id: crypto.randomUUID(),
+        isOpen: entry.isOpen !== false,
+        // Requests belong to the previous browser lifetime, not this hydration.
+        submissionPending: false,
+      };
+    }
+    return restored;
   } catch {
     return null;
   }

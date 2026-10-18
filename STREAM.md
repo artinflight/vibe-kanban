@@ -39,4 +39,6 @@ boundaries unchanged. Exact private associations and receipts stay private.
 
 ## Continuity
 
-Complete prior notes remain at both merge parents. Read STATE, HANDOFF and the linked contracts; private evidence stays local/B. Full Nightly restore is separate from this component release.
+Complete parent notes remain in Git. [Full stream history](STREAM_HISTORY_20261017.md)
+and [archive provenance](CONTINUITY_ARCHIVE.json) retain historical evidence.
+Private receipts stay local/B. Nightly whole-plan restore remains separate.

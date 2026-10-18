@@ -1,3 +1,30 @@
+# Sole retained capture active — October18 09:17UTC
+
+R9's actual terminal is collected below. Its diagnostic correction is tested;
+ONE subsequent capture retains and meters the same stream, producer702273/
+start41932456, unit vk-nightly-retained-capture-r1-20261018.service. ConfigSHA
+7fe5e7b8cbc17b6ef085a5b12f511176b9f179405f66edd27323110fbaaba997.
+Private cold-r1-retained-measured holds ADMISSION, phase, CURRENT_PHASE,
+supervisor, terminal and the supported collect-result.private.py. Passive
+collector exec session39031 awaits this same result; do not duplicate it.
+Actual start09:17:06UTC, original4h input-stage deadline13:17:06UTC. This is
+one CPU/High2GiB/Max3GiB/Swap0 with aggregate B writes paced8MiB/s. Disk09:02
+receipt has no capacity objection to this input stage; entire Nightly5GiB SSD
+cap and other-owner balances/floors remain. Initial admission caught6GiB vs
+required8GiB B reserve before producer launch; old admission is preserved in
+admission-r1. Actual config7fe uses8GiB, never the superseded d564 config.
+
+New independent restore helper passes six small tests, including actual chunked
+NightlyStore materialization, separate restored-file hashes, SQLite, hardlinks,
+literal symlinks, recorded xattrs/modes/owners/mtime, corruption and permission
+failure. Private full-proof worker is prepared ONLY, not admitted or launched.
+Existing VK-Candidate-20261009 registry still binds its ext4 VHD to B. UID1000
+has no passwd entry; use a fresh private parent on its existing /var/tmp ext4,
+not a new account, system setting, MCP OS/SSD tree or guessed home directory.
+Full capture, generation and independent restore remain unaccepted until actual
+terminal evidence. Closed private capture watcher does not establish cross-run
+operational journal continuity. No deployment, timer, cutover or original cleanup.
+
 # R9 terminal reconciled; bounded producer follow-up — October18 07:34UTC
 
 R9 is TERMINAL, not awaiting: producer exit1 at07:34:14UTC,8368.719s.

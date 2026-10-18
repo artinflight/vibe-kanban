@@ -1,3 +1,13 @@
+# Sole retained measurement active — October18 09:17UTC
+
+The original R9 terminal below remains failed/preserved. Corrected producer
+follow-up now meters and retains ONE same-stream archive for subsequent restore,
+with a fresh separate input-stage admission and unchanged TOTAL5GiB SSD cap.
+Exact current identity/config/collector are in HANDOFF. It is not a completed
+measurement, generation, full restore or operational adoption. New independent
+Linux recovery helper passes six targeted fixtures; current full workload proof
+still awaits the existing capture result. No deployment/schedule/cutover/cleanup.
+
 # Nightly R9 actual terminal collected — October18 07:34UTC
 
 R9 ended07:34:14UTC with producer exit1 after8368.719s. Supported collector

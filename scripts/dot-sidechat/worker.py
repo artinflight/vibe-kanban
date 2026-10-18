@@ -26,6 +26,11 @@ def main():
                                 reconcile_projects(store.db,vibe)
                     except Exception:
                         print('sidechat_project_scan_error; existing scopes retained',file=sys.stderr,flush=True)
+                    try:
+                        from dispatch_notes import recover_pending
+                        recover_pending()
+                    except Exception:
+                        print('dispatch_note_recovery_unavailable; receipts retained',file=sys.stderr,flush=True)
                     next_scan=time.monotonic()+5
                 try:
                     events.deliver_one(owner())

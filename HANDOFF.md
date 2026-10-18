@@ -1,29 +1,22 @@
 # Pickup
 
-Current bounded follow-up: [compact durable job outcomes](USAGE_JOB_OUTCOMES.md).
-PR266 is merged; preserve its archives/reuse and the newer release coordination.
+Current stream: [Dot dispatch notes](DOT_DISPATCH_NOTES.md), preserving
+[PR271's issue/error contract](DOT_WORKSPACE_ISSUE_CONTEXT.md).
 
-1. Read [STATE](STATE.md) for active protections and the topic map, then
-   [STREAM](STREAM.md) for this branch. Do not load historical archives by default.
-2. Read [USAGE_EFFICIENCY](USAGE_EFFICIENCY.md) for exact measured results,
-   commands and outstanding integration. Preserve owners' existing changes.
-3. Reuse the existing fingerprinted Preparation runner: prerequisites before
-   build, immutable source/tool/config/artifact identity, one cache owner,
-   and fresh volatile acceptance on every run. A cache hit never authorizes
-   deployment or skips current owner/data/queue/QA checks.
-4. Staging owns release and actual native queue start/drain readback. Nightly
-   workspace604d owns the sole B backup/package/schedule; its counted capacity
-   phase is not a backup. Neither is replaced by this efficiency branch.
-5. No restart, schedule activation, cleanup, privilege change or extra worker
-   is authorized here. Observe fresh resource admission and leave a user lane.
+Notes are driven by known accepted executions, scoped against native read-only
+execution/session/workspace/issue state and existing owner grants. The explicit
+internal note writer creates no owner message/event/reply authorization. Journal
+and chat uniqueness prevent duplicate notes; the existing publisher recovers note
+failures without sending another prompt. Bodies contain fixed safe purpose and
+execution ID only. Native/manual prompts do not enter this connector path.
 
-All former pickup text is preserved exactly in
-[HANDOFF history](HANDOFF_HISTORY_20261017.md). Locate relevant dated sections
-with `python3 scripts/continuity/pickup.py find QUERY` rather than reading the
-whole archive. The [archive manifest](CONTINUITY_ARCHIVE.json) records the
-original source commit, byte counts, hashes and every heading/line locator.
-Archives contain historical contradictory checkpoints: use current validated
-owner evidence, never a stale heading that says "current".
+34 connector tests, 66 sidechat tests and full private-adapter mocked acceptance
+pass, including the unchanged PR271 cases. Connector/publisher adoption from
+8c5b505df is live (00:18:09 UTC); cached registered status adds dispatch_notes
+with every original field unchanged. PR272 targets staging; full CI remains
+separate. Exact pins and private receipt provenance are in the protocol doc.
+No validation agent or live negative-start probe. Do not touch voice routing or the separate backend release.
 
-Current release coordination, newer Sidebar adoption and remaining private gates:
-[October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
+Backend queue/setup-to-execution correlation and backend-response loss without a
+captured execution ID remain unsupported; see exact limits in the protocol doc.
+Full previous pickup remains in [HANDOFF history](HANDOFF_HISTORY_20261017.md).

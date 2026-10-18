@@ -55,3 +55,9 @@ neutral derived dispatch author/body, including composer/history reply quotes.
 Raw history/IDs/hash/order remain unchanged; no management inference. Real target
 backfill/approval data is retained only in the private Staging handoff; tracked
 examples are synthetic. Staging still owns all packaging and activation.
+
+Priority before combined release: [Project chat routing and sizing](VK_PROJECT_DOT_CHAT_ROUTING.md)
+binds the sidebar to the displayed exact workspace, restores project chat on
+close/Back, retains per-session/destination drafts and pins in-flight sends.
+Drag/full-width/restore keep chat state mounted. Staging's existing coordination
+record was notified before packaging; no competing activation here.

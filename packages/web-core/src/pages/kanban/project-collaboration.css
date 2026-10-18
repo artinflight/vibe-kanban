@@ -38,7 +38,12 @@
   overflow: hidden;
 }
 .project-space-sidebar {
-  width: clamp(340px, 30vw, 440px);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
   flex-shrink: 0;
   border-left: 1px solid #8883;
   min-height: 0;
@@ -49,6 +54,9 @@
   z-index: 40;
 }
 .project-collaboration {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -75,6 +83,7 @@
   font-size: 16px;
 }
 .project-collaboration-heading span {
+  overflow-wrap: anywhere;
   opacity: 0.65;
   font-size: 12px;
 }
@@ -240,4 +249,29 @@
   .project-entry-editor select {
     font-size: 16px;
   }
+}
+
+.project-space-board[hidden] {
+  display: none;
+}
+.project-chat-size-tools {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  padding: 4px 12px;
+}
+.project-chat-size-tools button {
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid #8884;
+  border-radius: 6px;
+}
+.project-space-sidebar .dot-resize-handle {
+  width: 8px;
+}
+.project-space-mobile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
 }

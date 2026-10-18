@@ -35,8 +35,8 @@ continuation tip), not to the quoted context message.
 with older services. An uncertain targeted send stores its exact target/body/key
 using the existing pending-send mechanism, locks target editing, survives reload
 and reuses the identical request on retry. A capability downgrade cannot silently
-send that draft as ordinary chat. Unsent selection resets on navigation/reload;
-sent links and uncertain sends are durable. Canceling an unsent target remains
+send that draft as ordinary chat. Unsent drafts and reply selections are retained per paired session and exact
+destination across navigation/reload; sent links and uncertain sends are durable. Canceling an unsent target remains
 possible if the service capability changes.
 
 ## Validation

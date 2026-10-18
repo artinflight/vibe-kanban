@@ -72,13 +72,24 @@ export async function dotApi(
   return response.json();
 }
 
-export function DotSidechatLive({
-  workspaceId,
-  projectId,
-}: {
-  workspaceId?: string;
-  projectId?: string;
-}) {
+type ChatTarget = { workspaceId?: string; projectId?: string };
+type RetainedDraft = { body: string; reply: string | null };
+// Owner-session/context scoped fallback when tab storage is temporarily unavailable.
+const draftCache = new Map<string, RetainedDraft>();
+
+export function DotSidechatLive(props: ChatTarget) {
+  // A destination change gets a fresh lifetime, snapshot and pending-send state.
+  // Even callers without their own React key cannot reuse old-context responses.
+  const key =
+    props.workspaceId && !props.projectId
+      ? 'workspace:' + props.workspaceId
+      : props.projectId && !props.workspaceId
+        ? 'project:' + props.projectId
+        : 'none';
+  return <DotSidechatSession key={key} {...(key === 'none' ? {} : props)} />;
+}
+
+function DotSidechatSession({ workspaceId, projectId }: ChatTarget) {
   const contextId = projectId ?? workspaceId;
   const targetKey = projectId ? 'project' : 'workspace';
   const target = useMemo(
@@ -96,6 +107,7 @@ export function DotSidechatLive({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pending = useRef<Pending | null>(null);
+  const retainedDraft = useRef<RetainedDraft>({ body: '', reply: null });
   // Protect a manual choice from older visibility acknowledgements and snapshots.
   const manualUnread = useRef(new Set<string>());
   const readStateRevision = useRef(0);
@@ -110,6 +122,29 @@ export function DotSidechatLive({
         (projectId ? 'project:' : '') +
         contextId
       : null;
+
+  const draftKey =
+    storageKey?.replace('vibe-dot-pending:', 'vibe-dot-draft:') ?? null;
+  function retainDraft(value: RetainedDraft) {
+    retainedDraft.current = value;
+    setDraft(value.body);
+    setReplyTargetId(value.reply);
+    if (!draftKey) return;
+    draftCache.set(draftKey, value);
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify(value));
+    } catch {
+      setError(
+        'Draft retained in this tab, but tab storage is unavailable for reload recovery.'
+      );
+    }
+  }
+  function clearRetainedDraft() {
+    retainedDraft.current = { body: '', reply: null };
+    if (!draftKey) return;
+    draftCache.delete(draftKey);
+    sessionStorage.removeItem(draftKey);
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -132,8 +167,22 @@ export function DotSidechatLive({
     pending.current = null;
     setDraft('');
     setReplyTargetId(null);
-    if (!storageKey) return;
+    retainedDraft.current = { body: '', reply: null };
+    if (!storageKey || !draftKey) return;
     try {
+      const cached = draftCache.get(draftKey);
+      const savedDraft = cached ? null : sessionStorage.getItem(draftKey);
+      const value: RetainedDraft | null =
+        cached ?? (savedDraft ? JSON.parse(savedDraft) : null);
+      if (
+        value &&
+        typeof value.body === 'string' &&
+        (value.reply === null || typeof value.reply === 'string')
+      ) {
+        retainedDraft.current = value;
+        setDraft(value.body);
+        setReplyTargetId(value.reply);
+      }
       const saved = sessionStorage.getItem(storageKey);
       if (saved) {
         const value = JSON.parse(saved) as Pending;
@@ -148,6 +197,10 @@ export function DotSidechatLive({
               value.in_reply_to.length > 0))
         ) {
           pending.current = value;
+          retainedDraft.current = {
+            body: value.body,
+            reply: value.in_reply_to ?? null,
+          };
           setDraft(value.body);
           setReplyTargetId(value.in_reply_to ?? null);
         }
@@ -157,7 +210,7 @@ export function DotSidechatLive({
         'This browser cannot retain an uncertain send across reloads. Enable tab storage before sending.'
       );
     }
-  }, [storageKey, workspaceId, projectId]);
+  }, [storageKey, draftKey, workspaceId, projectId]);
 
   const refresh = useCallback(async () => {
     if (!session || !contextId || refreshing.current) return;
@@ -319,7 +372,15 @@ export function DotSidechatLive({
   }
 
   async function send() {
-    if (!session || !contextId || !storageKey || busy.current || !draft.trim())
+    if (
+      !session ||
+      !contextId ||
+      !storageKey ||
+      busy.current ||
+      lifetime.current.signal.aborted ||
+      !draft.trim() ||
+      loading
+    )
       return;
     busy.current = true;
     setSending(true);
@@ -342,6 +403,7 @@ export function DotSidechatLive({
       pending.current = outgoing;
       await dotApi('send', lifetime.current.signal, outgoing, session.csrf);
       sessionStorage.removeItem(storageKey);
+      clearRetainedDraft();
       pending.current = null;
       setDraft('');
       setReplyTargetId(null);
@@ -366,6 +428,15 @@ export function DotSidechatLive({
       lifetime.current.abort();
       lifetime.current = new AbortController();
       if (storageKey) sessionStorage.removeItem(storageKey);
+      if (session) {
+        const prefix = 'vibe-dot-draft:' + session.session_id + ':';
+        for (const key of [...draftCache.keys()])
+          if (key.startsWith(prefix)) draftCache.delete(key);
+        for (let index = sessionStorage.length - 1; index >= 0; index--) {
+          const key = sessionStorage.key(index);
+          if (key?.startsWith(prefix)) sessionStorage.removeItem(key);
+        }
+      }
       pending.current = null;
       setDraft('');
       setReplyTargetId(null);
@@ -438,7 +509,8 @@ export function DotSidechatLive({
             snapshot?.capabilities?.manual_unread ? changeReadState : undefined
           }
           onReplyTarget={(message) => {
-            if (!busy.current && !pending.current) setReplyTargetId(message);
+            if (!busy.current && !pending.current)
+              retainDraft({ ...retainedDraft.current, reply: message });
           }}
           replyEnabled={snapshot?.capabilities?.message_replies ?? false}
           replyTarget={(() => {
@@ -471,7 +543,7 @@ export function DotSidechatLive({
           error={error}
           draft={draft}
           draftLocked={pending.current !== null}
-          onDraft={setDraft}
+          onDraft={(body) => retainDraft({ ...retainedDraft.current, body })}
           onSend={() => void send()}
           onRefresh={() => void refresh()}
         />

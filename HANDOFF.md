@@ -29,13 +29,25 @@ backend identity, real resource/capacity/access protections still fail closed.
 Such a transition explicitly leaves live-release adoption unready. This keeps
 Staging's authorized frontend publication independent of long backup verification.
 
-Current gateway is the collapsible frontend, owner manifest/activation verified;
-its2389 immutable files/670179397bytes are added to a preserved98-root/10988-pin
-plan. This is a small known-package binding update, no repeat source census.
-The new cold-r2-frontend-epoch-measured preparation is NOT launched/admitted yet.
-Same5GiB TOTAL allocation, all previous recovery data and other-owner balances
-remain. Original Disk coordination request is queued by actual execution capacity;
-do not resend it or treat the queue as backup acceptance. No new agent/hold.
+R2 initially bound the collapsible frontend:2389 immutable files/670179397bytes,
+within the preserved98-root/10988-pin plan. It is running; do not relaunch it.
+Staging published its newer timestamp frontend at11:12:15UTC without a backend
+restart. The existing R2 guard records captured index227c28b3 -> observed09659f46
+as a healthy frontend epoch transition, with live-release adoption explicitly
+false. R2 keeps its original roots/pins/config; all retained-r1 inputs remain.
+The owner publication and2442-file complete-manifest SHA1cb792b9 are recorded in
+TIMESTAMP_FRONTEND_BINDING_HANDOFF.private.json beside R2; no new payload scan.
+Before adopting a future current baseline, independently bind that exact current
+manifest/root closure while preserving captured material and journal requirements.
+
+Original Disk owner completed its10:58 metadata reconciliation: the same TOTAL
+5GiB task cap fits, with1,072,455,680B above all remaining SSD allowances/floor
+at that observation. B240,527,106,048B free includes all retained attempts already.
+Its48GiB input allowance is not full generation+restore coexistence acceptance.
+Fresh existing guards continue; no exclusive reservation, Staging hold or cap reset.
+Independent-restore-preparation/captured-epoch-r2 is versioned preparation only;
+four exact controller probe checks pass, real B-backed WSL Python3.12.3 supports
+the verifier at uid/gid1000. No full-proof admission/launch or acceptance yet.
 
 # Retained capture r1 actual terminal — October18 10:34UTC
 

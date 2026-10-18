@@ -1,3 +1,20 @@
+# October18 retained-r2 and live frontend coordination
+
+Retained-r2 is the sole active capture, PID1889756/start42565325, started
+11:02:35UTC with bounded deadline19:02:35UTC. Its supported passive collector
+persists the actual terminal result; neither producer absence nor a healthy
+snapshot establishes completion. Same5GiB TOTAL task cap and all old recovery
+remain. Current proof is for its captured98-root/10988-pin epoch only.
+Staging's timestamp frontend went live11:12:15UTC; R2 records the healthy change
+without losing captured material and explicitly blocks current-live adoption.
+A future baseline must bind the new exact manifest/root closure and genuine
+continuous journal. No repeat capture or payload scan was started for this notice.
+Disk's10:58 receipt confirms the existing input-stage allocation fits; simultaneous
+store+independent restore still awaits actual complete measurement and fresh
+capacity reconciliation. Versioned restore preparation passed four probe checks;
+real B-backed WSL Python3.12.3 compatibility is verified. These are not a restore.
+No Nightly deployment, schedule activation, cutover or original retirement.
+
 # October18 actual retained-r1 result and count-policy correction
 
 Retained-r1 ended10:34:18UTC by its count-only7 cutoff when valid inventory

@@ -380,7 +380,13 @@ class RegisteredWorkspace:
                 compressor=self.producer(['zstd','-T1','-3','-c'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
                 def produce():
                     try:source.produce(compressor.stdin)
-                    except BaseException as error:errors.append(error);compressor.kill()
+                    except BaseException as error:
+                        # Close stdin and drain already produced bytes first.
+                        # A late journal rejection must not truncate zstd's
+                        # final block too. The original error still prevents
+                        # sealing/publication; existing outer guards and the
+                        # finally block retain ownership of all children.
+                        errors.append(error)
                     finally:
                         try:compressor.stdin.close()
                         except OSError:pass

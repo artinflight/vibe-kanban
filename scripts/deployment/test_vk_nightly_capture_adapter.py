@@ -9,6 +9,7 @@ import tempfile
 import subprocess
 import sys
 import socket
+import tarfile
 import threading
 from types import SimpleNamespace
 import unittest
@@ -325,6 +326,38 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(sealed.read_bytes(),b'x'*64)
         self.assertEqual(self.resident.events,
             [('allocate',sealed.name),('seal',sealed.name),('allocate',source.name)])
+    def test_late_journal_failure_finishes_compressed_bytes_without_sealing(self):
+        error=ValueError('Backup journal coverage is lost or does not match the plan')
+        payload=os.urandom(256*1024)
+        def produce(stream):
+            with tarfile.open(fileobj=stream,mode='w|') as archive:
+                member=tarfile.TarInfo('retained.txt');member.size=len(payload)
+                archive.addfile(member,io.BytesIO(payload))
+            raise error
+        source=StreamingArchive(self.destination,'rejected.tar.zst',produce)
+        with self.assertRaisesRegex(ValueError,'journal coverage') as caught:self.workspace.mirror(source)
+        self.assertIs(caught.exception,error)
+        target=self.destination/source.name
+        subprocess.run(['zstd','-t',str(target)],capture_output=True,check=True)
+        decoded=subprocess.run(['zstd','-dc',str(target)],capture_output=True,check=True).stdout
+        with tarfile.open(fileobj=io.BytesIO(decoded)) as archive:
+            self.assertEqual(archive.extractfile('retained.txt').read(),payload)
+        self.assertNotIn(source.name,self.workspace.sealed)
+        self.assertIsNone(source.sha256);self.assertIsNone(source.bytes)
+        self.assertEqual(self.resident.events,[('allocate',source.name)])
+    def test_mid_member_failure_preserves_replay_bytes_but_never_accepts_archive(self):
+        def produce(stream):
+            member=tarfile.TarInfo('incomplete.txt');member.size=1024*1024
+            stream.write(member.tobuf());stream.write(b'partial')
+            raise RuntimeError('source member failed')
+        source=StreamingArchive(self.destination,'incomplete.tar.zst',produce)
+        with self.assertRaisesRegex(RuntimeError,'source member failed'):self.workspace.mirror(source)
+        decoded=subprocess.run(['zstd','-dc',str(self.destination/source.name)],capture_output=True,check=True).stdout
+        with self.assertRaises(tarfile.ReadError):
+            with tarfile.open(fileobj=io.BytesIO(decoded)) as archive:
+                archive.extractfile('incomplete.txt').read()
+        self.assertNotIn(source.name,self.workspace.sealed)
+        self.assertIsNone(source.sha256)
     def test_compact_proof_stream_has_shared_capacity_bound(self):
         value={'proof':{'entries':{('path-%04d'%i):{'bytes':i,'sha256':'a'*64} for i in range(100)}}}
         path=self.destination/'nightly-proof.json'

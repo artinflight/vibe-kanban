@@ -1,3 +1,38 @@
+# October18 3:44p.m. EDT — actual retained-source terminal collected
+
+The sole retained-input producer reached child exit1 at3:44p.m. EDT, before its
+agent-selected6:21p.m. source deadline. The durable collector saved the actual
+failure and withheld complete-input/restore acceptance. Both units are terminal;
+MCP and B job leases are available. Do not restart that producer or recapture the
+111 original sealed SQL images. All Nightly recovery inputs remain preserved.
+
+Final source validation rejected journal continuity. Its detailed private watcher
+errors were not persisted, so overflow or another exact watcher cause is unproven.
+The warning log separately records7426 disappeared paths. Metadata-only local
+Git checks resolve6985 of7053 disappeared loose-object IDs;68 do not currently
+resolve. This does not establish which objects exist in the retained archive.
+The35,497,705,472-byte archive is unsealed. Native read-only framing inspection
+finds its final compressed block truncated by63017 bytes, because the error path
+killed compression before completion. No deadline, memory or capacity abort caused
+this terminal result; no full measured backup or independent restore passed.
+
+The source now drains produced compression bytes before relaying the original
+capture error, without sealing/publishing a failed input. The Nightly wrapper
+retains bounded watcher diagnostics on errors without cloning its complete change
+table; the reviewed base and external reader contract remain unchanged.90 affected
+journal/capture/baseline regressions and ops governance pass. Rust formatting
+passes; aggregate formatting still stops at missing frontend Prettier.
+
+The versioned compressed/deduplicated B-meter/full-restore preparation and its
+native small restore fixture remain sealed and unlaunched. A separate tiny fixture
+proves read-only forensic decoding of complete blocks from a truncated stream;
+it is explicitly not a repaired full archive or journal. Existing shared private
+receipts contain the actual terminal, exact block boundary and retained identities.
+Next recovery must inventory/hash valid retained members and reconcile required
+missing source evidence before complete-input/full-restore admission. Preserve the
+failed originals; do not fabricate a ready journal, suppress missing-path warnings,
+concatenate failed streams, repeat all SQL capture, deploy, schedule or retire data.
+
 # October18 — retained recovery path boundary corrected and verified
 
 The sole B-only recovery reached its actual terminal with a path-translation

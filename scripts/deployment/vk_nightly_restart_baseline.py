@@ -180,6 +180,30 @@ def capture_journal(plan, reader=None):
             reader = owned.report
         check_journal(reader(0), plan)
         yield reader
+    except BaseException as error:
+        if owned is not None:
+            try:
+                # Do not materialize another host-scale changed/events report
+                # while handling a capture failure or memory exception.
+                with owned.lock:
+                    owned.read()
+                    error.nightly_journal_diagnostic = {
+                        'ready': owned.ready and not owned.errors,
+                        'instance': owned.instance,
+                        'sequence': owned.seq,
+                        'scope_sha256': identity(owned.plan),
+                        'expected_scope_sha256': identity(scope(plan)),
+                        'watches': len(owned.watches),
+                        'changed_count': len(owned.changed),
+                        'error_count': len(owned.errors),
+                        'errors': [str(item)[:1024] for item in owned.errors[:32]],
+                        'errors_truncated': len(owned.errors) > 32,
+                    }
+                error.add_note('Private journal at capture failure: '
+                               + json.dumps(error.nightly_journal_diagnostic, sort_keys=True))
+            except Exception as secondary:
+                error.add_note('Private journal diagnostic unavailable: ' + type(secondary).__name__)
+        raise
     finally:
         if owned is not None:
             stop.set()

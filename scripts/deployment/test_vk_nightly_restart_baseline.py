@@ -177,6 +177,48 @@ class BaselineTests(unittest.TestCase):
             with self.assertRaises(ValueError), capture_journal(self.plan, lambda _: {'ready': False}):pass
             constructor.assert_not_called()
 
+    def test_private_journal_failure_evidence_survives_watcher_close(self):
+        from vk_change_journal import OVERFLOW
+        from vk_rolling_backup import check_journal
+        source=self.base/'diagnostic-source';source.mkdir();plan={'sources':[str(source)]}
+        with self.assertRaisesRegex(ValueError,'coverage') as caught:
+            with capture_journal(plan) as report:
+                owned=report.__self__;owned.event(-1,OVERFLOW,'')
+                check_journal(report(0),plan)
+        diagnostic=caught.exception.nightly_journal_diagnostic
+        self.assertFalse(diagnostic['ready'])
+        self.assertEqual(diagnostic['instance'],owned.instance)
+        self.assertEqual(diagnostic['error_count'],1)
+        self.assertIn(str(OVERFLOW),diagnostic['errors'][0])
+        with self.assertRaises(OSError):os.fstat(owned.fd)
+
+    def test_private_journal_diagnostic_is_bounded_and_omits_changed_names(self):
+        source=self.base/'bounded-diagnostic';source.mkdir();plan={'sources':[str(source)]}
+        with self.assertRaisesRegex(RuntimeError,'original capture failure') as caught:
+            with capture_journal(plan) as report:
+                owned=report.__self__
+                with owned.lock:
+                    owned.errors=[{'watch_removed':'x'*2048}]*100
+                    owned.changed={'private-user-file':1}
+                raise RuntimeError('original capture failure')
+        diagnostic=caught.exception.nightly_journal_diagnostic
+        self.assertEqual(diagnostic['error_count'],100)
+        self.assertEqual(len(diagnostic['errors']),32)
+        self.assertLessEqual(max(map(len,diagnostic['errors'])),1024)
+        self.assertTrue(diagnostic['errors_truncated'])
+        self.assertEqual(diagnostic['changed_count'],1)
+        self.assertNotIn('private-user-file',''.join(caught.exception.__notes__))
+
+    def test_private_journal_diagnostic_failure_preserves_original_error(self):
+        from vk_change_journal import Journal
+        source=self.base/'failed-diagnostic';source.mkdir();plan={'sources':[str(source)]}
+        with self.assertRaisesRegex(RuntimeError,'original capture failure') as caught:
+            with capture_journal(plan):
+                reader=patch.object(Journal,'read',side_effect=OSError('reader failed'))
+                reader.start();self.addCleanup(reader.stop)
+                raise RuntimeError('original capture failure')
+        self.assertIn('diagnostic unavailable: OSError',''.join(caught.exception.__notes__))
+
     def test_private_watcher_drains_during_long_capture_without_reports(self):
         source=self.base/'busy-source';source.mkdir();target=source/'fixture'
         plan={'sources':[str(source)],'excluded_rebuildable_directories':[]}

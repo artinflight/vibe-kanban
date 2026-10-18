@@ -151,11 +151,11 @@ class ManagementTests(unittest.TestCase):
         self.assertEqual(1, len(self.managed()))
         self.assertEqual(before, vibe.read_bytes(), 'Authoritative Vibe database stays read-only')
 
-    def test_only_verified_t89_backfill_is_provided_not_automatically_applied(self):
-        target = json.loads((Path(__file__).parent / 'management-backfill-t89.json').read_text())
-        self.assertEqual('811828af-f58f-48b3-ab51-0d594a1c4f4e', target['workspace'])
-        self.assertEqual('c34993a6-c342-44be-873d-95ec42bb7a05', target['issue'])
-        self.assertEqual('48c03c77-4207-48c1-86ed-686262c1116a', target['project'])
+    def test_tracked_management_example_is_synthetic_and_not_automatically_applied(self):
+        target = json.loads((Path(__file__).parent / 'management-example.json').read_text())
+        self.assertEqual('33333333-3333-4333-8333-333333333333', target['workspace'])
+        self.assertEqual('22222222-2222-4222-8222-222222222222', target['issue'])
+        self.assertEqual('11111111-1111-4111-8111-111111111111', target['project'])
         self.assertEqual([], self.managed())
 
 

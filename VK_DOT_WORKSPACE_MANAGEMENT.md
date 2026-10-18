@@ -39,23 +39,23 @@ issue workspace rows render the independent label on desktop and mobile.
 
 ## Bounded T89 backfill and release ownership
 
-The only supplied backfill is [management-backfill-t89.json](scripts/dot-sidechat/management-backfill-t89.json):
-workspace `811828af-f58f-48b3-ab51-0d594a1c4f4e`, issue
-`c34993a6-c342-44be-873d-95ec42bb7a05`, project
-`48c03c77-4207-48c1-86ed-686262c1116a`. It is not automatically imported. T18
-children/subordinates and every other unknown workspace remain neutral.
+Only the verified owner-authorized target is eligible for backfill. Its exact
+operational IDs and approval reference are retained in the existing private
+Staging handoff/local evidence, never a public fixture. T18 children/subordinates
+and every other unknown workspace remain neutral. The tracked
+[management-example.json](scripts/dot-sidechat/management-example.json) is synthetic,
+not an authorization or real backfill. Nothing is automatically imported.
 
-Staging applies that exact association using the existing scoped owner identity
-from its private records after fresh mapping/ownership and backup checks:
+Staging uses its existing private backfill and scoped owner identity after fresh
+mapping/ownership and backup checks. The CLI shape below is illustrative only:
 
 ```sh
 python3 -B <combined-dot-release>/workspace_management.py \
   --data <existing-private-sidechat-db> --vibe-db <current-vibe-db> \
   --owner <existing-scoped-owner> \
-  --project 48c03c77-4207-48c1-86ed-686262c1116a \
-  --issue c34993a6-c342-44be-873d-95ec42bb7a05 \
-  --workspace 811828af-f58f-48b3-ab51-0d594a1c4f4e \
-  --state managed --approval-ref 'Owner confirmed T89; T63 request 2026-10-18' --apply
+  --project <verified-project> --issue <verified-issue> \
+  --workspace <verified-workspace> --state managed \
+  --approval-ref <private-owner-approval-reference> --apply
 ```
 
 No new authentication is needed. If the existing exact owner scope is absent,

@@ -109,10 +109,11 @@ export function transport(s) {
           },
         ],
         receipts: {},
-        through: 2,
+        through: s.messages?.at(-1)?.seq ?? 2,
         next_after: null,
         capabilities: {
           notifications: true,
+          message_replies: s.supportsReplies === true,
           manual_unread: s.supportsManualUnread !== false,
         },
       };

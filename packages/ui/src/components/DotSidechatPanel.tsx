@@ -21,7 +21,16 @@ export interface SidechatMessage {
   manual_unread?: boolean;
   in_reply_to?: string;
   reply_reference?: SidechatReplyReference;
-  dispatch_note?: { workspace_id: string; execution_id: string };
+  dispatch_note?: {
+    workspace_id: string;
+    execution_id: string;
+    presentation?: {
+      author_label: string;
+      body: string;
+      derived: boolean;
+      stored_message_unchanged: boolean;
+    };
+  };
   attention?: { kind: 'question' | 'action'; resolved: boolean } | null;
 }
 
@@ -91,7 +100,37 @@ function MessageTimestamp({ created }: { created: number }) {
   );
 }
 
+// Preserve's exact-binding read adapter supplies this view without rewriting
+// stored role/body/hash. Dispatch metadata never establishes managed ownership.
+function dispatchPresentation(message: SidechatMessage) {
+  const view = message.dispatch_note?.presentation;
+  return message.role === 'dot' &&
+    view?.derived === true &&
+    view.stored_message_unchanged === true &&
+    typeof view.author_label === 'string' &&
+    typeof view.body === 'string'
+    ? view
+    : undefined;
+}
+
 export function DotSidechatPanel(props: DotSidechatPanelProps) {
+  const presented = new Map(
+    props.messages.map((message) => [message.id, dispatchPresentation(message)])
+  );
+  const quotePresentation = (reference: SidechatReplyReference) => {
+    const view = !reference.unavailable
+      ? presented.get(reference.id)
+      : undefined;
+    return {
+      author:
+        view?.author_label ?? (reference.role === 'owner' ? 'you' : 'Dot'),
+      excerpt: view ? view.body.slice(0, 1000) : reference.excerpt,
+      truncated: view ? view.body.length > 1000 : reference.truncated,
+    };
+  };
+  const replyView = props.replyTarget
+    ? quotePresentation(props.replyTarget)
+    : null;
   const history = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
   const attentionNavigationThread = useRef<string | null>(null);
@@ -385,11 +424,12 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           >
             <div className="dot-byline">
               <strong>
-                {message.role === 'owner'
-                  ? 'You'
-                  : props.live
-                    ? 'Dot'
-                    : 'Dot · fixture'}
+                {presented.get(message.id)?.author_label ??
+                  (message.role === 'owner'
+                    ? 'You'
+                    : props.live
+                      ? 'Dot'
+                      : 'Dot · fixture')}
               </strong>
               <MessageTimestamp created={message.created} />
               {props.onReplyTarget && props.replyEnabled && (
@@ -434,18 +474,20 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
                       }
                     >
                       Reply to{' '}
-                      {message.reply_reference.role === 'owner' ? 'you' : 'Dot'}{' '}
-                      · #{message.reply_reference.seq}
+                      {quotePresentation(message.reply_reference).author} · #
+                      {message.reply_reference.seq}
                     </a>
                     <p>
-                      {message.reply_reference.excerpt}
-                      {message.reply_reference.truncated ? '…' : ''}
+                      {quotePresentation(message.reply_reference).excerpt}
+                      {quotePresentation(message.reply_reference).truncated
+                        ? '…'
+                        : ''}
                     </p>
                   </>
                 )}
               </blockquote>
             )}
-            <p>{message.body}</p>
+            <p>{presented.get(message.id)?.body ?? message.body}</p>
             {message.role === 'dot' &&
               props.live &&
               props.notificationsEnabled && (
@@ -563,13 +605,12 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           >
             <div>
               <strong>
-                Replying to {props.replyTarget.role === 'owner' ? 'you' : 'Dot'}{' '}
-                · #{props.replyTarget.seq}
+                Replying to {replyView?.author} · #{props.replyTarget.seq}
               </strong>
               <MessageTimestamp created={props.replyTarget.created} />
               <p>
-                {props.replyTarget.excerpt}
-                {props.replyTarget.truncated ? '…' : ''}
+                {replyView?.excerpt}
+                {replyView?.truncated ? '…' : ''}
               </p>
             </div>
             <button

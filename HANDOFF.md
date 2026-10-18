@@ -49,3 +49,9 @@ Newest owner request: [persistent Dot management](VK_DOT_WORKSPACE_MANAGEMENT.md
 uses an explicit local association, never dispatch/read/count inference. Only
 verified T89 is provided for backfill; nothing is enabled live here. Staging owns
 combined Reply+Jump+management release; Preserve retains provenance/ack contracts.
+
+Staging compatibility follow-up: Reply/Jump panel now consumes Preserve174668ed7's
+neutral derived dispatch author/body, including composer/history reply quotes.
+Raw history/IDs/hash/order remain unchanged; no management inference. Real target
+backfill/approval data is retained only in the private Staging handoff; tracked
+examples are synthetic. Staging still owns all packaging and activation.

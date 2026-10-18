@@ -101,3 +101,23 @@ isolated-owner Dot roundtrip, including event target and readback reference,
 without acknowledging real notes or manufacturing a real user dispatch. Refresh
 existing connector metadata only if its cached event schema requires it; verify
 actual delivery rather than assuming advertisement is sufficient.
+
+## Derived dispatch presentation compatibility
+
+The panel consumes Preserve's `dispatch_note.presentation` from source174668ed7
+([contract and final handoff](https://github.com/artinflight/vibe-kanban/blob/174668ed7/DOT_DISPATCH_ATTRIBUTION.md)).
+It renders the supplied neutral author/body as plain text only for a Dot dispatch
+with explicit derived/unchanged-storage markers. Message IDs, stored role/body/hash,
+sequence, flags and send targets remain unchanged. Genuine messages retain their
+ordinary author/content; no text matching or management inference is introduced.
+
+Both composer targets and historical reply quotes resolve derived presentation
+from the exact referenced message in the complete loaded snapshot. Stored raw
+quote excerpts are not shown in place of the available derived view. Unavailable
+cross-workspace references keep their existing privacy label and reveal no text.
+The server read helper must be included through Preserve's existing shared-source
+composition; this UI change adds no Python, API, access or reload requirement.
+Staging retains the one combined activation. Focused actual-container DOM checks
+cover issue/project at390/1440, selection/cancel/send target, history quotes,
+genuine messages, privacy and unchanged raw data, with synthetic fixture traffic.
+No browser worker, production build, deployment or runtime change is performed.

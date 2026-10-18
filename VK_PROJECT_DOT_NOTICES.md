@@ -1,8 +1,9 @@
 # Project unread notices in Workspaces
 
 Positive project Dot Chat unread summaries appear once per project in Workspaces
-Needs Attention. Blue notices identify `Project · Dot Chat`, the project name and
-unread count, distinct from individual purple workspace badges. Mobile shows them
+Needs Attention. Compact unboxed rows identify the project name and
+`Project · Dot Chat`, with a small blue unread badge distinct from purple workspace
+badges. The row itself has no blue fill or outline. Mobile shows them
 only in Attention; desktop supports grouped and flat layouts. The Attention tab
 counts notice destinations, not the number of messages. Project notices are not
 workspace rows and are independent of workspace pagination or an empty workspace
@@ -33,7 +34,7 @@ The actual sidebar, project layout, chat and notifications hook are exercised wi
 synthetic API data at390/1440: positive/updated/zero counts, distinct project labels,
 no workspace fanout, grouped/flat/empty-workspace cases, keyboard activation, exact
 project scope despite workspace selection, draft/reply recovery and unchanged
-attention/manual-unread data. Browser checks include color distinction,84px notice
+attention/manual-unread data. Browser checks include color confined to the badge, compact two-line notice
 height and no horizontal overflow. No real conversations, authentication or live
 services are modified; physical-phone and served-live acceptance are not claimed.
 
@@ -46,16 +47,15 @@ No production build or Rust workspace tests were run for this frontend addition.
 
 ## Coordinated release
 
-This is a frontend-only addition atop0107f77b's routing/resize fixes and the existing
-Reply/Jump/management/neutral dispatch features. No new Python/API/schema/access
-requirement. Staging PR276 was notified before final source publication; Staging
-owns the single hosted frontend build and activation. Reconcile both newer inputs
-with its held source5fc7899be and retain live Eastern timestamps/collapsible UI,
-CU/Stop, private ownership backfill and latest-data rollback contracts.
+This visual correction is frontend-only and starts from the current combined
+live source, retaining routing/resize, Reply/Jump, management, neutral dispatch,
+selective acknowledgements, Eastern timestamps, collapsible UI and CU/Stop.
+No new Python/API/schema/access requirement. Staging's existing PR276 record was
+notified before preparation; no competing combined activation or service restart.
 
-The read-only prepared receipt says the old-runtime three-row R2 boundary was not
-yet consumed. This workspace has not verified a later boundary and does not alter,
-replace or restart R2, build a competing package or activate any service/pointer.
-Staging must use the actual boundary and its fresh live/backup gates; no new owner
-numeric permission is needed. Notify the owner once the coordinated release is
-actually verified live, not when source alone is ready.
+Staging subsequently verified the combined source366cfd243 live at09:35 EDT.
+The owner's visual correction is based on that exact current entry and changes
+only this presentation component. A source-derived component drop-in preserves
+all other compiled bytes and incumbent assets, with the previous immutable root
+retained for rollback. Fresh drift checks and actual served390/1440 acceptance
+are required; no Python, service, database or running-agent change is needed.

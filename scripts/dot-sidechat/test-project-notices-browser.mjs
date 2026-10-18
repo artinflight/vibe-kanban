@@ -98,11 +98,21 @@ try {
       await notice.waitFor();
       assert.match(
         await notice.textContent(),
-        /Project · Dot Chat.*Synthetic project Alpha.*3 unread/
+        /Synthetic project Alpha.*Project · Dot Chat.*3 unread/
       );
       const visual = await notice.evaluate((n) => ({
         height: n.getBoundingClientRect().height,
-        border: getComputedStyle(n).borderLeftColor,
+        padding: getComputedStyle(n).padding,
+        lines: [...n.children].map(c=>({height:c.getBoundingClientRect().height,font:getComputedStyle(c).fontSize,lineHeight:getComputedStyle(c).lineHeight})),
+        rowBorder: getComputedStyle(n).borderLeftWidth,
+        rowBackground: getComputedStyle(n).backgroundColor,
+        badgeColor: getComputedStyle(
+          n.querySelector('[data-project-dot-badge]')
+        ).color,
+        badgeWidth: n
+          .querySelector('[data-project-dot-badge]')
+          .getBoundingClientRect().width,
+        rowWidth: n.getBoundingClientRect().width,
         badge: getComputedStyle(
           document.querySelector(
             '[data-workspace-pane] [data-dot-indicators] [aria-label]'
@@ -110,8 +120,20 @@ try {
         ).color,
         overflow: document.documentElement.scrollWidth > innerWidth,
       }));
+      console.log('Project notice geometry', width, JSON.stringify(visual));
+      await page.screenshot({ path: output + `/project-notices-${width}.png` });
       assert.ok(visual.height >= 44);
-      assert.notEqual(visual.border, visual.badge);
+      assert.ok(
+        visual.height <= 52,
+        'Project notice stays a compact two-line row'
+      );
+      assert.equal(visual.rowBorder, '0px');
+      assert.equal(visual.rowBackground, 'rgba(0, 0, 0, 0)');
+      assert.ok(
+        visual.badgeWidth < visual.rowWidth / 3,
+        'Color is confined to a small badge'
+      );
+      assert.notEqual(visual.badgeColor, visual.badge);
       assert.equal(visual.overflow, false);
       await page.screenshot({ path: output + `/project-notices-${width}.png` });
       await notice.focus();

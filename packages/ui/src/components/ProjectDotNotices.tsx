@@ -26,19 +26,28 @@ export function ProjectDotNotices({
           data-project-dot-notice={notice.projectId}
           aria-label={`${notice.name}: ${notice.unreadCount} unread project Dot Chat messages`}
           onClick={() => onOpen(notice.projectId)}
-          className="flex min-h-11 w-full min-w-0 flex-col items-start gap-1 rounded border px-base py-half text-left text-normal focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+          className="flex w-full min-w-0 flex-col text-left px-base py-half text-normal hover:bg-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
           style={{
-            borderColor: 'hsl(var(--info, 200 75% 45%) / 0.7)',
-            backgroundColor: 'hsl(var(--info, 200 75% 45%) / 0.12)',
-            borderLeftWidth: 3,
+            minHeight: 44,
             overflowWrap: 'anywhere',
           }}
         >
-          <span className="text-sm font-medium">Project · Dot Chat</span>
-          <span className="w-full min-w-0 text-base font-medium">
+          <span className="w-full min-w-0 text-sm font-medium">
             {notice.name}
           </span>
-          <span className="text-sm">{notice.unreadCount} unread</span>
+          <span className="flex items-center gap-1 text-xs text-low">
+            <span>Project · Dot Chat</span>
+            <span
+              data-project-dot-badge
+              className="rounded px-1.5 py-0.5 text-xs font-medium"
+              style={{
+                color: 'hsl(var(--info, 200 75% 45%))',
+                backgroundColor: 'hsl(var(--info, 200 75% 45%) / 0.12)',
+              }}
+            >
+              {notice.unreadCount} unread
+            </span>
+          </span>
         </button>
       ))}
     </div>

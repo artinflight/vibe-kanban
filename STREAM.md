@@ -6,7 +6,7 @@ acknowledgement and neutral caller attribution. Preserve the published Eastern
 timestamps, collapsible issues, current private continuation support and CU/Stop.
 
 The final expanded scope also includes destination-safe project/workspace routing,
-sidebar drag/full-width, and blue project-scoped unread notices specifically in
+sidebar drag/full-width and compact project unread rows with a small blue badge in
 Workspaces Needs Attention. Preserve destination drafts, flags and sibling isolation.
 
 ## Source and boundaries

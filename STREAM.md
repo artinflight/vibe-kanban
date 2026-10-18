@@ -53,3 +53,9 @@ is preserved; Staging's timestamp release is now verified live. The derived
 handoff binds its current frontend/rollback pins without editing prior inputs or
 starting a capture. Staging owns the next combined release; Preserve execution88a68ab1
 owns exact-message acknowledgements. No activation or shared API changes here.
+
+Newest source follow-up: [project unread notices](VK_PROJECT_DOT_NOTICES.md) in
+Workspaces Needs Attention. Frontend-only, one project destination/count with
+explicit project navigation; preserves0107f77b routing/resize and earlier features.
+Staging's existing PR276 owns final integration/build/activation after its actual
+R2 boundary and fresh gates. Do not compete with its held package or capture.

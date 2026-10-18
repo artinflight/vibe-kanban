@@ -39,6 +39,7 @@ export function ProjectCollaborationSidebar({
   projectName,
   workspaceId,
   issueId,
+  chatRequest,
   onClose,
   onNavigate,
 }: {
@@ -46,10 +47,14 @@ export function ProjectCollaborationSidebar({
   projectName: string;
   workspaceId?: string | null;
   issueId?: string | null;
+  chatRequest?: number;
   onClose: () => void;
   onNavigate: (action: () => void) => void;
 }) {
   const [tab, setTab] = useState<'chat' | 'plan'>('chat');
+  useEffect(() => {
+    if (chatRequest) setTab('chat');
+  }, [chatRequest]);
   const notifications = useDotProjectNotifications();
   const issues = useDotNotifications();
   const workspaces = useDotWorkspaceNotifications();

@@ -5,7 +5,9 @@ export const ids = {
   a: '33333333-3333-4333-8333-333333333333',
   b: '44444444-4444-4444-8444-444444444444',
 };
-export async function projectRoutingBundle() {
+export async function projectRoutingBundle(
+  entry = 'scripts/dot-sidechat/project-routing-fixture.tsx'
+) {
   const stubs = {
     'shared/hooks/useProjectContext': `export function useProjectContext(){return {issues:[],getIssue:()=>null,getStatus:()=>null,getAssigneesForIssue:()=>[],getWorkspacesForIssue:()=>[]}}`,
     'shared/hooks/useOrgContext': `export function useOrgContext(){return {membersWithProfilesById:new Map()}}`,
@@ -13,7 +15,7 @@ export async function projectRoutingBundle() {
     'shared/providers/HostIdProvider': `export function useHostId(){return null}`,
   };
   const result = await build({
-    entryPoints: ['scripts/dot-sidechat/project-routing-fixture.tsx'],
+    entryPoints: [entry],
     bundle: true,
     write: false,
     outdir: 'unused',
@@ -41,15 +43,21 @@ export async function projectRoutingBundle() {
               return key ? { path: key, namespace: 'fixture' } : null;
             }
           );
+          b.onResolve({ filter: /^react-i18next$/ }, () => ({
+            path: 'i18n',
+            namespace: 'fixture',
+          }));
           b.onResolve({ filter: /^@tanstack\/react-router$/ }, () => ({
             path: 'router',
             namespace: 'fixture',
           }));
           b.onLoad({ filter: /.*/, namespace: 'fixture' }, (args) => ({
             contents:
-              args.path === 'router'
-                ? `export function useRouter(){return {history:window.fixtureHistory}}`
-                : stubs[args.path],
+              args.path === 'i18n'
+                ? `export function useTranslation(){return {t:k=>({'common:workspaces.needsAttention':'Needs Attention','common:workspaces.running':'Running','common:workspaces.idle':'Idle'}[k]??k)}}`
+                : args.path === 'router'
+                  ? `export function useRouter(){return {history:window.fixtureHistory}}`
+                  : stubs[args.path],
             loader: 'js',
           }));
         },
@@ -113,7 +121,12 @@ export function routingTransport(s) {
         expires: null,
       });
     if (route === 'notifications')
-      return result({ issues: [], projects: [], workspaces: [] });
+      return result({
+        issues: [],
+        projects: s.projectNotices ?? [],
+        workspaces: [],
+      });
+    if (route.startsWith('project-plan?')) return result({ entries: [] });
     if (route.startsWith('thread?')) {
       const q = new URL(url, 'http://fixture').searchParams;
       const d = q.has('project')

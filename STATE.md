@@ -42,6 +42,7 @@ Historical statements describe their dated checkpoint, not present authority.
 | Git preservation | [Automatic sync](VK_AUTOMATIC_GITHUB_SYNC.md), [preservation](VK_TURN_GIT_PRESERVATION.md) | Preserve native ledgers/originals and actual held writer fence. Invalid old watcher coverage cannot be reset or replaced by manifest booleans. Scope-specific handover gates do not block independent backup verification. |
 | Release integration | [Stop PR264](https://github.com/artinflight/vibe-kanban/pull/264), [Dot steering](VK_DOT_SESSION_STEERING.md) | Staging owns combined build/copy/rollback/queue acceptance. Public artifacts omit retained private bindings and cannot replace the live package. |
 | Dot/mobile/reporting | [Notifications](DOT_NOTIFICATION_ROLLOUT.md), [reliability](DOT_RELIABILITY_ROLLOUT.md), [integration](DOT_INTEGRATION_HANDOFF.md), [sent drafts](VK_SENT_STEERING_DRAFT.md) | Preserve mobile, steering, existing connector reporting and paired subscriptions; source-ready and served acceptance are separate. |
+| Project unread notices | [Notice routing](VK_PROJECT_DOT_NOTICES.md) | One project-scoped notice in Workspaces Needs Attention; never fan counts onto workspaces. Staging owns coordinated release and live verification. |
 | Generated files | [Artifact links](VK_ARTIFACT_LINKS.md) | Upload and verify intended files before offering browser links; filesystem paths alone are not delivery. |
 
 ## Maintaining this index

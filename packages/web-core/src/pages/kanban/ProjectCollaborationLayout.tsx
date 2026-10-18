@@ -1,10 +1,21 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
 import { useMobileSheet } from '@/shared/hooks/useMobileSheet';
 import { useDotProjectNotifications } from '@/shared/hooks/useDotNotifications';
 import { DotActivityIndicators } from '@vibe/ui/components/DotActivityIndicators';
 import { ProjectCollaborationSidebar } from './ProjectCollaborationSidebar';
 import { ProjectCollaborationPane } from './ProjectCollaborationPane';
+import {
+  getProjectChatRequest,
+  subscribeProjectChatRequest,
+  consumeProjectChatRequest,
+} from '@/shared/lib/dotProjectNotices';
 
 export function ProjectCollaborationLayout({
   projectId,
@@ -23,8 +34,35 @@ export function ProjectCollaborationLayout({
   const [fullChat, setFullChat] = useState(false);
   const isMobile = useIsMobile();
   const [desktopOpen, setDesktopOpen] = useState(true);
+  const [chatRequest, setChatRequest] = useState(0);
+  const projectChatRequest = useSyncExternalStore(
+    subscribeProjectChatRequest,
+    getProjectChatRequest
+  );
   const sheet = useMobileSheet('project-collaboration:' + projectId);
   const closeSheet = sheet.close;
+  const showSheet = sheet.show;
+  useEffect(() => {
+    if (
+      !projectChatRequest ||
+      projectChatRequest.projectId !== projectId ||
+      workspaceId ||
+      issueId
+    )
+      return;
+    consumeProjectChatRequest(projectChatRequest);
+    setChatRequest(projectChatRequest.sequence);
+    setDesktopOpen(true);
+    if (isMobile && !sheet.isOpen) showSheet();
+  }, [
+    projectChatRequest,
+    projectId,
+    workspaceId,
+    issueId,
+    isMobile,
+    sheet.isOpen,
+    showSheet,
+  ]);
   const open = isMobile ? sheet.isOpen : desktopOpen;
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -116,6 +154,7 @@ export function ProjectCollaborationLayout({
               projectName={projectName}
               workspaceId={workspaceId}
               issueId={issueId}
+              chatRequest={chatRequest}
               onClose={close}
               onNavigate={(action) => {
                 if (isMobile) sheet.run(action);

@@ -61,3 +61,11 @@ binds the sidebar to the displayed exact workspace, restores project chat on
 close/Back, retains per-session/destination drafts and pins in-flight sends.
 Drag/full-width/restore keep chat state mounted. Staging's existing coordination
 record was notified before packaging; no competing activation here.
+
+Newest required addition: [project unread notices](VK_PROJECT_DOT_NOTICES.md)
+adds one blue project-labeled destination to Workspaces Needs Attention, using
+existing summaries without workspace fanout. Clicks explicitly select project
+chat, preserving drafts/replies and flags. Routing/resize0107f77b and this source
+must both be reconciled into Staging's held PR276 before the one release. Staging
+was notified through its existing PR record; no package/activation here and no
+claim that Nightly's actual three-row R2 boundary has been reached.

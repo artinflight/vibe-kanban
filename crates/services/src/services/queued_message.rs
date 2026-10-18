@@ -167,16 +167,18 @@ impl QueuedMessageService {
 
     /// Take the oldest message waiting for global executor capacity.
     pub fn take_oldest_capacity_queued(&self) -> Option<QueuedMessage> {
-        let session_id = self
-            .queue
+        self.take_queued(self.oldest_capacity_session_id()?)
+    }
+
+    /// Choose an owner before locking and consuming its queue.
+    pub fn oldest_capacity_session_id(&self) -> Option<Uuid> {
+        self.queue
             .iter()
             .filter(|entry| {
                 entry.value().wait_for_capacity && !self.recovery_holds.contains_key(entry.key())
             })
             .min_by_key(|entry| entry.value().queued_at)
-            .map(|entry| *entry.key())?;
-
-        self.take_queued(session_id)
+            .map(|entry| *entry.key())
     }
 
     /// Snapshot used under shared execution admission for worktree ownership.

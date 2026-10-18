@@ -1,10 +1,40 @@
 //! Shared serialization for ordinary input and bounded worker admission.
-use std::{future::Future, sync::OnceLock};
+use std::{
+    collections::HashMap,
+    future::Future,
+    sync::{Arc, OnceLock, Weak},
+};
 
 use tokio::sync::Mutex;
 
 static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 tokio::task_local! { static HELD: bool; }
+tokio::task_local! { static OWNER: uuid::Uuid; }
+type OwnerLocks = std::sync::Mutex<HashMap<uuid::Uuid, Weak<Mutex<()>>>>;
+static OWNERS: OnceLock<OwnerLocks> = OnceLock::new();
+
+/// Keep the idle check, queue mutation and launch indivisible for one workspace.
+/// Unrelated owners retain their ordinary concurrent launch behavior.
+pub async fn owner<T>(id: uuid::Uuid, work: impl Future<Output = T>) -> T {
+    if OWNER.try_with(|current| *current == id).unwrap_or(false) {
+        return work.await;
+    }
+    let lock = {
+        let mut locks = OWNERS
+            .get_or_init(Default::default)
+            .lock()
+            .expect("owner locks");
+        locks.retain(|_, value| value.strong_count() > 0);
+        let lock = locks
+            .get(&id)
+            .and_then(Weak::upgrade)
+            .unwrap_or_else(|| Arc::new(Mutex::new(())));
+        locks.insert(id, Arc::downgrade(&lock));
+        lock
+    };
+    let _guard = lock.lock().await;
+    OWNER.scope(id, work).await
+}
 
 pub async fn run<T>(work: impl Future<Output = T>) -> T {
     if automatic_git_sync() {

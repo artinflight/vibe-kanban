@@ -2020,3 +2020,14 @@ Implemented private project Dot Chat/shared planning with canonical task links,
 revision/idempotency protection, separate project attention and responsive UI.
 Coordinated Preserve Dot/CU1.6 and Staging. No production adoption.
 See VK_PROJECT_COLLABORATION.md for validation and release requirements.
+
+## 2026-10-18 — source-only storage admission
+
+Prepared the narrow durable storage response admission contract and native
+implementation from staging5b43524ea, following Operations PR21582805b7.
+Exact batch/intent/owner receipts, queue-preserving owner serialization,
+execution insertion binding and cancellation tombstones keep uncertain sends
+from becoming unsafe retries. No live dispatch, release or activation.
+Validation/compatibility remains explicitly source-bound; shared capacity
+coordination holds additional compiler jobs while the original service test
+reaches its natural terminal checkpoint. See VK_STORAGE_ALERT_ADMISSION.md.

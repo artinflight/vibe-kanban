@@ -1,5 +1,11 @@
 # October18 6:42p.m. EDT — audit complete; independent recovered-set restore active
 
+The one-shot final-result event is armed outside the unchanged active bundle.
+Use FULL_RECOVERED_SET_ACCEPTANCE.private.json after the existing collector ends;
+a base pass alone does not prove error-free, complete archived-Git verification.
+Sixteen predicate cases, four callback contracts and the real event fixture pass.
+No extra payload job or automatic retry is armed. STATE.md has the acceptance scope.
+
 The retained-prefix audit passed at6:32p.m. EDT:1,377,791 complete members,
 112 sealed SQL bindings and all13512 original immutable file pins match. Exact
 7783 gaps remain explicit; current source/Git resolution is not archive inclusion.

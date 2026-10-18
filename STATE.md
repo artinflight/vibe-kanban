@@ -1,3 +1,17 @@
+# October 18 — full acceptance includes archived-Git completion
+
+The running independent restore and its55-file sealed bundle are unchanged.
+Its archived-Git helper records decoding errors rather than raising them, so the
+base collector pass alone cannot certify the requested full Git verification.
+A separate final-result predicate passes16 focused cases, including the actual
+helper's mocked corruption path; four callback contracts and a real one-shot
+file-event fixture pass. The callback waits for the existing collector to close
+its result, checks complete readback/SQLite/metadata/source digests and all Git
+outcomes, publishes actual acceptance or remaining requirements, then disarms.
+It creates no second copy, audit, polling collector or automatic retry. Original
+capture/journal/current-baseline acceptance stays false. Actual full-workload
+results remain pending in the existing private recovery area.
+
 # October18 6:42p.m. EDT — audit complete; independent recovered-set restore active
 
 The sole read-only audit completed successfully at6:32p.m. EDT. It read all

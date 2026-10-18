@@ -2045,3 +2045,10 @@ object payload. Preserved original failed bytes and corrected a metadata LIKE sc
 to a tested indexed range; no archive reread or SQL recapture. One separately
 guarded recovered-set restore and durable collector started6:42p.m. EDT. Actual
 restore/full original epoch/production-generation acceptance remain pending.
+
+## October 18 — final-result acceptance cannot hide archived-Git errors
+
+Preserved the active restore/controller/collector and added a tested one-shot
+completion-event predicate outside its sealed bundle.16 acceptance cases,4 callback
+contracts and the real event fixture pass; full actual readback/Git results remain
+pending. Exact original gaps and separate-epoch recovery options are retained.

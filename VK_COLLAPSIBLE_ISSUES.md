@@ -33,13 +33,58 @@ Detailed feature history originally lived in the old branch pickup prefixes;
 this topic document replaces duplication in all three indexes. Original branch
 receipts are retained in [the feature history](VK_COLLAPSIBLE_ISSUES_HISTORY_20261018.md).
 
-## Release
+## Live release — October 18
 
-Promotion and frontend release validation are in progress. Incumbent source
-`6655bba77` includes newer live Dot activity and readable workspace-row changes
-not yet present in staging. The release must preserve these frontend sources,
-existing hashed assets and artifact viewer. No backend, Python, gateway or agent
-restart is part of this frontend-only activation. Current data stays in place.
+[PR274](https://github.com/artinflight/vibe-kanban/pull/274) was rebase-merged
+into staging at `5b43524ea35b2eb5dd80d0881dc8445489f4442f` after all 12
+applicable checks passed in run 39119211683. The unrelated combined-capture
+acceptance job was skipped. Canonical staging and main references are current.
 
-Public branch preview:
+The frontend is live at https://vibe.local/ with entry
+`/assets/index-CHIz5WC2.js` and stylesheet `/assets/index-BThoGfNC.css`.
+App/API version remains 0.1.42. Existing tabs need a refresh.
+
+The clean release combines the merged feature with the exact eight incumbent
+frontend files from `6655bba77`, retaining live Dot unread/attention/activity
+and workspace-row readability fixes that remain in their separate PR268.
+Build source `5338d42f4` and release source `872547964` have the same tree,
+`814a571ad5a098df5335ae9b7f1d37d0a6e7c5af`. The release source includes the
+merged staging ancestry. Relevant frontend inputs of the public feature head
+and merged staging compare identically; no second build was needed for
+commit-identity-only promotion. The release branch is published as
+`deploy/frontend-collapsible-issues-20261018`.
+
+The memory-capped Preparation runner passed combined type checking and the
+production build. Packaging retains all 2283 incumbent non-index assets
+byte-for-byte and adds 106 members. Existing tabs can still load their old
+hashed chunks. The artifact viewer and notification service worker are retained.
+Release manifest SHA256:
+`bbc6b8b939787315c4935d2d95773d5ef75cf35ffc62690142a056c879e6cdd7`.
+
+The incumbent frontend and candidate delta were uploaded to Desktop B,
+downloaded, extracted and verified: 2284 incumbent files and 106 delta members.
+The verified incumbent remains the immediate immutable pointer rollback.
+Backup root: `desktop:B:/vk-backups/vk-collapsible-issues-20261018/`.
+No SQLite or conversation snapshot was restored or needed for this UI switch.
+
+Actual served browser acceptance passed at 1440px and 393px in light/dark
+modes: exact packaged entry, title/tint transitions, 24px padding, mouse/Enter,
+unchanged navigation, accepted subscriptions and preference-save requests.
+All 54 visible actionable workspace rows per case retained full opacity.
+No runtime exceptions or WebSocket errors occurred. Root, JS, CSS, artifact
+viewer and service-worker bytes matched the release. All seven monitored
+production service PIDs and definitions, the API route and sidechat pointer
+remain unchanged; no Vibe, Dot or agent restart/reload occurred.
+
+All automated application writes were intercepted. Physical-phone acceptance,
+live preference reload durability, drag persistence, workspace mutations,
+attachment uploads, saved-message edits and intentional notification clearing
+were not write-tested. Their existing code paths remain unchanged. The operator
+accepted the feature, spacing and coloring through the branch preview.
+
+Private preparation, backup, source binding, activation and browser receipts
+are retained under `/mnt/vk-storage/vk-collapsible-release-20261018/` and are
+not published as application data.
+
+Branch preview remains available at:
 https://mcp-server.tail744c4.ts.net:8443/projects/1cf19067-4055-4432-bbc1-581919f9185d

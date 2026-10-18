@@ -1,7 +1,7 @@
 # Collapsible Issues release stream
 
-Current branch prepares the accepted collapsible issue UI for rebase-merge
-into staging and a frontend-only live release. See
+PR274 is rebase-merged into staging and the accepted collapsible issue UI
+is live. This branch retains the final rollout receipt. See
 [feature, validation and release evidence](VK_COLLAPSIBLE_ISSUES.md).
 Preserve the compact indexes and all existing release protections below.
 

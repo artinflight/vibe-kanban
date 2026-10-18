@@ -72,6 +72,35 @@ const IMMEDIATE_PR_MERGE_CLEANUP_TARGET_BRANCH: &str = "staging";
 const HISTORICAL_REPLAY_HISTORY_BYTES: usize = 4 * 1024 * 1024;
 const HISTORICAL_REPLAY_CHANNEL_CAPACITY: usize = 1024;
 
+// Raw EOF ends the normalizers, not the derived patch stream. The latter
+// closes only after the feeder and every normalizer release their store owner.
+// Never interpret an old EOF using a later global completion flag.
+fn historical_normalized_output(
+    store: &Arc<MsgStore>,
+) -> BoxStream<'static, Result<LogMsg, std::io::Error>> {
+    store
+        .history_plus_stream_recoverable()
+        .scan(HashSet::<String>::new(), move |sent_paths, msg| {
+            future::ready(match msg {
+                Ok(LogMsg::JsonPatch(patch)) => {
+                    let patch = match patch_entry_path(&patch) {
+                        Some(_) if is_add_or_replace(&patch) => fix_patch_ops(patch, sent_paths),
+                        _ => patch,
+                    };
+                    Some(Some(Ok(LogMsg::JsonPatch(patch))))
+                }
+                Ok(LogMsg::Finished) => Some(None),
+                Ok(_) => Some(None),
+                Err(e) => Some(Some(Err(e))),
+            })
+        })
+        .filter_map(future::ready)
+        .chain(futures::stream::once(async {
+            Ok::<_, std::io::Error>(LogMsg::Finished)
+        }))
+        .boxed()
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArchiveScriptStartOutcome {
     Started,
@@ -1307,6 +1336,8 @@ pub trait ContainerService: Send + Sync {
             HISTORICAL_REPLAY_CHANNEL_CAPACITY,
         ));
         let (cancel_tx, mut cancel_rx) = oneshot::channel::<()>();
+        // Subscribe before either producer can publish or evict a patch.
+        let stream = historical_normalized_output(&temp_store);
 
         // Spawn normalizer on populated store and collect JoinHandles
         let handles = match executor_action.typ() {
@@ -1360,15 +1391,14 @@ pub trait ContainerService: Send + Sync {
             }
         };
 
-        let output_finished = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let output_finished_task = output_finished.clone();
-        let temp_store_for_finish = temp_store.clone();
+        let normalizer_owner = temp_store.clone();
         tokio::spawn(async move {
             for handle in handles {
                 let _ = handle.await;
             }
-            output_finished_task.store(true, std::sync::atomic::Ordering::SeqCst);
-            temp_store_for_finish.push_finished();
+            // Keep the broadcast sender alive until all derived patches exist.
+            // Receiver closure then drains queued patches before terminating.
+            drop(normalizer_owner);
         });
 
         let temp_store_for_feed = temp_store.clone();
@@ -1401,36 +1431,6 @@ pub trait ContainerService: Send + Sync {
 
             temp_store_for_feed.push_finished();
         });
-
-        let stream = temp_store
-            .history_plus_stream_recoverable()
-            .scan(HashSet::<String>::new(), move |sent_paths, msg| {
-                let output_finished = output_finished.clone();
-                future::ready(match msg {
-                    Ok(LogMsg::JsonPatch(patch)) => {
-                        let patch = match patch_entry_path(&patch) {
-                            Some(_) if is_add_or_replace(&patch) => {
-                                fix_patch_ops(patch, sent_paths)
-                            }
-                            _ => patch,
-                        };
-                        Some(Some(Ok(LogMsg::JsonPatch(patch))))
-                    }
-                    Ok(LogMsg::Finished)
-                        if output_finished.load(std::sync::atomic::Ordering::SeqCst) =>
-                    {
-                        None
-                    }
-                    Ok(LogMsg::Finished) => Some(None),
-                    Ok(_) => Some(None),
-                    Err(e) => Some(Some(Err(e))),
-                })
-            })
-            .filter_map(future::ready)
-            .chain(futures::stream::once(async {
-                Ok::<_, std::io::Error>(LogMsg::Finished)
-            }))
-            .boxed();
 
         Some(Box::pin(CancelOnDropStream::new(stream, cancel_tx)))
     }
@@ -1913,5 +1913,189 @@ mod tests {
         ];
 
         assert!(!has_merged_pr_to_target_branch(&pull_requests, "staging"));
+    }
+}
+
+#[cfg(test)]
+mod historical_replay_output_tests {
+    use std::{sync::atomic::AtomicBool, time::Duration};
+
+    use super::*;
+    fn original_output(
+        store: &Arc<MsgStore>,
+        output_finished: Arc<AtomicBool>,
+    ) -> BoxStream<'static, Result<LogMsg, std::io::Error>> {
+        store
+            .history_plus_stream_recoverable()
+            .scan(HashSet::<String>::new(), move |sent_paths, msg| {
+                let output_finished = output_finished.clone();
+                future::ready(match msg {
+                    Ok(LogMsg::JsonPatch(patch)) => {
+                        let patch = match patch_entry_path(&patch) {
+                            Some(_) if is_add_or_replace(&patch) => {
+                                fix_patch_ops(patch, sent_paths)
+                            }
+                            _ => patch,
+                        };
+                        Some(Some(Ok(LogMsg::JsonPatch(patch))))
+                    }
+                    Ok(LogMsg::Finished)
+                        if output_finished.load(std::sync::atomic::Ordering::SeqCst) =>
+                    {
+                        None
+                    }
+                    Ok(LogMsg::Finished) => Some(None),
+                    Ok(_) => Some(None),
+                    Err(e) => Some(Some(Err(e))),
+                })
+            })
+            .filter_map(future::ready)
+            .chain(futures::stream::once(async {
+                Ok::<_, std::io::Error>(LogMsg::Finished)
+            }))
+            .boxed()
+    }
+
+    fn patch(n: usize) -> LogMsg {
+        LogMsg::JsonPatch(ConversationPatch::add_normalized_entry(
+            n,
+            NormalizedEntry {
+                timestamp: None,
+                entry_type: NormalizedEntryType::AssistantMessage,
+                content: format!("preserved synthetic final {n}"),
+                metadata: None,
+            },
+        ))
+    }
+    fn count(v: &[Result<LogMsg, std::io::Error>]) -> usize {
+        v.iter()
+            .filter(|x| matches!(x, Ok(LogMsg::JsonPatch(_))))
+            .count()
+    }
+    fn run(f: impl std::future::Future<Output = ()>) {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap()
+            .block_on(f)
+    }
+    #[test]
+    fn original_late_completion_flag_reproduces_dropped_final() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            s.push_finished();
+            s.push(patch(0));
+            s.push_finished();
+            let out = original_output(&s, Arc::new(AtomicBool::new(true)));
+            drop(s);
+            let rows = out.collect::<Vec<_>>().await;
+            assert_eq!(
+                count(&rows),
+                0,
+                "original must reproduce the demonstrated ordering defect"
+            );
+        })
+    }
+    #[test]
+    fn completed_producer_is_drained_before_eof() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            s.push_finished();
+            s.push(patch(0));
+            s.push_finished();
+            let out = historical_normalized_output(&s);
+            drop(s);
+            let rows = tokio::time::timeout(Duration::from_secs(1), out.collect::<Vec<_>>())
+                .await
+                .unwrap();
+            assert_eq!(count(&rows), 1);
+            assert!(format!("{:?}", rows).contains("preserved synthetic final 0"));
+            assert_eq!(
+                rows.iter()
+                    .filter(|x| matches!(x, Ok(LogMsg::Finished)))
+                    .count(),
+                1
+            );
+        })
+    }
+    #[test]
+    fn raw_eof_does_not_end_delayed_normalization() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            let out = historical_normalized_output(&s);
+            s.push_finished();
+            let owner = s.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                owner.push(patch(0));
+                drop(owner);
+            });
+            drop(s);
+            let rows = tokio::time::timeout(Duration::from_secs(1), out.collect::<Vec<_>>())
+                .await
+                .unwrap();
+            assert_eq!(count(&rows), 1);
+        })
+    }
+    #[test]
+    fn slow_output_consumer_preserves_late_final_order() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            let out = historical_normalized_output(&s);
+            s.push_finished();
+            s.push(patch(0));
+            s.push(patch(1));
+            drop(s);
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            let rows = out.collect::<Vec<_>>().await;
+            assert_eq!(count(&rows), 2);
+            let a = format!("{:?}", rows);
+            assert!(a.find("final 0").unwrap() < a.find("final 1").unwrap());
+        })
+    }
+    #[test]
+    fn evicted_raw_marker_does_not_hang_output() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(4096, 32));
+            s.push_finished();
+            s.push_stdout("x".repeat(8192));
+            s.push(patch(0));
+            let out = historical_normalized_output(&s);
+            drop(s);
+            let rows = tokio::time::timeout(Duration::from_secs(1), out.collect::<Vec<_>>())
+                .await
+                .unwrap();
+            assert_eq!(count(&rows), 1);
+        })
+    }
+    #[test]
+    fn receiver_lag_still_reports_error() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 2));
+            let out = historical_normalized_output(&s);
+            for i in 0..16 {
+                s.push(patch(i));
+            }
+            drop(s);
+            let rows = out.collect::<Vec<_>>().await;
+            assert!(rows.iter().any(Result::is_err), "loss must remain explicit");
+        })
+    }
+    #[test]
+    fn empty_replay_finishes_once_without_invented_final() {
+        run(async {
+            let s = Arc::new(MsgStore::with_limits(1024 * 1024, 32));
+            let out = historical_normalized_output(&s);
+            s.push_finished();
+            drop(s);
+            let rows = out.collect::<Vec<_>>().await;
+            assert_eq!(count(&rows), 0);
+            assert_eq!(
+                rows.iter()
+                    .filter(|x| matches!(x, Ok(LogMsg::Finished)))
+                    .count(),
+                1
+            );
+        })
     }
 }

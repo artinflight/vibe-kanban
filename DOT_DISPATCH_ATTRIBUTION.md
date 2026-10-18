@@ -149,6 +149,13 @@ no live UI/caller identity/catalog adoption is claimed by these fixture results.
 
 ## Final package/catalog handoff to Staging
 
+Functional source checkpoint:
+`174668ed753d7ef53fb77c19d86c99938f54b616` (published; following commits only seal
+handoff text). This checkpoint contains all tested functional bytes and preserves
+fe69d36dc as an ancestor. Relative to PR272's four audited files, the correction is
+48 insertions/23 deletions. Relative to fe69d36dc, the shared Store is two additive
+read lines; browser API, UI and acknowledgement implementation have zero diff.
+
 Selective acknowledgement's exact source remains fe69d36dc; its module, connector
 hook, tools/schema and tests have no functional diff in this correction. The
 owner explicitly approved the narrow action plus safe connector reload. T63's
@@ -193,7 +200,9 @@ Candidate routing is tested through the actual adapter with fixture-backed
 connector calls; this does **not** prove new tool adoption in main Dot's catalog.
 Staging should verify the actual registered discovery/dispatch path and fresh
 read-only inventory after its owned release, then use only the already approved
-exact-ID cleanup scope. No credential/grant workaround or alternate route.
+exact-ID cleanup scope. Use only the owner's approved workspace/ID selection;
+unknown caller or generic dispatch history must not choose management associations
+or broaden that selection. No credential/grant workaround or alternate route.
 
 Reload dependency: the existing publisher imports `recover_pending` from
 `dispatch_notes` inside its five-second loop; Python caches that module. Updating

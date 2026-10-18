@@ -1,5 +1,14 @@
 # Preserve Dot: caller-attribution correction
 
+Functional checkpoint: `174668ed753d7ef53fb77c19d86c99938f54b616` (pushed).
+Selective ack ancestor: `fe69d36dc0846762a418c2a8b8a0a5dfd26e1de0`, unchanged
+implementation/schema. PR272 audit base: `71252feaeca0b9deba53d0faed59731e07f76d95`.
+The exact package hashes, scoped diff commands and catalog/CAS/reload contract are
+in [DOT_DISPATCH_ATTRIBUTION.md](DOT_DISPATCH_ATTRIBUTION.md#final-packagecatalog-handoff-to-staging).
+44 connector +100 sidechat cases pass; six caller cases also pass on an exact-live
+Store overlay, with mocked actual-adapter routes and spoofed caller metadata.
+No live state or catalog availability claim; root/Staging owns publication.
+
 [Source-only contract and adoption dependencies](DOT_DISPATCH_ATTRIBUTION.md).
 There is no verified root/manager/native-user initiating identity at the inspected
 stdio/tunnel boundary. `current_caller()` honestly returns unknown/unavailable;

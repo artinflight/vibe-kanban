@@ -1,11 +1,11 @@
 {
   "repository": "artinflight/Operations",
-  "commit": "a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd",
+  "commit": "5c2ee7f5f561a943d123fcc09d5ee8098cbeab20",
   "path": "tasks/storage-alert-response",
   "sha256": {
     "native_integration.py": "d056c0240621f849119969958f731a5a2faf7200bc33fdc60c83f2325a01a8c4",
     "native_adapter.py": "81e6a9b3fc6ce9c6de1d87d3c434bcd1d280f93e772b2d9617522e984c286b6a",
-    "monitor.py": "4b5b4fedcfb87577d8aa563c0b363e4183690ae0e3e0c1c540e9ba70050798ca",
+    "monitor.py": "5f0dec5371b0014b2ab2cbfdb27aeb6b3037ce6abc9950eafe13e536e2bdf7f9",
     "admission.py": "9e1e5db300834da4c7d8e7496913b277cba174d79ed7eb0d68a53d307d6a08e1",
     "accounting.py": "0d868d149fdc98daae447348bbaac402ec73c4f486ba84f27de26310f2108c35",
     "pressure.py": "f1f3e4a2a189f4941604242a7f0d3dc941ab43abfe75a36237b23cf5cb783a19"

@@ -1,3 +1,21 @@
+# Final T90 snapshot validation — current exact pin pending
+
+The unchanged native contract/fixture now pins final client
+`5c2ee7f5f561a943d123fcc09d5ee8098cbeab20` (Operations PR215). All six vendored
+source files match that published commit and provenance hashes. The codec and
+real native driver are unchanged from the prior passing pair; Store also records
+failed live revalidation and breaks consecutive debounce/recovery evidence,
+without admitting work. T90 reports 76 lightweight Python tests passed.
+
+The prior actual hosted pair below remains valid at its stated source. A fresh
+normal hosted Test run is required before claiming this final exact pin passed.
+This is sanitized test-source maintenance only: no native implementation,
+protocol, production binding/transport, service, access, allocation, migration,
+timer, model selection, Recommend routing or Staging release change. No host
+compiler/linker/aggregate build is run; normal formatting is source-only.
+
+--- Prior passing pair and history follow with their exact source boundaries. ---
+
 # Storage admission source validation
 
 Source/tests only. Normal fork staging was reverified as

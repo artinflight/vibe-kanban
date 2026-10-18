@@ -1,3 +1,11 @@
+# Final paired client pin
+
+The test-only snapshot/provenance/workflow now pins T90 final client
+`5c2ee7f5f561a943d123fcc09d5ee8098cbeab20`. Its 76 Python regressions pass;
+fresh hosted exact-pair evidence is pending. The prior native59/clienta345
+hosted acceptance below remains source-bound. Native protocol/implementation
+are unchanged. See [validation](STORAGE_ADMISSION_VALIDATION.md); no activation.
+
 # Storage admission pickup
 
 Source-only draft [PR277](https://github.com/artinflight/vibe-kanban/pull/277)

@@ -240,13 +240,13 @@ class Store:
                     self.db.execute("UPDATE incidents SET delivery='deferred' WHERE id=?", (r['id'],))
             return 'deferred'
         # Re-read live mount and pressure AFTER status/config reads, immediately before admission.
-        fresh = {}
+        fresh, fresh_errors = {}, {}
         for r in rows:
             try:
                 fresh[r['volume']] = bridge.observe(r['volume'])
             except Exception:
-                pass
-        self.observations(fresh, {}, time.time(), periodic=False)
+                fresh_errors[r['volume']] = 'live_revalidation_unavailable'
+        self.observations(fresh, fresh_errors, time.time(), periodic=False)
         self.retire_deferred(fresh)
         rows = self.pending(fresh)
         if not rows:

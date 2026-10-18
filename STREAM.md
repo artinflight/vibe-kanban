@@ -1,7 +1,9 @@
 # October18 current authorization boundary
 
 Continue guarded Nightly measurement within the traced existing Disk allocation
-and fresh resource/security admission; R8 was admitted October18 05:02UTC.
+and fresh resource/security admission. R8's actual PSI-only abort is collected;
+the unsupported numeric rule is withdrawn. Sole corrected R9 was admitted
+October18 05:14UTC, preserving all real resource/access/storage protections.
 Actual independent capture/restore still requires measured adequate coexistence.
 Do not deploy,
 schedule, cut over or retire archives/originals. Preserve all recovery, guards,

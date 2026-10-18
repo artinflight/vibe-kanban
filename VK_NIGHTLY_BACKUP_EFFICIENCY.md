@@ -8,12 +8,17 @@ The older production-completion authorization below is retained history.
 
 The first located Nightly introduction of full-memory PSI avg10 <= 0.1 is the
 private measurement wrapper recorded in commit `60bae882c` (October18 02:17UTC).
-It is an agent-added shared-host admission heuristic, subsequently retained by
-explicit user coordination instructions. Neither the checked-in supervisor nor
-the repository safety policies specify that numeric threshold. It remains a
-guard for this coordinated run; crossing it is not evidence of damaged recovery
-data or a permanent prohibition on validation. Buffered warmup and serial stages
-are the supported preparation path; no global service or kernel setting changes.
+It is an agent-added shared-host admission heuristic. There is no original
+Seamus quote requiring that number. Generic instructions to preserve guards did
+not authorize it; the earlier attribution to user authority is withdrawn.
+Neither the checked-in supervisor nor repository safety policies specify it.
+Subsequent execution treats PSI as telemetry rather than an independent abort
+condition: a stall sample alone does not establish harmful memory exhaustion.
+Existing cgroup caps, host memory/swap floors, runtime health, ownership, storage
+and deadline checks remain. Buffered warmup and serial stages are supported
+preparation; no global service, security or kernel setting changes are involved.
+R8 loaded its old wrapper before this correction; preserve that running attempt
+and its truthful policy provenance rather than restart or duplicate the producer.
 
 Local validation comes from `AGENTS.md`: validate before promoting to Staging,
 use the narrowest relevant checks before local runtime use, and record omissions.
@@ -41,8 +46,9 @@ fingerprints remain the evidence model. Keep warmup and validation in the same
 bounded unit so their memory and CPU remain charged together. Page residency is
 volatile; a cached static result does not certify that pages remain resident.
 
-Keep Nightly's reviewed CPU, memory high/max, zero-swap, task, PSI, storage,
-health/security and whole-job bounds. Run stages directly and serially within
+Keep Nightly's reviewed CPU, memory high/max, zero-swap, task, storage,
+health/security and whole-job bounds. Record PSI as diagnostic evidence; the
+private numeric-only abort is withdrawn. Run stages directly and serially within
 the task cap, without nesting extra package-manager processes. In the retained
 comparison, buffered tool warmup completed Rust formatting at PSI0; the three
 remaining direct frontend stages also passed at PSI0 and peaked at12 sampled

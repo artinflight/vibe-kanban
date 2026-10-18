@@ -1,3 +1,21 @@
+# Collect sole corrected R9; preserve terminal R8 — October18 05:15UTC
+
+R8 terminal05:10:28UTC/489.219s: agent PSI heuristic abort, not an external
+permission blocker. Only245bytes sealed. Exact unit/producer/mount and both
+kernel leases reconciled; originals preserved. R8 collected actual terminal
+and working-space receipt, not the earlier healthy observation.
+
+Seamus did not prescribe0.1. Prior claim of explicit user authority is withdrawn.
+Numeric-only abort removed and eight boundary/PSI telemetry checks pass; all
+real caps, floors, runtime/native health, ownership and deadline checks remain.
+Sole R9 started05:14:46UTC, PID2493667/start40478467, unit
+vk-nightly-capacity-r9-evidence-guards.service, configSHA
+fc782cc90ff4eab29e9228813b51a2605af558d678c821d98179367b432383cf.
+Same original2GiB SSD allowance, no reset or concurrent Nightly workload.
+Read actual terminal with capacity-r9-evidence-guards/collect-result.private.py;
+never replace a live run. Full capture/restore still needs measured coexistence
+and actual independent materialization/readback, not input-stage acceptance.
+
 # Collect existing R8 only — October18 05:02UTC
 
 Sole R8 measurement is admitted and started05:02:20UTC, PID2371315/start40403864,
@@ -11,9 +29,12 @@ leases and mounts if stopped. Preserve every earlier attempt. Do not replace
 an active run or treat input/stream measurement as independent restore proof.
 Full cold/restore coexistence still needs measured demand; no release authority.
 
-PSI0.1 originated as a private agent-added shared-host heuristic, subsequently
-retained explicitly by the user for coordinated runs. It is not repository-wide
-numeric safety policy. Local validation policy permits reuse and direct serial
+PSI0.1 originated as a private agent-added shared-host heuristic. No original
+Seamus quote requires it; generic guard-preservation wording did not authorize
+the number. Prior attribution to user authority is withdrawn. R8's already-loaded
+wrapper still has that heuristic; do not restart or duplicate its workload merely
+to replace the supervisor. Subsequent execution uses PSI as telemetry alongside
+real resource/runtime/storage protections. Local policy permits direct serial
 stages; it does not make public CI equivalent to private full restore acceptance.
 Exact private coordination receipts were updated for existing Disk/Staging/CU.
 

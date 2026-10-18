@@ -1,3 +1,22 @@
+# Nightly R8 collected; numeric PSI abort withdrawn — October18 05:15UTC
+
+R8 actually ended05:10:28UTC after489.219s, stopped by the agent-added PSI0.1
+rule (host0.46/0.27). No full stream, backup or restore: only245bytes sealed.
+Unit inactive/MainPID0; exact MCP/B leases acquired, producer identity absent,
+mount gone. All artifacts retained. Own high/max/OOM events and swap remained0;
+host memory/swap floors and runtime health passed. No original Seamus quote
+requires0.1; generic preserve-guards wording did not authorize that number.
+The false user-authority attribution is withdrawn. PSI remains telemetry.
+
+Eight targeted policy checks pass; no arbitrary replacement threshold. Sole
+corrected R9 started05:14:46UTC, PID2493667/start40478467, configSHA
+fc782cc90ff4eab29e9228813b51a2605af558d678c821d98179367b432383cf.
+Same original2GiB SSD allocation includes every prior attempt; CPU25%,
+High2GiB/Max3GiB/Swap0/Tasks32, memory/swap/runtime-health/storage/native-B
+and deadline protections remain. No concurrent Nightly job or automatic retry.
+Collect capacity-r9-evidence-guards/collect-result.private.py for actual terminal.
+Full working-space demand and independent full restore remain unaccepted.
+
 # Nightly buffered measurement admitted — October18 05:02UTC
 
 After CU's exact05:00:57 terminal release and three passing original guard
@@ -10,10 +29,12 @@ Use capacity-r8-buffered-runtime/collect-result.private.py on this exact attempt
 preserve it on failure. Full capture/restore coexistence and independent restore
 remain unaccepted; no deployment, schedule, cutover or archive retirement.
 
-The numeric PSI0.1 guard was added by the private Nightly preparation wrapper,
-then explicitly retained by user coordination. It is not a repository numeric
-safety requirement or permanent validation prohibition. Its current scope and
-the repository's local-validation requirement are recorded in the Nightly guide.
+The numeric PSI0.1 guard was added by the private Nightly preparation wrapper.
+No original Seamus quote requires this number. Generic guard-preservation wording
+did not authorize it; the previous attribution to user authority is withdrawn.
+PSI alone is diagnostic, not a permanent validation prohibition. R8 already loaded
+the old wrapper; do not restart or duplicate it to change that code. Corrected
+subsequent execution retains real resource, runtime-health and storage protections.
 
 # Nightly guarded validation path — October18
 

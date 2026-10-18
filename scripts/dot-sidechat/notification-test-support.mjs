@@ -71,6 +71,7 @@ export function transport(s) {
       });
     if (route === 'notifications')
       return result({
+        managed_workspaces: s.managed,
         issues:
           !s.seen || (s.attention && !s.resolved)
             ? [

@@ -26,6 +26,7 @@ export type WorkspaceLayoutMode = 'flat' | 'accordion';
 export interface WorkspacesSidebarWorkspace extends DotActivityState {
   id: string;
   name: string;
+  dotManaged?: boolean;
   filesChanged?: number;
   linesAdded?: number;
   linesRemoved?: number;
@@ -164,6 +165,7 @@ function WorkspaceList({
           hasPendingApproval={workspace.hasPendingApproval}
           hasRunningDevServer={workspace.hasRunningDevServer}
           hasUnseenActivity={workspace.hasUnseenActivity}
+          dotManaged={workspace.dotManaged}
           dotUnreadCount={workspace.dotUnreadCount}
           dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
           activeSubagentCount={workspace.activeSubagentCount}
@@ -536,6 +538,7 @@ export function WorkspacesSidebar({
                   hasPendingApproval={workspace.hasPendingApproval}
                   hasRunningDevServer={workspace.hasRunningDevServer}
                   hasUnseenActivity={workspace.hasUnseenActivity}
+                  dotManaged={workspace.dotManaged}
                   dotUnreadCount={workspace.dotUnreadCount}
                   dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
                   latestProcessCompletedAt={workspace.latestProcessCompletedAt}
@@ -655,6 +658,7 @@ export function WorkspacesSidebar({
                 hasPendingApproval={workspace.hasPendingApproval}
                 hasRunningDevServer={workspace.hasRunningDevServer}
                 hasUnseenActivity={workspace.hasUnseenActivity}
+                dotManaged={workspace.dotManaged}
                 dotUnreadCount={workspace.dotUnreadCount}
                 dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}
                 latestProcessCompletedAt={workspace.latestProcessCompletedAt}

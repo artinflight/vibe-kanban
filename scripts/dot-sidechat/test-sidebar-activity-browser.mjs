@@ -155,6 +155,60 @@ try {
         );
       }
     }
+    // A managed clean row remains readable and labeled after read/clear and reload.
+    const clean = page
+      .locator('.mobile-workspace-card')
+      .filter({ hasText: 'Idle clean' });
+    assert.equal(await clean.locator('[data-dot-managed]').count(), 1);
+    assert.equal(
+      await clean.locator('[data-dot-indicators]').textContent(),
+      ''
+    );
+    assert.equal(
+      await page
+        .locator('.mobile-workspace-card')
+        .filter({ hasText: 'Dispatch sibling' })
+        .locator('[data-dot-managed]')
+        .count(),
+      0
+    );
+    for (const change of [
+      { dotUnreadCount: 2, dotNeedsAttentionCount: 1 },
+      {
+        dotUnreadCount: 0,
+        dotNeedsAttentionCount: 0,
+        hasUnseenActivity: false,
+      },
+    ]) {
+      await page.evaluate(
+        (change) => window.fixtureUpdate('idle', change),
+        change
+      );
+      if (width < 768)
+        await page
+          .locator('.phone-workspace-tabs button')
+          .filter({ hasText: /^All\d+$/ })
+          .click();
+      await clean.locator('[data-dot-managed]').waitFor();
+      assert.equal(await clean.locator('[data-dot-managed]').count(), 1);
+      await assertReadable();
+    }
+    await page.reload();
+    if (width < 768)
+      await page
+        .locator('.phone-workspace-tabs button')
+        .filter({ hasText: /^Ready\d+$/ })
+        .click();
+    await clean.locator('[data-dot-managed]').waitFor();
+    assert.equal(
+      await clean.locator('[data-dot-indicators]').textContent(),
+      ''
+    );
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth
+      )
+    );
     if (process.env.VK_TEST_OUTPUT) {
       await mkdir(process.env.VK_TEST_OUTPUT, { recursive: true });
       await page.screenshot({

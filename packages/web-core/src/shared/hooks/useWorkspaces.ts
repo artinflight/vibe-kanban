@@ -10,9 +10,11 @@ import { makeLocalApiRequest } from '@/shared/lib/localApiTransport';
 import {
   useDotNotifications,
   useDotWorkspaceNotifications,
+  useDotManagedWorkspaces,
 } from '@/shared/hooks/useDotNotifications';
 import {
   workspaceDotNotification,
+  workspaceDotManaged,
   type DotNotification,
 } from '@/shared/lib/dotWorkspaceActivity';
 import { useHostId } from '@/shared/providers/HostIdProvider';
@@ -41,6 +43,7 @@ export interface SidebarWorkspace {
   hasRunningDevServer?: boolean;
   hasUnseenActivity?: boolean;
   dotUnreadCount?: number;
+  dotManaged?: boolean;
   dotNeedsAttentionCount?: number;
   activeSubagentCount?: number;
   unresolvedSubagentCount?: number;
@@ -72,7 +75,8 @@ type WorkspacesState = {
 function toSidebarWorkspace(
   ws: WorkspaceWithStatus,
   summary?: WorkspaceSummary,
-  dot?: DotNotification
+  dot?: DotNotification,
+  dotManaged = false
 ): SidebarWorkspace {
   const latestProcessStatus = summary?.latest_process_status ?? undefined;
   const isRunning =
@@ -100,6 +104,7 @@ function toSidebarWorkspace(
     hasRunningDevServer: summary?.has_running_dev_server,
     hasUnseenActivity: summary?.has_unseen_turns,
     dotUnreadCount: dot?.unread_count ?? 0,
+    dotManaged,
     dotNeedsAttentionCount: dot?.needs_attention_count ?? 0,
     activeSubagentCount: summary?.active_subagent_count ?? 0,
     unresolvedSubagentCount: summary?.unresolved_subagent_count ?? 0,
@@ -162,6 +167,11 @@ export function useWorkspaces(): UseWorkspacesResult {
   const hostId = useHostId();
   const dotNotifications = useDotNotifications();
   const dotWorkspaceNotifications = useDotWorkspaceNotifications();
+  const dotManagedWorkspaces = useDotManagedWorkspaces();
+  const managedByWorkspace = useMemo(
+    () => new Map(dotManagedWorkspaces.map((m) => [m.workspace_id, m])),
+    [dotManagedWorkspaces]
+  );
   const dotByWorkspace = useMemo(
     () => new Map(dotWorkspaceNotifications.map((n) => [n.workspace_id, n])),
     [dotWorkspaceNotifications]
@@ -312,10 +322,17 @@ export function useWorkspaces(): UseWorkspacesResult {
             ws.task_id,
             ws.task_id ? dotByIssue.get(ws.task_id) : undefined,
             dotByWorkspace.get(ws.id)
-          )
+          ),
+          workspaceDotManaged(ws.id, ws.task_id, managedByWorkspace.get(ws.id))
         )
       );
-  }, [activeData, activeSummaries, dotByIssue, dotByWorkspace]);
+  }, [
+    activeData,
+    activeSummaries,
+    dotByIssue,
+    dotByWorkspace,
+    managedByWorkspace,
+  ]);
 
   const archivedWorkspaces = useMemo(() => {
     if (!archivedData?.workspaces) return [];
@@ -338,10 +355,17 @@ export function useWorkspaces(): UseWorkspacesResult {
             ws.task_id,
             ws.task_id ? dotByIssue.get(ws.task_id) : undefined,
             dotByWorkspace.get(ws.id)
-          )
+          ),
+          workspaceDotManaged(ws.id, ws.task_id, managedByWorkspace.get(ws.id))
         )
       );
-  }, [archivedData, archivedSummaries, dotByIssue, dotByWorkspace]);
+  }, [
+    archivedData,
+    archivedSummaries,
+    dotByIssue,
+    dotByWorkspace,
+    managedByWorkspace,
+  ]);
 
   // The primary workspace list must not be blocked by archived workspace
   // initialization. Archived snapshots can be slow under load and are not

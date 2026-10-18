@@ -19,6 +19,7 @@ const rows: WorkspacesSidebarWorkspace[] = [
   {
     id: 'running-unread',
     name: 'Running unread',
+    dotManaged: true,
     isRunning: true,
     hasUnseenActivity: true,
     dotUnreadCount: 1,
@@ -64,7 +65,7 @@ const rows: WorkspacesSidebarWorkspace[] = [
   { id: 'idle-dot', name: 'Idle Dot unread', dotUnreadCount: 1 },
   { id: 'idle-approval', name: 'Idle approval', hasPendingApproval: true },
   { id: 'idle-attention', name: 'Idle attention', dotNeedsAttentionCount: 1 },
-  { id: 'idle', name: 'Idle clean' },
+  { id: 'idle', name: 'Idle clean', dotManaged: true },
   ...['target', 'sibling'].map((id) => {
     const activity = workspaceDotNotification(
       'i',

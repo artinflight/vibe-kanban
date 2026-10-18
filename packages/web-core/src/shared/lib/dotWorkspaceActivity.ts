@@ -10,6 +10,30 @@ export type DotWorkspaceNotification = DotNotification & {
   workspace_id: string;
 };
 
+// Supplied only by the trusted management registry, never inferred from activity.
+export type DotManagedWorkspace = {
+  workspace_id: string;
+  issue_id: string;
+  project_id: string;
+  manager: 'dot';
+  state: 'managed';
+};
+
+export function workspaceDotManaged(
+  workspaceId: string,
+  issueId: string | null,
+  association?: DotManagedWorkspace
+): boolean {
+  return !!(
+    issueId &&
+    association?.workspace_id === workspaceId &&
+    association.issue_id === issueId &&
+    association.project_id &&
+    association.manager === 'dot' &&
+    association.state === 'managed'
+  );
+}
+
 // Issue badges retain aggregate counts. Workspace badges combine the shared
 // conversation with only that workspace's verified dispatch receipts.
 export function workspaceDotNotification(

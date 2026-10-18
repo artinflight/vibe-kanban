@@ -5,15 +5,18 @@ import { useHostId } from '@/shared/providers/HostIdProvider';
 import type {
   DotNotification,
   DotWorkspaceNotification,
+  DotManagedWorkspace,
 } from '@/shared/lib/dotWorkspaceActivity';
 export type DotProjectNotification = Omit<DotNotification, 'issue_id'>;
 type DotNotifications = {
   issues: DotNotification[];
   projects?: DotProjectNotification[];
   workspaces?: DotWorkspaceNotification[];
+  managed_workspaces?: DotManagedWorkspace[];
 };
 const EMPTY: DotNotification[] = [];
 const EMPTY_WORKSPACES: DotWorkspaceNotification[] = [];
+const EMPTY_MANAGED: DotManagedWorkspace[] = [];
 const EMPTY_SNAPSHOT: DotNotifications = { issues: [] };
 export const dotNotificationKey = ['dot-sidechat-notifications'] as const;
 
@@ -64,4 +67,8 @@ export function useDotProjectNotifications(): DotProjectNotification[] {
 
 export function useDotWorkspaceNotifications(): DotWorkspaceNotification[] {
   return useDotNotificationSnapshot().workspaces ?? EMPTY_WORKSPACES;
+}
+
+export function useDotManagedWorkspaces(): DotManagedWorkspace[] {
+  return useDotNotificationSnapshot().managed_workspaces ?? EMPTY_MANAGED;
 }

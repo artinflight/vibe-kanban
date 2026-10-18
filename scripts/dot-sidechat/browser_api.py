@@ -21,6 +21,7 @@ import urllib.parse
 import uuid
 
 from sidechat import Principal, Rejected, Store
+from workspace_management import WorkspaceManagement
 from project_collaboration import Conflict
 
 PREFIX = "/api/dot-sidechat/"
@@ -135,6 +136,7 @@ class WorkspaceResolver:
 class BrowserAPI:
     def __init__(self, store, resolver):
         self.store, self.resolver, self.auth = store, resolver, BrowserAuth(store)
+        self.management = WorkspaceManagement(store)
 
     def scope(self, session, workspace):
         scope = self.resolver(str(uuid.UUID(workspace)))
@@ -204,7 +206,10 @@ class BrowserAPI:
 
 
     def notifications(self, session):
-        return self.store.notifications(Principal(session['owner'],'owner'),json.loads(session['projects']))
+        owner, projects = Principal(session['owner'],'owner'), json.loads(session['projects'])
+        result = self.store.notifications(owner, projects)
+        result['managed_workspaces'] = self.management.visible(owner, projects, self.resolver)
+        return result
 
     def seen(self, session, args):
         if set(args) not in ({'workspace','messages'}, {'project','messages'}):raise Rejected('Unexpected read argument')

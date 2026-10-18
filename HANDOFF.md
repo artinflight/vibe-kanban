@@ -44,3 +44,8 @@ timestamps are verified live07:12:15 EDT Oct18; Reply to plus navigation still
 await Staging's next integration. Current frontend/rollback pins and old r1
 inputs are retained in the derived private baseline record; no new capture.
 Preserve execution88a68ab1 retains exact-message acknowledgement ownership.
+
+Newest owner request: [persistent Dot management](VK_DOT_WORKSPACE_MANAGEMENT.md)
+uses an explicit local association, never dispatch/read/count inference. Only
+verified T89 is provided for backfill; nothing is enabled live here. Staging owns
+combined Reply+Jump+management release; Preserve retains provenance/ack contracts.

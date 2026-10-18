@@ -96,7 +96,34 @@ for (const width of [390, 1440]) {
       );
     }
   }
-  dom.window.fixtureUpdate('running-unread', { isRunning: false });
+  // Management is independent of read/attention/activity, including summary rows.
+  for (const changes of [
+    { dotUnreadCount: 0, dotNeedsAttentionCount: 0, hasUnseenActivity: false },
+    { dotUnreadCount: 1, dotNeedsAttentionCount: 1 },
+    { dotUnreadCount: 0, dotNeedsAttentionCount: 0 },
+  ]) {
+    dom.window.fixtureUpdate('running-unread', changes);
+    const root = section('Running');
+    await wait(() => names(root).includes('Running unread'));
+    const row = [...root.querySelectorAll('.mobile-workspace-card')].find((n) =>
+      n.textContent.includes('Running unread')
+    );
+    assert.ok(row.querySelector('[data-dot-managed]'));
+  }
+  const neutralRoot = section(width < 768 ? 'Attention' : 'Needs Attention');
+  await wait(() => names(neutralRoot).includes('Dispatch target'));
+  assert.equal(
+    [...neutralRoot.querySelectorAll('.mobile-workspace-card')]
+      .find((n) => n.textContent.includes('Dispatch target'))
+      .querySelector('[data-dot-managed]'),
+    null,
+    'Generic dispatch must not label a subordinate as managed'
+  );
+  dom.window.fixtureUpdate('running-unread', {
+    isRunning: false,
+    dotUnreadCount: 1,
+    hasUnseenActivity: true,
+  });
   const needs = section(width < 768 ? 'Attention' : 'Needs Attention');
   await wait(() => names(needs).includes('Running unread'));
   dom.window.fixtureUpdate('running-unread', {

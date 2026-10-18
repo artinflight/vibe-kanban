@@ -4,7 +4,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DotSidechatLive } from '../../packages/web-core/src/pages/workspaces/DotSidechatLive';
 import { WorkspaceSummary } from '../../packages/ui/src/components/WorkspaceSummary';
 import { IssueWorkspaceCard } from '../../packages/ui/src/components/IssueWorkspaceCard';
-import { useDotNotifications } from '../../packages/web-core/src/shared/hooks/useDotNotifications';
+import {
+  useDotNotifications,
+  useDotManagedWorkspaces,
+} from '../../packages/web-core/src/shared/hooks/useDotNotifications';
+import { workspaceDotManaged } from '../../packages/web-core/src/shared/lib/dotWorkspaceActivity';
 
 function Fixture() {
   const [visible, setVisible] = useState(false);
@@ -13,6 +17,12 @@ function Fixture() {
   );
   const project = new URLSearchParams(window.location.search).has('project');
   const notifications = useDotNotifications();
+  const associations = useDotManagedWorkspaces();
+  const managed = workspaceDotManaged(
+    '11111111-1111-4111-8111-111111111111',
+    'issue-fixture',
+    associations[0]
+  );
   const state = notifications.find((n) => n.issue_id === 'issue-fixture');
   const dot = {
     dotUnreadCount: state?.unread_count ?? 0,
@@ -23,6 +33,7 @@ function Fixture() {
       <aside id="workspace-list" style={{ width: 288, maxWidth: '100%' }}>
         <WorkspaceSummary
           name="Workspace A"
+          dotManaged={managed}
           filesChanged={8}
           linesAdded={120}
           linesRemoved={24}
@@ -40,6 +51,7 @@ function Fixture() {
         <IssueWorkspaceCard
           workspace={{
             id: 'fixture-card',
+            dotManaged: managed,
             localWorkspaceId: null,
             name: 'Issue workspace',
             archived: false,

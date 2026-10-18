@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { workspaceDotNotification } from './dotWorkspaceActivity.ts';
+import {
+  workspaceDotNotification,
+  workspaceDotManaged,
+  type DotManagedWorkspace,
+} from './dotWorkspaceActivity.ts';
 
 const aggregate = {
   project_id: 'p',
@@ -80,4 +84,37 @@ test('explicit dispatch attention is additive only on its target', () => {
     workspaceDotNotification('i', aggregate)?.needs_attention_count,
     1
   );
+});
+
+test('management requires an explicit exact association, independent of counts', () => {
+  const association: DotManagedWorkspace = {
+    workspace_id: 'target',
+    issue_id: 'i',
+    project_id: 'p',
+    manager: 'dot',
+    state: 'managed',
+  };
+  assert.equal(workspaceDotManaged('target', 'i', association), true);
+  assert.equal(workspaceDotManaged('sibling', 'i', association), false);
+  assert.equal(workspaceDotManaged('target', 'relinked', association), false);
+  assert.equal(workspaceDotManaged('target', null, association), false);
+  assert.equal(workspaceDotManaged('target', 'i'), false);
+  // Generic Dot dispatch/count metadata cannot establish a management relation.
+  assert.equal(
+    workspaceDotManaged(
+      'target',
+      'i',
+      dispatch as unknown as DotManagedWorkspace
+    ),
+    false
+  );
+  for (const changes of [{ state: 'released' }, { manager: 'unknown' }]) {
+    assert.equal(
+      workspaceDotManaged('target', 'i', {
+        ...association,
+        ...changes,
+      } as DotManagedWorkspace),
+      false
+    );
+  }
 });

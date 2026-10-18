@@ -1865,6 +1865,7 @@ export function KanbanContainer() {
                       key={id}
                       className={cn(
                         'mobile-task-card phone-task-row',
+                        !isExpanded && 'pb-base',
                         attentionLabel && 'kanban-attention-card'
                       )}
                     >

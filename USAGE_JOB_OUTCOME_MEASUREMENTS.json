@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "fixture_only": true,
+  "models_changed": false,
+  "provider_calls": {
+    "before": 0,
+    "after": 0
+  },
+  "native_model_savings_proved": false,
+  "same_command_sha256": "06d4576427217a4828eb02086d84c43fec282e1074f5bed58f22d82c59c78d1b",
+  "modes": {
+    "always_rerun": {
+      "requests": [
+        {
+          "phase": "cold",
+          "passed": true,
+          "launches": 3,
+          "reused": [],
+          "artifact_sha256": "3dfa4b64f6ff1613d15fd2738af77cca0ff94a96b85492582a69ca2def20387a",
+          "full_report_json_bytes": 3378,
+          "compact_outcome_json_bytes": 823
+        },
+        {
+          "phase": "identical_repeat",
+          "passed": true,
+          "launches": 3,
+          "reused": [],
+          "artifact_sha256": "3dfa4b64f6ff1613d15fd2738af77cca0ff94a96b85492582a69ca2def20387a",
+          "full_report_json_bytes": 3379,
+          "compact_outcome_json_bytes": 823
+        },
+        {
+          "phase": "changed_input",
+          "passed": true,
+          "launches": 3,
+          "reused": [],
+          "artifact_sha256": "b0770c2771b294ed9917fb6904dab81709783a40649a7140e9ac2780bb54ca15",
+          "full_report_json_bytes": 3376,
+          "compact_outcome_json_bytes": 823
+        }
+      ],
+      "step_launches": 9,
+      "fresh_checks": 3
+    },
+    "fingerprinted_reuse": {
+      "requests": [
+        {
+          "phase": "cold",
+          "passed": true,
+          "launches": 3,
+          "reused": [],
+          "artifact_sha256": "3dfa4b64f6ff1613d15fd2738af77cca0ff94a96b85492582a69ca2def20387a",
+          "full_report_json_bytes": 3425,
+          "compact_outcome_json_bytes": 830
+        },
+        {
+          "phase": "identical_repeat",
+          "passed": true,
+          "launches": 1,
+          "reused": [
+            "validate",
+            "build"
+          ],
+          "artifact_sha256": "3dfa4b64f6ff1613d15fd2738af77cca0ff94a96b85492582a69ca2def20387a",
+          "full_report_json_bytes": 3428,
+          "compact_outcome_json_bytes": 830
+        },
+        {
+          "phase": "changed_input",
+          "passed": true,
+          "launches": 3,
+          "reused": [],
+          "artifact_sha256": "b0770c2771b294ed9917fb6904dab81709783a40649a7140e9ac2780bb54ca15",
+          "full_report_json_bytes": 3427,
+          "compact_outcome_json_bytes": 830
+        }
+      ],
+      "step_launches": 7,
+      "fresh_checks": 3
+    }
+  },
+  "outcome_payloads": {
+    "requests": 6,
+    "full_json_bytes": 20413,
+    "compact_json_bytes": 4959,
+    "fewer_bytes": 15454,
+    "reduction_percent": 75.70665752216725,
+    "same_full_evidence_retained": true,
+    "extra_provider_calls": 0
+  }
+}

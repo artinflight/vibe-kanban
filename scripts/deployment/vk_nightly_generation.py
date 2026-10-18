@@ -27,9 +27,18 @@ MAX_CHUNKS = 1_000_000
 
 def chunk_layout(path, checksum, size):
     with regular(path) as stream:
-        data = stream.read(MAX_INDEX + 1)
-    if len(data) > MAX_INDEX:
-        raise ValueError('chunk layout exceeds metadata bound')
+        before = os.fstat(stream.fileno())
+        if before.st_size > MAX_INDEX:
+            raise ValueError('chunk layout exceeds metadata bound')
+        # read(512MiB) reserves that address space even for a tiny layout.
+        # Size the read from this opened file, retaining the exact hard bound
+        # and refusing growth/truncation or replacement during the read.
+        data = stream.read(before.st_size + 1)
+        after = os.fstat(stream.fileno())
+        if len(data) != before.st_size or (
+                before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
+                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+            raise ValueError('chunk layout changed during recovery')
     value = json.loads(data)
     if (value.get('encoding') != CHUNKED or value.get('sha256') != checksum
             or value.get('bytes') != size or not isinstance(value.get('chunks'), list)

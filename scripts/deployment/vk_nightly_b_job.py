@@ -48,8 +48,11 @@ encoding=m.get('object_encoding');assert encoding in (None,'zlib-1-v1','chunked-
 sizes={x['sha256']:x['bytes'] for x in m['entries'].values() if x['kind']=='file'}
 def decoded(path,h,size,codec):
  if codec=='chunked-zlib-1-v1':
-  with path.open('rb') as f:raw=f.read(268435457)
-  assert len(raw)<=268435456
+  with path.open('rb') as f:
+   before=os.fstat(f.fileno());assert before.st_size<=268435456
+   raw=f.read(before.st_size+1);after=os.fstat(f.fileno())
+  assert len(raw)==before.st_size
+  assert (before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns,before.st_ctime_ns)==(after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns,after.st_ctime_ns)
   layout=json.loads(raw)
   assert layout['encoding']==codec and layout['sha256']==h and layout['bytes']==size
   refs=layout['chunks'];assert len(refs)<=1000000

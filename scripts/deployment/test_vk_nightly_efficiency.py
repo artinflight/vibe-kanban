@@ -100,6 +100,22 @@ class ChunkedHistory(unittest.TestCase):
         self.assertEqual(self.recover('empty'), b'')
         self.assertEqual(self.recover('history'), data)
 
+    def test_small_layout_recovery_with_bounded_address_space(self):
+        data = b'exact retained history' * 100
+        self.advance({'history': data})
+        manifest = self.store.current();row = manifest['entries']['history']
+        path = self.root/manifest['generation']/'objects'/row['sha256']
+        code = '''import resource,sys,hashlib
+from vk_nightly_generation import CHUNKED,object_blocks
+resource.setrlimit(resource.RLIMIT_AS,(128*1024**2,128*1024**2))
+data=b''.join(object_blocks(sys.argv[1],sys.argv[2],int(sys.argv[3]),CHUNKED))
+assert hashlib.sha256(data).hexdigest()==sys.argv[2]
+'''
+        completed = subprocess.run([sys.executable, '-B', '-c', code, str(path),
+                                    row['sha256'], str(row['bytes'])],
+                                   text=True, capture_output=True, timeout=15)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
     def test_native_readback_program_decodes_same_complete_chunk_closure(self):
         data = os.urandom(CHUNK_BYTES)+b'incomplete final record\xff'
         self.advance({'history': data})
@@ -110,6 +126,8 @@ class ChunkedHistory(unittest.TestCase):
         # Exercise the EXACT native verifier source on a Linux fixture. Only
         # the Windows drive observation is redirected; no real B claim.
         code = WINDOWS_READBACK.replace("os.stat('B:/')", 'os.stat('+repr(str(self.root))+')')
+        code = ('import resource;resource.setrlimit(resource.RLIMIT_AS,'
+                '(128*1024**2,128*1024**2))\n' + code)
         completed = subprocess.run([sys.executable, '-B', '-c', code], input=json.dumps(request),
                                    text=True, capture_output=True)
         self.assertEqual(completed.returncode, 0, completed.stderr)

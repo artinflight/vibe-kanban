@@ -1,11 +1,41 @@
+# October18 7:41a.m. EDT — durable collection and native restore preparation
+
+R2 remains the sole producer1889756/start42565325; no capture restart or change
+to its config/package. The old interactive collector did not survive the turn
+boundary. Its absence was verified before attaching the durable metadata-only
+vk-backup-result-collector-r2-20261018.service, which invokes the existing
+supported terminal collector and preserves its result/log. It launches no producer
+or automatic next-stage retry; existing whole-job deadline remains3:02:35p.m. EDT.
+
+Preparation found a real avoidable memory fault: chunk-layout read(512MiB+1)
+reserves that address space even for tiny files; native verification reserved256MiB.
+Both readers now use the opened file's actual size with the same hard ceiling,
+identity/time/length checks.13 focused recovery regressions pass, including exact
+reader/native-code recovery under128MiB AS. A real Windows bridge/native B
+readback/new B-backed ext4 restore passed at7:41:06a.m. EDT:five entries, two
+regular files/10292bytes, one SQLite integrity check, links and recorded numeric
+metadata verified, peak WSL RSS24492KiB. This is a tiny marked fixture, not the
+current workload. Failed fixture retained. Unlaunched full worker also reuses
+WSL's already isolated PID=PGID=SID and ships only its verified11-module closure;
+no loader/access guard or resource limit was weakened.
+
+Staging's coordinated frontend/Python release needs before/after hashes, a complete
+preserved incumbent/new package manifest and activation/process identities. Shared
+DOT_RELEASE_TRANSITION_CONTRACT records the exact R2 epoch and small-work sequence.
+Frontend transitions remain observed without cancellation. New mutable Dot bytes
+may reject old runtime pins; preserve the complete sealed archive/result and
+reverify/rebind a known authorized transition rather than blindly recapture.
+No current-release adoption, full workload restore, deployment, schedule or original
+retirement is claimed. Existing5GiB total cap and owner allocations remain.
+
 # Sole retained-r2 ACTIVE — October18 11:02:35UTC
 
 Producer1889756/start42565325, supervisor1877794,
 vk-nightly-retained-capture-r2-20261018.service. ConfigSHA
 30e8d59529510348ddf301905f76e915a16ee02a930f5f3d01e1c95b8bc98805.
 Code snapshotcb3b659939a33e53143e1304bdbddde836f0b83c. Exact phase and current
-shared receipts are in cold-r2-frontend-epoch-measured. Passive collector exec
-session22043 owns this result; supported collect-result.private.py starts no job.
+shared receipts are in cold-r2-frontend-epoch-measured. Durable metadata collector unit
+vk-backup-result-collector-r2-20261018.service owns this result; supported collect-result.private.py starts no job.
 Initial-only8h deadline19:02:35UTC allows serial upload/full archive replay at
 observed transport speed; all old windows are terminal, unchanged and preserved.
 Same one CPU/High2GiB/Max3GiB/Swap0/Tasks32, aggregate B writes8MiB/s, TOTAL

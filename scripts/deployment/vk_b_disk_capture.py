@@ -217,6 +217,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
     reused, warnings = [], []
     manifest = None
     peak_snapshot = 0
+    peak_snapshot_cache = 0
     disk_proofs = {}
     disk_inventory = None
     disk_root = None
@@ -246,7 +247,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
             raise ValueError("Final boundary writer fence changed")
 
     def produce(stream):
-        nonlocal manifest, peak_snapshot, disk_inventory
+        nonlocal manifest, peak_snapshot, peak_snapshot_cache, disk_inventory
         with tarfile.open(fileobj=stream, mode="w|", format=tarfile.PAX_FORMAT,
                           bufsize=1024**2, copybufsize=1024**2) as archive:
             with measured(timings, "sqlite_snapshot_and_integrity"):
@@ -327,7 +328,9 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                                         or disk_image.get('writer_fenced') is not False
                                         or disk_image.get('physical_b_verified') is not True
                                         or disk_image.get('integrity') != 'ok'
-                                        or disk_image.get('local_snapshot_payload_bytes') != 0):
+                                        or (disk_image.get('local_snapshot_payload_bytes') != 0
+                                            and not (workspace is not None and getattr(workspace,'snapshot_cache',None)
+                                                     and workspace.snapshot_cache.valid(disk_image)))):
                                     raise ValueError('B-disk snapshot factory returned unverified evidence')
                                 disk_proofs[raw] = {k: v for k, v in disk_image.items() if k != 'mount_root'}
                                 image = None
@@ -335,6 +338,7 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                                 image = memory_snapshot(connection, max_snapshot_bytes)
                         connection.rollback()
                     image_bytes = disk_image['bytes'] if disk_image else len(image)
+                    if disk_image:peak_snapshot_cache=max(peak_snapshot_cache,disk_image.get('local_snapshot_cache_allocated_bytes',0))
                     peak_snapshot = max(peak_snapshot, 0 if disk_image else image_bytes)
                     relative = "sqlite/" + hashlib.sha256(raw.encode()).hexdigest() + ".sqlite"
                     member = archive.gettarinfo(raw, "payload/" + relative)
@@ -354,7 +358,9 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                         if (Path(disk_image['snapshot']).name != disk_image['snapshot']
                                 or not disk_image['snapshot'].startswith('sqlite-consistent-')):
                             raise ValueError('Unsafe disk snapshot selector')
-                        with (mounted / disk_image['snapshot']).open('rb') as payload:
+                        reader=(workspace.snapshot_reader(disk_image) if workspace and hasattr(workspace,'snapshot_reader')
+                                else (mounted / disk_image['snapshot']).open('rb'))
+                        with reader as payload:
                             if nightly_selection is None:
                                 if hashlib.file_digest(payload, 'sha256').hexdigest() != checksum:
                                     raise ValueError('B snapshot changed before archiving')
@@ -402,7 +408,8 @@ def capture(plan, root, journal, mirror, parent=None, publish=None, *, verify_fe
                                   'limit_bytes': inventory_limit, 'local_payload_bytes': 0}
             from vk_change_journal import scope
             manifest = {"schema": 1, "at": time.time(), "capture_driver": driver,
-                        "large_b_disk_snapshots": disk_proofs, "b_path_inventory": disk_inventory, "scope_sha256": identity(scope(plan)),
+                        "large_b_disk_snapshots": disk_proofs, "b_path_inventory": disk_inventory,
+                        "peak_local_snapshot_cache_allocated_bytes": peak_snapshot_cache, "scope_sha256": identity(scope(plan)),
                         "plan_sha256": identity(plan), "exclusion_targets": list(map(str, exclusions.roots)),
                         "journal_instance": before["instance"], "journal_sequence": before["sequence"],
                         "parent": None if parent is None else reference(parent), "sqlite_snapshots": snapshots,

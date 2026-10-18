@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 from nightly_test_support import fixture_readback
 from vk_archive_stream import StreamingArchive
-from vk_nightly_capacity import StreamMeter
+from vk_nightly_capacity import StreamMeter, measure_retained
 from vk_nightly_capture_adapter import Resident, resident_bundle
 from vk_nightly_b_job import resident_scope, resident_action
 from vk_nightly_generation import CHUNKED, MAX_INDEX, NightlyStore
@@ -90,6 +90,57 @@ class CapacityTransport(unittest.TestCase):
 
 
 class Capacity(unittest.TestCase):
+    def retained_workspace(self,root):
+        from test_vk_nightly_capture_adapter import FakeResident
+        from vk_nightly_capture_adapter import RegisteredWorkspace
+        inputs=root/'inputs';inputs.mkdir()
+        with patch.object(RegisteredWorkspace,'checked_root',lambda self,path:self.root):
+            workspace=RegisteredWorkspace(inputs,FakeResident(inputs,4*1024**2))
+        workspace.checked_root=lambda path:inputs
+        return workspace
+    def test_retained_stream_is_captured_once_and_matches_independent_delivery(self):
+        with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as raw:
+            root=Path(raw);workspace=self.retained_workspace(root);calls=[]
+            def produce(out):
+                calls.append('capture')
+                with tarfile.open(fileobj=out,mode='w|') as archive:
+                    for key,data in [('scope/history',b'unclosed history tail\xff'),
+                                     ('payload/manifest.json',b'{"sqlite_snapshots":{}}')]:
+                        member=tarfile.TarInfo(key);member.size=len(data);archive.addfile(member,io.BytesIO(data))
+            source=StreamingArchive(root,'retained.tar.zst',produce)
+            result,receipt=measure_retained(source,workspace.mirror,root/'meter',timeout_seconds=30)
+            archived=(workspace.root/source.name).read_bytes()
+            self.assertEqual(calls,['capture']);self.assertEqual(source.sha256,hashlib.sha256(archived).hexdigest())
+            self.assertEqual(result['compressed_archive_bytes'],len(archived));self.assertTrue(result['stream_retained'])
+            self.assertEqual(receipt['sha256'],source.sha256);self.assertEqual(result['regular_files'],1)
+            self.assertFalse(result['backup_created'])
+            restored=subprocess.run(['zstd','-d','-c'],input=archived,capture_output=True,check=True).stdout
+            with tarfile.open(fileobj=io.BytesIO(restored)) as tar:
+                self.assertEqual(tar.extractfile('scope/history').read(),b'unclosed history tail\xff')
+    def test_retained_source_failure_is_original_and_unaccepted_inputs_remain(self):
+        with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as raw:
+            root=Path(raw);workspace=self.retained_workspace(root);error=ValueError('fixture original source failure')
+            error.nightly_sqlite_diagnostic={'stage':'native.seal','resident_response':{'reason':'fixture'}}
+            def produce(out):out.write(b'\0'*10240);raise error
+            source=StreamingArchive(root,'failed.tar.zst',produce)
+            with self.assertRaises(ValueError) as caught:measure_retained(source,workspace.mirror,root/'meter',timeout_seconds=30)
+            self.assertIs(caught.exception,error);self.assertTrue((workspace.root/source.name).exists())
+            report=json.loads((root/'meter/stream-failure.private.json').read_text())
+            self.assertEqual(report['sqlite_diagnostic'],error.nightly_sqlite_diagnostic)
+            self.assertFalse((root/'meter/retained-stream-measurement.private.json').exists());self.assertIsNone(source.sha256)
+    def test_failed_archive_seal_never_becomes_a_measurement_result(self):
+        with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as raw:
+            root=Path(raw);workspace=self.retained_workspace(root)
+            def produce(out):
+                with tarfile.open(fileobj=out,mode='w|') as archive:
+                    data=b'{"sqlite_snapshots":{}}';member=tarfile.TarInfo('payload/manifest.json');member.size=len(data)
+                    archive.addfile(member,io.BytesIO(data))
+            source=StreamingArchive(root,'unsealed.tar.zst',produce)
+            with patch.object(workspace,'seal',side_effect=ValueError('fixture independent B seal failed')):
+                with self.assertRaisesRegex(ValueError,'independent B seal failed'):
+                    measure_retained(source,workspace.mirror,root/'meter',timeout_seconds=30)
+            self.assertTrue((workspace.root/source.name).exists());self.assertIsNone(source.sha256)
+            self.assertFalse((root/'meter/retained-stream-measurement.private.json').exists())
     def test_producer_failure_survives_missing_or_truncated_manifest(self):
         for partial in (b'\0'*10240, b'x'*512):
             with self.subTest(partial=partial[:1]),tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as raw:

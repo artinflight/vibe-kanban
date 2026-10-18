@@ -12,16 +12,27 @@ Failed274432-byte seed image has identical WSL/Windows SHA and both integrity
 checks pass. Two fresh targeted copies passed before writer-flush hardening.
 Original remote failure reason was discarded; do not invent a historical cause.
 Current patch propagates bounded resident failure details into snapshot diagnostics
-and completes the MCP writer flush before B sealing.31 prior and five focused
-regressions pass. A new native flush-path check was deferred before payload by
-the optional-offload busy heuristic; original Disk owner is reconciling B I/O.
+and completes the MCP writer flush before B sealing. Optional canonical/owned SSD
+scratch caches one SQLite image, requires exact independent B hash/integrity,
+feeds TAR from that duplicate and releases only completed verified scratch.
+measure_retained meters the SAME stream delivered by the ordinary B writer;
+no second capture/compressor or fabricated publication receipt.72 relevant tests
+pass in one process; two native cached-copy and two flush-path copies pass.
+Backend formatting passed; aggregate frontend formatting lacks Prettier here.
+Earlier unchanged-source frontend validation is retained, not claimed as a new
+aggregate pass. Ops check passed; no Rust/frontend source changed.
 
 Disk receipt T26_NIGHTLY_TOTAL_5G_ALLOCATION_20261018T0742.private.json confirms
 TOTAL5GiB including the whole Nightly root (1080328192bytes at07:41), replacing
 the prior2GiB cap. The old130MB peak is a smaller tracked subset. Do not add or
 reset allowances. A3GiB cache plus1.5GiB meter does not fit with existing files;
-use a measured combined budget and fresh original admission. No originals deleted,
-bulk retry, deployment, schedule or cutover. Existing private handoffs updated.
+use a measured combined budget and fresh original admission. Cache is consumed
+before regular-file indexing, so these maxima need not coexist. Existing private
+NEXT_PHASE_PREPARATION records the sequencing and retained-capture worker plan.
+MM Photography->R remains a B reader; no exclusive window is claimed. Disk's
+queue/idle check was optional-cleanup preference and is withdrawn for new work;
+real health/owner-pause/integrity/reserve protections remain. No originals deleted,
+bulk retry, deployment, schedule or cutover. Full independent restore is pending.
 
 # Historical: await same R9 under corrected guard — October18 06:00UTC
 

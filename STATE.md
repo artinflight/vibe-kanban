@@ -16,11 +16,27 @@ maxima are not additive: one3GiB image plus1.5GiB index would exceed that cap.
 Shared floors and other-owner allowances remain protected; no launch admission.
 
 Producer hardening retains bounded resident failure details and explicitly
-flushes the MCP writer before independent B sealing.31 narrow regressions and
-five focused error/flush regressions pass. New real flush-path validation was
-deferred before B allocation by the copied optional-offload busy heuristic;
-Disk is reconciling actual B activity. No full stream, backup/restore acceptance,
-deployment, schedule, cutover or cleanup. All R9 and earlier inputs preserved.
+flushes the MCP writer before independent B sealing. Optional private SSD scratch
+now streams a single consistent image to B, requires its independent native
+hash/integrity seal, and supplies that exact payload to TAR. Failed scratch stays;
+only its new verified duplicate is released, leaving source and B image intact.
+The retained-stream meter shares that same TAR with ordinary verified delivery,
+so a subsequent complete measurement can retain its archive for restore proof.
+
+72 relevant regressions pass in one process, including actual TAR/provider and
+retained-stream integration. Two native cached-copy checks and two native flush
+checks pass separately; these are small fixtures, not full workload acceptance.
+Required aggregate formatting was attempted: backend formatting passed; frontend
+stopped because this worktree has no Prettier installation. Earlier exact-source
+serial frontend results remain applicable; frontend/Rust bytes did not change.
+
+Disk identified MM Photography->R as an active B reader. The copied queue/idle
+assertion was its optional-cleanup preference, not user policy or hardware fault.
+That assertion is withdrawn for new diagnostics; native health, owner-pause,
+integrity and reserve checks remain. Separate fresh bulk admission is pending.
+SQL scratch is released before regular-file indexing, allowing phased use of the
+same5GiB TOTAL cap. No full stream, backup/restore acceptance, deployment,
+schedule, cutover or cleanup. All R9 and earlier inputs remain preserved.
 
 # Historical: same Nightly R9 retained under corrected guard — October18 06:00UTC
 

@@ -1,9 +1,10 @@
-"""Count an actual cold capture stream without retaining its archive payload.
+"""Measure an actual cold capture stream and its unique object working set.
 
 This is capacity evidence, never an accepted backup or permission to retire one.
 SQLite images use the normal registered B snapshot path. The full tar stream is
 hashed/compressed and its unique chunk/layout sizes are counted in SSD SQLite.
-No archive/object payload is retained and no publication receipt is fabricated.
+The CLI discards archive bytes. measure_retained delegates to the ordinary
+registered delivery path instead; neither mode publishes a generation.
 """
 import argparse
 import hashlib
@@ -26,6 +27,69 @@ from vk_prep_common import storage, save
 
 class MeasurementComplete(ValueError):
     pass
+
+
+def measure_retained(source,deliver,output,*,allocation_unit=4096,timeout_seconds=3600):
+    """Meter the SAME TAR delivered by a trusted registered-workspace callback.
+
+    Compression, B allocation, flush, hash/readback and failure preservation
+    remain with the existing deliver method. No second source capture or archive
+    compressor is started. A retained stream is not an accepted generation.
+    """
+    if not isinstance(source,StreamingArchive):raise ValueError('fixed streaming archive required')
+    if type(timeout_seconds) is not int or timeout_seconds<=0:raise ValueError('finite positive delivery wait required')
+    meter=StreamMeter(output,allocation_unit=allocation_unit)
+    read_fd,write_fd=os.pipe();reader=os.fdopen(read_fd,'rb');writer=os.fdopen(write_fd,'wb')
+    producer_errors=[];delivery_errors=[];receipts=[]
+    class Tee:
+        def __init__(self,out):self.out=out
+        def write(self,data):self.out.write(data);writer.write(data);return len(data)
+        def flush(self):self.out.flush();writer.flush()
+    def produce(out):
+        try:source.produce(Tee(out))
+        except BaseException as error:producer_errors.append(error);raise
+        finally:writer.close()
+    retained=StreamingArchive(source.parent,source.name,produce,max_bytes=source.max_bytes)
+    def send():
+        try:receipts.append(deliver(retained))
+        except BaseException as error:delivery_errors.append(error)
+        finally:
+            if not writer.closed:writer.close()
+    delivery=threading.Thread(target=send,name='nightly-retained-delivery',daemon=True)
+    delivery.start()
+    try:
+        try:meter.consume(reader)
+        except BaseException:
+            if producer_errors:raise producer_errors[0]
+            if delivery_errors:raise delivery_errors[0]
+            raise
+        value=meter.summary()
+        delivery.join(timeout=timeout_seconds)
+        if delivery.is_alive():raise TimeoutError('retained capture delivery did not finish')
+        if delivery_errors:raise delivery_errors[0]
+        receipt=receipts[0]
+        if (receipt.get('desktop_verified') is not True or receipt.get('direct_stream') is not True
+                or not retained.sha256 or (receipt.get('name'),receipt.get('bytes'),receipt.get('sha256'))
+                !=(source.name,retained.bytes,retained.sha256)):
+            raise ValueError('retained archive delivery/readback binding missing')
+        value.update(compressed_archive_bytes=retained.bytes,compressed_archive_sha256=retained.sha256,
+                     full_tar_stream_counted=True,stream_retained=True,seconds=time.monotonic()-meter.started)
+        save(meter.root/'retained-stream-measurement.private.json',value)
+        source.bytes,source.sha256=retained.bytes,retained.sha256
+        return value,receipt
+    except BaseException as error:
+        try:
+            meter.db.commit()  # Preserve complete observed rows, never a result seal.
+            save(meter.root/'stream-failure.private.json',{'passed':False,'error_type':type(error).__name__,
+                 'error':str(error),'traceback':traceback.format_exc(),'entries_observed':meter.count,
+                 'partial_index_not_accepted':True,'sqlite_diagnostic':getattr(error,'nightly_sqlite_diagnostic',None)})
+        except Exception as secondary:error.add_note('Partial measurement receipt failed: '+type(secondary).__name__)
+        raise
+    finally:
+        reader.close()
+        if not writer.closed:writer.close()
+        delivery.join(timeout=30)
+        meter.db.close()
 
 
 class StreamMeter:

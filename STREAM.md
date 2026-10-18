@@ -1,9 +1,12 @@
 # October18 current authorization boundary
 
-Continue guarded Nightly measurement within the traced existing Disk allocation
-and fresh resource/security admission. R8's actual PSI-only abort is collected;
-the unsupported numeric rule is withdrawn. Sole corrected R9 was admitted
-October18 05:14UTC, preserving all real resource/access/storage protections.
+Continue measured backup and independent restore proof within the traced Disk
+allocation and fresh resource/security admission. R9's actual terminal exit1 is
+collected; all inputs are retained. The unsupported PSI number and copied
+optional-cleanup idle preference are not user policy. Real resource, native
+health, owner-pause, access, integrity and storage protections remain.
+Optional one-image SSD scratch and same-stream retained measurement are tested;
+the same5GiB TOTAL task cap includes prior data and sequential new scratch/index.
 Actual independent capture/restore still requires measured adequate coexistence.
 Do not deploy,
 schedule, cut over or retire archives/originals. Preserve all recovery, guards,

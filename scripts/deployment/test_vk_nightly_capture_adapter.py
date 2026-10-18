@@ -14,7 +14,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from vk_nightly_capture_adapter import RegisteredWorkspace, Resident, ResidentFailure, disk_snapshot, mcp_lease, allowed_sqlite
+from vk_nightly_capture_adapter import RegisteredWorkspace, Resident, ResidentFailure, SnapshotCache, disk_snapshot, mcp_lease, allowed_sqlite
 from vk_nightly_b_job import LocalVerifiedProvider, receive
 from vk_nightly_job import inventory, validate_socket_exclusions
 from vk_archive_stream import StreamingArchive
@@ -38,6 +38,13 @@ class FakeResident:
 
 
 class ResidentProtocolTests(unittest.TestCase):
+    def test_invalid_cache_configuration_fails_before_remote_job(self):
+        for config in ({'sqlite_cache_root':'/missing'}, {'sqlite_cache_limit_bytes':1},
+                       {'sqlite_cache_root':'relative','sqlite_cache_limit_bytes':1},
+                       {'sqlite_cache_root':'/missing','sqlite_cache_limit_bytes':True}):
+            with self.subTest(config=config),patch('vk_nightly_capture_adapter.subprocess.Popen') as remote:
+                with self.assertRaises(ValueError):Resident(config)
+                remote.assert_not_called()
     def resident(self,response):
         value=Resident.__new__(Resident)
         value.lock=threading.Lock();value.process=SimpleNamespace(stdin=io.BytesIO())
@@ -72,6 +79,87 @@ class AdapterTests(unittest.TestCase):
     def tearDown(self):self.writer.close();self.mount_patch.stop()  # Keep small owned fixtures.
     def snapshot(self,maximum=1024**2):
         return disk_snapshot(self.source,self.workspace,{str(self.source)},maximum_bytes=maximum,timeout_seconds=30)
+    def cache(self,limit=1024**2):
+        path=self.root/'scratch';path.mkdir(mode=0o700)
+        self.workspace.snapshot_cache=SnapshotCache(path,limit)
+        return self.workspace.snapshot_cache
+    def test_cached_wal_image_matches_independent_B_and_releases_only_completed_duplicate(self):
+        cache=self.cache();result=self.snapshot();target=self.destination/result['snapshot']
+        self.assertEqual(result['local_snapshot_payload_bytes'],target.stat().st_size)
+        cached=cache.root/target.name;self.assertTrue(cached.exists())
+        with self.workspace.snapshot_reader(result) as stream:
+            self.assertEqual(hashlib.sha256(stream.read()).hexdigest(),result['sha256'])
+        self.assertFalse(cached.exists());self.assertTrue(target.exists());self.assertEqual(cache.pending,{})
+        self.assertEqual(self.writer.execute('SELECT value FROM retained').fetchall(),[('live WAL',)])
+    def test_cache_component_bound_falls_back_to_existing_B_only_capture(self):
+        cache=self.cache(1);result=self.snapshot()
+        self.assertEqual(result['local_snapshot_payload_bytes'],0)
+        self.assertEqual(cache.pending,{});self.assertEqual(list(cache.root.iterdir()),[])
+    def test_failed_independent_cache_comparison_preserves_both_images(self):
+        cache=self.cache();call=self.resident.call
+        def mismatch(action,**kwargs):
+            result=call(action,**kwargs)
+            if action=='seal':result['sha256']='f'*64
+            return result
+        with patch.object(self.resident,'call',side_effect=mismatch):
+            with self.assertRaisesRegex(ValueError,'differs from independently') as caught:self.snapshot()
+        self.assertEqual(caught.exception.nightly_sqlite_diagnostic['stage'],'destination.cache_verify')
+        self.assertEqual(len(list(cache.root.iterdir())),1);self.assertEqual(len(list(self.destination.iterdir())),1)
+    def test_incomplete_or_failed_archive_preserves_verified_scratch_and_B(self):
+        cache=self.cache();result=self.snapshot();path=cache.root/result['snapshot']
+        with self.assertRaisesRegex(ValueError,'not fully consumed'):
+            with self.workspace.snapshot_reader(result):pass
+        self.assertTrue(path.exists());self.assertTrue((self.destination/path.name).exists())
+        with self.assertRaisesRegex(RuntimeError,'fixture TAR failure'):
+            with self.workspace.snapshot_reader(result):raise RuntimeError('fixture TAR failure')
+        self.assertTrue(path.exists())
+        with self.assertRaisesRegex(ValueError,'one scratch snapshot'):
+            cache.allocate('sqlite-consistent-'+'f'*32+'.sqlite',1)
+    def test_substituted_cache_is_preserved_and_cannot_supply_archive_bytes(self):
+        cache=self.cache();result=self.snapshot();path=cache.root/result['snapshot'];path.write_bytes(b'changed')
+        with self.assertRaisesRegex(ValueError,'substituted'):
+            with self.workspace.snapshot_reader(result):pass
+        self.assertEqual(path.read_bytes(),b'changed')
+        self.assertEqual(hashlib.sha256((self.destination/path.name).read_bytes()).hexdigest(),result['sha256'])
+    def test_cache_root_alias_is_rejected(self):
+        path=self.root/'private';path.mkdir(mode=0o700);alias=self.root/'alias';alias.symlink_to(path,target_is_directory=True)
+        with self.assertRaisesRegex(ValueError,'canonical'):SnapshotCache(alias,1024)
+    def test_cached_snapshot_survives_full_tar_and_backup_provider_verification(self):
+        import vk_b_disk_capture
+        import vk_rolling_backup
+        from vk_archive_store import Archive
+        from vk_nightly_archive_index import NightlyArchiveProvider
+        from vk_nightly_capacity import measure_retained
+        from vk_nightly_delta import DeltaSelection
+        from vk_nightly_restart_baseline import capture_journal
+        from vk_prep_common import identity
+        from vk_change_journal import scope
+        cache=self.cache();note=self.root/'note.txt';note.write_bytes(b'original dirty work')
+        plan={'sources':[str(self.source),str(note)],'sqlite_snapshots':[str(self.source)],
+                                'excluded_rebuildable_directories':[]}
+        def factory(ref,**kwargs):return Archive(ref,archive_directory=self.destination,desktop_only=False)
+        measurements=[]
+        def mirror(source):
+            if isinstance(source,StreamingArchive):
+                value,receipt=measure_retained(source,self.workspace.mirror,self.root/'meter',timeout_seconds=30)
+                measurements.append(value);return receipt
+            return self.workspace.mirror(source)
+        with capture_journal(plan) as journal,patch.object(vk_b_disk_capture,'Archive',factory), \
+                patch.object(vk_rolling_backup,'Archive',factory):
+            result=vk_b_disk_capture.capture(plan,self.destination,journal,mirror,
+                publish=mirror,max_snapshot_bytes=1,
+                disk_snapshot=lambda raw:self.snapshot(),disk_inventory_root=self.destination,workspace=self.workspace,
+                nightly_selection=DeltaSelection(None,str(self.root),'a'*64))
+        self.assertTrue(result['passed']);self.assertEqual(cache.pending,{})
+        self.assertEqual(len(measurements),1);self.assertEqual(measurements[0]['regular_files'],2)
+        self.assertTrue(measurements[0]['stream_retained'])
+        self.assertGreater(result['peak_local_snapshot_cache_allocated_bytes'],0)
+        provider=NightlyArchiveProvider('a'*64,['source.sqlite'],archive_factory=factory,fixture_only=True)
+        provider.register('cached-fixture',result,identity(plan),identity(scope(plan)),self.root,origin_root_binding='fixture')
+        proof=provider.verify('cached-fixture');row=proof['entries']['source.sqlite']
+        self.assertEqual(row['sha256'],result['sqlite_snapshots'][str(self.source)]['sha256'])
+        self.assertEqual(proof['entries']['note.txt']['sha256'],hashlib.sha256(note.read_bytes()).hexdigest())
+        self.assertTrue(any(self.destination.glob('sqlite-consistent-*.sqlite')))
     def test_registered_b_disk_backup_includes_wal_without_serialize_or_sidecars(self):
         connect=sqlite3.connect;uris=[]
         def checked(path,*args,**kwargs):

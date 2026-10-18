@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import select
 import shutil
 import sqlite3
@@ -111,6 +112,7 @@ class ResidentFailure(ValueError):
 
 class Resident:
     def __init__(self,config):
+        self.snapshot_cache=configured_snapshot_cache(config)
         # Fail locally before opening SSH when even the bounded projection fails.
         raw=resident_bundle(config)
         self.process=subprocess.Popen(remote_command(),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
@@ -150,12 +152,106 @@ class Resident:
         self.process.stdout.close()
 
 
+class SnapshotCache:
+    """Optional single-image SSD scratch; the independently sealed B copy wins.
+
+    The caller admits total scratch separately. Failed images stay intact. Only
+    a new scratch duplicate that matches sealed B and completed TAR is released.
+    """
+    def __init__(self,root,limit):
+        raw=Path(root)
+        if not raw.is_absolute() or raw.resolve()!=raw:raise ValueError('canonical private snapshot cache required')
+        self.root=storage(raw);info=self.root.lstat()
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid!=os.getuid() or info.st_mode&0o077
+                or info.st_dev!=os.stat('/mnt/vk-storage').st_dev):
+            raise ValueError('snapshot cache must be an owned private directory')
+        if type(limit) is not int or limit<=0:raise ValueError('positive admitted snapshot cache limit required')
+        self.identity=(info.st_dev,info.st_ino);self.limit=limit;self.pending={}
+    def check(self):
+        info=self.root.lstat()
+        if not stat.S_ISDIR(info.st_mode) or (info.st_dev,info.st_ino)!=self.identity:
+            raise ValueError('snapshot cache directory substituted; preserve')
+    def allocate(self,name,size):
+        self.check()
+        if self.pending:raise ValueError('one scratch snapshot at a time; preserve pending image')
+        if size<=0 or size>self.limit:return None  # Ordinary B-only capture remains available.
+        if not re.fullmatch(r'sqlite-consistent-[0-9a-f]{32}\.sqlite',name):raise ValueError('unsafe cached snapshot selector')
+        path=self.root/name
+        fd=os.open(path,os.O_CREAT|os.O_EXCL|os.O_RDWR|os.O_NOFOLLOW,0o600)
+        try:info=os.fstat(fd)
+        finally:os.close(fd)
+        self.pending[name]={'path':path,'identity':(info.st_dev,info.st_ino)}
+        return path
+    def transfer(self,name,workspace):
+        self.check();row=self.pending[name];path=row['path']
+        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        with os.fdopen(fd,'rb') as source:
+            before=os.fstat(source.fileno())
+            if (not stat.S_ISREG(before.st_mode) or (before.st_dev,before.st_ino)!=row['identity']
+                    or before.st_size>self.limit):raise ValueError('cached image identity/size changed')
+            checksum=hashlib.sha256();size=0
+            with workspace.open_allocated(workspace.root/name) as target:
+                while block:=source.read(1024**2):
+                    size+=len(block)
+                    if size>self.limit:raise ValueError('cached snapshot exceeded admitted bound')
+                    checksum.update(block);target.write(block)
+                target.flush();os.fsync(target.fileno())
+            after=os.fstat(source.fileno())
+        if (before.st_size,before.st_mtime_ns)!=(after.st_size,after.st_mtime_ns) or size!=before.st_size:
+            raise ValueError('cached image changed during transfer')
+        row.update(bytes=size,sha256=checksum.hexdigest(),mtime_ns=after.st_mtime_ns,allocated_bytes=after.st_blocks*512)
+    def accept(self,name,sealed):
+        row=self.pending[name]
+        if (row['bytes'],row['sha256'])!=(sealed['bytes'],sealed['sha256']) or sealed.get('integrity')!='ok':
+            raise ValueError('cached image differs from independently verified B image')
+        row['verified']=True
+    def valid(self,image):
+        row=self.pending.get(image['snapshot'],{})
+        return (row.get('verified') is True and row.get('bytes')==image['bytes']
+                and row.get('sha256')==image['sha256'] and image.get('local_snapshot_payload_bytes')==image['bytes'])
+    @contextmanager
+    def reader(self,image):
+        self.check()
+        if not self.valid(image):raise ValueError('snapshot cache lacks exact independent B seal')
+        row=self.pending[image['snapshot']];path=row['path']
+        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        with os.fdopen(fd,'rb') as stream:
+            info=os.fstat(stream.fileno())
+            if (info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns)!=(*row['identity'],row['bytes'],row['mtime_ns']):
+                raise ValueError('sealed snapshot cache substituted')
+            yield stream
+            if stream.tell()!=row['bytes']:raise ValueError('cached payload was not fully consumed; preserve')
+            stream.seek(0)
+            if hashlib.file_digest(stream,'sha256').hexdigest()!=row['sha256']:
+                raise ValueError('snapshot cache changed during TAR; preserve')
+        # B's original registered image remains. This is only our new duplicate.
+        self.check();directory=os.open(self.root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+        try:
+            info=os.stat(path.name,dir_fd=directory,follow_symlinks=False)
+            if ((os.fstat(directory).st_dev,os.fstat(directory).st_ino)!=self.identity
+                    or not stat.S_ISREG(info.st_mode)
+                    or (info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns)!=(*row['identity'],row['bytes'],row['mtime_ns'])):
+                raise ValueError('scratch release identity changed; preserve')
+            os.unlink(path.name,dir_fd=directory)
+        finally:os.close(directory)
+        del self.pending[path.name]
+
+
+def configured_snapshot_cache(config):
+    root=config.get('sqlite_cache_root');limit=config.get('sqlite_cache_limit_bytes')
+    if root is None and limit is None:return None
+    if not isinstance(root,str) or not root or type(limit) is not int or limit<=0:
+        raise ValueError('paired canonical snapshot cache root and positive admitted limit required')
+    return SnapshotCache(root,limit)
+
+
 class RegisteredWorkspace:
     def __init__(self,root,resident,*,lease_fd=None):
         self.root=Path(root);self.resident=resident;self.names=set();self.bytes=0
         self.lease_fd=lease_fd
         self.limit=resident.config['capture_limit_bytes'];self.deadline=time.monotonic()+resident.timeout
         self.sealed={};self.reservations={};self.capacity_lock=threading.Lock();self.checked_root(root)
+        self.snapshot_cache=getattr(resident,'snapshot_cache',None) or configured_snapshot_cache(resident.config)
     def progress(self,phase,**values):
         if 'staging' not in self.resident.config:return
         save(Path(self.resident.config['staging'])/'capture-progress.private.json',
@@ -188,6 +284,10 @@ class RegisteredWorkspace:
         if path.name in self.names:raise ValueError('input path is immutable')
         if self.resident.call('allocate',name=path.name)!={'allocated':path.name}:raise ValueError('B input not registered')
         self.names.add(path.name)
+        return self.open_allocated(path)
+    def open_allocated(self,path):
+        path=Path(path);self.checked_root(path.parent)
+        if path.name not in self.names or path.name in self.sealed:raise ValueError('input is not an unsealed allocation')
         fd=os.open(path,os.O_WRONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
         if os.fstat(fd).st_size!=0:os.close(fd);raise ValueError('allocated input substituted')
         # Path inventories/proofs contain millions of tiny writes. Coalesce
@@ -201,6 +301,12 @@ class RegisteredWorkspace:
                 workspace.reserve_file(path,stream.tell()+len(data))
                 return stream.write(data)
         return BoundedWriter()
+    def snapshot_reader(self,image):
+        self.checked_root(self.root)
+        if image.get('local_snapshot_payload_bytes'):
+            if self.snapshot_cache is None:raise ValueError('no admitted snapshot cache')
+            return self.snapshot_cache.reader(image)
+        return (self.root/image['snapshot']).open('rb')
     def seal(self,path,*,sqlite=False):
         self.checked_root(Path(path).parent)
         value=self.resident.call('seal',name=Path(path).name,sqlite_integrity=sqlite)
@@ -314,6 +420,7 @@ def disk_snapshot(source,workspace,allowed_sources,*,maximum_bytes,timeout_secon
     before=metadata(source);started=time.monotonic();target=workspace.root/('sqlite-consistent-'+uuid.uuid4().hex+'.sqlite')
     with workspace.open_new(target):pass
     src=dst=None;stage='source.connect';page_size=None
+    cache=getattr(workspace,'snapshot_cache',None);cached=None;destination=target
     try:
         src=sqlite3.connect(source.as_uri()+'?mode=ro',uri=True)
         stage='source.temp_store';src.execute('PRAGMA temp_store=MEMORY')
@@ -325,10 +432,14 @@ def disk_snapshot(source,workspace,allowed_sources,*,maximum_bytes,timeout_secon
         page_size=src.execute('PRAGMA page_size').fetchone()[0]
         def progress(status,remaining,pages):
             if pages*page_size>maximum_bytes:raise ValueError('bounded B SQLite image exceeds reservation')
+            if cached is not None and pages*page_size>cache.limit:raise ValueError('snapshot cache exceeded admitted bound')
             workspace.reserve_file(target,pages*page_size)
             if time.monotonic()-started>timeout_seconds:raise TimeoutError('SQLite snapshot deadline exceeded')
-        stage='source.page_count';progress(None,None,src.execute('PRAGMA page_count').fetchone()[0])
-        stage='destination.connect';dst=sqlite3.connect(target)
+        stage='source.page_count';pages=src.execute('PRAGMA page_count').fetchone()[0];progress(None,None,pages)
+        if cache is not None:
+            stage='destination.cache_allocate';cached=cache.allocate(target.name,pages*page_size)
+            if cached is not None:destination=cached
+        stage='destination.connect';dst=sqlite3.connect(destination)
         stage='destination.temp_store';dst.execute('PRAGMA temp_store=MEMORY')
         stage='destination.cache_size';dst.execute('PRAGMA cache_size=-8192')
         stage='destination.mmap_size';dst.execute('PRAGMA mmap_size=0')
@@ -343,18 +454,24 @@ def disk_snapshot(source,workspace,allowed_sources,*,maximum_bytes,timeout_secon
         # reader seals the image. Its flush cannot substitute for completion
         # of this client's pending writes.
         stage='destination.flush'
-        fd=os.open(target,os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK)
+        fd=os.open(destination,os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK)
         try:
             if not stat.S_ISREG(os.fstat(fd).st_mode):raise ValueError('snapshot flush target is not regular')
             os.fsync(fd)
         finally:os.close(fd)
+        if cached is not None:
+            stage='destination.cache_transfer';cache.transfer(target.name,workspace)
         # Private-image integrity/full hash are independently checked by the
         # native B reader after SQLite destination close; no FUSE SQLite reopen.
         stage='native.seal';row=workspace.seal(target,sqlite=True)
+        if cached is not None:
+            stage='destination.cache_verify';cache.accept(target.name,row)
         return {'source':str(source),'snapshot':target.name,'mount_root':str(workspace.root),'bytes':row['bytes'],
                 'sha256':row['sha256'],'source_metadata_before':before,'backup_api_consistent_image':True,
                 'physical_b_verified':True,'integrity':'ok','online_preparation_only':True,'writer_fenced':False,
-                'local_snapshot_payload_bytes':0,'seconds':time.monotonic()-started}
+                'local_snapshot_payload_bytes':row['bytes'] if cached is not None else 0,
+                'local_snapshot_cache_allocated_bytes':cache.pending[target.name]['allocated_bytes'] if cached is not None else 0,
+                'seconds':time.monotonic()-started}
     except Exception as error:
         # Failure-only, metadata-only diagnostics. Preserve the ORIGINAL error,
         # transaction/backup semantics and unaccepted partial; never retry/seal.
@@ -363,6 +480,7 @@ def disk_snapshot(source,workspace,allowed_sources,*,maximum_bytes,timeout_secon
                'sqlite_errorname':getattr(error,'sqlite_errorname',None),'traceback':traceback.format_exc(),
                'source_page_size':page_size,'source_journal_mode':None,'diagnostic_errors':[]}
         if isinstance(error,ResidentFailure):value['resident_response']=error.resident_response
+        if cached is not None:value['writer_destination']=str(cached)
         for name,path in [('source_identity',source),('destination_identity',target),('parent_identity',target.parent)]:
             try:
                 info=path.lstat();value[name]={'device':info.st_dev,'inode':info.st_ino,'bytes':info.st_size,

@@ -1,3 +1,22 @@
+# Collect existing R8 only — October18 05:02UTC
+
+Sole R8 measurement is admitted and started05:02:20UTC, PID2371315/start40403864,
+unit vk-nightly-capacity-r8-buffered-runtime.service, configSHA
+a4898b64e94590f395510e114ce3b9cd8e861b9930172aeea3474f36a5b766d7.
+CU released05:00:57; Staging has no heavy conflict. Same original Disk2GiB SSD
+allocation and all current guards; no automatic retry or allowance reset.
+First lifetime sample PSI0 is not completion. Collect actual terminal with
+capacity-r8-buffered-runtime/collect-result.private.py, then reconcile both
+leases and mounts if stopped. Preserve every earlier attempt. Do not replace
+an active run or treat input/stream measurement as independent restore proof.
+Full cold/restore coexistence still needs measured demand; no release authority.
+
+PSI0.1 originated as a private agent-added shared-host heuristic, subsequently
+retained explicitly by the user for coordinated runs. It is not repository-wide
+numeric safety policy. Local validation policy permits reuse and direct serial
+stages; it does not make public CI equivalent to private full restore acceptance.
+Exact private coordination receipts were updated for existing Disk/Staging/CU.
+
 # Nightly resource diagnosis and next packet — October18
 
 No owned validation/capture unit remains active or automatically armed. R7 is

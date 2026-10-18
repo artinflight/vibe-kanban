@@ -1,3 +1,20 @@
+# Nightly buffered measurement admitted — October18 05:02UTC
+
+After CU's exact05:00:57 terminal release and three passing original guard
+samples, sole R8 started05:02:20UTC: PID2371315/start40403864, configSHA
+a4898b64e94590f395510e114ce3b9cd8e861b9930172aeea3474f36a5b766d7.
+Same original Disk2GiB SSD allocation, CPU25%/High2GiB/Max3GiB/Swap0/Tasks32;
+no retry, cap reset or concurrent Nightly bulk phase. Initial lifetime PSI0
+is not a terminal result. B252872712192bytes/SSD9150664704bytes at admission.
+Use capacity-r8-buffered-runtime/collect-result.private.py on this exact attempt;
+preserve it on failure. Full capture/restore coexistence and independent restore
+remain unaccepted; no deployment, schedule, cutover or archive retirement.
+
+The numeric PSI0.1 guard was added by the private Nightly preparation wrapper,
+then explicitly retained by user coordination. It is not a repository numeric
+safety requirement or permanent validation prohibition. Its current scope and
+the repository's local-validation requirement are recorded in the Nightly guide.
+
 # Nightly guarded validation path — October18
 
 Resource diagnosis now has more than a transient admission sample. An isolated

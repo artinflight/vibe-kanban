@@ -1,7 +1,9 @@
 # October18 current authorization boundary
 
-Continue guarded Nightly measurement and actual independent capture/restore proof
-only after fresh separate shared storage/resource/security admission. Do not deploy,
+Continue guarded Nightly measurement within the traced existing Disk allocation
+and fresh resource/security admission; R8 was admitted October18 05:02UTC.
+Actual independent capture/restore still requires measured adequate coexistence.
+Do not deploy,
 schedule, cut over or retire archives/originals. Preserve all recovery, guards,
 Staging/T18 allocations and actual budget gates; older broader authorizations below
 are superseded for this continuation. STATE/HANDOFF record current readiness.

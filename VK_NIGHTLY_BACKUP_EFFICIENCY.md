@@ -4,6 +4,26 @@ October18 continuation: resource preparation and separately admitted proof only.
 Deployment, schedule activation, cutover and original retirement remain excluded.
 The older production-completion authorization below is retained history.
 
+## Scope of validation and pressure guards
+
+The first located Nightly introduction of full-memory PSI avg10 <= 0.1 is the
+private measurement wrapper recorded in commit `60bae882c` (October18 02:17UTC).
+It is an agent-added shared-host admission heuristic, subsequently retained by
+explicit user coordination instructions. Neither the checked-in supervisor nor
+the repository safety policies specify that numeric threshold. It remains a
+guard for this coordinated run; crossing it is not evidence of damaged recovery
+data or a permanent prohibition on validation. Buffered warmup and serial stages
+are the supported preparation path; no global service or kernel setting changes.
+
+Local validation comes from `AGENTS.md`: validate before promoting to Staging,
+use the narrowest relevant checks before local runtime use, and record omissions.
+It does not require repeating accepted results, running every stage through a
+single package-manager process, or treating public CI as private restore proof.
+The user's actual independent-restore requirement remains separate and unmet.
+The existing Disk allocation can be traced to a corrected measurement packet
+without requesting a new allowance solely because its configuration hash changed.
+Full capture/restore admission still needs measured coexistence and current guards.
+
 ## Shared-host validation and cold code pages
 
 Pressure admission must cover the entire validation phase. Small anonymous

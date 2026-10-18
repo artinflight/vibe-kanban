@@ -4,6 +4,53 @@ October18 continuation: resource preparation and separately admitted proof only.
 Deployment, schedule activation, cutover and original retirement remain excluded.
 The older production-completion authorization below is retained history.
 
+## October18 actual R9 result and retained-capture preparation
+
+R9 ended at07:34:14UTC with producer exit1 after8368.719seconds. Its supported
+collector and corrected accounting were collected; both units, exact producer,
+mount and MCP/B leases are quiescent.5280248053bytes of sealed inputs remain.
+An independent integrity seal was missing for a274432-byte seed image. The
+original resident failure response was discarded, so its historical cause is
+unproven. That preserved image passes WSL/native Windows integrity with identical
+SHA; two fresh targeted copies also passed. This is not a full stream or restore.
+
+The producer now preserves the resident's actual terminal reason, explicitly
+flushes the originating writer, and checks producer-to-B metadata/proof digests.
+An optional `sqlite_cache_root` and positive `sqlite_cache_limit_bytes` enable
+one private, canonical, same-SSD scratch image at a time. Independent B hash and
+SQLite integrity must match before its duplicate supplies TAR bytes. Only that
+new duplicate is released after complete verified consumption; failures preserve
+scratch and B inputs. Larger images retain the existing B-only path.
+
+`measure_retained` meters the same TAR delivered by the ordinary registered B
+writer. It starts neither a second capture nor a second compressor. The retained
+archive can support subsequent independent restore work; no generation receipt,
+adoption or production activation is fabricated. Full working-set and restore
+acceptance are still pending a fresh admitted complete capture.
+
+72 relevant local regressions passed;46 adapter/capacity cases passed after the
+additional metadata digest checks. Small native cached-copy and writer-flush
+checks passed separately. Required formatting was attempted: Rust passed and
+frontend stopped at absent Prettier. Earlier unchanged-source frontend evidence
+is retained; no new aggregate formatting pass is claimed.
+
+Disk confirmed a5GiB TOTAL task cap including1080328192bytes already resident
+at07:41UTC. The130183168-byte R9 peak was only a tracked subset. Do not reset
+or add allowances, double-charge already resident B inputs, or claim an exclusive
+reservation. SQL scratch is consumed before regular-file indexing, allowing
+phased component budgets. Fresh whole-task accounting, shared SSD/B floors and
+Staging/T18 allowances remain admission requirements. Full restore must also
+fit beside backup inputs/objects in actual physical B space; virtual Linux free
+space alone proves nothing. Existing B-backed Linux placement is an available
+verification route, not proof already completed.
+
+Disk identified MM Photography->R as a continuing B reader. Its copied
+queue<2/idle>=10 preference was for optional cleanup, not permanent user policy
+or a disk-failure signal. New diagnostics withdraw that precondition while
+retaining native health, owner-pause, explicit B-stop, integrity and reserves.
+No competing bulk phase, archive retirement, deployment or schedule was started
+by these preparations.
+
 ## Scope of validation and pressure guards
 
 The first located Nightly introduction of full-memory PSI avg10 <= 0.1 is the
@@ -17,8 +64,8 @@ condition: a stall sample alone does not establish harmful memory exhaustion.
 Existing cgroup caps, host memory/swap floors, runtime health, ownership, storage
 and deadline checks remain. Buffered warmup and serial stages are supported
 preparation; no global service, security or kernel setting changes are involved.
-R8 loaded its old wrapper before this correction; preserve that running attempt
-and its truthful policy provenance rather than restart or duplicate the producer.
+R8 loaded its old wrapper before this correction and its actual failed terminal
+was collected. Its inputs and truthful policy provenance remain preserved.
 
 Local validation comes from `AGENTS.md`: validate before promoting to Staging,
 use the narrowest relevant checks before local runtime use, and record omissions.
@@ -46,10 +93,12 @@ fingerprints remain the evidence model. Keep warmup and validation in the same
 bounded unit so their memory and CPU remain charged together. Page residency is
 volatile; a cached static result does not certify that pages remain resident.
 
-Keep Nightly's reviewed CPU, memory high/max, zero-swap, task, storage,
-health/security and whole-job bounds. Record PSI as diagnostic evidence; the
+Use the currently admitted CPU, memory high/max, zero-swap, task, storage,
+health/security and whole-job bounds. Engineering wrapper choices are not new
+user policy; reassess them against measured risk when evidence warrants.
+Record PSI as diagnostic evidence; the
 private numeric-only abort is withdrawn. Run stages directly and serially within
-the task cap, without nesting extra package-manager processes. In the retained
+the task cap; avoid unnecessary package-manager nesting. In the retained
 comparison, buffered tool warmup completed Rust formatting at PSI0; the three
 remaining direct frontend stages also passed at PSI0 and peaked at12 sampled
 tasks under the unchanged32 cap. The earlier aggregate-wrapper abort remains

@@ -1,3 +1,11 @@
+# October18 current authorization boundary
+
+Continue guarded Nightly measurement and actual independent capture/restore proof
+only after fresh separate shared storage/resource/security admission. Do not deploy,
+schedule, cut over or retire archives/originals. Preserve all recovery, guards,
+Staging/T18 allocations and actual budget gates; older broader authorizations below
+are superseded for this continuation. STATE/HANDOFF record current readiness.
+
 # Nightly production completion — October 17
 
 Seamus authorizes finishing restore/integration acceptance, publication, deployment

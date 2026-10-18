@@ -1,3 +1,46 @@
+# Nightly guarded preparation — October18 02:17UTC
+
+Native B free257,963,102,208bytes (240.25GiB), volume2360624474, resolves the
+previous known-input shortage only. No full cold-backup/restore acceptance exists.
+SSD free2,309,873,664bytes (2.15GiB) at02:11. No Nightly bulk job/timer is active.
+Disk owns current joint allocation: original Staging/T18 caps and all remaining
+allowances remain; resident growth must not be subtracted twice. No exclusive
+reservation, media cleanup, T18 copy, archive retirement or deployment is made.
+
+Prepared one unlaunched derived capacity-r5-t63-binding package. Reconciled three
+changed Dot modules and activated T63 combined/row-readability releases using exact
+owner manifests:4488 members hashed,8599 runtime pins,97 roots; old roots/packages
+and recovery retained. Full source/runtime validation passes, backend3927146;
+config SHA d89a91b8fd9f97643cd97fa611a69b4af484603e6c2f7d68f2a8d52135269dd0.
+T63 owner confirms no further frontend/Dot activation planned. Compact preparation
+uses3,354,624 allocated SSD bytes; no fresh census/capture/restore launched.
+
+New private launch wrapper syntax and six storage/PSI boundary checks pass. It
+requires an exact separate allocation/security receipt before launch, then three
+healthy samples. Original CPU25%,High2GiB/Max3GiB,Swap0,Tasks32 and4h bound remain;
+added sampled2GiB owned-scratch stop, strict>2GiB SSD floor, protected8GiB B floor
+and shared full-PSI avg10<=0.1 apply. Sampling is not a filesystem quota or exact
+continuous peak. Actual full working-space peak still needs the admitted stream.
+Adoption/retention flags and schedule remain disabled in this derived configuration.
+
+Pending gates: Disk allocation/security reconciliation. Both native media-monitor
+controls still report STOP_REQUIRED at02:16; their scope must be confirmed before
+any B payload work, without bypassing/changing them. SSD needs at least1,985,093,633
+more bytes for proposed2GiB scratch plus strictly>2GiB free alone, BEFORE the other
+owners' remaining allocations/background.8GiB total-free is only prior planning
+headroom, not measured minimum/reservation. Normal allowance readback confirms10%
+used; charged ledger remains held/stale, old advance ended/reserved, and no extra
+funding is inferred. Existing CU owner reconciliation remains required for actual
+budget gates; no new paid helper/worker/provider generation was launched.
+
+Next: use Disk's existing session allocation/control decision and Staging's released
+window; fresh guard admission for the sole counted stream. Preserve partials on any
+abort; collect measured input/archive/object/restore demand and sampled SSD peak,
+then seek separate adequate allocation for actual cold backup and independent full
+restore/integration. No deployment, schedule or production cutover is authorized.
+Receipts are in restart-readiness-20261018T0212 and capacity-r5-t63-binding under the
+existing private Nightly evidence root; request copied into Staging coordination.
+
 # Nightly restart readiness — October17 23:24UTC
 
 Fresh read-only page-count audit passes all108 known databases, errors0:

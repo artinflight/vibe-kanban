@@ -141,6 +141,37 @@ pub fn classify(
     }
 }
 
+/// Automatic incident input cannot resume or replace the owner's native goal,
+/// including a paused, budget-limited or first-run goal. Inspect only its thread.
+pub async fn storage_alert_ready(thread: &str) -> io::Result<()> {
+    let home = codex_home().ok_or_else(|| invalid("Codex home unavailable"))?;
+    storage_alert_ready_in(&home.join("goals_1.sqlite"), thread).await
+}
+
+async fn storage_alert_ready_in(path: &Path, thread: &str) -> io::Result<()> {
+    let mut db = SqliteConnection::connect_with(
+        &SqliteConnectOptions::new()
+            .filename(path)
+            .read_only(true)
+            .create_if_missing(false),
+    )
+    .await
+    .map_err(db_error)?;
+    let status: Option<String> =
+        sqlx::query_scalar("SELECT status FROM thread_goals WHERE thread_id = ?")
+            .bind(thread)
+            .fetch_optional(&mut db)
+            .await
+            .map_err(db_error)?;
+    db.close().await.map_err(db_error)?;
+    if status.is_some_and(|status| status != "complete") {
+        return Err(invalid(
+            "Existing native goal requires owner-controlled admission",
+        ));
+    }
+    Ok(())
+}
+
 pub async fn native(thread: &str) -> io::Result<NativeGoal> {
     let home = codex_home().ok_or_else(|| invalid("Codex home unavailable"))?;
     let mut db = SqliteConnection::connect_with(
@@ -327,5 +358,50 @@ mod tests {
         assert!(read_progress(&native).unwrap().is_some());
         assert!(classify(&native, read_progress(&native).unwrap().as_ref()).is_err());
         fs::remove_file(path).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod storage_alert_tests {
+    use super::*;
+    #[tokio::test]
+    async fn own_native_goals_budget_pause_and_initialization_are_held_without_writes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("goals_1.sqlite");
+        assert!(storage_alert_ready_in(&path, "owner").await.is_err());
+        let mut db = SqliteConnection::connect_with(
+            &SqliteConnectOptions::new()
+                .filename(&path)
+                .create_if_missing(true),
+        )
+        .await
+        .unwrap();
+        sqlx::query("CREATE TABLE thread_goals(thread_id TEXT PRIMARY KEY,status TEXT)")
+            .execute(&mut db)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO thread_goals VALUES('unrelated-nightly','active')")
+            .execute(&mut db)
+            .await
+            .unwrap();
+        assert!(storage_alert_ready_in(&path, "owner").await.is_ok());
+        for status in ["budgetLimited", "paused", "blocked", "active", "complete"] {
+            sqlx::query("INSERT OR REPLACE INTO thread_goals VALUES('owner',?)")
+                .bind(status)
+                .execute(&mut db)
+                .await
+                .unwrap();
+            assert_eq!(
+                storage_alert_ready_in(&path, "owner").await.is_ok(),
+                status == "complete"
+            );
+            let actual: String =
+                sqlx::query_scalar("SELECT status FROM thread_goals WHERE thread_id='owner'")
+                    .fetch_one(&mut db)
+                    .await
+                    .unwrap();
+            assert_eq!(actual, status);
+        }
+        db.close().await.unwrap();
     }
 }

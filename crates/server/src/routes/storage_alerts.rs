@@ -28,13 +28,12 @@ use uuid::Uuid;
 
 use crate::error::ApiError;
 
-fn configured() -> Result<OwnerBinding, ApiError> {
+fn configured() -> Result<OwnerBinding, &'static str> {
     let path = std::env::var_os("VK_STORAGE_ALERT_OWNER_FILE")
-        .ok_or_else(|| ApiError::Conflict("Storage alert admission is disabled".into()))?;
-    let bytes = std::fs::read(path)
-        .map_err(|_| ApiError::Conflict("Storage alert binding unavailable".into()))?;
-    let binding: OwnerBinding = serde_json::from_slice(&bytes)
-        .map_err(|_| ApiError::Conflict("Invalid storage alert binding".into()))?;
+        .ok_or("Storage alert admission is disabled")?;
+    let bytes = std::fs::read(path).map_err(|_| "Storage alert binding unavailable")?;
+    let binding: OwnerBinding =
+        serde_json::from_slice(&bytes).map_err(|_| "Invalid storage alert binding")?;
     if binding.executor_config.executor != BaseCodingAgent::Codex
         || binding
             .executor_config
@@ -49,7 +48,9 @@ fn configured() -> Result<OwnerBinding, ApiError> {
         || binding.max_validation_age_seconds == 0
         || binding.max_validation_age_seconds > 300
     {
-        return Err(ApiError::Conflict("Storage admission requires the saved CODEX DEFAULT Recommend configuration and reviewed freshness".into()));
+        return Err(
+            "Storage admission requires the saved CODEX DEFAULT Recommend configuration and reviewed freshness",
+        );
     }
     Ok(binding)
 }
@@ -58,7 +59,7 @@ async fn submit<D: Deployment>(
     State(deployment): State<D>,
     Json(request): Json<Request>,
 ) -> Result<Json<Response>, ApiError> {
-    let binding = configured()?;
+    let binding = configured().map_err(|reason| ApiError::Conflict(reason.into()))?;
     Ok(Json(submit_bound(&deployment, &binding, &request).await?))
 }
 

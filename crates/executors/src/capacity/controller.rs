@@ -2224,6 +2224,41 @@ mod tests {
                 .is_err()
         );
     }
+    #[tokio::test]
+    async fn storage_alert_admission_keeps_unrelated_grants_and_holds_managed_owner() {
+        let mut f = Fixture::new();
+        f.issue();
+        let session = f.session;
+        let controller = Mutex::new(f.c.take().unwrap());
+        let before = serde_json::to_value(&controller.lock().await.state).unwrap();
+        assert!(
+            storage_alert_launch(Ok(Some(&controller)), Uuid::new_v4())
+                .await
+                .is_ok()
+        );
+        assert_eq!(
+            before,
+            serde_json::to_value(&controller.lock().await.state).unwrap(),
+            "No Nightly revocation or accounting mutation"
+        );
+        assert!(
+            storage_alert_launch(Ok(Some(&controller)), session)
+                .await
+                .is_err()
+        );
+        assert_eq!(
+            before,
+            serde_json::to_value(&controller.lock().await.state).unwrap()
+        );
+        assert!(
+            storage_alert_launch(
+                Err(invalid("synthetic unavailable controller")),
+                Uuid::new_v4()
+            )
+            .await
+            .is_err()
+        );
+    }
 }
 
 #[cfg(test)]
@@ -2438,40 +2473,5 @@ mod native_acceptance {
                 )
                 .unwrap();
         }
-    }
-    #[tokio::test]
-    async fn storage_alert_admission_keeps_unrelated_grants_and_holds_managed_owner() {
-        let mut f = Fixture::new();
-        f.issue();
-        let session = f.session;
-        let controller = Mutex::new(f.c.take().unwrap());
-        let before = serde_json::to_value(&controller.lock().await.state).unwrap();
-        assert!(
-            storage_alert_launch(Ok(Some(&controller)), Uuid::new_v4())
-                .await
-                .is_ok()
-        );
-        assert_eq!(
-            before,
-            serde_json::to_value(&controller.lock().await.state).unwrap(),
-            "No Nightly revocation or accounting mutation"
-        );
-        assert!(
-            storage_alert_launch(Ok(Some(&controller)), session)
-                .await
-                .is_err()
-        );
-        assert_eq!(
-            before,
-            serde_json::to_value(&controller.lock().await.state).unwrap()
-        );
-        assert!(
-            storage_alert_launch(
-                Err(invalid("synthetic unavailable controller")),
-                Uuid::new_v4()
-            )
-            .await
-            .is_err()
-        );
     }
 }

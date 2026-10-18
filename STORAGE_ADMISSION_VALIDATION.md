@@ -43,6 +43,13 @@ before reaching backend Cargo, for shared storage/resource coordination.
 It is not a passing aggregate check. Full lint and workspace tests were not
 started locally after that hold.
 
+The first normal hosted Test run `39132359649` at source `7b2a904c1`
+reported a misplaced controller test fixture reference and a large-error Clippy
+warning in the synchronous configuration parser. Source corrections move the
+test into its existing fixture module and return a small parser error mapped at
+the HTTP boundary. The wire contract is unchanged. Successor CI is required;
+these diagnostics are not represented as passing native tests.
+
 ## Prepared native tests, not yet accepted
 
 The server suite uses the actual HTTP router/handler, default native

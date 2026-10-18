@@ -1,127 +1,115 @@
-# Storage admission validation checkpoint
+# Storage admission source validation
 
-Source-only; not release-ready. Baseline verified against remote fork staging
-`5b43524ea35b2eb5dd80d0881dc8445489f4442f`. Client requirements verified at
-Operations PR215 `82805b71556d94e22073e5c790bb79d090f409ae`.
-[The native contract](VK_STORAGE_ALERT_ADMISSION.md) defines the implemented
-`storage-admission-v2` wire shape. T90 joint review/client adaptation remains
-pending; production client transport is disabled.
+Source/tests only. Normal fork staging was reverified as
+`5b43524ea35b2eb5dd80d0881dc8445489f4442f`. The
+[native contract](VK_STORAGE_ALERT_ADMISSION.md) defines `storage-admission-v2`.
+T90 reviewed that unchanged wire contract at native source
+`45cffa379d836a553f20bb46d7c96e5953558de0` for adapter source integration.
+Operations PR215 publishes the coordinated client/driver at
+`42bc9ceb10c978094992cee1d6284f5ea43b9bd9`. This is neither release nor
+activation acceptance; production Bridge remains disabled.
 
-## Observed local evidence
+## Passing hosted native evidence
 
-`cargo test --offline -p services --lib storage_admission -- --test-threads=1`
-compiled the native services test executable and ran **14 tests: 13 passed,
-1 failed**. Incremental compilation was disabled and there was one compiler
-job. No live owner, backend service or paid model request was dispatched.
+[Test run39141895388](https://github.com/artinflight/vibe-kanban/actions/runs/39141895388)
+at exact continuity-fix source `45cffa379d836a553f20bb46d7c96e5953558de0`
+completed successfully. [Native job117717927750](https://github.com/artinflight/vibe-kanban/actions/runs/39141895388/job/117717927750)
+reported **633 passed, 14 skipped** in the main no-fail-fast suite and
+**15 passed, 118 filtered/skipped** in the scheduling-enabled persistence subset.
+The old fail-fast omissions were run, including all **25 new admission cases**:
+14 service/SQLite/queue tests, nine actual native HTTP/default-launch tests and
+two executor controller/goal-hold tests. The prior broken race assertion and
+original-WAL restart test both passed. Native LocalContainer queue wakeup,
+uncertain-restoration and user-work preservation regressions passed in both
+normal and scheduling-enabled modes. The remaining 14 main-suite skips are
+preexisting ignored/environment-dependent tests; they are not a runtime pass.
 
-Passing isolated migrated-SQLite/native-queue cases:
+Backend Clippy/format, schema generation, remote, frontend, Tauri, governance,
+branch policy/freshness and preservation/sidechat checks passed in that run.
+Combined-capture-consent acceptance was conditionally skipped, not proven.
+Hosted evidence uses disposable Ubuntu runners, not the held shared host target.
 
-- competing same-batch deliveries create exactly one native execution row;
-- competing batches/duplicate incident identities cannot launch twice;
-- busy owner defers, unrelated active owner does not veto;
-- memory/durable queues and unhandled user receipts remain unchanged;
-- changed intent/owner/hash do not alias an accepted receipt;
-- definite capacity deferral requires a new attempt and fresh validation;
-- timeout after commit recovers the exact execution by read-only lookup;
-- cancellation fences a late insert and keeps a terminal tombstone;
-- failures before and after execution binding have different outcomes;
-- not-found/conflict/history loss never grant resend authority;
-- stale/invalid scope/evidence cannot launch;
-- normal native insertion respects a durable abandoned reservation;
-- fingerprint ordering and Unicode serialization agree with the fixed vector.
+Covered native admission behavior includes competing same/different batches,
+incident deduplication, owner busy versus unrelated owner, memory/durable/
+incoming user queues, changed intent/owner/hash, strict fresh deferred attempts,
+real capacity and own-goal/budget holds, timeout after committed binding,
+in-flight cancellation/late insertion fences, failure before versus after binding,
+missing/conflicting/history-loss uncertainty, close/reopen retention, canonical
+Unicode fingerprints, configuration drift, real interactive approval wait/denial,
+and ordinary user/alert contention. Alert recovery retains ordered failed/killed
+user prompts and partial text in the persisted action/coding turn. Accepted
+replay keeps the original immutable intent and execution with no second launch.
 
-The database-reopen test failed opening its fixture file (SQLite code14) after
-a `VACUUM INTO` snapshot. It is now changed to create, migrate, admit, close and
-reopen the **original on-disk WAL database**. That correction has not yet been
-rerun locally. Do not claim restart acceptance from the earlier failing run.
+## Coordinated real adapter integration on this source
 
-`pnpm run format` completed successfully after installing the locked tooling.
-Subsequent source edits are rustfmt-formatted before publication.
-`pnpm run ops:check` and `git diff --check` passed.
-The aggregate `pnpm run check` was interrupted during local-web typechecking
-before reaching backend Cargo, for shared storage/resource coordination.
-It is not a passing aggregate check. Full lint and workspace tests were not
-started locally after that hold.
+The test-only six-file snapshot is byte-exact Operations source
+`42bc9ceb10c978094992cee1d6284f5ea43b9bd9`, with commit/path/SHA256 provenance.
+T90 reports 73 client fixtures passing; that count alone is not native evidence.
+The snapshot avoids new cross-repository credentials or runner access.
 
-The first normal hosted Test run `39132359649` at source `7b2a904c1`
-reported a misplaced controller test fixture reference and a large-error Clippy
-warning in the synchronous configuration parser. Source corrections move the
-test into its existing fixture module and return a small parser error mapped at
-the HTTP boundary. The wire contract is unchanged. Successor CI is required;
-these diagnostics are not represented as passing native tests.
+The new Rust fixture serves the actual registered Axum router over ephemeral
+loopback with migrated on-disk SQLite, native QueuedMessageService, default
+ContainerService start and real ExecutorApprovalBridge. The exact Python
+Store/NativeAdapter submits real POST/GET requests. Its ten initial named
+assertion groups cover entire queued-user receipt preservation, definite
+queue/busy deferral with zero launch, strictly newer same-intent retry,
+interrupted-user recovery, native success without false pressure recovery,
+real commit followed by lost response/client reopen/GET, four competing first
+POST deliveries and accepted replay with one native execution. The listener,
+pool, deployment and memory queue are then replaced using the original WAL
+database. Two reopen groups require exact intent/attempt/execution identity,
+one GET and zero POST/new launch; Rust additionally checks unchanged execution
+row count. These are twelve assertion groups, not twelve full runtime tests.
 
-## Hosted checkpoint and continuity correction
+Normal hosted CI verifies snapshot hashes and explicitly runs the otherwise
+ignored integration test, even after a preceding native-suite failure. Missing
+inputs cannot silently pass. The main suite remains no-fail-fast. At this
+commit's preparation this new paired fixture requires its own hosted run;
+latest exact source/CI results are recorded on [PR277](https://github.com/artinflight/vibe-kanban/pull/277)
+and in the existing private T90/Staging handoffs. The earlier passing run above
+predates this fixture and cannot establish its integration success.
 
-The corrected-source Test run [39132942845](https://github.com/artinflight/vibe-kanban/actions/runs/39132942845)
-at `af7b35ddd2cb48d6a276f6fd410820971d21a59b` completed with **474 passed,
-1 failed, 14 skipped; 157 not run after fail-fast**. Backend Clippy, schema,
-remote, frontend and Tauri checks passed. The existing source-artifact run
-[39132942866](https://github.com/artinflight/vibe-kanban/actions/runs/39132942866)
-also succeeded; artifact production does not establish runtime acceptance.
+Only executor/process I/O, OS inventory and incident observations are synthetic.
+The real producer, deployment ingress and live resource environment are not
+certified by these tests. Setup controls compile only under cfg(test), never
+product ingress. No live model, owner, credential or allocation feed is used.
 
-The failing native user/alert race assertion expected the raw queued user
-prompt. Native ordinary follow-up correctly included the interrupted alert
-context. The assertion now requires the exact normal recovered prompt, the
-interrupted alert instruction, the current user instruction and saved config.
-The alert route additionally uses that same ordinary recovery query/formatter
-for failed/killed user turns. A new native test checks ordered prompts, partial
-summary, persisted execution action/coding turn, immutable intent and replay
-without a second launch. Neither continuity behavior nor approvals are weakened.
-The main hosted nextest run now uses `--no-fail-fast` so previously unrun service/
-restart/queue tests execute even if another test fails. This source correction
-awaits its own hosted results; no host native build is authorized.
+## Earlier failures and lightweight checks
 
-Direct pinned rustfmt, ops governance and whitespace checks passed for this
-correction. `pnpm run format` invokes host Cargo and is held by the explicit
-no-host-Cargo instruction; hosted format checks remain required. Aggregate
-builds/tests are hosted only.
+The original host services command ran14 tests:13passed/1restart fixture failed
+SQLite14 opening a VACUUM snapshot. It was replaced with original migrated-WAL
+close/reopen, now passing in the hosted run above. af7b35d's hosted test had
+474passes/one race-assertion failure/14skips/157unrun after fail-fast. Ordinary
+follow-up correctly recovered interrupted alert context; the assertion expected
+raw text. Source45cffa379 corrected it without weakening continuity and added
+ordinary interrupted-turn recovery to alert launch. No earlier partial run is
+represented as a full native or client pass.
 
-## Native tests and acceptance boundaries
+Pinned direct rustfmt, Python AST syntax/snapshot provenance, ops governance,
+branch policy and whitespace checks pass for the adapter fixture preparation.
+The explicit no-host-Cargo instruction overrides local `pnpm run format`, whose
+backend formatter invokes Cargo; hosted format checks remain required.
+Aggregate typecheck/lint/native builds run on hosted CI only.
 
-The server suite uses the actual HTTP router/handler, default native
-`ContainerService::start_execution`, migrated on-disk SQLite, native queue and
-real interactive approval bridge. It replaces executor/process I/O and OS
-inventory in isolated child test processes, pins only synthetic test settings,
-and disables model execution there. It includes normal user-follow-up contention,
-actual native capacity-gate outcomes, own native budget/paused-goal holds,
-unrelated Nightly context, approval waiting/denial, saved configuration drift,
-post-binding spawn failure, HTTP replay/GET/cancellation and missing receipts.
-At the prior hosted checkpoint five route cases and both executor hold cases
-passed; the race case failed its assertion and the remaining new cases were not
-run after fail-fast. The corrected source requires a complete hosted result.
+## Resource and release boundaries
 
-Executor tests additionally exercise the real controller's no-takeover check
-and read-only native goal database hold, without changing unrelated grants.
-Native LocalContainerService queue-consumer regressions and complete crate/
-workspace checks are still required. Compiling the services crate does not
-prove these server/LocalContainer paths compile or pass.
+The original owned host Cargo run exited; no further host Cargo/compiler/linker
+or aggregate build is started. All source/shared outputs remain retained. No
+cache deletion, file move, allocation reset or service action was used.
 
-## Resource and integration boundary
+The additive receipt migration, native execution fences, owner serialization,
+controller/goal checks and API must be reconciled with Staging's evolving Dot
+release. They do not replace its bundle. Forward and compatible rollback must
+recognize the exact migration/checksum and retain receipts/tombstones/triggers;
+an old binary's strict SQLx migration check is not rollback acceptance. No live
+migration, private binding installation, owner dispatch, deploy, restart, timer,
+credentials or access change occurred.
 
-The original local Cargo job has exited; no owned compiler/linker/check remains.
-All existing source and shared outputs are retained. No further host build or
-link allocation is authorized by this checkpoint. The existing Disk owner has
-private terminal-process and zero-future-growth handoffs. No cache deletion,
-file move, allowance change or live service action was used as a remedy.
-
-The repository's normal pull-request checks use GitHub-hosted Ubuntu runners;
-they can validate this source without a new host compiler or SSD payload.
-No custom workflow dispatch, deployment or hosted release is requested. Exact
-CI results must be recorded before claiming source acceptance. The combined
-private-reader release/rollback/native runtime acceptance remains Staging-owned
-and separate even if public CI passes.
-
-The current base adds a receipt migration, two narrow native admission checks,
-workspace serialization shared with normal input/queue consumption, and one
-new API module. It does not replace a release bundle. Before Staging adoption,
-compare its current release head, reconcile additive changes against the latest
-private routes, and require compatible forward/rollback migration checksums
-with all receipts/fences retained. No production migration was performed.
-
-The smallest later activation requirements are: coordinated exact wire-contract
-review and real client/native integration; fresh authoritative physical and
-allocation producer input; Staging's combined native/rollback acceptance; exact
-saved owner/config/freshness binding using existing authenticated ingress;
-then separate explicit native release and monitor tuning/access/timer approval.
-Existing phone alerts, model/effort/Recommend, cleanup and genuine spending/
-approval limits remain unchanged.
+Smallest later activation requirements: reviewed fresh authoritative physical/
+remaining-allocation producer and its bounded update procedure; Staging's combined
+forward/rollback and native resource/preservation/queue/approval acceptance;
+exact saved owner/config/freshness binding through reviewed existing ingress;
+then separately explicit release, monitor tuning/access/timer/automatic-response
+approval. Keep existing phone alerts, saved model/effort/Recommend, cleanup
+ownership and genuine approval boundaries intact. Source/paired isolated CI
+acceptance cannot approve these runtime steps.

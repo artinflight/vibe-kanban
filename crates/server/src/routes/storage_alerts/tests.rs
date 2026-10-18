@@ -39,6 +39,8 @@ use utils::{log_msg::LogMsg, msg_store::MsgStore};
 
 use super::*;
 
+mod native_adapter;
+
 #[derive(Clone)]
 struct FixtureDeployment {
     container: Arc<FixtureContainer>,
@@ -545,6 +547,7 @@ fn isolated(name: &str, capacity_hold: bool) -> bool {
             ),
             "--nocapture",
             "--test-threads=1",
+            "--include-ignored",
         ])
         .env("VK_STORAGE_TEST_CHILD", name)
         .env("CODEX_HOME", &home)
@@ -580,7 +583,24 @@ fn isolated(name: &str, capacity_hold: bool) -> bool {
         "Child must execute the exact native test, not an empty filter: {}",
         String::from_utf8_lossy(&output.stdout)
     );
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        if line.starts_with("NATIVE_STORAGE_ADAPTER_EVIDENCE ") {
+            println!("{line}");
+        }
+    }
     false
+}
+
+#[tokio::test]
+#[ignore = "requires the exact reviewed Operations adapter and driver supplied by hosted CI"]
+async fn native_python_adapter_uses_real_isolated_http_backend() {
+    if !isolated(
+        "native_python_adapter_uses_real_isolated_http_backend",
+        false,
+    ) {
+        return;
+    }
+    native_adapter::exercise().await;
 }
 
 #[tokio::test]

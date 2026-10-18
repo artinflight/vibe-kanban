@@ -167,6 +167,35 @@ native/scheduled goals do not veto the request. Automated input cannot exercise
 foreground takeover, revoke grants or stop Nightly. Existing numeric resource
 limits and approvals are neither raised nor replaced; no daily cap is added.
 
+## Coordinated adapter source and isolated transport
+
+The T90 owner reviewed the unchanged `storage-admission-v2` contract at native
+source `45cffa379d836a553f20bb46d7c96e5953558de0` for adapter source integration.
+The coordinated Operations adapter/Store/driver source is published at
+`42bc9ceb10c978094992cee1d6284f5ea43b9bd9` in PR215. This source review does not
+approve release, producer authority or activation; the production Bridge stays
+disabled.
+
+The test-only client snapshot under `crates/server/tests/fixtures/storage-alert-client`
+contains six unmodified source files with exact commit/path/SHA256 provenance.
+This avoids new cross-repository credentials or access on hosted runners. The
+explicit hosted integration step verifies those hashes, then runs the otherwise
+ignored native adapter test. Missing inputs fail rather than count as a pass.
+
+That test starts the actual Axum admission router under `/api` on an ephemeral
+loopback listener with migrated on-disk SQLite, native queue, default launch and
+real approval bridge. Its fixture setup routes compile only under `cfg(test)`
+and are never mounted in the product. The exact Python Store/NativeAdapter
+submits real POST/GET requests. Executor I/O, OS inventory and incident samples
+remain synthetic. After the initial phase the listener/pool/deployment/queue
+are replaced, reopening the original WAL database; the client reconciles by GET
+without a POST or new execution. The driver covers definite queue/busy deferral,
+strictly fresh same-intent retry, interrupted-user continuity, lost response
+after real commit, competing first deliveries, accepted replay and retained incident identity.
+Independent native tests cover competing first deliveries, rejection, in-flight
+fences, real capacity/goal holds, cancellation and missing receipt uncertainty.
+Exact hosted results are required before claiming this integration passed.
+
 ## Validation and release requirements
 
 Exact native commands/results and limitations are recorded in the

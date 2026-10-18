@@ -9,12 +9,14 @@ The publication hold is lifted for sanitized code/tests on the existing PRs;
 the host-heavy build/shared-target growth hold remains. No host Cargo, compiler,
 linker or aggregate build. Use the existing hosted PR checks.
 
-Prior native CI: 474 passed, one race assertion failed, 14 skipped and 157 not
-run. This correction asserts normal recovered queued input, adds ordinary
-interrupted-user-turn recovery to alert launch and tests persistence/replay.
-Hosted nextest disables fail-fast to exercise the complete suite. Results on
-this correction are pending. Joint T90 adapter review/integration and Staging
-combined release/rollback acceptance remain distinct from native source tests.
+Hosted source45cffa379 passed633native tests (14preexisting skips), including all
+25admission tests and the corrected race/restart cases; scheduling-enabled
+persistence passed15tests. T90 reviewed unchanged v2 at45cffa379 and published
+Operations42bc9ce. This source adds the exact pinned test-only client snapshot
+and a real loopback/native-WAL-reopen adapter fixture. Its explicit hosted
+integration result remains pending; latest exact results belong on PR277 and
+private shared handoffs. Staging combined release/rollback and activation
+remain separate.
 No live dispatch, binding installation, live migration, timer, access change,
 merge, deploy or restart is authorized. Preserve saved model/effort/Recommend,
 genuine approval boundaries and all source/build outputs.

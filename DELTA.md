@@ -2042,3 +2042,13 @@ and test ordered failed/killed instructions, partial text, persisted action and
 immutable-intent replay. Hosted nextest uses no-fail-fast for complete evidence.
 See STORAGE_ADMISSION_VALIDATION.md for exact prior CI failure and new results.
 No activation or live dispatch is included.
+
+
+## Coordinated storage v2 adapter seam (2026-10-18)
+
+T90 reviewed unchanged native v2 at45cffa379 for source integration and published
+Operations42bc9ce. Add a cfg(test)-only real loopback router/control fixture and
+exact six-file client/Store/driver snapshot with byte-hash provenance. Normal
+hosted CI explicitly runs initial/client-reopen and native-WAL-reopen phases;
+missing driver cannot silently pass. Host Cargo/build growth stays held.
+See the native contract/checkpoint for evidence and synthetic I/O boundaries.

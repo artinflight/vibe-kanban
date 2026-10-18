@@ -1,3 +1,10 @@
+# Collapsible Issues release stream
+
+Current branch prepares the accepted collapsible issue UI for rebase-merge
+into staging and a frontend-only live release. See
+[feature, validation and release evidence](VK_COLLAPSIBLE_ISSUES.md).
+Preserve the compact indexes and all existing release protections below.
+
 # Usage-efficiency follow-up: compact job outcomes
 
 Base: staging `d0b0bb298` (PR266 merged). Branch:

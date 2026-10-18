@@ -27,3 +27,5 @@ owner evidence, never a stale heading that says "current".
 
 Current release coordination, newer Sidebar adoption and remaining private gates:
 [October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
+
+Collapsible issue behavior and approved frontend release: [topic evidence](VK_COLLAPSIBLE_ISSUES.md).

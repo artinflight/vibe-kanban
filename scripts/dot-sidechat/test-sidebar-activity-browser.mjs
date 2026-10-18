@@ -75,6 +75,33 @@ try {
       throw Error('Production API route forbidden');
     });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.locator('.mobile-workspace-card').first().waitFor();
+    async function assertReadable() {
+      const rows = await page
+        .locator('.mobile-workspace-card > button:first-of-type')
+        .evaluateAll((buttons) =>
+          buttons.map((button) => {
+            let opacity = 1;
+            for (let node = button; node; node = node.parentElement)
+              opacity *= Number(getComputedStyle(node).opacity);
+            return {
+              opacity,
+              actionable: !button.disabled,
+              normalText: button.classList.contains('text-normal'),
+            };
+          })
+        );
+      assert.ok(rows.length > 0);
+      assert.ok(rows.every((row) => row.actionable && row.opacity === 1));
+      if (width >= 768) assert.ok(rows.every((row) => row.normalText));
+    }
+    await assertReadable();
+    await page.evaluate(() => window.fixtureSelect('idle'));
+    await page.locator('[aria-current="page"]').waitFor();
+    await assertReadable();
+    await page.evaluate(() => window.fixtureSelect('running-unread'));
+    await assertReadable();
+    await page.evaluate(() => window.fixtureSelect(null));
     for (const [category, names] of Object.entries(expected)) {
       let root;
       if (width < 768) {
@@ -92,6 +119,7 @@ try {
           .locator('..');
       }
       await page.waitForTimeout(50);
+      await assertReadable();
       assert.deepEqual(
         await root
           .locator('.mobile-workspace-card')

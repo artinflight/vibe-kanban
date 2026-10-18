@@ -81,8 +81,12 @@ const rows: WorkspacesSidebarWorkspace[] = [
 ];
 function Fixture() {
   const [workspaces, setWorkspaces] = useState(rows);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(
+    null
+  );
   // Tests change inputs through normal React rendering, without touching any API.
   Object.assign(window, {
+    fixtureSelect: setSelectedWorkspaceId,
     fixtureUpdate: (id: string, changes: Partial<WorkspacesSidebarWorkspace>) =>
       setWorkspaces((previous) =>
         previous.map((ws) => (ws.id === id ? { ...ws, ...changes } : ws))
@@ -93,8 +97,8 @@ function Fixture() {
       workspaces={workspaces}
       activityWorkspaces={workspaces}
       totalWorkspacesCount={workspaces.length}
-      selectedWorkspaceId={null}
-      onSelectWorkspace={() => {}}
+      selectedWorkspaceId={selectedWorkspaceId}
+      onSelectWorkspace={setSelectedWorkspaceId}
       searchQuery=""
       onSearchChange={() => {}}
       layoutMode="accordion"

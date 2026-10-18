@@ -1,9 +1,10 @@
 # Project sidebar: implementation and release handoff
 
 Prepared on `vk/7db7-vk-project-dot-c` from fork `staging` at `7110930b6`.
-Not deployed. The release owner is VK::Staging Check.
+Deployed October17,2026. See [live rollout and acceptance](VK_PROJECT_COLLABORATION_ROLLOUT.md).
+The preparation notes below are historical; Staging retains future integration ownership.
 
-[Draft staging PR267](https://github.com/artinflight/vibe-kanban/pull/267) · implementation `f60c8d1d6b2c`.
+[Merged staging PR267](https://github.com/artinflight/vibe-kanban/pull/267) · implementation `f60c8d1d6b2c`.
 [Open sidebar preview](https://vibe.local/vk-artifact-viewer.html?id=15bb5759-3ce8-4234-9081-7c524f4ac8e5&name=project-sidebar-review.html&v=1).
 The published viewer, all four embedded images and its tab controls passed
 a fresh isolated browser check. Publication SHA256:

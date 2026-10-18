@@ -20,6 +20,7 @@ import {
 } from '@phosphor-icons/react';
 import { UserAvatar, type UserAvatarUser } from './UserAvatar';
 import { RunningDots } from './RunningDots';
+import { DotManagedIndicator } from './DotManagedIndicator';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +53,7 @@ export interface WorkspacePr {
 }
 
 export interface WorkspaceWithStats extends DotActivityState {
+  dotManaged?: boolean;
   id: string;
   localWorkspaceId: string | null;
   name: string | null;
@@ -350,7 +352,8 @@ export function IssueWorkspaceCard({
         <div
           className={cn(
             'flex items-center flex-wrap gap-half text-sm text-low min-w-0',
-            !workspace.dotUnreadCount &&
+            !workspace.dotManaged &&
+              !workspace.dotUnreadCount &&
               !workspace.dotNeedsAttentionCount &&
               'sm:flex-nowrap overflow-hidden',
             shouldStackPrBadges ? 'w-full' : 'flex-1'
@@ -389,6 +392,7 @@ export function IssueWorkspaceCard({
             )}
           </div>
 
+          <DotManagedIndicator managed={workspace.dotManaged} />
           <DotActivityIndicators
             dotUnreadCount={workspace.dotUnreadCount}
             dotNeedsAttentionCount={workspace.dotNeedsAttentionCount}

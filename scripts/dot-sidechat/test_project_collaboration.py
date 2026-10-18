@@ -88,6 +88,25 @@ class ProjectTests(unittest.TestCase):
         self.assertEqual(self.api.notifications(self.session)['projects'], [])
         with self.assertRaises(Rejected): self.api.seen(self.session, {'project':self.other,'messages':[reply['id']]})
 
+    def test_manual_project_unread_is_private_persistent_and_independent(self):
+        page=self.api.project_page(self.session,self.project)
+        message=self.api.send(self.session,{'project':self.project,'request':uid(),'body':'Hello'})
+        reply=self.store.append(self.dot,page['thread']['id'],page['scope']['workspace'],uid(),'Answer',message['id'],'sidechat_'+message['id'])
+        args={'project':self.project,'message':reply['id'],'action':'unread'}
+        for _ in range(3):self.api.read_state(self.session,args)
+        self.assertEqual([],self.api.seen(self.session,{'project':self.project,'messages':[reply['id']]})['seen'])
+        self.assertEqual([],self.api.notifications(self.session)['issues'])
+        self.assertEqual(1,self.api.notifications(self.session)['projects'][0]['unread_count'])
+        self.assertEqual(0,self.api.notifications(self.session)['projects'][0]['needs_attention_count'])
+        for session,args_override in [(self.session,{'project':self.other}), (self.pair('other-owner',[self.project]),{}), (self.pair('restricted',[self.other]),{})]:
+            with self.assertRaises(Rejected):self.api.read_state(session,dict(args,**args_override))
+        with self.assertRaises(Rejected):self.api.read_state(self.session,{'workspace':self.workspace,'message':reply['id'],'action':'unread'})
+        self.store.close();self.store=Store(Path(self.temp.name)/'private.sqlite')
+        self.api=BrowserAPI(self.store,self.resolver)
+        self.assertTrue(self.api.project_page(self.session,self.project)['messages'][-1]['manual_unread'])
+        self.api.read_state(self.session,dict(args,action='read'))
+        self.assertEqual([],self.api.notifications(self.session)['projects'])
+
     def test_shared_entries_across_owners_and_dot_with_private_chat(self):
         created = self.write(self.entry())
         other_session = self.pair('other-owner', [self.project])

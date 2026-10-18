@@ -14,11 +14,51 @@ from unittest.mock import patch
 from nightly_test_support import fixture_readback
 from vk_archive_stream import StreamingArchive
 from vk_nightly_capacity import StreamMeter
-from vk_nightly_capture_adapter import Resident
+from vk_nightly_capture_adapter import Resident, resident_bundle
+from vk_nightly_b_job import resident_scope, resident_action
 from vk_nightly_generation import CHUNKED, MAX_INDEX, NightlyStore
 
 
 class CapacityTransport(unittest.TestCase):
+    def test_host_scale_runtime_pins_stay_local_and_bootstrap_retains_guards(self):
+        config={'wsl_root':'/mnt/b/vk-backups/vk-nightly-capacity-'+'a'*32,
+                'immutable_source_files':{
+                    '/captured/runtime/'+str(i):{'sha256':'a'*64,'identity':[1,i,123,456]}
+                    for i in range(8599)},
+                'capture_limit_bytes':48*1024**3,'preserved_B_floor_bytes':8*1024**3,
+                'capacity_measurement_only':True,'retention_adopted':False,
+                'enroll_fresh':True,'volume_device':2360624474}
+        self.assertGreater(len(json.dumps(config).encode()),1048576)
+        raw=resident_bundle(config);self.assertLess(len(raw),1048576)
+        remote=json.loads(raw)['config']
+        self.assertNotIn('immutable_source_files',remote)
+        self.assertEqual(remote['capture_limit_bytes'],48*1024**3)
+        self.assertEqual(remote['preserved_B_floor_bytes'],8*1024**3)
+        self.assertEqual(remote['volume_device'],2360624474)
+        self.assertFalse(remote['retention_adopted'])
+        self.assertTrue(resident_scope(remote))
+        self.assertEqual(len(config['immutable_source_files']),8599)
+
+    def test_oversized_required_bootstrap_does_not_open_ssh(self):
+        with patch('vk_nightly_capture_adapter.subprocess.Popen') as popen:
+            with self.assertRaisesRegex(ValueError,'bounded bootstrap'):
+                Resident({'wsl_root':'x'*1048576})
+        popen.assert_not_called()
+
+    def test_measurement_is_fresh_only_and_cannot_publish(self):
+        config={'wsl_root':'/mnt/b/vk-backups/vk-nightly-capacity-'+'a'*32,
+                'capacity_measurement_only':True,'enroll_fresh':True,
+                'retention_adopted':False}
+        self.assertTrue(resident_scope(config))
+        for changes in ({'enroll_fresh':False},{'recover_only':True},
+                        {'wsl_root':'/mnt/b/vk-backups/vk-operational'}):
+            with self.subTest(changes=changes),self.assertRaises(ValueError):
+                resident_scope({**config,**changes})
+        with self.assertRaisesRegex(ValueError,'cannot publish'):
+            resident_action(config,'finish')
+        with self.assertRaisesRegex(ValueError,'adoption required'):
+            resident_scope({**config,'capacity_measurement_only':False})
+
     def resident(self, budget, *, initial):
         config={'job_timeout_seconds':10,'initial_job_timeout_seconds':20,
                 'capture_limit_bytes':32,'initial_capture_limit_bytes':64,

@@ -18,6 +18,33 @@ receipt is historical source provenance, not acceptance of this new package.
 The Operations Desktop-backed recovery work is included through that source.
 Existing sealed operational packages are never edited in place.
 
+## Nightly terminal reconciliation and bootstrap fix — October18 03:00UTC
+
+R5 ended02:49:56.901223UTC, child exit1 after254.799s. The prior final report
+captured02:49:44 live health and missed this terminal event. Actual failure:
+"source bundle exceeded bounded bootstrap". Its2212435-byte configuration/source
+bundle exceeded the unchanged1048576-byte transport ceiling. No B namespace or
+payload was created; producer lease release and native B path absence verified.
+The empty meter, failed configuration, original logs and all prior captures remain.
+There is no full capacity or restore result.
+
+Targeted correction projects only fixed B-resident settings into the bootstrap;
+all8599 source/runtime pins remain validated on MCP. Current projected bundle is
+98442bytes, without raising the limit. Bundle bounds are checked before opening SSH.
+A separate measurement-only scope permits only a fresh UUID capacity namespace
+without claiming production adoption; finish/publication is explicitly forbidden.
+This also fixes the prepared measurement's disabled-retention flag mismatch.
+
+36 targeted adapter/capacity/diagnostic tests pass, including measured8599-pin
+bootstrap scale, required-cap preservation, pre-SSH rejection and no-publication.
+Ops check passes. Source code is not deployed and no schedule/restart is requested.
+CU has the coordinated bounded8min synthetic window; Nightly does targeted fixes/
+small tests only until CU reports terminal, then fresh original admission before
+another sole stream. Staging reports only a small protocol test, no heavy hold.
+Disk's2GiB allocation and protected8GiB B floor remain; resident bytes and prior
+failed artifacts are charged without resetting caps. New guarded package/rehearsal
+must validate the actual remote bootstrap before committing another long stream.
+
 ## Nightly guarded preparation — October18 02:17UTC
 
 Native B free257,963,102,208bytes (240.25GiB), volume2360624474, resolves the

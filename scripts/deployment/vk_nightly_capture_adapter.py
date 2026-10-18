@@ -78,16 +78,35 @@ def verify_immutable_capture(config, proof):
             raise ValueError('verified capture omits or changes pinned current runtime artifact')
 
 
+RESIDENT_CONFIG_KEYS = frozenset((
+    'wsl_root','retention_adopted','capacity_measurement_only','volume_device',
+    'readback_timeout_seconds','scope_sha256','source_prefix','snapshot_timeout_seconds',
+    'transport','object_encoding','changed_limit_bytes','initial_changed_limit_bytes',
+    'initial_reserve_bytes','reserve_bytes','initial_capture_limit_bytes','capture_limit_bytes',
+    'enroll_fresh','recover_only','mcp_producer_lease_held','plan_identity',
+    'source_scope_sha256','preserved_B_floor_bytes',
+))
+
+
+def resident_bundle(config):
+    # Runtime pins, source roots and supervisor settings are validated on MCP.
+    # They must not grow the fixed resident bootstrap with the source census.
+    sources=[]
+    for name in ('vk_nightly_json','vk_nightly_generation','vk_nightly_lifecycle','vk_nightly_b_job'):
+        source=Path(__file__).with_name(name+'.py').read_text()
+        sources.append((name,source,hashlib.sha256(source.encode()).hexdigest()))
+    remote={key:value for key,value in config.items() if key in RESIDENT_CONFIG_KEYS}
+    raw=json.dumps({'config':remote,'sources':sources}).encode()
+    if len(raw)>1048576:raise ValueError('source bundle exceeded bounded bootstrap')
+    return raw
+
+
 class Resident:
     def __init__(self,config):
+        # Fail locally before opening SSH when even the bounded projection fails.
+        raw=resident_bundle(config)
         self.process=subprocess.Popen(remote_command(),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
         self.lock=threading.Lock();self.timeout=config['job_timeout_seconds'];self.config=config
-        sources=[]
-        for name in ('vk_nightly_json','vk_nightly_generation','vk_nightly_lifecycle','vk_nightly_b_job'):
-            source=Path(__file__).with_name(name+'.py').read_text()
-            sources.append((name,source,hashlib.sha256(source.encode()).hexdigest()))
-        raw=json.dumps({'config':config,'sources':sources}).encode()
-        if len(raw)>1048576:raise ValueError('source bundle exceeded bounded bootstrap')
         try:
             self.process.stdin.write(struct.pack('!I',len(raw))+raw);self.process.stdin.flush()
             self.ready=self.response()

@@ -203,12 +203,30 @@ class LocalVerifiedProvider:
                 process.wait();process.stdout.close()
 
 
+def resident_scope(config):
+    root=Path(config['wsl_root'])
+    if not str(root).startswith('/mnt/b/vk-backups/vk-') or '..' in root.parts:
+        raise ValueError('explicit fresh operational scope/adoption required')
+    if config.get('capacity_measurement_only') is True:
+        if (not re.fullmatch('/mnt/b/vk-backups/vk-nightly-capacity-[0-9a-f]{32}',str(root))
+                or config.get('enroll_fresh') is not True or config.get('recover_only')):
+            raise ValueError('measurement requires a fresh isolated capacity namespace')
+        return True
+    if config.get('retention_adopted') is not True:
+        raise ValueError('explicit fresh operational scope/adoption required')
+    return False
+
+
+def resident_action(config, action):
+    if action=='finish' and config.get('capacity_measurement_only') is True:
+        raise ValueError('measurement-only resident cannot publish a generation')
+
+
 def run(config):
     started=time.monotonic()
     if os.getuid()!=1000:raise ValueError('existing unprivileged WSL writer required')
+    resident_scope(config)
     root=Path(config['wsl_root'])
-    if (not str(root).startswith('/mnt/b/vk-backups/vk-') or '..' in root.parts
-            or config.get('retention_adopted') is not True):raise ValueError('explicit fresh operational scope/adoption required')
     def mount():
         row=subprocess.check_output(['findmnt','-n','-T','/mnt/b','-o','SOURCE,FSTYPE'],text=True).split()
         if row!=['B:\\','9p']:raise ValueError('existing B drvfs mount changed')
@@ -259,6 +277,7 @@ def run(config):
             command=receive(sys.stdin.buffer)
             if command.get('binding')!=binding:raise ValueError('stale/wrong live producer binding')
             action=command.get('action');raw=command.get('name')
+            resident_action(config,action)
             if action in ('allocate','seal','inspect'):
                 if not isinstance(raw,str) or not re.fullmatch('[A-Za-z0-9_.-]+',raw) or raw in ('.','..'):
                     raise ValueError('unsafe registered input name')

@@ -74,7 +74,9 @@ function Fixture() {
       >
         <DotSidechatLive
           key={workspace}
-          {...(project ? { projectId: workspace } : { workspaceId: workspace })}
+          {...(project
+            ? { projectId: '11111111-1111-4111-8111-111111111111' }
+            : { workspaceId: workspace })}
         />
       </div>
     </div>

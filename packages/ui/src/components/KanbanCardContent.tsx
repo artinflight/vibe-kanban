@@ -233,7 +233,7 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
     <div
       className={cn(
         'mobile-task-content flex flex-col gap-half min-w-0',
-        !isExpanded && 'pb-base',
+        !isExpanded && 'pb-6',
         className
       )}
     >

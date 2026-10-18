@@ -279,6 +279,8 @@ jobs:
       - uses: actions/checkout@v6
       - name: Test sidechat recovery, delivery and project-scope rollout
         run: python3 -B -m unittest discover -s scripts/dot-sidechat -v
+      - name: Test lightweight connector controls and issue-linked workspace preflight
+        run: python3 -B -m unittest discover -s scripts/dot-connector -p 'test_*.py' -v
 
   frontend-checks:
     needs: [branch-policy, branch-freshness, changes]
@@ -316,10 +318,10 @@ jobs:
             "./scripts/check-legacy-frontend-paths.sh"
 
       - name: Test independent Dot unread and Needs Attention notifications
-        run: node scripts/dot-sidechat/test-notifications-ui.mjs && node scripts/dot-sidechat/test-live-ui.mjs
+        run: node scripts/dot-sidechat/test-notifications-ui.mjs && node scripts/dot-sidechat/test-live-ui.mjs && node scripts/dot-sidechat/test-sidebar-activity.mjs
 
       - name: Check issue creation persistence, local assignments and workspace pagination
-        run: node --experimental-strip-types --test packages/web-core/src/shared/lib/issueCreation.test.ts packages/web-core/src/pages/workspaces/workspaceAssignmentFilter.test.ts packages/web-core/src/pages/workspaces/workspaceSidebarPagination.test.ts
+        run: node --experimental-strip-types --test packages/web-core/src/shared/lib/issueCreation.test.ts packages/web-core/src/pages/workspaces/workspaceAssignmentFilter.test.ts packages/web-core/src/pages/workspaces/workspaceSidebarPagination.test.ts packages/web-core/src/shared/lib/dotWorkspaceActivity.test.ts
 
       - name: Check actual issue panel Close/reopen races
         env:
@@ -629,7 +631,7 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/vk-history-tools" --no-package-lock --ignore-scripts react-test-renderer@18.3.1
           node scripts/testing/run-long-thread-history-tests.mjs
           node scripts/testing/run-mcp-approval-ui-tests.mjs
-          node --experimental-strip-types --test packages/web-core/src/shared/lib/issueCreation.test.ts packages/web-core/src/pages/workspaces/workspaceAssignmentFilter.test.ts packages/web-core/src/pages/workspaces/workspaceSidebarPagination.test.ts
+          node --experimental-strip-types --test packages/web-core/src/shared/lib/issueCreation.test.ts packages/web-core/src/pages/workspaces/workspaceAssignmentFilter.test.ts packages/web-core/src/pages/workspaces/workspaceSidebarPagination.test.ts packages/web-core/src/shared/lib/dotWorkspaceActivity.test.ts
           node scripts/testing/run-kanban-issue-panel-tests.mjs
           pnpm run web-core:check
           pnpm run local-web:check

@@ -11,6 +11,7 @@ function Fixture() {
   const [workspace, setWorkspace] = useState(
     '11111111-1111-4111-8111-111111111111'
   );
+  const project = new URLSearchParams(window.location.search).has('project');
   const notifications = useDotNotifications();
   const state = notifications.find((n) => n.issue_id === 'issue-fixture');
   const dot = {
@@ -71,7 +72,12 @@ function Fixture() {
         id="dot-slot"
         style={{ display: visible ? 'flex' : 'none', height: 440 }}
       >
-        <DotSidechatLive key={workspace} workspaceId={workspace} />
+        <DotSidechatLive
+          key={workspace}
+          {...(project
+            ? { projectId: '11111111-1111-4111-8111-111111111111' }
+            : { workspaceId: workspace })}
+        />
       </div>
     </div>
   );

@@ -16,6 +16,7 @@ type Pending = {
   project?: string;
   request: string;
   body: string;
+  in_reply_to?: string;
 };
 type Snapshot = {
   thread: { id: string };
@@ -24,7 +25,11 @@ type Snapshot = {
   receipts: Record<string, SidechatReceipt>;
   through: number;
   next_after: number | null;
-  capabilities?: { notifications: boolean };
+  capabilities?: {
+    notifications: boolean;
+    manual_unread?: boolean;
+    message_replies?: boolean;
+  };
 };
 export class PairingRequired extends Error {}
 
@@ -86,10 +91,14 @@ export function DotSidechatLive({
   const [code, setCode] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [draft, setDraft] = useState('');
+  const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pending = useRef<Pending | null>(null);
+  // Protect a manual choice from older visibility acknowledgements and snapshots.
+  const manualUnread = useRef(new Set<string>());
+  const readStateRevision = useRef(0);
   const busy = useRef(false);
   const refreshing = useRef(false);
   const lifetime = useRef(new AbortController());
@@ -122,6 +131,7 @@ export function DotSidechatLive({
   useEffect(() => {
     pending.current = null;
     setDraft('');
+    setReplyTargetId(null);
     if (!storageKey) return;
     try {
       const saved = sessionStorage.getItem(storageKey);
@@ -132,10 +142,14 @@ export function DotSidechatLive({
             ? value.project === projectId && !value.workspace
             : value.workspace === workspaceId && !value.project) &&
           typeof value.body === 'string' &&
-          typeof value.request === 'string'
+          typeof value.request === 'string' &&
+          (value.in_reply_to === undefined ||
+            (typeof value.in_reply_to === 'string' &&
+              value.in_reply_to.length > 0))
         ) {
           pending.current = value;
           setDraft(value.body);
+          setReplyTargetId(value.in_reply_to ?? null);
         }
       }
     } catch {
@@ -149,6 +163,7 @@ export function DotSidechatLive({
     if (!session || !contextId || refreshing.current) return;
     refreshing.current = true;
     const signal = lifetime.current.signal;
+    const revision = readStateRevision.current;
     try {
       let page: Snapshot = await dotApi('thread?' + query, signal);
       const messages = [...page.messages];
@@ -166,12 +181,12 @@ export function DotSidechatLive({
         messages.push(...page.messages);
         Object.assign(receipts, page.receipts);
       }
-      if (!signal.aborted) {
+      if (!signal.aborted && revision === readStateRevision.current) {
         setSnapshot({ ...page, messages, receipts });
         setError(null);
       }
     } catch (failure) {
-      if (!signal.aborted) {
+      if (!signal.aborted && revision === readStateRevision.current) {
         setSnapshot(null);
         if (failure instanceof PairingRequired) {
           setSession(null);
@@ -197,7 +212,7 @@ export function DotSidechatLive({
     async (messages: string[]) => {
       if (!session || !contextId) return;
       try {
-        await dotApi(
+        const result: { seen: string[] } = await dotApi(
           'seen',
           lifetime.current.signal,
           { ...target, messages },
@@ -208,7 +223,11 @@ export function DotSidechatLive({
             ? {
                 ...previous,
                 messages: previous.messages.map((m) =>
-                  messages.includes(m.id) ? { ...m, seen: true } : m
+                  result.seen.includes(m.id) &&
+                  !manualUnread.current.has(m.id) &&
+                  !m.manual_unread
+                    ? { ...m, seen: true }
+                    : m
                 ),
               }
             : previous
@@ -222,6 +241,38 @@ export function DotSidechatLive({
     },
     [session, contextId, target]
   );
+
+  async function changeReadState(message: string, action: 'read' | 'unread') {
+    if (!session || !contextId) return;
+    readStateRevision.current++;
+    if (action === 'unread') manualUnread.current.add(message);
+    try {
+      const result: { seen: boolean; manual_unread: boolean } = await dotApi(
+        'read-state',
+        lifetime.current.signal,
+        { ...target, message, action },
+        session.csrf
+      );
+      readStateRevision.current++;
+      if (action === 'read') manualUnread.current.delete(message);
+      setSnapshot((previous) =>
+        previous
+          ? {
+              ...previous,
+              messages: previous.messages.map((m) =>
+                m.id === message ? { ...m, ...result } : m
+              ),
+            }
+          : previous
+      );
+      window.dispatchEvent(new CustomEvent('dot-sidechat-changed'));
+    } catch (failure) {
+      if (action === 'unread') manualUnread.current.delete(message);
+      if (!lifetime.current.signal.aborted)
+        setError((failure as Error).message);
+      throw failure;
+    }
+  }
 
   async function attention(
     message: string,
@@ -273,10 +324,18 @@ export function DotSidechatLive({
     busy.current = true;
     setSending(true);
     try {
+      if (
+        (replyTargetId || pending.current?.in_reply_to) &&
+        !snapshot?.capabilities?.message_replies
+      )
+        throw new Error(
+          'Reply targeting is unavailable. Your reply is retained; refresh after the Dot service release.'
+        );
       const outgoing = pending.current ?? {
         ...target,
         request: crypto.randomUUID(),
         body: draft,
+        ...(replyTargetId ? { in_reply_to: replyTargetId } : {}),
       };
       // Persist BEFORE submitting; retries after a lost response reuse the exact key/body.
       sessionStorage.setItem(storageKey, JSON.stringify(outgoing));
@@ -285,6 +344,7 @@ export function DotSidechatLive({
       sessionStorage.removeItem(storageKey);
       pending.current = null;
       setDraft('');
+      setReplyTargetId(null);
       await refresh();
     } catch (failure) {
       setError((failure as Error).message);
@@ -308,6 +368,7 @@ export function DotSidechatLive({
       if (storageKey) sessionStorage.removeItem(storageKey);
       pending.current = null;
       setDraft('');
+      setReplyTargetId(null);
       setSnapshot(null);
       setSession(null);
       window.dispatchEvent(
@@ -373,6 +434,28 @@ export function DotSidechatLive({
           live
           notificationsEnabled={snapshot?.capabilities?.notifications ?? false}
           onRead={readReplies}
+          onReadState={
+            snapshot?.capabilities?.manual_unread ? changeReadState : undefined
+          }
+          onReplyTarget={(message) => {
+            if (!busy.current && !pending.current) setReplyTargetId(message);
+          }}
+          replyEnabled={snapshot?.capabilities?.message_replies ?? false}
+          replyTarget={(() => {
+            const message = snapshot?.messages.find(
+              (m) => m.id === replyTargetId
+            );
+            return message
+              ? {
+                  id: message.id,
+                  seq: message.seq,
+                  role: message.role,
+                  created: message.created,
+                  excerpt: message.body.slice(0, 1000),
+                  truncated: message.body.length > 1000,
+                }
+              : null;
+          })()}
           onAttention={(message, action) => void attention(message, action)}
           messages={snapshot?.messages ?? []}
           receipts={snapshot?.receipts ?? {}}

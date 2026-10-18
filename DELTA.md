@@ -2020,3 +2020,28 @@ Implemented private project Dot Chat/shared planning with canonical task links,
 revision/idempotency protection, separate project attention and responsive UI.
 Coordinated Preserve Dot/CU1.6 and Staging. No production adoption.
 See VK_PROJECT_COLLABORATION.md for validation and release requirements.
+
+## 2026-10-17 — Project sidebar live
+
+Seamus-authorized Dot+frontend rollout completed. Exact-source CI, live project
+and legacy Dot 393/1440 acceptance and installed new-tool dispatch pass. Dot-only
+readiness 1.012 s; all non-Dot processes and CU pins unchanged. Before/boundary/after
+Desktop recovery verified, QA fully removed. See VK_PROJECT_COLLABORATION_ROLLOUT.md.
+
+## 2026-10-18 — T63 manual unread follow-up
+
+Added owner Mark unread/read independently of Needs Attention, durable storage,
+server automatic-read protection and client race/retry guards. Isolated
+persistence/HTTP/project/UI/browser tests and integration over newer live source
+pass. Read VK_DOT_MANUAL_UNREAD.md for exact evidence and baseline limits.
+Publication only; no merge, deploy, service or model/routing changes authorized.
+
+## 2026-10-18 — T63 Running and dispatch attribution
+
+Running now remains visible independently of explicit attention/approval views;
+ordinary unread stays a badge while active. Dispatch notes/counts/read actions
+are scoped by verified receipt workspace; genuine issue conversation remains
+shared. The nominated T18 note was inspected read-only and retained unseen.
+76 sidechat plus 34 newer connector regressions and desktop/mobile sidebar
+acceptance pass. Manual unread is preserved. See VK_DOT_ACTIVITY_ATTRIBUTION.md.
+Publication only; no merge, deploy, live cleanup, model/effort or routing change.

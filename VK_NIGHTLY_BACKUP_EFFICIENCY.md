@@ -1,3 +1,33 @@
+# October18 8:24a.m. EDT — retained R2 failed, useful inputs remain verified
+
+The durable collector captured the actual terminal8:24:10a.m. EDT: child1 after
+host swap fell to0/163840bytes. Nightly itself had swap0/OOM0. A separately owned
+test child grew about12GB swapped memory; shared evidence identifies it for its
+owner without stopping it or claiming sole pressure causation. The wrapper's
+2.5GiB RAM/512MiB swap numbers are agent-authored tuning, not user policy. Actual
+exhaustion/reclaim is the current resource blocker; no PSI-only stop or relaxation.
+
+Producer/mount absence and MCP/B kernel leases are attested.111 consistent native
+SQLite images5317406720B pass same-attempt metadata/seal binding for recovery.
+Sealed inputs5489770836B include1234413-path inventory. Preserve the incomplete
+1937342464B compressed archive and partial10033entry index. Its8282326453regular
+bytes and sampled3499655168B whole-task SSD peak do not establish full workload
+or simultaneous B generation/restore demand. No full independent restore accepted.
+
+No committed mutable adapter/dispatch/pointer rows exist: this terminated run
+cannot supply the promised Python publication checkpoint. No clearance issued.
+Existing owner handoffs carry actual terminal and expanded final Dot scope,
+including routing/sidebar/project-unread changes; older prepared package alone
+does not cover it. Recovery must authenticate/reuse existing SQL/input work and
+test a supported continuation, not blindly recapture or append partial compressed
+output. Full measurement, generation, independent restore and operational current
+baseline remain open. Nothing deployed/scheduled/restarted/retired.
+
+Current docs-only checks: ops governance/diff pass. Required aggregate formatting
+was attempted in an ownCPU5%/MemoryMax256MiB/Swap0 process; after isolated PATH
+correction its75s bound expired. No current complete formatting pass is claimed;
+earlier13 reader/restore regressions and tiny native fixture evidence are retained.
+
 # October18 7:41a.m. EDT — durable collection and native restore preparation
 
 R2 remains the sole producer1889756/start42565325; no capture restart or change

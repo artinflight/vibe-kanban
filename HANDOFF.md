@@ -1,3 +1,36 @@
+# October18 8:24a.m. EDT — R2 terminal, do not relaunch ordinary capture
+
+Read cold-r2-frontend-epoch-measured/ACTUAL_TERMINAL_COORDINATION.private.json,
+COLLECTED_RESULT.private.json, TERMINAL_RECONCILIATION.private.json and
+RETAINED_INPUT_REUSE_ELIGIBILITY.private.json in the existing private Nightly root.
+R2 child1 ended8:24:10a.m. EDT on actual swap exhaustion; both units terminal,
+original producer/mount absent and MCP/B kernel leases free. No bulk job/retry.
+111 native SQLite seals5317406720B and1234413-path inventory are bound to the
+same original manifest/ledger/file identities. Total sealed5489770836B; keep the
+unsealed1937342464B archive and10033-row partial index. No full demand/restore.
+
+External test-child Node growth in T63's original workspace consumed about12GB
+swap; Nightly swap/OOM0. Existing shared terminal receipt contains exact identity
+and samples, with no sole-host-cause claim. Original Staging/Disk coordination is
+queued; T63 running API rejected follow-up. No foreign job/settings changed.
+Do not impose PSI0.1 or the agent-added numeric wrapper floors as user policy;
+actual exhausted swap/active reclaim needs owner remedy and fresh reconciliation.
+
+Three-row Dot boundary remains FALSE; no Python publication clearance. This dead
+capture cannot reach it. Preserve old roots/pins and reconcile a supported retained
+recovery phase without blindly repeating SQL capture or accepting partial TAR.
+The original Staging source/activation handoff also records expanded routing,
+sidebar sizing and project-unread scope; older0577ee3d package is not final scope.
+Unlaunched independent-restore-preparation/captured-epoch-r4 now has a small pinned
+572710ae3 helper package/import closure. No full-proof request/admission was armed.
+Keep same5GiB total SSD and shared BB/Staging/T18 balances, all recovery originals,
+budgets/Recommend. No deployment, schedule, restart, deletion or foreign stopping.
+
+Docs-only verification: ops:check and diff check pass. Required pnpm run format
+was attempted with ownCPU5%/MemoryMax256MiB/Swap0; corrected the isolated PATH,
+then its75s bound expired before completion. No formatting pass is claimed and
+no application bytes changed. Existing13 reader/restore checks are retained.
+
 # October18 7:41a.m. EDT — durable collection and native restore preparation
 
 R2 remains the sole producer1889756/start42565325; no capture restart or change

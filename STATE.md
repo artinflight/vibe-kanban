@@ -1,3 +1,32 @@
+# October18 8:24a.m. EDT — R2 actual terminal collected, recovery preserved
+
+R2 ended8:24:10a.m. EDT, child1, after two host-swap-floor observations:
+SwapFree0/163840bytes, MemAvailable11.87/12.31GB. Its own swap/OOM events were0.
+The numeric2.5GiB RAM/512MiB swap floors originate in this agent's wrapper
+commit9f4b01d751, not an explicit user numeric instruction or immutable repo rule.
+Here actual swap exhaustion and rapid external test-child growth justify resource
+coordination; PSI alone did not stop the capture. No foreign process was changed.
+
+Supported collection and direct kernel-lease checks attest producer1889756/start
+42565325 absent, unitMainPID0, mount absent, MCP/B leases free. No Nightly bulk
+job or automatic retry remains.111 native-sealed SQLite images total5317406720B;
+same-attempt manifest/ledger/file-identity reuse validation passes. Sealed inputs
+total5489770836B, including1234413-path inventory. Preserve those and the
+UNSEALED1937342464-byte archive. Partial meter10033entries/8282326453regular
+bytes is not complete demand, a generation or full restore. Sampled whole-task
+SSD peak3499655168B fits the same TOTAL5GiB allocation; full B coexistence unknown.
+
+None of the three mutable Dot runtime rows was committed. The dead R2 cannot
+later supply its requested publication checkpoint; NO Python clearance issued.
+Shared original-owner handoffs now record this terminal, not the earlier active
+snapshot. Staging/Disk follow-ups accepted queued; T63 running API rejected the
+message, so delivery there is not claimed. Recovery should reuse authenticated
+inputs, not repeat all SQLite copies or append to the incomplete compressed stream.
+Resolve the identified external test-child growth before another bulk admission.
+Final coordinated Dot scope includes project/workspace routing, sidebar sizing
+and project-scoped unread attention; the older prepared bundle is not final-scope
+acceptance. No deployment, schedule, restart, original retirement or guard bypass.
+
 # October18 7:41a.m. EDT — durable collection and native restore preparation
 
 R2 remains the sole producer1889756/start42565325; no capture restart or change

@@ -89,10 +89,13 @@ class IndependentRestoreTests(unittest.TestCase):
 
     def test_reports_real_ownership_denial_without_escalation(self):
         self.payload('file', b'correct', uid=12345)
+        events = []
         with patch('vk_nightly_restore.os.chown', side_effect=PermissionError('denied')):
             with self.assertRaisesRegex(PermissionError, 'uid=12345'):
-                restore_generation(self.folder, self.manifest(), self.root / 'restore')
+                restore_generation(self.folder, self.manifest(), self.root / 'restore', checkpoint=events.append)
         self.assertEqual((self.root / 'restore/file').read_bytes(), b'correct')
+        self.assertEqual(events[-1]['phase'], 'independent_content_verified')
+        self.assertFalse(events[-1]['recorded_metadata_verified'])
 
     def test_real_chunked_generation_restores_without_source_alias(self):
         data = b'exact history\\n' * 80000

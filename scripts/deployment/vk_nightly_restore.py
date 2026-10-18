@@ -110,6 +110,10 @@ def restore_generation(folder, manifest, destination, *, checkpoint=lambda value
             report('independent_readback', index)
     if sqlite_checked != len(databases):
         raise ValueError('not all bound databases were independently restored')
+    report('content_verified', len(entries))
+    checkpoint({'phase': 'independent_content_verified', 'entries': len(entries),
+                'regular_bytes_written': logical, 'sqlite_integrity_checks': sqlite_checked,
+                'recorded_metadata_verified': False})
 
     # Apply only recorded metadata, children before directories. Inaccessible
     # numeric ownership/xattrs fail honestly; the helper never invokes sudo.

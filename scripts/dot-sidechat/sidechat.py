@@ -87,6 +87,11 @@ class Store:
           subscription TEXT, http_status INTEGER, updated REAL NOT NULL);
         """)
 
+        # Durable owner override: automatic visibility reads must not undo it.
+        with self.transaction():
+            if "manual_unread" not in {r[1] for r in self.db.execute("PRAGMA table_info(dot_reply_state)")}:
+                self.db.execute("ALTER TABLE dot_reply_state ADD COLUMN manual_unread INTEGER NOT NULL DEFAULT 0")
+
         # Legacy Dot replies become unread once. Reopening never resets state.
         self.db.execute("INSERT OR IGNORE INTO dot_reply_state(message,updated) SELECT id,created FROM messages WHERE role='dot'")
 
@@ -218,8 +223,9 @@ class Store:
         rows = rows[:limit]
         for message in rows:
             if message['role']=='dot':
-                state=self.db.execute('SELECT seen,attention_kind,resolved FROM dot_reply_state WHERE message=?',(message['id'],)).fetchone()
+                state=self.db.execute('SELECT seen,manual_unread,attention_kind,resolved FROM dot_reply_state WHERE message=?',(message['id'],)).fetchone()
                 message['seen']=bool(state and state['seen'])
+                message['manual_unread']=bool(state and state['manual_unread'])
                 message['attention']={'kind':state['attention_kind'],'resolved':bool(state['resolved'])} if state and state['attention_kind'] else None
             if message["role"] == "owner":
                 message["owner_intent"] = {
@@ -258,9 +264,25 @@ class Store:
             for message in messages:
                 if not self.db.execute("SELECT 1 FROM messages WHERE id=? AND thread=? AND role='dot'",(message,thread)).fetchone():
                     raise Rejected('Visible reply unavailable')
+            acknowledged=[]
             for message in messages:
-                self.db.execute('UPDATE dot_reply_state SET seen=1,updated=? WHERE message=? AND seen=0',(self.clock(),message))
-        return {'seen':messages}
+                self.db.execute('UPDATE dot_reply_state SET seen=1,updated=? WHERE message=? AND seen=0 AND manual_unread=0',(self.clock(),message))
+                if self.db.execute('SELECT seen FROM dot_reply_state WHERE message=?',(message,)).fetchone()[0]:
+                    acknowledged.append(message)
+        return {'seen':acknowledged}
+
+    def set_reply_read_state(self, principal, thread, workspace, message, action):
+        self._principal(principal,('owner',))
+        if not isinstance(message,str) or action not in ('read','unread'):
+            raise Rejected('Explicit read or unread action required')
+        with self.transaction():
+            scope=self._thread(principal,thread);self._workspace(principal,scope,workspace)
+            if not self.db.execute("SELECT 1 FROM messages WHERE id=? AND thread=? AND role='dot'",(message,thread)).fetchone():
+                raise Rejected('Dot reply unavailable in this scope')
+            unread=action=='unread'
+            self.db.execute('UPDATE dot_reply_state SET seen=?,manual_unread=?,updated=? WHERE message=?',(int(not unread),int(unread),self.clock(),message))
+        return {'message':message,'seen':not unread,'manual_unread':unread}
+
 
     def set_sidechat_attention(self, principal, thread, workspace, message, action):
         self._principal(principal,('owner','dot'))

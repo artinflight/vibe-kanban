@@ -1,35 +1,17 @@
-# Usage-efficiency follow-up: compact job outcomes
+# T63 Dot manual unread
 
-Base: staging `d0b0bb298` (PR266 merged). Branch:
-`fix/compact-job-outcomes-20261017`, existing Automatic Restart Preflight owner.
-This follow-up adds bounded durable outcomes to the existing runner and measures
-actual JSON payload reduction. Approval-review share is not evidence of waste;
-models, AutoSwitch, all approval checks and QA remain unchanged. Staging retains
-release ownership; no new execution owner or nightly job.
+Continue workspace `7db73dbd-3b5d-4c21-87f1-4924be648284` on
+`vk/7db7-vk-project-dot-c`, reconciled with staging `85af54d3c`.
+Scope: owner-requested Mark unread beside Needs attention, durable explicit
+read/unread with automatic-read protection, issue/project compatibility and
+regression tests. [Implementation and release handoff](VK_DOT_MANUAL_UNREAD.md).
 
-Seamus authorized reducing repeated pickup input and redundant work while
-keeping models, effort, AutoSwitch, full history and acceptance unchanged.
-Scope: lossless continuity archives and concise current indexes, adoption of
-the existing fingerprinted `scripts/deployment/vk_prepare.py` result reuse,
-and narrow shared-job correctness fixes coordinated with their existing owners.
+Implementation/testing/publication are authorized. Merge, deployment, live
+service changes and model/effort/routing changes are not. Staging retains release
+ownership; preserve newer live CU/Stop/context/continuation/dispatch changes.
+The October 17 sidebar deployment is historical, not new activation authority.
 
-Staging owns combined release/native queue recorder-drain acceptance. Nightly
-workspace604d/PR263 owns producer completion, capture reconciliation, B package,
-whole-plan recovery and schedule activation. Do not edit their workspaces,
-duplicate jobs/stores, compile another candidate or claim their pending checks.
-All runtime, admission, data, security and human-QA constraints in [STATE](STATE.md)
-remain active. No production change is part of this stream.
-
-Validation must show exact archival preservation and bounded pickup input,
-then exercise the existing Preparation runner with identical commands and
-acceptance before/after reuse. Count actual command launches and repeated
-input bytes; do not infer tokens, money or model-call savings from byte counts.
-Any model-workflow claim needs actual same-model provider evidence.
-
-Read [the efficiency evidence/contract](USAGE_EFFICIENCY.md) for current results
-and unresolved acceptance. The full prior branch histories, constraints,
-identities and receipts remain in [STREAM history](STREAM_HISTORY_20261017.md),
-indexed and hash-bound by [the archive manifest](CONTINUITY_ARCHIVE.json).
-
-Current release coordination, newer Sidebar adoption and remaining private gates:
-[October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
+Current protections/topic map: [STATE](STATE.md). Earlier branch histories are
+retained in [STREAM history](STREAM_HISTORY_20261017.md), its archive manifest,
+[sidebar preparation pickup](PROJECT_SIDEBAR_PICKUP_20261017.md) and
+[deployment additions](T63_DEPLOYMENT_PICKUP_20261017.md).

@@ -2027,3 +2027,11 @@ Seamus-authorized Dot+frontend rollout completed. Exact-source CI, live project
 and legacy Dot 393/1440 acceptance and installed new-tool dispatch pass. Dot-only
 readiness 1.012 s; all non-Dot processes and CU pins unchanged. Before/boundary/after
 Desktop recovery verified, QA fully removed. See VK_PROJECT_COLLABORATION_ROLLOUT.md.
+
+## 2026-10-18 — T63 manual unread follow-up
+
+Added owner Mark unread/read independently of Needs Attention, durable storage,
+server automatic-read protection and client race/retry guards. Isolated
+persistence/HTTP/project/UI/browser tests and integration over newer live source
+pass. Read VK_DOT_MANUAL_UNREAD.md for exact evidence and baseline limits.
+Publication only; no merge, deploy, service or model/routing changes authorized.

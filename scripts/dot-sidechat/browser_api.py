@@ -189,7 +189,7 @@ class BrowserAPI:
     def snapshot(self, owner, thread, scope, after, through):
         page = self.store.read(owner, thread["id"], after=after, through=through, limit=50)
         page["scope"] = scope
-        page["capabilities"] = {"notifications":True}
+        page["capabilities"] = {"notifications":True,"manual_unread":True}
         page["receipts"] = {m["id"]: self.store.receipt(owner, thread["id"], m["id"])
                             for m in page["messages"] if m["role"] == "owner"}
         return page
@@ -208,6 +208,11 @@ class BrowserAPI:
         if set(args) not in ({'workspace','messages'}, {'project','messages'}):raise Rejected('Unexpected read argument')
         owner,thread,scope=self.target(session,args)
         return self.store.seen_replies(owner,thread['id'],scope['workspace'],args['messages'])
+
+    def read_state(self, session, args):
+        if set(args) not in ({'workspace','message','action'}, {'project','message','action'}):raise Rejected('Unexpected read-state argument')
+        owner,thread,scope=self.target(session,args)
+        return self.store.set_reply_read_state(owner,thread['id'],scope['workspace'],args['message'],args['action'])
 
     def attention(self, session, args):
         if set(args) not in ({'workspace','message','action'}, {'project','message','action'}):raise Rejected('Unexpected attention argument')
@@ -297,6 +302,8 @@ def handler(api, origin):
                 return self.output(200,api.notifications(session))
             if self.command=='POST' and route=='seen':
                 return self.output(200,api.seen(session,args))
+            if self.command=='POST' and route=='read-state':
+                return self.output(200,api.read_state(session,args))
             if self.command=='POST' and route=='attention':
                 return self.output(200,api.attention(session,args))
             if self.command == "POST" and route == "send":

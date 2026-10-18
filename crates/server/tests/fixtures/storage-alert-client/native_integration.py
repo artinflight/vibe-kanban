@@ -88,6 +88,10 @@ def run_fixture(descriptor, url, journal):
                     None if operation is None else {'operation':operation})
 
     def observe(key):
+        if key == 'ssd':
+            return {'percent':99,'available':monitor.pressure.SSD_FLOOR,'at':time.time(),
+                    'identity':'synthetic-native-integration-ssd',
+                    'policy':monitor.pressure.SSD_PHYSICAL}
         return {'percent':98,'available':1024,'at':time.time(),
                 'identity':'synthetic-native-integration-fs','policy':monitor.pressure.OS}
 
@@ -102,7 +106,7 @@ def run_fixture(descriptor, url, journal):
     adapter.observe=observe
 
     def poll(store):
-        samples={'os':observe('os')}
+        samples={key:observe(key) for key in ('os','ssd')}
         store.observations(samples,{},time.time())
         return store.dispatch(samples,adapter,'synthetic-private-receipt-é')
 
@@ -110,7 +114,7 @@ def run_fixture(descriptor, url, journal):
         return store.db.execute('SELECT * FROM batches ORDER BY created DESC LIMIT 1').fetchone()
 
     def open_pressure(store):
-        assert store.db.execute('SELECT count(*) FROM incidents WHERE recovered IS NULL').fetchone()[0]==1
+        assert store.db.execute('SELECT count(*) FROM incidents WHERE recovered IS NULL').fetchone()[0]==2
 
     def finish(store):
         setup('complete')
@@ -126,6 +130,8 @@ def run_fixture(descriptor, url, journal):
         store=monitor.Store(journal.with_suffix('.queue.sqlite'))
         assert poll(store)=='deferred'
         original=store.document(batch(store))
+        assert {i['policy'] for i in original['intent']['incidents']}=={
+            monitor.pressure.OS,monitor.pressure.SSD_PHYSICAL}
         native_state=setup()
         assert native_state['launches']==baseline
         assert native_state['queued']==queued_receipt

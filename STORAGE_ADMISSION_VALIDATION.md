@@ -1,3 +1,57 @@
+# Frozen physical-policy paired validation checkpoint
+
+Current client: Operations PR215 `81887d38d238ce3b0665092bf38a482284441062`.
+All fifteen published Python source/test hashes match. The disabled published
+example config needed by a new test is also mirrored exactly; provenance contains
+sixteen hashes. Hosted CI runs the 103 Python tests with accurate pass/skip counts,
+then actual mixed OS/physical-SSD Store/Bridge/HTTP/native admission. Current exact
+native commit/result will be recorded on PR277 and existing private handoffs;
+pending validation is not acceptance. No native implementation, wire, fixture
+report ABI or production migration change is required.
+
+The driver supplies `os_percent` plus `ssd_physical_free_proposal_v1` in every
+scenario. It asserts the exact policy set in the queued batch, ordinary queue
+preservation, strict fresh retry, busy/interrupted continuity, real committed
+reply loss/GET-only reconciliation, four first deliveries/one execution and
+accepted replay. Native success and original-WAL reopen retain TWO open incidents.
+Reports remain initial10/reopened2 named groups; executor I/O, OS inventory and
+physical readings are synthetic, not live policy/runtime acceptance.
+
+Predecessor native `b2497288fb7f8fc8d2c6023eb625e6f2c9a354f6` / client
+`7a02102d6ccf55f2c91223c5128599cefa6492fc` passed
+[Test39148120424](https://github.com/artinflight/vibe-kanban/actions/runs/39148120424):
+633 main native passed/15skipped, Python87run/**86passed/1optional connector skipped**,
+one actual paired test passed, scheduling15passed/118filtered. The earlier summary
+incorrectly called all87 Python tests passed; this corrects it from completed logs.
+One main skip was the adapter explicitly run separately;14preexisting ignored
+native cases remain unrun. Substantive remote checks and conditional combined-
+consent acceptance were skipped. This predecessor is not physical-policy proof.
+
+Physical rollout has NO allocation-producer requirement. It never loads allocation
+input; normal remediation still protects owner/shared allocations, resource/budget
+and approval boundaries. Physical recovery is no claim future writes fit. Only
+2GiB floor is established; proposed2.25/2.5GiB,2/3samples,60s spacing/90s maxgap
+need tuning approval. OS unchanged. Optional reserve-aware mode remains separately
+disabled without explicit enablement/valid input. Both production transport gates
+and SSD tuning gate stay false. No existing journal transition is performed.
+
+Staging's existing20copied-data SQL checks passed; production migration/native
+bytes unchanged at b2497288. This repin changes only test snapshot/workflow/docs.
+Private candidate and receipt-safe latest-data rollback native acceptance remain
+separate and owned by Staging. Do not duplicate or overlay its preparation.
+Remaining release/activation requirements: combined native/private-reader/queue/
+resource/budget/approval and current-data forward/cutback runtime acceptance;
+review existing unauthenticated direct gateway/broad listener boundary (any changed
+security boundary needs separate approval); exact saved owner/config/freshness and
+minimal state/existing-phone permissions; approved physical tuning and explicit
+release/automatic-response/timer enablement. No allocation producer or updater.
+Host-heavy/shared-target hold remains; local aggregate format/check/build held,
+normal hosted checks supply native evidence. No live migration/binding/access/
+service/timer/deployment/dispatch action.
+
+--- Earlier source-bound checkpoints; reserve-aware producer requirements in
+historical context do not apply to the selected physical rollout. ---
+
 # Prepared disabled transport validation checkpoint
 
 Current exact Operations PR215 pin: `7a02102d6ccf55f2c91223c5128599cefa6492fc`.
@@ -30,7 +84,7 @@ receipt-safe rollback preparation. The nominated release remains PR276/366cfd243
 its prior applicability findings below remain scoped to that source. This delta
 changes only the test snapshot, additive workflow pin and documentation, leaving
 native/migration source unchanged. Do not duplicate preparation or overlay the
-release. Combined acceptance, complete fresh producer evidence, exact saved
+release. Combined acceptance, physical-policy tuning approval, exact saved
 binding/freshness, permissions and separately approved release/tuning/timer
 activation remain outstanding. Both production transport gates stay disabled.
 Host Cargo/compiler/linker/aggregate/shared-target hold remains; local aggregate
@@ -215,8 +269,9 @@ an old binary's strict SQLx migration check is not rollback acceptance. No live
 migration, private binding installation, owner dispatch, deploy, restart, timer,
 credentials or access change occurred.
 
-Smallest later activation requirements: reviewed fresh authoritative physical/
-remaining-allocation producer and its bounded update procedure; Staging's combined
+Smallest later activation requirements (updated for the selected physical mode):
+reviewed physical thresholds/counts/gap and exact mount/freshness validation; no
+allocation producer is required; Staging's combined
 forward/rollback and native resource/preservation/queue/approval acceptance;
 exact saved owner/config/freshness binding through reviewed existing ingress;
 then separately explicit release, monitor tuning/access/timer/automatic-response

@@ -1,14 +1,14 @@
 {
   "repository": "artinflight/Operations",
-  "commit": "7a02102d6ccf55f2c91223c5128599cefa6492fc",
+  "commit": "81887d38d238ce3b0665092bf38a482284441062",
   "path": "tasks/storage-alert-response",
   "sha256": {
-    "native_integration.py": "fc88859e1bcaf9fe954a03cd1053d459e91fe2c0feda1e9c0fb3a6ab4f756771",
+    "native_integration.py": "7aac2f1a1574ee98d5ec020bf9ba9ab85122411c3fea47a1703f562b9bff4f19",
     "native_adapter.py": "823a1908984f76c60403d11bd9b643b4c0cec2569bed2b9a242a4e8ea1040ede",
-    "monitor.py": "1238d82d7cb137f9709e9ec26162005806ee1984fbc22599aeddebd861d2bcd0",
+    "monitor.py": "ec5976e253b25b7533152aab25cb879c04ca879171a64fbfe1ddd3099e3e2a47",
     "admission.py": "9e1e5db300834da4c7d8e7496913b277cba174d79ed7eb0d68a53d307d6a08e1",
     "accounting.py": "0d868d149fdc98daae447348bbaac402ec73c4f486ba84f27de26310f2108c35",
-    "pressure.py": "f1f3e4a2a189f4941604242a7f0d3dc941ab43abfe75a36237b23cf5cb783a19",
+    "pressure.py": "2d1a279a396173b25ba7fe2d359cff8edd169442c87f0ac91be6f5dc6a975db9",
     "status.py": "b4d770a10c81db6cb2f7691c499bb8f049f0b1f640279a56d0f824243e71860a",
     "tests/test_headroom.py": "10463de9d0f27ce47ed9be94792a76eb2e7b776752623f9fa52a98735d44828f",
     "tests/test_monitor.py": "930dd74c14d4776221328733ca1d0e399fbdf4a43dc5bf402b4205ad266bebfe",
@@ -16,6 +16,8 @@
     "tests/test_receipts.py": "101543da0b8a7542717e5118afcd842896e7d60c259e1a215ecd7f2b90b4c9f0",
     "tests/test_transport.py": "497b6396df4c8e1df40be3f83ec03c9dc0377b8542fddf9ac72d72bb8aae23e4",
     "native_http.py": "e98fcf21ae75f0d62c9417b2c7e5392bccf4b4c16f18f25cb9c19ad1fe626fe2",
-    "tests/test_native_http.py": "069cfbe762f0f2ac63614d098b6e4f995baa28cad5dd4f7f48cbf6211b36b487"
+    "tests/test_native_http.py": "069cfbe762f0f2ac63614d098b6e4f995baa28cad5dd4f7f48cbf6211b36b487",
+    "tests/test_physical.py": "4c2470ce6b7a31fe36e7561ca70e7bf25386dd71a908677753dc0869e6bd07e9",
+    "config.example.json": "bb3e9500db088fcec2b25c08315d1cf185768c6353a1272d7f9ccc57e9075e81"
   }
 }

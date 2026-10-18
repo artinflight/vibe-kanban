@@ -1,48 +1,22 @@
-# Prepared disabled storage transport pickup
+# Frozen physical-policy pairing pickup
 
-PR277 mirrors fourteen exact executable/test files from Operations PR215
-`7a02102d6ccf55f2c91223c5128599cefa6492fc`, including Bridge wiring, bounded
-HTTP codec and 87 Python regressions. Hosted paired native evidence is required
-for this changed source; the passing native6c658d1/client5c2ee7f result below
-is historical only. Native contract/implementation/fixture ABI remain unchanged.
+PR277 pins Operations PR215 `81887d38d238ce3b0665092bf38a482284441062`:
+fifteen exact Python files plus its disabled example config, sixteen provenance
+hashes. Hosted103-test Python counts and actual mixed OS/physical-SSD native
+pair must be read from the exact run on PR277/private T90/Staging handoffs.
+Predecessor b2497288/7a02102 passed native633 +paired1 +scheduler15; its Python
+count is87run/86pass/1optional connector skip, corrected from completed logs.
+Protocol, native admission and production migration bytes remain unchanged.
 
-Read the corrected access boundary in VK_STORAGE_ALERT_ADMISSION.md: direct
-no-Origin requests are not application-authenticated; the gateway is not
-loopback-only. Owner binding/client restrictions do not authenticate callers.
-No security changes or endpoint probes are authorized. Both transport gates
-remain disabled. Staging owns its existing source-only compatibility/copied-data
-migration/receipt-safe rollback preparation; send source evidence through the
-existing private handoff without duplicating or overlaying that work.
-No host-heavy build, shared-target growth, live migration/binding/timer/deploy/
-access change or live owner dispatch. Exact new pair/results go on PR277 and
-existing private T90/Staging handoffs after CI.
-
---- Predecessor pickup retained with original evidence boundaries. ---
-
-# Final storage client validation pickup
-
-Supporting draft [PR277](https://github.com/artinflight/vibe-kanban/pull/277)
-now pins Operations PR215 client `5c2ee7f5f561a943d123fcc09d5ee8098cbeab20`.
-Source/test snapshot includes the 76 published Python tests and exact twelve-file
-provenance; hosted CI runs them before the real native HTTP/DB/queue integration.
-The previous native59e64543/clienta345ca8 pair passed633main +onepaired +15
-scheduling-enabled tests. Its result remains historical; final5c exact-pair
-hosted acceptance is pending. Native wire/implementation/fixture is unchanged.
-Read [contract](VK_STORAGE_ALERT_ADMISSION.md), [validation](STORAGE_ADMISSION_VALIDATION.md)
-and the final result on PR277/existing private T90/Staging handoffs.
-
-Actual nominated Staging source is PR276/366cfd243. Native-crates and additive
-workflow patches passed temporary-index applicability checks; only workflow
-and continuity paths overlap. Preserve the release and reconcile additively;
-combined copied-data/queue/resource/budget/approval/private-route and forward/
-latest-data rollback acceptance remain Staging-owned. No bundle overlay.
-
-Publication is limited to sanitized code/tests on existing PR215/277. Host
-Cargo/compiler/linker/aggregate-build/shared-target hold remains; use normal
-hosted PR checks. No live backend, migration, binding, timer, access, dispatch,
-merge, deploy or restart. Preserve saved config/Recommend and all existing work.
-
-The following prior pickup is retained as release context.
+Selected physical mode requires NO allocation producer; normal Disk remediation
+still protects allocations/resources/approvals. Physical tuning is proposed,
+OS unchanged. See VK_STORAGE_ALERT_ADMISSION.md and STORAGE_ADMISSION_VALIDATION.md.
+Staging owns the existing20passed copied-data SQL checks and separate private
+candidate/receipt-safe rollback runtime acceptance; do not duplicate/overlay it.
+Direct gateway requests are not application-authenticated and gateway is not
+loopback-only; boundary review remains required. Activation, SSD tuning and
+transport gates stay disabled. No host-heavy build/shared-target growth, live
+migration/binding/access/timer/deploy or Disk dispatch is authorized.
 
 # Pickup
 

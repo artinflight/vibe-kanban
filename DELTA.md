@@ -2083,3 +2083,14 @@ Corrected direct-request authentication/gateway exposure claims. Native ABI and
 admission/migration source unchanged; Staging owns its existing combined release/
 copied-data/receipt-safe rollback preparation. All production gates disabled;
 no host compiler, endpoint probe, security change or activation.
+
+## 2026-10-18 Frozen physical-policy pairing
+
+Reviewed/repinned Operations81887d38d238ce3b0665092bf38a482284441062: fifteen
+Python files plus the exact disabled example config required by new regressions.
+Hosted evidence pending for103tests/mixed OS+physical SSD Bridge/HTTP/native WAL
+scenarios. No native/migration change. Physical rollout needs no allocation
+producer; normal Disk allocation protection remains. Staging20copied-data SQL
+checks acknowledged, private runtime/receipt-safe rollback remains separate.
+Corrected predecessor b249/7a Python87run to86pass/1optional connector skip.
+No activation/host build/shared-target growth or live changes.

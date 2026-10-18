@@ -78,8 +78,10 @@ never prompt parsing. The validation envelope and attempt UUID are outside
 immutable intent. The receipt binds the batch ID, exact workspace/session,
 intent hash and exact native execution UUID. Native identity/configuration
 validation is distinct from the producer's filesystem/pressure validation.
-The native backend does not certify the producer's physical observations or
-allocation accounting; their authority/freshness needs coordinated review.
+The native backend does not certify physical observations or their identity/
+freshness. The selected physical SSD rollout needs
+no allocation producer. Optional reserve-aware accounting remains a separate,
+explicitly disabled path requiring complete valid input.
 
 ## Outcomes and positive proof
 
@@ -179,16 +181,17 @@ limits and approvals are neither raised nor replaced; no daily cap is added.
 The T90 owner reviewed the unchanged `storage-admission-v2` contract at native
 source `45cffa379d836a553f20bb46d7c96e5953558de0` for adapter source integration.
 The coordinated Operations adapter/Store/driver source is published at
-`7a02102d6ccf55f2c91223c5128599cefa6492fc` in PR215. This source review does not
-approve release, producer authority or activation; the production Bridge stays
+`81887d38d238ce3b0665092bf38a482284441062` in PR215. This source review does not
+approve release, physical tuning or activation; the production Bridge stays
 disabled.
 
 The test-only client snapshot under `crates/server/tests/fixtures/storage-alert-client`
-contains fourteen unmodified executable/test files, including the prepared
-production transport and its regressions, with exact commit/path/SHA256 provenance.
+contains fifteen unmodified Python executable/test files and the published disabled
+example config required by a regression, all with exact commit/path/SHA256 provenance.
 This avoids new cross-repository credentials or access on hosted runners. The
-explicit hosted integration step verifies those hashes, runs the 87 published Python tests, then runs the otherwise
-ignored native adapter test. Missing inputs fail rather than count as a pass.
+explicit hosted integration step verifies those hashes, runs the 103 published
+Python tests (optional skips reported separately), then runs the otherwise ignored
+native adapter test. Missing inputs fail rather than count as a pass.
 
 That test starts the actual Axum admission router under `/api` on an ephemeral
 loopback listener with migrated on-disk SQLite, native queue, default launch and
@@ -203,7 +206,25 @@ strictly fresh same-intent retry, interrupted-user continuity, lost response
 after real commit, competing first deliveries, accepted replay and retained incident identity.
 Independent native tests cover competing first deliveries, rejection, in-flight
 fences, real capacity/goal holds, cancellation and missing receipt uncertainty.
-Exact hosted results are required before claiming this integration passed.
+The driver supplies mixed OS/physical-SSD incidents in every scenario, checks the
+exact policy set in the queued batch and retains two open incidents after native
+success and original-WAL reopen. Exact hosted results are required before claiming
+this changed physical integration passed.
+
+## Selected physical policy and existing protections
+
+Operations' separately proposed `ssd_physical_free_proposal_v1` is immediate at
+or below 2 GiB; critical at/below 2.25 GiB after two samples at least 60 seconds
+apart; recovery/rearm at/above 2.5 GiB after three samples, maximum gap 90 seconds.
+Only the 2 GiB floor is established Disk policy; buffers/counts/gap remain tuning
+requiring approval. OS `os_percent` behavior is unchanged. Physical observations
+never read an allocation file or interpret unknown allocations as zero. Physical
+recovery describes measured capacity only, never releases allocations or proves
+future commitments fit. Disk remediation retains normal owner/allocation context,
+resource/budget/approval holds and Recommend. Native incident.policy is an ordinary
+nonempty String; this explicit new identity needs no native enum/schema change.
+Do not transfer reserve-aware counters or erase receipts when switching policies.
+See the frozen [physical proposal](https://github.com/artinflight/Operations/blob/81887d38d238ce3b0665092bf38a482284441062/tasks/storage-alert-response/PHYSICAL_POLICY.md).
 
 ## Source compatibility with the nominated release
 
@@ -214,7 +235,11 @@ Only the workflow and continuity documents share modified paths. Preserve
 PR276's additions during source reconciliation; this feature changes none of
 its frontend/connector/sidechat files. The private candidate, copied-data native
 checks and compatible forward/cutback retaining receipt schema/fences still
-require Staging acceptance. Source applicability does not approve installation.
+require Staging acceptance. Its existing 20 copied-data SQL checks passed; that
+is SQL/trigger evidence, not private candidate/native runtime acceptance. Native
+production/migration bytes remain unchanged from b2497288. Reconcile this test
+snapshot/workflow/docs delta through the existing owner; do not repeat its work.
+Source applicability does not approve installation.
 
 ## Validation and release requirements
 
@@ -226,7 +251,8 @@ I/O and OS inventory observations are synthetic. They make no paid model call
 and never address a live owner.
 
 Before activation: T90 owner review and exact adapter/backend integration;
-complete fresh allocation/physical observation producer evidence; Staging's
+approval of the physical thresholds/counts/gap and exact physical mount/freshness
+validation (no allocation producer required for this rollout); Staging's
 combined forward/rollback build recognizing this migration/checksum and
 retaining all receipt tables/triggers; isolated migrated-data native queue,
 resource/preservation/approval acceptance; exact saved owner/config binding and

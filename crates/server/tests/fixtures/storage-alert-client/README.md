@@ -1,21 +1,26 @@
 # Reviewed storage client test snapshot
 
-Fourteen unmodified executable/test files from Operations PR215 at
-`7a02102d6ccf55f2c91223c5128599cefa6492fc` are bound by commit/path/SHA256
-in provenance.json. Executable/test bytes equal `f6b800175d41a22528626f8a6ce708271f015f33`;
-the later commit only clarifies transport documentation. Refresh from coordinated
+Fifteen unmodified Python executable/test files from Operations PR215 at
+`81887d38d238ce3b0665092bf38a482284441062`, plus the published disabled
+config.example.json required by its config regression, are bound by sixteen
+commit/path/SHA256 entries in provenance.json. Refresh only from coordinated
 published source; do not edit this snapshot independently.
 
-Hosted CI verifies all hashes and runs the 87 published Python regressions, then
-the actual Bridge/Store/bounded HTTP codec against the native Axum router,
-migrated SQLite, native queue/default launch and approval bridge. The driver
-remaps only HTTPConnection to the isolated ephemeral listener; the runtime has
-no address override. Original client/native WAL state is closed and reopened.
-Executor I/O, OS inventory and incident observations remain synthetic.
+Hosted CI verifies all hashes and runs the 103 published Python tests, reporting
+optional skips separately. It then exercises the actual Bridge/Store/bounded HTTP
+codec against the native Axum router, migrated SQLite, native queue/default
+launch and real approval bridge. Each scenario supplies mixed `os_percent` and
+`ssd_physical_free_proposal_v1` incidents. The driver asserts both policy names
+in the queued batch and two open incidents after execution success and original
+WAL/client-state reopen. Only its HTTPConnection is remapped to the ephemeral
+fixture; runtime has no address override. Executor I/O, OS inventory and incident
+observations remain synthetic. The b2497288/7a02102 result is predecessor evidence.
 
-The prepared production Bridge requires both explicit gates; neither is enabled
-by this snapshot. No binding, service, credential, access or timer is installed.
-The fixed client destination does not narrow gateway exposure: direct requests
-are not application-authenticated, the gateway is not loopback-only, and owner
-binding is not caller identity. Existing-boundary review remains an activation
-blocker. The passing native6c658d1/client5c2ee7f result is predecessor evidence.
+Selected physical SSD policy does not read or require allocation input; physical
+recovery never releases allocations or proves future commitments fit. Normal
+Disk remediation retains allocation/resource/approval protection. OS is unchanged.
+The separate reserve-aware path remains explicitly disabled without valid input.
+Physical tuning still needs approval. The example leaves activation, SSD tuning
+and transport gates false. No binding, credential, access, service or timer is
+installed. Direct gateway traffic is not application-authenticated; gateway is
+not loopback-only. Existing-boundary review remains required before activation.

@@ -10,6 +10,69 @@ SSD_PROPOSAL = {
 }
 OS = 'os_percent'
 SSD = 'ssd_headroom_proposal_v1'
+SSD_PHYSICAL = 'ssd_physical_free_proposal_v1'
+SSD_POLICIES = (SSD, SSD_PHYSICAL)
+PHYSICAL_PROPOSAL = {
+    'critical_bytes': SSD_FLOOR + 256 * MIB, 'critical_samples': 2,
+    'recovery_bytes': SSD_FLOOR + 512 * MIB, 'recovery_samples': 3,
+    'sample_interval_seconds': 60, 'max_sample_gap_seconds': 90,
+}
+
+
+def physical_free(previous, sample, periodic):
+    """Separate physical policy: no allocation estimate or reserve recovery inference."""
+    state = dict(previous)
+    if state.get('identity', sample['identity']) != sample['identity']:
+        raise ValueError('volume_identity_changed')
+    # Legacy SSD states belonged to the reserve-aware policy. Never transfer
+    # debounce/recovery evidence across policies or silently reset their journal.
+    if previous and state.get('policy') != SSD_PHYSICAL:
+        raise ValueError('volume_policy_changed')
+    state.update(identity=sample['identity'], policy=SSD_PHYSICAL)
+    state.setdefault('critical_count', 0)
+    state.setdefault('recovery_count', 0)
+    state.setdefault('latched', False)
+    at, free = sample['at'], sample['available']
+    if type(free) is not int or free < 0:
+        raise ValueError('invalid_available_bytes')
+    last = state.get('last_sample_at')
+    delta = at - last if last is not None else None
+    count = periodic and (last is None or delta >= PHYSICAL_PROPOSAL['sample_interval_seconds'])
+    if delta is not None and (delta < 0 or delta > PHYSICAL_PROPOSAL['max_sample_gap_seconds']):
+        state.update(critical_count=0, recovery_count=0)
+        if delta < 0:
+            count = False
+    immediate = free <= SSD_FLOOR
+    recovered = False
+    if immediate:
+        state.update(latched=True, critical_count=0, recovery_count=0)
+        if periodic:
+            state['last_sample_at'] = at
+    else:
+        if count:
+            state['last_sample_at'] = at
+            if free <= PHYSICAL_PROPOSAL['critical_bytes']:
+                state['critical_count'] += 1
+                state['recovery_count'] = 0
+                if state['critical_count'] >= PHYSICAL_PROPOSAL['critical_samples']:
+                    state['latched'] = True
+            elif free >= PHYSICAL_PROPOSAL['recovery_bytes']:
+                state['critical_count'] = 0
+                state['recovery_count'] += 1
+                if state['recovery_count'] >= PHYSICAL_PROPOSAL['recovery_samples']:
+                    recovered = True
+                    state['latched'] = False
+            else:
+                state.update(critical_count=0, recovery_count=0)
+        elif free > PHYSICAL_PROPOSAL['critical_bytes']:
+            state['critical_count'] = 0
+        if free < PHYSICAL_PROPOSAL['recovery_bytes']:
+            state['recovery_count'] = 0
+    severity = 'critical' if state['latched'] else 'normal'
+    return state, {'severity': severity, 'eligible': state['latched'], 'recovered': recovered,
+        'reason': 'physical_floor' if immediate else 'physical_free_hysteresis',
+        'available_bytes': free, 'floor_bytes': SSD_FLOOR,
+        'critical_count': state['critical_count'], 'recovery_count': state['recovery_count']}
 
 
 def percent_level(percent):
@@ -24,9 +87,14 @@ def advance(previous, sample, periodic=True):
         p = sample['percent']
         return {}, {'severity': percent_level(p), 'eligible': p >= 92,
                     'recovered': p <= 83, 'reason': 'os_percentage'}
+    if policy == SSD_PHYSICAL:
+        return physical_free(previous, sample, periodic)
     if policy != SSD:
         raise ValueError('unknown_volume_policy')
     state = dict(previous)
+    if state.get('policy', SSD) != SSD:
+        raise ValueError('volume_policy_changed')
+    state['policy'] = SSD
     if state.get('identity', sample['identity']) != sample['identity']:
         raise ValueError('volume_identity_changed')
     state['identity'] = sample['identity']

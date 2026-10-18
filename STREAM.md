@@ -1,3 +1,28 @@
+# October18 5:31p.m. EDT — retained-prefix audit and guarded restore follow-through
+
+The original35,497,705,472-byte failed archive and all111 sealed SQL originals
+remain preserved. One read-only complete-member audit is active in the existing
+private prefix-recovery-r2 area; no new source capture runs. Read the actual
+current phase and collector receipts rather than treating this dated note as
+terminal evidence. The stopped earlier forensic index is also preserved.
+
+The corrected auditor batches SQLite transactions. A5000-member contract and
+69-member native B fixture pass. The direct recovered-set restore fixture checks
+independent file readback, SQLite integrity, links, numeric metadata and both
+original/derived source digests, without a duplicate object store. Durable
+filesystem flushes precede readback and acceptance. Archive-only Git tests reject
+current-only objects and ignore inherited/current Git configuration and alternates.
+These fixtures are preparation evidence, not full-workload restore acceptance.
+
+The existing audit collector now has a55-file sealed conditional follow-through:
+reconcile exact original-inventory gaps, selected-root coverage and13512 original
+source pins; then separately admit one independent restore of every authenticated
+complete retained member. Actual measured B demand and recorded metadata access
+must pass before full payload copying. Missing members and old SQL epochs remain
+explicit. No current Git lookup proves archive inclusion; no incomplete/mixed set
+becomes an original capture or operational restart baseline. Source recapture,
+archive retirement, deployment, schedule and cutover remain unauthorized.
+
 # October18 current authorization boundary
 
 Continue measured backup and independent restore proof within the traced Disk

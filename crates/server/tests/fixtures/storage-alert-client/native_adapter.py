@@ -1,7 +1,7 @@
 """Reviewed storage-admission-v2 codec. Transport is explicitly injected, never discovered.
 
-The runtime Bridge remains disabled. Isolated native tests supply the actual
-router transport; a later reviewed ingress integration must supply production I/O.
+The runtime Bridge supplies separately gated fixed-gateway I/O. Isolated native
+tests remap only its connection to the real fixture; no production I/O is enabled.
 """
 import datetime as dt
 import hashlib

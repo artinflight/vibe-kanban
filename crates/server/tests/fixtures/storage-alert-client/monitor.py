@@ -23,6 +23,7 @@ import uuid
 import accounting
 import pressure
 import native_adapter as native
+import native_http
 from admission import ReviewedProtocolUnavailable, normalize
 
 
@@ -345,32 +346,57 @@ class Store:
             self.audit('phone_' + result, {'volume': key, 'level': current})
 
 
-class Bridge:
-    """Production transport deliberately unavailable pending separate activation review.
+class Bridge(native.NativeAdapter):
+    """Prepared fixed-gateway wiring, disabled until explicit configuration approval.
 
-    NativeAdapter implements the reviewed v2 contract with explicitly injected I/O.
-    No production ingress/authentication is installed or discovered by this class.
+    The gateway uses existing host/process access, not direct-request authentication.
+    Enabling this client installs no binding, grant, credential, listener or service.
     """
     def __init__(self, config):
         self.config = config
+        settings = config.get('native_transport', {})
+        self.enabled = (config.get('activation_approved') is True
+                        and settings.get('enabled') is True)
+        if not self.enabled:
+            return
+        if (set(settings) != {'enabled', 'route', 'executor_config_sha256', 'max_validation_age_seconds'}
+                or settings['route'] != 'existing_local_gateway_v1'
+                or config.get('admission_protocol') != native.PROTOCOL):
+            raise ValueError('reviewed_fixed_native_transport_required')
+        binding = {k: config[k] for k in ('workspace_id', 'session_id')}
+        binding['executor_config_sha256'] = settings['executor_config_sha256']
+        super().__init__(binding, native_http.LocalNativeHTTP(binding), self.observe,
+                         settings['max_validation_age_seconds'])
+
+    def require_enabled(self):
+        if not self.enabled:
+            raise ReviewedProtocolUnavailable('production_transport_disabled')
 
     def binding(self):
-        return {k: self.config[k] for k in ('workspace_id', 'session_id')}
+        self.require_enabled()
+        return super().binding()
 
     def ready(self):
-        raise ReviewedProtocolUnavailable('production_transport_not_approved')
+        self.require_enabled()
+        return super().ready()
 
     def observe(self, key):
         return sample_volume(self.config['volumes'][key])
 
     def send(self, document):
-        raise ReviewedProtocolUnavailable('production_transport_not_approved')
+        self.require_enabled()
+        return super().send(document)
 
     def lookup(self, batch_id, fingerprint, document=None):
-        raise ReviewedProtocolUnavailable('production_transport_not_approved')
-
-    def execution(self, eid):
-        raise ReviewedProtocolUnavailable('production_transport_not_approved')
+        self.require_enabled()
+        if (document is None or batch_id != document['batch_id']
+                or fingerprint != document['intent_sha256']
+                or native.digest(document['intent']) != fingerprint
+                or any(document['intent'][k] != self._binding[k] for k in ('workspace_id', 'session_id'))):
+            raise ValueError('own_durable_native_receipt_required')
+        # An old configuration's accepted/uncertain receipt still needs GET
+        # reconciliation after settings drift. Never POST that old intent.
+        return super().lookup(batch_id, fingerprint, document)
 
 
 def publisher(config):

@@ -13,9 +13,11 @@ import sys
 import threading
 import time
 from urllib.parse import urlsplit
+from unittest.mock import patch
 
 import monitor
 import native_adapter as native
+import native_http
 
 
 def run(descriptor):
@@ -31,6 +33,16 @@ def run(descriptor):
     journal = Path(descriptor['state_file'])
     if not journal.is_absolute() or not journal.parent.is_dir():
         raise ValueError('isolated_state_directory_required')
+    # Test-only remap: exercise the production Bridge and bounded HTTP codec
+    # against the native runner's ephemeral listener. Runtime has no URL option.
+    def fixture_connection(host, port, timeout):
+        assert (host, port) == ('127.0.0.1', 4720)
+        return http.client.HTTPConnection('127.0.0.1', url.port, timeout=timeout)
+    with patch.object(native_http, 'HTTPConnection', fixture_connection):
+        return run_fixture(descriptor, url, journal)
+
+
+def run_fixture(descriptor, url, journal):
     counts = {'POST':0, 'GET':0}
     lock = threading.Lock()
     drop = False
@@ -58,7 +70,7 @@ def run(descriptor):
         def send_one(_=None):
             with lock:
                 counts[method] += 1
-            return exchange(method,path,body)
+            return bounded_transport(method,path,body)
         if method=='POST' and fanout:
             fanout=False
             with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
@@ -79,8 +91,15 @@ def run(descriptor):
         return {'percent':98,'available':1024,'at':time.time(),
                 'identity':'synthetic-native-integration-fs','policy':monitor.pressure.OS}
 
-    adapter=native.NativeAdapter(descriptor['binding'],transport,observe,
-                                 descriptor['max_validation_age_seconds'])
+    binding=descriptor['binding']
+    adapter=monitor.Bridge({'activation_approved':True, 'admission_protocol':native.PROTOCOL,
+        'workspace_id':binding['workspace_id'], 'session_id':binding['session_id'],
+        'native_transport':{'enabled':True, 'route':'existing_local_gateway_v1',
+            'executor_config_sha256':binding['executor_config_sha256'],
+            'max_validation_age_seconds':descriptor['max_validation_age_seconds']}})
+    bounded_transport=adapter.transport
+    adapter.transport=transport
+    adapter.observe=observe
 
     def poll(store):
         samples={'os':observe('os')}

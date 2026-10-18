@@ -1,3 +1,24 @@
+# Prepared disabled storage transport pickup
+
+PR277 mirrors fourteen exact executable/test files from Operations PR215
+`7a02102d6ccf55f2c91223c5128599cefa6492fc`, including Bridge wiring, bounded
+HTTP codec and 87 Python regressions. Hosted paired native evidence is required
+for this changed source; the passing native6c658d1/client5c2ee7f result below
+is historical only. Native contract/implementation/fixture ABI remain unchanged.
+
+Read the corrected access boundary in VK_STORAGE_ALERT_ADMISSION.md: direct
+no-Origin requests are not application-authenticated; the gateway is not
+loopback-only. Owner binding/client restrictions do not authenticate callers.
+No security changes or endpoint probes are authorized. Both transport gates
+remain disabled. Staging owns its existing source-only compatibility/copied-data
+migration/receipt-safe rollback preparation; send source evidence through the
+existing private handoff without duplicating or overlaying that work.
+No host-heavy build, shared-target growth, live migration/binding/timer/deploy/
+access change or live owner dispatch. Exact new pair/results go on PR277 and
+existing private T90/Staging handoffs after CI.
+
+--- Predecessor pickup retained with original evidence boundaries. ---
+
 # Final storage client validation pickup
 
 Supporting draft [PR277](https://github.com/artinflight/vibe-kanban/pull/277)

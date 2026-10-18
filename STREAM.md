@@ -3,7 +3,7 @@
 Branch `vk/c205-vk-storage-respo` starts from verified fork/staging
 `5b43524ea35b2eb5dd80d0881dc8445489f4442f`. Scope is the narrow native admission
 route supporting [Operations issue214](https://github.com/artinflight/Operations/issues/214)
-and PR215 final client `5c2ee7f5f561a943d123fcc09d5ee8098cbeab20`.
+and PR215 prepared disabled transport `7a02102d6ccf55f2c91223c5128599cefa6492fc`.
 Read [the native contract](VK_STORAGE_ALERT_ADMISSION.md) for exact receipt,
 replay, cancellation, retention and admission semantics. Source/tests only;
 production transport stays disabled until coordinated review/integration.

@@ -1,11 +1,11 @@
 {
   "repository": "artinflight/Operations",
-  "commit": "5c2ee7f5f561a943d123fcc09d5ee8098cbeab20",
+  "commit": "7a02102d6ccf55f2c91223c5128599cefa6492fc",
   "path": "tasks/storage-alert-response",
   "sha256": {
-    "native_integration.py": "d056c0240621f849119969958f731a5a2faf7200bc33fdc60c83f2325a01a8c4",
-    "native_adapter.py": "81e6a9b3fc6ce9c6de1d87d3c434bcd1d280f93e772b2d9617522e984c286b6a",
-    "monitor.py": "5f0dec5371b0014b2ab2cbfdb27aeb6b3037ce6abc9950eafe13e536e2bdf7f9",
+    "native_integration.py": "fc88859e1bcaf9fe954a03cd1053d459e91fe2c0feda1e9c0fb3a6ab4f756771",
+    "native_adapter.py": "823a1908984f76c60403d11bd9b643b4c0cec2569bed2b9a242a4e8ea1040ede",
+    "monitor.py": "1238d82d7cb137f9709e9ec26162005806ee1984fbc22599aeddebd861d2bcd0",
     "admission.py": "9e1e5db300834da4c7d8e7496913b277cba174d79ed7eb0d68a53d307d6a08e1",
     "accounting.py": "0d868d149fdc98daae447348bbaac402ec73c4f486ba84f27de26310f2108c35",
     "pressure.py": "f1f3e4a2a189f4941604242a7f0d3dc941ab43abfe75a36237b23cf5cb783a19",
@@ -14,6 +14,8 @@
     "tests/test_monitor.py": "930dd74c14d4776221328733ca1d0e399fbdf4a43dc5bf402b4205ad266bebfe",
     "tests/test_native_adapter.py": "51b197009129936973c458b62d836eec92713bf6f31a074b22a37b92bafe0a56",
     "tests/test_receipts.py": "101543da0b8a7542717e5118afcd842896e7d60c259e1a215ecd7f2b90b4c9f0",
-    "tests/test_transport.py": "497b6396df4c8e1df40be3f83ec03c9dc0377b8542fddf9ac72d72bb8aae23e4"
+    "tests/test_transport.py": "497b6396df4c8e1df40be3f83ec03c9dc0377b8542fddf9ac72d72bb8aae23e4",
+    "native_http.py": "e98fcf21ae75f0d62c9417b2c7e5392bccf4b4c16f18f25cb9c19ad1fe626fe2",
+    "tests/test_native_http.py": "069cfbe762f0f2ac63614d098b6e4f995baa28cad5dd4f7f48cbf6211b36b487"
   }
 }

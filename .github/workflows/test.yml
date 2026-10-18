@@ -504,7 +504,7 @@ jobs:
       - name: Test reviewed storage client against isolated native backend
         if: ${{ !cancelled() }}
         env:
-          VK_STORAGE_ADAPTER_SOURCE: 5c2ee7f5f561a943d123fcc09d5ee8098cbeab20
+          VK_STORAGE_ADAPTER_SOURCE: 7a02102d6ccf55f2c91223c5128599cefa6492fc
           VK_STORAGE_ADAPTER_DRIVER: ${{ github.workspace }}/crates/server/tests/fixtures/storage-alert-client/native_integration.py
         run: |
           python3 -B - <<'PY'

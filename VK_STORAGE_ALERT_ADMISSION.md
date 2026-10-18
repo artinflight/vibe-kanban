@@ -14,7 +14,14 @@ separate. Staging retains the combined release and compatible rollback.
 
 ## Native contract: storage-admission-v2
 
-The existing authenticated/origin-checked native API carries these routes:
+The existing native API carries these routes. Direct requests without an Origin
+are not application-authenticated: origin checking admits them, and request
+signatures are required only for relay-marked traffic. The existing gateway is
+not loopback-only and has no demonstrated per-UID/client authorization gate.
+A fixed loopback client destination does not restrict that gateway exposure.
+Exact owner/config binding limits admission scope; it does not identify callers.
+This source changes no access boundary. Activation requires explicit review of
+that existing boundary; any different security boundary needs separate approval.
 
 - `POST /api/storage-alerts/batches`: submit one batch/attempt.
 - `GET /api/storage-alerts/batches/{batch_id}?intent_sha256={hash}`:
@@ -29,7 +36,7 @@ binding must specify exactly `workspace_id`, `session_id`, the complete saved
 Only CODEX DEFAULT with native Recommend (`routing.mode=shadow`) is accepted.
 The complete configuration must still equal the latest persisted owner choice
 at admission. Reconfiguration does not erase prior receipts. GET/DELETE use the
-same native API authentication; they do not need submission enabled.
+same native API access boundary; they do not need submission enabled.
 
 POST has a 64 KiB limit and rejects unknown fields. The typed JSON body is:
 
@@ -172,22 +179,23 @@ limits and approvals are neither raised nor replaced; no daily cap is added.
 The T90 owner reviewed the unchanged `storage-admission-v2` contract at native
 source `45cffa379d836a553f20bb46d7c96e5953558de0` for adapter source integration.
 The coordinated Operations adapter/Store/driver source is published at
-`5c2ee7f5f561a943d123fcc09d5ee8098cbeab20` in PR215. This source review does not
+`7a02102d6ccf55f2c91223c5128599cefa6492fc` in PR215. This source review does not
 approve release, producer authority or activation; the production Bridge stays
 disabled.
 
 The test-only client snapshot under `crates/server/tests/fixtures/storage-alert-client`
-contains six unmodified driver dependencies, a read-only status helper and five
-published test modules with exact commit/path/SHA256 provenance.
+contains fourteen unmodified executable/test files, including the prepared
+production transport and its regressions, with exact commit/path/SHA256 provenance.
 This avoids new cross-repository credentials or access on hosted runners. The
-explicit hosted integration step verifies those hashes, runs the 76 published Python tests, then runs the otherwise
+explicit hosted integration step verifies those hashes, runs the 87 published Python tests, then runs the otherwise
 ignored native adapter test. Missing inputs fail rather than count as a pass.
 
 That test starts the actual Axum admission router under `/api` on an ephemeral
 loopback listener with migrated on-disk SQLite, native queue, default launch and
 real approval bridge. Its fixture setup routes compile only under `cfg(test)`
-and are never mounted in the product. The exact Python Store/NativeAdapter
-submits real POST/GET requests. Executor I/O, OS inventory and incident samples
+and are never mounted in the product. The exact Python Store/Bridge and bounded production HTTP codec
+submit real POST/GET requests through a test-only connection remap. The runtime
+has no address override. Both production configuration gates remain disabled. Executor I/O, OS inventory and incident samples
 remain synthetic. After the initial phase the listener/pool/deployment/queue
 are replaced, reopening the original WAL database; the client reconciles by GET
 without a POST or new execution. The driver covers definite queue/busy deferral,
@@ -222,6 +230,7 @@ complete fresh allocation/physical observation producer evidence; Staging's
 combined forward/rollback build recognizing this migration/checksum and
 retaining all receipt tables/triggers; isolated migrated-data native queue,
 resource/preservation/approval acceptance; exact saved owner/config binding and
-minimal existing authenticated ingress/state access; then separate explicit
+review of the existing unauthenticated direct gateway boundary and minimal
+state access; then separate explicit
 release and monitor tuning/timer/automatic-response approval. Preserve existing
 phone alerts throughout. Source publication is not that approval.

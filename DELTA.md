@@ -2073,3 +2073,13 @@ is required. Against nominated PR276/366cfd243, native crate and additive test
 workflow patches pass isolated index checks; shared paths are workflow/continuity
 only. Combined runtime and forward/latest-data rollback remain unaccepted and
 Staging-owned. No host Cargo/build or live service/binding/activation.
+
+## 2026-10-18 Prepared disabled storage transport
+
+Repinned fourteen exact Operations PR215 files at7a02102d6ccf55f2c91223c5128599cefa6492fc,
+including production Bridge/bounded HTTP wiring and87regressions. Hosted paired
+validation is required; predecessor6c658d1/5c2ee7f remains source-bound history.
+Corrected direct-request authentication/gateway exposure claims. Native ABI and
+admission/migration source unchanged; Staging owns its existing combined release/
+copied-data/receipt-safe rollback preparation. All production gates disabled;
+no host compiler, endpoint probe, security change or activation.

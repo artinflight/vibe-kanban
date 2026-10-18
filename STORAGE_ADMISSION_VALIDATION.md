@@ -1,3 +1,43 @@
+# Prepared disabled transport validation checkpoint
+
+Current exact Operations PR215 pin: `7a02102d6ccf55f2c91223c5128599cefa6492fc`.
+Its fourteen mirrored executable/test files equal `f6b800175d41a22528626f8a6ce708271f015f33`;
+the final commit changes only TRANSPORT.md. Hosted CI verifies provenance,
+runs 87 Python regressions and exercises the actual Bridge/Store/bounded HTTP
+codec against isolated native HTTP/SQLite/queue/default launch/approval code.
+Only the test driver remaps its HTTPConnection to the ephemeral listener.
+No native wire, fixture ABI, migration or admission behavior changes here.
+The new exact native head and hosted result will be recorded on PR277 and in
+the existing private handoffs; pending validation is not a pass.
+
+Predecessor native `6c658d1b915b7ec91e7f33ad984236a7846c54b5` / client
+`5c2ee7f5f561a943d123fcc09d5ee8098cbeab20` passed
+[Test39145016865](https://github.com/artinflight/vibe-kanban/actions/runs/39145016865):
+633 main native tests, 76 Python tests, one paired test (10 initial/2 reopen
+groups) and 15 scheduling-enabled tests. This result predates Bridge wiring;
+it is not acceptance for the changed transport. Earlier checkpoints below
+retain their original source boundaries.
+
+The contract now accurately documents the existing access boundary. Direct
+no-Origin requests are not application-authenticated; relay checks are
+conditional, and the gateway is not loopback-only. No per-UID/client gate is
+demonstrated. Client request restrictions and exact owner binding do not supply
+server access control. Boundary acceptance remains a separate activation review;
+no production endpoint was probed and no access change was made.
+
+Staging already owns source-only additive compatibility and copied-data migration/
+receipt-safe rollback preparation. The nominated release remains PR276/366cfd243;
+its prior applicability findings below remain scoped to that source. This delta
+changes only the test snapshot, additive workflow pin and documentation, leaving
+native/migration source unchanged. Do not duplicate preparation or overlay the
+release. Combined acceptance, complete fresh producer evidence, exact saved
+binding/freshness, permissions and separately approved release/tuning/timer
+activation remain outstanding. Both production transport gates stay disabled.
+Host Cargo/compiler/linker/aggregate/shared-target hold remains; local aggregate
+format/check commands are held and normal hosted checks supply native evidence.
+
+--- Previous exact source checkpoints follow. ---
+
 # Final exact client validation checkpoint
 
 Current client pin: `5c2ee7f5f561a943d123fcc09d5ee8098cbeab20`, Operations PR215.

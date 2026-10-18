@@ -1,3 +1,30 @@
+# Await same R9 under corrected guard — October18 06:00UTC
+
+DO NOT replace the live measurement. Producer2493667/start40478467 remains the
+same R9 started05:14:46UTC; configSHA
+fc782cc90ff4eab29e9228813b51a2605af558d678c821d98179367b432383cf.
+Original supervisor2486320 alone is paused after tested guard handover05:53:57;
+the capture, SQLite/WAL readers, watcher, transports and cgroup are NOT frozen.
+vk-nightly-r9-guard-correction-20261018.service (PID2879222) now supervises it.
+Guard exit automatically resumes only the exact original supervisor identity.
+Keep this control path intact until the producer is terminal; an unnecessary
+manual resume could reintroduce the incorrect SSD abort.
+
+Root cause: recursive scratch counting entered the B mount. Corrected accounting
+counts only actual SSD-device files (about128MB, not B snapshot payload). Same
+original2GiB SSD cap/floor and B8GiB floor remain. Main payload High2GiB/Max3GiB,
+Swap0/Tasks32 remain. Fresh CPU admission05:38 grants one CPU on the4-CPU host;
+the old quarter-core quota was throttled99.5% of periods. Metadata guard is
+bounded5%CPU/128MiB/Swap0; no duplicate capture. Original4h deadline remains.
+
+Passive collector client is attached in the current owner turn. On actual terminal,
+use capacity-r9-evidence-guards/collect-corrected-result.private.py; it invokes
+the original supported collector and separately preserves corrected SSD evidence.
+Read corrected-supervisor.private.json for current guards, not the paused old
+supervisor's stale samples. GUARD_HANDOVER and GUARD_HANDOFF_SELFTEST receipts,
+RESOURCE_ADJUSTMENT and both collector outputs remain in that same private area.
+All previous inputs preserved. Full capacity and independent restore not accepted.
+
 # Collect sole corrected R9; preserve terminal R8 — October18 05:15UTC
 
 R8 terminal05:10:28UTC/489.219s: agent PSI heuristic abort, not an external

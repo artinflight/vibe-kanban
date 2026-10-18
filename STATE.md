@@ -1,3 +1,20 @@
+# Same Nightly R9 retained under corrected guard — October18 06:00UTC
+
+R9 producer2493667/start40478467 is still the sole measurement. Eight policy
+checks and a synthetic guard-handover/identity/accounting test pass. The wrapper
+incorrectly charged mounted B input files to SSD scratch. At05:53:57 a bounded
+metadata guard took over real supervision; only original supervisor2486320 is
+paused, not the capture/cgroup/readers/watchers. Guard failure/exit resumes that
+exact original identity automatically. See HANDOFF for safe collection details.
+
+Current task CPU admission is one CPU after measured quarter-core throttling;
+payload memory High2GiB/Max3GiB,Swap0,Tasks32 and all real health/access/storage
+and original4h deadline protections remain. Same2GiB incremental SSD allowance,
+strict2GiB SSD floor and shared8GiB B floor; no reserve reset or other-owner hold.
+About861MB of SQLite images sealed at05:55, plus descriptor; stream incomplete.
+Use the supported collector plus separately retained corrected device-only
+accounting. No full backup/restore, deployment, schedule, cutover or cleanup claim.
+
 # Nightly R8 collected; numeric PSI abort withdrawn — October18 05:15UTC
 
 R8 actually ended05:10:28UTC after489.219s, stopped by the agent-added PSI0.1

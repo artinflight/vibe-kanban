@@ -1,3 +1,19 @@
+# October18 6:42p.m. EDT — audit complete; independent recovered-set restore active
+
+Continue the same recovered-set proof from the completed retained-prefix audit:
+1,377,791 complete members,112 sealed SQL bindings and13512 original pins match;
+7783 exact missing names remain excluded and identified. STATE.md records measured
+space and gap categories. Preserved old sources/seal/failure plus native query-plan
+and adversarial-name checks support the indexed metadata continuation; no archive
+reread or database recapture occurred.
+
+One independent defined-set restore with its durable collector started6:42p.m.
+EDT after separate host admission; native space/access passed6:45p.m. EDT. Read
+actual current private receipts. No full original epoch, operational
+baseline or production-generation acceptance is implied. All originals, SQL epochs,
+current runtime binding, owner allocations and genuine safeguards remain protected.
+No deployment, schedule, restart, cutover or retirement is authorized.
+
 # October18 5:31p.m. EDT — retained-prefix audit and guarded restore follow-through
 
 The original35,497,705,472-byte failed archive and all111 sealed SQL originals

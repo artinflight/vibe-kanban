@@ -2036,3 +2036,12 @@ Native small restore and metered proof preparation retained; full backup/restore
 source coverage reconciliation, deployment and schedule remain unaccepted.
 
 2026-10-18 17:31 EDT: Preserved failed archive/111 sealed SQL images; corrected read-only prefix audit active. Native69-member direct restore and archive-only Git fixtures pass;55-file conditional exact-coverage/independent-restore follow-through sealed with fresh measured-space/access gates. No original/full-workload restore acceptance, recapture, deployment, timer or retirement.
+
+## October18 — completed retained-prefix audit and one independent restore
+
+Audit passed:1,377,791 complete members,112 sealed SQL bindings and13512 original
+pins;7783 exact gaps remain explicit. Measured162.70GB logical/42.42GB encoded
+object payload. Preserved original failed bytes and corrected a metadata LIKE scan
+to a tested indexed range; no archive reread or SQL recapture. One separately
+guarded recovered-set restore and durable collector started6:42p.m. EDT. Actual
+restore/full original epoch/production-generation acceptance remain pending.

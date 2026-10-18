@@ -1,3 +1,40 @@
+# October18 6:42p.m. EDT — audit complete; independent recovered-set restore active
+
+The sole read-only audit completed successfully at6:32p.m. EDT. It read all
+35,497,705,472 original compressed bytes and authenticated1,377,791 complete
+members. All112 sealed SQLite payload hashes and all13512 original immutable
+file pins match. This preserves111 older sealed images plus the recorded extra
+seed image; no database recapture or current-source substitution occurred.
+
+Exact reconciliation records7783 original-inventory gaps:7053 loose Git objects,
+46 Git object directories,258 Git refs,51 Caspian paths,18 Codex temporary/snapshot
+paths and357 Zoho connector virtual-environment tail paths. Current availability
+is separate evidence. Archived packs/refs still need archive-only semantic checks;
+neither current Git resolution nor a matching pin proves a missing member was
+included. Original journal continuity and complete original-epoch capture remain
+unaccepted. The failed archive, sealed originals and old forensic index survive.
+
+The audited set measures162,704,613,801 regular-file bytes and42,423,912,437
+encoded unique-object payload bytes; filesystem metadata is additional. A full
+independent dense tree needs165,741,645,824 payload-allocation bytes plus the
+explicit9,714,333,593-byte metadata/VHD planning allowance. That175,455,979,417-byte
+additional plan passed native capacity/access checks at6:45p.m. EDT, with
+190,953,050,112 B bytes free and2,658,390,507 bytes above the full plan plus
+protected/inflight balances. No new object store or full production generation
+is claimed by this measurement.
+
+The first follow-through metadata lookup timed out on a full-table LIKE scan.
+The exact process exited. Preserved old source/seal/failure evidence plus an actual
+query-plan check and adversarial-name fixture support a literal indexed-range
+correction. Bounded indexed reconciliation then completed using the same finished
+index, without rereading the archive. The revised sealed preparation admitted one
+independent defined-set restore at6:42p.m. EDT with its durable result collector.
+Read current private phase/result receipts for actual progress and acceptance;
+this dated launch note is not a restore pass. There is no automatic capture retry.
+All original epochs, missing scope, owner allocations, native health/access checks
+and shared-space floors remain explicit. Deployment, scheduling, cutover, restart
+and original retirement remain unauthorized.
+
 # October18 3:44p.m. EDT — actual retained-source terminal collected
 
 The sole retained-input producer reached child exit1 at3:44p.m. EDT, before its

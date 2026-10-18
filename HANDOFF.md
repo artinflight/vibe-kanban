@@ -1,3 +1,19 @@
+# October18 6:42p.m. EDT — audit complete; independent recovered-set restore active
+
+The retained-prefix audit passed at6:32p.m. EDT:1,377,791 complete members,
+112 sealed SQL bindings and all13512 original immutable file pins match. Exact
+7783 gaps remain explicit; current source/Git resolution is not archive inclusion.
+The old35.50GB failed archive and111 sealed originals remain untouched.
+
+A tested indexed metadata correction recovered the first follow-through timeout
+without rereading the archive. One separately guarded independent recovered-set
+restore and durable collector started6:42p.m. EDT. Collect their actual terminal
+receipts in the existing prefix-recovery-r2/prepared-restore area; never duplicate
+or recapture. Native space/access checks passed6:45p.m. EDT. Full details and
+measured175.46GB additional dense-restore plan are in STATE.md. Defined-set restore,
+original-epoch continuity and production generation are not yet accepted. No
+schedule, deployment, restart, cutover, deletion or automatic capture retry.
+
 # October18 5:31p.m. EDT — retained-prefix audit and guarded restore follow-through
 
 The original35,497,705,472-byte failed archive and all111 sealed SQL originals

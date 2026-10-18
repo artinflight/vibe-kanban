@@ -187,7 +187,7 @@ class BrowserAPI:
         return self.snapshot(owner, thread, scope, after, through)
 
     def snapshot(self, owner, thread, scope, after, through):
-        page = self.store.read(owner, thread["id"], after=after, through=through, limit=50)
+        page = self.store.read(owner, thread["id"], after=after, through=through, limit=50, display_workspace=scope["workspace"])
         page["scope"] = scope
         page["capabilities"] = {"notifications":True,"manual_unread":True}
         page["receipts"] = {m["id"]: self.store.receipt(owner, thread["id"], m["id"])

@@ -9,6 +9,7 @@ export interface SidechatMessage {
   created: number;
   seen?: boolean;
   manual_unread?: boolean;
+  dispatch_note?: { workspace_id: string; execution_id: string };
   attention?: { kind: 'question' | 'action'; resolved: boolean } | null;
 }
 
@@ -249,6 +250,9 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
                     ? 'Dot'
                     : 'Dot · fixture'}
               </strong>
+              {message.dispatch_note && (
+                <span className="dot-private">Agent dispatch note</span>
+              )}
               <a
                 aria-label={'Link to message ' + message.seq}
                 href={'#thread=' + props.threadId + '&message=' + message.id}

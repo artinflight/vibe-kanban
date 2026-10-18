@@ -1,5 +1,8 @@
 # Dot manual unread — T63 follow-up
 
+Latest combined scope and validation: [Running/dispatch attribution](VK_DOT_ACTIVITY_ATTRIBUTION.md).
+The manual unread behavior below is retained.
+
 ## Behavior
 
 Each Dot reply has **Mark unread** beside its existing attention action. It

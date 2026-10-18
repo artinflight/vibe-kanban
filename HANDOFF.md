@@ -1,12 +1,14 @@
 # T63 pickup
 
 Read [STATE](STATE.md), [STREAM](STREAM.md), then
-[Dot manual unread](VK_DOT_MANUAL_UNREAD.md) for behavior, tests and release needs.
+[combined Dot activity/attribution handoff](VK_DOT_ACTIVITY_ATTRIBUTION.md).
 This follow-up is source/test work, not a live release. Reuse existing T63/PR268;
 no duplicate issue, agent or service. Models/effort and Recommend remain unchanged.
 
-The new read-state action persists independently of attention and cannot be
-cleared by automatic visibility reads. Test commands are in the owning guide;
+Mark unread is preserved. Running remains visible with alerts; explicit actions
+also remain in Attention. Verified dispatch notes/read actions are target-only,
+while genuine issue conversation stays shared. The nominated T18 note remains
+unseen and unchanged; no live clearing was performed. Tests are in the guide;
 full local Rust baseline is blocked by missing glib-2.0 development metadata.
 Preserve the current live dispatch-notes package; integrate only the compatible
 read-state changes with Staging/Preserve Dot ownership before any authorized

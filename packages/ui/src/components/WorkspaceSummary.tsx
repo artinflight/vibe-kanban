@@ -238,16 +238,17 @@ export function WorkspaceSummary({
               />
             )}
 
-            {/* Running dots OR hand icon for pending approval */}
-            {isRunning &&
-              (hasPendingApproval ? (
-                <HandIcon
-                  className="size-icon-xs text-brand shrink-0"
-                  weight="fill"
-                />
-              ) : (
-                <RunningDots />
-              ))}
+            {/* Approval remains visible independently of running activity. */}
+            {hasPendingApproval ? (
+              <HandIcon
+                className="size-icon-xs text-brand shrink-0"
+                weight="fill"
+                role="img"
+                aria-label="Pending approval"
+              />
+            ) : isRunning ? (
+              <RunningDots />
+            ) : null}
 
             {/* Unseen activity indicator (only when not running and not failed) */}
             {hasUnseenActivity &&

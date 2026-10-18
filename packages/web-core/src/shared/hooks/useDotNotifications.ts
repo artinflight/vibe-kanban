@@ -2,18 +2,18 @@ import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useHostId } from '@/shared/providers/HostIdProvider';
 
-export type DotNotification = {
-  project_id: string;
-  issue_id: string;
-  unread_count: number;
-  needs_attention_count: number;
-};
+import type {
+  DotNotification,
+  DotWorkspaceNotification,
+} from '@/shared/lib/dotWorkspaceActivity';
 export type DotProjectNotification = Omit<DotNotification, 'issue_id'>;
 type DotNotifications = {
   issues: DotNotification[];
   projects?: DotProjectNotification[];
+  workspaces?: DotWorkspaceNotification[];
 };
 const EMPTY: DotNotification[] = [];
+const EMPTY_WORKSPACES: DotWorkspaceNotification[] = [];
 const EMPTY_SNAPSHOT: DotNotifications = { issues: [] };
 export const dotNotificationKey = ['dot-sidechat-notifications'] as const;
 
@@ -60,4 +60,8 @@ export function useDotNotifications() {
 }
 export function useDotProjectNotifications(): DotProjectNotification[] {
   return useDotNotificationSnapshot().projects ?? EMPTY;
+}
+
+export function useDotWorkspaceNotifications(): DotWorkspaceNotification[] {
+  return useDotNotificationSnapshot().workspaces ?? EMPTY_WORKSPACES;
 }

@@ -59,3 +59,7 @@ Current release coordination, newer Sidebar adoption and remaining private gates
 T63 sidebar deployment is recorded in [the live rollout](VK_PROJECT_COLLABORATION_ROLLOUT.md).
 The dated preparation status above is superseded by that receipt. Local pickup
 additions/edits survive in [T63 pickup preservation](T63_DEPLOYMENT_PICKUP_20261017.md).
+
+Current T63 source follow-up: [Running and dispatch attribution](VK_DOT_ACTIVITY_ATTRIBUTION.md),
+preserving manual unread. Source review only; live correction needs a separately
+approved combined Python sidechat/frontend release.

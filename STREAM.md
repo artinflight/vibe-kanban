@@ -1,10 +1,11 @@
-# T63 Dot manual unread
+# T63 Dot activity and dispatch attribution
 
 Continue workspace `7db73dbd-3b5d-4c21-87f1-4924be648284` on
 `vk/7db7-vk-project-dot-c`, reconciled with staging `85af54d3c`.
-Scope: owner-requested Mark unread beside Needs attention, durable explicit
-read/unread with automatic-read protection, issue/project compatibility and
-regression tests. [Implementation and release handoff](VK_DOT_MANUAL_UNREAD.md).
+Scope: preserve completed Mark unread; retain active agents in Running with
+independent explicit action/approval visibility; attribute verified dispatch notes
+only to their target workspace while retaining genuine shared conversation.
+[Combined implementation/release handoff](VK_DOT_ACTIVITY_ATTRIBUTION.md).
 
 Implementation/testing/publication are authorized. Merge, deployment, live
 service changes and model/effort/routing changes are not. Staging retains release

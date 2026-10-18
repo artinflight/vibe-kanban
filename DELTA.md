@@ -2037,3 +2037,12 @@ See VK_PROJECT_COLLABORATION.md for validation and release requirements.
   incumbent controls pass. Connector-only reload/read-only acceptance preserved
   all other modules/services, repaired workspace and chats. No live start probe
   or voice routing change. See DOT_WORKSPACE_ISSUE_CONTEXT.md for pins/limits.
+
+- 2026-10-18: PR272 adds accepted-execution private Dot notes for connector
+  starts/follow-ups, explicit first-note path, durable note idempotence/recovery
+  and additive cached-status readback. Source 8c5b505df adopted connector/publisher
+  only at 00:18:09 UTC; 34 connector/66 sidechat tests and private mocked dispatch
+  acceptance pass, original PR271 contract preserved. Actual cached status and
+  access/history/module/service preservation verified. No live agent/probe,
+  backend restart or voice change. Backend queue/setup/lost-response correlation
+  remains unsupported; see DOT_DISPATCH_NOTES.md.

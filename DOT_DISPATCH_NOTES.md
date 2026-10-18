@@ -41,8 +41,9 @@ completed receipt cannot be downgraded by an older competing failure.
 
 The existing sidechat publisher retries up to 20 pending accepted receipts every
 five seconds, with fair ordering and a 0.5-second soft batch budget. Native/chat
-lock waits are bounded to 100ms so recovery yields to existing message delivery. It never sends/resends an agent prompt, launches
-an actor, scans unrelated executions or calls a model/provider. A process restart
+lock waits are bounded to 100ms so recovery yields to existing message delivery.
+It never sends/resends an agent prompt, launches an actor, scans unrelated
+executions or calls a model/provider. A process restart
 or lost MCP response after receipt capture retains the note/recovery state. The
 SQLite journal and chat data remain private and owner-readable only.
 
@@ -112,3 +113,46 @@ stay running unchanged. Rollback retains latest databases and standalone note
 messages; prior code renders the standard Dot messages without needing the new
 receipt tables. Record actual cached read-only acceptance separately from fixture
 validation and any future naturally authorized live dispatch.
+
+## Deployed receipt — 2026-10-18 00:18 UTC
+
+[PR272](https://github.com/artinflight/vibe-kanban/pull/272), into staging, is
+stacked on [PR271](https://github.com/artinflight/vibe-kanban/pull/271).
+Functional source `8c5b505df7462df694cd762ff8f2a6d4a8bdf033` was adopted at
+00:18:09 UTC. Only the connector and existing publisher were reloaded; HTTP
+readiness took 0.459 seconds. Vibe, agents, browser, frontend/static/gateway and
+notifier retained their process/pointer identities. The original PR271 guard,
+all CU/report/budget/Stop modules and complete incumbent sidechat bundle except
+its worker remain byte-identical.
+
+| Installed component | SHA-256 |
+| --- | --- |
+| Adapter (two post-dispatch hooks) | `fd9a3d6a0b864a9b5433cf90f6c9bd4687075fafb8430bc049c0979b29ff51a5` |
+| `dispatch_notes.py` | `9b8aedbda9e233c80a2df5c1e1da9b4b915ccfc463902c1434605186210d821d` |
+| Status wrapper | `8a03ca7e954519c90a968681a80c545eb0c771bdbb32699ecd1095a59af1a093` |
+| Existing publisher worker | `75a4cf65db29441f1bc0f4e080ac28c50a20a83bcd58080d1b7920346026bbef` |
+| Preserved PR271 guard | `50056e974b9577a0d3d220331923f332d6cba0ef61beb4af03491ce8465b3c07` |
+
+The **actual cached registered** `get_workspace_reconciliation_status` returned
+`dispatch_notes:{status:"recorded",receipts:[]}`. Its original fields were exactly
+equal before/after, including the original sidechat association, hold/delivery
+fields and `readback_fresh:false`. That flag is not upgraded by note availability.
+The receipt journal is mode 0600 with SQLite integrity `ok`; it contains no
+historical backfill. The repaired workspace/issue/branch API record was unchanged.
+Protected sessions/grants/subscriptions and all pre-existing messages were
+verified at the boundary. No synthetic live message, workspace or execution was
+created. Accepted live note rendering awaits a naturally authorized real dispatch;
+fixture/full-adapter acceptance is not claimed as a live agent run.
+
+Private manifests, cached receipts, source/data snapshots and rollback procedure
+are retained under the named mounted-SSD `vk-dot-dispatch-notes-20261018-v2`
+release directory and Desktop B's matching `vk-backups` directory. Both before and after
+archives passed upload/download hash equality, isolated source restore and SQLite
+integrity checks. Rollback restores code/pointer only, preserving the latest
+chat and receipt databases. No private chat contents or runtime IDs are published.
+
+Local ops and diff checks pass. `pnpm run format` was attempted: Rust formatting
+passed, then missing Prettier blocked frontend formatting. Broad frontend/Rust
+checks were not run locally; no compiler window or UI work was used. Public CI
+and protected-branch integration are tracked in the PR, separately from scoped
+runtime acceptance and the backend receipt limits above.

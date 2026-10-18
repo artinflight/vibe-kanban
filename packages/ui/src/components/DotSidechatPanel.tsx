@@ -54,6 +54,28 @@ function deliveryLabel(receipt?: SidechatReceipt) {
   return 'Saved · awaiting delivery';
 }
 
+// Stored sidechat timestamps are Unix seconds. Pin the display zone rather than
+// inheriting the viewer's device zone; Intl applies Toronto's DST rules.
+const messageTime = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Toronto',
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZoneName: 'short',
+});
+
+function MessageTimestamp({ created }: { created: number }) {
+  const date = new Date(created * 1000);
+  if (!Number.isFinite(date.getTime())) return null;
+  return (
+    <time dateTime={date.toISOString()} title="Eastern time · America/Toronto">
+      {messageTime.format(date)}
+    </time>
+  );
+}
+
 export function DotSidechatPanel(props: DotSidechatPanelProps) {
   const history = useRef<HTMLDivElement>(null);
   const [followLatest, setFollowLatest] = useState(true);
@@ -250,6 +272,7 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
                     ? 'Dot'
                     : 'Dot · fixture'}
               </strong>
+              <MessageTimestamp created={message.created} />
               {message.dispatch_note && (
                 <span className="dot-private">Agent dispatch note</span>
               )}

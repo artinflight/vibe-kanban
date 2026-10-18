@@ -16,3 +16,9 @@ Current protections/topic map: [STATE](STATE.md). Earlier branch histories are
 retained in [STREAM history](STREAM_HISTORY_20261017.md), its archive manifest,
 [sidebar preparation pickup](PROJECT_SIDEBAR_PICKUP_20261017.md) and
 [deployment additions](T63_DEPLOYMENT_PICKUP_20261017.md).
+
+Owner-requested follow-up: visible per-message timestamps use stored Unix seconds
+and `America/Toronto` with full date/year and EST/EDT. This is a minimal UI-only
+change with desktop/mobile history/update/DST tests; retain the current frontend
+baseline and all unread, attention, attribution, Running and readability behavior.
+Activation is authorized via the established pointer-only release; no restarts.

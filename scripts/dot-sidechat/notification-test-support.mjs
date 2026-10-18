@@ -90,7 +90,7 @@ export function transport(s) {
           issue_label: 'Fixture issue',
           workspace_label: 'Selected workspace',
         },
-        messages: [
+        messages: s.messages ?? [
           {
             id: 'dot-reply',
             role: 'dot',

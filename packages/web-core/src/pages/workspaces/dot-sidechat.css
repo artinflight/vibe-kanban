@@ -132,9 +132,14 @@
 }
 .dot-byline {
   display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   justify-content: space-between;
   font-size: 11px;
   gap: 12px;
+}
+.dot-byline time {
+  white-space: nowrap;
 }
 .dot-byline a {
   color: inherit;

@@ -1,3 +1,20 @@
+# Selective Dot notification acknowledgement — source only
+
+Current Preserve Dot owner task: [protocol, tests and adoption boundary](DOT_SELECTIVE_NOTIFICATION_ACK.md).
+Branch `feat/dot-selective-note-ack` is stacked on PR268 source `2a29ae93a` to
+preserve newer T63/manual-unread/workspace attribution and owner reply work.
+Only an additive connector hook, two schemas and a small fixture-tested module
+change. No deployment, merge, live cleanup, credentials/grants, security or
+routing/model changes are authorized. Existing browser owner-only seen stays.
+
+14 focused tests pass against branch and deployed Store; actual private adapter
+fixture dispatch passes. 98 full regressions plus two preparation tests pass.
+Read-only inventory and exact-ID acknowledgement only; genuine conversation,
+manual unread, unresolved attention and all unselected/new messages are protected.
+Adoption requires separate authorization for the new narrow persistent Dot
+read-state capability and connector-only reload. Source preservation is not live
+catalog availability. Existing shared stream context follows unchanged.
+
 # Collapsible Issues release stream
 
 Current branch prepares the accepted collapsible issue UI for rebase-merge

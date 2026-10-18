@@ -1,3 +1,20 @@
+# Preserve Dot: selective notification acknowledgement candidate
+
+Read [the source-only protocol and approval boundary](DOT_SELECTIVE_NOTIFICATION_ACK.md).
+Implementation/test only: no live state was opened by fixture acceptance, no
+credentials/authentication/grants, service restart, cleanup write or agent launch.
+Preserve live T63 sidechat hash `dd184669` and PR268 newer source `2a29ae93a`.
+The new module protects manual unread, unresolved attention, genuine conversation,
+sibling workspaces and newer/unselected messages. Inventory uses a read-only
+existing store; acknowledgement is exact-ID/state-token fenced in one transaction.
+Tests: 98 full regressions + two preparation checks, plus 14 focused cases and
+fixture dispatch against deployed Store/adapter. Format stops at missing Prettier
+after Rust formatting; no compiler or browser used. New persistent Dot read-state
+permission and connector-only adoption need separate authorization. Preparation
+must preserve fresh complete live source; never copy this whole stacked branch.
+
+Existing shared handoff follows unchanged.
+
 # Pickup
 
 Current bounded follow-up: [compact durable job outcomes](USAGE_JOB_OUTCOMES.md).

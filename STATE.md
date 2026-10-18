@@ -57,3 +57,6 @@ Current release coordination, newer Sidebar adoption and remaining private gates
 [October 17 release status](VK_RELEASE_COORDINATION_20261017.md).
 
 Collapsible issue behavior and approved frontend release: [topic evidence](VK_COLLAPSIBLE_ISSUES.md).
+
+Selective Dot dispatch-note acknowledgement is a source-only candidate; no live
+cleanup or new persistent access is applied. See [scope and approval boundary](DOT_SELECTIVE_NOTIFICATION_ACK.md).

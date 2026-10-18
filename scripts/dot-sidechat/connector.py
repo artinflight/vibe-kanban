@@ -24,6 +24,9 @@ def opened():
 
 
 def call(name,args):
+    if name in ('list_workspace_dot_notifications', 'acknowledge_dot_dispatch_notes'):
+        from notification_ack import call as notification_call
+        return notification_call(ROOT/'threads.sqlite', Principal(owner(), 'dot'), name, args)
     store=opened()
     try:
         if name in ('read_project_collaboration', 'write_project_collaboration_entry'):

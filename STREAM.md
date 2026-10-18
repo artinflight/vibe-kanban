@@ -1,3 +1,34 @@
+# Dispatch attribution correction — source only
+
+Current Preserve Dot task: [evidence, metadata and tests](DOT_DISPATCH_ATTRIBUTION.md).
+Branch `fix/dot-dispatch-attribution` preserves approved selective acknowledgement
+source fe69d36dc and carries minimal PR272 receipt corrections. The runtime has
+no verified initiating-caller identity; new notes are neutral/caller unknown.
+Historical raw bodies/hashes/IDs/receipts and read/attention state are untouched;
+an additive read-only presentation supplies neutral text and no ownership signal.
+T63 owns explicit owner-authenticated management associations and UI. No inference
+from connector use, target identity, inspection or T18 activity is permitted.
+44 connector/100 sidechat tests and exact-live fixture overlay/adapter checks pass.
+No deployment, reload, live notes/prompts/cleanup, permission/auth changes or new
+agent/workspace. Publication only; preserve current models/effort and Recommend.
+
+# Selective Dot notification acknowledgement — source only
+
+Current Preserve Dot owner task: [protocol, tests and adoption boundary](DOT_SELECTIVE_NOTIFICATION_ACK.md).
+Branch `feat/dot-selective-note-ack` is stacked on PR268 source `2a29ae93a` to
+preserve newer T63/manual-unread/workspace attribution and owner reply work.
+Only an additive connector hook, two schemas and a small fixture-tested module
+change. No deployment, merge, live cleanup, credentials/grants, security or
+routing/model changes are authorized. Existing browser owner-only seen stays.
+
+14 focused tests pass against branch and deployed Store; actual private adapter
+fixture dispatch passes. 98 full regressions plus two preparation tests pass.
+Read-only inventory and exact-ID acknowledgement only; genuine conversation,
+manual unread, unresolved attention and all unselected/new messages are protected.
+The narrow read-state permission is now owner-approved; deployment is
+coordinated separately by root/Staging. Source preservation is not live
+catalog availability. Existing shared stream context follows unchanged.
+
 # Collapsible Issues release stream
 
 Current branch prepares the accepted collapsible issue UI for rebase-merge

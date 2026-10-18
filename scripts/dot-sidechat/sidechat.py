@@ -281,6 +281,8 @@ class Store:
             dispatch_execution=message.pop('dispatch_execution')
             if dispatch_workspace:
                 message['dispatch_note']={'workspace_id':dispatch_workspace,'execution_id':dispatch_execution}
+                from dispatch_attribution import presentation
+                message['dispatch_note'].update(presentation(self, principal, message))
             if message['role']=='dot':
                 state=self.db.execute('SELECT seen,manual_unread,attention_kind,resolved FROM dot_reply_state WHERE message=?',(message['id'],)).fetchone()
                 message['seen']=bool(state and state['seen'])

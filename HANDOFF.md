@@ -1,33 +1,25 @@
-# Final paired client pin
+# Final storage client validation pickup
 
-The test-only snapshot/provenance/workflow now pins T90 final client
-`5c2ee7f5f561a943d123fcc09d5ee8098cbeab20`. Its 76 Python regressions pass;
-fresh hosted exact-pair evidence is pending. The prior native59/clienta345
-hosted acceptance below remains source-bound. Native protocol/implementation
-are unchanged. See [validation](STORAGE_ADMISSION_VALIDATION.md); no activation.
+Supporting draft [PR277](https://github.com/artinflight/vibe-kanban/pull/277)
+now pins Operations PR215 client `5c2ee7f5f561a943d123fcc09d5ee8098cbeab20`.
+Source/test snapshot includes the 76 published Python tests and exact twelve-file
+provenance; hosted CI runs them before the real native HTTP/DB/queue integration.
+The previous native59e64543/clienta345ca8 pair passed633main +onepaired +15
+scheduling-enabled tests. Its result remains historical; final5c exact-pair
+hosted acceptance is pending. Native wire/implementation/fixture is unchanged.
+Read [contract](VK_STORAGE_ALERT_ADMISSION.md), [validation](STORAGE_ADMISSION_VALIDATION.md)
+and the final result on PR277/existing private T90/Staging handoffs.
 
-# Storage admission pickup
+Actual nominated Staging source is PR276/366cfd243. Native-crates and additive
+workflow patches passed temporary-index applicability checks; only workflow
+and continuity paths overlap. Preserve the release and reconcile additively;
+combined copied-data/queue/resource/budget/approval/private-route and forward/
+latest-data rollback acceptance remain Staging-owned. No bundle overlay.
 
-Source-only draft [PR277](https://github.com/artinflight/vibe-kanban/pull/277)
-continues from `af7b35ddd2cb48d6a276f6fd410820971d21a59b` on verified staging
-`5b43524ea35b2eb5dd80d0881dc8445489f4442f`. Read the
-[native v2 contract](VK_STORAGE_ALERT_ADMISSION.md),
-[validation checkpoint](STORAGE_ADMISSION_VALIDATION.md) and [stream](STREAM.md).
-The publication hold is lifted for sanitized code/tests on the existing PRs;
-the host-heavy build/shared-target growth hold remains. No host Cargo, compiler,
-linker or aggregate build. Use the existing hosted PR checks.
-
-Hosted source45cffa379 passed633native tests (14preexisting skips), including all
-25admission tests and the corrected race/restart cases; scheduling-enabled
-persistence passed15tests. T90 reviewed unchanged v2 at45cffa379 and published
-Operationsa345ca8. This source adds the exact pinned test-only client snapshot
-and a real loopback/native-WAL-reopen adapter fixture. Its explicit hosted
-integration result remains pending; latest exact results belong on PR277 and
-private shared handoffs. Staging combined release/rollback and activation
-remain separate.
-No live dispatch, binding installation, live migration, timer, access change,
-merge, deploy or restart is authorized. Preserve saved model/effort/Recommend,
-genuine approval boundaries and all source/build outputs.
+Publication is limited to sanitized code/tests on existing PR215/277. Host
+Cargo/compiler/linker/aggregate-build/shared-target hold remains; use normal
+hosted PR checks. No live backend, migration, binding, timer, access, dispatch,
+merge, deploy or restart. Preserve saved config/Recommend and all existing work.
 
 The following prior pickup is retained as release context.
 

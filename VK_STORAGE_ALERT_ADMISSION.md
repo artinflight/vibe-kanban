@@ -172,14 +172,15 @@ limits and approvals are neither raised nor replaced; no daily cap is added.
 The T90 owner reviewed the unchanged `storage-admission-v2` contract at native
 source `45cffa379d836a553f20bb46d7c96e5953558de0` for adapter source integration.
 The coordinated Operations adapter/Store/driver source is published at
-`a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd` in PR215. This source review does not
+`5c2ee7f5f561a943d123fcc09d5ee8098cbeab20` in PR215. This source review does not
 approve release, producer authority or activation; the production Bridge stays
 disabled.
 
 The test-only client snapshot under `crates/server/tests/fixtures/storage-alert-client`
-contains six unmodified source files with exact commit/path/SHA256 provenance.
+contains six unmodified driver dependencies, a read-only status helper and five
+published test modules with exact commit/path/SHA256 provenance.
 This avoids new cross-repository credentials or access on hosted runners. The
-explicit hosted integration step verifies those hashes, then runs the otherwise
+explicit hosted integration step verifies those hashes, runs the 76 published Python tests, then runs the otherwise
 ignored native adapter test. Missing inputs fail rather than count as a pass.
 
 That test starts the actual Axum admission router under `/api` on an ephemeral
@@ -195,6 +196,17 @@ after real commit, competing first deliveries, accepted replay and retained inci
 Independent native tests cover competing first deliveries, rejection, in-flight
 fences, real capacity/goal holds, cancellation and missing receipt uncertainty.
 Exact hosted results are required before claiming this integration passed.
+
+## Source compatibility with the nominated release
+
+PR276 source `366cfd243dcf561c399c7ed0d1b6d442d771110b` shares the normal
+staging base `5b43524ea35b2eb5dd80d0881dc8445489f4442f`. Native crate and
+additive test-workflow patches pass a temporary-index applicability check.
+Only the workflow and continuity documents share modified paths. Preserve
+PR276's additions during source reconciliation; this feature changes none of
+its frontend/connector/sidechat files. The private candidate, copied-data native
+checks and compatible forward/cutback retaining receipt schema/fences still
+require Staging acceptance. Source applicability does not approve installation.
 
 ## Validation and release requirements
 

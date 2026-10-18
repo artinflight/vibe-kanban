@@ -517,6 +517,7 @@ jobs:
               assert hashlib.sha256((root / name).read_bytes()).hexdigest() == expected, name
           print('Verified exact reviewed test-only client source', provenance['commit'])
           PY
+          python3 -B -m unittest discover -s crates/server/tests/fixtures/storage-alert-client/tests -v
           cargo nextest run --workspace --exclude vibe-kanban-tauri --run-ignored all --no-fail-fast --success-output immediate -E 'test(native_python_adapter_uses_real_isolated_http_backend)'
 
       - name: Test explicit Dot steering connector

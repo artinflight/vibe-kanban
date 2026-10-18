@@ -2062,3 +2062,14 @@ a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd (75client fixtures reported). Repin
 all six exact files; preserve assertions and first/reopen evidence. Hosted
 ignored selection now reuses the main workspace feature graph; scheduling
 subset executes even after failure. New paired hosted success remains required.
+
+
+## Final client exact-pair closure (2026-10-18)
+
+Preserve the existing717c337 repin, add exact published5c2ee7f Python regression
+modules/status helper with twelve-file provenance and hosted76-test invocation.
+Previous native59/clienta345 result stays historical; final native/client CI
+is required. Against nominated PR276/366cfd243, native crate and additive test
+workflow patches pass isolated index checks; shared paths are workflow/continuity
+only. Combined runtime and forward/latest-data rollback remain unaccepted and
+Staging-owned. No host Cargo/build or live service/binding/activation.

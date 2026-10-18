@@ -1,18 +1,51 @@
-# Final T90 snapshot validation — current exact pin pending
+# Final exact client validation checkpoint
 
-The unchanged native contract/fixture now pins final client
-`5c2ee7f5f561a943d123fcc09d5ee8098cbeab20` (Operations PR215). All six vendored
-source files match that published commit and provenance hashes. The codec and
-real native driver are unchanged from the prior passing pair; Store also records
-failed live revalidation and breaks consecutive debounce/recovery evidence,
-without admitting work. T90 reports 76 lightweight Python tests passed.
+Current client pin: `5c2ee7f5f561a943d123fcc09d5ee8098cbeab20`, Operations PR215.
+The six driver dependencies, read-only status helper and five published Python
+test modules are byte-exact, with all twelve SHA256 hashes in provenance.json.
+Hosted CI now runs those 76 tests, including failed-live-recheck debounce/audit,
+before the actual native HTTP/SQLite/queue adapter integration. T90 reports76
+Python passes; that report is separate from this checkout's pending hosted run.
 
-The prior actual hosted pair below remains valid at its stated source. A fresh
-normal hosted Test run is required before claiming this final exact pin passed.
-This is sanitized test-source maintenance only: no native implementation,
-protocol, production binding/transport, service, access, allocation, migration,
-timer, model selection, Recommend routing or Staging release change. No host
-compiler/linker/aggregate build is run; normal formatting is source-only.
+The native protocol/fixture is unchanged. The predecessor exact pair
+native `59e64543ab12bedf055849b1a4fa9f5d5f518d57` / client
+`a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd` passed
+[Test39143813217](https://github.com/artinflight/vibe-kanban/actions/runs/39143813217):
+633 main tests, one real adapter test (10initial/2reopen assertion groups),
+15 scheduling-enabled tests. That result does **not** establish this changed
+client's exact-pair acceptance. The fresh run/result will be linked on PR277
+and in the existing private T90/Staging handoffs with its exact native commit.
+No predecessor result is relabelled as a final-client pass.
+
+## Current release source comparison
+
+The nominated Staging release is [PR276](https://github.com/artinflight/vibe-kanban/pull/276)
+source `366cfd243dcf561c399c7ed0d1b6d442d771110b`. Its common source baseline
+with this stream is `5b43524ea35b2eb5dd80d0881dc8445489f4442f`.
+Read-only temporary-index checks passed for the native crate patch and additive
+test workflow against that exact source; no checkout or live bundle changed.
+The only shared source paths are `.github/workflows/test.yml` and the four
+continuity files `STATE.md`, `STREAM.md`, `HANDOFF.md`, `DELTA.md`. Preserve
+PR276's workflow additions and reconcile these notes; this feature changes no
+PR276 frontend, connector or sidechat source. This is source applicability,
+not a combined compiled-runtime or rollback acceptance claim.
+
+Smallest next reconciliation: Staging incorporates the additive native patch
+and test checks into its exact release source while preserving private readers,
+Reply/acknowledgement/Stop/reporting and current data. Build/test the combined
+candidate under separately coordinated resources, rehearse migrated copied-data
+queue/resource/budget/approval and private-route acceptance, and prove forward
+and latest-data cutback recognize the same receipt migration/checksum and retain
+all receipt/attempt/incident data and execution fences. Never restore older data
+or use an old SQLx binary's migration check as rollback proof. This turn changes
+no release bundle or live schema, and authorizes no build on the held host.
+
+Pinned snapshot AST/provenance, governance and whitespace checks are lightweight;
+all native/aggregate compilation and tests run only on hosted runners. Local
+`pnpm run format` invokes Cargo and remains overridden by the no-host-Cargo hold;
+normal hosted format checks are required. Model/effort/Recommend, native admission
+and genuine approvals are unchanged. Producer authority, exact private binding,
+ingress/access, release and timer activation remain separate and unperformed.
 
 --- Prior passing pair and history follow with their exact source boundaries. ---
 

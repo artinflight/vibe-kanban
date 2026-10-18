@@ -12,7 +12,7 @@ linker or aggregate build. Use the existing hosted PR checks.
 Hosted source45cffa379 passed633native tests (14preexisting skips), including all
 25admission tests and the corrected race/restart cases; scheduling-enabled
 persistence passed15tests. T90 reviewed unchanged v2 at45cffa379 and published
-Operations42bc9ce. This source adds the exact pinned test-only client snapshot
+Operationsa345ca8. This source adds the exact pinned test-only client snapshot
 and a real loopback/native-WAL-reopen adapter fixture. Its explicit hosted
 integration result remains pending; latest exact results belong on PR277 and
 private shared handoffs. Staging combined release/rollback and activation

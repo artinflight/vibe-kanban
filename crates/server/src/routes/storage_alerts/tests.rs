@@ -584,8 +584,8 @@ fn isolated(name: &str, capacity_hold: bool) -> bool {
         String::from_utf8_lossy(&output.stdout)
     );
     for line in String::from_utf8_lossy(&output.stdout).lines() {
-        if line.starts_with("NATIVE_STORAGE_ADAPTER_EVIDENCE ") {
-            println!("{line}");
+        if let Some((_, evidence)) = line.split_once("NATIVE_STORAGE_ADAPTER_EVIDENCE ") {
+            println!("NATIVE_STORAGE_ADAPTER_EVIDENCE {evidence}");
         }
     }
     false

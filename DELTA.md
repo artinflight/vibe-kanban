@@ -2052,3 +2052,13 @@ exact six-file client/Store/driver snapshot with byte-hash provenance. Normal
 hosted CI explicitly runs initial/client-reopen and native-WAL-reopen phases;
 missing driver cannot silently pass. Host Cargo/build growth stays held.
 See the native contract/checkpoint for evidence and synthetic I/O boundaries.
+
+
+## Actual paired driver failure and coordinated correction (2026-10-18)
+
+Native18456f017 passed633main tests; its explicit paired case failed before
+HTTP due a driver/module name collision. T90 published corrected driver source
+a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd (75client fixtures reported). Repin
+all six exact files; preserve assertions and first/reopen evidence. Hosted
+ignored selection now reuses the main workspace feature graph; scheduling
+subset executes even after failure. New paired hosted success remains required.

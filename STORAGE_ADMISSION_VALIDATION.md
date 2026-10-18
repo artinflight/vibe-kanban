@@ -6,7 +6,7 @@ Source/tests only. Normal fork staging was reverified as
 T90 reviewed that unchanged wire contract at native source
 `45cffa379d836a553f20bb46d7c96e5953558de0` for adapter source integration.
 Operations PR215 publishes the coordinated client/driver at
-`42bc9ceb10c978094992cee1d6284f5ea43b9bd9`. This is neither release nor
+`a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd`. This is neither release nor
 activation acceptance; production Bridge remains disabled.
 
 ## Passing hosted native evidence
@@ -43,8 +43,8 @@ replay keeps the original immutable intent and execution with no second launch.
 ## Coordinated real adapter integration on this source
 
 The test-only six-file snapshot is byte-exact Operations source
-`42bc9ceb10c978094992cee1d6284f5ea43b9bd9`, with commit/path/SHA256 provenance.
-T90 reports 73 client fixtures passing; that count alone is not native evidence.
+`a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd`, with commit/path/SHA256 provenance.
+T90 reports 75 client fixtures passing; that count alone is not native evidence.
 The snapshot avoids new cross-repository credentials or runner access.
 
 The new Rust fixture serves the actual registered Axum router over ephemeral
@@ -73,6 +73,25 @@ Only executor/process I/O, OS inventory and incident observations are synthetic.
 The real producer, deployment ingress and live resource environment are not
 certified by these tests. Setup controls compile only under cfg(test), never
 product ingress. No live model, owner, credential or allocation feed is used.
+
+## First paired hosted result and correction
+
+[Run39142867234](https://github.com/artinflight/vibe-kanban/actions/runs/39142867234)
+at native `18456f017b042f2b20b833ac113694b393f9ff5e` passed the complete main
+suite (**633 passed, 15 skipped**, including the explicitly ignored adapter
+case). The explicit adapter case then failed before its first HTTP request:
+client `42bc9ceb10c978094992cee1d6284f5ea43b9bd9`'s local `http()` function shadowed its imported module,
+raising `AttributeError: function object has no attribute client`. This is not
+paired integration acceptance. The scheduling-enabled subset after that new
+step was skipped in this run; its earlier passing evidence remains separate.
+
+The driver correction is coordinated with T90 and repinned only from their
+published source. The ignored-test command now uses the same workspace/feature
+selection as the main suite to reuse its compiled test artifacts. Scheduling-
+enabled persistence checks also run after earlier failure so a client-test
+error cannot hide native queue regressions. Both initial/reopened evidence
+records are preserved even when libtest prefixes the first output line with
+the test name. None of these changes weaken the actual client assertions.
 
 ## Earlier failures and lightweight checks
 

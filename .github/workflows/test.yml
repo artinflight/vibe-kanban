@@ -504,7 +504,7 @@ jobs:
       - name: Test reviewed storage client against isolated native backend
         if: ${{ !cancelled() }}
         env:
-          VK_STORAGE_ADAPTER_SOURCE: 42bc9ceb10c978094992cee1d6284f5ea43b9bd9
+          VK_STORAGE_ADAPTER_SOURCE: a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd
           VK_STORAGE_ADAPTER_DRIVER: ${{ github.workspace }}/crates/server/tests/fixtures/storage-alert-client/native_integration.py
         run: |
           python3 -B - <<'PY'
@@ -517,12 +517,13 @@ jobs:
               assert hashlib.sha256((root / name).read_bytes()).hexdigest() == expected, name
           print('Verified exact reviewed test-only client source', provenance['commit'])
           PY
-          cargo nextest run -p server --run-ignored all --no-fail-fast --success-output immediate -E 'test(native_python_adapter_uses_real_isolated_http_backend)'
+          cargo nextest run --workspace --exclude vibe-kanban-tauri --run-ignored all --no-fail-fast --success-output immediate -E 'test(native_python_adapter_uses_real_isolated_http_backend)'
 
       - name: Test explicit Dot steering connector
         run: python3 -B -m unittest discover -s scripts/dot-connector -p 'test_*.py' -v
 
       - name: Exercise automatic checkpoint and input persistence with scheduling enabled
+        if: ${{ !cancelled() }}
         env:
           VK_AUTOMATIC_GITHUB_SYNC: "1"
         run: >-

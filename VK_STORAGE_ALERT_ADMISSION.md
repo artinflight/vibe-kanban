@@ -172,7 +172,7 @@ limits and approvals are neither raised nor replaced; no daily cap is added.
 The T90 owner reviewed the unchanged `storage-admission-v2` contract at native
 source `45cffa379d836a553f20bb46d7c96e5953558de0` for adapter source integration.
 The coordinated Operations adapter/Store/driver source is published at
-`42bc9ceb10c978094992cee1d6284f5ea43b9bd9` in PR215. This source review does not
+`a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd` in PR215. This source review does not
 approve release, producer authority or activation; the production Bridge stays
 disabled.
 

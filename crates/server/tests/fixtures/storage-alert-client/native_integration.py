@@ -38,7 +38,7 @@ def run(descriptor):
     competing_replies = []
     checks = []
 
-    def http(method, path, body):
+    def exchange(method, path, body):
         connection = http.client.HTTPConnection('127.0.0.1', url.port, timeout=30)
         try:
             connection.request(method, path, None if body is None else native.canonical(body).encode(),
@@ -58,7 +58,7 @@ def run(descriptor):
         def send_one(_=None):
             with lock:
                 counts[method] += 1
-            return http(method,path,body)
+            return exchange(method,path,body)
         if method=='POST' and fanout:
             fanout=False
             with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
@@ -72,7 +72,7 @@ def run(descriptor):
         return reply
 
     def setup(operation=None):
-        return http('GET' if operation is None else 'POST', '/__fixture',
+        return exchange('GET' if operation is None else 'POST', '/__fixture',
                     None if operation is None else {'operation':operation})
 
     def observe(key):

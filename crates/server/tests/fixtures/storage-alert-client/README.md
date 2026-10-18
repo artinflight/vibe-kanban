@@ -1,7 +1,7 @@
 # Reviewed storage client test snapshot
 
 These six files are unmodified test-only source from Operations PR215 at
-`42bc9ceb10c978094992cee1d6284f5ea43b9bd9`. The commit/path and exact SHA256
+`a345ca8dc1c5f50eab3afdc7db214ff3b923e7fd`. The commit/path and exact SHA256
 bytes are recorded in provenance.json. Refresh only from a coordinated,
 published client commit; do not edit the snapshot independently.
 

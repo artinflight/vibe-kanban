@@ -44,6 +44,13 @@ def host_admission(meminfo, coding_entries):
     return None
 
 
+class FrontendTransition(ValueError):
+    """Healthy gateway moved; the pinned immutable backup material still exists."""
+    def __init__(self, expected, observed):
+        super().__init__('actual gateway frontend differs from captured release')
+        self.expected, self.observed = expected, observed
+
+
 def served_frontend(settings):
     """Bind the actual gateway release separately from the backend fallback."""
     if 'frontend_url' not in settings:
@@ -59,11 +66,34 @@ def served_frontend(settings):
         raise ValueError('captured served frontend bytes changed')
     with urllib.request.urlopen(settings['frontend_url'],timeout=3) as response:
         data=response.read(1024**2+1)
-        if response.status!=200 or len(data)>1024**2 or hashlib.sha256(data).hexdigest()!=settings['frontend_index_sha256']:
-            raise ValueError('actual gateway frontend differs from captured release')
+        if response.status!=200 or len(data)>1024**2:
+            raise ValueError('gateway frontend response unavailable or oversized')
+        actual=hashlib.sha256(data).hexdigest()
+        if actual!=settings['frontend_index_sha256']:
+            raise FrontendTransition(settings['frontend_index_sha256'],actual)
 
 
-def observe(config):
+def frontend_observation(config, *, allow_transition=False):
+    # Only the trusted controller's already-running, unadopted private proof
+    # may finish a captured epoch after an online frontend publication. Normal
+    # nightlies and release/adoption admission retain exact live matching.
+    if allow_transition and not (config.get('capacity_measurement_only') is True
+            and config.get('adoption_authorized') is False
+            and config.get('retention_adopted') is False
+            and config.get('schedule_enabled') is False
+            and config.get('schedule',{}).get('enabled') is False):
+        raise ValueError('frontend epoch observation requires an unadopted private proof')
+    try:
+        served_frontend(config['supervisor'])
+    except FrontendTransition as error:
+        if not allow_transition:raise
+        return {'frontend_transition':{'captured_index_sha256':error.expected,
+                                      'observed_index_sha256':error.observed,
+                                      'exact_live_release_adoption_ready':False}}
+    return {}
+
+
+def observe(config, *, allow_frontend_transition=False):
     settings = config['supervisor']
     mem = {k: int(v.split()[0]) * 1024 for k, v in
            (row.split(':', 1) for row in Path('/proc/meminfo').read_text().splitlines())
@@ -89,7 +119,7 @@ def observe(config):
     front=next((row.split(b'=',1)[1].decode() for row in env if row.startswith(b'VK_FRONTEND_DIST_DIR=')),None)
     if front is None or str(Path(front).resolve())!=settings.get('backend_frontend_root',settings['frontend_root']):
         raise ValueError('live frontend differs from captured release binding')
-    served_frontend(settings)
+    result.update(frontend_observation(config,allow_transition=allow_frontend_transition))
     result['current_runtime_pid']=pid
     url = settings['health_url']
     from urllib.parse import urlsplit

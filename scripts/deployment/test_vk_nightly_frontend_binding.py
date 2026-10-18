@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from vk_nightly_supervisor import served_frontend
+from vk_nightly_supervisor import served_frontend, frontend_observation
 
 
 class ServedFrontend(unittest.TestCase):
@@ -36,6 +36,37 @@ class ServedFrontend(unittest.TestCase):
             with patch('vk_nightly_supervisor.urllib.request.urlopen') as opened:
                 with self.assertRaises(ValueError):served_frontend({**self.settings,'frontend_url':url})
                 opened.assert_not_called()
+
+    def private(self):
+        return {'supervisor':self.settings,'capacity_measurement_only':True,
+                'adoption_authorized':False,'retention_adopted':False,
+                'schedule_enabled':False,'schedule':{'enabled':False}}
+
+    def test_private_epoch_can_finish_after_frontend_publication_without_adoption(self):
+        newer=b'newer authorized frontend'
+        with patch('vk_nightly_supervisor.urllib.request.urlopen',return_value=self.response(newer)):
+            value=frontend_observation(self.private(),allow_transition=True)
+        self.assertEqual(value['frontend_transition']['captured_index_sha256'],self.settings['frontend_index_sha256'])
+        self.assertEqual(value['frontend_transition']['observed_index_sha256'],hashlib.sha256(newer).hexdigest())
+        self.assertFalse(value['frontend_transition']['exact_live_release_adoption_ready'])
+
+    def test_default_admission_and_operational_mode_remain_strict(self):
+        with patch('vk_nightly_supervisor.urllib.request.urlopen',return_value=self.response(b'newer')):
+            with self.assertRaisesRegex(ValueError,'gateway frontend'):
+                frontend_observation(self.private())
+        for key in ('adoption_authorized','retention_adopted','schedule_enabled'):
+            c=self.private();c[key]=True
+            with self.assertRaisesRegex(ValueError,'unadopted private'):
+                frontend_observation(c,allow_transition=True)
+
+    def test_private_transition_does_not_excuse_changed_pinned_material(self):
+        (self.root/'index.html').write_bytes(b'changed locally')
+        with self.assertRaisesRegex(ValueError,'served frontend bytes'):
+            frontend_observation(self.private(),allow_transition=True)
+
+    def test_private_transition_does_not_excuse_unavailable_gateway(self):
+        with patch('vk_nightly_supervisor.urllib.request.urlopen',side_effect=OSError('offline')):
+            with self.assertRaises(OSError):frontend_observation(self.private(),allow_transition=True)
 
 
 if __name__=='__main__':unittest.main()

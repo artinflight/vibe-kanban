@@ -1,3 +1,21 @@
+# Private captured-epoch validation — October18 follow-up
+
+25 supervisor/frontend/recovery tests now pass. Initial capture admission and all
+normal/adoption checks retain exact live frontend matching. Only an already-running
+unadopted private proof can record a healthy online frontend publication without
+canceling its captured epoch. Changed pinned source bytes, unavailable gateway,
+backend identity, real resource/capacity/access protections still fail closed.
+Such a transition explicitly leaves live-release adoption unready. This keeps
+Staging's authorized frontend publication independent of long backup verification.
+
+Current gateway is the collapsible frontend, owner manifest/activation verified;
+its2389 immutable files/670179397bytes are added to a preserved98-root/10988-pin
+plan. This is a small known-package binding update, no repeat source census.
+The new cold-r2-frontend-epoch-measured preparation is NOT launched/admitted yet.
+Same5GiB TOTAL allocation, all previous recovery data and other-owner balances
+remain. Original Disk coordination request is queued by actual execution capacity;
+do not resend it or treat the queue as backup acceptance. No new agent/hold.
+
 # Retained capture r1 actual terminal — October18 10:34UTC
 
 Sole retained capture producer702273/start41932456 ended10:34:18.985UTC,

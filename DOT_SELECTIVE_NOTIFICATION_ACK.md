@@ -98,12 +98,14 @@ have that authority. The proposed permission is limited to the owner's explicitl
 selected, unchanged, non-manual, non-actionable verified dispatch notes; the risk
 is that such selected activity badges can be hidden. It grants no general
 conversation, coding-agent, attention-resolution or cross-owner clearing power.
-That exact capability and the adoption/reload require separate authorization and
-any applicable server security review before application. If the platform has
+The owner has now explicitly approved this exact narrow capability. Deployment
+remains coordinated by root/Staging and is not authorized in this attribution
+turn. Preserve any applicable server security review; do not require the owner
+to repeat the unchanged permission approval. If the platform has
 an additional registered-connection allowlist, its exact change must be reviewed;
 this implementation does not edit one or change authentication.
 
-After approval, refresh the live pins and use `prepare_notification_ack.py` to
+At the separately coordinated deployment boundary, refresh the live pins and use `prepare_notification_ack.py` to
 prepare **only** the new module, the additive connector hook and appended tool
 definitions against the complete latest live package. Preparation verifies the
 old AST and all old tool/event/schema metadata, and leaves `sidechat.py` alone.

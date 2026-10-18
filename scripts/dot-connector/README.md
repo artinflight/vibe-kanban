@@ -1,3 +1,6 @@
+> October17 exact execution Stop: see [the current guarded control and deployment gates](../../DOT_STOP_CONTROL.md).
+> This additive overlay preserves steering and does not expose the legacy broad Stop.
+
 # Explicit Dot steering
 
 This overlay adds `steer_session_prompt` and `get_session_steering_receipt` to

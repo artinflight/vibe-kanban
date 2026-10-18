@@ -83,3 +83,26 @@ original pre-manual-unread Python is not the normal fallback.
 Staging/Preserve retain subsequent source integration ownership. PR268 remains
 unmerged; this runtime approval does not authorize a merge. Existing browser tabs
 need a normal refresh to load the newly selected frontend.
+
+## Owner-requested row readability follow-up
+
+The frontend-only correction from `6655bba77b84b4f45b371f2bfbfed2f5d4014e70`
+is live as of October18 02:13UTC. Actionable workspace rows always use normal
+foreground/full opacity, independent of selection or Dot counts. The one
+production class-list replacement preserves badges, activity grouping, existing
+secondary text and all Python/CU/Stop behavior; no disabled-row semantics exist
+in this component. Focused Chromium coverage reproduces the old desktop failure
+and passes ordinary/unseen, Running, attention, selected/unselected, approval and
+subagent cases at390/1440. DOM grouping, UI types, focused lint, format and ops pass.
+
+Immutable entry `/assets/index-DAWrwpyT.js` and CSS `/assets/index-D9oRzVVh.css`
+are served from `/mnt/vk-storage/vk-t63-row-readability-20261018/frontend-release`.
+All2178 incumbent non-index files remain byte-identical. Verified rollback is the
+previous full T63 candidate frontend; it retains all three T63 features. The
+scoped delta backup passed Desktop hash/download/restore checks. Actual served
+checks found53 actionable rows per viewport at390/1440, all at composed opacity1;
+desktop foreground matches normal text. All seven service PIDs/definitions and
+Python/module pointers stayed unchanged. No service/agent restart or reload,
+SQLite write, real conversation action, model/effort or routing change occurred.
+Refresh existing browser tabs. Private receipts are in the new preparation root;
+subsequent documentation publication does not change this installed source.

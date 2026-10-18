@@ -11,7 +11,8 @@ Models/effort and Recommend remain unchanged. Source remains unmerged.
 All affected issues/siblings were checked; genuine conversation/unread and
 explicit attention are preserved. Keep the latest SQLite for any cutback and use
 the prepared manual-unread-aware fallback, not the original October17 Python.
-Existing browser tabs need refresh for the new frontend. Earlier implementation
+The owner-requested frontend-only row readability correction is also live;
+all seven service PIDs stayed unchanged. Existing tabs need refresh. Earlier implementation
 and preparation details remain in [the source guide](VK_DOT_ACTIVITY_ATTRIBUTION.md).
 
 The October 17 deployed sidebar receipt is

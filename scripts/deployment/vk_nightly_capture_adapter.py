@@ -332,6 +332,14 @@ class RegisteredWorkspace:
                 or not image.get('retained_from') or receipt.get('integrity')!='ok'
                 or (receipt['sealed'],receipt['sha256'],receipt['bytes'])!=(name,image['sha256'],image['bytes'])):
             raise ValueError('retained snapshot response differs')
+        remote=Path(self.resident.config['wsl_root'])/'jobs'/self.resident.binding['input_name']
+        if (image.get('mount_root')!=str(remote)
+                or self.resident.ready['directory']!='B:/'+str(remote.relative_to('/mnt/b'))):
+            raise ValueError('retained snapshot outside bound resident input directory')
+        # The resident names B through WSL; MCP reads that exact input through
+        # its independently checked SSHFS mount. Never relax checked_root.
+        self.checked_root(self.root)
+        image={**image,'mount_root':str(self.root)}
         self.names.add(name);self.sealed[name]=receipt
         self.remaining();self.progress('retained SQL seal reused',last_input=name)
         return image

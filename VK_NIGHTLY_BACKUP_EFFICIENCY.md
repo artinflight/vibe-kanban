@@ -1,3 +1,26 @@
+# October18 — retained recovery path boundary corrected and verified
+
+The sole B-only recovery reached its actual terminal with a path-translation
+failure: the resident returned a WSL input directory, while the MCP archive
+reader correctly required its exact checked SSHFS mount. The supported collector
+saved the failure; producer/mount absence and both kernel leases are verified.
+All original sealed images and the failed attempt remain preserved.
+
+The adapter now verifies the exact resident input path and B-ready directory,
+then translates only to the separately checked local mount. It does not relax
+checked_root or permit another input namespace. Seven focused checks pass,
+including archive capture through the real adapter method without reopening live
+SQLite, outsider-path rejection and local-mount failure. A real read-only native
+B/SSHFS tiny fixture also passes full hash, SQLite integrity/content and clean
+mount teardown. These establish the corrected protocol boundary, not full restore.
+
+A single corrected continuation requires a fresh pinned package and separate
+resource admission; the failed producer must not be restarted or duplicated.
+The existing small metadata ceiling and shared owner/floor protections remain;
+Disk is assessing an additional small browser window separately. Full measured
+generation demand and independent restore remain unfinished. No deployment,
+schedule, restart, original retirement or full restore acceptance is claimed.
+
 # October18 — smaller B-only retained-recovery preparation
 
 Retained-input recovery is committed and published on the existing Nightly PR.

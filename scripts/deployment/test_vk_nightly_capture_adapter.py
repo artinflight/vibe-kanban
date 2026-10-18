@@ -181,20 +181,49 @@ class AdapterTests(unittest.TestCase):
         image=self.snapshot();old_metadata=dict(image['source_metadata_before'])
         self.writer.execute("INSERT INTO retained VALUES('newer live value')");self.writer.commit()
         image.update(retained_from={'candidate':'old'},new_SQLite_backup_api_capture=False)
+        remote='/mnt/b/vk-backups/vk-nightly-capacity-'+'a'*32
+        self.resident.config.update(retained_recovery={'fixture':True},wsl_root=remote)
+        self.resident.binding={'input_name':'input-'+'b'*32}
+        image['mount_root']=remote+'/jobs/'+self.resident.binding['input_name']
+        self.resident.ready['directory']='B:/'+image['mount_root'].removeprefix('/mnt/b/')
+        receipt={**self.workspace.sealed[image['snapshot']],'integrity':'ok'}
+        original_call=self.resident.call
+        def call(action,**kwargs):
+            if action=='reuse_snapshot':return {'image':image,'receipt':receipt}
+            return original_call(action,**kwargs)
         plan={'sources':[str(self.source)],'sqlite_snapshots':[str(self.source)],'excluded_rebuildable_directories':[]}
         def factory(ref,**kwargs):return Archive(ref,archive_directory=self.destination,desktop_only=False)
         with capture_journal(plan)as journal,patch.object(vk_b_disk_capture,'Archive',factory), \
                 patch('sqlite3.connect',side_effect=AssertionError('must not open live DB')), \
-                patch('vk_b_disk_capture.memory_snapshot',side_effect=AssertionError('must not recapture')):
+                patch('vk_b_disk_capture.memory_snapshot',side_effect=AssertionError('must not recapture')), \
+                patch.object(self.resident,'call',side_effect=call):
             result=vk_b_disk_capture.capture(plan,self.destination,journal,self.workspace.mirror,
                 publish=self.workspace.mirror,max_snapshot_bytes=1,disk_inventory_root=self.destination,
                 workspace=self.workspace,nightly_selection=DeltaSelection(None,str(self.root),'a'*64),
-                retained_snapshot=lambda raw:image)
+                retained_snapshot=self.workspace.retained_snapshot)
         self.assertTrue(result['passed']);self.assertEqual(result['retained_SQLite_recovery'],{str(self.source):{'candidate':'old'}})
         self.assertNotIn(str(self.source),result['database_proofs'])
         self.assertEqual(result['large_b_disk_snapshots'][str(self.source)]['source_metadata_before'],old_metadata)
         with sqlite3.connect((self.destination/image['snapshot']).as_uri()+'?mode=ro&immutable=1',uri=True)as db:
             self.assertEqual(db.execute('SELECT value FROM retained').fetchall(),[('live WAL',)])
+    def test_retained_remote_directory_and_local_mount_both_remain_strict(self):
+        image=self.snapshot();name=image['snapshot'];receipt={**self.workspace.sealed[name],'integrity':'ok'}
+        root='/mnt/b/vk-backups/vk-nightly-capacity-'+'c'*32
+        folder=root+'/jobs/input-'+'d'*32
+        self.resident.config.update(retained_recovery={'fixture':True},wsl_root=root)
+        self.resident.binding={'input_name':'input-'+'d'*32}
+        self.resident.ready['directory']='B:/'+folder.removeprefix('/mnt/b/')
+        image.update(retained_from={'candidate':'old'},new_SQLite_backup_api_capture=False,mount_root=folder)
+        with patch.object(self.resident,'call',return_value={'image':image,'receipt':receipt}):
+            for outside in ('/mnt/b/other',folder+'/child',str(self.destination)):
+                with self.subTest(outside=outside):
+                    image['mount_root']=outside
+                    with self.assertRaisesRegex(ValueError,'bound resident input'):self.workspace.retained_snapshot(str(self.source))
+            image['mount_root']=folder
+            with patch.object(self.workspace,'checked_root',side_effect=ValueError('actual local mount substituted')):
+                with self.assertRaisesRegex(ValueError,'actual local mount substituted'):self.workspace.retained_snapshot(str(self.source))
+            result=self.workspace.retained_snapshot(str(self.source))
+        self.assertEqual(result['mount_root'],str(self.destination));self.assertEqual(image['mount_root'],folder)
     def test_snapshot_bound_failure_retains_registered_unaccepted_image(self):
         with patch.object(self.workspace,'inspect_failure',return_value={'metadata_only':True}):
             with self.assertRaisesRegex(ValueError,'SQLite image exceeds') as caught:self.snapshot(maximum=1)

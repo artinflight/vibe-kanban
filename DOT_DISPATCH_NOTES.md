@@ -40,7 +40,8 @@ receipt retries or a lost note acknowledgment cannot produce another note. A
 completed receipt cannot be downgraded by an older competing failure.
 
 The existing sidechat publisher retries up to 20 pending accepted receipts every
-five seconds, with fair ordering. It never sends/resends an agent prompt, launches
+five seconds, with fair ordering and a 0.5-second soft batch budget. Native/chat
+lock waits are bounded to 100ms so recovery yields to existing message delivery. It never sends/resends an agent prompt, launches
 an actor, scans unrelated executions or calls a model/provider. A process restart
 or lost MCP response after receipt capture retains the note/recovery state. The
 SQLite journal and chat data remain private and owner-readable only.
@@ -94,7 +95,7 @@ behavior and the original sidechat contracts. `prepare_dispatch_notes.py` gates
 exact adapter/status/worker hashes and checks unchanged AST nodes outside the
 three scoped hooks. No new tool name, argument or catalog refresh is needed.
 
-33 public connector tests and 66 incumbent Python sidechat regressions pass.
+34 public connector tests and 66 incumbent Python sidechat regressions pass.
 Fixtures cover Dot/user origin; accepted/failed/unknown dispatch; first-message
 notes; session/workspace binding; scope changes/isolation; concurrent retries;
 restart/MCP-response loss; note-commit acknowledgment loss; unread state; no

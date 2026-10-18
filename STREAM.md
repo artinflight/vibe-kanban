@@ -11,7 +11,7 @@ Preserve PR271's deployed issue/error contract, PR270, all chats/access/history,
 CU/Stop, current sidebar/mobile/frontend, models and permissions. No voice routing,
 backend restart, actor launch or denied live negative-start probe.
 
-33 public connector and66 sidechat tests pass. Full private-adapter mocked
+34 public connector and66 sidechat tests pass. Full private-adapter mocked
 start/follow-up notes and PR271's28 rejection vectors/27 incumbent controls pass.
 Runtime adoption is pending. Backend POST response loss without an execution
 receipt, capacity queue IDs and sequential setup-to-agent correlation remain

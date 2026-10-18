@@ -10,7 +10,7 @@ and chat uniqueness prevent duplicate notes; the existing publisher recovers not
 failures without sending another prompt. Bodies contain fixed safe purpose and
 execution ID only. Native/manual prompts do not enter this connector path.
 
-33 connector tests,66 sidechat tests and full private-adapter mocked acceptance
+34 connector tests,66 sidechat tests and full private-adapter mocked acceptance
 pass, including the unchanged PR271 cases. Guarded connector/publisher adoption
 and read-only runtime acceptance remain to finish. No validation agent or live
 negative-start probe. Do not touch voice routing or the separate backend release.

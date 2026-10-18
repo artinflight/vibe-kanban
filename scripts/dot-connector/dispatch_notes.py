@@ -114,7 +114,7 @@ class NativeReader:
     def __init__(self, path=VIBE_DB): self.path = Path(path)
 
     def verify(self, row):
-        with sqlite3.connect(self.path.resolve(strict=True).as_uri()+'?mode=ro', uri=True, timeout=2) as db:
+        with sqlite3.connect(self.path.resolve(strict=True).as_uri()+'?mode=ro', uri=True, timeout=0.1) as db:
             db.execute('PRAGMA query_only=ON')
             found = db.execute('''SELECT e.session_id,s.workspace_id,w.task_id,t.project_id,
                 e.run_reason,e.dropped,e.status FROM execution_processes e
@@ -198,18 +198,33 @@ def receipt_from_result(kind, args, result):
         return None
 
 
+def open_note_store(path):
+    """Bounded existing-DB writer; avoid schema/backfill work on the dispatch path."""
+    from sidechat import Store
+    path = Path(path)
+    if path.is_symlink() or path.stat().st_mode & 0o077: raise Blocked('unsafe_chat_store')
+    store = Store.__new__(Store)
+    store.clock = time.time
+    store.db = sqlite3.connect(path.resolve().as_uri()+'?mode=rw', uri=True,
+                               timeout=0.1, isolation_level=None)
+    store.db.row_factory = sqlite3.Row
+    store.db.execute('PRAGMA foreign_keys=ON')
+    return store
+
+
 class Runtime:
     def __init__(self):
         import sidechat_connector  # Installs the fixed current bundle on sys.path.
-        from connector import ROOT, opened, owner
-        self.owner, self.opened = owner(), opened
+        from connector import ROOT, owner
+        self.owner = owner()
+        self.opened = lambda: open_note_store(ROOT/'threads.sqlite')
         self.journal = Journal(ROOT/'dispatch-receipts.sqlite')
         self.native = NativeReader(os.environ.get('VK_SIDECHAT_VIBE_DB', VIBE_DB))
 
     def close(self): self.journal.close()
 
     def session_workspace(self, session):
-        with sqlite3.connect(self.native.path.resolve(strict=True).as_uri()+'?mode=ro', uri=True, timeout=2) as db:
+        with sqlite3.connect(self.native.path.resolve(strict=True).as_uri()+'?mode=ro', uri=True, timeout=0.1) as db:
             db.execute('PRAGMA query_only=ON')
             row = db.execute('SELECT workspace_id FROM sessions WHERE id=?', (uuid.UUID(session).bytes,)).fetchone()
         if not row: raise Blocked('session_unavailable')
@@ -261,10 +276,15 @@ def observe(kind, args, result, origin='dot', factory=None):
     return output
 
 
-def recover_pending(factory=None):
+def recover_pending(factory=None, budget_seconds=0.5):
     runtime = (factory or Runtime)()
     try:
-        return [runtime.deliver(row) for row in runtime.journal.pending(runtime.owner)]
+        deadline = time.monotonic()+budget_seconds
+        results = []
+        for row in runtime.journal.pending(runtime.owner):
+            if time.monotonic() >= deadline: break
+            results.append(runtime.deliver(row))
+        return results
     finally: runtime.close()
 
 
@@ -275,7 +295,7 @@ def workspace_status(workspace):
     if not path.exists(): return {'status': 'no_recorded_dispatch', 'receipts': []}
     try:
         if path.is_symlink() or path.stat().st_mode & 0o077: raise Blocked('unsafe_receipt_store')
-        with sqlite3.connect(path.resolve().as_uri()+'?mode=ro', uri=True, timeout=2) as db:
+        with sqlite3.connect(path.resolve().as_uri()+'?mode=ro', uri=True, timeout=0.1) as db:
             db.execute('PRAGMA query_only=ON'); db.row_factory = sqlite3.Row
             rows = [dict(r) for r in db.execute('''SELECT execution,session,kind,state,message,error
                 FROM dispatch_receipts WHERE owner=? AND workspace=? ORDER BY created DESC LIMIT 10''', (owner(), uid(workspace)))]

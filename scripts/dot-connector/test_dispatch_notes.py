@@ -42,7 +42,7 @@ class DispatchNoteTests(unittest.TestCase):
         class FixtureRuntime(notes.Runtime):
             def __init__(self):
                 self.owner = 'alice';self.journal = notes.Journal(test.ledger)
-                self.native = notes.NativeReader(test.vibe);self.opened = lambda: Store(test.chat)
+                self.native = notes.NativeReader(test.vibe);self.opened = lambda: notes.open_note_store(test.chat)
         self.factory = FixtureRuntime
         self.args = {'project_id':self.project,'issue_id':self.issue,'prompt':'SENSITIVE_PRIVATE_PROMPT_NEVER_COPY'}
         self.result = {'isError':False,'content':[{'type':'text','text':json.dumps({
@@ -178,6 +178,13 @@ class DispatchNoteTests(unittest.TestCase):
         self.assertEqual(1,len({r.get('message_id') for r in results if r['state']=='noted'}))
         notes.recover_pending(self.factory)
         self.assertEqual((1,0,1),self.counts())
+
+    def test_recovery_batch_yields_to_existing_publisher_work(self):
+        runtime=types.SimpleNamespace(owner='alice',journal=Mock(),deliver=Mock(return_value={'state':'pending'}),close=Mock())
+        runtime.journal.pending.return_value=[{},{}]
+        with patch.object(notes.time,'monotonic',side_effect=[0,0.1,0.6]):
+            self.assertEqual([{'state':'pending'}],notes.recover_pending(lambda:runtime))
+        runtime.deliver.assert_called_once();runtime.close.assert_called_once()
 
     def test_note_receipt_completion_is_monotonic(self):
         self.observe()

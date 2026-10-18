@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Group, Layout, Panel, Separator } from 'react-resizable-panels';
 import { OrgProvider } from '@/shared/providers/remote/OrgProvider';
@@ -9,6 +9,10 @@ import { useActions } from '@/shared/hooks/useActions';
 import { usePageTitle } from '@/shared/hooks/usePageTitle';
 import { KanbanContainer } from '@/features/kanban/ui/KanbanContainer';
 import { useIsMobile } from '@/shared/hooks/useIsMobile';
+import { ProjectCollaborationSidebar } from './ProjectCollaborationSidebar';
+import { useMobileSheet } from '@/shared/hooks/useMobileSheet';
+import { useDotProjectNotifications } from '@/shared/hooks/useDotNotifications';
+import { DotActivityIndicators } from '@vibe/ui/components/DotActivityIndicators';
 import { ProjectRightSidebarContainer } from './ProjectRightSidebarContainer';
 import { LoginRequiredPrompt } from '@/shared/dialogs/shared/LoginRequiredPrompt';
 import {
@@ -107,7 +111,7 @@ function ProjectKanbanBoard() {
   );
 }
 
-export function ProjectKanbanLayout({ projectName }: { projectName: string }) {
+function ProjectKanbanContent({ projectName }: { projectName: string }) {
   const { issueId, isPanelOpen, hostId, projectId } =
     useCurrentKanbanRouteState();
   const isMobile = useIsMobile();
@@ -203,6 +207,116 @@ export function ProjectKanbanLayout({ projectName }: { projectName: string }) {
         </Panel>
       )}
     </Group>
+  );
+}
+
+export function ProjectKanbanLayout({ projectName }: { projectName: string }) {
+  const { projectId, hostId } = useCurrentKanbanRouteState();
+  const isMobile = useIsMobile();
+  const [desktopOpen, setDesktopOpen] = useState(true);
+  const sheet = useMobileSheet('project-collaboration:' + projectId);
+  const closeSheet = sheet.close;
+  const open = isMobile ? sheet.isOpen : desktopOpen;
+  const trigger = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const notifications = useDotProjectNotifications();
+  const activity = notifications.find((item) => item.project_id === projectId);
+  const close = () => {
+    if (isMobile) sheet.close();
+    else setDesktopOpen(false);
+  };
+  useEffect(() => {
+    if (!isMobile || !open) return;
+    const root = panel.current;
+    const focusTrigger = trigger.current;
+    root?.querySelector<HTMLButtonElement>('button')?.focus();
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeSheet();
+      }
+      if (event.key !== 'Tab' || !root) return;
+      const nodes = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'button, input, textarea, select, [tabindex="0"]'
+        )
+      ).filter(
+        (node) =>
+          !node.hasAttribute('disabled') && node.getClientRects().length > 0
+      );
+      const first = nodes[0],
+        last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    document.addEventListener('keydown', keyboard);
+    return () => {
+      document.removeEventListener('keydown', keyboard);
+      focusTrigger?.focus();
+    };
+  }, [isMobile, open, closeSheet]);
+  if (hostId || !projectId)
+    return <ProjectKanbanContent projectName={projectName} />;
+  return (
+    <div className="project-space-layout">
+      <div
+        className="project-space-toolbar bg-primary text-normal"
+        {...(isMobile && open ? { inert: '' } : {})}
+      >
+        <span className="truncate">{projectName}</span>
+        <button
+          ref={trigger}
+          type="button"
+          aria-label="Open project sidebar"
+          aria-expanded={open}
+          onClick={() => {
+            if (isMobile) sheet.show();
+            else setDesktopOpen((value) => !value);
+          }}
+        >
+          Project space{' '}
+          <DotActivityIndicators
+            dotUnreadCount={activity?.unread_count ?? 0}
+            dotNeedsAttentionCount={activity?.needs_attention_count ?? 0}
+          />
+        </button>
+      </div>
+      <div className="project-space-body">
+        <div
+          className="project-space-board"
+          {...(isMobile && open ? { inert: '' } : {})}
+        >
+          <ProjectKanbanContent projectName={projectName} />
+        </div>
+        {open && (
+          <div
+            ref={panel}
+            className={
+              isMobile ? 'project-space-mobile' : 'project-space-sidebar'
+            }
+            role={isMobile ? 'dialog' : undefined}
+            aria-modal={isMobile ? true : undefined}
+            aria-label={isMobile ? 'Project collaboration' : undefined}
+          >
+            <ProjectCollaborationSidebar
+              key={projectId}
+              projectId={projectId}
+              projectName={projectName}
+              onClose={close}
+              onNavigate={(action) => {
+                if (isMobile) sheet.run(action);
+                else action();
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

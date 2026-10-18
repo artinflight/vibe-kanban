@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "fixture_only": true,
+  "models_changed": false,
+  "provider_calls": {
+    "before": 0,
+    "after": 0
+  },
+  "native_model_savings_proved": false,
+  "same_command_sha256": "06d4576427217a4828eb02086d84c43fec282e1074f5bed58f22d82c59c78d1b",
+  "modes": {
+    "always_rerun": {
+      "requests": [
+        {
+          "phase": "cold",
+          "passed": true,
+          "launches": 3,
+          "reused": [],
+          "artifact_sha256": "3dfa4b64f6ff1613d15fd2738af77cca0ff94a96b85492582a69ca2def20387a"
+        },
+        {
+          "phase": "identical_repeat",
+          "passed": true,
+          "launches": 3,
+          "reused": [],
+          "artifact_sha256": "3dfa4b64f6ff1613d15fd2738af77cca0ff94a96b85492582a69ca2def20387a"
+        },
+        {
+          "phase": "changed_input",
+          "passed": true,
+          "launches": 3,
+          "reused": [],
+          "artifact_sha256": "b0770c2771b294ed9917fb6904dab81709783a40649a7140e9ac2780bb54ca15"
+        }
+      ],
+      "step_launches": 9,
+      "fresh_checks": 3
+    },
+    "fingerprinted_reuse": {
+      "requests": [
+        {
+          "phase": "cold",
+          "passed": true,
+          "launches": 3,
+          "reused": [],
+          "artifact_sha256": "3dfa4b64f6ff1613d15fd2738af77cca0ff94a96b85492582a69ca2def20387a"
+        },
+        {
+          "phase": "identical_repeat",
+          "passed": true,
+          "launches": 1,
+          "reused": [
+            "validate",
+            "build"
+          ],
+          "artifact_sha256": "3dfa4b64f6ff1613d15fd2738af77cca0ff94a96b85492582a69ca2def20387a"
+        },
+        {
+          "phase": "changed_input",
+          "passed": true,
+          "launches": 3,
+          "reused": [],
+          "artifact_sha256": "b0770c2771b294ed9917fb6904dab81709783a40649a7140e9ac2780bb54ca15"
+        }
+      ],
+      "step_launches": 7,
+      "fresh_checks": 3
+    }
+  },
+  "pickup": {
+    "before_bytes": 1032169,
+    "after_bytes": 8029,
+    "fewer_bytes": 1024140,
+    "reduction_percent": 99.22212350884399,
+    "historical_bytes_preserved": 1032169,
+    "relevant_topic_reads_additional": true,
+    "billed_token_savings": null
+  },
+  "representative_input": {
+    "common_reads": {
+      "VK_RESTART_QUEUE_WAKEUP.md": "71b384e8abc13f6ee87fe7901aaa33d79bf5e215ab8d6ec558e45920cd9b8ea8",
+      "scripts/deployment/vk_prepare.py": "e7781803a51f925bc1c9fb42ba123d583c6dd706efef5cc05ba464c7b70b7783",
+      "scripts/deployment/vk_prep_common.py": "5ab3dc9981e72aec9fea03e9970e68682f3fcd6d8ce3aaaac2c99dd7263823ca",
+      "scripts/deployment/test_vk_preparation.py": "72286d2e5f3a4b5cfb02b71709345a3eecdbba5b78e2a35ca0177c94e0a61028"
+    },
+    "common_bytes": 75203,
+    "before_bytes": 1107372,
+    "after_bytes": 83232,
+    "fewer_bytes": 1024140,
+    "measurement": "UTF-8 file bytes for the same recipe; not provider tokens"
+  }
+}

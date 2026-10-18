@@ -1,3 +1,26 @@
+# Nightly actual R7 terminal — October18 03:25UTC
+
+R7 PID1315986/start39765267 started03:15:54.600113UTC and guard-aborted
+03:22:38.153339UTC after404.639s: consecutive host full-memory PSI2.81/0.31
+exceeded unchanged0.1. UnitMainPID0/inactive/dead, both MCP producer and exact B
+job leases acquired after termination, and no local capture mount remains.
+Only245-byte direct-stream descriptor sealed; no SQLite snapshot or complete
+capacity/restore result. All attempts and recovery remain; no retry is armed.
+
+Sampled owned SSD peak9,379,840bytes includes prior retained increments, not full
+working demand. SSD minimum9,277,607,936bytes and B free252,869,148,672bytes passed.
+Own sampled memory peak1,358,184,448bytes, fullPSIavg10 maximum0, swap0 and
+high/max/OOM events0. Earlier other-service stalls identify affected groups,
+not the cause of final host pressure. Existing Staging owner received terminal
+evidence; Disk coordination receipt updated. Neither owner has a Nightly hold.
+
+The bootstrap correction and native18-byte seal remain verified;42 focused
+tests pass. Next gate is sustained healthy host admission, then the sole full
+measurement before sizing independent cold backup/restore coexistence. No guard
+relaxation, deployment, schedule, restart, cutover or original retirement.
+Private evidence: capacity-r7-pressure-diagnostics/TERMINAL_RECONCILIATION.private.json
+under the existing Nightly evidence root; shared phase coordination is terminal.
+
 # Nightly bounded recovery — October18 03:09UTC
 
 Corrected r6 started03:04:56.725347UTC PID1205519/start39699480 and guard-aborted

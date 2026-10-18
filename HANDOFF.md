@@ -1,3 +1,29 @@
+# Nightly R7 stopped; preserve evidence — October18 03:25UTC
+
+Existing r7 ended03:22:38.153339UTC, guard-aborted after404.639s, host fullPSI
+2.81/0.31 >unchanged0.1. PID1315986/start39765267 and supervisor are gone;
+unitMainPID0/inactive/dead, MCP and exact B job leases released/acquired, no local
+mount. Only245-byte descriptor sealed; no SQLite or full measurement/restore.
+Do not replace automatically, reconcile by deleting inputs, or report earlier
+healthy samples as completion. B current pointer absent; exact attempt preserved.
+
+Evidence root /mnt/vk-storage/vk-nightly-efficiency-20261017/capacity-r7-pressure-diagnostics:
+terminal.safe.json, COLLECTED_WORKING_SPACE.safe.json, B_QUIESCENCE.private.json,
+TERMINAL_RECONCILIATION.private.json and supervisor.private.json. Config SHA
+5d9b596fce5c273f34eb36800ec9571220f792887d2281112229ee4d07e9fe9d.
+Sampled same-cap owned SSD peak9,379,840B includes prior attempts; SSDmin9,277,607,936B,
+Bfree252,869,148,672B passed. Full cold/restore demand still unknown. Own sampled
+memory peak1,358,184,448B, PSIavg10max0, swap0, memory high/max/OOMevents0.
+Other affected-group stall observations do not establish the cause of final spike.
+
+Existing running Staging owner steered with exact terminal checkpoint; Disk private
+allocation area and shared NIGHTLY_PHASE_COORDINATION.private.json updated.
+CU/Disk idle owners were not awakened. No Nightly bulk job, automatic retry or
+other-owner hold remains. Need sustained healthy host admission coordinated with
+existing resource owner, then sole corrected stream and measured restore allocation.
+Reuse42 focused tests, native bootstrap seal and earlier fixture/index/WAL evidence;
+none is full current-plan restore acceptance. Do not deploy/schedule/restart/delete.
+
 # Nightly bounded recovery — October18 03:09UTC
 
 Corrected r6 started03:04:56.725347UTC PID1205519/start39699480 and guard-aborted

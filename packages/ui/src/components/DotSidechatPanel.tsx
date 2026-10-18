@@ -8,6 +8,8 @@ export interface SidechatMessage {
   workspace: string;
   created: number;
   seen?: boolean;
+  manual_unread?: boolean;
+  dispatch_note?: { workspace_id: string; execution_id: string };
   attention?: { kind: 'question' | 'action'; resolved: boolean } | null;
 }
 
@@ -25,6 +27,7 @@ export interface DotSidechatPanelProps {
     message: string,
     action: 'action' | 'resolve' | 'reopen'
   ) => void;
+  onReadState?: (message: string, action: 'read' | 'unread') => Promise<void>;
   draftLocked?: boolean;
   messages: SidechatMessage[];
   receipts: Record<string, SidechatReceipt>;
@@ -54,6 +57,8 @@ function deliveryLabel(receipt?: SidechatReceipt) {
 export function DotSidechatPanel(props: DotSidechatPanelProps) {
   const history = useRef<HTMLDivElement>(null);
   const [followLatest, setFollowLatest] = useState(true);
+  const [readStateBusy, setReadStateBusy] = useState(new Set<string>());
+  const readStateInFlight = useRef(new Set<string>());
   const readsInFlight = useRef(new Set<string>());
   const readsConfirmed = useRef(new Set<string>());
   useEffect(() => {
@@ -72,6 +77,8 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           (m) =>
             m.role === 'dot' &&
             m.seen === false &&
+            !m.manual_unread &&
+            !readStateInFlight.current.has(m.id) &&
             !readsInFlight.current.has(m.id) &&
             !readsConfirmed.current.has(m.id)
         )
@@ -243,6 +250,9 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
                     ? 'Dot'
                     : 'Dot · fixture'}
               </strong>
+              {message.dispatch_note && (
+                <span className="dot-private">Agent dispatch note</span>
+              )}
               <a
                 aria-label={'Link to message ' + message.seq}
                 href={'#thread=' + props.threadId + '&message=' + message.id}
@@ -262,6 +272,35 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
                         : 'Needs Attention'}{' '}
                       · {message.attention.kind}
                     </span>
+                  )}
+                  {props.onReadState && (
+                    <button
+                      type="button"
+                      disabled={readStateBusy.has(message.id)}
+                      aria-label={
+                        message.manual_unread
+                          ? 'Mark Dot reply as read'
+                          : 'Mark Dot reply as unread'
+                      }
+                      onClick={() => {
+                        if (readStateInFlight.current.has(message.id)) return;
+                        readStateInFlight.current.add(message.id);
+                        setReadStateBusy(new Set(readStateInFlight.current));
+                        void props.onReadState!(
+                          message.id,
+                          message.manual_unread ? 'read' : 'unread'
+                        )
+                          .catch(() => undefined)
+                          .finally(() => {
+                            readStateInFlight.current.delete(message.id);
+                            setReadStateBusy(
+                              new Set(readStateInFlight.current)
+                            );
+                          });
+                      }}
+                    >
+                      {message.manual_unread ? 'Mark read' : 'Mark unread'}
+                    </button>
                   )}
                   {props.onAttention && (
                     <button

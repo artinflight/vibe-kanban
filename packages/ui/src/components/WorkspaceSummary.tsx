@@ -194,12 +194,7 @@ export function WorkspaceSummary({
       <button
         aria-current={isActive ? 'page' : undefined}
         onClick={onClick}
-        className={cn(
-          'flex w-full cursor-pointer flex-col text-left px-base py-half transition-all duration-150',
-          isActive || hasDotActivity
-            ? 'text-normal'
-            : 'text-low sm:opacity-60 sm:hover:opacity-100 sm:hover:text-normal'
-        )}
+        className="flex w-full cursor-pointer flex-col text-left px-base py-half transition-all duration-150 text-normal"
       >
         <div
           className={cn(
@@ -238,16 +233,17 @@ export function WorkspaceSummary({
               />
             )}
 
-            {/* Running dots OR hand icon for pending approval */}
-            {isRunning &&
-              (hasPendingApproval ? (
-                <HandIcon
-                  className="size-icon-xs text-brand shrink-0"
-                  weight="fill"
-                />
-              ) : (
-                <RunningDots />
-              ))}
+            {/* Approval remains visible independently of running activity. */}
+            {hasPendingApproval ? (
+              <HandIcon
+                className="size-icon-xs text-brand shrink-0"
+                weight="fill"
+                role="img"
+                aria-label="Pending approval"
+              />
+            ) : isRunning ? (
+              <RunningDots />
+            ) : null}
 
             {/* Unseen activity indicator (only when not running and not failed) */}
             {hasUnseenActivity &&

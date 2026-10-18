@@ -238,25 +238,23 @@ export function WorkspacesSidebar({
       const collection = phone
         ? (activityWorkspaces ?? workspaces)
         : workspaces;
-      // Running workspaces should stay in the "Running" section even if unseen.
-      const hasSubagentActivity = (ws: WorkspacesSidebarWorkspace) =>
+      // Running is an activity view, independent of explicit actions/approvals.
+      // Ordinary unread stays a badge while active; idle unread is actionable.
+      const isActive = (ws: WorkspacesSidebarWorkspace) =>
+        !!ws.isRunning ||
         (ws.activeSubagentCount ?? 0) + (ws.unresolvedSubagentCount ?? 0) > 0;
       const needsAttention = (ws: WorkspacesSidebarWorkspace) =>
         (ws.dotNeedsAttentionCount ?? 0) > 0 ||
-        (ws.dotUnreadCount ?? 0) > 0 ||
         ws.hasPendingApproval ||
-        (ws.hasUnseenActivity && !ws.isRunning && !hasSubagentActivity(ws));
+        (!isActive(ws) &&
+          (ws.hasUnseenActivity || (ws.dotUnreadCount ?? 0) > 0));
 
       return {
         raisedHandWorkspaces: collection.filter((ws) => needsAttention(ws)),
         idleWorkspaces: collection.filter(
-          (ws) =>
-            !ws.isRunning && !hasSubagentActivity(ws) && !needsAttention(ws)
+          (ws) => !isActive(ws) && !needsAttention(ws)
         ),
-        runningWorkspaces: collection.filter(
-          (ws) =>
-            (ws.isRunning || hasSubagentActivity(ws)) && !needsAttention(ws)
-        ),
+        runningWorkspaces: collection.filter(isActive),
       };
     }, [workspaces, activityWorkspaces, phone]);
 

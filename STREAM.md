@@ -1,26 +1,20 @@
-# Issue context for connector-created Dot Chat workspaces
+# Private Dot dispatch notes
 
-Branch `fix/dot-workspace-issue-context`, based on current fork/staging.
+Branch `feat/dot-dispatch-notes`, stacked on preserved PR271 source. The new
+[dispatch-note protocol](DOT_DISPATCH_NOTES.md) records accepted Dot-origin
+execution receipts and writes one safe note into the existing private workspace
+conversation, including a first thread with no owner message.
 
-Repair the reported standalone workspace through supported issue creation/link
-routes, keeping its identity, branch, worktree and complete history. Prevent new
-connector starts without verified issue/project context. See
-[the repair and creation contract](DOT_WORKSPACE_ISSUE_CONTEXT.md).
+Scope: connector post-dispatch hooks/journal, explicit internal note writer,
+read-only status, recovery through the existing publisher, tests and handoff.
+Preserve PR271's deployed issue/error contract, PR270, all chats/access/history,
+CU/Stop, current sidebar/mobile/frontend, models and permissions. No voice routing,
+backend restart, actor launch or denied live negative-start probe.
 
-The live issue association, browser HTTPS route and actual cached connector
-lookup/history are verified. A real owner message arrived afterward. Do not
-answer or start another task merely to demonstrate the repair. Preserve private
-account details, sessions, grants, subscriptions, CU/Stop/follow-up pins and other
-owners' work. No Vibe/backend/agent/frontend restart or new worker is authorized
-by this source stream. The initial connector guard was adopted at source 4a5674de3;
-its current explanation follow-up is source a43a21807, as recorded below;
-only its process restarted. The live negative start probe was rejected by review
-and was not retried; see the exact validation limits in the protocol handoff.
+33 public connector and66 sidechat tests pass. Full private-adapter mocked
+start/follow-up notes and PR271's28 rejection vectors/27 incumbent controls pass.
+Runtime adoption is pending. Backend POST response loss without an execution
+receipt, capacity queue IDs and sequential setup-to-agent correlation remain
+explicit unsupported boundaries; never infer acceptance or resend prompts.
 
-Full prior notes remain in [STREAM history](STREAM_HISTORY_20261017.md).
-
-Approved continuation: finish the explanation contract with stable code/reason/
-next_step, distinct unavailable/malformed evidence and scope-safe negative
-lookups. Twenty public tests and 28 full-adapter mocked rejection vectors pass;
-valid mocked start and 27 incumbent controls pass. The explanation follow-up is live at source a43a21807, adapter b3f062e1 /
-guard 50056e97, with unchanged cached Caspian readback and preserved pins. Do not repeat the denied live probe or touch separate voice work.
+Full previous stream history remains in [STREAM history](STREAM_HISTORY_20261017.md).

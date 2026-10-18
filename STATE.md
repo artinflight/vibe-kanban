@@ -59,3 +59,7 @@ Current release coordination, newer Sidebar adoption and remaining private gates
 Issue-less connector starts can leave Dot Chat unavailable despite valid pairing.
 [Supported association repair and connector preflight](DOT_WORKSPACE_ISSUE_CONTEXT.md)
 records the scoped fix; preserve its live associations and current private chat.
+
+Dot dispatch-note protocol and exact backend receipt limits:
+[private workspace dispatch notes](DOT_DISPATCH_NOTES.md). Preserve PR271 and
+existing note/journal data; fixture acceptance is not a live dispatch claim.

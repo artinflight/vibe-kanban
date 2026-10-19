@@ -365,6 +365,7 @@ export function Navbar({
                     ? 'text-lg text-high font-medium'
                     : 'text-xl text-high font-semibold'
                 )}
+                title={workspaceTitle ?? undefined}
               >
                 {workspaceTitle || (isOnProjectPage ? 'Project' : 'Workspaces')}
               </p>

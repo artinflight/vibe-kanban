@@ -1,5 +1,13 @@
 # Exact workspace destinations and Personal visibility
 
+Workspace names retain their current font size and single-line ellipsis. The
+narrow header now supplies the same native `title` as the desktop header, with
+the complete current name. This uses browser hover behavior; no custom tap
+tooltip or new gesture is added. Touch still has the full text in the DOM for
+accessibility and native text selection. Hosted desktop/narrow checks exercise
+the same long name, ellipsis, hover metadata, touch without navigation or sending,
+and title updates when the selected workspace changes.
+
 The Project conversation panel previously replaced a requested workspace absent
 from its sidebar snapshot with the first linked sibling. A loading, filtered or
 stale snapshot could therefore change the destination. Issue workspace cards also

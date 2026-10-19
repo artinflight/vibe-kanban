@@ -54,6 +54,7 @@ try {
   for (const width of [390, 1440]) {
     const context = await browser.newContext({
       viewport: { width, height: 1000 },
+      hasTouch: width < 768,
     });
     try {
       await context.route('**/*', (route) =>
@@ -142,6 +143,43 @@ try {
         await header.getAttribute('title'),
         await header.textContent()
       );
+      const fullName = await header.textContent();
+      const navbarTitle = page.locator(
+        width < 768 ? '.mobile-app-header p' : 'nav p.text-xl'
+      );
+      await navbarTitle.hover();
+      assert.equal(await navbarTitle.getAttribute('title'), fullName);
+      assert.deepEqual(
+        await navbarTitle.evaluate((el) => ({
+          text: el.textContent,
+          overflow: getComputedStyle(el).textOverflow,
+          whiteSpace: getComputedStyle(el).whiteSpace,
+          clipped: el.scrollWidth > el.clientWidth,
+        })),
+        {
+          text: fullName,
+          overflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          clipped: true,
+        },
+        'Same full name remains available in the native hover title while visually truncated'
+      );
+      if (width < 768) {
+        await navbarTitle.tap();
+        assert.equal(await navbarTitle.textContent(), fullName);
+        assert.equal(await navbarTitle.getAttribute('title'), fullName);
+        assert.deepEqual(
+          await page.evaluate(() => window.fixture.navigations),
+          [],
+          'Touching the name must not navigate or send'
+        );
+        assert.deepEqual(await page.evaluate(() => window.fixture.calls), []);
+        assert.notEqual(
+          await navbarTitle.evaluate((el) => getComputedStyle(el).userSelect),
+          'none',
+          'The full DOM name remains available to native text selection; no tap tooltip is introduced'
+        );
+      }
       const sizes = await page.evaluate(() =>
         [...document.querySelectorAll('.text-xl')]
           .filter((n) => n.textContent.startsWith('Human workspace B'))
@@ -207,6 +245,11 @@ try {
         () => window.fixture.composer?.session?.workspace_id === 'C'
       );
       assert.match(await header.textContent(), /^Human workspace C/);
+      assert.equal(
+        await navbarTitle.getAttribute('title'),
+        await header.textContent(),
+        'Native title follows the newly selected workspace'
+      );
       await page.locator('#composer input').fill('Synthetic C browser prompt');
       await page
         .getByRole('button', { name: 'Synthetic send', exact: true })
@@ -218,7 +261,7 @@ try {
       );
       assert.deepEqual(errors, []);
       console.log(
-        `PASS hosted Chromium ${width}: full/embedded20px human headers, long-name containment, delayed record, displayed destination and exact synthetic prompt recipient.`
+        `PASS hosted Chromium ${width}: unchanged20px headers, native hover-title parity, ellipsis/full-name${width < 768 ? ' and touch without navigation/send' : ''}, long-name containment, delayed record, displayed destination and exact synthetic prompt recipient.`
       );
     } finally {
       await context.close();

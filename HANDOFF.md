@@ -1,3 +1,36 @@
+# October 19 3:33 p.m. EDT — cache owner acceptance and Disk retirement complete
+
+Disk retired ONLY the verified raw cache15:32:37EDT under exclusive owner/kernel
+leases. Net719,818,752 bytes before notes; archive/manifest/lease retained.
+NIGHTLY_CACHE_RETIREMENT_ACK_20261019 records exact Disk proof and remaining
+hydration shortfall:199,622,656 bytes before other future and phase stop margin.
+No new workload follows this receipt; restore-before-use remains mandatory.
+
+Read T26_NIGHTLY_CACHE_DEPENDENCY_20261019 in the private residual area, also
+/tmp/T26-NIGHTLY-CACHE-DEPENDENCY-20261019.json and Disk's cache-relief/
+NIGHTLY_OWNER_ADOPTION.json. Disk owns final source retirement under the exact
+accepted-baseline-index.sqlite.hydration.lease, not Nightly or a later agent.
+The manifest's canonicalSHA5882c593 binds the actual tar.zst archive, rawSHA,
+Linux metadata, exact lease identity and ten prepared consumer source hashes.
+The normal cache-consumer-entrypoint.private.py calls tested vk_verified_cache;
+use it with fresh real future/health/stop callbacks before any authorized reader.
+Do not edit/relaunch historical helpers or silently B-copy the missing cache.
+
+The archive is132,477,550 bytes, SHA86da513b; Disk's independent full GNU tar,
+raw checksum, SQLite integrity and metadata proof passed and was not replayed.
+Fifteen tiny hydration/guard/legacy-consumer tests pass. No real cache payload
+was read/restored by Nightly, no raw retirement performed and no new job admitted.
+Future hydration minimum2999787520 free bytes is raw scratch+2GiB floor only;
+add actual current owner futures and phase stop margin. Existing archive/resident
+data already appear in df. Never revive old419MB or assume RAM replacement.
+
+Catch-up PID2662536 is terminal10:52:08EDT. All49,971 names processed, one
+changing-rollout error,17 SQL bindings still require API disposition. Two new
+verified batches contain412 objects/142,351,986 stored encoded bytes. Preserve
+all observations, earlier1139 objects/137SQL/162.70GB proofs and original gaps.
+No current descriptor, journal/V3/final consumer or production acceptance follows
+from this cache relief. T18 remains priority; no automatic continuation.
+
 # October 19 10:50 a.m. EDT — collect the same self-contained continuation
 
 Do not rerun the original claim/launcher. Existing unit

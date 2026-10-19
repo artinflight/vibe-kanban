@@ -1,3 +1,24 @@
+# October 19 3:33 p.m. EDT — exact cache relief and restoration dependency complete
+
+Disk's exact retirement completed15:32:37EDT, net719,818,752 bytes before notes;
+the archive/manifest/lease persist. Hydration itself still needs separately
+available scratch above real floors/current future; no next workload is admitted.
+
+Current catch-up is terminal10:52EDT, not a running capture. Reuse its49,970
+observations,412 newly verified objects and exact changing-file/17SQL gaps.
+The full current recovery descriptor remains unaccepted.
+
+Disk's exact accepted-baseline-index.sqlite compression is supported through
+vk_verified_cache and the sealed private cache-consumer entrypoint. Fifteen
+small fixture tests passed, including actual PAX tar.zst format, nanosecond Linux
+metadata, byte-pinned direct-SQLite consumer and failclosed guard/lease cases.
+No actual cache hydration/capture/restore/retry or media workload was launched.
+Disk may retire only the verified raw cache after final checks under its shared
+owner lease. All original B/image/recovery chains and historical helpers persist.
+Future readers must restore identical cache bytes first under fresh actual
+scratch/floor/health admission; do not invoke the old copy generators or revive
+released planning balances. T18 priority and all other commitments are unchanged.
+
 # October 19 10:50 a.m. EDT — self-collecting retained continuation
 
 Preserve PID2662536/start52532540 and its unit

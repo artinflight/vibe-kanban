@@ -1,3 +1,40 @@
+# October 19 3:33 p.m. EDT — exact cache relief complete; hydration adopted
+
+Disk completed exact raw-cache retirement15:32:37EDT under owner/kernel leases
+after full proof/non-use checks:719,818,752 net allocated bytes recovered before
+small notes. Archive, sealed manifest/lease/entrypoint and all original B/recovery
+data remain. Latest Disk free2,800,164,864 bytes is199,622,656 below hydration's
+minimum before other future/stop, so no reader/workload admission is implied.
+
+The same current catch-up completed10:52:08EDT:49,971 paths processed,49,970
+observations and one changing-rollout gap,17 SQL API catch-up paths. Its412 new
+objects/142,351,986 actual stored encoded bytes passed native and independent
+readback in two batches. The142,352,524 counter includes deduplication effects;
+use batch receipts for actual stored demand. Terminal RESULT/LINEAGE_RESULT and
+all prior162.70GB/137SQL/original proofs remain intact; no current-set acceptance.
+
+Disk independently verified compression of only accepted-baseline-index.sqlite
+into its adjacent single-member PAX tar.zst:132,477,550 logical/132,485,120 allocated
+bytes, archiveSHA86da513b5a22755c7c4a2dc80d3941522f3012a2c7aa3462a67877cd02a43cc6.
+Its independent GNU tar restore, full rawSHA1a16e272, SQLite integrity and Linux
+metadata proof are reused, not repeated. Nightly found no active cache reader.
+The observer remains active and does not use this cache. Prepared helpers still
+depend on the cache, so source termination alone was not retirement clearance.
+
+vk_verified_cache supplies one restore-before-use entrypoint for byte-pinned
+consumers, with manifest/consumer hashes, owner lease, bounded streaming, exact
+ordinary PAX member, independent raw-file hash and metadata before immutable SQL.
+Fifteen tiny tests pass. The exact private manifest/lease/entrypoint and owner
+acceptance are beside the existing current-demand index and Disk cache proof.
+Disk owns final exclusive-lease/non-use checks and retirement of only its raw
+replica; Nightly has not removed it or started any recovery workload.
+
+Hydration needs at least852,303,872 bytes scratch plus unchanged2GiB, current
+once-charged future and actual stop margin. No released419MB balance, unused5GiB
+total or RAM-only replacement is introduced. Missing/invalid archives or failed
+admission block SQLite; no hidden B recapture. Current typed coverage, SQL/journal,
+V3/runtime and final Staging adoption remain open; no production/schedule change.
+
 # October 19 10:50 a.m. EDT — retained catch-up independently advances
 
 The original current catch-up stopped at10:07EDT on its agent-added8MiB control

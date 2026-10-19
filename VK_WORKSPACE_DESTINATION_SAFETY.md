@@ -8,6 +8,15 @@ accessibility and native text selection. Hosted desktop/narrow checks exercise
 the same long name, ellipsis, hover metadata, touch without navigation or sending,
 and title updates when the selected workspace changes.
 
+The project Dot sidebar also resolves its human workspace heading from the
+ID-validated workspace record, keeping the project name as context. A pending
+record shows a neutral workspace label; a delayed sibling response cannot rename
+the displayed destination. Linked workspace breadcrumbs expose their complete
+labels through native titles too. Existing header sizes and layout are retained.
+The mobile chat header uses the same exact-workspace branch fallback as desktop
+when a human name is unavailable. These corrections need only a frontend release;
+they add no read-state writes, pairing capability or backend reload requirement.
+
 The Project conversation panel previously replaced a requested workspace absent
 from its sidebar snapshot with the first linked sibling. A loading, filtered or
 stale snapshot could therefore change the destination. Issue workspace cards also

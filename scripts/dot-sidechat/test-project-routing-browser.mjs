@@ -106,6 +106,36 @@ try {
               ) && document.getElementById('message-note-' + d),
           d
         );
+        const heading = sidebar.locator(
+          '.project-collaboration-heading strong'
+        );
+        const expected =
+          d === 'project'
+            ? 'Synthetic project'
+            : 'Human workspace ' + d + ' — ' + 'Long human name '.repeat(12);
+        await page.waitForFunction(
+          (name) =>
+            document.querySelector('.project-collaboration-heading strong')
+              ?.textContent === name,
+          expected
+        );
+        assert.equal(await heading.getAttribute('title'), expected);
+        await heading.hover();
+        assert.equal(
+          await heading.evaluate((el) => getComputedStyle(el).fontSize),
+          '16px'
+        );
+        assert.equal(
+          await heading.evaluate((el) => getComputedStyle(el).textOverflow),
+          'ellipsis'
+        );
+        if (d !== 'project')
+          assert.ok(
+            await sidebar
+              .locator('.project-collaboration-heading span')
+              .textContent()
+              .then((text) => text.includes('Synthetic project'))
+          );
       }
       async function route(d) {
         await page.evaluate((d) => window.fixtureNavigate(d), d);
@@ -206,6 +236,8 @@ try {
       }
       const held = deferred();
       s.threadHolds.set('a', held);
+      const heldName = deferred();
+      s.workspaceHolds.set('a', heldName);
       await route('a');
       await open();
       await wait(() =>
@@ -213,14 +245,29 @@ try {
       );
       assert.equal(await page.locator('#message-note-project').count(), 0);
       assert.ok(await page.locator('button[type="submit"]').isDisabled());
+      assert.equal(
+        await sidebar
+          .locator('.project-collaboration-heading strong')
+          .textContent(),
+        'Workspace chat'
+      );
       await route('b');
       await ready('b');
       await input().fill('B isolated draft');
       s.threadHolds.delete('a');
       held.resolve();
+      s.workspaceHolds.delete('a');
+      heldName.resolve();
       await page.waitForTimeout(30);
       assert.equal(await input().inputValue(), 'B isolated draft');
       assert.equal(await page.locator('#message-note-a').count(), 0);
+      assert.ok(
+        (
+          await sidebar
+            .locator('.project-collaboration-heading strong')
+            .textContent()
+        ).startsWith('Human workspace b')
+      );
       // Multiple route changes in one event turn select only the final destination.
       await page.evaluate(() => {
         window.fixtureNavigate('a');

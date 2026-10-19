@@ -52,6 +52,7 @@ function Probe() {
       {!f.mobile && <div />}
       <Navbar
         workspaceTitle={workspace?.name || workspace?.branch}
+        breadcrumbs={f.breadcrumbs}
         mobileMode={f.mobile}
       />
     </div>

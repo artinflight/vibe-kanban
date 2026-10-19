@@ -142,6 +142,10 @@ try {
         });
       }
       if (category === 'Running') {
+        assert.equal(
+          await root.locator('[aria-label="Dot unread replies: 5"]').count(),
+          1
+        );
         assert.ok(
           await root.locator('[aria-label="Dot unread replies: 1"]').count()
         );
@@ -156,6 +160,49 @@ try {
       }
     }
     // A managed clean row remains readable and labeled after read/clear and reload.
+    async function section(category) {
+      if (width < 768) {
+        await page
+          .locator('.phone-workspace-tabs button')
+          .filter({ hasText: new RegExp('^' + category + '\\d+$') })
+          .click();
+        return page.locator('.phone-workspace-scroll');
+      }
+      return page
+        .getByRole('button', {
+          name: category === 'Attention' ? 'Needs Attention' : category,
+          exact: true,
+        })
+        .locator('..')
+        .locator('..');
+    }
+    for (const isRunning of [false, true]) {
+      await page.evaluate(
+        (running) =>
+          window.fixtureUpdate('running-unread', { isRunning: running }),
+        isRunning
+      );
+      for (const category of ['Running', 'Attention']) {
+        const root = await section(category);
+        const row = root
+          .locator('.mobile-workspace-card')
+          .filter({ hasText: 'Running unread' });
+        const present = category === (isRunning ? 'Running' : 'Attention');
+        await row.waitFor({ state: present ? 'attached' : 'detached' });
+        assert.equal(await row.count(), Number(present));
+        if (await row.count()) {
+          assert.equal(
+            await row.locator('[aria-label="Dot unread replies: 5"]').count(),
+            1
+          );
+          assert.equal(
+            await row.locator('[aria-label="Dot Needs Attention: 1"]').count(),
+            0
+          );
+        }
+      }
+    }
+    if (width < 768) await section('Ready');
     const clean = page
       .locator('.mobile-workspace-card')
       .filter({ hasText: 'Idle clean' });

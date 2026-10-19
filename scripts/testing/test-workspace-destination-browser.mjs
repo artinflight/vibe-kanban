@@ -259,6 +259,35 @@ try {
         await page.evaluate(() => window.fixture.calls.map((c) => c.id)),
         ['B-session', 'C-session']
       );
+      const selectedName = await header.textContent();
+      await page.evaluate((name) => {
+        window.fixture.breadcrumbs = [
+          { label: 'Synthetic linked project' },
+          { label: 'T-fixture' },
+          { label: name },
+        ];
+        window.fixture.render();
+      }, selectedName);
+      const workspaceCrumb = page
+        .locator(
+          width < 768 ? '.mobile-app-header span[title]' : 'nav span[title]'
+        )
+        .filter({ hasText: selectedName });
+      await workspaceCrumb.hover();
+      assert.equal(await workspaceCrumb.getAttribute('title'), selectedName);
+      assert.equal(
+        await workspaceCrumb.evaluate((el) => getComputedStyle(el).fontSize),
+        '20px'
+      );
+      assert.equal(
+        await workspaceCrumb.evaluate(
+          (el) => getComputedStyle(el).textOverflow
+        ),
+        'ellipsis'
+      );
+      assert.ok(
+        await page.evaluate(() => document.body.scrollWidth <= innerWidth + 1)
+      );
       assert.deepEqual(errors, []);
       console.log(
         `PASS hosted Chromium ${width}: unchanged20px headers, native hover-title parity, ellipsis/full-name${width < 768 ? ' and touch without navigation/send' : ''}, long-name containment, delayed record, displayed destination and exact synthetic prompt recipient.`

@@ -13,6 +13,7 @@ export async function projectRoutingBundle(
     'shared/hooks/useOrgContext': `export function useOrgContext(){return {membersWithProfilesById:new Map()}}`,
     'shared/hooks/useAppNavigation': `export function useAppNavigation(){return {}}`,
     'shared/providers/HostIdProvider': `export function useHostId(){return null}`,
+    'shared/lib/api': `export const workspacesApi={get:async id=>{const r=await fetch('/api/workspaces/'+id);if(!r.ok)throw Error('Workspace unavailable');return(await r.json()).data}}`,
   };
   const result = await build({
     entryPoints: [entry],
@@ -36,7 +37,7 @@ export async function projectRoutingBundle(
           b.onResolve(
             {
               filter:
-                /shared\/(hooks\/use(ProjectContext|OrgContext|AppNavigation)|providers\/HostIdProvider)/,
+                /shared\/(hooks\/use(ProjectContext|OrgContext|AppNavigation)|providers\/HostIdProvider|lib\/api)$/,
             },
             (args) => {
               const key = Object.keys(stubs).find((k) => args.path.endsWith(k));
@@ -82,6 +83,7 @@ export function routingState() {
     requests: [],
     sends: [],
     threadHolds: new Map(),
+    workspaceHolds: new Map(),
     sendHolds: new Map(),
     accepted: new Map(),
     messages: Object.fromEntries(
@@ -106,14 +108,31 @@ export function routingState() {
 }
 export function routingTransport(s) {
   return async (url, options = {}) => {
-    const route = url.split('/api/dot-sidechat/')[1];
-    if (!route) throw Error('Unexpected API ' + url);
     const result = (body, status = 200) => ({
       ok: status === 200,
       status,
       json: async () => structuredClone(body),
     });
     s.requests.push({ url, method: options.method ?? 'GET' });
+    if (
+      url.startsWith('/api/workspaces/') &&
+      (!options.method || options.method === 'GET')
+    ) {
+      const id = url.split('/').at(-1);
+      const d = Object.keys(ids).find((k) => ids[k] === id);
+      if (!['a', 'b'].includes(d)) throw Error('Unknown workspace record');
+      const hold = s.workspaceHolds.get(d);
+      if (hold) await hold.promise;
+      return result({
+        data: {
+          id,
+          name: 'Human workspace ' + d + ' — ' + 'Long human name '.repeat(12),
+          branch: 'vk/opaque-' + d,
+        },
+      });
+    }
+    const route = url.split('/api/dot-sidechat/')[1];
+    if (!route) throw Error('Unexpected API ' + url);
     if (route === 'session')
       return result({
         session_id: 'routing-fixture',

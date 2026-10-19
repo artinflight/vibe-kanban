@@ -22,7 +22,7 @@ const rows: WorkspacesSidebarWorkspace[] = [
     dotManaged: true,
     isRunning: true,
     hasUnseenActivity: true,
-    dotUnreadCount: 1,
+    dotUnreadCount: 5,
   },
   {
     id: 'running-attention',

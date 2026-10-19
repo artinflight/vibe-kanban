@@ -144,6 +144,7 @@ function NavbarBreadcrumbs({
               <button
                 type="button"
                 className="text-low hover:text-normal truncate cursor-pointer"
+                title={crumb.label}
                 onClick={crumb.onClick}
               >
                 {crumb.label}
@@ -154,6 +155,7 @@ function NavbarBreadcrumbs({
                   'truncate',
                   isLast ? 'text-xl font-semibold text-high' : 'text-low'
                 )}
+                title={crumb.label}
               >
                 {crumb.label}
               </span>

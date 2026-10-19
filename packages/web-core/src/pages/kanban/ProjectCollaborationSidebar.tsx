@@ -15,6 +15,7 @@ import {
   useDotWorkspaceNotifications,
 } from '@/shared/hooks/useDotNotifications';
 import { workspaceDotNotification } from '@/shared/lib/dotWorkspaceActivity';
+import { useWorkspaceRecord } from '@/shared/hooks/useWorkspaceRecord';
 import './project-collaboration.css';
 
 export type PlanningEntry = {
@@ -52,6 +53,10 @@ export function ProjectCollaborationSidebar({
   onNavigate: (action: () => void) => void;
 }) {
   const [tab, setTab] = useState<'chat' | 'plan'>('chat');
+  const { data: workspace } = useWorkspaceRecord(workspaceId ?? undefined);
+  const heading = workspaceId
+    ? workspace?.name || workspace?.branch || 'Workspace chat'
+    : projectName;
   useEffect(() => {
     if (chatRequest) setTab('chat');
   }, [chatRequest]);
@@ -72,10 +77,10 @@ export function ProjectCollaborationSidebar({
     >
       <header className="project-collaboration-heading">
         <div>
-          <strong>{projectName}</strong>
+          <strong title={heading}>{heading}</strong>
           <span>
             {workspaceId
-              ? 'Workspace chat · ' + workspaceId
+              ? projectName + ' · Workspace chat'
               : 'Project chat · Seamus & dot'}
           </span>
         </div>

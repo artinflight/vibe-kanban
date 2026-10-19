@@ -332,13 +332,14 @@ jobs:
         env:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/workspace-browser-tools/node_modules/playwright-core/index.mjs
           CHROME_BIN: /usr/bin/google-chrome
+          CHROMIUM_PATH: /usr/bin/google-chrome
         run: |
           npm install --prefix "$RUNNER_TEMP/workspace-browser-tools" --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright-core@1.59.1
           node scripts/testing/test-workspace-destination-browser.mjs
           export DOT_BASELINE_RELEASE="$GITHUB_WORKSPACE/packages/local-web/dist"
           export VK_TEST_OUTPUT="$RUNNER_TEMP/workspace-route-headers"
           node scripts/dot-sidechat/test-project-routing-browser.mjs
-          CHROMIUM_PATH="$CHROME_BIN" node scripts/dot-sidechat/test-sidebar-activity-browser.mjs
+          node scripts/dot-sidechat/test-sidebar-activity-browser.mjs
 
       - name: Check actual issue panel Close/reopen races
         env:

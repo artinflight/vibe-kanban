@@ -1,3 +1,34 @@
+# October 19 10:50 a.m. EDT — collect the same self-contained continuation
+
+Do not rerun the original claim/launcher. Existing unit
+vk-nightly-current-catchup-r1-resume2-20261019 owns PID2662536/start52532540.
+Read NIGHTLY_SAFE_SELF_COLLECTING_CHECKPOINT_20261019 in the existing private
+residual/shared area, then current-catchup-dcc4702e5fee401fac6199530b62f875/
+continuation2/{PROGRESS,RESULT,LINEAGE_RESULT,FAILURE,BATCHES}.private.json.
+The unit itself collects success or preserves RAM failure state; no second
+collector or active coding lane is required. Use host-visible PID/systemctl
+checks: the sandbox's /proc namespace can give a false absent-process result.
+
+Original38,554 observations and all1139 objects/538,646,910 encoded bytes are
+durably sealed on B, including full independent proofs. No941-object retransfer.
+At10:49:49 the continuation had13,519/49,971 paths; first42 new objects passed
+native plus independent readback. One changing history source is an honest gap,
+17 main SQL paths need API disposition and all2601 old font members are verified.
+
+The current16MiB control phase had5,013,504 bytes allocated/11,763,712 remaining.
+Protect actual T63 future9,793,536 bytes plus2GiB, not released T18/Caspian plans.
+T18 POD edits take priority. Keep new1MiB MP compact B demand separate from its
+old1MiB already inside the8,926,527,488 protected balance; no old media recharge.
+No additional Nightly bulk/validation phase is admitted by this checkpoint.
+
+Staging's real leased-provider proof passed10:23EDT; final consumer is UNBOUND.
+Use the five-error certificate3ef02096, retaining rawreadyfalse/errors; final
+changed-set closure is still needed. Bind actual current V3/d28 roots/2794 pins,
+not historical V2/font. Full canonical V3 reconstruction requires exact owner
+construction fields; an exploratory mismatch was rejected without adoption.
+Reuse accepted162.70GB,137 SQL and all prior supplements; original7783 gaps and
+new per-file epochs remain explicit. No deployment/schedule/root migration.
+
 # October 19 9:25 a.m. EDT — checkpoint and selected bodies verified
 
 The native B metadata checkpoint passed full SHA/SQLite readback at8:02EDT:

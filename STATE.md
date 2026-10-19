@@ -1,3 +1,40 @@
+# October 19 10:50 a.m. EDT — retained catch-up independently advances
+
+The original current catch-up stopped at10:07EDT on its agent-added8MiB control
+planning ceiling. Its38,554 observations and941 pending encoded objects were
+preserved. B-only follow-through sealed all four batches and full observation,
+journal and batch proofs at10:26EDT:1139 objects/538,646,910 encoded bytes, with
+independent raw-file readback. No source or DB recapture was needed for this save.
+
+After Disk's actual SSD relief, one cache-seeded continuation started10:43:48EDT:
+unit vk-nightly-current-catchup-r1-resume2-20261019, PID2662536/start52532540.
+At10:49:49 it had13,519/49,971 named/current-subtree paths,17 SQL catch-up paths,
+2601 historical font members verified and one explicitly changing history-file
+gap. Its first42 new objects/137,447,542 encoded bytes passed native and independent
+readback. This is component proof, not accepted current recovery coverage.
+
+The unit writes its own terminal RESULT/LINEAGE_RESULT or FAILURE with retained
+RAM objects and exact remaining names. No active coding lane, second collector,
+automatic retry or duplicate producer is needed. Read the existing private
+NIGHTLY_SAFE_SELF_COLLECTING_CHECKPOINT_20261019 and continuation2 receipts first.
+Accepted162.70GB restore,137 DB images, original archive and all epochs remain.
+
+Current once-charged SSD planning:16MiB new Nightly controls including stop margin,
+9,793,536 bytes T63 remaining and the unchanged2GiB physical floor. T18's old
+419,356,672 future allowance is released; resident media is not charged again.
+At10:49:49 Nightly controls used5,013,504 bytes with11,763,712 remaining. T18's POD
+work has priority; no optional parallel Nightly work or Desktop job is admitted.
+New B objects require measured native-rounded batch admission; the unchanged
+8,926,527,488 protected balance and new1MiB MP compact demand must be reconciled.
+
+Staging's actual leased-provider encoded/raw readback and control-failure/lease
+expiry checks passed10:23EDT. Five raw ENOENT journal errors remain preserved with
+conditional absence evidence, not full event closure. The current V3/d28 frontend
+and complete Python roots require explicit later immutable layers and exact2794
+pin binding; old V2/font scope is historical. Final composed coverage, changed SQL,
+journal closure and final descriptor/controller fence/producer adoption remain
+UNBOUND. No Nightly deployment, schedule, production switch or deletion occurred.
+
 # October 19 9:25 a.m. EDT — durable metadata and independent body proof
 
 The completed516,071,424-byte retained map is verified on native B (SHAbe243478,

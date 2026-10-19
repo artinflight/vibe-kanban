@@ -1,3 +1,18 @@
+# October 19 10:50 a.m. EDT — self-collecting retained continuation
+
+Preserve PID2662536/start52532540 and its unit
+vk-nightly-current-catchup-r1-resume2-20261019. The continuation reuses38,554
+retained observations and1139 B-verified objects; its first42 new objects passed
+independent readback. It writes its own terminal/failure checkpoint. An active
+coding turn is unnecessary while it proceeds; never start a replacement reader.
+
+Use the current private safe-checkpoint receipt for actual remaining controls
+inside the16MiB phase, T63's9,793,536 bytes and the2GiB floor. T18's released old
+allowance stays released and its POD priority gets practical execution availability.
+No optional parallel validation/bulk work. The accepted162.70GB/137DB proofs remain
+unchanged. Full current descriptor, changed SQL/journal closure, V3/d28 immutable
+scope and final Staging producer integration remain open; no production/schedule.
+
 # October 19 — finish the retained typed current baseline
 
 Reuse the independently accepted162.70GB cold set and137 API images. The complete

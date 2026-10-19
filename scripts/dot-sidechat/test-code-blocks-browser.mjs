@@ -86,8 +86,7 @@ try {
         };
         const original = JSON.stringify(s.messages),
           api = transport(s);
-        await context.addInitScript((theme) => {
-          document.documentElement.classList.toggle('dark', theme === 'dark');
+        await context.addInitScript(() => {
           document.hasFocus = () => false;
           window.testCopies = [];
           window.testDenyCopy = false;
@@ -99,7 +98,7 @@ try {
               },
             },
           });
-        }, theme);
+        });
         await context.route('**/*', async (route) => {
           const req = route.request(),
             u = new URL(req.url());
@@ -130,6 +129,14 @@ try {
             await page.locator('.dot-panel:visible').waitFor();
           };
           await page.goto(base + (project ? '/?project' : '/'));
+          await page.evaluate(
+            (theme) =>
+              document.documentElement.classList.toggle(
+                'dark',
+                theme === 'dark'
+              ),
+            theme
+          );
           await open();
           const blocks = page.locator('.dot-code-block');
           assert.equal(await blocks.count(), 2);

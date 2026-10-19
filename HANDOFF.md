@@ -3,7 +3,8 @@
 The one-shot final-result event is armed outside the unchanged active bundle.
 Use FULL_RECOVERED_SET_ACCEPTANCE.private.json after the existing collector ends;
 a base pass alone does not prove error-free, complete archived-Git verification.
-Sixteen predicate cases, four callback contracts and the real event fixture pass.
+Twenty-three predicate cases, five callback contracts, the real event fixture
+and native closed-Git-diagnostic checks pass.
 No extra payload job or automatic retry is armed. STATE.md has the acceptance scope.
 
 The retained-prefix audit passed at6:32p.m. EDT:1,377,791 complete members,

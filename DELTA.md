@@ -2052,3 +2052,9 @@ Preserved the active restore/controller/collector and added a tested one-shot
 completion-event predicate outside its sealed bundle.16 acceptance cases,4 callback
 contracts and the real event fixture pass; full actual readback/Git results remain
 pending. Exact original gaps and separate-epoch recovery options are retained.
+
+The final check also catches actual exit-zero Git corruption diagnostics:23
+predicate cases,5 callback contracts and native diagnostic SHA/nofollow checks
+pass. The existing one-shot event is resealed; the original restore stays active.
+T63's7:35p.m. frontend delta is separately bound to existing audited files and its
+verified B ZIP, with current baseline adoption still pending.

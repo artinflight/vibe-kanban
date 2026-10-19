@@ -1,3 +1,32 @@
+# October 19 1:50 a.m. EDT — defined recovered-set restore accepted
+
+The existing restore, collector and final acceptance event completed successfully;
+all worker leases are free. All 1,377,791 defined entries passed independent
+readback, including 162,704,613,801 regular-file bytes, 112 SQLite integrity checks,
+hardlink/symlink relationships and recorded numeric metadata. Original compressed
+and derived-prefix digests were reverified. Measured restored regular allocation
+is 165,741,731,840 bytes plus 538,644,480 selected-directory bytes; inode, VHD and
+unselected-parent overhead are additional. Native worker peak RSS was 1,334,236 KiB.
+No duplicate restore, audit or database capture was needed.
+
+Archive-only Git checks classified all 7,053 missing loose-object IDs: 507 semantic
+objects were verified from restored archived packs and 6,546 remain unresolved
+there. No unfinished checks, decoder errors, diagnostic output or unpaired packs
+remain. Of 258 missing refs-subtree names, 255 occur in archived packed-refs;
+three ancestor-like paths have no packed-ref mapping. This does not reconstruct
+original file types, loose-ref bytes or atomic repository state.
+
+The 7,783 original archive-member gaps remain historical gaps, including 46 Git
+object directories, 51 Caspian paths, 18 temporary/snapshot paths and 357 Zoho runtime
+tail paths. Passing the defined complete-member set does not accept the failed
+original capture/journal or current Restart baseline. Explicit historical SQL
+epochs do not establish a consistent current snapshot.
+The current frontend remains a separately B-backed release layer. Existing
+Staging receives the accepted dependency plus exact residual requirements:
+targeted gap recovery/disposition and a separately admitted consistent final
+current-data catch-up with current runtime bindings before baseline adoption.
+There is no deployment, schedule activation, cutover or archive-retirement claim.
+
 # October 18 — full acceptance includes archived-Git completion
 
 The running independent restore and its55-file sealed bundle are unchanged.

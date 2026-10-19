@@ -1,3 +1,15 @@
+# October 19 1:50 a.m. EDT — independent recovered-set proof complete
+
+The existing full restore and final checker passed independent readback of all
+defined entries, 112 SQLite integrity checks, metadata and archived-only Git
+classification. Preserve this accepted tree and the originals; do not duplicate
+the restore/audit. STATE.md and the existing private dependency handoff distinguish
+the 7,783 original gaps, 507 archive-recovered Git objects/6,546 unresolved IDs,
+historical SQL epochs and separately backed current frontend. The next integration
+is targeted residual coverage plus final current-data/runtime binding with the
+original Staging owner. Original-capture/current-baseline adoption, deployment,
+schedule activation, restart, cutover and retirement remain unaccepted/unauthorized.
+
 # October18 6:42p.m. EDT — audit complete; independent recovered-set restore active
 
 Continue the same recovered-set proof from the completed retained-prefix audit:

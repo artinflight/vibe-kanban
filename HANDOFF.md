@@ -1,3 +1,24 @@
+# October 19 1:50 a.m. EDT — accepted recovered-set dependency
+
+The same restore and final acceptance event passed. Read the actual
+FULL_RECOVERED_SET_ACCEPTANCE.private.json and existing shared owner receipts:
+all 1,377,791 defined entries, 162.70 GB regular payload, 112 SQLite integrity checks,
+links and recorded metadata pass independent readback. Controller/collector are
+terminal, leases free, and no retry is armed. Do not repeat the restore or audit.
+
+Archive-only Git recovered 507 of 7,053 missing loose-object IDs; 6,546 remain
+unresolved from archived bytes. All checks completed without decoder diagnostics
+or unpaired packs. Archived packed-refs contains 255 of 258 refs-subtree gap names.
+The 7,783 original-member gaps and original journal failure remain explicit.
+Original 111 sealed SQL images and the recorded extra seed keep their old epochs.
+Current frontend bytes are separately B-backed, not added to the original archive.
+
+Existing Staging can reuse this historical recovery dependency. Restart baseline
+adoption still needs targeted residual coverage recovery/disposition and a
+separately admitted final consistent current-data catch-up/current-pin binding.
+No production deployment, schedule, restart, cutover or deletion is authorized.
+STATE.md records measured allocation and acceptance boundaries.
+
 # October18 6:42p.m. EDT — audit complete; independent recovered-set restore active
 
 The one-shot final-result event is armed outside the unchanged active bundle.

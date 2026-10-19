@@ -1,3 +1,38 @@
+# October 19 7:12 a.m. EDT — retained source complete; RAM map recovery
+
+The original reader2752444 and its collector are terminal. Preserve their failed
+stream/cache and receipts. The authenticated complete prefix has1,024,890 rows;
+only its missing lexical suffix was read. RESUME2_RESULT records success at
+7:05a.m. EDT:1,406,810 records, no source failures,137 SQL bindings and2629 old
+runtime pins. This is mixed observation data, not current-backup acceptance.
+
+The suffix collector then retained a92,893,184-byte partial SQLite overlay when
+its448MiB metadata planning ceiling was exceeded. Do not remove it or recapture
+sources. The next separately admitted existing-owner unit is
+`vk-nightly-retained-ram-map-r1-20261019`: bounded2GiBRAM/Swap0/CPU25%, at most48MiB
+additional compressed checkpoint/receipts on SSD, no B payload. Read current-content
+RAM_PROGRESS, RAM_MAP_RESULT, then RAM_RESULT or RAM_FAILURE. The48MiB is a new
+measured-engineering phase allowance, not a reset/lowered lifetime user quota.
+
+Raw observerfa1097 retains two ENOENT enrollment errors at vanished .aws/.agents
+subtrees. Corrected kernel/event witness exists, but raw readyfalse/errors remain
+unchanged. STAGING_VANISHED_SUBTREE_CONSUMER_READBACK permits a reviewed explicit
+typed closure adapter, not filtering errors or adoption of the existing interface.
+It requires exact sequence/error/parent subscription identities, absence and
+subtree/event reconciliation, then continuing catch-up and real final fence/SQL.
+
+T63 font3cd0a6e63 is actually live since6:55:29a.m. EDT. Corrected font addendum
+accounts for2601 files through2494 base carriers,53 earlier ZIP members and54 font
+ZIP members. Actual ZIP selectors start frontend/. Preserve old roots/packages;
+new immutable scope and hardlink normalization must join the final map. The old
+2629 pins alone do not bind the new current frontend. Existing Staging review is
+complete; no deployment/operational adoption was performed.
+
+Reuse accepted162.70GB/137SQL/Git/Zoho proofs. Original missing bytes/epochs remain
+explicit. Before any new B transfer, collect actual selected-object demand and
+fresh once-charged MP/Disk/native allocation balances. Preserve all source,
+partials and history. No production/schedule/cutover/archive retirement authority.
+
 # October 19 6:13 a.m. EDT — existing reader plus bounded typed follow-through
 
 Keep source reader PID2752444/start50470539 and observer2707226 unchanged. Latest

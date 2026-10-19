@@ -542,6 +542,51 @@ def read_rows(stream, *, expected_sha256, expected_count):
         raise ValueError('sealed reconciliation length/digest differs')
 
 
+def retained_prefix(stream, *, encoded_sha256, encoded_bytes, complete_sha256,
+                    complete_count, partial_sha256, partial_bytes, last_name):
+    """Read authenticated complete records from a failed, unterminated stream.
+
+    This authenticates a bounded prefix only. Its excluded partial record never
+    becomes a member, and callers still need explicit suffix/journal coverage.
+    Exhaust the iterator before accepting derived output; preserve original bytes.
+    """
+    decoder = zlib.decompressobj(); pending_line = b''
+    encoded = hashlib.sha256(); complete = hashlib.sha256()
+    size = count = 0; previous = None
+    while block := stream.read(BLOCK):
+        size += len(block); encoded.update(block)
+        if size > encoded_bytes:
+            raise ValueError('retained prefix encoded bound differs')
+        pending = block
+        while pending:
+            raw = decoder.decompress(pending, BLOCK)
+            pending = decoder.unconsumed_tail
+            if decoder.unused_data:
+                raise ValueError('retained prefix contains trailing stream')
+            pending_line += raw
+            lines = pending_line.split(b'\n'); pending_line = lines.pop()
+            for line in lines:
+                if len(line) > MAX_ROW:
+                    raise ValueError('excessive retained row')
+                row = json.loads(line); name = key(row['name'])
+                if previous is not None and name <= previous:
+                    raise ValueError('retained prefix order differs')
+                if 'unaccepted_source_error' in row:
+                    raise ValueError('retained prefix has source failure')
+                previous = name; count += 1; complete.update(line + b'\n')
+                if count > complete_count:
+                    raise ValueError('retained prefix record count differs')
+                yield row
+            if len(pending_line) > MAX_ROW:
+                raise ValueError('excessive retained partial row')
+    if (decoder.eof or decoder.unused_data or decoder.unconsumed_tail
+            or size != encoded_bytes or encoded.hexdigest() != digest(encoded_sha256)
+            or count != complete_count or complete.hexdigest() != digest(complete_sha256)
+            or previous != last_name or len(pending_line) != partial_bytes
+            or hashlib.sha256(pending_line).hexdigest() != digest(partial_sha256)):
+        raise ValueError('retained prefix identity differs')
+
+
 def build_overlay(base, output, observations, *, sql_components, source_body_index,
                   verified_carriers=None, checkpoint=lambda: None):
     """Derive a consolidated map and minimal whole-body/prefix-tail requests.
@@ -625,8 +670,17 @@ def build_overlay(base, output, observations, *, sql_components, source_body_ind
                         segments.append(dict(layer='accepted-base', selector=target,
                                              bytes=start, sha256=old['sha256']))
                     request_id = checksum({'sha256': row['sha256'], 'bytes': row['bytes'], 'start': start})
-                    body = source_body_index.execute('select bytes,mode,uid,gid,mtime,ctime,sha from bodies where dev=? and ino=?',
-                                                     (observation['source_device'], observation['source_inode'])).fetchone()
+                    observed_fp = observation.get('recorded_body_fingerprint')
+                    if observed_fp is not None:
+                        if (not isinstance(observed_fp, list) or len(observed_fp) != 6
+                                or any(type(v) is not int for v in observed_fp)
+                                or observed_fp[:4] != [row['bytes'], stat.S_IFREG | row['mode'], row['uid'], row['gid']]
+                                or observed_fp[4] != row['mtime_ns']):
+                            raise ValueError('sealed body fingerprint differs from member')
+                        body = (*observed_fp, bytes.fromhex(digest(row['sha256'])))
+                    else:
+                        body = source_body_index.execute('select bytes,mode,uid,gid,mtime,ctime,sha from bodies where dev=? and ino=?',
+                                                         (observation['source_device'], observation['source_inode'])).fetchone()
                     if body is None or body[0] != row['bytes'] or bytes(body[6]).hex() != row['sha256']:
                         raise ValueError('source-body identity changed within reconciliation')
                     request = {'id': request_id, 'source': '/' + name, 'start': start,

@@ -1,3 +1,48 @@
+# October 19 7:12 a.m. EDT — source recovery complete; typed map still unaccepted
+
+The source reader ended6:45:59a.m. EDT on its combined RAM/swap/SSD predicate;
+the exact failing operand was not logged. Retained-prefix audit verified1,024,890
+complete ordered rows with no source errors;67 partial record bytes remain
+excluded, the unterminated original compressed bytes unchanged. Its preserved
+SQLite cache passes quick-check with871,635 bodies/155,117,795,573 logical bytes.
+
+Only missing lexical paths were then observed. The successful7:05:01 suffix result
+adds381,920 records and5,020,278,486 freshly hashed bytes, for1,406,810 total rows,
+zero source failures,137 consistent SQL component paths and all2629 earlier pins.
+New source/metadata epochs and journal changes remain explicit, not a single
+original-epoch snapshot. No full database capture, cold restore or body-prefix
+replay occurred. The suffix collector retained its partial overlay when the
+448MiB control planning ceiling was crossed. Actual partial SQLite92,893,184 bytes
+compresses to11,760,322 zlib1 bytes. It is preserved, not discarded as disposable.
+
+A separately admitted metadata recovery uses bounded2GiBRAM/Swap0/CPU25% and up to
+48MiB additional SSD checkpoint/receipt space, protecting the literal2GiB plus
+419,356,672-byte floor, Caspian256MiB and T63 next8MiB. This is an explicit next
+phase justified by actual compression and fresh shared capacity, not an immutable
+user quota or cap reset. No B payload/remaining layer admission is implied.
+
+The observer raw state remains unready with two watch_failed errno2 entries under
+worktree .aws/.agents subtrees. Corrected read-only kernel witness finds current
+absence, recorded parent deletion events and matching parent inode subscriptions;
+no overflow is reported. This is not accepted coverage by itself. Existing Staging
+source review permits a separately reviewed typed vanished-enrollment resolution
+contract with exact errors/sequence/parent identities, complete changed subtree
+reconciliation and continuing failclosed checks. It explicitly rejects filtering
+raw errors, forging readytrue or calling the current interface already adopted.
+
+T63 font3cd0a6e63 published6:55:29a.m. EDT, with2601-member manifest72109450... .
+A metadata-only new-root plan resolves all files to2494 accepted base bodies,
+53 prior frontend ZIP bodies and54 font ZIP bodies; no new frontend payload is
+needed. Correct actual ZIP selectors use frontend/ prefixes. The new immutable
+root requires explicit scope/pin/hardlink integration and independent composed
+readback; prior2629 pins/package and old observer scope are earlier evidence.
+
+The authenticated dependency plan binds21 existing proof receipts and all137 SQL
+maps. Accepted162.70GB cold readback, both Git repairs/full93293-owned-object closure,
+Zoho and current SQL proofs are reused. All original historical gaps, including68
+unavailable Git object IDs, remain explicit. No current typed descriptor, controller
+adoption, operational backup/schedule or production switch has been accepted.
+
 # October 19 6:13 a.m. EDT — typed reader prepared; current source proof active
 
 The same current-source reader (PID 2752444/start 50470539) has reconciled

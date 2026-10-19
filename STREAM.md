@@ -1,3 +1,19 @@
+# October 19 — finish retained source map and explicit coverage closure
+
+The missing-suffix recovery completed7:05a.m. EDT with1,406,810 records and zero
+source failures, reusing the authenticated1,024,890-row prefix and preserved body
+cache. No accepted162.70GB restore,137SQL image set or original body prefix was
+repeated. The disk overlay hit its metadata planning ceiling; preserve it and
+follow the one separately admitted bounded RAM/compressed-checkpoint continuation.
+
+Current acceptance gaps are explicit: complete map/new-layer measurement and
+independent composed proof; reviewed typed resolution of the two vanished-watch
+ENOENT gaps without changing raw journal errors; actual typography immutable
+root/scope/pins and source-only Staging controller/catch-up rehearsal. The font
+source3cd0a6e63 published6:55a.m. EDT is a later layer, not old observer coverage.
+Twenty-one reader tests plus suffix/cache fixtures pass. No B transfer, production
+switch, schedule, denied storage-feature pair or original-data deletion.
+
 # October 19 — compose the retained current proof without another capture
 
 The existing full-source reconciliation is active, not accepted. One collector

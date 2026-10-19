@@ -12,7 +12,7 @@ import zipfile
 
 from vk_typed_recovery import (FORMAT, ComposedIndex, HeldRecoverySet, LocalDependencies,
                                build_overlay, canonical, checksum, held_index, read_rows)
-from vk_typed_recovery import bind_components, verify_overlay_contents
+from vk_typed_recovery import bind_components, retained_prefix, verify_overlay_contents
 
 
 class TypedRecoveryTests(unittest.TestCase):
@@ -286,6 +286,43 @@ class TypedRecoveryTests(unittest.TestCase):
         self.assertNotIn('pending_content_request', sealed)
         self.assertEqual(sealed['segments'][0], prefix)
         self.assertEqual(sum(s['bytes'] for s in sealed['segments']), len(self.body))
+
+    def test_retained_unsealed_prefix_requires_exact_partial_and_encoded_identity(self):
+        rows = [dict(name='home/a', kind='directory'), dict(name='home/b', kind='directory')]
+        complete = b''.join(canonical(r) + b'\n' for r in rows)
+        partial = b'{"name":"home/c"'
+        compressor = zlib.compressobj()
+        encoded = compressor.compress(complete + partial) + compressor.flush(zlib.Z_SYNC_FLUSH)
+        args = dict(encoded_sha256=hashlib.sha256(encoded).hexdigest(), encoded_bytes=len(encoded),
+                    complete_sha256=hashlib.sha256(complete).hexdigest(), complete_count=2,
+                    partial_sha256=hashlib.sha256(partial).hexdigest(), partial_bytes=len(partial), last_name='home/b')
+        self.assertEqual(list(retained_prefix(io.BytesIO(encoded), **args)), rows)
+        for change in ({'complete_count': 1}, {'partial_bytes': 0}, {'last_name': 'home/c'},
+                       {'encoded_sha256': 'f' * 64}, {'complete_sha256': 'f' * 64},
+                       {'partial_sha256': 'f' * 64}):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                list(retained_prefix(io.BytesIO(encoded), **{**args, **change}))
+        with self.assertRaises(ValueError):
+            list(retained_prefix(io.BytesIO(encoded + b'extra'), **args))
+        with self.assertRaises(ValueError):
+            list(retained_prefix(io.BytesIO(zlib.compress(complete)), **args))
+
+    def test_sealed_suffix_fingerprint_can_replace_retained_cache_lookup(self):
+        base = sqlite3.connect(self.base / 'index.sqlite'); self.addCleanup(base.close)
+        row = dict(name='home/state/new', **self.file(b'new'), source_device=1, source_inode=2,
+                   recorded_body_fingerprint=[3, 0o100600, os.getuid(), os.getgid(), 123, 456])
+        for malformed in (False, True):
+            overlay = sqlite3.connect(':memory:'); self.addCleanup(overlay.close)
+            observation = copy.deepcopy(row)
+            if malformed:
+                observation['recorded_body_fingerprint'][0] = 4
+                with self.assertRaisesRegex(ValueError, 'fingerprint differs'):
+                    build_overlay(base, overlay, [observation], sql_components={}, source_body_index=None)
+            else:
+                result = build_overlay(base, overlay, [observation], sql_components={}, source_body_index=None)
+                self.assertEqual(result['member_count'], 1)
+                request = json.loads(overlay.execute('select row from requests').fetchone()[0])
+                self.assertEqual(request['recorded_body_fingerprint'], row['recorded_body_fingerprint'])
 
 
 if __name__ == '__main__':

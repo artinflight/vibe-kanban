@@ -1,3 +1,45 @@
+# October 19 4:32 a.m. EDT — current SQLite component restore accepted
+
+The accepted 162.70 GB recovered set and all 111 original sealed SQL images are
+unchanged. A later, explicitly epoch-labelled Git supplement independently verifies
+6,478 additional object IDs (281,122,995 logical bytes; 110,313,997 pack bytes).
+Sixty-eight original IDs remain unavailable from checked sources; none occurs in
+the observed current refs/reflogs graph. This is not original archive inclusion.
+The Zoho tail's 357 entries passed independent restore, completing the current
+1,559-entry environment with 1,202 hash/metadata-matching base entries.
+
+The current-data component set now independently restores all 137 SQLite images:
+5,416,636,416 bytes from 1,257,294,574 compressed B bytes. Every image passes full
+file readback, SQLite integrity, schema and recorded mode/UID/GID checks. Epochs
+are per store, not an atomic host transaction. A transient Windows control-file
+sharing failure retained 103 complete images; recovery revalidated their source
+hashes and preserved partials. The last 2.436 GB image could not serialize into
+one in-memory buffer. Four committed-WAL/bounds fixtures validate backup API to a
+checked tmpfs RAM file, avoiding serialization, VACUUM, source mutation and disk
+scratch. It finished using the same B set and 136 sealed images, then removed
+only its verified RAM scratch. Measured MCP peak: 4,646,084,608 bytes, zero swap.
+
+The fresh metadata census retains all 100 original source paths, expands current
+runtime coverage to 111 roots and hashes all 2,629 runtime pins. Census metadata
+alone is not complete current content acceptance. The new exact-file-root journal
+fix has six real inotify checks plus 18 existing restart-baseline checks passing;
+required artifact/manifest roots previously enrolled no watches.
+
+Caspian has candidate archived versions elsewhere for 32 of 51 old missing paths;
+19 have no version in the checked retained/current locations. These candidates do
+not establish unknown original untracked edits. Original gaps remain explicit.
+An additional archived-ref/reflog closure check found eight missing graph roots;
+all 1,603 archived roots are available from current Git. A minimal later-epoch
+semantic repair is being reconciled, without claiming the old graph is complete.
+
+The original Staging owner confirms a complete, versioned typed current set may
+feed a reviewed controller adapter; NightlyStore is not an inherent requirement.
+It still needs the complete current member/body/tombstone map, a fresh valid
+journal anchor, authenticated leased readers, final-delta contract and copied-data
+rehearsal. The old Oct15 callback is not wired to the new proof. Current 2,629 pins
+and live frontend/adapter remain bound; future Staging SSD/B allocation is zero.
+No deployment, schedule activation, production switch or denied storage pair.
+
 # October 19 1:50 a.m. EDT — defined recovered-set restore accepted
 
 The existing restore, collector and final acceptance event completed successfully;

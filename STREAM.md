@@ -1,3 +1,20 @@
+# October 19 — current components verified; composed baseline still open
+
+The accepted historical cold restore is unchanged. Independently verified later
+layers cover 6,478 Git objects, the 357-entry dependency tail, and all 137 consistent
+current SQLite images (5.417 GB raw, 1.257 GB compressed). Exact original gaps and
+per-store epochs remain explicit. The current-runtime source plan retains all
+100 old source paths, adds the agreed runtime closure to 111 roots and verifies
+2,629 pins. The exact-file-root journal correction is tested.
+
+Continue fresh whole-scope current-body/root/tombstone reconciliation, archived
+ref/reflog dependency repair, a leased typed reader and final-catch-up contract,
+then the existing Staging owner's source-only/copied-data adapter rehearsal.
+Staging confirms the typed format is valid in principle; no legacy callback is
+already wired. Reuse the accepted cold proof and valid components instead of
+another full copy. No production switch, schedule, archive retirement or denied
+storage-feature pair is authorized.
+
 # October 19 1:50 a.m. EDT — independent recovered-set proof complete
 
 The existing full restore and final checker passed independent readback of all

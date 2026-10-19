@@ -1,3 +1,22 @@
+# October 19 4:32 a.m. EDT — current-data proof and remaining coverage
+
+Do not repeat the accepted 162.70 GB restore, the 6,478-object Git supplement,
+Zoho's 357-entry restore or the now-completed 137-image SQLite proof. Read the
+existing private residual-coverage/current-SQL-components/RESULT receipt: all
+137 pass independent readback/integrity/schema and recorded mode/ownership;
+5,416,636,416 raw bytes occupy 1,257,294,574 compressed B bytes. All old epochs,
+original sealed images, partials and the accepted tree remain preserved.
+
+Staging's STAGING_TYPED_CURRENT_RECOVERY_CONSUMER_READBACK_20261019 receipt permits
+a typed complete current set with authenticated leased readers and supported final
+catch-up; it does not require re-encoding all recovered data into NightlyStore.
+No adapter is yet wired. Full fresh source-body/index/tombstone reconciliation and
+valid new journal continuity remain necessary. All 100 original source paths stay
+selected, with 111 current roots and 2,629 runtime pins. Historical original gaps
+must not be relabelled as current captures. Archived graph root repair is targeted;
+68 missing old IDs and the Caspian candidate/unknown distinction stay explicit.
+Use existing job results and coordination; no production or schedule authority.
+
 # October 19 1:50 a.m. EDT — accepted recovered-set dependency
 
 The same restore and final acceptance event passed. Read the actual

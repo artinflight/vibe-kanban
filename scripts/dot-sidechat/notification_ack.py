@@ -98,7 +98,7 @@ def inventory(store, principal, workspace_id, after=0, limit=50, through=None):
         if type(through) is not int or not after <= through <= high:
             raise Rejected('Invalid notification snapshot')
         rows = store.db.execute(SELECT+''' WHERE m.thread=? AND m.role='dot'
-            AND m.seq>? AND m.seq<=? AND (d.message IS NULL OR d.workspace=?)
+            AND m.seq>? AND m.seq<=? AND m.workspace=?
             ORDER BY m.seq LIMIT ?''', (principal.owner, thread, after, through, workspace_id, limit+1)).fetchall()
         selected = rows[:limit]
         result = {'workspace_id': workspace_id, 'thread_id': thread, 'through': through,
@@ -129,7 +129,7 @@ def acknowledge(store, principal, workspace_id, items):
         # Entire batch is owner/thread/workspace validated before any update.
         for item in items:
             row = store.db.execute(SELECT+''' WHERE m.thread=? AND m.id=? AND m.role='dot'
-                AND (d.message IS NULL OR d.workspace=?)''',
+                AND m.workspace=?''',
                 (principal.owner, thread, item['message_id'], workspace_id)).fetchone()
             if item['thread_id'] != thread or not row:
                 raise Rejected('Selected notification unavailable in this workspace')

@@ -307,19 +307,23 @@ class Store:
         rows=self.db.execute("""SELECT t.project,t.issue,
           SUM(CASE WHEN s.seen=0 THEN 1 ELSE 0 END) AS unread_count,
           SUM(CASE WHEN s.attention_kind IS NOT NULL AND s.resolved=0 THEN 1 ELSE 0 END) AS needs_attention_count,
-          SUM(CASE WHEN d.message IS NULL AND s.seen=0 THEN 1 ELSE 0 END) AS shared_unread_count,
-          SUM(CASE WHEN d.message IS NULL AND s.attention_kind IS NOT NULL AND s.resolved=0 THEN 1 ELSE 0 END) AS shared_needs_attention_count
+          SUM(CASE WHEN bound.workspace IS NULL AND s.seen=0 THEN 1 ELSE 0 END) AS shared_unread_count,
+          SUM(CASE WHEN bound.workspace IS NULL AND s.attention_kind IS NOT NULL AND s.resolved=0 THEN 1 ELSE 0 END) AS shared_needs_attention_count
           FROM threads t JOIN messages m ON m.thread=t.id AND m.role='dot'
-          JOIN dot_reply_state s ON s.message=m.id LEFT JOIN dispatch_notes d
-            ON d.message=m.id AND d.thread=t.id AND d.owner=t.owner AND d.workspace=m.workspace
+          JOIN dot_reply_state s ON s.message=m.id LEFT JOIN scopes bound
+            ON bound.owner=t.owner AND bound.project=t.project AND bound.issue=t.issue AND bound.workspace=m.workspace
           WHERE t.owner=? GROUP BY t.project,t.issue""",(principal.owner,)).fetchall()
-        workspace_rows=self.db.execute("""SELECT t.project,t.issue,d.workspace,
+        # Shared history does not imply shared notification scope. Stored message
+        # destinations must match an existing trusted scope; never infer a target
+        # from dispatch provenance, siblings, text or a legacy unknown workspace.
+        workspace_rows=self.db.execute("""SELECT t.project,t.issue,m.workspace,
           SUM(CASE WHEN s.seen=0 THEN 1 ELSE 0 END) AS unread_count,
           SUM(CASE WHEN s.attention_kind IS NOT NULL AND s.resolved=0 THEN 1 ELSE 0 END) AS needs_attention_count
           FROM threads t JOIN messages m ON m.thread=t.id AND m.role='dot'
-          JOIN dot_reply_state s ON s.message=m.id JOIN dispatch_notes d
-            ON d.message=m.id AND d.thread=t.id AND d.owner=t.owner AND d.workspace=m.workspace
-          WHERE t.owner=? GROUP BY t.project,t.issue,d.workspace""",(principal.owner,)).fetchall()
+          JOIN dot_reply_state s ON s.message=m.id JOIN scopes bound
+            ON bound.owner=t.owner AND bound.project=t.project AND bound.issue=t.issue AND bound.workspace=m.workspace
+          WHERE t.owner=? AND t.issue!=('project:'||t.project)
+          GROUP BY t.project,t.issue,m.workspace""",(principal.owner,)).fetchall()
         return {'issues':[{'project_id':r['project'],'issue_id':r['issue'],
           'unread_count':r['unread_count'],'needs_attention_count':r['needs_attention_count'],
           'shared_unread_count':r['shared_unread_count'],'shared_needs_attention_count':r['shared_needs_attention_count']}

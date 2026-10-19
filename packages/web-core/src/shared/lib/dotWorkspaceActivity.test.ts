@@ -22,15 +22,15 @@ const dispatch = {
   needs_attention_count: 0,
 };
 
-test('target adds dispatch; siblings retain only the genuine shared conversation', () => {
+test('only explicit target rows badge workspaces; shared history does not fan out', () => {
   assert.equal(
     workspaceDotNotification('i', aggregate, dispatch)?.unread_count,
-    2
+    1
   );
-  assert.equal(workspaceDotNotification('i', aggregate)?.unread_count, 1);
+  assert.equal(workspaceDotNotification('i', aggregate)?.unread_count, 0);
   assert.equal(
     workspaceDotNotification('i', aggregate)?.needs_attention_count,
-    1
+    0
   );
   assert.equal(aggregate.unread_count, 2, 'Issue aggregate remains intact');
 });
@@ -59,7 +59,7 @@ test('legacy service, dispatch-only lookup, relink and unlinked workspaces', () 
     unread_count: 2,
     needs_attention_count: 1,
   };
-  assert.equal(workspaceDotNotification('i', legacy)?.unread_count, 2);
+  assert.equal(workspaceDotNotification('i', legacy)?.unread_count, 0);
   assert.equal(
     workspaceDotNotification('i', undefined, dispatch)?.unread_count,
     1
@@ -70,20 +70,49 @@ test('legacy service, dispatch-only lookup, relink and unlinked workspaces', () 
   );
   assert.equal(workspaceDotNotification(null, aggregate, dispatch), undefined);
   assert.equal(workspaceDotNotification('i'), undefined);
+  assert.equal(
+    workspaceDotNotification('project:p', aggregate, dispatch),
+    undefined
+  );
 });
 
-test('explicit dispatch attention is additive only on its target', () => {
+test('explicit attention remains independent only on its target', () => {
   assert.equal(
     workspaceDotNotification('i', aggregate, {
       ...dispatch,
       needs_attention_count: 1,
     })?.needs_attention_count,
-    2
+    1
   );
   assert.equal(
     workspaceDotNotification('i', aggregate)?.needs_attention_count,
-    1
+    0
   );
+});
+
+test('new substantive target message after cleanup never recreates four sibling badges', () => {
+  // No dispatch receipt is involved; stale issue totals cannot create a target.
+  for (const [unread, attention] of [
+    [1, 0],
+    [1, 1],
+    [0, 1],
+    [1, 1],
+    [0, 0],
+  ]) {
+    const target = {
+      ...dispatch,
+      unread_count: unread,
+      needs_attention_count: attention,
+    };
+    const actual = workspaceDotNotification('i', aggregate, target);
+    assert.equal(actual?.unread_count, unread);
+    assert.equal(actual?.needs_attention_count, attention);
+    for (const siblingId of ['B', 'C', 'D', 'E']) {
+      const sibling = workspaceDotNotification('i', aggregate);
+      assert.equal(sibling?.unread_count, 0, siblingId);
+      assert.equal(sibling?.needs_attention_count, 0, siblingId);
+    }
+  }
 });
 
 test('management requires an explicit exact association, independent of counts', () => {

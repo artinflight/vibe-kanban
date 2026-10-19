@@ -34,25 +34,20 @@ export function workspaceDotManaged(
   );
 }
 
-// Issue badges retain aggregate counts. Workspace badges combine the shared
-// conversation with only that workspace's verified dispatch receipts.
+// Shared history remains available. Only explicit workspace notification rows
+// badge a workspace; issue aggregates and legacy unknown scope do not fan out.
 export function workspaceDotNotification(
   issueId: string | null,
   issue?: DotNotification,
-  dispatch?: DotWorkspaceNotification
+  workspace?: DotWorkspaceNotification
 ): DotNotification | undefined {
-  if (!issueId) return undefined;
-  const scoped = dispatch?.issue_id === issueId ? dispatch : undefined;
+  if (!issueId || issueId.startsWith('project:')) return undefined;
+  const scoped = workspace?.issue_id === issueId ? workspace : undefined;
   if (!issue && !scoped) return undefined;
   return {
     project_id: issue?.project_id ?? scoped!.project_id,
     issue_id: issueId,
-    unread_count:
-      (issue?.shared_unread_count ?? issue?.unread_count ?? 0) +
-      (scoped?.unread_count ?? 0),
-    needs_attention_count:
-      (issue?.shared_needs_attention_count ??
-        issue?.needs_attention_count ??
-        0) + (scoped?.needs_attention_count ?? 0),
+    unread_count: scoped?.unread_count ?? 0,
+    needs_attention_count: scoped?.needs_attention_count ?? 0,
   };
 }

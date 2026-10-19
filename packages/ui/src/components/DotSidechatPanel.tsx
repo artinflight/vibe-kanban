@@ -1,4 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { DotMessageBody } from './DotMessageBody';
+
+export interface SidechatReplyReference {
+  id: string;
+  seq: number;
+  role: 'owner' | 'dot';
+  created: number;
+  excerpt: string;
+  truncated?: boolean;
+  unavailable?: boolean;
+}
 
 export interface SidechatMessage {
   id: string;
@@ -8,6 +19,19 @@ export interface SidechatMessage {
   workspace: string;
   created: number;
   seen?: boolean;
+  manual_unread?: boolean;
+  in_reply_to?: string;
+  reply_reference?: SidechatReplyReference;
+  dispatch_note?: {
+    workspace_id: string;
+    execution_id: string;
+    presentation?: {
+      author_label: string;
+      body: string;
+      derived: boolean;
+      stored_message_unchanged: boolean;
+    };
+  };
   attention?: { kind: 'question' | 'action'; resolved: boolean } | null;
 }
 
@@ -25,7 +49,11 @@ export interface DotSidechatPanelProps {
     message: string,
     action: 'action' | 'resolve' | 'reopen'
   ) => void;
+  onReadState?: (message: string, action: 'read' | 'unread') => Promise<void>;
   draftLocked?: boolean;
+  replyTarget?: SidechatReplyReference | null;
+  replyEnabled?: boolean;
+  onReplyTarget?: (message: string | null) => void;
   messages: SidechatMessage[];
   receipts: Record<string, SidechatReceipt>;
   issueLabel: string;
@@ -51,9 +79,117 @@ function deliveryLabel(receipt?: SidechatReceipt) {
   return 'Saved · awaiting delivery';
 }
 
+// Stored sidechat timestamps are Unix seconds. Pin the display zone rather than
+// inheriting the viewer's device zone; Intl applies Toronto's DST rules.
+const messageTime = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Toronto',
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZoneName: 'short',
+});
+
+function MessageTimestamp({ created }: { created: number }) {
+  const date = new Date(created * 1000);
+  if (!Number.isFinite(date.getTime())) return null;
+  return (
+    <time dateTime={date.toISOString()} title="Eastern time · America/Toronto">
+      {messageTime.format(date)}
+    </time>
+  );
+}
+
+// Preserve's exact-binding read adapter supplies this view without rewriting
+// stored role/body/hash. Dispatch metadata never establishes managed ownership.
+function dispatchPresentation(message: SidechatMessage) {
+  const view = message.dispatch_note?.presentation;
+  return message.role === 'dot' &&
+    view?.derived === true &&
+    view.stored_message_unchanged === true &&
+    typeof view.author_label === 'string' &&
+    typeof view.body === 'string'
+    ? view
+    : undefined;
+}
+
 export function DotSidechatPanel(props: DotSidechatPanelProps) {
+  const presented = new Map(
+    props.messages.map((message) => [message.id, dispatchPresentation(message)])
+  );
+  const quotePresentation = (reference: SidechatReplyReference) => {
+    const view = !reference.unavailable
+      ? presented.get(reference.id)
+      : undefined;
+    return {
+      author:
+        view?.author_label ?? (reference.role === 'owner' ? 'you' : 'Dot'),
+      excerpt: view ? view.body.slice(0, 1000) : reference.excerpt,
+      truncated: view ? view.body.length > 1000 : reference.truncated,
+    };
+  };
+  const replyView = props.replyTarget
+    ? quotePresentation(props.replyTarget)
+    : null;
   const history = useRef<HTMLDivElement>(null);
+  const composer = useRef<HTMLTextAreaElement>(null);
+  const attentionNavigationThread = useRef<string | null>(null);
   const [followLatest, setFollowLatest] = useState(true);
+  const attentionStatusId = useId();
+  const [attentionCursor, setAttentionCursor] = useState<{
+    thread: string;
+    id: string;
+    seq: number;
+  } | null>(null);
+  const flagged = props.messages
+    .filter(
+      (message) =>
+        message.role === 'dot' &&
+        message.attention &&
+        !message.attention.resolved
+    )
+    .sort((a, b) => a.seq - b.seq);
+  const cursor =
+    attentionCursor?.thread === props.threadId ? attentionCursor : null;
+  const attentionIndex = flagged.findIndex(
+    (message) => message.id === cursor?.id
+  );
+  function jumpAttention(direction: -1 | 0 | 1) {
+    const root = history.current;
+    if (!root || props.loading || !flagged.length) return;
+    const target =
+      direction === 0
+        ? flagged[0]
+        : attentionIndex >= 0
+          ? flagged[
+              (attentionIndex + direction + flagged.length) % flagged.length
+            ]
+          : direction > 0
+            ? (flagged.find((message) => message.seq > (cursor?.seq ?? -1)) ??
+              flagged[0])
+            : ([...flagged]
+                .reverse()
+                .find((message) => message.seq < (cursor?.seq ?? Infinity)) ??
+              flagged[flagged.length - 1]);
+    const node = root.querySelector<HTMLElement>(
+      '#message-' + CSS.escape(target.id)
+    );
+    if (!node) return;
+    setFollowLatest(false);
+    attentionNavigationThread.current = props.threadId;
+    setAttentionCursor({
+      thread: props.threadId,
+      id: target.id,
+      seq: target.seq,
+    });
+    // Scroll only this history pane, not another mounted chat or the phone page.
+    root.scrollTop +=
+      node.getBoundingClientRect().top - root.getBoundingClientRect().top - 12;
+    node.focus({ preventScroll: true });
+  }
+  const [readStateBusy, setReadStateBusy] = useState(new Set<string>());
+  const readStateInFlight = useRef(new Set<string>());
   const readsInFlight = useRef(new Set<string>());
   const readsConfirmed = useRef(new Set<string>());
   useEffect(() => {
@@ -72,6 +208,8 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           (m) =>
             m.role === 'dot' &&
             m.seen === false &&
+            !m.manual_unread &&
+            !readStateInFlight.current.has(m.id) &&
             !readsInFlight.current.has(m.id) &&
             !readsConfirmed.current.has(m.id)
         )
@@ -158,11 +296,14 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
       if (!message || !props.messages.some((item) => item.id === message))
         return;
       setFollowLatest(false);
+      setAttentionCursor(null);
+      attentionNavigationThread.current = null;
       document
         .getElementById('message-' + message)
         ?.scrollIntoView({ block: 'center' });
     };
-    reveal();
+    // Polling must not pull attention navigation back to an older quoted link.
+    if (attentionNavigationThread.current !== props.threadId) reveal();
     window.addEventListener('hashchange', reveal);
     return () => window.removeEventListener('hashchange', reveal);
   }, [props.threadId, props.messages]);
@@ -193,6 +334,46 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           {props.workspaceLabel}
         </span>
       </div>
+      <nav
+        className="dot-attention-nav"
+        aria-label="Needs Attention navigation"
+      >
+        <button
+          type="button"
+          disabled={props.loading || !flagged.length}
+          aria-describedby={attentionStatusId}
+          onClick={() => jumpAttention(0)}
+        >
+          Jump to Needs Attention
+        </button>
+        <button
+          type="button"
+          aria-label="Previous flagged message"
+          disabled={props.loading || !flagged.length}
+          onClick={() => jumpAttention(-1)}
+        >
+          ←
+        </button>
+        <button
+          type="button"
+          aria-label="Next flagged message"
+          disabled={props.loading || !flagged.length}
+          onClick={() => jumpAttention(1)}
+        >
+          →
+        </button>
+        <span id={attentionStatusId} role="status">
+          {props.loading
+            ? 'Loading conversation…'
+            : props.error && !props.messages.length
+              ? 'Could not check flags. Refresh conversation.'
+              : !flagged.length
+                ? 'No unresolved flagged messages'
+                : attentionIndex >= 0
+                  ? `${attentionIndex + 1} of ${flagged.length}`
+                  : `${cursor ? 'Flag changed · ' : ''}${flagged.length} unresolved`}
+        </span>
+      </nav>
       {!props.live && (
         <div className="dot-fixture">
           Isolated prototype · fixture replies only
@@ -207,7 +388,8 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           const node = history.current;
           if (node)
             setFollowLatest(
-              node.scrollHeight - node.scrollTop - node.clientHeight < 48
+              !cursor &&
+                node.scrollHeight - node.scrollTop - node.clientHeight < 48
             );
         }}
       >
@@ -233,16 +415,41 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           <article
             key={message.id}
             id={'message-' + message.id}
+            tabIndex={-1}
+            data-dot-attention-current={
+              attentionIndex >= 0 && flagged[attentionIndex].id === message.id
+                ? ''
+                : undefined
+            }
             className={'dot-message dot-message-' + message.role}
           >
             <div className="dot-byline">
               <strong>
-                {message.role === 'owner'
-                  ? 'You'
-                  : props.live
-                    ? 'Dot'
-                    : 'Dot · fixture'}
+                {presented.get(message.id)?.author_label ??
+                  (message.role === 'owner'
+                    ? 'You'
+                    : props.live
+                      ? 'Dot'
+                      : 'Dot · fixture')}
               </strong>
+              <MessageTimestamp created={message.created} />
+              {props.onReplyTarget && props.replyEnabled && (
+                <button
+                  type="button"
+                  className="dot-reply-button"
+                  aria-label={'Reply to message ' + message.seq}
+                  disabled={props.sending || props.draftLocked || props.loading}
+                  onClick={() => {
+                    props.onReplyTarget?.(message.id);
+                    composer.current?.focus();
+                  }}
+                >
+                  Reply to
+                </button>
+              )}
+              {message.dispatch_note && (
+                <span className="dot-private">Agent dispatch note</span>
+              )}
               <a
                 aria-label={'Link to message ' + message.seq}
                 href={'#thread=' + props.threadId + '&message=' + message.id}
@@ -250,7 +457,40 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
                 #{message.seq}
               </a>
             </div>
-            <p>{message.body}</p>
+            {message.reply_reference && (
+              <blockquote className="dot-reply-reference">
+                {message.reply_reference.unavailable ? (
+                  <span>
+                    Reply to #{message.reply_reference.seq} · context in another
+                    workspace
+                  </span>
+                ) : (
+                  <>
+                    <a
+                      href={
+                        '#thread=' +
+                        props.threadId +
+                        '&message=' +
+                        message.reply_reference.id
+                      }
+                    >
+                      Reply to{' '}
+                      {quotePresentation(message.reply_reference).author} · #
+                      {message.reply_reference.seq}
+                    </a>
+                    <p>
+                      {quotePresentation(message.reply_reference).excerpt}
+                      {quotePresentation(message.reply_reference).truncated
+                        ? '…'
+                        : ''}
+                    </p>
+                  </>
+                )}
+              </blockquote>
+            )}
+            <DotMessageBody
+              body={presented.get(message.id)?.body ?? message.body}
+            />
             {message.role === 'dot' &&
               props.live &&
               props.notificationsEnabled && (
@@ -262,6 +502,35 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
                         : 'Needs Attention'}{' '}
                       · {message.attention.kind}
                     </span>
+                  )}
+                  {props.onReadState && (
+                    <button
+                      type="button"
+                      disabled={readStateBusy.has(message.id)}
+                      aria-label={
+                        message.manual_unread
+                          ? 'Mark Dot reply as read'
+                          : 'Mark Dot reply as unread'
+                      }
+                      onClick={() => {
+                        if (readStateInFlight.current.has(message.id)) return;
+                        readStateInFlight.current.add(message.id);
+                        setReadStateBusy(new Set(readStateInFlight.current));
+                        void props.onReadState!(
+                          message.id,
+                          message.manual_unread ? 'read' : 'unread'
+                        )
+                          .catch(() => undefined)
+                          .finally(() => {
+                            readStateInFlight.current.delete(message.id);
+                            setReadStateBusy(
+                              new Set(readStateInFlight.current)
+                            );
+                          });
+                      }}
+                    >
+                      {message.manual_unread ? 'Mark read' : 'Mark unread'}
+                    </button>
                   )}
                   {props.onAttention && (
                     <button
@@ -308,7 +577,10 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
         <button
           type="button"
           className="dot-latest"
-          onClick={() => setFollowLatest(true)}
+          onClick={() => {
+            setAttentionCursor(null);
+            setFollowLatest(true);
+          }}
         >
           Jump to latest ↓
         </button>
@@ -328,10 +600,41 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
           props.onSend();
         }}
       >
+        {props.replyTarget && (
+          <div
+            className="dot-reply-target"
+            role="group"
+            aria-label="Reply target"
+          >
+            <div>
+              <strong>
+                Replying to {replyView?.author} · #{props.replyTarget.seq}
+              </strong>
+              <MessageTimestamp created={props.replyTarget.created} />
+              <p>
+                {replyView?.excerpt}
+                {replyView?.truncated ? '…' : ''}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="dot-reply-button"
+              aria-label="Cancel reply"
+              disabled={props.sending || props.draftLocked}
+              onClick={() => {
+                props.onReplyTarget?.(null);
+                composer.current?.focus();
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
         <label className="dot-sr-only" htmlFor="dot-draft">
           Message Dot
         </label>
         <textarea
+          ref={composer}
           id="dot-draft"
           readOnly={props.draftLocked}
           value={props.draft}

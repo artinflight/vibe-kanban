@@ -219,8 +219,8 @@ export function NavbarContainer({
       : mobileMode
         ? mobileActiveTab === 'workspaces'
           ? 'Workspaces'
-          : selectedWorkspace?.name
-        : (selectedWorkspace?.branch ?? 'Workspaces');
+          : selectedWorkspace?.name || selectedWorkspace?.branch || 'Workspaces'
+        : selectedWorkspace?.name || selectedWorkspace?.branch || 'Workspaces';
 
   // Breadcrumbs: Project / Issue / Workspace (only on workspace pages with linked project)
   const linkedProjectId = linkedRemoteWorkspace?.project_id ?? null;

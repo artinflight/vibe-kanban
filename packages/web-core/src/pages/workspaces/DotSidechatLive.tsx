@@ -16,6 +16,7 @@ type Pending = {
   project?: string;
   request: string;
   body: string;
+  in_reply_to?: string;
 };
 type Snapshot = {
   thread: { id: string };
@@ -24,7 +25,11 @@ type Snapshot = {
   receipts: Record<string, SidechatReceipt>;
   through: number;
   next_after: number | null;
-  capabilities?: { notifications: boolean };
+  capabilities?: {
+    notifications: boolean;
+    manual_unread?: boolean;
+    message_replies?: boolean;
+  };
 };
 export class PairingRequired extends Error {}
 
@@ -67,13 +72,24 @@ export async function dotApi(
   return response.json();
 }
 
-export function DotSidechatLive({
-  workspaceId,
-  projectId,
-}: {
-  workspaceId?: string;
-  projectId?: string;
-}) {
+type ChatTarget = { workspaceId?: string; projectId?: string };
+type RetainedDraft = { body: string; reply: string | null };
+// Owner-session/context scoped fallback when tab storage is temporarily unavailable.
+const draftCache = new Map<string, RetainedDraft>();
+
+export function DotSidechatLive(props: ChatTarget) {
+  // A destination change gets a fresh lifetime, snapshot and pending-send state.
+  // Even callers without their own React key cannot reuse old-context responses.
+  const key =
+    props.workspaceId && !props.projectId
+      ? 'workspace:' + props.workspaceId
+      : props.projectId && !props.workspaceId
+        ? 'project:' + props.projectId
+        : 'none';
+  return <DotSidechatSession key={key} {...(key === 'none' ? {} : props)} />;
+}
+
+function DotSidechatSession({ workspaceId, projectId }: ChatTarget) {
   const contextId = projectId ?? workspaceId;
   const targetKey = projectId ? 'project' : 'workspace';
   const target = useMemo(
@@ -86,10 +102,15 @@ export function DotSidechatLive({
   const [code, setCode] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [draft, setDraft] = useState('');
+  const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pending = useRef<Pending | null>(null);
+  const retainedDraft = useRef<RetainedDraft>({ body: '', reply: null });
+  // Protect a manual choice from older visibility acknowledgements and snapshots.
+  const manualUnread = useRef(new Set<string>());
+  const readStateRevision = useRef(0);
   const busy = useRef(false);
   const refreshing = useRef(false);
   const lifetime = useRef(new AbortController());
@@ -101,6 +122,29 @@ export function DotSidechatLive({
         (projectId ? 'project:' : '') +
         contextId
       : null;
+
+  const draftKey =
+    storageKey?.replace('vibe-dot-pending:', 'vibe-dot-draft:') ?? null;
+  function retainDraft(value: RetainedDraft) {
+    retainedDraft.current = value;
+    setDraft(value.body);
+    setReplyTargetId(value.reply);
+    if (!draftKey) return;
+    draftCache.set(draftKey, value);
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify(value));
+    } catch {
+      setError(
+        'Draft retained in this tab, but tab storage is unavailable for reload recovery.'
+      );
+    }
+  }
+  function clearRetainedDraft() {
+    retainedDraft.current = { body: '', reply: null };
+    if (!draftKey) return;
+    draftCache.delete(draftKey);
+    sessionStorage.removeItem(draftKey);
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -122,8 +166,23 @@ export function DotSidechatLive({
   useEffect(() => {
     pending.current = null;
     setDraft('');
-    if (!storageKey) return;
+    setReplyTargetId(null);
+    retainedDraft.current = { body: '', reply: null };
+    if (!storageKey || !draftKey) return;
     try {
+      const cached = draftCache.get(draftKey);
+      const savedDraft = cached ? null : sessionStorage.getItem(draftKey);
+      const value: RetainedDraft | null =
+        cached ?? (savedDraft ? JSON.parse(savedDraft) : null);
+      if (
+        value &&
+        typeof value.body === 'string' &&
+        (value.reply === null || typeof value.reply === 'string')
+      ) {
+        retainedDraft.current = value;
+        setDraft(value.body);
+        setReplyTargetId(value.reply);
+      }
       const saved = sessionStorage.getItem(storageKey);
       if (saved) {
         const value = JSON.parse(saved) as Pending;
@@ -132,10 +191,18 @@ export function DotSidechatLive({
             ? value.project === projectId && !value.workspace
             : value.workspace === workspaceId && !value.project) &&
           typeof value.body === 'string' &&
-          typeof value.request === 'string'
+          typeof value.request === 'string' &&
+          (value.in_reply_to === undefined ||
+            (typeof value.in_reply_to === 'string' &&
+              value.in_reply_to.length > 0))
         ) {
           pending.current = value;
+          retainedDraft.current = {
+            body: value.body,
+            reply: value.in_reply_to ?? null,
+          };
           setDraft(value.body);
+          setReplyTargetId(value.in_reply_to ?? null);
         }
       }
     } catch {
@@ -143,12 +210,13 @@ export function DotSidechatLive({
         'This browser cannot retain an uncertain send across reloads. Enable tab storage before sending.'
       );
     }
-  }, [storageKey, workspaceId, projectId]);
+  }, [storageKey, draftKey, workspaceId, projectId]);
 
   const refresh = useCallback(async () => {
     if (!session || !contextId || refreshing.current) return;
     refreshing.current = true;
     const signal = lifetime.current.signal;
+    const revision = readStateRevision.current;
     try {
       let page: Snapshot = await dotApi('thread?' + query, signal);
       const messages = [...page.messages];
@@ -166,12 +234,12 @@ export function DotSidechatLive({
         messages.push(...page.messages);
         Object.assign(receipts, page.receipts);
       }
-      if (!signal.aborted) {
+      if (!signal.aborted && revision === readStateRevision.current) {
         setSnapshot({ ...page, messages, receipts });
         setError(null);
       }
     } catch (failure) {
-      if (!signal.aborted) {
+      if (!signal.aborted && revision === readStateRevision.current) {
         setSnapshot(null);
         if (failure instanceof PairingRequired) {
           setSession(null);
@@ -197,7 +265,7 @@ export function DotSidechatLive({
     async (messages: string[]) => {
       if (!session || !contextId) return;
       try {
-        await dotApi(
+        const result: { seen: string[] } = await dotApi(
           'seen',
           lifetime.current.signal,
           { ...target, messages },
@@ -208,7 +276,11 @@ export function DotSidechatLive({
             ? {
                 ...previous,
                 messages: previous.messages.map((m) =>
-                  messages.includes(m.id) ? { ...m, seen: true } : m
+                  result.seen.includes(m.id) &&
+                  !manualUnread.current.has(m.id) &&
+                  !m.manual_unread
+                    ? { ...m, seen: true }
+                    : m
                 ),
               }
             : previous
@@ -222,6 +294,38 @@ export function DotSidechatLive({
     },
     [session, contextId, target]
   );
+
+  async function changeReadState(message: string, action: 'read' | 'unread') {
+    if (!session || !contextId) return;
+    readStateRevision.current++;
+    if (action === 'unread') manualUnread.current.add(message);
+    try {
+      const result: { seen: boolean; manual_unread: boolean } = await dotApi(
+        'read-state',
+        lifetime.current.signal,
+        { ...target, message, action },
+        session.csrf
+      );
+      readStateRevision.current++;
+      if (action === 'read') manualUnread.current.delete(message);
+      setSnapshot((previous) =>
+        previous
+          ? {
+              ...previous,
+              messages: previous.messages.map((m) =>
+                m.id === message ? { ...m, ...result } : m
+              ),
+            }
+          : previous
+      );
+      window.dispatchEvent(new CustomEvent('dot-sidechat-changed'));
+    } catch (failure) {
+      if (action === 'unread') manualUnread.current.delete(message);
+      if (!lifetime.current.signal.aborted)
+        setError((failure as Error).message);
+      throw failure;
+    }
+  }
 
   async function attention(
     message: string,
@@ -268,23 +372,41 @@ export function DotSidechatLive({
   }
 
   async function send() {
-    if (!session || !contextId || !storageKey || busy.current || !draft.trim())
+    if (
+      !session ||
+      !contextId ||
+      !storageKey ||
+      busy.current ||
+      lifetime.current.signal.aborted ||
+      !draft.trim() ||
+      loading
+    )
       return;
     busy.current = true;
     setSending(true);
     try {
+      if (
+        (replyTargetId || pending.current?.in_reply_to) &&
+        !snapshot?.capabilities?.message_replies
+      )
+        throw new Error(
+          'Reply targeting is unavailable. Your reply is retained; refresh after the Dot service release.'
+        );
       const outgoing = pending.current ?? {
         ...target,
         request: crypto.randomUUID(),
         body: draft,
+        ...(replyTargetId ? { in_reply_to: replyTargetId } : {}),
       };
       // Persist BEFORE submitting; retries after a lost response reuse the exact key/body.
       sessionStorage.setItem(storageKey, JSON.stringify(outgoing));
       pending.current = outgoing;
       await dotApi('send', lifetime.current.signal, outgoing, session.csrf);
       sessionStorage.removeItem(storageKey);
+      clearRetainedDraft();
       pending.current = null;
       setDraft('');
+      setReplyTargetId(null);
       await refresh();
     } catch (failure) {
       setError((failure as Error).message);
@@ -306,8 +428,18 @@ export function DotSidechatLive({
       lifetime.current.abort();
       lifetime.current = new AbortController();
       if (storageKey) sessionStorage.removeItem(storageKey);
+      if (session) {
+        const prefix = 'vibe-dot-draft:' + session.session_id + ':';
+        for (const key of [...draftCache.keys()])
+          if (key.startsWith(prefix)) draftCache.delete(key);
+        for (let index = sessionStorage.length - 1; index >= 0; index--) {
+          const key = sessionStorage.key(index);
+          if (key?.startsWith(prefix)) sessionStorage.removeItem(key);
+        }
+      }
       pending.current = null;
       setDraft('');
+      setReplyTargetId(null);
       setSnapshot(null);
       setSession(null);
       window.dispatchEvent(
@@ -373,6 +505,29 @@ export function DotSidechatLive({
           live
           notificationsEnabled={snapshot?.capabilities?.notifications ?? false}
           onRead={readReplies}
+          onReadState={
+            snapshot?.capabilities?.manual_unread ? changeReadState : undefined
+          }
+          onReplyTarget={(message) => {
+            if (!busy.current && !pending.current)
+              retainDraft({ ...retainedDraft.current, reply: message });
+          }}
+          replyEnabled={snapshot?.capabilities?.message_replies ?? false}
+          replyTarget={(() => {
+            const message = snapshot?.messages.find(
+              (m) => m.id === replyTargetId
+            );
+            return message
+              ? {
+                  id: message.id,
+                  seq: message.seq,
+                  role: message.role,
+                  created: message.created,
+                  excerpt: message.body.slice(0, 1000),
+                  truncated: message.body.length > 1000,
+                }
+              : null;
+          })()}
           onAttention={(message, action) => void attention(message, action)}
           messages={snapshot?.messages ?? []}
           receipts={snapshot?.receipts ?? {}}
@@ -388,7 +543,7 @@ export function DotSidechatLive({
           error={error}
           draft={draft}
           draftLocked={pending.current !== null}
-          onDraft={setDraft}
+          onDraft={(body) => retainDraft({ ...retainedDraft.current, body })}
           onSend={() => void send()}
           onRefresh={() => void refresh()}
         />

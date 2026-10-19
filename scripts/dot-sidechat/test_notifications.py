@@ -3,6 +3,7 @@ import unittest
 import uuid
 import http.client
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from http.server import HTTPServer
 import test_sidechat
 import test_browser
@@ -49,6 +50,62 @@ class NotificationContracts(unittest.TestCase):
         self.s.set_sidechat_attention(self.dot,self.t,'w',reply['id'],'resolve')
         self.assertEqual((1,0),self.counts())
         self.assertEqual(1,self.s.db.execute('SELECT count(*) FROM outbox').fetchone()[0])
+
+    def test_manual_unread_is_idempotent_durable_and_survives_late_automatic_reads(self):
+        reply=self.reply(self.send())
+        mid=reply['id']
+        self.s.seen_replies(self.owner,self.t,'w',[mid])
+        self.assertEqual((0,0),self.counts())
+        for _ in range(3):
+            result=self.s.set_reply_read_state(self.owner,self.t,'w',mid,'unread')
+            self.assertFalse(result['seen']);self.assertTrue(result['manual_unread'])
+            self.assertEqual([],self.s.seen_replies(self.owner,self.t,'w2',[mid])['seen'])
+        self.s.close();self.s=Store(self.path,lambda:self.now)
+        message=next(m for m in self.s.read(self.owner,self.t)['messages'] if m['id']==mid)
+        self.assertFalse(message['seen']);self.assertTrue(message['manual_unread'])
+        self.assertIsNone(message['attention']);self.assertEqual((1,0),self.counts())
+        self.s.set_sidechat_attention(self.owner,self.t,'w',mid,'action')
+        self.s.set_sidechat_attention(self.owner,self.t,'w',mid,'resolve')
+        self.assertEqual((1,0),self.counts())
+        self.s.set_sidechat_attention(self.owner,self.t,'w',mid,'reopen')
+        self.assertEqual((1,1),self.counts())
+        for _ in range(3):self.s.set_reply_read_state(self.owner,self.t,'w2',mid,'read')
+        self.assertEqual((0,1),self.counts())
+        self.s.close();self.s=Store(self.path,lambda:self.now)
+        self.assertEqual((0,1),self.counts())
+        self.assertFalse(next(m for m in self.s.read(self.owner,self.t)['messages'] if m['id']==mid)['manual_unread'])
+        second=self.reply(self.send())
+        self.assertEqual([second['id']],self.s.seen_replies(self.owner,self.t,'w',[second['id']])['seen'])
+        self.assertEqual((0,1),self.counts())
+        self.assertEqual(2,self.s.db.execute('SELECT COUNT(*) FROM outbox').fetchone()[0])
+
+    def test_manual_read_state_is_owner_scoped_and_rejects_non_dot_messages(self):
+        owner=self.send();reply=self.reply(owner)
+        for principal in (Principal('bob','owner'),self.dot,self.publisher):
+            with self.assertRaises(Rejected):self.s.set_reply_read_state(principal,self.t,'w',reply['id'],'unread')
+        for workspace,message,action in [('missing',reply['id'],'unread'),('w',owner['id'],'unread'),('w','missing','unread'),('w',reply['id'],'toggle')]:
+            with self.assertRaises(Rejected):self.s.set_reply_read_state(self.owner,self.t,workspace,message,action)
+        self.assertEqual((1,0),self.counts())
+
+    def test_concurrent_startup_migrates_old_schema_once(self):
+        reply=self.reply(self.send())
+        self.s.seen_replies(self.owner,self.t,'w',[reply['id']])
+        self.s.db.execute('ALTER TABLE dot_reply_state DROP COLUMN manual_unread')
+        def reopen(_):
+            store=Store(self.path,lambda:self.now)
+            try:return store.read(self.owner,self.t)['messages'][-1]['seen']
+            finally:store.close()
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            self.assertEqual([True]*4,list(pool.map(reopen,range(4))))
+
+    def test_old_reply_schema_migrates_without_resetting_seen_or_attention(self):
+        reply=self.reply(self.send(),attention='question')
+        self.s.seen_replies(self.owner,self.t,'w',[reply['id']])
+        self.s.db.execute('ALTER TABLE dot_reply_state DROP COLUMN manual_unread')
+        self.s.close();self.s=Store(self.path,lambda:self.now)
+        self.assertEqual((0,1),self.counts())
+        message=next(m for m in self.s.read(self.owner,self.t)['messages'] if m['id']==reply['id'])
+        self.assertFalse(message['manual_unread'])
 
     def test_exact_seen_ids_do_not_clear_a_new_reply_arriving_during_read(self):
         first=self.reply(self.send());second=self.reply(self.send())
@@ -130,6 +187,14 @@ class NotificationBrowserContracts(unittest.TestCase):
             self.assertEqual(403,request('POST','seen',data,Origin='https://evil.test')[0])
             self.assertEqual(403,request('POST','seen',dict(data,owner='spoof'))[0])
             self.assertEqual(200,request('POST','seen',data)[0])
+            manual={'workspace':self.workspace,'message':reply['id'],'action':'unread'}
+            self.assertEqual(403,request('POST','read-state',manual,**{'X-Dot-CSRF':''})[0])
+            self.assertEqual(403,request('POST','read-state',manual,Origin='https://evil.test')[0])
+            self.assertEqual(403,request('POST','read-state',dict(manual,owner='spoof'))[0])
+            self.assertEqual(200,request('POST','read-state',manual)[0])
+            self.assertEqual([],request('POST','seen',data)[1]['seen'])
+            self.assertEqual(1,request('GET','notifications')[1]['issues'][0]['unread_count'])
+            self.assertEqual(200,request('POST','read-state',dict(manual,action='read'))[0])
             self.assertEqual(1,request('GET','notifications')[1]['issues'][0]['needs_attention_count'])
             self.assertEqual(200,request('POST','attention',{'workspace':self.workspace,'message':reply['id'],'action':'resolve'})[0])
             self.assertEqual([],request('GET','notifications')[1]['issues'])

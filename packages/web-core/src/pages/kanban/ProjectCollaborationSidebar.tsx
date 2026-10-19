@@ -9,7 +9,13 @@ import {
   type Session,
 } from '../workspaces/DotSidechatLive';
 import { DotActivityIndicators } from '@vibe/ui/components/DotActivityIndicators';
-import { useDotProjectNotifications } from '@/shared/hooks/useDotNotifications';
+import {
+  useDotProjectNotifications,
+  useDotNotifications,
+  useDotWorkspaceNotifications,
+} from '@/shared/hooks/useDotNotifications';
+import { workspaceDotNotification } from '@/shared/lib/dotWorkspaceActivity';
+import { useWorkspaceRecord } from '@/shared/hooks/useWorkspaceRecord';
 import './project-collaboration.css';
 
 export type PlanningEntry = {
@@ -32,17 +38,38 @@ const sections = {
 export function ProjectCollaborationSidebar({
   projectId,
   projectName,
+  workspaceId,
+  issueId,
+  chatRequest,
   onClose,
   onNavigate,
 }: {
   projectId: string;
   projectName: string;
+  workspaceId?: string | null;
+  issueId?: string | null;
+  chatRequest?: number;
   onClose: () => void;
   onNavigate: (action: () => void) => void;
 }) {
   const [tab, setTab] = useState<'chat' | 'plan'>('chat');
+  const { data: workspace } = useWorkspaceRecord(workspaceId ?? undefined);
+  const heading = workspaceId
+    ? workspace?.name || workspace?.branch || 'Workspace chat'
+    : projectName;
+  useEffect(() => {
+    if (chatRequest) setTab('chat');
+  }, [chatRequest]);
   const notifications = useDotProjectNotifications();
-  const activity = notifications.find((item) => item.project_id === projectId);
+  const issues = useDotNotifications();
+  const workspaces = useDotWorkspaceNotifications();
+  const activity = workspaceId
+    ? workspaceDotNotification(
+        issueId ?? null,
+        issues.find((item) => item.issue_id === issueId),
+        workspaces.find((item) => item.workspace_id === workspaceId)
+      )
+    : notifications.find((item) => item.project_id === projectId);
   return (
     <aside
       className="project-collaboration bg-secondary text-normal"
@@ -50,8 +77,12 @@ export function ProjectCollaborationSidebar({
     >
       <header className="project-collaboration-heading">
         <div>
-          <strong>{projectName}</strong>
-          <span>Project space · Seamus & dot</span>
+          <strong title={heading}>{heading}</strong>
+          <span>
+            {workspaceId
+              ? projectName + ' · Workspace chat'
+              : 'Project chat · Seamus & dot'}
+          </span>
         </div>
         <button
           type="button"
@@ -96,7 +127,7 @@ export function ProjectCollaborationSidebar({
         hidden={tab !== 'chat'}
         className="project-chat-slot"
       >
-        <DotSidechatLive key={projectId} projectId={projectId} />
+        <DotSidechatLive {...(workspaceId ? { workspaceId } : { projectId })} />
       </div>
       {tab === 'plan' && (
         <div

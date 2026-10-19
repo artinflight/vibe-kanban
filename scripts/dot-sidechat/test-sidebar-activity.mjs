@@ -137,6 +137,7 @@ for (const width of [390, 1440]) {
   assert.equal(names(action).includes('Dispatch sibling'), false);
   // Position changes never change the workspace behind a displayed row.
   const runningRows = section('Running');
+  await wait(() => names(runningRows).includes('Unresolved subagent'));
   const beforeReorder = names(runningRows);
   dom.window.fixtureReverse();
   await wait(

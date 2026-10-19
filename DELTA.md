@@ -2045,3 +2045,13 @@ shared. The nominated T18 note was inspected read-only and retained unseen.
 76 sidechat plus 34 newer connector regressions and desktop/mobile sidebar
 acceptance pass. Manual unread is preserved. See VK_DOT_ACTIVITY_ATTRIBUTION.md.
 Publication only; no merge, deploy, live cleanup, model/effort or routing change.
+
+## 2026-10-19 — T63 font live and exact workspace destination
+
+Font-only3cd0a6e63 is verified live at06:55 EDT, with16px Dot/native messages and
+composers in desktop/mobile project/workspace views, independent flags and compact
+notices preserved, no restart. New source removes sibling/name-based routing
+guesses, scopes session selection and validates workspace/session identity before
+send. Personal includes self or unassigned and headers prefer the human name.
+Code blocks and these newer corrections remain unactivated. Focused synthetic
+checks pass; see VK_WORKSPACE_DESTINATION_SAFETY.md for the current evidence/gates.

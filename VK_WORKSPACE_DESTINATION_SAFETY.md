@@ -31,8 +31,21 @@ responses, rapid/return navigation, in-flight creation, mismatched API identitie
 and self/unassigned/other assignees with the other issue filters. No real prompts
 or assignment/read-state writes are used. Hosted CI runs this regression.
 
-Desktop/mobile computed typography and final hosted build/CI acceptance must be
-recorded separately before claiming this candidate release-ready. The live font-only
+Focused source checks passed against the actual production panel, session/create/send
+hooks and Personal filters. Existing desktop/mobile sidebar tests also verify that
+reordered rows still select their displayed IDs. Repository formatting and governance
+passed; hosted frontend type/lint/format and local/remote builds passed at the first
+implementation checkpoint. An initial pickup-size and mobile test-timing failure
+were corrected without changing application behavior.
+
+A bounded actual compiled-app mobile workspace case measured20px human headings
+and16px Dot/native message/composer text, with exact copied code, reply/draft reload,
+manual unread/attention independence and exact destination intact. Further MCP
+browser probes stopped at genuine pressure/capacity guards; all own children are
+terminal and the unused local window is released. Remaining desktop/mobile component
+acceptance uses hosted Chromium with the built candidate stylesheet and synthetic
+transport, rather than consuming Nightly/Disk resources. Exact final-head CI/build
+and browser results are recorded in the existing PR and private owner handoff. The live font-only
 ancestor is preserved. Code blocks plus these UI corrections are not activated;
 separate owner approval and coordinated frontend-only release remain required.
 

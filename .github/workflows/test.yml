@@ -327,6 +327,15 @@ jobs:
       - name: Check exact workspace destinations and Personal visibility
         run: node scripts/testing/test-workspace-destination.mjs
 
+      - name: Browser-check workspace destination and human headers
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/workspace-browser-tools/node_modules/playwright-core/index.mjs
+          CHROME_BIN: /usr/bin/google-chrome
+        run: |
+          npm install --prefix "$RUNNER_TEMP/workspace-browser-tools" --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright-core@1.59.1
+          node scripts/testing/test-workspace-destination-browser.mjs
+
       - name: Check actual issue panel Close/reopen races
         env:
           VK_TEST_OUTPUT: ${{ runner.temp }}/kanban-issue-panel-tests

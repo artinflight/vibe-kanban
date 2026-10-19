@@ -1,5 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { Navbar } from '../../packages/ui/src/components/Navbar';
+import { useWorkspaceRecord } from '../../packages/web-core/src/shared/hooks/useWorkspaceRecord';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProjectRightSidebarContainer } from '../../packages/web-core/src/pages/kanban/ProjectRightSidebarContainer';
 import { IssueWorkspacesSectionContainer } from '../../packages/web-core/src/pages/kanban/IssueWorkspacesSectionContainer';
@@ -17,6 +19,7 @@ const client = new QueryClient({
   },
 });
 function Probe() {
+  const { data: workspace } = useWorkspaceRecord(f.workspaceId);
   f.selection = useWorkspaceSessions(f.workspaceId);
   f.renders.push({
     workspace: f.workspaceId,
@@ -36,18 +39,33 @@ function Probe() {
     filters,
     currentUserId: f.user ?? 'self',
   }).filteredIssues;
-  return null;
+  return f.showNavbar ? (
+    <Navbar
+      workspaceTitle={workspace?.name || workspace?.branch}
+      mobileMode={f.mobile}
+    />
+  ) : null;
 }
 const root = createRoot(document.getElementById('root')!);
 f.render = () =>
   root.render(
     <QueryClientProvider client={client}>
-      <Probe />
-      <ProjectRightSidebarContainer
-        expectedIssueId={null}
-        onExpectIssueOpen={() => {}}
-      />
-      <IssueWorkspacesSectionContainer issueId="issue" />
+      <div
+        className="new-design"
+        style={{
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        <Probe />
+        <ProjectRightSidebarContainer
+          expectedIssueId={null}
+          onExpectIssueOpen={() => {}}
+        />
+        <IssueWorkspacesSectionContainer issueId="issue" />
+      </div>
     </QueryClientProvider>
   );
 f.setSessions = (id: string, sessions: any[]) =>

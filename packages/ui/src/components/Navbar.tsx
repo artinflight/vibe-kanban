@@ -358,7 +358,14 @@ export function Navbar({
               )
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-xl text-high font-semibold truncate">
+              <p
+                className={cn(
+                  'truncate',
+                  isOnProjectPage
+                    ? 'text-lg text-high font-medium'
+                    : 'text-xl text-high font-semibold'
+                )}
+              >
                 {workspaceTitle || (isOnProjectPage ? 'Project' : 'Workspaces')}
               </p>
               {!isOnProjectPage && breadcrumbs && breadcrumbs.length > 0 && (
@@ -486,7 +493,12 @@ export function Navbar({
           />
         ) : (
           <p
-            className="text-xl font-semibold text-high truncate cursor-text select-text"
+            className={cn(
+              'truncate cursor-text select-text',
+              isOnProjectPage
+                ? 'text-base text-low'
+                : 'text-xl font-semibold text-high'
+            )}
             title={workspaceTitle ?? undefined}
           >
             {workspaceTitle ?? ''}

@@ -1,59 +1,8 @@
 // No real transport, prompts, assignment writes or browser. Bundle only in RAM.
 import assert from 'node:assert/strict';
-import { resolve } from 'node:path';
-import { build } from 'esbuild';
 import { JSDOM } from 'jsdom';
-const fixture = resolve('scripts/testing/workspace-destination.fixture.tsx');
-const realHooks =
-  /useWorkspace(Sessions|Record)$|workspaceSessionKeys$|workspaceSummaryKeys$|useUiPreferencesStore$|shared\/types\/attempt$/;
-const result = await build({
-  entryPoints: ['scripts/testing/workspace-destination-harness.tsx'],
-  bundle: true,
-  write: false,
-  format: 'iife',
-  platform: 'browser',
-  jsx: 'automatic',
-  tsconfig: 'packages/web-core/tsconfig.json',
-  define: { 'import.meta.hot': 'undefined', 'process.env.NODE_ENV': '"test"' },
-  alias: {
-    '@': resolve('packages/web-core/src'),
-    '@tanstack/react-query': resolve(
-      'packages/web-core/node_modules/@tanstack/react-query'
-    ),
-    react: resolve('packages/ui/node_modules/react'),
-    'react-dom': resolve('packages/ui/node_modules/react-dom'),
-  },
-  plugins: [
-    {
-      name: 'synthetic-destination-boundaries',
-      setup(b) {
-        b.onResolve({ filter: /^@\/shared\// }, ({ path }) =>
-          realHooks.test(path) ? undefined : { path: fixture }
-        );
-        b.onResolve(
-          {
-            filter:
-              /^(react-i18next|@tanstack\/react-router|@vibe\/ui\/components\/|@\/features\/|\.\/KanbanIssuePanelContainer$|\.\/useSessionQueueInteraction$)/,
-          },
-          ({ path }) =>
-            path.endsWith('/useSessionSend') ||
-            path.endsWith('/useCreateSession')
-              ? undefined
-              : { path: fixture }
-        );
-        b.onResolve({ filter: /^@phosphor-icons\/react$/ }, () => ({
-          path: 'icons',
-          namespace: 'fixture',
-        }));
-        b.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({
-          contents:
-            'export const ArrowDownIcon=()=>null,ArrowsOutIcon=()=>null,XIcon=()=>null,LinkIcon=()=>null,PlusIcon=()=>null;',
-          loader: 'js',
-        }));
-      },
-    },
-  ],
-});
+import { bundleDestinationFixture } from './workspace-destination-support.mjs';
+const result = await bundleDestinationFixture();
 const wait = async (check) => {
   for (let i = 0; i < 200; i++) {
     if (check()) return;
@@ -201,6 +150,19 @@ async function boot(extra = {}) {
     await tick();
     t.f.cards.onWorkspaceClick(t.f.cards.workspaces[0].localWorkspaceId);
     assert.equal(t.f.navigations.at(-1).at(-1), 'B');
+  } finally {
+    t.close();
+  }
+}
+// A pending session list is not permission to create/send to a new session.
+{
+  const pendingSessions = deferred();
+  const t = await boot({ getSessions: () => pendingSessions.promise });
+  try {
+    assert.equal(t.f.selection.isNewSessionMode, false);
+    assert.equal(t.f.composer.mode, 'placeholder');
+    pendingSessions.resolve([session('B')]);
+    await wait(() => t.f.composer.session?.id === 'B-session-1');
   } finally {
     t.close();
   }
@@ -373,6 +335,15 @@ for (const mismatch of ['record', 'list', 'create']) {
     assert.deepEqual([...t.f.visibleIssues.map((i) => i.id)], ['none']);
     t.f.filters = { ...t.f.filters, searchQuery: 'Matching' };
     assert.deepEqual([...t.f.filtersApplied.tagIds], ['tag']);
+    t.f.user = 'other';
+    t.f.filters = defaults;
+    t.f.render();
+    await tick();
+    assert.deepEqual(
+      [...t.f.visibleIssues.map((i) => i.id)],
+      ['none', 'other', 'low']
+    );
+    t.f.user = 'self';
     t.f.view = 'team';
     t.f.filters = undefined;
     t.f.render();

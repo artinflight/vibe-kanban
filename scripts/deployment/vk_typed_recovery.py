@@ -34,6 +34,15 @@ def checksum(value):
     return hashlib.sha256(canonical(value)).hexdigest()
 
 
+def stream_checksum(stream):
+    # Keep metadata authentication compatible with the installed Python runtimes;
+    # hashlib.file_digest is only a convenience API added in Python 3.11.
+    h = hashlib.sha256()
+    for block in iter(lambda: stream.read(BLOCK), b''):
+        h.update(block)
+    return h.hexdigest()
+
+
 def key(value):
     if (not isinstance(value, str) or not value or '\0' in value
             or PurePosixPath(value).is_absolute()
@@ -212,7 +221,7 @@ def held_index(provider, base_reference, overlay_reference):
             stream = stack.enter_context(provider.open(reference['layer'], reference['selector']))
             st = os.fstat(stream.fileno())
             if (st.st_size != reference['bytes']
-                    or hashlib.file_digest(stream, 'sha256').hexdigest() != digest(reference['sha256'])):
+                    or stream_checksum(stream) != digest(reference['sha256'])):
                 raise ValueError('authenticated index bytes differ')
             streams.append((stream, fingerprint(st)))
             connection = sqlite3.connect('file:/proc/self/fd/' + str(stream.fileno()) + '?mode=ro&immutable=1', uri=True)
@@ -412,7 +421,7 @@ class HeldRecoverySet:
         if encoded == 'zip-member':
             with self.provider.open(segment['layer'], key(segment['selector'])) as stream:
                 if (os.fstat(stream.fileno()).st_size != segment['encoded_bytes']
-                        or hashlib.file_digest(stream, 'sha256').hexdigest() != segment['encoded_sha256']):
+                        or stream_checksum(stream) != segment['encoded_sha256']):
                     raise ValueError('pinned ZIP identity differs')
                 stream.seek(0)
                 with zipfile.ZipFile(stream) as archive:
@@ -703,3 +712,38 @@ def verify_overlay_contents(handle, *, accepted_components):
             'exact_independent_component_proofs_reused': reused,
             'unchanged_accepted_base_proof_reused': True,
             'original_epoch_complete': False, 'activation_authorized': False}
+
+
+def bind_components(overlay, measured, independently_restored, *, layer):
+    """Resolve pending requests only to exact transferred/restored components.
+
+    The caller authenticates the measured and independent receipts first. Every
+    referenced component must match decoded and encoded lengths/digests, and its
+    independently restored file readback. This does not seal journal/runtime
+    coverage or replace the controller's final database/fence requirements.
+    """
+    changed = 0
+    for name, raw in list(overlay.execute('select name,row from puts order by name')):
+        row = json.loads(raw)
+        request = row.get('pending_content_request')
+        if request is None:
+            continue
+        source = measured[request]
+        component = independently_restored[source['sha256']]
+        for field in ('bytes', 'sha256', 'encoded_bytes', 'encoded_sha256'):
+            if component.get(field) != source[field]:
+                raise ValueError('restored component differs from measured request')
+        if (component.get('independent_file_readback_sha256') != source['sha256']
+                or component.get('independently_allocated') is not True
+                or source['selected_member_sha256'] != row['sha256']):
+            raise ValueError('independent component/member binding missing')
+        segment = {field: component[field] for field in ('bytes', 'sha256', 'encoded_bytes', 'encoded_sha256')}
+        segment.update(encoding='zlib', layer=layer, selector=key(component['file']))
+        row['segments'] = row.pop('prefix_segments') + [segment]
+        if sum(s['bytes'] for s in row['segments']) != row['bytes']:
+            raise ValueError('composed request length differs')
+        del row['pending_content_request']
+        overlay.execute('update puts set row=? where name=?', (canonical(row).decode(), name))
+        changed += 1
+    overlay.commit()
+    return changed

@@ -12,7 +12,7 @@ import zipfile
 
 from vk_typed_recovery import (FORMAT, ComposedIndex, HeldRecoverySet, LocalDependencies,
                                build_overlay, canonical, checksum, held_index, read_rows)
-from vk_typed_recovery import verify_overlay_contents
+from vk_typed_recovery import bind_components, verify_overlay_contents
 
 
 class TypedRecoveryTests(unittest.TestCase):
@@ -268,6 +268,24 @@ class TypedRecoveryTests(unittest.TestCase):
             # Restore the expected name before context finalizers run. Keeping
             # the old inode is impossible here, so the finalizer must also fail.
         with self.assertRaisesRegex(ValueError, 'lease replaced'): self.use(read)
+
+    def test_pending_recipe_requires_exact_independent_component_readback(self):
+        row = copy.deepcopy(self.rows['home/state/log'])
+        prefix, tail = row.pop('segments')
+        row.update(pending_content_request='request', prefix_segments=[prefix])
+        db = sqlite3.connect(':memory:'); self.addCleanup(db.close)
+        db.execute('create table puts(name text primary key,row text)')
+        db.execute('insert into puts values(?,?)', ('home/state/log', json.dumps(row))); db.commit()
+        measured = dict(tail, selected_member_sha256=row['sha256'])
+        restored = dict(tail, file='objects/tail.zlib', independent_file_readback_sha256=tail['sha256'], independently_allocated=True)
+        invalid = dict(restored, encoded_sha256='f' * 64)
+        with self.assertRaisesRegex(ValueError, 'differs'):
+            bind_components(db, {'request': measured}, {tail['sha256']: invalid}, layer='current')
+        self.assertEqual(bind_components(db, {'request': measured}, {tail['sha256']: restored}, layer='current'), 1)
+        sealed = json.loads(db.execute('select row from puts').fetchone()[0])
+        self.assertNotIn('pending_content_request', sealed)
+        self.assertEqual(sealed['segments'][0], prefix)
+        self.assertEqual(sum(s['bytes'] for s in sealed['segments']), len(self.body))
 
 
 if __name__ == '__main__':

@@ -112,6 +112,14 @@ Drag/full-width/restore keep chat state mounted. Staging's existing coordination
 record was notified before packaging; no competing activation here.
 
 Current follow-up: [Dot code blocks](VK_DOT_CODE_BLOCKS.md) adds safe fenced code,
-Prism highlighting and exact Copy, bundled with pending [16px typography](VK_DOT_TYPOGRAPHY.md).
-Preparation/testing only; activation explicitly denied pending separate approval.
+Prism highlighting and exact Copy. [16px typography](VK_DOT_TYPOGRAPHY.md) alone
+is verified live from3cd0a6e63 on October19 at06:55 EDT without restart.
+Code blocks and newer changes remain held pending separate activation approval.
 Use private Nightly/Disk bounded admission; no restart or state/routing change.
+
+Newest source-only follow-up: [workspace destination safety](VK_WORKSPACE_DESTINATION_SAFETY.md)
+removes sibling/name-based workspace substitutions, scopes session selection and
+creation to exact destinations, includes self-or-unassigned Personal visibility and
+prominent human workspace names. No new activation; use hosted builds and fresh
+bounded resource admission. Real unresolved project and shared-issue questions
+remain untouched; private scope diagnosis is separate from notification cleanup.

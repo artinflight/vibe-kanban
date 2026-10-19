@@ -42,3 +42,11 @@ boundaries unchanged. Exact private associations and receipts stay private.
 Complete parent notes remain in Git. [Full stream history](STREAM_HISTORY_20261017.md)
 and [archive provenance](CONTINUITY_ARCHIVE.json) retain historical evidence.
 Private receipts stay local/B. Nightly whole-plan restore remains separate.
+
+## October19 UI follow-up
+
+Font-only3cd0a6e63 is verified live without restart. Fenced code remains held.
+New source-only [destination safety and Personal/header corrections](VK_WORKSPACE_DESTINATION_SAFETY.md)
+retain all live Dot behavior and require hosted validation plus separate activation
+approval. Fresh private resource accounting separates terminal font demand from
+later checks; no Nightly/Caspian allowance or denied-action boundary is relaxed.

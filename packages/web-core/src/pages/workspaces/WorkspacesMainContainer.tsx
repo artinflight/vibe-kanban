@@ -115,7 +115,7 @@ export const WorkspacesMainContainer = forwardRef<
     repos,
     onSelectSession,
     isLoading,
-    isSessionsLoading: _isSessionsLoading,
+    isSessionsLoading = false,
     isNewSessionMode,
     onStartNewSession,
   },
@@ -189,9 +189,9 @@ export const WorkspacesMainContainer = forwardRef<
 
   const chatBoxContent = (
     <ChatBoxWithDiffStats
-      session={session}
-      workspaceId={workspaceWithSession?.id}
-      isNewSessionMode={isNewSessionMode}
+      session={isSessionsLoading ? undefined : session}
+      workspaceId={isSessionsLoading ? undefined : workspaceWithSession?.id}
+      isNewSessionMode={!isSessionsLoading && isNewSessionMode}
       sessions={sessions}
       onSelectSession={onSelectSession}
       onStartNewSession={onStartNewSession}

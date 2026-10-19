@@ -31,40 +31,6 @@ interface IssueWorkspacesSectionContainerProps {
   issueId: string;
 }
 
-type LocalWorkspaceSummary = {
-  id: string;
-  name: string;
-  isRunning?: boolean;
-  hasPendingApproval?: boolean;
-  hasRunningDevServer?: boolean;
-  hasUnseenActivity?: boolean;
-  latestProcessCompletedAt?: string | null;
-  latestProcessStatus?: string | null;
-};
-
-function resolveLocalWorkspaceId(
-  remoteWorkspace: {
-    local_workspace_id: string | null;
-    name: string | null;
-  },
-  localWorkspaces: LocalWorkspaceSummary[]
-): string | null {
-  if (remoteWorkspace.local_workspace_id) {
-    return remoteWorkspace.local_workspace_id;
-  }
-
-  const normalizedName = remoteWorkspace.name?.trim().toLowerCase() ?? '';
-  if (!normalizedName) {
-    return null;
-  }
-
-  const matches = localWorkspaces.filter(
-    (workspace) => workspace.name.trim().toLowerCase() === normalizedName
-  );
-
-  return matches.length === 1 ? matches[0].id : null;
-}
-
 /**
  * Container component for the workspaces section.
  * Fetches workspace data from ProjectContext and transforms it for display.
@@ -104,20 +70,14 @@ export function IssueWorkspacesSectionContainer({
     return map;
   }, [activeWorkspaces, archivedWorkspaces]);
 
-  const allLocalWorkspaces = useMemo(
-    () => [...activeWorkspaces, ...archivedWorkspaces],
-    [activeWorkspaces, archivedWorkspaces]
-  );
-
   // Get workspaces for the issue, with PR info
   const workspacesWithStats: WorkspaceWithStats[] = useMemo(() => {
     const rawWorkspaces = getWorkspacesForIssue(issueId);
 
     return rawWorkspaces.map((workspace) => {
-      const resolvedLocalWorkspaceId = resolveLocalWorkspaceId(
-        workspace,
-        allLocalWorkspaces
-      );
+      // Human names are not identity. Only the stored explicit link can route
+      // a card to a local workspace; an unlinked card stays unlinked.
+      const resolvedLocalWorkspaceId = workspace.local_workspace_id;
       const localWorkspace = resolvedLocalWorkspaceId
         ? localWorkspacesById.get(resolvedLocalWorkspaceId)
         : undefined;
@@ -164,7 +124,6 @@ export function IssueWorkspacesSectionContainer({
     membersWithProfilesById,
     userId,
     localWorkspacesById,
-    allLocalWorkspaces,
   ]);
 
   const isLoading = projectLoading || orgLoading;

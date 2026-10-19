@@ -88,6 +88,7 @@ function Fixture() {
   // Tests change inputs through normal React rendering, without touching any API.
   Object.assign(window, {
     fixtureSelect: setSelectedWorkspaceId,
+    fixtureReverse: () => setWorkspaces((previous) => [...previous].reverse()),
     fixtureUpdate: (id: string, changes: Partial<WorkspacesSidebarWorkspace>) =>
       setWorkspaces((previous) =>
         previous.map((ws) => (ws.id === id ? { ...ws, ...changes } : ws))
@@ -99,7 +100,10 @@ function Fixture() {
       activityWorkspaces={workspaces}
       totalWorkspacesCount={workspaces.length}
       selectedWorkspaceId={selectedWorkspaceId}
-      onSelectWorkspace={setSelectedWorkspaceId}
+      onSelectWorkspace={(id) => {
+        Object.assign(window, { fixtureLastSelected: id });
+        setSelectedWorkspaceId(id);
+      }}
       searchQuery=""
       onSearchChange={() => {}}
       layoutMode="accordion"

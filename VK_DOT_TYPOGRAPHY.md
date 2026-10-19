@@ -36,3 +36,15 @@ and separate from agents. No local heavy build, service restart, backup capture,
 model/effort or Recommend change. The private publication receipt distinguishes
 before/candidate/live measurements and exact-head CI; a build alone is not live
 acceptance or whole-Nightly recovery evidence.
+
+## Font-only live receipt
+
+Owner-approved source `3cd0a6e6337f7f16b99eb78225348346e949917b` was
+selected and verified live October 19 at06:55 EDT, without service or agent restart.
+Four actual served project/workspace cases at390/1440px measure16px for messages
+and composers; four candidate cases also passed. Native text matches, root scaling,
+mobile input sizing, reload/draft/reply, manual unread/attention independence and
+compact project-notice navigation pass with real conversation writes blocked.
+Immutable incumbent assets and compatible frontend-only rollback remain retained.
+Hosted Test39231063701 and frontend-only39231054377 both succeeded at that source.
+This activation excludes newer fenced-code, Personal/header and routing changes.

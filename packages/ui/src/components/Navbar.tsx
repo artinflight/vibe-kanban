@@ -150,7 +150,10 @@ function NavbarBreadcrumbs({
               </button>
             ) : (
               <span
-                className={cn('truncate', isLast ? 'text-normal' : 'text-low')}
+                className={cn(
+                  'truncate',
+                  isLast ? 'text-xl font-semibold text-high' : 'text-low'
+                )}
               >
                 {crumb.label}
               </span>
@@ -355,7 +358,7 @@ export function Navbar({
               )
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-lg text-high font-medium truncate">
+              <p className="text-xl text-high font-semibold truncate">
                 {workspaceTitle || (isOnProjectPage ? 'Project' : 'Workspaces')}
               </p>
               {!isOnProjectPage && breadcrumbs && breadcrumbs.length > 0 && (
@@ -483,7 +486,7 @@ export function Navbar({
           />
         ) : (
           <p
-            className="text-base text-low truncate cursor-text select-text"
+            className="text-xl font-semibold text-high truncate cursor-text select-text"
             title={workspaceTitle ?? undefined}
           >
             {workspaceTitle ?? ''}

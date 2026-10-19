@@ -135,6 +135,25 @@ for (const width of [390, 1440]) {
   const action = section(width < 768 ? 'Attention' : 'Needs Attention');
   await wait(() => names(action).includes('Running unread'));
   assert.equal(names(action).includes('Dispatch sibling'), false);
+  // Position changes never change the workspace behind a displayed row.
+  const runningRows = section('Running');
+  const beforeReorder = names(runningRows);
+  dom.window.fixtureReverse();
+  await wait(
+    () =>
+      JSON.stringify(names(runningRows)) ===
+      JSON.stringify([...beforeReorder].reverse())
+  );
+  for (const [name, id] of [
+    ['Running attention', 'running-attention'],
+    ['Running unread', 'running-unread'],
+  ]) {
+    const row = [
+      ...runningRows.querySelectorAll('.mobile-workspace-card'),
+    ].find((node) => node.textContent.includes(name));
+    row.querySelector('button').click();
+    assert.equal(dom.window.fixtureLastSelected, id);
+  }
   dom.window.close();
   console.log(
     `PASS ${width}: running/unread, explicit attention, approvals, idle/unseen, subagents, independent activity/action transitions and target-only dispatch badge.`

@@ -95,6 +95,7 @@ jobs:
               - 'packages/ui/**'
               - 'shared/**'
               - 'scripts/testing/kanban-issue-panel*'
+              - 'scripts/testing/*workspace-destination*'
               - 'scripts/testing/run-kanban-issue-panel-tests.mjs'
               - 'scripts/testing/*read-only-web-links*'
               - 'scripts/vk-publish-artifact.py'
@@ -322,6 +323,9 @@ jobs:
 
       - name: Check issue creation persistence, local assignments and workspace pagination
         run: node --experimental-strip-types --test packages/web-core/src/shared/lib/issueCreation.test.ts packages/web-core/src/pages/workspaces/workspaceAssignmentFilter.test.ts packages/web-core/src/pages/workspaces/workspaceSidebarPagination.test.ts packages/web-core/src/shared/lib/dotWorkspaceActivity.test.ts packages/web-core/src/shared/lib/dotProjectNotices.test.ts
+
+      - name: Check exact workspace destinations and Personal visibility
+        run: node scripts/testing/test-workspace-destination.mjs
 
       - name: Check actual issue panel Close/reopen races
         env:

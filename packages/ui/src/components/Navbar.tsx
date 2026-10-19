@@ -469,7 +469,7 @@ export function Navbar({
     <nav
       data-tauri-drag-region
       className={cn(
-        'flex items-center justify-between px-base py-half bg-secondary border-b shrink-0',
+        'flex min-w-0 items-center justify-between px-base py-half bg-secondary border-b shrink-0',
         className
       )}
     >

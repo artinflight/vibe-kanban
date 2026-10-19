@@ -49,6 +49,18 @@ and browser results are recorded in the existing PR and private owner handoff. T
 ancestor is preserved. Code blocks plus these UI corrections are not activated;
 separate owner approval and coordinated frontend-only release remain required.
 
+The approved `5c411b59b` package was selected on October19 and its served mobile
+checks passed. Served desktop testing then reproduced a long-name overflow:
+the navbar's automatic minimum width expanded the shell's `auto 1fr` grid.
+The original component fixture used a column layout and did not expose it.
+Frontend-only rollback restored the16px font baseline while retaining every
+incumbent and candidate asset; services, agents and conversations were untouched.
+The correction sets the navbar's minimum width to zero. The regression fixture
+now uses the shell grid and checks actual header bounds as well as body overflow,
+so a parent clipping overflow cannot conceal a failure. This correction requires
+its own exact-source validation and release selection; it is not deployed by
+the earlier exact-package approval.
+
 Project questions and genuine shared issue questions are independent notification
 scopes. A genuine unresolved shared issue question is intentionally discoverable on
 its sibling workspaces; a project question belongs only to the project notice.

@@ -8,7 +8,7 @@ import { bundleDestinationFixture } from './workspace-destination-support.mjs';
 const { chromium } = await import(
   pathToFileURL(process.env.PLAYWRIGHT_MODULE).href
 );
-const dist = resolve('packages/local-web/dist');
+const dist = resolve(process.env.VK_FRONTEND_DIST ?? 'packages/local-web/dist');
 const index = await readFile(resolve(dist, 'index.html'), 'utf8');
 const css = index.match(/href="([^"]+\.css)"/)[1];
 const bundle = await bundleDestinationFixture();
@@ -162,6 +162,30 @@ try {
         await page.evaluate(() => document.body.scrollWidth <= innerWidth + 1),
         'Long name does not overflow viewport'
       );
+      const headerBounds = await page.evaluate(() =>
+        [...document.querySelectorAll('nav, .mobile-app-header')].map((n) => ({
+          right: n.getBoundingClientRect().right,
+          width: n.getBoundingClientRect().width,
+          className: n.className,
+        }))
+      );
+      assert.ok(
+        headerBounds.every((n) => n.right <= width + 1),
+        'Header fits the actual shell grid: ' +
+          JSON.stringify({ width, headerBounds })
+      );
+      if (width >= 768) {
+        const previousWidth = await page.locator('nav').evaluate((nav) => {
+          nav.classList.remove('min-w-0');
+          const right = nav.getBoundingClientRect().right;
+          nav.classList.add('min-w-0');
+          return right;
+        });
+        assert.ok(
+          previousWidth > width + 1,
+          'The shell-grid fixture must reproduce the previous long-name overflow'
+        );
+      }
       await page.locator('#composer input').fill('Synthetic B browser prompt');
       await page
         .getByRole('button', { name: 'Synthetic send', exact: true })

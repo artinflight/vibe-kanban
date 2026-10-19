@@ -40,10 +40,21 @@ function Probe() {
     currentUserId: f.user ?? 'self',
   }).filteredIssues;
   return f.showNavbar ? (
-    <Navbar
-      workspaceTitle={workspace?.name || workspace?.branch}
-      mobileMode={f.mobile}
-    />
+    <div
+      style={{
+        display: f.mobile ? 'flex' : 'grid',
+        flexDirection: 'column',
+        gridTemplateColumns: '64px 1fr',
+        minWidth: 0,
+        width: '100%',
+      }}
+    >
+      {!f.mobile && <div />}
+      <Navbar
+        workspaceTitle={workspace?.name || workspace?.branch}
+        mobileMode={f.mobile}
+      />
+    </div>
   ) : null;
 }
 const root = createRoot(document.getElementById('root')!);

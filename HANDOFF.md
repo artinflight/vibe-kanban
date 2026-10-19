@@ -111,7 +111,7 @@ close/Back, retains per-session/destination drafts and pins in-flight sends.
 Drag/full-width/restore keep chat state mounted. Staging's existing coordination
 record was notified before packaging; no competing activation here.
 
-Current follow-up: [Dot typography](VK_DOT_TYPOGRAPHY.md) matches measured native
-workspace16px message/composer text, retaining the live compact project badge.
-Use current174193a14 baseline, private Nightly/Disk resource coordination, bounded
-checks and hosted frontend-only artifacts. No state logic or service restart.
+Current follow-up: [Dot code blocks](VK_DOT_CODE_BLOCKS.md) adds safe fenced code,
+Prism highlighting and exact Copy, bundled with pending [16px typography](VK_DOT_TYPOGRAPHY.md).
+Preparation/testing only; activation explicitly denied pending separate approval.
+Use private Nightly/Disk bounded admission; no restart or state/routing change.

@@ -21,12 +21,14 @@
   outline: 2px solid #d7834b;
 }
 .dot-fixture-container {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
   height: 100%;
 }
 .dot-panel {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -152,6 +154,69 @@
   margin: 8px 0;
   font-size: 1rem;
 }
+
+.dot-code-block {
+  min-width: 0;
+  max-width: 100%;
+  margin: 8px 0;
+  border: 1px solid #8884;
+  border-radius: 6px;
+  background: #88808;
+  font-size: 1rem;
+}
+.dot-code-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #8883;
+  font-size: 12px;
+}
+.dot-code-toolbar > span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.dot-code-toolbar button {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid #8885;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.dot-code-block pre {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  white-space: pre;
+  overflow-wrap: normal;
+  tab-size: 4;
+}
+.dot-code-block code {
+  font: inherit;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.dot-code-toolbar button:focus-visible,
+.dot-code-block pre:focus-visible {
+  outline: 2px solid #bc926b;
+  outline-offset: -2px;
+}
+.dot-code-copy-error {
+  display: block;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+@media (max-width: 767px) {
+  .dot-code-toolbar button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 .dot-message small {
   font-size: 10px;
   opacity: 0.6;

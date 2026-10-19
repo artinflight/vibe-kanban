@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { DotMessageBody } from './DotMessageBody';
 
 export interface SidechatReplyReference {
   id: string;
@@ -487,7 +488,9 @@ export function DotSidechatPanel(props: DotSidechatPanelProps) {
                 )}
               </blockquote>
             )}
-            <p>{presented.get(message.id)?.body ?? message.body}</p>
+            <DotMessageBody
+              body={presented.get(message.id)?.body ?? message.body}
+            />
             {message.role === 'dot' &&
               props.live &&
               props.notificationsEnabled && (

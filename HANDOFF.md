@@ -111,8 +111,7 @@ close/Back, retains per-session/destination drafts and pins in-flight sends.
 Drag/full-width/restore keep chat state mounted. Staging's existing coordination
 record was notified before packaging; no competing activation here.
 
-Current follow-up: [project unread notices](VK_PROJECT_DOT_NOTICES.md) now use a
-compact unboxed row and small blue badge at the owner's request. Staging verified
-the earlier combined366cfd243 release live; use that exact baseline for this
-frontend-only visual correction. Routing/read/draft code and Python stay unchanged.
-Preserve incumbent assets and rollback; no service/backend/agent restart.
+Current follow-up: [Dot typography](VK_DOT_TYPOGRAPHY.md) matches measured native
+workspace16px message/composer text, retaining the live compact project badge.
+Use current174193a14 baseline, private Nightly/Disk resource coordination, bounded
+checks and hosted frontend-only artifacts. No state logic or service restart.

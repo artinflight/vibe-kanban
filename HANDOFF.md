@@ -1,3 +1,20 @@
+# October 19 7:37 a.m. EDT — all map units terminal; B metadata next
+
+Read STATE's latest entry and private RAM_FAILURE before any launch. The complete
+RAM image was516,071,424 bytes but its48MiB checkpoint estimate failed during
+encoding. Preserve all partials; no current typed descriptor is accepted. No own
+bulk future or B producer remains. Next candidate is518,168,576 bytes directly on
+B after actual once-charged MP/native/I/O admission, not a source/SQL replay or an
+unused5GiB/448MiB reservation. The MP owner reports all3 masters now resident;
+verify receipts and update the SAME remaining allowance, not a new allocation.
+
+NIGHTLY_HISTORY_CARRIER_SOURCE_CONTRACT records exact old B-backed history versus
+selected new/tail requests from existing indexes. No live history scan/migration
+occurred. Hydration needs bounded per-file proof and supported reader/path glue;
+keep it separate from Restart acceptance. Journal closure, font scope/pins and
+Staging typed consumer/final catch-up remain genuine integration requirements.
+No automatic retry, deletion, security change, deployment or schedule authority.
+
 # October 19 7:12 a.m. EDT — retained source complete; RAM map recovery
 
 The original reader2752444 and its collector are terminal. Preserve their failed

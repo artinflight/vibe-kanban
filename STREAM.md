@@ -1,3 +1,13 @@
+# October 19 — close metadata transport and current integration
+
+Source observations are complete; current operational recovery is not accepted.
+The retained RAM image516.07MB exceeded the48MiB compressed checkpoint estimate;
+all units are now terminal and original/partial data retained. Prepare actual-sized
+B-only metadata transport under fresh once-charged MP capacity/I/O admission, then
+selected new/tail verification and typed journal/font/consumer integration. Reuse
+all accepted cold/137SQL/supplement proof. Disk's staged root-history read-tier
+proposal is source-only preparation, not a new Restart gate or live path move.
+
 # October 19 — finish retained source map and explicit coverage closure
 
 The missing-suffix recovery completed7:05a.m. EDT with1,406,810 records and zero

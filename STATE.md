@@ -1,3 +1,42 @@
+# October 19 7:37 a.m. EDT — terminal metadata limit and history carrier contract
+
+All Nightly source/map units are terminal; no automatic retry, new B payload or
+bulk SSD growth is committed. The RAM derivation completed SQLite integrity for
+a516,071,424-byte metadata image. Its serialization stopped7:22:42a.m. EDT at
+the48MiB planning limit, with50,343,567 encoded bytes retained, while RAM/swap and
+actual shared-floor checks passed. This is not a complete durable index. Preserve
+that partial, the prior93MB partial, original source records/cache and all accepted
+restore/SQL/Git/Zoho proof. Do not replay data capture to repair metadata transport.
+
+The next candidate is B-only raw metadata516,071,424 bytes plus2MiB planned native
+control/filesystem overhead, not another SSD checkpoint or duplicate raw restore.
+The MP owner now reports all3 old masters3,375,281,788 bytes B-verified/resident;
+subtract them once from the same3,376,330,364-byte future allowance, leaving1MiB.
+With8GiB B floor and335,544,320 support retained, planning protection becomes
+8,926,527,488 bytes. Actual native Bfree10,994,139,136 at7:24a.m. EDT gives a
+plausible518,168,576-byte metadata window; durable MP/native allocation receipts
+and current health/I/O admission remain necessary before transfer. No old12.301GB
+future balance is declared immutable or double charged against arrived payload.
+
+Disk's source-only root-placement follow-up is separate from Restart acceptance.
+Existing composed metadata for the5:00–6:45a.m. observation epoch identifies35018
+Vibe history members/85,089,068,381 logical bytes and2028 active-Codex history
+members/13,320,515,565 bytes with exact full bodies already on accepted B. Vibe72
+whole-member requests/2,044,646,075 bytes remain unbacked in that current layer;
+active-Codex116 requests need169,191,018 bytes beyond1,637,168,886 proven base
+prefix bytes. The additional legacy Codex root retains9971 B-verified members.
+These are logical-path counts, not additive physical allocations or live7:29
+writer coverage. Later growth, capture-state sidecars and absolute DB paths need
+final catch-up. No history migration, compression, hydration or source-path change
+was performed. Bounded selected-file native-Linux hydration is a preparation path;
+current Vibe filesystem readers have no transparent cold-tier routing yet.
+
+Actual current recovery still requires the durable complete map, measured new
+layers/independent composed proof, reviewed vanished-watch closure adapter/event
+reconciliation, actual font112-root/pin package and original Staging consumer/final
+SQL/fence/cutback rehearsal. Root migration is not added as a Restart gate. No
+production deployment, schedule activation, cutover or original retirement.
+
 # October 19 7:12 a.m. EDT — source recovery complete; typed map still unaccepted
 
 The source reader ended6:45:59a.m. EDT on its combined RAM/swap/SSD predicate;

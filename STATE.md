@@ -1,3 +1,55 @@
+# October 19 6:13 a.m. EDT — typed reader prepared; current source proof active
+
+The same current-source reader (PID 2752444/start 50470539) has reconciled
+123.39 GB at 6:12 a.m. EDT, with no recorded source errors. It is not terminal.
+All 137 independently verified SQLite images, the accepted 162.70 GB restore,
+original archive, original 111 SQL images and explicit historical gaps remain
+preserved. A single lightweight collector now waits for that exact reader;
+it cannot start a capture, repeat the census or write a B payload. After a
+successful terminal result, it derives the complete base/overlay/tombstone map
+and measures only required new bodies or append-history tails. Exact failures
+remain targeted gaps, not permission to replay the full workload.
+
+`vk_typed_recovery.py` implements a separate mixed-epoch format, authenticated
+readonly base/overlay indexes, cooperative dependency leases, bounded raw/zlib
+and pinned ZIP-member reads, complete namespace/link/runtime/SQL bindings and
+journal continuity checks. It can reuse unchanged accepted bodies and already
+verified SQLite, dependency and frontend components. An immutable extra runtime
+root needs explicit full member closure and consumer-supplied proof bindings;
+the old observer is never claimed to cover an outside root. Eighteen focused
+reader/overlay cases and two collector/tail-measurement fixtures pass. This is
+source preparation, not a sealed current descriptor or controller adoption.
+
+The archived Git dependency proof now traverses 93,293 objects from canonical
+refs/reflogs plus all archived worktree HEAD/pseudoref/reflog/index roots. All
+102 hash-pinned indexes parse; 4,605 distinct indexed object roots and 938
+additional reference roots produce no missing roots, missing dependencies or
+diagnostics using accepted bytes and the two verified later repair packs.
+The 68 unresolved original IDs occur in neither that graph nor the checked
+current refs/reflogs/index graph. Their original bytes/inclusion remain unproved;
+original-epoch completeness is still false. This does not dispose of the other
+recorded historical gaps or waive an original source root.
+
+The earlier native receiver failure is established as errno 13 opening the B
+owner-stop JSON, followed by the sender's broken pipe. Its precise Windows cause
+was not captured; a sharing race is a hypothesis, not a finding. The retained
+terminal reconciliation records three successful reads of each control file
+before SQL resumption. Bounded same-access retries still fail on persistent
+denial, malformed state, active OwnerPause or explicit B STOP. No ACL, monitor or
+security setting changed. The previous phrase "sharing failure" was too specific.
+
+Disk's final 5:34 a.m. EDT offload receipt records 14,875,848,704 B bytes free;
+fresh next-phase admission must use actual current free space and remaining
+owner commitments. The 3,376,330,364-byte MP master allowance is already inside
+the 12,301,809,276-byte protected balance; charge incoming residents once. The
+448 MiB body-control ceiling is not an exclusive reservation of every unused
+byte before a short bounded check. Current T63 typography preparation needs
+actual publication, immutable layer/scope and runtime-pin addenda if activated;
+Staging's existing package is explicitly the earlier runtime epoch. Whole-home
+root placement remains a future coordinated path/backup dependency, not authority
+to migrate live histories or databases. No production switch, deployment,
+schedule activation or original/archive deletion is authorized or performed.
+
 # October 19 4:32 a.m. EDT — current SQLite component restore accepted
 
 The accepted 162.70 GB recovered set and all 111 original sealed SQL images are
@@ -12,7 +64,7 @@ The current-data component set now independently restores all 137 SQLite images:
 5,416,636,416 bytes from 1,257,294,574 compressed B bytes. Every image passes full
 file readback, SQLite integrity, schema and recorded mode/UID/GID checks. Epochs
 are per store, not an atomic host transaction. A transient Windows control-file
-sharing failure retained 103 complete images; recovery revalidated their source
+read-access failure retained 103 complete images; recovery revalidated their source
 hashes and preserved partials. The last 2.436 GB image could not serialize into
 one in-memory buffer. Four committed-WAL/bounds fixtures validate backup API to a
 checked tmpfs RAM file, avoiding serialization, VACUUM, source mutation and disk

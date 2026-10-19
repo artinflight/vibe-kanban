@@ -1,3 +1,33 @@
+# October 19 6:13 a.m. EDT — existing reader plus bounded typed follow-through
+
+Keep source reader PID2752444/start50470539 and observer2707226 unchanged. Latest
+6:12 receipt: 123.39 GB, zero recorded failures. The single collector service
+`vk-nightly-current-typed-collector-r1-20261019` (PID3546197 at admission) waits
+for that exact reader. Read current-content/TYPED_PREPARATION_PROGRESS and then
+TYPED_PREPARATION_RESULT or TYPED_PREPARATION_FAILURE in the existing private
+residual-coverage area. It derives from sealed rows and measures selected new
+bodies/tails; it launches no source/DB replay, B transfer or production action.
+Preserve any partial overlay/measurements and reconcile only exact failing paths.
+
+Public typed reader/overlay tests:18 pass; collector/tail fixtures:2 pass.
+All137 consistent SQL images and old162.70GB cold proof remain accepted for
+their explicit epochs. ARCHIVED_ALL_OWNED_GIT_DEPENDENCIES_VERIFIED records full
+owned refs/reflogs/worktree-index closure using the two later semantic repairs;
+68 original IDs remain unknown historical containers, absent from the checked
+dependency graphs. B_CONTROL_READ_FAILURE_DISPOSITION records errno13 cause
+limits and the six readable control observations before SQL resumption. Never
+treat persistent denial, malformed state, OwnerPause or explicitBSTOP as success.
+
+Staging's STAGING_TYPED_READER_T63_PIN_CONTRACT is a bounded interface read,
+not adoption. Authenticate external receipts, exact required sets and actual
+native roots through the final leased read; a passed boolean is insufficient.
+Before sealing, reconcile journal changes and bind actual T63 publication or
+the still-incumbent frontend. A new outside source needs explicit immutable
+closure/scope/pin addendum; do not fabricate old-journal coverage or wait for
+an obsolete producer checkpoint. Fresh B admission must reconcile Disk's final
+receipt and once-charged MP arrivals. No stale9/48GiB future charge, deployment,
+schedule, production switch or original/archive retirement. STATE has details.
+
 # October 19 4:32 a.m. EDT — current-data proof and remaining coverage
 
 Do not repeat the accepted 162.70 GB restore, the 6,478-object Git supplement,

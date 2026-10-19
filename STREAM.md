@@ -1,3 +1,19 @@
+# October 19 — compose the retained current proof without another capture
+
+The existing full-source reconciliation is active, not accepted. One collector
+waits for its exact PID/start, then derives the retained complete member map and
+measures only new bodies/history tails under fresh admission. The typed reader
+and overlay builder have 18 passing checks; two collector/tail fixtures pass.
+The accepted cold tree and all 137 later consistent SQL images remain reusable.
+Full archived Git owned-root closure now passes with the two semantic repair
+packs; original unavailable IDs and other historical gaps stay explicit.
+
+Finish actual overlay/dependency sealing, targeted journal reconciliation,
+independent new-layer/composed readback and the exact current runtime binding.
+T63's pending font publication is a later explicit layer if activated, not old
+observer coverage. Existing Staging owns source-only controller adaptation and
+copied-data rehearsal. No production/schedule/cutover/archive-retirement action.
+
 # October 19 — current components verified; composed baseline still open
 
 The accepted historical cold restore is unchanged. Independently verified later

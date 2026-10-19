@@ -154,23 +154,32 @@ class LocalDependencies:
 
 
 class ComposedIndex:
-    """One accepted base plus one overlay, not an unbounded generation chain.
+    """Accepted base, consolidated map, and optionally one current journal patch.
 
-    base.entries(name,row); overlay.puts(name,row), removes(name). Both must be
-    hash-authenticated, held readonly SQLite connections supplied by the caller.
-    The provider rechecks their file identities throughout consumption.
+    A nested base is another held ComposedIndex, never a live filesystem view.
+    The public holder bounds this to three authenticated indexes. Keeping the
+    final journal patch small avoids cloning the complete retained map again.
     """
     def __init__(self, base, overlay, check):
         self.base, self.overlay, self.check = base, overlay, check
         for connection in (base, overlay):
-            connection.execute('pragma query_only=on')
+            if isinstance(connection, sqlite3.Connection):
+                connection.execute('pragma query_only=on')
 
     def entry(self, name):
-        self.check(); key(name)
+        self.check()
+        return self._entry(name)
+
+    def _entry(self, name):
+        # Internal metadata lookup: the complete validation pass owns its held
+        # descriptors and checks identities before/after each bounded batch.
+        key(name)
         row = self.overlay.execute('select row from puts where name=?', (name,)).fetchone()
         if row is None:
             if self.overlay.execute('select 1 from removes where name=?', (name,)).fetchone():
                 raise KeyError(name)
+            if isinstance(self.base, ComposedIndex):
+                return self.base._entry(name)
             row = self.base.execute('select row from entries where name=?', (name,)).fetchone()
         if row is None:
             raise KeyError(name)
@@ -180,7 +189,20 @@ class ComposedIndex:
 
     def entries(self):
         self.check()
-        base = iter(self.base.execute('select name,row from entries order by name'))
+        base = (self.base.entries() if isinstance(self.base, ComposedIndex)
+                else self.base.execute('select name,row from entries order by name'))
+        yield from self._merge(base)
+        self.check()
+
+    def changed_entries(self):
+        """Selected replacements from either overlay, including shadow/removal."""
+        self.check()
+        previous = self.base.changed_entries() if isinstance(self.base, ComposedIndex) else ()
+        yield from self._merge(previous)
+        self.check()
+
+    def _merge(self, previous):
+        base = iter(previous)
         overlay = iter(self.overlay.execute('select name,row from puts order by name'))
         removed = iter(self.overlay.execute('select name from removes order by name'))
         a, b, c = next(base, None), next(overlay, None), next(removed, None)
@@ -200,24 +222,31 @@ class ComposedIndex:
                 if self.overlay.execute('select 1 from puts where name=?', (chosen[0],)).fetchone():
                     raise ValueError('ambiguous replacement/tombstone')
                 continue
-            if len(chosen[1]) > MAX_ROW:
-                raise ValueError('excessive recovery row')
-            yield chosen[0], json.loads(chosen[1])
+            if isinstance(chosen[1], str):
+                if len(chosen[1]) > MAX_ROW:
+                    raise ValueError('excessive recovery row')
+                value = json.loads(chosen[1])
+            else:
+                value = chosen[1]  # Already bounded/decoded by the held lower index.
+            yield chosen[0], value
         self.check()
 
 
 @contextmanager
-def held_index(provider, base_reference, overlay_reference):
+def held_index(provider, *references):
     """Authenticate exact index bytes and retain their descriptors until close.
 
     On Linux /proc/self/fd pins the opened inode across pathname replacement.
-    Both connections and the underlying descriptors remain held for all reads.
-    Root leases/checks and index fingerprints are rechecked by the consumer.
+    All connections and underlying descriptors remain held for all reads.
+    Two indexes are the ordinary base/map pair. An optional third is a bounded,
+    consolidated current journal patch, not an unbounded history chain.
     """
+    if len(references) not in (2, 3):
+        raise ValueError('recovery requires base/map and at most one current journal patch')
     with ExitStack() as stack:
         streams = []
         connections = []
-        for reference in (base_reference, overlay_reference):
+        for reference in references:
             stream = stack.enter_context(provider.open(reference['layer'], reference['selector']))
             st = os.fstat(stream.fileno())
             if (st.st_size != reference['bytes']
@@ -234,8 +263,10 @@ def held_index(provider, base_reference, overlay_reference):
             if any(fingerprint(os.fstat(f.fileno())) != before for f, before in streams):
                 raise ValueError('authenticated index changed during lease')
 
-        index = ComposedIndex(*connections, check)
-        index.references = (base_reference, overlay_reference)
+        index = connections[0]
+        for overlay in connections[1:]:
+            index = ComposedIndex(index, overlay, check)
+        index.references = tuple(references)
         check()
         yield index
         check()
@@ -297,6 +328,7 @@ class HeldRecoverySet:
         self.provider, self.index = provider, index
         self.expected_sha256 = expected_sha256
         self.verified = False
+        self.enrollment_resolution = None
 
     def check(self):
         self.provider.check()
@@ -306,13 +338,14 @@ class HeldRecoverySet:
 
     def validate(self, *, plan_sha256, scope_sha256, required_sources,
                  original_sources, required_pins, required_SQL,
-                 journal_scope_sha256=None, immutable_sources=None):
+                 journal_scope_sha256=None, immutable_sources=None, enrollment_resolution=None):
         """Validate the complete namespace and exact caller-selected contract.
 
         Required sets come from the consumer's authenticated package, not from
         the descriptor's own assertions. A passing receipt alone is insufficient.
         Whole body reads of new components are a separate required proof.
         """
+        self.verified = False
         self.check(); d = self.descriptor
         immutable_sources = immutable_sources or {}
         journal_scope_sha256 = journal_scope_sha256 or scope_sha256
@@ -341,11 +374,20 @@ class HeldRecoverySet:
         if (not journal.get('instance') or journal.get('scope_sha256') != journal_scope_sha256
                 or type(journal.get('start')) is not int or journal['start'] < 0
                 or type(journal.get('end')) is not int or journal['end'] < journal['start']
-                or journal.get('errors') != [] or journal.get('event_closure_verified') is not True):
+                or journal.get('event_closure_verified') is not True):
             raise ValueError('source/journal reconciliation incomplete')
+        resolved_paths = []
+        if journal.get('errors') != []:
+            from vk_vanished_enrollment import VanishedEnrollmentCoverage
+            if not isinstance(enrollment_resolution, VanishedEnrollmentCoverage):
+                raise ValueError('raw journal errors require authenticated typed enrollment coverage')
+            resolved_paths = enrollment_resolution.validate_anchor(journal,
+                plan_sha256=plan_sha256, required_sources=required_sources)
+        elif enrollment_resolution is not None:
+            raise ValueError('unexpected enrollment certificate for error-free journal')
         h = hashlib.sha256(); count = 0; source_members = set()
         frozen = {root: [hashlib.sha256(), 0] for root in immutable_sources}
-        lookup = lru_cache(maxsize=8192)(self.index.entry)
+        lookup = lru_cache(maxsize=8192)(self.index._entry)
         for name, row in self.index.entries():
             validate_member(name, row, lookup)
             if row['kind'] == 'file':
@@ -372,6 +414,8 @@ class HeldRecoverySet:
                 if total != row['bytes']:
                     raise ValueError('content recipe coverage differs')
             absolute = '/' + name
+            if any(absolute == path or absolute.startswith(path.rstrip('/') + '/') for path in resolved_paths):
+                raise ValueError('vanished enrollment subtree remains in selected map')
             if not any(absolute == root or absolute.startswith(root.rstrip('/') + '/') for root in required_sources):
                 raise ValueError('member outside declared source scope')
             if absolute in required_sources:
@@ -405,6 +449,9 @@ class HeldRecoverySet:
                     or any(row.get(f) != component.get(f) for f in ('bytes', 'sha256'))):
                 raise ValueError('consistent SQLite component binding differs')
             digest(component.get('independent_proof_sha256'))
+        if enrollment_resolution is not None:
+            enrollment_resolution.validate_anchor(journal, plan_sha256=plan_sha256, required_sources=required_sources)
+        self.enrollment_resolution = enrollment_resolution
         self.check(); self.verified = True
         return {'format': FORMAT, 'descriptor_sha256': self.expected_sha256,
                 'member_count': count, 'member_map_sha256': h.hexdigest(),
@@ -492,6 +539,20 @@ class HeldRecoverySet:
         if not self.verified:
             raise ValueError('typed set is not validated')
         anchor = self.descriptor['journal']
+        if self.enrollment_resolution is not None:
+            # Return the unmodified raw unready report plus the separately
+            # authenticated resolution identity; never manufacture readytrue.
+            resolution = self.enrollment_resolution
+            resolution.validate_anchor(anchor, plan_sha256=self.descriptor['plan_sha256'],
+                                       required_sources=self.descriptor['sources'])
+            watched, drained = resolution.current(plan_sha256=self.descriptor['plan_sha256'],
+                                                   required_sources=self.descriptor['sources'])
+            self.check()
+            return {'format': FORMAT, 'descriptor_sha256': self.expected_sha256,
+                    'watched': watched, 'drained': drained,
+                    'enrollment_resolution_sha256': resolution.expected_sha256,
+                    'writer_fence_verified': False, 'activation_authorized': False,
+                    'fresh_final_SQLite_API_required': True}
         watched = journal_reader(anchor['start'])
         if (watched.get('ready') is not True or watched.get('errors')
                 or watched.get('instance') != anchor['instance']
@@ -742,8 +803,7 @@ def verify_overlay_contents(handle, *, accepted_components):
     if not handle.verified:
         raise ValueError('complete member map not validated')
     count = 0; total = 0; reused = 0
-    for name, raw in handle.index.overlay.execute('select name,row from puts order by name'):
-        row = json.loads(raw)
+    for name, row in handle.index.changed_entries():
         if row.get('kind') != 'file':
             continue
         prior = accepted_components.get(name)

@@ -1,19 +1,24 @@
-# October 19 7:37 a.m. EDT — all map units terminal; B metadata next
+# October 19 9:25 a.m. EDT — checkpoint and selected bodies verified
 
-Read STATE's latest entry and private RAM_FAILURE before any launch. The complete
-RAM image was516,071,424 bytes but its48MiB checkpoint estimate failed during
-encoding. Preserve all partials; no current typed descriptor is accepted. No own
-bulk future or B producer remains. Next candidate is518,168,576 bytes directly on
-B after actual once-charged MP/native/I/O admission, not a source/SQL replay or an
-unused5GiB/448MiB reservation. The MP owner reports all3 masters now resident;
-verify receipts and update the SAME remaining allowance, not a new allocation.
+The native B metadata checkpoint passed full SHA/SQLite readback at8:02EDT:
+516,071,424 logical bytes, SHAbe243478ba88c1a972f7f4a2fcd67a0b92f32e6d0f872a7cf2c9d99f20e28750.
+Transparent per-file NTFS compression later preserved its path/fileID/bytes and
+reduced allocation to173,338,624B, freeing342,732,800B. No file was moved/deleted.
+Read CHECKPOINT_TRANSPARENT_COMPRESSION_VERIFIED in the existing private residual
+area, plus SELECTED_COMPONENTS_RESULT:1244 components passed independent Linux
+RAM-file restore/full readback at8:37EDT. One changed MP queue file was skipped;
+51 earlier observation failures remain explicit, not accepted older data.
 
-NIGHTLY_HISTORY_CARRIER_SOURCE_CONTRACT records exact old B-backed history versus
-selected new/tail requests from existing indexes. No live history scan/migration
-occurred. Hydration needs bounded per-file proof and supported reader/path glue;
-keep it separate from Restart acceptance. Journal closure, font scope/pins and
-Staging typed consumer/final catch-up remain genuine integration requirements.
-No automatic retry, deletion, security change, deployment or schedule authority.
+Next read CURRENT_CATCHUP_CLAIM and the named current-catchup unit/result before
+starting anything. It reuses retained bodies and observes only journal-named
+changes, required pins and newly created subtrees, with measured RAM/B batches.
+No full source/137DB replay. The old observer now has THREE ENOENT enrollments;
+actual three-path certificate a918af9c supports conditional absence only, not
+whole event closure. Preserve raw errors and all historical epochs/gaps.
+The typed reader supports base/map plus one small journal patch;31 tests pass.
+Existing Staging owns the source bridge/2686-pin font revision and authenticated
+native-reader/MCP-observer transport. Actual descriptor/current SQL/event closure
+and copied-data integration are still unaccepted. No production/schedule action.
 
 # October 19 7:12 a.m. EDT — retained source complete; RAM map recovery
 

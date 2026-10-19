@@ -94,6 +94,101 @@ class TypedRecoveryTests(unittest.TestCase):
             handle = HeldRecoverySet(d, checksum(d), self.provider, index)
             return callback(handle)
 
+    def resolved_enrollment(self):
+        from vk_vanished_enrollment import seal, VanishedEnrollmentCoverage
+        observer = {'PID': 12, 'start_ticks': 34, 'fd': 3}
+        initial = dict(ready=True, errors=[], instance='new-observer', scope_sha256='3'*64, sequence=10)
+        target = '/home/state/vanished'
+        before = dict(initial, ready=False, sequence=18,
+                      errors=[{'watch_failed': target, 'errno': 2}], events={target: 0x600})
+        after = dict(before, sequence=20, changed=[])
+        kernel = dict(observer=observer, fd_device=1, fd_inode=2, rows=[{
+            'path': target, 'parent_device': 3, 'parent_inode': 4,
+            'watch': dict(wd=5, ino=4, sdev=3, mask=0xfce), 'absence_errno': 2}])
+        c = seal(observer=observer, initial=initial, before=before, after=after,
+                 kernel=kernel, plan_sha256='2'*64, required_sources=['/home/state'],
+                 subtree_names=lambda path: [])
+        current = dict(after, sequence=21)
+        adapter = VanishedEnrollmentCoverage(c, checksum(c), lambda since: current,
+                                             kernel_reader=lambda observer, paths: kernel)
+        d = self.descriptor(); d['journal'].update(errors=before['errors'],
+                                                  enrollment_resolution_sha256=checksum(c))
+        return d, adapter, current
+
+    def test_explicit_enrollment_adapter_preserves_raw_unready_catchup(self):
+        d, adapter, current = self.resolved_enrollment()
+        def check(h):
+            self.validate(h, enrollment_resolution=adapter)
+            result = h.catchup(lambda since: self.fail('Must use certificate-bound reader'))
+            self.assertFalse(result['watched']['ready'])
+            self.assertEqual(result['watched']['errors'], d['journal']['errors'])
+            self.assertFalse(result['writer_fence_verified'])
+            self.assertFalse(result['activation_authorized'])
+            current['errors'] = current['errors'] * 2
+            with self.assertRaises(ValueError): h.catchup(lambda since: {})
+        self.use(check, d)
+
+    def test_resolved_enrollment_cannot_hide_a_selected_descendant_or_use_boolean(self):
+        d, adapter, _ = self.resolved_enrollment()
+        with self.assertRaises(ValueError): self.use(lambda h: self.validate(h, enrollment_resolution=True), d)
+        self.rows['home/state/vanished/new'] = self.file(b'unknown transient')
+        self.write_overlay(); d, adapter, _ = self.resolved_enrollment()
+        with self.assertRaisesRegex(ValueError, 'subtree remains'):
+            self.use(lambda h: self.validate(h, enrollment_resolution=adapter), d)
+
+    def test_large_hardlink_map_checks_held_identities_by_batch(self):
+        # Distinct targets defeat the lookup cache: per-target filesystem/RPC
+        # admission would otherwise scale with every hardlink in a large map.
+        for i in range(5000):
+            target = 'home/state/target-%05d' % i
+            self.rows[target] = self.file(self.body, segments=[
+                self.segment('accepted-base', 'home/state/log', b'original\n'),
+                self.segment('current', 'suffix', b'new\n', zlib.compress(b'new\n'))])
+            self.rows['home/state/alias-%05d' % i] = dict(self.meta, kind='hardlink',
+                target=target, bytes=len(self.body), sha256=hashlib.sha256(self.body).hexdigest())
+        self.write_overlay()
+        count = [0]; original = self.provider.check
+        def checked():
+            count[0] += 1
+            original()
+        self.provider.check = checked
+        def check(h):
+            count[0] = 0
+            self.validate(h)
+            self.assertLess(count[0], 30)
+            self.assertTrue(h.verified)
+        self.use(check)
+
+    def test_small_third_journal_patch_shadows_removes_and_checks_lower_content(self):
+        other = b'lower overlay body'
+        encoded = zlib.compress(other)
+        (self.new / 'other').write_bytes(encoded)
+        self.rows['home/state/other'] = self.file(other, segments=[
+            self.segment('current', 'other', other, encoded)])
+        self.write_overlay()
+        body = self.body + b'last\n'; tail = zlib.compress(b'last\n')
+        (self.new / 'last').write_bytes(tail)
+        original = self.rows['home/state/log']
+        self.rows['home/state/log'] = self.file(body, segments=original['segments'] + [
+            self.segment('current', 'last', b'last\n', tail)])
+        del self.rows['home/state/link']
+        db = sqlite3.connect(self.new / 'patch.sqlite')
+        db.execute('create table puts(name text primary key,row text) without rowid')
+        db.execute('create table removes(name text primary key) without rowid')
+        db.execute('insert into puts values(?,?)', ('home/state/log', json.dumps(self.rows['home/state/log'])))
+        db.execute('insert into removes values(?)', ('home/state/link',)); db.commit(); db.close()
+        d = self.descriptor(); d['indexes'].append(self.reference(self.new, 'patch.sqlite', 'current'))
+        def check(h):
+            self.validate(h)
+            self.assertEqual(b''.join(h.blocks('home/state/log')), body)
+            with self.assertRaises(KeyError): h.index.entry('home/state/link')
+            proof = verify_overlay_contents(h, accepted_components={})
+            self.assertEqual(proof['new_composed_bodies_readback'], 2)
+            self.assertEqual(proof['new_composed_body_readback_bytes'], len(body) + len(other))
+        self.use(check, d)
+        with self.provider.held(), self.assertRaises(ValueError):
+            with held_index(self.provider, *d['indexes'], d['indexes'][-1]): pass
+
     def test_real_base_overlay_append_hardlink_and_literal_link(self):
         def check(h):
             proof = self.validate(h)

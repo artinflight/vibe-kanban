@@ -1,12 +1,18 @@
-# October 19 — close metadata transport and current integration
+# October 19 — finish the retained typed current baseline
 
-Source observations are complete; current operational recovery is not accepted.
-The retained RAM image516.07MB exceeded the48MiB compressed checkpoint estimate;
-all units are now terminal and original/partial data retained. Prepare actual-sized
-B-only metadata transport under fresh once-charged MP capacity/I/O admission, then
-selected new/tail verification and typed journal/font/consumer integration. Reuse
-all accepted cold/137SQL/supplement proof. Disk's staged root-history read-tier
-proposal is source-only preparation, not a new Restart gate or live path move.
+Reuse the independently accepted162.70GB cold set and137 API images. The complete
+retained member map is now durable/hash/SQLite-verified on B; transparent per-file
+compression preserves its logical516.07MB while using173.34MB. Selected-content
+transfer/independent RAM-file readback passed1244 components. Preserve51 earlier
+source failures plus one later MP-document skip as distinct epoch gaps.
+
+Finish only named current changes, new subtrees and source/pin closure. Capture
+SQL changes through the backup API, retaining old images. Compose a small third
+journal index instead of cloning the complete map. The three raw ENOENT gaps
+have a conditional current-absence certificate; event closure is still open.
+Existing Staging owns the source bridge/current font pins and remote provider
+integration. Final descriptor, full composed proof and copied-data/final-producer
+integration are not yet accepted. No production, schedule or root-history migration.
 
 # October 19 — finish retained source map and explicit coverage closure
 

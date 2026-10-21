@@ -17,6 +17,8 @@ export function getAgentName(
       return 'AMP';
     case BaseCodingAgent.GEMINI:
       return 'Gemini';
+    case BaseCodingAgent.ANTIGRAVITY:
+      return 'Antigravity ACP (unavailable)';
     case BaseCodingAgent.CODEX:
       return 'Codex';
     case BaseCodingAgent.OPENCODE:
@@ -51,6 +53,9 @@ export function AgentIcon({ agent, className = 'h-4 w-4' }: AgentIconProps) {
       break;
     case BaseCodingAgent.AMP:
       iconPath = `/agents/amp${suffix}.svg`;
+      break;
+    case BaseCodingAgent.ANTIGRAVITY:
+      iconPath = `/ide/antigravity${suffix}.svg`;
       break;
     case BaseCodingAgent.GEMINI:
       iconPath = `/agents/gemini${suffix}.svg`;

@@ -256,15 +256,13 @@ impl Controller {
                 });
             }
         }
-        for (index, mut failure) in failures.into_iter().enumerate() {
+        for (index, failure) in failures.into_iter().enumerate() {
             let mut until = now;
             if let Failure::Quota { window_id } = &failure {
-                // A native bucket not in the authoritative inventory must still block
-                // this pool, but cannot be relabelled as an already verified bucket.
+                // Preserve even an unfamiliar *named* native bucket. Re-admission
+                // must explicitly cover it, never omit/relabel the exhausted window.
                 if let Some(window) = p.windows.iter().find(|w| &w.id == window_id) {
                     until = until.max(window.reset_at_ms.unwrap_or(now));
-                } else {
-                    failure = Failure::QuotaUnspecified;
                 }
             }
             until = until.max(

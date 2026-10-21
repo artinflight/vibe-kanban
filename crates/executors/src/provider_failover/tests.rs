@@ -819,7 +819,9 @@ fn native_limit_and_journal_are_atomic_duplicates_do_not_extend_cooldown() {
     assert_eq!(c.state.blocks["openai"].len(), 1);
     assert_eq!(
         c.work("work-1").unwrap().event.as_ref().unwrap().failure,
-        Failure::QuotaUnspecified
+        Failure::Quota {
+            window_id: "codex:coding:primary".into()
+        }
     );
     drop(c);
     let c = Controller::open(&f.root).unwrap();
@@ -887,7 +889,17 @@ fn native_allowed_signal_and_passed_reset_clock_do_not_re_admit_pool() {
     p.generation = "verified-generation-2".into();
     p.observed_at_ms = 60_003;
     c.observe_pool(p.clone()).unwrap();
-    assert!(c.pool_ready(&p, 60_004));
+    // Complete/new generation alone cannot omit a newly discovered native bucket.
+    assert!(!c.pool_ready(&p, 60_004));
+    p.windows.push(Window {
+        id: "codex:coding:primary".into(),
+        kind: "minutes:180".into(),
+        available: Some(true),
+        reset_at_ms: Some(230_000),
+    });
+    p.observed_at_ms = 60_005;
+    c.observe_pool(p.clone()).unwrap();
+    assert!(c.pool_ready(&p, 60_006));
 }
 #[test]
 fn native_no_auto_astra_even_without_exclusion_or_when_alternate_is_unavailable() {

@@ -175,7 +175,7 @@ provider calls. Hooks do not change approval, cancellation, retry or routing pat
 | Native source | Implemented facts | Limits of the evidence |
 | --- | --- | --- |
 | Codex `account/rateLimits/updated` | Exact limitId plus primary/secondary window, usedPercent, optional sourced duration/reset. Captured before existing raw-log suppression. | Partial windows are observations, not a complete CU inventory, authorization, generation or admission. No fixed five-hour assumption. |
-| Codex `error` | Structured quota, auth, outage, HTTP rate limit, task failure/unknown; exact thread/turn and native willRetry. | No prose matching. Unnamed/unregistered quota bucket blocks the pool without inventing a window. A native retry does not establish a stopped worker. |
+| Codex `error` | Structured quota, auth, outage, HTTP rate limit, task failure/unknown; exact thread/turn and native willRetry. | No prose matching. Unnamed quota blocks the pool without inventing a window; an unfamiliar named window is retained and cannot be omitted on re-admission. A native retry does not establish a stopped worker. |
 | Claude `rate_limit_event` | Native session, allowed/warning/rejected, provider-defined window type and optional reset. Reuses the already-parsed CLIMessage fallback. | Pinned CLI 2.1.62/account emission has not been exercised. A newer SDK schema fixture does not certify that pin. Missing/unknown schema holds. Overage status does not authorize spending. |
 | Claude auth/outage/result errors | Controller accepts separately verified typed host failure receipts. | The pinned native stream has no verified structured mapping here; absent codes remain unknown, not quota. No error-text guessing or implicit API fallback. |
 | Existing exit monitor | Exit result, existing process-group quiescence and verified turn preservation. | Only for registered executions. Missing group/preservation is unsafe. Detached writers, external effects, DB exclusivity and admission still need independent host receipts. |
@@ -248,3 +248,36 @@ unavailable pending the separate official adapter/runtime/account gates. No back
 adoption/restart before PODs completion, and no production provider activation
 without separate approval. This cannot be installed by the classification-only
 hot module. Current Codex-model AutoSwitch remains independent.
+
+
+### Draft staging inventory
+
+Staging base: `5b43524ea35b2eb5dd80d0881dc8445489f4442f`.
+Original provider checkpoint `e3ffbbfb3dffa6250a9c65e7d73979c07590f409`
+and native development checkpoint `0e9b91e87d53c792cbe90e06e183247b7b474ccf`
+remain on the preserved provider branch. The independent Astra guard branch is
+not rebased or included. The staging-based draft applies only their provider hunks.
+Continuity conflicts were resolved by retaining staging's entire content and adding
+this branch's compact note; executor/exit hooks merged without source conflicts.
+
+Exact file inventory (15): `DELTA.md`, `HANDOFF.md`, `STREAM.md`, this contract;
+`crates/executors/src/lib.rs`;
+`crates/executors/src/provider_failover/{mod,native,observer,tests}.rs`;
+`crates/executors/src/executors/codex/client.rs`;
+`crates/executors/src/executors/claude.rs`;
+`crates/executors/src/executors/claude/{client,protocol}.rs`;
+`crates/local-deployment/src/container.rs`;
+`scripts/testing/run-provider-failover-offline.py`.
+No workflow/accounting/classification source is included. The 37 accounting tests
+were run successfully on the preserved development branch, not this staging base
+which does not contain that separate unmerged concern.
+
+Validation commands: `python3 scripts/testing/run-provider-failover-offline.py
+--output <private-mounted-SSD-directory>` (35 passed on final staging-based source),
+`pnpm run ops:check`, `git diff --check`, `pnpm run format` (Rust passes; existing
+missing frontend Prettier stops later stages). No Cargo backend build, full lint,
+type generation or provider probe. Draft commits use GitHub's documented `[skip ci]`
+head marker to avoid prohibited heavy pull-request jobs. Workflow/security files
+are unchanged. Skipped/pending CI is NOT accepted validation or merge permission;
+resume required checks in a separately permitted build window before readiness.
+See [GitHub's workflow-skip rules](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs).

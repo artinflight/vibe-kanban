@@ -1,7 +1,9 @@
 # Pickup
 
-Current bounded follow-up: [compact durable job outcomes](USAGE_JOB_OUTCOMES.md).
-PR266 is merged; preserve its archives/reuse and the newer release coordination.
+Current bounded follow-up: [Antigravity ACP preparation](VK_ANTIGRAVITY_ACP.md).
+Read its validation receipt and activation gates before continuing. The adapter
+is unavailable by construction; do not deploy or restart while PODs is active.
+Inherited staging pickup below remains context for its separate release owner.
 
 1. Read [STATE](STATE.md) for active protections and the topic map, then
    [STREAM](STREAM.md) for this branch. Do not load historical archives by default.

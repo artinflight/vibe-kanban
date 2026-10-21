@@ -71,6 +71,35 @@ impl AcpAgentHarness {
         self
     }
 
+    /// Strict opt-in lifecycle: interactive approvals, native resume, terminal failures.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn spawn_supervised_with_command(
+        &self,
+        cwd: &Path,
+        prompt: String,
+        session: Option<&str>,
+        command: CommandParts,
+        env: &ExecutionEnv,
+        approvals: Option<Arc<dyn ExecutorApprovalService>>,
+    ) -> Result<SpawnedChild, ExecutorError> {
+        if self.mode.is_some() {
+            return Err(ExecutorError::Io(std::io::Error::other(
+                "Supervised ACP mode overrides are unsupported",
+            )));
+        }
+        super::supervised::spawn(
+            self.session_namespace.clone(),
+            self.model.clone(),
+            cwd,
+            prompt,
+            session,
+            command,
+            env,
+            approvals,
+        )
+        .await
+    }
+
     pub fn apply_overrides(&mut self, executor_config: &crate::profile::ExecutorConfig) {
         if let Some(model_id) = &executor_config.model_id {
             self.model = Some(model_id.clone());

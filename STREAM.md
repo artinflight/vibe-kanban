@@ -1,3 +1,18 @@
+# Antigravity ACP preparation stream
+
+Current branch: `feature/antigravity-acp-preparation`, based on verified fork
+staging `5b43524ea35b2eb5dd80d0881dc8445489f4442f` (2026-10-21).
+Scope: disabled source adapter, synthetic offline tests and normal type/schema
+registration. See [design, evidence and activation gates](VK_ANTIGRAVITY_ACP.md).
+No consumer CLI wrapper, inference, account mutation, installation, automatic
+routing, deployment, merge or restart. The follow-up authorizes a separate draft
+PR into staging; its push is source publication only. No backend restart before PODs ends.
+Preserve active PODs/disk work, shared caches and the original design worktree.
+The existing owner continues; no paid agents or additional integration owner.
+[STATE](STATE.md) remains the repo-wide authority. This branch makes no live claims.
+
+Prior staging stream text follows as inherited context, not this branch's scope.
+
 # Collapsible Issues release stream
 
 Current branch prepares the accepted collapsible issue UI for rebase-merge

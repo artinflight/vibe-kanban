@@ -1893,3 +1893,5 @@ PR244 stays open/unmerged. No actual savings or cheap-model quality acceptance
 is claimed from replay. Operational inputs/receipts remain outside Git.
 
 - 2026-10-17 22:54:50 UTC: Operator-directed publication of status-scope-8544d46d3-20261017 through the established no-restart helper. Exact deployed hashes, pinned validator, unchanged process/health/settings and retained rollback verified. Separate review remained unavailable and is not claimed. No runtime source change, Auto activation or paid inference; recorded-case outcomes are not measured savings.
+
+- 2026-10-21: Prepared dormant cross-provider failover controller/contract on local branch fix/autoswitch-provider-failover. Twenty synthetic controller/journal tests and37 existing accounting/workflow regressions pass; no production integration, provider call, publication, push or restart. Claude signal mapping, Antigravity official-ACP/account gates and provider lifecycle/admission enforcement remain activation dependencies after PODs.

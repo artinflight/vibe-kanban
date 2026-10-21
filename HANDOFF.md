@@ -1,3 +1,38 @@
+# October 21 — Nightly readiness for the post-PODs Staging inventory
+
+This is the Nightly integration, separate from Disk's later Cargo offload.
+Nightly uses standalone Python capture/readback workers and an unprivileged
+cron/calendar entrypoint; its source needs no Vibe backend build or restart.
+Future reviewed activation would install the pinned worker/config and separately
+adopt its schedule. Nothing is enabled, started, reloaded or deployed here.
+Desktop-off retry/continuation code is unchanged. Backend cutover remains with
+Staging after PODs and separate approval; permanent history work remains paused.
+
+Code inspected:1710ab389891744071d415dd6f446d5c50f111f5. GitHub PR263 is OPEN
+against staging, published head b4769b286ab5c055581e900f0b02642633371c6b,
+mergeStateStatus DIRTY and no listed checks; local checkout is16commits ahead.
+Neither the published PR nor this source review establishes combined readiness.
+
+Reuse accepted162,704,613,801-byte independent restored content/metadata/Git proof,
+137 independently verified DB images and the later supplements. The retained
+CURRENT_CATCHUP_RESULT.private.json still says full_current_set_accepted=false:
+49,970 observations, one changing-rollout gap,17 SQL API catch-up paths and five
+raw ENOENT enrollment errors. Keep old epochs/original gaps explicit. The source-
+prepared Staging consumer remains unbound to the final current descriptor,
+journal closure, current runtime/frontend layers and actual final producer/
+authenticated readback. Those need separately admitted current-data work and a
+copied-data integration/failure rehearsal, not another full historical restore.
+No heavy capture, hydrate, archive readback or controller action is admitted now.
+
+Bounded current checks:9 mocked scheduler tests and AST parsing of6 worker/
+scheduler/reader modules pass; no payload writes, B access or schedule changes.
+Ops governance and diff checks pass. Required pnpm run format was attempted at
+nice19 with an8-second own-process bound; it did not finish backend formatting.
+No formatting pass or Rust/frontend/full integration acceptance is claimed.
+These checks do not replace retained full-workload proofs or final combined
+exact-head acceptance. Do not include Nightly as accepted in the forthcoming
+restart solely to share that window: it does not depend on the backend restart.
+
 # October 19 3:33 p.m. EDT — cache owner acceptance and Disk retirement complete
 
 Disk retired ONLY the verified raw cache15:32:37EDT under exclusive owner/kernel

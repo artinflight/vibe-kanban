@@ -1,3 +1,27 @@
+# October 21 — restart requirement and actual integration readiness
+
+Nightly is a standalone Python worker/configuration plus unprivileged calendar/
+cron integration. It does not require a Vibe backend restart or Rust compilation.
+No worker/config/schedule activation is performed by this readiness review.
+Desktop-off retry/continuation behavior is unchanged; no duplicate producer runs.
+
+The accepted defined-set independent restore covers162.70GB and the later137DB
+proof remains reusable. This supersedes older below-the-line pending-restore
+snapshots, but does not accept the original incomplete epoch or a current Restart
+baseline. Latest retained catch-up has17 SQL API paths, one changing-rollout gap,
+five raw journal errors and unresolved final current member/runtime/dependency
+closure. Staging's typed consumer is source-prepared, not adopted: the final
+authenticated descriptor, journal coverage and actual producer/readback/copy-data
+rehearsal remain required. Keep original gaps and supplemental epochs explicit.
+
+This is not a small source-only acceptance closeout. Reuse completed proof rather
+than repeat a full capture/restore. New current-data payload or integration work
+requires its own fresh measured admission and must not compete with PODs/Disk.
+No schedule, production change or permanent-history implementation is authorized.
+The existing HANDOFF.md records exact local/published heads and current checks;
+any proposed Staging inclusion remains conditional on combined exact-head
+acceptance and the remaining actual integration proof.
+
 # October18 — retained recovery path boundary corrected and verified
 
 The sole B-only recovery reached its actual terminal with a path-translation

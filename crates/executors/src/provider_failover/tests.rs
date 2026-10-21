@@ -667,3 +667,432 @@ fn allocation_rank_and_model_preference_are_separate_and_conflicts_hold() {
     c.observe_pool(p).unwrap();
     is_hold(c.plan("work-1", 3000), "allocation_rank_conflict");
 }
+
+fn codex_quota() -> native::Signal {
+    native::codex("account/rateLimits/updated", &serde_json::json!({"rateLimits": {
+        "limitId":"coding", "primary":{"usedPercent":100,"windowDurationMins":180,"resetsAt":50},
+        "secondary":{"usedPercent":35,"windowDurationMins":10080,"resetsAt":900}
+    }})).unwrap().unwrap()
+}
+fn native_end(execution: &str, now: u64, quiet: bool, preserved: bool) -> observer::Ended {
+    observer::Ended {
+        execution_id: execution.into(),
+        source_receipt: "synthetic:exit".into(),
+        observed_at_ms: now,
+        exit_code: Some(1),
+        process_group_quiescent: quiet,
+        preservation_verified: preserved,
+    }
+}
+#[test]
+fn native_codex_preserves_distinct_sourced_windows_and_no_assumed_five_hours() {
+    let signal = codex_quota();
+    assert_eq!(signal.windows[0].kind, "minutes:180");
+    assert_eq!(signal.windows[0].reset_at_ms, Some(50_000));
+    assert_eq!(signal.windows[0].available, Some(false));
+    assert_eq!(signal.windows[1].available, Some(true));
+    assert_eq!(signal.windows[1].id, "codex:coding:secondary");
+    let s = native::codex(
+        "account/rateLimits/updated",
+        &serde_json::json!({"rateLimits":{
+        "primary":{"usedPercent":10}}}),
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(s.windows[0].kind, "unknown_duration");
+    assert_eq!(s.windows[0].reset_at_ms, None);
+}
+#[test]
+fn native_codex_structured_failure_classification_never_uses_error_prose() {
+    for (info, failure) in [
+        (
+            serde_json::json!("usageLimitExceeded"),
+            Failure::QuotaUnspecified,
+        ),
+        (serde_json::json!("unauthorized"), Failure::Authentication),
+        (serde_json::json!("serverOverloaded"), Failure::Outage),
+        (
+            serde_json::json!({"httpConnectionFailed":{"httpStatusCode":429}}),
+            Failure::RateLimit,
+        ),
+        (
+            serde_json::json!({"responseStreamDisconnected":{"httpStatusCode":503}}),
+            Failure::Outage,
+        ),
+        (
+            serde_json::json!("contextWindowExceeded"),
+            Failure::TaskFailure,
+        ),
+        (serde_json::json!("other"), Failure::Unknown),
+    ] {
+        let s = native::codex("error", &serde_json::json!({"threadId":"thread", "turnId":"turn", "willRetry":true,
+            "error":{"message":"quota exhausted; secret-looking prose ignored", "codexErrorInfo":info}})).unwrap().unwrap();
+        assert_eq!(s.failure, Some(failure));
+        assert_eq!(s.native_retrying, Some(true));
+        assert!(
+            !serde_json::to_string(&s)
+                .unwrap()
+                .contains("secret-looking")
+        );
+    }
+}
+#[test]
+fn native_claude_rejected_and_warning_preserve_window_specific_resets() {
+    for (status, available) in [
+        ("allowed", true),
+        ("allowed_warning", true),
+        ("rejected", false),
+    ] {
+        let s = native::claude(&serde_json::json!({"type":"rate_limit_event", "session_id":"claude-native", "rate_limit_info":{
+            "status":status,"rateLimitType":"seven_day_sonnet","resetsAt":900,"utilization":0.9,
+            "overageStatus":"allowed", "private_extra":"not retained"}})).unwrap().unwrap();
+        assert_eq!(s.windows[0].id, "claude:seven_day_sonnet");
+        assert_eq!(s.windows[0].reset_at_ms, Some(900_000));
+        assert_eq!(s.windows[0].available, Some(available));
+        assert_eq!(s.failure.is_some(), !available);
+        assert!(!serde_json::to_string(&s).unwrap().contains("private_extra"));
+    }
+}
+#[test]
+fn native_unknown_schema_and_overflow_fail_closed_without_credential_inspection() {
+    assert!(
+        native::claude(
+            &serde_json::json!({"type":"rate_limit_event","session_id":"s","rate_limit_info":{
+        "status":"rejected","rateLimitType":"future_window"}})
+        )
+        .is_err()
+    );
+    assert!(
+        native::claude(&serde_json::json!({"type":"rate_limit_event","rate_limit_info":{}}))
+            .is_err()
+    );
+    assert!(
+        native::codex(
+            "account/rateLimits/updated",
+            &serde_json::json!({"rateLimits":{"primary":{
+        "usedPercent":100,"resetsAt":u64::MAX}}})
+        )
+        .is_err()
+    );
+    assert!(
+        native::codex(
+            "account/rateLimits/updated",
+            &serde_json::json!({"rateLimits":{"primary":{
+        "usedPercent":-1}}})
+        )
+        .is_err()
+    );
+    assert!(
+        native::codex(
+            "item/completed",
+            &serde_json::json!({"message":"rate limit"})
+        )
+        .unwrap()
+        .is_none()
+    );
+}
+#[test]
+fn native_limit_and_journal_are_atomic_duplicates_do_not_extend_cooldown() {
+    let f = Fixture::new();
+    let mut c = f.controller();
+    let identity = pool("openai", Provider::Codex, 'a').identity;
+    c.record_native(
+        "work-1",
+        "exec-1",
+        &identity,
+        codex_quota(),
+        "synthetic:native",
+        2000,
+    )
+    .unwrap();
+    let before = c.state.clone();
+    c.record_native(
+        "work-1",
+        "exec-1",
+        &identity,
+        codex_quota(),
+        "synthetic:duplicate",
+        2100,
+    )
+    .unwrap();
+    assert_eq!(c.state, before);
+    assert_eq!(c.state.blocks["openai"].len(), 1);
+    assert_eq!(
+        c.work("work-1").unwrap().event.as_ref().unwrap().failure,
+        Failure::QuotaUnspecified
+    );
+    drop(c);
+    let c = Controller::open(&f.root).unwrap();
+    assert_eq!(c.state, before);
+}
+#[test]
+fn native_retry_or_parent_exit_is_not_a_safe_lifecycle_checkpoint() {
+    for (quiet, preserved, ready) in [
+        (false, true, false),
+        (true, false, false),
+        (true, true, true),
+    ] {
+        let f = Fixture::new();
+        let mut c = f.controller();
+        c.record_native(
+            "work-1",
+            "exec-1",
+            &pool("openai", Provider::Codex, 'a').identity,
+            codex_quota(),
+            "synthetic:native",
+            2000,
+        )
+        .unwrap();
+        c.checkpoint("work-1", checkpoint()).unwrap();
+        is_hold(c.plan("work-1", 3000), "native_lifecycle_not_fenced");
+        c.record_ended(native_end("exec-1", 2500, quiet, preserved))
+            .unwrap();
+        if ready {
+            assert_eq!(c.plan("work-1", 3000), Plan::Ready(candidate("anthropic")));
+        } else {
+            is_hold(c.plan("work-1", 3000), "native_lifecycle_not_fenced");
+        }
+    }
+}
+#[test]
+fn native_allowed_signal_and_passed_reset_clock_do_not_re_admit_pool() {
+    let f = Fixture::new();
+    let mut c = f.controller();
+    let id = pool("openai", Provider::Codex, 'a').identity;
+    c.record_native(
+        "work-1",
+        "exec-1",
+        &id,
+        codex_quota(),
+        "synthetic:native",
+        2000,
+    )
+    .unwrap();
+    let mut allowed = codex_quota();
+    allowed.windows[0].available = Some(true);
+    c.record_native(
+        "work-1",
+        "exec-1",
+        &id,
+        allowed,
+        "synthetic:allowed",
+        60_000,
+    )
+    .unwrap();
+    assert!(!c.pool_ready(&c.state.pools["openai"], 60_000));
+    let mut p = c.state.pools["openai"].clone();
+    p.observed_at_ms = 60_001;
+    c.observe_pool(p.clone()).unwrap();
+    assert!(!c.pool_ready(&p, 60_002));
+    p.generation = "verified-generation-2".into();
+    p.observed_at_ms = 60_003;
+    c.observe_pool(p.clone()).unwrap();
+    assert!(c.pool_ready(&p, 60_004));
+}
+#[test]
+fn native_no_auto_astra_even_without_exclusion_or_when_alternate_is_unavailable() {
+    let f = Fixture::new();
+    let mut c = f.controller();
+    let mut w = c.work("work-1").unwrap().clone();
+    w.policy.candidates.retain(|v| v.pool_id == "anthropic");
+    w.policy.candidates[0].model = "gpt-6-astra".into();
+    c.state.works.insert(w.id.clone(), w);
+    ready(&mut c);
+    is_hold(c.plan("work-1", 3000), "no_authorized_qualified_provider");
+    assert!(c.claim("work-1", permit(), boundary(), 3000).is_err());
+}
+#[test]
+fn observer_is_dormant_without_host_binding_and_cannot_register_antigravity() {
+    assert!(!observer::is_registered("unbound-execution"));
+    assert!(!observer::codex("unbound-execution", "error", &serde_json::json!({})).unwrap());
+    assert!(!observer::ended("unbound-execution", Some(1), true, true).unwrap());
+    let f = Fixture::new();
+    let c = std::sync::Arc::new(std::sync::Mutex::new(f.controller()));
+    assert!(
+        observer::register(
+            &c,
+            "work-1",
+            "exec-1",
+            pool("google", Provider::Antigravity, 'c').identity,
+            "s",
+            None
+        )
+        .is_err()
+    );
+}
+#[test]
+fn observer_binds_native_account_session_and_exclusive_execution_without_dispatch() {
+    let f = Fixture::new();
+    let mut c = f.controller();
+    let wall = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+    for p in c.state.pools.values_mut() {
+        p.observed_at_ms = wall - 1000;
+        p.valid_until_ms = wall + 1_000_000;
+    }
+    let c = std::sync::Arc::new(std::sync::Mutex::new(c));
+    let identity = pool("openai", Provider::Codex, 'a').identity;
+    let registration = observer::register(
+        &c,
+        "work-1",
+        "exec-1",
+        identity.clone(),
+        "native-thread",
+        Some("coding".into()),
+    )
+    .unwrap();
+    assert!(observer::register(&c, "work-1", "exec-1", identity, "native-thread", None).is_err());
+    assert!(
+        observer::codex(
+            "exec-1",
+            "error",
+            &serde_json::json!({"threadId":"native-thread","turnId":"turn-1","willRetry":true,
+        "error":{"codexErrorInfo":"usageLimitExceeded"}})
+        )
+        .unwrap()
+    );
+    {
+        let c = c.lock().unwrap();
+        assert_eq!(c.work("work-1").unwrap().phase, Phase::Watching);
+        assert_eq!(c.state.native_records.len(), 1);
+    }
+    // A different session must not be attributed to this execution; durable hold.
+    assert!(
+        observer::codex(
+            "exec-1",
+            "error",
+            &serde_json::json!({"threadId":"other-thread","turnId":"turn","willRetry":false,
+        "error":{"codexErrorInfo":"usageLimitExceeded"}})
+        )
+        .is_err()
+    );
+    {
+        let c = c.lock().unwrap();
+        is_hold(
+            c.plan("work-1", wall + 10),
+            "native_adapter_reconciliation_required",
+        );
+    }
+    drop(registration);
+    assert!(!observer::is_registered("exec-1"));
+}
+#[test]
+fn observer_malformed_bucket_durably_holds_instead_of_granting_capacity() {
+    let f = Fixture::new();
+    let c = std::sync::Arc::new(std::sync::Mutex::new(f.controller()));
+    let _registration = observer::register(
+        &c,
+        "work-1",
+        "exec-1",
+        pool("openai", Provider::Codex, 'a').identity,
+        "thread",
+        Some("coding".into()),
+    )
+    .unwrap();
+    assert!(
+        observer::codex(
+            "exec-1",
+            "account/rateLimits/updated",
+            &serde_json::json!({"rateLimits":{
+        "limitId":"different-account-bucket","primary":{"usedPercent":0}}})
+        )
+        .is_err()
+    );
+    let c = c.lock().unwrap();
+    assert!(c.state.native_records.is_empty());
+    is_hold(
+        c.plan("work-1", 3000),
+        "native_adapter_reconciliation_required",
+    );
+}
+#[test]
+fn return_to_sol_requires_verified_reset_and_new_quiescent_alternate_checkpoint() {
+    let f = Fixture::new();
+    let mut c = f.controller();
+    c.state.works.get_mut("work-1").unwrap().incumbent.model = "gpt-6.1-sol".into();
+    ready(&mut c);
+    c.claim("work-1", permit(), boundary(), 3000).unwrap();
+    c.confirm_started("work-1", launch()).unwrap();
+    let mut cp = checkpoint();
+    cp.execution_id = "exec-2".into();
+    cp.workspace_snapshot = "synthetic:current-dirty-state".into();
+    is_hold(
+        c.preferred_return("work-1", &cp, 60_000),
+        "preferred_return_not_qualified_or_reset",
+    );
+    let mut p = c.state.pools["openai"].clone();
+    p.generation = "reset-verified".into();
+    p.observed_at_ms = 60_001;
+    c.observe_pool(p).unwrap();
+    is_hold(
+        c.preferred_return("work-1", &cp, 60_002),
+        "preferred_return_checkpoint_required",
+    );
+    c.record_ended(native_end("exec-2", 60_003, true, true))
+        .unwrap();
+    assert!(
+        matches!(c.preferred_return("work-1",&cp,60_004),Plan::Recommend(v) if v.model=="gpt-6.1-sol")
+    );
+    assert!(c.claim("work-1", permit(), boundary(), 60_004).is_err());
+    cp.failed_validation = true;
+    is_hold(
+        c.preferred_return("work-1", &cp, 60_005),
+        "preferred_return_checkpoint_required",
+    );
+}
+
+#[test]
+fn observer_claude_native_session_is_bound_and_never_grants_billing_or_auth() {
+    let f = Fixture::new();
+    let mut controller = f.controller();
+    let w = controller.state.works.get_mut("work-1").unwrap();
+    w.incumbent = candidate("anthropic");
+    let c = std::sync::Arc::new(std::sync::Mutex::new(controller));
+    let _binding = observer::register(
+        &c,
+        "work-1",
+        "exec-1",
+        pool("anthropic", Provider::Claude, 'b').identity,
+        "claude-native",
+        None,
+    )
+    .unwrap();
+    assert!(observer::claude("exec-1",&serde_json::json!({"type":"rate_limit_event","session_id":"claude-native","rate_limit_info":{
+        "status":"rejected","rateLimitType":"five_hour","resetsAt":1900000000}})).unwrap());
+    {
+        let c = c.lock().unwrap();
+        assert_eq!(c.state.native_records.len(), 1);
+        assert_eq!(c.state.pools["anthropic"].auth_verified_at_ms, Some(1000));
+        assert_eq!(
+            c.state.pools["anthropic"].source_receipt,
+            "synthetic:pool-1"
+        );
+        assert!(!c.pool_ready(&c.state.pools["anthropic"], 1_900_000_000_001));
+    }
+    assert!(observer::claude("exec-1",&serde_json::json!({"type":"rate_limit_event","session_id":"other-native","rate_limit_info":{
+        "status":"allowed","rateLimitType":"five_hour"}})).is_err());
+    assert!(c.lock().unwrap().state.adapter_holds.contains_key("exec-1"));
+}
+#[test]
+fn native_storage_failure_cannot_persist_half_observation_or_release_dispatch() {
+    let f = Fixture::new();
+    let mut c = f.controller();
+    let before = c.state.clone();
+    fs::rename(f.root.join("state.json"), f.root.join("saved-state.json")).unwrap();
+    fs::create_dir(f.root.join("state.json")).unwrap();
+    assert!(
+        c.record_native(
+            "work-1",
+            "exec-1",
+            &pool("openai", Provider::Codex, 'a').identity,
+            codex_quota(),
+            "synthetic:native",
+            2000
+        )
+        .is_err()
+    );
+    assert_eq!(c.state, before);
+    is_hold(c.plan("work-1", 3000), "journal_recovery_required");
+}

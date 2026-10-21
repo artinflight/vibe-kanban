@@ -665,6 +665,7 @@ impl ClaudeCode {
         let repo_context = env.repo_context.clone();
         let commit_reminder_prompt = env.commit_reminder_prompt.clone();
         let cancel_for_task = cancel.clone();
+        let execution_id = env.get("VK_EXECUTION_PROCESS_ID").cloned();
         tokio::spawn(async move {
             let log_writer = LogWriter::new(new_stdout);
             let client = ClaudeAgentClient::new(
@@ -674,6 +675,9 @@ impl ClaudeCode {
                 commit_reminder_prompt,
                 cancel_for_task.clone(),
             );
+            if let Some(execution) = execution_id {
+                client.set_execution_id(execution);
+            }
             let protocol_peer =
                 ProtocolPeer::spawn(child_stdin, child_stdout, client.clone(), cancel_for_task);
 

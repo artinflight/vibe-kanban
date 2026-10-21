@@ -87,8 +87,12 @@ impl ProtocolPeer {
                                     self.handle_control_request(&client, request_id, request)
                                         .await;
                                 }
-                                Ok(CLIMessage::Result(_)) => {
+                                Ok(CLIMessage::Result(message)) => {
+                                    client.observe_provider_message(&message);
                                     break;
+                                }
+                                Ok(CLIMessage::Other(message)) => {
+                                    client.observe_provider_message(&message);
                                 }
                                 _ => {}
                             }

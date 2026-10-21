@@ -739,6 +739,21 @@ impl LocalContainerService {
                 } else {
                     None
                 };
+                // A native limit is not a handoff boundary. Persist existing exit,
+                // group and preservation evidence only for an explicitly bound host.
+                // This does not certify detached writers, side effects or admission.
+                if executors::provider_failover::observer::is_registered(&exec_id.to_string())
+                    && let Err(error) = executors::provider_failover::observer::ended(
+                        &exec_id.to_string(),
+                        exit_code,
+                        group_id.is_some_and(crate::turn_preservation::group_quiescent),
+                        preservation
+                            .as_ref()
+                            .is_some_and(crate::turn_preservation::verified),
+                    )
+                {
+                    tracing::warn!(%exec_id, %error, "Provider lifecycle observation held; no handoff authorized");
+                }
                 let preservation_blocked = preservation
                     .as_ref()
                     .is_some_and(|report| !crate::turn_preservation::verified(report));

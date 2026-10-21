@@ -1,3 +1,12 @@
+# Provider preparation pickup
+
+Read [VK_PROVIDER_FAILOVER_V1.md](VK_PROVIDER_FAILOVER_V1.md): 35 synthetic provider
+checks pass; 37 accounting checks passed on preserved development source. Full
+backend build/integration and provider entitlement remain unverified. Do not
+activate providers, restart before PODs completes, or infer billing from login.
+Guard and original provider branches/receipts remain preserved separately. The
+staging-base handoff below is retained unchanged.
+
 # Pickup
 
 Current bounded follow-up: [compact durable job outcomes](USAGE_JOB_OUTCOMES.md).

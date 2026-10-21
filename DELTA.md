@@ -2020,3 +2020,7 @@ Implemented private project Dot Chat/shared planning with canonical task links,
 revision/idempotency protection, separate project attention and responsive UI.
 Coordinated Preserve Dot/CU1.6 and Staging. No production adoption.
 See VK_PROJECT_COLLABORATION.md for validation and release requirements.
+
+2026-10-21: Separate dormant provider controller source checkpoint; 20 synthetic controller tests; native/admission integration not activated.
+
+2026-10-21: Provider-only native signal/lifecycle observer prepared with 35 synthetic tests. Automatic Astra forbidden; verified-reset Sol return is advisory. Host admission/fencing, billing and full integration build remain required. No production changes.

@@ -1,3 +1,12 @@
+# Provider failover source preparation
+
+This branch adds the dormant provider controller and native observation/lifecycle
+hooks only. Read [provider contract and release inventory](VK_PROVIDER_FAILOVER_V1.md).
+No activation, backend build, restart, paid probe or Antigravity registration.
+Current Codex AutoSwitch, Sol6.1 and Astra guard remain outside this PR. Full host
+admission/fencing, provider billing and executor integration checks remain gates.
+All current staging functionality and continuity below are preserved.
+
 # Collapsible Issues release stream
 
 Current branch prepares the accepted collapsible issue UI for rebase-merge

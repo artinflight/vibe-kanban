@@ -1,3 +1,26 @@
+## October 21: provider native observations prepared, not activated
+
+The separate provider branch adds structured Codex window/error and Claude
+rate-event normalizers, dormant opt-in executor/exit hooks, atomic journal facts,
+invalid-evidence holds and a safe-checkpoint Sol-return recommendation. Automatic
+provider selection cannot choose Astra. No host registration or dispatch loop is
+activated. Native reset clocks and allowed events cannot mint allocation authority.
+
+Focused offline validation: 35 synthetic tests using the real controller/normalizers/
+observer and the extracted actual Claude CLIMessage enum; no Cargo backend build,
+provider/paid probe, new agent, permissions change or live settings mutation.
+The preserved original provider checkpoint also retains the 37 accounting/workflow
+checks. Full executor/backend build and real-provider acceptance remain unrun.
+Current hot-module/guard branch and receipts are preserved separately. The live
+Astra guard module and backend identity read back unchanged; operator-confirmed
+Sol6.1/xhigh, per-chat Auto/Astra denial remain untouched.
+
+VK_PROVIDER_FAILOVER_V1.md records the exact source inventory, fixture limits,
+Claude auth/billing ambiguity, CU admission/fencing integration and unavailable
+Antigravity gates. No Claude executable is on PATH; do not run npx to create one
+or inspect credentials. This draft preparation is not deployable failover. No
+backend adoption before PODs completion; provider activation requires approval.
+
 ## October 21: cross-provider failover prepared offline, not activated
 
 Local branch `fix/autoswitch-provider-failover` starts at the preserved AutoSwitch

@@ -1,5 +1,6 @@
 //! Isolated, dormant cross-provider boundary controller. No network, scheduler,
-//! process launcher, provider registration or production call site. Inputs must
+//! process launcher or automatic provider registration. Native observation hooks are
+//! inactive without an explicit trusted host binding. Inputs must
 //! come from trusted executor/admission adapters, never prompts/model output.
 use std::{
     collections::BTreeMap,
@@ -9,6 +10,9 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+
+pub mod native;
+pub mod observer;
 
 const MAX_STATE: usize = 2 * 1024 * 1024;
 const MAX_WORK: usize = 100;
@@ -63,7 +67,11 @@ pub struct Pool {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Failure {
-    Quota { window_id: String },
+    Quota {
+        window_id: String,
+    },
+    /// Native quota exhaustion without a verified named window.
+    QuotaUnspecified,
     RateLimit,
     Authentication,
     Outage,
@@ -247,6 +255,12 @@ struct State {
     blocks: BTreeMap<String, Vec<Block>>,
     events: BTreeMap<String, LimitEvent>,
     works: BTreeMap<String, Work>,
+    #[serde(default)]
+    native_records: BTreeMap<String, native::Record>,
+    #[serde(default)]
+    ended: BTreeMap<String, observer::Ended>,
+    #[serde(default)]
+    adapter_holds: BTreeMap<String, String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -382,6 +396,9 @@ impl Controller {
                 blocks: BTreeMap::new(),
                 events: BTreeMap::new(),
                 works: BTreeMap::new(),
+                native_records: BTreeMap::new(),
+                ended: BTreeMap::new(),
+                adapter_holds: BTreeMap::new(),
             },
         })
     }
@@ -614,6 +631,7 @@ impl Controller {
                                 .iter()
                                 .any(|w| w.id == *window_id && w.available == Some(true))
                     }
+                    Failure::QuotaUnspecified => p.generation != b.generation,
                     Failure::Authentication => p
                         .auth_verified_at_ms
                         .is_some_and(|t| t > b.event.observed_at_ms && t <= p.observed_at_ms),
@@ -635,6 +653,9 @@ impl Controller {
         let Some(w) = self.work(id) else {
             return hold("unknown_work");
         };
+        if self.state.adapter_holds.contains_key(&w.execution_id) {
+            return hold("native_adapter_reconciliation_required");
+        }
         if matches!(w.phase, Phase::DispatchPending(_)) {
             return hold("dispatch_outcome_unknown");
         }
@@ -662,6 +683,9 @@ impl Controller {
         if !c.all_workers_terminal || !present(&c.terminal_receipt) {
             return hold("prior_worker_outcome_unknown");
         }
+        if self.native_observed(&c.execution_id) && !self.ended_safely(&c.execution_id) {
+            return hold("native_lifecycle_not_fenced");
+        }
         if !c.effects_complete
             || c.effects
                 .iter()
@@ -683,6 +707,9 @@ impl Controller {
                 c.pool_id != w.incumbent.pool_id
                     && c.qualified
                     && c.rank > 0
+                    // Break-glass approval is a separate explicit manual action.
+                    // A qualification, outage or generic escalation flag cannot grant it.
+                    && c.model != "gpt-6-astra"
                     && present(&c.model)
                     && present(&c.effort)
                     && present(&c.service_tier)

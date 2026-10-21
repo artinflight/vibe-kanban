@@ -2506,6 +2506,19 @@ impl JsonRpcCallbacks for AppServerClient {
         raw: &str,
         notification: JSONRPCNotification,
     ) -> Result<bool, ExecutorError> {
+        // Dormant unless the trusted existing host explicitly binds this execution.
+        // Capture rate windows before the normal raw-log suppression; preserve all
+        // existing retry/approval/routing behavior. Observability cannot launch work.
+        if let Some(execution) = self.execution_id.get()
+            && let Some(params) = &notification.params
+            && let Err(error) = crate::provider_failover::observer::codex(
+                &execution.to_string(),
+                &notification.method,
+                params,
+            )
+        {
+            tracing::warn!(%execution, %error, "Provider observation held; execution behavior unchanged");
+        }
         if matches!(
             notification.method.as_str(),
             "turn/started" | "turn/completed"

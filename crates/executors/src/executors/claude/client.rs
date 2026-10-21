@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use tokio_util::sync::CancellationToken;
 use workspace_utils::approvals::{ApprovalStatus, QuestionStatus};
@@ -35,6 +35,7 @@ pub struct ClaudeAgentClient {
     repo_context: RepoContext,
     commit_reminder_prompt: String,
     cancel: CancellationToken,
+    execution_id: OnceLock<String>,
 }
 
 impl ClaudeAgentClient {
@@ -54,7 +55,21 @@ impl ClaudeAgentClient {
             repo_context,
             commit_reminder_prompt,
             cancel,
+            execution_id: OnceLock::new(),
         })
+    }
+
+    pub fn set_execution_id(&self, execution: String) {
+        let _ = self.execution_id.set(execution);
+    }
+
+    /// Reuse already-parsed native messages; no duplicate parsing of chat/tool data.
+    pub fn observe_provider_message(&self, message: &serde_json::Value) {
+        if let Some(execution) = self.execution_id.get()
+            && let Err(error) = crate::provider_failover::observer::claude(execution, message)
+        {
+            tracing::warn!(%execution, %error, "Provider observation held; execution behavior unchanged");
+        }
     }
 
     async fn handle_approval(

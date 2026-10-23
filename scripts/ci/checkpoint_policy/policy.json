@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "repository": "artinflight/vibe-kanban",
+  "reviewed_base": "5b43524ea35b2eb5dd80d0881dc8445489f4442f",
+  "github_actions_app_id": 15368,
+  "workflows": {
+    "dot-steering-acceptance.yml": {
+      "context": "CI policy / Dot steering acceptance artifact",
+      "required_jobs": [
+        "executor-tests"
+      ],
+      "source_sha256": "d0f98f0773d11e19d88f78d2973135dd256e1e3271e36ce8c2b104d9870c794d"
+    },
+    "historical-response-recovery.yml": {
+      "context": "CI policy / Historical response recovery",
+      "required_jobs": [
+        "recovery"
+      ],
+      "source_sha256": "3727a908f3bc3cf0bc37d927cc9d24cbf8fff92ce54a943ebfb4772dfeb7f1f1"
+    },
+    "large-history-verification.yml": {
+      "context": "CI policy / Large history verification",
+      "required_jobs": [
+        "verify"
+      ],
+      "source_sha256": "ed8b05304bb5082aa13b799f393ea567b8e02baf37bf4c9250449ea3e52298d3"
+    },
+    "native-final-repair.yml": {
+      "context": "CI policy / Bounded native final repair",
+      "required_jobs": [
+        "repair"
+      ],
+      "source_sha256": "fc9d199713242d758871e4074e86cb84ca3e3d279fb4ff180ab8884595475c14"
+    },
+    "native-review-compatibility.yml": {
+      "context": "CI policy / Native reviewer compatibility",
+      "required_jobs": [
+        "verify"
+      ],
+      "source_sha256": "2212d0e0e059f25f6de43b68693cab042a0193896de1e854fdd4c771b20e6a0f"
+    },
+    "scheduled-goal-artifacts.yml": {
+      "context": "CI policy / Scheduled goal acceptance artifacts",
+      "required_jobs": [
+        "build"
+      ],
+      "source_sha256": "fd0cc60a76b461da2c886264669ca21d9fddd3f3c7f13cd448dae4f85083e6da"
+    },
+    "test.yml": {
+      "context": "CI policy / Test",
+      "required_jobs": [
+        "branch-policy",
+        "branch-freshness",
+        "changes",
+        "turn-git-preservation-contract",
+        "ops-governance",
+        "dot-sidechat-contracts",
+        "frontend-checks",
+        "backend-schema-checks",
+        "backend-remote-checks",
+        "backend-clippy",
+        "backend-test",
+        "tauri-checks"
+      ],
+      "source_sha256": "b3aaf5e9c7eeaffb95f04e4103c64b9353c4921735753b6863bdcbe33c636b80"
+    }
+  }
+}

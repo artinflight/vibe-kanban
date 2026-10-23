@@ -1,3 +1,32 @@
+# Checkpoint CI policy preparation
+
+This branch owns only the CI-cost proposal for artinflight/vibe-kanban, based on
+staging `5b43524ea35b2eb5dd80d0881dc8445489f4442f`.
+See [the policy and exact protection payloads](CI_CHECKPOINT_POLICY.md).
+
+Retain checkpoint backup pushes and one draft PR through the incumbent publisher.
+Prepare final-test gating without activating any skip behavior. All seven current
+PR workflows are hash-bound inputs to an offline renderer; active `.github`
+files, repository settings and runtime are unchanged. Fourteen policy fixtures
+and actionlint 1.7.12 pass on all rendered workflows. The live read-only auditor
+correctly rejects the existing unprotected setup.
+
+Next: owner confirmation of exact main/staging required checks and strictness,
+review/admin/force-push rules, least-privilege Actions defaults, independent
+reviewer availability and external App subscriptions. Only then may separately
+authorized installation and genuine hosted source/base invalidation acceptance
+proceed. Real final application tests must pass on the latest source/current base
+before merge; this preparation is not that proof. Do not merge, deploy, activate,
+change settings or take over preservation, restart, Staging or backup jobs.
+
+No local application compiler, browser, dependency installation or deployment was
+used. Full check/lint/format limitations are recorded in the policy. Prior green
+application runs are historical and cannot validate this branch's new source.
+
+Inherited staging notes follow for context; they do not assign this branch the
+older streams. The full archived continuity remains in
+[STREAM history](STREAM_HISTORY_20261017.md).
+
 # Collapsible Issues release stream
 
 Current branch prepares the accepted collapsible issue UI for rebase-merge

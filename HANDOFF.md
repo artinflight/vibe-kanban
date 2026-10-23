@@ -1,5 +1,16 @@
 # Pickup
 
+Current branch prepares the dormant [checkpoint CI policy](CI_CHECKPOINT_POLICY.md).
+The seven active PR workflows and all live GitHub settings are unchanged.
+Fourteen offline policy fixtures, generation of all seven candidates and
+actionlint 1.7.12 pass. The read-only protection auditor rejects current
+unprotected main/staging. Owner confirmation of both complete protection payloads,
+Actions token defaults, independent review and external App subscriptions must
+precede any activation. Full application checks remain separate; this draft is
+not merge or deployment ready. Preserve incumbent Git-publication/release owners.
+
+The pickup below is inherited staging context, not ownership of this stream.
+
 Current bounded follow-up: [compact durable job outcomes](USAGE_JOB_OUTCOMES.md).
 PR266 is merged; preserve its archives/reuse and the newer release coordination.
 

@@ -2020,3 +2020,13 @@ Implemented private project Dot Chat/shared planning with canonical task links,
 revision/idempotency protection, separate project attention and responsive UI.
 Coordinated Preserve Dot/CU1.6 and Staging. No production adoption.
 See VK_PROJECT_COLLABORATION.md for validation and release requirements.
+
+
+## 2026-10-23 — Dormant checkpoint CI policy preparation
+
+Prepared an offline, hash-bound candidate for seven PR workflows plus exact
+main/staging protection and Actions-default payloads. Current protections remain
+absent; no skip, setting, runtime or deployment change is activated. Policy
+fixtures and Actions syntax validation pass. See CI_CHECKPOINT_POLICY.md for
+source/base freshness, actual-test gates, external-App visibility limits and
+the owner confirmation boundary. Existing preservation/release owners unchanged.

@@ -1,0 +1,3 @@
+# Review CI enforcement and its executable dependencies.
+/.github/ @artinflight
+/scripts/ci/ @artinflight

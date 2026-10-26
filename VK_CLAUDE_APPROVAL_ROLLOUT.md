@@ -31,7 +31,8 @@ cannot prove notification detail. Human-visible delivery requires all components
 
 ## Exact source validation
 
-Pending exact-head CI receipts will be recorded here after completion. Earlier
+The final source-bound receipts and workflow links are recorded in draft PR281
+and the private package manifest. Check their exact source SHA before use. Earlier
 CI evidence in the diagnosis guide is historical and does not validate this delta.
 Local native fixtures use the installed pinned CLI, an empty dedicated HOME,
 synthetic key and loopback mock Messages API. They make no paid/provider request

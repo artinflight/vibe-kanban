@@ -33,21 +33,11 @@ async fn native_permissions_cover_existing_profiles_and_resume_without_bypass() 
             config.reasoning_id = Some("high".into());
             agent.apply_overrides(&config);
             assert_eq!(agent.permission_mode(), mode);
-            agent.cmd.base_command_override = Some("/usr/bin/true".into());
+            agent.cmd.base_command_override = Some("synthetic-claude".into());
             let builder = agent.build_command_builder().await.unwrap();
-            let (_, initial) = builder
-                .build_initial()
-                .unwrap()
-                .into_resolved()
-                .await
-                .unwrap();
+            let initial = builder.build_initial().unwrap().args().to_vec();
             let resume = ["--resume".to_owned(), "existing-native-session".to_owned()];
-            let (_, follow_up) = builder
-                .build_follow_up(&resume)
-                .unwrap()
-                .into_resolved()
-                .await
-                .unwrap();
+            let follow_up = builder.build_follow_up(&resume).unwrap().args().to_vec();
             assert_eq!(&follow_up[..initial.len()], &initial);
             assert_eq!(&follow_up[initial.len()..], &resume);
             assert!(initial.contains(&format!("--permission-mode={mode}")));
@@ -87,19 +77,14 @@ fn native_permissions_preserve_legacy_selection_and_plan_precedence() {
 async fn native_permissions_keep_custom_rules_but_refuse_conflicting_controls() {
     let mut agent: ClaudeCode = serde_json::from_value(json!({
         "model":"custom-model", "effort":"medium", "agent":"reviewer",
-        "base_command_override":"/usr/bin/true",
-        "additional_params":["--allowedTools", "'Bash(ls:*)'", "--disallowedTools", "'Bash(rm:*)'"],
+        "base_command_override":"synthetic-claude",
+        "additional_params":["--allowedTools", "\"Bash(ls:*)\"", "--disallowedTools", "\"Bash(rm:*)\""],
         "env":{"TASK_FIXTURE":"unchanged"}
     }))
     .unwrap();
     let before = agent.clone();
     let builder = agent.build_command_builder().await.unwrap();
-    let (_, args) = builder
-        .build_initial()
-        .unwrap()
-        .into_resolved()
-        .await
-        .unwrap();
+    let args = builder.build_initial().unwrap().args().to_vec();
     for value in [
         "custom-model",
         "medium",
@@ -123,8 +108,8 @@ async fn native_permissions_keep_custom_rules_but_refuse_conflicting_controls() 
         agent.cmd.additional_params = Some(vec![flag.into()]);
         assert!(agent.build_command_builder().await.is_err(), "{flag}");
         agent.cmd.additional_params = None;
-        agent.cmd.base_command_override = Some(format!("/usr/bin/true {flag}"));
+        agent.cmd.base_command_override = Some(format!("synthetic-claude {flag}"));
         assert!(agent.build_command_builder().await.is_err(), "base {flag}");
-        agent.cmd.base_command_override = Some("/usr/bin/true".into());
+        agent.cmd.base_command_override = Some("synthetic-claude".into());
     }
 }

@@ -5,11 +5,11 @@ workspace and branch. This is source preparation, not an activated release.
 
 ## Evidence and cause
 
-Read-only live discovery identified MP NODEs Production Orchestration workspace
+Initial read-only live discovery identified MP NODEs Production Orchestration workspace
 `67768cca-383d-4325-b81c-3f42b54f325c`, Claude session
 `c8e17776-282b-4227-bc29-1f10d01dc93f`. Its latest execution
-`0f6b4082-b332-405b-8aef-2a637c95748e` completed October26 at15:50UTC. Exactly two
-Claude executions exist, neither running. The saved selection is
+`0f6b4082-b332-405b-8aef-2a637c95748e` completed October26 at15:50UTC. At that earlier checkpoint, two
+Claude executions existed, neither running. The saved selection is
 CLAUDE_CODE / DEFAULT / sonnet / SUPERVISED; reasoning was not explicitly saved.
 No effort was invented and no model, profile, ownership or history was changed.
 
@@ -21,6 +21,15 @@ pending15:47:26UTC, a roughly13-minute interval. Its notification says only
 `review_in_vk`, with no targets or command. The retained disappearance is NOT
 proof of human approval, rejection or confirmed timeout. This trace proves one
 wait; it does not quantify every earlier interruption or infer outage coverage.
+
+A later read-only snapshot found two additional failed executions:
+`bca714b2-44ad-4954-a8a7-a08b0a0488f5` (17:09–17:18UTC) and
+`c61be101-c712-4209-87dc-7411eedc463b` (17:19UTC). Both retained replies report
+provider usage exhaustion with a20:00UTC reset. They ran on the unchanged incumbent,
+not this unreleased fix, and no execution is running in that snapshot. This is a
+separate capacity boundary; a reset timestamp does not prove current headroom.
+No retry, model/effort switch, Codex handoff, extra purchase or recovery-ledger
+rewrite was attempted. The model remains sonnet/SUPERVISED with no saved effort.
 
 Read-only inspection found no permission-rule arrays in the usual user settings
 file, and no project `.claude/settings.json` or `settings.local.json` in the MP

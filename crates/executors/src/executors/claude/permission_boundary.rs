@@ -34,7 +34,7 @@ fn resolve_target(path: &Path) -> Option<PathBuf> {
 }
 
 pub(super) fn allows_workspace_edit(root: Option<&Path>, event: &Value) -> bool {
-    let Some(root) = root else {
+    let Some(root) = root.filter(|root| root.is_absolute() && root.parent().is_some()) else {
         return false;
     };
     // Native Plan may write its own planning files, but never auto-authorize
@@ -108,6 +108,10 @@ mod tests {
             "Explicit direct outside rules still belong to native evaluation"
         );
         assert!(!allows_workspace_edit(None, &event(&root.join("file.txt"))));
+        assert!(
+            !allows_workspace_edit(root.ancestors().last(), &event(&root.join("file.txt"))),
+            "A filesystem root must never become an automatic global grant"
+        );
         for mode in ["plan", "acceptEdits", "bypassPermissions", "unknown"] {
             let mut value = event(&root.join("file.txt"));
             value["permission_mode"] = json!(mode);

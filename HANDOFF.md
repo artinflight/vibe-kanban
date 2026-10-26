@@ -15,7 +15,7 @@ uses qualified2.1.77 Default/Plan, scoped per-call edits and genuine owner fallb
 no blanket asks/bypass; Codex native-review behavior is retained. No live policy,
 MP turn, service or global profile changed. Read the
 [rollout/rollback gates](VK_CLAUDE_APPROVAL_ROLLOUT.md) for current tested head and
-remaining activation boundary. Do not rebuild locally: SSD has only2.8GiB free;
+remaining activation boundary and later MP provider-quota failures. Do not rebuild locally: SSD has only2.8GiB free;
 use existing hosted artifacts and preserve all data/caches.
 
 Live connector follow-up completed: Seamus explicitly authorized the connector

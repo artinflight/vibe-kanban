@@ -9,17 +9,26 @@ repository overlay. Native Rust MCP already supports Claude. The new backend
 handoff requires the migration and existing serialized admission; long/incomplete
 history, unknown past approval settings and pending work fail closed.
 
-Validation: 42 connector tests and 28 installed-source policy/status
-regressions plus JSON Schema/discovery/dispatch checks pass entirely offline.
-All 12 focused Rust handoff tests pass. The offline workspace baseline is blocked by uncached `arboard v3.6.1`
-(Tauri dependency). Broader server-library tests: 98 passed, 3 failed, 2 ignored.
-The three `original_worker` production-fixture tests share process globals;
-one large-history case passes isolated, while the two launch/timeout cases still
-fail isolated with `Worker collision or capacity guard blocked`. Their cause is
-unresolved; no baseline equivalence or all-green backend suite is claimed. `pnpm run ops:check` passes. `pnpm run format`
-completed Rust formatting, then failed on missing Prettier. `pnpm run check` and
-`pnpm run lint` cannot run without this checkout's TypeScript/ESLint dependencies.
-No live handoff, paid-model call or deployment is exercised.
+Validation follow-up: 14 focused Rust handoff fixtures, 42 connector tests and
+28 installed-source regressions plus schema/dispatch/allowlist checks pass offline.
+The bounded server-library run uses one process per test: **101 passed, 2 failed,
+2 ignored**. Both failures are the launch/timeout positive paths blocked by the
+unchanged live capacity inventory of seven engines; exact staging base
+`5b43524ea35b2eb5dd80d0881dc8445489f4442f` reproduces the identical assertion before
+the handoff fence. Large-history and monitor-startup fixtures pass isolated on
+both base and branch. Mixed-process base failures prove the old global-home /
+worker-registry isolation requirement; CI uses nextest. These are diagnosed
+baseline/environmental limits, not green test results. See the contract's table.
+
+Normal locked pnpm dependencies and the previously missing Cargo `arboard` are
+resolved. Full formatting, ops checks, frontend lint and strict focused server
+library/test clippy (`-D warnings`) pass. TypeScript checking
+exits 134 near its default 750 MiB V8 heap; this task has a 3,000 MiB hard limit,
+while the supported CI/preparation heap is 8,192 MiB. Full Cargo workspace build
+exits 101 at missing `glib-2.0 >= 2.70` (`glib-sys`); GTK/WebKit development packages
+are also absent. No resource/guard threshold, system package, security policy or
+global configuration was changed. Full check/lint/workspace-test gates remain
+unverified on this host. No live handoff, paid-model call or deployment is exercised.
 
 Inherited pickup/release history follows; its old release ownership remains intact.
 

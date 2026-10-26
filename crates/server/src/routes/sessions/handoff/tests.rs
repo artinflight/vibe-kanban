@@ -124,7 +124,7 @@ async fn running_failed_dropped_wrong_executor_and_stale_checkpoint_fail_closed(
     assert!(source_checkpoint(&session, &[changed], execution.id).is_err());
     let mut wrong = session.clone();
     wrong.executor = Some("CODEX".into());
-    assert!(source_checkpoint(&wrong, &[execution.clone()], execution.id).is_err());
+    assert!(source_checkpoint(&wrong, std::slice::from_ref(&execution), execution.id).is_err());
     let mut changed = execution.clone();
     changed.session_id = Uuid::new_v4();
     assert!(source_checkpoint(&session, &[changed], execution.id).is_err());
@@ -137,7 +137,10 @@ async fn unsupported_or_denied_selection_is_never_substituted() {
         source_checkpoint(&session, std::slice::from_ref(&execution), execution.id).unwrap();
     let mut req = request(execution.id);
     req.reasoning_id = "not-supported".into();
-    assert!(target_config(&source, &req).is_err());
+    assert!(matches!(
+        ApiError::from(target_config(&source, &req).unwrap_err()),
+        ApiError::BadRequest(_)
+    ));
     req.reasoning_id = "high".into();
     req.model_id = "unknown-provider-model".into();
     assert!(target_config(&source, &req).is_err());
@@ -452,4 +455,62 @@ fn unicode_request_fingerprint_uses_utf8_not_ascii_escape_substitution() {
         request_hash(&req).unwrap(),
         "6c5971728ec7dc04586974eed98b465627549cd3f1d371336e50818108f575d1"
     );
+}
+
+#[tokio::test]
+async fn unrelated_codex_sessions_keep_existing_admission_with_or_without_other_handoffs() {
+    let (pool, source, execution) = fixture().await;
+    let codex = Session::create(
+        &pool,
+        &CreateSession {
+            executor: Some("CODEX".into()),
+            name: None,
+        },
+        Uuid::new_v4(),
+        source.workspace_id,
+    )
+    .await
+    .unwrap();
+    require_unclaimed(&pool, codex.id).await.unwrap();
+    let receipt = reserve(
+        &pool,
+        source.id,
+        &request(execution.id),
+        "context",
+        |_| async { Err(ApiError::Conflict("Uncertain fixture dispatch".into())) },
+    )
+    .await
+    .unwrap();
+    assert_eq!(receipt.status, "unknown");
+    require_unclaimed(&pool, codex.id).await.unwrap();
+    assert!(require_unclaimed(&pool, source.id).await.is_err());
+    assert!(
+        require_unclaimed(&pool, receipt.target_session_id)
+            .await
+            .is_err()
+    );
+    let executions: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM execution_processes WHERE session_id=?")
+            .bind(codex.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(executions, 0);
+}
+
+#[tokio::test]
+async fn custom_source_preset_or_mode_cannot_silently_become_codex_defaults() {
+    let (_, session, execution) = fixture().await;
+    let mut source =
+        source_checkpoint(&session, std::slice::from_ref(&execution), execution.id).unwrap();
+    source.variant = Some("DEFAULT".into());
+    assert!(target_config(&source, &request(execution.id)).is_ok());
+    source.variant = Some("OWNER_CUSTOM".into());
+    assert!(matches!(
+        ApiError::from(target_config(&source, &request(execution.id)).unwrap_err()),
+        ApiError::Conflict(_)
+    ));
+    source.variant = None;
+    source.agent_id = Some("owner-mode".into());
+    assert!(target_config(&source, &request(execution.id)).is_err());
 }

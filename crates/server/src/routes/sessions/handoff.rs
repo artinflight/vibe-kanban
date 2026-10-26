@@ -38,6 +38,22 @@ use crate::{DeploymentImpl, error::ApiError};
 
 const CONTEXT_BYTES: usize = 240_000;
 
+// Keep pure validation independent of the large transport error enum.
+#[derive(Debug)]
+enum ValidationError {
+    BadRequest(String),
+    Conflict(String),
+}
+
+impl From<ValidationError> for ApiError {
+    fn from(value: ValidationError) -> Self {
+        match value {
+            ValidationError::BadRequest(message) => Self::BadRequest(message),
+            ValidationError::Conflict(message) => Self::Conflict(message),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct HandoffRequest {
@@ -64,7 +80,7 @@ fn hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 
-fn request_hash(request: &HandoffRequest) -> Result<String, ApiError> {
+fn request_hash(request: &HandoffRequest) -> Result<String, ValidationError> {
     // Explicit sorted keys: the workspace enables serde_json/preserve_order.
     // This must match the connector's compact UTF-8 fingerprint, including Unicode.
     let fields = std::collections::BTreeMap::from([
@@ -75,7 +91,7 @@ fn request_hash(request: &HandoffRequest) -> Result<String, ApiError> {
         ("request_id", json!(request.request_id)),
     ]);
     Ok(hash(&serde_json::to_vec(&fields).map_err(|_| {
-        ApiError::Conflict("Cannot fingerprint handoff".into())
+        ValidationError::Conflict("Cannot fingerprint handoff".into())
     })?))
 }
 
@@ -173,14 +189,16 @@ fn source_checkpoint(
     session: &Session,
     processes: &[ExecutionProcess],
     expected: Uuid,
-) -> Result<ExecutorConfig, ApiError> {
+) -> Result<ExecutorConfig, ValidationError> {
     if session.executor.as_deref() != Some("CLAUDE_CODE") {
-        return Err(ApiError::BadRequest("Source must be CLAUDE_CODE".into()));
+        return Err(ValidationError::BadRequest(
+            "Source must be CLAUDE_CODE".into(),
+        ));
     }
     let latest = processes
         .iter()
         .rfind(|p| p.run_reason == ExecutionProcessRunReason::CodingAgent)
-        .ok_or_else(|| ApiError::Conflict("No Claude checkpoint".into()))?;
+        .ok_or_else(|| ValidationError::Conflict("No Claude checkpoint".into()))?;
     if latest.id != expected
         || processes.iter().any(|p| {
             p.session_id != session.id
@@ -189,7 +207,7 @@ fn source_checkpoint(
                 || p.exit_code != Some(0)
         })
     {
-        return Err(ApiError::Conflict(
+        return Err(ValidationError::Conflict(
             "Source is not at the exact successful idle checkpoint".into(),
         ));
     }
@@ -199,26 +217,32 @@ fn source_checkpoint(
     {
         if process
             .executor_action()
-            .map_err(|_| ApiError::Conflict("Source configuration unavailable".into()))?
+            .map_err(|_| ValidationError::Conflict("Source configuration unavailable".into()))?
             .base_executor()
             != Some(BaseCodingAgent::ClaudeCode)
         {
-            return Err(ApiError::Conflict("Source executor mismatch".into()));
+            return Err(ValidationError::Conflict("Source executor mismatch".into()));
         }
     }
     executors::routing::config(
         latest
             .executor_action()
-            .map_err(|_| ApiError::Conflict("Source configuration unavailable".into()))?,
+            .map_err(|_| ValidationError::Conflict("Source configuration unavailable".into()))?,
     )
     .cloned()
-    .ok_or_else(|| ApiError::Conflict("Missing source configuration".into()))
+    .ok_or_else(|| ValidationError::Conflict("Missing source configuration".into()))
 }
 
 fn target_config(
     source: &ExecutorConfig,
     request: &HandoffRequest,
-) -> Result<ExecutorConfig, ApiError> {
+) -> Result<ExecutorConfig, ValidationError> {
+    if source.variant.as_deref().is_some_and(|v| v != "DEFAULT") || source.agent_id.is_some() {
+        return Err(ValidationError::Conflict(
+            "Custom source preset/mode cannot be translated across executors; no default fallback"
+                .into(),
+        ));
+    }
     if request.request_id.is_nil()
         || request.execution_id.is_nil()
         || request.prompt.trim().is_empty()
@@ -226,11 +250,11 @@ fn target_config(
         || request.model_id.len() > 100
         || request.reasoning_id.len() > 100
     {
-        return Err(ApiError::BadRequest(
+        return Err(ValidationError::BadRequest(
             "Explicit bounded handoff and model/effort required".into(),
         ));
     }
-    let models = executors::routing::model_policies().map_err(ApiError::Conflict)?;
+    let models = executors::routing::model_policies().map_err(ValidationError::Conflict)?;
     if request
         .reasoning_id
         .parse::<executors::executors::codex::ReasoningEffort>()
@@ -239,7 +263,7 @@ fn target_config(
             m.released && m.id == request.model_id && m.efforts.contains(&request.reasoning_id)
         })
     {
-        return Err(ApiError::BadRequest(
+        return Err(ValidationError::BadRequest(
             "Unsupported Codex model/effort; no fallback".into(),
         ));
     }
@@ -252,7 +276,7 @@ fn target_config(
         })
     });
     if policy.denied_models.contains(&request.model_id) {
-        return Err(ApiError::Conflict(
+        return Err(ValidationError::Conflict(
             "Selected target model is denied; no fallback".into(),
         ));
     }
@@ -260,7 +284,7 @@ fn target_config(
     // A current preset is not proof of historical approval settings. Require
     // the explicit persisted selection rather than guessing across executors.
     let permission = source.permission_policy.clone().ok_or_else(|| {
-        ApiError::Conflict("Persisted source approval policy unknown; no handoff".into())
+        ValidationError::Conflict("Persisted source approval policy unknown; no handoff".into())
     })?;
     Ok(ExecutorConfig {
         executor: BaseCodingAgent::Codex,
